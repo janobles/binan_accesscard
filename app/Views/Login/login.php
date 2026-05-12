@@ -4,17 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login</title>
-    <link rel="stylesheet" href="/assets/css/login.css?v=<?= filemtime(FCPATH . 'assets/css/login.css') ?>">
+    <link rel="stylesheet" href="<?= base_url('assets/css/login.css') ?>?v=<?= filemtime(FCPATH . 'assets/css/login.css') ?>">
 </head>
 <body>
     <main class="login-page">
         <section class="login-card">
             <div class="logo-stack">
-                <div class="logo-frame logo-frame-large">
-                    <img src="/assets/image/binan.png" alt="City of Binan Logo" class="logo-image">
-                </div>
-                <div class="logo-frame logo-frame-small">
-                    <img src="/assets/image/cswd.png" alt="CSWD Logo" class="logo-image">
+                <div class="logo-container">
+                    <img src="<?= base_url('assets/image/binan.png') ?>" alt="City of Binan Logo" class="logo-image">
                 </div>
             </div>
 

@@ -8,4 +8,15 @@ class Home extends BaseController
     {
         return view('Login/login');
     }
+
+    public function login()
+    {
+        return redirect()->to(site_url('admin'));
+    }
+
+    public function admin(): string
+    {
+        return view('Dashboard/admin');
+
+    }
 }

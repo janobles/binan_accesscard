@@ -5,8 +5,20 @@
 body {
 	margin: 0;
 	font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-	background: radial-gradient(circle at top right, #8f6ab8 0%, #5f3b82 45%, #2f1847 100%);
+	background: #000;
 	min-height: 100vh;
+	position: relative;
+	overflow: hidden;
+}
+
+body::before {
+	content: "";
+	position: fixed;
+	inset: 0;
+	background: url("../image/hall.jpg") center center / cover no-repeat;
+	filter: blur(4px);
+	transform: scale(1.04);
+	z-index: -1;
 }
 
 .login-page {
@@ -19,8 +31,9 @@ body {
 
 .login-card {
 	width: 100%;
-	max-width: 420px;
-	background: #f7f7f7;
+	max-width: 430px;
+	min-height: 500px;
+	background: rgba(230, 230, 230, 0.80);
 	border-radius: 14px;
 	padding: 28px 24px;
 	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.22);
@@ -28,22 +41,17 @@ body {
 
 .logo-stack {
 	display: flex;
-	flex-direction: column;
 	align-items: center;
-	gap: 10px;
 	margin-bottom: 14px;
 }
 
-.logo-frame {
-	border: 2px solid #d2d2d2;
-	border-radius: 10px;
-	background: #ffffff;
+
+.logo-container {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	overflow: hidden;
-	color: #7b7b7b;
-	font-size: 13px;
+	width: 150px;
+	height: 150px;
 }
 
 .logo-image {
@@ -53,21 +61,12 @@ body {
 	display: block;
 }
 
-.logo-frame-large {
-	width: 140px;
-	height: 140px;
-}
-
-.logo-frame-small {
-	width: 120px;
-	height: 120px;
-}
-
 .login-title {
 	margin: 0 0 16px;
 	text-align: center;
-	font-size: 30px;
-	font-weight: 400;
+    font-family: 'Roboto', sans-serif;
+	font-size: 31px;
+    font-weight: 700;
 	color: #3c3c3c;
 }
 

@@ -7,6 +7,6 @@
     <link rel="stylesheet" href="<?= base_url('assets/css/admin.css') ?>?v=<?= filemtime(FCPATH . 'assets/css/admin.css') ?>">
 </head>
 <body>
-    <h1>ADMIN YARN</h1>
+    <h1>THIS IS THE ADMIN DASHBOARD</h1>
 </body>
 </html>

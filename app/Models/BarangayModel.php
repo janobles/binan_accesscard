@@ -4,11 +4,11 @@ namespace App\Models;
 
 use CodeIgniter\Model;
 
-class SectorModel extends Model
+class BarangayModel extends Model
 {
-    protected $table = 'sectors';
+    protected $table = 'barangays';
     protected $primaryKey = 'id';
     protected $returnType = 'array';
-    protected $allowedFields = ['name', 'description'];
+    protected $allowedFields = ['name'];
     protected $useTimestamps = true;
 }

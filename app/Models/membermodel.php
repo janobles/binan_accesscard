@@ -6,54 +6,110 @@ use CodeIgniter\Model;
 
 class MemberModel extends Model
 {
-    protected $table = 'members';
-    protected $primaryKey = 'id';
+    protected $table = 'member';
+    protected $primaryKey = 'memberID';
     protected $returnType = 'array';
     protected $allowedFields = [
-        'head_id',
-        'sector_id',
-        'barangay_id',
-        'first_name',
-        'middle_name',
-        'last_name',
-        'birthdate',
-        'gender',
-        'relationship_to_head',
-        'address',
-        'contact_no',
-        'created_by',
-        'updated_by',
+        'lastname',
+        'firstname',
+        'middlename',
+        'suffix',
+        'birthday',
+        'civilstatus',
+        'sex',
+        'education',
+        'job',
+        'Salary',
+        'contactnumber',
+        'relationship',
+        'headID',
+        'sectorID',
     ];
-    protected $useTimestamps = true;
+    protected $useTimestamps = false;
 
     protected $validationRules = [
-        'sector_id' => 'required|is_natural_no_zero',
-        'barangay_id' => 'required|is_natural_no_zero',
-        'first_name' => 'required|max_length[80]',
-        'last_name' => 'required|max_length[80]',
-        'birthdate' => 'required|valid_date[Y-m-d]',
-        'gender' => 'required|in_list[Male,Female,Other]',
-        'address' => 'required|max_length[255]',
+        'sectorID' => 'required|is_natural_no_zero',
+        'firstname' => 'required|max_length[100]',
+        'lastname' => 'required|max_length[100]',
+        'birthday' => 'required|valid_date[Y-m-d]',
+        'sex' => 'required|in_list[Male,Female]',
     ];
+
+    public function createHead(array $data): int|false
+    {
+        $data['memberID'] = $this->nextAutoIncrementId();
+        $data['headID'] = $data['memberID'];
+        $data['relationship'] = $data['relationship'] ?? 'Head';
+
+        if (! $this->insert($data)) {
+            return false;
+        }
+
+        return (int) $data['memberID'];
+    }
+
+    public function addFamilyMember(int $headId, array $data): int|false
+    {
+        if ($this->find($headId) === null) {
+            return false;
+        }
+
+        $data['headID'] = $headId;
+        $data['relationship'] = $data['relationship'] ?? 'Member';
+
+        if (! $this->insert($data)) {
+            return false;
+        }
+
+        return (int) $this->getInsertID();
+    }
+
+    public function getFamilyMembers(int $headId): array
+    {
+        return $this->select('member.*, sector.name AS sector_name')
+            ->join('sector', 'sector.sectorID = member.sectorID')
+            ->where('member.headID', $headId)
+            ->orderBy('member.memberID', 'ASC')
+            ->findAll();
+    }
+
+    public function findWithSector(int $memberId): ?array
+    {
+        return $this->select('member.*, sector.name AS sector_name, sector.shortcode AS sector_shortcode')
+            ->join('sector', 'sector.sectorID = member.sectorID')
+            ->where('member.memberID', $memberId)
+            ->first();
+    }
 
     public function searchFamilies(?string $keyword = null): array
     {
-        $builder = $this->select('members.*, sectors.name AS sector_name, barangays.name AS barangay_name')
-            ->join('sectors', 'sectors.id = members.sector_id')
-            ->join('barangays', 'barangays.id = members.barangay_id')
-            ->where('members.head_id', null)
-            ->orderBy('members.last_name', 'ASC')
-            ->orderBy('members.first_name', 'ASC');
+        $builder = $this->select('member.*, sector.name AS sector_name')
+            ->join('sector', 'sector.sectorID = member.sectorID')
+            ->where('member.headID = member.memberID')
+            ->orderBy('member.lastname', 'ASC')
+            ->orderBy('member.firstname', 'ASC');
 
         if ($keyword !== null && trim($keyword) !== '') {
             $builder->groupStart()
-                ->like('members.first_name', $keyword)
-                ->orLike('members.last_name', $keyword)
-                ->orLike('barangays.name', $keyword)
-                ->orLike('sectors.name', $keyword)
+                ->like('member.firstname', $keyword)
+                ->orLike('member.lastname', $keyword)
+                ->orLike('sector.name', $keyword)
                 ->groupEnd();
         }
 
         return $builder->findAll();
     }
+
+    private function nextAutoIncrementId(): int
+    {
+        $row = $this->db->query("
+            SELECT AUTO_INCREMENT
+            FROM information_schema.TABLES
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = 'member'
+        ")->getRowArray();
+
+        return (int) ($row['AUTO_INCREMENT'] ?? 1);
+    }
 }
+

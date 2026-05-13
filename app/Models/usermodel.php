@@ -7,27 +7,36 @@ use CodeIgniter\Model;
 class UserModel extends Model
 {
     protected $table = 'users';
-    protected $primaryKey = 'id';
+    protected $primaryKey = 'userID';
     protected $returnType = 'array';
     protected $allowedFields = [
         'username',
-        'password_hash',
-        'full_name',
+        'password',
         'role',
-        'is_active',
+        'isactive',
     ];
-    protected $useTimestamps = true;
+    protected $useTimestamps = false;
 
     protected $validationRules = [
-        'username' => 'required|max_length[80]',
-        'full_name' => 'required|max_length[150]',
-        'role' => 'required|in_list[Admin,Employee]',
+        'username' => 'required|max_length[255]',
+        'role' => 'required|in_list[Admin,Employee,Developer]',
     ];
 
     public function findActiveByUsername(string $username): ?array
     {
         return $this->where('username', $username)
-            ->where('is_active', 1)
+            ->where('isactive', 'Enable')
             ->first();
+    }
+
+    public function verifyLogin(string $username, string $password): ?array
+    {
+        $user = $this->findActiveByUsername($username);
+
+        if ($user === null || ! password_verify($password, $user['password'])) {
+            return null;
+        }
+
+        return $user;
     }
 }

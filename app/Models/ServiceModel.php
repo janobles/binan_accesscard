@@ -7,15 +7,35 @@ use CodeIgniter\Model;
 class ServiceModel extends Model
 {
     protected $table = 'services';
-    protected $primaryKey = 'id';
+    protected $primaryKey = 'serviceID';
     protected $returnType = 'array';
-    protected $allowedFields = ['name', 'description', 'sector_id'];
-    protected $useTimestamps = true;
+    protected $allowedFields = ['category', 'name', 'description'];
+    protected $useTimestamps = false;
 
-    public function getForSector(int $sectorId): array
+    public function getForSectorName(string $sectorName): array
     {
-        return $this->where('sector_id', $sectorId)
+        return $this->groupStart()
+            ->where('category', $sectorName)
+            ->orWhere('category', 'General')
+            ->groupEnd()
             ->orderBy('name', 'ASC')
             ->findAll();
     }
+
+    public function getEligibleForMember(int $memberId): array
+    {
+        $member = $this->db->table('member')
+            ->select('sector.name AS sector_name')
+            ->join('sector', 'sector.sectorID = member.sectorID')
+            ->where('member.memberID', $memberId)
+            ->get()
+            ->getRowArray();
+
+        if ($member === null) {
+            return [];
+        }
+
+        return $this->getForSectorName((string) $member['sector_name']);
+    }
 }
+

@@ -4,65 +4,65 @@ namespace App\Models;
 
 use CodeIgniter\Model;
 
-class AuditTrailsModel extends Model
+class audittrailsmodel extends Model
 {
     protected $table            = 'audit_trails';
-    protected $primaryKey       = 'id';
+    protected $primaryKey       = 'auditID';
     protected $useAutoIncrement = true;
     protected $returnType       = 'array';
     protected $useSoftDeletes   = false;
     protected $protectFields    = true;
 
     protected $allowedFields = [
-        'user_id',
-        'action',
+        'user_action',
         'description',
         'ip_address',
-        'user_agent',
-        'created_at',
+        'userID',
+        'memberID',
     ];
 
     protected $useTimestamps = false;
 
     protected $validationRules = [
-        'action' => 'required|max_length[100]',
+        'user_action' => 'required',
     ];
 
     protected $validationMessages = [
-        'action' => [
-            'required'   => 'Audit action is required.',
-            'max_length' => 'Audit action must not exceed 100 characters.',
+        'user_action' => [
+            'required' => 'Audit action is required.',
         ],
     ];
 
     public function logAction(
-        ?int $userId,
+        int $userId,
+        ?int $memberId,
         string $action,
         ?string $description = null,
-        ?string $ipAddress = null,
-        ?string $userAgent = null
+        ?string $ipAddress = null
     ): bool {
         return $this->insert([
-            'user_id'     => $userId,
-            'action'      => $action,
+            'userID'      => $userId,
+            'memberID'    => $memberId,
+            'user_action' => $action,
             'description' => $description,
             'ip_address'  => $ipAddress,
-            'user_agent'  => $userAgent,
-            'created_at'  => date('Y-m-d H:i:s'),
         ]) !== false;
     }
 
     public function getRecent(int $limit = 50): array
     {
-        return $this->orderBy('created_at', 'DESC')
+        return $this->select('audit_trails.*, users.username, member.firstname, member.lastname')
+            ->join('users', 'users.userID = audit_trails.userID')
+            ->join('member', 'member.memberID = audit_trails.memberID', 'left')
+            ->orderBy('audit_trails.dt_created', 'DESC')
             ->limit($limit)
             ->findAll();
     }
 
     public function getByUser(int $userId, int $limit = 50): array
     {
-        return $this->where('user_id', $userId)
-            ->orderBy('created_at', 'DESC')
+        return $this->where('userID', $userId)
+            ->orderBy('dt_created', 'DESC')
             ->limit($limit)
             ->findAll();
     }

@@ -6,9 +6,9 @@ use CodeIgniter\Model;
 
 class SectorModel extends Model
 {
-    protected $table = 'sectors';
-    protected $primaryKey = 'id';
+    protected $table = 'sector';
+    protected $primaryKey = 'sectorID';
     protected $returnType = 'array';
-    protected $allowedFields = ['name', 'description'];
-    protected $useTimestamps = true;
+    protected $allowedFields = ['shortcode', 'name', 'description'];
+    protected $useTimestamps = false;
 }

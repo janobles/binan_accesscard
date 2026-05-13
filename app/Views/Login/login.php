@@ -17,12 +17,16 @@
 
             <h1 class="login-title">Binan Access Card Portal</h1>
 
+            <?php if (session()->getFlashdata('error')): ?>
+                <p class="login-error"><?= esc(session()->getFlashdata('error')) ?></p>
+            <?php endif; ?>
+
             <form method="post" action="<?= site_url('login') ?>" class="login-form">
                 <?= csrf_field() ?>
 
                 <div class="form-group">
                     <label for="username">Username</label>
-                    <input type="text" id="username" name="username" required>
+                    <input type="text" id="username" name="username" value="<?= esc(old('username')) ?>" required>
                 </div>
 
                 <div class="form-group">

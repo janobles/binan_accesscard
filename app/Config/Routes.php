@@ -8,3 +8,4 @@ use CodeIgniter\Router\RouteCollection;
 $routes->get('/', 'Home::index');
 $routes->post('login', 'Home::login');
 $routes->get('admin', 'Home::admin');
+$routes->get('employee/workspace', 'Home::employee');

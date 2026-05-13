@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Employee Dashboard - Binan Access Card MIS</title>
+    <title>Employee Workspace - Binan Access Card MIS</title>
 </head>
 <body>
 
@@ -14,7 +14,7 @@
         </div>
         <nav>
             <ul>
-                <li><a href="<?= base_url('employee/dashboard') ?>">Dashboard</a></li>
+                <li><a href="<?= base_url('employee/workspace') ?>">Workspace</a></li>
                 <li><a href="#">Register Family</a></li>
                 <li><a href="#">Manage Members</a></li>
                 <li><a href="#">Process Assistance</a></li>
@@ -37,7 +37,7 @@
             </div>
         </header>
 
-        <!-- Dashboard Content -->
+        <!-- Workspace Content -->
         <section>
             <header>
                 <h1>Employee Workspace</h1>

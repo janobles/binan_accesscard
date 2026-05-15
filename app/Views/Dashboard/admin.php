@@ -34,7 +34,7 @@
                 <button type="button">Search</button>
             </div>
             <div>
-                <span>Welcome, Administrator</span>
+                <span>Welcome!, Administrator</span>
                 <a href="<?= base_url('logout') ?>">Logout</a>
             </div>
         </header>
@@ -110,7 +110,7 @@
                                 <td>Attempted unauthorized deletion</td>
                                 <td>Members</td>
                                 <td>2026-05-12 04:15 PM</td>
-                                <td>Failed</td>
+                                <td>Failed</td> //hmm
                             </tr>
                             -->
                         </tbody>

@@ -4,15 +4,11 @@ namespace App\Models;
 
 use CodeIgniter\Model;
 
-class audittrailsmodel extends Model
+class AuditTrailsModel extends Model
 {
-    protected $table            = 'audit_trails';
-    protected $primaryKey       = 'auditID';
-    protected $useAutoIncrement = true;
-    protected $returnType       = 'array';
-    protected $useSoftDeletes   = false;
-    protected $protectFields    = true;
-
+    protected $table = 'audit_trails';
+    protected $primaryKey = 'auditID';
+    protected $returnType = 'array';
     protected $allowedFields = [
         'user_action',
         'description',
@@ -20,18 +16,7 @@ class audittrailsmodel extends Model
         'userID',
         'memberID',
     ];
-
     protected $useTimestamps = false;
-
-    protected $validationRules = [
-        'user_action' => 'required',
-    ];
-
-    protected $validationMessages = [
-        'user_action' => [
-            'required' => 'Audit action is required.',
-        ],
-    ];
 
     public function logAction(
         int $userId,
@@ -41,11 +26,11 @@ class audittrailsmodel extends Model
         ?string $ipAddress = null
     ): bool {
         return $this->insert([
-            'userID'      => $userId,
-            'memberID'    => $memberId,
+            'userID' => $userId,
+            'memberID' => $memberId,
             'user_action' => $action,
             'description' => $description,
-            'ip_address'  => $ipAddress,
+            'ip_address' => $ipAddress,
         ]) !== false;
     }
 

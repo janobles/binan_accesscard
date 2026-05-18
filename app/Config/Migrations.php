@@ -16,7 +16,7 @@ class Migrations extends BaseConfig
      * You should enable migrations whenever you intend to do a schema migration
      * and disable it back when you're done.
      */
-    public bool $enabled = true;
+    public bool $enabled = false;
 
     /**
      * --------------------------------------------------------------------------

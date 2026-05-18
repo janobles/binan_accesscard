@@ -10,7 +10,12 @@ use CodeIgniter\HTTP\RedirectResponse;
 class Home extends BaseController
 {
     public function index(): string|RedirectResponse
+    public function index(): string|RedirectResponse
     {
+        if (session()->get('is_logged_in')) {
+            return $this->redirectByRole((string) session()->get('role'));
+        }
+
         if (session()->get('is_logged_in')) {
             return $this->redirectByRole((string) session()->get('role'));
         }
@@ -18,6 +23,7 @@ class Home extends BaseController
         return view('Login/login');
     }
 
+    public function login(): RedirectResponse
     public function login(): RedirectResponse
     {
         $username = trim((string) $this->request->getPost('username'));
@@ -189,5 +195,28 @@ class Home extends BaseController
             ->limit(10)
             ->get()
             ->getResultArray();
+    }
+
+    private function requireRole(array $allowedRoles): ?RedirectResponse
+    {
+        if (! session()->get('is_logged_in')) {
+            return redirect()->to(site_url('/'))->with('error', 'Please login first.');
+        }
+
+        if (! in_array(session()->get('role'), $allowedRoles, true)) {
+            return $this->redirectByRole((string) session()->get('role'))
+                ->with('error', 'You do not have access to that page.');
+        }
+
+        return null;
+    }
+
+    private function redirectByRole(string $role): RedirectResponse
+    {
+        if ($role === 'Employee') {
+            return redirect()->to(site_url('employee/workspace'));
+        }
+
+        return redirect()->to(site_url('admin'));
     }
 }

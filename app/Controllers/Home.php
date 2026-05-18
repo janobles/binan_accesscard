@@ -10,7 +10,7 @@ use CodeIgniter\HTTP\RedirectResponse;
 class Home extends BaseController
 {
     public function index(): string|RedirectResponse
-    public function index(): string|RedirectResponse
+   
     {
         if (session()->get('is_logged_in')) {
             return $this->redirectByRole((string) session()->get('role'));
@@ -24,7 +24,7 @@ class Home extends BaseController
     }
 
     public function login(): RedirectResponse
-    public function login(): RedirectResponse
+    
     {
         $username = trim((string) $this->request->getPost('username'));
         $password = (string) $this->request->getPost('password');

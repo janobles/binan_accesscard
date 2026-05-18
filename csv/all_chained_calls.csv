@@ -1,0 +1,4 @@
+"Path","LineNumber","Line"
+"C:\xampp\htdocs\binanaccesscard\binan_accesscard\app\Controllers\AccountController.php","50","            $userId = (new UserModel())->createAccount("
+"C:\xampp\htdocs\binanaccesscard\binan_accesscard\app\Controllers\Home.php","32","        $user = (new UserModel())->verifyLogin($username, $password);"
+"C:\xampp\htdocs\binanaccesscard\binan_accesscard\vendor\codeigniter4\framework\system\Typography\Typography.php","99","        if (str_contains($str, '<!--') && preg_match_all('#(<!\-\-.*?\-\->)#s', $str, $matches) >= 1) {"

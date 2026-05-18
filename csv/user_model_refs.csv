@@ -1,0 +1,7 @@
+"Path","LineNumber","Line"
+"C:\xampp\htdocs\binanaccesscard\binan_accesscard\app\Controllers\AccountController.php","6","use App\Models\UserModel;"
+"C:\xampp\htdocs\binanaccesscard\binan_accesscard\app\Controllers\AccountController.php","50","            $userId = (new UserModel())->createAccount("
+"C:\xampp\htdocs\binanaccesscard\binan_accesscard\app\Controllers\Home.php","5","use App\Models\UserModel;"
+"C:\xampp\htdocs\binanaccesscard\binan_accesscard\app\Controllers\Home.php","32","        $user = (new UserModel())->verifyLogin($username, $password);"
+"C:\xampp\htdocs\binanaccesscard\binan_accesscard\app\Controllers\Home.php","98","        $users = (new UserModel())"
+"C:\xampp\htdocs\binanaccesscard\binan_accesscard\vendor\codeigniter4\framework\system\Commands\Generators\ModelGenerator.php","74","        '--suffix'    => 'Append the component title to the class name (e.g. User => UserModel).',"

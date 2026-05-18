@@ -70,6 +70,18 @@ body::before {
 	color: #3c3c3c;
 }
 
+.login-error {
+	margin: 0 0 16px;
+	padding: 10px 12px;
+	border: 1px solid #fecaca;
+	border-radius: 6px;
+	background: #fef2f2;
+	color: #991b1b;
+	font-size: 14px;
+	line-height: 1.4;
+	text-align: center;
+}
+
 .login-form {
 	display: flex;
 	flex-direction: column;

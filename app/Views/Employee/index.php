@@ -1,98 +1,117 @@
+<?php
+$username = $user['username'] ?? 'Employee';
+$activePage = $activePage ?? 'dashboard';
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Employee Workspace - Binan Access Card MIS</title>
+    <title><?= esc(ucwords(str_replace('-', ' ', $activePage))) ?> - Binan Access Card MIS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="<?= base_url('assets/css/mis.css') ?>?v=<?= filemtime(FCPATH . 'assets/css/mis.css') ?>">
 </head>
 <body>
-
-    <!-- Sidebar Navigation -->
-    <aside>
+<div class="app-shell">
+    <aside class="sidebar employee">
         <div>
-            <h2>Binan Access Card MIS (Employee)</h2>
-        </div>
-        <nav>
-            <ul>
-                <li><a href="<?= base_url('employee/workspace') ?>">Workspace</a></li>
-                <li><a href="#">Register Family</a></li>
-                <li><a href="#">Manage Members</a></li>
-                <li><a href="#">Process Assistance</a></li>
-                <li><a href="#">My Recent Activity</a></li>
-            </ul>
-        </nav>
-    </aside>
-
-    <!-- Main Content Area -->
-    <main>
-        <!-- Top Header -->
-        <header>
-            <div>
-                <input type="text" placeholder="Search families, members by ID...">
-                <button type="button">Search</button>
-            </div>
-            <div>
-                <span>Welcome, Employee</span>
-                <a href="<?= base_url('logout') ?>">Logout</a>
-            </div>
-        </header>
-
-        <!-- Workspace Content -->
-        <section>
-            <header>
-                <h1>Employee Workspace</h1>
-                <p>Quick access to family registration and assistance processing.</p>
-            </header>
-            
-            <!-- Quick Actions -->
-            <div>
-                <h2>Quick Actions</h2>
-                <ul>
-                    <li><button type="button">+ New Family Profile</button></li>
-                    <li><button type="button">+ Add Family Member</button></li>
-                    <li><button type="button">Process New Assistance</button></li>
-                </ul>
-            </div>
-
-            <br><hr><br>
-
-            <!-- Pending Tasks / Recent Processing -->
-            <div>
-                <header>
-                    <h2>Recently Processed Assistance</h2>
-                    <a href="#">View All My Logs</a>
-                </header>
+            <div class="brand">
+                <img src="<?= base_url('assets/image/binan.png') ?>" alt="City of Binan Logo">
                 <div>
-                    <table border="1" cellpadding="10" cellspacing="0" width="100%">
-                        <thead>
-                            <tr>
-                                <th>Reference ID</th>
-                                <th>Beneficiary Name</th>
-                                <th>Assistance Type</th>
-                                <th>Date Processed</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <!-- Placeholder for empty state -->
-                            <tr>
-                                <td colspan="5" align="center">No recent records found.</td>
-                            </tr>
-                            <!-- Example populated row
-                            <tr>
-                                <td>REF-00123</td>
-                                <td>Maria Clara (Senior)</td>
-                                <td>Medical Assistance</td>
-                                <td>2026-05-13 11:30 AM</td>
-                                <td>Completed</td>
-                            </tr>
-                            -->
-                        </tbody>
-                    </table>
+                    <strong>Bi&ntilde;an Access Card MIS</strong>
+                    <small class="d-block">Employee Workspace</small>
                 </div>
             </div>
-        </section>
-    </main>
+            <nav class="nav flex-column mt-3">
+                <a class="nav-link <?= $activePage === 'dashboard' ? 'active' : '' ?>" href="<?= site_url('employee/workspace') ?>">Workspace</a>
+                <a class="nav-link <?= $activePage === 'family-entry' ? 'active' : '' ?>" href="<?= site_url('employee/family-entry') ?>">Family Entry</a>
+                <a class="nav-link <?= $activePage === 'activity' ? 'active' : '' ?>" href="<?= site_url('employee/activity') ?>">My Activity</a>
+            </nav>
+        </div>
+        <div class="sidebar-footer">
+            <div class="sidebar-user"><?= esc($username) ?> &middot; Employee</div>
+            <a href="<?= site_url('logout') ?>" class="btn btn-outline-light btn-sm w-100">Logout</a>
+        </div>
+    </aside>
 
+    <main class="content">
+        <div class="topbar">
+            <div>
+                <div class="fw-bold"><?= esc($activePage === 'dashboard' ? 'Workspace' : ucwords(str_replace('-', ' ', $activePage))) ?></div>
+                <small class="text-muted">Bi&ntilde;an Access Card MIS</small>
+            </div>
+        </div>
+
+        <div class="container-fluid py-4">
+            <?php if (session()->getFlashdata('success')): ?>
+                <div class="alert alert-success"><?= esc(session()->getFlashdata('success')) ?></div>
+            <?php endif; ?>
+            <?php if (session()->getFlashdata('error')): ?>
+                <div class="alert alert-danger"><?= esc(session()->getFlashdata('error')) ?></div>
+            <?php endif; ?>
+
+            <?php if ($activePage === 'dashboard'): ?>
+                <div class="panel">
+                    <div class="section-title mt-0"><span>Recently Added Families</span></div>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead><tr><th>Head</th><th>Barangay</th><th>Sector</th><th>Date</th></tr></thead>
+                            <tbody>
+                                <?php foreach ($recentFamilies as $family): ?>
+                                    <tr>
+                                        <td><?= esc($family['firstname'] . ' ' . $family['lastname']) ?></td>
+                                        <td><?= esc($family['barangay']) ?></td>
+                                        <td><?= esc($family['sector_name'] ?? '') ?></td>
+                                        <td><?= esc($family['dt_created'] ?? '') ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                                <?php if ($recentFamilies === []): ?>
+                                    <tr><td colspan="4" class="text-center text-muted">No family records yet.</td></tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            <?php endif; ?>
+
+            <?php if ($activePage === 'family-entry'): ?>
+                <div class="panel">
+                    <div class="section-title mt-0">
+                        <span>Family / Member Data Entry</span>
+                    </div>
+                    <?= view('Shared/family_form', [
+                        'formOptions' => $formOptions,
+                        'canCreateFamily' => $canCreateFamily,
+                    ]) ?>
+                </div>
+            <?php endif; ?>
+
+            <?php if ($activePage === 'activity'): ?>
+                <div class="panel">
+                    <div class="section-title mt-0"><span>My Recent Activity</span></div>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead><tr><th>Action</th><th>Description</th><th>Date</th></tr></thead>
+                            <tbody>
+                                <?php foreach ($myAudits as $audit): ?>
+                                    <tr>
+                                        <td><?= esc($audit['user_action']) ?></td>
+                                        <td><?= esc($audit['description']) ?></td>
+                                        <td><?= esc($audit['dt_created'] ?? '') ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                                <?php if ($myAudits === []): ?>
+                                    <tr><td colspan="3" class="text-center text-muted">No activity yet.</td></tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            <?php endif; ?>
+        </div>
+    </main>
+</div>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="<?= base_url('assets/js/mis.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/mis.js') ?>"></script>
 </body>
 </html>

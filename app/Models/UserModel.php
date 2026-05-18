@@ -22,7 +22,7 @@ class UserModel extends Model
 
     protected $validationRules = [
         'username' => 'required|max_length[255]',
-        'role' => 'required|in_list[Admin,Employee,Developer]',
+        'role' => 'required|in_list[User,Admin,Developer]',
         'isactive' => 'permit_empty|in_list[Enable,Disabled]',
     ];
 
@@ -50,16 +50,16 @@ class UserModel extends Model
         return $user;
     }
 
-    public function createAccount(string $username, string $password, string $role, ?int $memberId = null): int|false
+    public function createAccount(string $username, string $password, string $role, ?int $memberId = 1): int|false
     {
-        if (! in_array($role, ['Admin', 'Employee'], true)) {
+        if (! in_array($role, ['Admin', 'User'], true)) {
             return false;
         }
 
         if (! $this->insert([
             'username' => $username,
             'password' => password_hash($password, self::PASSWORD_ALGORITHM),
-            'role'     => $role,
+            'role' => $role,
             'isactive' => 'Enable',
             'memberID' => $memberId,
         ])) {

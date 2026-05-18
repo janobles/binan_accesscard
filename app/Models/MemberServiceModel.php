@@ -17,7 +17,7 @@ class MemberServiceModel extends Model
 
     protected $validationRules = [
         'memberID' => 'required|is_natural_no_zero',
-        'serviceID' => 'required|is_natural_no_zero',
+        'serviceID' => 'required|is_natural',
     ];
 
     public function assignService(int $memberId, int $serviceId): int|false

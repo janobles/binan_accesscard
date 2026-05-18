@@ -10,6 +10,7 @@ class MemberModel extends Model
     protected $primaryKey = 'memberID';
     protected $returnType = 'array';
     protected $allowedFields = [
+        'memberID',
         'lastname',
         'firstname',
         'middlename',
@@ -31,8 +32,9 @@ class MemberModel extends Model
         'sectorID' => 'required|is_natural_no_zero',
         'firstname' => 'required|max_length[100]',
         'lastname' => 'required|max_length[100]',
-        'birthday' => 'required|valid_date[Y-m-d]',
-        'sex' => 'required|in_list[Male,Female]',
+        'middlename' => 'permit_empty|max_length[50]',
+        'birthday' => 'permit_empty|valid_date[Y-m-d]',
+        'sex' => 'permit_empty|in_list[Male,Female]',
     ];
 
     public function createHead(array $data): int|false
@@ -112,4 +114,3 @@ class MemberModel extends Model
         return (int) ($row['AUTO_INCREMENT'] ?? 1);
     }
 }
-

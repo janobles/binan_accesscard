@@ -78,11 +78,23 @@ class AccountController extends BaseController
             return redirect()->to(site_url('/'))->with('error', 'Please login first.');
         }
 
-        if (session()->get('role') !== 'Developer') {
+        if ($this->normalizeRole((string) session()->get('role')) !== 'Developer') {
             return redirect()->to(site_url('/'))->with('error', 'Developer access is required.');
         }
 
         return null;
+    }
+
+    private function normalizeRole(string $role): ?string
+    {
+        $normalizedRole = strtolower(trim($role));
+
+        return match ($normalizedRole) {
+            'developer' => 'Developer',
+            'admin', 'administrator' => 'Admin',
+            'user', 'employee' => 'User',
+            default => null,
+        };
     }
 
     private function audit(string $action, string $description): void

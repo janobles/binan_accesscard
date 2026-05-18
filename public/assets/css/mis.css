@@ -186,6 +186,26 @@ body::before {
     gap: 6px;
 }
 
+.floating-family-modal .modal-dialog {
+    max-width: min(1080px, 96vw);
+}
+
+.floating-family-modal .modal-content {
+    border: 1px solid #dce4ee;
+    border-radius: 10px;
+    box-shadow: 0 20px 44px rgba(17, 32, 56, .24);
+}
+
+.floating-family-modal .modal-header {
+    border-bottom: 1px solid #e4e9f0;
+    background: #f7faff;
+}
+
+.floating-family-modal .modal-body {
+    max-height: 78vh;
+    overflow-y: auto;
+}
+
 @media (max-width: 992px) {
     .app-shell {
         display: block;
@@ -222,5 +242,9 @@ body::before {
 
     .topbar {
         padding: 12px;
+    }
+
+    .floating-family-modal .modal-dialog {
+        margin: 0.6rem;
     }
 }

@@ -26,7 +26,7 @@ class UserModel extends Model
             return null;
         }
 
-        if ((int) ($user['isactive'] ?? 1) !== 1) {
+        if (! $this->isUserActive($user['isactive'] ?? 1)) {
             return null;
         }
 
@@ -44,6 +44,21 @@ class UserModel extends Model
         }
 
         return $user;
+    }
+
+    private function isUserActive(mixed $value): bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        if (is_int($value) || is_float($value)) {
+            return (int) $value === 1;
+        }
+
+        $normalized = strtolower(trim((string) $value));
+
+        return in_array($normalized, ['1', 'true', 'yes', 'y', 'on', 'enable', 'enabled', 'active'], true);
     }
 
     public function createAccount(string $username, string $password, string $role): int|false

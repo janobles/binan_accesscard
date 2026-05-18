@@ -2,20 +2,15 @@
 
 namespace App\Controllers;
 
-use App\Models\UserModel;
 use App\Models\AuditTrailsModel;
 use App\Models\FamilyFormOptionsModel;
+use App\Models\UserModel;
 use CodeIgniter\HTTP\RedirectResponse;
 
 class Home extends BaseController
 {
     public function index(): string|RedirectResponse
-    public function index(): string|RedirectResponse
     {
-        if (session()->get('is_logged_in')) {
-            return $this->redirectByRole((string) session()->get('role'));
-        }
-
         if (session()->get('is_logged_in')) {
             return $this->redirectByRole((string) session()->get('role'));
         }
@@ -23,7 +18,6 @@ class Home extends BaseController
         return view('Login/login');
     }
 
-    public function login(): RedirectResponse
     public function login(): RedirectResponse
     {
         $username = trim((string) $this->request->getPost('username'));
@@ -40,10 +34,10 @@ class Home extends BaseController
         session()->regenerate();
         session()->set([
             'is_logged_in' => true,
-            'user_id'      => (int) $user['userID'],
-            'username'     => $user['username'],
-            'role'         => $user['role'],
-            'member_id'    => (int) $user['memberID'],
+            'user_id' => (int) $user['userID'],
+            'username' => $user['username'],
+            'role' => $user['role'],
+            'member_id' => (int) $user['memberID'],
         ]);
 
         return $this->redirectByRole((string) $user['role']);
@@ -56,7 +50,7 @@ class Home extends BaseController
         return redirect()->to(site_url('/'));
     }
 
-    public function admin(): string|RedirectResponse
+    public function admin(): RedirectResponse
     {
         return redirect()->to(site_url('admin/dashboard'));
     }
@@ -81,6 +75,21 @@ class Home extends BaseController
         return $this->renderAdminPage('audit-trails');
     }
 
+    public function employee(): string|RedirectResponse
+    {
+        return $this->renderEmployeePage('dashboard');
+    }
+
+    public function employeeFamilyEntry(): string|RedirectResponse
+    {
+        return $this->renderEmployeePage('family-entry');
+    }
+
+    public function employeeActivity(): string|RedirectResponse
+    {
+        return $this->renderEmployeePage('activity');
+    }
+
     private function renderAdminPage(string $activePage): string|RedirectResponse
     {
         $guard = $this->requireRole(['Developer', 'Admin']);
@@ -102,16 +111,13 @@ class Home extends BaseController
             ->orderBy('username', 'ASC')
             ->findAll();
 
-        $formOptions = (new FamilyFormOptionsModel())->getOptions();
-        $recentFamilies = $this->recentFamilies($db);
-
         return view('Dashboard/admin', [
             'user' => session()->get(),
             'activePage' => $activePage,
             'adminAccounts' => array_values(array_filter($users, static fn ($account) => $account['role'] === 'Admin')),
             'employeeAccounts' => array_values(array_filter($users, static fn ($account) => $account['role'] === 'User')),
-            'formOptions' => $formOptions,
-            'recentFamilies' => $recentFamilies,
+            'formOptions' => (new FamilyFormOptionsModel())->getOptions(),
+            'recentFamilies' => $this->recentFamilies($db),
             'recentAudits' => $db->tableExists('audit_trails') ? (new AuditTrailsModel())->getRecent(10) : [],
             'stats' => [
                 'families' => $db->tableExists('member') ? $db->table('member')->where('headID = memberID')->countAllResults() : 0,
@@ -123,21 +129,6 @@ class Home extends BaseController
         ]);
     }
 
-    public function employee(): string|RedirectResponse
-    {
-        return $this->renderEmployeePage('dashboard');
-    }
-
-    public function employeeFamilyEntry(): string|RedirectResponse
-    {
-        return $this->renderEmployeePage('family-entry');
-    }
-
-    public function employeeActivity(): string|RedirectResponse
-    {
-        return $this->renderEmployeePage('activity');
-    }
-
     private function renderEmployeePage(string $activePage): string|RedirectResponse
     {
         $guard = $this->requireRole(['Developer', 'Admin', 'User']);
@@ -146,8 +137,9 @@ class Home extends BaseController
             return $guard;
         }
 
-        $userId = (int) session()->get('user_id');
         $db = db_connect();
+        $userId = (int) session()->get('user_id');
+
         return view('Employee/index', [
             'user' => session()->get(),
             'activePage' => $activePage,
@@ -195,28 +187,5 @@ class Home extends BaseController
             ->limit(10)
             ->get()
             ->getResultArray();
-    }
-
-    private function requireRole(array $allowedRoles): ?RedirectResponse
-    {
-        if (! session()->get('is_logged_in')) {
-            return redirect()->to(site_url('/'))->with('error', 'Please login first.');
-        }
-
-        if (! in_array(session()->get('role'), $allowedRoles, true)) {
-            return $this->redirectByRole((string) session()->get('role'))
-                ->with('error', 'You do not have access to that page.');
-        }
-
-        return null;
-    }
-
-    private function redirectByRole(string $role): RedirectResponse
-    {
-        if ($role === 'Employee') {
-            return redirect()->to(site_url('employee/workspace'));
-        }
-
-        return redirect()->to(site_url('admin'));
     }
 }

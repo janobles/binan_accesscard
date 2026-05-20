@@ -10,6 +10,31 @@ $formOptions = array_merge([
     'services_by_category' => [],
 ], $formOptions ?? []);
 $sectorCatalog = $sectorCatalog ?? [];
+$formAction = $formAction ?? site_url('families');
+$submitButtonLabel = $submitButtonLabel ?? 'Save Family Data';
+$familyRecord = $familyRecord ?? [];
+$existingMembers = $existingMembers ?? [];
+$headServiceIds = $headServiceIds ?? [];
+
+$headSectorId = (int) ($familyRecord['sectorID'] ?? 0);
+$selectedSectorIds = $headSectorId > 0 ? [$headSectorId] : [];
+$selectedSectorCategories = [];
+
+foreach ($sectorCatalog as $categoryKey => $sectorRows) {
+    foreach ((array) $sectorRows as $sectorRow) {
+        if ((int) ($sectorRow['sectorID'] ?? 0) === $headSectorId) {
+            $selectedSectorCategories[] = (string) $categoryKey;
+            break;
+        }
+    }
+}
+
+$initialFamilyData = [
+    'selectedSectorIds' => $selectedSectorIds,
+    'selectedSectorCategories' => array_values(array_unique($selectedSectorCategories)),
+    'headServiceIds' => array_values(array_map(static fn ($id): int => (int) $id, (array) $headServiceIds)),
+    'existingMembers' => $existingMembers,
+];
 ?>
 
 <link rel="stylesheet" href="<?= base_url('assets/css/familyform.css') ?>?v=<?= filemtime(FCPATH . 'assets/css/familyform.css') ?>">
@@ -33,7 +58,7 @@ $sectorCatalog = $sectorCatalog ?? [];
             <div class="wizard-step" data-step-target="3"><span>3</span><small>Family members</small></div>
         </div>
 
-<form method="post" action="/families" id="familyForm" class="needs-validation js-family-form" novalidate>
+<form method="post" action="<?= esc($formAction) ?>" id="familyForm" class="needs-validation js-family-form" novalidate>
     <div id="familyFormAlert" class="mb-3" aria-live="polite"></div>
 
     <div class="form-section family-step-panel is-visible" data-step="1">
@@ -43,35 +68,35 @@ $sectorCatalog = $sectorCatalog ?? [];
         <div class="row g-3">
             <div class="col-md-3">
                 <label class="form-label" for="head_firstname">First name</label>
-                <input class="form-control" id="head_firstname" name="head_firstname" required>
+                <input class="form-control" id="head_firstname" name="head_firstname" value="<?= esc((string) ($familyRecord['firstname'] ?? '')) ?>" required>
             </div>
             <div class="col-md-3">
                 <label class="form-label" for="head_middlename">Middle name</label>
-                <input class="form-control" id="head_middlename" name="head_middlename" required>
+                <input class="form-control" id="head_middlename" name="head_middlename" value="<?= esc((string) ($familyRecord['middlename'] ?? '')) ?>" required>
             </div>
             <div class="col-md-3">
                 <label class="form-label" for="head_lastname">Last name</label>
-                <input class="form-control" id="head_lastname" name="head_lastname" required>
+                <input class="form-control" id="head_lastname" name="head_lastname" value="<?= esc((string) ($familyRecord['lastname'] ?? '')) ?>" required>
             </div>
             <div class="col-md-3">
                 <label class="form-label" for="head_suffix">Suffix</label>
                 <select class="form-select" id="head_suffix" name="head_suffix">
                     <option value="">Select</option>
                     <?php foreach ($formOptions['suffixes'] as $suffix): ?>
-                        <option value="<?= esc($suffix) ?>"><?= esc($suffix) ?></option>
+                        <option value="<?= esc($suffix) ?>" <?= (string) ($familyRecord['suffix'] ?? '') === (string) $suffix ? 'selected' : '' ?>><?= esc($suffix) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
             <div class="col-md-3">
                 <label class="form-label" for="head_birthday">Birthday</label>
-                <input type="date" class="form-control" id="head_birthday" name="head_birthday" required>
+                <input type="date" class="form-control" id="head_birthday" name="head_birthday" value="<?= esc((string) ($familyRecord['birthday'] ?? '')) ?>" required>
             </div>
             <div class="col-md-3">
                 <label class="form-label" for="head_sex">Sex</label>
                 <select class="form-select" id="head_sex" name="head_sex" required>
                     <option value="">Select</option>
                     <?php foreach ($formOptions['sexes'] as $sex): ?>
-                        <option value="<?= esc($sex) ?>"><?= esc($sex) ?></option>
+                        <option value="<?= esc($sex) ?>" <?= (string) ($familyRecord['sex'] ?? '') === (string) $sex ? 'selected' : '' ?>><?= esc($sex) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
@@ -80,32 +105,32 @@ $sectorCatalog = $sectorCatalog ?? [];
                 <select class="form-select" id="head_civilstatus" name="head_civilstatus">
                     <option value="">Select</option>
                     <?php foreach ($formOptions['civil_statuses'] as $civilStatus): ?>
-                        <option value="<?= esc($civilStatus) ?>"><?= esc($civilStatus) ?></option>
+                        <option value="<?= esc($civilStatus) ?>" <?= (string) ($familyRecord['civilstatus'] ?? '') === (string) $civilStatus ? 'selected' : '' ?>><?= esc($civilStatus) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
             <div class="col-md-3">
                 <label class="form-label" for="head_contactnumber">Contact number</label>
-                <input class="form-control" id="head_contactnumber" name="head_contactnumber">
+                <input class="form-control" id="head_contactnumber" name="head_contactnumber" value="<?= esc((string) ($familyRecord['contactnumber'] ?? '')) ?>">
             </div>
             <div class="col-md-3">
                 <label class="form-label" for="head_education">Education</label>
                 <select class="form-select" id="head_education" name="head_education">
                     <option value="">Select</option>
                     <?php foreach ($formOptions['education_levels'] as $education): ?>
-                        <option value="<?= esc($education) ?>"><?= esc($education) ?></option>
+                        <option value="<?= esc($education) ?>" <?= (string) ($familyRecord['education'] ?? '') === (string) $education ? 'selected' : '' ?>><?= esc($education) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
             <div class="col-md-3">
                 <label class="form-label" for="head_job">Job</label>
-                <input class="form-control" id="head_job" name="head_job">
+                <input class="form-control" id="head_job" name="head_job" value="<?= esc((string) ($familyRecord['job'] ?? '')) ?>">
             </div>
             <div class="col-md-3">
                 <label class="form-label" for="head_salary">Monthly income</label>
                 <select class="form-select" id="head_salary" name="head_salary">
                     <?php foreach ($formOptions['income_ranges'] as $incomeValue => $incomeLabel): ?>
-                        <option value="<?= esc((string) $incomeValue) ?>"><?= esc((string) $incomeLabel) ?></option>
+                        <option value="<?= esc((string) $incomeValue) ?>" <?= (string) ($familyRecord['Salary'] ?? '') === (string) $incomeValue ? 'selected' : '' ?>><?= esc((string) $incomeLabel) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
@@ -115,6 +140,9 @@ $sectorCatalog = $sectorCatalog ?? [];
     <?= view('Dashboard/sectorandservices', [
         'servicesByCategory' => $formOptions['services_by_category'],
         'sectorCatalog' => $sectorCatalog,
+        'selectedSectorIds' => $selectedSectorIds,
+        'selectedSectorCategories' => $selectedSectorCategories,
+        'selectedServiceIds' => $headServiceIds,
     ]) ?>
 
     <div class="form-section family-step-panel" data-step="3">
@@ -147,7 +175,7 @@ $sectorCatalog = $sectorCatalog ?? [];
         <button type="button" class="btn btn-outline-secondary" id="prevStepBtn" style="display:none;">Previous</button>
         <button type="reset" class="btn btn-outline-secondary" id="resetFamilyBtn">Clear</button>
         <button type="button" class="btn btn-primary" id="nextStepBtn">Next</button>
-        <button type="submit" class="btn btn-primary" id="submitFamilyBtn" style="display:none;">Save Family Data</button>
+        <button type="submit" class="btn btn-primary" id="submitFamilyBtn" style="display:none;"><?= esc((string) $submitButtonLabel) ?></button>
     </div>
 </form>
 
@@ -262,3 +290,5 @@ $sectorCatalog = $sectorCatalog ?? [];
         </div>
     </div>
 </template>
+
+<script type="application/json" id="initialFamilyData"><?= json_encode($initialFamilyData, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?></script>

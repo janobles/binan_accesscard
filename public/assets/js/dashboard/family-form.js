@@ -1,4 +1,10 @@
 (function (window, document) {
+    function collectSelectedSectorIds(form) {
+        return Array.from(form.querySelectorAll('#sectorNameList input[type="checkbox"]:checked')).map(function (checkbox) {
+            return checkbox.value;
+        });
+    }
+
     function initFamilyForm(rootElement) {
         const root = rootElement instanceof HTMLElement ? rootElement : document;
         const form = root.querySelector('#familyForm');
@@ -39,6 +45,7 @@
         let currentStep = 1;
         const totalSteps = 3;
         let sectorCatalog = {};
+        let selectedSectorIds = [];
 
         if (sectorCatalogNode) {
             try {
@@ -127,6 +134,7 @@
                 checkbox.value = String(option.sectorID || '');
                 checkbox.dataset.name = String(option.name || '');
                 checkbox.dataset.description = String(option.description || '');
+                checkbox.checked = selectedSectorIds.includes(checkbox.value);
 
                 const labelText = document.createElement('span');
                 labelText.className = 'form-check-label';
@@ -287,7 +295,7 @@
             renderSummaryList(headSummaryServices, selectedServices);
         }
 
-        function createMemberRow() {
+        function createMemberRow(memberData) {
             if (!memberTemplate || !memberRows) {
                 return;
             }
@@ -314,6 +322,34 @@
                 }
 
                 input.setAttribute('name', 'members[' + memberIndex + '][' + fieldName + ']');
+
+                if (!memberData || typeof memberData !== 'object') {
+                    return;
+                }
+
+                const value = Object.prototype.hasOwnProperty.call(memberData, fieldName)
+                    ? memberData[fieldName]
+                    : null;
+
+                if (fieldName.endsWith('[]')) {
+                    const arrayValue = Array.isArray(value) ? value.map(String) : [];
+
+                    if (input instanceof HTMLSelectElement) {
+                        Array.from(input.options).forEach(function (option) {
+                            option.selected = arrayValue.includes(option.value);
+                        });
+                    }
+
+                    return;
+                }
+
+                if (value === null || typeof value === 'undefined') {
+                    return;
+                }
+
+                if (input instanceof HTMLInputElement || input instanceof HTMLSelectElement || input instanceof HTMLTextAreaElement) {
+                    input.value = String(value);
+                }
             });
 
             memberRows.appendChild(fragment);
@@ -366,6 +402,7 @@
                 const target = event.target;
 
                 if (target instanceof HTMLInputElement && target.type === 'checkbox') {
+                    selectedSectorIds = collectSelectedSectorIds(form);
                     populateSectorsByCategory();
                     updateHeadSummary();
                 }
@@ -377,6 +414,7 @@
                 const target = event.target;
 
                 if (target instanceof HTMLInputElement && target.type === 'checkbox') {
+                    selectedSectorIds = collectSelectedSectorIds(form);
                     updateSectorSelection();
                     updateHeadSummary();
                 }
@@ -391,7 +429,26 @@
             }
         });
 
-        resetSectorSelection();
+        if (typeof window.initManageFamilyForm === 'function') {
+            window.initManageFamilyForm({
+                form: form,
+                createMemberRow: createMemberRow,
+                setSelectedSectorIds: function (ids) {
+                    selectedSectorIds = Array.isArray(ids)
+                        ? ids.map(function (id) {
+                            return String(id || '').trim();
+                        }).filter(function (id) {
+                            return id !== '';
+                        })
+                        : [];
+                },
+                populateSectorsByCategory: populateSectorsByCategory,
+                resetSectorSelection: resetSectorSelection,
+            });
+        } else {
+            resetSectorSelection();
+        }
+
         setMemberRowsEmptyState();
         updateHeadSummary();
 

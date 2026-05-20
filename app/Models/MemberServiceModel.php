@@ -55,5 +55,45 @@ class MemberServiceModel extends Model
             ->limit($limit)
             ->findAll();
     }
+
+    public function getServiceIdsByMemberIds(array $memberIds): array
+    {
+        $memberIds = array_values(array_filter(array_map(static fn ($id): int => (int) $id, $memberIds), static fn (int $id): bool => $id > 0));
+
+        if ($memberIds === []) {
+            return [];
+        }
+
+        $rows = $this->select('memberID, serviceID')
+            ->whereIn('memberID', $memberIds)
+            ->findAll();
+
+        $map = [];
+
+        foreach ($rows as $row) {
+            $memberId = (int) ($row['memberID'] ?? 0);
+            $serviceId = (int) ($row['serviceID'] ?? 0);
+
+            if ($memberId <= 0 || $serviceId <= 0) {
+                continue;
+            }
+
+            $map[$memberId] ??= [];
+            $map[$memberId][] = $serviceId;
+        }
+
+        return $map;
+    }
+
+    public function deleteByMemberIds(array $memberIds): bool
+    {
+        $memberIds = array_values(array_filter(array_map(static fn ($id): int => (int) $id, $memberIds), static fn (int $id): bool => $id > 0));
+
+        if ($memberIds === []) {
+            return true;
+        }
+
+        return $this->whereIn('memberID', $memberIds)->delete() !== false;
+    }
 }
 

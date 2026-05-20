@@ -170,6 +170,34 @@ class MemberModel extends Model
         return $builder->findAll();
     }
 
+    public function getFamilyMemberIds(int $headId): array
+    {
+        if (! $this->hasTable()) {
+            return [];
+        }
+
+        $rows = $this->select('memberID')
+            ->where('headID', $headId)
+            ->findAll();
+
+        return array_values(array_map(static fn (array $row): int => (int) ($row['memberID'] ?? 0), $rows));
+    }
+
+    public function updateHead(int $headId, array $data): bool
+    {
+        $data['headID'] = $headId;
+        $data['relationship'] = 'Head';
+
+        return $this->update($headId, $data) !== false;
+    }
+
+    public function deleteFamilyMembersExceptHead(int $headId): bool
+    {
+        return $this->where('headID', $headId)
+            ->where('memberID !=', $headId)
+            ->delete() !== false;
+    }
+
     private function nextAutoIncrementId(): int
     {
         $row = $this->db->query("

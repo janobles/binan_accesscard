@@ -71,6 +71,7 @@ class FamilyFormOptionsModel extends Model
                 ['value' => '250001', 'label' => 'Above PHP 250,000'],
             ],
             'services_by_category' => $this->getServicesByCategory(),
+            'family_heads' => $this->getFamilyHeads(),
         ];
     }
 
@@ -88,6 +89,7 @@ class FamilyFormOptionsModel extends Model
             'educationOptions' => $options['education_levels'] ?? [],
             'incomeOptions' => $options['income_ranges'] ?? [],
             'servicesByCategory' => $options['services_by_category'] ?? [],
+            'familyHeads' => $options['family_heads'] ?? [],
         ];
     }
 
@@ -121,5 +123,20 @@ class FamilyFormOptionsModel extends Model
         }
 
         return $grouped;
+    }
+
+    private function getFamilyHeads(): array
+    {
+        if (! $this->db->tableExists('member')) {
+            return [];
+        }
+
+        return $this->db->table('member')
+            ->select('memberID, firstname, middlename, lastname, suffix')
+            ->where('headID = memberID')
+            ->orderBy('lastname', 'ASC')
+            ->orderBy('firstname', 'ASC')
+            ->get()
+            ->getResultArray();
     }
 }

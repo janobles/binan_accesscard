@@ -52,14 +52,8 @@ class FamilyController extends BaseController
             }
         }
 
-        $rules = [
-            'head_firstname' => 'required|max_length[100]',
-            'head_middlename' => 'required|max_length[50]',
-            'head_lastname' => 'required|max_length[100]',
-            'head_birthday' => 'required|valid_date[Y-m-d]',
-            'head_sex' => 'required|in_list[Male,Female]',
-            'sectorID' => 'required|is_natural_no_zero',
-        ];
+        $entryType = $this->entryType();
+        $rules = $this->rulesForEntryType($entryType);
 
         if (! $this->validate($rules)) {
             $message = implode(' ', $this->validator->getErrors());
@@ -79,12 +73,7 @@ class FamilyController extends BaseController
                 ->with('error', $message);
         }
 
-        $members = $this->request->getPost('members');
         $serviceIds = $this->request->getPost('service_ids');
-
-        if (! is_array($members)) {
-            $members = [];
-        }
 
         if (! is_array($serviceIds)) {
             $serviceIds = [];
@@ -96,6 +85,47 @@ class FamilyController extends BaseController
         $userId = (int) session()->get('user_id');
 
         $db->transStart();
+
+        if ($entryType === 'member') {
+            $headId = (int) $this->request->getPost('family_head_id');
+            $memberId = $memberModel->addFamilyMember($headId, $this->memberPayload('member_'));
+
+            if ($memberId === false) {
+                $db->transRollback();
+
+                $message = 'Family member could not be saved. Please check the selected family head and required fields.';
+
+                if ($this->request->isAJAX()) {
+                    return $this->response
+                        ->setStatusCode(422)
+                        ->setJSON([
+                            'status' => 'error',
+                            'message' => $message,
+                            'csrf' => csrf_hash(),
+                        ]);
+                }
+
+                return redirect()->back()->withInput()->with('error', $message);
+            }
+
+            $this->assignServices($memberServiceModel, $serviceModel, $memberId, $serviceIds);
+            $this->auditFamilyAction(
+                $userId,
+                $memberId,
+                'FAMILY_MEMBER_CREATED',
+                'Added family member ' . trim((string) $this->request->getPost('member_firstname')) . ' ' . trim((string) $this->request->getPost('member_lastname')) . '.'
+            );
+
+            $db->transComplete();
+
+            return $this->familyResponse($db, 'Family member and services saved successfully.');
+        }
+
+        $members = $this->request->getPost('members');
+
+        if (! is_array($members)) {
+            $members = [];
+        }
 
         $headId = $memberModel->createHead($this->memberPayload('head_'));
 
@@ -145,30 +175,21 @@ class FamilyController extends BaseController
             }
         }
 
-        foreach ($serviceIds as $serviceId) {
-            $serviceId = (int) $serviceId;
-
-            if ($serviceId < 0 || ! $serviceModel->existsById($serviceId)) {
-                continue;
-            }
-
-            $memberServiceModel->assignService($headId, $serviceId);
-        }
-
-        if ($db->tableExists('audit_trails')) {
-            // Tracks the creating operator plus client IP and browser agent.
-            (new AuditTrailsModel())->logAction(
-                $userId,
-                $headId,
-                'FAMILY_CREATED',
-                'Created family profile for ' . trim((string) $this->request->getPost('head_firstname')) . ' ' . trim((string) $this->request->getPost('head_lastname')) . '.',
-                $this->request->getIPAddress(),
-                $this->request->getUserAgent()->getAgentString()
-            );
-        }
+        $this->assignServices($memberServiceModel, $serviceModel, $headId, $serviceIds);
+        $this->auditFamilyAction(
+            $userId,
+            $headId,
+            'FAMILY_CREATED',
+            'Created family profile for ' . trim((string) $this->request->getPost('head_firstname')) . ' ' . trim((string) $this->request->getPost('head_lastname')) . '.'
+        );
 
         $db->transComplete();
 
+        return $this->familyResponse($db, 'Family and member data saved successfully.');
+    }
+
+    private function familyResponse($db, string $successMessage)
+    {
         if (! $db->transStatus()) {
             $message = 'The family form was not saved.';
 
@@ -188,12 +209,12 @@ class FamilyController extends BaseController
         if ($this->request->isAJAX()) {
             return $this->response->setJSON([
                 'status' => 'success',
-                'message' => 'Family and member data saved successfully.',
+                'message' => $successMessage,
                 'csrf' => csrf_hash(),
             ]);
         }
 
-        return redirect()->back()->with('success', 'Family and member data saved successfully.');
+        return redirect()->back()->with('success', $successMessage);
     }
 
     private function requireFamilyEntryAccess(): ?RedirectResponse
@@ -225,8 +246,39 @@ class FamilyController extends BaseController
             'job' => $this->nullableText($this->request->getPost($prefix . 'job')),
             'Salary' => $this->moneyOrNull($this->request->getPost($prefix . 'salary')),
             'contactnumber' => $this->nullableText($this->request->getPost($prefix . 'contactnumber')),
-            'relationship' => $prefix === 'head_' ? 'Head' : trim((string) $this->request->getPost($prefix . 'relationship')),
+            'relationship' => $prefix === 'head_' ? 'Head' : $this->nullableText($this->request->getPost($prefix . 'relationship')),
             'sectorID' => (int) $this->request->getPost('sectorID'),
+        ];
+    }
+
+    private function entryType(): string
+    {
+        return (string) $this->request->getPost('entry_type') === 'member' ? 'member' : 'head';
+    }
+
+    private function rulesForEntryType(string $entryType): array
+    {
+        $rules = [
+            'sectorID' => 'required|is_natural_no_zero',
+        ];
+
+        if ($entryType === 'member') {
+            return $rules + [
+                'family_head_id' => 'required|is_natural_no_zero',
+                'member_firstname' => 'required|max_length[100]',
+                'member_lastname' => 'required|max_length[100]',
+                'member_middlename' => 'permit_empty|max_length[50]',
+                'member_birthday' => 'permit_empty|valid_date[Y-m-d]',
+                'member_sex' => 'permit_empty|in_list[Male,Female]',
+            ];
+        }
+
+        return $rules + [
+            'head_firstname' => 'required|max_length[100]',
+            'head_middlename' => 'required|max_length[50]',
+            'head_lastname' => 'required|max_length[100]',
+            'head_birthday' => 'required|valid_date[Y-m-d]',
+            'head_sex' => 'required|in_list[Male,Female]',
         ];
     }
 
@@ -269,6 +321,39 @@ class FamilyController extends BaseController
         $value = trim((string) $value);
 
         return $value === '' ? null : $value;
+    }
+
+    private function assignServices(
+        MemberServiceModel $memberServiceModel,
+        ServiceModel $serviceModel,
+        int $memberId,
+        array $serviceIds
+    ): void {
+        foreach ($serviceIds as $serviceId) {
+            $serviceId = (int) $serviceId;
+
+            if ($serviceId < 0 || ! $serviceModel->existsById($serviceId)) {
+                continue;
+            }
+
+            $memberServiceModel->assignService($memberId, $serviceId);
+        }
+    }
+
+    private function auditFamilyAction(int $userId, int $memberId, string $action, string $description): void
+    {
+        if (! db_connect()->tableExists('audit_trails')) {
+            return;
+        }
+
+        (new AuditTrailsModel())->logAction(
+            $userId,
+            $memberId,
+            $action,
+            $description,
+            $this->request->getIPAddress(),
+            $this->request->getUserAgent()->getAgentString()
+        );
     }
 
 }

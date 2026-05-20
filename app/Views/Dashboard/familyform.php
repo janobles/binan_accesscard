@@ -1,3 +1,7 @@
+<div class="d-flex justify-content-end mb-3">
+    <a href="<?= site_url('logout') ?>" class="btn btn-outline-danger btn-sm">Logout</a>
+</div>
+
 <form method="post" action="/families" id="familyForm" class="needs-validation js-family-form" novalidate>
     <div id="familyFormAlert" class="mb-3" aria-live="polite"></div>
 

@@ -27,7 +27,7 @@
         </div>
         <div class="sidebar-footer">
             <div class="sidebar-user">Administrator &middot; Admin</div>
-            <a href="/logout" class="btn btn-outline-light btn-sm w-100">Logout</a>
+            <a href="<?= site_url('logout') ?>" class="btn btn-outline-light btn-sm w-100">Logout</a>
         </div>
     </aside>
 

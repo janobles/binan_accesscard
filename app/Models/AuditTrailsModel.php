@@ -22,6 +22,11 @@ class AuditTrailsModel extends Model
     ];
     protected $useTimestamps = false;
 
+    public function hasTable(): bool
+    {
+        return $this->db->tableExists($this->table);
+    }
+
     public function logAction(
         int $userId,
         ?int $memberId,
@@ -38,7 +43,6 @@ class AuditTrailsModel extends Model
             'ip_address' => $ipAddress,
         ];
 
-        // Prefer dedicated column when present; otherwise keep UA in description.
         if ($userAgent !== null && $userAgent !== '') {
             if ($this->db->fieldExists('user_agent', $this->table)) {
                 $payload['user_agent'] = $userAgent;
@@ -48,6 +52,32 @@ class AuditTrailsModel extends Model
         }
 
         return $this->insert($payload) !== false;
+    }
+
+    public function getRecent(int $limit = 50): array
+    {
+        if (! $this->hasTable()) {
+            return [];
+        }
+
+        return $this->select('audit_trails.*, users.username, member.firstname, member.lastname')
+            ->join('users', 'users.userID = audit_trails.userID')
+            ->join('member', 'member.memberID = audit_trails.memberID', 'left')
+            ->orderBy('audit_trails.dt_created', 'DESC')
+            ->limit($limit)
+            ->findAll();
+    }
+
+    public function getByUser(int $userId, int $limit = 50): array
+    {
+        if (! $this->hasTable()) {
+            return [];
+        }
+
+        return $this->where('userID', $userId)
+            ->orderBy('dt_created', 'DESC')
+            ->limit($limit)
+            ->findAll();
     }
 
     private function appendUserAgent(?string $description, string $userAgent): string
@@ -91,31 +121,5 @@ class AuditTrailsModel extends Model
         }
 
         return true;
-    }
-
-    public function getRecent(int $limit = 50): array
-    {
-        if (! $this->db->tableExists($this->table)) {
-            return [];
-        }
-
-        return $this->select('audit_trails.*, users.username, member.firstname, member.lastname')
-            ->join('users', 'users.userID = audit_trails.userID')
-            ->join('member', 'member.memberID = audit_trails.memberID', 'left')
-            ->orderBy('audit_trails.dt_created', 'DESC')
-            ->limit($limit)
-            ->findAll();
-    }
-
-    public function getByUser(int $userId, int $limit = 50): array
-    {
-        if (! $this->db->tableExists($this->table)) {
-            return [];
-        }
-
-        return $this->where('userID', $userId)
-            ->orderBy('dt_created', 'DESC')
-            ->limit($limit)
-            ->findAll();
     }
 }

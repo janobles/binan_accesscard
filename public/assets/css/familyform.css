@@ -151,6 +151,12 @@
 	padding-bottom: 0;
 }
 
+#familyForm .section-title .btn {
+	min-width: 112px;
+	border-radius: 8px;
+	font-weight: 600;
+}
+
 #familyForm .section-title span {
 	color: #4f6175;
 	font-size: 31px;
@@ -190,6 +196,25 @@
 	border: 1px solid #d6dee9;
 	border-radius: 8px;
 	background: #f8fbff;
+}
+
+#headOfFamilySummary small {
+	font-size: 12px;
+	color: #4f6175;
+}
+
+.head-summary-list {
+	font-size: 12px;
+	color: #4f6175;
+}
+
+.head-summary-list ul {
+	margin: 4px 0 0;
+	padding-left: 18px;
+}
+
+.head-summary-list li {
+	margin-bottom: 2px;
 }
 
 #familyForm .service-check-list {

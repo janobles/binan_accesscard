@@ -1,0 +1,143 @@
+<?php
+
+namespace App\Controllers\Concerns;
+
+use App\Models\AuditTrailsModel;
+use App\Models\DashboardModel;
+use App\Models\FamilyFormOptionsModel;
+use App\Models\SearchModel;
+use App\Models\ViewLayoutModel;
+use CodeIgniter\HTTP\RedirectResponse;
+use Config\IdleTimeout;
+
+trait HomeDashboardPagesTrait
+{
+    private function renderAdminPage(string $activePage): string|RedirectResponse
+    {
+        $guard = $this->requireRole(['Developer', 'Admin']);
+
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        if ($activePage === 'accounts' && $this->normalizeRole((string) session()->get('role')) !== 'Developer') {
+            return redirect()->to(site_url('admin/dashboard'))
+                ->with('error', 'Developer access is required for account management.');
+        }
+
+        return view('Dashboard/admin', $this->buildAdminViewData($activePage));
+    }
+
+    private function buildAdminViewData(string $activePage): array
+    {
+        $layoutModel = new ViewLayoutModel();
+        $dashboardModel = new DashboardModel();
+        $searchModel = new SearchModel();
+        $searchTerm = trim((string) $this->request->getGet('q'));
+        $searchFilters = $this->searchFilters();
+        $hasSearchFilters = $this->hasSearchFilters($searchFilters);
+        $isDeveloper = $this->normalizeRole((string) session()->get('role')) === 'Developer';
+        $users = $isDeveloper && $activePage === 'accounts'
+            ? $searchModel->staffAccounts($searchTerm, $searchFilters)
+            : [];
+
+        $familyFormViewData = (new FamilyFormOptionsModel())->getViewData();
+        $recentFamilies = $activePage === 'dashboard' && ($searchTerm !== '' || $hasSearchFilters)
+            ? $searchModel->families($searchTerm, $searchFilters, 25)
+            : $dashboardModel->recentFamilies(10);
+        $recentAudits = $activePage === 'audit-trails'
+            ? $searchModel->auditTrails($searchTerm, $searchFilters, 50)
+            : (new AuditTrailsModel())->getRecent(10);
+
+        return [
+            'user' => session()->get(),
+            'activePage' => $activePage,
+            'pageTitle' => $layoutModel->pageTitle($activePage),
+            'modeLabel' => $layoutModel->adminModeLabel($isDeveloper),
+            'canManageAccounts' => $isDeveloper,
+            'navActive' => [
+                'dashboard' => $layoutModel->navActive($activePage, 'dashboard'),
+                'accounts' => $layoutModel->navActive($activePage, 'accounts'),
+                'family-entry' => $layoutModel->navActive($activePage, 'family-entry'),
+                'audit-trails' => $layoutModel->navActive($activePage, 'audit-trails'),
+            ],
+            'adminAccounts' => array_values(array_filter($users, static fn ($account) => $account['role'] === 'Admin')),
+            'employeeAccounts' => array_values(array_filter($users, static fn ($account) => $account['role'] === 'User')),
+            'familyFormViewData' => $familyFormViewData,
+            'recentFamilies' => $recentFamilies,
+            'recentAudits' => $recentAudits,
+            'searchTerm' => $searchTerm,
+            'searchFilters' => $searchFilters,
+            'auditActionOptions' => $searchModel->auditActions(),
+            'stats' => $dashboardModel->stats(),
+            'canCreateFamily' => true,
+            'idleTimeoutSeconds' => (new IdleTimeout())->seconds,
+        ];
+    }
+
+    private function renderEmployeePage(string $activePage): string|RedirectResponse
+    {
+        $guard = $this->requireRole(['Developer', 'Admin', 'User']);
+
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        $layoutModel = new ViewLayoutModel();
+        $dashboardModel = new DashboardModel();
+        $searchModel = new SearchModel();
+        $searchTerm = trim((string) $this->request->getGet('q'));
+        $searchFilters = $this->searchFilters();
+        $hasSearchFilters = $this->hasSearchFilters($searchFilters);
+        $userId = (int) session()->get('user_id');
+        $familyFormViewData = (new FamilyFormOptionsModel())->getViewData();
+        $recentFamilies = $activePage === 'dashboard' && ($searchTerm !== '' || $hasSearchFilters)
+            ? $searchModel->families($searchTerm, $searchFilters, 25)
+            : $dashboardModel->recentFamilies(10);
+        $myAudits = $activePage === 'activity'
+            ? $searchModel->auditTrailsByUser($userId, $searchTerm, $searchFilters, 50)
+            : (new AuditTrailsModel())->getByUser($userId, 10);
+
+        return view('Employee/index', [
+            'user' => session()->get(),
+            'activePage' => $activePage,
+            'pageTitle' => $layoutModel->employeePageTitle($activePage),
+            'navActive' => [
+                'dashboard' => $layoutModel->navActive($activePage, 'dashboard'),
+                'family-entry' => $layoutModel->navActive($activePage, 'family-entry'),
+                'activity' => $layoutModel->navActive($activePage, 'activity'),
+            ],
+            'canCreateFamily' => true,
+            'familyFormViewData' => $familyFormViewData,
+            'recentFamilies' => $recentFamilies,
+            'myAudits' => $myAudits,
+            'searchTerm' => $searchTerm,
+            'searchFilters' => $searchFilters,
+            'auditActionOptions' => $searchModel->auditActions(),
+            'idleTimeoutSeconds' => (new IdleTimeout())->seconds,
+        ]);
+    }
+
+    private function searchFilters(): array
+    {
+        return [
+            'sectorID' => (string) $this->request->getGet('sectorID'),
+            'role' => (string) $this->request->getGet('role'),
+            'status' => (string) $this->request->getGet('status'),
+            'action' => (string) $this->request->getGet('action'),
+            'date_from' => (string) $this->request->getGet('date_from'),
+            'date_to' => (string) $this->request->getGet('date_to'),
+        ];
+    }
+
+    private function hasSearchFilters(array $filters): bool
+    {
+        foreach ($filters as $value) {
+            if (trim((string) $value) !== '') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+}

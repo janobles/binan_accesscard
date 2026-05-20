@@ -4,13 +4,11 @@ namespace App\Controllers;
 
 use App\Models\AuditTrailsModel;
 use App\Models\UserModel;
-use Throwable;
 use CodeIgniter\HTTP\RedirectResponse;
+use Throwable;
 
 /**
  * Handles developer-only staff account creation.
- *
- * Validation and redirects stay here; user persistence stays in UserModel.
  */
 class AccountController extends BaseController
 {
@@ -105,12 +103,14 @@ class AccountController extends BaseController
 
     private function audit(string $action, string $description): void
     {
-        if (! db_connect()->tableExists('audit_trails')) {
+        $auditModel = new AuditTrailsModel();
+
+        if (! $auditModel->hasTable()) {
             return;
         }
 
         try {
-            (new AuditTrailsModel())->logAction(
+            $auditModel->logAction(
                 (int) session()->get('user_id'),
                 (int) session()->get('member_id') ?: null,
                 $action,

@@ -9,9 +9,7 @@ use App\Models\ServiceModel;
 use CodeIgniter\HTTP\RedirectResponse;
 
 /**
- * Handles family registration submissions from admin and employee views.
- *
- * The controller validates the request and delegates database writes to models.
+ * Validates and saves family head or family member registration records.
  */
 class FamilyController extends BaseController
 {
@@ -33,44 +31,19 @@ class FamilyController extends BaseController
             return $guard;
         }
 
-        $db = db_connect();
-        foreach (['member', 'sector', 'services', 'member_services', 'audit_trails'] as $table) {
-            if (! $db->tableExists($table)) {
-                $message = 'The accesscard database is missing required tables from accesscardV1.4.sql.';
+        $memberModel = new MemberModel();
+        $memberServiceModel = new MemberServiceModel();
+        $serviceModel = new ServiceModel();
+        $auditModel = new AuditTrailsModel();
 
-                if ($this->request->isAJAX()) {
-                    return $this->response
-                        ->setStatusCode(422)
-                        ->setJSON([
-                            'status' => 'error',
-                            'message' => $message,
-                            'csrf' => csrf_hash(),
-                        ]);
-                }
-
-                return redirect()->back()->withInput()->with('error', $message);
-            }
+        if (! $memberModel->hasRequiredFamilyTables()) {
+            return $this->validationResponse('The accesscard database is missing required tables from accesscardV1.4.sql.');
         }
 
         $entryType = $this->entryType();
-        $rules = $this->rulesForEntryType($entryType);
 
-        if (! $this->validate($rules)) {
-            $message = implode(' ', $this->validator->getErrors());
-
-            if ($this->request->isAJAX()) {
-                return $this->response
-                    ->setStatusCode(422)
-                    ->setJSON([
-                        'status' => 'error',
-                        'message' => $message,
-                        'csrf' => csrf_hash(),
-                    ]);
-            }
-
-            return redirect()->back()
-                ->withInput()
-                ->with('error', $message);
+        if (! $this->validate($this->rulesForEntryType($entryType))) {
+            return $this->validationResponse(implode(' ', $this->validator->getErrors()));
         }
 
         $serviceIds = $this->request->getPost('service_ids');
@@ -79,46 +52,36 @@ class FamilyController extends BaseController
             $serviceIds = [];
         }
 
-        $memberModel = new MemberModel();
-        $memberServiceModel = new MemberServiceModel();
-        $serviceModel = new ServiceModel();
         $userId = (int) session()->get('user_id');
-
-        $db->transStart();
+        $memberModel->beginTransaction();
 
         if ($entryType === 'member') {
             $headId = (int) $this->request->getPost('family_head_id');
             $memberId = $memberModel->addFamilyMember($headId, $this->memberPayload('member_'));
 
             if ($memberId === false) {
-                $db->transRollback();
+                $memberModel->rollbackTransaction();
 
-                $message = 'Family member could not be saved. Please check the selected family head and required fields.';
-
-                if ($this->request->isAJAX()) {
-                    return $this->response
-                        ->setStatusCode(422)
-                        ->setJSON([
-                            'status' => 'error',
-                            'message' => $message,
-                            'csrf' => csrf_hash(),
-                        ]);
-                }
-
-                return redirect()->back()->withInput()->with('error', $message);
+                return $this->validationResponse('Family member could not be saved. Please check the selected family head and required fields.');
             }
 
-            $this->assignServices($memberServiceModel, $serviceModel, $memberId, $serviceIds);
+            if (! $this->assignServices($memberServiceModel, $serviceModel, $memberId, $serviceIds)) {
+                $memberModel->rollbackTransaction();
+
+                return $this->validationResponse('A selected service could not be assigned to this family member.');
+            }
+
             $this->auditFamilyAction(
+                $auditModel,
                 $userId,
                 $memberId,
                 'FAMILY_MEMBER_CREATED',
                 'Added family member ' . trim((string) $this->request->getPost('member_firstname')) . ' ' . trim((string) $this->request->getPost('member_lastname')) . '.'
             );
 
-            $db->transComplete();
+            $memberModel->completeTransaction();
 
-            return $this->familyResponse($db, 'Family member and services saved successfully.');
+            return $this->familyResponse($memberModel, 'Family member and services saved successfully.');
         }
 
         $members = $this->request->getPost('members');
@@ -130,23 +93,9 @@ class FamilyController extends BaseController
         $headId = $memberModel->createHead($this->memberPayload('head_'));
 
         if ($headId === false) {
-            $db->transRollback();
+            $memberModel->rollbackTransaction();
 
-            $message = 'Head of family could not be saved. Please check required fields.';
-
-            if ($this->request->isAJAX()) {
-                return $this->response
-                    ->setStatusCode(422)
-                    ->setJSON([
-                        'status' => 'error',
-                        'message' => $message,
-                        'csrf' => csrf_hash(),
-                    ]);
-            }
-
-            return redirect()->back()
-                ->withInput()
-                ->with('error', $message);
+            return $this->validationResponse('Head of family could not be saved. Please check required fields.');
         }
 
         foreach ($members as $member) {
@@ -157,40 +106,61 @@ class FamilyController extends BaseController
             $memberId = $memberModel->addFamilyMember($headId, $this->memberPayloadFromArray($member));
 
             if ($memberId === false) {
-                $db->transRollback();
+                $memberModel->rollbackTransaction();
 
-                $message = 'One family member could not be saved.';
+                return $this->validationResponse('One family member could not be saved.');
+            }
 
-                if ($this->request->isAJAX()) {
-                    return $this->response
-                        ->setStatusCode(422)
-                        ->setJSON([
-                            'status' => 'error',
-                            'message' => $message,
-                            'csrf' => csrf_hash(),
-                        ]);
-                }
+            $memberServiceIds = $member['service_ids'] ?? [];
 
-                return redirect()->back()->withInput()->with('error', $message);
+            if (! is_array($memberServiceIds)) {
+                $memberServiceIds = [];
+            }
+
+            if (! $this->assignServices($memberServiceModel, $serviceModel, $memberId, $memberServiceIds)) {
+                $memberModel->rollbackTransaction();
+
+                return $this->validationResponse('A selected service could not be assigned to one family member.');
             }
         }
 
-        $this->assignServices($memberServiceModel, $serviceModel, $headId, $serviceIds);
+        if (! $this->assignServices($memberServiceModel, $serviceModel, $headId, $serviceIds)) {
+            $memberModel->rollbackTransaction();
+
+            return $this->validationResponse('A selected service could not be assigned to the family head.');
+        }
+
         $this->auditFamilyAction(
+            $auditModel,
             $userId,
             $headId,
             'FAMILY_CREATED',
             'Created family profile for ' . trim((string) $this->request->getPost('head_firstname')) . ' ' . trim((string) $this->request->getPost('head_lastname')) . '.'
         );
 
-        $db->transComplete();
+        $memberModel->completeTransaction();
 
-        return $this->familyResponse($db, 'Family and member data saved successfully.');
+        return $this->familyResponse($memberModel, 'Family and member data saved successfully.');
     }
 
-    private function familyResponse($db, string $successMessage)
+    private function validationResponse(string $message)
     {
-        if (! $db->transStatus()) {
+        if ($this->request->isAJAX()) {
+            return $this->response
+                ->setStatusCode(422)
+                ->setJSON([
+                    'status' => 'error',
+                    'message' => $message,
+                    'csrf' => csrf_hash(),
+                ]);
+        }
+
+        return redirect()->back()->withInput()->with('error', $message);
+    }
+
+    private function familyResponse(MemberModel $memberModel, string $successMessage)
+    {
+        if (! $memberModel->transactionStatus()) {
             $message = 'The family form was not saved.';
 
             if ($this->request->isAJAX()) {
@@ -232,25 +202,6 @@ class FamilyController extends BaseController
         return redirect()->back()->with('error', 'You do not have permission to add family records.');
     }
 
-    private function memberPayload(string $prefix): array
-    {
-        return [
-            'firstname' => trim((string) $this->request->getPost($prefix . 'firstname')),
-            'middlename' => trim((string) $this->request->getPost($prefix . 'middlename')),
-            'lastname' => trim((string) $this->request->getPost($prefix . 'lastname')),
-            'suffix' => $this->nullableText($this->request->getPost($prefix . 'suffix')),
-            'birthday' => $this->request->getPost($prefix . 'birthday'),
-            'civilstatus' => $this->nullableText($this->request->getPost($prefix . 'civilstatus')),
-            'sex' => $this->nullableText($this->request->getPost($prefix . 'sex')),
-            'education' => $this->nullableText($this->request->getPost($prefix . 'education')),
-            'job' => $this->nullableText($this->request->getPost($prefix . 'job')),
-            'Salary' => $this->moneyOrNull($this->request->getPost($prefix . 'salary')),
-            'contactnumber' => $this->nullableText($this->request->getPost($prefix . 'contactnumber')),
-            'relationship' => $prefix === 'head_' ? 'Head' : $this->nullableText($this->request->getPost($prefix . 'relationship')),
-            'sectorID' => (int) $this->request->getPost('sectorID'),
-        ];
-    }
-
     private function entryType(): string
     {
         return (string) $this->request->getPost('entry_type') === 'member' ? 'member' : 'head';
@@ -279,6 +230,25 @@ class FamilyController extends BaseController
             'head_lastname' => 'required|max_length[100]',
             'head_birthday' => 'required|valid_date[Y-m-d]',
             'head_sex' => 'required|in_list[Male,Female]',
+        ];
+    }
+
+    private function memberPayload(string $prefix): array
+    {
+        return [
+            'firstname' => trim((string) $this->request->getPost($prefix . 'firstname')),
+            'middlename' => trim((string) $this->request->getPost($prefix . 'middlename')),
+            'lastname' => trim((string) $this->request->getPost($prefix . 'lastname')),
+            'suffix' => $this->nullableText($this->request->getPost($prefix . 'suffix')),
+            'birthday' => $this->request->getPost($prefix . 'birthday'),
+            'civilstatus' => $this->nullableText($this->request->getPost($prefix . 'civilstatus')),
+            'sex' => $this->nullableText($this->request->getPost($prefix . 'sex')),
+            'education' => $this->nullableText($this->request->getPost($prefix . 'education')),
+            'job' => $this->nullableText($this->request->getPost($prefix . 'job')),
+            'Salary' => $this->moneyOrNull($this->request->getPost($prefix . 'salary')),
+            'contactnumber' => $this->nullableText($this->request->getPost($prefix . 'contactnumber')),
+            'relationship' => $prefix === 'head_' ? 'Head' : ($this->nullableText($this->request->getPost($prefix . 'relationship')) ?? 'Member'),
+            'sectorID' => (int) $this->request->getPost('sectorID'),
         ];
     }
 
@@ -328,25 +298,34 @@ class FamilyController extends BaseController
         ServiceModel $serviceModel,
         int $memberId,
         array $serviceIds
-    ): void {
+    ): bool {
         foreach ($serviceIds as $serviceId) {
             $serviceId = (int) $serviceId;
 
-            if ($serviceId < 0 || ! $serviceModel->existsById($serviceId)) {
+            if ($serviceId <= 0 || ! $serviceModel->existsById($serviceId)) {
                 continue;
             }
 
-            $memberServiceModel->assignService($memberId, $serviceId);
+            if ($memberServiceModel->assignService($memberId, $serviceId) === false) {
+                return false;
+            }
         }
+
+        return true;
     }
 
-    private function auditFamilyAction(int $userId, int $memberId, string $action, string $description): void
-    {
-        if (! db_connect()->tableExists('audit_trails')) {
+    private function auditFamilyAction(
+        AuditTrailsModel $auditModel,
+        int $userId,
+        int $memberId,
+        string $action,
+        string $description
+    ): void {
+        if (! $auditModel->hasTable()) {
             return;
         }
 
-        (new AuditTrailsModel())->logAction(
+        $auditModel->logAction(
             $userId,
             $memberId,
             $action,
@@ -355,5 +334,4 @@ class FamilyController extends BaseController
             $this->request->getUserAgent()->getAgentString()
         );
     }
-
 }

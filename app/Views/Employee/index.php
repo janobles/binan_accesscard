@@ -48,7 +48,10 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
 
     <main class="content">
         <div class="topbar">
-            <div>
+            <div class="topbar-brand">
+                <img src="<?= base_url('assets/image/binan.png') ?>" alt="City of Binan Logo">
+            </div>
+            <div class="topbar-text">
                 <div class="fw-bold"><?= esc($pageTitle) ?></div>
                 <small class="text-muted">Bi&ntilde;an Access Card MIS</small>
             </div>
@@ -104,12 +107,12 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
                                     <tr>
                                         <td><?= esc(($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? '')) ?></td>
                                         <td><?= esc((string) ($family['barangay'] ?? '')) ?></td>
-                                        <td><?= esc($family['sector_name'] ?? '') ?></td>
-                                        <td><?= esc($family['dt_created'] ?? '') ?></td>
+                                        <td><?= esc((string) ($family['sector_name'] ?? '')) ?></td>
+                                        <td><?= esc((string) ($family['dt_created'] ?? '')) ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                                 <?php if ($recentFamilies === []): ?>
-                                    <tr><td colspan="4" class="text-center text-muted"><?= $searchTerm !== '' ? 'No matching family records found.' : 'No family records yet.' ?></td></tr>
+                                    <tr><td colspan="4" class="text-center text-muted"><?= $searchTerm !== '' || $hasSearchFilters ? 'No matching family records found.' : 'No family records yet.' ?></td></tr>
                                 <?php endif; ?>
                             </tbody>
                         </table>
@@ -167,11 +170,11 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
                                     <tr>
                                         <td><?= esc((string) ($audit['user_action'] ?? '')) ?></td>
                                         <td><?= esc((string) ($audit['description'] ?? '')) ?></td>
-                                        <td><?= esc($audit['dt_created'] ?? '') ?></td>
+                                        <td><?= esc((string) ($audit['dt_created'] ?? '')) ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                                 <?php if ($myAudits === []): ?>
-                                    <tr><td colspan="3" class="text-center text-muted"><?= $searchTerm !== '' ? 'No matching activity found.' : 'No activity yet.' ?></td></tr>
+                                    <tr><td colspan="3" class="text-center text-muted"><?= $hasSearchFilters ? 'No matching activity found.' : 'No activity yet.' ?></td></tr>
                                 <?php endif; ?>
                             </tbody>
                         </table>
@@ -183,6 +186,7 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
 </div>
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="<?= base_url('assets/js/dashboard/family-form.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form.js') ?>"></script>
 <script src="<?= base_url('assets/js/session-timeout.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/session-timeout.js') ?>" data-timeout-seconds="<?= esc((string) $idleTimeoutSeconds) ?>" data-logout-url="<?= site_url('logout?timeout=1') ?>" data-keep-alive-url="<?= site_url('session/keep-alive') ?>"></script>
 </body>
 </html>

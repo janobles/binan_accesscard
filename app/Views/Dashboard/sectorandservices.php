@@ -1,20 +1,38 @@
 <?php
 $servicesByCategory = $servicesByCategory ?? [];
-$sectorOptions = $sectorOptions ?? [];
+$sectorCatalog = $sectorCatalog ?? [];
 ?>
 
 <div class="form-section family-step-panel" data-step="2">
 	<div class="row g-3 mb-3">
 		<div class="col-md-4 col-lg-3">
-			<label class="form-label" for="sectorID">Sector</label>
-			<select class="form-select" id="sectorID" name="sectorID" required>
-				<option value="">Select</option>
-				<?php foreach ($sectorOptions as $sector): ?>
-					<option value="<?= esc((string) ($sector['sectorID'] ?? '')) ?>"><?= esc((string) ($sector['name'] ?? '')) ?></option>
-				<?php endforeach; ?>
-			</select>
+			<label class="form-label" for="sectorCategoryList">Sector</label>
+			<div class="border rounded p-2 bg-white" id="sectorCategoryList" role="group" aria-label="Sector categories">
+				<label class="form-check mb-1">
+					<input class="form-check-input" type="checkbox" name="sector_categories[]" value="PWD">
+					<span class="form-check-label">PWD</span>
+				</label>
+				<label class="form-check mb-1">
+					<input class="form-check-input" type="checkbox" name="sector_categories[]" value="SP">
+					<span class="form-check-label">SP</span>
+				</label>
+				<label class="form-check mb-0">
+					<input class="form-check-input" type="checkbox" name="sector_categories[]" value="OSCA">
+					<span class="form-check-label">OSCA</span>
+				</label>
+			</div>
+		</div>
+		<div class="col-md-8 col-lg-9">
+			<label class="form-label" for="sectorNameList">Sector Name</label>
+			<input type="hidden" id="sectorID" name="sectorID" required>
+			<div class="border rounded p-2 bg-white" id="sectorNameList" role="group" aria-label="Sector names">
+				<small class="text-muted">Select one or more sector categories first.</small>
+			</div>
+			<small class="form-text text-muted">Select one or more sector names.</small>
 		</div>
 	</div>
+
+	<script type="application/json" id="sectorCatalogData"><?= json_encode($sectorCatalog, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?></script>
 
 	<div class="section-title">
 		<span>Services and Programs</span>

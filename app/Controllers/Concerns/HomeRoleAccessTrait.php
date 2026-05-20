@@ -12,6 +12,13 @@ trait HomeRoleAccessTrait
             return redirect()->to(site_url('/'))->with('error', 'Please login first.');
         }
 
+        if (! $this->sessionUserExists()) {
+            session()->destroy();
+
+            return redirect()->to(site_url('/'))
+                ->with('error', 'Your session is no longer valid after the database update. Please login again.');
+        }
+
         $currentRole = $this->normalizeRole((string) session()->get('role'));
         $normalizedAllowedRoles = array_values(array_filter(array_map(
             fn (string $role): ?string => $this->normalizeRole($role),
@@ -49,6 +56,25 @@ trait HomeRoleAccessTrait
 
         return redirect()->to(site_url('/'))
             ->with('error', 'Your account role is invalid. Please contact an administrator.');
+    }
+
+    private function sessionUserExists(): bool
+    {
+        $userId = (int) session()->get('user_id');
+
+        if ($userId <= 0) {
+            return false;
+        }
+
+        $db = db_connect();
+
+        if (! $db->tableExists('users')) {
+            return false;
+        }
+
+        return $db->table('users')
+            ->where('userID', $userId)
+            ->countAllResults() > 0;
     }
 
     private function normalizeRole(string $role): ?string

@@ -200,6 +200,12 @@ class FamilyController extends BaseController
             return redirect()->to(site_url('/'))->with('error', 'Please login first.');
         }
 
+        if (! $this->sessionUserExists()) {
+            session()->destroy();
+
+            return redirect()->to(site_url('/'))->with('error', 'Your session is no longer valid after the database update. Please login again.');
+        }
+
         $role = (string) session()->get('role');
 
         if (in_array($role, ['Developer', 'Admin', 'User'], true)) {
@@ -332,7 +338,7 @@ class FamilyController extends BaseController
         string $action,
         string $description
     ): void {
-        if (! $auditModel->hasTable()) {
+        if (! $auditModel->hasTable() || ! $this->userExists($userId)) {
             return;
         }
 
@@ -344,5 +350,27 @@ class FamilyController extends BaseController
             $this->request->getIPAddress(),
             $this->request->getUserAgent()->getAgentString()
         );
+    }
+
+    private function sessionUserExists(): bool
+    {
+        return $this->userExists((int) session()->get('user_id'));
+    }
+
+    private function userExists(int $userId): bool
+    {
+        if ($userId <= 0) {
+            return false;
+        }
+
+        $db = db_connect();
+
+        if (! $db->tableExists('users')) {
+            return false;
+        }
+
+        return $db->table('users')
+            ->where('userID', $userId)
+            ->countAllResults() > 0;
     }
 }

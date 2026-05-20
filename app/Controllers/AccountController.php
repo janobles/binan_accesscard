@@ -82,11 +82,37 @@ class AccountController extends BaseController
             return redirect()->to(site_url('/'))->with('error', 'Please login first.');
         }
 
+        if (! $this->sessionUserExists()) {
+            session()->destroy();
+
+            return redirect()->to(site_url('/'))
+                ->with('error', 'Your session is no longer valid after the database update. Please login again.');
+        }
+
         if ($this->normalizeRole((string) session()->get('role')) !== 'Developer') {
             return redirect()->to(site_url('/'))->with('error', 'Developer access is required.');
         }
 
         return null;
+    }
+
+    private function sessionUserExists(): bool
+    {
+        $userId = (int) session()->get('user_id');
+
+        if ($userId <= 0) {
+            return false;
+        }
+
+        $db = db_connect();
+
+        if (! $db->tableExists('users')) {
+            return false;
+        }
+
+        return $db->table('users')
+            ->where('userID', $userId)
+            ->countAllResults() > 0;
     }
 
     private function normalizeRole(string $role): ?string

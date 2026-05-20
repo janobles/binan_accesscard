@@ -16,7 +16,7 @@ class SearchModel
         $this->db = $db ?? db_connect();
     }
 
-    public function families(string $keyword = '', int $limit = 25): array
+    public function families(string $keyword = '', array $filters = [], int $limit = 25): array
     {
         if (! $this->db->tableExists('member')) {
             return [];
@@ -40,6 +40,14 @@ class SearchModel
                 ->groupEnd();
         }
 
+        $sectorId = (int) ($filters['sectorID'] ?? 0);
+
+        if ($sectorId > 0) {
+            $builder->where('member.sectorID', $sectorId);
+        }
+
+        $this->applyDateRange($builder, 'member.dt_created', $filters);
+
         return $builder
             ->orderBy('member.dt_created', 'DESC')
             ->limit($limit)
@@ -47,7 +55,7 @@ class SearchModel
             ->getResultArray();
     }
 
-    public function staffAccounts(string $keyword = '', int $limit = 100): array
+    public function staffAccounts(string $keyword = '', array $filters = [], int $limit = 100): array
     {
         if (! $this->db->tableExists('users')) {
             return [];
@@ -67,6 +75,18 @@ class SearchModel
                 ->groupEnd();
         }
 
+        $role = $this->normalizeKeyword((string) ($filters['role'] ?? ''));
+
+        if (in_array($role, ['Admin', 'User'], true)) {
+            $builder->where('role', $role);
+        }
+
+        $status = $this->normalizeKeyword((string) ($filters['status'] ?? ''));
+
+        if (in_array($status, ['Enable', 'Disabled'], true)) {
+            $builder->where('isactive', $status);
+        }
+
         return $builder
             ->orderBy('role', 'ASC')
             ->orderBy('username', 'ASC')
@@ -75,7 +95,7 @@ class SearchModel
             ->getResultArray();
     }
 
-    public function auditTrails(string $keyword = '', int $limit = 50): array
+    public function auditTrails(string $keyword = '', array $filters = [], int $limit = 50): array
     {
         if (! $this->hasAuditSearchTables()) {
             return [];
@@ -88,6 +108,8 @@ class SearchModel
             $this->applyAuditSearch($builder, $keyword);
         }
 
+        $this->applyAuditFilters($builder, $filters);
+
         return $builder
             ->orderBy('audit_trails.dt_created', 'DESC')
             ->limit($limit)
@@ -95,7 +117,7 @@ class SearchModel
             ->getResultArray();
     }
 
-    public function auditTrailsByUser(int $userId, string $keyword = '', int $limit = 50): array
+    public function auditTrailsByUser(int $userId, string $keyword = '', array $filters = [], int $limit = 50): array
     {
         if (! $this->hasAuditSearchTables()) {
             return [];
@@ -110,11 +132,31 @@ class SearchModel
             $this->applyAuditSearch($builder, $keyword);
         }
 
+        $this->applyAuditFilters($builder, $filters);
+
         return $builder
             ->orderBy('audit_trails.dt_created', 'DESC')
             ->limit($limit)
             ->get()
             ->getResultArray();
+    }
+
+    public function auditActions(): array
+    {
+        if (! $this->db->tableExists('audit_trails')) {
+            return [];
+        }
+
+        return array_column(
+            $this->db->table('audit_trails')
+                ->select('user_action')
+                ->where('user_action IS NOT NULL')
+                ->groupBy('user_action')
+                ->orderBy('user_action', 'ASC')
+                ->get()
+                ->getResultArray(),
+            'user_action'
+        );
     }
 
     private function auditTrailBuilder()
@@ -137,6 +179,31 @@ class SearchModel
             ->groupEnd();
     }
 
+    private function applyAuditFilters($builder, array $filters): void
+    {
+        $action = $this->normalizeKeyword((string) ($filters['action'] ?? ''));
+
+        if ($action !== '') {
+            $builder->where('audit_trails.user_action', $action);
+        }
+
+        $this->applyDateRange($builder, 'audit_trails.dt_created', $filters);
+    }
+
+    private function applyDateRange($builder, string $column, array $filters): void
+    {
+        $dateFrom = $this->normalizeDate((string) ($filters['date_from'] ?? ''));
+        $dateTo = $this->normalizeDate((string) ($filters['date_to'] ?? ''));
+
+        if ($dateFrom !== '') {
+            $builder->where($column . ' >=', $dateFrom . ' 00:00:00');
+        }
+
+        if ($dateTo !== '') {
+            $builder->where($column . ' <=', $dateTo . ' 23:59:59');
+        }
+    }
+
     private function hasAuditSearchTables(): bool
     {
         return $this->db->tableExists('audit_trails')
@@ -147,5 +214,12 @@ class SearchModel
     private function normalizeKeyword(string $keyword): string
     {
         return trim($keyword);
+    }
+
+    private function normalizeDate(string $date): string
+    {
+        $date = trim($date);
+
+        return preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) === 1 ? $date : '';
     }
 }

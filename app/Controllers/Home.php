@@ -146,17 +146,19 @@ class Home extends BaseController
         $dashboardModel = new DashboardModel();
         $searchModel = new SearchModel();
         $searchTerm = trim((string) $this->request->getGet('q'));
+        $searchFilters = $this->searchFilters();
         $isDeveloper = $this->normalizeRole((string) session()->get('role')) === 'Developer';
         $users = $isDeveloper && $activePage === 'accounts'
-            ? $searchModel->staffAccounts($searchTerm)
+            ? $searchModel->staffAccounts($searchTerm, $searchFilters)
             : [];
 
         $familyFormViewData = (new FamilyFormOptionsModel())->getViewData();
-        $recentFamilies = $activePage === 'dashboard' && $searchTerm !== ''
-            ? $searchModel->families($searchTerm, 25)
+        $hasSearchFilters = $this->hasSearchFilters($searchFilters);
+        $recentFamilies = $activePage === 'dashboard' && ($searchTerm !== '' || $hasSearchFilters)
+            ? $searchModel->families($searchTerm, $searchFilters, 25)
             : $dashboardModel->recentFamilies(10);
         $recentAudits = $activePage === 'audit-trails'
-            ? $searchModel->auditTrails($searchTerm, 50)
+            ? $searchModel->auditTrails($searchTerm, $searchFilters, 50)
             : (new AuditTrailsModel())->getRecent(10);
 
         return view('Dashboard/admin', [
@@ -177,6 +179,8 @@ class Home extends BaseController
             'recentFamilies' => $recentFamilies,
             'recentAudits' => $recentAudits,
             'searchTerm' => $searchTerm,
+            'searchFilters' => $searchFilters,
+            'auditActionOptions' => $searchModel->auditActions(),
             'stats' => $dashboardModel->stats(),
             'canCreateFamily' => true,
             'idleTimeoutSeconds' => (new IdleTimeout())->seconds,
@@ -195,13 +199,15 @@ class Home extends BaseController
         $dashboardModel = new DashboardModel();
         $searchModel = new SearchModel();
         $searchTerm = trim((string) $this->request->getGet('q'));
+        $searchFilters = $this->searchFilters();
+        $hasSearchFilters = $this->hasSearchFilters($searchFilters);
         $userId = (int) session()->get('user_id');
         $familyFormViewData = (new FamilyFormOptionsModel())->getViewData();
-        $recentFamilies = $activePage === 'dashboard' && $searchTerm !== ''
-            ? $searchModel->families($searchTerm, 25)
+        $recentFamilies = $activePage === 'dashboard' && ($searchTerm !== '' || $hasSearchFilters)
+            ? $searchModel->families($searchTerm, $searchFilters, 25)
             : $dashboardModel->recentFamilies(10);
         $myAudits = $activePage === 'activity'
-            ? $searchModel->auditTrailsByUser($userId, $searchTerm, 50)
+            ? $searchModel->auditTrailsByUser($userId, $searchTerm, $searchFilters, 50)
             : (new AuditTrailsModel())->getByUser($userId, 10);
 
         return view('Employee/index', [
@@ -218,6 +224,8 @@ class Home extends BaseController
             'recentFamilies' => $recentFamilies,
             'myAudits' => $myAudits,
             'searchTerm' => $searchTerm,
+            'searchFilters' => $searchFilters,
+            'auditActionOptions' => $searchModel->auditActions(),
             'idleTimeoutSeconds' => (new IdleTimeout())->seconds,
         ]);
     }
@@ -277,6 +285,29 @@ class Home extends BaseController
             'user', 'employee' => 'User',
             default => null,
         };
+    }
+
+    private function searchFilters(): array
+    {
+        return [
+            'sectorID' => (string) $this->request->getGet('sectorID'),
+            'role' => (string) $this->request->getGet('role'),
+            'status' => (string) $this->request->getGet('status'),
+            'action' => (string) $this->request->getGet('action'),
+            'date_from' => (string) $this->request->getGet('date_from'),
+            'date_to' => (string) $this->request->getGet('date_to'),
+        ];
+    }
+
+    private function hasSearchFilters(array $filters): bool
+    {
+        foreach ($filters as $value) {
+            if (trim((string) $value) !== '') {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function clearLoginSession(): void

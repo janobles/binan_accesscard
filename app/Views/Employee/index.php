@@ -7,8 +7,12 @@ $recentFamilies = $recentFamilies ?? [];
 $myAudits = $myAudits ?? [];
 $familyFormViewData = $familyFormViewData ?? [];
 $searchTerm = $searchTerm ?? '';
+$searchFilters = $searchFilters ?? [];
+$auditActionOptions = $auditActionOptions ?? [];
+$sectorOptions = $familyFormViewData['sectorOptions'] ?? [];
+$hasSearchFilters = $searchTerm !== '' || array_filter($searchFilters, static fn ($value): bool => trim((string) $value) !== '') !== [];
 $canCreateFamily = $canCreateFamily ?? false;
-$idleTimeoutSeconds = $idleTimeoutSeconds ?? 60;
+$idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -65,13 +69,28 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 60;
                         <a class="btn btn-primary btn-sm" href="<?= site_url('employee/manage-family') ?>">Manage Family</a>
                     </div>
                     <form class="row g-2 mb-3" method="get" action="<?= site_url('employee/workspace') ?>">
-                        <div class="col-md-8 col-lg-6">
+                        <div class="col-md-6 col-lg-4">
                             <input class="form-control" type="search" name="q" value="<?= esc($searchTerm) ?>" placeholder="Search records by name, contact number, or sector">
+                        </div>
+                        <div class="col-md-4 col-lg-3">
+                            <select class="form-select" name="sectorID">
+                                <option value="">All sectors</option>
+                                <?php foreach ($sectorOptions as $sector): ?>
+                                    <?php $sectorId = (string) ($sector['sectorID'] ?? ''); ?>
+                                    <option value="<?= esc($sectorId) ?>" <?= (string) ($searchFilters['sectorID'] ?? '') === $sectorId ? 'selected' : '' ?>><?= esc((string) ($sector['name'] ?? '')) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-3 col-lg-2">
+                            <input class="form-control" type="date" name="date_from" value="<?= esc((string) ($searchFilters['date_from'] ?? '')) ?>">
+                        </div>
+                        <div class="col-md-3 col-lg-2">
+                            <input class="form-control" type="date" name="date_to" value="<?= esc((string) ($searchFilters['date_to'] ?? '')) ?>">
                         </div>
                         <div class="col-auto">
                             <button class="btn btn-primary" type="submit">Search</button>
                         </div>
-                        <?php if ($searchTerm !== ''): ?>
+                        <?php if ($hasSearchFilters): ?>
                             <div class="col-auto">
                                 <a class="btn btn-outline-secondary" href="<?= site_url('employee/workspace') ?>">Clear</a>
                             </div>
@@ -114,13 +133,27 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 60;
                 <div class="panel">
                     <div class="section-title mt-0"><span>My Recent Activity</span></div>
                     <form class="row g-2 mb-3" method="get" action="<?= site_url('employee/activity') ?>">
-                        <div class="col-md-8 col-lg-6">
+                        <div class="col-md-6 col-lg-4">
                             <input class="form-control" type="search" name="q" value="<?= esc($searchTerm) ?>" placeholder="Search activity by action or description">
+                        </div>
+                        <div class="col-md-4 col-lg-3">
+                            <select class="form-select" name="action">
+                                <option value="">All actions</option>
+                                <?php foreach ($auditActionOptions as $action): ?>
+                                    <option value="<?= esc((string) $action) ?>" <?= (string) ($searchFilters['action'] ?? '') === (string) $action ? 'selected' : '' ?>><?= esc((string) $action) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-3 col-lg-2">
+                            <input class="form-control" type="date" name="date_from" value="<?= esc((string) ($searchFilters['date_from'] ?? '')) ?>">
+                        </div>
+                        <div class="col-md-3 col-lg-2">
+                            <input class="form-control" type="date" name="date_to" value="<?= esc((string) ($searchFilters['date_to'] ?? '')) ?>">
                         </div>
                         <div class="col-auto">
                             <button class="btn btn-primary" type="submit">Search</button>
                         </div>
-                        <?php if ($searchTerm !== ''): ?>
+                        <?php if ($hasSearchFilters): ?>
                             <div class="col-auto">
                                 <a class="btn btn-outline-secondary" href="<?= site_url('employee/activity') ?>">Clear</a>
                             </div>

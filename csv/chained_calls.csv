@@ -1,0 +1,4 @@
+"Path","LineNumber","Line","Context"
+"C:\xampp\htdocs\binanaccesscard\binan_accesscard\app\Controllers\AccountController.php","50","            $userId = (new UserModel())->createAccount(","Microsoft.PowerShell.Commands.MatchInfoContext"
+"C:\xampp\htdocs\binanaccesscard\binan_accesscard\app\Controllers\Home.php","32","        $user = (new UserModel())->verifyLogin($username, $password);","Microsoft.PowerShell.Commands.MatchInfoContext"
+"C:\xampp\htdocs\binanaccesscard\binan_accesscard\app\Controllers\Home.php","98","        $users = (new UserModel())","Microsoft.PowerShell.Commands.MatchInfoContext"

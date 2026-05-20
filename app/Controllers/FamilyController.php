@@ -9,18 +9,40 @@ use CodeIgniter\HTTP\RedirectResponse;
 
 class FamilyController extends BaseController
 {
-    public function store(): RedirectResponse
+    public function store()
     {
         $guard = $this->requireFamilyEntryAccess();
 
         if ($guard instanceof RedirectResponse) {
+            if ($this->request->isAJAX()) {
+                return $this->response
+                    ->setStatusCode(403)
+                    ->setJSON([
+                        'status' => 'error',
+                        'message' => 'You do not have permission to add family records.',
+                        'csrf' => csrf_hash(),
+                    ]);
+            }
+
             return $guard;
         }
 
         $db = db_connect();
         foreach (['member', 'sector', 'services', 'member_services', 'audit_trails'] as $table) {
             if (! $db->tableExists($table)) {
-                return redirect()->back()->withInput()->with('error', 'The accesscard database is missing required tables from accesscardV1.4.sql.');
+                $message = 'The accesscard database is missing required tables from accesscardV1.4.sql.';
+
+                if ($this->request->isAJAX()) {
+                    return $this->response
+                        ->setStatusCode(422)
+                        ->setJSON([
+                            'status' => 'error',
+                            'message' => $message,
+                            'csrf' => csrf_hash(),
+                        ]);
+                }
+
+                return redirect()->back()->withInput()->with('error', $message);
             }
         }
 
@@ -34,9 +56,21 @@ class FamilyController extends BaseController
         ];
 
         if (! $this->validate($rules)) {
+            $message = implode(' ', $this->validator->getErrors());
+
+            if ($this->request->isAJAX()) {
+                return $this->response
+                    ->setStatusCode(422)
+                    ->setJSON([
+                        'status' => 'error',
+                        'message' => $message,
+                        'csrf' => csrf_hash(),
+                    ]);
+            }
+
             return redirect()->back()
                 ->withInput()
-                ->with('error', implode(' ', $this->validator->getErrors()));
+                ->with('error', $message);
         }
 
         $members = $this->request->getPost('members');
@@ -61,9 +95,21 @@ class FamilyController extends BaseController
         if ($headId === false) {
             $db->transRollback();
 
+            $message = 'Head of family could not be saved. Please check required fields.';
+
+            if ($this->request->isAJAX()) {
+                return $this->response
+                    ->setStatusCode(422)
+                    ->setJSON([
+                        'status' => 'error',
+                        'message' => $message,
+                        'csrf' => csrf_hash(),
+                    ]);
+            }
+
             return redirect()->back()
                 ->withInput()
-                ->with('error', 'Head of family could not be saved. Please check required fields.');
+                ->with('error', $message);
         }
 
         foreach ($members as $member) {
@@ -76,7 +122,19 @@ class FamilyController extends BaseController
             if ($memberId === false) {
                 $db->transRollback();
 
-                return redirect()->back()->withInput()->with('error', 'One family member could not be saved.');
+                $message = 'One family member could not be saved.';
+
+                if ($this->request->isAJAX()) {
+                    return $this->response
+                        ->setStatusCode(422)
+                        ->setJSON([
+                            'status' => 'error',
+                            'message' => $message,
+                            'csrf' => csrf_hash(),
+                        ]);
+                }
+
+                return redirect()->back()->withInput()->with('error', $message);
             }
         }
 
@@ -91,19 +149,41 @@ class FamilyController extends BaseController
         }
 
         if ($db->tableExists('audit_trails')) {
+            // Tracks the creating operator plus client IP and browser agent.
             (new AuditTrailsModel())->logAction(
                 $userId,
                 $headId,
                 'FAMILY_CREATED',
                 'Created family profile for ' . trim((string) $this->request->getPost('head_firstname')) . ' ' . trim((string) $this->request->getPost('head_lastname')) . '.',
-                $this->request->getIPAddress()
+                $this->request->getIPAddress(),
+                $this->request->getUserAgent()->getAgentString()
             );
         }
 
         $db->transComplete();
 
         if (! $db->transStatus()) {
-            return redirect()->back()->withInput()->with('error', 'The family form was not saved.');
+            $message = 'The family form was not saved.';
+
+            if ($this->request->isAJAX()) {
+                return $this->response
+                    ->setStatusCode(500)
+                    ->setJSON([
+                        'status' => 'error',
+                        'message' => $message,
+                        'csrf' => csrf_hash(),
+                    ]);
+            }
+
+            return redirect()->back()->withInput()->with('error', $message);
+        }
+
+        if ($this->request->isAJAX()) {
+            return $this->response->setJSON([
+                'status' => 'success',
+                'message' => 'Family and member data saved successfully.',
+                'csrf' => csrf_hash(),
+            ]);
         }
 
         return redirect()->back()->with('success', 'Family and member data saved successfully.');

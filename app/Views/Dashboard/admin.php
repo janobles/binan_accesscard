@@ -1,17 +1,25 @@
-<?php
-$role = $user['role'] ?? '';
-$username = $user['username'] ?? 'User';
-$activePage = $activePage ?? 'dashboard';
-$isDeveloper = $role === 'Developer';
-?>
 <!DOCTYPE html>
+<?php
+$user = $user ?? [];
+$username = $user['username'] ?? 'Admin';
+$activePage = $activePage ?? 'dashboard';
+$pageTitle = $pageTitle ?? 'Dashboard';
+$navActive = $navActive ?? [];
+$stats = $stats ?? ['families' => 0, 'members' => 0, 'sectors' => 0, 'assistance' => 0];
+$recentFamilies = $recentFamilies ?? [];
+$recentAudits = $recentAudits ?? [];
+$adminAccounts = $adminAccounts ?? [];
+$employeeAccounts = $employeeAccounts ?? [];
+$familyFormViewData = $familyFormViewData ?? [];
+$canCreateFamily = $canCreateFamily ?? false;
+?>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= esc(ucwords(str_replace('-', ' ', $activePage))) ?> - Binan Access Card MIS</title>
+    <title>Admin Dashboard - Binan Access Card MIS</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="<?= base_url('assets/css/mis.css') ?>?v=<?= filemtime(FCPATH . 'assets/css/mis.css') ?>">
+    <link rel="stylesheet" href="<?= base_url('assets/css/admin.css') ?>?v=<?= filemtime(FCPATH . 'assets/css/admin.css') ?>">
 </head>
 <body>
 <div class="app-shell">
@@ -21,28 +29,29 @@ $isDeveloper = $role === 'Developer';
                 <img src="<?= base_url('assets/image/binan.png') ?>" alt="City of Binan Logo">
                 <div>
                     <strong>Bi&ntilde;an Access Card MIS</strong>
-                    <small><?= esc($isDeveloper ? 'Developer Mode' : 'Admin Console') ?></small>
+                    <small>Admin Console</small>
                 </div>
             </div>
             <nav class="nav flex-column mt-3">
-                <a class="nav-link <?= $activePage === 'dashboard' ? 'active' : '' ?>" href="<?= site_url('admin/dashboard') ?>">Dashboard</a>
-                <?php if ($isDeveloper): ?>
-                    <a class="nav-link <?= $activePage === 'accounts' ? 'active' : '' ?>" href="<?= site_url('admin/accounts') ?>">Account Management</a>
-                <?php endif; ?>
-                <a class="nav-link <?= $activePage === 'family-entry' ? 'active' : '' ?>" href="<?= site_url('admin/family-entry') ?>">Family Entry</a>
-                <a class="nav-link <?= $activePage === 'audit-trails' ? 'active' : '' ?>" href="<?= site_url('admin/audit-trails') ?>">Audit Trails</a>
+                <a class="nav-link <?= esc($navActive['dashboard'] ?? '') ?>" href="<?= site_url('admin/dashboard') ?>">Dashboard</a>
+                <a class="nav-link <?= esc($navActive['accounts'] ?? '') ?>" href="<?= site_url('admin/accounts') ?>">Account Management</a>
+                <a class="nav-link <?= esc($navActive['family-entry'] ?? '') ?>" href="<?= site_url('admin/manage-family') ?>">Manage Family</a>
+                <a class="nav-link <?= esc($navActive['audit-trails'] ?? '') ?>" href="<?= site_url('admin/audit-trails') ?>">Audit Trails</a>
             </nav>
         </div>
         <div class="sidebar-footer">
-            <div class="sidebar-user"><?= esc($username) ?> &middot; <?= esc($role) ?></div>
+            <div class="sidebar-user"><?= esc($username) ?> &middot; Admin</div>
             <a href="<?= site_url('logout') ?>" class="btn btn-outline-light btn-sm w-100">Logout</a>
         </div>
     </aside>
 
     <main class="content">
         <div class="topbar">
-            <div>
-                <div class="fw-bold"><?= esc(ucwords(str_replace('-', ' ', $activePage))) ?></div>
+            <div class="topbar-brand">
+                <img src="<?= base_url('assets/image/binan.png') ?>" alt="City of Binan Logo">
+            </div>
+            <div class="topbar-text">
+                <div class="fw-bold"><?= esc($pageTitle) ?></div>
                 <small class="text-muted">Bi&ntilde;an Access Card MIS</small>
             </div>
         </div>
@@ -57,23 +66,26 @@ $isDeveloper = $role === 'Developer';
 
             <?php if ($activePage === 'dashboard'): ?>
                 <div class="row g-3 mb-3">
-                    <div class="col-md-3"><div class="panel"><small>Total Families</small><div class="stat-value"><?= esc($stats['families'] ?? 0) ?></div></div></div>
-                    <div class="col-md-3"><div class="panel"><small>Registered Members</small><div class="stat-value"><?= esc($stats['members'] ?? 0) ?></div></div></div>
-                    <div class="col-md-3"><div class="panel"><small>Active Sectors</small><div class="stat-value"><?= esc($stats['sectors'] ?? 0) ?></div></div></div>
-                    <div class="col-md-3"><div class="panel"><small>Member Services</small><div class="stat-value"><?= esc($stats['assistance'] ?? 0) ?></div></div></div>
+                    <div class="col-md-3"><div class="panel"><small>Total Families</small><div class="stat-value"><?= esc((string) ($stats['families'] ?? 0)) ?></div></div></div>
+                    <div class="col-md-3"><div class="panel"><small>Registered Members</small><div class="stat-value"><?= esc((string) ($stats['members'] ?? 0)) ?></div></div></div>
+                    <div class="col-md-3"><div class="panel"><small>Active Sectors</small><div class="stat-value"><?= esc((string) ($stats['sectors'] ?? 0)) ?></div></div></div>
+                    <div class="col-md-3"><div class="panel"><small>Member Services</small><div class="stat-value"><?= esc((string) ($stats['assistance'] ?? 0)) ?></div></div></div>
                 </div>
-                <div class="panel">
-                    <div class="section-title mt-0"><span>Recent Families</span></div>
+
+                <div class="panel mb-3">
+                    <div class="section-title mt-0">
+                        <span>Recent Families</span>
+                    </div>
                     <div class="table-responsive">
                         <table class="table table-sm">
                             <thead><tr><th>Head</th><th>Barangay</th><th>Sector</th><th>Date</th></tr></thead>
                             <tbody>
                                 <?php foreach ($recentFamilies as $family): ?>
                                     <tr>
-                                        <td><?= esc($family['firstname'] . ' ' . $family['lastname']) ?></td>
-                                        <td><?= esc($family['barangay']) ?></td>
-                                        <td><?= esc($family['sector_name'] ?? '') ?></td>
-                                        <td><?= esc($family['dt_created'] ?? '') ?></td>
+                                        <td><?= esc(($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? '')) ?></td>
+                                        <td><?= esc((string) ($family['barangay'] ?? '')) ?></td>
+                                        <td><?= esc((string) ($family['sector_name'] ?? '')) ?></td>
+                                        <td><?= esc((string) ($family['dt_created'] ?? '')) ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                                 <?php if ($recentFamilies === []): ?>
@@ -85,27 +97,22 @@ $isDeveloper = $role === 'Developer';
                 </div>
             <?php endif; ?>
 
-            <?php if ($activePage === 'accounts' && $isDeveloper): ?>
-                <div class="panel">
-                    <div class="section-title mt-0">
-                        <span>Account Management</span>
-                    </div>
+            <?php if ($activePage === 'accounts'): ?>
+                <div class="panel mb-3">
+                    <div class="section-title mt-0"><span>Account Management</span></div>
                     <div class="row g-3 mb-3">
                         <div class="col-lg-6">
                             <div class="border rounded p-3 h-100 bg-light">
                                 <h6 class="mb-3">Create Admin Account</h6>
-                                <form method="post" action="<?= site_url('developer/accounts') ?>" class="account-form">
-                                    <?= csrf_field() ?>
+                                <form class="account-form" method="post" action="<?= site_url('developer/accounts') ?>">
                                     <input type="hidden" name="role" value="Admin">
                                     <div>
                                         <label class="form-label">Username</label>
                                         <input class="form-control" name="username" placeholder="admin_maria01" required minlength="4">
-                                        <div class="form-text">Must be unique. Examples: admin_maria01, admin_roberto02.</div>
                                     </div>
                                     <div>
                                         <label class="form-label">Password</label>
                                         <input type="password" class="form-control" name="password" required minlength="8">
-                                        <div class="form-text">Minimum 8 characters.</div>
                                     </div>
                                     <div class="account-action">
                                         <button class="btn btn-primary w-100" type="submit">Create</button>
@@ -116,18 +123,15 @@ $isDeveloper = $role === 'Developer';
                         <div class="col-lg-6">
                             <div class="border rounded p-3 h-100 bg-light">
                                 <h6 class="mb-3">Create Employee Account</h6>
-                                <form method="post" action="<?= site_url('developer/accounts') ?>" class="account-form account-form-employee">
-                                    <?= csrf_field() ?>
+                                <form class="account-form account-form-employee" method="post" action="<?= site_url('developer/accounts') ?>">
                                     <input type="hidden" name="role" value="User">
                                     <div>
                                         <label class="form-label">Username</label>
                                         <input class="form-control" name="username" placeholder="emp_juan01" required minlength="4">
-                                        <div class="form-text">Must be unique. Examples: emp_juan01, emp_ana02.</div>
                                     </div>
                                     <div>
                                         <label class="form-label">Password</label>
                                         <input type="password" class="form-control" name="password" required minlength="8">
-                                        <div class="form-text">Minimum 8 characters.</div>
                                     </div>
                                     <div class="account-action">
                                         <button class="btn btn-primary w-100" type="submit">Create</button>
@@ -138,39 +142,46 @@ $isDeveloper = $role === 'Developer';
                     </div>
 
                     <div class="row g-3">
-                        <div class="col-lg-5">
-                            <h6 class="mb-2">Admin Accounts</h6>
-                            <div class="table-responsive">
-                                <table class="table table-sm align-middle">
-                                    <thead><tr><th>User</th><th>Status</th></tr></thead>
-                                    <tbody>
-                                        <?php foreach ($adminAccounts as $account): ?>
-                                            <tr><td><?= esc($account['username']) ?></td><td><?= esc($account['isactive']) ?></td></tr>
-                                        <?php endforeach; ?>
-                                        <?php if ($adminAccounts === []): ?>
-                                            <tr><td colspan="2" class="text-center text-muted">No admin accounts yet.</td></tr>
-                                        <?php endif; ?>
-                                    </tbody>
-                                </table>
+                        <div class="col-lg-6">
+                            <div class="panel">
+                                <div class="section-title mt-0"><span>Admin Accounts</span></div>
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead><tr><th>Username</th><th>Status</th></tr></thead>
+                                        <tbody>
+                                            <?php foreach ($adminAccounts as $account): ?>
+                                                <tr>
+                                                    <td><?= esc((string) ($account['username'] ?? '')) ?></td>
+                                                    <td><?= esc((string) ($account['isactive'] ?? '')) ?></td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                            <?php if ($adminAccounts === []): ?>
+                                                <tr><td colspan="2" class="text-center text-muted">No admin accounts found.</td></tr>
+                                            <?php endif; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
-                        <div class="col-lg-7">
-                            <h6 class="mb-2">Employee Accounts</h6>
-                            <div class="table-responsive">
-                                <table class="table table-sm align-middle">
-                                    <thead><tr><th>User</th><th>Status</th></tr></thead>
-                                    <tbody>
-                                        <?php foreach ($employeeAccounts as $account): ?>
-                                            <tr>
-                                                <td><?= esc($account['username']) ?></td>
-                                                <td><?= esc($account['isactive']) ?></td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                        <?php if ($employeeAccounts === []): ?>
-                                            <tr><td colspan="2" class="text-center text-muted">No employee accounts yet.</td></tr>
-                                        <?php endif; ?>
-                                    </tbody>
-                                </table>
+                        <div class="col-lg-6">
+                            <div class="panel">
+                                <div class="section-title mt-0"><span>Employee Accounts</span></div>
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead><tr><th>Username</th><th>Status</th></tr></thead>
+                                        <tbody>
+                                            <?php foreach ($employeeAccounts as $account): ?>
+                                                <tr>
+                                                    <td><?= esc((string) ($account['username'] ?? '')) ?></td>
+                                                    <td><?= esc((string) ($account['isactive'] ?? '')) ?></td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                            <?php if ($employeeAccounts === []): ?>
+                                                <tr><td colspan="2" class="text-center text-muted">No employee accounts found.</td></tr>
+                                            <?php endif; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -178,14 +189,12 @@ $isDeveloper = $role === 'Developer';
             <?php endif; ?>
 
             <?php if ($activePage === 'family-entry'): ?>
-                <div class="panel">
-                    <div class="section-title mt-0">
-                        <span>Family / Member Data Entry</span>
-                    </div>
-                    <?= view('Shared/family_form', [
-                        'formOptions' => $formOptions,
-                        'canCreateFamily' => $canCreateFamily,
-                    ]) ?>
+                <div class="panel mb-3">
+                    <div class="section-title mt-0"><span>Family / Member Data Entry</span></div>
+                    <?= view('Dashboard/familyform', array_merge(
+                        $familyFormViewData,
+                        ['canCreateFamily' => $canCreateFamily]
+                    )) ?>
                 </div>
             <?php endif; ?>
 
@@ -198,10 +207,10 @@ $isDeveloper = $role === 'Developer';
                             <tbody>
                                 <?php foreach ($recentAudits as $audit): ?>
                                     <tr>
-                                        <td><?= esc($audit['username'] ?? '') ?></td>
-                                        <td><?= esc($audit['user_action']) ?></td>
-                                        <td><?= esc($audit['description']) ?></td>
-                                        <td><?= esc($audit['dt_created'] ?? '') ?></td>
+                                        <td><?= esc((string) ($audit['username'] ?? $audit['userID'] ?? '')) ?></td>
+                                        <td><?= esc((string) ($audit['user_action'] ?? '')) ?></td>
+                                        <td><?= esc((string) ($audit['description'] ?? '')) ?></td>
+                                        <td><?= esc((string) ($audit['dt_created'] ?? '')) ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                                 <?php if ($recentAudits === []): ?>
@@ -216,6 +225,6 @@ $isDeveloper = $role === 'Developer';
     </main>
 </div>
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<script src="<?= base_url('assets/js/mis.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/mis.js') ?>"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

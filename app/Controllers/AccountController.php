@@ -78,11 +78,23 @@ class AccountController extends BaseController
             return redirect()->to(site_url('/'))->with('error', 'Please login first.');
         }
 
-        if (session()->get('role') !== 'Developer') {
+        if ($this->normalizeRole((string) session()->get('role')) !== 'Developer') {
             return redirect()->to(site_url('/'))->with('error', 'Developer access is required.');
         }
 
         return null;
+    }
+
+    private function normalizeRole(string $role): ?string
+    {
+        $normalizedRole = strtolower(trim($role));
+
+        return match ($normalizedRole) {
+            'developer' => 'Developer',
+            'admin', 'administrator' => 'Admin',
+            'user', 'employee' => 'User',
+            default => null,
+        };
     }
 
     private function audit(string $action, string $description): void
@@ -92,12 +104,14 @@ class AccountController extends BaseController
         }
 
         try {
+            // Account creation is a staff action, so memberID stays null.
             (new AuditTrailsModel())->logAction(
                 (int) session()->get('user_id'),
-                (int) (session()->get('member_id') ?? 1),
+                null,
                 $action,
                 $description,
-                $this->request->getIPAddress()
+                $this->request->getIPAddress(),
+                $this->request->getUserAgent()->getAgentString()
             );
         } catch (Throwable $exception) {
             log_message('error', 'Audit trail skipped: ' . $exception->getMessage());

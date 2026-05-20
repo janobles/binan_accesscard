@@ -71,6 +71,23 @@ class FamilyFormOptionsModel extends Model
         ];
     }
 
+    public function getViewData(): array
+    {
+        $options = $this->getOptions();
+
+        return [
+            'formOptions' => $options,
+            'sectorOptions' => $options['sectors'] ?? [],
+            'sexOptions' => $options['sexes'] ?? [],
+            'suffixOptions' => $options['suffixes'] ?? [],
+            'civilOptions' => $options['civil_statuses'] ?? [],
+            'relationshipOptions' => $options['relationships'] ?? [],
+            'educationOptions' => $options['education_levels'] ?? [],
+            'incomeOptions' => $options['income_ranges'] ?? [],
+            'servicesByCategory' => $options['services_by_category'] ?? [],
+        ];
+    }
+
     private function getSectors(): array
     {
         if (! $this->db->tableExists('sector')) {

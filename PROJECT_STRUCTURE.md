@@ -39,7 +39,7 @@ This project follows the normal CodeIgniter 4 layout. The database source of tru
 - `app/Views/Employee/index.php`  
   Employee workspace pages.
 
-- `app/Views/Shared/family_form.php`  
+- `app/Views/Dashboard/form.php`  
   Shared family/member form markup. Options are passed in from the controller.
 
 ## Database
@@ -58,7 +58,6 @@ This project follows the normal CodeIgniter 4 layout. The database source of tru
 - `public/assets/css/mis.css`  
   Shared dashboard/workspace styling.
 
-- `public/assets/js/mis.js`  
   Shared dashboard/workspace JavaScript.
 
 - `public/assets/image/`  

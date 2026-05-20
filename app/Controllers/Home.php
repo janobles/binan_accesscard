@@ -4,7 +4,7 @@ namespace App\Controllers;
 
 use App\Models\AuditTrailsModel;
 use App\Models\FamilyFormOptionsModel;
-use App\Models\UserModel;
+use App\Models\ViewLayoutModel;
 use CodeIgniter\HTTP\RedirectResponse;
 
 class Home extends BaseController
@@ -19,6 +19,7 @@ class Home extends BaseController
     }
 
     public function login(): RedirectResponse
+    
     {
         $username = trim((string) $this->request->getPost('username'));
         $password = (string) $this->request->getPost('password');
@@ -31,16 +32,24 @@ class Home extends BaseController
                 ->with('error', 'Invalid username or password.');
         }
 
+        $role = $this->normalizeRole((string) ($user['role'] ?? ''));
+
+        if ($role === null) {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Your account role is invalid. Please contact an administrator.');
+        }
+
         session()->regenerate();
+        // Session data drives role-based redirects for operators (staff accounts).
         session()->set([
             'is_logged_in' => true,
-            'user_id' => (int) $user['userID'],
-            'username' => $user['username'],
-            'role' => $user['role'],
-            'member_id' => (int) $user['memberID'],
+            'user_id'      => (int) $user['userID'],
+            'username'     => $user['username'],
+            'role'         => $role,
         ]);
 
-        return $this->redirectByRole((string) $user['role']);
+        return $this->redirectByRole($role);
     }
 
     public function logout(): RedirectResponse
@@ -103,6 +112,8 @@ class Home extends BaseController
                 ->with('error', 'Developer access is required for account management.');
         }
 
+        $layoutModel = new ViewLayoutModel();
+        $isDeveloper = $this->normalizeRole((string) session()->get('role')) === 'Developer';
         $db = db_connect();
         $users = (new UserModel())
             ->select('userID, username, role, isactive')
@@ -111,13 +122,24 @@ class Home extends BaseController
             ->orderBy('username', 'ASC')
             ->findAll();
 
+        $familyFormViewData = (new FamilyFormOptionsModel())->getViewData();
+        $recentFamilies = $this->recentFamilies($db);
+
         return view('Dashboard/admin', [
             'user' => session()->get(),
             'activePage' => $activePage,
+            'pageTitle' => $layoutModel->pageTitle($activePage),
+            'modeLabel' => $layoutModel->adminModeLabel($isDeveloper),
+            'navActive' => [
+                'dashboard' => $layoutModel->navActive($activePage, 'dashboard'),
+                'accounts' => $layoutModel->navActive($activePage, 'accounts'),
+                'family-entry' => $layoutModel->navActive($activePage, 'family-entry'),
+                'audit-trails' => $layoutModel->navActive($activePage, 'audit-trails'),
+            ],
             'adminAccounts' => array_values(array_filter($users, static fn ($account) => $account['role'] === 'Admin')),
             'employeeAccounts' => array_values(array_filter($users, static fn ($account) => $account['role'] === 'User')),
-            'formOptions' => (new FamilyFormOptionsModel())->getOptions(),
-            'recentFamilies' => $this->recentFamilies($db),
+            'familyFormViewData' => $familyFormViewData,
+            'recentFamilies' => $recentFamilies,
             'recentAudits' => $db->tableExists('audit_trails') ? (new AuditTrailsModel())->getRecent(10) : [],
             'stats' => [
                 'families' => $db->tableExists('member') ? $db->table('member')->where('headID = memberID')->countAllResults() : 0,
@@ -137,14 +159,22 @@ class Home extends BaseController
             return $guard;
         }
 
-        $db = db_connect();
+        $layoutModel = new ViewLayoutModel();
         $userId = (int) session()->get('user_id');
+        $db = db_connect();
+        $familyFormViewData = (new FamilyFormOptionsModel())->getViewData();
 
         return view('Employee/index', [
             'user' => session()->get(),
             'activePage' => $activePage,
+            'pageTitle' => $layoutModel->employeePageTitle($activePage),
+            'navActive' => [
+                'dashboard' => $layoutModel->navActive($activePage, 'dashboard'),
+                'family-entry' => $layoutModel->navActive($activePage, 'family-entry'),
+                'activity' => $layoutModel->navActive($activePage, 'activity'),
+            ],
             'canCreateFamily' => true,
-            'formOptions' => (new FamilyFormOptionsModel())->getOptions(),
+            'familyFormViewData' => $familyFormViewData,
             'recentFamilies' => $this->recentFamilies($db),
             'myAudits' => $db->tableExists('audit_trails') ? (new AuditTrailsModel())->getByUser($userId, 10) : [],
         ]);
@@ -156,8 +186,21 @@ class Home extends BaseController
             return redirect()->to(site_url('/'))->with('error', 'Please login first.');
         }
 
-        if (! in_array(session()->get('role'), $allowedRoles, true)) {
-            return $this->redirectByRole((string) session()->get('role'))
+        $currentRole = $this->normalizeRole((string) session()->get('role'));
+        $normalizedAllowedRoles = array_values(array_filter(array_map(
+            fn (string $role): ?string => $this->normalizeRole($role),
+            $allowedRoles
+        )));
+
+        if ($currentRole === null) {
+            session()->destroy();
+
+            return redirect()->to(site_url('/'))
+                ->with('error', 'Your account role is invalid. Please login again or contact an administrator.');
+        }
+
+        if (! in_array($currentRole, $normalizedAllowedRoles, true)) {
+            return $this->redirectByRole($currentRole)
                 ->with('error', 'You do not have access to that page.');
         }
 
@@ -166,11 +209,32 @@ class Home extends BaseController
 
     private function redirectByRole(string $role): RedirectResponse
     {
-        if ($role === 'User') {
+        $normalizedRole = $this->normalizeRole($role);
+
+        if ($normalizedRole === 'User') {
             return redirect()->to(site_url('employee/workspace'));
         }
 
-        return redirect()->to(site_url('admin'));
+        if ($normalizedRole === 'Admin' || $normalizedRole === 'Developer') {
+            return redirect()->to(site_url('admin'));
+        }
+
+        session()->destroy();
+
+        return redirect()->to(site_url('/'))
+            ->with('error', 'Your account role is invalid. Please contact an administrator.');
+    }
+
+    private function normalizeRole(string $role): ?string
+    {
+        $normalizedRole = strtolower(trim($role));
+
+        return match ($normalizedRole) {
+            'developer' => 'Developer',
+            'admin', 'administrator' => 'Admin',
+            'user', 'employee' => 'User',
+            default => null,
+        };
     }
 
     private function recentFamilies($db): array

@@ -1,13 +1,15 @@
 <?php
 $username = $user['username'] ?? 'Employee';
 $activePage = $activePage ?? 'dashboard';
+$pageTitle = $pageTitle ?? ($activePage === 'dashboard' ? 'Workspace' : ucwords(str_replace('-', ' ', $activePage)));
+$navActive = $navActive ?? [];
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= esc(ucwords(str_replace('-', ' ', $activePage))) ?> - Binan Access Card MIS</title>
+    <title><?= esc($pageTitle) ?> - Binan Access Card MIS</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="<?= base_url('assets/css/mis.css') ?>?v=<?= filemtime(FCPATH . 'assets/css/mis.css') ?>">
 </head>
@@ -23,9 +25,9 @@ $activePage = $activePage ?? 'dashboard';
                 </div>
             </div>
             <nav class="nav flex-column mt-3">
-                <a class="nav-link <?= $activePage === 'dashboard' ? 'active' : '' ?>" href="<?= site_url('employee/workspace') ?>">Workspace</a>
-                <a class="nav-link <?= $activePage === 'family-entry' ? 'active' : '' ?>" href="<?= site_url('employee/family-entry') ?>">Family Entry</a>
-                <a class="nav-link <?= $activePage === 'activity' ? 'active' : '' ?>" href="<?= site_url('employee/activity') ?>">My Activity</a>
+                <a class="nav-link <?= esc($navActive['dashboard'] ?? '') ?>" href="<?= site_url('employee/workspace') ?>">Workspace</a>
+                <a class="nav-link <?= esc($navActive['family-entry'] ?? '') ?>" href="<?= site_url('employee/manage-family') ?>">Manage Family</a>
+                <a class="nav-link <?= esc($navActive['activity'] ?? '') ?>" href="<?= site_url('employee/activity') ?>">My Activity</a>
             </nav>
         </div>
         <div class="sidebar-footer">
@@ -37,7 +39,7 @@ $activePage = $activePage ?? 'dashboard';
     <main class="content">
         <div class="topbar">
             <div>
-                <div class="fw-bold"><?= esc($activePage === 'dashboard' ? 'Workspace' : ucwords(str_replace('-', ' ', $activePage))) ?></div>
+                <div class="fw-bold"><?= esc($pageTitle) ?></div>
                 <small class="text-muted">Bi&ntilde;an Access Card MIS</small>
             </div>
         </div>
@@ -52,7 +54,10 @@ $activePage = $activePage ?? 'dashboard';
 
             <?php if ($activePage === 'dashboard'): ?>
                 <div class="panel">
-                    <div class="section-title mt-0"><span>Recently Added Families</span></div>
+                    <div class="section-title mt-0">
+                        <span>Recently Added Families</span>
+                        <a class="btn btn-primary btn-sm" href="<?= site_url('employee/manage-family') ?>">Manage Family</a>
+                    </div>
                     <div class="table-responsive">
                         <table class="table table-sm">
                             <thead><tr><th>Head</th><th>Barangay</th><th>Sector</th><th>Date</th></tr></thead>
@@ -79,10 +84,10 @@ $activePage = $activePage ?? 'dashboard';
                     <div class="section-title mt-0">
                         <span>Family / Member Data Entry</span>
                     </div>
-                    <?= view('Shared/family_form', [
-                        'formOptions' => $formOptions,
-                        'canCreateFamily' => $canCreateFamily,
-                    ]) ?>
+                    <?= view('Dashboard/familyform', array_merge(
+                        $familyFormViewData ?? [],
+                        ['canCreateFamily' => $canCreateFamily]
+                    )) ?>
                 </div>
             <?php endif; ?>
 
@@ -112,6 +117,6 @@ $activePage = $activePage ?? 'dashboard';
     </main>
 </div>
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<script src="<?= base_url('assets/js/mis.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/mis.js') ?>"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

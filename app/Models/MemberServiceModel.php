@@ -20,6 +20,20 @@ class MemberServiceModel extends Model
         'serviceID' => 'required|is_natural',
     ];
 
+    public function hasTable(): bool
+    {
+        return $this->db->tableExists($this->table);
+    }
+
+    public function countAssignments(): int
+    {
+        if (! $this->hasTable()) {
+            return 0;
+        }
+
+        return $this->countAllResults();
+    }
+
     public function assignService(int $memberId, int $serviceId): int|false
     {
         if (! $this->insert([

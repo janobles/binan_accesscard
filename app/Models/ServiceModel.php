@@ -12,6 +12,20 @@ class ServiceModel extends Model
     protected $allowedFields = ['category', 'name', 'description'];
     protected $useTimestamps = false;
 
+    public function hasTable(): bool
+    {
+        return $this->db->tableExists($this->table);
+    }
+
+    public function existsById(int $serviceId): bool
+    {
+        if (! $this->hasTable()) {
+            return false;
+        }
+
+        return $this->where('serviceID', $serviceId)->countAllResults() > 0;
+    }
+
     public function getForSectorName(string $sectorName): array
     {
         return $this->groupStart()

@@ -34,9 +34,9 @@ $canCreateFamily = $canCreateFamily ?? false;
             </div>
             <nav class="nav flex-column mt-3">
                 <a class="nav-link <?= esc($navActive['dashboard'] ?? '') ?>" href="<?= site_url('admin/dashboard') ?>">Dashboard</a>
-                <a class="nav-link <?= esc($navActive['accounts'] ?? '') ?>" href="<?= site_url('admin/accounts') ?>">Account Management</a>
-                <a class="nav-link <?= esc($navActive['family-entry'] ?? '') ?>" href="<?= site_url('admin/manage-family') ?>">Manage Family</a>
-                <a class="nav-link <?= esc($navActive['audit-trails'] ?? '') ?>" href="<?= site_url('admin/audit-trails') ?>">Audit Trails</a>
+                <a class="nav-link <?= esc($navActive['accounts'] ?? '') ?> js-open-accounts-modal" href="<?= site_url('admin/accounts') ?>" data-modal-url="<?= site_url('admin/accounts?partial=1') ?>" data-modal-title="Account Management">Account Management</a>
+                <a class="nav-link <?= esc($navActive['family-entry'] ?? '') ?> js-open-family-modal" href="<?= site_url('admin/manage-family') ?>" data-modal-url="<?= site_url('admin/manage-family?partial=1') ?>" data-modal-title="Add Family">Add Family</a>
+                <a class="nav-link <?= esc($navActive['audit-trails'] ?? '') ?> js-open-audit-modal" href="<?= site_url('admin/audit-trails') ?>" data-modal-url="<?= site_url('admin/audit-trails?partial=1') ?>" data-modal-title="Audit Trails">Audit Trails</a>
             </nav>
         </div>
         <div class="sidebar-footer">
@@ -75,6 +75,7 @@ $canCreateFamily = $canCreateFamily ?? false;
                 <div class="panel mb-3">
                     <div class="section-title mt-0">
                         <span>Recent Families</span>
+                        <button type="button" class="btn btn-primary btn-sm js-open-family-modal" data-modal-url="<?= site_url('admin/manage-family?partial=1') ?>" data-modal-title="Add Family">Add Family</button>
                     </div>
                     <div class="table-responsive">
                         <table class="table table-sm">
@@ -224,7 +225,32 @@ $canCreateFamily = $canCreateFamily ?? false;
         </div>
     </main>
 </div>
+
+<div class="modal fade floating-family-modal" id="familyModal" tabindex="-1" aria-labelledby="familyModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="familyModalLabel">Add Family</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="familyModalBody">
+                <div class="family-modal-loading" role="status" aria-live="polite">
+                    <div class="spinner-border text-primary" aria-hidden="true"></div>
+                    <span>Loading family form...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="<?= base_url('assets/js/dashboard/family-form.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form.js') ?>"></script>
+<?php if ($activePage === 'dashboard'): ?>
+<script src="<?= base_url('assets/js/dashboard/dashboard-modal-loader.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/dashboard-modal-loader.js') ?>"></script>
+<script src="<?= base_url('assets/js/dashboard/manage-family-modal.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/manage-family-modal.js') ?>"></script>
+<script src="<?= base_url('assets/js/dashboard/accounts-modal.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/accounts-modal.js') ?>"></script>
+<script src="<?= base_url('assets/js/dashboard/audit-trails-modal.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/audit-trails-modal.js') ?>"></script>
+<?php endif; ?>
 </body>
 </html>

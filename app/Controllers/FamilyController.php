@@ -5,6 +5,7 @@ namespace App\Controllers;
 use App\Models\AuditTrailsModel;
 use App\Models\MemberModel;
 use App\Models\MemberServiceModel;
+use App\Models\ServiceModel;
 use CodeIgniter\HTTP\RedirectResponse;
 
 class FamilyController extends BaseController
@@ -27,23 +28,25 @@ class FamilyController extends BaseController
             return $guard;
         }
 
-        $db = db_connect();
-        foreach (['member', 'sector', 'services', 'member_services', 'audit_trails'] as $table) {
-            if (! $db->tableExists($table)) {
-                $message = 'The accesscard database is missing required tables from accesscardV1.4.sql.';
+        $memberModel = new MemberModel();
+        $memberServiceModel = new MemberServiceModel();
+        $serviceModel = new ServiceModel();
+        $auditModel = new AuditTrailsModel();
 
-                if ($this->request->isAJAX()) {
-                    return $this->response
-                        ->setStatusCode(422)
-                        ->setJSON([
-                            'status' => 'error',
-                            'message' => $message,
-                            'csrf' => csrf_hash(),
-                        ]);
-                }
+        if (! $memberModel->hasRequiredFamilyTables()) {
+            $message = 'The accesscard database is missing required tables from accesscardV1.4.sql.';
 
-                return redirect()->back()->withInput()->with('error', $message);
+            if ($this->request->isAJAX()) {
+                return $this->response
+                    ->setStatusCode(422)
+                    ->setJSON([
+                        'status' => 'error',
+                        'message' => $message,
+                        'csrf' => csrf_hash(),
+                    ]);
             }
+
+            return redirect()->back()->withInput()->with('error', $message);
         }
 
         $rules = [
@@ -84,16 +87,14 @@ class FamilyController extends BaseController
             $serviceIds = [];
         }
 
-        $memberModel = new MemberModel();
-        $memberServiceModel = new MemberServiceModel();
         $userId = (int) session()->get('user_id');
 
-        $db->transStart();
+        $memberModel->beginTransaction();
 
         $headId = $memberModel->createHead($this->memberPayload('head_'));
 
         if ($headId === false) {
-            $db->transRollback();
+            $memberModel->rollbackTransaction();
 
             $message = 'Head of family could not be saved. Please check required fields.';
 
@@ -120,7 +121,7 @@ class FamilyController extends BaseController
             $memberId = $memberModel->addFamilyMember($headId, $this->memberPayloadFromArray($member));
 
             if ($memberId === false) {
-                $db->transRollback();
+                $memberModel->rollbackTransaction();
 
                 $message = 'One family member could not be saved.';
 
@@ -136,21 +137,53 @@ class FamilyController extends BaseController
 
                 return redirect()->back()->withInput()->with('error', $message);
             }
+
+            $memberServiceIds = $member['service_ids'] ?? [];
+
+            if (! is_array($memberServiceIds)) {
+                $memberServiceIds = [];
+            }
+
+            foreach ($memberServiceIds as $memberServiceId) {
+                $memberServiceId = (int) $memberServiceId;
+
+                if ($memberServiceId <= 0 || ! $serviceModel->existsById($memberServiceId)) {
+                    continue;
+                }
+
+                if ($memberServiceModel->assignService($memberId, $memberServiceId) === false) {
+                    $memberModel->rollbackTransaction();
+
+                    $message = 'A selected service could not be assigned to one family member.';
+
+                    if ($this->request->isAJAX()) {
+                        return $this->response
+                            ->setStatusCode(422)
+                            ->setJSON([
+                                'status' => 'error',
+                                'message' => $message,
+                                'csrf' => csrf_hash(),
+                            ]);
+                    }
+
+                    return redirect()->back()->withInput()->with('error', $message);
+                }
+            }
         }
 
         foreach ($serviceIds as $serviceId) {
             $serviceId = (int) $serviceId;
 
-            if ($serviceId < 0 || ! $this->serviceExists($serviceId)) {
+            if ($serviceId < 0 || ! $serviceModel->existsById($serviceId)) {
                 continue;
             }
 
             $memberServiceModel->assignService($headId, $serviceId);
         }
 
-        if ($db->tableExists('audit_trails')) {
+        if ($auditModel->hasTable()) {
             // Tracks the creating operator plus client IP and browser agent.
-            (new AuditTrailsModel())->logAction(
+            $auditModel->logAction(
                 $userId,
                 $headId,
                 'FAMILY_CREATED',
@@ -160,9 +193,9 @@ class FamilyController extends BaseController
             );
         }
 
-        $db->transComplete();
+        $memberModel->completeTransaction();
 
-        if (! $db->transStatus()) {
+        if (! $memberModel->transactionStatus()) {
             $message = 'The family form was not saved.';
 
             if ($this->request->isAJAX()) {
@@ -264,10 +297,4 @@ class FamilyController extends BaseController
         return $value === '' ? null : $value;
     }
 
-    private function serviceExists(int $serviceId): bool
-    {
-        return db_connect()->table('services')
-            ->where('serviceID', $serviceId)
-            ->countAllResults() > 0;
-    }
 }

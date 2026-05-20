@@ -1,13 +1,15 @@
 <?php
-$formOptions = $formOptions ?? [];
-$sectorOptions = $sectorOptions ?? ($formOptions['sectors'] ?? []);
-$sexOptions = $sexOptions ?? ($formOptions['sexes'] ?? []);
-$suffixOptions = $suffixOptions ?? ($formOptions['suffixes'] ?? []);
-$civilOptions = $civilOptions ?? ($formOptions['civil_statuses'] ?? []);
-$relationshipOptions = $relationshipOptions ?? ($formOptions['relationships'] ?? []);
-$educationOptions = $educationOptions ?? ($formOptions['education_levels'] ?? []);
-$incomeOptions = $incomeOptions ?? ($formOptions['income_ranges'] ?? []);
-$servicesByCategory = $servicesByCategory ?? ($formOptions['services_by_category'] ?? []);
+$formOptions = array_merge([
+    'sectors' => [],
+    'sexes' => [],
+    'suffixes' => [],
+    'civil_statuses' => [],
+    'relationships' => [],
+    'education_levels' => [],
+    'income_ranges' => [],
+    'services_by_category' => [],
+], $formOptions ?? []);
+$sectorCatalog = $sectorCatalog ?? [];
 ?>
 
 <link rel="stylesheet" href="<?= base_url('assets/css/familyform.css') ?>?v=<?= filemtime(FCPATH . 'assets/css/familyform.css') ?>">
@@ -55,7 +57,7 @@ $servicesByCategory = $servicesByCategory ?? ($formOptions['services_by_category
                 <label class="form-label" for="head_suffix">Suffix</label>
                 <select class="form-select" id="head_suffix" name="head_suffix">
                     <option value="">Select</option>
-                    <?php foreach ($suffixOptions as $suffix): ?>
+                    <?php foreach ($formOptions['suffixes'] as $suffix): ?>
                         <option value="<?= esc($suffix) ?>"><?= esc($suffix) ?></option>
                     <?php endforeach; ?>
                 </select>
@@ -68,7 +70,7 @@ $servicesByCategory = $servicesByCategory ?? ($formOptions['services_by_category
                 <label class="form-label" for="head_sex">Sex</label>
                 <select class="form-select" id="head_sex" name="head_sex" required>
                     <option value="">Select</option>
-                    <?php foreach ($sexOptions as $sex): ?>
+                    <?php foreach ($formOptions['sexes'] as $sex): ?>
                         <option value="<?= esc($sex) ?>"><?= esc($sex) ?></option>
                     <?php endforeach; ?>
                 </select>
@@ -77,7 +79,7 @@ $servicesByCategory = $servicesByCategory ?? ($formOptions['services_by_category
                 <label class="form-label" for="head_civilstatus">Civil status</label>
                 <select class="form-select" id="head_civilstatus" name="head_civilstatus">
                     <option value="">Select</option>
-                    <?php foreach ($civilOptions as $civilStatus): ?>
+                    <?php foreach ($formOptions['civil_statuses'] as $civilStatus): ?>
                         <option value="<?= esc($civilStatus) ?>"><?= esc($civilStatus) ?></option>
                     <?php endforeach; ?>
                 </select>
@@ -90,7 +92,7 @@ $servicesByCategory = $servicesByCategory ?? ($formOptions['services_by_category
                 <label class="form-label" for="head_education">Education</label>
                 <select class="form-select" id="head_education" name="head_education">
                     <option value="">Select</option>
-                    <?php foreach ($educationOptions as $education): ?>
+                    <?php foreach ($formOptions['education_levels'] as $education): ?>
                         <option value="<?= esc($education) ?>"><?= esc($education) ?></option>
                     <?php endforeach; ?>
                 </select>
@@ -102,7 +104,7 @@ $servicesByCategory = $servicesByCategory ?? ($formOptions['services_by_category
             <div class="col-md-3">
                 <label class="form-label" for="head_salary">Monthly income</label>
                 <select class="form-select" id="head_salary" name="head_salary">
-                    <?php foreach ($incomeOptions as $incomeValue => $incomeLabel): ?>
+                    <?php foreach ($formOptions['income_ranges'] as $incomeValue => $incomeLabel): ?>
                         <option value="<?= esc((string) $incomeValue) ?>"><?= esc((string) $incomeLabel) ?></option>
                     <?php endforeach; ?>
                 </select>
@@ -111,15 +113,34 @@ $servicesByCategory = $servicesByCategory ?? ($formOptions['services_by_category
     </div>
 
     <?= view('Dashboard/sectorandservices', [
-        'servicesByCategory' => $servicesByCategory,
-        'sectorOptions' => $sectorOptions,
+        'servicesByCategory' => $formOptions['services_by_category'],
+        'sectorCatalog' => $sectorCatalog,
     ]) ?>
 
     <div class="form-section family-step-panel" data-step="3">
         <div class="section-title">
             <span>Family Members</span>
+            <button type="button" class="btn btn-sm btn-primary" id="addMemberBtn">Add Member</button>
+        </div>
+        <div class="member-row mb-3" id="headOfFamilySummary">
+            <div class="member-row-header">
+                <strong>Current Head of Family</strong>
+            </div>
+            <div class="row g-2">
+                <div class="col-md-4"><small><strong>Name:</strong> <span id="headSummaryName">-</span></small></div>
+                <div class="col-md-4"><small><strong>Birthday:</strong> <span id="headSummaryBirthday">-</span></small></div>
+                <div class="col-md-4"><small><strong>Sex:</strong> <span id="headSummarySex">-</span></small></div>
+                <div class="col-md-4"><small><strong>Civil status:</strong> <span id="headSummaryCivil">-</span></small></div>
+                <div class="col-md-4"><small><strong>Contact:</strong> <span id="headSummaryContact">-</span></small></div>
+                <div class="col-md-4"><small><strong>Education:</strong> <span id="headSummaryEducation">-</span></small></div>
+                <div class="col-md-4"><small><strong>Job:</strong> <span id="headSummaryJob">-</span></small></div>
+                <div class="col-md-4"><small><strong>Monthly income:</strong> <span id="headSummaryIncome">-</span></small></div>
+                <div class="col-md-6"><small><strong>Sector(s):</strong></small><div id="headSummarySectors" class="head-summary-list">-</div></div>
+                <div class="col-md-6"><small><strong>Services availed:</strong></small><div id="headSummaryServices" class="head-summary-list">-</div></div>
+            </div>
         </div>
         <div id="memberRows" class="member-stack"></div>
+        <p class="text-muted mb-0" id="memberRowsEmpty">No family members added yet. Click Add Member.</p>
     </div>
 
     <div class="d-flex justify-content-end gap-2 family-form-actions">
@@ -140,144 +161,104 @@ $servicesByCategory = $servicesByCategory ?? ($formOptions['services_by_category
             <button type="button" class="btn btn-sm btn-outline-danger remove-member">Remove</button>
         </div>
         <div class="row g-2">
-            <div class="col-md-3"><input class="form-control" data-name="firstname" placeholder="First name"></div>
-            <div class="col-md-3"><input class="form-control" data-name="middlename" placeholder="Middle name"></div>
-            <div class="col-md-3"><input class="form-control" data-name="lastname" placeholder="Last name"></div>
             <div class="col-md-3">
+                <label class="form-label">First name</label>
+                <input class="form-control" data-name="firstname" placeholder="First name">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Middle name</label>
+                <input class="form-control" data-name="middlename" placeholder="Middle name">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Last name</label>
+                <input class="form-control" data-name="lastname" placeholder="Last name">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Suffix</label>
                 <select class="form-select" data-name="suffix">
                     <option value="">Suffix</option>
-                    <?php foreach ($suffixOptions as $suffix): ?>
+                    <?php foreach ($formOptions['suffixes'] as $suffix): ?>
                         <option value="<?= esc($suffix) ?>"><?= esc($suffix) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
-            <div class="col-md-3"><input type="date" class="form-control" data-name="birthday"></div>
             <div class="col-md-3">
+                <label class="form-label">Birthday</label>
+                <input type="date" class="form-control" data-name="birthday">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Sex</label>
                 <select class="form-select" data-name="sex">
                     <option value="">Sex</option>
-                    <?php foreach ($sexOptions as $sex): ?>
+                    <?php foreach ($formOptions['sexes'] as $sex): ?>
                         <option value="<?= esc($sex) ?>"><?= esc($sex) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
             <div class="col-md-3">
+                <label class="form-label">Civil status</label>
                 <select class="form-select" data-name="civilstatus">
                     <option value="">Civil status</option>
-                    <?php foreach ($civilOptions as $civilStatus): ?>
+                    <?php foreach ($formOptions['civil_statuses'] as $civilStatus): ?>
                         <option value="<?= esc($civilStatus) ?>"><?= esc($civilStatus) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
             <div class="col-md-3">
+                <label class="form-label">Relationship</label>
                 <select class="form-select" data-name="relationship">
                     <option value="">Relationship</option>
-                    <?php foreach ($relationshipOptions as $relationship): ?>
+                    <?php foreach ($formOptions['relationships'] as $relationship): ?>
                         <option value="<?= esc($relationship) ?>"><?= esc($relationship) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
             <div class="col-md-3">
+                <label class="form-label">Sector</label>
                 <select class="form-select" data-name="sectorID">
                     <option value="">Select</option>
-                    <?php foreach ($sectorOptions as $sector): ?>
+                    <?php foreach ($formOptions['sectors'] as $sector): ?>
                         <option value="<?= esc((string) ($sector['sectorID'] ?? '')) ?>"><?= esc((string) ($sector['name'] ?? '')) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
             <div class="col-md-3">
+                <label class="form-label">Education</label>
                 <select class="form-select" data-name="education">
                     <option value="">Education</option>
-                    <?php foreach ($educationOptions as $education): ?>
+                    <?php foreach ($formOptions['education_levels'] as $education): ?>
                         <option value="<?= esc($education) ?>"><?= esc($education) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
-            <div class="col-md-3"><input class="form-control" data-name="job" placeholder="Job"></div>
             <div class="col-md-3">
+                <label class="form-label">Job</label>
+                <input class="form-control" data-name="job" placeholder="Job">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Monthly income</label>
                 <select class="form-select" data-name="salary">
-                    <?php foreach ($incomeOptions as $incomeValue => $incomeLabel): ?>
+                    <?php foreach ($formOptions['income_ranges'] as $incomeValue => $incomeLabel): ?>
                         <option value="<?= esc((string) $incomeValue) ?>"><?= esc((string) $incomeLabel) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Contact number</label>
+                <input class="form-control" data-name="contactnumber" placeholder="Contact number">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Services availed</label>
+                <select class="form-select" data-name="service_ids[]" multiple size="5" aria-label="Services availed">
+                    <?php foreach ($formOptions['services_by_category'] as $category => $services): ?>
+                        <optgroup label="<?= esc((string) $category) ?>">
+                            <?php foreach ($services as $service): ?>
+                                <option value="<?= esc((string) ($service['serviceID'] ?? '')) ?>"><?= esc((string) ($service['name'] ?? '')) ?></option>
+                            <?php endforeach; ?>
+                        </optgroup>
                     <?php endforeach; ?>
                 </select>
             </div>
         </div>
     </div>
 </template>
-
-<script>
-(function () {
-    const form = document.getElementById('familyForm');
-
-    if (! form) {
-        return;
-    }
-
-    const panels = Array.from(form.querySelectorAll('.family-step-panel'));
-    const stepItems = Array.from(document.querySelectorAll('.family-wizard-steps .wizard-step'));
-    const nextBtn = document.getElementById('nextStepBtn');
-    const prevBtn = document.getElementById('prevStepBtn');
-    const submitBtn = document.getElementById('submitFamilyBtn');
-    const resetBtn = document.getElementById('resetFamilyBtn');
-    const stepInfo = document.querySelector('.wizard-header-left small');
-    let currentStep = 1;
-    const totalSteps = 3;
-
-    function setStep(step) {
-        currentStep = Math.max(1, Math.min(totalSteps, step));
-
-        panels.forEach(function (panel) {
-            panel.classList.toggle('is-visible', Number(panel.dataset.step) === currentStep);
-        });
-
-        stepItems.forEach(function (item) {
-            item.classList.toggle('is-active', Number(item.dataset.stepTarget) === currentStep);
-        });
-
-        if (stepInfo) {
-            if (currentStep === 1) {
-                stepInfo.textContent = 'Step 1 of 3 - Head of the Family';
-            } else if (currentStep === 2) {
-                stepInfo.textContent = 'Step 2 of 3 - Sector & services';
-            } else {
-                stepInfo.textContent = 'Step 3 of 3 - Family members';
-            }
-        }
-
-        if (prevBtn) {
-            prevBtn.style.display = currentStep === 1 ? 'none' : '';
-        }
-
-        if (nextBtn) {
-            nextBtn.style.display = currentStep === totalSteps ? 'none' : '';
-        }
-
-        if (submitBtn) {
-            submitBtn.style.display = currentStep === totalSteps ? '' : 'none';
-        }
-
-        if (resetBtn) {
-            resetBtn.style.display = currentStep === totalSteps ? 'none' : '';
-        }
-    }
-
-    if (nextBtn) {
-        nextBtn.addEventListener('click', function () {
-            setStep(currentStep + 1);
-        });
-    }
-
-    if (prevBtn) {
-        prevBtn.addEventListener('click', function () {
-            setStep(currentStep - 1);
-        });
-    }
-
-    stepItems.forEach(function (item) {
-        item.addEventListener('click', function () {
-            setStep(Number(item.dataset.stepTarget));
-        });
-    });
-
-    setStep(1);
-})();
-</script>

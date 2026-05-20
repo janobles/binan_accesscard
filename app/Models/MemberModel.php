@@ -37,6 +37,74 @@ class MemberModel extends Model
         'sex' => 'permit_empty|in_list[Male,Female]',
     ];
 
+    public function hasTable(): bool
+    {
+        return $this->db->tableExists($this->table);
+    }
+
+    public function hasRequiredFamilyTables(): bool
+    {
+        foreach (['member', 'sector', 'services', 'member_services', 'audit_trails'] as $table) {
+            if (! $this->db->tableExists($table)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public function beginTransaction(): void
+    {
+        $this->db->transStart();
+    }
+
+    public function rollbackTransaction(): void
+    {
+        $this->db->transRollback();
+    }
+
+    public function completeTransaction(): void
+    {
+        $this->db->transComplete();
+    }
+
+    public function transactionStatus(): bool
+    {
+        return $this->db->transStatus();
+    }
+
+    public function getRecentFamilies(int $limit = 10): array
+    {
+        if (! $this->hasTable()) {
+            return [];
+        }
+
+        return $this->select('member.*, sector.name AS sector_name')
+            ->join('sector', 'sector.sectorID = member.sectorID', 'left')
+            ->where('member.headID = member.memberID')
+            ->orderBy('member.dt_created', 'DESC')
+            ->limit($limit)
+            ->findAll();
+    }
+
+    public function countHeads(): int
+    {
+        if (! $this->hasTable()) {
+            return 0;
+        }
+
+        return $this->where('headID = memberID')->countAllResults();
+    }
+
+    public function countMembers(): int
+    {
+        if (! $this->hasTable()) {
+            return 0;
+        }
+
+        return $this->countAllResults();
+    }
+
     public function createHead(array $data): int|false
     {
         $data['memberID'] = $this->nextAutoIncrementId();

@@ -12,8 +12,10 @@ class FamilyFormOptionsModel extends Model
 
     public function getOptions(): array
     {
+        $sectorModel = new SectorModel();
+
         return [
-            'sectors' => $this->getSectors(),
+            'sectors' => $sectorModel->getSectorOptions(),
             'sexes' => ['Male', 'Female'],
             'suffixes' => ['I', 'II', 'III', 'IV'],
             'civil_statuses' => [
@@ -74,10 +76,13 @@ class FamilyFormOptionsModel extends Model
     public function getViewData(): array
     {
         $options = $this->getOptions();
+        $sectorOptions = $options['sectors'] ?? [];
+        $sectorModel = new SectorModel();
 
         return [
             'formOptions' => $options,
-            'sectorOptions' => $options['sectors'] ?? [],
+            'sectorOptions' => $sectorOptions,
+            'sectorCatalog' => $sectorModel->getSectorCatalog($sectorOptions),
             'sexOptions' => $options['sexes'] ?? [],
             'suffixOptions' => $options['suffixes'] ?? [],
             'civilOptions' => $options['civil_statuses'] ?? [],
@@ -86,15 +91,6 @@ class FamilyFormOptionsModel extends Model
             'incomeOptions' => $options['income_ranges'] ?? [],
             'servicesByCategory' => $options['services_by_category'] ?? [],
         ];
-    }
-
-    private function getSectors(): array
-    {
-        if (! $this->db->tableExists('sector')) {
-            return [];
-        }
-
-        return $this->orderBy('name', 'ASC')->findAll();
     }
 
     private function getServicesByCategory(): array

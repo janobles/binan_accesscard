@@ -53,6 +53,19 @@ class UserModel extends Model
         return $user;
     }
 
+    public function getStaffAccounts(): array
+    {
+        if (! $this->db->tableExists($this->table)) {
+            return [];
+        }
+
+        return $this->select('userID, username, role, isactive')
+            ->whereIn('role', ['Admin', 'User'])
+            ->orderBy('role', 'ASC')
+            ->orderBy('username', 'ASC')
+            ->findAll();
+    }
+
     // Enforces the Enable/Disabled enum while allowing legacy numeric rows.
     private function isUserActive(mixed $value): bool
     {

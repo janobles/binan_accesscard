@@ -19,6 +19,11 @@ class AuditTrailsModel extends Model
     ];
     protected $useTimestamps = false;
 
+    public function hasTable(): bool
+    {
+        return $this->db->tableExists($this->table);
+    }
+
     public function logAction(
         int $userId,
         ?int $memberId,
@@ -57,6 +62,10 @@ class AuditTrailsModel extends Model
 
     public function getRecent(int $limit = 50): array
     {
+        if (! $this->hasTable()) {
+            return [];
+        }
+
         return $this->select('audit_trails.*, users.username, member.firstname, member.lastname')
             ->join('users', 'users.userID = audit_trails.userID')
             ->join('member', 'member.memberID = audit_trails.memberID', 'left')
@@ -67,6 +76,10 @@ class AuditTrailsModel extends Model
 
     public function getByUser(int $userId, int $limit = 50): array
     {
+        if (! $this->hasTable()) {
+            return [];
+        }
+
         return $this->where('userID', $userId)
             ->orderBy('dt_created', 'DESC')
             ->limit($limit)

@@ -99,13 +99,15 @@ class AccountController extends BaseController
 
     private function audit(string $action, string $description): void
     {
-        if (! db_connect()->tableExists('audit_trails')) {
+        $auditModel = new AuditTrailsModel();
+
+        if (! $auditModel->hasTable()) {
             return;
         }
 
         try {
             // Account creation is a staff action, so memberID stays null.
-            (new AuditTrailsModel())->logAction(
+            $auditModel->logAction(
                 (int) session()->get('user_id'),
                 null,
                 $action,

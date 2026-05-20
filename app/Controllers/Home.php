@@ -2,14 +2,17 @@
 
 namespace App\Controllers;
 
+use App\Controllers\Concerns\HomeDashboardPagesTrait;
+use App\Controllers\Concerns\HomeRoleAccessTrait;
 use App\Models\UserModel;
-use App\Models\AuditTrailsModel;
 use App\Models\FamilyFormOptionsModel;
-use App\Models\ViewLayoutModel;
 use CodeIgniter\HTTP\RedirectResponse;
 
 class Home extends BaseController
 {
+    use HomeRoleAccessTrait;
+    use HomeDashboardPagesTrait;
+
     public function index(): string|RedirectResponse
     {
         if (session()->get('is_logged_in')) {
@@ -72,68 +75,89 @@ class Home extends BaseController
 
     public function adminAccounts(): string|RedirectResponse
     {
+        if ($this->isPartialRequest()) {
+            return $this->renderAdminAccountsPartial();
+        }
+
         return $this->renderAdminPage('accounts');
     }
 
     public function adminFamilyEntry(): string|RedirectResponse
     {
+        if ($this->isPartialRequest()) {
+            return $this->renderAdminFamilyPartial();
+        }
+
         return $this->renderAdminPage('family-entry');
     }
 
     public function adminAuditTrails(): string|RedirectResponse
     {
+        if ($this->isPartialRequest()) {
+            return $this->renderAdminAuditPartial();
+        }
+
         return $this->renderAdminPage('audit-trails');
     }
 
-    private function renderAdminPage(string $activePage): string|RedirectResponse
+    private function isPartialRequest(): bool
     {
-        $guard = $this->requireRole(['Developer', 'Admin']);
+        return $this->request->isAJAX() || (string) $this->request->getGet('partial') === '1';
+    }
+
+    private function guardAdminPartialAccess(): ?RedirectResponse
+    {
+        return $this->requireRole(['Developer', 'Admin']);
+    }
+
+    private function renderAdminAccountsPartial(): string|RedirectResponse
+    {
+        $guard = $this->guardAdminPartialAccess();
 
         if ($guard instanceof RedirectResponse) {
             return $guard;
         }
 
-        if ($activePage === 'accounts' && session()->get('role') !== 'Developer') {
-            return redirect()->to(site_url('admin/dashboard'))
-                ->with('error', 'Developer access is required for account management.');
+        if ((string) session()->get('role') !== 'Developer') {
+            return '<div class="alert alert-danger mb-0">Developer access is required for account management.</div>';
         }
 
-        $layoutModel = new ViewLayoutModel();
-        $isDeveloper = $this->normalizeRole((string) session()->get('role')) === 'Developer';
-        $db = db_connect();
-        $users = (new UserModel())
-            ->select('userID, username, role, isactive')
-            ->whereIn('role', ['Admin', 'User'])
-            ->orderBy('role', 'ASC')
-            ->orderBy('username', 'ASC')
-            ->findAll();
+        $viewData = $this->buildAdminViewData('accounts');
+
+        return view('Dashboard/accounts', [
+            'adminAccounts' => $viewData['adminAccounts'] ?? [],
+            'employeeAccounts' => $viewData['employeeAccounts'] ?? [],
+        ]);
+    }
+
+    private function renderAdminFamilyPartial(): string|RedirectResponse
+    {
+        $guard = $this->guardAdminPartialAccess();
+
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
 
         $familyFormViewData = (new FamilyFormOptionsModel())->getViewData();
-        $recentFamilies = $this->recentFamilies($db);
 
-        return view('Dashboard/admin', [
-            'user' => session()->get(),
-            'activePage' => $activePage,
-            'pageTitle' => $layoutModel->pageTitle($activePage),
-            'modeLabel' => $layoutModel->adminModeLabel($isDeveloper),
-            'navActive' => [
-                'dashboard' => $layoutModel->navActive($activePage, 'dashboard'),
-                'accounts' => $layoutModel->navActive($activePage, 'accounts'),
-                'family-entry' => $layoutModel->navActive($activePage, 'family-entry'),
-                'audit-trails' => $layoutModel->navActive($activePage, 'audit-trails'),
-            ],
-            'adminAccounts' => array_values(array_filter($users, static fn ($account) => $account['role'] === 'Admin')),
-            'employeeAccounts' => array_values(array_filter($users, static fn ($account) => $account['role'] === 'User')),
-            'familyFormViewData' => $familyFormViewData,
-            'recentFamilies' => $recentFamilies,
-            'recentAudits' => $db->tableExists('audit_trails') ? (new AuditTrailsModel())->getRecent(10) : [],
-            'stats' => [
-                'families' => $db->tableExists('member') ? $db->table('member')->where('headID = memberID')->countAllResults() : 0,
-                'members' => $db->tableExists('member') ? $db->table('member')->countAllResults() : 0,
-                'sectors' => $db->tableExists('sector') ? $db->table('sector')->countAllResults() : 0,
-                'assistance' => $db->tableExists('member_services') ? $db->table('member_services')->countAllResults() : 0,
-            ],
-            'canCreateFamily' => true,
+        return view('Dashboard/familyform', array_merge(
+            $familyFormViewData,
+            ['canCreateFamily' => true]
+        ));
+    }
+
+    private function renderAdminAuditPartial(): string|RedirectResponse
+    {
+        $guard = $this->guardAdminPartialAccess();
+
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        $viewData = $this->buildAdminViewData('audit-trails');
+
+        return view('Dashboard/audit-trails', [
+            'recentAudits' => $viewData['recentAudits'] ?? [],
         ]);
     }
 
@@ -152,105 +176,4 @@ class Home extends BaseController
         return $this->renderEmployeePage('activity');
     }
 
-    private function renderEmployeePage(string $activePage): string|RedirectResponse
-    {
-        $guard = $this->requireRole(['Developer', 'Admin', 'User']);
-
-        if ($guard instanceof RedirectResponse) {
-            return $guard;
-        }
-
-        $layoutModel = new ViewLayoutModel();
-        $userId = (int) session()->get('user_id');
-        $db = db_connect();
-        $familyFormViewData = (new FamilyFormOptionsModel())->getViewData();
-
-        return view('Employee/index', [
-            'user' => session()->get(),
-            'activePage' => $activePage,
-            'pageTitle' => $layoutModel->employeePageTitle($activePage),
-            'navActive' => [
-                'dashboard' => $layoutModel->navActive($activePage, 'dashboard'),
-                'family-entry' => $layoutModel->navActive($activePage, 'family-entry'),
-                'activity' => $layoutModel->navActive($activePage, 'activity'),
-            ],
-            'canCreateFamily' => true,
-            'familyFormViewData' => $familyFormViewData,
-            'recentFamilies' => $this->recentFamilies($db),
-            'myAudits' => $db->tableExists('audit_trails') ? (new AuditTrailsModel())->getByUser($userId, 10) : [],
-        ]);
-    }
-
-    private function requireRole(array $allowedRoles): ?RedirectResponse
-    {
-        if (! session()->get('is_logged_in')) {
-            return redirect()->to(site_url('/'))->with('error', 'Please login first.');
-        }
-
-        $currentRole = $this->normalizeRole((string) session()->get('role'));
-        $normalizedAllowedRoles = array_values(array_filter(array_map(
-            fn (string $role): ?string => $this->normalizeRole($role),
-            $allowedRoles
-        )));
-
-        if ($currentRole === null) {
-            session()->destroy();
-
-            return redirect()->to(site_url('/'))
-                ->with('error', 'Your account role is invalid. Please login again or contact an administrator.');
-        }
-
-        if (! in_array($currentRole, $normalizedAllowedRoles, true)) {
-            return $this->redirectByRole($currentRole)
-                ->with('error', 'You do not have access to that page.');
-        }
-
-        return null;
-    }
-
-    private function redirectByRole(string $role): RedirectResponse
-    {
-        $normalizedRole = $this->normalizeRole($role);
-
-        if ($normalizedRole === 'User') {
-            return redirect()->to(site_url('employee/workspace'));
-        }
-
-        if ($normalizedRole === 'Admin' || $normalizedRole === 'Developer') {
-            return redirect()->to(site_url('admin'));
-        }
-
-        session()->destroy();
-
-        return redirect()->to(site_url('/'))
-            ->with('error', 'Your account role is invalid. Please contact an administrator.');
-    }
-
-    private function normalizeRole(string $role): ?string
-    {
-        $normalizedRole = strtolower(trim($role));
-
-        return match ($normalizedRole) {
-            'developer' => 'Developer',
-            'admin', 'administrator' => 'Admin',
-            'user', 'employee' => 'User',
-            default => null,
-        };
-    }
-
-    private function recentFamilies($db): array
-    {
-        if (! $db->tableExists('member')) {
-            return [];
-        }
-
-        return $db->table('member')
-            ->select('member.*, sector.name AS sector_name')
-            ->join('sector', 'sector.sectorID = member.sectorID', 'left')
-            ->where('member.headID = member.memberID')
-            ->orderBy('member.dt_created', 'DESC')
-            ->limit(10)
-            ->get()
-            ->getResultArray();
-    }
 }

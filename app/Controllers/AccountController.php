@@ -104,12 +104,14 @@ class AccountController extends BaseController
         }
 
         try {
+            // Account creation is a staff action, so memberID stays null.
             (new AuditTrailsModel())->logAction(
                 (int) session()->get('user_id'),
-                (int) (session()->get('member_id') ?? 1),
+                null,
                 $action,
                 $description,
-                $this->request->getIPAddress()
+                $this->request->getIPAddress(),
+                $this->request->getUserAgent()->getAgentString()
             );
         } catch (Throwable $exception) {
             log_message('error', 'Audit trail skipped: ' . $exception->getMessage());

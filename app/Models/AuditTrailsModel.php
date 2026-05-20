@@ -13,6 +13,7 @@ class AuditTrailsModel extends Model
         'user_action',
         'description',
         'ip_address',
+        'user_agent',
         'userID',
         'memberID',
     ];
@@ -23,15 +24,35 @@ class AuditTrailsModel extends Model
         ?int $memberId,
         string $action,
         ?string $description = null,
-        ?string $ipAddress = null
+        ?string $ipAddress = null,
+        ?string $userAgent = null
     ): bool {
-        return $this->insert([
+        $payload = [
             'userID' => $userId,
             'memberID' => $memberId,
             'user_action' => $action,
             'description' => $description,
             'ip_address' => $ipAddress,
-        ]) !== false;
+        ];
+
+        // Prefer dedicated column when present; otherwise keep UA in description.
+        if ($userAgent !== null && $userAgent !== '') {
+            if ($this->db->fieldExists('user_agent', $this->table)) {
+                $payload['user_agent'] = $userAgent;
+            } else {
+                $payload['description'] = $this->appendUserAgent($description, $userAgent);
+            }
+        }
+
+        return $this->insert($payload) !== false;
+    }
+
+    private function appendUserAgent(?string $description, string $userAgent): string
+    {
+        $base = $description ?? '';
+        $suffix = 'UA: ' . $userAgent;
+
+        return $base === '' ? $suffix : $base . ' | ' . $suffix;
     }
 
     public function getRecent(int $limit = 50): array

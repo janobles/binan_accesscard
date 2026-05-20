@@ -47,10 +47,15 @@ class FamilyController extends BaseController
             return $this->validationResponse(implode(' ', $this->validator->getErrors()));
         }
 
-        $sectorIds = SectorIds::normalize($this->request->getPost('sector_ids'));
+        $postedSectorIds = $this->postedSectorIds();
+        $sectorIds = SectorIds::normalize($postedSectorIds);
 
         if ($sectorIds === []) {
             return $this->validationResponse('Please select at least one sector name.');
+        }
+
+        if (SectorIds::hasMalformedIds($postedSectorIds) || ! $this->sectorIdsExist($sectorIds)) {
+            return $this->validationResponse('One or more selected sectors are invalid.');
         }
 
         $serviceIds = $this->request->getPost('service_ids');
@@ -108,6 +113,12 @@ class FamilyController extends BaseController
         foreach ($members as $member) {
             if (! is_array($member) || ! $this->hasMemberData($member)) {
                 continue;
+            }
+
+            if (! $this->memberSectorIdsAreValid($member)) {
+                $memberModel->rollbackTransaction();
+
+                return $this->validationResponse('One family member has an invalid sector selection.');
             }
 
             $memberId = $memberModel->addFamilyMember($headId, $this->memberPayloadFromArray($member));
@@ -220,6 +231,13 @@ class FamilyController extends BaseController
         return (string) $this->request->getPost('entry_type') === 'member' ? 'member' : 'head';
     }
 
+    private function postedSectorIds(): mixed
+    {
+        $sectorIds = $this->request->getPost('sector_ids');
+
+        return $sectorIds !== null ? $sectorIds : $this->request->getPost('sectorID');
+    }
+
     private function rulesForEntryType(string $entryType): array
     {
         $rules = [];
@@ -259,7 +277,7 @@ class FamilyController extends BaseController
             'Salary' => $this->moneyOrNull($this->request->getPost($prefix . 'salary')),
             'contactnumber' => $this->nullableText($this->request->getPost($prefix . 'contactnumber')),
             'relationship' => $prefix === 'head_' ? 'Head' : ($this->nullableText($this->request->getPost($prefix . 'relationship')) ?? 'Member'),
-            'sectorID' => SectorIds::toStorage($this->request->getPost('sector_ids')),
+            'sectorID' => SectorIds::toStorage($this->postedSectorIds()),
         ];
     }
 
@@ -268,7 +286,7 @@ class FamilyController extends BaseController
         $sectorIds = $member['sector_ids'] ?? $member['sectorID'] ?? null;
 
         if (SectorIds::normalize($sectorIds) === []) {
-            $sectorIds = $this->request->getPost('sector_ids');
+            $sectorIds = $this->postedSectorIds();
         }
 
         return [
@@ -329,6 +347,42 @@ class FamilyController extends BaseController
         }
 
         return true;
+    }
+
+    private function sectorIdsExist(array $sectorIds): bool
+    {
+        if ($sectorIds === []) {
+            return false;
+        }
+
+        $db = db_connect();
+
+        if (! $db->tableExists('sector')) {
+            return false;
+        }
+
+        $existingCount = $db->table('sector')
+            ->whereIn('sectorID', $sectorIds)
+            ->countAllResults();
+
+        return $existingCount === count($sectorIds);
+    }
+
+    private function memberSectorIdsAreValid(array $member): bool
+    {
+        $sectorIds = $member['sector_ids'] ?? $member['sectorID'] ?? null;
+
+        if (SectorIds::hasMalformedIds($sectorIds)) {
+            return false;
+        }
+
+        $normalizedSectorIds = SectorIds::normalize($sectorIds);
+
+        if ($normalizedSectorIds === []) {
+            return true;
+        }
+
+        return $this->sectorIdsExist($normalizedSectorIds);
     }
 
     private function auditFamilyAction(

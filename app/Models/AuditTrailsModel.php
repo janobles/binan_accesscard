@@ -60,12 +60,12 @@ class AuditTrailsModel extends Model
             return [];
         }
 
-        return $this->select('audit_trails.*, users.username, member.firstname, member.lastname')
-            ->join('users', 'users.userID = audit_trails.userID')
-            ->join('member', 'member.memberID = audit_trails.memberID', 'left')
+        $rows = $this->select('audit_trails.*')
             ->orderBy('audit_trails.dt_created', 'DESC')
             ->limit($limit)
             ->findAll();
+
+        return $this->withNames($rows);
     }
 
     public function getByUser(int $userId, int $limit = 50): array
@@ -74,10 +74,12 @@ class AuditTrailsModel extends Model
             return [];
         }
 
-        return $this->where('userID', $userId)
+        $rows = $this->where('userID', $userId)
             ->orderBy('dt_created', 'DESC')
             ->limit($limit)
             ->findAll();
+
+        return $this->withNames($rows);
     }
 
     private function appendUserAgent(?string $description, string $userAgent): string
@@ -121,5 +123,80 @@ class AuditTrailsModel extends Model
         }
 
         return true;
+    }
+
+    private function withNames(array $rows): array
+    {
+        $usernames = $this->usernameMap(array_column($rows, 'userID'));
+        $memberNames = $this->memberNameMap(array_column($rows, 'memberID'));
+
+        foreach ($rows as &$row) {
+            $userId = (int) ($row['userID'] ?? 0);
+            $memberId = (int) ($row['memberID'] ?? 0);
+            $memberName = $memberNames[$memberId] ?? ['firstname' => '', 'lastname' => ''];
+
+            $row['username'] = $usernames[$userId] ?? '';
+            $row['firstname'] = $memberName['firstname'];
+            $row['lastname'] = $memberName['lastname'];
+        }
+
+        return $rows;
+    }
+
+    private function usernameMap(array $userIds): array
+    {
+        $userIds = $this->positiveUniqueIds($userIds);
+
+        if ($userIds === [] || ! $this->db->tableExists('users')) {
+            return [];
+        }
+
+        $users = $this->db->table('users')
+            ->select('userID, username')
+            ->whereIn('userID', $userIds)
+            ->get()
+            ->getResultArray();
+
+        $map = [];
+
+        foreach ($users as $user) {
+            $map[(int) $user['userID']] = (string) $user['username'];
+        }
+
+        return $map;
+    }
+
+    private function memberNameMap(array $memberIds): array
+    {
+        $memberIds = $this->positiveUniqueIds($memberIds);
+
+        if ($memberIds === [] || ! $this->db->tableExists('member')) {
+            return [];
+        }
+
+        $members = $this->db->table('member')
+            ->select('memberID, firstname, lastname')
+            ->whereIn('memberID', $memberIds)
+            ->get()
+            ->getResultArray();
+
+        $map = [];
+
+        foreach ($members as $member) {
+            $map[(int) $member['memberID']] = [
+                'firstname' => (string) $member['firstname'],
+                'lastname' => (string) $member['lastname'],
+            ];
+        }
+
+        return $map;
+    }
+
+    private function positiveUniqueIds(array $ids): array
+    {
+        return array_values(array_unique(array_filter(
+            array_map(static fn (mixed $id): int => (int) $id, $ids),
+            static fn (int $id): bool => $id > 0
+        )));
     }
 }

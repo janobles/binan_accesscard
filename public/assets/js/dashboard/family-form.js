@@ -24,7 +24,6 @@
         const sectorCategoryList = form.querySelector('#sectorCategoryList');
         const sectorNameList = form.querySelector('#sectorNameList');
         const sectorIdInput = form.querySelector('#sectorID');
-        const sectorCatalogNode = form.querySelector('#sectorCatalogData');
         const entryTypeInput = form.querySelector('#entryType');
         const entryButtons = Array.from(form.querySelectorAll('.entry-type-btn'));
         const entryPanels = Array.from(form.querySelectorAll('[data-entry-panel]'));
@@ -43,9 +42,9 @@
         let entryType = entryTypeInput ? entryTypeInput.value : 'head';
         let sectorCatalog = {};
 
-        if (sectorCatalogNode) {
+        if (sectorCategoryList) {
             try {
-                sectorCatalog = JSON.parse(sectorCatalogNode.textContent || '{}');
+                sectorCatalog = JSON.parse(sectorCategoryList.dataset.sectorCatalog || '{}');
             } catch (error) {
                 sectorCatalog = {};
             }
@@ -53,6 +52,12 @@
 
         function totalSteps() {
             return entryType === 'member' ? 2 : 3;
+        }
+
+        function setHidden(element, hidden) {
+            if (element) {
+                element.classList.toggle('family-form-hidden', hidden);
+            }
         }
 
         function resetSectorSelection() {
@@ -99,6 +104,9 @@
                 return;
             }
 
+            const previouslySelectedIds = new Set(Array.from(sectorNameList.querySelectorAll('input[type="checkbox"]:checked')).map(function (checkbox) {
+                return String(checkbox.value || '');
+            }));
             const selectedCategories = Array.from(sectorCategoryList.querySelectorAll('input[type="checkbox"]:checked')).map(function (checkbox) {
                 return checkbox.value;
             });
@@ -138,6 +146,7 @@
                 checkbox.className = 'form-check-input';
                 checkbox.name = 'sector_ids[]';
                 checkbox.value = String(option.sectorID || '');
+                checkbox.checked = previouslySelectedIds.has(checkbox.value);
                 checkbox.dataset.name = String(option.name || '');
                 checkbox.dataset.description = String(option.description || '');
 
@@ -166,7 +175,7 @@
             stepItems.forEach(function (item) {
                 const stepTarget = Number(item.dataset.stepTarget);
 
-                item.style.display = stepTarget > totalSteps() ? 'none' : '';
+                setHidden(item, stepTarget > totalSteps());
                 item.classList.toggle('is-active', stepTarget === currentStep);
             });
 
@@ -181,19 +190,19 @@
             }
 
             if (prevBtn) {
-                prevBtn.style.display = currentStep === 1 ? 'none' : '';
+                setHidden(prevBtn, currentStep === 1);
             }
 
             if (nextBtn) {
-                nextBtn.style.display = currentStep === totalSteps() ? 'none' : '';
+                setHidden(nextBtn, currentStep === totalSteps());
             }
 
             if (submitBtn) {
-                submitBtn.style.display = currentStep === totalSteps() ? '' : 'none';
+                setHidden(submitBtn, currentStep !== totalSteps());
             }
 
             if (resetBtn) {
-                resetBtn.style.display = currentStep === totalSteps() ? 'none' : '';
+                setHidden(resetBtn, currentStep === totalSteps());
             }
 
             if (currentStep === 3 && entryType === 'head') {
@@ -225,7 +234,7 @@
             entryPanels.forEach(function (panel) {
                 const isActive = panel.dataset.entryPanel === entryType;
 
-                panel.style.display = isActive ? '' : 'none';
+                setHidden(panel, !isActive);
                 togglePanelFields(panel, isActive);
             });
 
@@ -245,7 +254,7 @@
                 return;
             }
 
-            memberRowsEmpty.style.display = memberRows.children.length === 0 ? '' : 'none';
+            setHidden(memberRowsEmpty, memberRows.children.length !== 0);
         }
 
         function updateHeadSummary() {

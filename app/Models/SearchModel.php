@@ -19,40 +19,44 @@ class SearchModel
 
     public function families(string $keyword = '', array $filters = [], int $limit = 25): array
     {
-        if (! $this->db->tableExists('member')) {
+        if (! $this->db->tableExists('view_member_dashboard')) {
             return [];
         }
 
-        $builder = $this->db->table('member')
-            ->select('member.*, ' . SectorIds::sectorNameSelect(), false)
-            ->where('member.headID = member.memberID');
+        $builder = $this->db->table('view_member_dashboard')
+            ->where('memberID = headID');
 
         $keyword = $this->normalizeKeyword($keyword);
 
         if ($keyword !== '') {
             $builder->groupStart()
-                ->like('member.firstname', $keyword)
-                ->orLike('member.middlename', $keyword)
-                ->orLike('member.lastname', $keyword)
-                ->orLike('member.contactnumber', $keyword)
-                ->orLike('member.relationship', $keyword)
-                ->orWhere(SectorIds::sectorNameLikeCondition($keyword, 'member.sectorID', $this->db), null, false)
-                ->groupEnd();
+                ->like('firstname', $keyword)
+                ->orLike('lastname', $keyword)
+                ->orLike('relationship', $keyword)
+                ->orLike('head_firstname', $keyword)
+                ->orLike('head_lastname', $keyword)
+                ->orLike('sector_array_string', $keyword);
+
+            foreach ($this->sectorIdsForKeyword($keyword) as $sectorId) {
+                $builder->orWhere(SectorIds::containsCondition($sectorId), null, false);
+            }
+
+            $builder->groupEnd();
         }
 
         $sectorId = (int) ($filters['sectorID'] ?? 0);
 
         if ($sectorId > 0) {
-            $builder->where(SectorIds::containsCondition($sectorId));
+            $builder->where(SectorIds::containsCondition($sectorId), null, false);
         }
 
-        $this->applyDateRange($builder, 'member.dt_created', $filters);
-
-        return $builder
-            ->orderBy('member.dt_created', 'DESC')
+        $rows = $builder
+            ->orderBy('memberID', 'DESC')
             ->limit($limit)
             ->get()
             ->getResultArray();
+
+        return $this->withSectorNames($rows);
     }
 
     public function staffAccounts(string $keyword = '', array $filters = [], int $limit = 100): array
@@ -110,11 +114,13 @@ class SearchModel
 
         $this->applyAuditFilters($builder, $filters);
 
-        return $builder
+        $rows = $builder
             ->orderBy('audit_trails.dt_created', 'DESC')
             ->limit($limit)
             ->get()
             ->getResultArray();
+
+        return $this->withAuditNames($rows);
     }
 
     public function auditTrailsByUser(int $userId, string $keyword = '', array $filters = [], int $limit = 50): array
@@ -134,11 +140,13 @@ class SearchModel
 
         $this->applyAuditFilters($builder, $filters);
 
-        return $builder
+        $rows = $builder
             ->orderBy('audit_trails.dt_created', 'DESC')
             ->limit($limit)
             ->get()
             ->getResultArray();
+
+        return $this->withAuditNames($rows);
     }
 
     public function auditActions(): array
@@ -162,21 +170,29 @@ class SearchModel
     private function auditTrailBuilder()
     {
         return $this->db->table('audit_trails')
-            ->select('audit_trails.*, users.username, member.firstname, member.lastname')
-            ->join('users', 'users.userID = audit_trails.userID')
-            ->join('member', 'member.memberID = audit_trails.memberID', 'left');
+            ->select('audit_trails.*');
     }
 
     private function applyAuditSearch($builder, string $keyword): void
     {
         $builder->groupStart()
-            ->like('users.username', $keyword)
-            ->orLike('audit_trails.user_action', $keyword)
+            ->like('audit_trails.user_action', $keyword)
             ->orLike('audit_trails.description', $keyword)
-            ->orLike('audit_trails.ip_address', $keyword)
-            ->orLike('member.firstname', $keyword)
-            ->orLike('member.lastname', $keyword)
-            ->groupEnd();
+            ->orLike('audit_trails.ip_address', $keyword);
+
+        $userIds = $this->userIdsForKeyword($keyword);
+
+        if ($userIds !== []) {
+            $builder->orWhereIn('audit_trails.userID', $userIds);
+        }
+
+        $memberIds = $this->memberIdsForKeyword($keyword);
+
+        if ($memberIds !== []) {
+            $builder->orWhereIn('audit_trails.memberID', $memberIds);
+        }
+
+        $builder->groupEnd();
     }
 
     private function applyAuditFilters($builder, array $filters): void
@@ -209,6 +225,166 @@ class SearchModel
         return $this->db->tableExists('audit_trails')
             && $this->db->tableExists('users')
             && $this->db->tableExists('member');
+    }
+
+    private function withSectorNames(array $rows): array
+    {
+        $sectorNames = $this->sectorNameMap();
+
+        foreach ($rows as &$row) {
+            $sectorValue = $row['sector_array_string'] ?? $row['sectorID'] ?? '[]';
+            $row['sectorID'] = $sectorValue;
+            $row['sector_name'] = SectorIds::toNames($sectorValue, $sectorNames);
+        }
+
+        return $rows;
+    }
+
+    private function sectorNameMap(): array
+    {
+        if (! $this->db->tableExists('sector')) {
+            return [];
+        }
+
+        $sectors = $this->db->table('sector')
+            ->select('sectorID, name')
+            ->get()
+            ->getResultArray();
+
+        $map = [];
+
+        foreach ($sectors as $sector) {
+            $map[(int) $sector['sectorID']] = (string) $sector['name'];
+        }
+
+        return $map;
+    }
+
+    private function sectorIdsForKeyword(string $keyword): array
+    {
+        if (! $this->db->tableExists('sector')) {
+            return [];
+        }
+
+        return array_map(
+            static fn (array $sector): int => (int) $sector['sectorID'],
+            $this->db->table('sector')
+                ->select('sectorID')
+                ->like('name', $keyword)
+                ->orLike('description', $keyword)
+                ->get()
+                ->getResultArray()
+        );
+    }
+
+    private function withAuditNames(array $rows): array
+    {
+        $usernames = $this->usernameMap(array_column($rows, 'userID'));
+        $memberNames = $this->memberNameMap(array_column($rows, 'memberID'));
+
+        foreach ($rows as &$row) {
+            $userId = (int) ($row['userID'] ?? 0);
+            $memberId = (int) ($row['memberID'] ?? 0);
+            $memberName = $memberNames[$memberId] ?? ['firstname' => '', 'lastname' => ''];
+
+            $row['username'] = $usernames[$userId] ?? '';
+            $row['firstname'] = $memberName['firstname'];
+            $row['lastname'] = $memberName['lastname'];
+        }
+
+        return $rows;
+    }
+
+    private function usernameMap(array $userIds): array
+    {
+        $userIds = $this->positiveUniqueIds($userIds);
+
+        if ($userIds === [] || ! $this->db->tableExists('users')) {
+            return [];
+        }
+
+        $users = $this->db->table('users')
+            ->select('userID, username')
+            ->whereIn('userID', $userIds)
+            ->get()
+            ->getResultArray();
+
+        $map = [];
+
+        foreach ($users as $user) {
+            $map[(int) $user['userID']] = (string) $user['username'];
+        }
+
+        return $map;
+    }
+
+    private function memberNameMap(array $memberIds): array
+    {
+        $memberIds = $this->positiveUniqueIds($memberIds);
+
+        if ($memberIds === [] || ! $this->db->tableExists('member')) {
+            return [];
+        }
+
+        $members = $this->db->table('member')
+            ->select('memberID, firstname, lastname')
+            ->whereIn('memberID', $memberIds)
+            ->get()
+            ->getResultArray();
+
+        $map = [];
+
+        foreach ($members as $member) {
+            $map[(int) $member['memberID']] = [
+                'firstname' => (string) $member['firstname'],
+                'lastname' => (string) $member['lastname'],
+            ];
+        }
+
+        return $map;
+    }
+
+    private function userIdsForKeyword(string $keyword): array
+    {
+        if (! $this->db->tableExists('users')) {
+            return [];
+        }
+
+        return array_map(
+            static fn (array $user): int => (int) $user['userID'],
+            $this->db->table('users')
+                ->select('userID')
+                ->like('username', $keyword)
+                ->get()
+                ->getResultArray()
+        );
+    }
+
+    private function memberIdsForKeyword(string $keyword): array
+    {
+        if (! $this->db->tableExists('member')) {
+            return [];
+        }
+
+        return array_map(
+            static fn (array $member): int => (int) $member['memberID'],
+            $this->db->table('member')
+                ->select('memberID')
+                ->groupStart()
+                ->like('firstname', $keyword)
+                ->orLike('lastname', $keyword)
+                ->groupEnd()
+                ->get()
+                ->getResultArray()
+        );
+    }
+
+    private function positiveUniqueIds(array $ids): array
+    {
+        return array_values(array_unique(array_filter(
+            array_map(static fn (mixed $id): int => (int) $id, $ids),
+            static fn (int $id): bool => $id > 0
+        )));
     }
 
     private function normalizeKeyword(string $keyword): string

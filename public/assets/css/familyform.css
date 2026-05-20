@@ -228,6 +228,10 @@
 	border-top: 1px solid #d6dee8;
 }
 
+.family-form-hidden {
+	display: none !important;
+}
+
 .family-form-actions .btn {
 	min-width: 118px;
 	border-radius: 8px;

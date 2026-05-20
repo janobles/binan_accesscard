@@ -120,7 +120,7 @@ $familyHeads = $familyHeads ?? ($formOptions['family_heads'] ?? []);
                     </div>
                 </div>
 
-                <div data-entry-panel="member" style="display:none;">
+                <div data-entry-panel="member" class="family-form-hidden">
                     <div class="section-title">
                         <span>Family Member</span>
                     </div>
@@ -248,10 +248,10 @@ $familyHeads = $familyHeads ?? ($formOptions['family_heads'] ?? []);
             </div>
 
             <div class="d-flex justify-content-end gap-2 family-form-actions">
-                <button type="button" class="btn btn-outline-secondary" id="prevStepBtn" style="display:none;">Previous</button>
+                <button type="button" class="btn btn-outline-secondary family-form-hidden" id="prevStepBtn">Previous</button>
                 <button type="reset" class="btn btn-outline-secondary" id="resetFamilyBtn">Clear</button>
                 <button type="button" class="btn btn-primary" id="nextStepBtn">Next</button>
-                <button type="submit" class="btn btn-primary" id="submitFamilyBtn" style="display:none;">Save Family Data</button>
+                <button type="submit" class="btn btn-primary family-form-hidden" id="submitFamilyBtn">Save Family Data</button>
             </div>
         </form>
     </div>

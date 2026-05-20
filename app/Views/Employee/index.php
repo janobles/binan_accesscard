@@ -12,8 +12,9 @@ $navActive = $navActive ?? [];
     <title><?= esc($pageTitle) ?> - Binan Access Card MIS</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="<?= base_url('assets/css/mis.css') ?>?v=<?= filemtime(FCPATH . 'assets/css/mis.css') ?>">
+    <link rel="stylesheet" href="<?= base_url('assets/css/session-timeout.css') ?>?v=<?= filemtime(FCPATH . 'assets/css/session-timeout.css') ?>">
 </head>
-<body>
+<body data-session-timeout-ms="60000" data-session-timeout-redirect="<?= site_url('logout') ?>">
 <div class="app-shell">
     <aside class="sidebar employee">
         <div>
@@ -116,7 +117,15 @@ $navActive = $navActive ?? [];
         </div>
     </main>
 </div>
+<div id="session-timeout-modal" class="session-timeout-modal" aria-live="assertive">
+    <div class="session-timeout-card" role="dialog" aria-modal="true" aria-labelledby="session-timeout-title">
+        <h4 id="session-timeout-title" class="session-timeout-title">Session Expired</h4>
+        <p class="session-timeout-text">You have been logged out.</p>
+        <p class="session-timeout-subtext">Redirecting to login screen...</p>
+    </div>
+</div>
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="<?= base_url('assets/js/session-timeout.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/session-timeout.js') ?>"></script>
 </body>
 </html>

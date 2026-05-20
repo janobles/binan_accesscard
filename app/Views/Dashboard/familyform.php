@@ -317,9 +317,8 @@ $familyHeads = $familyHeads ?? ($formOptions['family_heads'] ?? []);
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="form-label">Sector</label>
-                <select class="form-select" data-name="sectorID">
-                    <option value="">Select</option>
+                <label class="form-label">Sectors</label>
+                <select class="form-select" data-name="sector_ids[]" multiple size="5">
                     <?php foreach ($sectorOptions as $sector): ?>
                         <option value="<?= esc((string) ($sector['sectorID'] ?? '')) ?>"><?= esc((string) ($sector['name'] ?? '')) ?></option>
                     <?php endforeach; ?>

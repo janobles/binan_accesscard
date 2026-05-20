@@ -6,6 +6,7 @@ use App\Models\AuditTrailsModel;
 use App\Models\MemberModel;
 use App\Models\MemberServiceModel;
 use App\Models\ServiceModel;
+use App\Support\SectorIds;
 use CodeIgniter\HTTP\RedirectResponse;
 
 /**
@@ -37,13 +38,19 @@ class FamilyController extends BaseController
         $auditModel = new AuditTrailsModel();
 
         if (! $memberModel->hasRequiredFamilyTables()) {
-            return $this->validationResponse('The accesscard database is missing required tables from accesscardV1.4.sql.');
+            return $this->validationResponse('The accesscard database is missing required tables from accesscardV3.0.sql.');
         }
 
         $entryType = $this->entryType();
 
         if (! $this->validate($this->rulesForEntryType($entryType))) {
             return $this->validationResponse(implode(' ', $this->validator->getErrors()));
+        }
+
+        $sectorIds = SectorIds::normalize($this->request->getPost('sector_ids'));
+
+        if ($sectorIds === []) {
+            return $this->validationResponse('Please select at least one sector name.');
         }
 
         $serviceIds = $this->request->getPost('service_ids');
@@ -209,9 +216,7 @@ class FamilyController extends BaseController
 
     private function rulesForEntryType(string $entryType): array
     {
-        $rules = [
-            'sectorID' => 'required|is_natural_no_zero',
-        ];
+        $rules = [];
 
         if ($entryType === 'member') {
             return $rules + [
@@ -248,12 +253,18 @@ class FamilyController extends BaseController
             'Salary' => $this->moneyOrNull($this->request->getPost($prefix . 'salary')),
             'contactnumber' => $this->nullableText($this->request->getPost($prefix . 'contactnumber')),
             'relationship' => $prefix === 'head_' ? 'Head' : ($this->nullableText($this->request->getPost($prefix . 'relationship')) ?? 'Member'),
-            'sectorID' => (int) $this->request->getPost('sectorID'),
+            'sectorID' => SectorIds::toStorage($this->request->getPost('sector_ids')),
         ];
     }
 
     private function memberPayloadFromArray(array $member): array
     {
+        $sectorIds = $member['sector_ids'] ?? $member['sectorID'] ?? null;
+
+        if (SectorIds::normalize($sectorIds) === []) {
+            $sectorIds = $this->request->getPost('sector_ids');
+        }
+
         return [
             'firstname' => trim((string) ($member['firstname'] ?? '')),
             'middlename' => trim((string) ($member['middlename'] ?? '')),
@@ -267,7 +278,7 @@ class FamilyController extends BaseController
             'Salary' => $this->moneyOrNull($member['salary'] ?? null),
             'contactnumber' => $this->nullableText($member['contactnumber'] ?? null),
             'relationship' => $this->nullableText($member['relationship'] ?? 'Member'),
-            'sectorID' => (int) ($member['sectorID'] ?? $this->request->getPost('sectorID')),
+            'sectorID' => SectorIds::toStorage($sectorIds),
         ];
     }
 
@@ -302,7 +313,7 @@ class FamilyController extends BaseController
         foreach ($serviceIds as $serviceId) {
             $serviceId = (int) $serviceId;
 
-            if ($serviceId <= 0 || ! $serviceModel->existsById($serviceId)) {
+            if ($serviceId < 0 || ! $serviceModel->existsById($serviceId)) {
                 continue;
             }
 

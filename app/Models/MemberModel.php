@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\SectorIds;
 use CodeIgniter\Model;
 
 /**
@@ -32,7 +33,7 @@ class MemberModel extends Model
     protected $useTimestamps = false;
 
     protected $validationRules = [
-        'sectorID' => 'required|is_natural_no_zero',
+        'sectorID' => 'required|max_length[255]',
         'firstname' => 'required|max_length[100]',
         'lastname' => 'required|max_length[100]',
         'middlename' => 'permit_empty|max_length[50]',
@@ -82,8 +83,7 @@ class MemberModel extends Model
             return [];
         }
 
-        return $this->select('member.*, sector.name AS sector_name')
-            ->join('sector', 'sector.sectorID = member.sectorID', 'left')
+        return $this->select('member.*, ' . SectorIds::sectorNameSelect(), false)
             ->where('member.headID = member.memberID')
             ->orderBy('member.dt_created', 'DESC')
             ->limit($limit)
@@ -139,8 +139,7 @@ class MemberModel extends Model
 
     public function getFamilyMembers(int $headId): array
     {
-        return $this->select('member.*, sector.name AS sector_name')
-            ->join('sector', 'sector.sectorID = member.sectorID')
+        return $this->select('member.*, ' . SectorIds::sectorNameSelect(), false)
             ->where('member.headID', $headId)
             ->orderBy('member.memberID', 'ASC')
             ->findAll();
@@ -148,16 +147,20 @@ class MemberModel extends Model
 
     public function findWithSector(int $memberId): ?array
     {
-        return $this->select('member.*, sector.name AS sector_name, sector.shortcode AS sector_shortcode')
-            ->join('sector', 'sector.sectorID = member.sectorID')
+        return $this->select(
+            'member.*, '
+            . SectorIds::sectorNameSelect()
+            . ', '
+            . SectorIds::sectorShortcodeSelect(),
+            false
+        )
             ->where('member.memberID', $memberId)
             ->first();
     }
 
     public function searchFamilies(?string $keyword = null): array
     {
-        $builder = $this->select('member.*, sector.name AS sector_name')
-            ->join('sector', 'sector.sectorID = member.sectorID')
+        $builder = $this->select('member.*, ' . SectorIds::sectorNameSelect(), false)
             ->where('member.headID = member.memberID')
             ->orderBy('member.lastname', 'ASC')
             ->orderBy('member.firstname', 'ASC');
@@ -166,7 +169,7 @@ class MemberModel extends Model
             $builder->groupStart()
                 ->like('member.firstname', $keyword)
                 ->orLike('member.lastname', $keyword)
-                ->orLike('sector.name', $keyword)
+                ->orWhere(SectorIds::sectorNameLikeCondition($keyword, 'member.sectorID', $this->db), null, false)
                 ->groupEnd();
         }
 

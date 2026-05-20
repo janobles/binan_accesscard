@@ -92,13 +92,18 @@ class UserModel extends Model
     // Creates staff accounts for AccountController::create().
     public function createAccount(string $username, string $password, string $role, ?int $memberId = null): int|false
     {
-        $inserted = $this->insert([
+        $data = [
             'username' => $username,
             'password' => password_hash($password, PASSWORD_ARGON2ID),
             'role' => $role,
             'isactive' => $this->activeValue(),
-            'memberID' => $this->memberIdValue($memberId),
-        ]);
+        ];
+
+        if ($this->hasUserField('memberID')) {
+            $data['memberID'] = $this->memberIdValue($memberId);
+        }
+
+        $inserted = $this->insert($data);
 
         if ($inserted === false) {
             return false;
@@ -151,6 +156,12 @@ class UserModel extends Model
         }
 
         return true;
+    }
+
+    private function hasUserField(string $fieldName): bool
+    {
+        return $this->db->tableExists($this->table)
+            && $this->db->fieldExists($fieldName, $this->table);
     }
 
     private function memberExists(int $memberId): bool

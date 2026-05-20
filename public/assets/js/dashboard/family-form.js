@@ -83,7 +83,13 @@
             });
 
             if (sectorIdInput) {
-                sectorIdInput.value = selectedItems.length > 0 ? String(selectedItems[0].sectorID || '') : '';
+                const selectedIds = selectedItems.map(function (item) {
+                    return String(item.sectorID || '').trim();
+                }).filter(function (value) {
+                    return value !== '';
+                });
+
+                sectorIdInput.value = selectedIds.length > 0 ? '[' + selectedIds.join(',') + ']' : '';
                 sectorIdInput.setCustomValidity(selectedItems.length > 0 ? '' : 'Please select at least one sector name.');
             }
         }

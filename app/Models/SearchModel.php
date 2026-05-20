@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\SectorIds;
 use CodeIgniter\Database\BaseConnection;
 
 /**
@@ -23,8 +24,7 @@ class SearchModel
         }
 
         $builder = $this->db->table('member')
-            ->select('member.*, sector.name AS sector_name')
-            ->join('sector', 'sector.sectorID = member.sectorID', 'left')
+            ->select('member.*, ' . SectorIds::sectorNameSelect(), false)
             ->where('member.headID = member.memberID');
 
         $keyword = $this->normalizeKeyword($keyword);
@@ -36,14 +36,14 @@ class SearchModel
                 ->orLike('member.lastname', $keyword)
                 ->orLike('member.contactnumber', $keyword)
                 ->orLike('member.relationship', $keyword)
-                ->orLike('sector.name', $keyword)
+                ->orWhere(SectorIds::sectorNameLikeCondition($keyword, 'member.sectorID', $this->db), null, false)
                 ->groupEnd();
         }
 
         $sectorId = (int) ($filters['sectorID'] ?? 0);
 
         if ($sectorId > 0) {
-            $builder->where('member.sectorID', $sectorId);
+            $builder->where(SectorIds::containsCondition($sectorId));
         }
 
         $this->applyDateRange($builder, 'member.dt_created', $filters);

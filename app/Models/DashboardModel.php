@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\SectorIds;
 use CodeIgniter\Database\BaseConnection;
 
 /**
@@ -35,8 +36,7 @@ class DashboardModel
         }
 
         return $this->db->table('member')
-            ->select('member.*, sector.name AS sector_name')
-            ->join('sector', 'sector.sectorID = member.sectorID', 'left')
+            ->select('member.*, ' . SectorIds::sectorNameSelect(), false)
             ->where('member.headID = member.memberID')
             ->orderBy('member.dt_created', 'DESC')
             ->limit($limit)

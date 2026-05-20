@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\SectorIds;
 use CodeIgniter\Model;
 
 /**
@@ -33,8 +34,7 @@ class ServiceModel extends Model
     public function getEligibleForMember(int $memberId): array
     {
         $member = $this->db->table('member')
-            ->select('sector.name AS sector_name')
-            ->join('sector', 'sector.sectorID = member.sectorID')
+            ->select('sectorID')
             ->where('member.memberID', $memberId)
             ->get()
             ->getRowArray();
@@ -43,7 +43,31 @@ class ServiceModel extends Model
             return [];
         }
 
-        return $this->getForSectorName((string) $member['sector_name']);
+        $sectorIds = SectorIds::normalize($member['sectorID'] ?? null);
+
+        if ($sectorIds === []) {
+            return [];
+        }
+
+        $sectorNames = array_column(
+            $this->db->table('sector')
+                ->select('name')
+                ->whereIn('sectorID', $sectorIds)
+                ->get()
+                ->getResultArray(),
+            'name'
+        );
+
+        if ($sectorNames === []) {
+            return [];
+        }
+
+        return $this->groupStart()
+            ->whereIn('category', $sectorNames)
+            ->orWhere('category', 'General')
+            ->groupEnd()
+            ->orderBy('name', 'ASC')
+            ->findAll();
     }
 
     public function existsById(int $serviceId): bool

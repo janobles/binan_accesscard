@@ -4,6 +4,9 @@ namespace App\Models;
 
 use CodeIgniter\Model;
 
+/**
+ * Records and retrieves audit trail entries for staff actions.
+ */
 class AuditTrailsModel extends Model
 {
     protected $table = 'audit_trails';
@@ -29,7 +32,7 @@ class AuditTrailsModel extends Model
     ): bool {
         $payload = [
             'userID' => $userId,
-            'memberID' => $memberId,
+            'memberID' => $this->memberIdValue($memberId),
             'user_action' => $action,
             'description' => $description,
             'ip_address' => $ipAddress,
@@ -55,8 +58,47 @@ class AuditTrailsModel extends Model
         return $base === '' ? $suffix : $base . ' | ' . $suffix;
     }
 
+    private function memberIdValue(?int $memberId): ?int
+    {
+        if ($memberId !== null && $memberId > 0) {
+            return $memberId;
+        }
+
+        if ($this->isMemberIdNullable()) {
+            return null;
+        }
+
+        if (! $this->db->tableExists('member')) {
+            return null;
+        }
+
+        $member = $this->db->table('member')
+            ->select('memberID')
+            ->orderBy('memberID', 'ASC')
+            ->limit(1)
+            ->get()
+            ->getRowArray();
+
+        return isset($member['memberID']) ? (int) $member['memberID'] : null;
+    }
+
+    private function isMemberIdNullable(): bool
+    {
+        foreach ($this->db->getFieldData($this->table) as $field) {
+            if ($field->name === 'memberID') {
+                return (bool) ($field->nullable ?? false);
+            }
+        }
+
+        return true;
+    }
+
     public function getRecent(int $limit = 50): array
     {
+        if (! $this->db->tableExists($this->table)) {
+            return [];
+        }
+
         return $this->select('audit_trails.*, users.username, member.firstname, member.lastname')
             ->join('users', 'users.userID = audit_trails.userID')
             ->join('member', 'member.memberID = audit_trails.memberID', 'left')
@@ -67,6 +109,10 @@ class AuditTrailsModel extends Model
 
     public function getByUser(int $userId, int $limit = 50): array
     {
+        if (! $this->db->tableExists($this->table)) {
+            return [];
+        }
+
         return $this->where('userID', $userId)
             ->orderBy('dt_created', 'DESC')
             ->limit($limit)

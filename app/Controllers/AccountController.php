@@ -7,6 +7,11 @@ use App\Models\UserModel;
 use Throwable;
 use CodeIgniter\HTTP\RedirectResponse;
 
+/**
+ * Handles developer-only staff account creation.
+ *
+ * Validation and redirects stay here; user persistence stays in UserModel.
+ */
 class AccountController extends BaseController
 {
     public function create(): RedirectResponse
@@ -50,7 +55,8 @@ class AccountController extends BaseController
             $userId = (new UserModel())->createAccount(
                 $username,
                 (string) $this->request->getPost('password'),
-                $role
+                $role,
+                (int) session()->get('member_id') ?: null
             );
         } catch (Throwable $exception) {
             log_message('error', $exception->getMessage());
@@ -104,10 +110,9 @@ class AccountController extends BaseController
         }
 
         try {
-            // Account creation is a staff action, so memberID stays null.
             (new AuditTrailsModel())->logAction(
                 (int) session()->get('user_id'),
-                null,
+                (int) session()->get('member_id') ?: null,
                 $action,
                 $description,
                 $this->request->getIPAddress(),

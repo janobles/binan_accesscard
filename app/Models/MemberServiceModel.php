@@ -4,6 +4,9 @@ namespace App\Models;
 
 use CodeIgniter\Model;
 
+/**
+ * Links members to services or assistance programs.
+ */
 class MemberServiceModel extends Model
 {
     protected $table = 'member_services';

@@ -4,6 +4,9 @@ namespace App\Models;
 
 use CodeIgniter\Model;
 
+/**
+ * Manages staff users, login verification, and account creation.
+ */
 class UserModel extends Model
 {
     protected $table = 'users';
@@ -53,6 +56,19 @@ class UserModel extends Model
         return $user;
     }
 
+    public function getStaffAccounts(): array
+    {
+        if (! $this->db->tableExists($this->table)) {
+            return [];
+        }
+
+        return $this->select('userID, username, role, isactive')
+            ->whereIn('role', ['Admin', 'User'])
+            ->orderBy('role', 'ASC')
+            ->orderBy('username', 'ASC')
+            ->findAll();
+    }
+
     // Enforces the Enable/Disabled enum while allowing legacy numeric rows.
     private function isUserActive(mixed $value): bool
     {
@@ -74,14 +90,14 @@ class UserModel extends Model
     }
 
     // Creates staff accounts for AccountController::create().
-    public function createAccount(string $username, string $password, string $role): int|false
+    public function createAccount(string $username, string $password, string $role, ?int $memberId = null): int|false
     {
         $inserted = $this->insert([
             'username' => $username,
             'password' => password_hash($password, PASSWORD_ARGON2ID),
             'role' => $role,
             'isactive' => $this->activeValue(),
-            'memberID' => null,
+            'memberID' => $this->memberIdValue($memberId),
         ]);
 
         if ($inserted === false) {
@@ -111,5 +127,56 @@ class UserModel extends Model
         }
 
         return 'Enable';
+    }
+
+    private function memberIdValue(?int $memberId): ?int
+    {
+        if ($this->isMemberIdNullable()) {
+            return null;
+        }
+
+        if ($memberId !== null && $memberId > 0 && $this->memberExists($memberId)) {
+            return $memberId;
+        }
+
+        return $this->firstMemberId();
+    }
+
+    private function isMemberIdNullable(): bool
+    {
+        foreach ($this->db->getFieldData($this->table) as $field) {
+            if ($field->name === 'memberID') {
+                return (bool) ($field->nullable ?? false);
+            }
+        }
+
+        return true;
+    }
+
+    private function memberExists(int $memberId): bool
+    {
+        if (! $this->db->tableExists('member')) {
+            return false;
+        }
+
+        return $this->db->table('member')
+            ->where('memberID', $memberId)
+            ->countAllResults() > 0;
+    }
+
+    private function firstMemberId(): ?int
+    {
+        if (! $this->db->tableExists('member')) {
+            return null;
+        }
+
+        $member = $this->db->table('member')
+            ->select('memberID')
+            ->orderBy('memberID', 'ASC')
+            ->limit(1)
+            ->get()
+            ->getRowArray();
+
+        return isset($member['memberID']) ? (int) $member['memberID'] : null;
     }
 }

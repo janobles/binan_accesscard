@@ -23,14 +23,14 @@ $sectorOptions = $sectorOptions ?? [];
 		<?php foreach ($servicesByCategory as $category => $services): ?>
 			<div class="col-lg-4">
 				<div class="assistance-box">
-					<h6 class="mb-2\"><?= esc((string) $category) ?></h6>
+					<h6 class="mb-2"><?= esc((string) $category) ?></h6>
 					<div class="service-check-list">
 						<?php foreach ($services as $service): ?>
 							<?php $serviceId = (string) ($service['serviceID'] ?? ''); ?>
 							<?php $serviceInputId = 'service_' . preg_replace('/[^a-zA-Z0-9_\-]/', '_', strtolower((string) $category)) . '_' . $serviceId; ?>
 							<label class="form-check" for="<?= esc($serviceInputId) ?>">
 								<input class="form-check-input" id="<?= esc($serviceInputId) ?>" type="checkbox" name="service_ids[]" value="<?= esc($serviceId) ?>">
-								<span class="form-check-label\"><?= esc((string) ($service['name'] ?? '')) ?></span>
+								<span class="form-check-label"><?= esc((string) ($service['name'] ?? '')) ?></span>
 							</label>
 						<?php endforeach; ?>
 					</div>

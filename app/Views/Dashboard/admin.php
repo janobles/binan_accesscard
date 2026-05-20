@@ -4,6 +4,8 @@ $user = $user ?? [];
 $username = $user['username'] ?? 'Admin';
 $activePage = $activePage ?? 'dashboard';
 $pageTitle = $pageTitle ?? 'Dashboard';
+$modeLabel = $modeLabel ?? 'Admin Console';
+$canManageAccounts = $canManageAccounts ?? false;
 $navActive = $navActive ?? [];
 $stats = $stats ?? ['families' => 0, 'members' => 0, 'sectors' => 0, 'assistance' => 0];
 $recentFamilies = $recentFamilies ?? [];
@@ -11,7 +13,9 @@ $recentAudits = $recentAudits ?? [];
 $adminAccounts = $adminAccounts ?? [];
 $employeeAccounts = $employeeAccounts ?? [];
 $familyFormViewData = $familyFormViewData ?? [];
+$searchTerm = $searchTerm ?? '';
 $canCreateFamily = $canCreateFamily ?? false;
+$idleTimeoutSeconds = $idleTimeoutSeconds ?? 60;
 ?>
 <html lang="en">
 <head>
@@ -29,18 +33,20 @@ $canCreateFamily = $canCreateFamily ?? false;
                 <img src="<?= base_url('assets/image/binan.png') ?>" alt="City of Binan Logo">
                 <div>
                     <strong>Bi&ntilde;an Access Card MIS</strong>
-                    <small>Admin Console</small>
+                    <small><?= esc($modeLabel) ?></small>
                 </div>
             </div>
             <nav class="nav flex-column mt-3">
                 <a class="nav-link <?= esc($navActive['dashboard'] ?? '') ?>" href="<?= site_url('admin/dashboard') ?>">Dashboard</a>
-                <a class="nav-link <?= esc($navActive['accounts'] ?? '') ?>" href="<?= site_url('admin/accounts') ?>">Account Management</a>
+                <?php if ($canManageAccounts): ?>
+                    <a class="nav-link <?= esc($navActive['accounts'] ?? '') ?>" href="<?= site_url('admin/accounts') ?>">Account Management</a>
+                <?php endif; ?>
                 <a class="nav-link <?= esc($navActive['family-entry'] ?? '') ?>" href="<?= site_url('admin/manage-family') ?>">Manage Family</a>
                 <a class="nav-link <?= esc($navActive['audit-trails'] ?? '') ?>" href="<?= site_url('admin/audit-trails') ?>">Audit Trails</a>
             </nav>
         </div>
         <div class="sidebar-footer">
-            <div class="sidebar-user"><?= esc($username) ?> &middot; Admin</div>
+            <div class="sidebar-user"><?= esc($username) ?> &middot; <?= esc($modeLabel) ?></div>
             <a href="<?= site_url('logout') ?>" class="btn btn-outline-light btn-sm w-100">Logout</a>
         </div>
     </aside>
@@ -76,6 +82,19 @@ $canCreateFamily = $canCreateFamily ?? false;
                     <div class="section-title mt-0">
                         <span>Recent Families</span>
                     </div>
+                    <form class="row g-2 mb-3" method="get" action="<?= site_url('admin/dashboard') ?>">
+                        <div class="col-md-8 col-lg-6">
+                            <input class="form-control" type="search" name="q" value="<?= esc($searchTerm) ?>" placeholder="Search records by name, contact number, or sector">
+                        </div>
+                        <div class="col-auto">
+                            <button class="btn btn-primary" type="submit">Search</button>
+                        </div>
+                        <?php if ($searchTerm !== ''): ?>
+                            <div class="col-auto">
+                                <a class="btn btn-outline-secondary" href="<?= site_url('admin/dashboard') ?>">Clear</a>
+                            </div>
+                        <?php endif; ?>
+                    </form>
                     <div class="table-responsive">
                         <table class="table table-sm">
                             <thead><tr><th>Head</th><th>Barangay</th><th>Sector</th><th>Date</th></tr></thead>
@@ -89,7 +108,7 @@ $canCreateFamily = $canCreateFamily ?? false;
                                     </tr>
                                 <?php endforeach; ?>
                                 <?php if ($recentFamilies === []): ?>
-                                    <tr><td colspan="4" class="text-center text-muted">No family records yet.</td></tr>
+                                    <tr><td colspan="4" class="text-center text-muted"><?= $searchTerm !== '' ? 'No matching family records found.' : 'No family records yet.' ?></td></tr>
                                 <?php endif; ?>
                             </tbody>
                         </table>
@@ -97,14 +116,28 @@ $canCreateFamily = $canCreateFamily ?? false;
                 </div>
             <?php endif; ?>
 
-            <?php if ($activePage === 'accounts'): ?>
+            <?php if ($activePage === 'accounts' && $canManageAccounts): ?>
                 <div class="panel mb-3">
                     <div class="section-title mt-0"><span>Account Management</span></div>
+                    <form class="row g-2 mb-3" method="get" action="<?= site_url('admin/accounts') ?>">
+                        <div class="col-md-8 col-lg-6">
+                            <input class="form-control" type="search" name="q" value="<?= esc($searchTerm) ?>" placeholder="Search accounts by username, role, or status">
+                        </div>
+                        <div class="col-auto">
+                            <button class="btn btn-primary" type="submit">Search</button>
+                        </div>
+                        <?php if ($searchTerm !== ''): ?>
+                            <div class="col-auto">
+                                <a class="btn btn-outline-secondary" href="<?= site_url('admin/accounts') ?>">Clear</a>
+                            </div>
+                        <?php endif; ?>
+                    </form>
                     <div class="row g-3 mb-3">
                         <div class="col-lg-6">
                             <div class="border rounded p-3 h-100 bg-light">
                                 <h6 class="mb-3">Create Admin Account</h6>
                                 <form class="account-form" method="post" action="<?= site_url('developer/accounts') ?>">
+                                    <?= csrf_field() ?>
                                     <input type="hidden" name="role" value="Admin">
                                     <div>
                                         <label class="form-label">Username</label>
@@ -124,6 +157,7 @@ $canCreateFamily = $canCreateFamily ?? false;
                             <div class="border rounded p-3 h-100 bg-light">
                                 <h6 class="mb-3">Create Employee Account</h6>
                                 <form class="account-form account-form-employee" method="post" action="<?= site_url('developer/accounts') ?>">
+                                    <?= csrf_field() ?>
                                     <input type="hidden" name="role" value="User">
                                     <div>
                                         <label class="form-label">Username</label>
@@ -156,7 +190,7 @@ $canCreateFamily = $canCreateFamily ?? false;
                                                 </tr>
                                             <?php endforeach; ?>
                                             <?php if ($adminAccounts === []): ?>
-                                                <tr><td colspan="2" class="text-center text-muted">No admin accounts found.</td></tr>
+                                                <tr><td colspan="2" class="text-center text-muted"><?= $searchTerm !== '' ? 'No matching admin accounts found.' : 'No admin accounts found.' ?></td></tr>
                                             <?php endif; ?>
                                         </tbody>
                                     </table>
@@ -177,7 +211,7 @@ $canCreateFamily = $canCreateFamily ?? false;
                                                 </tr>
                                             <?php endforeach; ?>
                                             <?php if ($employeeAccounts === []): ?>
-                                                <tr><td colspan="2" class="text-center text-muted">No employee accounts found.</td></tr>
+                                                <tr><td colspan="2" class="text-center text-muted"><?= $searchTerm !== '' ? 'No matching employee accounts found.' : 'No employee accounts found.' ?></td></tr>
                                             <?php endif; ?>
                                         </tbody>
                                     </table>
@@ -201,6 +235,19 @@ $canCreateFamily = $canCreateFamily ?? false;
             <?php if ($activePage === 'audit-trails'): ?>
                 <div class="panel">
                     <div class="section-title mt-0"><span>Audit Trails</span></div>
+                    <form class="row g-2 mb-3" method="get" action="<?= site_url('admin/audit-trails') ?>">
+                        <div class="col-md-8 col-lg-6">
+                            <input class="form-control" type="search" name="q" value="<?= esc($searchTerm) ?>" placeholder="Search audit trails by user, action, or description">
+                        </div>
+                        <div class="col-auto">
+                            <button class="btn btn-primary" type="submit">Search</button>
+                        </div>
+                        <?php if ($searchTerm !== ''): ?>
+                            <div class="col-auto">
+                                <a class="btn btn-outline-secondary" href="<?= site_url('admin/audit-trails') ?>">Clear</a>
+                            </div>
+                        <?php endif; ?>
+                    </form>
                     <div class="table-responsive">
                         <table class="table table-sm">
                             <thead><tr><th>User</th><th>Action</th><th>Description</th><th>Date</th></tr></thead>
@@ -214,7 +261,7 @@ $canCreateFamily = $canCreateFamily ?? false;
                                     </tr>
                                 <?php endforeach; ?>
                                 <?php if ($recentAudits === []): ?>
-                                    <tr><td colspan="4" class="text-center text-muted">No audit logs yet.</td></tr>
+                                    <tr><td colspan="4" class="text-center text-muted"><?= $searchTerm !== '' ? 'No matching audit logs found.' : 'No audit logs yet.' ?></td></tr>
                                 <?php endif; ?>
                             </tbody>
                         </table>
@@ -226,5 +273,6 @@ $canCreateFamily = $canCreateFamily ?? false;
 </div>
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="<?= base_url('assets/js/session-timeout.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/session-timeout.js') ?>" data-timeout-seconds="<?= esc((string) $idleTimeoutSeconds) ?>" data-logout-url="<?= site_url('logout?timeout=1') ?>" data-keep-alive-url="<?= site_url('session/keep-alive') ?>"></script>
 </body>
 </html>

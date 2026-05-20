@@ -4,6 +4,9 @@ namespace App\Models;
 
 use CodeIgniter\Model;
 
+/**
+ * Manages family heads and family member records.
+ */
 class MemberModel extends Model
 {
     protected $table = 'member';

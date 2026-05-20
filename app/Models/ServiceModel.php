@@ -4,6 +4,9 @@ namespace App\Models;
 
 use CodeIgniter\Model;
 
+/**
+ * Manages available assistance services and eligibility lookups.
+ */
 class ServiceModel extends Model
 {
     protected $table = 'services';
@@ -36,6 +39,15 @@ class ServiceModel extends Model
         }
 
         return $this->getForSectorName((string) $member['sector_name']);
+    }
+
+    public function existsById(int $serviceId): bool
+    {
+        if (! $this->db->tableExists($this->table)) {
+            return false;
+        }
+
+        return $this->where($this->primaryKey, $serviceId)->countAllResults() > 0;
     }
 }
 

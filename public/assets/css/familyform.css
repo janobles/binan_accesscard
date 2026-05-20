@@ -1,3 +1,5 @@
+/* Family wizard UI styles. Field saving and validation belong in PHP controllers/models. */
+
 .family-wizard-shell {
 	display: flex;
 	justify-content: center;

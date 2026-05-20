@@ -3,10 +3,19 @@
 namespace App\Controllers;
 
 use App\Models\AuditTrailsModel;
+use App\Models\DashboardModel;
 use App\Models\FamilyFormOptionsModel;
+use App\Models\SearchModel;
+use App\Models\UserModel;
 use App\Models\ViewLayoutModel;
 use CodeIgniter\HTTP\RedirectResponse;
+use Config\IdleTimeout;
 
+/**
+ * Handles authentication and role-based page routing.
+ *
+ * Controllers coordinate request/session flow while models fetch the data.
+ */
 class Home extends BaseController
 {
     public function index(): string|RedirectResponse
@@ -19,7 +28,6 @@ class Home extends BaseController
     }
 
     public function login(): RedirectResponse
-    
     {
         $username = trim((string) $this->request->getPost('username'));
         $password = (string) $this->request->getPost('password');
@@ -45,8 +53,10 @@ class Home extends BaseController
         session()->set([
             'is_logged_in' => true,
             'user_id'      => (int) $user['userID'],
+            'member_id'    => (int) ($user['memberID'] ?? 0),
             'username'     => $user['username'],
             'role'         => $role,
+            'idle_last_activity' => time(),
         ]);
 
         return $this->redirectByRole($role);
@@ -54,9 +64,29 @@ class Home extends BaseController
 
     public function logout(): RedirectResponse
     {
+        if ($this->request->getGet('timeout') === '1') {
+            $this->clearLoginSession();
+
+            return redirect()->to(site_url('/'))
+                ->with('error', 'You were logged out due to inactivity.');
+        }
+
         session()->destroy();
 
         return redirect()->to(site_url('/'));
+    }
+
+    public function keepAlive()
+    {
+        if (! session()->get('is_logged_in')) {
+            return $this->response
+                ->setStatusCode(401)
+                ->setJSON(['status' => 'expired']);
+        }
+
+        session()->set('idle_last_activity', time());
+
+        return $this->response->setJSON(['status' => 'ok']);
     }
 
     public function admin(): RedirectResponse
@@ -113,23 +143,28 @@ class Home extends BaseController
         }
 
         $layoutModel = new ViewLayoutModel();
+        $dashboardModel = new DashboardModel();
+        $searchModel = new SearchModel();
+        $searchTerm = trim((string) $this->request->getGet('q'));
         $isDeveloper = $this->normalizeRole((string) session()->get('role')) === 'Developer';
-        $db = db_connect();
-        $users = (new UserModel())
-            ->select('userID, username, role, isactive')
-            ->whereIn('role', ['Admin', 'User'])
-            ->orderBy('role', 'ASC')
-            ->orderBy('username', 'ASC')
-            ->findAll();
+        $users = $isDeveloper && $activePage === 'accounts'
+            ? $searchModel->staffAccounts($searchTerm)
+            : [];
 
         $familyFormViewData = (new FamilyFormOptionsModel())->getViewData();
-        $recentFamilies = $this->recentFamilies($db);
+        $recentFamilies = $activePage === 'dashboard' && $searchTerm !== ''
+            ? $searchModel->families($searchTerm, 25)
+            : $dashboardModel->recentFamilies(10);
+        $recentAudits = $activePage === 'audit-trails'
+            ? $searchModel->auditTrails($searchTerm, 50)
+            : (new AuditTrailsModel())->getRecent(10);
 
         return view('Dashboard/admin', [
             'user' => session()->get(),
             'activePage' => $activePage,
             'pageTitle' => $layoutModel->pageTitle($activePage),
             'modeLabel' => $layoutModel->adminModeLabel($isDeveloper),
+            'canManageAccounts' => $isDeveloper,
             'navActive' => [
                 'dashboard' => $layoutModel->navActive($activePage, 'dashboard'),
                 'accounts' => $layoutModel->navActive($activePage, 'accounts'),
@@ -140,14 +175,11 @@ class Home extends BaseController
             'employeeAccounts' => array_values(array_filter($users, static fn ($account) => $account['role'] === 'User')),
             'familyFormViewData' => $familyFormViewData,
             'recentFamilies' => $recentFamilies,
-            'recentAudits' => $db->tableExists('audit_trails') ? (new AuditTrailsModel())->getRecent(10) : [],
-            'stats' => [
-                'families' => $db->tableExists('member') ? $db->table('member')->where('headID = memberID')->countAllResults() : 0,
-                'members' => $db->tableExists('member') ? $db->table('member')->countAllResults() : 0,
-                'sectors' => $db->tableExists('sector') ? $db->table('sector')->countAllResults() : 0,
-                'assistance' => $db->tableExists('member_services') ? $db->table('member_services')->countAllResults() : 0,
-            ],
+            'recentAudits' => $recentAudits,
+            'searchTerm' => $searchTerm,
+            'stats' => $dashboardModel->stats(),
             'canCreateFamily' => true,
+            'idleTimeoutSeconds' => (new IdleTimeout())->seconds,
         ]);
     }
 
@@ -160,9 +192,17 @@ class Home extends BaseController
         }
 
         $layoutModel = new ViewLayoutModel();
+        $dashboardModel = new DashboardModel();
+        $searchModel = new SearchModel();
+        $searchTerm = trim((string) $this->request->getGet('q'));
         $userId = (int) session()->get('user_id');
-        $db = db_connect();
         $familyFormViewData = (new FamilyFormOptionsModel())->getViewData();
+        $recentFamilies = $activePage === 'dashboard' && $searchTerm !== ''
+            ? $searchModel->families($searchTerm, 25)
+            : $dashboardModel->recentFamilies(10);
+        $myAudits = $activePage === 'activity'
+            ? $searchModel->auditTrailsByUser($userId, $searchTerm, 50)
+            : (new AuditTrailsModel())->getByUser($userId, 10);
 
         return view('Employee/index', [
             'user' => session()->get(),
@@ -175,8 +215,10 @@ class Home extends BaseController
             ],
             'canCreateFamily' => true,
             'familyFormViewData' => $familyFormViewData,
-            'recentFamilies' => $this->recentFamilies($db),
-            'myAudits' => $db->tableExists('audit_trails') ? (new AuditTrailsModel())->getByUser($userId, 10) : [],
+            'recentFamilies' => $recentFamilies,
+            'myAudits' => $myAudits,
+            'searchTerm' => $searchTerm,
+            'idleTimeoutSeconds' => (new IdleTimeout())->seconds,
         ]);
     }
 
@@ -237,19 +279,15 @@ class Home extends BaseController
         };
     }
 
-    private function recentFamilies($db): array
+    private function clearLoginSession(): void
     {
-        if (! $db->tableExists('member')) {
-            return [];
-        }
-
-        return $db->table('member')
-            ->select('member.*, sector.name AS sector_name')
-            ->join('sector', 'sector.sectorID = member.sectorID', 'left')
-            ->where('member.headID = member.memberID')
-            ->orderBy('member.dt_created', 'DESC')
-            ->limit(10)
-            ->get()
-            ->getResultArray();
+        session()->remove([
+            'is_logged_in',
+            'user_id',
+            'member_id',
+            'username',
+            'role',
+            'idle_last_activity',
+        ]);
     }
 }

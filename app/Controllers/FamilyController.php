@@ -5,8 +5,14 @@ namespace App\Controllers;
 use App\Models\AuditTrailsModel;
 use App\Models\MemberModel;
 use App\Models\MemberServiceModel;
+use App\Models\ServiceModel;
 use CodeIgniter\HTTP\RedirectResponse;
 
+/**
+ * Handles family registration submissions from admin and employee views.
+ *
+ * The controller validates the request and delegates database writes to models.
+ */
 class FamilyController extends BaseController
 {
     public function store()
@@ -86,6 +92,7 @@ class FamilyController extends BaseController
 
         $memberModel = new MemberModel();
         $memberServiceModel = new MemberServiceModel();
+        $serviceModel = new ServiceModel();
         $userId = (int) session()->get('user_id');
 
         $db->transStart();
@@ -141,7 +148,7 @@ class FamilyController extends BaseController
         foreach ($serviceIds as $serviceId) {
             $serviceId = (int) $serviceId;
 
-            if ($serviceId < 0 || ! $this->serviceExists($serviceId)) {
+            if ($serviceId < 0 || ! $serviceModel->existsById($serviceId)) {
                 continue;
             }
 
@@ -264,10 +271,4 @@ class FamilyController extends BaseController
         return $value === '' ? null : $value;
     }
 
-    private function serviceExists(int $serviceId): bool
-    {
-        return db_connect()->table('services')
-            ->where('serviceID', $serviceId)
-            ->countAllResults() > 0;
-    }
 }

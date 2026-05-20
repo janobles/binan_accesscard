@@ -8,6 +8,7 @@ use CodeIgniter\Router\RouteCollection;
 $routes->get('/', 'Home::index');
 $routes->post('login', 'Home::login');
 $routes->get('logout', 'Home::logout');
+$routes->get('session/keep-alive', 'Home::keepAlive');
 $routes->get('admin', 'Home::admin');
 $routes->get('admin/dashboard', 'Home::adminDashboard');
 $routes->get('admin/accounts', 'Home::adminAccounts');

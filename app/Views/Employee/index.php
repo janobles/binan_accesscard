@@ -3,6 +3,12 @@ $username = $user['username'] ?? 'Employee';
 $activePage = $activePage ?? 'dashboard';
 $pageTitle = $pageTitle ?? ($activePage === 'dashboard' ? 'Workspace' : ucwords(str_replace('-', ' ', $activePage)));
 $navActive = $navActive ?? [];
+$recentFamilies = $recentFamilies ?? [];
+$myAudits = $myAudits ?? [];
+$familyFormViewData = $familyFormViewData ?? [];
+$searchTerm = $searchTerm ?? '';
+$canCreateFamily = $canCreateFamily ?? false;
+$idleTimeoutSeconds = $idleTimeoutSeconds ?? 60;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -11,7 +17,7 @@ $navActive = $navActive ?? [];
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= esc($pageTitle) ?> - Binan Access Card MIS</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="<?= base_url('assets/css/mis.css') ?>?v=<?= filemtime(FCPATH . 'assets/css/mis.css') ?>">
+    <link rel="stylesheet" href="<?= base_url('assets/css/admin.css') ?>?v=<?= filemtime(FCPATH . 'assets/css/admin.css') ?>">
 </head>
 <body>
 <div class="app-shell">
@@ -58,20 +64,33 @@ $navActive = $navActive ?? [];
                         <span>Recently Added Families</span>
                         <a class="btn btn-primary btn-sm" href="<?= site_url('employee/manage-family') ?>">Manage Family</a>
                     </div>
+                    <form class="row g-2 mb-3" method="get" action="<?= site_url('employee/workspace') ?>">
+                        <div class="col-md-8 col-lg-6">
+                            <input class="form-control" type="search" name="q" value="<?= esc($searchTerm) ?>" placeholder="Search records by name, contact number, or sector">
+                        </div>
+                        <div class="col-auto">
+                            <button class="btn btn-primary" type="submit">Search</button>
+                        </div>
+                        <?php if ($searchTerm !== ''): ?>
+                            <div class="col-auto">
+                                <a class="btn btn-outline-secondary" href="<?= site_url('employee/workspace') ?>">Clear</a>
+                            </div>
+                        <?php endif; ?>
+                    </form>
                     <div class="table-responsive">
                         <table class="table table-sm">
                             <thead><tr><th>Head</th><th>Barangay</th><th>Sector</th><th>Date</th></tr></thead>
                             <tbody>
                                 <?php foreach ($recentFamilies as $family): ?>
                                     <tr>
-                                        <td><?= esc($family['firstname'] . ' ' . $family['lastname']) ?></td>
-                                        <td><?= esc($family['barangay']) ?></td>
+                                        <td><?= esc(($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? '')) ?></td>
+                                        <td><?= esc((string) ($family['barangay'] ?? '')) ?></td>
                                         <td><?= esc($family['sector_name'] ?? '') ?></td>
                                         <td><?= esc($family['dt_created'] ?? '') ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                                 <?php if ($recentFamilies === []): ?>
-                                    <tr><td colspan="4" class="text-center text-muted">No family records yet.</td></tr>
+                                    <tr><td colspan="4" class="text-center text-muted"><?= $searchTerm !== '' ? 'No matching family records found.' : 'No family records yet.' ?></td></tr>
                                 <?php endif; ?>
                             </tbody>
                         </table>
@@ -85,7 +104,7 @@ $navActive = $navActive ?? [];
                         <span>Family / Member Data Entry</span>
                     </div>
                     <?= view('Dashboard/familyform', array_merge(
-                        $familyFormViewData ?? [],
+                        $familyFormViewData,
                         ['canCreateFamily' => $canCreateFamily]
                     )) ?>
                 </div>
@@ -94,19 +113,32 @@ $navActive = $navActive ?? [];
             <?php if ($activePage === 'activity'): ?>
                 <div class="panel">
                     <div class="section-title mt-0"><span>My Recent Activity</span></div>
+                    <form class="row g-2 mb-3" method="get" action="<?= site_url('employee/activity') ?>">
+                        <div class="col-md-8 col-lg-6">
+                            <input class="form-control" type="search" name="q" value="<?= esc($searchTerm) ?>" placeholder="Search activity by action or description">
+                        </div>
+                        <div class="col-auto">
+                            <button class="btn btn-primary" type="submit">Search</button>
+                        </div>
+                        <?php if ($searchTerm !== ''): ?>
+                            <div class="col-auto">
+                                <a class="btn btn-outline-secondary" href="<?= site_url('employee/activity') ?>">Clear</a>
+                            </div>
+                        <?php endif; ?>
+                    </form>
                     <div class="table-responsive">
                         <table class="table table-sm">
                             <thead><tr><th>Action</th><th>Description</th><th>Date</th></tr></thead>
                             <tbody>
                                 <?php foreach ($myAudits as $audit): ?>
                                     <tr>
-                                        <td><?= esc($audit['user_action']) ?></td>
-                                        <td><?= esc($audit['description']) ?></td>
+                                        <td><?= esc((string) ($audit['user_action'] ?? '')) ?></td>
+                                        <td><?= esc((string) ($audit['description'] ?? '')) ?></td>
                                         <td><?= esc($audit['dt_created'] ?? '') ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                                 <?php if ($myAudits === []): ?>
-                                    <tr><td colspan="3" class="text-center text-muted">No activity yet.</td></tr>
+                                    <tr><td colspan="3" class="text-center text-muted"><?= $searchTerm !== '' ? 'No matching activity found.' : 'No activity yet.' ?></td></tr>
                                 <?php endif; ?>
                             </tbody>
                         </table>
@@ -118,5 +150,6 @@ $navActive = $navActive ?? [];
 </div>
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="<?= base_url('assets/js/session-timeout.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/session-timeout.js') ?>" data-timeout-seconds="<?= esc((string) $idleTimeoutSeconds) ?>" data-logout-url="<?= site_url('logout?timeout=1') ?>" data-keep-alive-url="<?= site_url('session/keep-alive') ?>"></script>
 </body>
 </html>

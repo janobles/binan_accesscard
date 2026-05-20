@@ -65,7 +65,7 @@ class UserModel extends Model
     {
         $inserted = $this->insert([
             'username' => $username,
-            'password' => password_hash($password, PASSWORD_DEFAULT),
+            'password' => password_hash($password, PASSWORD_ARGON2ID),
             'role' => $role,
             'isactive' => 1,
             'memberID' => null,

@@ -84,7 +84,7 @@ $navActive = $navActive ?? [];
                     <div class="section-title mt-0">
                         <span>Family / Member Data Entry</span>
                     </div>
-                    <?= view('Dashboard/form', array_merge(
+                    <?= view('Dashboard/familyform', array_merge(
                         $familyFormViewData ?? [],
                         ['canCreateFamily' => $canCreateFamily]
                     )) ?>
@@ -118,6 +118,5 @@ $navActive = $navActive ?? [];
 </div>
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="<?= base_url('assets/js/mis.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/mis.js') ?>"></script>
 </body>
 </html>

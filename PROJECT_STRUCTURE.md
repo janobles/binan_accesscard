@@ -58,7 +58,6 @@ This project follows the normal CodeIgniter 4 layout. The database source of tru
 - `public/assets/css/mis.css`  
   Shared dashboard/workspace styling.
 
-- `public/assets/js/mis.js`  
   Shared dashboard/workspace JavaScript.
 
 - `public/assets/image/`  

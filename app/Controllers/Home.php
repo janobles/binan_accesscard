@@ -42,12 +42,12 @@ class Home extends BaseController
         }
 
         session()->regenerate();
+        // Session data drives role-based redirects for operators (staff accounts).
         session()->set([
             'is_logged_in' => true,
             'user_id'      => (int) $user['userID'],
             'username'     => $user['username'],
             'role'         => $role,
-            'member_id'    => isset($user['memberID']) ? (int) $user['memberID'] : null,
         ]);
 
         return $this->redirectByRole($role);

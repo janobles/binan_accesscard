@@ -18,6 +18,7 @@ class UserModel extends Model
     ];
     protected $useTimestamps = false;
 
+    // Used by Home::login() to authenticate staff accounts.
     public function verifyLogin(string $username, string $password): ?array
     {
         $user = $this->where('username', $username)->first();
@@ -31,21 +32,28 @@ class UserModel extends Model
         }
 
         $storedPassword = (string) ($user['password'] ?? '');
-        $isValid = password_verify($password, $storedPassword) || hash_equals($storedPassword, $password);
+        $passwordInfo = password_get_info($storedPassword);
+        $isLegacyPlaintext = $passwordInfo['algo'] === 0;
+        $isValid = password_verify($password, $storedPassword);
+
+        if (! $isValid && $isLegacyPlaintext) {
+            $isValid = hash_equals($storedPassword, $password);
+        }
 
         if (! $isValid) {
             return null;
         }
 
-        if (! password_get_info($storedPassword)['algo']) {
+        if ($isLegacyPlaintext || password_needs_rehash($storedPassword, PASSWORD_ARGON2ID)) {
             $this->update((int) $user['userID'], [
-                'password' => password_hash($password, PASSWORD_DEFAULT),
+                'password' => password_hash($password, PASSWORD_ARGON2ID),
             ]);
         }
 
         return $user;
     }
 
+    // Enforces the Enable/Disabled enum while allowing legacy numeric rows.
     private function isUserActive(mixed $value): bool
     {
         if (is_bool($value)) {
@@ -58,16 +66,21 @@ class UserModel extends Model
 
         $normalized = strtolower(trim((string) $value));
 
-        return in_array($normalized, ['1', 'true', 'yes', 'y', 'on', 'enable', 'enabled', 'active'], true);
+        if (in_array($normalized, ['enable', 'enabled'], true)) {
+            return true;
+        }
+
+        return in_array($normalized, ['1', 'true', 'yes', 'y', 'on'], true);
     }
 
+    // Creates staff accounts for AccountController::create().
     public function createAccount(string $username, string $password, string $role): int|false
     {
         $inserted = $this->insert([
             'username' => $username,
             'password' => password_hash($password, PASSWORD_ARGON2ID),
             'role' => $role,
-            'isactive' => 1,
+            'isactive' => $this->activeValue(),
             'memberID' => null,
         ]);
 
@@ -76,5 +89,27 @@ class UserModel extends Model
         }
 
         return (int) $this->getInsertID();
+    }
+
+    // Keeps insert compatible with either enum or numeric legacy types.
+    private function activeValue(): string|int
+    {
+        $fieldData = $this->db->getFieldData($this->table);
+
+        foreach ($fieldData as $field) {
+            if ($field->name !== 'isactive') {
+                continue;
+            }
+
+            $type = strtolower((string) $field->type);
+
+            $isStringType = strpos($type, 'char') !== false
+                || strpos($type, 'text') !== false
+                || strpos($type, 'enum') !== false;
+
+            return $isStringType ? 'Enable' : 1;
+        }
+
+        return 'Enable';
     }
 }

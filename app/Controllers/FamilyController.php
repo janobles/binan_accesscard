@@ -149,12 +149,14 @@ class FamilyController extends BaseController
         }
 
         if ($db->tableExists('audit_trails')) {
+            // Tracks the creating operator plus client IP and browser agent.
             (new AuditTrailsModel())->logAction(
                 $userId,
                 $headId,
                 'FAMILY_CREATED',
                 'Created family profile for ' . trim((string) $this->request->getPost('head_firstname')) . ' ' . trim((string) $this->request->getPost('head_lastname')) . '.',
-                $this->request->getIPAddress()
+                $this->request->getIPAddress(),
+                $this->request->getUserAgent()->getAgentString()
             );
         }
 

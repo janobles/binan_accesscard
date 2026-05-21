@@ -1,3 +1,4 @@
+// Restores edit-mode family data into the dynamic family wizard fields.
 (function (window) {
     function parseJsonNode(node, fallbackValue) {
         if (!node) {

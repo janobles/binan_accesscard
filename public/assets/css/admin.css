@@ -38,6 +38,9 @@ body {
 .sidebar {
 	width: 250px;
 	flex: 0 0 250px;
+	position: sticky;
+	top: 0;
+	height: 100vh;
 	min-height: 100vh;
 	display: flex;
 	flex-direction: column;
@@ -305,8 +308,8 @@ body {
 	transform: translate(-50%, -50%) !important;
 	margin: 0;
 	max-width: none;
-	width: min(1120px, 92vw);
-	height: min(760px, 86vh);
+	width: min(1400px, 97vw);
+	height: min(930px, 94vh);
 }
 
 .floating-family-modal .modal-content {
@@ -320,12 +323,42 @@ body {
 }
 
 .floating-family-modal .modal-header {
+	align-items: center;
 	background: #f4f8fc;
 	border-bottom: 1px solid #d5dfeb;
+	justify-content: space-between;
+	padding: 24px 20px;
+}
+
+.floating-family-modal .family-modal-back {
+	border-color: #c9d4e2;
+	border-radius: 8px;
+	color: #20344a;
+	font-size: 16px;
+	font-weight: 700;
+	min-width: 104px;
+	padding: 9px 16px;
+}
+
+.floating-family-modal .family-modal-back:hover,
+.floating-family-modal .family-modal-back:focus {
+	background: #e8eef6;
+	border-color: #b8c6d6;
+	color: #17283a;
+}
+
+.floating-family-modal .family-modal-close {
+	margin-left: auto;
+	opacity: 0.7;
+}
+
+.floating-family-modal .family-modal-close:hover,
+.floating-family-modal .family-modal-close:focus {
+	opacity: 1;
 }
 
 .floating-family-modal .modal-title {
-	font-size: 18px;
+	font-size: 22px;
 	font-weight: 700;
 	color: #20344a;
 }
@@ -335,7 +368,7 @@ body {
 	flex: 1 1 auto;
 	overflow: auto;
 	background: #e9edf2;
-	padding: 14px;
+	padding: 28px;
 }
 
 .family-modal-loading {
@@ -353,6 +386,9 @@ body {
 	}
 
 	.sidebar {
+		position: relative;
+		top: auto;
+		height: auto;
 		width: 100%;
 		flex-basis: auto;
 		min-height: auto;

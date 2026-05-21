@@ -62,7 +62,7 @@ class UserModel extends Model
             return [];
         }
 
-        return $this->select('userID, username, role, isactive')
+        return $this->select('userID, username, role, isactive, dt_created')
             ->whereIn('role', ['Admin', 'User'])
             ->orderBy('role', 'ASC')
             ->orderBy('username', 'ASC')

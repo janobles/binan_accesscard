@@ -5,6 +5,8 @@ use CodeIgniter\Router\RouteCollection;
 /**
  * @var RouteCollection $routes
  */
+
+// Defines the login, dashboard, family, account, and audit routes used by each staff role.
 $routes->get('/', 'Home::index');
 $routes->post('login', 'Home::login');
 $routes->get('logout', 'Home::logout');
@@ -24,6 +26,10 @@ $routes->get('employee/workspace', 'Home::employee');
 $routes->get('employee/family-entry', 'Home::employeeFamilyEntry');
 $routes->get('employee/manage-family', 'Home::employeeFamilyEntry');
 $routes->get('employee/manage-families', 'Home::employeeFamilyEntry');
+$routes->get('employee/manage-family/list', 'FamilyController::listFamilies');
+$routes->get('employee/manage-family/view/(:num)', 'FamilyController::viewFamily/$1');
+$routes->get('employee/manage-family/edit/(:num)', 'FamilyController::editFamily/$1');
+$routes->post('employee/manage-family/update/(:num)', 'FamilyController::update/$1');
 $routes->get('employee/activity', 'Home::employeeActivity');
 $routes->post('developer/accounts', 'AccountController::create');
 $routes->post('families', 'FamilyController::store');

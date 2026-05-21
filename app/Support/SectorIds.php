@@ -34,13 +34,27 @@ class SectorIds
 
     public static function hasMalformedIds(mixed $value): bool
     {
+        if (is_array($value) && ! self::isListArray($value)) {
+            return true;
+        }
+
+        if (is_string($value)) {
+            $text = trim($value);
+
+            if ($text !== '' && $text[0] === '{') {
+                return true;
+            }
+
+            $decoded = json_decode($text, true);
+
+            if (is_array($decoded) && ! self::isListArray($decoded)) {
+                return true;
+            }
+        }
+
         foreach (self::itemsFromValue($value) as $item) {
             if (is_array($item)) {
-                if (self::hasMalformedIds($item)) {
-                    return true;
-                }
-
-                continue;
+                return true;
             }
 
             if (! self::isNumericId($item)) {
@@ -77,7 +91,7 @@ class SectorIds
     private static function itemsFromValue(mixed $value): array
     {
         if (is_array($value)) {
-            return $value;
+            return self::isListArray($value) ? $value : [];
         }
 
         $text = trim((string) $value);
@@ -86,11 +100,20 @@ class SectorIds
             return [];
         }
 
+        if ($text[0] === '{') {
+            return [];
+        }
+
         $decoded = json_decode($text, true);
 
-        return is_array($decoded)
+        return is_array($decoded) && self::isListArray($decoded)
             ? $decoded
             : explode(',', trim($text, "[] \t\n\r\0\x0B"));
+    }
+
+    private static function isListArray(array $value): bool
+    {
+        return $value === [] || array_keys($value) === range(0, count($value) - 1);
     }
 
     private static function isNumericId(mixed $value): bool

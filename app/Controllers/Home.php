@@ -130,6 +130,10 @@ class Home extends BaseController
 
     public function employeeFamilyEntry(): string|RedirectResponse
     {
+        if ($this->isPartialRequest()) {
+            return $this->renderEmployeeFamilyPartial();
+        }
+
         return $this->renderEmployeePage('family-entry');
     }
 
@@ -200,6 +204,20 @@ class Home extends BaseController
             'searchFilters' => $viewData['searchFilters'] ?? [],
             'auditActionOptions' => $viewData['auditActionOptions'] ?? [],
         ]);
+    }
+
+    private function renderEmployeeFamilyPartial(): string|RedirectResponse
+    {
+        $guard = $this->requireRole(['Developer', 'Admin', 'User']);
+
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        return view('Dashboard/familyform', array_merge(
+            (new FamilyFormOptionsModel())->getViewData(),
+            ['canCreateFamily' => true]
+        ));
     }
 
     private function clearLoginSession(): void

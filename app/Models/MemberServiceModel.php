@@ -20,7 +20,7 @@ class MemberServiceModel extends Model
 
     protected $validationRules = [
         'memberID' => 'required|is_natural_no_zero',
-        'serviceID' => 'required|is_natural',
+        'serviceID' => 'required|is_natural_no_zero',
     ];
 
     public function hasTable(): bool

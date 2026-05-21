@@ -4,6 +4,16 @@ $searchTerm = $searchTerm ?? '';
 $searchFilters = $searchFilters ?? [];
 $auditActionOptions = $auditActionOptions ?? [];
 $hasSearchFilters = $searchTerm !== '' || array_filter($searchFilters, static fn ($value): bool => trim((string) $value) !== '') !== [];
+$formatDate = static function (mixed $value): string {
+    $timestamp = strtotime((string) $value);
+
+    return $timestamp === false ? '' : date('Y-m-d', $timestamp);
+};
+$formatTime = static function (mixed $value): string {
+    $timestamp = strtotime((string) $value);
+
+    return $timestamp === false ? '' : date('h:i A', $timestamp);
+};
 ?>
 
 <div class="panel">
@@ -37,18 +47,19 @@ $hasSearchFilters = $searchTerm !== '' || array_filter($searchFilters, static fn
     </form>
     <div class="table-responsive">
         <table class="table table-sm">
-            <thead><tr><th>User</th><th>Action</th><th>Description</th><th>Date</th></tr></thead>
+            <thead><tr><th>User</th><th>Action</th><th>Description</th><th>Date</th><th>Time</th></tr></thead>
             <tbody>
                 <?php foreach ($recentAudits as $audit): ?>
                     <tr>
                         <td><?= esc((string) ($audit['username'] ?? $audit['userID'] ?? '')) ?></td>
                         <td><?= esc((string) ($audit['user_action'] ?? '')) ?></td>
                         <td><?= esc((string) ($audit['description'] ?? '')) ?></td>
-                        <td><?= esc((string) ($audit['dt_created'] ?? '')) ?></td>
+                        <td><?= esc($formatDate($audit['dt_created'] ?? '')) ?></td>
+                        <td><?= esc($formatTime($audit['dt_created'] ?? '')) ?></td>
                     </tr>
                 <?php endforeach; ?>
                 <?php if ($recentAudits === []): ?>
-                    <tr><td colspan="4" class="text-center text-muted"><?= $hasSearchFilters ? 'No matching audit logs found.' : 'No audit logs yet.' ?></td></tr>
+                    <tr><td colspan="5" class="text-center text-muted"><?= $hasSearchFilters ? 'No matching audit logs found.' : 'No audit logs yet.' ?></td></tr>
                 <?php endif; ?>
             </tbody>
         </table>

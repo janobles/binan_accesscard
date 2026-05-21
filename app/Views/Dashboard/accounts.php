@@ -4,6 +4,16 @@ $employeeAccounts = $employeeAccounts ?? [];
 $searchTerm = $searchTerm ?? '';
 $searchFilters = $searchFilters ?? [];
 $hasSearchFilters = $searchTerm !== '' || array_filter($searchFilters, static fn ($value): bool => trim((string) $value) !== '') !== [];
+$formatDate = static function (mixed $value): string {
+    $timestamp = strtotime((string) $value);
+
+    return $timestamp === false ? '' : date('Y-m-d', $timestamp);
+};
+$formatTime = static function (mixed $value): string {
+    $timestamp = strtotime((string) $value);
+
+    return $timestamp === false ? '' : date('h:i A', $timestamp);
+};
 ?>
 
 <div class="panel mb-3">
@@ -85,16 +95,18 @@ $hasSearchFilters = $searchTerm !== '' || array_filter($searchFilters, static fn
                 <div class="section-title mt-0"><span>Admin Accounts</span></div>
                 <div class="table-responsive">
                     <table class="table table-sm">
-                        <thead><tr><th>Username</th><th>Status</th></tr></thead>
+                        <thead><tr><th>Username</th><th>Status</th><th>Date</th><th>Time</th></tr></thead>
                         <tbody>
                             <?php foreach ($adminAccounts as $account): ?>
                                 <tr>
                                     <td><?= esc((string) ($account['username'] ?? '')) ?></td>
                                     <td><?= esc((string) ($account['isactive'] ?? '')) ?></td>
+                                    <td><?= esc($formatDate($account['dt_created'] ?? '')) ?></td>
+                                    <td><?= esc($formatTime($account['dt_created'] ?? '')) ?></td>
                                 </tr>
                             <?php endforeach; ?>
                             <?php if ($adminAccounts === []): ?>
-                                <tr><td colspan="2" class="text-center text-muted"><?= $hasSearchFilters ? 'No matching admin accounts found.' : 'No admin accounts found.' ?></td></tr>
+                                <tr><td colspan="4" class="text-center text-muted"><?= $hasSearchFilters ? 'No matching admin accounts found.' : 'No admin accounts found.' ?></td></tr>
                             <?php endif; ?>
                         </tbody>
                     </table>
@@ -106,16 +118,18 @@ $hasSearchFilters = $searchTerm !== '' || array_filter($searchFilters, static fn
                 <div class="section-title mt-0"><span>Employee Accounts</span></div>
                 <div class="table-responsive">
                     <table class="table table-sm">
-                        <thead><tr><th>Username</th><th>Status</th></tr></thead>
+                        <thead><tr><th>Username</th><th>Status</th><th>Date</th><th>Time</th></tr></thead>
                         <tbody>
                             <?php foreach ($employeeAccounts as $account): ?>
                                 <tr>
                                     <td><?= esc((string) ($account['username'] ?? '')) ?></td>
                                     <td><?= esc((string) ($account['isactive'] ?? '')) ?></td>
+                                    <td><?= esc($formatDate($account['dt_created'] ?? '')) ?></td>
+                                    <td><?= esc($formatTime($account['dt_created'] ?? '')) ?></td>
                                 </tr>
                             <?php endforeach; ?>
                             <?php if ($employeeAccounts === []): ?>
-                                <tr><td colspan="2" class="text-center text-muted"><?= $hasSearchFilters ? 'No matching employee accounts found.' : 'No employee accounts found.' ?></td></tr>
+                                <tr><td colspan="4" class="text-center text-muted"><?= $hasSearchFilters ? 'No matching employee accounts found.' : 'No employee accounts found.' ?></td></tr>
                             <?php endif; ?>
                         </tbody>
                     </table>

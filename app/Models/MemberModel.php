@@ -10,6 +10,15 @@ use CodeIgniter\Model;
  */
 class MemberModel extends Model
 {
+    public const VALIDATION_RULES = [
+        'sectorID' => 'required|max_length[255]',
+        'firstname' => 'required|max_length[100]',
+        'lastname' => 'required|max_length[100]',
+        'middlename' => 'permit_empty|max_length[50]',
+        'birthday' => 'permit_empty|valid_date[Y-m-d]',
+        'sex' => 'permit_empty|in_list[Male,Female]',
+    ];
+
     protected $table = 'member';
     protected $primaryKey = 'memberID';
     protected $returnType = 'array';
@@ -31,15 +40,7 @@ class MemberModel extends Model
         'sectorID',
     ];
     protected $useTimestamps = false;
-
-    protected $validationRules = [
-        'sectorID' => 'required|max_length[255]',
-        'firstname' => 'required|max_length[100]',
-        'lastname' => 'required|max_length[100]',
-        'middlename' => 'permit_empty|max_length[50]',
-        'birthday' => 'permit_empty|valid_date[Y-m-d]',
-        'sex' => 'permit_empty|in_list[Male,Female]',
-    ];
+    protected $validationRules = self::VALIDATION_RULES;
 
     public function hasTable(): bool
     {
@@ -111,6 +112,20 @@ class MemberModel extends Model
         return $this->countAllResults();
     }
 
+    public static function personValidationRules(bool $requireHeadDetails = false): array
+    {
+        $rules = self::VALIDATION_RULES;
+        unset($rules['sectorID']);
+
+        if ($requireHeadDetails) {
+            $rules['middlename'] = 'required|max_length[50]';
+            $rules['birthday'] = 'required|valid_date[Y-m-d]';
+            $rules['sex'] = 'required|in_list[Male,Female]';
+        }
+
+        return $rules;
+    }
+
     public function createHead(array $data): int|false
     {
         $data['memberID'] = $this->nextAutoIncrementId();
@@ -126,7 +141,9 @@ class MemberModel extends Model
 
     public function addFamilyMember(int $headId, array $data): int|false
     {
-        if ($this->find($headId) === null) {
+        $head = $this->find($headId);
+
+        if ($head === null || (int) ($head['headID'] ?? 0) !== $headId) {
             return false;
         }
 

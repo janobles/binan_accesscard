@@ -73,7 +73,7 @@ class SearchModel
 
         $limit = max(1, $limit);
         $builder = $this->db->table('users')
-            ->select('userID, username, role, isactive')
+            ->select('userID, username, role, isactive, dt_created')
             ->whereIn('role', ['Admin', 'User']);
 
         $keyword = $this->normalizeKeyword($keyword);

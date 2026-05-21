@@ -105,5 +105,23 @@ class ServiceModel extends Model
 
         return $this->where($this->primaryKey, $serviceId)->countAllResults() > 0;
     }
+
+    public function idsExist(array $serviceIds): bool
+    {
+        $serviceIds = array_values(array_unique(array_filter(
+            array_map(static fn (mixed $id): int => (int) $id, $serviceIds),
+            static fn (int $id): bool => $id > 0
+        )));
+
+        if ($serviceIds === []) {
+            return true;
+        }
+
+        if (! $this->db->tableExists($this->table)) {
+            return false;
+        }
+
+        return $this->whereIn($this->primaryKey, $serviceIds)->countAllResults() === count($serviceIds);
+    }
 }
 

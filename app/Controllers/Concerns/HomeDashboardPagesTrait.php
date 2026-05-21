@@ -10,6 +10,9 @@ use App\Models\ViewLayoutModel;
 use CodeIgniter\HTTP\RedirectResponse;
 use Config\IdleTimeout;
 
+/**
+ * Builds the admin and employee workspace data used by the Home controller.
+ */
 trait HomeDashboardPagesTrait
 {
     private function renderAdminPage(string $activePage): string|RedirectResponse
@@ -59,6 +62,7 @@ trait HomeDashboardPagesTrait
                 'dashboard' => $layoutModel->navActive($activePage, 'dashboard'),
                 'accounts' => $layoutModel->navActive($activePage, 'accounts'),
                 'family-entry' => $layoutModel->navActive($activePage, 'family-entry'),
+                'family-manage' => $layoutModel->navActive($activePage, 'family-manage'),
                 'audit-trails' => $layoutModel->navActive($activePage, 'audit-trails'),
             ],
             'adminAccounts' => array_values(array_filter($users, static fn ($account) => $account['role'] === 'Admin')),
@@ -105,12 +109,14 @@ trait HomeDashboardPagesTrait
             'navActive' => [
                 'dashboard' => $layoutModel->navActive($activePage, 'dashboard'),
                 'family-entry' => $layoutModel->navActive($activePage, 'family-entry'),
+                'family-manage' => $layoutModel->navActive($activePage, 'family-manage'),
                 'activity' => $layoutModel->navActive($activePage, 'activity'),
             ],
             'canCreateFamily' => true,
             'familyFormViewData' => $familyFormViewData,
             'recentFamilies' => $recentFamilies,
             'myAudits' => $myAudits,
+            'stats' => $dashboardModel->stats(),
             'searchTerm' => $searchTerm,
             'searchFilters' => $searchFilters,
             'auditActionOptions' => $searchModel->auditActions(),

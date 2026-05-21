@@ -1,3 +1,4 @@
+// Registers family management screens with the shared dashboard modal loader.
 (function (window) {
     if (typeof window.registerDashboardModal !== 'function') {
         return;

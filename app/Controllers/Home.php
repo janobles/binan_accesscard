@@ -100,6 +100,24 @@ class Home extends BaseController
         return $this->renderAdminPage('audit-trails');
     }
 
+    public function adminSectors(): string|RedirectResponse
+    {
+        if ($this->isPartialRequest()) {
+            return $this->renderAdminSectorsPartial();
+        }
+
+        return $this->renderAdminPage('sectors');
+    }
+
+    public function adminServices(): string|RedirectResponse
+    {
+        if ($this->isPartialRequest()) {
+            return $this->renderAdminServicesPartial();
+        }
+
+        return $this->renderAdminPage('services');
+    }
+
     private function isPartialRequest(): bool
     {
         return $this->request->isAJAX() || (string) $this->request->getGet('partial') === '1';
@@ -158,6 +176,36 @@ class Home extends BaseController
 
         return view('Dashboard/audit-trails', [
             'recentAudits' => $viewData['recentAudits'] ?? [],
+        ]);
+    }
+
+    private function renderAdminSectorsPartial(): string|RedirectResponse
+    {
+        $guard = $this->guardAdminPartialAccess();
+
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        $viewData = $this->buildAdminViewData('sectors');
+
+        return view('Dashboard/Sectors and Services/sector', [
+            'sectors' => $viewData['sectors'] ?? [],
+        ]);
+    }
+
+    private function renderAdminServicesPartial(): string|RedirectResponse
+    {
+        $guard = $this->guardAdminPartialAccess();
+
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        $viewData = $this->buildAdminViewData('services');
+
+        return view('Dashboard/Sectors and Services/services', [
+            'services' => $viewData['services'] ?? [],
         ]);
     }
 

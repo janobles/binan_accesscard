@@ -1,0 +1,121 @@
+/* Admin shared panels, forms, tables, and utility components. */
+.panel {
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    padding: 16px;
+    box-shadow: 0 2px 10px rgba(11, 26, 46, 0.08);
+}
+
+.panel small,
+.table,
+.form-label,
+.form-text {
+    font-size: 12px;
+}
+
+.stat-value {
+    margin-top: 2px;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--value);
+}
+
+.section-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #d6e0ec;
+}
+
+.section-title span {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--title);
+}
+
+.table > :not(caption) > * > * {
+    background: transparent;
+    border-bottom-color: #d9e3ee;
+    color: #27313d;
+}
+
+.table thead th {
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #54687f;
+}
+
+.form-control,
+.form-select {
+    min-height: 38px;
+    border-color: #ccd8e6;
+    background-color: #fdfefe;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: #2e739f;
+    box-shadow: 0 0 0 0.2rem rgba(46, 115, 159, 0.14);
+}
+
+.account-form,
+.account-form-employee {
+    display: grid;
+    grid-template-columns: minmax(170px, 1fr) minmax(170px, 1fr) 100px;
+    gap: 10px;
+    align-items: start;
+}
+
+.account-action {
+    padding-top: 30px;
+}
+
+.btn-primary {
+    border-color: var(--btn-primary);
+    background-color: var(--btn-primary);
+}
+
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active {
+    border-color: var(--btn-primary-hover) !important;
+    background-color: var(--btn-primary-hover) !important;
+}
+
+.form-section {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid #d8e1ec;
+}
+
+.member-row,
+.assistance-box,
+.status-chip,
+.status-tile {
+    border: 1px solid #d1dce9;
+    border-radius: 8px;
+    background: #f8fbfe;
+    padding: 12px;
+}
+
+.member-stack {
+    display: grid;
+    gap: 12px;
+}
+
+.member-row-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.service-check-list {
+    display: grid;
+    gap: 6px;
+}

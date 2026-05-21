@@ -7,6 +7,7 @@ use App\Models\DashboardModel;
 use App\Models\FamilyFormOptionsModel;
 use App\Models\MemberModel;
 use App\Models\MemberServiceModel;
+use App\Models\SearchModel;
 use App\Models\SectorModel;
 use App\Models\ServiceModel;
 use App\Models\UserModel;

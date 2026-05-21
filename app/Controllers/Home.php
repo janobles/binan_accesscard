@@ -236,18 +236,22 @@ class Home extends BaseController
         ]);
     }
 
-    public function employee(): string|RedirectResponse
+    private function renderEmployeeFamilyPartial(): string|RedirectResponse
     {
-        return $this->renderEmployeePage('dashboard');
+        $guard = $this->requireRole(['Developer', 'Admin', 'User']);
+
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        return view('Dashboard/familyform', array_merge(
+            (new FamilyFormOptionsModel())->getViewData(),
+            ['canCreateFamily' => true]
+        ));
     }
 
-    public function employeeFamilyEntry(): string|RedirectResponse
+    private function clearLoginSession(): void
     {
-        return $this->renderEmployeePage('family-entry');
-    }
-
-    public function employeeActivity(): string|RedirectResponse
-    {
-        return $this->renderEmployeePage('activity');
+        session()->destroy();
     }
 }

@@ -260,7 +260,6 @@ $errorId = uniqid('error', true);
                     </tbody>
                 </table>
 
-
                 <?php $empty = true; ?>
                 <?php foreach (['_GET', '_POST', '_COOKIE'] as $var) : ?>
                     <?php

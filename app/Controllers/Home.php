@@ -206,29 +206,48 @@ class Home extends BaseController
         ]);
     }
 
-    private function renderEmployeeFamilyPartial(): string|RedirectResponse
+    private function renderAdminSectorsPartial(): string|RedirectResponse
     {
-        $guard = $this->requireRole(['Developer', 'Admin', 'User']);
+        $guard = $this->guardAdminPartialAccess();
 
         if ($guard instanceof RedirectResponse) {
             return $guard;
         }
 
-        return view('Dashboard/familyform', array_merge(
-            (new FamilyFormOptionsModel())->getViewData(),
-            ['canCreateFamily' => true]
-        ));
+        $viewData = $this->buildAdminViewData('sectors');
+
+        return view('Dashboard/Sectors and Services/sector', [
+            'sectors' => $viewData['sectors'] ?? [],
+        ]);
     }
 
-    private function clearLoginSession(): void
+    private function renderAdminServicesPartial(): string|RedirectResponse
     {
-        session()->remove([
-            'is_logged_in',
-            'user_id',
-            'member_id',
-            'username',
-            'role',
-            'idle_last_activity',
+        $guard = $this->guardAdminPartialAccess();
+
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        $viewData = $this->buildAdminViewData('services');
+
+        return view('Dashboard/Sectors and Services/services', [
+            'services' => $viewData['services'] ?? [],
         ]);
+    }
+
+    public function employee(): string|RedirectResponse
+    {
+        return $this->renderEmployeePage('dashboard');
+    }
+
+    public function employeeFamilyEntry(): string|RedirectResponse
+    {
+        return $this->renderEmployeePage('family-entry');
+    }
+
+    public function employeeActivity(): string|RedirectResponse
+    {
+        return $this->renderEmployeePage('activity');
     }
 }

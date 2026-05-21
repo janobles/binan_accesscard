@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <?php
+helper('assets');
 $user = $user ?? [];
 $username = $user['username'] ?? 'Admin';
 $activePage = $activePage ?? 'dashboard';
@@ -37,7 +38,7 @@ $formatTime = static function (mixed $value): string {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= esc($pageTitle) ?> - Binan Access Card MIS</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="<?= base_url('assets/css/admin.css') ?>?v=<?= filemtime(FCPATH . 'assets/css/admin.css') ?>">
+    <?= admin_dashboard_style_links() ?>
 </head>
 <body>
 <div class="app-shell">
@@ -57,6 +58,8 @@ $formatTime = static function (mixed $value): string {
                 <?php endif; ?>
                 <a class="nav-link <?= esc($navActive['family-entry'] ?? '') ?> js-open-family-modal" href="<?= site_url('admin/manage-family') ?>" data-modal-url="<?= site_url('admin/manage-family?partial=1') ?>" data-modal-title="Add Family">Add Family</a>
                 <a class="nav-link <?= esc($navActive['family-manage'] ?? '') ?> js-open-family-list" href="<?= site_url('admin/manage-family/list') ?>" data-modal-url="<?= site_url('admin/manage-family/list?partial=1') ?>" data-modal-title="Manage Families">Manage Family</a>
+                <a class="nav-link <?= esc($navActive['sectors'] ?? '') ?> js-open-sectors-modal" href="<?= site_url('admin/sectors') ?>" data-modal-url="<?= site_url('admin/sectors?partial=1') ?>" data-modal-title="Sector Management">Sector Management</a>
+                <a class="nav-link <?= esc($navActive['services'] ?? '') ?> js-open-services-modal" href="<?= site_url('admin/services') ?>" data-modal-url="<?= site_url('admin/services?partial=1') ?>" data-modal-title="Service Management">Service Management</a>
                 <a class="nav-link <?= esc($navActive['audit-trails'] ?? '') ?> js-open-audit-modal" href="<?= site_url('admin/audit-trails') ?>" data-modal-url="<?= site_url('admin/audit-trails?partial=1') ?>" data-modal-title="Audit Trails">Audit Trails</a>
             </nav>
         </div>
@@ -201,6 +204,18 @@ $formatTime = static function (mixed $value): string {
                     'auditActionOptions' => $auditActionOptions,
                 ]) ?>
             <?php endif; ?>
+
+            <?php if ($activePage === 'sectors'): ?>
+                <?= view('Dashboard/Sectors and Services/sector', [
+                    'sectors' => $sectors ?? [],
+                ]) ?>
+            <?php endif; ?>
+
+            <?php if ($activePage === 'services'): ?>
+                <?= view('Dashboard/Sectors and Services/services', [
+                    'services' => $services ?? [],
+                ]) ?>
+            <?php endif; ?>
         </div>
     </main>
 </div>
@@ -229,11 +244,20 @@ $formatTime = static function (mixed $value): string {
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="<?= base_url('assets/js/dashboard/manage-family-form.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/manage-family-form.js') ?>"></script>
 <script src="<?= base_url('assets/js/dashboard/family-form-ui.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form-ui.js') ?>"></script>
+<script src="<?= base_url('assets/js/dashboard/family-form-utils.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form-utils.js') ?>"></script>
+<script src="<?= base_url('assets/js/dashboard/family-form-sectors.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form-sectors.js') ?>"></script>
+<script src="<?= base_url('assets/js/dashboard/family-form-members.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form-members.js') ?>"></script>
+<script src="<?= base_url('assets/js/dashboard/family-form-summary.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form-summary.js') ?>"></script>
 <script src="<?= base_url('assets/js/dashboard/family-form.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form.js') ?>"></script>
+<script src="<?= base_url('assets/js/dashboard/sector-management-view.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/sector-management-view.js') ?>"></script>
+<script src="<?= base_url('assets/js/dashboard/service-management-view.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/service-management-view.js') ?>"></script>
 <script src="<?= base_url('assets/js/session-timeout.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/session-timeout.js') ?>" data-timeout-seconds="<?= esc((string) $idleTimeoutSeconds) ?>" data-logout-url="<?= site_url('logout?timeout=1') ?>" data-keep-alive-url="<?= site_url('session/keep-alive') ?>"></script>
 <script src="<?= base_url('assets/js/dashboard/dashboard-modal-loader.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/dashboard-modal-loader.js') ?>"></script>
 <script src="<?= base_url('assets/js/dashboard/manage-family-modal.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/manage-family-modal.js') ?>"></script>
 <script src="<?= base_url('assets/js/dashboard/accounts-modal.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/accounts-modal.js') ?>"></script>
+<script src="<?= base_url('assets/js/dashboard/sectors-modal.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/sectors-modal.js') ?>"></script>
+<script src="<?= base_url('assets/js/dashboard/services-modal.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/services-modal.js') ?>"></script>
 <script src="<?= base_url('assets/js/dashboard/audit-trails-modal.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/audit-trails-modal.js') ?>"></script>
 </body>
 </html>
+

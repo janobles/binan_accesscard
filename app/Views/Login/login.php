@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -38,5 +38,6 @@
             </form>
         </section>
     </main>
+    <script src="<?= base_url('assets/js/login.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/login.js') ?>"></script>
 </body>
 </html>

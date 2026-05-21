@@ -1,11 +1,13 @@
+/* Family wizard UI styles. Field saving and validation belong in PHP controllers/models. */
+
 .family-wizard-shell {
 	display: flex;
 	justify-content: center;
-	margin: 8px 0 0;
+	margin: 0;
 }
 
 .family-wizard-card {
-	width: min(100%, 1020px);
+	width: min(100%, 1276px);
 	background: #f3f5f8;
 	border: 2px solid #2185d7;
 	border-radius: 2px;
@@ -17,7 +19,7 @@
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	padding: 14px 18px;
+	padding: 24px 22px;
 	background: #0c2948;
 	color: #eff7ff;
 }
@@ -30,7 +32,7 @@
 
 .wizard-header-left strong {
 	display: block;
-	font-size: 30px;
+	font-size: 38px;
 	font-weight: 400;
 	line-height: 1.05;
 	letter-spacing: 0.2px;
@@ -39,19 +41,19 @@
 .wizard-header-left small {
 	display: block;
 	margin-top: 2px;
-	font-size: 12px;
+	font-size: 14px;
 	color: #9fb1c6;
 }
 
 .wizard-icon {
-	width: 30px;
-	height: 30px;
+	width: 38px;
+	height: 38px;
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
 	border-radius: 7px;
 	background: #118b86;
-	font-size: 20px;
+	font-size: 24px;
 	line-height: 1;
 	font-weight: 600;
 }
@@ -73,7 +75,7 @@
 }
 
 .wizard-step {
-	min-height: 76px;
+	min-height: 94px;
 	display: grid;
 	place-items: center;
 	text-align: center;
@@ -88,23 +90,23 @@
 }
 
 .wizard-step span {
-	width: 20px;
-	height: 20px;
+	width: 24px;
+	height: 24px;
 	border-radius: 50%;
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	font-size: 12px;
+	font-size: 13px;
 	font-weight: 700;
 	color: #8d9daf;
 	background: #dce4ee;
 }
 
 .wizard-step small {
-	font-size: 11px;
+	font-size: 13px;
 	line-height: 1.15;
 	color: #8c9aad;
-	max-width: 96px;
+	max-width: 160px;
 }
 
 .wizard-step.is-active {
@@ -122,13 +124,13 @@
 }
 
 #familyForm {
-	padding: 18px 18px 16px;
+	padding: 42px 22px 20px;
 }
 
 #familyForm .form-section {
-	margin-top: 14px;
+	margin-top: 0;
 	border-top: 1px solid #d6dee8;
-	padding-top: 12px;
+	padding-top: 24px;
 }
 
 #familyForm .family-step-panel {
@@ -140,11 +142,11 @@
 }
 
 #familyForm .form-section:first-of-type {
-	margin-top: 6px;
+	margin-top: 0;
 }
 
 #familyForm .section-title {
-	margin-bottom: 12px;
+	margin-bottom: 24px;
 	border-bottom: 0;
 	padding-bottom: 0;
 }
@@ -157,24 +159,24 @@
 
 #familyForm .section-title span {
 	color: #4f6175;
-	font-size: 31px;
+	font-size: 38px;
 	font-weight: 400;
 	letter-spacing: 0.1px;
 }
 
 #familyForm .form-label {
-	margin-bottom: 4px;
+	margin-bottom: 6px;
 	color: #59697b;
-	font-size: 13px;
+	font-size: 15px;
 	font-weight: 600;
 }
 
 #familyForm .form-control,
 #familyForm .form-select {
-	min-height: 40px;
+	min-height: 50px;
 	border-color: #cbd6e3;
 	border-radius: 7px;
-	font-size: 14px;
+	font-size: 16px;
 	color: #4e5f72;
 	background: #fbfdff;
 }
@@ -221,15 +223,21 @@
 }
 
 .family-form-actions {
-	margin-top: 20px;
-	padding-top: 14px;
+	margin-top: 24px;
+	padding-top: 18px;
 	border-top: 1px solid #d6dee8;
 }
 
+.family-form-hidden {
+	display: none !important;
+}
+
 .family-form-actions .btn {
-	min-width: 118px;
+	min-width: 146px;
+	min-height: 46px;
 	border-radius: 8px;
 	font-weight: 600;
+	font-size: 18px;
 }
 
 .family-form-actions .btn-outline-secondary {

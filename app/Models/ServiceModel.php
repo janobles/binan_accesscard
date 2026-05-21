@@ -2,8 +2,12 @@
 
 namespace App\Models;
 
+use App\Support\SectorIds;
 use CodeIgniter\Model;
 
+/**
+ * Manages available assistance services and eligibility lookups.
+ */
 class ServiceModel extends Model
 {
     protected $table = 'services';
@@ -17,13 +21,31 @@ class ServiceModel extends Model
         return $this->db->tableExists($this->table);
     }
 
-    public function existsById(int $serviceId): bool
+    public function getNameMapByIds(array $serviceIds): array
     {
-        if (! $this->hasTable()) {
-            return false;
+        $serviceIds = array_values(array_filter(array_map(static fn ($id): int => (int) $id, $serviceIds), static fn (int $id): bool => $id > 0));
+
+        if ($serviceIds === []) {
+            return [];
         }
 
-        return $this->where('serviceID', $serviceId)->countAllResults() > 0;
+        $rows = $this->select('serviceID, name')
+            ->whereIn('serviceID', $serviceIds)
+            ->findAll();
+
+        $map = [];
+
+        foreach ($rows as $row) {
+            $id = (int) ($row['serviceID'] ?? 0);
+
+            if ($id <= 0) {
+                continue;
+            }
+
+            $map[$id] = (string) ($row['name'] ?? '');
+        }
+
+        return $map;
     }
 
     public function getForSectorName(string $sectorName): array
@@ -39,8 +61,7 @@ class ServiceModel extends Model
     public function getEligibleForMember(int $memberId): array
     {
         $member = $this->db->table('member')
-            ->select('sector.name AS sector_name')
-            ->join('sector', 'sector.sectorID = member.sectorID')
+            ->select('sectorID')
             ->where('member.memberID', $memberId)
             ->get()
             ->getRowArray();
@@ -49,7 +70,58 @@ class ServiceModel extends Model
             return [];
         }
 
-        return $this->getForSectorName((string) $member['sector_name']);
+        $sectorIds = SectorIds::normalize($member['sectorID'] ?? null);
+
+        if ($sectorIds === []) {
+            return [];
+        }
+
+        $sectorNames = array_column(
+            $this->db->table('sector')
+                ->select('name')
+                ->whereIn('sectorID', $sectorIds)
+                ->get()
+                ->getResultArray(),
+            'name'
+        );
+
+        if ($sectorNames === []) {
+            return [];
+        }
+
+        return $this->groupStart()
+            ->whereIn('category', $sectorNames)
+            ->orWhere('category', 'General')
+            ->groupEnd()
+            ->orderBy('name', 'ASC')
+            ->findAll();
+    }
+
+    public function existsById(int $serviceId): bool
+    {
+        if (! $this->db->tableExists($this->table)) {
+            return false;
+        }
+
+        return $this->where($this->primaryKey, $serviceId)->countAllResults() > 0;
+    }
+
+    public function idsExist(array $serviceIds): bool
+    {
+        $serviceIds = array_values(array_unique(array_filter(
+            array_map(static fn (mixed $id): int => (int) $id, $serviceIds),
+            static fn (int $id): bool => $id > 0
+        )));
+
+        if ($serviceIds === []) {
+            return true;
+        }
+
+        if (! $this->db->tableExists($this->table)) {
+            return false;
+        }
+
+        return $this->whereIn($this->primaryKey, $serviceIds)->countAllResults() === count($serviceIds);
     }
 }
 

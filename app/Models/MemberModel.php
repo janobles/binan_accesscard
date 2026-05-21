@@ -2,10 +2,23 @@
 
 namespace App\Models;
 
+use App\Support\SectorIds;
 use CodeIgniter\Model;
 
+/**
+ * Manages family heads and family member records.
+ */
 class MemberModel extends Model
 {
+    public const VALIDATION_RULES = [
+        'sectorID' => 'required|max_length[255]',
+        'firstname' => 'required|max_length[100]',
+        'lastname' => 'required|max_length[100]',
+        'middlename' => 'permit_empty|max_length[50]',
+        'birthday' => 'permit_empty|valid_date[Y-m-d]',
+        'sex' => 'permit_empty|in_list[Male,Female]',
+    ];
+
     protected $table = 'member';
     protected $primaryKey = 'memberID';
     protected $returnType = 'array';
@@ -27,15 +40,7 @@ class MemberModel extends Model
         'sectorID',
     ];
     protected $useTimestamps = false;
-
-    protected $validationRules = [
-        'sectorID' => 'required|is_natural_no_zero',
-        'firstname' => 'required|max_length[100]',
-        'lastname' => 'required|max_length[100]',
-        'middlename' => 'permit_empty|max_length[50]',
-        'birthday' => 'permit_empty|valid_date[Y-m-d]',
-        'sex' => 'permit_empty|in_list[Male,Female]',
-    ];
+    protected $validationRules = self::VALIDATION_RULES;
 
     public function hasTable(): bool
     {
@@ -75,16 +80,18 @@ class MemberModel extends Model
 
     public function getRecentFamilies(int $limit = 10): array
     {
-        if (! $this->hasTable()) {
+        if (! $this->db->tableExists('view_member_dashboard')) {
             return [];
         }
 
-        return $this->select('member.*, sector.name AS sector_name')
-            ->join('sector', 'sector.sectorID = member.sectorID', 'left')
-            ->where('member.headID = member.memberID')
-            ->orderBy('member.dt_created', 'DESC')
+        $rows = $this->db->table('view_member_dashboard')
+            ->where('memberID = headID')
+            ->orderBy('memberID', 'DESC')
             ->limit($limit)
-            ->findAll();
+            ->get()
+            ->getResultArray();
+
+        return $this->withSectorNames($rows);
     }
 
     public function countHeads(): int
@@ -105,6 +112,20 @@ class MemberModel extends Model
         return $this->countAllResults();
     }
 
+    public static function personValidationRules(bool $requireHeadDetails = false): array
+    {
+        $rules = self::VALIDATION_RULES;
+        unset($rules['sectorID']);
+
+        if ($requireHeadDetails) {
+            $rules['middlename'] = 'required|max_length[50]';
+            $rules['birthday'] = 'required|valid_date[Y-m-d]';
+            $rules['sex'] = 'required|in_list[Male,Female]';
+        }
+
+        return $rules;
+    }
+
     public function createHead(array $data): int|false
     {
         $data['memberID'] = $this->nextAutoIncrementId();
@@ -120,7 +141,9 @@ class MemberModel extends Model
 
     public function addFamilyMember(int $headId, array $data): int|false
     {
-        if ($this->find($headId) === null) {
+        $head = $this->find($headId);
+
+        if ($head === null || (int) ($head['headID'] ?? 0) !== $headId) {
             return false;
         }
 
@@ -136,38 +159,93 @@ class MemberModel extends Model
 
     public function getFamilyMembers(int $headId): array
     {
-        return $this->select('member.*, sector.name AS sector_name')
-            ->join('sector', 'sector.sectorID = member.sectorID')
-            ->where('member.headID', $headId)
-            ->orderBy('member.memberID', 'ASC')
-            ->findAll();
+        if (! $this->db->tableExists('view_member_dashboard')) {
+            return [];
+        }
+
+        $rows = $this->db->table('view_member_dashboard')
+            ->where('headID', $headId)
+            ->orderBy('memberID', 'ASC')
+            ->get()
+            ->getResultArray();
+
+        return $this->withSectorNames($rows);
     }
 
     public function findWithSector(int $memberId): ?array
     {
-        return $this->select('member.*, sector.name AS sector_name, sector.shortcode AS sector_shortcode')
-            ->join('sector', 'sector.sectorID = member.sectorID')
-            ->where('member.memberID', $memberId)
-            ->first();
+        if (! $this->db->tableExists('view_member_dashboard')) {
+            return null;
+        }
+
+        $member = $this->db->table('view_member_dashboard')
+            ->where('memberID', $memberId)
+            ->get()
+            ->getRowArray();
+
+        if ($member === null) {
+            return null;
+        }
+
+        return $this->withSectorNames([$member])[0] ?? null;
     }
 
     public function searchFamilies(?string $keyword = null): array
     {
-        $builder = $this->select('member.*, sector.name AS sector_name')
-            ->join('sector', 'sector.sectorID = member.sectorID')
-            ->where('member.headID = member.memberID')
-            ->orderBy('member.lastname', 'ASC')
-            ->orderBy('member.firstname', 'ASC');
+        if (! $this->db->tableExists('view_member_dashboard')) {
+            return [];
+        }
+
+        $builder = $this->db->table('view_member_dashboard')
+            ->where('memberID = headID')
+            ->orderBy('lastname', 'ASC')
+            ->orderBy('firstname', 'ASC');
 
         if ($keyword !== null && trim($keyword) !== '') {
+            $keyword = trim($keyword);
+
             $builder->groupStart()
-                ->like('member.firstname', $keyword)
-                ->orLike('member.lastname', $keyword)
-                ->orLike('sector.name', $keyword)
+                ->like('firstname', $keyword)
+                ->orLike('lastname', $keyword)
+                ->orLike('relationship', $keyword);
+
+            foreach ($this->sectorIdsForKeyword($keyword) as $sectorId) {
+                $builder->orWhere(SectorIds::containsCondition($sectorId), null, false);
+            }
+
+            $builder
                 ->groupEnd();
         }
 
-        return $builder->findAll();
+        return $this->withSectorNames($builder->get()->getResultArray());
+    }
+
+    public function getFamilyMemberIds(int $headId): array
+    {
+        if (! $this->hasTable()) {
+            return [];
+        }
+
+        $rows = $this->select('memberID')
+            ->where('headID', $headId)
+            ->findAll();
+
+        return array_values(array_map(static fn (array $row): int => (int) ($row['memberID'] ?? 0), $rows));
+    }
+
+    public function updateHead(int $headId, array $data): bool
+    {
+        $data['headID'] = $headId;
+        $data['relationship'] = 'Head';
+
+        return $this->update($headId, $data) !== false;
+    }
+
+    public function deleteFamilyMembersExceptHead(int $headId): bool
+    {
+        return $this->where('headID', $headId)
+            ->where('memberID !=', $headId)
+            ->delete() !== false;
     }
 
     private function nextAutoIncrementId(): int
@@ -180,5 +258,55 @@ class MemberModel extends Model
         ")->getRowArray();
 
         return (int) ($row['AUTO_INCREMENT'] ?? 1);
+    }
+
+    private function withSectorNames(array $rows): array
+    {
+        $sectorNames = $this->sectorNameMap();
+
+        foreach ($rows as &$row) {
+            $sectorValue = $row['sector_array_string'] ?? $row['sectorID'] ?? '[]';
+            $row['sectorID'] = $sectorValue;
+            $row['sector_name'] = SectorIds::toNames($sectorValue, $sectorNames);
+        }
+
+        return $rows;
+    }
+
+    private function sectorNameMap(): array
+    {
+        if (! $this->db->tableExists('sector')) {
+            return [];
+        }
+
+        $sectors = $this->db->table('sector')
+            ->select('sectorID, name')
+            ->get()
+            ->getResultArray();
+
+        $map = [];
+
+        foreach ($sectors as $sector) {
+            $map[(int) $sector['sectorID']] = (string) $sector['name'];
+        }
+
+        return $map;
+    }
+
+    private function sectorIdsForKeyword(string $keyword): array
+    {
+        if (! $this->db->tableExists('sector')) {
+            return [];
+        }
+
+        return array_map(
+            static fn (array $sector): int => (int) $sector['sectorID'],
+            $this->db->table('sector')
+                ->select('sectorID')
+                ->like('name', $keyword)
+                ->orLike('description', $keyword)
+                ->get()
+                ->getResultArray()
+        );
     }
 }

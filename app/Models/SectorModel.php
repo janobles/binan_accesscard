@@ -4,6 +4,9 @@ namespace App\Models;
 
 use CodeIgniter\Model;
 
+/**
+ * Manages the citizen sectors used for categorizing members.
+ */
 class SectorModel extends Model
 {
     protected $table = 'sector';

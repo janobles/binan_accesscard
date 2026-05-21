@@ -1,3 +1,5 @@
+/* Login page UI styles. Authentication logic stays in Home and UserModel. */
+
 * {
 	box-sizing: border-box;
 }

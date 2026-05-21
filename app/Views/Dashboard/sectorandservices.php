@@ -1,23 +1,27 @@
 <?php
 $servicesByCategory = $servicesByCategory ?? [];
 $sectorCatalog = $sectorCatalog ?? [];
+$selectedSectorIds = array_values(array_map(static fn ($id): int => (int) $id, (array) ($selectedSectorIds ?? [])));
+$selectedSectorCategories = array_values(array_map(static fn ($key): string => (string) $key, (array) ($selectedSectorCategories ?? [])));
+$selectedServiceIds = array_values(array_map(static fn ($id): int => (int) $id, (array) ($selectedServiceIds ?? [])));
+$sectorCatalogJson = json_encode($sectorCatalog, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?: '{}';
 ?>
 
 <div class="form-section family-step-panel" data-step="2">
 	<div class="row g-3 mb-3">
 		<div class="col-md-4 col-lg-3">
 			<label class="form-label" for="sectorCategoryList">Sector</label>
-			<div class="border rounded p-2 bg-white" id="sectorCategoryList" role="group" aria-label="Sector categories">
+			<div class="border rounded p-2 bg-white" id="sectorCategoryList" role="group" aria-label="Sector categories" data-sector-catalog="<?= esc($sectorCatalogJson, 'attr') ?>">
 				<label class="form-check mb-1">
-					<input class="form-check-input" type="checkbox" name="sector_categories[]" value="PWD">
+					<input class="form-check-input" type="checkbox" name="sector_categories[]" value="PWD" <?= in_array('PWD', $selectedSectorCategories, true) ? 'checked' : '' ?>>
 					<span class="form-check-label">PWD</span>
 				</label>
 				<label class="form-check mb-1">
-					<input class="form-check-input" type="checkbox" name="sector_categories[]" value="SP">
+					<input class="form-check-input" type="checkbox" name="sector_categories[]" value="SP" <?= in_array('SP', $selectedSectorCategories, true) ? 'checked' : '' ?>>
 					<span class="form-check-label">SP</span>
 				</label>
 				<label class="form-check mb-0">
-					<input class="form-check-input" type="checkbox" name="sector_categories[]" value="OSCA">
+					<input class="form-check-input" type="checkbox" name="sector_categories[]" value="OSCA" <?= in_array('OSCA', $selectedSectorCategories, true) ? 'checked' : '' ?>>
 					<span class="form-check-label">OSCA</span>
 				</label>
 			</div>
@@ -33,6 +37,7 @@ $sectorCatalog = $sectorCatalog ?? [];
 	</div>
 
 	<script type="application/json" id="sectorCatalogData"><?= json_encode($sectorCatalog, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?></script>
+	<script type="application/json" id="selectedSectorIdsData"><?= json_encode($selectedSectorIds, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?></script>
 
 	<div class="section-title">
 		<span>Services and Programs</span>
@@ -47,7 +52,7 @@ $sectorCatalog = $sectorCatalog ?? [];
 							<?php $serviceId = (string) ($service['serviceID'] ?? ''); ?>
 							<?php $serviceInputId = 'service_' . preg_replace('/[^a-zA-Z0-9_\-]/', '_', strtolower((string) $category)) . '_' . $serviceId; ?>
 							<label class="form-check" for="<?= esc($serviceInputId) ?>">
-								<input class="form-check-input" id="<?= esc($serviceInputId) ?>" type="checkbox" name="service_ids[]" value="<?= esc($serviceId) ?>">
+								<input class="form-check-input" id="<?= esc($serviceInputId) ?>" type="checkbox" name="service_ids[]" value="<?= esc($serviceId) ?>" <?= in_array((int) $serviceId, $selectedServiceIds, true) ? 'checked' : '' ?>>
 								<span class="form-check-label"><?= esc((string) ($service['name'] ?? '')) ?></span>
 							</label>
 						<?php endforeach; ?>

@@ -1,9 +1,11 @@
+// Wires the family wizard events while delegating rendering helpers to FamilyFormUI.
 (function (window, document) {
     function initFamilyForm(rootElement) {
+        const ui = window.FamilyFormUI;
         const root = rootElement instanceof HTMLElement ? rootElement : document;
         const form = root.querySelector('#familyForm');
 
-        if (!form || form.dataset.familyFormInitialized === '1') {
+        if (!ui || !form || form.dataset.familyFormInitialized === '1') {
             return;
         }
 
@@ -24,301 +26,99 @@
         const sectorCategoryList = form.querySelector('#sectorCategoryList');
         const sectorNameList = form.querySelector('#sectorNameList');
         const sectorIdInput = form.querySelector('#sectorID');
-        const sectorCatalogNode = form.querySelector('#sectorCatalogData');
-        const headSummaryName = form.querySelector('#headSummaryName');
-        const headSummaryBirthday = form.querySelector('#headSummaryBirthday');
-        const headSummarySex = form.querySelector('#headSummarySex');
-        const headSummaryCivil = form.querySelector('#headSummaryCivil');
-        const headSummaryContact = form.querySelector('#headSummaryContact');
-        const headSummaryEducation = form.querySelector('#headSummaryEducation');
-        const headSummaryJob = form.querySelector('#headSummaryJob');
-        const headSummaryIncome = form.querySelector('#headSummaryIncome');
-        const headSummarySectors = form.querySelector('#headSummarySectors');
-        const headSummaryServices = form.querySelector('#headSummaryServices');
+        const entryTypeInput = form.querySelector('#entryType');
+        const entryButtons = Array.from(form.querySelectorAll('.entry-type-btn'));
+        const entryPanels = Array.from(form.querySelectorAll('[data-entry-panel]'));
+        const summaryTargets = {
+            name: form.querySelector('#headSummaryName'),
+            birthday: form.querySelector('#headSummaryBirthday'),
+            sex: form.querySelector('#headSummarySex'),
+            civil: form.querySelector('#headSummaryCivil'),
+            contact: form.querySelector('#headSummaryContact'),
+            education: form.querySelector('#headSummaryEducation'),
+            job: form.querySelector('#headSummaryJob'),
+            income: form.querySelector('#headSummaryIncome'),
+            sectors: form.querySelector('#headSummarySectors'),
+            services: form.querySelector('#headSummaryServices')
+        };
+        const sectorCatalog = ui.readSectorCatalog(sectorCategoryList);
         let memberIndex = 0;
         let currentStep = 1;
-        const totalSteps = 3;
-        let sectorCatalog = {};
+        let entryType = entryTypeInput ? entryTypeInput.value : 'head';
+        let selectedSectorIds = [];
 
-        if (sectorCatalogNode) {
-            try {
-                sectorCatalog = JSON.parse(sectorCatalogNode.textContent || '{}');
-            } catch (error) {
-                sectorCatalog = {};
-            }
-        }
-
-        function resetSectorSelection() {
-            if (!sectorNameList) {
-                return;
-            }
-
-            sectorNameList.innerHTML = '<small class="text-muted">Select one or more sector categories first.</small>';
-
-            if (sectorIdInput) {
-                sectorIdInput.value = '';
-                sectorIdInput.setCustomValidity('Please select at least one sector name.');
-            }
-        }
-
-        function updateSectorSelection() {
-            if (!sectorCategoryList || !sectorNameList) {
-                return;
-            }
-
-            const checkedBoxes = Array.from(sectorNameList.querySelectorAll('input[type="checkbox"]:checked'));
-            const selectedItems = checkedBoxes.map(function (checkbox) {
-                return {
-                    sectorID: checkbox.value,
-                    name: checkbox.dataset.name || '',
-                    description: checkbox.dataset.description || ''
-                };
-            });
-
-            if (sectorIdInput) {
-                sectorIdInput.value = selectedItems.length > 0 ? String(selectedItems[0].sectorID || '') : '';
-                sectorIdInput.setCustomValidity(selectedItems.length > 0 ? '' : 'Please select at least one sector name.');
-            }
-        }
-
-        function populateSectorsByCategory() {
-            if (!sectorCategoryList || !sectorNameList) {
-                return;
-            }
-
-            const selectedCategories = Array.from(sectorCategoryList.querySelectorAll('input[type="checkbox"]:checked')).map(function (checkbox) {
-                return checkbox.value;
-            });
-            const options = [];
-            const seenSectorIds = new Set();
-
-            selectedCategories.forEach(function (category) {
-                const categoryOptions = Array.isArray(sectorCatalog[category]) ? sectorCatalog[category] : [];
-
-                categoryOptions.forEach(function (option) {
-                    const key = String(option.sectorID || '');
-
-                    if (seenSectorIds.has(key)) {
-                        return;
-                    }
-
-                    seenSectorIds.add(key);
-                    options.push(option);
-                });
-            });
-
-            sectorNameList.innerHTML = '';
-
-            if (options.length === 0) {
-                sectorNameList.innerHTML = '<small class="text-muted">No sector names available for selected sector(s).</small>';
-                updateSectorSelection();
-
-                return;
-            }
-
-            options.forEach(function (option) {
-                const wrapper = document.createElement('label');
-                wrapper.className = 'form-check mb-1';
-
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.className = 'form-check-input';
-                checkbox.name = 'sector_ids[]';
-                checkbox.value = String(option.sectorID || '');
-                checkbox.dataset.name = String(option.name || '');
-                checkbox.dataset.description = String(option.description || '');
-
-                const labelText = document.createElement('span');
-                labelText.className = 'form-check-label';
-                const description = String(option.description || '').trim();
-                labelText.textContent = description !== ''
-                    ? String(option.name || '') + ' - ' + description
-                    : String(option.name || '');
-
-                wrapper.appendChild(checkbox);
-                wrapper.appendChild(labelText);
-                sectorNameList.appendChild(wrapper);
-            });
-
-            updateSectorSelection();
-        }
-
-        function setStep(step) {
-            currentStep = Math.max(1, Math.min(totalSteps, step));
-
-            panels.forEach(function (panel) {
-                panel.classList.toggle('is-visible', Number(panel.dataset.step) === currentStep);
-            });
-
-            stepItems.forEach(function (item) {
-                item.classList.toggle('is-active', Number(item.dataset.stepTarget) === currentStep);
-            });
-
-            if (stepInfo) {
-                if (currentStep === 1) {
-                    stepInfo.textContent = 'Step 1 of 3 - Head of the Family';
-                } else if (currentStep === 2) {
-                    stepInfo.textContent = 'Step 2 of 3 - Sector & services';
-                } else {
-                    stepInfo.textContent = 'Step 3 of 3 - Family members';
-                }
-            }
-
-            if (prevBtn) {
-                prevBtn.style.display = currentStep === 1 ? 'none' : '';
-            }
-
-            if (nextBtn) {
-                nextBtn.style.display = currentStep === totalSteps ? 'none' : '';
-            }
-
-            if (submitBtn) {
-                submitBtn.style.display = currentStep === totalSteps ? '' : 'none';
-            }
-
-            if (resetBtn) {
-                resetBtn.style.display = currentStep === totalSteps ? 'none' : '';
-            }
-
-            if (currentStep === 3) {
-                updateHeadSummary();
-            }
-        }
-
-        function setMemberRowsEmptyState() {
-            if (!memberRows || !memberRowsEmpty) {
-                return;
-            }
-
-            memberRowsEmpty.style.display = memberRows.children.length === 0 ? '' : 'none';
+        function totalSteps() {
+            return entryType === 'member' ? 2 : 3;
         }
 
         function updateHeadSummary() {
-            function renderSummaryList(container, items) {
-                if (!container) {
-                    return;
-                }
-
-                if (!Array.isArray(items) || items.length === 0) {
-                    container.textContent = '-';
-
-                    return;
-                }
-
-                const listItems = items.map(function (item) {
-                    return '<li>' + item.replace(/[&<>"']/g, function (char) {
-                        return {
-                            '&': '&amp;',
-                            '<': '&lt;',
-                            '>': '&gt;',
-                            '"': '&quot;',
-                            "'": '&#039;'
-                        }[char] || char;
-                    }) + '</li>';
-                }).join('');
-
-                container.innerHTML = '<ul>' + listItems + '</ul>';
-            }
-
-            const firstName = (form.querySelector('#head_firstname') || {}).value || '';
-            const middleName = (form.querySelector('#head_middlename') || {}).value || '';
-            const lastName = (form.querySelector('#head_lastname') || {}).value || '';
-            const suffix = (form.querySelector('#head_suffix') || {}).value || '';
-            const fullName = [firstName, middleName, lastName, suffix].filter(Boolean).join(' ').trim();
-
-            if (headSummaryName) {
-                headSummaryName.textContent = fullName !== '' ? fullName : '-';
-            }
-
-            if (headSummaryBirthday) {
-                const value = (form.querySelector('#head_birthday') || {}).value || '';
-                headSummaryBirthday.textContent = value !== '' ? value : '-';
-            }
-
-            if (headSummarySex) {
-                const value = (form.querySelector('#head_sex') || {}).value || '';
-                headSummarySex.textContent = value !== '' ? value : '-';
-            }
-
-            if (headSummaryCivil) {
-                const value = (form.querySelector('#head_civilstatus') || {}).value || '';
-                headSummaryCivil.textContent = value !== '' ? value : '-';
-            }
-
-            if (headSummaryContact) {
-                const value = (form.querySelector('#head_contactnumber') || {}).value || '';
-                headSummaryContact.textContent = value !== '' ? value : '-';
-            }
-
-            if (headSummaryEducation) {
-                const value = (form.querySelector('#head_education') || {}).value || '';
-                headSummaryEducation.textContent = value !== '' ? value : '-';
-            }
-
-            if (headSummaryJob) {
-                const value = (form.querySelector('#head_job') || {}).value || '';
-                headSummaryJob.textContent = value !== '' ? value : '-';
-            }
-
-            if (headSummaryIncome) {
-                const salarySelect = form.querySelector('#head_salary');
-                const label = salarySelect && salarySelect.selectedOptions.length > 0
-                    ? salarySelect.selectedOptions[0].textContent
-                    : '';
-                headSummaryIncome.textContent = (label || '').trim() !== '' ? label.trim() : '-';
-            }
-
-            const selectedSectors = Array.from(form.querySelectorAll('#sectorNameList input[type="checkbox"]:checked')).map(function (checkbox) {
-                return String(checkbox.dataset.name || '').trim();
-            }).filter(function (value) {
-                return value !== '';
-            });
-
-            const selectedServices = Array.from(form.querySelectorAll('input[name="service_ids[]"]:checked')).map(function (checkbox) {
-                const label = checkbox.closest('label');
-                const text = label ? label.textContent : '';
-
-                return (text || '').trim();
-            }).filter(function (value) {
-                return value !== '';
-            });
-
-            renderSummaryList(headSummarySectors, selectedSectors);
-            renderSummaryList(headSummaryServices, selectedServices);
+            ui.renderHeadSummary(form, summaryTargets);
         }
 
-        function createMemberRow() {
-            if (!memberTemplate || !memberRows) {
-                return;
-            }
+        function setStep(step) {
+            currentStep = Math.max(1, Math.min(totalSteps(), step));
 
-            const fragment = memberTemplate.content.cloneNode(true);
-            const row = fragment.querySelector('.member-row');
+            ui.setWizardStep({
+                currentStep: currentStep,
+                entryType: entryType,
+                panels: panels,
+                stepItems: stepItems,
+                stepInfo: stepInfo,
+                prevBtn: prevBtn,
+                nextBtn: nextBtn,
+                submitBtn: submitBtn,
+                resetBtn: resetBtn,
+                totalSteps: totalSteps(),
+                onHeadSummary: updateHeadSummary
+            });
+        }
 
-            if (!row) {
-                return;
-            }
+        function setEntryType(nextEntryType) {
+            entryType = nextEntryType === 'member' ? 'member' : 'head';
 
-            row.querySelectorAll('[data-name]').forEach(function (input) {
-                const fieldName = input.getAttribute('data-name') || '';
-
-                if (fieldName === '') {
-                    return;
-                }
-
-                if (fieldName.endsWith('[]')) {
-                    const baseName = fieldName.slice(0, -2);
-                    input.setAttribute('name', 'members[' + memberIndex + '][' + baseName + '][]');
-
-                    return;
-                }
-
-                input.setAttribute('name', 'members[' + memberIndex + '][' + fieldName + ']');
+            ui.setEntryType({
+                addMemberBtn: addMemberBtn,
+                entryButtons: entryButtons,
+                entryPanels: entryPanels,
+                entryType: entryType,
+                entryTypeInput: entryTypeInput,
+                memberRows: memberRows
             });
 
-            memberRows.appendChild(fragment);
-            memberIndex += 1;
-            setMemberRowsEmptyState();
+            setStep(Math.min(currentStep, totalSteps()));
+        }
+
+        function resetSectorSelection() {
+            selectedSectorIds = [];
+            ui.resetSectorSelection(sectorNameList, sectorIdInput);
+        }
+
+        function updateSectorSelection() {
+            ui.updateSectorSelection(sectorNameList, sectorIdInput);
+        }
+
+        function populateSectorsByCategory() {
+            ui.populateSectorsByCategory({
+                sectorCatalog: sectorCatalog,
+                sectorCategoryList: sectorCategoryList,
+                sectorNameList: sectorNameList,
+                sectorIdInput: sectorIdInput,
+                selectedSectorIds: selectedSectorIds
+            });
+        }
+
+        function createMemberRow(memberData) {
+            if ((!memberData || typeof memberData !== 'object') && entryType !== 'head') {
+                return;
+            }
+
+            memberIndex = ui.createMemberRow({
+                memberTemplate: memberTemplate,
+                memberRows: memberRows,
+                memberIndex: memberIndex,
+                memberData: memberData
+            });
+            ui.setMemberRowsEmptyState(memberRows, memberRowsEmpty);
         }
 
         if (nextBtn) {
@@ -334,8 +134,16 @@
         }
 
         if (addMemberBtn) {
-            addMemberBtn.addEventListener('click', createMemberRow);
+            addMemberBtn.addEventListener('click', function () {
+                createMemberRow();
+            });
         }
+
+        entryButtons.forEach(function (button) {
+            button.addEventListener('click', function () {
+                setEntryType(button.dataset.entryType);
+            });
+        });
 
         if (memberRows) {
             memberRows.addEventListener('click', function (event) {
@@ -346,7 +154,7 @@
 
                     if (row) {
                         row.remove();
-                        setMemberRowsEmptyState();
+                        ui.setMemberRowsEmptyState(memberRows, memberRowsEmpty);
                     }
                 }
             });
@@ -366,6 +174,7 @@
                 const target = event.target;
 
                 if (target instanceof HTMLInputElement && target.type === 'checkbox') {
+                    selectedSectorIds = ui.collectSelectedSectorIds(form);
                     populateSectorsByCategory();
                     updateHeadSummary();
                 }
@@ -377,6 +186,7 @@
                 const target = event.target;
 
                 if (target instanceof HTMLInputElement && target.type === 'checkbox') {
+                    selectedSectorIds = ui.collectSelectedSectorIds(form);
                     updateSectorSelection();
                     updateHeadSummary();
                 }
@@ -391,8 +201,44 @@
             }
         });
 
-        resetSectorSelection();
-        setMemberRowsEmptyState();
+        if (resetBtn) {
+            resetBtn.addEventListener('click', function () {
+                window.setTimeout(function () {
+                    if (memberRows) {
+                        memberRows.innerHTML = '';
+                    }
+
+                    memberIndex = 0;
+                    setEntryType('head');
+                    resetSectorSelection();
+                    ui.setMemberRowsEmptyState(memberRows, memberRowsEmpty);
+                    updateHeadSummary();
+                    setStep(1);
+                }, 0);
+            });
+        }
+
+        if (typeof window.initManageFamilyForm === 'function') {
+            window.initManageFamilyForm({
+                form: form,
+                createMemberRow: createMemberRow,
+                setSelectedSectorIds: function (ids) {
+                    selectedSectorIds = Array.isArray(ids)
+                        ? ids.map(function (id) {
+                            return String(id || '').trim();
+                        }).filter(function (id) {
+                            return id !== '';
+                        })
+                        : [];
+                },
+                populateSectorsByCategory: populateSectorsByCategory,
+                resetSectorSelection: resetSectorSelection
+            });
+        } else {
+            resetSectorSelection();
+        }
+
+        ui.setMemberRowsEmptyState(memberRows, memberRowsEmpty);
         updateHeadSummary();
 
         stepItems.forEach(function (item) {
@@ -401,6 +247,7 @@
             });
         });
 
+        setEntryType(entryType);
         setStep(1);
     }
 

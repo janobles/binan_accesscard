@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Models\AuditTrailsModel;
+use App\Models\FamilyFormOptionsModel;
 use App\Models\MemberModel;
 use App\Models\MemberServiceModel;
 use App\Models\ServiceModel;
@@ -14,6 +15,214 @@ use CodeIgniter\HTTP\RedirectResponse;
  */
 class FamilyController extends BaseController
 {
+    public function listFamilies(): string|RedirectResponse
+    {
+        $guard = $this->requireFamilyEntryAccess();
+
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        $keyword = trim((string) $this->request->getGet('q'));
+        $families = (new MemberModel())->searchFamilies($keyword === '' ? null : $keyword);
+
+        return view('Dashboard/family-list', [
+            'families' => $families,
+            'keyword' => $keyword,
+        ]);
+    }
+
+    public function viewFamily(int $headId): string|RedirectResponse
+    {
+        $guard = $this->requireFamilyEntryAccess();
+
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        $familyData = $this->buildFamilyData($headId);
+
+        if ($familyData === null) {
+            return '<div class="alert alert-warning mb-0">Family record not found.</div>';
+        }
+
+        return view('Dashboard/family-view', $familyData);
+    }
+
+    public function editFamily(int $headId): string|RedirectResponse
+    {
+        $guard = $this->requireFamilyEntryAccess();
+
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        $familyData = $this->buildFamilyData($headId);
+
+        if ($familyData === null) {
+            return '<div class="alert alert-warning mb-0">Family record not found.</div>';
+        }
+
+        $familyOptions = (new FamilyFormOptionsModel())->getViewData();
+        $head = $familyData['head'];
+        $members = $familyData['members'];
+        $serviceMap = $familyData['serviceMap'];
+        $headServiceIds = $serviceMap[(int) ($head['memberID'] ?? 0)] ?? [];
+
+        foreach ($members as $index => $member) {
+            $memberId = (int) ($member['memberID'] ?? 0);
+            $members[$index]['service_ids'] = $serviceMap[$memberId] ?? [];
+        }
+
+        return view('Dashboard/familyform', array_merge(
+            $familyOptions,
+            [
+                'formAction' => site_url('admin/manage-family/update/' . $headId),
+                'submitButtonLabel' => 'Update Family Data',
+                'familyRecord' => $head,
+                'existingMembers' => $members,
+                'headServiceIds' => $headServiceIds,
+                'showManageFamilyListButton' => true,
+            ]
+        ));
+    }
+
+    public function update(int $headId): RedirectResponse
+    {
+        $guard = $this->requireFamilyEntryAccess();
+
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        $memberModel = new MemberModel();
+        $memberServiceModel = new MemberServiceModel();
+        $serviceModel = new ServiceModel();
+        $auditModel = new AuditTrailsModel();
+
+        if (! $memberModel->hasRequiredFamilyTables()) {
+            return redirect()->back()->withInput()->with('error', 'The accesscard database is missing required tables from accesscardV3.0.sql.');
+        }
+
+        $rules = [
+            'head_firstname' => 'required|max_length[100]',
+            'head_middlename' => 'required|max_length[50]',
+            'head_lastname' => 'required|max_length[100]',
+            'head_birthday' => 'required|valid_date[Y-m-d]',
+            'head_sex' => 'required|in_list[Male,Female]',
+        ];
+
+        if (! $this->validate($rules)) {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', implode(' ', $this->validator->getErrors()));
+        }
+
+        $postedSectorIds = $this->postedSectorIds();
+        $sectorIds = SectorIds::normalize($postedSectorIds);
+
+        if ($sectorIds === []) {
+            return redirect()->back()->withInput()->with('error', 'Please select at least one sector name.');
+        }
+
+        if (SectorIds::hasMalformedIds($postedSectorIds) || ! $this->sectorIdsExist($sectorIds)) {
+            return redirect()->back()->withInput()->with('error', 'One or more selected sectors are invalid.');
+        }
+
+        $head = $memberModel->find($headId);
+
+        if ($head === null || (int) ($head['headID'] ?? 0) !== $headId) {
+            return redirect()->back()->with('error', 'Family record not found.');
+        }
+
+        $members = $this->request->getPost('members');
+        $headServiceIds = $this->request->getPost('service_ids');
+
+        if (! is_array($members)) {
+            $members = [];
+        }
+
+        if (! is_array($headServiceIds)) {
+            $headServiceIds = [];
+        }
+
+        $memberModel->beginTransaction();
+
+        if (! $memberModel->updateHead($headId, $this->memberPayload('head_'))) {
+            $memberModel->rollbackTransaction();
+
+            return redirect()->back()->withInput()->with('error', 'Head of family could not be updated.');
+        }
+
+        $existingMemberIds = $memberModel->getFamilyMemberIds($headId);
+
+        if (! $memberServiceModel->deleteByMemberIds($existingMemberIds)) {
+            $memberModel->rollbackTransaction();
+
+            return redirect()->back()->withInput()->with('error', 'Could not update family services.');
+        }
+
+        if (! $memberModel->deleteFamilyMembersExceptHead($headId)) {
+            $memberModel->rollbackTransaction();
+
+            return redirect()->back()->withInput()->with('error', 'Could not refresh family members.');
+        }
+
+        if (! $this->assignServices($memberServiceModel, $serviceModel, $headId, $headServiceIds)) {
+            $memberModel->rollbackTransaction();
+
+            return redirect()->back()->withInput()->with('error', 'Could not assign selected head services.');
+        }
+
+        foreach ($members as $member) {
+            if (! is_array($member) || ! $this->hasMemberData($member)) {
+                continue;
+            }
+
+            if (! $this->memberSectorIdsAreValid($member)) {
+                $memberModel->rollbackTransaction();
+
+                return redirect()->back()->withInput()->with('error', 'One family member has an invalid sector selection.');
+            }
+
+            $memberId = $memberModel->addFamilyMember($headId, $this->memberPayloadFromArray($member));
+
+            if ($memberId === false) {
+                $memberModel->rollbackTransaction();
+
+                return redirect()->back()->withInput()->with('error', 'A family member could not be updated.');
+            }
+
+            $memberServiceIds = $member['service_ids'] ?? [];
+
+            if (! is_array($memberServiceIds)) {
+                $memberServiceIds = [];
+            }
+
+            if (! $this->assignServices($memberServiceModel, $serviceModel, $memberId, $memberServiceIds)) {
+                $memberModel->rollbackTransaction();
+
+                return redirect()->back()->withInput()->with('error', 'A selected service could not be assigned to one family member.');
+            }
+        }
+
+        $this->auditFamilyAction(
+            $auditModel,
+            (int) session()->get('user_id'),
+            $headId,
+            'FAMILY_UPDATED',
+            'Updated family profile for ' . trim((string) $this->request->getPost('head_firstname')) . ' ' . trim((string) $this->request->getPost('head_lastname')) . '.'
+        );
+
+        $memberModel->completeTransaction();
+
+        if (! $memberModel->transactionStatus()) {
+            return redirect()->back()->withInput()->with('error', 'The family update was not saved.');
+        }
+
+        return redirect()->to(site_url('admin/dashboard'))->with('success', 'Family and member data updated successfully.');
+    }
+
     public function store()
     {
         $guard = $this->requireFamilyEntryAccess();
@@ -409,6 +618,65 @@ class FamilyController extends BaseController
     private function sessionUserExists(): bool
     {
         return $this->userExists((int) session()->get('user_id'));
+    }
+
+    private function buildFamilyData(int $headId): ?array
+    {
+        $memberModel = new MemberModel();
+        $memberServiceModel = new MemberServiceModel();
+        $serviceModel = new ServiceModel();
+
+        $familyMembers = $memberModel->getFamilyMembers($headId);
+
+        if ($familyMembers === []) {
+            return null;
+        }
+
+        $head = null;
+        $members = [];
+
+        foreach ($familyMembers as $member) {
+            $memberId = (int) ($member['memberID'] ?? 0);
+            $member['sector_ids'] = SectorIds::normalize($member['sectorID'] ?? null);
+
+            if ($memberId === $headId) {
+                $head = $member;
+
+                continue;
+            }
+
+            $members[] = $member;
+        }
+
+        if ($head === null) {
+            return null;
+        }
+
+        $memberIds = array_map(static fn (array $row): int => (int) ($row['memberID'] ?? 0), $familyMembers);
+        $serviceMap = $memberServiceModel->getServiceIdsByMemberIds($memberIds);
+        $serviceIds = [];
+
+        foreach ($members as $index => $member) {
+            $memberId = (int) ($member['memberID'] ?? 0);
+            $members[$index]['service_ids'] = $serviceMap[$memberId] ?? [];
+        }
+
+        $head['service_ids'] = $serviceMap[(int) ($head['memberID'] ?? 0)] ?? [];
+
+        foreach ($serviceMap as $ids) {
+            foreach ((array) $ids as $id) {
+                $serviceIds[] = (int) $id;
+            }
+        }
+
+        $serviceNameMap = $serviceModel->getNameMapByIds($serviceIds);
+
+        return [
+            'head' => $head,
+            'members' => $members,
+            'serviceMap' => $serviceMap,
+            'serviceNameMap' => $serviceNameMap,
+        ];
     }
 
     private function userExists(int $userId): bool

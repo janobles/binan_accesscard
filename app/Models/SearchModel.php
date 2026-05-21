@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Support\SectorIds;
+use CodeIgniter\Database\BaseBuilder;
 use CodeIgniter\Database\BaseConnection;
 
 /**
@@ -19,10 +20,11 @@ class SearchModel
 
     public function families(string $keyword = '', array $filters = [], int $limit = 25): array
     {
-        if (! $this->db->tableExists('view_member_dashboard')) {
+        if (! $this->hasFamilySearchTables()) {
             return [];
         }
 
+        $limit = max(1, $limit);
         $builder = $this->db->table('view_member_dashboard')
             ->where('memberID = headID');
 
@@ -31,7 +33,9 @@ class SearchModel
         if ($keyword !== '') {
             $builder->groupStart()
                 ->like('firstname', $keyword)
+                ->orLike('middlename', $keyword)
                 ->orLike('lastname', $keyword)
+                ->orLike('contactnumber', $keyword)
                 ->orLike('relationship', $keyword)
                 ->orLike('head_firstname', $keyword)
                 ->orLike('head_lastname', $keyword)
@@ -50,6 +54,8 @@ class SearchModel
             $builder->where(SectorIds::containsCondition($sectorId), null, false);
         }
 
+        $this->applyDateRange($builder, 'dt_created', $filters);
+
         $rows = $builder
             ->orderBy('memberID', 'DESC')
             ->limit($limit)
@@ -65,6 +71,7 @@ class SearchModel
             return [];
         }
 
+        $limit = max(1, $limit);
         $builder = $this->db->table('users')
             ->select('userID, username, role, isactive')
             ->whereIn('role', ['Admin', 'User']);
@@ -87,8 +94,8 @@ class SearchModel
 
         $status = $this->normalizeKeyword((string) ($filters['status'] ?? ''));
 
-        if (in_array($status, ['Enable', 'Disabled'], true)) {
-            $builder->where('isactive', $status);
+        if ($status !== '') {
+            $this->applyActiveStatusFilter($builder, $status);
         }
 
         return $builder
@@ -105,6 +112,7 @@ class SearchModel
             return [];
         }
 
+        $limit = max(1, $limit);
         $builder = $this->auditTrailBuilder();
         $keyword = $this->normalizeKeyword($keyword);
 
@@ -129,6 +137,7 @@ class SearchModel
             return [];
         }
 
+        $limit = max(1, $limit);
         $builder = $this->auditTrailBuilder()
             ->where('audit_trails.userID', $userId);
 
@@ -167,13 +176,13 @@ class SearchModel
         );
     }
 
-    private function auditTrailBuilder()
+    private function auditTrailBuilder(): BaseBuilder
     {
         return $this->db->table('audit_trails')
             ->select('audit_trails.*');
     }
 
-    private function applyAuditSearch($builder, string $keyword): void
+    private function applyAuditSearch(BaseBuilder $builder, string $keyword): void
     {
         $builder->groupStart()
             ->like('audit_trails.user_action', $keyword)
@@ -195,7 +204,7 @@ class SearchModel
         $builder->groupEnd();
     }
 
-    private function applyAuditFilters($builder, array $filters): void
+    private function applyAuditFilters(BaseBuilder $builder, array $filters): void
     {
         $action = $this->normalizeKeyword((string) ($filters['action'] ?? ''));
 
@@ -206,7 +215,7 @@ class SearchModel
         $this->applyDateRange($builder, 'audit_trails.dt_created', $filters);
     }
 
-    private function applyDateRange($builder, string $column, array $filters): void
+    private function applyDateRange(BaseBuilder $builder, string $column, array $filters): void
     {
         $dateFrom = $this->normalizeDate((string) ($filters['date_from'] ?? ''));
         $dateTo = $this->normalizeDate((string) ($filters['date_to'] ?? ''));
@@ -218,6 +227,36 @@ class SearchModel
         if ($dateTo !== '') {
             $builder->where($column . ' <=', $dateTo . ' 23:59:59');
         }
+    }
+
+    private function applyActiveStatusFilter(BaseBuilder $builder, string $status): void
+    {
+        $normalized = strtolower($status);
+
+        if (in_array($normalized, ['enable', 'enabled', 'active', '1', 'true', 'yes', 'on'], true)) {
+            $builder->groupStart()
+                ->where('isactive', 'Enable')
+                ->orWhere('isactive', 'Enabled')
+                ->orWhere('isactive', 1)
+                ->orWhere('isactive', '1')
+                ->groupEnd();
+
+            return;
+        }
+
+        if (in_array($normalized, ['disable', 'disabled', 'inactive', '0', 'false', 'no', 'off'], true)) {
+            $builder->groupStart()
+                ->where('isactive', 'Disabled')
+                ->orWhere('isactive', 0)
+                ->orWhere('isactive', '0')
+                ->groupEnd();
+        }
+    }
+
+    private function hasFamilySearchTables(): bool
+    {
+        return $this->db->tableExists('view_member_dashboard')
+            && $this->db->tableExists('sector');
     }
 
     private function hasAuditSearchTables(): bool

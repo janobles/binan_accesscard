@@ -21,6 +21,33 @@ class ServiceModel extends Model
         return $this->db->tableExists($this->table);
     }
 
+    public function getNameMapByIds(array $serviceIds): array
+    {
+        $serviceIds = array_values(array_filter(array_map(static fn ($id): int => (int) $id, $serviceIds), static fn (int $id): bool => $id > 0));
+
+        if ($serviceIds === []) {
+            return [];
+        }
+
+        $rows = $this->select('serviceID, name')
+            ->whereIn('serviceID', $serviceIds)
+            ->findAll();
+
+        $map = [];
+
+        foreach ($rows as $row) {
+            $id = (int) ($row['serviceID'] ?? 0);
+
+            if ($id <= 0) {
+                continue;
+            }
+
+            $map[$id] = (string) ($row['name'] ?? '');
+        }
+
+        return $map;
+    }
+
     public function getForSectorName(string $sectorName): array
     {
         return $this->groupStart()

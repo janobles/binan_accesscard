@@ -1,5 +1,15 @@
 <?php
-$formOptions = $formOptions ?? [];
+$formOptions = array_merge([
+    'sectors' => [],
+    'sexes' => [],
+    'suffixes' => [],
+    'civil_statuses' => [],
+    'relationships' => [],
+    'education_levels' => [],
+    'income_ranges' => [],
+    'services_by_category' => [],
+    'family_heads' => [],
+], $formOptions ?? []);
 $sectorOptions = $sectorOptions ?? ($formOptions['sectors'] ?? []);
 $sectorCatalog = $sectorCatalog ?? [];
 $sexOptions = $sexOptions ?? ($formOptions['sexes'] ?? []);
@@ -10,6 +20,30 @@ $educationOptions = $educationOptions ?? ($formOptions['education_levels'] ?? []
 $incomeOptions = $incomeOptions ?? ($formOptions['income_ranges'] ?? []);
 $servicesByCategory = $servicesByCategory ?? ($formOptions['services_by_category'] ?? []);
 $familyHeads = $familyHeads ?? ($formOptions['family_heads'] ?? []);
+$formAction = $formAction ?? site_url('families');
+$submitButtonLabel = $submitButtonLabel ?? 'Save Family Data';
+$familyRecord = $familyRecord ?? [];
+$existingMembers = $existingMembers ?? [];
+$headServiceIds = array_values(array_map(static fn ($id): int => (int) $id, (array) ($headServiceIds ?? ($familyRecord['service_ids'] ?? []))));
+$isEditMode = $familyRecord !== [];
+$selectedSectorIds = \App\Support\SectorIds::normalize($familyRecord['sectorID'] ?? null);
+$selectedSectorCategories = [];
+
+foreach ($sectorCatalog as $categoryKey => $sectorRows) {
+    foreach ((array) $sectorRows as $sectorRow) {
+        if (in_array((int) ($sectorRow['sectorID'] ?? 0), $selectedSectorIds, true)) {
+            $selectedSectorCategories[] = (string) $categoryKey;
+            break;
+        }
+    }
+}
+
+$initialFamilyData = [
+    'selectedSectorIds' => $selectedSectorIds,
+    'selectedSectorCategories' => array_values(array_unique($selectedSectorCategories)),
+    'headServiceIds' => $headServiceIds,
+    'existingMembers' => $existingMembers,
+];
 ?>
 
 <link rel="stylesheet" href="<?= base_url('assets/css/familyform.css') ?>?v=<?= filemtime(FCPATH . 'assets/css/familyform.css') ?>">
@@ -20,8 +54,8 @@ $familyHeads = $familyHeads ?? ($formOptions['family_heads'] ?? []);
             <div class="wizard-header-left">
                 <span class="wizard-icon" aria-hidden="true">+</span>
                 <div>
-                    <strong>Add Record</strong>
-                    <small>Step 1 of 3 - Person Details</small>
+                    <strong><?= $isEditMode ? 'Edit Family' : 'Add Record' ?></strong>
+                    <small>Step 1 of 3 - <?= $isEditMode ? 'Head of Family' : 'Person Details' ?></small>
                 </div>
             </div>
             <span class="wizard-header-badge" aria-hidden="true"></span>
@@ -33,16 +67,18 @@ $familyHeads = $familyHeads ?? ($formOptions['family_heads'] ?? []);
             <div class="wizard-step" data-step-target="3"><span>3</span><small>Additional members</small></div>
         </div>
 
-        <form method="post" action="<?= site_url('families') ?>" id="familyForm" class="needs-validation js-family-form" novalidate>
+        <form method="post" action="<?= esc($formAction, 'attr') ?>" id="familyForm" class="needs-validation js-family-form" novalidate>
             <?= csrf_field() ?>
             <input type="hidden" name="entry_type" id="entryType" value="head">
             <div id="familyFormAlert" class="mb-3" aria-live="polite"></div>
 
             <div class="form-section family-step-panel is-visible" data-step="1">
-                <div class="entry-type-toggle mb-3" role="group" aria-label="Record type">
-                    <button type="button" class="btn btn-primary entry-type-btn is-active" data-entry-type="head">New Family Head</button>
-                    <button type="button" class="btn btn-outline-secondary entry-type-btn" data-entry-type="member">Family Member</button>
-                </div>
+                <?php if (! $isEditMode): ?>
+                    <div class="entry-type-toggle mb-3" role="group" aria-label="Record type">
+                        <button type="button" class="btn btn-primary entry-type-btn is-active" data-entry-type="head">New Family Head</button>
+                        <button type="button" class="btn btn-outline-secondary entry-type-btn" data-entry-type="member">Family Member</button>
+                    </div>
+                <?php endif; ?>
 
                 <div data-entry-panel="head">
                     <div class="section-title">
@@ -51,35 +87,35 @@ $familyHeads = $familyHeads ?? ($formOptions['family_heads'] ?? []);
                     <div class="row g-3">
                         <div class="col-md-3">
                             <label class="form-label" for="head_firstname">First name</label>
-                            <input class="form-control" id="head_firstname" name="head_firstname" required>
+                            <input class="form-control" id="head_firstname" name="head_firstname" value="<?= esc((string) ($familyRecord['firstname'] ?? '')) ?>" required>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label" for="head_middlename">Middle name</label>
-                            <input class="form-control" id="head_middlename" name="head_middlename" required>
+                            <input class="form-control" id="head_middlename" name="head_middlename" value="<?= esc((string) ($familyRecord['middlename'] ?? '')) ?>" required>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label" for="head_lastname">Last name</label>
-                            <input class="form-control" id="head_lastname" name="head_lastname" required>
+                            <input class="form-control" id="head_lastname" name="head_lastname" value="<?= esc((string) ($familyRecord['lastname'] ?? '')) ?>" required>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label" for="head_suffix">Suffix</label>
                             <select class="form-select" id="head_suffix" name="head_suffix">
                                 <option value="">Select</option>
                                 <?php foreach ($suffixOptions as $suffix): ?>
-                                    <option value="<?= esc($suffix) ?>"><?= esc($suffix) ?></option>
+                                    <option value="<?= esc($suffix) ?>" <?= (string) ($familyRecord['suffix'] ?? '') === (string) $suffix ? 'selected' : '' ?>><?= esc($suffix) ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label" for="head_birthday">Birthday</label>
-                            <input type="date" class="form-control" id="head_birthday" name="head_birthday" required>
+                            <input type="date" class="form-control" id="head_birthday" name="head_birthday" value="<?= esc((string) ($familyRecord['birthday'] ?? '')) ?>" required>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label" for="head_sex">Sex</label>
                             <select class="form-select" id="head_sex" name="head_sex" required>
                                 <option value="">Select</option>
                                 <?php foreach ($sexOptions as $sex): ?>
-                                    <option value="<?= esc($sex) ?>"><?= esc($sex) ?></option>
+                                    <option value="<?= esc($sex) ?>" <?= (string) ($familyRecord['sex'] ?? '') === (string) $sex ? 'selected' : '' ?>><?= esc($sex) ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -88,137 +124,144 @@ $familyHeads = $familyHeads ?? ($formOptions['family_heads'] ?? []);
                             <select class="form-select" id="head_civilstatus" name="head_civilstatus">
                                 <option value="">Select</option>
                                 <?php foreach ($civilOptions as $civilStatus): ?>
-                                    <option value="<?= esc($civilStatus) ?>"><?= esc($civilStatus) ?></option>
+                                    <option value="<?= esc($civilStatus) ?>" <?= (string) ($familyRecord['civilstatus'] ?? '') === (string) $civilStatus ? 'selected' : '' ?>><?= esc($civilStatus) ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label" for="head_contactnumber">Contact number</label>
-                            <input class="form-control" id="head_contactnumber" name="head_contactnumber">
+                            <input class="form-control" id="head_contactnumber" name="head_contactnumber" value="<?= esc((string) ($familyRecord['contactnumber'] ?? '')) ?>">
                         </div>
                         <div class="col-md-3">
                             <label class="form-label" for="head_education">Education</label>
                             <select class="form-select" id="head_education" name="head_education">
                                 <option value="">Select</option>
                                 <?php foreach ($educationOptions as $education): ?>
-                                    <option value="<?= esc($education) ?>"><?= esc($education) ?></option>
+                                    <option value="<?= esc($education) ?>" <?= (string) ($familyRecord['education'] ?? '') === (string) $education ? 'selected' : '' ?>><?= esc($education) ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label" for="head_job">Job</label>
-                            <input class="form-control" id="head_job" name="head_job">
+                            <input class="form-control" id="head_job" name="head_job" value="<?= esc((string) ($familyRecord['job'] ?? '')) ?>">
                         </div>
                         <div class="col-md-3">
                             <label class="form-label" for="head_salary">Monthly income</label>
                             <select class="form-select" id="head_salary" name="head_salary">
                                 <?php foreach ($incomeOptions as $incomeOption): ?>
-                                    <option value="<?= esc((string) ($incomeOption['value'] ?? '')) ?>"><?= esc((string) ($incomeOption['label'] ?? '')) ?></option>
+                                    <?php $incomeValue = (string) ($incomeOption['value'] ?? ''); ?>
+                                    <?php $incomeLabel = (string) ($incomeOption['label'] ?? $incomeValue); ?>
+                                    <option value="<?= esc($incomeValue) ?>" <?= (string) ($familyRecord['Salary'] ?? '') === $incomeValue ? 'selected' : '' ?>><?= esc($incomeLabel) ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
                     </div>
                 </div>
 
-                <div data-entry-panel="member" class="family-form-hidden">
-                    <div class="section-title">
-                        <span>Family Member</span>
+                <?php if (! $isEditMode): ?>
+                    <div data-entry-panel="member" class="family-form-hidden">
+                        <div class="section-title">
+                            <span>Family Member</span>
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label" for="family_head_id">Family head</label>
+                                <select class="form-select" id="family_head_id" name="family_head_id" required>
+                                    <option value="">Select family head</option>
+                                    <?php foreach ($familyHeads as $head): ?>
+                                        <?php $headName = trim(($head['firstname'] ?? '') . ' ' . ($head['middlename'] ?? '') . ' ' . ($head['lastname'] ?? '') . ' ' . ($head['suffix'] ?? '')); ?>
+                                        <option value="<?= esc((string) ($head['memberID'] ?? '')) ?>"><?= esc($headName) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label" for="member_firstname">First name</label>
+                                <input class="form-control" id="member_firstname" name="member_firstname" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label" for="member_middlename">Middle name</label>
+                                <input class="form-control" id="member_middlename" name="member_middlename">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label" for="member_lastname">Last name</label>
+                                <input class="form-control" id="member_lastname" name="member_lastname" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label" for="member_suffix">Suffix</label>
+                                <select class="form-select" id="member_suffix" name="member_suffix">
+                                    <option value="">Select</option>
+                                    <?php foreach ($suffixOptions as $suffix): ?>
+                                        <option value="<?= esc($suffix) ?>"><?= esc($suffix) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label" for="member_birthday">Birthday</label>
+                                <input type="date" class="form-control" id="member_birthday" name="member_birthday">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label" for="member_sex">Sex</label>
+                                <select class="form-select" id="member_sex" name="member_sex">
+                                    <option value="">Select</option>
+                                    <?php foreach ($sexOptions as $sex): ?>
+                                        <option value="<?= esc($sex) ?>"><?= esc($sex) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label" for="member_civilstatus">Civil status</label>
+                                <select class="form-select" id="member_civilstatus" name="member_civilstatus">
+                                    <option value="">Select</option>
+                                    <?php foreach ($civilOptions as $civilStatus): ?>
+                                        <option value="<?= esc($civilStatus) ?>"><?= esc($civilStatus) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label" for="member_relationship">Relationship</label>
+                                <select class="form-select" id="member_relationship" name="member_relationship">
+                                    <option value="">Select</option>
+                                    <?php foreach ($relationshipOptions as $relationship): ?>
+                                        <option value="<?= esc($relationship) ?>"><?= esc($relationship) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label" for="member_contactnumber">Contact number</label>
+                                <input class="form-control" id="member_contactnumber" name="member_contactnumber">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label" for="member_education">Education</label>
+                                <select class="form-select" id="member_education" name="member_education">
+                                    <option value="">Select</option>
+                                    <?php foreach ($educationOptions as $education): ?>
+                                        <option value="<?= esc($education) ?>"><?= esc($education) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label" for="member_job">Job</label>
+                                <input class="form-control" id="member_job" name="member_job">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label" for="member_salary">Monthly income</label>
+                                <select class="form-select" id="member_salary" name="member_salary">
+                                    <?php foreach ($incomeOptions as $incomeOption): ?>
+                                        <option value="<?= esc((string) ($incomeOption['value'] ?? '')) ?>"><?= esc((string) ($incomeOption['label'] ?? '')) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        </div>
                     </div>
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label" for="family_head_id">Family head</label>
-                            <select class="form-select" id="family_head_id" name="family_head_id" required>
-                                <option value="">Select family head</option>
-                                <?php foreach ($familyHeads as $head): ?>
-                                    <?php $headName = trim(($head['firstname'] ?? '') . ' ' . ($head['middlename'] ?? '') . ' ' . ($head['lastname'] ?? '') . ' ' . ($head['suffix'] ?? '')); ?>
-                                    <option value="<?= esc((string) ($head['memberID'] ?? '')) ?>"><?= esc($headName) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label" for="member_firstname">First name</label>
-                            <input class="form-control" id="member_firstname" name="member_firstname" required>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label" for="member_middlename">Middle name</label>
-                            <input class="form-control" id="member_middlename" name="member_middlename">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label" for="member_lastname">Last name</label>
-                            <input class="form-control" id="member_lastname" name="member_lastname" required>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label" for="member_suffix">Suffix</label>
-                            <select class="form-select" id="member_suffix" name="member_suffix">
-                                <option value="">Select</option>
-                                <?php foreach ($suffixOptions as $suffix): ?>
-                                    <option value="<?= esc($suffix) ?>"><?= esc($suffix) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label" for="member_birthday">Birthday</label>
-                            <input type="date" class="form-control" id="member_birthday" name="member_birthday">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label" for="member_sex">Sex</label>
-                            <select class="form-select" id="member_sex" name="member_sex">
-                                <option value="">Select</option>
-                                <?php foreach ($sexOptions as $sex): ?>
-                                    <option value="<?= esc($sex) ?>"><?= esc($sex) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label" for="member_civilstatus">Civil status</label>
-                            <select class="form-select" id="member_civilstatus" name="member_civilstatus">
-                                <option value="">Select</option>
-                                <?php foreach ($civilOptions as $civilStatus): ?>
-                                    <option value="<?= esc($civilStatus) ?>"><?= esc($civilStatus) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label" for="member_relationship">Relationship</label>
-                            <select class="form-select" id="member_relationship" name="member_relationship">
-                                <option value="">Select</option>
-                                <?php foreach ($relationshipOptions as $relationship): ?>
-                                    <option value="<?= esc($relationship) ?>"><?= esc($relationship) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label" for="member_contactnumber">Contact number</label>
-                            <input class="form-control" id="member_contactnumber" name="member_contactnumber">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label" for="member_education">Education</label>
-                            <select class="form-select" id="member_education" name="member_education">
-                                <option value="">Select</option>
-                                <?php foreach ($educationOptions as $education): ?>
-                                    <option value="<?= esc($education) ?>"><?= esc($education) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label" for="member_job">Job</label>
-                            <input class="form-control" id="member_job" name="member_job">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label" for="member_salary">Monthly income</label>
-                            <select class="form-select" id="member_salary" name="member_salary">
-                                <?php foreach ($incomeOptions as $incomeOption): ?>
-                                    <option value="<?= esc((string) ($incomeOption['value'] ?? '')) ?>"><?= esc((string) ($incomeOption['label'] ?? '')) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                    </div>
-                </div>
+                <?php endif; ?>
             </div>
 
             <?= view('Dashboard/sectorandservices', [
                 'servicesByCategory' => $servicesByCategory,
                 'sectorCatalog' => $sectorCatalog,
+                'selectedSectorIds' => $selectedSectorIds,
+                'selectedSectorCategories' => $selectedSectorCategories,
+                'selectedServiceIds' => $headServiceIds,
             ]) ?>
 
             <div class="form-section family-step-panel" data-step="3">
@@ -249,9 +292,11 @@ $familyHeads = $familyHeads ?? ($formOptions['family_heads'] ?? []);
 
             <div class="d-flex justify-content-end gap-2 family-form-actions">
                 <button type="button" class="btn btn-outline-secondary family-form-hidden" id="prevStepBtn">Previous</button>
-                <button type="reset" class="btn btn-outline-secondary" id="resetFamilyBtn">Clear</button>
+                <?php if (! $isEditMode): ?>
+                    <button type="reset" class="btn btn-outline-secondary" id="resetFamilyBtn">Clear</button>
+                <?php endif; ?>
                 <button type="button" class="btn btn-primary" id="nextStepBtn">Next</button>
-                <button type="submit" class="btn btn-primary family-form-hidden" id="submitFamilyBtn">Save Family Data</button>
+                <button type="submit" class="btn btn-primary family-form-hidden" id="submitFamilyBtn"><?= esc((string) $submitButtonLabel) ?></button>
             </div>
         </form>
     </div>
@@ -364,3 +409,5 @@ $familyHeads = $familyHeads ?? ($formOptions['family_heads'] ?? []);
         </div>
     </div>
 </template>
+
+<script type="application/json" id="initialFamilyData"><?= json_encode($initialFamilyData, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?></script>

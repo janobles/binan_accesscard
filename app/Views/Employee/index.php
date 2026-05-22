@@ -14,6 +14,7 @@ $sectorOptions = $familyFormViewData['sectorOptions'] ?? [];
 $hasSearchFilters = $searchTerm !== '' || array_filter($searchFilters, static fn ($value): bool => trim((string) $value) !== '') !== [];
 $canCreateFamily = $canCreateFamily ?? false;
 $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
+$selectedFilterDate = (string) ($searchFilters['date'] ?? $searchFilters['date_from'] ?? '');
 $formatDate = static function (mixed $value): string {
     $timestamp = strtotime((string) $value);
 
@@ -107,10 +108,7 @@ $formatTime = static function (mixed $value): string {
                             </select>
                         </div>
                         <div class="col-md-3 col-lg-2">
-                            <input class="form-control" type="date" name="date_from" value="<?= esc((string) ($searchFilters['date_from'] ?? '')) ?>">
-                        </div>
-                        <div class="col-md-3 col-lg-2">
-                            <input class="form-control" type="date" name="date_to" value="<?= esc((string) ($searchFilters['date_to'] ?? '')) ?>">
+                            <input class="form-control" type="date" name="date" value="<?= esc($selectedFilterDate) ?>" aria-label="Filter by date">
                         </div>
                         <div class="col-auto">
                             <button class="btn btn-primary" type="submit">Search</button>
@@ -123,19 +121,18 @@ $formatTime = static function (mixed $value): string {
                     </form>
                     <div class="table-responsive">
                         <table class="table table-sm">
-                            <thead><tr><th>Head</th><th>Barangay</th><th>Sector</th><th>Date</th><th>Time</th></tr></thead>
+                            <thead><tr><th>Head</th><th>Sector</th><th>Date</th><th>Time</th></tr></thead>
                             <tbody>
                                 <?php foreach ($recentFamilies as $family): ?>
                                     <tr>
                                         <td><?= esc(($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? '')) ?></td>
-                                        <td><?= esc((string) ($family['barangay'] ?? '')) ?></td>
                                         <td><?= esc((string) ($family['sector_name'] ?? '')) ?></td>
                                         <td><?= esc($formatDate($family['dt_created'] ?? '')) ?></td>
                                         <td><?= esc($formatTime($family['dt_created'] ?? '')) ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                                 <?php if ($recentFamilies === []): ?>
-                                    <tr><td colspan="5" class="text-center text-muted"><?= $searchTerm !== '' || $hasSearchFilters ? 'No matching family records found.' : 'No family records yet.' ?></td></tr>
+                                    <tr><td colspan="4" class="text-center text-muted"><?= $searchTerm !== '' || $hasSearchFilters ? 'No matching family records found.' : 'No family records yet.' ?></td></tr>
                                 <?php endif; ?>
                             </tbody>
                         </table>
@@ -196,10 +193,7 @@ $formatTime = static function (mixed $value): string {
                             </select>
                         </div>
                         <div class="col-md-3 col-lg-2">
-                            <input class="form-control" type="date" name="date_from" value="<?= esc((string) ($searchFilters['date_from'] ?? '')) ?>">
-                        </div>
-                        <div class="col-md-3 col-lg-2">
-                            <input class="form-control" type="date" name="date_to" value="<?= esc((string) ($searchFilters['date_to'] ?? '')) ?>">
+                            <input class="form-control" type="date" name="date" value="<?= esc($selectedFilterDate) ?>" aria-label="Filter by date">
                         </div>
                         <div class="col-auto">
                             <button class="btn btn-primary" type="submit">Search</button>

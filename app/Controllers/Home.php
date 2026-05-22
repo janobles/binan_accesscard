@@ -64,13 +64,13 @@ class Home extends BaseController
         if ($this->request->getGet('timeout') === '1') {
             $this->clearLoginSession();
 
-            return redirect()->to(site_url('/'))
+            return redirect()->to(site_url('login'))
                 ->with('error', 'You were logged out due to inactivity.');
         }
 
         session()->destroy();
 
-        return redirect()->to(site_url('/'));
+        return redirect()->to(site_url('login'));
     }
 
     public function keepAlive()
@@ -121,6 +121,24 @@ class Home extends BaseController
         }
 
         return $this->renderAdminPage('audit-trails');
+    }
+
+    public function adminSectors(): string|RedirectResponse
+    {
+        if ($this->isPartialRequest()) {
+            return $this->renderAdminSectorsPartial();
+        }
+
+        return $this->renderAdminPage('sectors');
+    }
+
+    public function adminServices(): string|RedirectResponse
+    {
+        if ($this->isPartialRequest()) {
+            return $this->renderAdminServicesPartial();
+        }
+
+        return $this->renderAdminPage('services');
     }
 
     public function employee(): string|RedirectResponse

@@ -11,7 +11,7 @@ use CodeIgniter\Model;
 class MemberModel extends Model
 {
     public const VALIDATION_RULES = [
-        'sectorID' => 'required|max_length[255]',
+        'sectorID' => 'required|valid_sector_array',
         'firstname' => 'required|max_length[100]',
         'lastname' => 'required|max_length[100]',
         'middlename' => 'permit_empty|max_length[50]',
@@ -41,6 +41,8 @@ class MemberModel extends Model
     ];
     protected $useTimestamps = false;
     protected $validationRules = self::VALIDATION_RULES;
+    protected $beforeInsert = ['normalizeSectorIdStorage'];
+    protected $beforeUpdate = ['normalizeSectorIdStorage'];
 
     public function hasTable(): bool
     {
@@ -80,13 +82,13 @@ class MemberModel extends Model
 
     public function getRecentFamilies(int $limit = 10): array
     {
-        if (! $this->db->tableExists('view_member_dashboard')) {
+        if (! $this->hasTable()) {
             return [];
         }
 
-        $rows = $this->db->table('view_member_dashboard')
-            ->where('memberID = headID')
-            ->orderBy('memberID', 'DESC')
+        $rows = $this->memberDashboardBuilder()
+            ->where('member.memberID = member.headID', null, false)
+            ->orderBy('member.memberID', 'DESC')
             ->limit($limit)
             ->get()
             ->getResultArray();
@@ -100,7 +102,9 @@ class MemberModel extends Model
             return 0;
         }
 
-        return $this->where('headID = memberID')->countAllResults();
+        return $this->where('headID = memberID')
+            ->where('dt_deleted IS NULL', null, false)
+            ->countAllResults();
     }
 
     public function countMembers(): int
@@ -109,7 +113,17 @@ class MemberModel extends Model
             return 0;
         }
 
-        return $this->countAllResults();
+        return $this->where('dt_deleted IS NULL', null, false)
+            ->countAllResults();
+    }
+
+    protected function normalizeSectorIdStorage(array $data): array
+    {
+        if (array_key_exists('sectorID', $data['data'] ?? [])) {
+            $data['data']['sectorID'] = SectorIds::toStorage($data['data']['sectorID']);
+        }
+
+        return $data;
     }
 
     public static function personValidationRules(bool $requireHeadDetails = false): array
@@ -159,13 +173,13 @@ class MemberModel extends Model
 
     public function getFamilyMembers(int $headId): array
     {
-        if (! $this->db->tableExists('view_member_dashboard')) {
+        if (! $this->hasTable()) {
             return [];
         }
 
-        $rows = $this->db->table('view_member_dashboard')
-            ->where('headID', $headId)
-            ->orderBy('memberID', 'ASC')
+        $rows = $this->memberDashboardBuilder()
+            ->where('member.headID', $headId)
+            ->orderBy('member.memberID', 'ASC')
             ->get()
             ->getResultArray();
 
@@ -174,12 +188,12 @@ class MemberModel extends Model
 
     public function findWithSector(int $memberId): ?array
     {
-        if (! $this->db->tableExists('view_member_dashboard')) {
+        if (! $this->hasTable()) {
             return null;
         }
 
-        $member = $this->db->table('view_member_dashboard')
-            ->where('memberID', $memberId)
+        $member = $this->memberDashboardBuilder()
+            ->where('member.memberID', $memberId)
             ->get()
             ->getRowArray();
 
@@ -192,25 +206,27 @@ class MemberModel extends Model
 
     public function searchFamilies(?string $keyword = null): array
     {
-        if (! $this->db->tableExists('view_member_dashboard')) {
+        if (! $this->hasTable()) {
             return [];
         }
 
-        $builder = $this->db->table('view_member_dashboard')
-            ->where('memberID = headID')
-            ->orderBy('lastname', 'ASC')
-            ->orderBy('firstname', 'ASC');
+        $builder = $this->memberDashboardBuilder()
+            ->where('member.memberID = member.headID', null, false)
+            ->orderBy('member.lastname', 'ASC')
+            ->orderBy('member.firstname', 'ASC');
 
         if ($keyword !== null && trim($keyword) !== '') {
             $keyword = trim($keyword);
 
             $builder->groupStart()
-                ->like('firstname', $keyword)
-                ->orLike('lastname', $keyword)
-                ->orLike('relationship', $keyword);
+                ->like('member.firstname', $keyword)
+                ->orLike('member.middlename', $keyword)
+                ->orLike('member.lastname', $keyword)
+                ->orLike('member.contactnumber', $keyword)
+                ->orLike('member.relationship', $keyword);
 
             foreach ($this->sectorIdsForKeyword($keyword) as $sectorId) {
-                $builder->orWhere(SectorIds::containsCondition($sectorId), null, false);
+                $builder->orWhere(SectorIds::containsCondition($sectorId, 'member.sectorID'), null, false);
             }
 
             $builder
@@ -258,6 +274,40 @@ class MemberModel extends Model
         ")->getRowArray();
 
         return (int) ($row['AUTO_INCREMENT'] ?? 1);
+    }
+
+    private function memberDashboardBuilder()
+    {
+        $builder = $this->db->table('member')
+            ->select([
+                'member.memberID',
+                'member.lastname',
+                'member.firstname',
+                'member.middlename',
+                'member.suffix',
+                'member.birthday',
+                'member.civilstatus',
+                'member.sex',
+                'member.education',
+                'member.job',
+                'member.Salary',
+                'member.contactnumber',
+                'member.relationship',
+                'member.dt_created',
+                'member.dt_updated',
+                'member.dt_deleted',
+                'member.headID',
+                'member.sectorID',
+                'head.firstname AS head_firstname',
+                'head.lastname AS head_lastname',
+            ])
+            ->join('member head', 'head.memberID = member.headID', 'left');
+
+        if ($this->db->fieldExists('dt_deleted', 'member')) {
+            $builder->where('member.dt_deleted IS NULL', null, false);
+        }
+
+        return $builder;
     }
 
     private function withSectorNames(array $rows): array

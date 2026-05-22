@@ -9,13 +9,13 @@ trait HomeRoleAccessTrait
     private function requireRole(array $allowedRoles): ?RedirectResponse
     {
         if (! session()->get('is_logged_in')) {
-            return redirect()->to(site_url('/'))->with('error', 'Please login first.');
+            return redirect()->to(site_url('login'))->with('error', 'Please login first.');
         }
 
         if (! $this->sessionUserExists()) {
             session()->destroy();
 
-            return redirect()->to(site_url('/'))
+            return redirect()->to(site_url('login'))
                 ->with('error', 'Your session is no longer valid after the database update. Please login again.');
         }
 
@@ -28,7 +28,7 @@ trait HomeRoleAccessTrait
         if ($currentRole === null) {
             session()->destroy();
 
-            return redirect()->to(site_url('/'))
+            return redirect()->to(site_url('login'))
                 ->with('error', 'Your account role is invalid. Please login again or contact an administrator.');
         }
 
@@ -54,7 +54,7 @@ trait HomeRoleAccessTrait
 
         session()->destroy();
 
-        return redirect()->to(site_url('/'))
+        return redirect()->to(site_url('login'))
             ->with('error', 'Your account role is invalid. Please contact an administrator.');
     }
 

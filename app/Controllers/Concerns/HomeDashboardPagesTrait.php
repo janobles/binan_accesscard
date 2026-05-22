@@ -100,23 +100,9 @@ trait HomeDashboardPagesTrait
             return [];
         }
 
-        $db = $sectorModel->db;
-        $builder = $db->table('sector');
-
-        if ($db->fieldExists('isactive', 'sector')) {
-            $builder->where('isactive', 1);
-        } elseif ($db->fieldExists('status', 'sector')) {
-            $builder->where('LOWER(status) <>', 'archived');
-        } elseif ($db->fieldExists('archived_at', 'sector')) {
-            $builder->where('archived_at IS NULL');
-        } elseif ($db->fieldExists('deleted_at', 'sector')) {
-            $builder->where('deleted_at IS NULL');
-        }
-
-        return $builder
+        return $sectorModel
             ->orderBy('sectorID', 'ASC')
-            ->get()
-            ->getResultArray();
+            ->findAll();
     }
 
     private function fetchVisibleServices(ServiceModel $serviceModel): array
@@ -125,23 +111,9 @@ trait HomeDashboardPagesTrait
             return [];
         }
 
-        $db = $serviceModel->db;
-        $builder = $db->table('services');
-
-        if ($db->fieldExists('isactive', 'services')) {
-            $builder->where('isactive', 1);
-        } elseif ($db->fieldExists('status', 'services')) {
-            $builder->where('LOWER(status) <>', 'archived');
-        } elseif ($db->fieldExists('archived_at', 'services')) {
-            $builder->where('archived_at IS NULL');
-        } elseif ($db->fieldExists('deleted_at', 'services')) {
-            $builder->where('deleted_at IS NULL');
-        }
-
-        return $builder
+        return $serviceModel
             ->orderBy('serviceID', 'ASC')
-            ->get()
-            ->getResultArray();
+            ->findAll();
     }
 
     private function renderEmployeePage(string $activePage): string|RedirectResponse
@@ -196,6 +168,7 @@ trait HomeDashboardPagesTrait
             'role' => (string) $this->request->getGet('role'),
             'status' => (string) $this->request->getGet('status'),
             'action' => (string) $this->request->getGet('action'),
+            'date' => (string) $this->request->getGet('date'),
             'date_from' => (string) $this->request->getGet('date_from'),
             'date_to' => (string) $this->request->getGet('date_to'),
         ];

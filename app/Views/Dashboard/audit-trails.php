@@ -4,6 +4,7 @@ $searchTerm = $searchTerm ?? '';
 $searchFilters = $searchFilters ?? [];
 $auditActionOptions = $auditActionOptions ?? [];
 $hasSearchFilters = $searchTerm !== '' || array_filter($searchFilters, static fn ($value): bool => trim((string) $value) !== '') !== [];
+$selectedFilterDate = (string) ($searchFilters['date'] ?? $searchFilters['date_from'] ?? '');
 $formatDate = static function (mixed $value): string {
     $timestamp = strtotime((string) $value);
 
@@ -31,10 +32,7 @@ $formatTime = static function (mixed $value): string {
             </select>
         </div>
         <div class="col-md-3 col-lg-2">
-            <input class="form-control" type="date" name="date_from" value="<?= esc((string) ($searchFilters['date_from'] ?? '')) ?>">
-        </div>
-        <div class="col-md-3 col-lg-2">
-            <input class="form-control" type="date" name="date_to" value="<?= esc((string) ($searchFilters['date_to'] ?? '')) ?>">
+            <input class="form-control" type="date" name="date" value="<?= esc($selectedFilterDate) ?>" aria-label="Filter by date">
         </div>
         <div class="col-auto">
             <button class="btn btn-primary" type="submit">Search</button>

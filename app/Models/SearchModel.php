@@ -25,8 +25,10 @@ class SearchModel
         }
 
         $limit = max(1, $limit);
-        $builder = $this->db->table('view_member_dashboard')
-            ->where('memberID = headID');
+        $builder = $this->db->table('member')
+            ->select('memberID, firstname, middlename, lastname, contactnumber, relationship, headID, sectorID, dt_created, dt_updated')
+            ->where('memberID = headID', null, false)
+            ->where('dt_deleted IS NULL', null, false);
 
         $keyword = $this->normalizeKeyword($keyword);
 
@@ -37,12 +39,10 @@ class SearchModel
                 ->orLike('lastname', $keyword)
                 ->orLike('contactnumber', $keyword)
                 ->orLike('relationship', $keyword)
-                ->orLike('head_firstname', $keyword)
-                ->orLike('head_lastname', $keyword)
-                ->orLike('sector_array_string', $keyword);
+                ->orLike('sectorID', $keyword);
 
             foreach ($this->sectorIdsForKeyword($keyword) as $sectorId) {
-                $builder->orWhere(SectorIds::containsCondition($sectorId), null, false);
+                $builder->orWhere(SectorIds::containsCondition($sectorId, 'sectorID'), null, false);
             }
 
             $builder->groupEnd();
@@ -51,7 +51,7 @@ class SearchModel
         $sectorId = (int) ($filters['sectorID'] ?? 0);
 
         if ($sectorId > 0) {
-            $builder->where(SectorIds::containsCondition($sectorId), null, false);
+            $builder->where(SectorIds::containsCondition($sectorId, 'sectorID'), null, false);
         }
 
         $this->applyDateRange($builder, 'dt_created', $filters);
@@ -217,6 +217,16 @@ class SearchModel
 
     private function applyDateRange(BaseBuilder $builder, string $column, array $filters): void
     {
+        $date = $this->normalizeDate((string) ($filters['date'] ?? ''));
+
+        if ($date !== '') {
+            $builder
+                ->where($column . ' >=', $date . ' 00:00:00')
+                ->where($column . ' <=', $date . ' 23:59:59');
+
+            return;
+        }
+
         $dateFrom = $this->normalizeDate((string) ($filters['date_from'] ?? ''));
         $dateTo = $this->normalizeDate((string) ($filters['date_to'] ?? ''));
 
@@ -255,7 +265,7 @@ class SearchModel
 
     private function hasFamilySearchTables(): bool
     {
-        return $this->db->tableExists('view_member_dashboard')
+        return $this->db->tableExists('member')
             && $this->db->tableExists('sector');
     }
 

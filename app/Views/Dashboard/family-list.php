@@ -30,7 +30,7 @@ $formatTime = static function (mixed $value): string {
     </form>
 
     <div class="table-responsive">
-        <table class="table table-sm">
+        <table class="table table-sm family-list-table align-middle">
             <thead>
             <tr>
                 <th>Head of Family</th>
@@ -49,6 +49,7 @@ $formatTime = static function (mixed $value): string {
                     <td><?= esc($formatDate($family['dt_created'] ?? '')) ?></td>
                     <td><?= esc($formatTime($family['dt_created'] ?? '')) ?></td>
                     <td class="text-end">
+                        <div class="family-list-actions">
                         <button
                             type="button"
                             class="btn btn-outline-primary btn-sm js-open-family-view-modal"
@@ -63,6 +64,7 @@ $formatTime = static function (mixed $value): string {
                             data-modal-title="Edit Family">
                             Edit
                         </button>
+                        </div>
                     </td>
                 </tr>
             <?php endforeach; ?>

@@ -434,13 +434,13 @@ class FamilyController extends BaseController
     private function requireFamilyEntryAccess(): ?RedirectResponse
     {
         if (! session()->get('is_logged_in')) {
-            return redirect()->to(site_url('/'))->with('error', 'Please login first.');
+            return redirect()->to(site_url('login'))->with('error', 'Please login first.');
         }
 
         if (! $this->sessionUserExists()) {
             session()->destroy();
 
-            return redirect()->to(site_url('/'))->with('error', 'Your session is no longer valid after the database update. Please login again.');
+            return redirect()->to(site_url('login'))->with('error', 'Your session is no longer valid after the database update. Please login again.');
         }
 
         $role = (string) session()->get('role');
@@ -569,7 +569,7 @@ class FamilyController extends BaseController
         foreach ($serviceIds as $serviceId) {
             $serviceId = (int) $serviceId;
 
-            if ($serviceId <= 0 || ! $serviceModel->existsById($serviceId)) {
+            if ($serviceId < 0 || ! $serviceModel->existsById($serviceId)) {
                 return false;
             }
 
@@ -652,7 +652,7 @@ class FamilyController extends BaseController
 
             $id = (int) $item;
 
-            if ($id <= 0) {
+            if ($id < 0) {
                 return null;
             }
 

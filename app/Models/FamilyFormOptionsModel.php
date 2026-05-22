@@ -131,7 +131,8 @@ class FamilyFormOptionsModel extends Model
 
         return $this->db->table('member')
             ->select('memberID, firstname, middlename, lastname, suffix')
-            ->where('headID = memberID')
+            ->where('headID = memberID', null, false)
+            ->where('dt_deleted IS NULL', null, false)
             ->orderBy('lastname', 'ASC')
             ->orderBy('firstname', 'ASC')
             ->get()

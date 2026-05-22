@@ -206,6 +206,36 @@ class Home extends BaseController
         ]);
     }
 
+    private function renderAdminSectorsPartial(): string|RedirectResponse
+    {
+        $guard = $this->guardAdminPartialAccess();
+
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        $viewData = $this->buildAdminViewData('sectors');
+
+        return view('Dashboard/Sectors and Services/sector', [
+            'sectors' => $viewData['sectors'] ?? [],
+        ]);
+    }
+
+    private function renderAdminServicesPartial(): string|RedirectResponse
+    {
+        $guard = $this->guardAdminPartialAccess();
+
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        $viewData = $this->buildAdminViewData('services');
+
+        return view('Dashboard/Sectors and Services/services', [
+            'services' => $viewData['services'] ?? [],
+        ]);
+    }
+
     private function renderEmployeeFamilyPartial(): string|RedirectResponse
     {
         $guard = $this->requireRole(['Developer', 'Admin', 'User']);
@@ -222,13 +252,6 @@ class Home extends BaseController
 
     private function clearLoginSession(): void
     {
-        session()->remove([
-            'is_logged_in',
-            'user_id',
-            'member_id',
-            'username',
-            'role',
-            'idle_last_activity',
-        ]);
+        session()->destroy();
     }
 }

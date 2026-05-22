@@ -1,9 +1,16 @@
 // Wires the family wizard events while delegating rendering helpers to FamilyFormUI.
 (function (window, document) {
     function initFamilyForm(rootElement) {
-        const ui = window.FamilyFormUI;
+        const utils = window.familyFormUtils || {};
+        const q = utils.q;
+        const qa = utils.qa;
+
+        if (typeof q !== 'function' || typeof qa !== 'function') {
+            return;
+        }
+
         const root = rootElement instanceof HTMLElement ? rootElement : document;
-        const form = root.querySelector('#familyForm');
+        const form = q(root, '#familyForm');
 
         if (!ui || !form || form.dataset.familyFormInitialized === '1') {
             return;
@@ -12,40 +19,37 @@
         form.dataset.familyFormInitialized = '1';
 
         const wizardCard = form.closest('.family-wizard-card');
-        const panels = Array.from(form.querySelectorAll('.family-step-panel'));
-        const stepItems = Array.from((wizardCard || root).querySelectorAll('.family-wizard-steps .wizard-step'));
-        const nextBtn = form.querySelector('#nextStepBtn');
-        const prevBtn = form.querySelector('#prevStepBtn');
-        const submitBtn = form.querySelector('#submitFamilyBtn');
-        const resetBtn = form.querySelector('#resetFamilyBtn');
-        const addMemberBtn = form.querySelector('#addMemberBtn');
-        const memberRows = form.querySelector('#memberRows');
-        const memberTemplate = root.querySelector('#memberTemplate');
-        const memberRowsEmpty = form.querySelector('#memberRowsEmpty');
-        const stepInfo = (wizardCard || root).querySelector('.wizard-header-left small');
-        const sectorCategoryList = form.querySelector('#sectorCategoryList');
-        const sectorNameList = form.querySelector('#sectorNameList');
-        const sectorIdInput = form.querySelector('#sectorID');
-        const entryTypeInput = form.querySelector('#entryType');
-        const entryButtons = Array.from(form.querySelectorAll('.entry-type-btn'));
-        const entryPanels = Array.from(form.querySelectorAll('[data-entry-panel]'));
-        const summaryTargets = {
-            name: form.querySelector('#headSummaryName'),
-            birthday: form.querySelector('#headSummaryBirthday'),
-            sex: form.querySelector('#headSummarySex'),
-            civil: form.querySelector('#headSummaryCivil'),
-            contact: form.querySelector('#headSummaryContact'),
-            education: form.querySelector('#headSummaryEducation'),
-            job: form.querySelector('#headSummaryJob'),
-            income: form.querySelector('#headSummaryIncome'),
-            sectors: form.querySelector('#headSummarySectors'),
-            services: form.querySelector('#headSummaryServices')
-        };
-        const sectorCatalog = ui.readSectorCatalog(sectorCategoryList);
-        let memberIndex = 0;
+        const uiRoot = wizardCard || root;
+        const panels = qa(form, '.family-step-panel');
+        const stepItems = qa(uiRoot, '.family-wizard-steps .wizard-step');
+        const nextBtn = q(form, '#nextStepBtn');
+        const prevBtn = q(form, '#prevStepBtn');
+        const submitBtn = q(form, '#submitFamilyBtn');
+        const resetBtn = q(form, '#resetFamilyBtn');
+        const addMemberBtn = q(form, '#addMemberBtn');
+        const memberRows = q(form, '#memberRows');
+        const memberTemplate = q(root, '#memberTemplate');
+        const memberRowsEmpty = q(form, '#memberRowsEmpty');
+        const stepInfo = q(uiRoot, '.wizard-header-left small');
+        const sectorCategoryList = q(form, '#sectorCategoryList');
+        const sectorNameList = q(form, '#sectorNameList');
+        const sectorIdInput = q(form, '#sectorID');
+        const sectorCatalogNode = q(form, '#sectorCatalogData');
+        const headSummaryName = q(form, '#headSummaryName');
+        const headSummaryBirthday = q(form, '#headSummaryBirthday');
+        const headSummarySex = q(form, '#headSummarySex');
+        const headSummaryCivil = q(form, '#headSummaryCivil');
+        const headSummaryContact = q(form, '#headSummaryContact');
+        const headSummaryEducation = q(form, '#headSummaryEducation');
+        const headSummaryJob = q(form, '#headSummaryJob');
+        const headSummaryIncome = q(form, '#headSummaryIncome');
+        const headSummarySectors = q(form, '#headSummarySectors');
+        const headSummaryServices = q(form, '#headSummaryServices');
         let currentStep = 1;
         let entryType = entryTypeInput ? entryTypeInput.value : 'head';
-        let selectedSectorIds = [];
+        const state = {
+            selectedSectorIds: [],
+        };
 
         function totalSteps() {
             return entryType === 'member' ? 2 : 3;
@@ -161,7 +165,7 @@
         }
 
         ['#head_firstname', '#head_middlename', '#head_lastname', '#head_suffix', '#head_birthday', '#head_sex', '#head_civilstatus', '#head_contactnumber', '#head_education', '#head_job', '#head_salary'].forEach(function (selector) {
-            const element = form.querySelector(selector);
+            const element = q(form, selector);
 
             if (element) {
                 element.addEventListener('input', updateHeadSummary);
@@ -221,9 +225,9 @@
         if (typeof window.initManageFamilyForm === 'function') {
             window.initManageFamilyForm({
                 form: form,
-                createMemberRow: createMemberRow,
+                createMemberRow: memberHandlers.createMemberRow,
                 setSelectedSectorIds: function (ids) {
-                    selectedSectorIds = Array.isArray(ids)
+                    state.selectedSectorIds = Array.isArray(ids)
                         ? ids.map(function (id) {
                             return String(id || '').trim();
                         }).filter(function (id) {
@@ -235,7 +239,7 @@
                 resetSectorSelection: resetSectorSelection
             });
         } else {
-            resetSectorSelection();
+            sectorHandlers.resetSectorSelection();
         }
 
         ui.setMemberRowsEmptyState(memberRows, memberRowsEmpty);

@@ -1,3 +1,5 @@
+/* Login page UI styles. Authentication logic stays in Home and UserModel. */
+
 * {
 	box-sizing: border-box;
 }
@@ -42,6 +44,7 @@ body::before {
 .logo-stack {
 	display: flex;
 	align-items: center;
+	justify-content: center;
 	margin-bottom: 14px;
 }
 

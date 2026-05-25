@@ -1,6 +1,6 @@
 # Project Structure
 
-This project follows the normal CodeIgniter 4 layout. The database source of truth is `C:\Users\Acer\Downloads\accesscardV1.4.sql`; no app migrations are used.
+This project follows the normal CodeIgniter 4 layout. The database source of truth is `C:\Users\Acer\Downloads\accesscardV3.0.sql`; no app migrations are used.
 
 ## Backend
 
@@ -44,7 +44,7 @@ This project follows the normal CodeIgniter 4 layout. The database source of tru
 
 ## Database
 
-- `C:\Users\Acer\Downloads\accesscardV1.4.sql`  
+- `C:\Users\Acer\Downloads\accesscardV3.0.sql`  
   Source database structure.
 
 - `app/Database/Seeds/AccessCardSeeder.php`  

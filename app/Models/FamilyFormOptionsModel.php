@@ -4,6 +4,9 @@ namespace App\Models;
 
 use CodeIgniter\Model;
 
+/**
+ * Builds select options used by the family registration UI.
+ */
 class FamilyFormOptionsModel extends Model
 {
     protected $table = 'sector';
@@ -38,38 +41,41 @@ class FamilyFormOptionsModel extends Model
                 'Other',
             ],
             'education_levels' => [
-                'No Formal Education',
-                'Day Care / Early Childhood',
+                'No Grade Completed',
+                'Early Childhood Education / Day Care',
                 'Kindergarten',
-                'Elementary Level',
+                'Elementary Undergraduate',
                 'Elementary Graduate',
-                'Junior High School Level',
+                'Junior High School Undergraduate',
                 'Junior High School Graduate',
-                'Senior High School Level',
+                'Senior High School Undergraduate',
                 'Senior High School Graduate',
-                'Alternative Learning System (ALS)',
-                'Technical / Vocational Level',
-                'Technical / Vocational Graduate',
-                'College Level',
-                'College Graduate',
-                'Postgraduate / Masteral',
-                'Doctorate',
+                'Alternative Learning System (ALS) Completer',
+                'Technical-Vocational Undergraduate',
+                'Technical-Vocational Graduate',
+                'College Undergraduate',
+                'Associate Degree Graduate',
+                'Bachelor\'s Degree Graduate',
+                'Post-Baccalaureate',
+                'Master\'s Degree',
+                'Doctorate Degree',
             ],
             'income_ranges' => [
-                '' => 'Select',
-                '0' => 'No regular income',
-                '8000' => 'Below PHP 8,000',
-                '13000' => 'PHP 8,000 - 13,000',
-                '18000' => 'PHP 13,001 - 18,000',
-                '25000' => 'PHP 18,001 - 25,000',
-                '40000' => 'PHP 25,001 - 40,000',
-                '65000' => 'PHP 40,001 - 65,000',
-                '100000' => 'PHP 65,001 - 100,000',
-                '150000' => 'PHP 100,001 - 150,000',
-                '250000' => 'PHP 150,001 - 250,000',
-                '250001' => 'Above PHP 250,000',
+                ['value' => '', 'label' => 'Select'],
+                ['value' => '0', 'label' => 'No regular income'],
+                ['value' => '8000', 'label' => 'Below PHP 8,000'],
+                ['value' => '13000', 'label' => 'PHP 8,000 - 13,000'],
+                ['value' => '18000', 'label' => 'PHP 13,001 - 18,000'],
+                ['value' => '25000', 'label' => 'PHP 18,001 - 25,000'],
+                ['value' => '40000', 'label' => 'PHP 25,001 - 40,000'],
+                ['value' => '65000', 'label' => 'PHP 40,001 - 65,000'],
+                ['value' => '100000', 'label' => 'PHP 65,001 - 100,000'],
+                ['value' => '150000', 'label' => 'PHP 100,001 - 150,000'],
+                ['value' => '250000', 'label' => 'PHP 150,001 - 250,000'],
+                ['value' => '250001', 'label' => 'Above PHP 250,000'],
             ],
             'services_by_category' => $this->getServicesByCategory(),
+            'family_heads' => $this->getFamilyHeads(),
         ];
     }
 
@@ -90,6 +96,7 @@ class FamilyFormOptionsModel extends Model
             'educationOptions' => $options['education_levels'] ?? [],
             'incomeOptions' => $options['income_ranges'] ?? [],
             'servicesByCategory' => $options['services_by_category'] ?? [],
+            'familyHeads' => $options['family_heads'] ?? [],
         ];
     }
 
@@ -114,5 +121,21 @@ class FamilyFormOptionsModel extends Model
         }
 
         return $grouped;
+    }
+
+    private function getFamilyHeads(): array
+    {
+        if (! $this->db->tableExists('member')) {
+            return [];
+        }
+
+        return $this->db->table('member')
+            ->select('memberID, firstname, middlename, lastname, suffix')
+            ->where('headID = memberID', null, false)
+            ->where('dt_deleted IS NULL', null, false)
+            ->orderBy('lastname', 'ASC')
+            ->orderBy('firstname', 'ASC')
+            ->get()
+            ->getResultArray();
     }
 }

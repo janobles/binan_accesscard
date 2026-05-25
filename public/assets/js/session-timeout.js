@@ -1,37 +1,104 @@
 (function () {
-    var body = document.body;
-    if (!body) {
-        return;
+    const script = document.currentScript;
+    const timeoutSeconds = Number(script?.dataset.timeoutSeconds || 60);
+    const logoutUrl = script?.dataset.logoutUrl || 'logout?timeout=1';
+    const keepAliveUrl = script?.dataset.keepAliveUrl || '';
+    const timeoutMs = Math.max(1, timeoutSeconds) * 1000;
+    const storageKey = 'binan_accesscard_last_activity';
+    let isLoggingOut = false;
+    let lastWrite = 0;
+    let lastKeepAlive = 0;
+
+    function now() {
+        return Date.now();
     }
 
-    var timeoutMs = parseInt(body.getAttribute('data-session-timeout-ms') || '0', 10);
-    var redirectUrl = body.getAttribute('data-session-timeout-redirect') || '';
-    var modal = document.getElementById('session-timeout-modal');
+    function getLastActivity() {
+        const stored = Number(localStorage.getItem(storageKey));
 
-    if (!timeoutMs || !redirectUrl || !modal) {
-        return;
+        return Number.isFinite(stored) && stored > 0 ? stored : now();
     }
 
-    var redirectDelayMs = 3000;
-    var timerId = null;
+    function markActivity() {
+        const currentTime = now();
 
-    var resetTimer = function () {
-        if (timerId) {
-            clearTimeout(timerId);
+        if ((currentTime - lastWrite) < 1000) {
+            return;
         }
 
-        timerId = setTimeout(function () {
-            modal.classList.add('is-visible');
+        lastWrite = currentTime;
+        localStorage.setItem(storageKey, String(currentTime));
+        keepAlive();
+    }
 
-            setTimeout(function () {
-                window.location.href = redirectUrl;
-            }, redirectDelayMs);
-        }, timeoutMs);
-    };
+    function keepAlive() {
+        const currentTime = now();
+        const intervalMs = Math.max(10000, Math.floor(timeoutMs / 3));
 
-    ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart'].forEach(function (eventName) {
-        window.addEventListener(eventName, resetTimer, { passive: true });
+        if (! keepAliveUrl || (currentTime - lastKeepAlive) < intervalMs) {
+            return;
+        }
+
+        lastKeepAlive = currentTime;
+
+        fetch(keepAliveUrl, { credentials: 'same-origin' })
+            .then(function (response) {
+                if (response.status === 401) {
+                    logout();
+                }
+            })
+            .catch(function () {});
+    }
+
+    function isExpired() {
+        return (now() - getLastActivity()) >= timeoutMs;
+    }
+
+    function logout() {
+        if (isLoggingOut) {
+            return;
+        }
+
+        isLoggingOut = true;
+        localStorage.removeItem(storageKey);
+        window.location.href = logoutUrl;
+    }
+
+    function checkTimeout() {
+        if (isExpired()) {
+            logout();
+        }
+    }
+
+    function handleActivity() {
+        if (isExpired()) {
+            logout();
+            return;
+        }
+
+        markActivity();
+    }
+
+    if (! localStorage.getItem(storageKey)) {
+        markActivity();
+    }
+
+    ['click', 'keydown', 'mousemove', 'scroll', 'touchstart'].forEach(function (eventName) {
+        window.addEventListener(eventName, handleActivity, { passive: true });
     });
 
-    resetTimer();
+    window.addEventListener('focus', checkTimeout);
+    document.addEventListener('visibilitychange', function () {
+        if (! document.hidden) {
+            checkTimeout();
+        }
+    });
+
+    window.addEventListener('storage', function (event) {
+        if (event.key === storageKey) {
+            checkTimeout();
+        }
+    });
+
+    window.setInterval(checkTimeout, 5000);
 })();

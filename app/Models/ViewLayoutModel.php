@@ -2,6 +2,9 @@
 
 namespace App\Models;
 
+/**
+ * Provides page labels and navigation state for views.
+ */
 class ViewLayoutModel
 {
     public function pageTitle(string $activePage): string

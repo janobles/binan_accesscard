@@ -1,15 +1,17 @@
+/* Family wizard UI styles. Field saving and validation belong in PHP controllers/models. */
+
 .family-wizard-shell {
 	display: flex;
 	justify-content: center;
-	margin: 8px 0 0;
+	margin: 0;
 }
 
 .family-wizard-card {
-	width: min(100%, 1020px);
-	background: #f3f5f8;
-	border: 2px solid #2185d7;
-	border-radius: 2px;
-	box-shadow: 0 2px 8px rgba(9, 31, 58, 0.08);
+	width: min(100%, 1180px);
+	background: #ffffff;
+	border: 1px solid #cfdceb;
+	border-radius: 8px;
+	box-shadow: 0 8px 24px rgba(9, 31, 58, 0.08);
 	overflow: hidden;
 }
 
@@ -17,8 +19,8 @@
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	padding: 14px 18px;
-	background: #0c2948;
+	padding: 16px 18px;
+	background: #102f50;
 	color: #eff7ff;
 }
 
@@ -30,10 +32,9 @@
 
 .wizard-header-left strong {
 	display: block;
-	font-size: 30px;
-	font-weight: 400;
-	line-height: 1.05;
-	letter-spacing: 0.2px;
+	font-size: 22px;
+	font-weight: 700;
+	line-height: 1.15;
 }
 
 .wizard-header-left small {
@@ -44,8 +45,8 @@
 }
 
 .wizard-icon {
-	width: 30px;
-	height: 30px;
+	width: 32px;
+	height: 32px;
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
@@ -57,8 +58,8 @@
 }
 
 .wizard-header-badge {
-	width: 24px;
-	height: 24px;
+	width: 18px;
+	height: 18px;
 	border-radius: 6px;
 	border: 2px solid #294c72;
 	background: transparent;
@@ -73,7 +74,7 @@
 }
 
 .wizard-step {
-	min-height: 76px;
+	min-height: 62px;
 	display: grid;
 	place-items: center;
 	text-align: center;
@@ -88,23 +89,23 @@
 }
 
 .wizard-step span {
-	width: 20px;
-	height: 20px;
+	width: 24px;
+	height: 24px;
 	border-radius: 50%;
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	font-size: 12px;
+	font-size: 13px;
 	font-weight: 700;
 	color: #8d9daf;
 	background: #dce4ee;
 }
 
 .wizard-step small {
-	font-size: 11px;
+	font-size: 13px;
 	line-height: 1.15;
 	color: #8c9aad;
-	max-width: 96px;
+	max-width: 160px;
 }
 
 .wizard-step.is-active {
@@ -122,13 +123,13 @@
 }
 
 #familyForm {
-	padding: 18px 18px 16px;
+	padding: 20px 18px 18px;
 }
 
 #familyForm .form-section {
-	margin-top: 14px;
+	margin-top: 0;
 	border-top: 1px solid #d6dee8;
-	padding-top: 12px;
+	padding-top: 18px;
 }
 
 #familyForm .family-step-panel {
@@ -140,11 +141,11 @@
 }
 
 #familyForm .form-section:first-of-type {
-	margin-top: 6px;
+	margin-top: 0;
 }
 
 #familyForm .section-title {
-	margin-bottom: 12px;
+	margin-bottom: 16px;
 	border-bottom: 0;
 	padding-bottom: 0;
 }
@@ -157,13 +158,12 @@
 
 #familyForm .section-title span {
 	color: #4f6175;
-	font-size: 31px;
-	font-weight: 400;
-	letter-spacing: 0.1px;
+	font-size: 20px;
+	font-weight: 700;
 }
 
 #familyForm .form-label {
-	margin-bottom: 4px;
+	margin-bottom: 6px;
 	color: #59697b;
 	font-size: 13px;
 	font-weight: 600;
@@ -171,7 +171,7 @@
 
 #familyForm .form-control,
 #familyForm .form-select {
-	min-height: 40px;
+	min-height: 42px;
 	border-color: #cbd6e3;
 	border-radius: 7px;
 	font-size: 14px;
@@ -221,15 +221,21 @@
 }
 
 .family-form-actions {
-	margin-top: 20px;
+	margin-top: 18px;
 	padding-top: 14px;
 	border-top: 1px solid #d6dee8;
 }
 
+.family-form-hidden {
+	display: none !important;
+}
+
 .family-form-actions .btn {
-	min-width: 118px;
+	min-width: 116px;
+	min-height: 40px;
 	border-radius: 8px;
 	font-weight: 600;
+	font-size: 14px;
 }
 
 .family-form-actions .btn-outline-secondary {
@@ -279,7 +285,7 @@
 	}
 
 	.family-wizard-card {
-		min-width: 980px;
+		min-width: 760px;
 	}
 
 	.family-wizard-steps {

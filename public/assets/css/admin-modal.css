@@ -1,0 +1,49 @@
+/* Admin modal styles. */
+.floating-family-modal .modal-dialog {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) !important;
+    margin: 0;
+    max-width: none;
+    width: min(1240px, 94vw);
+    height: min(760px, 86vh);
+}
+
+.floating-family-modal .modal-content {
+    border: 1px solid #cfdae8;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 18px 46px rgba(9, 25, 47, 0.28);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.floating-family-modal .modal-header {
+    background: #f4f8fc;
+    border-bottom: 1px solid #d5dfeb;
+}
+
+.floating-family-modal .modal-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #20344a;
+}
+
+.floating-family-modal .modal-body {
+    max-height: none;
+    flex: 1 1 auto;
+    overflow: auto;
+    background: #e9edf2;
+    padding: 14px;
+}
+
+.family-modal-loading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px;
+    font-weight: 600;
+    color: #325273;
+}

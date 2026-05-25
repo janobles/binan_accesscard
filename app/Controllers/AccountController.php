@@ -4,9 +4,12 @@ namespace App\Controllers;
 
 use App\Models\AuditTrailsModel;
 use App\Models\UserModel;
-use Throwable;
 use CodeIgniter\HTTP\RedirectResponse;
+use Throwable;
 
+/**
+ * Handles developer-only staff account creation.
+ */
 class AccountController extends BaseController
 {
     public function create(): RedirectResponse
@@ -50,7 +53,8 @@ class AccountController extends BaseController
             $userId = (new UserModel())->createAccount(
                 $username,
                 (string) $this->request->getPost('password'),
-                $role
+                $role,
+                (int) session()->get('member_id') ?: null
             );
         } catch (Throwable $exception) {
             log_message('error', $exception->getMessage());
@@ -78,11 +82,37 @@ class AccountController extends BaseController
             return redirect()->to(site_url('/'))->with('error', 'Please login first.');
         }
 
+        if (! $this->sessionUserExists()) {
+            session()->destroy();
+
+            return redirect()->to(site_url('/'))
+                ->with('error', 'Your session is no longer valid after the database update. Please login again.');
+        }
+
         if ($this->normalizeRole((string) session()->get('role')) !== 'Developer') {
             return redirect()->to(site_url('/'))->with('error', 'Developer access is required.');
         }
 
         return null;
+    }
+
+    private function sessionUserExists(): bool
+    {
+        $userId = (int) session()->get('user_id');
+
+        if ($userId <= 0) {
+            return false;
+        }
+
+        $db = db_connect();
+
+        if (! $db->tableExists('users')) {
+            return false;
+        }
+
+        return $db->table('users')
+            ->where('userID', $userId)
+            ->countAllResults() > 0;
     }
 
     private function normalizeRole(string $role): ?string
@@ -106,10 +136,9 @@ class AccountController extends BaseController
         }
 
         try {
-            // Account creation is a staff action, so memberID stays null.
             $auditModel->logAction(
                 (int) session()->get('user_id'),
-                null,
+                (int) session()->get('member_id') ?: null,
                 $action,
                 $description,
                 $this->request->getIPAddress(),

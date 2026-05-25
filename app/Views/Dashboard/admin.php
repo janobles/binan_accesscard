@@ -1,9 +1,12 @@
 <!DOCTYPE html>
 <?php
+helper('assets');
 $user = $user ?? [];
 $username = $user['username'] ?? 'Admin';
 $activePage = $activePage ?? 'dashboard';
 $pageTitle = $pageTitle ?? 'Dashboard';
+$modeLabel = $modeLabel ?? 'Admin Console';
+$canManageAccounts = $canManageAccounts ?? false;
 $navActive = $navActive ?? [];
 $stats = $stats ?? ['families' => 0, 'members' => 0, 'sectors' => 0, 'assistance' => 0];
 $recentFamilies = $recentFamilies ?? [];
@@ -11,16 +14,32 @@ $recentAudits = $recentAudits ?? [];
 $adminAccounts = $adminAccounts ?? [];
 $employeeAccounts = $employeeAccounts ?? [];
 $familyFormViewData = $familyFormViewData ?? [];
+$searchTerm = $searchTerm ?? '';
+$searchFilters = $searchFilters ?? [];
+$auditActionOptions = $auditActionOptions ?? [];
+$sectorOptions = $familyFormViewData['sectorOptions'] ?? [];
+$hasSearchFilters = $searchTerm !== '' || array_filter($searchFilters, static fn ($value): bool => trim((string) $value) !== '') !== [];
 $canCreateFamily = $canCreateFamily ?? false;
+$idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
+$selectedFilterDate = (string) ($searchFilters['date'] ?? $searchFilters['date_from'] ?? '');
+$formatDate = static function (mixed $value): string {
+    $timestamp = strtotime((string) $value);
+
+    return $timestamp === false ? '' : date('Y-m-d', $timestamp);
+};
+$formatTime = static function (mixed $value): string {
+    $timestamp = strtotime((string) $value);
+
+    return $timestamp === false ? '' : date('h:i A', $timestamp);
+};
 ?>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard - Binan Access Card MIS</title>
+    <title><?= esc($pageTitle) ?> - Binan Access Card MIS</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="<?= base_url('assets/css/admin.css') ?>?v=<?= filemtime(FCPATH . 'assets/css/admin.css') ?>">
-    <link rel="stylesheet" href="<?= base_url('assets/css/session-timeout.css') ?>?v=<?= filemtime(FCPATH . 'assets/css/session-timeout.css') ?>">
+    <?= admin_dashboard_style_links() ?>
 </head>
 <body data-session-timeout-ms="60000" data-session-timeout-redirect="<?= site_url('logout') ?>">
 <div class="app-shell">
@@ -30,18 +49,23 @@ $canCreateFamily = $canCreateFamily ?? false;
                 <img src="<?= base_url('assets/image/binan.png') ?>" alt="City of Binan Logo">
                 <div>
                     <strong>Bi&ntilde;an Access Card MIS</strong>
-                    <small>Admin Console</small>
+                    <small><?= esc($modeLabel) ?></small>
                 </div>
             </div>
             <nav class="nav flex-column mt-3">
                 <a class="nav-link <?= esc($navActive['dashboard'] ?? '') ?>" href="<?= site_url('admin/dashboard') ?>">Dashboard</a>
-                <a class="nav-link <?= esc($navActive['accounts'] ?? '') ?> js-open-accounts-modal" href="<?= site_url('admin/accounts') ?>" data-modal-url="<?= site_url('admin/accounts?partial=1') ?>" data-modal-title="Account Management">Account Management</a>
+                <?php if ($canManageAccounts): ?>
+                    <a class="nav-link <?= esc($navActive['accounts'] ?? '') ?> js-open-accounts-modal" href="<?= site_url('admin/accounts') ?>" data-modal-url="<?= site_url('admin/accounts?partial=1') ?>" data-modal-title="Account Management">Account Management</a>
+                <?php endif; ?>
                 <a class="nav-link <?= esc($navActive['family-entry'] ?? '') ?> js-open-family-modal" href="<?= site_url('admin/manage-family') ?>" data-modal-url="<?= site_url('admin/manage-family?partial=1') ?>" data-modal-title="Add Family">Add Family</a>
+                <a class="nav-link <?= esc($navActive['family-manage'] ?? '') ?> js-open-family-list" href="<?= site_url('admin/manage-family/list') ?>" data-modal-url="<?= site_url('admin/manage-family/list?partial=1') ?>" data-modal-title="Manage Families">Manage Family</a>
+                <a class="nav-link <?= esc($navActive['sectors'] ?? '') ?> js-open-sectors-modal" href="<?= site_url('admin/sectors') ?>" data-modal-url="<?= site_url('admin/sectors?partial=1') ?>" data-modal-title="Sector List">Sectors</a>
+                <a class="nav-link <?= esc($navActive['services'] ?? '') ?> js-open-services-modal" href="<?= site_url('admin/services') ?>" data-modal-url="<?= site_url('admin/services?partial=1') ?>" data-modal-title="Service List">Services</a>
                 <a class="nav-link <?= esc($navActive['audit-trails'] ?? '') ?> js-open-audit-modal" href="<?= site_url('admin/audit-trails') ?>" data-modal-url="<?= site_url('admin/audit-trails?partial=1') ?>" data-modal-title="Audit Trails">Audit Trails</a>
             </nav>
         </div>
         <div class="sidebar-footer">
-            <div class="sidebar-user"><?= esc($username) ?> &middot; Admin</div>
+            <div class="sidebar-user"><?= esc($username) ?> &middot; <?= esc($modeLabel) ?></div>
             <a href="<?= site_url('logout') ?>" class="btn btn-outline-light btn-sm w-100">Logout</a>
         </div>
     </aside>
@@ -78,20 +102,71 @@ $canCreateFamily = $canCreateFamily ?? false;
                         <span>Recent Families</span>
                         <button type="button" class="btn btn-primary btn-sm js-open-family-modal" data-modal-url="<?= site_url('admin/manage-family?partial=1') ?>" data-modal-title="Add Family">Add Family</button>
                     </div>
+                    <form class="row g-2 mb-3" method="get" action="<?= site_url('admin/dashboard') ?>">
+                        <div class="col-md-6 col-lg-4">
+                            <input class="form-control" type="search" name="q" value="<?= esc($searchTerm) ?>" placeholder="Search records by name, contact number, or sector">
+                        </div>
+                        <div class="col-md-4 col-lg-3">
+                            <select class="form-select" name="sectorID">
+                                <option value="">All sectors</option>
+                                <?php foreach ($sectorOptions as $sector): ?>
+                                    <?php $sectorId = (string) ($sector['sectorID'] ?? ''); ?>
+                                    <option value="<?= esc($sectorId) ?>" <?= (string) ($searchFilters['sectorID'] ?? '') === $sectorId ? 'selected' : '' ?>><?= esc((string) ($sector['name'] ?? '')) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-3 col-lg-2">
+                            <input class="form-control" type="date" name="date" value="<?= esc($selectedFilterDate) ?>" aria-label="Filter by date">
+                        </div>
+                        <div class="col-auto">
+                            <button class="btn btn-primary" type="submit">Search</button>
+                        </div>
+                        <?php if ($hasSearchFilters): ?>
+                            <div class="col-auto">
+                                <a class="btn btn-outline-secondary" href="<?= site_url('admin/dashboard') ?>">Clear</a>
+                            </div>
+                        <?php endif; ?>
+                    </form>
                     <div class="table-responsive">
                         <table class="table table-sm">
-                            <thead><tr><th>Head</th><th>Barangay</th><th>Sector</th><th>Date</th></tr></thead>
+                            <thead><tr><th>Head</th><th>Sector</th><th>Date</th><th>Time</th></tr></thead>
                             <tbody>
                                 <?php foreach ($recentFamilies as $family): ?>
                                     <tr>
                                         <td><?= esc(($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? '')) ?></td>
-                                        <td><?= esc((string) ($family['barangay'] ?? '')) ?></td>
                                         <td><?= esc((string) ($family['sector_name'] ?? '')) ?></td>
-                                        <td><?= esc((string) ($family['dt_created'] ?? '')) ?></td>
+                                        <td><?= esc($formatDate($family['dt_created'] ?? '')) ?></td>
+                                        <td><?= esc($formatTime($family['dt_created'] ?? '')) ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                                 <?php if ($recentFamilies === []): ?>
-                                    <tr><td colspan="4" class="text-center text-muted">No family records yet.</td></tr>
+                                    <tr><td colspan="4" class="text-center text-muted"><?= $searchTerm !== '' || $hasSearchFilters ? 'No matching family records found.' : 'No family records yet.' ?></td></tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="panel mb-3">
+                    <div class="section-title mt-0">
+                        <span>Recent Activity</span>
+                        <button type="button" class="btn btn-outline-secondary btn-sm js-open-audit-modal" data-modal-url="<?= site_url('admin/audit-trails?partial=1') ?>" data-modal-title="Audit Trails">View All</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead><tr><th>User</th><th>Action</th><th>Description</th><th>Date</th><th>Time</th></tr></thead>
+                            <tbody>
+                                <?php foreach ($recentAudits as $audit): ?>
+                                    <tr>
+                                        <td><?= esc((string) ($audit['username'] ?? $audit['userID'] ?? '')) ?></td>
+                                        <td><?= esc((string) ($audit['user_action'] ?? '')) ?></td>
+                                        <td><?= esc((string) ($audit['description'] ?? '')) ?></td>
+                                        <td><?= esc($formatDate($audit['dt_created'] ?? '')) ?></td>
+                                        <td><?= esc($formatTime($audit['dt_created'] ?? '')) ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                                <?php if ($recentAudits === []): ?>
+                                    <tr><td colspan="5" class="text-center text-muted">No activity yet.</td></tr>
                                 <?php endif; ?>
                             </tbody>
                         </table>
@@ -99,95 +174,13 @@ $canCreateFamily = $canCreateFamily ?? false;
                 </div>
             <?php endif; ?>
 
-            <?php if ($activePage === 'accounts'): ?>
-                <div class="panel mb-3">
-                    <div class="section-title mt-0"><span>Account Management</span></div>
-                    <div class="row g-3 mb-3">
-                        <div class="col-lg-6">
-                            <div class="border rounded p-3 h-100 bg-light">
-                                <h6 class="mb-3">Create Admin Account</h6>
-                                <form class="account-form" method="post" action="<?= site_url('developer/accounts') ?>">
-                                    <input type="hidden" name="role" value="Admin">
-                                    <div>
-                                        <label class="form-label">Username</label>
-                                        <input class="form-control" name="username" placeholder="admin_maria01" required minlength="4">
-                                    </div>
-                                    <div>
-                                        <label class="form-label">Password</label>
-                                        <input type="password" class="form-control" name="password" required minlength="8">
-                                    </div>
-                                    <div class="account-action">
-                                        <button class="btn btn-primary w-100" type="submit">Create</button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                        <div class="col-lg-6">
-                            <div class="border rounded p-3 h-100 bg-light">
-                                <h6 class="mb-3">Create Employee Account</h6>
-                                <form class="account-form account-form-employee" method="post" action="<?= site_url('developer/accounts') ?>">
-                                    <input type="hidden" name="role" value="User">
-                                    <div>
-                                        <label class="form-label">Username</label>
-                                        <input class="form-control" name="username" placeholder="emp_juan01" required minlength="4">
-                                    </div>
-                                    <div>
-                                        <label class="form-label">Password</label>
-                                        <input type="password" class="form-control" name="password" required minlength="8">
-                                    </div>
-                                    <div class="account-action">
-                                        <button class="btn btn-primary w-100" type="submit">Create</button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row g-3">
-                        <div class="col-lg-6">
-                            <div class="panel">
-                                <div class="section-title mt-0"><span>Admin Accounts</span></div>
-                                <div class="table-responsive">
-                                    <table class="table table-sm">
-                                        <thead><tr><th>Username</th><th>Status</th></tr></thead>
-                                        <tbody>
-                                            <?php foreach ($adminAccounts as $account): ?>
-                                                <tr>
-                                                    <td><?= esc((string) ($account['username'] ?? '')) ?></td>
-                                                    <td><?= esc((string) ($account['isactive'] ?? '')) ?></td>
-                                                </tr>
-                                            <?php endforeach; ?>
-                                            <?php if ($adminAccounts === []): ?>
-                                                <tr><td colspan="2" class="text-center text-muted">No admin accounts found.</td></tr>
-                                            <?php endif; ?>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-lg-6">
-                            <div class="panel">
-                                <div class="section-title mt-0"><span>Employee Accounts</span></div>
-                                <div class="table-responsive">
-                                    <table class="table table-sm">
-                                        <thead><tr><th>Username</th><th>Status</th></tr></thead>
-                                        <tbody>
-                                            <?php foreach ($employeeAccounts as $account): ?>
-                                                <tr>
-                                                    <td><?= esc((string) ($account['username'] ?? '')) ?></td>
-                                                    <td><?= esc((string) ($account['isactive'] ?? '')) ?></td>
-                                                </tr>
-                                            <?php endforeach; ?>
-                                            <?php if ($employeeAccounts === []): ?>
-                                                <tr><td colspan="2" class="text-center text-muted">No employee accounts found.</td></tr>
-                                            <?php endif; ?>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            <?php if ($activePage === 'accounts' && $canManageAccounts): ?>
+                <?= view('Dashboard/accounts', [
+                    'adminAccounts' => $adminAccounts,
+                    'employeeAccounts' => $employeeAccounts,
+                    'searchTerm' => $searchTerm,
+                    'searchFilters' => $searchFilters,
+                ]) ?>
             <?php endif; ?>
 
             <?php if ($activePage === 'family-entry'): ?>
@@ -201,43 +194,43 @@ $canCreateFamily = $canCreateFamily ?? false;
             <?php endif; ?>
 
             <?php if ($activePage === 'audit-trails'): ?>
-                <div class="panel">
-                    <div class="section-title mt-0"><span>Audit Trails</span></div>
-                    <div class="table-responsive">
-                        <table class="table table-sm">
-                            <thead><tr><th>User</th><th>Action</th><th>Description</th><th>Date</th></tr></thead>
-                            <tbody>
-                                <?php foreach ($recentAudits as $audit): ?>
-                                    <tr>
-                                        <td><?= esc((string) ($audit['username'] ?? $audit['userID'] ?? '')) ?></td>
-                                        <td><?= esc((string) ($audit['user_action'] ?? '')) ?></td>
-                                        <td><?= esc((string) ($audit['description'] ?? '')) ?></td>
-                                        <td><?= esc((string) ($audit['dt_created'] ?? '')) ?></td>
-                                    </tr>
-                                <?php endforeach; ?>
-                                <?php if ($recentAudits === []): ?>
-                                    <tr><td colspan="4" class="text-center text-muted">No audit logs yet.</td></tr>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+                <?= view('Dashboard/audit-trails', [
+                    'recentAudits' => $recentAudits,
+                    'searchTerm' => $searchTerm,
+                    'searchFilters' => $searchFilters,
+                    'auditActionOptions' => $auditActionOptions,
+                ]) ?>
+            <?php endif; ?>
+
+            <?php if ($activePage === 'sectors'): ?>
+                <?= view('Dashboard/Sectors and Services/sector', [
+                    'sectors' => $sectors ?? [],
+                ]) ?>
+            <?php endif; ?>
+
+            <?php if ($activePage === 'services'): ?>
+                <?= view('Dashboard/Sectors and Services/services', [
+                    'services' => $services ?? [],
+                ]) ?>
             <?php endif; ?>
         </div>
     </main>
 </div>
 
-<div class="modal fade floating-family-modal" id="familyModal" tabindex="-1" aria-labelledby="familyModalLabel" aria-hidden="true">
+<div class="modal fade floating-family-modal" id="familyModal" tabindex="-1" aria-labelledby="familyModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered modal-xl">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="familyModalLabel">Add Family</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn btn-outline-secondary family-modal-back js-family-modal-back" aria-label="Back">
+                    <span aria-hidden="true">&larr;</span> Back
+                </button>
+                <h5 class="modal-title visually-hidden" id="familyModalLabel">Manage Family</h5>
+                <button type="button" class="btn-close family-modal-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body" id="familyModalBody">
                 <div class="family-modal-loading" role="status" aria-live="polite">
                     <div class="spinner-border text-primary" aria-hidden="true"></div>
-                    <span>Loading family form...</span>
+                    <span>Loading...</span>
                 </div>
             </div>
         </div>
@@ -253,13 +246,20 @@ $canCreateFamily = $canCreateFamily ?? false;
 </div>
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="<?= base_url('assets/js/dashboard/manage-family-form.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/manage-family-form.js') ?>"></script>
+<script src="<?= base_url('assets/js/dashboard/family-form-ui.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form-ui.js') ?>"></script>
+<script src="<?= base_url('assets/js/dashboard/family-form-utils.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form-utils.js') ?>"></script>
+<script src="<?= base_url('assets/js/dashboard/family-form-sectors.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form-sectors.js') ?>"></script>
+<script src="<?= base_url('assets/js/dashboard/family-form-members.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form-members.js') ?>"></script>
+<script src="<?= base_url('assets/js/dashboard/family-form-summary.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form-summary.js') ?>"></script>
 <script src="<?= base_url('assets/js/dashboard/family-form.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form.js') ?>"></script>
-<?php if ($activePage === 'dashboard'): ?>
+<script src="<?= base_url('assets/js/session-timeout.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/session-timeout.js') ?>" data-timeout-seconds="<?= esc((string) $idleTimeoutSeconds) ?>" data-logout-url="<?= site_url('logout?timeout=1') ?>" data-keep-alive-url="<?= site_url('session/keep-alive') ?>"></script>
 <script src="<?= base_url('assets/js/dashboard/dashboard-modal-loader.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/dashboard-modal-loader.js') ?>"></script>
 <script src="<?= base_url('assets/js/dashboard/manage-family-modal.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/manage-family-modal.js') ?>"></script>
 <script src="<?= base_url('assets/js/dashboard/accounts-modal.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/accounts-modal.js') ?>"></script>
+<script src="<?= base_url('assets/js/dashboard/sectors-modal.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/sectors-modal.js') ?>"></script>
+<script src="<?= base_url('assets/js/dashboard/services-modal.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/services-modal.js') ?>"></script>
 <script src="<?= base_url('assets/js/dashboard/audit-trails-modal.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/audit-trails-modal.js') ?>"></script>
-<?php endif; ?>
-<script src="<?= base_url('assets/js/session-timeout.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/session-timeout.js') ?>"></script>
 </body>
 </html>
+

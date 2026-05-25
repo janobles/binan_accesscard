@@ -24,6 +24,7 @@ class AccountController extends BaseController
             'username' => 'required|min_length[4]|max_length[255]|is_unique[users.username]',
             'password' => 'required|min_length[8]',
             'role' => 'required|in_list[Admin,User]',
+            'memberID' => 'permit_empty|is_natural_no_zero',
         ];
         $messages = [
             'username' => [
@@ -48,13 +49,28 @@ class AccountController extends BaseController
 
         $role = (string) $this->request->getPost('role');
         $username = trim((string) $this->request->getPost('username'));
+        $memberId = $this->postedMemberId();
+
+        if ($memberId !== null && ! $this->memberExists($memberId)) {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'The linked member record does not exist.');
+        }
+
+        if ($memberId === null && $this->memberLinkRequired()) {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Please choose a linked member for this account.');
+        }
+
+        $userModel = new UserModel();
 
         try {
-            $userId = (new UserModel())->createAccount(
+            $userId = $userModel->createAccount(
                 $username,
                 (string) $this->request->getPost('password'),
                 $role,
-                (int) session()->get('member_id') ?: null
+                $memberId
             );
         } catch (Throwable $exception) {
             log_message('error', $exception->getMessage());
@@ -71,7 +87,14 @@ class AccountController extends BaseController
         }
 
         $displayRole = $role === 'User' ? 'Employee' : $role;
-        $this->audit('ACCOUNT_CREATED', 'Created ' . $displayRole . ' account "' . $username . '" (#' . $userId . ').');
+        $linkedMemberName = $memberId === null ? '' : $this->memberDisplayName($memberId);
+        $linkedMemberText = $linkedMemberName === '' ? '' : ' linked to ' . $linkedMemberName;
+
+        $this->audit(
+            'ACCOUNT_CREATED',
+            'Created ' . $displayRole . ' account "' . $username . '" (#' . $userId . ')' . $linkedMemberText . '.',
+            $memberId
+        );
 
         return redirect()->to(site_url('admin/accounts'))->with('success', 'Account created successfully.');
     }
@@ -127,7 +150,7 @@ class AccountController extends BaseController
         };
     }
 
-    private function audit(string $action, string $description): void
+    private function audit(string $action, string $description, ?int $memberId = null): void
     {
         $auditModel = new AuditTrailsModel();
 
@@ -138,7 +161,7 @@ class AccountController extends BaseController
         try {
             $auditModel->logAction(
                 (int) session()->get('user_id'),
-                (int) session()->get('member_id') ?: null,
+                $memberId,
                 $action,
                 $description,
                 $this->request->getIPAddress(),
@@ -147,5 +170,76 @@ class AccountController extends BaseController
         } catch (Throwable $exception) {
             log_message('error', 'Audit trail skipped: ' . $exception->getMessage());
         }
+    }
+
+    private function postedMemberId(): ?int
+    {
+        $memberId = $this->request->getPost('memberID');
+
+        if ($memberId === null || trim((string) $memberId) === '') {
+            return null;
+        }
+
+        return (int) $memberId;
+    }
+
+    private function memberExists(int $memberId): bool
+    {
+        if ($memberId <= 0) {
+            return false;
+        }
+
+        $db = db_connect();
+
+        if (! $db->tableExists('member')) {
+            return false;
+        }
+
+        return $db->table('member')
+            ->where('memberID', $memberId)
+            ->countAllResults() > 0;
+    }
+
+    private function memberLinkRequired(): bool
+    {
+        $db = db_connect();
+
+        if (! $db->tableExists('users') || ! $db->fieldExists('memberID', 'users')) {
+            return false;
+        }
+
+        foreach ($db->getFieldData('users') as $field) {
+            if ($field->name === 'memberID') {
+                return ! (bool) ($field->nullable ?? true);
+            }
+        }
+
+        return false;
+    }
+
+    private function memberDisplayName(int $memberId): string
+    {
+        $db = db_connect();
+
+        if (! $db->tableExists('member')) {
+            return '';
+        }
+
+        $member = $db->table('member')
+            ->select('firstname, middlename, lastname, suffix')
+            ->where('memberID', $memberId)
+            ->get()
+            ->getRowArray();
+
+        if ($member === null) {
+            return '';
+        }
+
+        return trim(implode(' ', array_filter([
+            (string) ($member['firstname'] ?? ''),
+            (string) ($member['middlename'] ?? ''),
+            (string) ($member['lastname'] ?? ''),
+            (string) ($member['suffix'] ?? ''),
+        ], static fn (string $value): bool => trim($value) !== '')));
     }
 }

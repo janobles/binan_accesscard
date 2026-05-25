@@ -49,7 +49,7 @@ trait HomeRoleAccessTrait
         }
 
         if ($normalizedRole === 'Admin' || $normalizedRole === 'Developer') {
-            return redirect()->to(site_url('admin'));
+            return redirect()->to(site_url('admin/dashboard'));
         }
 
         session()->destroy();

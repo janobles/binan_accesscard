@@ -171,13 +171,13 @@ class MemberModel extends Model
         return (int) $this->getInsertID();
     }
 
-    public function getFamilyMembers(int $headId): array
+    public function getFamilyMembers(int $headId, string $visibility = 'active'): array
     {
         if (! $this->hasTable()) {
             return [];
         }
 
-        $rows = $this->memberDashboardBuilder()
+        $rows = $this->memberDashboardBuilder($visibility)
             ->where('member.headID', $headId)
             ->orderBy('member.memberID', 'ASC')
             ->get()
@@ -204,16 +204,36 @@ class MemberModel extends Model
         return $this->withSectorNames([$member])[0] ?? null;
     }
 
-    public function searchFamilies(?string $keyword = null): array
+    public function searchFamilies(?string $keyword = null, int $limit = 50, int $offset = 0, bool $archived = false): array
     {
         if (! $this->hasTable()) {
             return [];
         }
 
-        $builder = $this->memberDashboardBuilder()
-            ->where('member.memberID = member.headID', null, false)
+        $limit = max(1, $limit);
+        $offset = max(0, $offset);
+
+        $builder = $this->familySearchBuilder($keyword, $archived)
             ->orderBy('member.lastname', 'ASC')
-            ->orderBy('member.firstname', 'ASC');
+            ->orderBy('member.firstname', 'ASC')
+            ->limit($limit, $offset);
+
+        return $this->withSectorNames($builder->get()->getResultArray());
+    }
+
+    public function countSearchFamilies(?string $keyword = null, bool $archived = false): int
+    {
+        if (! $this->hasTable()) {
+            return 0;
+        }
+
+        return $this->familySearchBuilder($keyword, $archived)->countAllResults();
+    }
+
+    private function familySearchBuilder(?string $keyword = null, bool $archived = false)
+    {
+        $builder = $this->memberDashboardBuilder($archived ? 'archived' : 'active')
+            ->where('member.memberID = member.headID', null, false);
 
         if ($keyword !== null && trim($keyword) !== '') {
             $keyword = trim($keyword);
@@ -233,7 +253,7 @@ class MemberModel extends Model
                 ->groupEnd();
         }
 
-        return $this->withSectorNames($builder->get()->getResultArray());
+        return $builder;
     }
 
     public function getFamilyMemberIds(int $headId): array
@@ -264,6 +284,40 @@ class MemberModel extends Model
             ->delete() !== false;
     }
 
+    public function archiveFamily(int $headId): bool
+    {
+        return $this->markFamilyDeleted($headId);
+    }
+
+    public function deleteFamilyRecord(int $headId): bool
+    {
+        return $this->markFamilyDeleted($headId);
+    }
+
+    public function restoreFamily(int $headId): bool
+    {
+        if (! $this->hasTable() || ! $this->db->fieldExists('dt_deleted', $this->table)) {
+            return false;
+        }
+
+        return (bool) $this->db->table($this->table)
+            ->where('headID', $headId)
+            ->where('dt_deleted IS NOT NULL', null, false)
+            ->update(['dt_deleted' => null]);
+    }
+
+    private function markFamilyDeleted(int $headId): bool
+    {
+        if (! $this->hasTable() || ! $this->db->fieldExists('dt_deleted', $this->table)) {
+            return false;
+        }
+
+        return (bool) $this->db->table($this->table)
+            ->where('headID', $headId)
+            ->where('dt_deleted IS NULL', null, false)
+            ->update(['dt_deleted' => date('Y-m-d H:i:s')]);
+    }
+
     private function nextAutoIncrementId(): int
     {
         $row = $this->db->query("
@@ -276,7 +330,7 @@ class MemberModel extends Model
         return (int) ($row['AUTO_INCREMENT'] ?? 1);
     }
 
-    private function memberDashboardBuilder()
+    private function memberDashboardBuilder(string $visibility = 'active')
     {
         $builder = $this->db->table('member')
             ->select([
@@ -304,7 +358,11 @@ class MemberModel extends Model
             ->join('member head', 'head.memberID = member.headID', 'left');
 
         if ($this->db->fieldExists('dt_deleted', 'member')) {
-            $builder->where('member.dt_deleted IS NULL', null, false);
+            if ($visibility === 'archived') {
+                $builder->where('member.dt_deleted IS NOT NULL', null, false);
+            } elseif ($visibility !== 'all') {
+                $builder->where('member.dt_deleted IS NULL', null, false);
+            }
         }
 
         return $builder;

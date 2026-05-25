@@ -72,8 +72,14 @@ class SearchModel
         }
 
         $limit = max(1, $limit);
+        $select = 'userID, username, role, isactive, dt_created';
+
+        if ($this->db->fieldExists('memberID', 'users')) {
+            $select .= ', memberID';
+        }
+
         $builder = $this->db->table('users')
-            ->select('userID, username, role, isactive, dt_created')
+            ->select($select)
             ->whereIn('role', ['Admin', 'User']);
 
         $keyword = $this->normalizeKeyword($keyword);
@@ -98,12 +104,14 @@ class SearchModel
             $this->applyActiveStatusFilter($builder, $status);
         }
 
-        return $builder
+        $rows = $builder
             ->orderBy('role', 'ASC')
             ->orderBy('username', 'ASC')
             ->limit($limit)
             ->get()
             ->getResultArray();
+
+        return $this->withAccountMemberNames($rows);
     }
 
     public function auditTrails(string $keyword = '', array $filters = [], int $limit = 50): array
@@ -166,10 +174,11 @@ class SearchModel
 
         return array_column(
             $this->db->table('audit_trails')
-                ->select('user_action')
+                ->select('TRIM(user_action) AS user_action', false)
                 ->where('user_action IS NOT NULL')
-                ->groupBy('user_action')
-                ->orderBy('user_action', 'ASC')
+                ->where("TRIM(user_action) != ''", null, false)
+                ->groupBy('TRIM(user_action)')
+                ->orderBy('TRIM(user_action)', 'ASC', false)
                 ->get()
                 ->getResultArray(),
             'user_action'
@@ -209,7 +218,7 @@ class SearchModel
         $action = $this->normalizeKeyword((string) ($filters['action'] ?? ''));
 
         if ($action !== '') {
-            $builder->where('audit_trails.user_action', $action);
+            $builder->where('TRIM(audit_trails.user_action) = ' . $this->db->escape($action), null, false);
         }
 
         $this->applyDateRange($builder, 'audit_trails.dt_created', $filters);
@@ -328,23 +337,46 @@ class SearchModel
 
     private function withAuditNames(array $rows): array
     {
-        $usernames = $this->usernameMap(array_column($rows, 'userID'));
+        $users = $this->userMap(array_column($rows, 'userID'));
         $memberNames = $this->memberNameMap(array_column($rows, 'memberID'));
 
         foreach ($rows as &$row) {
             $userId = (int) ($row['userID'] ?? 0);
             $memberId = (int) ($row['memberID'] ?? 0);
             $memberName = $memberNames[$memberId] ?? ['firstname' => '', 'lastname' => ''];
+            $user = $users[$userId] ?? ['username' => '', 'role' => ''];
 
-            $row['username'] = $usernames[$userId] ?? '';
+            $row['username'] = $user['username'];
+            $row['user_role'] = $user['role'];
             $row['firstname'] = $memberName['firstname'];
             $row['lastname'] = $memberName['lastname'];
+            $row['member_name'] = $this->formatMemberName($memberName);
         }
 
         return $rows;
     }
 
-    private function usernameMap(array $userIds): array
+    private function withAccountMemberNames(array $rows): array
+    {
+        if (! $this->db->fieldExists('memberID', 'users')) {
+            foreach ($rows as &$row) {
+                $row['member_name'] = '';
+            }
+
+            return $rows;
+        }
+
+        $memberNames = $this->memberNameMap(array_column($rows, 'memberID'));
+
+        foreach ($rows as &$row) {
+            $memberId = (int) ($row['memberID'] ?? 0);
+            $row['member_name'] = $this->formatMemberName($memberNames[$memberId] ?? []);
+        }
+
+        return $rows;
+    }
+
+    private function userMap(array $userIds): array
     {
         $userIds = $this->positiveUniqueIds($userIds);
 
@@ -353,7 +385,7 @@ class SearchModel
         }
 
         $users = $this->db->table('users')
-            ->select('userID, username')
+            ->select('userID, username, role')
             ->whereIn('userID', $userIds)
             ->get()
             ->getResultArray();
@@ -361,7 +393,10 @@ class SearchModel
         $map = [];
 
         foreach ($users as $user) {
-            $map[(int) $user['userID']] = (string) $user['username'];
+            $map[(int) $user['userID']] = [
+                'username' => (string) $user['username'],
+                'role' => (string) ($user['role'] ?? ''),
+            ];
         }
 
         return $map;
@@ -391,6 +426,14 @@ class SearchModel
         }
 
         return $map;
+    }
+
+    private function formatMemberName(array $memberName): string
+    {
+        return trim(implode(' ', array_filter([
+            (string) ($memberName['firstname'] ?? ''),
+            (string) ($memberName['lastname'] ?? ''),
+        ], static fn (string $value): bool => trim($value) !== '')));
     }
 
     private function userIdsForKeyword(string $keyword): array

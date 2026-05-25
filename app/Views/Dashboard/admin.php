@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 <?php
 helper('assets');
 $user = $user ?? [];
@@ -13,6 +12,7 @@ $recentFamilies = $recentFamilies ?? [];
 $recentAudits = $recentAudits ?? [];
 $adminAccounts = $adminAccounts ?? [];
 $employeeAccounts = $employeeAccounts ?? [];
+$linkableMembers = $linkableMembers ?? [];
 $familyFormViewData = $familyFormViewData ?? [];
 $searchTerm = $searchTerm ?? '';
 $searchFilters = $searchFilters ?? [];
@@ -32,7 +32,27 @@ $formatTime = static function (mixed $value): string {
 
     return $timestamp === false ? '' : date('h:i A', $timestamp);
 };
+$formatAuditMember = static function (array $audit): string {
+    $memberName = trim((string) ($audit['member_name'] ?? ''));
+
+    if ($memberName === '') {
+        $memberName = trim((string) ($audit['firstname'] ?? '') . ' ' . (string) ($audit['lastname'] ?? ''));
+    }
+
+    return $memberName === '' ? '-' : $memberName;
+};
+$formatAuditUser = static function (array $audit): string {
+    $username = trim((string) ($audit['username'] ?? $audit['userID'] ?? ''));
+    $role = trim((string) ($audit['user_role'] ?? ''));
+
+    if ($role === 'User') {
+        $role = 'Employee';
+    }
+
+    return $role === '' ? $username : $username . ' (' . $role . ')';
+};
 ?>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -66,7 +86,7 @@ $formatTime = static function (mixed $value): string {
         </div>
         <div class="sidebar-footer">
             <div class="sidebar-user"><?= esc($username) ?> &middot; <?= esc($modeLabel) ?></div>
-            <a href="<?= site_url('logout') ?>" class="btn btn-outline-light btn-sm w-100">Logout</a>
+            <a href="<?= site_url('logout') ?>" class="btn btn-outline-light btn-sm w-100 js-logout-link">Logout</a>
         </div>
     </aside>
 
@@ -154,11 +174,12 @@ $formatTime = static function (mixed $value): string {
                     </div>
                     <div class="table-responsive">
                         <table class="table table-sm">
-                            <thead><tr><th>User</th><th>Action</th><th>Description</th><th>Date</th><th>Time</th></tr></thead>
+                            <thead><tr><th>User</th><th>Member</th><th>Action</th><th>Description</th><th>Date</th><th>Time</th></tr></thead>
                             <tbody>
                                 <?php foreach ($recentAudits as $audit): ?>
                                     <tr>
-                                        <td><?= esc((string) ($audit['username'] ?? $audit['userID'] ?? '')) ?></td>
+                                        <td><?= esc($formatAuditUser($audit)) ?></td>
+                                        <td><?= esc($formatAuditMember($audit)) ?></td>
                                         <td><?= esc((string) ($audit['user_action'] ?? '')) ?></td>
                                         <td><?= esc((string) ($audit['description'] ?? '')) ?></td>
                                         <td><?= esc($formatDate($audit['dt_created'] ?? '')) ?></td>
@@ -166,7 +187,7 @@ $formatTime = static function (mixed $value): string {
                                     </tr>
                                 <?php endforeach; ?>
                                 <?php if ($recentAudits === []): ?>
-                                    <tr><td colspan="5" class="text-center text-muted">No activity yet.</td></tr>
+                                    <tr><td colspan="6" class="text-center text-muted">No activity yet.</td></tr>
                                 <?php endif; ?>
                             </tbody>
                         </table>
@@ -178,6 +199,7 @@ $formatTime = static function (mixed $value): string {
                 <?= view('Dashboard/accounts', [
                     'adminAccounts' => $adminAccounts,
                     'employeeAccounts' => $employeeAccounts,
+                    'linkableMembers' => $linkableMembers,
                     'searchTerm' => $searchTerm,
                     'searchFilters' => $searchFilters,
                 ]) ?>
@@ -246,12 +268,7 @@ $formatTime = static function (mixed $value): string {
 </div>
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="<?= base_url('assets/js/dashboard/manage-family-form.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/manage-family-form.js') ?>"></script>
 <script src="<?= base_url('assets/js/dashboard/family-form-ui.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form-ui.js') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/family-form-utils.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form-utils.js') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/family-form-sectors.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form-sectors.js') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/family-form-members.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form-members.js') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/family-form-summary.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form-summary.js') ?>"></script>
 <script src="<?= base_url('assets/js/dashboard/family-form.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form.js') ?>"></script>
 <script src="<?= base_url('assets/js/session-timeout.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/session-timeout.js') ?>" data-timeout-seconds="<?= esc((string) $idleTimeoutSeconds) ?>" data-logout-url="<?= site_url('logout?timeout=1') ?>" data-keep-alive-url="<?= site_url('session/keep-alive') ?>"></script>
 <script src="<?= base_url('assets/js/dashboard/dashboard-modal-loader.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/dashboard-modal-loader.js') ?>"></script>

@@ -45,16 +45,14 @@ trait HomeDashboardPagesTrait
         $searchFilters = $this->searchFilters();
         $hasSearchFilters = $this->hasSearchFilters($searchFilters);
         $isDeveloper = $this->normalizeRole((string) session()->get('role')) === 'Developer';
+        $userModel = new UserModel();
         $users = $isDeveloper && $activePage === 'accounts'
             ? $searchModel->staffAccounts($searchTerm, $searchFilters)
-            : [];
-        $userModel = new UserModel();
+            : $userModel->getStaffAccounts();
         $memberModel = new MemberModel();
         $sectorModel = new SectorModel();
         $serviceModel = new ServiceModel();
         $memberServiceModel = new MemberServiceModel();
-        $auditModel = new AuditTrailsModel();
-        $users = $userModel->getStaffAccounts();
 
         $familyFormViewData = (new FamilyFormOptionsModel())->getViewData();
         $recentFamilies = $activePage === 'dashboard' && ($searchTerm !== '' || $hasSearchFilters)
@@ -81,6 +79,7 @@ trait HomeDashboardPagesTrait
             ],
             'adminAccounts' => array_values(array_filter($users, static fn ($account) => $account['role'] === 'Admin')),
             'employeeAccounts' => array_values(array_filter($users, static fn ($account) => $account['role'] === 'User')),
+            'linkableMembers' => $isDeveloper ? $userModel->getLinkableMembers() : [],
             'familyFormViewData' => $familyFormViewData,
             'sectors' => $this->fetchVisibleSectors($sectorModel),
             'services' => $this->fetchVisibleServices($serviceModel),
@@ -91,6 +90,7 @@ trait HomeDashboardPagesTrait
             'auditActionOptions' => $searchModel->auditActions(),
             'stats' => $dashboardModel->stats(),
             'canCreateFamily' => true,
+            'idleTimeoutSeconds' => (new IdleTimeout())->seconds,
         ];
     }
 

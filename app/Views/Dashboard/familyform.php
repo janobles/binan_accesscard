@@ -1,60 +1,6 @@
 <?php
-$formOptions = array_merge([
-    'sectors' => [],
-    'sexes' => [],
-    'suffixes' => [],
-    'civil_statuses' => [],
-    'relationships' => [],
-    'education_levels' => [],
-    'income_ranges' => [],
-    'services_by_category' => [],
-    'family_heads' => [],
-], $formOptions ?? []);
-$sectorOptions = $sectorOptions ?? ($formOptions['sectors'] ?? []);
-$sectorCatalog = $sectorCatalog ?? [];
-$sexOptions = $sexOptions ?? ($formOptions['sexes'] ?? []);
-$suffixOptions = $suffixOptions ?? ($formOptions['suffixes'] ?? []);
-$civilOptions = $civilOptions ?? ($formOptions['civil_statuses'] ?? []);
-$relationshipOptions = $relationshipOptions ?? ($formOptions['relationships'] ?? []);
-$educationOptions = $educationOptions ?? ($formOptions['education_levels'] ?? []);
-$incomeOptions = $incomeOptions ?? ($formOptions['income_ranges'] ?? []);
-$servicesByCategory = $servicesByCategory ?? ($formOptions['services_by_category'] ?? []);
-$familyHeads = $familyHeads ?? ($formOptions['family_heads'] ?? []);
-$formAction = $formAction ?? site_url('families');
-$submitButtonLabel = $submitButtonLabel ?? 'Save Family Data';
-$familyRecord = $familyRecord ?? [];
-$existingMembers = $existingMembers ?? [];
-$headServiceIds = array_values(array_map(static fn ($id): int => (int) $id, (array) ($headServiceIds ?? ($familyRecord['service_ids'] ?? []))));
-$isEditMode = $familyRecord !== [];
-$selectedSectorIds = \App\Support\SectorIds::normalize($familyRecord['sectorID'] ?? null);
-$selectedSectorCategories = [];
-
-foreach ($sectorCatalog as $categoryKey => $sectorRows) {
-    foreach ((array) $sectorRows as $sectorRow) {
-        if (in_array((int) ($sectorRow['sectorID'] ?? 0), $selectedSectorIds, true)) {
-            $selectedSectorCategories[] = (string) $categoryKey;
-            break;
-        }
-    }
-}
-
-$initialFamilyData = [
-    'selectedSectorIds' => $selectedSectorIds,
-    'selectedSectorCategories' => array_values(array_unique($selectedSectorCategories)),
-    'headServiceIds' => $headServiceIds,
-    'existingMembers' => $existingMembers,
-];
-$fieldViewData = compact(
-    'civilOptions',
-    'educationOptions',
-    'familyRecord',
-    'incomeOptions',
-    'relationshipOptions',
-    'sectorOptions',
-    'servicesByCategory',
-    'sexOptions',
-    'suffixOptions'
-);
+helper('family_form');
+extract(family_form_view_data(get_defined_vars()), EXTR_OVERWRITE);
 ?>
 
 <link rel="stylesheet" href="<?= base_url('assets/css/familyform.css') ?>?v=<?= filemtime(FCPATH . 'assets/css/familyform.css') ?>">

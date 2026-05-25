@@ -25,6 +25,15 @@ $formatTime = static function (mixed $value): string {
 
     return $timestamp === false ? '' : date('h:i A', $timestamp);
 };
+$formatAuditMember = static function (array $audit): string {
+    $memberName = trim((string) ($audit['member_name'] ?? ''));
+
+    if ($memberName === '') {
+        $memberName = trim((string) ($audit['firstname'] ?? '') . ' ' . (string) ($audit['lastname'] ?? ''));
+    }
+
+    return $memberName === '' ? '-' : $memberName;
+};
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -55,7 +64,7 @@ $formatTime = static function (mixed $value): string {
         </div>
         <div class="sidebar-footer">
             <div class="sidebar-user"><?= esc($username) ?> &middot; Employee</div>
-            <a href="<?= site_url('logout') ?>" class="btn btn-outline-light btn-sm w-100">Logout</a>
+            <a href="<?= site_url('logout') ?>" class="btn btn-outline-light btn-sm w-100 js-logout-link">Logout</a>
         </div>
     </aside>
 
@@ -146,18 +155,19 @@ $formatTime = static function (mixed $value): string {
                     </div>
                     <div class="table-responsive">
                         <table class="table table-sm">
-                            <thead><tr><th>Action</th><th>Description</th><th>Date</th><th>Time</th></tr></thead>
+                            <thead><tr><th>Action</th><th>Member</th><th>Description</th><th>Date</th><th>Time</th></tr></thead>
                             <tbody>
                                 <?php foreach ($myAudits as $audit): ?>
                                     <tr>
                                         <td><?= esc((string) ($audit['user_action'] ?? '')) ?></td>
+                                        <td><?= esc($formatAuditMember($audit)) ?></td>
                                         <td><?= esc((string) ($audit['description'] ?? '')) ?></td>
                                         <td><?= esc($formatDate($audit['dt_created'] ?? '')) ?></td>
                                         <td><?= esc($formatTime($audit['dt_created'] ?? '')) ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                                 <?php if ($myAudits === []): ?>
-                                    <tr><td colspan="4" class="text-center text-muted">No activity yet.</td></tr>
+                                    <tr><td colspan="5" class="text-center text-muted">No activity yet.</td></tr>
                                 <?php endif; ?>
                             </tbody>
                         </table>
@@ -180,15 +190,16 @@ $formatTime = static function (mixed $value): string {
             <?php if ($activePage === 'activity'): ?>
                 <div class="panel">
                     <div class="section-title mt-0"><span>My Recent Activity</span></div>
-                    <form class="row g-2 mb-3" method="get" action="<?= site_url('employee/activity') ?>">
+                    <form class="row g-2 mb-3 js-audit-filter-form" method="get" action="<?= site_url('employee/activity') ?>">
                         <div class="col-md-6 col-lg-4">
                             <input class="form-control" type="search" name="q" value="<?= esc($searchTerm) ?>" placeholder="Search activity by action or description">
                         </div>
                         <div class="col-md-4 col-lg-3">
-                            <select class="form-select" name="action">
+                            <select class="form-select js-audit-action-filter" name="action">
                                 <option value="">All actions</option>
                                 <?php foreach ($auditActionOptions as $action): ?>
-                                    <option value="<?= esc((string) $action) ?>" <?= (string) ($searchFilters['action'] ?? '') === (string) $action ? 'selected' : '' ?>><?= esc((string) $action) ?></option>
+                                    <?php $action = trim((string) $action); ?>
+                                    <option value="<?= esc($action) ?>" <?= trim((string) ($searchFilters['action'] ?? '')) === $action ? 'selected' : '' ?>><?= esc($action) ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -206,18 +217,19 @@ $formatTime = static function (mixed $value): string {
                     </form>
                     <div class="table-responsive">
                         <table class="table table-sm">
-                            <thead><tr><th>Action</th><th>Description</th><th>Date</th><th>Time</th></tr></thead>
+                            <thead><tr><th>Action</th><th>Member</th><th>Description</th><th>Date</th><th>Time</th></tr></thead>
                             <tbody>
                                 <?php foreach ($myAudits as $audit): ?>
                                     <tr>
                                         <td><?= esc((string) ($audit['user_action'] ?? '')) ?></td>
+                                        <td><?= esc($formatAuditMember($audit)) ?></td>
                                         <td><?= esc((string) ($audit['description'] ?? '')) ?></td>
                                         <td><?= esc($formatDate($audit['dt_created'] ?? '')) ?></td>
                                         <td><?= esc($formatTime($audit['dt_created'] ?? '')) ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                                 <?php if ($myAudits === []): ?>
-                                    <tr><td colspan="4" class="text-center text-muted"><?= $hasSearchFilters ? 'No matching activity found.' : 'No activity yet.' ?></td></tr>
+                                    <tr><td colspan="5" class="text-center text-muted"><?= $hasSearchFilters ? 'No matching activity found.' : 'No activity yet.' ?></td></tr>
                                 <?php endif; ?>
                             </tbody>
                         </table>
@@ -250,15 +262,23 @@ $formatTime = static function (mixed $value): string {
 
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="<?= base_url('assets/js/dashboard/family-form-utils.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form-utils.js') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/family-form-sectors.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form-sectors.js') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/family-form-members.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form-members.js') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/family-form-summary.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form-summary.js') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/manage-family-form.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/manage-family-form.js') ?>"></script>
 <script src="<?= base_url('assets/js/dashboard/family-form-ui.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form-ui.js') ?>"></script>
 <script src="<?= base_url('assets/js/dashboard/family-form.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form.js') ?>"></script>
 <script src="<?= base_url('assets/js/session-timeout.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/session-timeout.js') ?>" data-timeout-seconds="<?= esc((string) $idleTimeoutSeconds) ?>" data-logout-url="<?= site_url('logout?timeout=1') ?>" data-keep-alive-url="<?= site_url('session/keep-alive') ?>"></script>
 <script src="<?= base_url('assets/js/dashboard/dashboard-modal-loader.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/dashboard-modal-loader.js') ?>"></script>
 <script src="<?= base_url('assets/js/dashboard/manage-family-modal.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/manage-family-modal.js') ?>"></script>
+<script>
+(function () {
+    document.querySelectorAll('.js-audit-action-filter').forEach(function (select) {
+        select.addEventListener('change', function () {
+            const form = select.closest('.js-audit-filter-form');
+
+            if (form) {
+                form.submit();
+            }
+        });
+    });
+})();
+</script>
 </body>
 </html>

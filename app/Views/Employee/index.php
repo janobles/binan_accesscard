@@ -11,7 +11,7 @@ extract(employee_dashboard_view_data(get_defined_vars()), EXTR_OVERWRITE);
     <link href="<?= base_url('assets/bootstrap/css/bootstrap.min.css') ?>" rel="stylesheet">
     <link rel="stylesheet" href="<?= base_url('assets/css/admin.css') ?>?v=<?= filemtime(FCPATH . 'assets/css/admin.css') ?>">
 </head>
-<body>
+<body data-session-timeout-ms="60000" data-session-timeout-redirect="<?= site_url('logout') ?>">
 <div class="app-shell">
     <aside class="sidebar employee">
         <div>

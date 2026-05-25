@@ -43,6 +43,9 @@
         form.dataset.familyFormInitialized = '1';
 
         const wizardCard = form.closest('.family-wizard-card');
+        const isEditMode = form.dataset.editMode === '1';
+        const formAlert = q(form, '#familyFormAlert');
+        let isSubmitting = false;
         const uiRoot = wizardCard || root;
         const panels = qa(form, '.family-step-panel');
         const stepItems = qa(uiRoot, '.family-wizard-steps .wizard-step');
@@ -87,6 +90,67 @@
 
         function totalSteps() {
             return entryType === 'member' ? 2 : 3;
+        }
+
+        function escapeHtml(value) {
+            return String(value || '').replace(/[&<>"']/g, function (char) {
+                return {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                }[char] || char;
+            });
+        }
+
+        function setFormAlert(type, message) {
+            if (!formAlert) {
+                return;
+            }
+
+            if (!message) {
+                formAlert.innerHTML = '';
+                return;
+            }
+
+            formAlert.innerHTML = '<div class="alert alert-' + type + '">' + escapeHtml(message) + '</div>';
+        }
+
+        function updateCsrfToken(token) {
+            if (!token) {
+                return;
+            }
+
+            // Keep CSRF in sync with FamilyController::store AJAX responses.
+            qa(form, 'input[type="hidden"][name]').forEach(function (input) {
+                if (String(input.name || '').toLowerCase().indexOf('csrf') !== -1) {
+                    input.value = token;
+                }
+            });
+        }
+
+        function resetFamilyForm(clearAlert) {
+            window.setTimeout(function () {
+                if (memberRows) {
+                    memberRows.innerHTML = '';
+                }
+
+                memberIndex = 0;
+                setEntryType('head');
+                resetSectorSelection();
+
+                if (typeof ui.setMemberRowsEmptyState === 'function') {
+                    ui.setMemberRowsEmptyState(memberRows, memberRowsEmpty);
+                }
+
+                updateHeadSummary();
+                setStep(1);
+
+                if (clearAlert) {
+                    setFormAlert('', '');
+                }
+            }, 0);
         }
 
         function setHidden(element, hidden) {
@@ -312,24 +376,116 @@
 
         if (resetBtn) {
             resetBtn.addEventListener('click', function () {
-                window.setTimeout(function () {
-                    if (memberRows) {
-                        memberRows.innerHTML = '';
-                    }
-
-                    memberIndex = 0;
-                    setEntryType('head');
-                    resetSectorSelection();
-
-                    if (typeof ui.setMemberRowsEmptyState === 'function') {
-                        ui.setMemberRowsEmptyState(memberRows, memberRowsEmpty);
-                    }
-
-                    updateHeadSummary();
-                    setStep(1);
-                }, 0);
+                resetFamilyForm(true);
             });
         }
+
+        form.addEventListener('submit', function (event) {
+            // Submit via AJAX so validation errors stay inside the family modal.
+            event.preventDefault();
+
+            if (isSubmitting) {
+                return;
+            }
+
+            isSubmitting = true;
+            setFormAlert('', '');
+
+            fetch(form.action, {
+                method: 'POST',
+                body: new FormData(form),
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+                .then(function (response) {
+                    return response.text().then(function (text) {
+                        let data = {};
+
+                        try {
+                            data = JSON.parse(text || '{}');
+                        } catch (error) {
+                            data = {};
+                        }
+
+                        return { ok: response.ok, data: data };
+                    });
+                })
+                .then(function (result) {
+                    const data = result.data || {};
+
+                    updateCsrfToken(data.csrf);
+
+                    if (!result.ok || data.status === 'error') {
+                        setFormAlert('danger', data.message || 'Please review the required fields.');
+                        return;
+                    }
+
+                    setFormAlert('success', data.message || 'Family data saved successfully.');
+
+                    // Suggestion #1: clear the form after a successful add.
+                    if (!isEditMode) {
+                        form.reset();
+                        resetFamilyForm(false);
+                    }
+                })
+                .catch(function () {
+                    setFormAlert('danger', 'Unable to save the family data. Please try again.');
+                })
+                .finally(function () {
+                    isSubmitting = false;
+                });
+        });
+
+        form.addEventListener('submit', function (event) {
+            // Submit via AJAX so validation stays inside the Add Family modal.
+            event.preventDefault();
+
+            if (isSubmitting) {
+                return;
+            }
+
+            isSubmitting = true;
+            setFormAlert('', '');
+
+            fetch(form.action, {
+                method: 'POST',
+                body: new FormData(form),
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+                .then(function (response) {
+                    return response.json().then(function (data) {
+                        return { ok: response.ok, data: data };
+                    }).catch(function () {
+                        return { ok: false, data: { message: 'Unable to save the family data. Please try again.' } };
+                    });
+                })
+                .then(function (result) {
+                    const data = result.data || {};
+
+                    updateCsrfToken(data.csrf);
+
+                    if (!result.ok || data.status === 'error') {
+                        setFormAlert('danger', data.message || 'Please review the required fields.');
+                        return;
+                    }
+
+                    setFormAlert('success', data.message || 'Family data saved successfully.');
+
+                    // Suggestion #1: auto-clear the form and return to Step 1 after save.
+                    if (resetBtn) {
+                        resetBtn.click();
+                    }
+                })
+                .catch(function () {
+                    setFormAlert('danger', 'Unable to save the family data. Please try again.');
+                })
+                .finally(function () {
+                    isSubmitting = false;
+                });
+        });
 
         if (state.selectedSectorIds.length > 0) {
             populateSectorsByCategory();

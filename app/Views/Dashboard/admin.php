@@ -1,6 +1,57 @@
 <?php
-helper(['assets', 'dashboard_view']);
-extract(admin_dashboard_view_data(get_defined_vars()), EXTR_OVERWRITE);
+helper('assets');
+$user = $user ?? [];
+$username = $user['username'] ?? 'Admin';
+$activePage = $activePage ?? 'dashboard';
+$pageTitle = $pageTitle ?? 'Dashboard';
+$modeLabel = $modeLabel ?? 'Admin Console';
+$canManageAccounts = $canManageAccounts ?? false;
+$navActive = $navActive ?? [];
+$stats = $stats ?? ['families' => 0, 'members' => 0, 'sectors' => 0, 'assistance' => 0];
+$recentFamilies = $recentFamilies ?? [];
+$recentAudits = $recentAudits ?? [];
+$adminAccounts = $adminAccounts ?? [];
+$employeeAccounts = $employeeAccounts ?? [];
+$canCreateAccounts = $canCreateAccounts ?? false;
+$currentRole = $currentRole ?? '';
+$familyFormViewData = $familyFormViewData ?? [];
+$searchTerm = $searchTerm ?? '';
+$searchFilters = $searchFilters ?? [];
+$auditActionOptions = $auditActionOptions ?? [];
+$sectorOptions = $familyFormViewData['sectorOptions'] ?? [];
+$hasSearchFilters = $searchTerm !== '' || array_filter($searchFilters, static fn ($value): bool => trim((string) $value) !== '') !== [];
+$canCreateFamily = $canCreateFamily ?? false;
+$idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
+$selectedFilterDate = (string) ($searchFilters['date'] ?? $searchFilters['date_from'] ?? '');
+$formatDate = static function (mixed $value): string {
+    $timestamp = strtotime((string) $value);
+
+    return $timestamp === false ? '' : date('Y-m-d', $timestamp);
+};
+$formatTime = static function (mixed $value): string {
+    $timestamp = strtotime((string) $value);
+
+    return $timestamp === false ? '' : date('h:i A', $timestamp);
+};
+$formatAuditMember = static function (array $audit): string {
+    $memberName = trim((string) ($audit['member_name'] ?? ''));
+
+    if ($memberName === '') {
+        $memberName = trim((string) ($audit['firstname'] ?? '') . ' ' . (string) ($audit['lastname'] ?? ''));
+    }
+
+    return $memberName === '' ? '-' : $memberName;
+};
+$formatAuditUser = static function (array $audit): string {
+    $username = trim((string) ($audit['username'] ?? $audit['userID'] ?? ''));
+    $role = trim((string) ($audit['user_role'] ?? ''));
+
+    if ($role === 'User') {
+        $role = 'Employee';
+    }
+
+    return $role === '' ? $username : $username . ' (' . $role . ')';
+};
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -11,7 +62,7 @@ extract(admin_dashboard_view_data(get_defined_vars()), EXTR_OVERWRITE);
     <link href="<?= base_url('assets/bootstrap/css/bootstrap.min.css') ?>" rel="stylesheet">
     <?= admin_dashboard_style_links() ?>
 </head>
-<body>
+<body data-session-timeout-ms="60000" data-session-timeout-redirect="<?= site_url('logout') ?>">
 <div class="app-shell">
     <aside class="sidebar">
         <div>
@@ -185,9 +236,10 @@ extract(admin_dashboard_view_data(get_defined_vars()), EXTR_OVERWRITE);
                 <?= view('Dashboard/accounts', [
                     'adminAccounts'    => $adminAccounts,
                     'employeeAccounts' => $employeeAccounts,
-                    'linkableMembers'  => $linkableMembers,
-                    'searchTerm'       => $searchTerm,
-                    'searchFilters'    => $searchFilters,
+                    'canCreateAccounts' => $canCreateAccounts,
+                    'currentRole' => $currentRole,
+                    'searchTerm' => $searchTerm,
+                    'searchFilters' => $searchFilters,
                 ]) ?>
             <?php endif; ?>
 
@@ -244,6 +296,13 @@ extract(admin_dashboard_view_data(get_defined_vars()), EXTR_OVERWRITE);
     </div>
 </div>
 
+<div id="session-timeout-modal" class="session-timeout-modal" aria-live="assertive">
+    <div class="session-timeout-card" role="dialog" aria-modal="true" aria-labelledby="session-timeout-title">
+        <h4 id="session-timeout-title" class="session-timeout-title">Session Expired</h4>
+        <p class="session-timeout-text">You have been logged out.</p>
+        <p class="session-timeout-subtext">Redirecting to login screen...</p>
+    </div>
+</div>
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="<?= base_url('assets/bootstrap/js/bootstrap.bundle.min.js') ?>"></script>
 <script src="<?= base_url('assets/js/family-form-ui.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/family-form-ui.js') ?>"></script>

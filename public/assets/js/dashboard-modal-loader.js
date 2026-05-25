@@ -126,7 +126,15 @@
                 if (typeof config.onLoaded === 'function') {
                     config.onLoaded($body[0], response);
                 }
-            }).fail(function () {
+            }).fail(function (jqXHR) {
+                if (jqXHR && jqXHR.status === 401) {
+                    const fallbackRedirect = document.body?.dataset?.sessionTimeoutRedirect || 'login';
+                    const redirectUrl = jqXHR.responseJSON?.redirect || fallbackRedirect;
+
+                    window.location.href = redirectUrl;
+                    return;
+                }
+
                 $body.html(config.errorMarkup || '<div class="alert alert-danger mb-0">Unable to load data. Please try again.</div>');
             });
         });

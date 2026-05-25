@@ -25,6 +25,8 @@ $routes->group('admin', static function (RouteCollection $routes): void {
     $routes->get('audit-trails', 'Home::adminAuditTrails');
     $routes->get('sectors', 'Home::adminSectors');
     $routes->get('services', 'Home::adminServices');
+    // Admin-only: disable employee accounts from Account Management.
+    $routes->post('accounts/disable', 'AccountController::disableEmployee');
 
     $routes->get('manage-families', 'Home::adminFamilyEntry');
     $routes->group('manage-family', static function (RouteCollection $routes): void {
@@ -73,4 +75,6 @@ $routes->group('employee', static function (RouteCollection $routes): void {
  * Shared submissions
  */
 $routes->post('developer/accounts', 'AccountController::create');
+// Developer-only: toggle staff account status from Account Management (Dashboard/accounts).
+$routes->post('developer/accounts/status', 'AccountController::updateStatus');
 $routes->post('families', 'FamilyController::store');

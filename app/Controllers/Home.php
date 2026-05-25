@@ -12,6 +12,101 @@ use CodeIgniter\HTTP\RedirectResponse;
  */
 class Home extends BaseController
 {
+    use HomeRoleAccessTrait;
+    use HomeDashboardPagesTrait;
+
+    public function index(): string|RedirectResponse
+    {
+        if (session()->get('is_logged_in')) {
+            if (! $this->hasValidLoginSession()) {
+                $this->clearLoginSession();
+
+                return redirect()->to(site_url('login'))
+                    ->with('error', 'Your session expired. Please login again.');
+            }
+
+            return $this->redirectByRole((string) session()->get('role'));
+        }
+
+        return view('Login/login');
+    }
+
+    public function login(): string|RedirectResponse
+    {
+        if ($this->request->getMethod() === 'GET') {
+            return $this->index();
+        }
+
+        $username = trim((string) $this->request->getPost('username'));
+        $password = (string) $this->request->getPost('password');
+
+        $user = (new UserModel())->verifyLogin($username, $password);
+
+        if ($user === null) {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Invalid username or password.');
+        }
+
+        // Show a specific message when valid credentials belong to a disabled account.
+        if (($user['login_error'] ?? '') === 'disabled') {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'This account is disabled and cannot be used.');
+        }
+
+        $role = $this->normalizeRole((string) ($user['role'] ?? ''));
+
+        if ($role === null) {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Your account role is invalid. Please contact an administrator.');
+        }
+
+        session()->regenerate();
+        session()->set([
+            'is_logged_in' => true,
+            'user_id' => (int) $user['userID'],
+            'member_id' => (int) ($user['memberID'] ?? 0),
+            'username' => $user['username'],
+            'role' => $role,
+            'idle_last_activity' => time(),
+        ]);
+
+        SessionAuditLogger::logLogin($user, $role, $this->request);
+
+        return $this->redirectByRole($role);
+    }
+
+    public function logout(): RedirectResponse
+    {
+        if ($this->request->getGet('timeout') === '1') {
+            SessionAuditLogger::logLogoutFromSession($this->request, true);
+            $this->clearLoginSession();
+
+            return redirect()->to(site_url('login'))
+                ->with('error', 'You were logged out due to inactivity.');
+        }
+
+        SessionAuditLogger::logLogoutFromSession($this->request);
+        $this->clearLoginSession();
+
+        return redirect()->to(site_url('login'));
+    }
+
+    public function keepAlive()
+    {
+        if (! session()->get('is_logged_in')) {
+            return $this->response
+                ->setStatusCode(401)
+                ->setJSON(['status' => 'expired']);
+        }
+
+        session()->set('idle_last_activity', time());
+
+        return $this->response->setJSON(['status' => 'ok']);
+    }
+
     public function admin(): RedirectResponse
     {
         return redirect()->to(site_url('admin/dashboard'));
@@ -104,8 +199,10 @@ class Home extends BaseController
             return $guard;
         }
 
-        if (RoleAccess::normalizeRole((string) session()->get('role')) !== 'Developer') {
-            return '<div class="alert alert-danger mb-0">Developer access is required for account management.</div>';
+        $currentRole = $this->normalizeRole((string) session()->get('role'));
+
+        if (! in_array($currentRole, ['Developer', 'Admin'], true)) {
+            return '<div class="alert alert-danger mb-0">Developer or Admin access is required for account management.</div>';
         }
 
         $viewData = (new DashboardPageBuilder($this->request))->buildAdminViewData('accounts');
@@ -113,7 +210,8 @@ class Home extends BaseController
         return view('Dashboard/accounts', [
             'adminAccounts' => $viewData['adminAccounts'] ?? [],
             'employeeAccounts' => $viewData['employeeAccounts'] ?? [],
-            'linkableMembers' => $viewData['linkableMembers'] ?? [],
+            'canCreateAccounts' => $currentRole === 'Developer',
+            'currentRole' => $currentRole,
             'searchTerm' => $viewData['searchTerm'] ?? '',
             'searchFilters' => $viewData['searchFilters'] ?? [],
         ]);

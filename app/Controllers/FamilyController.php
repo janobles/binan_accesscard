@@ -272,9 +272,10 @@ class FamilyController extends BaseController
         }
 
         if (! $this->validate($this->rulesForEntryType('head'))) {
+            // Build a user-friendly message using the field labels shown in the form UI.
             return redirect()->back()
                 ->withInput()
-                ->with('error', implode(' ', $this->validator->getErrors()));
+                ->with('error', $this->friendlyValidationMessage('head', $this->validator->getErrors()));
         }
 
         if (! $this->postedSectorIdsHaveValidShape()) {
@@ -424,7 +425,8 @@ class FamilyController extends BaseController
         $entryType = $this->entryType();
 
         if (! $this->validate($this->rulesForEntryType($entryType))) {
-            return $this->validationResponse(implode(' ', $this->validator->getErrors()));
+            // Keep validation feedback inside the modal with clear field labels.
+            return $this->validationResponse($this->friendlyValidationMessage($entryType, $this->validator->getErrors()));
         }
 
         if (! $this->postedSectorIdsHaveValidShape()) {
@@ -566,6 +568,55 @@ class FamilyController extends BaseController
         }
 
         return redirect()->back()->withInput()->with('error', $message);
+    }
+
+    private function friendlyValidationMessage(string $entryType, array $errors): string
+    {
+        if ($errors === []) {
+            return 'Please review the required fields.';
+        }
+
+        $labelMap = [
+            'family_head_id' => 'Family head',
+            'head_firstname' => 'First name',
+            'head_middlename' => 'Middle name',
+            'head_lastname' => 'Last name',
+            'head_birthday' => 'Birthday',
+            'head_sex' => 'Sex',
+            'member_firstname' => 'First name',
+            'member_middlename' => 'Middle name',
+            'member_lastname' => 'Last name',
+            'member_birthday' => 'Birthday',
+            'member_sex' => 'Sex',
+        ];
+
+        $requiredFields = [];
+        $otherMessages = [];
+
+        foreach ($errors as $field => $message) {
+            $label = $labelMap[$field] ?? null;
+
+            if ($label !== null && stripos($message, 'required') !== false) {
+                $requiredFields[] = $label;
+                continue;
+            }
+
+            $otherMessages[] = $message;
+        }
+
+        $requiredFields = array_values(array_unique($requiredFields));
+        $messages = [];
+
+        if ($requiredFields !== []) {
+            $context = $entryType === 'member' ? 'Family Member' : 'Head of Family';
+            $messages[] = 'Please fill in the following ' . $context . ' fields: ' . implode(', ', $requiredFields) . '.';
+        }
+
+        if ($otherMessages !== []) {
+            $messages[] = implode(' ', $otherMessages);
+        }
+
+        return implode(' ', $messages);
     }
 
     private function familyResponse(MemberModel $memberModel, string $successMessage)

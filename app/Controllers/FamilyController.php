@@ -24,12 +24,28 @@ class FamilyController extends BaseController
         }
 
         $keyword = trim((string) $this->request->getGet('q'));
-        $families = (new MemberModel())->searchFamilies($keyword === '' ? null : $keyword);
+        $isEmployeePath = $this->isEmployeeRequestPath();
+        $status = $isEmployeePath ? 'active' : strtolower(trim((string) $this->request->getGet('status')));
+        $showArchived = $status === 'archived';
+        $page = max(1, (int) $this->request->getGet('page'));
+        $perPage = 50;
+        $memberModel = new MemberModel();
+        $searchKeyword = $keyword === '' ? null : $keyword;
+        $totalFamilies = $memberModel->countSearchFamilies($searchKeyword, $showArchived);
+        $totalPages = max(1, (int) ceil($totalFamilies / $perPage));
+        $page = min($page, $totalPages);
+        $families = $memberModel->searchFamilies($searchKeyword, $perPage, ($page - 1) * $perPage, $showArchived);
 
         return view('Dashboard/family-list', [
             'families' => $families,
             'keyword' => $keyword,
             'routeBase' => $this->familyRouteBase(),
+            'status' => $showArchived ? 'archived' : 'active',
+            'canRestoreArchived' => ! $isEmployeePath,
+            'page' => $page,
+            'perPage' => $perPage,
+            'totalFamilies' => $totalFamilies,
+            'totalPages' => $totalPages,
         ]);
     }
 
@@ -86,6 +102,156 @@ class FamilyController extends BaseController
                 'showManageFamilyListButton' => true,
             ]
         ));
+    }
+
+    public function archive(int $headId): RedirectResponse
+    {
+        $guard = $this->requireFamilyEntryAccess();
+
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        if ((string) session()->get('role') === 'User') {
+            return redirect()->back()->with('error', 'Employee accounts can delete records, but only admin accounts can archive them.');
+        }
+
+        $memberModel = new MemberModel();
+        $auditModel = new AuditTrailsModel();
+        $familyData = $this->buildFamilyData($headId);
+
+        if ($familyData === null) {
+            return redirect()->back()->with('error', 'Family record not found or already archived.');
+        }
+
+        $head = $familyData['head'];
+        $memberCount = count($familyData['members'] ?? []);
+        $familyName = $this->personName($head);
+
+        $memberModel->beginTransaction();
+
+        if (! $memberModel->archiveFamily($headId)) {
+            $memberModel->rollbackTransaction();
+
+            return redirect()->back()->with('error', 'Family record could not be archived.');
+        }
+
+        $this->auditFamilyAction(
+            $auditModel,
+            (int) session()->get('user_id'),
+            $headId,
+            'FAMILY_ARCHIVED',
+            'Archived family record #' . $headId . ' for ' . $familyName . ' with ' . $memberCount . ' family member' . ($memberCount === 1 ? '' : 's') . '.'
+        );
+
+        $memberModel->completeTransaction();
+
+        if (! $memberModel->transactionStatus()) {
+            return redirect()->back()->with('error', 'The family record was not archived.');
+        }
+
+        return redirect()->to(site_url($this->familyDashboardPath()))
+            ->with('success', 'Family record archived successfully.');
+    }
+
+    public function delete(int $headId): RedirectResponse
+    {
+        $guard = $this->requireFamilyEntryAccess();
+
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        if ((string) session()->get('role') !== 'User') {
+            return redirect()->back()->with('error', 'Only employee accounts can delete family records from this page.');
+        }
+
+        $memberModel = new MemberModel();
+        $auditModel = new AuditTrailsModel();
+        $familyData = $this->buildFamilyData($headId);
+
+        if ($familyData === null) {
+            return redirect()->back()->with('error', 'Family record not found or already deleted.');
+        }
+
+        $head = $familyData['head'];
+        $memberCount = count($familyData['members'] ?? []);
+        $familyName = $this->personName($head);
+
+        $memberModel->beginTransaction();
+
+        if (! $memberModel->deleteFamilyRecord($headId)) {
+            $memberModel->rollbackTransaction();
+
+            return redirect()->back()->with('error', 'Family record could not be deleted.');
+        }
+
+        $this->auditFamilyAction(
+            $auditModel,
+            (int) session()->get('user_id'),
+            $headId,
+            'FAMILY_DELETED',
+            'Deleted family record #' . $headId . ' for ' . $familyName . ' with ' . $memberCount . ' family member' . ($memberCount === 1 ? '' : 's') . '.'
+        );
+
+        $memberModel->completeTransaction();
+
+        if (! $memberModel->transactionStatus()) {
+            return redirect()->back()->with('error', 'The family record was not deleted.');
+        }
+
+        return redirect()->to(site_url($this->familyDashboardPath()))
+            ->with('success', 'Family record deleted successfully.');
+    }
+
+    public function restore(int $headId): RedirectResponse
+    {
+        $guard = $this->requireFamilyEntryAccess();
+
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        if ((string) session()->get('role') === 'User') {
+            return redirect()->back()->with('error', 'Only admin accounts can restore archived records.');
+        }
+
+        $memberModel = new MemberModel();
+        $auditModel = new AuditTrailsModel();
+        $familyData = $this->buildFamilyData($headId, 'archived');
+
+        if ($familyData === null) {
+            return redirect()->back()->with('error', 'Archived family record not found.');
+        }
+
+        $head = $familyData['head'];
+        $memberCount = count($familyData['members'] ?? []);
+        $familyName = $this->personName($head);
+
+        $memberModel->beginTransaction();
+
+        if (! $memberModel->restoreFamily($headId)) {
+            $memberModel->rollbackTransaction();
+
+            return redirect()->back()->with('error', 'Family record could not be restored.');
+        }
+
+        $this->auditFamilyAction(
+            $auditModel,
+            (int) session()->get('user_id'),
+            $headId,
+            'FAMILY_RESTORED',
+            'Restored family record #' . $headId . ' for ' . $familyName . ' with ' . $memberCount . ' family member' . ($memberCount === 1 ? '' : 's') . '.'
+        );
+
+        $memberModel->completeTransaction();
+
+        if (! $memberModel->transactionStatus()) {
+            return redirect()->back()->with('error', 'The family record was not restored.');
+        }
+
+        return redirect()->to(site_url($this->familyDashboardPath()))
+            ->with('success', 'Family record restored successfully.');
     }
 
     public function update(int $headId): RedirectResponse
@@ -434,13 +600,13 @@ class FamilyController extends BaseController
     private function requireFamilyEntryAccess(): ?RedirectResponse
     {
         if (! session()->get('is_logged_in')) {
-            return redirect()->to(site_url('/'))->with('error', 'Please login first.');
+            return redirect()->to(site_url('login'))->with('error', 'Please login first.');
         }
 
         if (! $this->sessionUserExists()) {
             session()->destroy();
 
-            return redirect()->to(site_url('/'))->with('error', 'Your session is no longer valid after the database update. Please login again.');
+            return redirect()->to(site_url('login'))->with('error', 'Your session is no longer valid after the database update. Please login again.');
         }
 
         $role = (string) session()->get('role');
@@ -544,6 +710,18 @@ class FamilyController extends BaseController
             && trim((string) ($member['lastname'] ?? '')) !== '';
     }
 
+    private function personName(array $person): string
+    {
+        $name = trim(implode(' ', array_filter([
+            (string) ($person['firstname'] ?? ''),
+            (string) ($person['middlename'] ?? ''),
+            (string) ($person['lastname'] ?? ''),
+            (string) ($person['suffix'] ?? ''),
+        ], static fn (string $value): bool => trim($value) !== '')));
+
+        return $name === '' ? 'family #' . (int) ($person['memberID'] ?? 0) : $name;
+    }
+
     private function moneyOrNull(mixed $value): ?float
     {
         if ($value === null || $value === '') {
@@ -569,7 +747,7 @@ class FamilyController extends BaseController
         foreach ($serviceIds as $serviceId) {
             $serviceId = (int) $serviceId;
 
-            if ($serviceId <= 0 || ! $serviceModel->existsById($serviceId)) {
+            if ($serviceId < 0 || ! $serviceModel->existsById($serviceId)) {
                 return false;
             }
 
@@ -652,7 +830,7 @@ class FamilyController extends BaseController
 
             $id = (int) $item;
 
-            if ($id <= 0) {
+            if ($id < 0) {
                 return null;
             }
 
@@ -693,13 +871,13 @@ class FamilyController extends BaseController
         return $this->userExists((int) session()->get('user_id'));
     }
 
-    private function buildFamilyData(int $headId): ?array
+    private function buildFamilyData(int $headId, string $visibility = 'active'): ?array
     {
         $memberModel = new MemberModel();
         $memberServiceModel = new MemberServiceModel();
         $serviceModel = new ServiceModel();
 
-        $familyMembers = $memberModel->getFamilyMembers($headId);
+        $familyMembers = $memberModel->getFamilyMembers($headId, $visibility);
 
         if ($familyMembers === []) {
             return null;
@@ -754,16 +932,20 @@ class FamilyController extends BaseController
 
     private function familyRouteBase(): string
     {
-        $path = trim($this->request->getUri()->getPath(), '/');
-
-        return str_starts_with($path, 'employee/') ? 'employee/manage-family' : 'admin/manage-family';
+        return $this->isEmployeeRequestPath() ? 'employee/manage-family' : 'admin/manage-family';
     }
 
     private function familyDashboardPath(): string
     {
+        return $this->isEmployeeRequestPath() ? 'employee/workspace' : 'admin/dashboard';
+    }
+
+    private function isEmployeeRequestPath(): bool
+    {
         $path = trim($this->request->getUri()->getPath(), '/');
 
-        return str_starts_with($path, 'employee/') ? 'employee/workspace' : 'admin/dashboard';
+        return str_starts_with($path, 'employee/')
+            || str_contains('/' . $path, '/employee/');
     }
 
     private function userExists(int $userId): bool

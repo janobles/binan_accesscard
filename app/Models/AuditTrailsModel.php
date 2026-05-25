@@ -35,9 +35,17 @@ class AuditTrailsModel extends Model
         ?string $ipAddress = null,
         ?string $userAgent = null
     ): bool {
+        $memberId = $this->memberIdValue($memberId);
+
+        if ($memberId === null && ! $this->isMemberIdNullable()) {
+            log_message('error', 'Audit trail skipped: audit_trails.memberID is required but no affected member was supplied.');
+
+            return false;
+        }
+
         $payload = [
             'userID' => $userId,
-            'memberID' => $this->memberIdValue($memberId),
+            'memberID' => $memberId,
             'user_action' => $action,
             'description' => $description,
             'ip_address' => $ipAddress,
@@ -92,26 +100,11 @@ class AuditTrailsModel extends Model
 
     private function memberIdValue(?int $memberId): ?int
     {
-        if ($memberId !== null && $memberId > 0) {
+        if ($memberId !== null && $memberId > 0 && $this->memberExists($memberId)) {
             return $memberId;
         }
 
-        if ($this->isMemberIdNullable()) {
-            return null;
-        }
-
-        if (! $this->db->tableExists('member')) {
-            return null;
-        }
-
-        $member = $this->db->table('member')
-            ->select('memberID')
-            ->orderBy('memberID', 'ASC')
-            ->limit(1)
-            ->get()
-            ->getRowArray();
-
-        return isset($member['memberID']) ? (int) $member['memberID'] : null;
+        return null;
     }
 
     private function isMemberIdNullable(): bool
@@ -127,23 +120,26 @@ class AuditTrailsModel extends Model
 
     private function withNames(array $rows): array
     {
-        $usernames = $this->usernameMap(array_column($rows, 'userID'));
+        $users = $this->userMap(array_column($rows, 'userID'));
         $memberNames = $this->memberNameMap(array_column($rows, 'memberID'));
 
         foreach ($rows as &$row) {
             $userId = (int) ($row['userID'] ?? 0);
             $memberId = (int) ($row['memberID'] ?? 0);
             $memberName = $memberNames[$memberId] ?? ['firstname' => '', 'lastname' => ''];
+            $user = $users[$userId] ?? ['username' => '', 'role' => ''];
 
-            $row['username'] = $usernames[$userId] ?? '';
+            $row['username'] = $user['username'];
+            $row['user_role'] = $user['role'];
             $row['firstname'] = $memberName['firstname'];
             $row['lastname'] = $memberName['lastname'];
+            $row['member_name'] = $this->formatMemberName($memberName);
         }
 
         return $rows;
     }
 
-    private function usernameMap(array $userIds): array
+    private function userMap(array $userIds): array
     {
         $userIds = $this->positiveUniqueIds($userIds);
 
@@ -152,7 +148,7 @@ class AuditTrailsModel extends Model
         }
 
         $users = $this->db->table('users')
-            ->select('userID, username')
+            ->select('userID, username, role')
             ->whereIn('userID', $userIds)
             ->get()
             ->getResultArray();
@@ -160,7 +156,10 @@ class AuditTrailsModel extends Model
         $map = [];
 
         foreach ($users as $user) {
-            $map[(int) $user['userID']] = (string) $user['username'];
+            $map[(int) $user['userID']] = [
+                'username' => (string) $user['username'],
+                'role' => (string) ($user['role'] ?? ''),
+            ];
         }
 
         return $map;
@@ -190,6 +189,25 @@ class AuditTrailsModel extends Model
         }
 
         return $map;
+    }
+
+    private function memberExists(int $memberId): bool
+    {
+        if (! $this->db->tableExists('member')) {
+            return false;
+        }
+
+        return $this->db->table('member')
+            ->where('memberID', $memberId)
+            ->countAllResults() > 0;
+    }
+
+    private function formatMemberName(array $memberName): string
+    {
+        return trim(implode(' ', array_filter([
+            (string) ($memberName['firstname'] ?? ''),
+            (string) ($memberName['lastname'] ?? ''),
+        ], static fn (string $value): bool => trim($value) !== '')));
     }
 
     private function positiveUniqueIds(array $ids): array

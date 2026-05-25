@@ -1,6 +1,39 @@
 <?php
-helper('dashboard_view');
-extract(employee_dashboard_view_data(get_defined_vars()), EXTR_OVERWRITE);
+$username = $user['username'] ?? 'Employee';
+$activePage = $activePage ?? 'dashboard';
+$pageTitle = $pageTitle ?? ($activePage === 'dashboard' ? 'Workspace' : ucwords(str_replace('-', ' ', $activePage)));
+$navActive = $navActive ?? [];
+$stats = $stats ?? ['families' => 0, 'members' => 0, 'sectors' => 0, 'assistance' => 0];
+$recentFamilies = $recentFamilies ?? [];
+$myAudits = $myAudits ?? [];
+$familyFormViewData = $familyFormViewData ?? [];
+$searchTerm = $searchTerm ?? '';
+$searchFilters = $searchFilters ?? [];
+$auditActionOptions = $auditActionOptions ?? [];
+$sectorOptions = $familyFormViewData['sectorOptions'] ?? [];
+$hasSearchFilters = $searchTerm !== '' || array_filter($searchFilters, static fn ($value): bool => trim((string) $value) !== '') !== [];
+$canCreateFamily = $canCreateFamily ?? false;
+$idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
+$selectedFilterDate = (string) ($searchFilters['date'] ?? $searchFilters['date_from'] ?? '');
+$formatDate = static function (mixed $value): string {
+    $timestamp = strtotime((string) $value);
+
+    return $timestamp === false ? '' : date('Y-m-d', $timestamp);
+};
+$formatTime = static function (mixed $value): string {
+    $timestamp = strtotime((string) $value);
+
+    return $timestamp === false ? '' : date('h:i A', $timestamp);
+};
+$formatAuditMember = static function (array $audit): string {
+    $memberName = trim((string) ($audit['member_name'] ?? ''));
+
+    if ($memberName === '') {
+        $memberName = trim((string) ($audit['firstname'] ?? '') . ' ' . (string) ($audit['lastname'] ?? ''));
+    }
+
+    return $memberName === '' ? '-' : $memberName;
+};
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -31,7 +64,7 @@ extract(employee_dashboard_view_data(get_defined_vars()), EXTR_OVERWRITE);
         </div>
         <div class="sidebar-footer">
             <div class="sidebar-user"><?= esc($username) ?> &middot; Employee</div>
-            <a href="<?= site_url('logout') ?>" class="btn btn-outline-light btn-sm w-100">Logout</a>
+            <a href="<?= site_url('logout') ?>" class="btn btn-outline-light btn-sm w-100 js-logout-link">Logout</a>
         </div>
     </aside>
 
@@ -84,10 +117,7 @@ extract(employee_dashboard_view_data(get_defined_vars()), EXTR_OVERWRITE);
                             </select>
                         </div>
                         <div class="col-md-3 col-lg-2">
-                            <input class="form-control" type="date" name="date_from" value="<?= esc((string) ($searchFilters['date_from'] ?? '')) ?>">
-                        </div>
-                        <div class="col-md-3 col-lg-2">
-                            <input class="form-control" type="date" name="date_to" value="<?= esc((string) ($searchFilters['date_to'] ?? '')) ?>">
+                            <input class="form-control" type="date" name="date" value="<?= esc($selectedFilterDate) ?>" aria-label="Filter by date">
                         </div>
                         <div class="col-auto">
                             <button class="btn btn-primary" type="submit">Search</button>
@@ -100,19 +130,18 @@ extract(employee_dashboard_view_data(get_defined_vars()), EXTR_OVERWRITE);
                     </form>
                     <div class="table-responsive">
                         <table class="table table-sm">
-                            <thead><tr><th>Head</th><th>Barangay</th><th>Sector</th><th>Date</th><th>Time</th></tr></thead>
+                            <thead><tr><th>Head</th><th>Sector</th><th>Date</th><th>Time</th></tr></thead>
                             <tbody>
                                 <?php foreach ($recentFamilies as $family): ?>
                                     <tr>
                                         <td><?= esc(($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? '')) ?></td>
-                                        <td><?= esc((string) ($family['barangay'] ?? '')) ?></td>
                                         <td><?= esc((string) ($family['sector_name'] ?? '')) ?></td>
                                         <td><?= esc($formatDate($family['dt_created'] ?? '')) ?></td>
                                         <td><?= esc($formatTime($family['dt_created'] ?? '')) ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                                 <?php if ($recentFamilies === []): ?>
-                                    <tr><td colspan="5" class="text-center text-muted"><?= $searchTerm !== '' || $hasSearchFilters ? 'No matching family records found.' : 'No family records yet.' ?></td></tr>
+                                    <tr><td colspan="4" class="text-center text-muted"><?= $searchTerm !== '' || $hasSearchFilters ? 'No matching family records found.' : 'No family records yet.' ?></td></tr>
                                 <?php endif; ?>
                             </tbody>
                         </table>
@@ -126,18 +155,19 @@ extract(employee_dashboard_view_data(get_defined_vars()), EXTR_OVERWRITE);
                     </div>
                     <div class="table-responsive">
                         <table class="table table-sm">
-                            <thead><tr><th>Action</th><th>Description</th><th>Date</th><th>Time</th></tr></thead>
+                            <thead><tr><th>Action</th><th>Member</th><th>Description</th><th>Date</th><th>Time</th></tr></thead>
                             <tbody>
                                 <?php foreach ($myAudits as $audit): ?>
                                     <tr>
                                         <td><?= esc((string) ($audit['user_action'] ?? '')) ?></td>
+                                        <td><?= esc($formatAuditMember($audit)) ?></td>
                                         <td><?= esc((string) ($audit['description'] ?? '')) ?></td>
                                         <td><?= esc($formatDate($audit['dt_created'] ?? '')) ?></td>
                                         <td><?= esc($formatTime($audit['dt_created'] ?? '')) ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                                 <?php if ($myAudits === []): ?>
-                                    <tr><td colspan="4" class="text-center text-muted">No activity yet.</td></tr>
+                                    <tr><td colspan="5" class="text-center text-muted">No activity yet.</td></tr>
                                 <?php endif; ?>
                             </tbody>
                         </table>
@@ -160,23 +190,21 @@ extract(employee_dashboard_view_data(get_defined_vars()), EXTR_OVERWRITE);
             <?php if ($activePage === 'activity'): ?>
                 <div class="panel">
                     <div class="section-title mt-0"><span>My Recent Activity</span></div>
-                    <form class="row g-2 mb-3" method="get" action="<?= site_url('employee/activity') ?>">
+                    <form class="row g-2 mb-3 js-audit-filter-form" method="get" action="<?= site_url('employee/activity') ?>">
                         <div class="col-md-6 col-lg-4">
                             <input class="form-control" type="search" name="q" value="<?= esc($searchTerm) ?>" placeholder="Search activity by action or description">
                         </div>
                         <div class="col-md-4 col-lg-3">
-                            <select class="form-select" name="action">
+                            <select class="form-select js-audit-action-filter" name="action">
                                 <option value="">All actions</option>
                                 <?php foreach ($auditActionOptions as $action): ?>
-                                    <option value="<?= esc((string) $action) ?>" <?= (string) ($searchFilters['action'] ?? '') === (string) $action ? 'selected' : '' ?>><?= esc((string) $action) ?></option>
+                                    <?php $action = trim((string) $action); ?>
+                                    <option value="<?= esc($action) ?>" <?= trim((string) ($searchFilters['action'] ?? '')) === $action ? 'selected' : '' ?>><?= esc($action) ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
                         <div class="col-md-3 col-lg-2">
-                            <input class="form-control" type="date" name="date_from" value="<?= esc((string) ($searchFilters['date_from'] ?? '')) ?>">
-                        </div>
-                        <div class="col-md-3 col-lg-2">
-                            <input class="form-control" type="date" name="date_to" value="<?= esc((string) ($searchFilters['date_to'] ?? '')) ?>">
+                            <input class="form-control" type="date" name="date" value="<?= esc($selectedFilterDate) ?>" aria-label="Filter by date">
                         </div>
                         <div class="col-auto">
                             <button class="btn btn-primary" type="submit">Search</button>
@@ -189,18 +217,19 @@ extract(employee_dashboard_view_data(get_defined_vars()), EXTR_OVERWRITE);
                     </form>
                     <div class="table-responsive">
                         <table class="table table-sm">
-                            <thead><tr><th>Action</th><th>Description</th><th>Date</th><th>Time</th></tr></thead>
+                            <thead><tr><th>Action</th><th>Member</th><th>Description</th><th>Date</th><th>Time</th></tr></thead>
                             <tbody>
                                 <?php foreach ($myAudits as $audit): ?>
                                     <tr>
                                         <td><?= esc((string) ($audit['user_action'] ?? '')) ?></td>
+                                        <td><?= esc($formatAuditMember($audit)) ?></td>
                                         <td><?= esc((string) ($audit['description'] ?? '')) ?></td>
                                         <td><?= esc($formatDate($audit['dt_created'] ?? '')) ?></td>
                                         <td><?= esc($formatTime($audit['dt_created'] ?? '')) ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                                 <?php if ($myAudits === []): ?>
-                                    <tr><td colspan="4" class="text-center text-muted"><?= $hasSearchFilters ? 'No matching activity found.' : 'No activity yet.' ?></td></tr>
+                                    <tr><td colspan="5" class="text-center text-muted"><?= $hasSearchFilters ? 'No matching activity found.' : 'No activity yet.' ?></td></tr>
                                 <?php endif; ?>
                             </tbody>
                         </table>
@@ -238,5 +267,18 @@ extract(employee_dashboard_view_data(get_defined_vars()), EXTR_OVERWRITE);
 <script src="<?= base_url('assets/js/session-timeout.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/session-timeout.js') ?>" data-timeout-seconds="<?= esc((string) $idleTimeoutSeconds) ?>" data-logout-url="<?= site_url('logout?timeout=1') ?>" data-keep-alive-url="<?= site_url('session/keep-alive') ?>"></script>
 <script src="<?= base_url('assets/js/dashboard/dashboard-modal-loader.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/dashboard-modal-loader.js') ?>"></script>
 <script src="<?= base_url('assets/js/dashboard/manage-family-modal.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/manage-family-modal.js') ?>"></script>
+<script>
+(function () {
+    document.querySelectorAll('.js-audit-action-filter').forEach(function (select) {
+        select.addEventListener('change', function () {
+            const form = select.closest('.js-audit-filter-form');
+
+            if (form) {
+                form.submit();
+            }
+        });
+    });
+})();
+</script>
 </body>
 </html>

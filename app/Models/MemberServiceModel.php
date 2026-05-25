@@ -20,7 +20,7 @@ class MemberServiceModel extends Model
 
     protected $validationRules = [
         'memberID' => 'required|is_natural_no_zero',
-        'serviceID' => 'required|is_natural_no_zero',
+        'serviceID' => 'required|is_natural',
     ];
 
     public function hasTable(): bool
@@ -160,7 +160,7 @@ class MemberServiceModel extends Model
             $memberId = (int) ($row['memberID'] ?? 0);
             $serviceId = (int) ($row['serviceID'] ?? 0);
 
-            if ($memberId <= 0 || $serviceId <= 0) {
+            if ($memberId <= 0 || $serviceId < 0) {
                 continue;
             }
 

@@ -21,17 +21,17 @@
                 <p class="login-error"><?= esc(session()->getFlashdata('error')) ?></p>
             <?php endif; ?>
 
-            <form method="post" action="<?= site_url('login') ?>" class="login-form">
+            <form method="post" action="<?= site_url('login') ?>" class="login-form" autocomplete="on">
                 <?= csrf_field() ?>
 
                 <div class="form-group">
                     <label for="username">Username</label>
-                    <input type="text" id="username" name="username" value="<?= esc(old('username')) ?>" required>
+                    <input type="text" id="username" name="username" value="<?= esc(old('username')) ?>" autocomplete="username" autocapitalize="none" spellcheck="false" required>
                 </div>
 
                 <div class="form-group">
                     <label for="password">Password</label>
-                    <input type="password" id="password" name="password" required>
+                    <input type="password" id="password" name="password" autocomplete="current-password" required>
                 </div>
 
                 <button type="submit" class="login-button">Login</button>

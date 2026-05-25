@@ -1,6 +1,56 @@
 <?php
-helper(['assets', 'dashboard_view']);
-extract(admin_dashboard_view_data(get_defined_vars()), EXTR_OVERWRITE);
+helper('assets');
+$user = $user ?? [];
+$username = $user['username'] ?? 'Admin';
+$activePage = $activePage ?? 'dashboard';
+$pageTitle = $pageTitle ?? 'Dashboard';
+$modeLabel = $modeLabel ?? 'Admin Console';
+$canManageAccounts = $canManageAccounts ?? false;
+$navActive = $navActive ?? [];
+$stats = $stats ?? ['families' => 0, 'members' => 0, 'sectors' => 0, 'assistance' => 0];
+$recentFamilies = $recentFamilies ?? [];
+$recentAudits = $recentAudits ?? [];
+$adminAccounts = $adminAccounts ?? [];
+$employeeAccounts = $employeeAccounts ?? [];
+$linkableMembers = $linkableMembers ?? [];
+$familyFormViewData = $familyFormViewData ?? [];
+$searchTerm = $searchTerm ?? '';
+$searchFilters = $searchFilters ?? [];
+$auditActionOptions = $auditActionOptions ?? [];
+$sectorOptions = $familyFormViewData['sectorOptions'] ?? [];
+$hasSearchFilters = $searchTerm !== '' || array_filter($searchFilters, static fn ($value): bool => trim((string) $value) !== '') !== [];
+$canCreateFamily = $canCreateFamily ?? false;
+$idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
+$selectedFilterDate = (string) ($searchFilters['date'] ?? $searchFilters['date_from'] ?? '');
+$formatDate = static function (mixed $value): string {
+    $timestamp = strtotime((string) $value);
+
+    return $timestamp === false ? '' : date('Y-m-d', $timestamp);
+};
+$formatTime = static function (mixed $value): string {
+    $timestamp = strtotime((string) $value);
+
+    return $timestamp === false ? '' : date('h:i A', $timestamp);
+};
+$formatAuditMember = static function (array $audit): string {
+    $memberName = trim((string) ($audit['member_name'] ?? ''));
+
+    if ($memberName === '') {
+        $memberName = trim((string) ($audit['firstname'] ?? '') . ' ' . (string) ($audit['lastname'] ?? ''));
+    }
+
+    return $memberName === '' ? '-' : $memberName;
+};
+$formatAuditUser = static function (array $audit): string {
+    $username = trim((string) ($audit['username'] ?? $audit['userID'] ?? ''));
+    $role = trim((string) ($audit['user_role'] ?? ''));
+
+    if ($role === 'User') {
+        $role = 'Employee';
+    }
+
+    return $role === '' ? $username : $username . ' (' . $role . ')';
+};
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -29,14 +79,14 @@ extract(admin_dashboard_view_data(get_defined_vars()), EXTR_OVERWRITE);
                 <?php endif; ?>
                 <a class="nav-link <?= esc($navActive['family-entry'] ?? '') ?> js-open-family-modal" href="<?= site_url('admin/manage-family') ?>" data-modal-url="<?= site_url('admin/manage-family?partial=1') ?>" data-modal-title="Add Family">Add Family</a>
                 <a class="nav-link <?= esc($navActive['family-manage'] ?? '') ?> js-open-family-list" href="<?= site_url('admin/manage-family/list') ?>" data-modal-url="<?= site_url('admin/manage-family/list?partial=1') ?>" data-modal-title="Manage Families">Manage Family</a>
-                <a class="nav-link <?= esc($navActive['sectors'] ?? '') ?> js-open-sectors-modal" href="<?= site_url('admin/sectors') ?>" data-modal-url="<?= site_url('admin/sectors?partial=1') ?>" data-modal-title="Sector Management">Sector Management</a>
-                <a class="nav-link <?= esc($navActive['services'] ?? '') ?> js-open-services-modal" href="<?= site_url('admin/services') ?>" data-modal-url="<?= site_url('admin/services?partial=1') ?>" data-modal-title="Service Management">Service Management</a>
+                <a class="nav-link <?= esc($navActive['sectors'] ?? '') ?> js-open-sectors-modal" href="<?= site_url('admin/sectors') ?>" data-modal-url="<?= site_url('admin/sectors?partial=1') ?>" data-modal-title="Sector List">Sectors</a>
+                <a class="nav-link <?= esc($navActive['services'] ?? '') ?> js-open-services-modal" href="<?= site_url('admin/services') ?>" data-modal-url="<?= site_url('admin/services?partial=1') ?>" data-modal-title="Service List">Services</a>
                 <a class="nav-link <?= esc($navActive['audit-trails'] ?? '') ?> js-open-audit-modal" href="<?= site_url('admin/audit-trails') ?>" data-modal-url="<?= site_url('admin/audit-trails?partial=1') ?>" data-modal-title="Audit Trails">Audit Trails</a>
             </nav>
         </div>
         <div class="sidebar-footer">
             <div class="sidebar-user"><?= esc($username) ?> &middot; <?= esc($modeLabel) ?></div>
-            <a href="<?= site_url('logout') ?>" class="btn btn-outline-light btn-sm w-100">Logout</a>
+            <a href="<?= site_url('logout') ?>" class="btn btn-outline-light btn-sm w-100 js-logout-link">Logout</a>
         </div>
     </aside>
 
@@ -86,10 +136,7 @@ extract(admin_dashboard_view_data(get_defined_vars()), EXTR_OVERWRITE);
                             </select>
                         </div>
                         <div class="col-md-3 col-lg-2">
-                            <input class="form-control" type="date" name="date_from" value="<?= esc((string) ($searchFilters['date_from'] ?? '')) ?>">
-                        </div>
-                        <div class="col-md-3 col-lg-2">
-                            <input class="form-control" type="date" name="date_to" value="<?= esc((string) ($searchFilters['date_to'] ?? '')) ?>">
+                            <input class="form-control" type="date" name="date" value="<?= esc($selectedFilterDate) ?>" aria-label="Filter by date">
                         </div>
                         <div class="col-auto">
                             <button class="btn btn-primary" type="submit">Search</button>
@@ -102,19 +149,18 @@ extract(admin_dashboard_view_data(get_defined_vars()), EXTR_OVERWRITE);
                     </form>
                     <div class="table-responsive">
                         <table class="table table-sm">
-                            <thead><tr><th>Head</th><th>Barangay</th><th>Sector</th><th>Date</th><th>Time</th></tr></thead>
+                            <thead><tr><th>Head</th><th>Sector</th><th>Date</th><th>Time</th></tr></thead>
                             <tbody>
                                 <?php foreach ($recentFamilies as $family): ?>
                                     <tr>
                                         <td><?= esc(($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? '')) ?></td>
-                                        <td><?= esc((string) ($family['barangay'] ?? '')) ?></td>
                                         <td><?= esc((string) ($family['sector_name'] ?? '')) ?></td>
                                         <td><?= esc($formatDate($family['dt_created'] ?? '')) ?></td>
                                         <td><?= esc($formatTime($family['dt_created'] ?? '')) ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                                 <?php if ($recentFamilies === []): ?>
-                                    <tr><td colspan="5" class="text-center text-muted"><?= $searchTerm !== '' || $hasSearchFilters ? 'No matching family records found.' : 'No family records yet.' ?></td></tr>
+                                    <tr><td colspan="4" class="text-center text-muted"><?= $searchTerm !== '' || $hasSearchFilters ? 'No matching family records found.' : 'No family records yet.' ?></td></tr>
                                 <?php endif; ?>
                             </tbody>
                         </table>
@@ -128,11 +174,12 @@ extract(admin_dashboard_view_data(get_defined_vars()), EXTR_OVERWRITE);
                     </div>
                     <div class="table-responsive">
                         <table class="table table-sm">
-                            <thead><tr><th>User</th><th>Action</th><th>Description</th><th>Date</th><th>Time</th></tr></thead>
+                            <thead><tr><th>User</th><th>Member</th><th>Action</th><th>Description</th><th>Date</th><th>Time</th></tr></thead>
                             <tbody>
                                 <?php foreach ($recentAudits as $audit): ?>
                                     <tr>
-                                        <td><?= esc((string) ($audit['username'] ?? $audit['userID'] ?? '')) ?></td>
+                                        <td><?= esc($formatAuditUser($audit)) ?></td>
+                                        <td><?= esc($formatAuditMember($audit)) ?></td>
                                         <td><?= esc((string) ($audit['user_action'] ?? '')) ?></td>
                                         <td><?= esc((string) ($audit['description'] ?? '')) ?></td>
                                         <td><?= esc($formatDate($audit['dt_created'] ?? '')) ?></td>
@@ -140,7 +187,7 @@ extract(admin_dashboard_view_data(get_defined_vars()), EXTR_OVERWRITE);
                                     </tr>
                                 <?php endforeach; ?>
                                 <?php if ($recentAudits === []): ?>
-                                    <tr><td colspan="5" class="text-center text-muted">No activity yet.</td></tr>
+                                    <tr><td colspan="6" class="text-center text-muted">No activity yet.</td></tr>
                                 <?php endif; ?>
                             </tbody>
                         </table>
@@ -152,6 +199,7 @@ extract(admin_dashboard_view_data(get_defined_vars()), EXTR_OVERWRITE);
                 <?= view('Dashboard/accounts', [
                     'adminAccounts' => $adminAccounts,
                     'employeeAccounts' => $employeeAccounts,
+                    'linkableMembers' => $linkableMembers,
                     'searchTerm' => $searchTerm,
                     'searchFilters' => $searchFilters,
                 ]) ?>
@@ -215,8 +263,6 @@ extract(admin_dashboard_view_data(get_defined_vars()), EXTR_OVERWRITE);
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="<?= base_url('assets/js/dashboard/family-form-ui.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form-ui.js') ?>"></script>
 <script src="<?= base_url('assets/js/dashboard/family-form.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form.js') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/sector-management-view.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/sector-management-view.js') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/service-management-view.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/service-management-view.js') ?>"></script>
 <script src="<?= base_url('assets/js/session-timeout.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/session-timeout.js') ?>" data-timeout-seconds="<?= esc((string) $idleTimeoutSeconds) ?>" data-logout-url="<?= site_url('logout?timeout=1') ?>" data-keep-alive-url="<?= site_url('session/keep-alive') ?>"></script>
 <script src="<?= base_url('assets/js/dashboard/dashboard-modal-loader.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/dashboard-modal-loader.js') ?>"></script>
 <script src="<?= base_url('assets/js/dashboard/manage-family-modal.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/manage-family-modal.js') ?>"></script>

@@ -6,7 +6,7 @@
     transform: translate(-50%, -50%) !important;
     margin: 0;
     max-width: none;
-    width: min(1120px, 92vw);
+    width: min(1240px, 94vw);
     height: min(760px, 86vh);
 }
 

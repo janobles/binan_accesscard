@@ -23,7 +23,7 @@ class DashboardModel
     {
         return [
             'families' => $this->countFamilies(),
-            'members' => $this->countTable('member'),
+            'members' => $this->countMembers(),
             'sectors' => $this->countTable('sector'),
             'assistance' => $this->countTable('member_services'),
         ];
@@ -31,12 +31,14 @@ class DashboardModel
 
     public function recentFamilies(int $limit = 10): array
     {
-        if (! $this->db->tableExists('view_member_dashboard')) {
+        if (! $this->db->tableExists('member')) {
             return [];
         }
 
-        $rows = $this->db->table('view_member_dashboard')
-            ->where('memberID = headID')
+        $rows = $this->db->table('member')
+            ->select('memberID, firstname, lastname, contactnumber, relationship, headID, sectorID, dt_created, dt_updated')
+            ->where('memberID = headID', null, false)
+            ->where('dt_deleted IS NULL', null, false)
             ->orderBy('memberID', 'DESC')
             ->limit($limit)
             ->get()
@@ -47,12 +49,24 @@ class DashboardModel
 
     private function countFamilies(): int
     {
-        if (! $this->db->tableExists('view_member_dashboard')) {
+        if (! $this->db->tableExists('member')) {
             return 0;
         }
 
-        return $this->db->table('view_member_dashboard')
-            ->where('memberID = headID')
+        return $this->db->table('member')
+            ->where('memberID = headID', null, false)
+            ->where('dt_deleted IS NULL', null, false)
+            ->countAllResults();
+    }
+
+    private function countMembers(): int
+    {
+        if (! $this->db->tableExists('member')) {
+            return 0;
+        }
+
+        return $this->db->table('member')
+            ->where('dt_deleted IS NULL', null, false)
             ->countAllResults();
     }
 

@@ -1,6 +1,36 @@
 <?php
-helper('dashboard_view');
-extract(accounts_view_data(get_defined_vars()), EXTR_OVERWRITE);
+$adminAccounts = $adminAccounts ?? [];
+$employeeAccounts = $employeeAccounts ?? [];
+$linkableMembers = $linkableMembers ?? [];
+$searchTerm = $searchTerm ?? '';
+$searchFilters = $searchFilters ?? [];
+$hasSearchFilters = $searchTerm !== '' || array_filter($searchFilters, static fn ($value): bool => trim((string) $value) !== '') !== [];
+$formatDate = static function (mixed $value): string {
+    $timestamp = strtotime((string) $value);
+
+    return $timestamp === false ? '' : date('Y-m-d', $timestamp);
+};
+$formatTime = static function (mixed $value): string {
+    $timestamp = strtotime((string) $value);
+
+    return $timestamp === false ? '' : date('h:i A', $timestamp);
+};
+$formatMemberName = static function (array $member): string {
+    $memberName = trim((string) ($member['member_name'] ?? ''));
+
+    if ($memberName !== '') {
+        return $memberName;
+    }
+
+    $memberName = trim(implode(' ', array_filter([
+        (string) ($member['firstname'] ?? ''),
+        (string) ($member['middlename'] ?? ''),
+        (string) ($member['lastname'] ?? ''),
+        (string) ($member['suffix'] ?? ''),
+    ], static fn (string $value): bool => trim($value) !== '')));
+
+    return $memberName === '' ? '-' : $memberName;
+};
 ?>
 
 <div class="panel mb-3">
@@ -48,6 +78,15 @@ extract(accounts_view_data(get_defined_vars()), EXTR_OVERWRITE);
                         <label class="form-label">Password</label>
                         <input type="password" class="form-control" name="password" required minlength="8">
                     </div>
+                    <div>
+                        <label class="form-label">Linked Member</label>
+                        <select class="form-select" name="memberID">
+                            <option value="">None</option>
+                            <?php foreach ($linkableMembers as $member): ?>
+                                <option value="<?= esc((string) ($member['memberID'] ?? '')) ?>"><?= esc($formatMemberName($member)) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
                     <div class="account-action">
                         <button class="btn btn-primary w-100" type="submit">Create</button>
                     </div>
@@ -68,6 +107,15 @@ extract(accounts_view_data(get_defined_vars()), EXTR_OVERWRITE);
                         <label class="form-label">Password</label>
                         <input type="password" class="form-control" name="password" required minlength="8">
                     </div>
+                    <div>
+                        <label class="form-label">Linked Member</label>
+                        <select class="form-select" name="memberID">
+                            <option value="">None</option>
+                            <?php foreach ($linkableMembers as $member): ?>
+                                <option value="<?= esc((string) ($member['memberID'] ?? '')) ?>"><?= esc($formatMemberName($member)) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
                     <div class="account-action">
                         <button class="btn btn-primary w-100" type="submit">Create</button>
                     </div>
@@ -82,18 +130,19 @@ extract(accounts_view_data(get_defined_vars()), EXTR_OVERWRITE);
                 <div class="section-title mt-0"><span>Admin Accounts</span></div>
                 <div class="table-responsive">
                     <table class="table table-sm">
-                        <thead><tr><th>Username</th><th>Status</th><th>Date</th><th>Time</th></tr></thead>
+                        <thead><tr><th>Username</th><th>Linked Member</th><th>Status</th><th>Date</th><th>Time</th></tr></thead>
                         <tbody>
                             <?php foreach ($adminAccounts as $account): ?>
                                 <tr>
                                     <td><?= esc((string) ($account['username'] ?? '')) ?></td>
+                                    <td><?= esc($formatMemberName($account)) ?></td>
                                     <td><?= esc((string) ($account['isactive'] ?? '')) ?></td>
                                     <td><?= esc($formatDate($account['dt_created'] ?? '')) ?></td>
                                     <td><?= esc($formatTime($account['dt_created'] ?? '')) ?></td>
                                 </tr>
                             <?php endforeach; ?>
                             <?php if ($adminAccounts === []): ?>
-                                <tr><td colspan="4" class="text-center text-muted"><?= $hasSearchFilters ? 'No matching admin accounts found.' : 'No admin accounts found.' ?></td></tr>
+                                <tr><td colspan="5" class="text-center text-muted"><?= $hasSearchFilters ? 'No matching admin accounts found.' : 'No admin accounts found.' ?></td></tr>
                             <?php endif; ?>
                         </tbody>
                     </table>
@@ -105,18 +154,19 @@ extract(accounts_view_data(get_defined_vars()), EXTR_OVERWRITE);
                 <div class="section-title mt-0"><span>Employee Accounts</span></div>
                 <div class="table-responsive">
                     <table class="table table-sm">
-                        <thead><tr><th>Username</th><th>Status</th><th>Date</th><th>Time</th></tr></thead>
+                        <thead><tr><th>Username</th><th>Linked Member</th><th>Status</th><th>Date</th><th>Time</th></tr></thead>
                         <tbody>
                             <?php foreach ($employeeAccounts as $account): ?>
                                 <tr>
                                     <td><?= esc((string) ($account['username'] ?? '')) ?></td>
+                                    <td><?= esc($formatMemberName($account)) ?></td>
                                     <td><?= esc((string) ($account['isactive'] ?? '')) ?></td>
                                     <td><?= esc($formatDate($account['dt_created'] ?? '')) ?></td>
                                     <td><?= esc($formatTime($account['dt_created'] ?? '')) ?></td>
                                 </tr>
                             <?php endforeach; ?>
                             <?php if ($employeeAccounts === []): ?>
-                                <tr><td colspan="4" class="text-center text-muted"><?= $hasSearchFilters ? 'No matching employee accounts found.' : 'No employee accounts found.' ?></td></tr>
+                                <tr><td colspan="5" class="text-center text-muted"><?= $hasSearchFilters ? 'No matching employee accounts found.' : 'No employee accounts found.' ?></td></tr>
                             <?php endif; ?>
                         </tbody>
                     </table>

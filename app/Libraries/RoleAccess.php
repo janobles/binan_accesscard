@@ -4,21 +4,61 @@ namespace App\Libraries;
 
 use CodeIgniter\HTTP\RedirectResponse;
 
-class RoleAccess
+trait HomeRoleAccessTrait
 {
-    public static function normalizeRole(string $role): ?string
+    private function requireRole(array $allowedRoles): ?RedirectResponse
     {
-        $normalizedRole = strtolower(trim($role));
+        if (! session()->get('is_logged_in')) {
+            return redirect()->to(site_url('login'))->with('error', 'Please login first.');
+        }
 
-        return match ($normalizedRole) {
-            'developer'              => 'Developer',
-            'admin', 'administrator' => 'Admin',
-            'user', 'employee'       => 'User',
-            default                  => null,
-        };
+        if (! $this->sessionUserExists()) {
+            session()->destroy();
+
+            return redirect()->to(site_url('login'))
+                ->with('error', 'Your session is no longer valid after the database update. Please login again.');
+        }
+
+        $currentRole = $this->normalizeRole((string) session()->get('role'));
+        $normalizedAllowedRoles = array_values(array_filter(array_map(
+            fn (string $role): ?string => $this->normalizeRole($role),
+            $allowedRoles
+        )));
+
+        if ($currentRole === null) {
+            session()->destroy();
+
+            return redirect()->to(site_url('login'))
+                ->with('error', 'Your account role is invalid. Please login again or contact an administrator.');
+        }
+
+        if (! in_array($currentRole, $normalizedAllowedRoles, true)) {
+            return $this->redirectByRole($currentRole)
+                ->with('error', 'You do not have access to that page.');
+        }
+
+        return null;
     }
 
-    public static function sessionUserExists(): bool
+    private function redirectByRole(string $role): RedirectResponse
+    {
+        $normalizedRole = $this->normalizeRole($role);
+
+        if ($normalizedRole === 'User') {
+            return redirect()->to(site_url('employee/workspace'));
+        }
+
+        if ($normalizedRole === 'Admin' || $normalizedRole === 'Developer') {
+            return redirect()->to(site_url('admin/dashboard'));
+        }
+
+        session()->destroy();
+
+        return redirect()->to(site_url('login'))
+            ->with('error', 'Your account role is invalid. Please contact an administrator.');
+    }
+
+    private function sessionUserExists(): bool
     {
         $userId = (int) session()->get('user_id');
 
@@ -37,55 +77,15 @@ class RoleAccess
             ->countAllResults() > 0;
     }
 
-    public static function requireRole(array $allowedRoles): ?RedirectResponse
+    private function normalizeRole(string $role): ?string
     {
-        if (! session()->get('is_logged_in')) {
-            return redirect()->to(site_url('/'))->with('error', 'Please login first.');
-        }
+        $normalizedRole = strtolower(trim($role));
 
-        if (! self::sessionUserExists()) {
-            session()->destroy();
-
-            return redirect()->to(site_url('/'))
-                ->with('error', 'Your session is no longer valid after the database update. Please login again.');
-        }
-
-        $currentRole = self::normalizeRole((string) session()->get('role'));
-        $normalizedAllowedRoles = array_values(array_filter(array_map(
-            fn (string $role): ?string => self::normalizeRole($role),
-            $allowedRoles
-        )));
-
-        if ($currentRole === null) {
-            session()->destroy();
-
-            return redirect()->to(site_url('/'))
-                ->with('error', 'Your account role is invalid. Please login again or contact an administrator.');
-        }
-
-        if (! in_array($currentRole, $normalizedAllowedRoles, true)) {
-            return self::redirectByRole($currentRole)
-                ->with('error', 'You do not have access to that page.');
-        }
-
-        return null;
-    }
-
-    public static function redirectByRole(string $role): RedirectResponse
-    {
-        $normalizedRole = self::normalizeRole($role);
-
-        if ($normalizedRole === 'User') {
-            return redirect()->to(site_url('employee/workspace'));
-        }
-
-        if ($normalizedRole === 'Admin' || $normalizedRole === 'Developer') {
-            return redirect()->to(site_url('admin'));
-        }
-
-        session()->destroy();
-
-        return redirect()->to(site_url('/'))
-            ->with('error', 'Your account role is invalid. Please contact an administrator.');
+        return match ($normalizedRole) {
+            'developer' => 'Developer',
+            'admin', 'administrator' => 'Admin',
+            'user', 'employee' => 'User',
+            default => null,
+        };
     }
 }

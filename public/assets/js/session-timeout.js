@@ -1,10 +1,12 @@
 (function () {
     const script = document.currentScript;
-    const timeoutSeconds = Number(script?.dataset.timeoutSeconds || 60);
+    const timeoutSeconds = Number(script?.dataset.timeoutSeconds || 900);
     const logoutUrl = script?.dataset.logoutUrl || 'logout?timeout=1';
     const keepAliveUrl = script?.dataset.keepAliveUrl || '';
     const timeoutMs = Math.max(1, timeoutSeconds) * 1000;
     const storageKey = 'binan_accesscard_last_activity';
+    const activityEvents = ['pointerdown', 'keydown', 'mousemove', 'wheel', 'scroll', 'touchstart'];
+    const resumeEvents = ['focus', 'pageshow', 'online'];
     let isLoggingOut = false;
     let lastWrite = 0;
     let lastKeepAlive = 0;
@@ -31,17 +33,22 @@
         keepAlive();
     }
 
-    function keepAlive() {
+    function keepAlive(force = false) {
         const currentTime = now();
         const intervalMs = Math.max(10000, Math.floor(timeoutMs / 3));
 
-        if (! keepAliveUrl || (currentTime - lastKeepAlive) < intervalMs) {
+        if (! keepAliveUrl || (! force && (currentTime - lastKeepAlive) < intervalMs)) {
             return;
         }
 
         lastKeepAlive = currentTime;
 
-        fetch(keepAliveUrl, { credentials: 'same-origin' })
+        fetch(keepAliveUrl, {
+            credentials: 'same-origin',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        })
             .then(function (response) {
                 if (response.status === 401) {
                     logout();
@@ -64,9 +71,18 @@
         window.location.href = logoutUrl;
     }
 
-    function checkTimeout() {
+    function clearActivity() {
+        localStorage.removeItem(storageKey);
+    }
+
+    function checkTimeout(validateServer = false) {
         if (isExpired()) {
             logout();
+            return;
+        }
+
+        if (validateServer) {
+            keepAlive(true);
         }
     }
 
@@ -79,26 +95,38 @@
         markActivity();
     }
 
-    if (! localStorage.getItem(storageKey)) {
-        markActivity();
-    }
+    markActivity();
 
-    ['click', 'keydown', 'mousemove', 'scroll', 'touchstart'].forEach(function (eventName) {
+    activityEvents.forEach(function (eventName) {
         window.addEventListener(eventName, handleActivity, { passive: true });
     });
 
-    window.addEventListener('focus', checkTimeout);
+    document.querySelectorAll('.js-logout-link').forEach(function (link) {
+        link.addEventListener('click', clearActivity);
+    });
+
+    resumeEvents.forEach(function (eventName) {
+        window.addEventListener(eventName, function () {
+            checkTimeout(true);
+        });
+    });
+
     document.addEventListener('visibilitychange', function () {
         if (! document.hidden) {
-            checkTimeout();
+            checkTimeout(true);
         }
     });
 
     window.addEventListener('storage', function (event) {
         if (event.key === storageKey) {
-            checkTimeout();
+            if (event.newValue === null) {
+                logout();
+                return;
+            }
+
+            checkTimeout(true);
         }
     });
 
-    window.setInterval(checkTimeout, 5000);
+    window.setInterval(checkTimeout, Math.min(5000, timeoutMs));
 })();

@@ -43,6 +43,8 @@ extract(family_form_view_data(get_defined_vars()), EXTR_OVERWRITE);
 
             <?= view('Dashboard/familyform/member-summary') ?>
 
+            <script type="application/json" id="initialFamilyData"><?= json_encode($initialFamilyData, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?></script>
+
             <div class="d-flex justify-content-end gap-2 family-form-actions">
                 <button type="button" class="btn btn-outline-secondary family-form-hidden" id="prevStepBtn">Previous</button>
                 <?php if (! $isEditMode): ?>
@@ -56,5 +58,3 @@ extract(family_form_view_data(get_defined_vars()), EXTR_OVERWRITE);
 </div>
 
 <?= view('Dashboard/familyform/member-template', $fieldViewData) ?>
-
-<script type="application/json" id="initialFamilyData"><?= json_encode($initialFamilyData, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?></script>

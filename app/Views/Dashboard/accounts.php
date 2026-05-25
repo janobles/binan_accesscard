@@ -34,7 +34,9 @@ $formatMemberName = static function (array $member): string {
 ?>
 
 <div class="panel mb-3">
-    <div class="section-title mt-0"><span>Account Management</span></div>
+    <div class="section-title mt-0">
+        <span>Account Management</span>
+    </div>
     <form class="row g-2 mb-3" method="get" action="<?= site_url('admin/accounts') ?>">
         <div class="col-md-6 col-lg-4">
             <input class="form-control" type="search" name="q" value="<?= esc($searchTerm) ?>" placeholder="Search accounts by username, role, or status">
@@ -127,10 +129,20 @@ $formatMemberName = static function (array $member): string {
     <div class="row g-3">
         <div class="col-lg-6">
             <div class="panel">
-                <div class="section-title mt-0"><span>Admin Accounts</span></div>
+                <div class="section-title mt-0">
+                    <span>Admin Accounts</span>
+                </div>
                 <div class="table-responsive">
                     <table class="table table-sm">
-                        <thead><tr><th>Username</th><th>Linked Member</th><th>Status</th><th>Date</th><th>Time</th></tr></thead>
+                        <thead>
+                            <tr>
+                                <th>Username</th>
+                                <th>Linked Member</th>
+                                <th>Status</th>
+                                <th>Date</th>
+                                <th>Time</th>
+                            </tr>
+                        </thead>
                         <tbody>
                             <?php foreach ($adminAccounts as $account): ?>
                                 <tr>
@@ -151,10 +163,20 @@ $formatMemberName = static function (array $member): string {
         </div>
         <div class="col-lg-6">
             <div class="panel">
-                <div class="section-title mt-0"><span>Employee Accounts</span></div>
+                <div class="section-title mt-0">
+                    <span>Employee Accounts</span>
+                </div>
                 <div class="table-responsive">
                     <table class="table table-sm">
-                        <thead><tr><th>Username</th><th>Linked Member</th><th>Status</th><th>Date</th><th>Time</th></tr></thead>
+                        <thead>
+                            <tr>
+                                <th>Username</th>
+                                <th>Linked Member</th>
+                                <th>Status</th>
+                                <th>Date</th>
+                                <th>Time</th>
+                            </tr>
+                        </thead>
                         <tbody>
                             <?php foreach ($employeeAccounts as $account): ?>
                                 <tr>

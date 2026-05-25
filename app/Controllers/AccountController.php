@@ -3,7 +3,7 @@
 namespace App\Controllers;
 
 use App\Models\AuditTrailsModel;
-use App\Models\UserModel;
+use App\Models\Auth\UserModel;
 use CodeIgniter\HTTP\RedirectResponse;
 use Throwable;
 

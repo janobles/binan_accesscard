@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Models;
+namespace App\Models\Auth;
 
 use CodeIgniter\Model;
 
@@ -21,7 +21,7 @@ class UserModel extends Model
     ];
     protected $useTimestamps = false;
 
-    // Used by Home::login() to authenticate staff accounts.
+    // Used by AuthController::login() to authenticate staff accounts.
     public function verifyLogin(string $username, string $password): ?array
     {
         $user = $this->where('username', $username)->first();
@@ -118,7 +118,7 @@ class UserModel extends Model
         $data = [
             'username' => $username,
             'password' => password_hash($password, PASSWORD_ARGON2ID),
-            'role' => $role,
+            'role'     => $role,
             'isactive' => $this->activeValue(),
         ];
 

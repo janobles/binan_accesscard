@@ -86,13 +86,13 @@ $listUrl = static function (string $targetStatus, int $targetPage = 1) use ($rou
     <div class="table-responsive">
         <table class="table table-sm family-list-table align-middle">
             <thead>
-            <tr>
-                <th>Head of Family</th>
-                <th>Sector</th>
-                <th>Date</th>
-                <th>Time</th>
-                <th class="text-end">Actions</th>
-            </tr>
+                <tr>
+                    <th>Head of Family</th>
+                    <th>Sector</th>
+                    <th>Date</th>
+                    <th>Time</th>
+                    <th class="text-end">Actions</th>
+                </tr>
             </thead>
             <tbody>
             <?php foreach ($families as $family): ?>

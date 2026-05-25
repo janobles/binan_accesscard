@@ -9,10 +9,10 @@ use CodeIgniter\Router\RouteCollection;
 /*
  * Authentication
  */
-$routes->get('/', 'Home::index');
-$routes->match(['GET', 'POST'], 'login', 'Home::login');
-$routes->get('logout', 'Home::logout');
-$routes->get('session/keep-alive', 'Home::keepAlive');
+$routes->get('/', 'Auth\AuthController::index');
+$routes->match(['GET', 'POST'], 'login', 'Auth\AuthController::login');
+$routes->get('logout', 'Auth\AuthController::logout');
+$routes->get('session/keep-alive', 'Auth\AuthController::keepAlive');
 
 /*
  * Admin workspace

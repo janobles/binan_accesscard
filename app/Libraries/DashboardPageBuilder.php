@@ -8,7 +8,8 @@ use App\Models\FamilyFormOptionsModel;
 use App\Models\SearchModel;
 use App\Models\SectorModel;
 use App\Models\ServiceModel;
-use App\Models\UserModel;
+use App\Models\Auth\UserModel;
+use App\Libraries\RoleAccess;
 use App\Models\ViewLayoutModel;
 use CodeIgniter\HTTP\IncomingRequest;
 use CodeIgniter\HTTP\RedirectResponse;
@@ -42,19 +43,15 @@ class DashboardPageBuilder
         $searchTerm = trim((string) $this->request->getGet('q'));
         $searchFilters = $this->searchFilters();
         $hasSearchFilters = $this->hasSearchFilters($searchFilters);
-        $isDeveloper = $this->normalizeRole((string) session()->get('role')) === 'Developer';
-        $userModel = new UserModel();
-        $users = $isDeveloper && $activePage === 'accounts'
-            ? $searchModel->staffAccounts($searchTerm, $searchFilters)
-            : $userModel->getStaffAccounts();
-        $memberModel = new MemberModel();
-        $sectorModel = new SectorModel();
+        $isDeveloper = RoleAccess::normalizeRole((string) session()->get('role')) === 'Developer';
+        $sectorModel  = new SectorModel();
         $serviceModel = new ServiceModel();
-        $memberServiceModel = new MemberServiceModel();
+        $userModel    = new UserModel();
+        $users        = $userModel->getStaffAccounts();
 
         $familyFormViewData = (new FamilyFormOptionsModel())->getViewData();
 
-        $recentFamilies = $activePage === 'dashboard' && ($searchTerm !== '' || $hasFilters)
+        $recentFamilies = $activePage === 'dashboard' && ($searchTerm !== '' || $hasSearchFilters)
             ? $searchModel->families($searchTerm, $searchFilters, 25)
             : $dashboardModel->recentFamilies(10);
 
@@ -82,14 +79,11 @@ class DashboardPageBuilder
             'linkableMembers' => $isDeveloper ? $userModel->getLinkableMembers() : [],
             'familyFormViewData' => $familyFormViewData,
             'recentFamilies'     => $recentFamilies,
-            'myAudits'           => $myAudits,
+            'recentAudits'       => $recentAudits,
+            'sectors'            => $this->fetchVisibleSectors($sectorModel),
+            'services'           => $this->fetchVisibleServices($serviceModel),
             'stats'              => $dashboardModel->stats(),
-            'searchTerm'         => $searchTerm,
-            'searchFilters'      => $searchFilters,
-            'auditActionOptions' => $searchModel->auditActions(),
-            'stats' => $dashboardModel->stats(),
-            'canCreateFamily' => true,
-            'idleTimeoutSeconds' => (new IdleTimeout())->seconds,
+            'canCreateFamily'    => true,
         ];
     }
 
@@ -115,9 +109,9 @@ class DashboardPageBuilder
             ->findAll();
     }
 
-    private function renderEmployeePage(string $activePage): string|RedirectResponse
+    public function renderEmployeePage(string $activePage): string|RedirectResponse
     {
-        $guard = $this->requireRole(['Developer', 'Admin', 'User']);
+        $guard = RoleAccess::requireRole(['Developer', 'Admin', 'User']);
 
         if ($guard instanceof RedirectResponse) {
             return $guard;

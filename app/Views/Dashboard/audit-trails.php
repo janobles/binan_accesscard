@@ -37,7 +37,9 @@ $formatAuditUser = static function (array $audit): string {
 ?>
 
 <div class="panel">
-    <div class="section-title mt-0"><span>Audit Trails</span></div>
+    <div class="section-title mt-0">
+        <span>Audit Trails</span>
+    </div>
     <form class="row g-2 mb-3 js-audit-filter-form" method="get" action="<?= site_url('admin/audit-trails') ?>">
         <div class="col-md-6 col-lg-4">
             <input class="form-control" type="search" name="q" value="<?= esc($searchTerm) ?>" placeholder="Search audit trails by user, action, or description">
@@ -65,7 +67,16 @@ $formatAuditUser = static function (array $audit): string {
     </form>
     <div class="table-responsive">
         <table class="table table-sm">
-            <thead><tr><th>User</th><th>Member</th><th>Action</th><th>Description</th><th>Date</th><th>Time</th></tr></thead>
+            <thead>
+                <tr>
+                    <th>User</th>
+                    <th>Member</th>
+                    <th>Action</th>
+                    <th>Description</th>
+                    <th>Date</th>
+                    <th>Time</th>
+                </tr>
+            </thead>
             <tbody>
                 <?php foreach ($recentAudits as $audit): ?>
                     <tr>

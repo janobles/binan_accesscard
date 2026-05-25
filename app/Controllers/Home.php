@@ -5,101 +5,13 @@ namespace App\Controllers;
 use App\Libraries\DashboardPageBuilder;
 use App\Libraries\RoleAccess;
 use App\Models\FamilyFormOptionsModel;
-use App\Models\UserModel;
-use App\Support\SessionAuditLogger;
 use CodeIgniter\HTTP\RedirectResponse;
-use Config\IdleTimeout;
 
 /**
  * Handles authentication, session lifetime, and role-based dashboard routing.
  */
 class Home extends BaseController
 {
-    public function index(): string|RedirectResponse
-    {
-        if (session()->get('is_logged_in')) {
-            if (! $this->hasValidLoginSession()) {
-                $this->clearLoginSession();
-
-                return redirect()->to(site_url('login'))
-                    ->with('error', 'Your session expired. Please login again.');
-            }
-
-            return $this->redirectByRole((string) session()->get('role'));
-        }
-
-        return view('Login/login');
-    }
-
-    public function login(): string|RedirectResponse
-    {
-        if ($this->request->getMethod() === 'GET') {
-            return $this->index();
-        }
-
-        $username = trim((string) $this->request->getPost('username'));
-        $password = (string) $this->request->getPost('password');
-
-        $user = (new UserModel())->verifyLogin($username, $password);
-
-        if ($user === null) {
-            return redirect()->back()
-                ->withInput()
-                ->with('error', 'Invalid username or password.');
-        }
-
-        $role = RoleAccess::normalizeRole((string) ($user['role'] ?? ''));
-
-        if ($role === null) {
-            return redirect()->back()
-                ->withInput()
-                ->with('error', 'Your account role is invalid. Please contact an administrator.');
-        }
-
-        session()->regenerate();
-        session()->set([
-            'is_logged_in' => true,
-            'user_id' => (int) $user['userID'],
-            'member_id' => (int) ($user['memberID'] ?? 0),
-            'username' => $user['username'],
-            'role' => $role,
-            'idle_last_activity' => time(),
-        ]);
-
-        SessionAuditLogger::logLogin($user, $role, $this->request);
-
-        return $this->redirectByRole($role);
-    }
-
-    public function logout(): RedirectResponse
-    {
-        if ($this->request->getGet('timeout') === '1') {
-            SessionAuditLogger::logLogoutFromSession($this->request, true);
-            $this->clearLoginSession();
-
-            return redirect()->to(site_url('login'))
-                ->with('error', 'You were logged out due to inactivity.');
-        }
-
-        SessionAuditLogger::logLogoutFromSession($this->request);
-        $this->clearLoginSession();
-
-        return redirect()->to(site_url('login'));
-    }
-
-    public function keepAlive()
-    {
-        if (! session()->get('is_logged_in')) {
-            return $this->response
-                ->setStatusCode(401)
-                ->setJSON(['status' => 'expired']);
-        }
-
-        session()->set('idle_last_activity', time());
-
-        return $this->response->setJSON(['status' => 'ok']);
-    }
-
     public function admin(): RedirectResponse
     {
         return redirect()->to(site_url('admin/dashboard'));
@@ -134,7 +46,7 @@ class Home extends BaseController
             return $this->renderAdminAuditPartial();
         }
 
-        return $this->renderAdminPage('audit-trails');
+        return (new DashboardPageBuilder($this->request))->renderAdminPage('audit-trails');
     }
 
     public function adminSectors(): string|RedirectResponse
@@ -143,7 +55,7 @@ class Home extends BaseController
             return $this->renderAdminSectorsPartial();
         }
 
-        return $this->renderAdminPage('sectors');
+        return (new DashboardPageBuilder($this->request))->renderAdminPage('sectors');
     }
 
     public function adminServices(): string|RedirectResponse
@@ -152,7 +64,7 @@ class Home extends BaseController
             return $this->renderAdminServicesPartial();
         }
 
-        return $this->renderAdminPage('services');
+        return (new DashboardPageBuilder($this->request))->renderAdminPage('services');
     }
 
     public function employee(): string|RedirectResponse
@@ -283,32 +195,4 @@ class Home extends BaseController
         ));
     }
 
-    private function clearLoginSession(): void
-    {
-        session()->remove([
-            'is_logged_in',
-            'user_id',
-            'member_id',
-            'username',
-            'role',
-            'idle_last_activity',
-        ]);
-
-        session()->regenerate(true);
-    }
-
-    private function hasValidLoginSession(): bool
-    {
-        if (! $this->sessionUserExists()) {
-            return false;
-        }
-
-        if ($this->normalizeRole((string) session()->get('role')) === null) {
-            return false;
-        }
-
-        $lastActivity = (int) (session()->get('idle_last_activity') ?? time());
-
-        return (time() - $lastActivity) < (new IdleTimeout())->seconds;
-    }
 }

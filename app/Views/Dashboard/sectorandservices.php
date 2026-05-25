@@ -1,10 +1,6 @@
 <?php
-$servicesByCategory = $servicesByCategory ?? [];
-$sectorCatalog = $sectorCatalog ?? [];
-$selectedSectorIds = array_values(array_map(static fn ($id): int => (int) $id, (array) ($selectedSectorIds ?? [])));
-$selectedSectorCategories = array_values(array_map(static fn ($key): string => (string) $key, (array) ($selectedSectorCategories ?? [])));
-$selectedServiceIds = array_values(array_map(static fn ($id): int => (int) $id, (array) ($selectedServiceIds ?? [])));
-$sectorCatalogJson = json_encode($sectorCatalog, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?: '{}';
+helper('dashboard_view');
+extract(sector_and_services_view_data(get_defined_vars()), EXTR_OVERWRITE);
 ?>
 
 <div class="form-section family-step-panel" data-step="2">

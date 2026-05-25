@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 <?php
 helper('assets');
 $user = $user ?? [];
@@ -53,6 +52,7 @@ $formatAuditUser = static function (array $audit): string {
     return $role === '' ? $username : $username . ' (' . $role . ')';
 };
 ?>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -261,12 +261,7 @@ $formatAuditUser = static function (array $audit): string {
 
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="<?= base_url('assets/js/dashboard/manage-family-form.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/manage-family-form.js') ?>"></script>
 <script src="<?= base_url('assets/js/dashboard/family-form-ui.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form-ui.js') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/family-form-utils.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form-utils.js') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/family-form-sectors.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form-sectors.js') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/family-form-members.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form-members.js') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/family-form-summary.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form-summary.js') ?>"></script>
 <script src="<?= base_url('assets/js/dashboard/family-form.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form.js') ?>"></script>
 <script src="<?= base_url('assets/js/session-timeout.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/session-timeout.js') ?>" data-timeout-seconds="<?= esc((string) $idleTimeoutSeconds) ?>" data-logout-url="<?= site_url('logout?timeout=1') ?>" data-keep-alive-url="<?= site_url('session/keep-alive') ?>"></script>
 <script src="<?= base_url('assets/js/dashboard/dashboard-modal-loader.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/dashboard-modal-loader.js') ?>"></script>

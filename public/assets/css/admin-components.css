@@ -66,13 +66,34 @@
 .account-form,
 .account-form-employee {
     display: grid;
-    grid-template-columns: minmax(170px, 1fr) minmax(170px, 1fr) 100px;
+    grid-template-columns: minmax(170px, 1fr) minmax(170px, 1fr) 110px;
+    gap: 10px;
+    align-items: start;
+}
+
+.management-create-form {
+    display: grid;
+    grid-template-columns: 170px minmax(180px, 1fr) minmax(220px, 1.2fr) 128px;
     gap: 10px;
     align-items: start;
 }
 
 .account-action {
     padding-top: 30px;
+}
+
+.management-action {
+    padding-top: 30px;
+}
+
+.management-table th:last-child,
+.management-table td:last-child {
+    width: 96px;
+}
+
+.management-table .form-control,
+.management-table .form-select {
+    min-width: 140px;
 }
 
 .btn-primary {

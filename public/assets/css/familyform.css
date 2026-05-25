@@ -18,7 +18,7 @@
 .family-wizard-header {
 	display: flex;
 	align-items: center;
-	justify-content: space-between;
+	justify-content: flex-start;
 	padding: 16px 18px;
 	background: #102f50;
 	color: #eff7ff;
@@ -55,14 +55,6 @@
 	font-size: 20px;
 	line-height: 1;
 	font-weight: 600;
-}
-
-.wizard-header-badge {
-	width: 18px;
-	height: 18px;
-	border-radius: 6px;
-	border: 2px solid #294c72;
-	background: transparent;
 }
 
 .family-wizard-steps {
@@ -218,6 +210,62 @@
 #familyForm .service-check-list {
 	display: grid;
 	gap: 8px;
+}
+
+#sectorNameList .sector-name-option {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+	margin-bottom: 9px !important;
+}
+
+#sectorNameList .sector-name-option .form-check-input {
+	flex: 0 0 auto;
+	margin-top: 4px;
+}
+
+#sectorNameList .sector-name-label {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+	line-height: 1.35;
+}
+
+#sectorNameList .sector-group-badge {
+	flex: 0 0 auto;
+	min-width: 48px;
+	padding: 2px 7px;
+	border: 1px solid #b9cce0;
+	border-radius: 6px;
+	background: #edf4fb;
+	color: #285276;
+	font-size: 11px;
+	font-weight: 700;
+	line-height: 1.35;
+	text-align: center;
+	letter-spacing: 0.03em;
+}
+
+#sectorNameList .sector-group-pwd {
+	border-color: #9bc7df;
+	background: #e7f6fb;
+	color: #0f6177;
+}
+
+#sectorNameList .sector-group-sp {
+	border-color: #b7d2aa;
+	background: #eff8eb;
+	color: #3b6d2c;
+}
+
+#sectorNameList .sector-group-osca {
+	border-color: #d6c1ed;
+	background: #f4edfb;
+	color: #684293;
+}
+
+#sectorNameList .sector-name-text {
+	overflow-wrap: anywhere;
 }
 
 .family-form-actions {

@@ -12,8 +12,8 @@ $recentFamilies = $recentFamilies ?? [];
 $recentAudits = $recentAudits ?? [];
 $adminAccounts = $adminAccounts ?? [];
 $employeeAccounts = $employeeAccounts ?? [];
-$linkableMembers = $linkableMembers ?? [];
 $familyFormViewData = $familyFormViewData ?? [];
+$sectorShortcodeOptions = $sectorShortcodeOptions ?? [];
 $searchTerm = $searchTerm ?? '';
 $searchFilters = $searchFilters ?? [];
 $auditActionOptions = $auditActionOptions ?? [];
@@ -79,8 +79,8 @@ $formatAuditUser = static function (array $audit): string {
                 <?php endif; ?>
                 <a class="nav-link <?= esc($navActive['family-entry'] ?? '') ?> js-open-family-modal" href="<?= site_url('admin/manage-family') ?>" data-modal-url="<?= site_url('admin/manage-family?partial=1') ?>" data-modal-title="Add Family">Add Family</a>
                 <a class="nav-link <?= esc($navActive['family-manage'] ?? '') ?> js-open-family-list" href="<?= site_url('admin/manage-family/list') ?>" data-modal-url="<?= site_url('admin/manage-family/list?partial=1') ?>" data-modal-title="Manage Families">Manage Family</a>
-                <a class="nav-link <?= esc($navActive['sectors'] ?? '') ?> js-open-sectors-modal" href="<?= site_url('admin/sectors') ?>" data-modal-url="<?= site_url('admin/sectors?partial=1') ?>" data-modal-title="Sector List">Sectors</a>
-                <a class="nav-link <?= esc($navActive['services'] ?? '') ?> js-open-services-modal" href="<?= site_url('admin/services') ?>" data-modal-url="<?= site_url('admin/services?partial=1') ?>" data-modal-title="Service List">Services</a>
+                <a class="nav-link <?= esc($navActive['sectors'] ?? '') ?> js-open-sectors-modal" href="<?= site_url('admin/sectors') ?>" data-modal-url="<?= site_url('admin/sectors?partial=1') ?>" data-modal-title="Sector Management">Sectors</a>
+                <a class="nav-link <?= esc($navActive['services'] ?? '') ?> js-open-services-modal" href="<?= site_url('admin/services') ?>" data-modal-url="<?= site_url('admin/services?partial=1') ?>" data-modal-title="Service Management">Services</a>
                 <a class="nav-link <?= esc($navActive['audit-trails'] ?? '') ?> js-open-audit-modal" href="<?= site_url('admin/audit-trails') ?>" data-modal-url="<?= site_url('admin/audit-trails?partial=1') ?>" data-modal-title="Audit Trails">Audit Trails</a>
             </nav>
         </div>
@@ -199,7 +199,6 @@ $formatAuditUser = static function (array $audit): string {
                 <?= view('Dashboard/accounts', [
                     'adminAccounts' => $adminAccounts,
                     'employeeAccounts' => $employeeAccounts,
-                    'linkableMembers' => $linkableMembers,
                     'searchTerm' => $searchTerm,
                     'searchFilters' => $searchFilters,
                 ]) ?>
@@ -227,6 +226,7 @@ $formatAuditUser = static function (array $audit): string {
             <?php if ($activePage === 'sectors'): ?>
                 <?= view('Dashboard/Sectors and Services/sector', [
                     'sectors' => $sectors ?? [],
+                    'sectorShortcodeOptions' => $sectorShortcodeOptions,
                 ]) ?>
             <?php endif; ?>
 

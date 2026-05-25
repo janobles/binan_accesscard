@@ -15,7 +15,6 @@ extract(family_form_view_data(get_defined_vars()), EXTR_OVERWRITE);
                     <small>Step 1 of 3 - Head of the Family</small>
                 </div>
             </div>
-            <span class="wizard-header-badge" aria-hidden="true"></span>
         </div>
 
         <div class="family-wizard-steps" aria-hidden="true">

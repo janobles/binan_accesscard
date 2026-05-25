@@ -62,7 +62,14 @@ class ServiceController extends BaseController
         }
 
         $isUpdate = $serviceId !== null;
-        $isUpdate ? $model->update($serviceId, $data) : $model->insert($data);
+
+        if ($isUpdate) {
+            $model->update($serviceId, $data);
+        } else {
+            $data['serviceID'] = $model->nextServiceId();
+            $model->insert($data);
+        }
+
         $message = $isUpdate ? 'Service updated successfully.' : 'Service added successfully.';
 
         return $this->redirectAdmin('admin/services', 'success', $message);

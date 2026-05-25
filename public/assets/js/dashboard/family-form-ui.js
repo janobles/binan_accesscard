@@ -101,7 +101,10 @@
                 }
 
                 seenSectorIds.add(key);
-                options.push(option);
+                options.push({
+                    group: category,
+                    option: option
+                });
             });
         });
 
@@ -114,9 +117,11 @@
             return;
         }
 
-        options.forEach(function (option) {
+        options.forEach(function (item) {
+            const option = item.option || {};
+            const group = String(item.group || '').trim();
             const wrapper = document.createElement('label');
-            wrapper.className = 'form-check mb-1';
+            wrapper.className = 'form-check mb-2 sector-name-option';
 
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
@@ -126,13 +131,23 @@
             checkbox.checked = selectedIds.has(checkbox.value);
             checkbox.dataset.name = String(option.name || '');
             checkbox.dataset.description = String(option.description || '');
+            checkbox.dataset.group = group;
 
             const labelText = document.createElement('span');
-            labelText.className = 'form-check-label';
-            labelText.textContent = String(option.description || '').trim() !== ''
+            labelText.className = 'form-check-label sector-name-label';
+
+            const groupBadge = document.createElement('span');
+            groupBadge.className = 'sector-group-badge sector-group-' + group.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+            groupBadge.textContent = group;
+
+            const sectorText = document.createElement('span');
+            sectorText.className = 'sector-name-text';
+            sectorText.textContent = String(option.description || '').trim() !== ''
                 ? String(option.name || '') + ' - ' + String(option.description || '').trim()
                 : String(option.name || '');
 
+            labelText.appendChild(groupBadge);
+            labelText.appendChild(sectorText);
             wrapper.appendChild(checkbox);
             wrapper.appendChild(labelText);
             sectorNameList.appendChild(wrapper);
@@ -280,7 +295,10 @@
         }
 
         const selectedSectors = Array.from(form.querySelectorAll('#sectorNameList input[type="checkbox"]:checked')).map(function (checkbox) {
-            return String(checkbox.dataset.name || '').trim();
+            const group = String(checkbox.dataset.group || '').trim();
+            const name = String(checkbox.dataset.name || '').trim();
+
+            return group !== '' && name !== '' ? group + ' - ' + name : name;
         }).filter(function (value) {
             return value !== '';
         });

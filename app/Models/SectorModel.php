@@ -38,6 +38,41 @@ class SectorModel extends Model
         return $this->orderBy('name', 'ASC')->findAll();
     }
 
+    public function getShortcodeOptions(): array
+    {
+        $fallback = [
+            'PWD1',
+            'PWD2',
+            'PWD3',
+            'PWD4',
+            'PWD5',
+            'SP1',
+            'SP2',
+            'OSCA1',
+            'OSCA2',
+            'OSCA3',
+            'OSCA4',
+            'OSCA5',
+            'OSCA6',
+            'OSCA7',
+        ];
+
+        if (! $this->hasTable()) {
+            return $fallback;
+        }
+
+        $field = $this->db
+            ->query("SHOW COLUMNS FROM `{$this->table}` LIKE 'shortcode'")
+            ->getRowArray();
+        $type = (string) ($field['Type'] ?? '');
+
+        if (preg_match_all("/'((?:[^'\\\\]|\\\\.)*)'/", $type, $matches) !== false && $matches[1] !== []) {
+            return array_map(static fn (string $value): string => stripcslashes($value), $matches[1]);
+        }
+
+        return $fallback;
+    }
+
     public function getSectorCatalog(array $sectorOptions = []): array
     {
         if ($sectorOptions === []) {

@@ -63,7 +63,7 @@ class Home extends BaseController
         session()->set([
             'is_logged_in' => true,
             'user_id' => (int) $user['userID'],
-            'member_id' => (int) ($user['memberID'] ?? 0),
+            'member_id' => 0,
             'username' => $user['username'],
             'role' => $role,
             'idle_last_activity' => time(),
@@ -204,7 +204,6 @@ class Home extends BaseController
         return view('Dashboard/accounts', [
             'adminAccounts' => $viewData['adminAccounts'] ?? [],
             'employeeAccounts' => $viewData['employeeAccounts'] ?? [],
-            'linkableMembers' => $viewData['linkableMembers'] ?? [],
             'searchTerm' => $viewData['searchTerm'] ?? '',
             'searchFilters' => $viewData['searchFilters'] ?? [],
         ]);
@@ -254,6 +253,7 @@ class Home extends BaseController
 
         return view('Dashboard/Sectors and Services/sector', [
             'sectors' => $viewData['sectors'] ?? [],
+            'sectorShortcodeOptions' => $viewData['sectorShortcodeOptions'] ?? [],
         ]);
     }
 

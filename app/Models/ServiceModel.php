@@ -13,12 +13,24 @@ class ServiceModel extends Model
     protected $table = 'services';
     protected $primaryKey = 'serviceID';
     protected $returnType = 'array';
-    protected $allowedFields = ['category', 'name', 'description'];
+    protected $allowedFields = ['serviceID', 'category', 'name', 'description'];
+    protected $useAutoIncrement = false;
     protected $useTimestamps = false;
 
     public function hasTable(): bool
     {
         return $this->db->tableExists($this->table);
+    }
+
+    public function nextServiceId(): int
+    {
+        if (! $this->hasTable()) {
+            return 1;
+        }
+
+        $row = $this->selectMax($this->primaryKey, 'max_id')->first();
+
+        return ((int) ($row['max_id'] ?? 0)) + 1;
     }
 
     public function getNameMapByIds(array $serviceIds): array

@@ -5,7 +5,7 @@ extract(sector_and_services_view_data(get_defined_vars()), EXTR_OVERWRITE);
 
 <div class="form-section family-step-panel" data-step="2">
     <div class="row g-3 mb-3">
-        <div class="col-md-4 col-lg-3">
+        <div class="col-sm-5 col-md-4 col-lg-3">
             <label class="form-label" for="sectorCategoryList">Sector</label>
             <div class="border rounded p-2 bg-white" id="sectorCategoryList" role="group" aria-label="Sector categories" data-sector-catalog="<?= esc($sectorCatalogJson, 'attr') ?>">
                 <label class="form-check mb-1">
@@ -22,7 +22,7 @@ extract(sector_and_services_view_data(get_defined_vars()), EXTR_OVERWRITE);
                 </label>
             </div>
         </div>
-        <div class="col-md-8 col-lg-9">
+        <div class="col-sm-7 col-md-8 col-lg-9">
             <label class="form-label" for="sectorNameList">Sector Name</label>
             <input type="hidden" id="sectorID" name="sectorID" required>
             <div class="border rounded p-2 bg-white" id="sectorNameList" role="group" aria-label="Sector names">
@@ -40,7 +40,7 @@ extract(sector_and_services_view_data(get_defined_vars()), EXTR_OVERWRITE);
     </div>
     <div class="row g-3">
         <?php foreach ($servicesByCategory as $category => $services): ?>
-            <div class="col-lg-4">
+            <div class="col-12 col-sm-6 col-lg-4">
                 <div class="assistance-box">
                     <h6 class="mb-2"><?= esc((string) $category) ?></h6>
                     <div class="service-check-list">

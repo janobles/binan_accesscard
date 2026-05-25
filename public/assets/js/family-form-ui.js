@@ -87,56 +87,78 @@
         const selectedCategories = Array.from(sectorCategoryList.querySelectorAll('input[type="checkbox"]:checked')).map(function (checkbox) {
             return checkbox.value;
         });
-        const options = [];
-        const seenSectorIds = new Set();
-
-        selectedCategories.forEach(function (category) {
-            const categoryOptions = Array.isArray(sectorCatalog[category]) ? sectorCatalog[category] : [];
-
-            categoryOptions.forEach(function (option) {
-                const key = String(option.sectorID || '');
-
-                if (seenSectorIds.has(key)) {
-                    return;
-                }
-
-                seenSectorIds.add(key);
-                options.push(option);
-            });
-        });
 
         sectorNameList.innerHTML = '';
 
-        if (options.length === 0) {
-            sectorNameList.innerHTML = '<small class="text-muted">No sector names available for selected sector(s).</small>';
+        if (selectedCategories.length === 0) {
+            sectorNameList.innerHTML = '<small class="text-muted">Select one or more sector categories first.</small>';
             updateSectorSelection(sectorNameList, sectorIdInput);
 
             return;
         }
 
-        options.forEach(function (option) {
-            const wrapper = document.createElement('label');
-            wrapper.className = 'form-check mb-1';
+        let anyOptions = false;
 
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.className = 'form-check-input';
-            checkbox.name = 'sector_ids[]';
-            checkbox.value = String(option.sectorID || '');
-            checkbox.checked = selectedIds.has(checkbox.value);
-            checkbox.dataset.name = String(option.name || '');
-            checkbox.dataset.description = String(option.description || '');
+        selectedCategories.forEach(function (category) {
+            const categoryOptions = Array.isArray(sectorCatalog[category]) ? sectorCatalog[category] : [];
 
-            const labelText = document.createElement('span');
-            labelText.className = 'form-check-label';
-            labelText.textContent = String(option.description || '').trim() !== ''
-                ? String(option.name || '') + ' - ' + String(option.description || '').trim()
-                : String(option.name || '');
+            // Group header for this sector
+            const groupHeader = document.createElement('div');
+            groupHeader.className = 'sector-group-header d-flex align-items-center gap-2 mt-2 mb-1';
 
-            wrapper.appendChild(checkbox);
-            wrapper.appendChild(labelText);
-            sectorNameList.appendChild(wrapper);
+            const badge = document.createElement('span');
+            badge.className = 'badge bg-secondary';
+            badge.textContent = category;
+
+            const line = document.createElement('hr');
+            line.className = 'flex-grow-1 my-0';
+
+            groupHeader.appendChild(badge);
+            groupHeader.appendChild(line);
+            sectorNameList.appendChild(groupHeader);
+
+            if (categoryOptions.length === 0) {
+                const empty = document.createElement('small');
+                empty.className = 'text-muted d-block mb-1';
+                empty.textContent = 'No names available for ' + category + '.';
+                sectorNameList.appendChild(empty);
+
+                return;
+            }
+
+            anyOptions = true;
+
+            categoryOptions.forEach(function (option) {
+                const key = String(option.sectorID || '');
+
+                const wrapper = document.createElement('label');
+                wrapper.className = 'form-check mb-1';
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'form-check-input';
+                checkbox.name = 'sector_ids[]';
+                checkbox.value = key;
+                checkbox.checked = selectedIds.has(key);
+                checkbox.dataset.name = String(option.name || '');
+                checkbox.dataset.category = category;
+                checkbox.dataset.description = String(option.description || '');
+
+                const labelText = document.createElement('span');
+                labelText.className = 'form-check-label';
+                labelText.textContent = String(option.description || '').trim() !== ''
+                    ? String(option.name || '') + ' — ' + String(option.description || '').trim()
+                    : String(option.name || '');
+
+                wrapper.appendChild(checkbox);
+                wrapper.appendChild(labelText);
+                sectorNameList.appendChild(wrapper);
+            });
         });
+
+        if (!anyOptions) {
+            sectorNameList.innerHTML = '<small class="text-muted">No sector names available for selected sector(s).</small>';
+        }
 
         updateSectorSelection(sectorNameList, sectorIdInput);
     }

@@ -81,6 +81,71 @@ class AccountController extends BaseController
         return redirect()->to(site_url('admin/accounts'))->with('success', 'Account created successfully.');
     }
 
+    /**
+     * Developer-only: toggle Admin/User isactive from Account Management UI.
+     */
+    public function updateStatus(): RedirectResponse
+    {
+        $guard = $this->requireDeveloper();
+
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        // Inputs come from Dashboard/accounts.php action buttons.
+        $rules = [
+            'userID' => 'required|is_natural_no_zero',
+            'isactive' => 'required|in_list[Enable,Disabled]',
+        ];
+        $messages = [
+            'userID' => [
+                'required' => 'Account is required.',
+            ],
+            'isactive' => [
+                'in_list' => 'Status must be Enable or Disabled.',
+            ],
+        ];
+
+        if (! $this->validate($rules, $messages)) {
+            return redirect()->back()->with('error', implode(' ', $this->validator->getErrors()));
+        }
+
+        $userId = (int) $this->request->getPost('userID');
+        $status = (string) $this->request->getPost('isactive');
+        $sessionUserId = (int) session()->get('user_id');
+
+        if ($userId === $sessionUserId) {
+            return redirect()->back()->with('error', 'You cannot change your own account status.');
+        }
+
+        $userModel = new UserModel();
+        $user = $userModel->find($userId);
+
+        if ($user === null) {
+            return redirect()->back()->with('error', 'Account not found.');
+        }
+
+        $role = (string) ($user['role'] ?? '');
+
+        if (! in_array($role, ['Admin', 'User'], true)) {
+            return redirect()->back()->with('error', 'Only admin or employee accounts can be updated.');
+        }
+
+        if ($userModel->update($userId, ['isactive' => $status]) === false) {
+            return redirect()->back()->with('error', 'Account status could not be updated.');
+        }
+
+        $displayRole = $role === 'User' ? 'Employee' : $role;
+        $auditStatus = $status === 'Enable' ? 'Enabled' : 'Disabled';
+
+        $this->audit(
+            'ACCOUNT_STATUS_UPDATED',
+            $auditStatus . ' ' . $displayRole . ' account "' . (string) ($user['username'] ?? '') . '" (#' . $userId . ').'
+        );
+
+        return redirect()->to(site_url('admin/accounts'))->with('success', 'Account status updated successfully.');
+    }
+
     private function requireDeveloper(): ?RedirectResponse
     {
         if (! session()->get('is_logged_in')) {

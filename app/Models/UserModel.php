@@ -29,10 +29,6 @@ class UserModel extends Model
             return null;
         }
 
-        if (! $this->isUserActive($user['isactive'] ?? 1)) {
-            return null;
-        }
-
         $storedPassword = (string) ($user['password'] ?? '');
         $passwordInfo = password_get_info($storedPassword);
         $isLegacyPlaintext = $passwordInfo['algo'] === 0;
@@ -44,6 +40,13 @@ class UserModel extends Model
 
         if (! $isValid) {
             return null;
+        }
+
+        // Let the controller show a specific message for disabled accounts.
+        if (! $this->isUserActive($user['isactive'] ?? 1)) {
+            $user['login_error'] = 'disabled';
+
+            return $user;
         }
 
         if ($isLegacyPlaintext || password_needs_rehash($storedPassword, PASSWORD_ARGON2ID)) {

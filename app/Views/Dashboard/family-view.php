@@ -1,8 +1,6 @@
 <?php
-$head = $head ?? [];
-$members = $members ?? [];
-$serviceMap = $serviceMap ?? [];
-$serviceNameMap = $serviceNameMap ?? [];
+helper('dashboard_view');
+extract(family_details_view_data(get_defined_vars()), EXTR_OVERWRITE);
 ?>
 
 <div class="panel mb-3">

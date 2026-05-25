@@ -1,5 +1,6 @@
 <?php
-$services = $services ?? [];
+helper('dashboard_view');
+extract(service_management_view_data(get_defined_vars()), EXTR_OVERWRITE);
 ?>
 
 <div class="panel mb-3" data-service-management-root>

@@ -1,17 +1,6 @@
 <?php
-$families = $families ?? [];
-$keyword = $keyword ?? '';
-$routeBase = $routeBase ?? 'admin/manage-family';
-$formatDate = static function (mixed $value): string {
-    $timestamp = strtotime((string) $value);
-
-    return $timestamp === false ? '' : date('Y-m-d', $timestamp);
-};
-$formatTime = static function (mixed $value): string {
-    $timestamp = strtotime((string) $value);
-
-    return $timestamp === false ? '' : date('h:i A', $timestamp);
-};
+helper('dashboard_view');
+extract(family_list_view_data(get_defined_vars()), EXTR_OVERWRITE);
 ?>
 
 <div class="panel mb-3">

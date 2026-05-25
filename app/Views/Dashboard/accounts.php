@@ -1,19 +1,6 @@
 <?php
-$adminAccounts = $adminAccounts ?? [];
-$employeeAccounts = $employeeAccounts ?? [];
-$searchTerm = $searchTerm ?? '';
-$searchFilters = $searchFilters ?? [];
-$hasSearchFilters = $searchTerm !== '' || array_filter($searchFilters, static fn ($value): bool => trim((string) $value) !== '') !== [];
-$formatDate = static function (mixed $value): string {
-    $timestamp = strtotime((string) $value);
-
-    return $timestamp === false ? '' : date('Y-m-d', $timestamp);
-};
-$formatTime = static function (mixed $value): string {
-    $timestamp = strtotime((string) $value);
-
-    return $timestamp === false ? '' : date('h:i A', $timestamp);
-};
+helper('dashboard_view');
+extract(accounts_view_data(get_defined_vars()), EXTR_OVERWRITE);
 ?>
 
 <div class="panel mb-3">

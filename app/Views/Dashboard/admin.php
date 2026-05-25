@@ -1,37 +1,8 @@
-<!DOCTYPE html>
 <?php
-helper('assets');
-$user = $user ?? [];
-$username = $user['username'] ?? 'Admin';
-$activePage = $activePage ?? 'dashboard';
-$pageTitle = $pageTitle ?? 'Dashboard';
-$modeLabel = $modeLabel ?? 'Admin Console';
-$canManageAccounts = $canManageAccounts ?? false;
-$navActive = $navActive ?? [];
-$stats = $stats ?? ['families' => 0, 'members' => 0, 'sectors' => 0, 'assistance' => 0];
-$recentFamilies = $recentFamilies ?? [];
-$recentAudits = $recentAudits ?? [];
-$adminAccounts = $adminAccounts ?? [];
-$employeeAccounts = $employeeAccounts ?? [];
-$familyFormViewData = $familyFormViewData ?? [];
-$searchTerm = $searchTerm ?? '';
-$searchFilters = $searchFilters ?? [];
-$auditActionOptions = $auditActionOptions ?? [];
-$sectorOptions = $familyFormViewData['sectorOptions'] ?? [];
-$hasSearchFilters = $searchTerm !== '' || array_filter($searchFilters, static fn ($value): bool => trim((string) $value) !== '') !== [];
-$canCreateFamily = $canCreateFamily ?? false;
-$idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
-$formatDate = static function (mixed $value): string {
-    $timestamp = strtotime((string) $value);
-
-    return $timestamp === false ? '' : date('Y-m-d', $timestamp);
-};
-$formatTime = static function (mixed $value): string {
-    $timestamp = strtotime((string) $value);
-
-    return $timestamp === false ? '' : date('h:i A', $timestamp);
-};
+helper(['assets', 'dashboard_view']);
+extract(admin_dashboard_view_data(get_defined_vars()), EXTR_OVERWRITE);
 ?>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -242,12 +213,7 @@ $formatTime = static function (mixed $value): string {
 
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="<?= base_url('assets/js/dashboard/manage-family-form.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/manage-family-form.js') ?>"></script>
 <script src="<?= base_url('assets/js/dashboard/family-form-ui.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form-ui.js') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/family-form-utils.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form-utils.js') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/family-form-sectors.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form-sectors.js') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/family-form-members.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form-members.js') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/family-form-summary.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form-summary.js') ?>"></script>
 <script src="<?= base_url('assets/js/dashboard/family-form.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form.js') ?>"></script>
 <script src="<?= base_url('assets/js/dashboard/sector-management-view.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/sector-management-view.js') ?>"></script>
 <script src="<?= base_url('assets/js/dashboard/service-management-view.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/service-management-view.js') ?>"></script>

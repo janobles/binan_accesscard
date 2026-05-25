@@ -3,14 +3,14 @@
 namespace App\Support;
 
 /**
- * Converts the final database's JSON-style sector list strings to/from arrays.
+ * Normalizes sector IDs stored as arrays, JSON lists, or comma-separated text.
  */
 class SectorIds
 {
     public static function normalize(mixed $value): array
     {
         $items = self::itemsFromValue($value);
-        $ids = [];
+        $ids   = [];
 
         foreach ($items as $item) {
             if (is_array($item)) {
@@ -34,6 +34,7 @@ class SectorIds
 
     public static function hasMalformedIds(mixed $value): bool
     {
+        // Associative arrays and object-like JSON are not valid sector ID lists.
         if (is_array($value) && ! self::isListArray($value)) {
             return true;
         }
@@ -72,6 +73,7 @@ class SectorIds
 
     public static function containsCondition(int $sectorId, string $column = 'sector_array_string'): string
     {
+        // Used in query filters for the database JSON sector list column.
         return 'JSON_CONTAINS(' . $column . ", '" . $sectorId . "') = 1";
     }
 
@@ -104,6 +106,7 @@ class SectorIds
             return [];
         }
 
+        // Prefer JSON lists; fall back to the older "[1,2,3]" / "1,2,3" text format.
         $decoded = json_decode($text, true);
 
         return is_array($decoded) && self::isListArray($decoded)

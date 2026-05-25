@@ -14,6 +14,7 @@ class AccountController extends BaseController
 {
     public function create(): RedirectResponse
     {
+        // Only the Developer role can create staff accounts.
         $guard = $this->requireDeveloper();
 
         if ($guard instanceof RedirectResponse) {
@@ -23,16 +24,17 @@ class AccountController extends BaseController
         $rules = [
             'username' => 'required|min_length[4]|max_length[255]|is_unique[users.username]',
             'password' => 'required|min_length[8]',
-            'role' => 'required|in_list[Admin,User]',
+            'role'     => 'required|in_list[Admin,User]',
         ];
+
         $messages = [
             'username' => [
-                'required' => 'Username is required. Example: admin_maria01 or emp_juan01.',
+                'required'   => 'Username is required. Example: admin_maria01 or emp_juan01.',
                 'min_length' => 'Username must have at least 4 characters. Example: emp_juan01.',
-                'is_unique' => 'Username must be unique. Try examples like admin_maria01, admin_roberto02, emp_ana01, or emp_juan02.',
+                'is_unique'  => 'Username must be unique. Try examples like admin_maria01, admin_roberto02, emp_ana01, or emp_juan02.',
             ],
             'password' => [
-                'required' => 'Password is required.',
+                'required'   => 'Password is required.',
                 'min_length' => 'Password must have at least 8 characters.',
             ],
             'role' => [
@@ -46,10 +48,11 @@ class AccountController extends BaseController
                 ->with('error', implode(' ', $this->validator->getErrors()));
         }
 
-        $role = (string) $this->request->getPost('role');
+        $role     = (string) $this->request->getPost('role');
         $username = trim((string) $this->request->getPost('username'));
 
         try {
+            // UserModel handles password hashing and database compatibility details.
             $userId = (new UserModel())->createAccount(
                 $username,
                 (string) $this->request->getPost('password'),
@@ -71,6 +74,8 @@ class AccountController extends BaseController
         }
 
         $displayRole = $role === 'User' ? 'Employee' : $role;
+
+        // Keep a traceable audit record for administrative account changes.
         $this->audit('ACCOUNT_CREATED', 'Created ' . $displayRole . ' account "' . $username . '" (#' . $userId . ').');
 
         return redirect()->to(site_url('admin/accounts'))->with('success', 'Account created successfully.');

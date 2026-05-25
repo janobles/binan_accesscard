@@ -1,4 +1,27 @@
 <?php
+/**
+ * View: Employee Workspace
+ *
+ * Main layout shell for the employee (User role) interface.
+ * Loads the dashboard_view helper and extracts view data via
+ * employee_dashboard_view_data().
+ *
+ * Variables injected:
+ *   @var string  $pageTitle          Current page heading
+ *   @var string  $username           Logged-in employee username
+ *   @var string  $activePage         Which content panel to render
+ *   @var array   $navActive          Active-class map for nav links
+ *   @var bool    $canCreateFamily    Whether the family form submit is enabled
+ *   @var array   $stats              Summary counts (families, members, …)
+ *   @var array   $sectorOptions      Sector list for filter dropdowns
+ *   @var array   $recentFamilies     Latest family records
+ *   @var array   $myAudits           Audit entries for the current user
+ *   @var array   $searchFilters      Active filter values
+ *   @var string  $searchTerm         Current search keyword
+ *   @var bool    $hasSearchFilters   Whether any filter is applied
+ *   @var array   $familyFormViewData Data for the family wizard
+ *   @var int     $idleTimeoutSeconds Idle timeout for session-timeout.js
+ */
 helper('dashboard_view');
 extract(employee_dashboard_view_data(get_defined_vars()), EXTR_OVERWRITE);
 ?>
@@ -12,7 +35,15 @@ extract(employee_dashboard_view_data(get_defined_vars()), EXTR_OVERWRITE);
     <link rel="stylesheet" href="<?= base_url('assets/css/admin.css') ?>?v=<?= filemtime(FCPATH . 'assets/css/admin.css') ?>">
 </head>
 <body>
+
+<!-- ================================================================
+     APP SHELL — wraps the sidebar and main content area
+     ================================================================ -->
 <div class="app-shell">
+
+    <!-- ============================================================
+         SIDEBAR — branding, navigation, and logout footer
+         ============================================================ -->
     <aside class="sidebar employee">
         <div>
             <div class="brand">
@@ -29,12 +60,17 @@ extract(employee_dashboard_view_data(get_defined_vars()), EXTR_OVERWRITE);
                 <a class="nav-link <?= esc($navActive['activity'] ?? '') ?>" href="<?= site_url('employee/activity') ?>">My Activity</a>
             </nav>
         </div>
+        <!-- Sidebar footer — shows logged-in employee and logout button -->
         <div class="sidebar-footer">
             <div class="sidebar-user"><?= esc($username) ?> &middot; Employee</div>
             <a href="<?= site_url('logout') ?>" class="btn btn-outline-light btn-sm w-100">Logout</a>
         </div>
     </aside>
+    <!-- /SIDEBAR -->
 
+    <!-- ============================================================
+         MAIN CONTENT — topbar header + scrollable page body
+         ============================================================ -->
     <main class="content">
         <div class="topbar">
             <div class="topbar-brand">
@@ -47,6 +83,8 @@ extract(employee_dashboard_view_data(get_defined_vars()), EXTR_OVERWRITE);
         </div>
 
         <div class="container-fluid py-4">
+
+            <!-- Flash messages — displayed once after a redirect, then discarded -->
             <?php if (session()->getFlashdata('success')): ?>
                 <div class="alert alert-success"><?= esc(session()->getFlashdata('success')) ?></div>
             <?php endif; ?>
@@ -54,12 +92,37 @@ extract(employee_dashboard_view_data(get_defined_vars()), EXTR_OVERWRITE);
                 <div class="alert alert-danger"><?= esc(session()->getFlashdata('error')) ?></div>
             <?php endif; ?>
 
+            <!-- ==================================================
+                 PAGE: WORKSPACE — summary stats + recent records
+                 ================================================== -->
             <?php if ($activePage === 'dashboard'): ?>
+
+                <!-- Summary stat cards -->
                 <div class="row g-3 mb-3">
-                    <div class="col-md-3"><div class="panel"><small>Total Families</small><div class="stat-value"><?= esc((string) ($stats['families'] ?? 0)) ?></div></div></div>
-                    <div class="col-md-3"><div class="panel"><small>Registered Members</small><div class="stat-value"><?= esc((string) ($stats['members'] ?? 0)) ?></div></div></div>
-                    <div class="col-md-3"><div class="panel"><small>Active Sectors</small><div class="stat-value"><?= esc((string) ($stats['sectors'] ?? 0)) ?></div></div></div>
-                    <div class="col-md-3"><div class="panel"><small>Member Services</small><div class="stat-value"><?= esc((string) ($stats['assistance'] ?? 0)) ?></div></div></div>
+                    <div class="col-md-3">
+                        <div class="panel">
+                            <small>Total Families</small>
+                            <div class="stat-value"><?= esc((string) ($stats['families'] ?? 0)) ?></div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="panel">
+                            <small>Registered Members</small>
+                            <div class="stat-value"><?= esc((string) ($stats['members'] ?? 0)) ?></div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="panel">
+                            <small>Active Sectors</small>
+                            <div class="stat-value"><?= esc((string) ($stats['sectors'] ?? 0)) ?></div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="panel">
+                            <small>Member Services</small>
+                            <div class="stat-value"><?= esc((string) ($stats['assistance'] ?? 0)) ?></div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="panel mb-3">
@@ -100,7 +163,15 @@ extract(employee_dashboard_view_data(get_defined_vars()), EXTR_OVERWRITE);
                     </form>
                     <div class="table-responsive">
                         <table class="table table-sm">
-                            <thead><tr><th>Head</th><th>Barangay</th><th>Sector</th><th>Date</th><th>Time</th></tr></thead>
+                            <thead>
+                                <tr>
+                                    <th>Head</th>
+                                    <th>Barangay</th>
+                                    <th>Sector</th>
+                                    <th>Date</th>
+                                    <th>Time</th>
+                                </tr>
+                            </thead>
                             <tbody>
                                 <?php foreach ($recentFamilies as $family): ?>
                                     <tr>
@@ -126,7 +197,14 @@ extract(employee_dashboard_view_data(get_defined_vars()), EXTR_OVERWRITE);
                     </div>
                     <div class="table-responsive">
                         <table class="table table-sm">
-                            <thead><tr><th>Action</th><th>Description</th><th>Date</th><th>Time</th></tr></thead>
+                            <thead>
+                                <tr>
+                                    <th>Action</th>
+                                    <th>Description</th>
+                                    <th>Date</th>
+                                    <th>Time</th>
+                                </tr>
+                            </thead>
                             <tbody>
                                 <?php foreach ($myAudits as $audit): ?>
                                     <tr>
@@ -145,6 +223,9 @@ extract(employee_dashboard_view_data(get_defined_vars()), EXTR_OVERWRITE);
                 </div>
             <?php endif; ?>
 
+            <!-- ==================================================
+                 PAGE: FAMILY ENTRY — multi-step family data wizard
+                 ================================================== -->
             <?php if ($activePage === 'family-entry'): ?>
                 <div class="panel">
                     <div class="section-title mt-0">
@@ -157,6 +238,9 @@ extract(employee_dashboard_view_data(get_defined_vars()), EXTR_OVERWRITE);
                 </div>
             <?php endif; ?>
 
+            <!-- ==================================================
+                 PAGE: ACTIVITY — employee’s own audit history
+                 ================================================== -->
             <?php if ($activePage === 'activity'): ?>
                 <div class="panel">
                     <div class="section-title mt-0"><span>My Recent Activity</span></div>
@@ -189,7 +273,14 @@ extract(employee_dashboard_view_data(get_defined_vars()), EXTR_OVERWRITE);
                     </form>
                     <div class="table-responsive">
                         <table class="table table-sm">
-                            <thead><tr><th>Action</th><th>Description</th><th>Date</th><th>Time</th></tr></thead>
+                            <thead>
+                                <tr>
+                                    <th>Action</th>
+                                    <th>Description</th>
+                                    <th>Date</th>
+                                    <th>Time</th>
+                                </tr>
+                            </thead>
                             <tbody>
                                 <?php foreach ($myAudits as $audit): ?>
                                     <tr>
@@ -209,8 +300,14 @@ extract(employee_dashboard_view_data(get_defined_vars()), EXTR_OVERWRITE);
             <?php endif; ?>
         </div>
     </main>
-</div>
+    <!-- /MAIN CONTENT -->
 
+</div>
+<!-- /APP SHELL -->
+
+<!-- ================================================================
+     FAMILY MODAL — floating overlay for family-related actions
+     ================================================================ -->
 <div class="modal fade floating-family-modal" id="familyModal" tabindex="-1" aria-labelledby="familyModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered modal-xl">
         <div class="modal-content">
@@ -222,7 +319,8 @@ extract(employee_dashboard_view_data(get_defined_vars()), EXTR_OVERWRITE);
                 <button type="button" class="btn-close family-modal-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body" id="familyModalBody">
-                <div class="family-modal-loading" role="status" aria-live="polite">
+                <!-- Loading spinner — visible while the partial view is fetched via AJAX -->
+            <div class="family-modal-loading" role="status" aria-live="polite">
                     <div class="spinner-border text-primary" aria-hidden="true"></div>
                     <span>Loading...</span>
                 </div>
@@ -230,13 +328,25 @@ extract(employee_dashboard_view_data(get_defined_vars()), EXTR_OVERWRITE);
         </div>
     </div>
 </div>
+<!-- /FAMILY MODAL -->
 
+<!-- ================================================================
+     SCRIPTS — jQuery, Bootstrap bundle, and app-specific JS modules
+     ================================================================ -->
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Family form UI behaviour (wizard step transitions, inline validation) -->
 <script src="<?= base_url('assets/js/dashboard/family-form-ui.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form-ui.js') ?>"></script>
+<!-- Family form AJAX submission and dynamic member row management -->
 <script src="<?= base_url('assets/js/dashboard/family-form.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form.js') ?>"></script>
-<script src="<?= base_url('assets/js/session-timeout.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/session-timeout.js') ?>" data-timeout-seconds="<?= esc((string) $idleTimeoutSeconds) ?>" data-logout-url="<?= site_url('logout?timeout=1') ?>" data-keep-alive-url="<?= site_url('session/keep-alive') ?>"></script>
+<!-- Session idle-timeout handler — auto-logs out after inactivity -->
+<script src="<?= base_url('assets/js/session-timeout.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/session-timeout.js') ?>"
+        data-timeout-seconds="<?= esc((string) $idleTimeoutSeconds) ?>"
+        data-logout-url="<?= site_url('logout?timeout=1') ?>"
+        data-keep-alive-url="<?= site_url('session/keep-alive') ?>"></script>
+<!-- Dashboard modal loader — fetches partial views into #familyModalBody via AJAX -->
 <script src="<?= base_url('assets/js/dashboard/dashboard-modal-loader.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/dashboard-modal-loader.js') ?>"></script>
+<!-- Individual modal openers -->
 <script src="<?= base_url('assets/js/dashboard/manage-family-modal.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/manage-family-modal.js') ?>"></script>
 </body>
 </html>

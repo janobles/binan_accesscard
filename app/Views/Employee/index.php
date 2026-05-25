@@ -307,11 +307,11 @@ $formatAuditMember = static function (array $audit): string {
 
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="<?= base_url('assets/bootstrap/js/bootstrap.bundle.min.js') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/family-form-ui.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form-ui.js') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/family-form.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form.js') ?>"></script>
+<script src="<?= base_url('assets/js/family-form-ui.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/family-form-ui.js') ?>"></script>
+<script src="<?= base_url('assets/js/family-form.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/family-form.js') ?>"></script>
 <script src="<?= base_url('assets/js/session-timeout.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/session-timeout.js') ?>" data-timeout-seconds="<?= esc((string) $idleTimeoutSeconds) ?>" data-logout-url="<?= site_url('logout?timeout=1') ?>" data-keep-alive-url="<?= site_url('session/keep-alive') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/dashboard-modal-loader.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/dashboard-modal-loader.js') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/manage-family-modal.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/manage-family-modal.js') ?>"></script>
+<script src="<?= base_url('assets/js/dashboard-modal-loader.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard-modal-loader.js') ?>"></script>
+<script src="<?= base_url('assets/js/manage-family-modal.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/manage-family-modal.js') ?>"></script>
 <script>
 (function () {
     document.querySelectorAll('.js-audit-action-filter').forEach(function (select) {

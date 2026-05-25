@@ -299,15 +299,15 @@ $formatAuditUser = static function (array $audit): string {
 
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="<?= base_url('assets/bootstrap/js/bootstrap.bundle.min.js') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/family-form-ui.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form-ui.js') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/family-form.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form.js') ?>"></script>
+<script src="<?= base_url('assets/js/family-form-ui.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/family-form-ui.js') ?>"></script>
+<script src="<?= base_url('assets/js/family-form.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/family-form.js') ?>"></script>
 <script src="<?= base_url('assets/js/session-timeout.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/session-timeout.js') ?>" data-timeout-seconds="<?= esc((string) $idleTimeoutSeconds) ?>" data-logout-url="<?= site_url('logout?timeout=1') ?>" data-keep-alive-url="<?= site_url('session/keep-alive') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/dashboard-modal-loader.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/dashboard-modal-loader.js') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/manage-family-modal.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/manage-family-modal.js') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/accounts-modal.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/accounts-modal.js') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/sectors-modal.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/sectors-modal.js') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/services-modal.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/services-modal.js') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/audit-trails-modal.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/audit-trails-modal.js') ?>"></script>
+<script src="<?= base_url('assets/js/dashboard-modal-loader.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard-modal-loader.js') ?>"></script>
+<script src="<?= base_url('assets/js/manage-family-modal.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/manage-family-modal.js') ?>"></script>
+<script src="<?= base_url('assets/js/accounts-modal.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/accounts-modal.js') ?>"></script>
+<script src="<?= base_url('assets/js/sectors-modal.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/sectors-modal.js') ?>"></script>
+<script src="<?= base_url('assets/js/services-modal.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/services-modal.js') ?>"></script>
+<script src="<?= base_url('assets/js/audit-trails-modal.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/audit-trails-modal.js') ?>"></script>
 </body>
 </html>
 

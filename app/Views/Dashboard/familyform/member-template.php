@@ -1,3 +1,6 @@
+<?php
+// Template cloned by the family form script for each new member row.
+?>
 <template id="memberTemplate">
     <div class="member-row">
         <div class="member-row-header">

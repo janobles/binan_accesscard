@@ -1,43 +1,6 @@
 <?php
-$families = $families ?? [];
-$keyword = $keyword ?? '';
-$routeBase = $routeBase ?? 'admin/manage-family';
-$status = (string) ($status ?? 'active') === 'archived' ? 'archived' : 'active';
-$canRestoreArchived = (bool) ($canRestoreArchived ?? false);
-$page = max(1, (int) ($page ?? 1));
-$perPage = max(1, (int) ($perPage ?? 50));
-$totalFamilies = max(0, (int) ($totalFamilies ?? count($families)));
-$totalPages = max(1, (int) ($totalPages ?? 1));
-$fromRecord = $totalFamilies === 0 ? 0 : (($page - 1) * $perPage) + 1;
-$toRecord = min($totalFamilies, $page * $perPage);
-$requestPath = trim((string) service('request')->getUri()->getPath(), '/');
-$isEmployeeList = (string) session()->get('role') === 'User'
-    || str_starts_with((string) $routeBase, 'employee/')
-    || str_starts_with($requestPath, 'employee/')
-    || str_contains('/' . $requestPath, '/employee/');
-$formatDate = static function (mixed $value): string {
-    $timestamp = strtotime((string) $value);
-
-    return $timestamp === false ? '' : date('Y-m-d', $timestamp);
-};
-$formatTime = static function (mixed $value): string {
-    $timestamp = strtotime((string) $value);
-
-    return $timestamp === false ? '' : date('h:i A', $timestamp);
-};
-$listUrl = static function (string $targetStatus, int $targetPage = 1) use ($routeBase, $keyword): string {
-    $params = ['page' => $targetPage];
-
-    if ($targetStatus === 'archived') {
-        $params['status'] = 'archived';
-    }
-
-    if (trim((string) $keyword) !== '') {
-        $params['q'] = (string) $keyword;
-    }
-
-    return site_url($routeBase . '/list?' . http_build_query($params));
-};
+helper('dashboard_view');
+extract(family_list_view_data(get_defined_vars()), EXTR_OVERWRITE);
 ?>
 
 <div class="panel mb-3">
@@ -97,12 +60,12 @@ $listUrl = static function (string $targetStatus, int $targetPage = 1) use ($rou
             <tbody>
             <?php foreach ($families as $family): ?>
                 <?php
-                $headId = (int) ($family['memberID'] ?? 0);
-                $dateValue = $status === 'archived' ? ($family['dt_deleted'] ?? '') : ($family['dt_created'] ?? '');
-                $recordAction = $status === 'archived' ? 'restore' : ($isEmployeeList ? 'delete' : 'archive');
+                $headId            = (int) ($family['memberID'] ?? 0);
+                $dateValue         = $status === 'archived' ? ($family['dt_deleted'] ?? '') : ($family['dt_created'] ?? '');
+                $recordAction      = $status === 'archived' ? 'restore' : ($isEmployeeList ? 'delete' : 'archive');
                 $recordActionLabel = $status === 'archived' ? 'Restore' : ($isEmployeeList ? 'Delete' : 'Archive');
-                $recordActionPast = $status === 'archived' ? 'restored' : ($isEmployeeList ? 'deleted' : 'archived');
-                $confirmMessage = $status === 'archived'
+                $recordActionPast  = $status === 'archived' ? 'restored' : ($isEmployeeList ? 'deleted' : 'archived');
+                $confirmMessage    = $status === 'archived'
                     ? 'Restore this family record to the active list?'
                     : $recordActionLabel . ' this family record? This keeps the record in the database, marks it as ' . $recordActionPast . ', and hides it from active lists.';
                 ?>
@@ -145,22 +108,19 @@ $listUrl = static function (string $targetStatus, int $targetPage = 1) use ($rou
     </div>
 
     <?php if ($totalPages > 1): ?>
-        <?php
-        $pageUrl = static fn (int $targetPage): string => $listUrl($status, $targetPage);
-        ?>
         <div class="d-flex justify-content-end gap-2 mt-3">
             <a
                 class="btn btn-outline-secondary btn-sm js-open-family-list <?= $page <= 1 ? 'disabled' : '' ?>"
-                href="<?= esc($pageUrl(max(1, $page - 1)), 'attr') ?>"
-                data-modal-url="<?= esc($pageUrl(max(1, $page - 1)) . '&partial=1', 'attr') ?>"
+                href="<?= esc($listUrl($status, max(1, $page - 1)), 'attr') ?>"
+                data-modal-url="<?= esc($listUrl($status, max(1, $page - 1)) . '&partial=1', 'attr') ?>"
                 data-modal-title="Manage Families"
                 aria-disabled="<?= $page <= 1 ? 'true' : 'false' ?>">
                 Previous
             </a>
             <a
                 class="btn btn-outline-secondary btn-sm js-open-family-list <?= $page >= $totalPages ? 'disabled' : '' ?>"
-                href="<?= esc($pageUrl(min($totalPages, $page + 1)), 'attr') ?>"
-                data-modal-url="<?= esc($pageUrl(min($totalPages, $page + 1)) . '&partial=1', 'attr') ?>"
+                href="<?= esc($listUrl($status, min($totalPages, $page + 1)), 'attr') ?>"
+                data-modal-url="<?= esc($listUrl($status, min($totalPages, $page + 1)) . '&partial=1', 'attr') ?>"
                 data-modal-title="Manage Families"
                 aria-disabled="<?= $page >= $totalPages ? 'true' : 'false' ?>">
                 Next

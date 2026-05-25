@@ -1,5 +1,7 @@
 <?php
 helper('dashboard_view');
+
+// Load normalized service rows for the service list partial.
 extract(service_management_view_data(get_defined_vars()), EXTR_OVERWRITE);
 ?>
 

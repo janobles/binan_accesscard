@@ -1,10 +1,10 @@
 <?php
 
-use App\Support\FamilyFormViewData;
+use App\Support\DashboardViewData;
 
 if (! function_exists('family_form_view_data')) {
     function family_form_view_data(array $data = []): array
     {
-        return FamilyFormViewData::prepare($data);
+        return DashboardViewData::familyForm($data);
     }
 }

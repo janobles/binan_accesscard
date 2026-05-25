@@ -1,5 +1,7 @@
 <?php
 helper('dashboard_view');
+
+// Load normalized sector/service selections for the family wizard step.
 extract(sector_and_services_view_data(get_defined_vars()), EXTR_OVERWRITE);
 ?>
 
@@ -45,7 +47,7 @@ extract(sector_and_services_view_data(get_defined_vars()), EXTR_OVERWRITE);
                     <h6 class="mb-2"><?= esc((string) $category) ?></h6>
                     <div class="service-check-list">
                         <?php foreach ($services as $service): ?>
-                            <?php $serviceId = (string) ($service['serviceID'] ?? ''); ?>
+                            <?php $serviceId      = (string) ($service['serviceID'] ?? ''); ?>
                             <?php $serviceInputId = 'service_' . preg_replace('/[^a-zA-Z0-9_\-]/', '_', strtolower((string) $category)) . '_' . $serviceId; ?>
                             <label class="form-check" for="<?= esc($serviceInputId) ?>">
                                 <input class="form-check-input" id="<?= esc($serviceInputId) ?>" type="checkbox" name="service_ids[]" value="<?= esc($serviceId) ?>" <?= in_array((int) $serviceId, $selectedServiceIds, true) ? 'checked' : '' ?>>

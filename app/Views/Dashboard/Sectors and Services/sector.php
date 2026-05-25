@@ -1,5 +1,7 @@
 <?php
 helper('dashboard_view');
+
+// Load normalized sector rows for the sector list partial.
 extract(sector_management_view_data(get_defined_vars()), EXTR_OVERWRITE);
 ?>
 

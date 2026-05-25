@@ -1,36 +1,6 @@
 <?php
-$adminAccounts = $adminAccounts ?? [];
-$employeeAccounts = $employeeAccounts ?? [];
-$linkableMembers = $linkableMembers ?? [];
-$searchTerm = $searchTerm ?? '';
-$searchFilters = $searchFilters ?? [];
-$hasSearchFilters = $searchTerm !== '' || array_filter($searchFilters, static fn ($value): bool => trim((string) $value) !== '') !== [];
-$formatDate = static function (mixed $value): string {
-    $timestamp = strtotime((string) $value);
-
-    return $timestamp === false ? '' : date('Y-m-d', $timestamp);
-};
-$formatTime = static function (mixed $value): string {
-    $timestamp = strtotime((string) $value);
-
-    return $timestamp === false ? '' : date('h:i A', $timestamp);
-};
-$formatMemberName = static function (array $member): string {
-    $memberName = trim((string) ($member['member_name'] ?? ''));
-
-    if ($memberName !== '') {
-        return $memberName;
-    }
-
-    $memberName = trim(implode(' ', array_filter([
-        (string) ($member['firstname'] ?? ''),
-        (string) ($member['middlename'] ?? ''),
-        (string) ($member['lastname'] ?? ''),
-        (string) ($member['suffix'] ?? ''),
-    ], static fn (string $value): bool => trim($value) !== '')));
-
-    return $memberName === '' ? '-' : $memberName;
-};
+helper('dashboard_view');
+extract(accounts_view_data(get_defined_vars()), EXTR_OVERWRITE);
 ?>
 
 <div class="panel mb-3">

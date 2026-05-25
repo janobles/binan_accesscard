@@ -1,3 +1,6 @@
+<?php
+// Member summary placeholders are filled by the family form script.
+?>
 <div class="form-section family-step-panel" data-step="3">
     <div class="section-title">
         <span>Family Members</span>

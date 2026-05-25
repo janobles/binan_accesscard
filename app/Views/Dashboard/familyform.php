@@ -1,5 +1,7 @@
 <?php
 helper('family_form');
+
+// Load normalized family form data from the helper before rendering the wizard.
 extract(family_form_view_data(get_defined_vars()), EXTR_OVERWRITE);
 ?>
 

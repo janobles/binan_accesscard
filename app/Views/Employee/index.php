@@ -1,39 +1,6 @@
 <?php
-$username = $user['username'] ?? 'Employee';
-$activePage = $activePage ?? 'dashboard';
-$pageTitle = $pageTitle ?? ($activePage === 'dashboard' ? 'Workspace' : ucwords(str_replace('-', ' ', $activePage)));
-$navActive = $navActive ?? [];
-$stats = $stats ?? ['families' => 0, 'members' => 0, 'sectors' => 0, 'assistance' => 0];
-$recentFamilies = $recentFamilies ?? [];
-$myAudits = $myAudits ?? [];
-$familyFormViewData = $familyFormViewData ?? [];
-$searchTerm = $searchTerm ?? '';
-$searchFilters = $searchFilters ?? [];
-$auditActionOptions = $auditActionOptions ?? [];
-$sectorOptions = $familyFormViewData['sectorOptions'] ?? [];
-$hasSearchFilters = $searchTerm !== '' || array_filter($searchFilters, static fn ($value): bool => trim((string) $value) !== '') !== [];
-$canCreateFamily = $canCreateFamily ?? false;
-$idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
-$selectedFilterDate = (string) ($searchFilters['date'] ?? $searchFilters['date_from'] ?? '');
-$formatDate = static function (mixed $value): string {
-    $timestamp = strtotime((string) $value);
-
-    return $timestamp === false ? '' : date('Y-m-d', $timestamp);
-};
-$formatTime = static function (mixed $value): string {
-    $timestamp = strtotime((string) $value);
-
-    return $timestamp === false ? '' : date('h:i A', $timestamp);
-};
-$formatAuditMember = static function (array $audit): string {
-    $memberName = trim((string) ($audit['member_name'] ?? ''));
-
-    if ($memberName === '') {
-        $memberName = trim((string) ($audit['firstname'] ?? '') . ' ' . (string) ($audit['lastname'] ?? ''));
-    }
-
-    return $memberName === '' ? '-' : $memberName;
-};
+helper('dashboard_view');
+extract(employee_dashboard_view_data(get_defined_vars()), EXTR_OVERWRITE);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -215,10 +182,7 @@ $formatAuditMember = static function (array $audit): string {
                     <div class="section-title mt-0">
                         <span>Family / Member Data Entry</span>
                     </div>
-                    <?= view('Dashboard/familyform', array_merge(
-                        $familyFormViewData,
-                        ['canCreateFamily' => $canCreateFamily]
-                    )) ?>
+                    <?= view('Dashboard/familyform', family_form_partial_data($familyFormViewData, $canCreateFamily)) ?>
                 </div>
             <?php endif; ?>
 

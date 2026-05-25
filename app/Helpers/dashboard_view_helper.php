@@ -64,3 +64,10 @@ if (! function_exists('service_management_view_data')) {
         return DashboardViewData::serviceManagement($data);
     }
 }
+
+if (! function_exists('family_form_partial_data')) {
+    function family_form_partial_data(array $familyFormViewData = [], bool $canCreateFamily = false): array
+    {
+        return DashboardViewData::familyFormPartial($familyFormViewData, $canCreateFamily);
+    }
+}

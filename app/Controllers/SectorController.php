@@ -2,16 +2,13 @@
 
 namespace App\Controllers;
 
-use App\Controllers\Concerns\AdminCrudSupportTrait;
-use App\Controllers\Concerns\HomeRoleAccessTrait;
+use App\Libraries\RecordArchiver;
+use App\Libraries\RoleAccess;
 use App\Models\SectorModel;
 use CodeIgniter\HTTP\RedirectResponse;
 
 class SectorController extends BaseController
 {
-    use AdminCrudSupportTrait;
-    use HomeRoleAccessTrait;
-
     public function create(): RedirectResponse
     {
         return $this->saveSector();
@@ -24,22 +21,22 @@ class SectorController extends BaseController
 
     public function archive(int $sectorId): RedirectResponse
     {
-        $guard = $this->ensureAdminAccess();
+        $guard = RoleAccess::requireRole(['Developer', 'Admin']);
 
         if ($guard instanceof RedirectResponse) {
             return $guard;
         }
 
-        if (! $this->archiveRecord('sector', 'sectorID', $sectorId)) {
-            return $this->redirectAdmin('admin/sectors', 'error', 'Unable to delete sector.');
+        if (! RecordArchiver::archive('sector', 'sectorID', $sectorId)) {
+            return redirect()->to(site_url('admin/sectors'))->with('error', 'Unable to delete sector.');
         }
 
-        return $this->redirectAdmin('admin/sectors', 'success', 'Sector deleted successfully.');
+        return redirect()->to(site_url('admin/sectors'))->with('success', 'Sector deleted successfully.');
     }
 
     private function saveSector(?int $sectorId = null): RedirectResponse
     {
-        $guard = $this->ensureAdminAccess();
+        $guard = RoleAccess::requireRole(['Developer', 'Admin']);
 
         if ($guard instanceof RedirectResponse) {
             return $guard;
@@ -48,7 +45,7 @@ class SectorController extends BaseController
         $model = new SectorModel();
 
         if (! $model->hasTable()) {
-            return $this->redirectAdmin('admin/sectors', 'error', 'Sector table is not available.');
+            return redirect()->to(site_url('admin/sectors'))->with('error', 'Sector table is not available.');
         }
 
         $data = [
@@ -58,13 +55,13 @@ class SectorController extends BaseController
         ];
 
         if ($data['shortcode'] === '' || $data['name'] === '') {
-            return $this->redirectAdmin('admin/sectors', 'error', 'Shortcode and name are required.');
+            return redirect()->to(site_url('admin/sectors'))->with('error', 'Shortcode and name are required.');
         }
 
         $isUpdate = $sectorId !== null;
         $isUpdate ? $model->update($sectorId, $data) : $model->insert($data);
         $message = $isUpdate ? 'Sector updated successfully.' : 'Sector added successfully.';
 
-        return $this->redirectAdmin('admin/sectors', 'success', $message);
+        return redirect()->to(site_url('admin/sectors'))->with('success', $message);
     }
 }

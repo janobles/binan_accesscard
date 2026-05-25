@@ -2,16 +2,13 @@
 
 namespace App\Controllers;
 
-use App\Controllers\Concerns\AdminCrudSupportTrait;
-use App\Controllers\Concerns\HomeRoleAccessTrait;
+use App\Libraries\RecordArchiver;
+use App\Libraries\RoleAccess;
 use App\Models\ServiceModel;
 use CodeIgniter\HTTP\RedirectResponse;
 
 class ServiceController extends BaseController
 {
-    use AdminCrudSupportTrait;
-    use HomeRoleAccessTrait;
-
     public function create(): RedirectResponse
     {
         return $this->saveService();
@@ -24,22 +21,22 @@ class ServiceController extends BaseController
 
     public function archive(int $serviceId): RedirectResponse
     {
-        $guard = $this->ensureAdminAccess();
+        $guard = RoleAccess::requireRole(['Developer', 'Admin']);
 
         if ($guard instanceof RedirectResponse) {
             return $guard;
         }
 
-        if (! $this->archiveRecord('services', 'serviceID', $serviceId)) {
-            return $this->redirectAdmin('admin/services', 'error', 'Unable to delete service.');
+        if (! RecordArchiver::archive('services', 'serviceID', $serviceId)) {
+            return redirect()->to(site_url('admin/services'))->with('error', 'Unable to delete service.');
         }
 
-        return $this->redirectAdmin('admin/services', 'success', 'Service deleted successfully.');
+        return redirect()->to(site_url('admin/services'))->with('success', 'Service deleted successfully.');
     }
 
     private function saveService(?int $serviceId = null): RedirectResponse
     {
-        $guard = $this->ensureAdminAccess();
+        $guard = RoleAccess::requireRole(['Developer', 'Admin']);
 
         if ($guard instanceof RedirectResponse) {
             return $guard;
@@ -48,7 +45,7 @@ class ServiceController extends BaseController
         $model = new ServiceModel();
 
         if (! $model->hasTable()) {
-            return $this->redirectAdmin('admin/services', 'error', 'Services table is not available.');
+            return redirect()->to(site_url('admin/services'))->with('error', 'Services table is not available.');
         }
 
         $data = [
@@ -58,13 +55,13 @@ class ServiceController extends BaseController
         ];
 
         if ($data['category'] === '' || $data['name'] === '') {
-            return $this->redirectAdmin('admin/services', 'error', 'Category and name are required.');
+            return redirect()->to(site_url('admin/services'))->with('error', 'Category and name are required.');
         }
 
         $isUpdate = $serviceId !== null;
         $isUpdate ? $model->update($serviceId, $data) : $model->insert($data);
         $message = $isUpdate ? 'Service updated successfully.' : 'Service added successfully.';
 
-        return $this->redirectAdmin('admin/services', 'success', $message);
+        return redirect()->to(site_url('admin/services'))->with('success', $message);
     }
 }

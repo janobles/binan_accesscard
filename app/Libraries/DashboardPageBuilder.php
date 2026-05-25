@@ -1,0 +1,204 @@
+<?php
+
+namespace App\Libraries;
+
+use App\Models\AuditTrailsModel;
+use App\Models\DashboardModel;
+use App\Models\FamilyFormOptionsModel;
+use App\Models\SearchModel;
+use App\Models\SectorModel;
+use App\Models\ServiceModel;
+use App\Models\UserModel;
+use App\Models\ViewLayoutModel;
+use CodeIgniter\HTTP\IncomingRequest;
+use CodeIgniter\HTTP\RedirectResponse;
+use Config\IdleTimeout;
+
+class DashboardPageBuilder
+{
+    public function __construct(private IncomingRequest $request) {}
+
+    public function renderAdminPage(string $activePage): string|RedirectResponse
+    {
+        $guard = RoleAccess::requireRole(['Developer', 'Admin']);
+
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        if ($activePage === 'accounts' && RoleAccess::normalizeRole((string) session()->get('role')) !== 'Developer') {
+            return redirect()->to(site_url('admin/dashboard'))
+                ->with('error', 'Developer access is required for account management.');
+        }
+
+        return view('Dashboard/admin', $this->buildAdminViewData($activePage));
+    }
+
+    public function buildAdminViewData(string $activePage): array
+    {
+        $layoutModel    = new ViewLayoutModel();
+        $dashboardModel = new DashboardModel();
+        $searchModel    = new SearchModel();
+        $searchTerm     = trim((string) $this->request->getGet('q'));
+        $searchFilters  = $this->searchFilters();
+        $hasFilters     = $this->hasSearchFilters($searchFilters);
+        $isDeveloper    = RoleAccess::normalizeRole((string) session()->get('role')) === 'Developer';
+        $sectorModel    = new SectorModel();
+        $serviceModel   = new ServiceModel();
+        $users          = (new UserModel())->getStaffAccounts();
+
+        $familyFormViewData = (new FamilyFormOptionsModel())->getViewData();
+
+        $recentFamilies = $activePage === 'dashboard' && ($searchTerm !== '' || $hasFilters)
+            ? $searchModel->families($searchTerm, $searchFilters, 25)
+            : $dashboardModel->recentFamilies(10);
+
+        $recentAudits = $activePage === 'audit-trails'
+            ? $searchModel->auditTrails($searchTerm, $searchFilters, 50)
+            : (new AuditTrailsModel())->getRecent(10);
+
+        return [
+            'user'             => session()->get(),
+            'activePage'       => $activePage,
+            'pageTitle'        => $layoutModel->pageTitle($activePage),
+            'modeLabel'        => $layoutModel->adminModeLabel($isDeveloper),
+            'canManageAccounts' => $isDeveloper,
+            'navActive' => [
+                'dashboard'    => $layoutModel->navActive($activePage, 'dashboard'),
+                'accounts'     => $layoutModel->navActive($activePage, 'accounts'),
+                'family-entry' => $layoutModel->navActive($activePage, 'family-entry'),
+                'family-manage' => $layoutModel->navActive($activePage, 'family-manage'),
+                'audit-trails' => $layoutModel->navActive($activePage, 'audit-trails'),
+                'sectors'      => $layoutModel->navActive($activePage, 'sectors'),
+                'services'     => $layoutModel->navActive($activePage, 'services'),
+            ],
+            'adminAccounts'    => array_values(array_filter($users, static fn ($u) => $u['role'] === 'Admin')),
+            'employeeAccounts' => array_values(array_filter($users, static fn ($u) => $u['role'] === 'User')),
+            'familyFormViewData' => $familyFormViewData,
+            'sectors'          => $this->fetchVisibleSectors($sectorModel),
+            'services'         => $this->fetchVisibleServices($serviceModel),
+            'recentFamilies'   => $recentFamilies,
+            'recentAudits'     => $recentAudits,
+            'searchTerm'       => $searchTerm,
+            'searchFilters'    => $searchFilters,
+            'auditActionOptions' => $searchModel->auditActions(),
+            'stats'            => $dashboardModel->stats(),
+            'canCreateFamily'  => true,
+        ];
+    }
+
+    public function renderEmployeePage(string $activePage): string|RedirectResponse
+    {
+        $guard = RoleAccess::requireRole(['Developer', 'Admin', 'User']);
+
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        $layoutModel    = new ViewLayoutModel();
+        $dashboardModel = new DashboardModel();
+        $searchModel    = new SearchModel();
+        $searchTerm     = trim((string) $this->request->getGet('q'));
+        $searchFilters  = $this->searchFilters();
+        $hasFilters     = $this->hasSearchFilters($searchFilters);
+        $userId         = (int) session()->get('user_id');
+
+        $familyFormViewData = (new FamilyFormOptionsModel())->getViewData();
+
+        $recentFamilies = $activePage === 'dashboard' && ($searchTerm !== '' || $hasFilters)
+            ? $searchModel->families($searchTerm, $searchFilters, 25)
+            : $dashboardModel->recentFamilies(10);
+
+        $myAudits = $activePage === 'activity'
+            ? $searchModel->auditTrailsByUser($userId, $searchTerm, $searchFilters, 50)
+            : (new AuditTrailsModel())->getByUser($userId, 10);
+
+        return view('Employee/index', [
+            'user'          => session()->get(),
+            'activePage'    => $activePage,
+            'pageTitle'     => $layoutModel->employeePageTitle($activePage),
+            'navActive' => [
+                'dashboard'    => $layoutModel->navActive($activePage, 'dashboard'),
+                'family-entry' => $layoutModel->navActive($activePage, 'family-entry'),
+                'family-manage' => $layoutModel->navActive($activePage, 'family-manage'),
+                'activity'     => $layoutModel->navActive($activePage, 'activity'),
+            ],
+            'canCreateFamily'    => true,
+            'familyFormViewData' => $familyFormViewData,
+            'recentFamilies'     => $recentFamilies,
+            'myAudits'           => $myAudits,
+            'stats'              => $dashboardModel->stats(),
+            'searchTerm'         => $searchTerm,
+            'searchFilters'      => $searchFilters,
+            'auditActionOptions' => $searchModel->auditActions(),
+            'idleTimeoutSeconds' => (new IdleTimeout())->seconds,
+        ]);
+    }
+
+    public function searchFilters(): array
+    {
+        return [
+            'sectorID'  => (string) $this->request->getGet('sectorID'),
+            'role'      => (string) $this->request->getGet('role'),
+            'status'    => (string) $this->request->getGet('status'),
+            'action'    => (string) $this->request->getGet('action'),
+            'date_from' => (string) $this->request->getGet('date_from'),
+            'date_to'   => (string) $this->request->getGet('date_to'),
+        ];
+    }
+
+    private function fetchVisibleSectors(SectorModel $sectorModel): array
+    {
+        if (! $sectorModel->hasTable()) {
+            return [];
+        }
+
+        $db      = $sectorModel->db;
+        $builder = $db->table('sector');
+
+        if ($db->fieldExists('isactive', 'sector')) {
+            $builder->where('isactive', 1);
+        } elseif ($db->fieldExists('status', 'sector')) {
+            $builder->where('LOWER(status) <>', 'archived');
+        } elseif ($db->fieldExists('archived_at', 'sector')) {
+            $builder->where('archived_at IS NULL');
+        } elseif ($db->fieldExists('deleted_at', 'sector')) {
+            $builder->where('deleted_at IS NULL');
+        }
+
+        return $builder->orderBy('sectorID', 'ASC')->get()->getResultArray();
+    }
+
+    private function fetchVisibleServices(ServiceModel $serviceModel): array
+    {
+        if (! $serviceModel->hasTable()) {
+            return [];
+        }
+
+        $db      = $serviceModel->db;
+        $builder = $db->table('services');
+
+        if ($db->fieldExists('isactive', 'services')) {
+            $builder->where('isactive', 1);
+        } elseif ($db->fieldExists('status', 'services')) {
+            $builder->where('LOWER(status) <>', 'archived');
+        } elseif ($db->fieldExists('archived_at', 'services')) {
+            $builder->where('archived_at IS NULL');
+        } elseif ($db->fieldExists('deleted_at', 'services')) {
+            $builder->where('deleted_at IS NULL');
+        }
+
+        return $builder->orderBy('serviceID', 'ASC')->get()->getResultArray();
+    }
+
+    private function hasSearchFilters(array $filters): bool
+    {
+        foreach ($filters as $value) {
+            if (trim((string) $value) !== '') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+}

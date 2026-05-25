@@ -2,8 +2,8 @@
 
 namespace App\Controllers;
 
-use App\Controllers\Concerns\HomeDashboardPagesTrait;
-use App\Controllers\Concerns\HomeRoleAccessTrait;
+use App\Libraries\DashboardPageBuilder;
+use App\Libraries\RoleAccess;
 use App\Models\FamilyFormOptionsModel;
 use App\Models\UserModel;
 use CodeIgniter\HTTP\RedirectResponse;
@@ -13,13 +13,10 @@ use CodeIgniter\HTTP\RedirectResponse;
  */
 class Home extends BaseController
 {
-    use HomeRoleAccessTrait;
-    use HomeDashboardPagesTrait;
-
     public function index(): string|RedirectResponse
     {
         if (session()->get('is_logged_in')) {
-            return $this->redirectByRole((string) session()->get('role'));
+            return RoleAccess::redirectByRole((string) session()->get('role'));
         }
 
         return view('Login/login');
@@ -38,7 +35,7 @@ class Home extends BaseController
                 ->with('error', 'Invalid username or password.');
         }
 
-        $role = $this->normalizeRole((string) ($user['role'] ?? ''));
+        $role = RoleAccess::normalizeRole((string) ($user['role'] ?? ''));
 
         if ($role === null) {
             return redirect()->back()
@@ -56,7 +53,7 @@ class Home extends BaseController
             'idle_last_activity' => time(),
         ]);
 
-        return $this->redirectByRole($role);
+        return RoleAccess::redirectByRole($role);
     }
 
     public function logout(): RedirectResponse
@@ -93,7 +90,7 @@ class Home extends BaseController
 
     public function adminDashboard(): string|RedirectResponse
     {
-        return $this->renderAdminPage('dashboard');
+        return (new DashboardPageBuilder($this->request))->renderAdminPage('dashboard');
     }
 
     public function adminAccounts(): string|RedirectResponse
@@ -102,7 +99,7 @@ class Home extends BaseController
             return $this->renderAdminAccountsPartial();
         }
 
-        return $this->renderAdminPage('accounts');
+        return (new DashboardPageBuilder($this->request))->renderAdminPage('accounts');
     }
 
     public function adminFamilyEntry(): string|RedirectResponse
@@ -111,7 +108,7 @@ class Home extends BaseController
             return $this->renderAdminFamilyPartial();
         }
 
-        return $this->renderAdminPage('family-entry');
+        return (new DashboardPageBuilder($this->request))->renderAdminPage('family-entry');
     }
 
     public function adminAuditTrails(): string|RedirectResponse
@@ -120,12 +117,12 @@ class Home extends BaseController
             return $this->renderAdminAuditPartial();
         }
 
-        return $this->renderAdminPage('audit-trails');
+        return (new DashboardPageBuilder($this->request))->renderAdminPage('audit-trails');
     }
 
     public function employee(): string|RedirectResponse
     {
-        return $this->renderEmployeePage('dashboard');
+        return (new DashboardPageBuilder($this->request))->renderEmployeePage('dashboard');
     }
 
     public function employeeFamilyEntry(): string|RedirectResponse
@@ -134,12 +131,12 @@ class Home extends BaseController
             return $this->renderEmployeeFamilyPartial();
         }
 
-        return $this->renderEmployeePage('family-entry');
+        return (new DashboardPageBuilder($this->request))->renderEmployeePage('family-entry');
     }
 
     public function employeeActivity(): string|RedirectResponse
     {
-        return $this->renderEmployeePage('activity');
+        return (new DashboardPageBuilder($this->request))->renderEmployeePage('activity');
     }
 
     private function isPartialRequest(): bool
@@ -149,7 +146,7 @@ class Home extends BaseController
 
     private function guardAdminPartialAccess(): ?RedirectResponse
     {
-        return $this->requireRole(['Developer', 'Admin']);
+        return RoleAccess::requireRole(['Developer', 'Admin']);
     }
 
     private function renderAdminAccountsPartial(): string|RedirectResponse
@@ -160,11 +157,11 @@ class Home extends BaseController
             return $guard;
         }
 
-        if ($this->normalizeRole((string) session()->get('role')) !== 'Developer') {
+        if (RoleAccess::normalizeRole((string) session()->get('role')) !== 'Developer') {
             return '<div class="alert alert-danger mb-0">Developer access is required for account management.</div>';
         }
 
-        $viewData = $this->buildAdminViewData('accounts');
+        $viewData = (new DashboardPageBuilder($this->request))->buildAdminViewData('accounts');
 
         return view('Dashboard/accounts', [
             'adminAccounts' => $viewData['adminAccounts'] ?? [],
@@ -196,7 +193,7 @@ class Home extends BaseController
             return $guard;
         }
 
-        $viewData = $this->buildAdminViewData('audit-trails');
+        $viewData = (new DashboardPageBuilder($this->request))->buildAdminViewData('audit-trails');
 
         return view('Dashboard/audit-trails', [
             'recentAudits' => $viewData['recentAudits'] ?? [],
@@ -214,7 +211,7 @@ class Home extends BaseController
             return $guard;
         }
 
-        $viewData = $this->buildAdminViewData('sectors');
+        $viewData = (new DashboardPageBuilder($this->request))->buildAdminViewData('sectors');
 
         return view('Dashboard/Sectors and Services/sector', [
             'sectors' => $viewData['sectors'] ?? [],
@@ -229,7 +226,7 @@ class Home extends BaseController
             return $guard;
         }
 
-        $viewData = $this->buildAdminViewData('services');
+        $viewData = (new DashboardPageBuilder($this->request))->buildAdminViewData('services');
 
         return view('Dashboard/Sectors and Services/services', [
             'services' => $viewData['services'] ?? [],
@@ -238,7 +235,7 @@ class Home extends BaseController
 
     private function renderEmployeeFamilyPartial(): string|RedirectResponse
     {
-        $guard = $this->requireRole(['Developer', 'Admin', 'User']);
+        $guard = RoleAccess::requireRole(['Developer', 'Admin', 'User']);
 
         if ($guard instanceof RedirectResponse) {
             return $guard;

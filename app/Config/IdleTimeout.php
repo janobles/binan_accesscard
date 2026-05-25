@@ -9,5 +9,5 @@ use CodeIgniter\Config\BaseConfig;
  */
 class IdleTimeout extends BaseConfig
 {
-    public int $seconds = 900;
+    public int $seconds = 60;
 }

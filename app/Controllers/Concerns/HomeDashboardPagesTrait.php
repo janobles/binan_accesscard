@@ -90,6 +90,7 @@ trait HomeDashboardPagesTrait
             'auditActionOptions' => $searchModel->auditActions(),
             'stats' => $dashboardModel->stats(),
             'canCreateFamily' => true,
+            'idleTimeoutSeconds' => (new IdleTimeout())->seconds,
         ];
     }
 

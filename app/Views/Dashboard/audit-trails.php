@@ -24,6 +24,16 @@ $formatAuditMember = static function (array $audit): string {
 
     return $memberName === '' ? '-' : $memberName;
 };
+$formatAuditUser = static function (array $audit): string {
+    $username = trim((string) ($audit['username'] ?? $audit['userID'] ?? ''));
+    $role = trim((string) ($audit['user_role'] ?? ''));
+
+    if ($role === 'User') {
+        $role = 'Employee';
+    }
+
+    return $role === '' ? $username : $username . ' (' . $role . ')';
+};
 ?>
 
 <div class="panel">
@@ -59,7 +69,7 @@ $formatAuditMember = static function (array $audit): string {
             <tbody>
                 <?php foreach ($recentAudits as $audit): ?>
                     <tr>
-                        <td><?= esc((string) ($audit['username'] ?? $audit['userID'] ?? '')) ?></td>
+                        <td><?= esc($formatAuditUser($audit)) ?></td>
                         <td><?= esc($formatAuditMember($audit)) ?></td>
                         <td><?= esc((string) ($audit['user_action'] ?? '')) ?></td>
                         <td><?= esc((string) ($audit['description'] ?? '')) ?></td>

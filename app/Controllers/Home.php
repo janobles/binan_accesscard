@@ -8,6 +8,7 @@ use App\Models\FamilyFormOptionsModel;
 use App\Models\UserModel;
 use App\Support\SessionAuditLogger;
 use CodeIgniter\HTTP\RedirectResponse;
+use Config\IdleTimeout;
 
 /**
  * Handles authentication, session lifetime, and role-based dashboard routing.
@@ -20,14 +21,25 @@ class Home extends BaseController
     public function index(): string|RedirectResponse
     {
         if (session()->get('is_logged_in')) {
+            if (! $this->hasValidLoginSession()) {
+                $this->clearLoginSession();
+
+                return redirect()->to(site_url('login'))
+                    ->with('error', 'Your session expired. Please login again.');
+            }
+
             return $this->redirectByRole((string) session()->get('role'));
         }
 
         return view('Login/login');
     }
 
-    public function login(): RedirectResponse
+    public function login(): string|RedirectResponse
     {
+        if ($this->request->getMethod() === 'get') {
+            return $this->index();
+        }
+
         $username = trim((string) $this->request->getPost('username'));
         $password = (string) $this->request->getPost('password');
 
@@ -73,7 +85,7 @@ class Home extends BaseController
         }
 
         SessionAuditLogger::logLogoutFromSession($this->request);
-        session()->destroy();
+        $this->clearLoginSession();
 
         return redirect()->to(site_url('login'));
     }
@@ -276,6 +288,30 @@ class Home extends BaseController
 
     private function clearLoginSession(): void
     {
-        session()->destroy();
+        session()->remove([
+            'is_logged_in',
+            'user_id',
+            'member_id',
+            'username',
+            'role',
+            'idle_last_activity',
+        ]);
+
+        session()->regenerate(true);
+    }
+
+    private function hasValidLoginSession(): bool
+    {
+        if (! $this->sessionUserExists()) {
+            return false;
+        }
+
+        if ($this->normalizeRole((string) session()->get('role')) === null) {
+            return false;
+        }
+
+        $lastActivity = (int) (session()->get('idle_last_activity') ?? time());
+
+        return (time() - $lastActivity) < (new IdleTimeout())->seconds;
     }
 }

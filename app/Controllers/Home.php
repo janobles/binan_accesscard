@@ -36,7 +36,7 @@ class Home extends BaseController
 
     public function login(): string|RedirectResponse
     {
-        if ($this->request->getMethod() === 'get') {
+        if ($this->request->getMethod() === 'GET') {
             return $this->index();
         }
 

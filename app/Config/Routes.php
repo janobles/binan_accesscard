@@ -10,7 +10,7 @@ use CodeIgniter\Router\RouteCollection;
  * Authentication
  */
 $routes->get('/', 'Home::index');
-$routes->match(['get', 'post'], 'login', 'Home::login');
+$routes->match(['GET', 'POST'], 'login', 'Home::login');
 $routes->get('logout', 'Home::logout');
 $routes->get('session/keep-alive', 'Home::keepAlive');
 

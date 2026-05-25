@@ -204,7 +204,6 @@ class Home extends BaseController
         return view('Dashboard/accounts', [
             'adminAccounts' => $viewData['adminAccounts'] ?? [],
             'employeeAccounts' => $viewData['employeeAccounts'] ?? [],
-            'linkableMembers' => $viewData['linkableMembers'] ?? [],
             'searchTerm' => $viewData['searchTerm'] ?? '',
             'searchFilters' => $viewData['searchFilters'] ?? [],
         ]);

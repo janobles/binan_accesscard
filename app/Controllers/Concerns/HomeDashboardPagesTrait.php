@@ -79,7 +79,6 @@ trait HomeDashboardPagesTrait
             ],
             'adminAccounts' => array_values(array_filter($users, static fn ($account) => $account['role'] === 'Admin')),
             'employeeAccounts' => array_values(array_filter($users, static fn ($account) => $account['role'] === 'User')),
-            'linkableMembers' => $isDeveloper ? $userModel->getLinkableMembers() : [],
             'familyFormViewData' => $familyFormViewData,
             'sectors' => $this->fetchVisibleSectors($sectorModel),
             'services' => $this->fetchVisibleServices($serviceModel),

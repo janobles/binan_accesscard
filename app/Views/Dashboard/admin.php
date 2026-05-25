@@ -12,7 +12,6 @@ $recentFamilies = $recentFamilies ?? [];
 $recentAudits = $recentAudits ?? [];
 $adminAccounts = $adminAccounts ?? [];
 $employeeAccounts = $employeeAccounts ?? [];
-$linkableMembers = $linkableMembers ?? [];
 $familyFormViewData = $familyFormViewData ?? [];
 $searchTerm = $searchTerm ?? '';
 $searchFilters = $searchFilters ?? [];
@@ -199,7 +198,6 @@ $formatAuditUser = static function (array $audit): string {
                 <?= view('Dashboard/accounts', [
                     'adminAccounts' => $adminAccounts,
                     'employeeAccounts' => $employeeAccounts,
-                    'linkableMembers' => $linkableMembers,
                     'searchTerm' => $searchTerm,
                     'searchFilters' => $searchFilters,
                 ]) ?>

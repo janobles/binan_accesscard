@@ -74,10 +74,6 @@ class SearchModel
         $limit = max(1, $limit);
         $select = 'userID, username, role, isactive, dt_created';
 
-        if ($this->db->fieldExists('memberID', 'users')) {
-            $select .= ', memberID';
-        }
-
         $builder = $this->db->table('users')
             ->select($select)
             ->whereIn('role', ['Admin', 'User']);
@@ -111,7 +107,7 @@ class SearchModel
             ->get()
             ->getResultArray();
 
-        return $this->withAccountMemberNames($rows);
+        return $rows;
     }
 
     public function auditTrails(string $keyword = '', array $filters = [], int $limit = 50): array
@@ -351,26 +347,6 @@ class SearchModel
             $row['firstname'] = $memberName['firstname'];
             $row['lastname'] = $memberName['lastname'];
             $row['member_name'] = $this->formatMemberName($memberName);
-        }
-
-        return $rows;
-    }
-
-    private function withAccountMemberNames(array $rows): array
-    {
-        if (! $this->db->fieldExists('memberID', 'users')) {
-            foreach ($rows as &$row) {
-                $row['member_name'] = '';
-            }
-
-            return $rows;
-        }
-
-        $memberNames = $this->memberNameMap(array_column($rows, 'memberID'));
-
-        foreach ($rows as &$row) {
-            $memberId = (int) ($row['memberID'] ?? 0);
-            $row['member_name'] = $this->formatMemberName($memberNames[$memberId] ?? []);
         }
 
         return $rows;

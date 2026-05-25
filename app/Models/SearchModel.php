@@ -72,8 +72,14 @@ class SearchModel
         }
 
         $limit = max(1, $limit);
+        $select = 'userID, username, role, isactive, dt_created';
+
+        if ($this->db->fieldExists('memberID', 'users')) {
+            $select .= ', memberID';
+        }
+
         $builder = $this->db->table('users')
-            ->select('userID, username, role, isactive, dt_created')
+            ->select($select)
             ->whereIn('role', ['Admin', 'User']);
 
         $keyword = $this->normalizeKeyword($keyword);
@@ -98,12 +104,14 @@ class SearchModel
             $this->applyActiveStatusFilter($builder, $status);
         }
 
-        return $builder
+        $rows = $builder
             ->orderBy('role', 'ASC')
             ->orderBy('username', 'ASC')
             ->limit($limit)
             ->get()
             ->getResultArray();
+
+        return $this->withAccountMemberNames($rows);
     }
 
     public function auditTrails(string $keyword = '', array $filters = [], int $limit = 50): array
@@ -166,10 +174,11 @@ class SearchModel
 
         return array_column(
             $this->db->table('audit_trails')
-                ->select('user_action')
+                ->select('TRIM(user_action) AS user_action', false)
                 ->where('user_action IS NOT NULL')
-                ->groupBy('user_action')
-                ->orderBy('user_action', 'ASC')
+                ->where("TRIM(user_action) != ''", null, false)
+                ->groupBy('TRIM(user_action)')
+                ->orderBy('TRIM(user_action)', 'ASC', false)
                 ->get()
                 ->getResultArray(),
             'user_action'
@@ -209,7 +218,7 @@ class SearchModel
         $action = $this->normalizeKeyword((string) ($filters['action'] ?? ''));
 
         if ($action !== '') {
-            $builder->where('audit_trails.user_action', $action);
+            $builder->where('TRIM(audit_trails.user_action) = ' . $this->db->escape($action), null, false);
         }
 
         $this->applyDateRange($builder, 'audit_trails.dt_created', $filters);
@@ -339,6 +348,27 @@ class SearchModel
             $row['username'] = $usernames[$userId] ?? '';
             $row['firstname'] = $memberName['firstname'];
             $row['lastname'] = $memberName['lastname'];
+            $row['member_name'] = $this->formatMemberName($memberName);
+        }
+
+        return $rows;
+    }
+
+    private function withAccountMemberNames(array $rows): array
+    {
+        if (! $this->db->fieldExists('memberID', 'users')) {
+            foreach ($rows as &$row) {
+                $row['member_name'] = '';
+            }
+
+            return $rows;
+        }
+
+        $memberNames = $this->memberNameMap(array_column($rows, 'memberID'));
+
+        foreach ($rows as &$row) {
+            $memberId = (int) ($row['memberID'] ?? 0);
+            $row['member_name'] = $this->formatMemberName($memberNames[$memberId] ?? []);
         }
 
         return $rows;
@@ -391,6 +421,14 @@ class SearchModel
         }
 
         return $map;
+    }
+
+    private function formatMemberName(array $memberName): string
+    {
+        return trim(implode(' ', array_filter([
+            (string) ($memberName['firstname'] ?? ''),
+            (string) ($memberName['lastname'] ?? ''),
+        ], static fn (string $value): bool => trim($value) !== '')));
     }
 
     private function userIdsForKeyword(string $keyword): array

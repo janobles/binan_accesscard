@@ -62,11 +62,34 @@ class UserModel extends Model
             return [];
         }
 
-        return $this->select('userID, username, role, isactive, dt_created')
+        $select = 'userID, username, role, isactive, dt_created';
+
+        if ($this->hasUserField('memberID')) {
+            $select .= ', memberID';
+        }
+
+        $accounts = $this->select($select)
             ->whereIn('role', ['Admin', 'User'])
             ->orderBy('role', 'ASC')
             ->orderBy('username', 'ASC')
             ->findAll();
+
+        return $this->withLinkedMemberNames($accounts);
+    }
+
+    public function getLinkableMembers(): array
+    {
+        if (! $this->db->tableExists('member')) {
+            return [];
+        }
+
+        return $this->db->table('member')
+            ->select('memberID, firstname, middlename, lastname, suffix')
+            ->where('dt_deleted IS NULL', null, false)
+            ->orderBy('lastname', 'ASC')
+            ->orderBy('firstname', 'ASC')
+            ->get()
+            ->getResultArray();
     }
 
     // Enforces the Enable/Disabled enum while allowing legacy numeric rows.
@@ -136,26 +159,31 @@ class UserModel extends Model
 
     private function memberIdValue(?int $memberId): ?int
     {
-        if ($this->isMemberIdNullable()) {
-            return null;
-        }
-
         if ($memberId !== null && $memberId > 0 && $this->memberExists($memberId)) {
             return $memberId;
         }
 
-        return $this->firstMemberId();
+        return null;
     }
 
-    private function isMemberIdNullable(): bool
+    private function withLinkedMemberNames(array $accounts): array
     {
-        foreach ($this->db->getFieldData($this->table) as $field) {
-            if ($field->name === 'memberID') {
-                return (bool) ($field->nullable ?? false);
+        if (! $this->hasUserField('memberID')) {
+            foreach ($accounts as &$account) {
+                $account['member_name'] = '';
             }
+
+            return $accounts;
         }
 
-        return true;
+        $memberNames = $this->memberNameMap(array_column($accounts, 'memberID'));
+
+        foreach ($accounts as &$account) {
+            $memberId = (int) ($account['memberID'] ?? 0);
+            $account['member_name'] = $memberNames[$memberId] ?? '';
+        }
+
+        return $accounts;
     }
 
     private function hasUserField(string $fieldName): bool
@@ -175,19 +203,39 @@ class UserModel extends Model
             ->countAllResults() > 0;
     }
 
-    private function firstMemberId(): ?int
+    private function memberNameMap(array $memberIds): array
     {
-        if (! $this->db->tableExists('member')) {
-            return null;
+        $memberIds = array_values(array_unique(array_filter(
+            array_map(static fn (mixed $id): int => (int) $id, $memberIds),
+            static fn (int $id): bool => $id > 0
+        )));
+
+        if ($memberIds === [] || ! $this->db->tableExists('member')) {
+            return [];
         }
 
-        $member = $this->db->table('member')
-            ->select('memberID')
-            ->orderBy('memberID', 'ASC')
-            ->limit(1)
+        $members = $this->db->table('member')
+            ->select('memberID, firstname, middlename, lastname, suffix')
+            ->whereIn('memberID', $memberIds)
             ->get()
-            ->getRowArray();
+            ->getResultArray();
 
-        return isset($member['memberID']) ? (int) $member['memberID'] : null;
+        $map = [];
+
+        foreach ($members as $member) {
+            $map[(int) $member['memberID']] = $this->formatMemberName($member);
+        }
+
+        return $map;
+    }
+
+    private function formatMemberName(array $member): string
+    {
+        return trim(implode(' ', array_filter([
+            (string) ($member['firstname'] ?? ''),
+            (string) ($member['middlename'] ?? ''),
+            (string) ($member['lastname'] ?? ''),
+            (string) ($member['suffix'] ?? ''),
+        ], static fn (string $value): bool => trim($value) !== '')));
     }
 }

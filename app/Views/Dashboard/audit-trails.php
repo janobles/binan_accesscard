@@ -15,19 +15,29 @@ $formatTime = static function (mixed $value): string {
 
     return $timestamp === false ? '' : date('h:i A', $timestamp);
 };
+$formatAuditMember = static function (array $audit): string {
+    $memberName = trim((string) ($audit['member_name'] ?? ''));
+
+    if ($memberName === '') {
+        $memberName = trim((string) ($audit['firstname'] ?? '') . ' ' . (string) ($audit['lastname'] ?? ''));
+    }
+
+    return $memberName === '' ? '-' : $memberName;
+};
 ?>
 
 <div class="panel">
     <div class="section-title mt-0"><span>Audit Trails</span></div>
-    <form class="row g-2 mb-3" method="get" action="<?= site_url('admin/audit-trails') ?>">
+    <form class="row g-2 mb-3 js-audit-filter-form" method="get" action="<?= site_url('admin/audit-trails') ?>">
         <div class="col-md-6 col-lg-4">
             <input class="form-control" type="search" name="q" value="<?= esc($searchTerm) ?>" placeholder="Search audit trails by user, action, or description">
         </div>
         <div class="col-md-4 col-lg-3">
-            <select class="form-select" name="action">
+            <select class="form-select js-audit-action-filter" name="action">
                 <option value="">All actions</option>
                 <?php foreach ($auditActionOptions as $action): ?>
-                    <option value="<?= esc((string) $action) ?>" <?= (string) ($searchFilters['action'] ?? '') === (string) $action ? 'selected' : '' ?>><?= esc((string) $action) ?></option>
+                    <?php $action = trim((string) $action); ?>
+                    <option value="<?= esc($action) ?>" <?= trim((string) ($searchFilters['action'] ?? '')) === $action ? 'selected' : '' ?>><?= esc($action) ?></option>
                 <?php endforeach; ?>
             </select>
         </div>
@@ -45,11 +55,12 @@ $formatTime = static function (mixed $value): string {
     </form>
     <div class="table-responsive">
         <table class="table table-sm">
-            <thead><tr><th>User</th><th>Action</th><th>Description</th><th>Date</th><th>Time</th></tr></thead>
+            <thead><tr><th>User</th><th>Member</th><th>Action</th><th>Description</th><th>Date</th><th>Time</th></tr></thead>
             <tbody>
                 <?php foreach ($recentAudits as $audit): ?>
                     <tr>
                         <td><?= esc((string) ($audit['username'] ?? $audit['userID'] ?? '')) ?></td>
+                        <td><?= esc($formatAuditMember($audit)) ?></td>
                         <td><?= esc((string) ($audit['user_action'] ?? '')) ?></td>
                         <td><?= esc((string) ($audit['description'] ?? '')) ?></td>
                         <td><?= esc($formatDate($audit['dt_created'] ?? '')) ?></td>
@@ -57,9 +68,23 @@ $formatTime = static function (mixed $value): string {
                     </tr>
                 <?php endforeach; ?>
                 <?php if ($recentAudits === []): ?>
-                    <tr><td colspan="5" class="text-center text-muted"><?= $hasSearchFilters ? 'No matching audit logs found.' : 'No audit logs yet.' ?></td></tr>
+                    <tr><td colspan="6" class="text-center text-muted"><?= $hasSearchFilters ? 'No matching audit logs found.' : 'No audit logs yet.' ?></td></tr>
                 <?php endif; ?>
             </tbody>
         </table>
     </div>
 </div>
+
+<script>
+(function () {
+    document.querySelectorAll('.js-audit-action-filter').forEach(function (select) {
+        select.addEventListener('change', function () {
+            const form = select.closest('.js-audit-filter-form');
+
+            if (form) {
+                form.submit();
+            }
+        });
+    });
+})();
+</script>

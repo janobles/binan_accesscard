@@ -13,6 +13,7 @@ $recentFamilies = $recentFamilies ?? [];
 $recentAudits = $recentAudits ?? [];
 $adminAccounts = $adminAccounts ?? [];
 $employeeAccounts = $employeeAccounts ?? [];
+$linkableMembers = $linkableMembers ?? [];
 $familyFormViewData = $familyFormViewData ?? [];
 $searchTerm = $searchTerm ?? '';
 $searchFilters = $searchFilters ?? [];
@@ -31,6 +32,15 @@ $formatTime = static function (mixed $value): string {
     $timestamp = strtotime((string) $value);
 
     return $timestamp === false ? '' : date('h:i A', $timestamp);
+};
+$formatAuditMember = static function (array $audit): string {
+    $memberName = trim((string) ($audit['member_name'] ?? ''));
+
+    if ($memberName === '') {
+        $memberName = trim((string) ($audit['firstname'] ?? '') . ' ' . (string) ($audit['lastname'] ?? ''));
+    }
+
+    return $memberName === '' ? '-' : $memberName;
 };
 ?>
 <html lang="en">
@@ -154,11 +164,12 @@ $formatTime = static function (mixed $value): string {
                     </div>
                     <div class="table-responsive">
                         <table class="table table-sm">
-                            <thead><tr><th>User</th><th>Action</th><th>Description</th><th>Date</th><th>Time</th></tr></thead>
+                            <thead><tr><th>User</th><th>Member</th><th>Action</th><th>Description</th><th>Date</th><th>Time</th></tr></thead>
                             <tbody>
                                 <?php foreach ($recentAudits as $audit): ?>
                                     <tr>
                                         <td><?= esc((string) ($audit['username'] ?? $audit['userID'] ?? '')) ?></td>
+                                        <td><?= esc($formatAuditMember($audit)) ?></td>
                                         <td><?= esc((string) ($audit['user_action'] ?? '')) ?></td>
                                         <td><?= esc((string) ($audit['description'] ?? '')) ?></td>
                                         <td><?= esc($formatDate($audit['dt_created'] ?? '')) ?></td>
@@ -166,7 +177,7 @@ $formatTime = static function (mixed $value): string {
                                     </tr>
                                 <?php endforeach; ?>
                                 <?php if ($recentAudits === []): ?>
-                                    <tr><td colspan="5" class="text-center text-muted">No activity yet.</td></tr>
+                                    <tr><td colspan="6" class="text-center text-muted">No activity yet.</td></tr>
                                 <?php endif; ?>
                             </tbody>
                         </table>
@@ -178,6 +189,7 @@ $formatTime = static function (mixed $value): string {
                 <?= view('Dashboard/accounts', [
                     'adminAccounts' => $adminAccounts,
                     'employeeAccounts' => $employeeAccounts,
+                    'linkableMembers' => $linkableMembers,
                     'searchTerm' => $searchTerm,
                     'searchFilters' => $searchFilters,
                 ]) ?>

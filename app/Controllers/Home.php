@@ -6,6 +6,7 @@ use App\Controllers\Concerns\HomeDashboardPagesTrait;
 use App\Controllers\Concerns\HomeRoleAccessTrait;
 use App\Models\FamilyFormOptionsModel;
 use App\Models\UserModel;
+use App\Support\SessionAuditLogger;
 use CodeIgniter\HTTP\RedirectResponse;
 
 /**
@@ -56,18 +57,22 @@ class Home extends BaseController
             'idle_last_activity' => time(),
         ]);
 
+        SessionAuditLogger::logLogin($user, $role, $this->request);
+
         return $this->redirectByRole($role);
     }
 
     public function logout(): RedirectResponse
     {
         if ($this->request->getGet('timeout') === '1') {
+            SessionAuditLogger::logLogoutFromSession($this->request, true);
             $this->clearLoginSession();
 
             return redirect()->to(site_url('login'))
                 ->with('error', 'You were logged out due to inactivity.');
         }
 
+        SessionAuditLogger::logLogoutFromSession($this->request);
         session()->destroy();
 
         return redirect()->to(site_url('login'));
@@ -187,6 +192,7 @@ class Home extends BaseController
         return view('Dashboard/accounts', [
             'adminAccounts' => $viewData['adminAccounts'] ?? [],
             'employeeAccounts' => $viewData['employeeAccounts'] ?? [],
+            'linkableMembers' => $viewData['linkableMembers'] ?? [],
             'searchTerm' => $viewData['searchTerm'] ?? '',
             'searchFilters' => $viewData['searchFilters'] ?? [],
         ]);

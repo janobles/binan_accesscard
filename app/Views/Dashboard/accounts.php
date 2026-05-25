@@ -9,6 +9,8 @@ $showAdminActions = $isDeveloper;
 $showEmployeeActions = $isDeveloper || $isAdmin;
 $adminColspan = $showAdminActions ? 5 : 4;
 $employeeColspan = $showEmployeeActions ? 5 : 4;
+$adminColumnClass = $isDeveloper ? 'col-lg-6' : 'col-lg-12';
+$employeeColumnClass = $isDeveloper ? 'col-lg-6' : 'col-lg-12';
 $searchTerm = $searchTerm ?? '';
 $searchFilters = $searchFilters ?? [];
 $hasSearchFilters = $searchTerm !== '' || array_filter($searchFilters, static fn ($value): bool => trim((string) $value) !== '') !== [];
@@ -116,45 +118,47 @@ $formatStatus = static function (mixed $value) use ($isActiveStatus): string {
     <?php endif; ?>
 
     <div class="row g-3">
-        <div class="col-lg-6">
-            <div class="panel">
-                <div class="section-title mt-0"><span>Admin Accounts</span></div>
-                <div class="table-responsive">
-                    <table class="table table-sm">
-                        <thead><tr><th>Username</th><th>Status</th><th>Date</th><th>Time</th><?= $showAdminActions ? '<th>Action</th>' : '' ?></tr></thead>
-                        <tbody>
-                            <?php foreach ($adminAccounts as $account): ?>
-                                <?php $isActive = $isActiveStatus($account['isactive'] ?? null); ?>
-                                <?php $nextStatus = $isActive ? 'Disabled' : 'Enable'; ?>
-                                <tr>
-                                    <td><?= esc((string) ($account['username'] ?? '')) ?></td>
-                                    <td><?= esc($formatStatus($account['isactive'] ?? '')) ?></td>
-                                    <td><?= esc($formatDate($account['dt_created'] ?? '')) ?></td>
-                                    <td><?= esc($formatTime($account['dt_created'] ?? '')) ?></td>
-                                    <?php if ($showAdminActions): ?>
-                                        <td>
-                                            <!-- Developer-only: posts to AccountController::updateStatus (developer/accounts/status). -->
-                                            <form method="post" action="<?= site_url('developer/accounts/status') ?>">
-                                                <?= csrf_field() ?>
-                                                <input type="hidden" name="userID" value="<?= esc((string) ($account['userID'] ?? '')) ?>">
-                                                <input type="hidden" name="isactive" value="<?= esc($nextStatus) ?>">
-                                                <button class="btn btn-sm <?= $isActive ? 'btn-outline-danger' : 'btn-outline-success' ?>" type="submit">
-                                                    <?= $isActive ? 'Disable' : 'Enable' ?>
-                                                </button>
-                                            </form>
-                                        </td>
-                                    <?php endif; ?>
-                                </tr>
-                            <?php endforeach; ?>
-                            <?php if ($adminAccounts === []): ?>
-                                <tr><td colspan="<?= $adminColspan ?>" class="text-center text-muted"><?= $hasSearchFilters ? 'No matching admin accounts found.' : 'No admin accounts found.' ?></td></tr>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
+        <?php if ($isDeveloper): ?>
+            <div class="<?= esc($adminColumnClass) ?>">
+                <div class="panel">
+                    <div class="section-title mt-0"><span>Admin Accounts</span></div>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead><tr><th>Username</th><th>Status</th><th>Date</th><th>Time</th><?= $showAdminActions ? '<th>Action</th>' : '' ?></tr></thead>
+                            <tbody>
+                                <?php foreach ($adminAccounts as $account): ?>
+                                    <?php $isActive = $isActiveStatus($account['isactive'] ?? null); ?>
+                                    <?php $nextStatus = $isActive ? 'Disabled' : 'Enable'; ?>
+                                    <tr>
+                                        <td><?= esc((string) ($account['username'] ?? '')) ?></td>
+                                        <td><?= esc($formatStatus($account['isactive'] ?? '')) ?></td>
+                                        <td><?= esc($formatDate($account['dt_created'] ?? '')) ?></td>
+                                        <td><?= esc($formatTime($account['dt_created'] ?? '')) ?></td>
+                                        <?php if ($showAdminActions): ?>
+                                            <td>
+                                                <!-- Developer-only: posts to AccountController::updateStatus (developer/accounts/status). -->
+                                                <form method="post" action="<?= site_url('developer/accounts/status') ?>">
+                                                    <?= csrf_field() ?>
+                                                    <input type="hidden" name="userID" value="<?= esc((string) ($account['userID'] ?? '')) ?>">
+                                                    <input type="hidden" name="isactive" value="<?= esc($nextStatus) ?>">
+                                                    <button class="btn btn-sm <?= $isActive ? 'btn-outline-danger' : 'btn-outline-success' ?>" type="submit">
+                                                        <?= $isActive ? 'Disable' : 'Enable' ?>
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        <?php endif; ?>
+                                    </tr>
+                                <?php endforeach; ?>
+                                <?php if ($adminAccounts === []): ?>
+                                    <tr><td colspan="<?= $adminColspan ?>" class="text-center text-muted"><?= $hasSearchFilters ? 'No matching admin accounts found.' : 'No admin accounts found.' ?></td></tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="col-lg-6">
+        <?php endif; ?>
+        <div class="<?= esc($employeeColumnClass) ?>">
             <div class="panel">
                 <div class="section-title mt-0"><span>Employee Accounts</span></div>
                 <div class="table-responsive">

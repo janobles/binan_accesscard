@@ -24,7 +24,8 @@ extract(family_form_view_data(get_defined_vars()), EXTR_OVERWRITE);
             <div class="wizard-step" data-step-target="3"><span>3</span><small>Family members</small></div>
         </div>
 
-        <form method="post" action="<?= esc($formAction, 'attr') ?>" id="familyForm" class="needs-validation js-family-form" novalidate>
+        <!-- data-edit-mode is read by family-form.js to avoid resetting edit forms on AJAX success. -->
+        <form method="post" action="<?= esc($formAction, 'attr') ?>" id="familyForm" class="needs-validation js-family-form" data-edit-mode="<?= $isEditMode ? '1' : '0' ?>" novalidate>
             <?= csrf_field() ?>
             <input type="hidden" name="entry_type" id="entryType" value="head">
             <div id="familyFormAlert" class="mb-3" aria-live="polite"></div>

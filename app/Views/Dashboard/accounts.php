@@ -78,15 +78,6 @@ $formatMemberName = static function (array $member): string {
                         <label class="form-label">Password</label>
                         <input type="password" class="form-control" name="password" required minlength="8">
                     </div>
-                    <div>
-                        <label class="form-label">Linked Member</label>
-                        <select class="form-select" name="memberID">
-                            <option value="">None</option>
-                            <?php foreach ($linkableMembers as $member): ?>
-                                <option value="<?= esc((string) ($member['memberID'] ?? '')) ?>"><?= esc($formatMemberName($member)) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
                     <div class="account-action">
                         <button class="btn btn-primary w-100" type="submit">Create</button>
                     </div>
@@ -106,15 +97,6 @@ $formatMemberName = static function (array $member): string {
                     <div>
                         <label class="form-label">Password</label>
                         <input type="password" class="form-control" name="password" required minlength="8">
-                    </div>
-                    <div>
-                        <label class="form-label">Linked Member</label>
-                        <select class="form-select" name="memberID">
-                            <option value="">None</option>
-                            <?php foreach ($linkableMembers as $member): ?>
-                                <option value="<?= esc((string) ($member['memberID'] ?? '')) ?>"><?= esc($formatMemberName($member)) ?></option>
-                            <?php endforeach; ?>
-                        </select>
                     </div>
                     <div class="account-action">
                         <button class="btn btn-primary w-100" type="submit">Create</button>

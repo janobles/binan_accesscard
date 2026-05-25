@@ -146,6 +146,52 @@ class AccountController extends BaseController
         return redirect()->to(site_url('admin/accounts'))->with('success', 'Account status updated successfully.');
     }
 
+    /**
+     * Admin-only: disable employee accounts from Account Management UI.
+     */
+    public function disableEmployee(): RedirectResponse
+    {
+        $guard = $this->requireAdmin();
+
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        // Input comes from the admin Account Management table action.
+        $rules = [
+            'userID' => 'required|is_natural_no_zero',
+        ];
+
+        if (! $this->validate($rules)) {
+            return redirect()->back()->with('error', implode(' ', $this->validator->getErrors()));
+        }
+
+        $userId = (int) $this->request->getPost('userID');
+        $userModel = new UserModel();
+        $user = $userModel->find($userId);
+
+        if ($user === null) {
+            return redirect()->back()->with('error', 'Account not found.');
+        }
+
+        $role = (string) ($user['role'] ?? '');
+
+        if ($role !== 'User') {
+            return redirect()->back()->with('error', 'Only employee accounts can be disabled.');
+        }
+
+        if ($userModel->update($userId, ['isactive' => 'Disabled']) === false) {
+            return redirect()->back()->with('error', 'Account status could not be updated.');
+        }
+
+        $this->audit(
+            'ACCOUNT_STATUS_UPDATED',
+            'Disabled Employee account "' . (string) ($user['username'] ?? '') . '" (#' . $userId . ').'
+        );
+
+        return redirect()->to(site_url('admin/accounts'))->with('success', 'Employee account disabled successfully.');
+    }
+
     private function requireDeveloper(): ?RedirectResponse
     {
         if (! session()->get('is_logged_in')) {
@@ -161,6 +207,26 @@ class AccountController extends BaseController
 
         if ($this->normalizeRole((string) session()->get('role')) !== 'Developer') {
             return redirect()->to(site_url('/'))->with('error', 'Developer access is required.');
+        }
+
+        return null;
+    }
+
+    private function requireAdmin(): ?RedirectResponse
+    {
+        if (! session()->get('is_logged_in')) {
+            return redirect()->to(site_url('/'))->with('error', 'Please login first.');
+        }
+
+        if (! $this->sessionUserExists()) {
+            session()->destroy();
+
+            return redirect()->to(site_url('/'))
+                ->with('error', 'Your session is no longer valid after the database update. Please login again.');
+        }
+
+        if ($this->normalizeRole((string) session()->get('role')) !== 'Admin') {
+            return redirect()->to(site_url('/'))->with('error', 'Admin access is required.');
         }
 
         return null;

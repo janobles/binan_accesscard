@@ -202,8 +202,10 @@ class Home extends BaseController
             return $guard;
         }
 
-        if ($this->normalizeRole((string) session()->get('role')) !== 'Developer') {
-            return '<div class="alert alert-danger mb-0">Developer access is required for account management.</div>';
+        $currentRole = $this->normalizeRole((string) session()->get('role'));
+
+        if (! in_array($currentRole, ['Developer', 'Admin'], true)) {
+            return '<div class="alert alert-danger mb-0">Developer or Admin access is required for account management.</div>';
         }
 
         $viewData = $this->buildAdminViewData('accounts');
@@ -211,6 +213,8 @@ class Home extends BaseController
         return view('Dashboard/accounts', [
             'adminAccounts' => $viewData['adminAccounts'] ?? [],
             'employeeAccounts' => $viewData['employeeAccounts'] ?? [],
+            'canCreateAccounts' => $currentRole === 'Developer',
+            'currentRole' => $currentRole,
             'searchTerm' => $viewData['searchTerm'] ?? '',
             'searchFilters' => $viewData['searchFilters'] ?? [],
         ]);

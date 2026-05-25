@@ -28,9 +28,11 @@ trait HomeDashboardPagesTrait
             return $guard;
         }
 
-        if ($activePage === 'accounts' && $this->normalizeRole((string) session()->get('role')) !== 'Developer') {
+        $currentRole = $this->normalizeRole((string) session()->get('role'));
+
+        if ($activePage === 'accounts' && ! in_array($currentRole, ['Developer', 'Admin'], true)) {
             return redirect()->to(site_url('admin/dashboard'))
-                ->with('error', 'Developer access is required for account management.');
+            ->with('error', 'Developer or Admin access is required for account management.');
         }
 
         return view('Dashboard/admin', $this->buildAdminViewData($activePage));
@@ -44,7 +46,9 @@ trait HomeDashboardPagesTrait
         $searchTerm = trim((string) $this->request->getGet('q'));
         $searchFilters = $this->searchFilters();
         $hasSearchFilters = $this->hasSearchFilters($searchFilters);
-        $isDeveloper = $this->normalizeRole((string) session()->get('role')) === 'Developer';
+        $currentRole = $this->normalizeRole((string) session()->get('role'));
+        $isDeveloper = $currentRole === 'Developer';
+        $isAdmin = $currentRole === 'Admin';
         $userModel = new UserModel();
         $users = $isDeveloper && $activePage === 'accounts'
             ? $searchModel->staffAccounts($searchTerm, $searchFilters)
@@ -67,7 +71,10 @@ trait HomeDashboardPagesTrait
             'activePage' => $activePage,
             'pageTitle' => $layoutModel->pageTitle($activePage),
             'modeLabel' => $layoutModel->adminModeLabel($isDeveloper),
-            'canManageAccounts' => $isDeveloper,
+            // Developers can manage all staff; admins can only disable employees.
+            'canManageAccounts' => $isDeveloper || $isAdmin,
+            'canCreateAccounts' => $isDeveloper,
+            'currentRole' => $currentRole,
             'navActive' => [
                 'dashboard' => $layoutModel->navActive($activePage, 'dashboard'),
                 'accounts' => $layoutModel->navActive($activePage, 'accounts'),

@@ -32,6 +32,10 @@ class UserModel extends Model
         $storedPassword = (string) ($user['password'] ?? '');
         $passwordInfo = password_get_info($storedPassword);
         $isLegacyPlaintext = $passwordInfo['algo'] === 0;
+
+        // password_verify() does not 'decrypt' the hash. Instead, it extracts the salt and 
+        // algorithm settings from the $storedPassword string, hashes the input $password 
+        // using those same settings, and compares the two hashes.
         $isValid = password_verify($password, $storedPassword);
 
         if (! $isValid && $isLegacyPlaintext) {
@@ -49,6 +53,9 @@ class UserModel extends Model
             return $user;
         }
 
+        // If the password was plaintext (legacy) or uses an outdated Argon2 configuration,
+        // we generate a brand new Argon2id hash and update the database record.
+        // This provides 'automatic migration' to the latest security standards.
         if ($isLegacyPlaintext || password_needs_rehash($storedPassword, PASSWORD_ARGON2ID)) {
             $this->update((int) $user['userID'], [
                 'password' => password_hash($password, PASSWORD_ARGON2ID),
@@ -98,6 +105,10 @@ class UserModel extends Model
     {
         $data = [
             'username' => $username,
+            // password_hash() creates a cryptographically secure, one-way hash.
+            // PASSWORD_ARGON2ID is the current industry standard (as of PHP 8.2+) 
+            // resistant to both GPU cracking and side-channel attacks.
+            // The salt is automatically generated and bundled into the output string.
             'password' => password_hash($password, PASSWORD_ARGON2ID),
             'role'     => $role,
             'isactive' => $this->activeValue(),

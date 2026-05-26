@@ -19,21 +19,13 @@
     }
 
     function collectSelectedSectorIds(form) {
-        return Array.from(form.querySelectorAll('#sectorNameList input[type="checkbox"]:checked')).map(function (checkbox) {
+        return Array.from(form.querySelectorAll('input[name="sectors[]"]:checked')).map(function (checkbox) {
             return checkbox.value;
         });
     }
 
     function readSectorCatalog(sectorCategoryList) {
-        if (!sectorCategoryList) {
-            return {};
-        }
-
-        try {
-            return JSON.parse(sectorCategoryList.dataset.sectorCatalog || '{}');
-        } catch (error) {
-            return {};
-        }
+        return {};
     }
 
     function resetSectorSelection(sectorNameList, sectorIdInput) {
@@ -41,104 +33,17 @@
             return;
         }
 
-        sectorNameList.innerHTML = '<small class="text-muted">Select one or more sector categories first.</small>';
-
-        if (sectorIdInput) {
-            sectorIdInput.value = '';
-            sectorIdInput.setCustomValidity('Please select at least one sector name.');
-        }
+        Array.from(sectorNameList.querySelectorAll('input[type="checkbox"]')).forEach(function (checkbox) {
+            checkbox.checked = false;
+        });
     }
 
     function updateSectorSelection(sectorNameList, sectorIdInput) {
-        if (!sectorNameList) {
-            return;
-        }
-
-        const checkedBoxes = Array.from(sectorNameList.querySelectorAll('input[type="checkbox"]:checked'));
-        const selectedIds = checkedBoxes.map(function (checkbox) {
-            return String(checkbox.value || '').trim();
-        }).filter(function (value) {
-            return value !== '';
-        });
-
-        if (sectorIdInput) {
-            sectorIdInput.value = selectedIds.length > 0 ? '[' + selectedIds.join(',') + ']' : '';
-            sectorIdInput.setCustomValidity(selectedIds.length > 0 ? '' : 'Please select at least one sector name.');
-        }
+        return;
     }
 
     function populateSectorsByCategory(config) {
-        const sectorCatalog = config.sectorCatalog || {};
-        const sectorCategoryList = config.sectorCategoryList;
-        const sectorNameList = config.sectorNameList;
-        const sectorIdInput = config.sectorIdInput;
-        const selectedSectorIds = Array.isArray(config.selectedSectorIds)
-            ? config.selectedSectorIds.map(String)
-            : [];
-
-        if (!sectorCategoryList || !sectorNameList) {
-            return;
-        }
-
-        const previouslySelectedIds = new Set(Array.from(sectorNameList.querySelectorAll('input[type="checkbox"]:checked')).map(function (checkbox) {
-            return String(checkbox.value || '');
-        }));
-        const selectedIds = selectedSectorIds.length > 0 ? new Set(selectedSectorIds) : previouslySelectedIds;
-        const selectedCategories = Array.from(sectorCategoryList.querySelectorAll('input[type="checkbox"]:checked')).map(function (checkbox) {
-            return checkbox.value;
-        });
-        const options = [];
-        const seenSectorIds = new Set();
-
-        selectedCategories.forEach(function (category) {
-            const categoryOptions = Array.isArray(sectorCatalog[category]) ? sectorCatalog[category] : [];
-
-            categoryOptions.forEach(function (option) {
-                const key = String(option.sectorID || '');
-
-                if (seenSectorIds.has(key)) {
-                    return;
-                }
-
-                seenSectorIds.add(key);
-                options.push(option);
-            });
-        });
-
-        sectorNameList.innerHTML = '';
-
-        if (options.length === 0) {
-            sectorNameList.innerHTML = '<small class="text-muted">No sector names available for selected sector(s).</small>';
-            updateSectorSelection(sectorNameList, sectorIdInput);
-
-            return;
-        }
-
-        options.forEach(function (option) {
-            const wrapper = document.createElement('label');
-            wrapper.className = 'form-check mb-1';
-
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.className = 'form-check-input';
-            checkbox.name = 'sector_ids[]';
-            checkbox.value = String(option.sectorID || '');
-            checkbox.checked = selectedIds.has(checkbox.value);
-            checkbox.dataset.name = String(option.name || '');
-            checkbox.dataset.description = String(option.description || '');
-
-            const labelText = document.createElement('span');
-            labelText.className = 'form-check-label';
-            labelText.textContent = String(option.description || '').trim() !== ''
-                ? String(option.name || '') + ' - ' + String(option.description || '').trim()
-                : String(option.name || '');
-
-            wrapper.appendChild(checkbox);
-            wrapper.appendChild(labelText);
-            sectorNameList.appendChild(wrapper);
-        });
-
-        updateSectorSelection(sectorNameList, sectorIdInput);
+        return;
     }
 
     function stepCopy(currentStep, totalSteps, entryType) {
@@ -279,12 +184,12 @@
             targets.income.textContent = (label || '').trim() !== '' ? label.trim() : '-';
         }
 
-        const selectedSectors = Array.from(form.querySelectorAll('#sectorNameList input[type="checkbox"]:checked')).map(function (checkbox) {
+        const selectedSectors = Array.from(form.querySelectorAll('input[name="sectors[]"]:checked')).map(function (checkbox) {
             return String(checkbox.dataset.name || '').trim();
         }).filter(function (value) {
             return value !== '';
         });
-        const selectedServices = Array.from(form.querySelectorAll('input[name="service_ids[]"]:checked')).map(function (checkbox) {
+        const selectedServices = Array.from(form.querySelectorAll('input[name="services[]"]:checked')).map(function (checkbox) {
             const label = checkbox.closest('label');
             const text = label ? label.textContent : '';
 
@@ -345,6 +250,10 @@
                     Array.from(input.options).forEach(function (option) {
                         option.selected = arrayValue.includes(option.value);
                     });
+                }
+
+                if (input instanceof HTMLInputElement && input.type === 'checkbox') {
+                    input.checked = arrayValue.includes(String(input.value || ''));
                 }
 
                 return;

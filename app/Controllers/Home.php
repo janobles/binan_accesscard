@@ -4,7 +4,6 @@ namespace App\Controllers;
 
 use App\Controllers\Concerns\HomeDashboardPagesTrait;
 use App\Controllers\Concerns\HomeRoleAccessTrait;
-use App\Models\FamilyFormOptionsModel;
 use App\Models\UserModel;
 use App\Support\SessionAuditLogger;
 use CodeIgniter\HTTP\RedirectResponse;
@@ -229,7 +228,7 @@ class Home extends BaseController
         }
 
         return view('Dashboard/familyform', array_merge(
-            (new FamilyFormOptionsModel())->getViewData(),
+            $this->buildFamilyFormViewData(),
             ['canCreateFamily' => true]
         ));
     }
@@ -291,7 +290,7 @@ class Home extends BaseController
         }
 
         return view('Dashboard/familyform', array_merge(
-            (new FamilyFormOptionsModel())->getViewData(),
+            $this->buildFamilyFormViewData(),
             ['canCreateFamily' => true]
         ));
     }

@@ -19,6 +19,8 @@ $searchTerm = $searchTerm ?? '';
 $searchFilters = $searchFilters ?? [];
 $auditActionOptions = $auditActionOptions ?? [];
 $sectorOptions = $familyFormViewData['sectorOptions'] ?? [];
+$showLookupNav = in_array($currentRole, ['Admin', 'Developer'], true);
+$lookupsActive = str_contains((string) current_url(), 'admin/lookups') ? 'active' : '';
 $hasSearchFilters = $searchTerm !== '' || array_filter($searchFilters, static fn ($value): bool => trim((string) $value) !== '') !== [];
 $canCreateFamily = $canCreateFamily ?? false;
 $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
@@ -60,6 +62,7 @@ $formatAuditUser = static function (array $audit): string {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= esc($pageTitle) ?> - Binan Access Card MIS</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <?= admin_dashboard_style_links() ?>
 </head>
 <body data-session-timeout-ms="60000" data-session-timeout-redirect="<?= site_url('logout') ?>">
@@ -83,6 +86,13 @@ $formatAuditUser = static function (array $audit): string {
                 <a class="nav-link <?= esc($navActive['sectors'] ?? '') ?> js-open-sectors-modal" href="<?= site_url('admin/sectors') ?>" data-modal-url="<?= site_url('admin/sectors?partial=1') ?>" data-modal-title="Sector List">Sectors</a>
                 <a class="nav-link <?= esc($navActive['services'] ?? '') ?> js-open-services-modal" href="<?= site_url('admin/services') ?>" data-modal-url="<?= site_url('admin/services?partial=1') ?>" data-modal-title="Service List">Services</a>
                 <a class="nav-link <?= esc($navActive['audit-trails'] ?? '') ?> js-open-audit-modal" href="<?= site_url('admin/audit-trails') ?>" data-modal-url="<?= site_url('admin/audit-trails?partial=1') ?>" data-modal-title="Audit Trails">Audit Trails</a>
+                <?php if ($showLookupNav): ?>
+                    <div class="mt-3 small text-uppercase text-muted">Administration</div>
+                    <a class="nav-link <?= esc($lookupsActive) ?>" href="<?= site_url('admin/lookups/sectors') ?>">
+                        <i class="bi bi-grid-3x3-gap me-2" aria-hidden="true"></i>
+                        Sectors &amp; Services
+                    </a>
+                <?php endif; ?>
             </nav>
         </div>
         <div class="sidebar-footer">

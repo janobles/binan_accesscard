@@ -59,11 +59,25 @@
             </div>
             <div class="col-md-3">
                 <label class="form-label">Sectors</label>
-                <select class="form-select" data-name="sector_ids[]" multiple size="5">
-                    <?php foreach ($sectorOptions as $sector): ?>
-                        <option value="<?= esc((string) ($sector['sectorID'] ?? '')) ?>"><?= esc((string) ($sector['name'] ?? '')) ?></option>
+                <div class="border rounded p-2 bg-white">
+                    <?php foreach ($sectorGroups as $groupLabel => $sectors): ?>
+                        <div class="fw-semibold small text-muted mb-1"><?= esc((string) $groupLabel) ?></div>
+                        <?php foreach ($sectors as $sector): ?>
+                            <?php
+                            $sectorId = (int) ($sector['sectorID'] ?? 0);
+                            $shortcode = (string) ($sector['shortcode'] ?? '');
+                            $label = trim($shortcode . ' ' . (string) ($sector['name'] ?? ''));
+                            ?>
+                            <label class="form-check mb-1">
+                                <input class="form-check-input" type="checkbox" data-name="sectors[]" value="<?= esc((string) $sectorId) ?>">
+                                <span class="form-check-label"><?= esc($label) ?></span>
+                            </label>
+                        <?php endforeach; ?>
                     <?php endforeach; ?>
-                </select>
+                    <?php if ($sectorGroups === []): ?>
+                        <small class="text-muted">No sectors available.</small>
+                    <?php endif; ?>
+                </div>
             </div>
             <div class="col-md-3">
                 <label class="form-label">Education</label>
@@ -92,15 +106,21 @@
             </div>
             <div class="col-md-6">
                 <label class="form-label">Services availed</label>
-                <select class="form-select" data-name="service_ids[]" multiple size="5" aria-label="Services availed">
-                    <?php foreach ($servicesByCategory as $category => $services): ?>
-                        <optgroup label="<?= esc((string) $category) ?>">
-                            <?php foreach ($services as $service): ?>
-                                <option value="<?= esc((string) ($service['serviceID'] ?? '')) ?>"><?= esc((string) ($service['name'] ?? '')) ?></option>
-                            <?php endforeach; ?>
-                        </optgroup>
+                <div class="border rounded p-2 bg-white" aria-label="Services availed">
+                    <?php foreach ($serviceGroups as $category => $services): ?>
+                        <div class="fw-semibold small text-muted mb-1"><?= esc((string) $category) ?></div>
+                        <?php foreach ($services as $service): ?>
+                            <?php $serviceId = (int) ($service['serviceID'] ?? 0); ?>
+                            <label class="form-check mb-1">
+                                <input class="form-check-input" type="checkbox" data-name="services[]" value="<?= esc((string) $serviceId) ?>">
+                                <span class="form-check-label"><?= esc((string) ($service['name'] ?? '')) ?></span>
+                            </label>
+                        <?php endforeach; ?>
                     <?php endforeach; ?>
-                </select>
+                    <?php if ($serviceGroups === []): ?>
+                        <small class="text-muted">No services available.</small>
+                    <?php endif; ?>
+                </div>
             </div>
         </div>
     </div>

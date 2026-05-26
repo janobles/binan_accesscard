@@ -6,7 +6,8 @@
         }
 
         try {
-            return JSON.parse(node.textContent || 'null') || fallbackValue;
+            const raw = typeof node.value !== 'undefined' ? node.value : node.textContent;
+            return JSON.parse(raw || 'null') || fallbackValue;
         } catch (error) {
             return fallbackValue;
         }
@@ -61,11 +62,7 @@
         const entryTypeInput = q(form, '#entryType');
         const entryButtons = qa(form, '[data-entry-type]');
         const entryPanels = qa(form, '[data-entry-panel]');
-        const sectorCategoryList = q(form, '#sectorCategoryList');
         const sectorNameList = q(form, '#sectorNameList');
-        const sectorIdInput = q(form, '#sectorID');
-        const sectorCatalogNode = q(form, '#sectorCatalogData');
-        const selectedSectorIdsNode = q(form, '#selectedSectorIdsData');
         const initialFamilyDataNode = q(root, '#initialFamilyData');
         const summaryTargets = {
             name: q(form, '#headSummaryName'),
@@ -82,11 +79,7 @@
         let currentStep = 1;
         let memberIndex = 0;
         let entryType = entryTypeInput ? entryTypeInput.value : 'head';
-        let sectorCatalog = parseJsonNode(sectorCatalogNode, {});
         const initialFamilyData = parseJsonNode(initialFamilyDataNode, {});
-        const state = {
-            selectedSectorIds: normalizeIds(parseJsonNode(selectedSectorIdsNode, initialFamilyData.selectedSectorIds || [])),
-        };
 
         function totalSteps() {
             return entryType === 'member' ? 2 : 3;
@@ -228,22 +221,14 @@
         }
 
         function resetSectorSelection() {
-            state.selectedSectorIds = [];
-
             if (typeof ui.resetSectorSelection === 'function') {
-                ui.resetSectorSelection(sectorNameList, sectorIdInput);
+                ui.resetSectorSelection(sectorNameList, null);
             }
         }
 
         function updateSectorSelection() {
-            state.selectedSectorIds = typeof ui.collectSelectedSectorIds === 'function'
-                ? ui.collectSelectedSectorIds(form)
-                : qa(form, '#sectorNameList input[type="checkbox"]:checked').map(function (checkbox) {
-                    return checkbox.value;
-                });
-
             if (typeof ui.updateSectorSelection === 'function') {
-                ui.updateSectorSelection(sectorNameList, sectorIdInput);
+                ui.updateSectorSelection(sectorNameList, null);
             }
         }
 
@@ -253,11 +238,8 @@
             }
 
             ui.populateSectorsByCategory({
-                sectorCatalog: sectorCatalog,
-                sectorCategoryList: sectorCategoryList,
                 sectorNameList: sectorNameList,
-                sectorIdInput: sectorIdInput,
-                selectedSectorIds: state.selectedSectorIds
+                selectedSectorIds: []
             });
         }
 
@@ -343,18 +325,6 @@
             }
         });
 
-        if (sectorCategoryList) {
-            sectorCategoryList.addEventListener('change', function (event) {
-                const target = event.target;
-
-                if (target instanceof HTMLInputElement && target.type === 'checkbox') {
-                    updateSectorSelection();
-                    populateSectorsByCategory();
-                    updateHeadSummary();
-                }
-            });
-        }
-
         if (sectorNameList) {
             sectorNameList.addEventListener('change', function (event) {
                 const target = event.target;
@@ -369,7 +339,7 @@
         form.addEventListener('change', function (event) {
             const target = event.target;
 
-            if (target instanceof HTMLInputElement && target.name === 'service_ids[]') {
+            if (target instanceof HTMLInputElement && (target.name === 'services[]' || target.name === 'sectors[]')) {
                 updateHeadSummary();
             }
         });
@@ -487,11 +457,7 @@
                 });
         });
 
-        if (state.selectedSectorIds.length > 0) {
-            populateSectorsByCategory();
-        } else {
-            resetSectorSelection();
-        }
+        resetSectorSelection();
 
         if (Array.isArray(initialFamilyData.existingMembers)) {
             initialFamilyData.existingMembers.forEach(function (member) {

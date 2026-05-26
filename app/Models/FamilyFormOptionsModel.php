@@ -16,9 +16,10 @@ class FamilyFormOptionsModel extends Model
     public function getOptions(): array
     {
         $sectorModel = new SectorModel();
+        $servicesModel = new ServicesModel();
 
         return [
-            'sectors' => $sectorModel->getSectorOptions(),
+            'sectors' => $sectorModel->getAll(),
             'sexes' => ['Male', 'Female'],
             'suffixes' => ['I', 'II', 'III', 'IV'],
             'civil_statuses' => [
@@ -74,7 +75,7 @@ class FamilyFormOptionsModel extends Model
                 ['value' => '250000', 'label' => 'PHP 150,001 - 250,000'],
                 ['value' => '250001', 'label' => 'Above PHP 250,000'],
             ],
-            'services_by_category' => $this->getServicesByCategory(),
+            'services' => $servicesModel->getAll(),
             'family_heads' => [],
         ];
     }
@@ -83,44 +84,19 @@ class FamilyFormOptionsModel extends Model
     {
         $options = $this->getOptions();
         $sectorOptions = $options['sectors'] ?? [];
-        $sectorModel = new SectorModel();
+        $serviceOptions = $options['services'] ?? [];
 
         return [
             'formOptions' => $options,
             'sectorOptions' => $sectorOptions,
-            'sectorCatalog' => $sectorModel->getSectorCatalog($sectorOptions),
             'sexOptions' => $options['sexes'] ?? [],
             'suffixOptions' => $options['suffixes'] ?? [],
             'civilOptions' => $options['civil_statuses'] ?? [],
             'relationshipOptions' => $options['relationships'] ?? [],
             'educationOptions' => $options['education_levels'] ?? [],
             'incomeOptions' => $options['income_ranges'] ?? [],
-            'servicesByCategory' => $options['services_by_category'] ?? [],
+            'serviceOptions' => $serviceOptions,
             'familyHeads' => $options['family_heads'] ?? [],
         ];
     }
-
-    private function getServicesByCategory(): array
-    {
-        if (! $this->db->tableExists('services')) {
-            return [];
-        }
-
-        $services = $this->db->table('services')
-            ->select('serviceID, category, name, description')
-            ->orderBy('category', 'ASC')
-            ->orderBy('serviceID', 'ASC')
-            ->get()
-            ->getResultArray();
-
-        $grouped = [];
-
-        foreach ($services as $service) {
-            $category = (string) ($service['category'] ?? 'Other');
-            $grouped[$category][] = $service;
-        }
-
-        return $grouped;
-    }
-
 }

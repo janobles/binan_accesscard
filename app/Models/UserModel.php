@@ -68,6 +68,21 @@ class UserModel extends Model
             ->findAll();
     }
 
+    public function updateAccountStatus(int $userId, bool $enabled): bool
+    {
+        if (! $this->db->tableExists($this->table)) {
+            return false;
+        }
+
+        $account = $this->select('userID, role')->find($userId);
+
+        if ($account === null || ! in_array((string) ($account['role'] ?? ''), ['Admin', 'User'], true)) {
+            return false;
+        }
+
+        return $this->update($userId, ['isactive' => $this->statusValue($enabled)]) !== false;
+    }
+
     // Enforces the Enable/Disabled enum while allowing legacy numeric rows.
     private function isUserActive(mixed $value): bool
     {
@@ -110,6 +125,11 @@ class UserModel extends Model
     // Keeps insert compatible with either enum or numeric legacy types.
     private function activeValue(): string|int
     {
+        return $this->statusValue(true);
+    }
+
+    private function statusValue(bool $enabled): string|int
+    {
         $fieldData = $this->db->getFieldData($this->table);
 
         foreach ($fieldData as $field) {
@@ -123,9 +143,13 @@ class UserModel extends Model
                 || strpos($type, 'text') !== false
                 || strpos($type, 'enum') !== false;
 
-            return $isStringType ? 'Enable' : 1;
+            if ($isStringType) {
+                return $enabled ? 'Enable' : 'Disabled';
+            }
+
+            return $enabled ? 1 : 0;
         }
 
-        return 'Enable';
+        return $enabled ? 'Enable' : 'Disabled';
     }
 }

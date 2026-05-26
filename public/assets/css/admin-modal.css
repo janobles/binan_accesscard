@@ -25,6 +25,11 @@
     border-bottom: 1px solid #d5dfeb;
 }
 
+.floating-family-modal .modal-footer {
+    background: #f4f8fc;
+    border-top: 1px solid #d5dfeb;
+}
+
 .floating-family-modal .modal-title {
     font-size: 18px;
     font-weight: 700;

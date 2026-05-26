@@ -17,11 +17,12 @@ class FamilyFormViewData
         $civilOptions = $data['civilOptions'] ?? ($formOptions['civil_statuses'] ?? []);
         $relationshipOptions = $data['relationshipOptions'] ?? ($formOptions['relationships'] ?? []);
         $educationOptions = $data['educationOptions'] ?? ($formOptions['education_levels'] ?? []);
+        $jobOptions = $data['jobOptions'] ?? ($formOptions['job_options'] ?? []);
         $incomeOptions = $data['incomeOptions'] ?? ($formOptions['income_ranges'] ?? []);
         $servicesByCategory = $data['servicesByCategory'] ?? ($formOptions['services_by_category'] ?? []);
         $familyHeads = $data['familyHeads'] ?? ($formOptions['family_heads'] ?? []);
         $formAction = $data['formAction'] ?? site_url('families');
-        $submitButtonLabel = $data['submitButtonLabel'] ?? 'Save Family Data';
+        $submitButtonLabel = $data['submitButtonLabel'] ?? 'Save Record Data';
         $familyRecord = self::arrayValue($data['familyRecord'] ?? []);
         $existingMembers = self::arrayValue($data['existingMembers'] ?? []);
         $headServiceIds = self::integerList($data['headServiceIds'] ?? ($familyRecord['service_ids'] ?? []));
@@ -39,6 +40,7 @@ class FamilyFormViewData
             'educationOptions',
             'familyRecord',
             'incomeOptions',
+            'jobOptions',
             'relationshipOptions',
             'sectorOptions',
             'servicesByCategory',
@@ -59,6 +61,7 @@ class FamilyFormViewData
             'incomeOptions',
             'initialFamilyData',
             'isEditMode',
+            'jobOptions',
             'relationshipOptions',
             'sectorCatalog',
             'sectorOptions',
@@ -80,6 +83,7 @@ class FamilyFormViewData
             'civil_statuses' => [],
             'relationships' => [],
             'education_levels' => [],
+            'job_options' => [],
             'income_ranges' => [],
             'services_by_category' => [],
             'family_heads' => [],

@@ -88,12 +88,19 @@
 
 .management-table th:last-child,
 .management-table td:last-child {
-    width: 96px;
+    width: 230px;
 }
 
 .management-table .form-control,
 .management-table .form-select {
     min-width: 140px;
+}
+
+.management-row-actions {
+    display: inline-flex;
+    justify-content: flex-end;
+    gap: 6px;
+    white-space: nowrap;
 }
 
 .btn-primary {

@@ -55,6 +55,9 @@ trait HomeDashboardPagesTrait
         $memberServiceModel = new MemberServiceModel();
 
         $familyFormViewData = (new FamilyFormOptionsModel())->getViewData();
+        $recordListData = $activePage === 'family-manage'
+            ? $this->buildRecordListData(false)
+            : [];
         $recentFamilies = $activePage === 'dashboard' && ($searchTerm !== '' || $hasSearchFilters)
             ? $searchModel->families($searchTerm, $searchFilters, 25)
             : $dashboardModel->recentFamilies(10);
@@ -80,6 +83,7 @@ trait HomeDashboardPagesTrait
             'adminAccounts' => array_values(array_filter($users, static fn ($account) => $account['role'] === 'Admin')),
             'employeeAccounts' => array_values(array_filter($users, static fn ($account) => $account['role'] === 'User')),
             'familyFormViewData' => $familyFormViewData,
+            'recordListData' => $recordListData,
             'sectors' => $this->fetchVisibleSectors($sectorModel),
             'sectorShortcodeOptions' => $sectorModel->getShortcodeOptions(),
             'services' => $this->fetchVisibleServices($serviceModel),
@@ -132,6 +136,9 @@ trait HomeDashboardPagesTrait
         $hasSearchFilters = $this->hasSearchFilters($searchFilters);
         $userId = (int) session()->get('user_id');
         $familyFormViewData = (new FamilyFormOptionsModel())->getViewData();
+        $recordListData = $activePage === 'family-manage'
+            ? $this->buildRecordListData(true)
+            : [];
         $recentFamilies = $activePage === 'dashboard' && ($searchTerm !== '' || $hasSearchFilters)
             ? $searchModel->families($searchTerm, $searchFilters, 25)
             : $dashboardModel->recentFamilies(10);
@@ -151,6 +158,7 @@ trait HomeDashboardPagesTrait
             ],
             'canCreateFamily' => true,
             'familyFormViewData' => $familyFormViewData,
+            'recordListData' => $recordListData,
             'recentFamilies' => $recentFamilies,
             'myAudits' => $myAudits,
             'stats' => $dashboardModel->stats(),
@@ -183,5 +191,33 @@ trait HomeDashboardPagesTrait
         }
 
         return false;
+    }
+
+    private function buildRecordListData(bool $isEmployeePath): array
+    {
+        $keyword = trim((string) $this->request->getGet('q'));
+        $status = $isEmployeePath ? 'active' : strtolower(trim((string) $this->request->getGet('status')));
+        $showArchived = $status === 'archived';
+        $page = max(1, (int) $this->request->getGet('page'));
+        $perPage = 50;
+        $memberModel = new MemberModel();
+        $searchKeyword = $keyword === '' ? null : $keyword;
+        $totalFamilies = $memberModel->countSearchFamilies($searchKeyword, $showArchived);
+        $totalPages = max(1, (int) ceil($totalFamilies / $perPage));
+        $page = min($page, $totalPages);
+
+        return [
+            'families' => $memberModel->searchFamilies($searchKeyword, $perPage, ($page - 1) * $perPage, $showArchived),
+            'keyword' => $keyword,
+            'routeBase' => $isEmployeePath ? 'employee/manage-family' : 'admin/manage-family',
+            'listRoute' => $isEmployeePath ? 'employee/manage-records' : 'admin/manage-records',
+            'status' => $showArchived ? 'archived' : 'active',
+            'canRestoreArchived' => ! $isEmployeePath,
+            'useModalLinks' => false,
+            'page' => $page,
+            'perPage' => $perPage,
+            'totalFamilies' => $totalFamilies,
+            'totalPages' => $totalPages,
+        ];
     }
 }

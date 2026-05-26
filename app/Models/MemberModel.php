@@ -15,8 +15,16 @@ class MemberModel extends Model
         'firstname' => 'required|max_length[100]',
         'lastname' => 'required|max_length[100]',
         'middlename' => 'permit_empty|max_length[50]',
+        'suffix' => 'permit_empty|max_length[20]',
         'birthday' => 'permit_empty|valid_date[Y-m-d]',
+        'civilstatus' => 'permit_empty|max_length[100]',
         'sex' => 'permit_empty|in_list[Male,Female]',
+        'education' => 'permit_empty|max_length[150]',
+        'job' => 'permit_empty|max_length[150]',
+        'contactnumber' => 'permit_empty|max_length[30]',
+        'religion' => 'permit_empty|max_length[100]',
+        'address' => 'permit_empty|max_length[255]',
+        'barangay' => 'permit_empty|max_length[100]',
     ];
 
     protected $table = 'member';
@@ -35,6 +43,9 @@ class MemberModel extends Model
         'job',
         'Salary',
         'contactnumber',
+        'religion',
+        'address',
+        'barangay',
         'relationship',
         'headID',
         'sectorID',
@@ -145,6 +156,7 @@ class MemberModel extends Model
         $data['memberID'] = $this->nextAutoIncrementId();
         $data['headID'] = $data['memberID'];
         $data['relationship'] = $data['relationship'] ?? 'Head';
+        $data = $this->memberColumnPayload($data);
 
         if (! $this->insert($data)) {
             return false;
@@ -163,6 +175,7 @@ class MemberModel extends Model
 
         $data['headID'] = $headId;
         $data['relationship'] = $data['relationship'] ?? 'Member';
+        $data = $this->memberColumnPayload($data);
 
         if (! $this->insert($data)) {
             return false;
@@ -245,6 +258,12 @@ class MemberModel extends Model
                 ->orLike('member.contactnumber', $keyword)
                 ->orLike('member.relationship', $keyword);
 
+            foreach (['religion', 'address', 'barangay'] as $field) {
+                if ($this->memberFieldExists($field)) {
+                    $builder->orLike('member.' . $field, $keyword);
+                }
+            }
+
             foreach ($this->sectorIdsForKeyword($keyword) as $sectorId) {
                 $builder->orWhere(SectorIds::containsCondition($sectorId, 'member.sectorID'), null, false);
             }
@@ -273,6 +292,7 @@ class MemberModel extends Model
     {
         $data['headID'] = $headId;
         $data['relationship'] = 'Head';
+        $data = $this->memberColumnPayload($data);
 
         return $this->update($headId, $data) !== false;
     }
@@ -332,29 +352,37 @@ class MemberModel extends Model
 
     private function memberDashboardBuilder(string $visibility = 'active')
     {
+        $select = [
+            'member.memberID',
+            'member.lastname',
+            'member.firstname',
+            'member.middlename',
+            'member.suffix',
+            'member.birthday',
+            'member.civilstatus',
+            'member.sex',
+            'member.education',
+            'member.job',
+            'member.Salary',
+            'member.contactnumber',
+            'member.relationship',
+            'member.dt_created',
+            'member.dt_updated',
+            'member.dt_deleted',
+            'member.headID',
+            'member.sectorID',
+            'head.firstname AS head_firstname',
+            'head.lastname AS head_lastname',
+        ];
+
+        foreach (['religion', 'address', 'barangay'] as $field) {
+            if ($this->memberFieldExists($field)) {
+                $select[] = 'member.' . $field;
+            }
+        }
+
         $builder = $this->db->table('member')
-            ->select([
-                'member.memberID',
-                'member.lastname',
-                'member.firstname',
-                'member.middlename',
-                'member.suffix',
-                'member.birthday',
-                'member.civilstatus',
-                'member.sex',
-                'member.education',
-                'member.job',
-                'member.Salary',
-                'member.contactnumber',
-                'member.relationship',
-                'member.dt_created',
-                'member.dt_updated',
-                'member.dt_deleted',
-                'member.headID',
-                'member.sectorID',
-                'head.firstname AS head_firstname',
-                'head.lastname AS head_lastname',
-            ])
+            ->select($select)
             ->join('member head', 'head.memberID = member.headID', 'left');
 
         if ($this->db->fieldExists('dt_deleted', 'member')) {
@@ -416,5 +444,23 @@ class MemberModel extends Model
                 ->get()
                 ->getResultArray()
         );
+    }
+
+    private function memberColumnPayload(array $data): array
+    {
+        if (! $this->hasTable()) {
+            return $data;
+        }
+
+        return array_filter(
+            $data,
+            fn (mixed $value, string $field): bool => $this->memberFieldExists($field),
+            ARRAY_FILTER_USE_BOTH
+        );
+    }
+
+    private function memberFieldExists(string $field): bool
+    {
+        return $this->db->fieldExists($field, $this->table);
     }
 }

@@ -1,7 +1,7 @@
 <template id="memberTemplate">
     <div class="member-row">
         <div class="member-row-header">
-            <strong>Family Member</strong>
+            <strong>Member</strong>
             <button type="button" class="btn btn-sm btn-outline-danger remove-member">Remove</button>
         </div>
         <div class="row g-2">
@@ -27,13 +27,13 @@
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="form-label">Birthday</label>
+                <label class="form-label">Date of birth</label>
                 <input type="date" class="form-control" data-name="birthday">
             </div>
             <div class="col-md-3">
-                <label class="form-label">Sex</label>
+                <label class="form-label">Gender</label>
                 <select class="form-select" data-name="sex">
-                    <option value="">Sex</option>
+                    <option value="">Gender</option>
                     <?php foreach ($sexOptions as $sex): ?>
                         <option value="<?= esc($sex) ?>"><?= esc($sex) ?></option>
                     <?php endforeach; ?>
@@ -41,42 +41,61 @@
             </div>
             <div class="col-md-3">
                 <label class="form-label">Civil status</label>
-                <select class="form-select" data-name="civilstatus">
+                <select class="form-select js-other-select" data-name="civilstatus" data-other-field="civilstatus">
                     <option value="">Civil status</option>
                     <?php foreach ($civilOptions as $civilStatus): ?>
                         <option value="<?= esc($civilStatus) ?>"><?= esc($civilStatus) ?></option>
                     <?php endforeach; ?>
                 </select>
+                <input class="form-control mt-2 js-other-input family-form-hidden" data-other-for="civilstatus" placeholder="Enter civil status">
             </div>
             <div class="col-md-3">
                 <label class="form-label">Relationship</label>
-                <select class="form-select" data-name="relationship">
+                <select class="form-select js-other-select" data-name="relationship" data-other-field="relationship">
                     <option value="">Relationship</option>
                     <?php foreach ($relationshipOptions as $relationship): ?>
                         <option value="<?= esc($relationship) ?>"><?= esc($relationship) ?></option>
                     <?php endforeach; ?>
                 </select>
+                <input class="form-control mt-2 js-other-input family-form-hidden" data-other-for="relationship" placeholder="Enter relationship">
             </div>
-            <div class="col-md-3">
+            <div class="col-md-6">
                 <label class="form-label">Sectors</label>
-                <select class="form-select" data-name="sector_ids[]" multiple size="5">
-                    <?php foreach ($sectorOptions as $sector): ?>
-                        <option value="<?= esc((string) ($sector['sectorID'] ?? '')) ?>"><?= esc((string) ($sector['name'] ?? '')) ?></option>
-                    <?php endforeach; ?>
-                </select>
+                <div class="dropdown-checklist js-dropdown-checklist" data-placeholder="Select sectors">
+                    <button type="button" class="dropdown-checklist-toggle" data-dropdown-checklist-toggle>
+                        <span data-dropdown-checklist-label>Select sectors</span>
+                        <span class="dropdown-checklist-caret" aria-hidden="true"></span>
+                    </button>
+                    <div class="dropdown-checklist-menu">
+                        <?php foreach ($sectorOptions as $sector): ?>
+                            <?php $sectorLabel = trim((string) ($sector['shortcode'] ?? '')) !== '' ? (string) ($sector['shortcode'] ?? '') . ' - ' . (string) ($sector['name'] ?? '') : (string) ($sector['name'] ?? ''); ?>
+                            <label class="dropdown-checklist-option">
+                                <input class="form-check-input" type="checkbox" data-name="sector_ids[]" value="<?= esc((string) ($sector['sectorID'] ?? '')) ?>" data-label="<?= esc($sectorLabel, 'attr') ?>">
+                                <span><?= esc($sectorLabel) ?></span>
+                            </label>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
             </div>
             <div class="col-md-3">
                 <label class="form-label">Education</label>
-                <select class="form-select" data-name="education">
+                <select class="form-select js-other-select" data-name="education" data-other-field="education">
                     <option value="">Education</option>
                     <?php foreach ($educationOptions as $education): ?>
                         <option value="<?= esc($education) ?>"><?= esc($education) ?></option>
                     <?php endforeach; ?>
                 </select>
+                <input class="form-control mt-2 js-other-input family-form-hidden" data-other-for="education" placeholder="Enter education">
             </div>
             <div class="col-md-3">
                 <label class="form-label">Job</label>
-                <input class="form-control" data-name="job" placeholder="Job">
+                <select class="form-select js-other-select" data-name="job" data-other-field="job">
+                    <option value="">Job</option>
+                    <?php foreach ($jobOptions as $jobOption): ?>
+                        <option value="<?= esc((string) $jobOption) ?>"><?= esc((string) $jobOption) ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <input class="form-control mt-2 js-other-input family-form-hidden" data-other-for="job" placeholder="Enter job">
             </div>
             <div class="col-md-3">
                 <label class="form-label">Monthly income</label>
@@ -90,17 +109,32 @@
                 <label class="form-label">Contact number</label>
                 <input class="form-control" data-name="contactnumber" placeholder="Contact number">
             </div>
+            <div class="col-md-3">
+                <label class="form-label">Religion</label>
+                <input class="form-control" data-name="religion" placeholder="Religion">
+            </div>
             <div class="col-md-6">
-                <label class="form-label">Services availed</label>
-                <select class="form-select" data-name="service_ids[]" multiple size="5" aria-label="Services availed">
-                    <?php foreach ($servicesByCategory as $category => $services): ?>
-                        <optgroup label="<?= esc((string) $category) ?>">
-                            <?php foreach ($services as $service): ?>
-                                <option value="<?= esc((string) ($service['serviceID'] ?? '')) ?>"><?= esc((string) ($service['name'] ?? '')) ?></option>
-                            <?php endforeach; ?>
-                        </optgroup>
-                    <?php endforeach; ?>
-                </select>
+                <label class="form-label">Services and programs availed</label>
+                <div class="dropdown-checklist js-dropdown-checklist" data-placeholder="Select services and programs">
+                    <button type="button" class="dropdown-checklist-toggle" data-dropdown-checklist-toggle>
+                        <span data-dropdown-checklist-label>Select services and programs</span>
+                        <span class="dropdown-checklist-caret" aria-hidden="true"></span>
+                    </button>
+                    <div class="dropdown-checklist-menu">
+                        <?php foreach ($servicesByCategory as $category => $services): ?>
+                            <div class="dropdown-checklist-group">
+                                <div class="dropdown-checklist-group-title"><?= esc((string) $category) ?></div>
+                                <?php foreach ($services as $service): ?>
+                                    <?php $serviceLabel = trim((string) ($service['description'] ?? '')) !== '' ? (string) ($service['name'] ?? '') . ' - ' . trim((string) ($service['description'] ?? '')) : (string) ($service['name'] ?? ''); ?>
+                                    <label class="dropdown-checklist-option">
+                                        <input class="form-check-input" type="checkbox" data-name="service_ids[]" value="<?= esc((string) ($service['serviceID'] ?? '')) ?>" data-label="<?= esc((string) ($service['name'] ?? ''), 'attr') ?>">
+                                        <span><?= esc($serviceLabel) ?></span>
+                                    </label>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

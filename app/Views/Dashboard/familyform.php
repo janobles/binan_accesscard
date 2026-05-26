@@ -11,16 +11,16 @@ extract(family_form_view_data(get_defined_vars()), EXTR_OVERWRITE);
             <div class="wizard-header-left">
                 <span class="wizard-icon" aria-hidden="true">+</span>
                 <div>
-                    <strong><?= $isEditMode ? 'Edit Family' : 'Add Family' ?></strong>
-                    <small>Step 1 of 3 - Head of the Family</small>
+                    <strong><?= $isEditMode ? 'Edit Record' : 'Add Record' ?></strong>
+                    <small>Step 1 of 3 - Record Head</small>
                 </div>
             </div>
         </div>
 
         <div class="family-wizard-steps" aria-hidden="true">
-            <div class="wizard-step is-active" data-step-target="1"><span>1</span><small>Head of the Family</small></div>
-            <div class="wizard-step" data-step-target="2"><span>2</span><small>Sector &amp; services</small></div>
-            <div class="wizard-step" data-step-target="3"><span>3</span><small>Family members</small></div>
+            <div class="wizard-step is-active" data-step-target="1"><span>1</span><small>Record Head</small></div>
+            <div class="wizard-step" data-step-target="2"><span>2</span><small>Sectors, services &amp; programs</small></div>
+            <div class="wizard-step" data-step-target="3"><span>3</span><small>Members</small></div>
         </div>
 
         <form method="post" action="<?= esc($formAction, 'attr') ?>" id="familyForm" class="needs-validation js-family-form" novalidate>

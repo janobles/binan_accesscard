@@ -18,6 +18,235 @@
         });
     }
 
+    function isOtherValue(value) {
+        const normalized = String(value || '').trim().toLowerCase();
+
+        return normalized === 'other' || normalized === 'others' || normalized === '__other__';
+    }
+
+    function findOtherInput(select) {
+        if (!select) {
+            return null;
+        }
+
+        const selector = select.dataset.otherInput || '';
+
+        if (selector !== '') {
+            return document.querySelector(selector);
+        }
+
+        const field = select.dataset.otherField || '';
+        const container = select.closest('.col-md-3, .col-md-4, .col-md-6, .col-md-8, .col-md-12, .col-12, .member-row, form') || select.parentElement;
+
+        return field !== '' && container
+            ? container.querySelector('[data-other-for="' + field + '"]')
+            : null;
+    }
+
+    function optionExists(select, value) {
+        return Array.from(select.options).some(function (option) {
+            return option.value === value;
+        });
+    }
+
+    function selectedFieldValue(select) {
+        const otherInput = findOtherInput(select);
+
+        if (isOtherValue(select.value) && otherInput) {
+            const otherValue = String(otherInput.value || '').trim();
+
+            return otherValue !== '' ? otherValue : select.value;
+        }
+
+        return select.value;
+    }
+
+    function syncOtherControl(select) {
+        const otherInput = findOtherInput(select);
+
+        if (!otherInput) {
+            return;
+        }
+
+        const shouldShow = isOtherValue(select.value);
+
+        setHidden(otherInput, !shouldShow);
+        otherInput.required = shouldShow;
+
+        if (!shouldShow) {
+            otherInput.value = '';
+        }
+    }
+
+    function setSelectValueWithOther(select, value) {
+        const normalizedValue = String(value || '');
+
+        if (normalizedValue === '' || optionExists(select, normalizedValue)) {
+            select.value = normalizedValue;
+            syncOtherControl(select);
+
+            return;
+        }
+
+        const otherOption = Array.from(select.options).find(function (option) {
+            return isOtherValue(option.value);
+        });
+
+        if (otherOption) {
+            otherOption.selected = true;
+            const otherInput = findOtherInput(select);
+
+            if (otherInput) {
+                otherInput.value = normalizedValue;
+            }
+
+            syncOtherControl(select);
+        }
+    }
+
+    function applyOtherValues(root) {
+        Array.from(root.querySelectorAll('.js-other-select')).forEach(function (select) {
+            const otherInput = findOtherInput(select);
+
+            if (!otherInput || !isOtherValue(select.value)) {
+                return;
+            }
+
+            const otherValue = String(otherInput.value || '').trim();
+
+            if (otherValue === '') {
+                return;
+            }
+
+            let generatedOption = Array.from(select.options).find(function (option) {
+                return option.dataset.generatedOther === '1';
+            });
+
+            if (!generatedOption) {
+                generatedOption = document.createElement('option');
+                generatedOption.dataset.generatedOther = '1';
+                select.appendChild(generatedOption);
+            }
+
+            generatedOption.value = otherValue;
+            generatedOption.textContent = otherValue;
+            generatedOption.selected = true;
+        });
+    }
+
+    function syncOtherControls(root) {
+        Array.from(root.querySelectorAll('.js-other-select')).forEach(syncOtherControl);
+    }
+
+    let dropdownChecklistCloseBound = false;
+
+    function dropdownChecklistInputLabel(input) {
+        if (!input) {
+            return '';
+        }
+
+        const dataLabel = String(input.dataset.label || '').trim();
+
+        if (dataLabel !== '') {
+            return dataLabel;
+        }
+
+        const label = input.closest('label');
+
+        return label ? String(label.textContent || '').trim() : '';
+    }
+
+    function updateDropdownChecklist(dropdown) {
+        if (!dropdown) {
+            return;
+        }
+
+        const label = dropdown.querySelector('[data-dropdown-checklist-label]');
+        const placeholder = String(dropdown.dataset.placeholder || 'Select options');
+        const checked = Array.from(dropdown.querySelectorAll('input[type="checkbox"]:checked'));
+        const labels = checked.map(dropdownChecklistInputLabel).filter(function (value) {
+            return value !== '';
+        });
+
+        let labelText = placeholder;
+
+        if (labels.length === 1) {
+            labelText = labels[0];
+        } else if (labels.length === 2) {
+            labelText = labels.join(', ');
+        } else if (labels.length > 2) {
+            labelText = labels.length + ' selected';
+        }
+
+        if (label) {
+            label.textContent = labelText;
+            label.title = labels.join(', ');
+        }
+
+        dropdown.classList.toggle('has-selection', labels.length > 0);
+    }
+
+    function closeDropdownChecklists(exceptDropdown) {
+        Array.from(document.querySelectorAll('.js-dropdown-checklist.is-open')).forEach(function (dropdown) {
+            if (dropdown !== exceptDropdown) {
+                dropdown.classList.remove('is-open');
+            }
+        });
+    }
+
+    function bindDropdownChecklistClose() {
+        if (dropdownChecklistCloseBound) {
+            return;
+        }
+
+        document.addEventListener('click', function (event) {
+            const target = event.target;
+
+            if (target instanceof Element && target.closest('.js-dropdown-checklist')) {
+                return;
+            }
+
+            closeDropdownChecklists(null);
+        });
+
+        dropdownChecklistCloseBound = true;
+    }
+
+    function initDropdownChecklists(root) {
+        const scope = root instanceof Element ? root : document;
+
+        bindDropdownChecklistClose();
+
+        Array.from(scope.querySelectorAll('.js-dropdown-checklist')).forEach(function (dropdown) {
+            if (dropdown.dataset.dropdownChecklistInitialized !== '1') {
+                dropdown.dataset.dropdownChecklistInitialized = '1';
+
+                const toggle = dropdown.querySelector('[data-dropdown-checklist-toggle]');
+
+                if (toggle) {
+                    toggle.addEventListener('click', function (event) {
+                        event.preventDefault();
+                        event.stopPropagation();
+
+                        const shouldOpen = !dropdown.classList.contains('is-open');
+                        closeDropdownChecklists(dropdown);
+                        dropdown.classList.toggle('is-open', shouldOpen);
+                    });
+                }
+
+                dropdown.addEventListener('change', function (event) {
+                    const target = event.target;
+
+                    if (target instanceof HTMLInputElement && target.type === 'checkbox') {
+                        updateDropdownChecklist(dropdown);
+                    }
+                });
+            }
+
+            updateDropdownChecklist(dropdown);
+        });
+    }
+
     function collectSelectedSectorIds(form) {
         return Array.from(form.querySelectorAll('#sectorNameList input[type="checkbox"]:checked')).map(function (checkbox) {
             return checkbox.value;
@@ -84,9 +313,13 @@
             return String(checkbox.value || '');
         }));
         const selectedIds = selectedSectorIds.length > 0 ? new Set(selectedSectorIds) : previouslySelectedIds;
-        const selectedCategories = Array.from(sectorCategoryList.querySelectorAll('input[type="checkbox"]:checked')).map(function (checkbox) {
+        let selectedCategories = Array.from(sectorCategoryList.querySelectorAll('input[type="checkbox"]:checked')).map(function (checkbox) {
             return checkbox.value;
         });
+
+        if (selectedCategories.length === 0 && sectorCategoryList.dataset.autoSelectAll === '1') {
+            selectedCategories = Object.keys(sectorCatalog);
+        }
         const options = [];
         const seenSectorIds = new Set();
 
@@ -138,7 +371,7 @@
 
             const groupBadge = document.createElement('span');
             groupBadge.className = 'sector-group-badge sector-group-' + group.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-            groupBadge.textContent = group;
+            groupBadge.textContent = String(option.category_label || group);
 
             const sectorText = document.createElement('span');
             sectorText.className = 'sector-name-text';
@@ -158,14 +391,14 @@
 
     function stepCopy(currentStep, totalSteps, entryType) {
         if (currentStep === 1) {
-            return 'Step 1 of ' + totalSteps + ' - ' + (entryType === 'member' ? 'Family Member' : 'Head of the Family');
+            return 'Step 1 of ' + totalSteps + ' - ' + (entryType === 'member' ? 'Member' : 'Record Head');
         }
 
         if (currentStep === 2) {
-            return 'Step 2 of ' + totalSteps + ' - Sector & services';
+            return 'Step 2 of ' + totalSteps + ' - Sectors, services & programs';
         }
 
-        return 'Step 3 of 3 - Family members';
+        return 'Step 3 of 3 - Members';
     }
 
     function setWizardStep(config) {
@@ -274,11 +507,16 @@
             ['sex', '#head_sex'],
             ['civil', '#head_civilstatus'],
             ['contact', '#head_contactnumber'],
+            ['religion', '#head_religion'],
             ['education', '#head_education'],
-            ['job', '#head_job']
+            ['job', '#head_job'],
+            ['address', '#head_address']
         ].forEach(function (field) {
             const target = targets[field[0]];
-            const value = (form.querySelector(field[1]) || {}).value || '';
+            const element = form.querySelector(field[1]);
+            const value = element instanceof HTMLSelectElement
+                ? selectedFieldValue(element)
+                : ((element || {}).value || '');
 
             if (target) {
                 target.textContent = value !== '' ? value : '-';
@@ -365,10 +603,20 @@
                     });
                 }
 
+                if (input instanceof HTMLInputElement && input.type === 'checkbox') {
+                    input.checked = arrayValue.includes(input.value);
+                }
+
                 return;
             }
 
             if (value === null || typeof value === 'undefined') {
+                return;
+            }
+
+            if (input instanceof HTMLSelectElement && input.classList.contains('js-other-select')) {
+                setSelectValueWithOther(input, String(value));
+
                 return;
             }
 
@@ -377,21 +625,29 @@
             }
         });
 
+        syncOtherControls(row);
+        initDropdownChecklists(row);
+
         memberRows.appendChild(fragment);
 
         return memberIndex + 1;
     }
 
     window.FamilyFormUI = {
+        applyOtherValues: applyOtherValues,
         collectSelectedSectorIds: collectSelectedSectorIds,
         createMemberRow: createMemberRow,
+        initDropdownChecklists: initDropdownChecklists,
         readSectorCatalog: readSectorCatalog,
         renderHeadSummary: renderHeadSummary,
         populateSectorsByCategory: populateSectorsByCategory,
         resetSectorSelection: resetSectorSelection,
+        selectedFieldValue: selectedFieldValue,
         setEntryType: setEntryType,
         setHidden: setHidden,
         setMemberRowsEmptyState: setMemberRowsEmptyState,
+        syncOtherControl: syncOtherControl,
+        syncOtherControls: syncOtherControls,
         setWizardStep: setWizardStep,
         updateSectorSelection: updateSectorSelection
     };

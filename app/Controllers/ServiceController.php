@@ -24,17 +24,32 @@ class ServiceController extends BaseController
 
     public function archive(int $serviceId): RedirectResponse
     {
+        return $this->delete($serviceId);
+    }
+
+    public function delete(int $serviceId): RedirectResponse
+    {
         $guard = $this->ensureAdminAccess();
 
         if ($guard instanceof RedirectResponse) {
             return $guard;
         }
 
-        if (! $this->archiveRecord('services', 'serviceID', $serviceId)) {
+        $model = new ServiceModel();
+
+        if (! $model->hasTable()) {
+            return $this->redirectAdmin('admin/services', 'error', 'Services table is not available.');
+        }
+
+        if ($this->serviceIsUsed($serviceId)) {
+            return $this->redirectAdmin('admin/services', 'error', 'This service or program is already used by one or more records and cannot be deleted.');
+        }
+
+        if (! $model->delete($serviceId)) {
             return $this->redirectAdmin('admin/services', 'error', 'Unable to delete service.');
         }
 
-        return $this->redirectAdmin('admin/services', 'success', 'Service deleted successfully.');
+        return $this->redirectAdmin('admin/services', 'success', 'Service or program deleted successfully.');
     }
 
     private function saveService(?int $serviceId = null): RedirectResponse
@@ -51,8 +66,14 @@ class ServiceController extends BaseController
             return $this->redirectAdmin('admin/services', 'error', 'Services table is not available.');
         }
 
+        $category = trim((string) $this->request->getPost('category'));
+
+        if ($category === '__other__') {
+            $category = trim((string) $this->request->getPost('category_other'));
+        }
+
         $data = [
-            'category' => trim((string) $this->request->getPost('category')),
+            'category' => $category,
             'name' => trim((string) $this->request->getPost('name')),
             'description' => trim((string) $this->request->getPost('description')),
         ];
@@ -73,5 +94,18 @@ class ServiceController extends BaseController
         $message = $isUpdate ? 'Service updated successfully.' : 'Service added successfully.';
 
         return $this->redirectAdmin('admin/services', 'success', $message);
+    }
+
+    private function serviceIsUsed(int $serviceId): bool
+    {
+        $db = db_connect();
+
+        if (! $db->tableExists('member_services')) {
+            return false;
+        }
+
+        return $db->table('member_services')
+            ->where('serviceID', $serviceId)
+            ->countAllResults() > 0;
     }
 }

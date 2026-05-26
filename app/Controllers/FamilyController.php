@@ -60,7 +60,7 @@ class FamilyController extends BaseController
         $familyData = $this->buildFamilyData($headId);
 
         if ($familyData === null) {
-            return '<div class="alert alert-warning mb-0">Family record not found.</div>';
+            return '<div class="alert alert-warning mb-0">Record not found.</div>';
         }
 
         return view('Dashboard/family-view', $familyData);
@@ -77,7 +77,7 @@ class FamilyController extends BaseController
         $familyData = $this->buildFamilyData($headId);
 
         if ($familyData === null) {
-            return '<div class="alert alert-warning mb-0">Family record not found.</div>';
+            return '<div class="alert alert-warning mb-0">Record not found.</div>';
         }
 
         $familyOptions = (new FamilyFormOptionsModel())->getViewData();
@@ -95,7 +95,7 @@ class FamilyController extends BaseController
             $familyOptions,
             [
                 'formAction' => site_url($this->familyRouteBase() . '/update/' . $headId),
-                'submitButtonLabel' => 'Update Family Data',
+                'submitButtonLabel' => 'Update Record Data',
                 'familyRecord' => $head,
                 'existingMembers' => $members,
                 'headServiceIds' => $headServiceIds,
@@ -121,7 +121,7 @@ class FamilyController extends BaseController
         $familyData = $this->buildFamilyData($headId);
 
         if ($familyData === null) {
-            return redirect()->back()->with('error', 'Family record not found or already archived.');
+            return redirect()->back()->with('error', 'Record not found or already archived.');
         }
 
         $head = $familyData['head'];
@@ -133,7 +133,7 @@ class FamilyController extends BaseController
         if (! $memberModel->archiveFamily($headId)) {
             $memberModel->rollbackTransaction();
 
-            return redirect()->back()->with('error', 'Family record could not be archived.');
+            return redirect()->back()->with('error', 'Record could not be archived.');
         }
 
         $this->auditFamilyAction(
@@ -141,17 +141,17 @@ class FamilyController extends BaseController
             (int) session()->get('user_id'),
             $headId,
             'FAMILY_ARCHIVED',
-            'Archived family record #' . $headId . ' for ' . $familyName . ' with ' . $memberCount . ' family member' . ($memberCount === 1 ? '' : 's') . '.'
+            'Archived record #' . $headId . ' for ' . $familyName . ' with ' . $memberCount . ' member' . ($memberCount === 1 ? '' : 's') . '.'
         );
 
         $memberModel->completeTransaction();
 
         if (! $memberModel->transactionStatus()) {
-            return redirect()->back()->with('error', 'The family record was not archived.');
+            return redirect()->back()->with('error', 'The record was not archived.');
         }
 
         return redirect()->to(site_url($this->familyDashboardPath()))
-            ->with('success', 'Family record archived successfully.');
+            ->with('success', 'Record archived successfully.');
     }
 
     public function delete(int $headId): RedirectResponse
@@ -163,7 +163,7 @@ class FamilyController extends BaseController
         }
 
         if ((string) session()->get('role') !== 'User') {
-            return redirect()->back()->with('error', 'Only employee accounts can delete family records from this page.');
+            return redirect()->back()->with('error', 'Only employee accounts can delete records from this page.');
         }
 
         $memberModel = new MemberModel();
@@ -171,7 +171,7 @@ class FamilyController extends BaseController
         $familyData = $this->buildFamilyData($headId);
 
         if ($familyData === null) {
-            return redirect()->back()->with('error', 'Family record not found or already deleted.');
+            return redirect()->back()->with('error', 'Record not found or already deleted.');
         }
 
         $head = $familyData['head'];
@@ -183,7 +183,7 @@ class FamilyController extends BaseController
         if (! $memberModel->deleteFamilyRecord($headId)) {
             $memberModel->rollbackTransaction();
 
-            return redirect()->back()->with('error', 'Family record could not be deleted.');
+            return redirect()->back()->with('error', 'Record could not be deleted.');
         }
 
         $this->auditFamilyAction(
@@ -191,17 +191,17 @@ class FamilyController extends BaseController
             (int) session()->get('user_id'),
             $headId,
             'FAMILY_DELETED',
-            'Deleted family record #' . $headId . ' for ' . $familyName . ' with ' . $memberCount . ' family member' . ($memberCount === 1 ? '' : 's') . '.'
+            'Deleted record #' . $headId . ' for ' . $familyName . ' with ' . $memberCount . ' member' . ($memberCount === 1 ? '' : 's') . '.'
         );
 
         $memberModel->completeTransaction();
 
         if (! $memberModel->transactionStatus()) {
-            return redirect()->back()->with('error', 'The family record was not deleted.');
+            return redirect()->back()->with('error', 'The record was not deleted.');
         }
 
         return redirect()->to(site_url($this->familyDashboardPath()))
-            ->with('success', 'Family record deleted successfully.');
+            ->with('success', 'Record deleted successfully.');
     }
 
     public function restore(int $headId): RedirectResponse
@@ -221,7 +221,7 @@ class FamilyController extends BaseController
         $familyData = $this->buildFamilyData($headId, 'archived');
 
         if ($familyData === null) {
-            return redirect()->back()->with('error', 'Archived family record not found.');
+            return redirect()->back()->with('error', 'Archived record not found.');
         }
 
         $head = $familyData['head'];
@@ -233,7 +233,7 @@ class FamilyController extends BaseController
         if (! $memberModel->restoreFamily($headId)) {
             $memberModel->rollbackTransaction();
 
-            return redirect()->back()->with('error', 'Family record could not be restored.');
+            return redirect()->back()->with('error', 'Record could not be restored.');
         }
 
         $this->auditFamilyAction(
@@ -241,17 +241,17 @@ class FamilyController extends BaseController
             (int) session()->get('user_id'),
             $headId,
             'FAMILY_RESTORED',
-            'Restored family record #' . $headId . ' for ' . $familyName . ' with ' . $memberCount . ' family member' . ($memberCount === 1 ? '' : 's') . '.'
+            'Restored record #' . $headId . ' for ' . $familyName . ' with ' . $memberCount . ' member' . ($memberCount === 1 ? '' : 's') . '.'
         );
 
         $memberModel->completeTransaction();
 
         if (! $memberModel->transactionStatus()) {
-            return redirect()->back()->with('error', 'The family record was not restored.');
+            return redirect()->back()->with('error', 'The record was not restored.');
         }
 
         return redirect()->to(site_url($this->familyDashboardPath()))
-            ->with('success', 'Family record restored successfully.');
+            ->with('success', 'Record restored successfully.');
     }
 
     public function update(int $headId): RedirectResponse
@@ -295,14 +295,14 @@ class FamilyController extends BaseController
         $head = $memberModel->find($headId);
 
         if ($head === null || (int) ($head['headID'] ?? 0) !== $headId) {
-            return redirect()->back()->with('error', 'Family record not found.');
+            return redirect()->back()->with('error', 'Record not found.');
         }
 
         $members = $this->request->getPost('members');
         $headServiceIds = $this->normalizeIdListPayload($this->request->getPost('service_ids'));
 
         if ($members !== null && ! is_array($members)) {
-            return redirect()->back()->withInput()->with('error', 'Family member entries must be submitted as a list.');
+            return redirect()->back()->withInput()->with('error', 'Member entries must be submitted as a list.');
         }
 
         if (! is_array($members)) {
@@ -318,7 +318,7 @@ class FamilyController extends BaseController
         if (! $memberModel->updateHead($headId, $this->memberPayload('head_', $sectorIds))) {
             $memberModel->rollbackTransaction();
 
-            return redirect()->back()->withInput()->with('error', 'Head of family could not be updated.');
+            return redirect()->back()->withInput()->with('error', 'Record head could not be updated.');
         }
 
         $existingMemberIds = $memberModel->getFamilyMemberIds($headId);
@@ -326,13 +326,13 @@ class FamilyController extends BaseController
         if (! $memberServiceModel->deleteByMemberIds($existingMemberIds)) {
             $memberModel->rollbackTransaction();
 
-            return redirect()->back()->withInput()->with('error', 'Could not update family services.');
+            return redirect()->back()->withInput()->with('error', 'Could not update record services and programs.');
         }
 
         if (! $memberModel->deleteFamilyMembersExceptHead($headId)) {
             $memberModel->rollbackTransaction();
 
-            return redirect()->back()->withInput()->with('error', 'Could not refresh family members.');
+            return redirect()->back()->withInput()->with('error', 'Could not refresh members.');
         }
 
         if (! $this->assignServices($memberServiceModel, $serviceModel, $headId, $headServiceIds)) {
@@ -351,7 +351,7 @@ class FamilyController extends BaseController
             if ($memberSectorIds === null) {
                 $memberModel->rollbackTransaction();
 
-                return redirect()->back()->withInput()->with('error', 'One family member has an invalid sector selection.');
+                return redirect()->back()->withInput()->with('error', 'One member has an invalid sector selection.');
             }
 
             $memberServiceIds = $this->normalizeIdListPayload($member['service_ids'] ?? null);
@@ -359,7 +359,7 @@ class FamilyController extends BaseController
             if ($memberServiceIds === null || ! $serviceModel->idsExist($memberServiceIds)) {
                 $memberModel->rollbackTransaction();
 
-                return redirect()->back()->withInput()->with('error', 'One family member has an invalid service selection.');
+                return redirect()->back()->withInput()->with('error', 'One member has an invalid service or program selection.');
             }
 
             $memberId = $memberModel->addFamilyMember($headId, $this->memberPayloadFromArray($member, $memberSectorIds));
@@ -367,13 +367,13 @@ class FamilyController extends BaseController
             if ($memberId === false) {
                 $memberModel->rollbackTransaction();
 
-                return redirect()->back()->withInput()->with('error', 'A family member could not be updated.');
+                return redirect()->back()->withInput()->with('error', 'A member could not be updated.');
             }
 
             if (! $this->assignServices($memberServiceModel, $serviceModel, $memberId, $memberServiceIds)) {
                 $memberModel->rollbackTransaction();
 
-                return redirect()->back()->withInput()->with('error', 'A selected service could not be assigned to one family member.');
+                return redirect()->back()->withInput()->with('error', 'A selected service or program could not be assigned to one member.');
             }
         }
 
@@ -382,16 +382,16 @@ class FamilyController extends BaseController
             (int) session()->get('user_id'),
             $headId,
             'FAMILY_UPDATED',
-            'Updated family profile for ' . trim((string) $this->request->getPost('head_firstname')) . ' ' . trim((string) $this->request->getPost('head_lastname')) . '.'
+            'Updated record profile for ' . trim((string) $this->request->getPost('head_firstname')) . ' ' . trim((string) $this->request->getPost('head_lastname')) . '.'
         );
 
         $memberModel->completeTransaction();
 
         if (! $memberModel->transactionStatus()) {
-            return redirect()->back()->withInput()->with('error', 'The family update was not saved.');
+            return redirect()->back()->withInput()->with('error', 'The record update was not saved.');
         }
 
-        return redirect()->to(site_url($this->familyDashboardPath()))->with('success', 'Family and member data updated successfully.');
+        return redirect()->to(site_url($this->familyDashboardPath()))->with('success', 'Record and member data updated successfully.');
     }
 
     public function store()
@@ -404,7 +404,7 @@ class FamilyController extends BaseController
                     ->setStatusCode(403)
                     ->setJSON([
                         'status' => 'error',
-                        'message' => 'You do not have permission to add family records.',
+                        'message' => 'You do not have permission to add records.',
                         'csrf' => csrf_hash(),
                     ]);
             }
@@ -458,13 +458,13 @@ class FamilyController extends BaseController
             if ($memberId === false) {
                 $memberModel->rollbackTransaction();
 
-                return $this->validationResponse('Family member could not be saved. Please check the selected family head and required fields.');
+                return $this->validationResponse('Member could not be saved. Please check the selected record head and required fields.');
             }
 
             if (! $this->assignServices($memberServiceModel, $serviceModel, $memberId, $serviceIds)) {
                 $memberModel->rollbackTransaction();
 
-                return $this->validationResponse('A selected service could not be assigned to this family member.');
+                return $this->validationResponse('A selected service or program could not be assigned to this member.');
             }
 
             $this->auditFamilyAction(
@@ -472,18 +472,18 @@ class FamilyController extends BaseController
                 $userId,
                 $memberId,
                 'FAMILY_MEMBER_CREATED',
-                'Added family member ' . trim((string) $this->request->getPost('member_firstname')) . ' ' . trim((string) $this->request->getPost('member_lastname')) . '.'
+                'Added member ' . trim((string) $this->request->getPost('member_firstname')) . ' ' . trim((string) $this->request->getPost('member_lastname')) . '.'
             );
 
             $memberModel->completeTransaction();
 
-            return $this->familyResponse($memberModel, 'Family member and services saved successfully.');
+            return $this->familyResponse($memberModel, 'Member services and programs saved successfully.');
         }
 
         $members = $this->request->getPost('members');
 
         if ($members !== null && ! is_array($members)) {
-            return $this->validationResponse('Family member entries must be submitted as a list.');
+            return $this->validationResponse('Member entries must be submitted as a list.');
         }
 
         if (! is_array($members)) {
@@ -495,7 +495,7 @@ class FamilyController extends BaseController
         if ($headId === false) {
             $memberModel->rollbackTransaction();
 
-            return $this->validationResponse('Head of family could not be saved. Please check required fields.');
+            return $this->validationResponse('Record head could not be saved. Please check required fields.');
         }
 
         foreach ($members as $member) {
@@ -508,7 +508,7 @@ class FamilyController extends BaseController
             if ($memberSectorIds === null) {
                 $memberModel->rollbackTransaction();
 
-                return $this->validationResponse('One family member has an invalid sector selection.');
+                return $this->validationResponse('One member has an invalid sector selection.');
             }
 
             $memberServiceIds = $this->normalizeIdListPayload($member['service_ids'] ?? null);
@@ -516,7 +516,7 @@ class FamilyController extends BaseController
             if ($memberServiceIds === null || ! $serviceModel->idsExist($memberServiceIds)) {
                 $memberModel->rollbackTransaction();
 
-                return $this->validationResponse('One family member has an invalid service selection.');
+                return $this->validationResponse('One member has an invalid service or program selection.');
             }
 
             $memberId = $memberModel->addFamilyMember($headId, $this->memberPayloadFromArray($member, $memberSectorIds));
@@ -524,20 +524,20 @@ class FamilyController extends BaseController
             if ($memberId === false) {
                 $memberModel->rollbackTransaction();
 
-                return $this->validationResponse('One family member could not be saved.');
+                return $this->validationResponse('One member could not be saved.');
             }
 
             if (! $this->assignServices($memberServiceModel, $serviceModel, $memberId, $memberServiceIds)) {
                 $memberModel->rollbackTransaction();
 
-                return $this->validationResponse('A selected service could not be assigned to one family member.');
+                return $this->validationResponse('A selected service or program could not be assigned to one member.');
             }
         }
 
         if (! $this->assignServices($memberServiceModel, $serviceModel, $headId, $serviceIds)) {
             $memberModel->rollbackTransaction();
 
-            return $this->validationResponse('A selected service could not be assigned to the family head.');
+            return $this->validationResponse('A selected service or program could not be assigned to the record head.');
         }
 
         $this->auditFamilyAction(
@@ -545,12 +545,12 @@ class FamilyController extends BaseController
             $userId,
             $headId,
             'FAMILY_CREATED',
-            'Created family profile for ' . trim((string) $this->request->getPost('head_firstname')) . ' ' . trim((string) $this->request->getPost('head_lastname')) . '.'
+            'Created record profile for ' . trim((string) $this->request->getPost('head_firstname')) . ' ' . trim((string) $this->request->getPost('head_lastname')) . '.'
         );
 
         $memberModel->completeTransaction();
 
-        return $this->familyResponse($memberModel, 'Family and member data saved successfully.');
+        return $this->familyResponse($memberModel, 'Record and member data saved successfully.');
     }
 
     private function validationResponse(string $message)
@@ -571,7 +571,7 @@ class FamilyController extends BaseController
     private function familyResponse(MemberModel $memberModel, string $successMessage)
     {
         if (! $memberModel->transactionStatus()) {
-            $message = 'The family form was not saved.';
+            $message = 'The record form was not saved.';
 
             if ($this->request->isAJAX()) {
                 return $this->response
@@ -615,7 +615,7 @@ class FamilyController extends BaseController
             return null;
         }
 
-        return redirect()->back()->with('error', 'You do not have permission to add family records.');
+        return redirect()->back()->with('error', 'You do not have permission to add records.');
     }
 
     private function entryType(): string
@@ -680,6 +680,9 @@ class FamilyController extends BaseController
             'job' => $this->nullableText($this->request->getPost($prefix . 'job')),
             'Salary' => $this->moneyOrNull($this->request->getPost($prefix . 'salary')),
             'contactnumber' => $this->nullableText($this->request->getPost($prefix . 'contactnumber')),
+            'religion' => $this->nullableText($this->request->getPost($prefix . 'religion')),
+            'address' => $this->nullableText($this->request->getPost($prefix . 'address')),
+            'barangay' => $this->nullableText($this->request->getPost($prefix . 'barangay')),
             'relationship' => $prefix === 'head_' ? 'Head' : ($this->nullableText($this->request->getPost($prefix . 'relationship')) ?? 'Member'),
             'sectorID' => SectorIds::toStorage($sectorIds),
         ];
@@ -699,6 +702,9 @@ class FamilyController extends BaseController
             'job' => $this->nullableText($member['job'] ?? null),
             'Salary' => $this->moneyOrNull($member['salary'] ?? null),
             'contactnumber' => $this->nullableText($member['contactnumber'] ?? null),
+            'religion' => $this->nullableText($member['religion'] ?? null),
+            'address' => $this->nullableText($member['address'] ?? null),
+            'barangay' => $this->nullableText($member['barangay'] ?? null),
             'relationship' => $this->nullableText($member['relationship'] ?? 'Member'),
             'sectorID' => SectorIds::toStorage($sectorIds),
         ];
@@ -719,7 +725,7 @@ class FamilyController extends BaseController
             (string) ($person['suffix'] ?? ''),
         ], static fn (string $value): bool => trim($value) !== '')));
 
-        return $name === '' ? 'family #' . (int) ($person['memberID'] ?? 0) : $name;
+        return $name === '' ? 'record #' . (int) ($person['memberID'] ?? 0) : $name;
     }
 
     private function moneyOrNull(mixed $value): ?float
@@ -937,7 +943,7 @@ class FamilyController extends BaseController
 
     private function familyDashboardPath(): string
     {
-        return $this->isEmployeeRequestPath() ? 'employee/workspace' : 'admin/dashboard';
+        return $this->isEmployeeRequestPath() ? 'employee/manage-records' : 'admin/manage-records';
     }
 
     private function isEmployeeRequestPath(): bool

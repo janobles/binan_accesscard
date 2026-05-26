@@ -70,9 +70,11 @@
             sex: q(form, '#headSummarySex'),
             civil: q(form, '#headSummaryCivil'),
             contact: q(form, '#headSummaryContact'),
+            religion: q(form, '#headSummaryReligion'),
             education: q(form, '#headSummaryEducation'),
             job: q(form, '#headSummaryJob'),
             income: q(form, '#headSummaryIncome'),
+            address: q(form, '#headSummaryAddress'),
             sectors: q(form, '#headSummarySectors'),
             services: q(form, '#headSummaryServices')
         };
@@ -267,9 +269,11 @@
             '#head_sex',
             '#head_civilstatus',
             '#head_contactnumber',
+            '#head_religion',
             '#head_education',
             '#head_job',
-            '#head_salary'
+            '#head_salary',
+            '#head_address'
         ].forEach(function (selector) {
             const element = q(form, selector);
 
@@ -305,8 +309,30 @@
         form.addEventListener('change', function (event) {
             const target = event.target;
 
+            if (target instanceof HTMLSelectElement && target.classList.contains('js-other-select')) {
+                if (typeof ui.syncOtherControl === 'function') {
+                    ui.syncOtherControl(target);
+                }
+
+                updateHeadSummary();
+            }
+
             if (target instanceof HTMLInputElement && target.name === 'service_ids[]') {
                 updateHeadSummary();
+            }
+        });
+
+        form.addEventListener('input', function (event) {
+            const target = event.target;
+
+            if (target instanceof HTMLInputElement && target.classList.contains('js-other-input')) {
+                updateHeadSummary();
+            }
+        });
+
+        form.addEventListener('submit', function () {
+            if (typeof ui.applyOtherValues === 'function') {
+                ui.applyOtherValues(form);
             }
         });
 
@@ -320,6 +346,7 @@
                     memberIndex = 0;
                     setEntryType('head');
                     resetSectorSelection();
+                    populateSectorsByCategory();
 
                     if (typeof ui.setMemberRowsEmptyState === 'function') {
                         ui.setMemberRowsEmptyState(memberRows, memberRowsEmpty);
@@ -331,7 +358,7 @@
             });
         }
 
-        if (state.selectedSectorIds.length > 0) {
+        if (Object.keys(sectorCatalog).length > 0) {
             populateSectorsByCategory();
         } else {
             resetSectorSelection();
@@ -345,6 +372,14 @@
 
         if (typeof ui.setMemberRowsEmptyState === 'function') {
             ui.setMemberRowsEmptyState(memberRows, memberRowsEmpty);
+        }
+
+        if (typeof ui.syncOtherControls === 'function') {
+            ui.syncOtherControls(form);
+        }
+
+        if (typeof ui.initDropdownChecklists === 'function') {
+            ui.initDropdownChecklists(form);
         }
 
         updateHeadSummary();

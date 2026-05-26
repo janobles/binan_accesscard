@@ -131,6 +131,11 @@ class Home extends BaseController
         return $this->renderAdminPage('family-entry');
     }
 
+    public function adminManageRecords(): string|RedirectResponse
+    {
+        return $this->renderAdminPage('family-manage');
+    }
+
     public function adminAuditTrails(): string|RedirectResponse
     {
         if ($this->isPartialRequest()) {
@@ -170,6 +175,11 @@ class Home extends BaseController
         }
 
         return $this->renderEmployeePage('family-entry');
+    }
+
+    public function employeeManageRecords(): string|RedirectResponse
+    {
+        return $this->renderEmployeePage('family-manage');
     }
 
     public function employeeActivity(): string|RedirectResponse

@@ -81,6 +81,49 @@ class AccountController extends BaseController
         return redirect()->to(site_url('admin/accounts'))->with('success', 'Account created successfully.');
     }
 
+    public function updateStatus(): RedirectResponse
+    {
+        $guard = $this->requireDeveloper();
+
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        $rules = [
+            'userID' => 'required|is_natural_no_zero',
+            'status' => 'required|in_list[Enable,Disabled]',
+        ];
+
+        if (! $this->validate($rules)) {
+            return redirect()->back()
+                ->with('error', implode(' ', $this->validator->getErrors()));
+        }
+
+        $userId = (int) $this->request->getPost('userID');
+        $enabled = (string) $this->request->getPost('status') === 'Enable';
+        $userModel = new UserModel();
+        $account = $userModel->find($userId);
+
+        if ($account === null || ! in_array((string) ($account['role'] ?? ''), ['Admin', 'User'], true)) {
+            return redirect()->back()->with('error', 'Account could not be found.');
+        }
+
+        if (! $userModel->updateAccountStatus($userId, $enabled)) {
+            return redirect()->back()->with('error', 'Account status could not be updated.');
+        }
+
+        $displayRole = (string) ($account['role'] ?? '') === 'User' ? 'Employee' : (string) ($account['role'] ?? '');
+        $statusLabel = $enabled ? 'enabled' : 'disabled';
+
+        $this->audit(
+            'ACCOUNT_STATUS_UPDATED',
+            ucfirst($statusLabel) . ' ' . $displayRole . ' account "' . (string) ($account['username'] ?? '') . '" (#' . $userId . ').'
+        );
+
+        return redirect()->to(site_url('admin/accounts'))
+            ->with('success', 'Account ' . $statusLabel . ' successfully.');
+    }
+
     private function requireDeveloper(): ?RedirectResponse
     {
         if (! session()->get('is_logged_in')) {

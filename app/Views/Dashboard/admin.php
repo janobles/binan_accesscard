@@ -283,7 +283,7 @@ $formatAuditUser = static function (array $audit): string {
                 <button type="button" class="btn btn-outline-secondary family-modal-back js-family-modal-back" aria-label="Back">
                     <span aria-hidden="true">&larr;</span> Back
                 </button>
-                <h5 class="modal-title visually-hidden" id="familyModalLabel">Manage Family</h5>
+                <h5 class="modal-title visually-hidden" id="familyModalLabel">Manage Record</h5>
                 <button type="button" class="btn-close family-modal-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body" id="familyModalBody">

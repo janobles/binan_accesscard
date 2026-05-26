@@ -261,13 +261,6 @@ $formatAuditUser = static function (array $audit): string {
     </div>
 </div>
 
-<div id="session-timeout-modal" class="session-timeout-modal" aria-live="assertive">
-    <div class="session-timeout-card" role="dialog" aria-modal="true" aria-labelledby="session-timeout-title">
-        <h4 id="session-timeout-title" class="session-timeout-title">Session Expired</h4>
-        <p class="session-timeout-text">You have been logged out.</p>
-        <p class="session-timeout-subtext">Redirecting to login screen...</p>
-    </div>
-</div>
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="<?= base_url('assets/js/dashboard/family-form-ui.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form-ui.js') ?>"></script>

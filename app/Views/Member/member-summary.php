@@ -8,7 +8,7 @@
     </div>
     <div class="member-row mb-3" id="headOfFamilySummary">
         <div class="member-row-header">
-            <strong>Current Head of Family</strong>
+            <strong>Currgent Head of Family</strong>
         </div>
         <div class="row g-2">
             <div class="col-md-4"><small><strong>Name:</strong> <span id="headSummaryName">-</span></small></div>

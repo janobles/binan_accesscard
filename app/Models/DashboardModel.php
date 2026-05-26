@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Support\SectorIds;
+use App\Libraries\SectorIds;
 use CodeIgniter\Database\BaseConnection;
 
 /**

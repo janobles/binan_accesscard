@@ -1,6 +1,43 @@
 <?php
-helper('dashboard_view');
-extract(audit_trails_view_data(get_defined_vars()), EXTR_OVERWRITE);
+$recentAudits       = $recentAudits ?? [];
+$searchTerm         = $searchTerm ?? '';
+$searchFilters      = $searchFilters ?? [];
+$auditActionOptions = $auditActionOptions ?? [];
+$hasSearchFilters   = $searchTerm !== '' || array_filter($searchFilters, static fn ($value): bool => trim((string) $value) !== '') !== [];
+$selectedFilterDate = (string) ($searchFilters['date'] ?? $searchFilters['date_from'] ?? '');
+
+$formatDate = static function (mixed $value): string {
+    $timestamp = strtotime((string) $value);
+
+    return $timestamp === false ? '' : date('Y-m-d', $timestamp);
+};
+
+$formatTime = static function (mixed $value): string {
+    $timestamp = strtotime((string) $value);
+
+    return $timestamp === false ? '' : date('h:i A', $timestamp);
+};
+
+$formatAuditMember = static function (array $audit): string {
+    $memberName = trim((string) ($audit['member_name'] ?? ''));
+
+    if ($memberName === '') {
+        $memberName = trim((string) ($audit['firstname'] ?? '') . ' ' . (string) ($audit['lastname'] ?? ''));
+    }
+
+    return $memberName === '' ? '-' : $memberName;
+};
+
+$formatAuditUser = static function (array $audit): string {
+    $username = trim((string) ($audit['username'] ?? $audit['userID'] ?? ''));
+    $role     = trim((string) ($audit['user_role'] ?? ''));
+
+    if ($role === 'User') {
+        $role = 'Employee';
+    }
+
+    return $role === '' ? $username : $username . ' (' . $role . ')';
+};
 ?>
 
 <div class="panel">

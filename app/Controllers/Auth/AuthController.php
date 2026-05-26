@@ -5,7 +5,7 @@ namespace App\Controllers\Auth;
 use App\Controllers\BaseController;
 use App\Libraries\RoleAccess;
 use App\Models\Auth\UserModel;
-use App\Support\SessionAuditLogger;
+use App\Libraries\SessionAuditLogger;
 use CodeIgniter\HTTP\RedirectResponse;
 use Config\IdleTimeout;
 

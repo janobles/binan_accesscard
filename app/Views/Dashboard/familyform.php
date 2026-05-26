@@ -1,8 +1,67 @@
 <?php
-helper('family_form');
+use App\Libraries\SectorIds;
 
-// Load normalized family form data from the helper before rendering the wizard.
-extract(family_form_view_data(get_defined_vars()), EXTR_OVERWRITE);
+$defaultFormOptions = [
+    'sectors'              => [],
+    'sexes'                => [],
+    'suffixes'             => [],
+    'civil_statuses'       => [],
+    'relationships'        => [],
+    'education_levels'     => [],
+    'income_ranges'        => [],
+    'services_by_category' => [],
+    'family_heads'         => [],
+];
+
+$formOptions              = array_merge($defaultFormOptions, (array) ($formOptions ?? []));
+$sectorOptions            = $sectorOptions ?? ($formOptions['sectors'] ?? []);
+$sectorCatalog            = (array) ($sectorCatalog ?? []);
+$sexOptions               = $sexOptions ?? ($formOptions['sexes'] ?? []);
+$suffixOptions            = $suffixOptions ?? ($formOptions['suffixes'] ?? []);
+$civilOptions             = $civilOptions ?? ($formOptions['civil_statuses'] ?? []);
+$relationshipOptions      = $relationshipOptions ?? ($formOptions['relationships'] ?? []);
+$educationOptions         = $educationOptions ?? ($formOptions['education_levels'] ?? []);
+$incomeOptions            = $incomeOptions ?? ($formOptions['income_ranges'] ?? []);
+$servicesByCategory       = $servicesByCategory ?? ($formOptions['services_by_category'] ?? []);
+$familyHeads              = $familyHeads ?? ($formOptions['family_heads'] ?? []);
+$formAction               = $formAction ?? site_url('families');
+$submitButtonLabel        = $submitButtonLabel ?? 'Save Family Data';
+$familyRecord             = (array) ($familyRecord ?? []);
+$existingMembers          = (array) ($existingMembers ?? []);
+$headServiceIds           = array_values(array_map('intval', (array) ($headServiceIds ?? $familyRecord['service_ids'] ?? [])));
+$isEditMode               = $familyRecord !== [];
+$selectedSectorIds        = SectorIds::normalize($familyRecord['sectorID'] ?? null);
+$selectedSectorCategories = (static function () use ($sectorCatalog, $selectedSectorIds): array {
+    $cats = [];
+
+    foreach ($sectorCatalog as $key => $rows) {
+        foreach ((array) $rows as $row) {
+            if (in_array((int) ($row['sectorID'] ?? 0), $selectedSectorIds, true)) {
+                $cats[] = (string) $key;
+                break;
+            }
+        }
+    }
+
+    return array_values(array_unique($cats));
+})();
+$initialFamilyData        = [
+    'selectedSectorIds'        => $selectedSectorIds,
+    'selectedSectorCategories' => $selectedSectorCategories,
+    'headServiceIds'           => $headServiceIds,
+    'existingMembers'          => $existingMembers,
+];
+$fieldViewData            = compact(
+    'civilOptions',
+    'educationOptions',
+    'familyRecord',
+    'incomeOptions',
+    'relationshipOptions',
+    'sectorOptions',
+    'servicesByCategory',
+    'sexOptions',
+    'suffixOptions'
+);
 ?>
 
 <link rel="stylesheet" href="<?= base_url('assets/css/familyform.css') ?>?v=<?= filemtime(FCPATH . 'assets/css/familyform.css') ?>">

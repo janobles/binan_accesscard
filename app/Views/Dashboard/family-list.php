@@ -1,8 +1,3 @@
-<?php
-helper('dashboard_view');
-extract(family_list_view_data(get_defined_vars()), EXTR_OVERWRITE);
-?>
-
 <div class="panel mb-3">
     <div class="section-title mt-0">
         <span><?= $status === 'archived' ? 'Archived Families' : 'Manage Families' ?></span>

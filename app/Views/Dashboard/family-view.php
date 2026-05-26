@@ -1,6 +1,62 @@
 <?php
-helper('dashboard_view');
-extract(family_details_view_data(get_defined_vars()), EXTR_OVERWRITE);
+$head           = (array) ($head ?? []);
+$members        = (array) ($members ?? []);
+$serviceMap     = (array) ($serviceMap ?? []);
+$serviceNameMap = (array) ($serviceNameMap ?? []);
+
+$fullName = static function (array $person): string {
+    $name = trim(
+        ($person['firstname'] ?? '') . ' '
+        . ($person['middlename'] ?? '') . ' '
+        . ($person['lastname'] ?? '') . ' '
+        . ($person['suffix'] ?? '')
+    );
+
+    return $name !== '' ? $name : '-';
+};
+
+$display = static fn (mixed $value): string => trim((string) $value) !== '' ? (string) $value : '-';
+
+$formatDate = static function (mixed $value): string {
+    $timestamp = strtotime((string) $value);
+
+    return $timestamp === false ? '-' : date('Y-m-d', $timestamp);
+};
+
+$formatTime = static function (mixed $value): string {
+    $timestamp = strtotime((string) $value);
+
+    return $timestamp === false ? '-' : date('h:i A', $timestamp);
+};
+
+$serviceNames = static function (array $person) use ($serviceMap, $serviceNameMap): array {
+    $memberId = (int) ($person['memberID'] ?? 0);
+    $names    = [];
+
+    foreach (($serviceMap[$memberId] ?? []) as $serviceId) {
+        $serviceId = (int) $serviceId;
+        $names[]   = (string) ($serviceNameMap[$serviceId] ?? ('Service #' . $serviceId));
+    }
+
+    return $names;
+};
+
+$detailItem = static function (string $label, mixed $value) use ($display): string {
+    return '<div class="family-detail-item"><span>' . esc($label) . '</span><strong>' . esc($display($value)) . '</strong></div>';
+};
+
+$renderServices = static function (array $names): string {
+    if ($names === []) {
+        return '<span class="text-muted">No services availed.</span>';
+    }
+
+    $items = array_map(
+        static fn (string $name): string => '<span class="family-service-chip">' . esc($name) . '</span>',
+        $names
+    );
+
+    return implode('', $items);
+};
 ?>
 
 <div class="family-detail">

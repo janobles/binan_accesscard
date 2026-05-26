@@ -7,7 +7,7 @@ use App\Models\FamilyFormOptionsModel;
 use App\Models\MemberModel;
 use App\Models\MemberServiceModel;
 use App\Models\ServiceModel;
-use App\Support\SectorIds;
+use App\Libraries\SectorIds;
 use CodeIgniter\HTTP\RedirectResponse;
 
 /**
@@ -34,18 +34,53 @@ class FamilyController extends BaseController
         $totalFamilies = $memberModel->countSearchFamilies($searchKeyword, $showArchived);
         $totalPages = max(1, (int) ceil($totalFamilies / $perPage));
         $page = min($page, $totalPages);
-        $families = $memberModel->searchFamilies($searchKeyword, $perPage, ($page - 1) * $perPage, $showArchived);
+        $families   = $memberModel->searchFamilies($searchKeyword, $perPage, ($page - 1) * $perPage, $showArchived);
+        $routeBase  = $this->familyRouteBase();
+        $fromRecord = $totalFamilies === 0 ? 0 : (($page - 1) * $perPage) + 1;
+        $toRecord   = min($totalFamilies, $page * $perPage);
+
+        $formatDate = static function (mixed $value): string {
+            $timestamp = strtotime((string) $value);
+
+            return $timestamp === false ? '' : date('Y-m-d', $timestamp);
+        };
+
+        $formatTime = static function (mixed $value): string {
+            $timestamp = strtotime((string) $value);
+
+            return $timestamp === false ? '' : date('h:i A', $timestamp);
+        };
+
+        $listUrl = static function (string $targetStatus, int $targetPage = 1) use ($routeBase, $keyword): string {
+            $params = ['page' => $targetPage];
+
+            if ($targetStatus === 'archived') {
+                $params['status'] = 'archived';
+            }
+
+            if (trim($keyword) !== '') {
+                $params['q'] = $keyword;
+            }
+
+            return site_url($routeBase . '/list?' . http_build_query($params));
+        };
 
         return view('Dashboard/family-list', [
-            'families' => $families,
-            'keyword' => $keyword,
-            'routeBase' => $this->familyRouteBase(),
-            'status' => $showArchived ? 'archived' : 'active',
             'canRestoreArchived' => ! $isEmployeePath,
-            'page' => $page,
-            'perPage' => $perPage,
-            'totalFamilies' => $totalFamilies,
-            'totalPages' => $totalPages,
+            'families'          => $families,
+            'formatDate'        => $formatDate,
+            'formatTime'        => $formatTime,
+            'fromRecord'        => $fromRecord,
+            'isEmployeeList'    => $isEmployeePath,
+            'keyword'           => $keyword,
+            'listUrl'           => $listUrl,
+            'page'              => $page,
+            'perPage'           => $perPage,
+            'routeBase'         => $routeBase,
+            'status'            => $showArchived ? 'archived' : 'active',
+            'toRecord'          => $toRecord,
+            'totalFamilies'     => $totalFamilies,
+            'totalPages'        => $totalPages,
         ]);
     }
 

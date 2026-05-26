@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use App\Libraries\DashboardPageBuilder;
 use App\Libraries\RoleAccess;
+use App\Libraries\SessionAuditLogger;
 use App\Models\FamilyFormOptionsModel;
 use CodeIgniter\HTTP\RedirectResponse;
 

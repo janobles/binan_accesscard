@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Support;
+namespace App\Libraries;
 
 /**
  * Converts the final database's JSON-style sector list strings to/from arrays.

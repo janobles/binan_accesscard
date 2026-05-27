@@ -85,7 +85,7 @@ $formatAuditUser = static function (array $audit): string {
                 </div>
                 <div class="nav-section">
                     <div class="nav-section-title">Management</div>
-                    <a class="nav-link <?= esc($navActive['family-manage'] ?? '') ?>" href="<?= site_url('admin/manage-members') ?>">Manage Member</a>
+                    <a class="nav-link <?= esc($navActive['family-manage'] ?? '') ?>" href="<?= site_url('admin/manage-members') ?>">Manage Record</a>
                     <a class="nav-link <?= esc($navActive['sectors'] ?? '') ?>" href="<?= site_url('admin/sectors') ?>">Sectors</a>
                     <a class="nav-link <?= esc($navActive['services'] ?? '') ?>" href="<?= site_url('admin/services') ?>">Services</a>
                 </div>

@@ -6,7 +6,7 @@ $services = $services ?? [];
     <div class="section-title mt-0">
         <span>Service List</span>
         <div class="d-flex gap-2">
-            <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#serviceAddModal">Add</button>
+            <button type="button" class="btn btn-primary btn-sm js-service-add-button">Add</button>
             <button type="button" class="btn btn-outline-primary btn-sm js-service-update-button" disabled>Update</button>
             <button type="button" class="btn btn-outline-danger btn-sm js-service-archive-button" disabled>Archive</button>
         </div>
@@ -54,61 +54,31 @@ $services = $services ?? [];
     </div>
 </div>
 
-<div class="modal fade" id="serviceAddModal" tabindex="-1" aria-labelledby="serviceAddModalLabel" aria-hidden="true">
+<div class="modal fade" id="serviceEditorModal" tabindex="-1" aria-labelledby="serviceEditorModalLabel" aria-hidden="true">
     <div class="modal-dialog">
-        <form class="modal-content" method="post" action="<?= site_url('admin/services/create') ?>">
+        <form class="modal-content" method="post" data-create-action="<?= site_url('admin/services/create') ?>" data-update-action="<?= site_url('admin/services/update') ?>">
             <?= csrf_field() ?>
             <div class="modal-header">
-                <h5 class="modal-title" id="serviceAddModalLabel">Add Service</h5>
+                <h5 class="modal-title" id="serviceEditorModalLabel">Add Service</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <div class="mb-3">
-                    <label class="form-label" for="serviceAddCategory">Category</label>
-                    <input class="form-control" id="serviceAddCategory" name="category" maxlength="100" required>
+                    <label class="form-label" for="serviceEditorCategory">Category</label>
+                    <input class="form-control" id="serviceEditorCategory" name="category" maxlength="100" required>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label" for="serviceAddName">Name</label>
-                    <input class="form-control" id="serviceAddName" name="name" maxlength="150" required>
+                    <label class="form-label" for="serviceEditorName">Name</label>
+                    <input class="form-control" id="serviceEditorName" name="name" maxlength="150" required>
                 </div>
                 <div>
-                    <label class="form-label" for="serviceAddDescription">Description</label>
-                    <textarea class="form-control" id="serviceAddDescription" name="description" rows="3"></textarea>
+                    <label class="form-label" for="serviceEditorDescription">Description</label>
+                    <textarea class="form-control" id="serviceEditorDescription" name="description" rows="3"></textarea>
                 </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="submit" class="btn btn-primary">Add</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<div class="modal fade" id="serviceUpdateModal" tabindex="-1" aria-labelledby="serviceUpdateModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <form class="modal-content" method="post" data-action-base="<?= site_url('admin/services/update') ?>">
-            <?= csrf_field() ?>
-            <div class="modal-header">
-                <h5 class="modal-title" id="serviceUpdateModalLabel">Update Service</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="mb-3">
-                    <label class="form-label" for="serviceUpdateCategory">Category</label>
-                    <input class="form-control" id="serviceUpdateCategory" name="category" maxlength="100" required>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label" for="serviceUpdateName">Name</label>
-                    <input class="form-control" id="serviceUpdateName" name="name" maxlength="150" required>
-                </div>
-                <div>
-                    <label class="form-label" for="serviceUpdateDescription">Description</label>
-                    <textarea class="form-control" id="serviceUpdateDescription" name="description" rows="3"></textarea>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="submit" class="btn btn-primary">Update</button>
+                <button type="submit" class="btn btn-primary js-service-editor-submit">Add</button>
             </div>
         </form>
     </div>

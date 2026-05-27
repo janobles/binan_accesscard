@@ -30,10 +30,27 @@
     });
 
     document.addEventListener('click', function (event) {
+        const addButton = event.target.closest('.js-service-add-button');
         const updateButton = event.target.closest('.js-service-update-button');
         const archiveButton = event.target.closest('.js-service-archive-button');
 
-        if (!updateButton && !archiveButton) {
+        if (!addButton && !updateButton && !archiveButton) {
+            return;
+        }
+
+        if (addButton) {
+            const modal = document.getElementById('serviceEditorModal');
+            const form = modal?.querySelector('form');
+
+            if (!modal || !form) {
+                return;
+            }
+
+            form.action = form.dataset.createAction;
+            form.reset();
+            document.getElementById('serviceEditorModalLabel').textContent = 'Add Service';
+            document.querySelector('.js-service-editor-submit').textContent = 'Add';
+            window.bootstrap.Modal.getOrCreateInstance(modal).show();
             return;
         }
 
@@ -44,17 +61,20 @@
         }
 
         if (updateButton) {
-            const form = document.querySelector('#serviceUpdateModal form');
+            const modal = document.getElementById('serviceEditorModal');
+            const form = modal?.querySelector('form');
 
-            if (!form) {
+            if (!modal || !form) {
                 return;
             }
 
-            form.action = form.dataset.actionBase + '/' + selected.dataset.serviceId;
-            document.getElementById('serviceUpdateCategory').value = selected.dataset.category || '';
-            document.getElementById('serviceUpdateName').value = selected.dataset.name || '';
-            document.getElementById('serviceUpdateDescription').value = selected.dataset.description || '';
-            window.bootstrap.Modal.getOrCreateInstance(document.getElementById('serviceUpdateModal')).show();
+            form.action = form.dataset.updateAction + '/' + selected.dataset.serviceId;
+            document.getElementById('serviceEditorCategory').value = selected.dataset.category || '';
+            document.getElementById('serviceEditorName').value = selected.dataset.name || '';
+            document.getElementById('serviceEditorDescription').value = selected.dataset.description || '';
+            document.getElementById('serviceEditorModalLabel').textContent = 'Update Service';
+            document.querySelector('.js-service-editor-submit').textContent = 'Update';
+            window.bootstrap.Modal.getOrCreateInstance(modal).show();
             return;
         }
 

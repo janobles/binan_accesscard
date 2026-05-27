@@ -30,10 +30,27 @@
     });
 
     document.addEventListener('click', function (event) {
+        const addButton = event.target.closest('.js-sector-add-button');
         const updateButton = event.target.closest('.js-sector-update-button');
         const archiveButton = event.target.closest('.js-sector-archive-button');
 
-        if (!updateButton && !archiveButton) {
+        if (!addButton && !updateButton && !archiveButton) {
+            return;
+        }
+
+        if (addButton) {
+            const modal = document.getElementById('sectorEditorModal');
+            const form = modal?.querySelector('form');
+
+            if (!modal || !form) {
+                return;
+            }
+
+            form.action = form.dataset.createAction;
+            form.reset();
+            document.getElementById('sectorEditorModalLabel').textContent = 'Add Sector';
+            document.querySelector('.js-sector-editor-submit').textContent = 'Add';
+            window.bootstrap.Modal.getOrCreateInstance(modal).show();
             return;
         }
 
@@ -44,17 +61,20 @@
         }
 
         if (updateButton) {
-            const form = document.querySelector('#sectorUpdateModal form');
+            const modal = document.getElementById('sectorEditorModal');
+            const form = modal?.querySelector('form');
 
-            if (!form) {
+            if (!modal || !form) {
                 return;
             }
 
-            form.action = form.dataset.actionBase + '/' + selected.dataset.sectorId;
-            document.getElementById('sectorUpdateShortcode').value = selected.dataset.shortcode || '';
-            document.getElementById('sectorUpdateName').value = selected.dataset.name || '';
-            document.getElementById('sectorUpdateDescription').value = selected.dataset.description || '';
-            window.bootstrap.Modal.getOrCreateInstance(document.getElementById('sectorUpdateModal')).show();
+            form.action = form.dataset.updateAction + '/' + selected.dataset.sectorId;
+            document.getElementById('sectorEditorShortcode').value = selected.dataset.shortcode || '';
+            document.getElementById('sectorEditorName').value = selected.dataset.name || '';
+            document.getElementById('sectorEditorDescription').value = selected.dataset.description || '';
+            document.getElementById('sectorEditorModalLabel').textContent = 'Update Sector';
+            document.querySelector('.js-sector-editor-submit').textContent = 'Update';
+            window.bootstrap.Modal.getOrCreateInstance(modal).show();
             return;
         }
 

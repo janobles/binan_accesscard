@@ -30,6 +30,22 @@ $familyRecord             = (array) ($familyRecord ?? []);
 $existingMembers          = (array) ($existingMembers ?? []);
 $headServiceIds           = array_values(array_map('intval', (array) ($headServiceIds ?? $familyRecord['service_ids'] ?? [])));
 $isEditMode               = $familyRecord !== [];
+$fieldLabels              = array_merge([
+    'firstname'       => 'First name',
+    'middlename'      => 'Middle name',
+    'lastname'        => 'Last name',
+    'suffix'          => 'Suffix',
+    'birthday'        => 'Birthday',
+    'sex'             => 'Sex',
+    'civilstatus'     => 'Civil status',
+    'contactnumber'   => 'Contact number',
+    'education'       => 'Education',
+    'job'             => 'Job',
+    'salary'          => 'Monthly income',
+    'relationship'    => 'Relationship',
+    'sector_ids'      => 'Sectors',
+    'service_ids'     => 'Services availed',
+], (array) ($fieldLabels ?? []));
 $selectedSectorIds        = SectorIds::normalize($familyRecord['sectorID'] ?? null);
 $selectedSectorCategories = (static function () use ($sectorCatalog, $selectedSectorIds): array {
     $cats = [];
@@ -55,6 +71,7 @@ $fieldViewData            = compact(
     'civilOptions',
     'educationOptions',
     'familyRecord',
+    'fieldLabels',
     'incomeOptions',
     'relationshipOptions',
     'sectorOptions',
@@ -72,7 +89,7 @@ $fieldViewData            = compact(
             <div class="wizard-header-left">
                 <span class="wizard-icon" aria-hidden="true">+</span>
                 <div>
-                    <strong><?= $isEditMode ? 'Edit Family' : 'Add Family' ?></strong>
+                    <strong><?= $isEditMode ? 'Edit Family' : 'Add Record' ?></strong>
                     <small>Step 1 of 3 - Head of the Family</small>
                 </div>
             </div>

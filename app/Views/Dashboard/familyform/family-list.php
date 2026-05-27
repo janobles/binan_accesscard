@@ -3,7 +3,7 @@
     <div class="section-title mt-0">
         <span><?= $status === 'archived' ? 'Archived Members' : 'Manage Member' ?></span>
         <?php if ($status !== 'archived'): ?>
-            <button type="button" class="btn btn-primary btn-sm js-open-family-modal" data-modal-url="<?= site_url($routeBase . '?partial=1') ?>" data-modal-title="Add Family">Add Family</button>
+            <button type="button" class="btn btn-primary btn-sm js-open-family-modal" data-modal-url="<?= site_url($routeBase . '?partial=1') ?>" data-modal-title="Add Record">Add Record</button>
         <?php endif; ?>
     </div>
     <?php if (! $isEmployeeList && $canRestoreArchived): ?>

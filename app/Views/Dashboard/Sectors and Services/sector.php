@@ -6,7 +6,7 @@ $sectors = $sectors ?? [];
     <div class="section-title mt-0">
         <span>Sector List</span>
         <div class="d-flex gap-2">
-            <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#sectorAddModal">Add</button>
+            <button type="button" class="btn btn-primary btn-sm js-sector-add-button">Add</button>
             <button type="button" class="btn btn-outline-primary btn-sm js-sector-update-button" disabled>Update</button>
             <button type="button" class="btn btn-outline-danger btn-sm js-sector-archive-button" disabled>Archive</button>
         </div>
@@ -54,61 +54,31 @@ $sectors = $sectors ?? [];
     </div>
 </div>
 
-<div class="modal fade" id="sectorAddModal" tabindex="-1" aria-labelledby="sectorAddModalLabel" aria-hidden="true">
+<div class="modal fade" id="sectorEditorModal" tabindex="-1" aria-labelledby="sectorEditorModalLabel" aria-hidden="true">
     <div class="modal-dialog">
-        <form class="modal-content" method="post" action="<?= site_url('admin/sectors/create') ?>">
+        <form class="modal-content" method="post" data-create-action="<?= site_url('admin/sectors/create') ?>" data-update-action="<?= site_url('admin/sectors/update') ?>">
             <?= csrf_field() ?>
             <div class="modal-header">
-                <h5 class="modal-title" id="sectorAddModalLabel">Add Sector</h5>
+                <h5 class="modal-title" id="sectorEditorModalLabel">Add Sector</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <div class="mb-3">
-                    <label class="form-label" for="sectorAddShortcode">Shortcode</label>
-                    <input class="form-control" id="sectorAddShortcode" name="shortcode" maxlength="20" required>
+                    <label class="form-label" for="sectorEditorShortcode">Shortcode</label>
+                    <input class="form-control" id="sectorEditorShortcode" name="shortcode" maxlength="20" required>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label" for="sectorAddName">Name</label>
-                    <input class="form-control" id="sectorAddName" name="name" maxlength="150" required>
+                    <label class="form-label" for="sectorEditorName">Name</label>
+                    <input class="form-control" id="sectorEditorName" name="name" maxlength="150" required>
                 </div>
                 <div>
-                    <label class="form-label" for="sectorAddDescription">Description</label>
-                    <textarea class="form-control" id="sectorAddDescription" name="description" rows="3"></textarea>
+                    <label class="form-label" for="sectorEditorDescription">Description</label>
+                    <textarea class="form-control" id="sectorEditorDescription" name="description" rows="3"></textarea>
                 </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="submit" class="btn btn-primary">Add</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<div class="modal fade" id="sectorUpdateModal" tabindex="-1" aria-labelledby="sectorUpdateModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <form class="modal-content" method="post" data-action-base="<?= site_url('admin/sectors/update') ?>">
-            <?= csrf_field() ?>
-            <div class="modal-header">
-                <h5 class="modal-title" id="sectorUpdateModalLabel">Update Sector</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="mb-3">
-                    <label class="form-label" for="sectorUpdateShortcode">Shortcode</label>
-                    <input class="form-control" id="sectorUpdateShortcode" name="shortcode" maxlength="20" required>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label" for="sectorUpdateName">Name</label>
-                    <input class="form-control" id="sectorUpdateName" name="name" maxlength="150" required>
-                </div>
-                <div>
-                    <label class="form-label" for="sectorUpdateDescription">Description</label>
-                    <textarea class="form-control" id="sectorUpdateDescription" name="description" rows="3"></textarea>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="submit" class="btn btn-primary">Update</button>
+                <button type="submit" class="btn btn-primary js-sector-editor-submit">Add</button>
             </div>
         </form>
     </div>

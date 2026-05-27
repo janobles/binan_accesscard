@@ -5,6 +5,7 @@ namespace App\Libraries;
 use App\Models\AuditTrailsModel;
 use App\Models\DashboardModel;
 use App\Models\FamilyFormOptionsModel;
+use App\Models\MemberModel;
 use App\Models\SearchModel;
 use App\Models\SectorModel;
 use App\Models\ServiceModel;
@@ -27,7 +28,7 @@ class DashboardPageBuilder
             return $guard;
         }
 
-        $currentRole = $this->normalizeRole((string) session()->get('role'));
+        $currentRole = RoleAccess::normalizeRole((string) session()->get('role'));
 
         if ($activePage === 'accounts' && ! in_array($currentRole, ['Developer', 'Admin'], true)) {
             return redirect()->to(site_url('admin/dashboard'))
@@ -36,7 +37,7 @@ class DashboardPageBuilder
 
         helper('assets');
 
-        return view('Dashboard/admin', $this->buildAdminViewData($activePage));
+        return view('Dashboard/Manage/admin', $this->buildAdminViewData($activePage));
     }
 
     public function buildAdminViewData(string $activePage): array
@@ -47,18 +48,15 @@ class DashboardPageBuilder
         $searchTerm = trim((string) $this->request->getGet('q'));
         $searchFilters = $this->searchFilters();
         $hasSearchFilters = $this->hasSearchFilters($searchFilters);
-        $currentRole = $this->normalizeRole((string) session()->get('role'));
+        $currentRole = RoleAccess::normalizeRole((string) session()->get('role'));
         $isDeveloper = $currentRole === 'Developer';
         $isAdmin = $currentRole === 'Admin';
         $userModel = new UserModel();
         $users = $isDeveloper && $activePage === 'accounts'
             ? $searchModel->staffAccounts($searchTerm, $searchFilters)
             : $userModel->getStaffAccounts();
-        $memberModel = new MemberModel();
         $sectorModel = new SectorModel();
         $serviceModel = new ServiceModel();
-        $userModel    = new UserModel();
-        $users        = $userModel->getStaffAccounts();
 
         $familyFormViewData = (new FamilyFormOptionsModel())->getViewData();
 
@@ -69,6 +67,9 @@ class DashboardPageBuilder
         $recentAudits = $activePage === 'audit-trails'
             ? $searchModel->auditTrails($searchTerm, $searchFilters, 50)
             : (new AuditTrailsModel())->getRecent(10);
+        $memberListData = $activePage === 'family-manage'
+            ? $this->buildMemberListData()
+            : [];
 
         $isActiveStatus = static function (mixed $value): bool {
             if (is_bool($value)) {
@@ -107,6 +108,7 @@ class DashboardPageBuilder
             'familyFormViewData' => $familyFormViewData,
             'recentFamilies'     => $recentFamilies,
             'recentAudits'       => $recentAudits,
+            'memberListData'      => $memberListData,
             'sectors'            => $this->fetchVisibleSectors($sectorModel),
             'services'           => $this->fetchVisibleServices($serviceModel),
             'stats'              => $dashboardModel->stats(),
@@ -183,6 +185,62 @@ class DashboardPageBuilder
         return $serviceModel
             ->orderBy('serviceID', 'ASC')
             ->findAll();
+    }
+
+    private function buildMemberListData(): array
+    {
+        $keyword = trim((string) $this->request->getGet('q'));
+        $status = strtolower(trim((string) $this->request->getGet('status')));
+        $showArchived = $status === 'archived';
+        $page = max(1, (int) $this->request->getGet('page'));
+        $perPage = 50;
+        $memberModel = new MemberModel();
+        $searchKeyword = $keyword === '' ? null : $keyword;
+        $totalFamilies = $memberModel->countSearchFamilies($searchKeyword, $showArchived);
+        $totalPages = max(1, (int) ceil($totalFamilies / $perPage));
+        $page = min($page, $totalPages);
+        $routeBase = 'admin/manage-family';
+
+        $listUrl = static function (string $targetStatus, int $targetPage = 1) use ($keyword): string {
+            $params = ['page' => $targetPage];
+
+            if ($targetStatus === 'archived') {
+                $params['status'] = 'archived';
+            }
+
+            if ($keyword !== '') {
+                $params['q'] = $keyword;
+            }
+
+            return site_url('admin/manage-members?' . http_build_query($params));
+        };
+
+        return [
+            'canRestoreArchived' => true,
+            'families'          => $memberModel->searchFamilies($searchKeyword, $perPage, ($page - 1) * $perPage, $showArchived),
+            'formatDate'        => static function (mixed $value): string {
+                $timestamp = strtotime((string) $value);
+
+                return $timestamp === false ? '' : date('Y-m-d', $timestamp);
+            },
+            'formatTime'        => static function (mixed $value): string {
+                $timestamp = strtotime((string) $value);
+
+                return $timestamp === false ? '' : date('h:i A', $timestamp);
+            },
+            'fromRecord'        => $totalFamilies === 0 ? 0 : (($page - 1) * $perPage) + 1,
+            'isEmployeeList'    => false,
+            'isFullPage'        => true,
+            'keyword'           => $keyword,
+            'listUrl'           => $listUrl,
+            'page'              => $page,
+            'perPage'           => $perPage,
+            'routeBase'         => $routeBase,
+            'status'            => $showArchived ? 'archived' : 'active',
+            'toRecord'          => min($totalFamilies, $page * $perPage),
+            'totalFamilies'     => $totalFamilies,
+            'totalPages'        => $totalPages,
+        ];
     }
 
     public function renderEmployeePage(string $activePage): string|RedirectResponse

@@ -219,7 +219,7 @@ $formatAuditMember = static function (array $audit): string {
                     <div class="section-title mt-0">
                         <span>Family / Member Data Entry</span>
                     </div>
-                    <?= view('Dashboard/familyform', family_form_partial_data($familyFormViewData, $canCreateFamily)) ?>
+                    <?= view('Dashboard/familyform/familyform', family_form_partial_data($familyFormViewData, $canCreateFamily)) ?>
                 </div>
             <?php endif; ?>
 

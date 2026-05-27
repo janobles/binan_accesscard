@@ -12,6 +12,7 @@ $recentFamilies = $recentFamilies ?? [];
 $recentAudits = $recentAudits ?? [];
 $adminAccounts = $adminAccounts ?? [];
 $employeeAccounts = $employeeAccounts ?? [];
+$memberListData = $memberListData ?? [];
 $canCreateAccounts = $canCreateAccounts ?? false;
 $currentRole = $currentRole ?? '';
 $familyFormViewData = $familyFormViewData ?? [];
@@ -74,15 +75,20 @@ $formatAuditUser = static function (array $audit): string {
                 </div>
             </div>
             <nav class="nav flex-column mt-3">
-                <a class="nav-link <?= esc($navActive['dashboard'] ?? '') ?>" href="<?= site_url('admin/dashboard') ?>">Dashboard</a>
-                <?php if ($canManageAccounts): ?>
-                    <a class="nav-link <?= esc($navActive['accounts'] ?? '') ?> js-open-accounts-modal" href="<?= site_url('admin/accounts') ?>" data-modal-url="<?= site_url('admin/accounts?partial=1') ?>" data-modal-title="Account Management">Account Management</a>
-                <?php endif; ?>
-                <a class="nav-link <?= esc($navActive['family-entry'] ?? '') ?> js-open-family-modal" href="<?= site_url('admin/manage-family') ?>" data-modal-url="<?= site_url('admin/manage-family?partial=1') ?>" data-modal-title="Add Family">Add Family</a>
-                <a class="nav-link <?= esc($navActive['family-manage'] ?? '') ?> js-open-family-list" href="<?= site_url('admin/manage-family/list') ?>" data-modal-url="<?= site_url('admin/manage-family/list?partial=1') ?>" data-modal-title="Manage Families">Manage Family</a>
-                <a class="nav-link <?= esc($navActive['sectors'] ?? '') ?> js-open-sectors-modal" href="<?= site_url('admin/sectors') ?>" data-modal-url="<?= site_url('admin/sectors?partial=1') ?>" data-modal-title="Sector List">Sectors</a>
-                <a class="nav-link <?= esc($navActive['services'] ?? '') ?> js-open-services-modal" href="<?= site_url('admin/services') ?>" data-modal-url="<?= site_url('admin/services?partial=1') ?>" data-modal-title="Service List">Services</a>
-                <a class="nav-link <?= esc($navActive['audit-trails'] ?? '') ?> js-open-audit-modal" href="<?= site_url('admin/audit-trails') ?>" data-modal-url="<?= site_url('admin/audit-trails?partial=1') ?>" data-modal-title="Audit Trails">Audit Trails</a>
+                <div class="nav-section">
+                    <div class="nav-section-title">Overview</div>
+                    <a class="nav-link <?= esc($navActive['dashboard'] ?? '') ?>" href="<?= site_url('admin/dashboard') ?>">Dashboard</a>
+                    <a class="nav-link <?= esc($navActive['audit-trails'] ?? '') ?>" href="<?= site_url('admin/audit-trails') ?>">Audit</a>
+                    <?php if ($canManageAccounts): ?>
+                        <a class="nav-link <?= esc($navActive['accounts'] ?? '') ?>" href="<?= site_url('admin/accounts') ?>">User</a>
+                    <?php endif; ?>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Management</div>
+                    <a class="nav-link <?= esc($navActive['family-manage'] ?? '') ?>" href="<?= site_url('admin/manage-members') ?>">Manage Member</a>
+                    <a class="nav-link <?= esc($navActive['sectors'] ?? '') ?>" href="<?= site_url('admin/sectors') ?>">Sectors</a>
+                    <a class="nav-link <?= esc($navActive['services'] ?? '') ?>" href="<?= site_url('admin/services') ?>">Services</a>
+                </div>
             </nav>
         </div>
         <div class="sidebar-footer">
@@ -141,7 +147,6 @@ $formatAuditUser = static function (array $audit): string {
                 <div class="panel mb-3">
                     <div class="section-title mt-0">
                         <span>Recent Families</span>
-                        <button type="button" class="btn btn-primary btn-sm js-open-family-modal" data-modal-url="<?= site_url('admin/manage-family?partial=1') ?>" data-modal-title="Add Family">Add Family</button>
                     </div>
                     <form class="row g-2 mb-3" method="get" action="<?= site_url('admin/dashboard') ?>">
                         <div class="col-md-6 col-lg-4">
@@ -233,7 +238,7 @@ $formatAuditUser = static function (array $audit): string {
             <?php endif; ?>
 
             <?php if ($activePage === 'accounts' && $canManageAccounts): ?>
-                <?= view('Dashboard/accounts', [
+                <?= view('Dashboard/Manage/accounts', [
                     'adminAccounts'    => $adminAccounts,
                     'employeeAccounts' => $employeeAccounts,
                     'canCreateAccounts' => $canCreateAccounts,
@@ -248,12 +253,16 @@ $formatAuditUser = static function (array $audit): string {
                     <div class="section-title mt-0">
                         <span>Family / Member Data Entry</span>
                     </div>
-                    <?= view('Dashboard/familyform', family_form_partial_data($familyFormViewData, $canCreateFamily)) ?>
+                    <?= view('Dashboard/familyform/familyform', family_form_partial_data($familyFormViewData, $canCreateFamily)) ?>
                 </div>
             <?php endif; ?>
 
+            <?php if ($activePage === 'family-manage'): ?>
+                <?= view('Dashboard/familyform/family-list', $memberListData) ?>
+            <?php endif; ?>
+
             <?php if ($activePage === 'audit-trails'): ?>
-                <?= view('Dashboard/audit-trails', [
+                <?= view('Dashboard/Manage/audit-trails', [
                     'recentAudits'       => $recentAudits,
                     'searchTerm'         => $searchTerm,
                     'searchFilters'      => $searchFilters,

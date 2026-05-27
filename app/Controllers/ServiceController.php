@@ -2,7 +2,6 @@
 
 namespace App\Controllers;
 
-use App\Libraries\RecordArchiver;
 use App\Libraries\RoleAccess;
 use App\Models\ServiceModel;
 use CodeIgniter\HTTP\RedirectResponse;
@@ -27,7 +26,7 @@ class ServiceController extends BaseController
             return $guard;
         }
 
-        if (! RecordArchiver::archive('services', 'serviceID', $serviceId)) {
+        if (! (new ServiceModel())->archiveService($serviceId)) {
             return redirect()->to(site_url('admin/services'))->with('error', 'Unable to delete service.');
         }
 
@@ -48,18 +47,18 @@ class ServiceController extends BaseController
             return redirect()->to(site_url('admin/services'))->with('error', 'Services table is not available.');
         }
 
-        $data = [
-            'category' => trim((string) $this->request->getPost('category')),
-            'name' => trim((string) $this->request->getPost('name')),
-            'description' => trim((string) $this->request->getPost('description')),
-        ];
+        $data = $model->serviceData((array) $this->request->getPost());
 
-        if ($data['category'] === '' || $data['name'] === '') {
+        if (! $model->isValidServiceData($data)) {
             return redirect()->to(site_url('admin/services'))->with('error', 'Category and name are required.');
         }
 
         $isUpdate = $serviceId !== null;
-        $isUpdate ? $model->update($serviceId, $data) : $model->insert($data);
+
+        if (! $model->saveServiceRecord($data, $serviceId)) {
+            return redirect()->to(site_url('admin/services'))->with('error', 'Unable to save service.');
+        }
+
         $message = $isUpdate ? 'Service updated successfully.' : 'Service added successfully.';
 
         return redirect()->to(site_url('admin/services'))->with('success', $message);

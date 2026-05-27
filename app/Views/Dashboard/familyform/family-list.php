@@ -1,6 +1,7 @@
+<?php $isFullPage = $isFullPage ?? false; ?>
 <div class="panel mb-3">
     <div class="section-title mt-0">
-        <span><?= $status === 'archived' ? 'Archived Families' : 'Manage Families' ?></span>
+        <span><?= $status === 'archived' ? 'Archived Members' : 'Manage Member' ?></span>
         <?php if ($status !== 'archived'): ?>
             <button type="button" class="btn btn-primary btn-sm js-open-family-modal" data-modal-url="<?= site_url($routeBase . '?partial=1') ?>" data-modal-title="Add Family">Add Family</button>
         <?php endif; ?>
@@ -8,14 +9,14 @@
     <?php if (! $isEmployeeList && $canRestoreArchived): ?>
         <div class="d-flex gap-2 mb-3">
             <a
-                class="btn btn-sm <?= $status === 'active' ? 'btn-primary' : 'btn-outline-secondary' ?> js-open-family-list"
+                class="btn btn-sm <?= $status === 'active' ? 'btn-primary' : 'btn-outline-secondary' ?> <?= $isFullPage ? '' : 'js-open-family-list' ?>"
                 href="<?= esc($listUrl('active'), 'attr') ?>"
                 data-modal-url="<?= esc($listUrl('active') . '&partial=1', 'attr') ?>"
                 data-modal-title="Manage Families">
                 Active
             </a>
             <a
-                class="btn btn-sm <?= $status === 'archived' ? 'btn-primary' : 'btn-outline-secondary' ?> js-open-family-list"
+                class="btn btn-sm <?= $status === 'archived' ? 'btn-primary' : 'btn-outline-secondary' ?> <?= $isFullPage ? '' : 'js-open-family-list' ?>"
                 href="<?= esc($listUrl('archived'), 'attr') ?>"
                 data-modal-url="<?= esc($listUrl('archived') . '&partial=1', 'attr') ?>"
                 data-modal-title="Archived Families">
@@ -24,7 +25,7 @@
         </div>
     <?php endif; ?>
 
-    <form method="get" class="row g-2 mb-3" action="<?= site_url($routeBase . '/list') ?>">
+    <form method="get" class="row g-2 mb-3" action="<?= $isFullPage ? site_url('admin/manage-members') : site_url($routeBase . '/list') ?>">
         <?php if ($status === 'archived'): ?>
             <input type="hidden" name="status" value="archived">
         <?php endif; ?>
@@ -105,7 +106,7 @@
     <?php if ($totalPages > 1): ?>
         <div class="d-flex justify-content-end gap-2 mt-3">
             <a
-                class="btn btn-outline-secondary btn-sm js-open-family-list <?= $page <= 1 ? 'disabled' : '' ?>"
+                class="btn btn-outline-secondary btn-sm <?= $isFullPage ? '' : 'js-open-family-list' ?> <?= $page <= 1 ? 'disabled' : '' ?>"
                 href="<?= esc($listUrl($status, max(1, $page - 1)), 'attr') ?>"
                 data-modal-url="<?= esc($listUrl($status, max(1, $page - 1)) . '&partial=1', 'attr') ?>"
                 data-modal-title="Manage Families"
@@ -113,7 +114,7 @@
                 Previous
             </a>
             <a
-                class="btn btn-outline-secondary btn-sm js-open-family-list <?= $page >= $totalPages ? 'disabled' : '' ?>"
+                class="btn btn-outline-secondary btn-sm <?= $isFullPage ? '' : 'js-open-family-list' ?> <?= $page >= $totalPages ? 'disabled' : '' ?>"
                 href="<?= esc($listUrl($status, min($totalPages, $page + 1)), 'attr') ?>"
                 data-modal-url="<?= esc($listUrl($status, min($totalPages, $page + 1)) . '&partial=1', 'attr') ?>"
                 data-modal-title="Manage Families"
@@ -123,26 +124,3 @@
         </div>
     <?php endif; ?>
 </div>
-
-<script>
-(function () {
-    document.querySelectorAll('.js-family-record-action-form').forEach(function (form) {
-        if (form.dataset.recordActionBound === '1') {
-            return;
-        }
-
-        form.dataset.recordActionBound = '1';
-        form.addEventListener('submit', function (event) {
-            const familyName = (form.dataset.familyName || 'this family record').trim();
-            const actionLabel = (form.dataset.actionLabel || 'Archive').trim();
-            const actionPast = (form.dataset.actionPast || 'archived').trim();
-            const message = (form.dataset.confirmMessage || '').trim() || (actionLabel + ' ' + familyName + '? This keeps the record in the database, marks it as ' + actionPast + ', and hides it from active lists.');
-            const confirmed = window.confirm(message);
-
-            if (!confirmed) {
-                event.preventDefault();
-            }
-        });
-    });
-})();
-</script>

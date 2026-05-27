@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Libraries\RecordArchiver;
 use App\Libraries\SectorIds;
 use CodeIgniter\Model;
 
@@ -19,6 +20,49 @@ class ServiceModel extends Model
     public function hasTable(): bool
     {
         return $this->db->tableExists($this->table);
+    }
+
+    public function saveServiceRecord(array $data, ?int $serviceId = null): bool
+    {
+        if (! $this->hasTable()) {
+            return false;
+        }
+
+        $serviceData = $this->serviceData($data);
+
+        if (! $this->isValidServiceData($serviceData)) {
+            return false;
+        }
+
+        if ($serviceId === null) {
+            return (bool) $this->insert($serviceData);
+        }
+
+        return (bool) $this->update($serviceId, $serviceData);
+    }
+
+    public function archiveService(int $serviceId): bool
+    {
+        if (! $this->hasTable()) {
+            return false;
+        }
+
+        return RecordArchiver::archive($this->table, $this->primaryKey, $serviceId);
+    }
+
+    public function serviceData(array $data): array
+    {
+        return [
+            'category' => trim((string) ($data['category'] ?? '')),
+            'name' => trim((string) ($data['name'] ?? '')),
+            'description' => trim((string) ($data['description'] ?? '')),
+        ];
+    }
+
+    public function isValidServiceData(array $data): bool
+    {
+        return trim((string) ($data['category'] ?? '')) !== ''
+            && trim((string) ($data['name'] ?? '')) !== '';
     }
 
     public function getNameMapByIds(array $serviceIds): array

@@ -95,7 +95,7 @@ $fieldViewData            = compact(
                 <?= view('Dashboard/familyform/head-fields', $fieldViewData) ?>
             </div>
 
-            <?= view('Dashboard/sectorandservices', [
+            <?= view('Dashboard/Sectors and Services/sectorandservices', [
                 'servicesByCategory' => $servicesByCategory,
                 'sectorCatalog' => $sectorCatalog,
                 'selectedSectorIds' => $selectedSectorIds,
@@ -103,7 +103,7 @@ $fieldViewData            = compact(
                 'selectedServiceIds' => $headServiceIds,
             ]) ?>
 
-            <?= view('Dashboard/familyform/member-summary') ?>
+            <?= view('Member/member-summary') ?>
 
             <script type="application/json" id="initialFamilyData"><?= json_encode($initialFamilyData, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?></script>
 
@@ -119,4 +119,4 @@ $fieldViewData            = compact(
     </div>
 </div>
 
-<?= view('Dashboard/familyform/member-template', $fieldViewData) ?>
+<?= view('Member/member-template', $fieldViewData) ?>

@@ -65,7 +65,7 @@ class FamilyController extends BaseController
             return site_url($routeBase . '/list?' . http_build_query($params));
         };
 
-        return view('Dashboard/family-list', [
+        return view('Dashboard/familyform/family-list', [
             'canRestoreArchived' => ! $isEmployeePath,
             'families'          => $families,
             'formatDate'        => $formatDate,
@@ -98,7 +98,7 @@ class FamilyController extends BaseController
             return '<div class="alert alert-warning mb-0">Family record not found.</div>';
         }
 
-        return view('Dashboard/family-view', $familyData);
+        return view('Dashboard/familyform/family-view', $familyData);
     }
 
     public function editFamily(int $headId): string|RedirectResponse
@@ -126,7 +126,7 @@ class FamilyController extends BaseController
             $members[$index]['service_ids'] = $serviceMap[$memberId] ?? [];
         }
 
-        return view('Dashboard/familyform', array_merge(
+        return view('Dashboard/familyform/familyform', array_merge(
             $familyOptions,
             [
                 'formAction' => site_url($this->familyRouteBase() . '/update/' . $headId),
@@ -1013,7 +1013,88 @@ class FamilyController extends BaseController
             'members' => $members,
             'serviceMap' => $serviceMap,
             'serviceNameMap' => $serviceNameMap,
+            'headView' => $this->buildPersonView($head, $serviceMap, $serviceNameMap),
+            'memberViews' => array_map(
+                fn (array $member): array => $this->buildPersonView($member, $serviceMap, $serviceNameMap),
+                $members
+            ),
         ];
+    }
+
+    private function buildPersonView(array $person, array $serviceMap, array $serviceNameMap): array
+    {
+        $isHead = (string) ($person['relationship'] ?? '') === '';
+        $updatedAt = (string) ($person['dt_updated'] ?? '');
+        $createdAt = (string) ($person['dt_created'] ?? '');
+        $lastDateLabel = $isHead ? 'Last updated' : 'Created';
+        $lastDateValue = $isHead
+            ? ($updatedAt !== '' ? $this->formatFamilyDate($updatedAt) . ' ' . $this->formatFamilyTime($updatedAt) : '-')
+            : ($createdAt !== '' ? $this->formatFamilyDate($createdAt) . ' ' . $this->formatFamilyTime($createdAt) : '-');
+
+        return [
+            'fullName' => $this->familyFullName($person),
+            'relationship' => $this->displayFamilyValue($person['relationship'] ?? 'Member'),
+            'sectorName' => $this->displayFamilyValue($person['sector_name'] ?? ''),
+            'createdDate' => $this->formatFamilyDate($createdAt),
+            'createdTime' => $this->formatFamilyTime($createdAt),
+            'details' => [
+                ['label' => 'Birthday', 'value' => $this->displayFamilyValue($person['birthday'] ?? '-')],
+                ['label' => 'Sex', 'value' => $this->displayFamilyValue($person['sex'] ?? '-')],
+                ['label' => 'Civil status', 'value' => $this->displayFamilyValue($person['civilstatus'] ?? '-')],
+                ['label' => 'Contact number', 'value' => $this->displayFamilyValue($person['contactnumber'] ?? '-')],
+                ['label' => 'Education', 'value' => $this->displayFamilyValue($person['education'] ?? '-')],
+                ['label' => 'Job', 'value' => $this->displayFamilyValue($person['job'] ?? '-')],
+                ['label' => 'Monthly income', 'value' => $this->displayFamilyValue($person['Salary'] ?? '-')],
+                ['label' => $lastDateLabel, 'value' => $lastDateValue],
+            ],
+            'services' => $this->familyServiceNames($person, $serviceMap, $serviceNameMap),
+        ];
+    }
+
+    private function familyFullName(array $person): string
+    {
+        $name = trim(
+            ($person['firstname'] ?? '') . ' '
+            . ($person['middlename'] ?? '') . ' '
+            . ($person['lastname'] ?? '') . ' '
+            . ($person['suffix'] ?? '')
+        );
+
+        return $name !== '' ? $name : '-';
+    }
+
+    private function displayFamilyValue(mixed $value): string
+    {
+        $value = trim((string) $value);
+
+        return $value !== '' ? $value : '-';
+    }
+
+    private function formatFamilyDate(mixed $value): string
+    {
+        $timestamp = strtotime((string) $value);
+
+        return $timestamp === false ? '-' : date('Y-m-d', $timestamp);
+    }
+
+    private function formatFamilyTime(mixed $value): string
+    {
+        $timestamp = strtotime((string) $value);
+
+        return $timestamp === false ? '-' : date('h:i A', $timestamp);
+    }
+
+    private function familyServiceNames(array $person, array $serviceMap, array $serviceNameMap): array
+    {
+        $memberId = (int) ($person['memberID'] ?? 0);
+        $names = [];
+
+        foreach (($serviceMap[$memberId] ?? []) as $serviceId) {
+            $serviceId = (int) $serviceId;
+            $names[] = (string) ($serviceNameMap[$serviceId] ?? ('Service #' . $serviceId));
+        }
+
+        return $names;
     }
 
     private function familyRouteBase(): string

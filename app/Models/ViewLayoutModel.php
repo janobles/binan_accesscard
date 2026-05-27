@@ -9,6 +9,10 @@ class ViewLayoutModel
 {
     public function pageTitle(string $activePage): string
     {
+        if ($activePage === 'family-manage') {
+            return 'Manage Member';
+        }
+
         return ucwords(str_replace('-', ' ', $activePage));
     }
 

@@ -5,12 +5,18 @@ $sectors = $sectors ?? [];
 <div class="panel mb-3">
     <div class="section-title mt-0">
         <span>Sector List</span>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#sectorAddModal">Add</button>
+            <button type="button" class="btn btn-outline-primary btn-sm js-sector-update-button" disabled>Update</button>
+            <button type="button" class="btn btn-outline-danger btn-sm js-sector-archive-button" disabled>Archive</button>
+        </div>
     </div>
 
     <div class="table-responsive">
         <table class="table table-sm align-middle">
             <thead>
                 <tr>
+                    <th></th>
                     <th>ID</th>
                     <th>Shortcode</th>
                     <th>Name</th>
@@ -21,6 +27,17 @@ $sectors = $sectors ?? [];
                 <?php foreach ($sectors as $sector): ?>
                     <?php $sectorId = (int) ($sector['sectorID'] ?? 0); ?>
                     <tr>
+                        <td>
+                            <input
+                                class="form-check-input js-sector-select"
+                                type="radio"
+                                name="selected_sector"
+                                aria-label="Select sector"
+                                data-sector-id="<?= esc((string) $sectorId, 'attr') ?>"
+                                data-shortcode="<?= esc((string) ($sector['shortcode'] ?? ''), 'attr') ?>"
+                                data-name="<?= esc((string) ($sector['name'] ?? ''), 'attr') ?>"
+                                data-description="<?= esc((string) ($sector['description'] ?? ''), 'attr') ?>">
+                        </td>
                         <td><?= esc((string) $sectorId) ?></td>
                         <td><?= esc((string) ($sector['shortcode'] ?? '')) ?></td>
                         <td><?= esc((string) ($sector['name'] ?? '')) ?></td>
@@ -29,10 +46,89 @@ $sectors = $sectors ?? [];
                 <?php endforeach; ?>
                 <?php if ($sectors === []): ?>
                     <tr>
-                        <td colspan="4" class="text-center text-muted">No sector records found.</td>
+                        <td colspan="5" class="text-center text-muted">No sector records found.</td>
                     </tr>
                 <?php endif; ?>
             </tbody>
         </table>
+    </div>
+</div>
+
+<div class="modal fade" id="sectorAddModal" tabindex="-1" aria-labelledby="sectorAddModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <form class="modal-content" method="post" action="<?= site_url('admin/sectors/create') ?>">
+            <?= csrf_field() ?>
+            <div class="modal-header">
+                <h5 class="modal-title" id="sectorAddModalLabel">Add Sector</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label" for="sectorAddShortcode">Shortcode</label>
+                    <input class="form-control" id="sectorAddShortcode" name="shortcode" maxlength="20" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="sectorAddName">Name</label>
+                    <input class="form-control" id="sectorAddName" name="name" maxlength="150" required>
+                </div>
+                <div>
+                    <label class="form-label" for="sectorAddDescription">Description</label>
+                    <textarea class="form-control" id="sectorAddDescription" name="description" rows="3"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-primary">Add</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal fade" id="sectorUpdateModal" tabindex="-1" aria-labelledby="sectorUpdateModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <form class="modal-content" method="post" data-action-base="<?= site_url('admin/sectors/update') ?>">
+            <?= csrf_field() ?>
+            <div class="modal-header">
+                <h5 class="modal-title" id="sectorUpdateModalLabel">Update Sector</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label" for="sectorUpdateShortcode">Shortcode</label>
+                    <input class="form-control" id="sectorUpdateShortcode" name="shortcode" maxlength="20" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="sectorUpdateName">Name</label>
+                    <input class="form-control" id="sectorUpdateName" name="name" maxlength="150" required>
+                </div>
+                <div>
+                    <label class="form-label" for="sectorUpdateDescription">Description</label>
+                    <textarea class="form-control" id="sectorUpdateDescription" name="description" rows="3"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-primary">Update</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal fade" id="sectorArchiveModal" tabindex="-1" aria-labelledby="sectorArchiveModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <form class="modal-content" method="post" data-action-base="<?= site_url('admin/sectors/archive') ?>">
+            <?= csrf_field() ?>
+            <div class="modal-header">
+                <h5 class="modal-title" id="sectorArchiveModalLabel">Archive Sector</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0">Archive <strong class="js-sector-archive-name">this sector</strong>?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-danger">Archive</button>
+            </div>
+        </form>
     </div>
 </div>

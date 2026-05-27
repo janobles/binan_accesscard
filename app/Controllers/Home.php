@@ -5,6 +5,7 @@ namespace App\Controllers;
 use App\Libraries\DashboardPageBuilder;
 use App\Libraries\RoleAccess;
 use App\Libraries\SessionAuditLogger;
+use App\Models\Auth\UserModel;
 use App\Models\FamilyFormOptionsModel;
 use CodeIgniter\HTTP\RedirectResponse;
 
@@ -163,6 +164,11 @@ class Home extends BaseController
         return (new DashboardPageBuilder($this->request))->renderAdminPage('services');
     }
 
+    public function adminManageMembers(): string|RedirectResponse
+    {
+        return (new DashboardPageBuilder($this->request))->renderAdminPage('family-manage');
+    }
+
     public function employee(): string|RedirectResponse
     {
         return (new DashboardPageBuilder($this->request))->renderEmployeePage('dashboard');
@@ -208,7 +214,7 @@ class Home extends BaseController
 
         $viewData = (new DashboardPageBuilder($this->request))->buildAdminViewData('accounts');
 
-        return view('Dashboard/accounts', [
+        return view('Dashboard/Manage/accounts', [
             'adminAccounts' => $viewData['adminAccounts'] ?? [],
             'employeeAccounts' => $viewData['employeeAccounts'] ?? [],
             'canCreateAccounts' => $currentRole === 'Developer',
@@ -226,7 +232,7 @@ class Home extends BaseController
             return $guard;
         }
 
-        return view('Dashboard/familyform', array_merge(
+        return view('Dashboard/familyform/familyform', array_merge(
             (new FamilyFormOptionsModel())->getViewData(),
             ['canCreateFamily' => true]
         ));
@@ -242,7 +248,7 @@ class Home extends BaseController
 
         $viewData = (new DashboardPageBuilder($this->request))->buildAdminViewData('audit-trails');
 
-        return view('Dashboard/audit-trails', [
+        return view('Dashboard/Manage/audit-trails', [
             'recentAudits' => $viewData['recentAudits'] ?? [],
             'searchTerm' => $viewData['searchTerm'] ?? '',
             'searchFilters' => $viewData['searchFilters'] ?? [],
@@ -288,7 +294,7 @@ class Home extends BaseController
             return $guard;
         }
 
-        return view('Dashboard/familyform', array_merge(
+        return view('Dashboard/familyform/familyform', array_merge(
             (new FamilyFormOptionsModel())->getViewData(),
             ['canCreateFamily' => true]
         ));

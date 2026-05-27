@@ -2,7 +2,6 @@
 
 namespace App\Controllers;
 
-use App\Libraries\RecordArchiver;
 use App\Libraries\RoleAccess;
 use App\Models\SectorModel;
 use CodeIgniter\HTTP\RedirectResponse;
@@ -27,7 +26,7 @@ class SectorController extends BaseController
             return $guard;
         }
 
-        if (! RecordArchiver::archive('sector', 'sectorID', $sectorId)) {
+        if (! (new SectorModel())->archiveSector($sectorId)) {
             return redirect()->to(site_url('admin/sectors'))->with('error', 'Unable to delete sector.');
         }
 
@@ -48,18 +47,18 @@ class SectorController extends BaseController
             return redirect()->to(site_url('admin/sectors'))->with('error', 'Sector table is not available.');
         }
 
-        $data = [
-            'shortcode' => strtoupper(trim((string) $this->request->getPost('shortcode'))),
-            'name' => trim((string) $this->request->getPost('name')),
-            'description' => trim((string) $this->request->getPost('description')),
-        ];
+        $data = $model->sectorData((array) $this->request->getPost());
 
-        if ($data['shortcode'] === '' || $data['name'] === '') {
+        if (! $model->isValidSectorData($data)) {
             return redirect()->to(site_url('admin/sectors'))->with('error', 'Shortcode and name are required.');
         }
 
         $isUpdate = $sectorId !== null;
-        $isUpdate ? $model->update($sectorId, $data) : $model->insert($data);
+
+        if (! $model->saveSectorRecord($data, $sectorId)) {
+            return redirect()->to(site_url('admin/sectors'))->with('error', 'Unable to save sector.');
+        }
+
         $message = $isUpdate ? 'Sector updated successfully.' : 'Sector added successfully.';
 
         return redirect()->to(site_url('admin/sectors'))->with('success', $message);

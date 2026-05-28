@@ -13,7 +13,7 @@ class FamilyFormViewData
     {
         $formOptions = array_merge(self::defaultFormOptions(), self::arrayValue($data['formOptions'] ?? []));
         $sectorOptions = $data['sectorOptions'] ?? ($formOptions['sectors'] ?? []);
-        $sectorGroups = self::arrayValue($data['sectorGroups'] ?? []);
+        $sectorCatalog = self::arrayValue($data['sectorCatalog'] ?? []);
         $sexOptions = $data['sexOptions'] ?? ($formOptions['sexes'] ?? []);
         $suffixOptions = $data['suffixOptions'] ?? ($formOptions['suffixes'] ?? []);
         $civilOptions = $data['civilOptions'] ?? ($formOptions['civil_statuses'] ?? []);
@@ -21,8 +21,11 @@ class FamilyFormViewData
         $educationOptions = $data['educationOptions'] ?? ($formOptions['education_levels'] ?? []);
         $jobOptions = $data['jobOptions'] ?? ($formOptions['job_options'] ?? []);
         $incomeOptions = $data['incomeOptions'] ?? ($formOptions['income_ranges'] ?? []);
-        $serviceGroups = self::arrayValue($data['serviceGroups'] ?? []);
+        $servicesByCategory = self::arrayValue($data['servicesByCategory'] ?? []);
         $serviceOptions = self::arrayValue($data['serviceOptions'] ?? ($formOptions['services'] ?? []));
+        if ($servicesByCategory === []) {
+            $servicesByCategory = self::servicesByCategory($serviceOptions);
+        }
         $familyHeads = $data['familyHeads'] ?? ($formOptions['family_heads'] ?? []);
         $formAction = $data['formAction'] ?? site_url('families');
         $submitButtonLabel = $data['submitButtonLabel'] ?? 'Save Record Data';
@@ -30,9 +33,12 @@ class FamilyFormViewData
         $existingMembers = self::arrayValue($data['existingMembers'] ?? []);
         $headServiceIds = self::integerList($data['headServiceIds'] ?? ($familyRecord['services'] ?? ($familyRecord['service_ids'] ?? [])));
         $isEditMode = $familyRecord !== [];
+        $embeddedInModal = (bool) ($data['embeddedInModal'] ?? false);
         $selectedSectorIds = SectorIds::normalize($familyRecord['sectorID'] ?? null);
+        $selectedSectorCategories = self::selectedSectorCategories($sectorCatalog, $selectedSectorIds);
         $initialFamilyData = [
             'selectedSectorIds' => $selectedSectorIds,
+            'selectedSectorCategories' => $selectedSectorCategories,
             'headServiceIds' => $headServiceIds,
             'existingMembers' => $existingMembers,
         ];
@@ -43,9 +49,8 @@ class FamilyFormViewData
             'incomeOptions',
             'jobOptions',
             'relationshipOptions',
-            'sectorGroups',
             'sectorOptions',
-            'serviceGroups',
+            'servicesByCategory',
             'serviceOptions',
             'sexOptions',
             'suffixOptions'
@@ -64,12 +69,14 @@ class FamilyFormViewData
             'incomeOptions',
             'initialFamilyData',
             'isEditMode',
+            'embeddedInModal',
             'jobOptions',
             'relationshipOptions',
-            'sectorGroups',
+            'sectorCatalog',
             'sectorOptions',
             'selectedSectorIds',
-            'serviceGroups',
+            'selectedSectorCategories',
+            'servicesByCategory',
             'serviceOptions',
             'sexOptions',
             'submitButtonLabel',
@@ -89,8 +96,37 @@ class FamilyFormViewData
             'job_options' => [],
             'income_ranges' => [],
             'services' => [],
+            'services_by_category' => [],
             'family_heads' => [],
         ];
+    }
+
+    private static function servicesByCategory(array $services): array
+    {
+        $grouped = [];
+
+        foreach ($services as $service) {
+            $category = trim((string) ($service['category'] ?? 'Other'));
+            $grouped[$category !== '' ? $category : 'Other'][] = $service;
+        }
+
+        return $grouped;
+    }
+
+    private static function selectedSectorCategories(array $sectorCatalog, array $selectedSectorIds): array
+    {
+        $categories = [];
+
+        foreach ($sectorCatalog as $key => $rows) {
+            foreach ((array) $rows as $row) {
+                if (in_array((int) ($row['sectorID'] ?? 0), $selectedSectorIds, true)) {
+                    $categories[] = (string) $key;
+                    break;
+                }
+            }
+        }
+
+        return array_values(array_unique($categories));
     }
 
     private static function integerList(mixed $value): array

@@ -63,7 +63,10 @@
         const entryTypeInput = q(form, '#entryType');
         const entryButtons = qa(form, '[data-entry-type]');
         const entryPanels = qa(form, '[data-entry-panel]');
+        const sectorCategoryList = q(form, '#sectorCategoryList');
         const sectorNameList = q(form, '#sectorNameList');
+        const sectorCatalogNode = q(form, '#sectorCatalogData');
+        const selectedSectorIdsNode = q(form, '#selectedSectorIdsData');
         const initialFamilyDataNode = q(root, '#initialFamilyData');
         const summaryTargets = {
             name: q(form, '#headSummaryName'),
@@ -83,6 +86,7 @@
         let memberIndex = 0;
         let entryType = entryTypeInput ? entryTypeInput.value : 'head';
         const initialFamilyData = parseJsonNode(initialFamilyDataNode, {});
+        const sectorCatalog = parseJsonNode(sectorCatalogNode, {});
         const state = {
             selectedSectorIds: normalizeIds(parseJsonNode(selectedSectorIdsNode, initialFamilyData.selectedSectorIds || [])),
             activeChoiceSource: null,
@@ -188,8 +192,10 @@
             }
 
             ui.populateSectorsByCategory({
+                sectorCatalog: sectorCatalog,
+                sectorCategoryList: sectorCategoryList,
                 sectorNameList: sectorNameList,
-                selectedSectorIds: []
+                selectedSectorIds: state.selectedSectorIds
             });
         }
 
@@ -401,6 +407,17 @@
 
                 if (target instanceof HTMLInputElement && target.type === 'checkbox') {
                     updateSectorSelection();
+                    updateHeadSummary();
+                }
+            });
+        }
+
+        if (sectorCategoryList) {
+            sectorCategoryList.addEventListener('change', function (event) {
+                const target = event.target;
+
+                if (target instanceof HTMLInputElement && target.type === 'checkbox') {
+                    populateSectorsByCategory();
                     updateHeadSummary();
                 }
             });

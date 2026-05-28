@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use CodeIgniter\Database\BaseBuilder;
 use CodeIgniter\Model;
 
 /**
@@ -20,11 +21,13 @@ class ServicesModel extends Model
      */
     public function getAll(): array
     {
-        if (! $this->db->tableExists('view_services_active')) {
+        $builder = $this->activeBuilder();
+
+        if ($builder === null) {
             return [];
         }
 
-        return $this->db->table('view_services_active')
+        return $builder
             ->orderBy('category', 'ASC')
             ->orderBy('serviceID', 'ASC')
             ->get()
@@ -67,11 +70,13 @@ class ServicesModel extends Model
      */
     public function getByCategory(string $category): array
     {
-        if (! $this->db->tableExists('view_services_active')) {
+        $builder = $this->activeBuilder();
+
+        if ($builder === null) {
             return [];
         }
 
-        return $this->db->table('view_services_active')
+        return $builder
             ->where('category', $category)
             ->orderBy('serviceID', 'ASC')
             ->get()
@@ -83,11 +88,13 @@ class ServicesModel extends Model
      */
     public function getCategories(): array
     {
-        if (! $this->db->tableExists('view_services_active')) {
+        $builder = $this->activeBuilder();
+
+        if ($builder === null) {
             return [];
         }
 
-        $rows = $this->db->table('view_services_active')
+        $rows = $builder
             ->distinct()
             ->select('category')
             ->orderBy('category', 'ASC')
@@ -140,5 +147,24 @@ class ServicesModel extends Model
             ->where($this->primaryKey, $id)
             ->set('dt_deleted', null)
             ->update();
+    }
+
+    private function activeBuilder(): ?BaseBuilder
+    {
+        if ($this->db->tableExists('view_services_active')) {
+            return $this->db->table('view_services_active');
+        }
+
+        if (! $this->db->tableExists($this->table)) {
+            return null;
+        }
+
+        $builder = $this->db->table($this->table);
+
+        if ($this->db->fieldExists('dt_deleted', $this->table)) {
+            $builder->where('dt_deleted IS NULL', null, false);
+        }
+
+        return $builder;
     }
 }

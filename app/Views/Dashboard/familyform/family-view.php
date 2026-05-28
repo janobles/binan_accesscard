@@ -1,6 +1,13 @@
 <?php
 $headView = (array) ($headView ?? []);
 $memberViews = (array) ($memberViews ?? []);
+$splitList = static function (mixed $value): array {
+    if (is_array($value)) {
+        return array_values(array_filter(array_map('trim', array_map('strval', $value))));
+    }
+
+    return array_values(array_filter(array_map('trim', explode(',', (string) $value))));
+};
 ?>
 
 <div class="family-detail">
@@ -8,7 +15,6 @@ $memberViews = (array) ($memberViews ?? []);
         <div>
             <span class="family-detail-kicker">Head of Family</span>
             <h2><?= esc((string) ($headView['fullName'] ?? '-')) ?></h2>
-            <p><?= esc((string) ($headView['sectorName'] ?? '-')) ?></p>
         </div>
         <div class="family-detail-date">
             <span>Created</span>
@@ -27,16 +33,30 @@ $memberViews = (array) ($memberViews ?? []);
                 </div>
             <?php endforeach; ?>
         </div>
+        <div class="family-detail-list mt-3">
+            <span class="family-service-label">Sectors</span>
+            <?php $headSectors = $splitList($headView['sectorName'] ?? ''); ?>
+            <?php if ($headSectors !== []): ?>
+                <ul>
+                    <?php foreach ($headSectors as $sectorName): ?>
+                        <li><?= esc($sectorName) ?></li>
+                    <?php endforeach; ?>
+                </ul>
+            <?php else: ?>
+                <span class="text-muted">No sectors listed.</span>
+            <?php endif; ?>
+        </div>
         <div class="family-service-list mt-3">
             <span class="family-service-label">Services availed</span>
-            <div>
+            <?php if (($headView['services'] ?? []) !== []): ?>
+                <ul>
                 <?php foreach ((array) ($headView['services'] ?? []) as $serviceName): ?>
-                    <span class="family-service-chip"><?= esc((string) $serviceName) ?></span>
+                    <li><?= esc((string) $serviceName) ?></li>
                 <?php endforeach; ?>
-                <?php if (($headView['services'] ?? []) === []): ?>
-                    <span class="text-muted">No services availed.</span>
-                <?php endif; ?>
-            </div>
+                </ul>
+            <?php else: ?>
+                <span class="text-muted">No services availed.</span>
+            <?php endif; ?>
         </div>
     </section>
 
@@ -54,7 +74,6 @@ $memberViews = (array) ($memberViews ?? []);
                             <strong><?= esc((string) ($member['fullName'] ?? '-')) ?></strong>
                             <span><?= esc((string) ($member['relationship'] ?? 'Member')) ?></span>
                         </div>
-                        <small><?= esc((string) ($member['sectorName'] ?? '-')) ?></small>
                     </div>
                     <div class="family-detail-grid is-compact">
                         <?php foreach ((array) ($member['details'] ?? []) as $detail): ?>
@@ -64,16 +83,30 @@ $memberViews = (array) ($memberViews ?? []);
                             </div>
                         <?php endforeach; ?>
                     </div>
+                    <div class="family-detail-list">
+                        <span class="family-service-label">Sectors</span>
+                        <?php $memberSectors = $splitList($member['sectorName'] ?? ''); ?>
+                        <?php if ($memberSectors !== []): ?>
+                            <ul>
+                                <?php foreach ($memberSectors as $sectorName): ?>
+                                    <li><?= esc($sectorName) ?></li>
+                                <?php endforeach; ?>
+                            </ul>
+                        <?php else: ?>
+                            <span class="text-muted">No sectors listed.</span>
+                        <?php endif; ?>
+                    </div>
                     <div class="family-service-list">
                         <span class="family-service-label">Services availed</span>
-                        <div>
+                        <?php if (($member['services'] ?? []) !== []): ?>
+                            <ul>
                             <?php foreach ((array) ($member['services'] ?? []) as $serviceName): ?>
-                                <span class="family-service-chip"><?= esc((string) $serviceName) ?></span>
+                                <li><?= esc((string) $serviceName) ?></li>
                             <?php endforeach; ?>
-                            <?php if (($member['services'] ?? []) === []): ?>
-                                <span class="text-muted">No services availed.</span>
-                            <?php endif; ?>
-                        </div>
+                            </ul>
+                        <?php else: ?>
+                            <span class="text-muted">No services availed.</span>
+                        <?php endif; ?>
                     </div>
                 </article>
             <?php endforeach; ?>

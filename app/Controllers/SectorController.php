@@ -5,7 +5,6 @@ namespace App\Controllers;
 use App\Libraries\RoleAccess;
 use App\Libraries\SectorIds;
 use App\Models\SectorModel;
-use App\Libraries\SectorIds;
 use CodeIgniter\HTTP\RedirectResponse;
 
 class SectorController extends BaseController

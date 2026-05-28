@@ -78,7 +78,11 @@ $deepUrl = static function (int $targetPage) use ($listRoute, $deepKeyword, $sta
 };
 ?>
 
-<div class="panel mb-3">
+<div
+    class="panel mb-3"
+    data-family-list-panel
+    data-family-list-partial-base="<?= esc(site_url($routeBase . '/list'), 'attr') ?>"
+    data-family-list-full-base="<?= esc(site_url($listRoute), 'attr') ?>">
     <div class="section-title mt-0">
         <span><?= $status === 'archived' ? 'Archived Records' : 'Manage Records' ?></span>
         <?php if ($status !== 'archived'): ?>
@@ -88,69 +92,86 @@ $deepUrl = static function (int $targetPage) use ($listRoute, $deepKeyword, $sta
     <?php if (! $isEmployeeList && $canRestoreArchived): ?>
         <div class="d-flex gap-2 mb-3">
             <a
-                class="btn btn-sm <?= $status === 'active' ? 'btn-primary' : 'btn-outline-secondary' ?><?= $useModalLinks ? ' js-open-family-list' : '' ?>"
-                href="<?= esc($listUrl('active'), 'attr') ?>"
-                <?= $useModalLinks ? 'data-modal-url="' . esc($partialUrl($listUrl('active')), 'attr') . '" data-modal-title="Manage Records"' : '' ?>>
+                class="btn btn-sm <?= $status === 'active' ? 'btn-primary' : 'btn-outline-secondary' ?>"
+                href="<?= esc($listUrl('active'), 'attr') ?>">
                 Active
             </a>
             <a
-                class="btn btn-sm <?= $status === 'archived' ? 'btn-primary' : 'btn-outline-secondary' ?><?= $useModalLinks ? ' js-open-family-list' : '' ?>"
-                href="<?= esc($listUrl('archived'), 'attr') ?>"
-                <?= $useModalLinks ? 'data-modal-url="' . esc($partialUrl($listUrl('archived')), 'attr') . '" data-modal-title="Archived Records"' : '' ?>>
+                class="btn btn-sm <?= $status === 'archived' ? 'btn-primary' : 'btn-outline-secondary' ?>"
+                href="<?= esc($listUrl('archived'), 'attr') ?>">
                 Archived
             </a>
         </div>
     <?php endif; ?>
 
-    <?php /* FIRST (quick) search bar + Manage Records FILTER (sector + date + status).
-             Submits q + sectorID + date (+ status) and is backed by
-             App\Models\MemberModel::searchFamilies() via DashboardPageBuilder. */ ?>
-    <form method="get" class="row g-2 mb-3 align-items-end" action="<?= site_url($listRoute) ?>">
-        <?php if ($status === 'archived'): ?>
-            <input type="hidden" name="status" value="archived">
+    <div class="d-flex flex-wrap gap-2 mb-3">
+        <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#recordSearchModal">Search</button>
+        <?php if (trim((string) $keyword) !== '' || $filterSectorId !== '' || $filterDate !== '' || $deepKeyword !== ''): ?>
+            <a class="btn btn-outline-secondary" href="<?= esc(site_url($listRoute . ($status === 'archived' ? '?status=archived' : '')), 'attr') ?>">Clear</a>
         <?php endif; ?>
-        <div class="col-md-5">
-            <label class="form-label small mb-1">Search records (shown list)</label>
-            <input class="form-control" type="search" name="q" value="<?= esc((string) $keyword) ?>" placeholder="Search by head name or sector">
-        </div>
-        <div class="col-md-4">
-            <label class="form-label small mb-1">Filter by sector</label>
-            <select class="form-select" name="sectorID">
-                <option value="">All sectors</option>
-                <?php foreach ($sectorOptions as $sector): ?>
-                    <?php $optionId = (string) ($sector['sectorID'] ?? ''); ?>
-                    <option value="<?= esc($optionId) ?>" <?= $filterSectorId === $optionId ? 'selected' : '' ?>><?= esc((string) ($sector['name'] ?? '')) ?></option>
-                <?php endforeach; ?>
-            </select>
-        </div>
-        <div class="col-md-3">
-            <label class="form-label small mb-1">Filter by date</label>
-            <input class="form-control" type="date" name="date" value="<?= esc($filterDate) ?>">
-        </div>
-        <div class="col-12 d-flex gap-2 mt-1">
-            <button class="btn btn-outline-secondary" type="submit">Search / Filter</button>
-            <?php if (trim((string) $keyword) !== '' || $filterSectorId !== '' || $filterDate !== ''): ?>
-                <a class="btn btn-outline-secondary" href="<?= esc(site_url($listRoute . ($status === 'archived' ? '?status=archived' : '')), 'attr') ?>">Clear</a>
-            <?php endif; ?>
-        </div>
-    </form>
+    </div>
 
-    <?php /* SECOND ("search the whole database") bar. Unlike the first bar it finds ANY
-             member including non-head family members, and also matches by sector name and
-             service/program name. Submits deep_q and is backed by
-             App\Models\SearchModel::allMembers(). Results show in the panel below. */ ?>
-    <form method="get" class="row g-2 mb-3 align-items-end" action="<?= site_url($listRoute) ?>">
-        <?php if ($status === 'archived'): ?>
-            <input type="hidden" name="status" value="archived">
-        <?php endif; ?>
-        <div class="col-md-9">
-            <label class="form-label small mb-1">Search the entire database (any member, sector, or service)</label>
-            <input class="form-control" type="search" name="deep_q" value="<?= esc($deepKeyword) ?>" placeholder="e.g. a family member's name, a sector, or a service/program">
+    <div class="modal fade" id="recordSearchModal" tabindex="-1" aria-labelledby="recordSearchModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="recordSearchModalLabel">Search Records</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <ul class="nav nav-tabs mb-3" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="recordNormalSearchTab" data-bs-toggle="tab" data-bs-target="#recordNormalSearchPane" type="button" role="tab" aria-controls="recordNormalSearchPane" aria-selected="true">Normal Search</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="recordAdvancedSearchTab" data-bs-toggle="tab" data-bs-target="#recordAdvancedSearchPane" type="button" role="tab" aria-controls="recordAdvancedSearchPane" aria-selected="false">Advanced Search</button>
+                        </li>
+                    </ul>
+                    <div class="tab-content">
+                        <div class="tab-pane fade show active" id="recordNormalSearchPane" role="tabpanel" aria-labelledby="recordNormalSearchTab" tabindex="0">
+                            <form data-current-page-search>
+                                <div class="mb-3">
+                                    <label class="form-label" for="recordSearchKeyword">Search current page</label>
+                                    <input class="form-control" id="recordSearchKeyword" type="search" name="q" placeholder="Search only the records shown on this page">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label" for="recordSearchSector">Filter current page by sector</label>
+                                    <select class="form-select" id="recordSearchSector" name="sectorID">
+                                        <option value="">All sectors on this page</option>
+                                        <?php foreach ($sectorOptions as $sector): ?>
+                                            <?php $optionId = (string) ($sector['sectorID'] ?? ''); ?>
+                                            <option value="<?= esc($optionId) ?>" data-sector-name="<?= esc((string) ($sector['name'] ?? ''), 'attr') ?>"><?= esc((string) ($sector['name'] ?? '')) ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label" for="recordSearchDate">Filter current page by date</label>
+                                    <input class="form-control" id="recordSearchDate" type="date" name="date">
+                                </div>
+                                <div class="d-flex justify-content-end gap-2">
+                                    <button class="btn btn-outline-secondary" type="reset" data-current-page-search-clear>Clear</button>
+                                    <button class="btn btn-primary" type="submit">Search Current Page</button>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="tab-pane fade" id="recordAdvancedSearchPane" role="tabpanel" aria-labelledby="recordAdvancedSearchTab" tabindex="0">
+                            <form method="get" action="<?= site_url($listRoute) ?>">
+                                <?php if ($status === 'archived'): ?>
+                                    <input type="hidden" name="status" value="archived">
+                                <?php endif; ?>
+                                <label class="form-label" for="recordAdvancedSearchKeyword">Search the entire database</label>
+                                <input class="form-control" id="recordAdvancedSearchKeyword" type="search" name="deep_q" value="<?= esc($deepKeyword) ?>" placeholder="Any member, sector, or service/program">
+                                <div class="d-flex justify-content-end gap-2 mt-3">
+                                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <button class="btn btn-primary" type="submit">Search All</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="col-md-3 d-grid">
-            <button class="btn btn-primary" type="submit">Search All</button>
-        </div>
-    </form>
+    </div>
 
     <?php /* Deep-search results panel. Renders only when the deep search box was used.
              Each row links to its family record via the existing view modal. */ ?>
@@ -245,10 +266,10 @@ $deepUrl = static function (int $targetPage) use ($listRoute, $deepKeyword, $sta
                     ? 'Restore this record to the active list?'
                     : $recordActionLabel . ' this record? This keeps the record in the database, marks it as ' . $recordActionPast . ', and hides it from active lists.';
                 ?>
-                <tr>
-                    <td><?= esc((string) (($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? ''))) ?></td>
-                    <td><?= esc((string) ($family['sector_name'] ?? '')) ?></td>
-                    <td><?= esc($formatDate($dateValue)) ?></td>
+                <tr data-record-row>
+                    <td data-record-name><?= esc((string) (($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? ''))) ?></td>
+                    <td data-record-sector><?= esc((string) ($family['sector_name'] ?? '')) ?></td>
+                    <td data-record-date><?= esc($formatDate($dateValue)) ?></td>
                     <td><?= esc($formatTime($dateValue)) ?></td>
                     <td class="text-end">
                         <div class="family-list-actions">
@@ -279,6 +300,7 @@ $deepUrl = static function (int $targetPage) use ($listRoute, $deepKeyword, $sta
             <?php if ($families === []): ?>
                 <tr><td colspan="5" class="text-center text-muted"><?= $status === 'archived' ? 'No archived records found.' : 'No records found.' ?></td></tr>
             <?php endif; ?>
+                <tr class="d-none" data-current-page-empty><td colspan="5" class="text-center text-muted">No records on this page match the current search.</td></tr>
             </tbody>
         </table>
     </div>

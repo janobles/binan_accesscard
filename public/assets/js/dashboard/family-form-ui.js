@@ -537,7 +537,7 @@
         }).filter(function (value) {
             return value !== '';
         });
-        const selectedServices = Array.from(form.querySelectorAll('input[name="services[]"]:checked')).map(function (checkbox) {
+        const selectedServices = Array.from(form.querySelectorAll('input[name="service_ids[]"]:checked')).map(function (checkbox) {
             const label = checkbox.closest('label');
             const text = label ? label.textContent : '';
 

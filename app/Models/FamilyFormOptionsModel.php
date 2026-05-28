@@ -63,10 +63,13 @@ class FamilyFormOptionsModel extends Model
         $options = $this->getOptions();
         $sectorOptions = $options['sectors'] ?? [];
         $serviceOptions = $options['services'] ?? [];
+        $sectorModel = new SectorModel();
+        $servicesByCategory = $this->groupServicesByCategory($serviceOptions);
 
         return [
             'formOptions' => $options,
             'sectorOptions' => $sectorOptions,
+            'sectorCatalog' => $sectorModel->getSectorCatalog($sectorOptions),
             'sexOptions' => $options['sexes'] ?? [],
             'suffixOptions' => $options['suffixes'] ?? [],
             'civilOptions' => $options['civil_statuses'] ?? [],
@@ -75,22 +78,13 @@ class FamilyFormOptionsModel extends Model
             'jobOptions' => $options['job_options'] ?? [],
             'incomeOptions' => $options['income_ranges'] ?? [],
             'serviceOptions' => $serviceOptions,
+            'servicesByCategory' => $servicesByCategory,
             'familyHeads' => $options['family_heads'] ?? [],
         ];
     }
 
-    private function getServicesByCategory(): array
+    private function groupServicesByCategory(array $services): array
     {
-        if (! $this->db->tableExists('services')) {
-            return [];
-        }
-
-        $services = $this->db->table('services')
-            ->select('serviceID, category, name, description')
-            ->orderBy('serviceID', 'ASC')
-            ->get()
-            ->getResultArray();
-
         $grouped = [];
 
         foreach ($services as $service) {

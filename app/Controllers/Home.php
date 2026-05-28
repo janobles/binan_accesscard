@@ -242,7 +242,7 @@ class Home extends BaseController
 
         return view('Dashboard/familyform/familyform', array_merge(
             (new FamilyFormOptionsModel())->getViewData(),
-            ['canCreateFamily' => true]
+            ['canCreateFamily' => true, 'embeddedInModal' => true]
         ));
     }
 
@@ -305,7 +305,7 @@ class Home extends BaseController
 
         return view('Dashboard/familyform/familyform', array_merge(
             (new FamilyFormOptionsModel())->getViewData(),
-            ['canCreateFamily' => true]
+            ['canCreateFamily' => true, 'embeddedInModal' => true]
         ));
     }
 

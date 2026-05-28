@@ -269,28 +269,25 @@
     overflow-wrap: anywhere;
 }
 
+.family-detail-list,
 .family-service-list {
     display: grid;
     gap: 8px;
 }
 
-.family-service-list > div {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
+.family-detail-list ul,
+.family-service-list ul {
+    margin: 0;
+    padding-left: 20px;
+    color: #244964;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.55;
 }
 
-.family-service-chip {
-    display: inline-flex;
-    align-items: center;
-    min-height: 26px;
-    padding: 4px 9px;
-    border: 1px solid #cbdceb;
-    border-radius: 999px;
-    background: #eef6fb;
-    color: #244964;
-    font-size: 12px;
-    font-weight: 600;
+.family-detail-list li + li,
+.family-service-list li + li {
+    margin-top: 3px;
 }
 
 .family-member-list {

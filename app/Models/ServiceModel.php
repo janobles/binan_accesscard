@@ -115,8 +115,13 @@ class ServiceModel extends Model
             return false;
         }
 
-        return $this->where('dt_deleted', null)
-            ->where($this->primaryKey, $serviceId)
+        $builder = $this->where($this->primaryKey, $serviceId);
+
+        if ($this->db->fieldExists('dt_deleted', $this->table)) {
+            $builder->where('dt_deleted', null);
+        }
+
+        return $builder
             ->countAllResults() > 0;
     }
 
@@ -136,8 +141,13 @@ class ServiceModel extends Model
             return false;
         }
 
-        return $this->where('dt_deleted', null)
-            ->whereIn($this->primaryKey, $serviceIds)
+        $builder = $this->whereIn($this->primaryKey, $serviceIds);
+
+        if ($this->db->fieldExists('dt_deleted', $this->table)) {
+            $builder->where('dt_deleted', null);
+        }
+
+        return $builder
             ->countAllResults() === count($serviceIds);
     }
 

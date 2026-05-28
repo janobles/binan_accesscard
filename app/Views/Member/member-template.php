@@ -133,7 +133,6 @@ $memberSectorGroups = array_filter(
                         <div class="col-lg-6">
                             <div class="member-choice-section">
                                 <div class="member-choice-section-title">Sectors</div>
-                                <label class="form-label">Sectors</label>
                                 <div class="member-visible-list" role="group" aria-label="Member sectors">
                                     <?php foreach ($memberSectorGroups as $sectorGroup): ?>
                                         <div class="member-visible-group">
@@ -156,7 +155,6 @@ $memberSectorGroups = array_filter(
                         <div class="col-lg-6">
                             <div class="member-choice-section">
                                 <div class="member-choice-section-title">Services and Programs Available</div>
-                                <label class="form-label">Services and programs availed</label>
                                 <div class="member-visible-list member-service-list" role="group" aria-label="Member services and programs">
                                     <?php foreach ($servicesByCategory as $category => $services): ?>
                                         <div class="member-visible-group">

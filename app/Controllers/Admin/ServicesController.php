@@ -3,8 +3,8 @@
 namespace App\Controllers\Admin;
 
 use App\Controllers\BaseController;
-use App\Controllers\Concerns\HomeRoleAccessTrait;
 use App\Controllers\Concerns\LookupManagementTrait;
+use App\Controllers\HomeRoleAccessTrait;
 use App\Models\ServicesModel;
 use CodeIgniter\HTTP\RedirectResponse;
 

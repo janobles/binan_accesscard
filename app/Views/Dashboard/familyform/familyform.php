@@ -26,6 +26,7 @@ $servicesByCategory       = $servicesByCategory ?? ($formOptions['services_by_ca
 $familyHeads              = $familyHeads ?? ($formOptions['family_heads'] ?? []);
 $formAction               = $formAction ?? site_url('families');
 $submitButtonLabel        = $submitButtonLabel ?? 'Save Family Data';
+$embeddedInModal          = (bool) ($embeddedInModal ?? false);
 $familyRecord             = (array) ($familyRecord ?? []);
 $existingMembers          = (array) ($existingMembers ?? []);
 $headServiceIds           = array_values(array_map('intval', (array) ($headServiceIds ?? $familyRecord['service_ids'] ?? [])));
@@ -73,6 +74,7 @@ $fieldViewData            = compact(
     'familyRecord',
     'fieldLabels',
     'incomeOptions',
+    'jobOptions',
     'relationshipOptions',
     'sectorOptions',
     'servicesByCategory',
@@ -85,16 +87,18 @@ $fieldViewData            = compact(
 
 <div class="family-wizard-shell">
     <div class="family-wizard-card">
-        <div class="family-wizard-header">
-            <div class="wizard-header-left">
-                <span class="wizard-icon" aria-hidden="true">+</span>
-                <div>
-                    <strong><?= $isEditMode ? 'Edit Family' : 'Add Record' ?></strong>
-                    <small>Step 1 of 3 - Head of the Family</small>
+        <?php if (! $embeddedInModal): ?>
+            <div class="family-wizard-header">
+                <div class="wizard-header-left">
+                    <span class="wizard-icon" aria-hidden="true">+</span>
+                    <div>
+                        <strong><?= $isEditMode ? 'Edit Record' : 'Add Record' ?></strong>
+                        <small>Step 1 of 3 - Head of Family</small>
+                    </div>
                 </div>
+                <span class="wizard-header-badge" aria-hidden="true"></span>
             </div>
-            <span class="wizard-header-badge" aria-hidden="true"></span>
-        </div>
+        <?php endif; ?>
 
         <div class="family-wizard-steps" aria-hidden="true">
             <div class="wizard-step is-active" data-step-target="1" aria-current="step"><span>1</span><small>Head of Family</small></div>

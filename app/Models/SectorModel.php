@@ -21,12 +21,24 @@ class SectorModel extends Model
      */
     public function getAll(): array
     {
-        if (! $this->db->tableExists('view_sector_active')) {
+        if ($this->db->tableExists('view_sector_active')) {
+            return $this->db->table('view_sector_active')
+                ->orderBy('sectorID', 'ASC')
+                ->get()
+                ->getResultArray();
+        }
+
+        if (! $this->hasTable()) {
             return [];
         }
 
-        return $this->db->table('view_sector_active')
-            ->orderBy('sectorID', 'ASC')
+        $builder = $this->db->table($this->table);
+
+        if ($this->db->fieldExists('dt_deleted', $this->table)) {
+            $builder->where('dt_deleted IS NULL', null, false);
+        }
+
+        return $builder->orderBy('sectorID', 'ASC')
             ->get()
             ->getResultArray();
     }

@@ -2,6 +2,7 @@
 
 namespace App\Controllers;
 
+use App\Libraries\DashboardPageBuilder;
 use App\Models\AuditTrailsModel;
 use App\Models\FamilyFormOptionsModel;
 use App\Models\MemberModel;
@@ -39,6 +40,13 @@ class FamilyController extends BaseController
 
         $keyword = trim((string) $this->request->getGet('q'));
         $isEmployeePath = $this->isEmployeeRequestPath();
+
+        if (! $isEmployeePath) {
+            $viewData = (new DashboardPageBuilder($this->request))->buildAdminViewData('family-manage');
+
+            return view('Dashboard/familyform/family-list', $viewData['recordListData'] ?? []);
+        }
+
         $status = $isEmployeePath ? 'active' : strtolower(trim((string) $this->request->getGet('status')));
         $showArchived = $status === 'archived';
         $page = max(1, (int) $this->request->getGet('page'));
@@ -149,6 +157,7 @@ class FamilyController extends BaseController
                 'existingMembers' => $members,
                 'headServiceIds' => $headServiceIds,
                 'showManageFamilyListButton' => true,
+                'embeddedInModal' => true,
             ]
         ));
     }
@@ -894,10 +903,14 @@ class FamilyController extends BaseController
             return false;
         }
 
-        $existingCount = $db->table('sector')
-            ->where('dt_deleted', null)
-            ->whereIn('sectorID', $sectorIds)
-            ->countAllResults();
+        $builder = $db->table('sector')
+            ->whereIn('sectorID', $sectorIds);
+
+        if ($db->fieldExists('dt_deleted', 'sector')) {
+            $builder->where('dt_deleted', null);
+        }
+
+        $existingCount = $builder->countAllResults();
 
         return $existingCount === count($sectorIds);
     }

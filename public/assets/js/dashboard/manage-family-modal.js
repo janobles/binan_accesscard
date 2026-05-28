@@ -19,6 +19,233 @@
 })(window);
 
 (function (window, document) {
+    function panelFor(target) {
+        return target ? target.closest('[data-family-list-panel]') : null;
+    }
+
+    function urlWithPartial(url, panel) {
+        const nextUrl = new URL(url, window.location.href);
+        const partialBase = panel ? panel.dataset.familyListPartialBase : '';
+
+        if (partialBase) {
+            const partialUrl = new URL(partialBase, window.location.href);
+            nextUrl.pathname = partialUrl.pathname;
+        }
+
+        nextUrl.searchParams.set('partial', '1');
+
+        return nextUrl;
+    }
+
+    function setPanelLoading(panel, loading) {
+        panel.classList.toggle('is-loading', loading);
+        panel.querySelectorAll('button, input, select, a').forEach(function (control) {
+            if (control.tagName === 'A') {
+                control.classList.toggle('disabled', loading);
+                control.setAttribute('aria-disabled', loading ? 'true' : 'false');
+                return;
+            }
+
+            control.disabled = loading;
+        });
+    }
+
+    function replacePanel(panel, html) {
+        const template = document.createElement('template');
+        template.innerHTML = html.trim();
+        const replacement = template.content.querySelector('[data-family-list-panel]');
+
+        if (!replacement) {
+            window.location.reload();
+            return null;
+        }
+
+        panel.replaceWith(replacement);
+        document.querySelectorAll('.modal-backdrop').forEach(function (backdrop) {
+            backdrop.remove();
+        });
+        document.body.classList.remove('modal-open');
+        document.body.style.removeProperty('overflow');
+        document.body.style.removeProperty('padding-right');
+
+        return replacement;
+    }
+
+    function loadFamilyList(panel, fullUrl, pushHistory) {
+        const partialUrl = urlWithPartial(fullUrl, panel);
+
+        setPanelLoading(panel, true);
+
+        return window.fetch(partialUrl.toString(), {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            credentials: 'same-origin'
+        })
+            .then(function (response) {
+                if (!response.ok) {
+                    throw new Error('Unable to load records.');
+                }
+
+                return response.text();
+            })
+            .then(function (html) {
+                const nextPanel = replacePanel(panel, html);
+
+                if (pushHistory && nextPanel) {
+                    window.history.pushState({ familyList: true }, '', fullUrl);
+                }
+
+                return nextPanel;
+            })
+            .catch(function () {
+                window.location.href = fullUrl;
+            });
+    }
+
+    function normalizedText(value) {
+        return String(value || '').trim().toLowerCase();
+    }
+
+    function closeModalFor(element) {
+        const modal = element.closest('.modal');
+
+        if (modal && window.bootstrap) {
+            const instance = window.bootstrap.Modal.getInstance(modal);
+
+            if (instance) {
+                instance.hide();
+            }
+        }
+    }
+
+    function applyCurrentPageSearch(form) {
+        const panel = panelFor(form);
+
+        if (!panel) {
+            return;
+        }
+
+        const data = new FormData(form);
+        const keyword = normalizedText(data.get('q'));
+        const selectedSector = form.querySelector('[name="sectorID"]');
+        const selectedSectorName = selectedSector && selectedSector.selectedOptions.length > 0
+            ? normalizedText(selectedSector.selectedOptions[0].dataset.sectorName || selectedSector.selectedOptions[0].textContent)
+            : '';
+        const selectedDate = normalizedText(data.get('date'));
+        let visibleCount = 0;
+
+        panel.querySelectorAll('[data-record-row]').forEach(function (row) {
+            const name = normalizedText((row.querySelector('[data-record-name]') || {}).textContent);
+            const sector = normalizedText((row.querySelector('[data-record-sector]') || {}).textContent);
+            const date = normalizedText((row.querySelector('[data-record-date]') || {}).textContent);
+            const haystack = [name, sector, date].join(' ');
+            const matchesKeyword = keyword === '' || haystack.includes(keyword);
+            const matchesSector = selectedSectorName === '' || sector.includes(selectedSectorName);
+            const matchesDate = selectedDate === '' || date === selectedDate;
+            const matches = matchesKeyword && matchesSector && matchesDate;
+
+            row.classList.toggle('d-none', !matches);
+
+            if (matches) {
+                visibleCount += 1;
+            }
+        });
+
+        const emptyRow = panel.querySelector('[data-current-page-empty]');
+
+        if (emptyRow) {
+            emptyRow.classList.toggle('d-none', visibleCount !== 0);
+        }
+    }
+
+    document.addEventListener('submit', function (event) {
+        const form = event.target.closest('[data-family-list-panel] form[data-current-page-search]');
+
+        if (!form) {
+            return;
+        }
+
+        event.preventDefault();
+        applyCurrentPageSearch(form);
+        closeModalFor(form);
+    });
+
+    document.addEventListener('reset', function (event) {
+        const form = event.target.closest('[data-family-list-panel] form[data-current-page-search]');
+
+        if (!form) {
+            return;
+        }
+
+        window.setTimeout(function () {
+            applyCurrentPageSearch(form);
+        }, 0);
+    });
+
+    document.addEventListener('submit', function (event) {
+        const form = event.target.closest('[data-family-list-panel] form[method="get"]');
+
+        if (!form) {
+            return;
+        }
+
+        const panel = panelFor(form);
+
+        if (!panel || !window.fetch || !window.history) {
+            return;
+        }
+
+        event.preventDefault();
+
+        closeModalFor(form);
+
+        const fullUrl = new URL(form.action, window.location.href);
+        const formData = new FormData(form);
+
+        fullUrl.search = '';
+        formData.forEach(function (value, key) {
+            if (String(value).trim() !== '') {
+                fullUrl.searchParams.append(key, value);
+            }
+        });
+
+        loadFamilyList(panel, fullUrl.toString(), true);
+    });
+
+    document.addEventListener('click', function (event) {
+        const link = event.target.closest('[data-family-list-panel] a[href]');
+
+        if (!link || link.classList.contains('disabled')) {
+            return;
+        }
+
+        const panel = panelFor(link);
+
+        if (!panel || !window.fetch || !window.history) {
+            return;
+        }
+
+        const href = link.getAttribute('href') || '';
+
+        if (href === '' || href.startsWith('#')) {
+            return;
+        }
+
+        event.preventDefault();
+        loadFamilyList(panel, new URL(href, window.location.href).toString(), true);
+    });
+
+    window.addEventListener('popstate', function () {
+        const panel = document.querySelector('[data-family-list-panel]');
+
+        if (!panel || !window.fetch) {
+            return;
+        }
+
+        loadFamilyList(panel, window.location.href, false);
+    });
+
     document.addEventListener('submit', function (event) {
         const form = event.target.closest('.js-family-record-action-form');
 

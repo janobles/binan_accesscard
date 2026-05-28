@@ -23,6 +23,20 @@ class FamilyController extends BaseController
             return $guard;
         }
 
+        if (! $this->isPartialRequest()) {
+            $dashboardPath = $this->familyDashboardPath();
+            $query = $this->request->getGet();
+            unset($query['partial']);
+
+            $target = site_url($dashboardPath);
+
+            if ($query !== []) {
+                $target .= '?' . http_build_query($query);
+            }
+
+            return redirect()->to($target);
+        }
+
         $keyword = trim((string) $this->request->getGet('q'));
         $isEmployeePath = $this->isEmployeeRequestPath();
         $status = $isEmployeePath ? 'active' : strtolower(trim((string) $this->request->getGet('status')));
@@ -702,6 +716,11 @@ class FamilyController extends BaseController
         }
 
         return redirect()->back()->with('error', 'You do not have permission to add records.');
+    }
+
+    private function isPartialRequest(): bool
+    {
+        return $this->request->isAJAX() || (string) $this->request->getGet('partial') === '1';
     }
 
     private function entryType(): string

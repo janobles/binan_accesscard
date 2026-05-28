@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use App\Libraries\SectorIds;
+
 /**
  * Prepares family form variables before the view renders HTML.
  */

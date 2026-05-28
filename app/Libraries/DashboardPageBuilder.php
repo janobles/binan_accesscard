@@ -233,6 +233,7 @@ class DashboardPageBuilder
             'isEmployeeList'    => false,
             'isFullPage'        => true,
             'keyword'           => $keyword,
+            'listRoute'         => 'admin/manage-records',
             'listUrl'           => $listUrl,
             'page'              => $page,
             'perPage'           => $perPage,
@@ -241,6 +242,7 @@ class DashboardPageBuilder
             'toRecord'          => min($totalFamilies, $page * $perPage),
             'totalFamilies'     => $totalFamilies,
             'totalPages'        => $totalPages,
+            'useModalLinks'     => false,
         ];
     }
 

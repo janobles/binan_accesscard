@@ -117,6 +117,11 @@ class MemberModel extends Model
             ->countAllResults();
     }
 
+    /**
+     * ENCODE hook. Registered as beforeInsert/beforeUpdate, this runs right
+     * before a row is written and converts the sectorID array into its JSON
+     * storage string ('[1,2,3]'). See App\Support\SectorIds::toStorage().
+     */
     protected function normalizeSectorIdStorage(array $data): array
     {
         if (array_key_exists('sectorID', $data['data'] ?? [])) {
@@ -368,6 +373,11 @@ class MemberModel extends Model
         return $builder;
     }
 
+    /**
+     * DECODE/display path. For each member row, takes the raw JSON sectorID
+     * string and adds a 'sector_name' field with the IDs resolved to names.
+     * See App\Support\SectorIds::toNames().
+     */
     private function withSectorNames(array $rows): array
     {
         $sectorNames = $this->sectorNameMap();

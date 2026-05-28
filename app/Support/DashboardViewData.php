@@ -179,20 +179,16 @@ class DashboardViewData
 
     public static function sectorAndServices(array $data): array
     {
-        $servicesByCategory = self::arrayValue($data['servicesByCategory'] ?? []);
-        $sectorCatalog = self::arrayValue($data['sectorCatalog'] ?? []);
+        $serviceGroups = self::arrayValue($data['serviceGroups'] ?? []);
+        $sectorGroups = self::arrayValue($data['sectorGroups'] ?? []);
         $selectedSectorIds = self::integerList($data['selectedSectorIds'] ?? []);
-        $selectedSectorCategories = self::stringList($data['selectedSectorCategories'] ?? []);
         $selectedServiceIds = self::integerList($data['selectedServiceIds'] ?? []);
-        $sectorCatalogJson = json_encode($sectorCatalog, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?: '{}';
 
         return compact(
-            'sectorCatalog',
-            'sectorCatalogJson',
-            'selectedSectorCategories',
+            'sectorGroups',
             'selectedSectorIds',
             'selectedServiceIds',
-            'servicesByCategory'
+            'serviceGroups'
         );
     }
 

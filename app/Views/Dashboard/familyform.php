@@ -33,16 +33,15 @@ extract(family_form_view_data(get_defined_vars()), EXTR_OVERWRITE);
             </div>
 
             <?= view('Dashboard/sectorandservices', [
-                'servicesByCategory' => $servicesByCategory,
-                'sectorCatalog' => $sectorCatalog,
+                'serviceGroups' => $serviceGroups,
+                'sectorGroups' => $sectorGroups,
                 'selectedSectorIds' => $selectedSectorIds,
-                'selectedSectorCategories' => $selectedSectorCategories,
                 'selectedServiceIds' => $headServiceIds,
             ]) ?>
 
             <?= view('Member/member-summary') ?>
 
-            <script type="application/json" id="initialFamilyData"><?= json_encode($initialFamilyData, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?></script>
+            <input type="hidden" id="initialFamilyData" value="<?= esc(json_encode($initialFamilyData, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?: '{}', 'attr') ?>">
 
             <div class="d-flex justify-content-end gap-2 family-form-actions">
                 <button type="button" class="btn btn-outline-secondary family-form-hidden" id="prevStepBtn">Previous</button>

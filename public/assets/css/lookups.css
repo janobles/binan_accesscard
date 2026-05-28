@@ -1,0 +1,53 @@
+.badge-pwd {
+    background-color: #cfe2ff;
+    color: #084298;
+}
+
+.badge-sp {
+    background-color: #d1e7dd;
+    color: #0a3622;
+}
+
+.badge-osca {
+    background-color: #fff3cd;
+    color: #664d03;
+}
+
+.sector-card-grid {
+    align-items: stretch;
+}
+
+.sector-card {
+    display: flex;
+    flex-direction: column;
+}
+
+.sector-card .card-footer {
+    margin-top: auto;
+}
+
+.archived-row {
+    opacity: 0.7;
+}
+
+.icon-btn {
+    width: 28px;
+    height: 28px;
+    border: 0;
+    background: transparent;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.icon-btn:hover {
+    background-color: #e9ecef;
+}
+
+.toast-container {
+    position: fixed;
+    right: 1rem;
+    bottom: 1rem;
+    z-index: 1100;
+}

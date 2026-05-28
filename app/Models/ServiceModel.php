@@ -115,7 +115,9 @@ class ServiceModel extends Model
             return false;
         }
 
-        return $this->where($this->primaryKey, $serviceId)->countAllResults() > 0;
+        return $this->where('dt_deleted', null)
+            ->where($this->primaryKey, $serviceId)
+            ->countAllResults() > 0;
     }
 
     public function idsExist(array $serviceIds): bool
@@ -134,7 +136,9 @@ class ServiceModel extends Model
             return false;
         }
 
-        return $this->whereIn($this->primaryKey, $serviceIds)->countAllResults() === count($serviceIds);
+        return $this->where('dt_deleted', null)
+            ->whereIn($this->primaryKey, $serviceIds)
+            ->countAllResults() === count($serviceIds);
     }
 
     private function naturalIds(array $serviceIds): ?array

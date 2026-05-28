@@ -248,21 +248,13 @@
     }
 
     function collectSelectedSectorIds(form) {
-        return Array.from(form.querySelectorAll('#sectorNameList input[type="checkbox"]:checked')).map(function (checkbox) {
+        return Array.from(form.querySelectorAll('input[name="sectors[]"]:checked')).map(function (checkbox) {
             return checkbox.value;
         });
     }
 
     function readSectorCatalog(sectorCategoryList) {
-        if (!sectorCategoryList) {
-            return {};
-        }
-
-        try {
-            return JSON.parse(sectorCategoryList.dataset.sectorCatalog || '{}');
-        } catch (error) {
-            return {};
-        }
+        return {};
     }
 
     function resetSectorSelection(sectorNameList, sectorIdInput) {
@@ -270,30 +262,13 @@
             return;
         }
 
-        sectorNameList.innerHTML = '<small class="text-muted">Select one or more sector categories first.</small>';
-
-        if (sectorIdInput) {
-            sectorIdInput.value = '';
-            sectorIdInput.setCustomValidity('Please select at least one sector name.');
-        }
+        Array.from(sectorNameList.querySelectorAll('input[type="checkbox"]')).forEach(function (checkbox) {
+            checkbox.checked = false;
+        });
     }
 
     function updateSectorSelection(sectorNameList, sectorIdInput) {
-        if (!sectorNameList) {
-            return;
-        }
-
-        const checkedBoxes = Array.from(sectorNameList.querySelectorAll('input[type="checkbox"]:checked'));
-        const selectedIds = checkedBoxes.map(function (checkbox) {
-            return String(checkbox.value || '').trim();
-        }).filter(function (value) {
-            return value !== '';
-        });
-
-        if (sectorIdInput) {
-            sectorIdInput.value = selectedIds.length > 0 ? '[' + selectedIds.join(',') + ']' : '';
-            sectorIdInput.setCustomValidity(selectedIds.length > 0 ? '' : 'Please select at least one sector name.');
-        }
+        return;
     }
 
     function populateSectorsByCategory(config) {
@@ -562,7 +537,7 @@
         }).filter(function (value) {
             return value !== '';
         });
-        const selectedServices = Array.from(form.querySelectorAll('input[name="service_ids[]"]:checked')).map(function (checkbox) {
+        const selectedServices = Array.from(form.querySelectorAll('input[name="services[]"]:checked')).map(function (checkbox) {
             const label = checkbox.closest('label');
             const text = label ? label.textContent : '';
 

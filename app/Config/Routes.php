@@ -54,6 +54,22 @@ $routes->group('admin', static function (RouteCollection $routes): void {
         $routes->post('delete/(:num)', 'ServiceController::delete/$1');
         $routes->post('archive/(:num)', 'ServiceController::archive/$1');
     });
+
+    $routes->group('lookups', static function (RouteCollection $routes): void {
+        // Sectors
+        $routes->get('sectors', 'Admin\SectorController::index');
+        $routes->post('sectors/store', 'Admin\SectorController::store');
+        $routes->post('sectors/update/(:num)', 'Admin\SectorController::update/$1');
+        $routes->post('sectors/archive/(:num)', 'Admin\SectorController::archive/$1');
+        $routes->post('sectors/restore/(:num)', 'Admin\SectorController::restore/$1');
+
+        // Services
+        $routes->get('services', 'Admin\ServicesController::index');
+        $routes->post('services/store', 'Admin\ServicesController::store');
+        $routes->post('services/update/(:num)', 'Admin\ServicesController::update/$1');
+        $routes->post('services/archive/(:num)', 'Admin\ServicesController::archive/$1');
+        $routes->post('services/restore/(:num)', 'Admin\ServicesController::restore/$1');
+    });
 });
 
 /*

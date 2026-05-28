@@ -169,6 +169,66 @@ trait HomeDashboardPagesTrait
         ]);
     }
 
+    /**
+     * Assemble the family form view data with grouped lookup options.
+     */
+    private function buildFamilyFormViewData(): array
+    {
+        $viewData = (new FamilyFormOptionsModel())->getViewData();
+        $sectorOptions = $viewData['sectorOptions'] ?? [];
+        $serviceOptions = $viewData['serviceOptions'] ?? [];
+
+        $viewData['sectorGroups'] = $this->groupSectorsByPrefix($sectorOptions);
+        $viewData['serviceGroups'] = $this->groupServicesByCategory($serviceOptions);
+
+        return $viewData;
+    }
+
+    /**
+     * Group sector rows by shortcode prefix for checkbox rendering.
+     */
+    private function groupSectorsByPrefix(array $sectors): array
+    {
+        $groups = [
+            'PWD' => [],
+            'SP' => [],
+            'OSCA' => [],
+        ];
+
+        foreach ($sectors as $sector) {
+            $shortcode = strtoupper(trim((string) ($sector['shortcode'] ?? '')));
+
+            if (str_starts_with($shortcode, 'PWD')) {
+                $groups['PWD'][] = $sector;
+            } elseif (str_starts_with($shortcode, 'SP')) {
+                $groups['SP'][] = $sector;
+            } elseif (str_starts_with($shortcode, 'OSCA')) {
+                $groups['OSCA'][] = $sector;
+            }
+        }
+
+        return array_filter($groups, static fn (array $items): bool => $items !== []);
+    }
+
+    /**
+     * Group active services by category for checkbox rendering.
+     */
+    private function groupServicesByCategory(array $services): array
+    {
+        $groups = [];
+
+        foreach ($services as $service) {
+            $category = trim((string) ($service['category'] ?? ''));
+            $category = $category !== '' ? $category : 'Other';
+            $groups[$category] ??= [];
+            $groups[$category][] = $service;
+        }
+
+        ksort($groups);
+
+        return $groups;
+    }
+
     private function searchFilters(): array
     {
         return [

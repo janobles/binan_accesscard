@@ -31,14 +31,11 @@ $sectorCategoryKeys = array_values(array_unique(array_merge(
 		</div>
 	</div>
 
-	<script type="application/json" id="sectorCatalogData"><?= json_encode($sectorCatalog, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?></script>
-	<script type="application/json" id="selectedSectorIdsData"><?= json_encode($selectedSectorIds, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?></script>
-
 	<div class="section-title">
 		<span>Services and Programs Available</span>
 	</div>
 	<div class="row g-3">
-		<?php foreach ($servicesByCategory as $category => $services): ?>
+		<?php foreach ($serviceGroups as $category => $services): ?>
 			<div class="col-lg-4">
 				<div class="assistance-box">
 					<h6 class="mb-2"><?= esc((string) $category) ?></h6>
@@ -61,7 +58,7 @@ $sectorCategoryKeys = array_values(array_unique(array_merge(
 				</div>
 			</div>
 		<?php endforeach; ?>
-		<?php if ($servicesByCategory === []): ?>
+		<?php if ($serviceGroups === []): ?>
 			<div class="col-12">
 				<p class="text-muted mb-0">No services available.</p>
 			</div>

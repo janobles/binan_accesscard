@@ -1,6 +1,6 @@
 <?php
 
-use App\Support\SectorIds;
+use App\Libraries\SectorIds;
 use App\Validation\SectorRules;
 use CodeIgniter\Test\CIUnitTestCase;
 

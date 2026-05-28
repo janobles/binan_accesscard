@@ -77,6 +77,10 @@ class DashboardModel
             : 0;
     }
 
+    /**
+     * DECODE/display path for dashboard lists. Resolves each row's raw JSON
+    * sectorID string into a readable 'sector_name'. See App\Libraries\SectorIds::toNames().
+     */
     private function withSectorNames(array $rows): array
     {
         $sectorNames = $this->sectorNameMap();

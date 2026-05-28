@@ -129,7 +129,7 @@ class FamilyController extends BaseController
             return '<div class="alert alert-warning mb-0">Record not found.</div>';
         }
 
-        $familyOptions = (new FamilyFormOptionsModel())->getViewData();
+        $familyOptions = $this->buildFamilyFormViewData();
         $head = $familyData['head'];
         $members = $familyData['members'];
         $serviceMap = $familyData['serviceMap'];
@@ -137,7 +137,7 @@ class FamilyController extends BaseController
 
         foreach ($members as $index => $member) {
             $memberId = (int) ($member['memberID'] ?? 0);
-            $members[$index]['service_ids'] = $serviceMap[$memberId] ?? [];
+            $members[$index]['services'] = $serviceMap[$memberId] ?? [];
         }
 
         return view('Dashboard/familyform/familyform', array_merge(
@@ -349,7 +349,7 @@ class FamilyController extends BaseController
         }
 
         $members = $this->request->getPost('members');
-        $headServiceIds = $this->normalizeIdListPayload($this->request->getPost('service_ids'));
+        $headServiceIds = $this->normalizeIdListPayload($this->request->getPost('services'));
 
         if ($members !== null && ! is_array($members)) {
             return redirect()->back()->withInput()->with('error', 'Member entries must be submitted as a list.');
@@ -404,7 +404,7 @@ class FamilyController extends BaseController
                 return redirect()->back()->withInput()->with('error', 'One member has an invalid sector selection.');
             }
 
-            $memberServiceIds = $this->normalizeIdListPayload($member['service_ids'] ?? null);
+            $memberServiceIds = $this->normalizeIdListPayload($member['services'] ?? null);
 
             if ($memberServiceIds === null || ! $serviceModel->idsExist($memberServiceIds)) {
                 $memberModel->rollbackTransaction();
@@ -493,7 +493,7 @@ class FamilyController extends BaseController
             return $this->validationResponse('One or more selected sectors are invalid.');
         }
 
-        $serviceIds = $this->normalizeIdListPayload($this->request->getPost('service_ids'));
+        $serviceIds = $this->normalizeIdListPayload($this->request->getPost('services'));
 
         if ($serviceIds === null || ! $serviceModel->idsExist($serviceIds)) {
             return $this->validationResponse('One or more selected services are invalid.');
@@ -562,7 +562,7 @@ class FamilyController extends BaseController
                 return $this->validationResponse('One member has an invalid sector selection.');
             }
 
-            $memberServiceIds = $this->normalizeIdListPayload($member['service_ids'] ?? null);
+            $memberServiceIds = $this->normalizeIdListPayload($member['services'] ?? null);
 
             if ($memberServiceIds === null || ! $serviceModel->idsExist($memberServiceIds)) {
                 $memberModel->rollbackTransaction();
@@ -730,6 +730,12 @@ class FamilyController extends BaseController
 
     private function postedSectorIds(): mixed
     {
+        $sectorIds = $this->request->getPost('sectors');
+
+        if ($sectorIds !== null) {
+            return $sectorIds;
+        }
+
         $sectorIds = $this->request->getPost('sector_ids');
 
         return $sectorIds !== null ? $sectorIds : $this->request->getPost('sectorID');
@@ -737,6 +743,12 @@ class FamilyController extends BaseController
 
     private function postedSectorIdsHaveValidShape(): bool
     {
+        $sectorIds = $this->request->getPost('sectors');
+
+        if ($sectorIds !== null) {
+            return is_array($sectorIds) && $this->isListArray($sectorIds);
+        }
+
         $sectorIds = $this->request->getPost('sector_ids');
 
         if ($sectorIds !== null) {
@@ -883,6 +895,7 @@ class FamilyController extends BaseController
         }
 
         $existingCount = $db->table('sector')
+            ->where('dt_deleted', null)
             ->whereIn('sectorID', $sectorIds)
             ->countAllResults();
 
@@ -891,7 +904,13 @@ class FamilyController extends BaseController
 
     private function memberSectorIdsFromArray(array $member, array $fallbackSectorIds): ?array
     {
-        if (array_key_exists('sector_ids', $member)) {
+        if (array_key_exists('sectors', $member)) {
+            if (! is_array($member['sectors']) || ! $this->isListArray($member['sectors'])) {
+                return null;
+            }
+
+            $sectorIds = $member['sectors'];
+        } elseif (array_key_exists('sector_ids', $member)) {
             if (! is_array($member['sector_ids']) || ! $this->isListArray($member['sector_ids'])) {
                 return null;
             }
@@ -977,6 +996,66 @@ class FamilyController extends BaseController
         );
     }
 
+    /**
+     * Assemble grouped sector/service data for the family form UI.
+     */
+    private function buildFamilyFormViewData(): array
+    {
+        $viewData = (new FamilyFormOptionsModel())->getViewData();
+        $sectorOptions = $viewData['sectorOptions'] ?? [];
+        $serviceOptions = $viewData['serviceOptions'] ?? [];
+
+        $viewData['sectorGroups'] = $this->groupSectorsByPrefix($sectorOptions);
+        $viewData['serviceGroups'] = $this->groupServicesByCategory($serviceOptions);
+
+        return $viewData;
+    }
+
+    /**
+     * Group sector rows by shortcode prefix for checkbox rendering.
+     */
+    private function groupSectorsByPrefix(array $sectors): array
+    {
+        $groups = [
+            'PWD' => [],
+            'SP' => [],
+            'OSCA' => [],
+        ];
+
+        foreach ($sectors as $sector) {
+            $shortcode = strtoupper(trim((string) ($sector['shortcode'] ?? '')));
+
+            if (str_starts_with($shortcode, 'PWD')) {
+                $groups['PWD'][] = $sector;
+            } elseif (str_starts_with($shortcode, 'SP')) {
+                $groups['SP'][] = $sector;
+            } elseif (str_starts_with($shortcode, 'OSCA')) {
+                $groups['OSCA'][] = $sector;
+            }
+        }
+
+        return array_filter($groups, static fn (array $items): bool => $items !== []);
+    }
+
+    /**
+     * Group active services by category for checkbox rendering.
+     */
+    private function groupServicesByCategory(array $services): array
+    {
+        $groups = [];
+
+        foreach ($services as $service) {
+            $category = trim((string) ($service['category'] ?? ''));
+            $category = $category !== '' ? $category : 'Other';
+            $groups[$category] ??= [];
+            $groups[$category][] = $service;
+        }
+
+        ksort($groups);
+
+        return $groups;
+    }
+
     private function sessionUserExists(): bool
     {
         return $this->userExists((int) session()->get('user_id'));
@@ -999,7 +1078,7 @@ class FamilyController extends BaseController
 
         foreach ($familyMembers as $member) {
             $memberId = (int) ($member['memberID'] ?? 0);
-            $member['sector_ids'] = SectorIds::normalize($member['sectorID'] ?? null);
+            $member['sectors'] = SectorIds::normalize($member['sectorID'] ?? null);
 
             if ($memberId === $headId) {
                 $head = $member;
@@ -1020,10 +1099,10 @@ class FamilyController extends BaseController
 
         foreach ($members as $index => $member) {
             $memberId = (int) ($member['memberID'] ?? 0);
-            $members[$index]['service_ids'] = $serviceMap[$memberId] ?? [];
+            $members[$index]['services'] = $serviceMap[$memberId] ?? [];
         }
 
-        $head['service_ids'] = $serviceMap[(int) ($head['memberID'] ?? 0)] ?? [];
+        $head['services'] = $serviceMap[(int) ($head['memberID'] ?? 0)] ?? [];
 
         foreach ($serviceMap as $ids) {
             foreach ((array) $ids as $id) {

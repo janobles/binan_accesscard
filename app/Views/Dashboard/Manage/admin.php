@@ -19,6 +19,8 @@ $searchTerm = $searchTerm ?? '';
 $searchFilters = $searchFilters ?? [];
 $auditActionOptions = $auditActionOptions ?? [];
 $sectorOptions = $familyFormViewData['sectorOptions'] ?? [];
+$showLookupNav = in_array($currentRole, ['Admin', 'Developer'], true);
+$lookupsActive = str_contains((string) current_url(), 'admin/lookups') ? 'active' : '';
 $hasSearchFilters = $searchTerm !== '' || array_filter($searchFilters, static fn ($value): bool => trim((string) $value) !== '') !== [];
 $canCreateFamily = $canCreateFamily ?? false;
 $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
@@ -61,6 +63,7 @@ $formatAuditUser = static function (array $audit): string {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= esc($pageTitle) ?> - Binan Access Card MIS</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <?= admin_dashboard_style_links() ?>
 </head>
 <body>

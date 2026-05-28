@@ -51,9 +51,13 @@
         const submitBtn = q(form, '#submitFamilyBtn');
         const resetBtn = q(form, '#resetFamilyBtn');
         const addMemberBtn = q(form, '#addMemberBtn');
+        const addMemberStickyBtn = q(form, '#addMemberStickyBtn');
         const memberRows = q(form, '#memberRows');
         const memberTemplate = q(root, '#memberTemplate');
         const memberRowsEmpty = q(form, '#memberRowsEmpty');
+        const choiceModal = q(root, '#familyChoiceModal');
+        const choiceModalTitle = q(root, '#familyChoiceModalLabel');
+        const choiceModalBody = q(root, '#familyChoiceModalBody');
         const stepInfo = q(uiRoot, '.wizard-header-left small');
         const entryTypeInput = q(form, '#entryType');
         const entryButtons = qa(form, '[data-entry-type]');
@@ -85,7 +89,12 @@
         const initialFamilyData = parseJsonNode(initialFamilyDataNode, {});
         const state = {
             selectedSectorIds: normalizeIds(parseJsonNode(selectedSectorIdsNode, initialFamilyData.selectedSectorIds || [])),
+            activeChoiceSource: null,
+            activeChoicePlaceholder: null,
         };
+        const bootstrapChoiceModal = choiceModal && window.bootstrap && window.bootstrap.Modal
+            ? new window.bootstrap.Modal(choiceModal)
+            : null;
 
         function totalSteps() {
             return entryType === 'member' ? 2 : 3;
@@ -216,6 +225,114 @@
             if (typeof ui.setMemberRowsEmptyState === 'function') {
                 ui.setMemberRowsEmptyState(memberRows, memberRowsEmpty);
             }
+
+            initMemberChoiceFields(memberRows);
+        }
+
+        function choiceLabel(input) {
+            const dataLabel = String(input.dataset.label || '').trim();
+
+            if (dataLabel !== '') {
+                return dataLabel;
+            }
+
+            const label = input.closest('label');
+
+            return label ? String(label.textContent || '').trim() : '';
+        }
+
+        function updateChoiceSummary(field) {
+            if (!field) {
+                return;
+            }
+
+            const summary = q(field, '[data-choice-summary]');
+            const emptyText = String(field.dataset.choiceEmpty || 'No options selected');
+            const labels = qa(field, 'input[type="checkbox"]:checked')
+                .map(choiceLabel)
+                .filter(function (label) {
+                    return label !== '';
+                });
+
+            if (!summary) {
+                return;
+            }
+
+            if (labels.length === 0) {
+                summary.textContent = emptyText;
+                summary.classList.add('text-muted');
+
+                return;
+            }
+
+            summary.textContent = labels.length <= 2 ? labels.join(', ') : labels.length + ' selected';
+            summary.title = labels.join(', ');
+            summary.classList.remove('text-muted');
+        }
+
+        function returnChoiceSource() {
+            if (!state.activeChoiceSource || !state.activeChoicePlaceholder) {
+                return;
+            }
+
+            state.activeChoicePlaceholder.replaceWith(state.activeChoiceSource);
+            state.activeChoiceSource.classList.add('family-form-hidden');
+            updateChoiceSummary(state.activeChoiceSource.closest('[data-choice-field]'));
+            state.activeChoiceSource = null;
+            state.activeChoicePlaceholder = null;
+        }
+
+        function openChoiceModal(field) {
+            const source = q(field, '[data-choice-source]');
+
+            if (!source || !choiceModalBody) {
+                return;
+            }
+
+            returnChoiceSource();
+
+            const placeholder = document.createComment('family choice source');
+
+            source.replaceWith(placeholder);
+            source.classList.remove('family-form-hidden');
+            choiceModalBody.appendChild(source);
+            state.activeChoiceSource = source;
+            state.activeChoicePlaceholder = placeholder;
+
+            if (choiceModalTitle) {
+                choiceModalTitle.textContent = String(field.dataset.choiceTitle || 'Select options');
+            }
+
+            if (bootstrapChoiceModal) {
+                bootstrapChoiceModal.show();
+            }
+        }
+
+        function initMemberChoiceFields(scope) {
+            const choiceScope = scope instanceof Element ? scope : form;
+
+            qa(choiceScope, '[data-choice-field]').forEach(function (field) {
+                if (field.dataset.choiceInitialized !== '1') {
+                    field.dataset.choiceInitialized = '1';
+                    const openBtn = q(field, '[data-choice-open]');
+
+                    if (openBtn) {
+                        openBtn.addEventListener('click', function () {
+                            openChoiceModal(field);
+                        });
+                    }
+
+                    field.addEventListener('change', function (event) {
+                        const target = event.target;
+
+                        if (target instanceof HTMLInputElement && target.type === 'checkbox') {
+                            updateChoiceSummary(field);
+                        }
+                    });
+                }
+
+                updateChoiceSummary(field);
+            });
         }
 
         if (nextBtn) {
@@ -234,6 +351,16 @@
             addMemberBtn.addEventListener('click', function () {
                 createMemberRow();
             });
+        }
+
+        if (addMemberStickyBtn) {
+            addMemberStickyBtn.addEventListener('click', function () {
+                createMemberRow();
+            });
+        }
+
+        if (choiceModal) {
+            choiceModal.addEventListener('hidden.bs.modal', returnChoiceSource);
         }
 
         entryButtons.forEach(function (button) {
@@ -352,6 +479,7 @@
                         ui.setMemberRowsEmptyState(memberRows, memberRowsEmpty);
                     }
 
+                    initMemberChoiceFields(memberRows);
                     updateHeadSummary();
                     setStep(1);
                 }, 0);
@@ -381,6 +509,8 @@
         if (typeof ui.initDropdownChecklists === 'function') {
             ui.initDropdownChecklists(form);
         }
+
+        initMemberChoiceFields(memberRows);
 
         updateHeadSummary();
 

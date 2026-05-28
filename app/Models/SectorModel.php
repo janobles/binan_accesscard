@@ -36,7 +36,7 @@ class SectorModel extends Model
             return [];
         }
 
-        return $this->orderBy('name', 'ASC')->findAll();
+        return $this->orderBy('shortcode', 'ASC')->findAll();
     }
 
     public function getShortcodeOptions(): array
@@ -48,6 +48,19 @@ class SectorModel extends Model
 
         if (! $this->hasTable()) {
             return $fallback;
+        }
+
+        $rows = $this->select('shortcode')
+            ->where('shortcode !=', '')
+            ->orderBy('shortcode', 'ASC')
+            ->findAll();
+        $shortcodes = array_values(array_unique(array_filter(array_map(
+            static fn (array $row): string => strtoupper(trim((string) ($row['shortcode'] ?? ''))),
+            $rows
+        ))));
+
+        if ($shortcodes !== []) {
+            return array_values(array_unique(array_merge($shortcodes, $fallback)));
         }
 
         $field = $this->db
@@ -64,6 +77,21 @@ class SectorModel extends Model
         return $fallback;
     }
 
+    public function saveSectorRecord(array $data, ?int $sectorId = null): bool
+    {
+        if (! $this->hasTable()) {
+            return false;
+        }
+
+        $data['shortcode'] = $this->effectiveShortcode($data, $sectorId);
+
+        if ($sectorId !== null) {
+            return $this->update($sectorId, $data) !== false;
+        }
+
+        return $this->insert($data) !== false;
+    }
+
     public function getSectorCatalog(array $sectorOptions = []): array
     {
         if ($sectorOptions === []) {
@@ -71,27 +99,64 @@ class SectorModel extends Model
         }
 
         $catalog = array_fill_keys(array_keys(FamilyProfilingFormV2::SECTOR_CATEGORIES), []);
+        $catalog['OSCA'] = [];
 
         foreach ($sectorOptions as $sector) {
-            $shortcode = strtoupper(trim((string) ($sector['shortcode'] ?? '')));
+            $shortcode = $this->effectiveShortcode($sector);
 
             if ($shortcode === '') {
                 continue;
             }
 
-            $group = array_key_exists($shortcode, FamilyProfilingFormV2::SECTOR_CATEGORIES)
-                ? $shortcode
-                : 'OTHER';
+            if (str_starts_with($shortcode, 'PWD')) {
+                $group = 'PWD';
+            } elseif (str_starts_with($shortcode, 'SP')) {
+                $group = 'SP';
+            } elseif (str_starts_with($shortcode, 'SC') || str_starts_with($shortcode, 'OSCA') || str_starts_with($shortcode, 'OSWA')) {
+                $group = 'SC';
+            } elseif (str_starts_with($shortcode, 'B')) {
+                $group = 'B';
+            } else {
+                $group = array_key_exists($shortcode, FamilyProfilingFormV2::SECTOR_CATEGORIES)
+                    ? $shortcode
+                    : 'OTHER';
+            }
 
             $catalog[$group][] = [
                 'category_label' => FamilyProfilingFormV2::SECTOR_CATEGORIES[$group] ?? 'Other Sectors',
                 'sectorID' => (string) ($sector['sectorID'] ?? ''),
-                'shortcode' => (string) ($sector['shortcode'] ?? ''),
+                'shortcode' => $shortcode,
                 'name' => (string) ($sector['name'] ?? ''),
                 'description' => (string) ($sector['description'] ?? ''),
             ];
         }
 
         return $catalog;
+    }
+
+    private function effectiveShortcode(array $sector, ?int $sectorId = null): string
+    {
+        $shortcode = strtoupper(trim((string) ($sector['shortcode'] ?? '')));
+
+        if ($shortcode !== '') {
+            return $shortcode;
+        }
+
+        if ($sectorId !== null) {
+            $existing = $this->find($sectorId);
+            $existingShortcode = strtoupper(trim((string) ($existing['shortcode'] ?? '')));
+
+            if ($existingShortcode !== '') {
+                return $existingShortcode;
+            }
+        }
+
+        $name = strtoupper(trim((string) ($sector['name'] ?? '')));
+
+        if (str_contains($name, 'REGISTERED OSCA')) {
+            return 'SC1';
+        }
+
+        return '';
     }
 }

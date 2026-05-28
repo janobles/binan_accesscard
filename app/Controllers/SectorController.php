@@ -75,6 +75,15 @@ class SectorController extends BaseController
             'description' => trim((string) $this->request->getPost('description')),
         ];
 
+        if ($data['shortcode'] === '' && $sectorId !== null) {
+            $existingSector = $model->find($sectorId);
+            $data['shortcode'] = strtoupper(trim((string) ($existingSector['shortcode'] ?? '')));
+        }
+
+        if ($data['shortcode'] === '' && str_contains(strtoupper($data['name']), 'REGISTERED OSCA')) {
+            $data['shortcode'] = 'OSCA1';
+        }
+
         if ($data['shortcode'] === '' || $data['name'] === '') {
             return $this->redirectAdmin('admin/sectors', 'error', 'Shortcode and name are required.');
         }
@@ -101,5 +110,17 @@ class SectorController extends BaseController
         return $db->table('member')
             ->where(SectorIds::containsCondition($sectorId, 'sectorID'), null, false)
             ->countAllResults() > 0;
+    }
+
+    private function ensureAdminAccess(): ?RedirectResponse
+    {
+        $guard = RoleAccess::requireRole(['Developer', 'Admin']);
+
+        return $guard instanceof RedirectResponse ? $guard : null;
+    }
+
+    private function redirectAdmin(string $path, string $type, string $message): RedirectResponse
+    {
+        return redirect()->to(site_url($path))->with($type, $message);
     }
 }

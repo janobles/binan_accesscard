@@ -134,12 +134,12 @@ class Home extends BaseController
             return $this->renderAdminFamilyPartial();
         }
 
-        return $this->renderAdminPage('family-entry');
+        return (new DashboardPageBuilder($this->request))->renderAdminPage('family-entry');
     }
 
     public function adminManageRecords(): string|RedirectResponse
     {
-        return $this->renderAdminPage('family-manage');
+        return (new DashboardPageBuilder($this->request))->renderAdminPage('family-manage');
     }
 
     public function adminAuditTrails(): string|RedirectResponse
@@ -185,12 +185,12 @@ class Home extends BaseController
             return $this->renderEmployeeFamilyPartial();
         }
 
-        return $this->renderEmployeePage('family-entry');
+        return (new DashboardPageBuilder($this->request))->renderEmployeePage('family-entry');
     }
 
     public function employeeManageRecords(): string|RedirectResponse
     {
-        return $this->renderEmployeePage('family-manage');
+        return (new DashboardPageBuilder($this->request))->renderEmployeePage('family-manage');
     }
 
     public function employeeActivity(): string|RedirectResponse

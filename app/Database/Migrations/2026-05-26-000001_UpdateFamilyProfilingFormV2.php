@@ -47,8 +47,8 @@ class UpdateFamilyProfilingFormV2 extends Migration
             }
 
             $this->db->table('sector')
-                ->where('sectorID >', 9)
-                ->where("shortcode REGEXP '^(PWD|SP|OSCA)[0-9]+'", null, false)
+                ->where('sectorID >', 24)
+                ->where("shortcode REGEXP '^(SC|PWD|SP|B|OSCA)[0-9]+'", null, false)
                 ->delete();
         }
 

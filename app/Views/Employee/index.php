@@ -193,7 +193,7 @@ $formatAuditMember = static function (array $audit): string {
             <?php endif; ?>
 
             <?php if ($activePage === 'family-manage'): ?>
-                <?= view('Dashboard/family-list', $recordListData) ?>
+                <?= view('Dashboard/familyform/family-list', $recordListData) ?>
             <?php endif; ?>
 
             <?php if ($activePage === 'activity'): ?>

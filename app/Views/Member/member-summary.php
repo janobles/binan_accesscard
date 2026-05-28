@@ -2,9 +2,8 @@
 // Member summary placeholders are filled by the family form script.
 ?>
 <div class="form-section family-step-panel" data-step="3">
-    <div class="section-title">
+    <div class="section-title member-section-title">
         <span>Members</span>
-        <button type="button" class="btn btn-sm btn-primary" id="addMemberBtn">Add Member</button>
     </div>
     <div class="member-row mb-3" id="headOfFamilySummary">
         <div class="member-row-header">
@@ -27,4 +26,7 @@
     </div>
     <div id="memberRows" class="member-stack"></div>
     <p class="text-muted mb-0" id="memberRowsEmpty">No members added yet. Click Add Member.</p>
+    <div class="member-sticky-add">
+        <button type="button" class="btn btn-primary w-100" id="addMemberStickyBtn">Add Member</button>
+    </div>
 </div>

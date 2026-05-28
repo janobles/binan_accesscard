@@ -10,7 +10,7 @@ use App\Models\MemberServiceModel;
 use App\Models\SearchModel;
 use App\Models\SectorModel;
 use App\Models\ServiceModel;
-use App\Models\UserModel;
+use App\Models\Auth\UserModel;
 use App\Models\ViewLayoutModel;
 use CodeIgniter\HTTP\RedirectResponse;
 use Config\IdleTimeout;

@@ -108,6 +108,7 @@ class DashboardPageBuilder
             'familyFormViewData' => $familyFormViewData,
             'recentFamilies'     => $recentFamilies,
             'recentAudits'       => $recentAudits,
+            'recordListData'      => $memberListData,
             'memberListData'      => $memberListData,
             'sectors'            => $this->fetchVisibleSectors($sectorModel),
             'services'           => $this->fetchVisibleServices($serviceModel),
@@ -259,6 +260,9 @@ class DashboardPageBuilder
         $hasSearchFilters = $this->hasSearchFilters($searchFilters);
         $userId = (int) session()->get('user_id');
         $familyFormViewData = (new FamilyFormOptionsModel())->getViewData();
+        $recordListData = $activePage === 'family-manage'
+            ? $this->buildEmployeeRecordListData()
+            : [];
         $recentFamilies = $activePage === 'dashboard' && ($searchTerm !== '' || $hasSearchFilters)
             ? $searchModel->families($searchTerm, $searchFilters, 25)
             : $dashboardModel->recentFamilies(10);
@@ -278,6 +282,7 @@ class DashboardPageBuilder
             ],
             'canCreateFamily'    => true,
             'familyFormViewData' => $familyFormViewData,
+            'recordListData'     => $recordListData,
             'recentFamilies'     => $recentFamilies,
             'myAudits'           => $myAudits,
             'stats'              => array_merge(['families' => 0, 'members' => 0, 'sectors' => 0, 'assistance' => 0], $dashboardModel->stats()),
@@ -333,5 +338,31 @@ class DashboardPageBuilder
         }
 
         return false;
+    }
+
+    private function buildEmployeeRecordListData(): array
+    {
+        $keyword = trim((string) $this->request->getGet('q'));
+        $page = max(1, (int) $this->request->getGet('page'));
+        $perPage = 50;
+        $memberModel = new MemberModel();
+        $searchKeyword = $keyword === '' ? null : $keyword;
+        $totalFamilies = $memberModel->countSearchFamilies($searchKeyword, false);
+        $totalPages = max(1, (int) ceil($totalFamilies / $perPage));
+        $page = min($page, $totalPages);
+
+        return [
+            'canRestoreArchived' => false,
+            'families' => $memberModel->searchFamilies($searchKeyword, $perPage, ($page - 1) * $perPage, false),
+            'keyword' => $keyword,
+            'listRoute' => 'employee/manage-records',
+            'page' => $page,
+            'perPage' => $perPage,
+            'routeBase' => 'employee/manage-family',
+            'status' => 'active',
+            'totalFamilies' => $totalFamilies,
+            'totalPages' => $totalPages,
+            'useModalLinks' => false,
+        ];
     }
 }

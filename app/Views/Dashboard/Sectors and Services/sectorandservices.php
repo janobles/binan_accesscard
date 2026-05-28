@@ -5,6 +5,11 @@ $selectedSectorIds        = array_map('intval', array_values(array_filter((array
 $selectedSectorCategories = array_values(array_filter(array_map('strval', (array) ($selectedSectorCategories ?? [])), static fn ($v) => trim($v) !== ''));
 $selectedServiceIds       = array_map('intval', array_values(array_filter((array) ($selectedServiceIds ?? []), static fn ($v) => is_numeric($v))));
 $sectorCatalogJson        = json_encode($sectorCatalog, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?: '{}';
+$sectorCategoryLabels     = \App\Support\FamilyProfilingFormV2::SECTOR_CATEGORIES;
+$sectorCategoryKeys       = array_values(array_filter(
+    array_keys($sectorCatalog),
+    static fn (string $key): bool => ($sectorCatalog[$key] ?? []) !== []
+));
 ?>
 
 <div class="form-section family-step-panel" data-step="2">
@@ -12,18 +17,15 @@ $sectorCatalogJson        = json_encode($sectorCatalog, JSON_HEX_TAG | JSON_HEX_
         <div class="col-sm-5 col-md-4 col-lg-3">
             <label class="form-label" for="sectorCategoryList">Sector</label>
             <div class="border rounded p-2 bg-white" id="sectorCategoryList" role="group" aria-label="Sector categories" data-sector-catalog="<?= esc($sectorCatalogJson, 'attr') ?>">
-                <label class="form-check mb-1">
-                    <input class="form-check-input" type="checkbox" name="sector_categories[]" value="PWD" <?= in_array('PWD', $selectedSectorCategories, true) ? 'checked' : '' ?>>
-                    <span class="form-check-label">PWD</span>
-                </label>
-                <label class="form-check mb-1">
-                    <input class="form-check-input" type="checkbox" name="sector_categories[]" value="SP" <?= in_array('SP', $selectedSectorCategories, true) ? 'checked' : '' ?>>
-                    <span class="form-check-label">SP</span>
-                </label>
-                <label class="form-check mb-0">
-                    <input class="form-check-input" type="checkbox" name="sector_categories[]" value="OSCA" <?= in_array('OSCA', $selectedSectorCategories, true) ? 'checked' : '' ?>>
-                    <span class="form-check-label">OSCA</span>
-                </label>
+                <?php foreach ($sectorCategoryKeys as $index => $categoryKey): ?>
+                    <label class="form-check <?= $index === array_key_last($sectorCategoryKeys) ? 'mb-0' : 'mb-1' ?>">
+                        <input class="form-check-input" type="checkbox" name="sector_categories[]" value="<?= esc((string) $categoryKey) ?>" <?= in_array((string) $categoryKey, $selectedSectorCategories, true) ? 'checked' : '' ?>>
+                        <span class="form-check-label"><?= esc((string) $categoryKey) ?></span>
+                    </label>
+                <?php endforeach; ?>
+                <?php if ($sectorCategoryKeys === []): ?>
+                    <small class="text-muted">No sectors available.</small>
+                <?php endif; ?>
             </div>
         </div>
         <div class="col-sm-7 col-md-8 col-lg-9">

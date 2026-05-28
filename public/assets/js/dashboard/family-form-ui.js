@@ -350,7 +350,31 @@
             return;
         }
 
+        const groupedOptions = {};
+        const groupOrder = [];
+
         options.forEach(function (item) {
+            const group = String(item.group || '').trim();
+            const groupLabel = group;
+
+            if (!Object.prototype.hasOwnProperty.call(groupedOptions, groupLabel)) {
+                groupedOptions[groupLabel] = [];
+                groupOrder.push(groupLabel);
+            }
+
+            groupedOptions[groupLabel].push(item);
+        });
+
+        groupOrder.forEach(function (groupLabel) {
+            const section = document.createElement('div');
+            section.className = 'sector-name-section';
+
+            const heading = document.createElement('div');
+            heading.className = 'sector-name-section-title';
+            heading.textContent = groupLabel;
+            section.appendChild(heading);
+
+            groupedOptions[groupLabel].forEach(function (item) {
             const option = item.option || {};
             const group = String(item.group || '').trim();
             const wrapper = document.createElement('label');
@@ -369,21 +393,19 @@
             const labelText = document.createElement('span');
             labelText.className = 'form-check-label sector-name-label';
 
-            const groupBadge = document.createElement('span');
-            groupBadge.className = 'sector-group-badge sector-group-' + group.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-            groupBadge.textContent = String(option.category_label || group);
-
             const sectorText = document.createElement('span');
             sectorText.className = 'sector-name-text';
-            sectorText.textContent = String(option.description || '').trim() !== ''
-                ? String(option.name || '') + ' - ' + String(option.description || '').trim()
-                : String(option.name || '');
+            sectorText.textContent = String(option.shortcode || '').trim() !== ''
+                ? String(option.shortcode || '').trim() + ' - ' + String(option.name || '').trim()
+                : String(option.name || '').trim();
 
-            labelText.appendChild(groupBadge);
             labelText.appendChild(sectorText);
             wrapper.appendChild(checkbox);
             wrapper.appendChild(labelText);
-            sectorNameList.appendChild(wrapper);
+                section.appendChild(wrapper);
+            });
+
+            sectorNameList.appendChild(section);
         });
 
         updateSectorSelection(sectorNameList, sectorIdInput);

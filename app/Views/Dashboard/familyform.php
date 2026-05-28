@@ -40,7 +40,7 @@ extract(family_form_view_data(get_defined_vars()), EXTR_OVERWRITE);
                 'selectedServiceIds' => $headServiceIds,
             ]) ?>
 
-            <?= view('Dashboard/familyform/member-summary') ?>
+            <?= view('Member/member-summary') ?>
 
             <script type="application/json" id="initialFamilyData"><?= json_encode($initialFamilyData, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?></script>
 
@@ -56,4 +56,19 @@ extract(family_form_view_data(get_defined_vars()), EXTR_OVERWRITE);
     </div>
 </div>
 
-<?= view('Dashboard/familyform/member-template', $fieldViewData) ?>
+<div class="modal fade" id="familyChoiceModal" tabindex="-1" aria-labelledby="familyChoiceModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="familyChoiceModalLabel">Select options</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="familyChoiceModalBody"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Done</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<?= view('Member/member-template', $fieldViewData) ?>

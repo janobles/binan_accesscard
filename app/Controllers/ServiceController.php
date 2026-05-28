@@ -104,4 +104,16 @@ class ServiceController extends BaseController
             ->where('serviceID', $serviceId)
             ->countAllResults() > 0;
     }
+
+    private function ensureAdminAccess(): ?RedirectResponse
+    {
+        $guard = RoleAccess::requireRole(['Developer', 'Admin']);
+
+        return $guard instanceof RedirectResponse ? $guard : null;
+    }
+
+    private function redirectAdmin(string $path, string $type, string $message): RedirectResponse
+    {
+        return redirect()->to(site_url($path))->with($type, $message);
+    }
 }

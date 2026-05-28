@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Support;
+namespace App\Libraries;
 
 /**
  * Normalizes sector IDs stored as arrays, JSON lists, or comma-separated text.

@@ -13,7 +13,8 @@ class ServiceModel extends Model
     protected $table = 'services';
     protected $primaryKey = 'serviceID';
     protected $returnType = 'array';
-    protected $allowedFields = ['category', 'name', 'description'];
+    protected $allowedFields = ['serviceID', 'category', 'name', 'description'];
+    protected $useAutoIncrement = false;
     protected $useTimestamps = false;
 
     public function hasTable(): bool
@@ -21,9 +22,20 @@ class ServiceModel extends Model
         return $this->db->tableExists($this->table);
     }
 
+    public function nextServiceId(): int
+    {
+        if (! $this->hasTable()) {
+            return 1;
+        }
+
+        $row = $this->selectMax($this->primaryKey, 'max_id')->first();
+
+        return ((int) ($row['max_id'] ?? 0)) + 1;
+    }
+
     public function getNameMapByIds(array $serviceIds): array
     {
-        $serviceIds = array_values(array_filter(array_map(static fn ($id): int => (int) $id, $serviceIds), static fn (int $id): bool => $id > 0));
+        $serviceIds = $this->naturalIds($serviceIds) ?? [];
 
         if ($serviceIds === []) {
             return [];
@@ -38,7 +50,7 @@ class ServiceModel extends Model
         foreach ($rows as $row) {
             $id = (int) ($row['serviceID'] ?? 0);
 
-            if ($id <= 0) {
+            if ($id < 0) {
                 continue;
             }
 
@@ -108,10 +120,11 @@ class ServiceModel extends Model
 
     public function idsExist(array $serviceIds): bool
     {
-        $serviceIds = array_values(array_unique(array_filter(
-            array_map(static fn (mixed $id): int => (int) $id, $serviceIds),
-            static fn (int $id): bool => $id > 0
-        )));
+        $serviceIds = $this->naturalIds($serviceIds);
+
+        if ($serviceIds === null) {
+            return false;
+        }
 
         if ($serviceIds === []) {
             return true;
@@ -122,6 +135,27 @@ class ServiceModel extends Model
         }
 
         return $this->whereIn($this->primaryKey, $serviceIds)->countAllResults() === count($serviceIds);
+    }
+
+    private function naturalIds(array $serviceIds): ?array
+    {
+        $normalizedIds = [];
+
+        foreach ($serviceIds as $serviceId) {
+            if (is_array($serviceId)) {
+                return null;
+            }
+
+            $serviceId = trim((string) $serviceId);
+
+            if ($serviceId === '' || ! ctype_digit($serviceId)) {
+                return null;
+            }
+
+            $normalizedIds[] = (int) $serviceId;
+        }
+
+        return array_values(array_unique($normalizedIds));
     }
 }
 

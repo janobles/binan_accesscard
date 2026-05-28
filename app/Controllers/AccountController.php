@@ -3,7 +3,7 @@
 namespace App\Controllers;
 
 use App\Models\AuditTrailsModel;
-use App\Models\UserModel;
+use App\Models\Auth\UserModel;
 use CodeIgniter\HTTP\RedirectResponse;
 use Throwable;
 
@@ -51,13 +51,13 @@ class AccountController extends BaseController
         $role     = (string) $this->request->getPost('role');
         $username = trim((string) $this->request->getPost('username'));
 
+        $userModel = new UserModel();
+
         try {
-            // UserModel handles password hashing and database compatibility details.
-            $userId = (new UserModel())->createAccount(
+            $userId = $userModel->createAccount(
                 $username,
                 (string) $this->request->getPost('password'),
-                $role,
-                (int) session()->get('member_id') ?: null
+                $role
             );
         } catch (Throwable $exception) {
             log_message('error', $exception->getMessage());
@@ -75,10 +75,55 @@ class AccountController extends BaseController
 
         $displayRole = $role === 'User' ? 'Employee' : $role;
 
-        // Keep a traceable audit record for administrative account changes.
-        $this->audit('ACCOUNT_CREATED', 'Created ' . $displayRole . ' account "' . $username . '" (#' . $userId . ').');
+        $this->audit(
+            'ACCOUNT_CREATED',
+            'Created ' . $displayRole . ' account "' . $username . '" (#' . $userId . ').'
+        );
 
         return redirect()->to(site_url('admin/accounts'))->with('success', 'Account created successfully.');
+    }
+
+    public function updateStatus(): RedirectResponse
+    {
+        $guard = $this->requireDeveloper();
+
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        $rules = [
+            'userID' => 'required|is_natural_no_zero',
+            'status' => 'required|in_list[Enable,Disabled]',
+        ];
+
+        if (! $this->validate($rules)) {
+            return redirect()->back()
+                ->with('error', implode(' ', $this->validator->getErrors()));
+        }
+
+        $userId = (int) $this->request->getPost('userID');
+        $enabled = (string) $this->request->getPost('status') === 'Enable';
+        $userModel = new UserModel();
+        $account = $userModel->find($userId);
+
+        if ($account === null || ! in_array((string) ($account['role'] ?? ''), ['Admin', 'User'], true)) {
+            return redirect()->back()->with('error', 'Account could not be found.');
+        }
+
+        if (! $userModel->updateAccountStatus($userId, $enabled)) {
+            return redirect()->back()->with('error', 'Account status could not be updated.');
+        }
+
+        $displayRole = (string) ($account['role'] ?? '') === 'User' ? 'Employee' : (string) ($account['role'] ?? '');
+        $statusLabel = $enabled ? 'enabled' : 'disabled';
+
+        $this->audit(
+            'ACCOUNT_STATUS_UPDATED',
+            ucfirst($statusLabel) . ' ' . $displayRole . ' account "' . (string) ($account['username'] ?? '') . '" (#' . $userId . ').'
+        );
+
+        return redirect()->to(site_url('admin/accounts'))
+            ->with('success', 'Account ' . $statusLabel . ' successfully.');
     }
 
     private function requireDeveloper(): ?RedirectResponse
@@ -96,6 +141,26 @@ class AccountController extends BaseController
 
         if ($this->normalizeRole((string) session()->get('role')) !== 'Developer') {
             return redirect()->to(site_url('/'))->with('error', 'Developer access is required.');
+        }
+
+        return null;
+    }
+
+    private function requireAdmin(): ?RedirectResponse
+    {
+        if (! session()->get('is_logged_in')) {
+            return redirect()->to(site_url('/'))->with('error', 'Please login first.');
+        }
+
+        if (! $this->sessionUserExists()) {
+            session()->destroy();
+
+            return redirect()->to(site_url('/'))
+                ->with('error', 'Your session is no longer valid after the database update. Please login again.');
+        }
+
+        if ($this->normalizeRole((string) session()->get('role')) !== 'Admin') {
+            return redirect()->to(site_url('/'))->with('error', 'Admin access is required.');
         }
 
         return null;
@@ -143,7 +208,7 @@ class AccountController extends BaseController
         try {
             $auditModel->logAction(
                 (int) session()->get('user_id'),
-                (int) session()->get('member_id') ?: null,
+                null,
                 $action,
                 $description,
                 $this->request->getIPAddress(),

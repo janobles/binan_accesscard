@@ -17,11 +17,13 @@
     }
 
     .account-form,
-    .account-form-employee {
+    .account-form-employee,
+    .management-create-form {
         grid-template-columns: 1fr;
     }
 
-    .account-action {
+    .account-action,
+    .management-action {
         padding-top: 0;
     }
 

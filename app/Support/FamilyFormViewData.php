@@ -9,39 +9,38 @@ class FamilyFormViewData
 {
     public static function prepare(array $data): array
     {
-        // Keep default form data here so the family form view only renders fields.
-        $formOptions          = array_merge(self::defaultFormOptions(), self::arrayValue($data['formOptions'] ?? []));
-        $sectorOptions        = $data['sectorOptions'] ?? ($formOptions['sectors'] ?? []);
-        $sectorCatalog        = self::arrayValue($data['sectorCatalog'] ?? []);
-        $sexOptions           = $data['sexOptions'] ?? ($formOptions['sexes'] ?? []);
-        $suffixOptions        = $data['suffixOptions'] ?? ($formOptions['suffixes'] ?? []);
-        $civilOptions         = $data['civilOptions'] ?? ($formOptions['civil_statuses'] ?? []);
-        $relationshipOptions  = $data['relationshipOptions'] ?? ($formOptions['relationships'] ?? []);
-        $educationOptions     = $data['educationOptions'] ?? ($formOptions['education_levels'] ?? []);
-        $incomeOptions        = $data['incomeOptions'] ?? ($formOptions['income_ranges'] ?? []);
-        $servicesByCategory   = $data['servicesByCategory'] ?? ($formOptions['services_by_category'] ?? []);
-        $familyHeads          = $data['familyHeads'] ?? ($formOptions['family_heads'] ?? []);
-        $formAction           = $data['formAction'] ?? site_url('families');
-        $submitButtonLabel    = $data['submitButtonLabel'] ?? 'Save Family Data';
-        $familyRecord         = self::arrayValue($data['familyRecord'] ?? []);
-        $existingMembers      = self::arrayValue($data['existingMembers'] ?? []);
-        $headServiceIds       = self::integerList($data['headServiceIds'] ?? ($familyRecord['service_ids'] ?? []));
-        $isEditMode           = $familyRecord !== [];
-        $selectedSectorIds    = SectorIds::normalize($familyRecord['sectorID'] ?? null);
-
-        // The frontend wizard uses this payload to restore edit-mode selections.
+        $formOptions = array_merge(self::defaultFormOptions(), self::arrayValue($data['formOptions'] ?? []));
+        $sectorOptions = $data['sectorOptions'] ?? ($formOptions['sectors'] ?? []);
+        $sectorCatalog = self::arrayValue($data['sectorCatalog'] ?? []);
+        $sexOptions = $data['sexOptions'] ?? ($formOptions['sexes'] ?? []);
+        $suffixOptions = $data['suffixOptions'] ?? ($formOptions['suffixes'] ?? []);
+        $civilOptions = $data['civilOptions'] ?? ($formOptions['civil_statuses'] ?? []);
+        $relationshipOptions = $data['relationshipOptions'] ?? ($formOptions['relationships'] ?? []);
+        $educationOptions = $data['educationOptions'] ?? ($formOptions['education_levels'] ?? []);
+        $jobOptions = $data['jobOptions'] ?? ($formOptions['job_options'] ?? []);
+        $incomeOptions = $data['incomeOptions'] ?? ($formOptions['income_ranges'] ?? []);
+        $servicesByCategory = $data['servicesByCategory'] ?? ($formOptions['services_by_category'] ?? []);
+        $familyHeads = $data['familyHeads'] ?? ($formOptions['family_heads'] ?? []);
+        $formAction = $data['formAction'] ?? site_url('families');
+        $submitButtonLabel = $data['submitButtonLabel'] ?? 'Save Record Data';
+        $familyRecord = self::arrayValue($data['familyRecord'] ?? []);
+        $existingMembers = self::arrayValue($data['existingMembers'] ?? []);
+        $headServiceIds = self::integerList($data['headServiceIds'] ?? ($familyRecord['service_ids'] ?? []));
+        $isEditMode = $familyRecord !== [];
+        $selectedSectorIds = SectorIds::normalize($familyRecord['sectorID'] ?? null);
         $selectedSectorCategories = self::selectedSectorCategories($sectorCatalog, $selectedSectorIds);
-        $initialFamilyData         = [
-            'selectedSectorIds'        => $selectedSectorIds,
+        $initialFamilyData = [
+            'selectedSectorIds' => $selectedSectorIds,
             'selectedSectorCategories' => $selectedSectorCategories,
-            'headServiceIds'           => $headServiceIds,
-            'existingMembers'          => $existingMembers,
+            'headServiceIds' => $headServiceIds,
+            'existingMembers' => $existingMembers,
         ];
-        $fieldViewData             = compact(
+        $fieldViewData = compact(
             'civilOptions',
             'educationOptions',
             'familyRecord',
             'incomeOptions',
+            'jobOptions',
             'relationshipOptions',
             'sectorOptions',
             'servicesByCategory',
@@ -62,6 +61,7 @@ class FamilyFormViewData
             'incomeOptions',
             'initialFamilyData',
             'isEditMode',
+            'jobOptions',
             'relationshipOptions',
             'sectorCatalog',
             'sectorOptions',
@@ -77,15 +77,16 @@ class FamilyFormViewData
     private static function defaultFormOptions(): array
     {
         return [
-            'sectors'              => [],
-            'sexes'                => [],
-            'suffixes'             => [],
-            'civil_statuses'       => [],
-            'relationships'        => [],
-            'education_levels'     => [],
-            'income_ranges'        => [],
+            'sectors' => [],
+            'sexes' => [],
+            'suffixes' => [],
+            'civil_statuses' => [],
+            'relationships' => [],
+            'education_levels' => [],
+            'job_options' => [],
+            'income_ranges' => [],
             'services_by_category' => [],
-            'family_heads'         => [],
+            'family_heads' => [],
         ];
     }
 
@@ -93,7 +94,6 @@ class FamilyFormViewData
     {
         $selectedCategories = [];
 
-        // Match sector IDs back to their category keys for the sector/category controls.
         foreach ($sectorCatalog as $categoryKey => $sectorRows) {
             foreach ((array) $sectorRows as $sectorRow) {
                 if (in_array((int) ($sectorRow['sectorID'] ?? 0), $selectedSectorIds, true)) {

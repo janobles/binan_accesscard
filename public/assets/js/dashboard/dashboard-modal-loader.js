@@ -1,4 +1,4 @@
-// Loads dashboard partials into modals and manages Back/Close modal navigation.
+// Loads dashboard partials into modals and manages Close modal navigation.
 (function (window, $) {
     const modalHistory = [];
 
@@ -28,35 +28,6 @@
 
             if (modalInstance) {
                 modalInstance.hide();
-            }
-        });
-
-        $(document).on('click.dashboardModalBack', '#familyModal .js-family-modal-back', function () {
-            const $modalEl = $('#familyModal');
-            const $body = $('#familyModalBody');
-            const $title = $('#familyModalLabel');
-            const modalInstance = getModalInstance($modalEl);
-            const previous = modalHistory.pop();
-
-            if (!previous) {
-                if (modalInstance) {
-                    modalInstance.hide();
-                }
-
-                return;
-            }
-
-            if ($title.length) {
-                $title.text(previous.title || 'Manage Family');
-            }
-
-            $body.html(cleanBodyMarkup(previous.body));
-            $body.find('script').each(function () {
-                $.globalEval(this.text || this.textContent || this.innerHTML || '');
-            });
-
-            if (typeof previous.onLoaded === 'function') {
-                previous.onLoaded($body[0], previous.body);
             }
         });
 
@@ -126,7 +97,15 @@
                 if (typeof config.onLoaded === 'function') {
                     config.onLoaded($body[0], response);
                 }
-            }).fail(function () {
+            }).fail(function (jqXHR) {
+                if (jqXHR && jqXHR.status === 401) {
+                    const fallbackRedirect = document.body?.dataset?.sessionTimeoutRedirect || 'login';
+                    const redirectUrl = jqXHR.responseJSON?.redirect || fallbackRedirect;
+
+                    window.location.href = redirectUrl;
+                    return;
+                }
+
                 $body.html(config.errorMarkup || '<div class="alert alert-danger mb-0">Unable to load data. Please try again.</div>');
             });
         });

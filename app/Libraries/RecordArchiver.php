@@ -1,22 +1,10 @@
 <?php
 
-namespace App\Controllers\Concerns;
+namespace App\Libraries;
 
-use CodeIgniter\HTTP\RedirectResponse;
-
-trait AdminCrudSupportTrait
+class RecordArchiver
 {
-    private function ensureAdminAccess(): ?RedirectResponse
-    {
-        return $this->requireRole(['Developer', 'Admin']);
-    }
-
-    private function redirectAdmin(string $path, string $type, string $message): RedirectResponse
-    {
-        return redirect()->to(site_url($path))->with($type, $message);
-    }
-
-    private function archiveRecord(string $table, string $primaryKey, int $id): bool
+    public static function archive(string $table, string $primaryKey, int $id): bool
     {
         $db = db_connect();
 

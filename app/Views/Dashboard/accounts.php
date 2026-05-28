@@ -1,6 +1,33 @@
 <?php
-helper('dashboard_view');
-extract(accounts_view_data(get_defined_vars()), EXTR_OVERWRITE);
+$adminAccounts = $adminAccounts ?? [];
+$employeeAccounts = $employeeAccounts ?? [];
+$searchTerm = $searchTerm ?? '';
+$searchFilters = $searchFilters ?? [];
+$hasSearchFilters = $searchTerm !== '' || array_filter($searchFilters, static fn ($value): bool => trim((string) $value) !== '') !== [];
+$formatDate = static function (mixed $value): string {
+    $timestamp = strtotime((string) $value);
+
+    return $timestamp === false ? '' : date('Y-m-d', $timestamp);
+};
+$formatTime = static function (mixed $value): string {
+    $timestamp = strtotime((string) $value);
+
+    return $timestamp === false ? '' : date('h:i A', $timestamp);
+};
+$isAccountActive = static function (mixed $value): bool {
+    if (is_int($value) || is_float($value)) {
+        return (int) $value === 1;
+    }
+
+    $normalized = strtolower(trim((string) $value));
+
+    return in_array($normalized, ['enable', 'enabled', '1', 'true', 'yes', 'on'], true);
+};
+$statusBadge = static function (mixed $value) use ($isAccountActive): string {
+    return $isAccountActive($value)
+        ? '<span class="badge text-bg-success">Enabled</span>'
+        : '<span class="badge text-bg-secondary">Disabled</span>';
+};
 ?>
 
 <div class="panel mb-3">
@@ -82,18 +109,31 @@ extract(accounts_view_data(get_defined_vars()), EXTR_OVERWRITE);
                 <div class="section-title mt-0"><span>Admin Accounts</span></div>
                 <div class="table-responsive">
                     <table class="table table-sm">
-                        <thead><tr><th>Username</th><th>Status</th><th>Date</th><th>Time</th></tr></thead>
+                        <thead><tr><th>Username</th><th>Status</th><th>Date</th><th>Time</th><th class="text-end">Action</th></tr></thead>
                         <tbody>
                             <?php foreach ($adminAccounts as $account): ?>
+                                <?php
+                                $isActive = $isAccountActive($account['isactive'] ?? '');
+                                $nextStatus = $isActive ? 'Disabled' : 'Enable';
+                                $nextAction = $isActive ? 'Disable' : 'Enable';
+                                ?>
                                 <tr>
                                     <td><?= esc((string) ($account['username'] ?? '')) ?></td>
-                                    <td><?= esc((string) ($account['isactive'] ?? '')) ?></td>
+                                    <td><?= $statusBadge($account['isactive'] ?? '') ?></td>
                                     <td><?= esc($formatDate($account['dt_created'] ?? '')) ?></td>
                                     <td><?= esc($formatTime($account['dt_created'] ?? '')) ?></td>
+                                    <td class="text-end">
+                                        <form class="d-inline js-account-status-form" method="post" action="<?= site_url('developer/accounts/status') ?>" data-confirm-message="<?= esc($nextAction . ' admin account "' . (string) ($account['username'] ?? '') . '"?', 'attr') ?>">
+                                            <?= csrf_field() ?>
+                                            <input type="hidden" name="userID" value="<?= esc((string) ($account['userID'] ?? '')) ?>">
+                                            <input type="hidden" name="status" value="<?= esc($nextStatus) ?>">
+                                            <button type="submit" class="btn btn-sm <?= $isActive ? 'btn-outline-danger' : 'btn-outline-success' ?>"><?= esc($nextAction) ?></button>
+                                        </form>
+                                    </td>
                                 </tr>
                             <?php endforeach; ?>
                             <?php if ($adminAccounts === []): ?>
-                                <tr><td colspan="4" class="text-center text-muted"><?= $hasSearchFilters ? 'No matching admin accounts found.' : 'No admin accounts found.' ?></td></tr>
+                                <tr><td colspan="5" class="text-center text-muted"><?= $hasSearchFilters ? 'No matching admin accounts found.' : 'No admin accounts found.' ?></td></tr>
                             <?php endif; ?>
                         </tbody>
                     </table>
@@ -105,18 +145,31 @@ extract(accounts_view_data(get_defined_vars()), EXTR_OVERWRITE);
                 <div class="section-title mt-0"><span>Employee Accounts</span></div>
                 <div class="table-responsive">
                     <table class="table table-sm">
-                        <thead><tr><th>Username</th><th>Status</th><th>Date</th><th>Time</th></tr></thead>
+                        <thead><tr><th>Username</th><th>Status</th><th>Date</th><th>Time</th><th class="text-end">Action</th></tr></thead>
                         <tbody>
                             <?php foreach ($employeeAccounts as $account): ?>
+                                <?php
+                                $isActive = $isAccountActive($account['isactive'] ?? '');
+                                $nextStatus = $isActive ? 'Disabled' : 'Enable';
+                                $nextAction = $isActive ? 'Disable' : 'Enable';
+                                ?>
                                 <tr>
                                     <td><?= esc((string) ($account['username'] ?? '')) ?></td>
-                                    <td><?= esc((string) ($account['isactive'] ?? '')) ?></td>
+                                    <td><?= $statusBadge($account['isactive'] ?? '') ?></td>
                                     <td><?= esc($formatDate($account['dt_created'] ?? '')) ?></td>
                                     <td><?= esc($formatTime($account['dt_created'] ?? '')) ?></td>
+                                    <td class="text-end">
+                                        <form class="d-inline js-account-status-form" method="post" action="<?= site_url('developer/accounts/status') ?>" data-confirm-message="<?= esc($nextAction . ' employee account "' . (string) ($account['username'] ?? '') . '"?', 'attr') ?>">
+                                            <?= csrf_field() ?>
+                                            <input type="hidden" name="userID" value="<?= esc((string) ($account['userID'] ?? '')) ?>">
+                                            <input type="hidden" name="status" value="<?= esc($nextStatus) ?>">
+                                            <button type="submit" class="btn btn-sm <?= $isActive ? 'btn-outline-danger' : 'btn-outline-success' ?>"><?= esc($nextAction) ?></button>
+                                        </form>
+                                    </td>
                                 </tr>
                             <?php endforeach; ?>
                             <?php if ($employeeAccounts === []): ?>
-                                <tr><td colspan="4" class="text-center text-muted"><?= $hasSearchFilters ? 'No matching employee accounts found.' : 'No employee accounts found.' ?></td></tr>
+                                <tr><td colspan="5" class="text-center text-muted"><?= $hasSearchFilters ? 'No matching employee accounts found.' : 'No employee accounts found.' ?></td></tr>
                             <?php endif; ?>
                         </tbody>
                     </table>
@@ -125,3 +178,22 @@ extract(accounts_view_data(get_defined_vars()), EXTR_OVERWRITE);
         </div>
     </div>
 </div>
+
+<script>
+(function () {
+    document.querySelectorAll('.js-account-status-form').forEach(function (form) {
+        if (form.dataset.statusFormBound === '1') {
+            return;
+        }
+
+        form.dataset.statusFormBound = '1';
+        form.addEventListener('submit', function (event) {
+            const message = form.dataset.confirmMessage || 'Update this account status?';
+
+            if (!window.confirm(message)) {
+                event.preventDefault();
+            }
+        });
+    });
+})();
+</script>

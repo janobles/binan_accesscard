@@ -9,29 +9,29 @@ class DashboardViewData
 {
     public static function admin(array $data): array
     {
-        // Normalize the admin shell data once so templates can stay render-focused.
-        $user                 = self::arrayValue($data['user'] ?? []);
-        $username             = $user['username'] ?? 'Admin';
-        $activePage           = (string) ($data['activePage'] ?? 'dashboard');
-        $pageTitle            = (string) ($data['pageTitle'] ?? 'Dashboard');
-        $modeLabel            = (string) ($data['modeLabel'] ?? 'Admin Console');
-        $canManageAccounts    = (bool) ($data['canManageAccounts'] ?? false);
-        $navActive            = self::arrayValue($data['navActive'] ?? []);
-        $stats                = array_merge(self::defaultStats(), self::arrayValue($data['stats'] ?? []));
-        $recentFamilies       = self::arrayValue($data['recentFamilies'] ?? []);
-        $recentAudits         = self::arrayValue($data['recentAudits'] ?? []);
-        $adminAccounts        = self::arrayValue($data['adminAccounts'] ?? []);
-        $employeeAccounts     = self::arrayValue($data['employeeAccounts'] ?? []);
-        $familyFormViewData   = self::arrayValue($data['familyFormViewData'] ?? []);
-        $searchTerm           = (string) ($data['searchTerm'] ?? '');
-        $searchFilters        = self::arrayValue($data['searchFilters'] ?? []);
-        $auditActionOptions   = self::arrayValue($data['auditActionOptions'] ?? []);
-        $sectorOptions        = self::arrayValue($familyFormViewData['sectorOptions'] ?? []);
-        $hasSearchFilters     = self::hasSearchFilters($searchTerm, $searchFilters);
-        $canCreateFamily      = (bool) ($data['canCreateFamily'] ?? false);
-        $idleTimeoutSeconds   = (int) ($data['idleTimeoutSeconds'] ?? 900);
-        $formatDate           = self::formatDateCallback();
-        $formatTime           = self::formatTimeCallback();
+        $user = self::arrayValue($data['user'] ?? []);
+        $username = $user['username'] ?? 'Admin';
+        $activePage = (string) ($data['activePage'] ?? 'dashboard');
+        $pageTitle = (string) ($data['pageTitle'] ?? 'Dashboard');
+        $modeLabel = (string) ($data['modeLabel'] ?? 'Admin Console');
+        $canManageAccounts = (bool) ($data['canManageAccounts'] ?? false);
+        $navActive = self::arrayValue($data['navActive'] ?? []);
+        $stats = array_merge(self::defaultStats(), self::arrayValue($data['stats'] ?? []));
+        $recentFamilies = self::arrayValue($data['recentFamilies'] ?? []);
+        $recentAudits = self::arrayValue($data['recentAudits'] ?? []);
+        $adminAccounts = self::arrayValue($data['adminAccounts'] ?? []);
+        $employeeAccounts = self::arrayValue($data['employeeAccounts'] ?? []);
+        $familyFormViewData = self::arrayValue($data['familyFormViewData'] ?? []);
+        $sectorShortcodeOptions = self::stringList($data['sectorShortcodeOptions'] ?? []);
+        $searchTerm = (string) ($data['searchTerm'] ?? '');
+        $searchFilters = self::arrayValue($data['searchFilters'] ?? []);
+        $auditActionOptions = self::arrayValue($data['auditActionOptions'] ?? []);
+        $sectorOptions = self::arrayValue($familyFormViewData['sectorOptions'] ?? []);
+        $hasSearchFilters = self::hasSearchFilters($searchTerm, $searchFilters);
+        $canCreateFamily = (bool) ($data['canCreateFamily'] ?? false);
+        $idleTimeoutSeconds = (int) ($data['idleTimeoutSeconds'] ?? 900);
+        $formatDate = self::formatDateCallback();
+        $formatTime = self::formatTimeCallback();
 
         return compact(
             'activePage',
@@ -52,6 +52,7 @@ class DashboardViewData
             'recentFamilies',
             'searchFilters',
             'searchTerm',
+            'sectorShortcodeOptions',
             'sectorOptions',
             'stats',
             'user',
@@ -61,25 +62,24 @@ class DashboardViewData
 
     public static function employee(array $data): array
     {
-        // Employee pages share most dashboard data but expose a smaller action set.
-        $user                 = self::arrayValue($data['user'] ?? []);
-        $username             = $user['username'] ?? 'Employee';
-        $activePage           = (string) ($data['activePage'] ?? 'dashboard');
-        $pageTitle            = (string) ($data['pageTitle'] ?? ($activePage === 'dashboard' ? 'Workspace' : ucwords(str_replace('-', ' ', $activePage))));
-        $navActive            = self::arrayValue($data['navActive'] ?? []);
-        $stats                = array_merge(self::defaultStats(), self::arrayValue($data['stats'] ?? []));
-        $recentFamilies       = self::arrayValue($data['recentFamilies'] ?? []);
-        $myAudits             = self::arrayValue($data['myAudits'] ?? []);
-        $familyFormViewData   = self::arrayValue($data['familyFormViewData'] ?? []);
-        $searchTerm           = (string) ($data['searchTerm'] ?? '');
-        $searchFilters        = self::arrayValue($data['searchFilters'] ?? []);
-        $auditActionOptions   = self::arrayValue($data['auditActionOptions'] ?? []);
-        $sectorOptions        = self::arrayValue($familyFormViewData['sectorOptions'] ?? []);
-        $hasSearchFilters     = self::hasSearchFilters($searchTerm, $searchFilters);
-        $canCreateFamily      = (bool) ($data['canCreateFamily'] ?? false);
-        $idleTimeoutSeconds   = (int) ($data['idleTimeoutSeconds'] ?? 900);
-        $formatDate           = self::formatDateCallback();
-        $formatTime           = self::formatTimeCallback();
+        $user = self::arrayValue($data['user'] ?? []);
+        $username = $user['username'] ?? 'Employee';
+        $activePage = (string) ($data['activePage'] ?? 'dashboard');
+        $pageTitle = (string) ($data['pageTitle'] ?? ($activePage === 'dashboard' ? 'Workspace' : ucwords(str_replace('-', ' ', $activePage))));
+        $navActive = self::arrayValue($data['navActive'] ?? []);
+        $stats = array_merge(self::defaultStats(), self::arrayValue($data['stats'] ?? []));
+        $recentFamilies = self::arrayValue($data['recentFamilies'] ?? []);
+        $myAudits = self::arrayValue($data['myAudits'] ?? []);
+        $familyFormViewData = self::arrayValue($data['familyFormViewData'] ?? []);
+        $searchTerm = (string) ($data['searchTerm'] ?? '');
+        $searchFilters = self::arrayValue($data['searchFilters'] ?? []);
+        $auditActionOptions = self::arrayValue($data['auditActionOptions'] ?? []);
+        $sectorOptions = self::arrayValue($familyFormViewData['sectorOptions'] ?? []);
+        $hasSearchFilters = self::hasSearchFilters($searchTerm, $searchFilters);
+        $canCreateFamily = (bool) ($data['canCreateFamily'] ?? false);
+        $idleTimeoutSeconds = (int) ($data['idleTimeoutSeconds'] ?? 900);
+        $formatDate = self::formatDateCallback();
+        $formatTime = self::formatTimeCallback();
 
         return compact(
             'activePage',
@@ -105,13 +105,13 @@ class DashboardViewData
 
     public static function accounts(array $data): array
     {
-        $adminAccounts    = self::arrayValue($data['adminAccounts'] ?? []);
+        $adminAccounts = self::arrayValue($data['adminAccounts'] ?? []);
         $employeeAccounts = self::arrayValue($data['employeeAccounts'] ?? []);
-        $searchTerm       = (string) ($data['searchTerm'] ?? '');
-        $searchFilters    = self::arrayValue($data['searchFilters'] ?? []);
+        $searchTerm = (string) ($data['searchTerm'] ?? '');
+        $searchFilters = self::arrayValue($data['searchFilters'] ?? []);
         $hasSearchFilters = self::hasSearchFilters($searchTerm, $searchFilters);
-        $formatDate       = self::formatDateCallback();
-        $formatTime       = self::formatTimeCallback();
+        $formatDate = self::formatDateCallback();
+        $formatTime = self::formatTimeCallback();
 
         return compact(
             'adminAccounts',
@@ -126,13 +126,13 @@ class DashboardViewData
 
     public static function auditTrails(array $data): array
     {
-        $recentAudits       = self::arrayValue($data['recentAudits'] ?? []);
-        $searchTerm         = (string) ($data['searchTerm'] ?? '');
-        $searchFilters      = self::arrayValue($data['searchFilters'] ?? []);
+        $recentAudits = self::arrayValue($data['recentAudits'] ?? []);
+        $searchTerm = (string) ($data['searchTerm'] ?? '');
+        $searchFilters = self::arrayValue($data['searchFilters'] ?? []);
         $auditActionOptions = self::arrayValue($data['auditActionOptions'] ?? []);
-        $hasSearchFilters   = self::hasSearchFilters($searchTerm, $searchFilters);
-        $formatDate         = self::formatDateCallback();
-        $formatTime         = self::formatTimeCallback();
+        $hasSearchFilters = self::hasSearchFilters($searchTerm, $searchFilters);
+        $formatDate = self::formatDateCallback();
+        $formatTime = self::formatTimeCallback();
 
         return compact(
             'auditActionOptions',
@@ -147,9 +147,9 @@ class DashboardViewData
 
     public static function familyList(array $data): array
     {
-        $families   = self::arrayValue($data['families'] ?? []);
-        $keyword    = (string) ($data['keyword'] ?? '');
-        $routeBase  = (string) ($data['routeBase'] ?? 'admin/manage-family');
+        $families = self::arrayValue($data['families'] ?? []);
+        $keyword = (string) ($data['keyword'] ?? '');
+        $routeBase = (string) ($data['routeBase'] ?? 'admin/manage-family');
         $formatDate = self::formatDateCallback();
         $formatTime = self::formatTimeCallback();
 
@@ -164,9 +164,9 @@ class DashboardViewData
 
     public static function familyDetails(array $data): array
     {
-        $head           = self::arrayValue($data['head'] ?? []);
-        $members        = self::arrayValue($data['members'] ?? []);
-        $serviceMap     = self::arrayValue($data['serviceMap'] ?? []);
+        $head = self::arrayValue($data['head'] ?? []);
+        $members = self::arrayValue($data['members'] ?? []);
+        $serviceMap = self::arrayValue($data['serviceMap'] ?? []);
         $serviceNameMap = self::arrayValue($data['serviceNameMap'] ?? []);
 
         return compact(
@@ -179,13 +179,12 @@ class DashboardViewData
 
     public static function sectorAndServices(array $data): array
     {
-        // The rendered view and the sector picker script both need this normalized shape.
-        $servicesByCategory       = self::arrayValue($data['servicesByCategory'] ?? []);
-        $sectorCatalog            = self::arrayValue($data['sectorCatalog'] ?? []);
-        $selectedSectorIds        = self::integerList($data['selectedSectorIds'] ?? []);
+        $servicesByCategory = self::arrayValue($data['servicesByCategory'] ?? []);
+        $sectorCatalog = self::arrayValue($data['sectorCatalog'] ?? []);
+        $selectedSectorIds = self::integerList($data['selectedSectorIds'] ?? []);
         $selectedSectorCategories = self::stringList($data['selectedSectorCategories'] ?? []);
-        $selectedServiceIds       = self::integerList($data['selectedServiceIds'] ?? []);
-        $sectorCatalogJson        = json_encode($sectorCatalog, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?: '{}';
+        $selectedServiceIds = self::integerList($data['selectedServiceIds'] ?? []);
+        $sectorCatalogJson = json_encode($sectorCatalog, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?: '{}';
 
         return compact(
             'sectorCatalog',
@@ -200,8 +199,9 @@ class DashboardViewData
     public static function sectorManagement(array $data): array
     {
         $sectors = self::arrayValue($data['sectors'] ?? []);
+        $sectorShortcodeOptions = self::stringList($data['sectorShortcodeOptions'] ?? []);
 
-        return compact('sectors');
+        return compact('sectorShortcodeOptions', 'sectors');
     }
 
     public static function serviceManagement(array $data): array
@@ -214,16 +214,15 @@ class DashboardViewData
     private static function defaultStats(): array
     {
         return [
-            'families'   => 0,
-            'members'    => 0,
-            'sectors'    => 0,
+            'families' => 0,
+            'members' => 0,
+            'sectors' => 0,
             'assistance' => 0,
         ];
     }
 
     private static function hasSearchFilters(string $searchTerm, array $searchFilters): bool
     {
-        // Query text and any populated filter field both count as an active search.
         if ($searchTerm !== '') {
             return true;
         }
@@ -239,7 +238,6 @@ class DashboardViewData
 
     private static function formatDateCallback(): callable
     {
-        // Views receive callbacks so table rendering can stay compact and consistent.
         return static function (mixed $value): string {
             $timestamp = strtotime((string) $value);
 

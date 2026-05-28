@@ -6,7 +6,7 @@
     transform: translate(-50%, -50%) !important;
     margin: 0;
     max-width: none;
-    width: min(1120px, 92vw);
+    width: min(1240px, 94vw);
     height: min(760px, 86vh);
 }
 
@@ -23,6 +23,11 @@
 .floating-family-modal .modal-header {
     background: #f4f8fc;
     border-bottom: 1px solid #d5dfeb;
+}
+
+.floating-family-modal .modal-footer {
+    background: #f4f8fc;
+    border-top: 1px solid #d5dfeb;
 }
 
 .floating-family-modal .modal-title {

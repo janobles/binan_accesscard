@@ -2,10 +2,11 @@
 
 namespace App\Controllers;
 
-use App\Controllers\Concerns\HomeDashboardPagesTrait;
-use App\Controllers\Concerns\HomeRoleAccessTrait;
+use App\Libraries\DashboardPageBuilder;
+use App\Libraries\RoleAccess;
+use App\Libraries\SessionAuditLogger;
+use App\Models\Auth\UserModel;
 use App\Models\FamilyFormOptionsModel;
-use App\Models\UserModel;
 use CodeIgniter\HTTP\RedirectResponse;
 
 /**
@@ -19,14 +20,25 @@ class Home extends BaseController
     public function index(): string|RedirectResponse
     {
         if (session()->get('is_logged_in')) {
+            if (! $this->hasValidLoginSession()) {
+                $this->clearLoginSession();
+
+                return redirect()->to(site_url('login'))
+                    ->with('error', 'Your session expired. Please login again.');
+            }
+
             return $this->redirectByRole((string) session()->get('role'));
         }
 
         return view('Login/login');
     }
 
-    public function login(): RedirectResponse
+    public function login(): string|RedirectResponse
     {
+        if ($this->request->getMethod() === 'GET') {
+            return $this->index();
+        }
+
         $username = trim((string) $this->request->getPost('username'));
         $password = (string) $this->request->getPost('password');
 
@@ -36,6 +48,13 @@ class Home extends BaseController
             return redirect()->back()
                 ->withInput()
                 ->with('error', 'Invalid username or password.');
+        }
+
+        // Show a specific message when valid credentials belong to a disabled account.
+        if (($user['login_error'] ?? '') === 'disabled') {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'This account is disabled and cannot be used.');
         }
 
         $role = $this->normalizeRole((string) ($user['role'] ?? ''));
@@ -50,11 +69,13 @@ class Home extends BaseController
         session()->set([
             'is_logged_in' => true,
             'user_id' => (int) $user['userID'],
-            'member_id' => (int) ($user['memberID'] ?? 0),
+            'member_id' => 0,
             'username' => $user['username'],
             'role' => $role,
             'idle_last_activity' => time(),
         ]);
+
+        SessionAuditLogger::logLogin($user, $role, $this->request);
 
         return $this->redirectByRole($role);
     }
@@ -62,15 +83,17 @@ class Home extends BaseController
     public function logout(): RedirectResponse
     {
         if ($this->request->getGet('timeout') === '1') {
+            SessionAuditLogger::logLogoutFromSession($this->request, true);
             $this->clearLoginSession();
 
-            return redirect()->to(site_url('/'))
+            return redirect()->to(site_url('login'))
                 ->with('error', 'You were logged out due to inactivity.');
         }
 
-        session()->destroy();
+        SessionAuditLogger::logLogoutFromSession($this->request);
+        $this->clearLoginSession();
 
-        return redirect()->to(site_url('/'));
+        return redirect()->to(site_url('login'));
     }
 
     public function keepAlive()
@@ -93,7 +116,7 @@ class Home extends BaseController
 
     public function adminDashboard(): string|RedirectResponse
     {
-        return $this->renderAdminPage('dashboard');
+        return (new DashboardPageBuilder($this->request))->renderAdminPage('dashboard');
     }
 
     public function adminAccounts(): string|RedirectResponse
@@ -102,7 +125,7 @@ class Home extends BaseController
             return $this->renderAdminAccountsPartial();
         }
 
-        return $this->renderAdminPage('accounts');
+        return (new DashboardPageBuilder($this->request))->renderAdminPage('accounts');
     }
 
     public function adminFamilyEntry(): string|RedirectResponse
@@ -111,7 +134,12 @@ class Home extends BaseController
             return $this->renderAdminFamilyPartial();
         }
 
-        return $this->renderAdminPage('family-entry');
+        return (new DashboardPageBuilder($this->request))->renderAdminPage('family-entry');
+    }
+
+    public function adminManageRecords(): string|RedirectResponse
+    {
+        return (new DashboardPageBuilder($this->request))->renderAdminPage('family-manage');
     }
 
     public function adminAuditTrails(): string|RedirectResponse
@@ -120,12 +148,35 @@ class Home extends BaseController
             return $this->renderAdminAuditPartial();
         }
 
-        return $this->renderAdminPage('audit-trails');
+        return (new DashboardPageBuilder($this->request))->renderAdminPage('audit-trails');
+    }
+
+    public function adminSectors(): string|RedirectResponse
+    {
+        if ($this->isPartialRequest()) {
+            return $this->renderAdminSectorsPartial();
+        }
+
+        return (new DashboardPageBuilder($this->request))->renderAdminPage('sectors');
+    }
+
+    public function adminServices(): string|RedirectResponse
+    {
+        if ($this->isPartialRequest()) {
+            return $this->renderAdminServicesPartial();
+        }
+
+        return (new DashboardPageBuilder($this->request))->renderAdminPage('services');
+    }
+
+    public function adminManageMembers(): string|RedirectResponse
+    {
+        return (new DashboardPageBuilder($this->request))->renderAdminPage('family-manage');
     }
 
     public function employee(): string|RedirectResponse
     {
-        return $this->renderEmployeePage('dashboard');
+        return (new DashboardPageBuilder($this->request))->renderEmployeePage('dashboard');
     }
 
     public function employeeFamilyEntry(): string|RedirectResponse
@@ -134,12 +185,17 @@ class Home extends BaseController
             return $this->renderEmployeeFamilyPartial();
         }
 
-        return $this->renderEmployeePage('family-entry');
+        return (new DashboardPageBuilder($this->request))->renderEmployeePage('family-entry');
+    }
+
+    public function employeeManageRecords(): string|RedirectResponse
+    {
+        return (new DashboardPageBuilder($this->request))->renderEmployeePage('family-manage');
     }
 
     public function employeeActivity(): string|RedirectResponse
     {
-        return $this->renderEmployeePage('activity');
+        return (new DashboardPageBuilder($this->request))->renderEmployeePage('activity');
     }
 
     private function isPartialRequest(): bool
@@ -149,7 +205,7 @@ class Home extends BaseController
 
     private function guardAdminPartialAccess(): ?RedirectResponse
     {
-        return $this->requireRole(['Developer', 'Admin']);
+        return RoleAccess::requireRole(['Developer', 'Admin']);
     }
 
     private function renderAdminAccountsPartial(): string|RedirectResponse
@@ -160,13 +216,15 @@ class Home extends BaseController
             return $guard;
         }
 
-        if ($this->normalizeRole((string) session()->get('role')) !== 'Developer') {
-            return '<div class="alert alert-danger mb-0">Developer access is required for account management.</div>';
+        $currentRole = $this->normalizeRole((string) session()->get('role'));
+
+        if (! in_array($currentRole, ['Developer', 'Admin'], true)) {
+            return '<div class="alert alert-danger mb-0">Developer or Admin access is required for account management.</div>';
         }
 
-        $viewData = $this->buildAdminViewData('accounts');
+        $viewData = (new DashboardPageBuilder($this->request))->buildAdminViewData('accounts');
 
-        return view('Dashboard/accounts', [
+        return view('Dashboard/Manage/accounts', [
             'adminAccounts' => $viewData['adminAccounts'] ?? [],
             'employeeAccounts' => $viewData['employeeAccounts'] ?? [],
             'searchTerm' => $viewData['searchTerm'] ?? '',
@@ -182,7 +240,7 @@ class Home extends BaseController
             return $guard;
         }
 
-        return view('Dashboard/familyform', array_merge(
+        return view('Dashboard/familyform/familyform', array_merge(
             (new FamilyFormOptionsModel())->getViewData(),
             ['canCreateFamily' => true]
         ));
@@ -196,9 +254,9 @@ class Home extends BaseController
             return $guard;
         }
 
-        $viewData = $this->buildAdminViewData('audit-trails');
+        $viewData = (new DashboardPageBuilder($this->request))->buildAdminViewData('audit-trails');
 
-        return view('Dashboard/audit-trails', [
+        return view('Dashboard/Manage/audit-trails', [
             'recentAudits' => $viewData['recentAudits'] ?? [],
             'searchTerm' => $viewData['searchTerm'] ?? '',
             'searchFilters' => $viewData['searchFilters'] ?? [],
@@ -214,10 +272,11 @@ class Home extends BaseController
             return $guard;
         }
 
-        $viewData = $this->buildAdminViewData('sectors');
+        $viewData = (new DashboardPageBuilder($this->request))->buildAdminViewData('sectors');
 
         return view('Dashboard/Sectors and Services/sector', [
             'sectors' => $viewData['sectors'] ?? [],
+            'sectorShortcodeOptions' => $viewData['sectorShortcodeOptions'] ?? [],
         ]);
     }
 
@@ -229,7 +288,7 @@ class Home extends BaseController
             return $guard;
         }
 
-        $viewData = $this->buildAdminViewData('services');
+        $viewData = (new DashboardPageBuilder($this->request))->buildAdminViewData('services');
 
         return view('Dashboard/Sectors and Services/services', [
             'services' => $viewData['services'] ?? [],
@@ -238,20 +297,16 @@ class Home extends BaseController
 
     private function renderEmployeeFamilyPartial(): string|RedirectResponse
     {
-        $guard = $this->requireRole(['Developer', 'Admin', 'User']);
+        $guard = RoleAccess::requireRole(['Developer', 'Admin', 'User']);
 
         if ($guard instanceof RedirectResponse) {
             return $guard;
         }
 
-        return view('Dashboard/familyform', array_merge(
+        return view('Dashboard/familyform/familyform', array_merge(
             (new FamilyFormOptionsModel())->getViewData(),
             ['canCreateFamily' => true]
         ));
     }
 
-    private function clearLoginSession(): void
-    {
-        session()->destroy();
-    }
 }

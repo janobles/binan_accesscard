@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Models;
+namespace App\Models\Auth;
 
 use CodeIgniter\Model;
 
@@ -17,7 +17,6 @@ class UserModel extends Model
         'password',
         'role',
         'isactive',
-        'memberID',
     ];
     protected $useTimestamps = false;
 
@@ -69,6 +68,21 @@ class UserModel extends Model
             ->findAll();
     }
 
+    public function updateAccountStatus(int $userId, bool $enabled): bool
+    {
+        if (! $this->db->tableExists($this->table)) {
+            return false;
+        }
+
+        $account = $this->select('userID, role')->find($userId);
+
+        if ($account === null || ! in_array((string) ($account['role'] ?? ''), ['Admin', 'User'], true)) {
+            return false;
+        }
+
+        return $this->update($userId, ['isactive' => $this->statusValue($enabled)]) !== false;
+    }
+
     // Enforces the Enable/Disabled enum while allowing legacy numeric rows.
     private function isUserActive(mixed $value): bool
     {
@@ -90,7 +104,7 @@ class UserModel extends Model
     }
 
     // Creates staff accounts for AccountController::create().
-    public function createAccount(string $username, string $password, string $role, ?int $memberId = null): int|false
+    public function createAccount(string $username, string $password, string $role): int|false
     {
         $data = [
             'username' => $username,
@@ -98,10 +112,6 @@ class UserModel extends Model
             'role' => $role,
             'isactive' => $this->activeValue(),
         ];
-
-        if ($this->hasUserField('memberID')) {
-            $data['memberID'] = $this->memberIdValue($memberId);
-        }
 
         $inserted = $this->insert($data);
 
@@ -114,6 +124,11 @@ class UserModel extends Model
 
     // Keeps insert compatible with either enum or numeric legacy types.
     private function activeValue(): string|int
+    {
+        return $this->statusValue(true);
+    }
+
+    private function statusValue(bool $enabled): string|int
     {
         $fieldData = $this->db->getFieldData($this->table);
 
@@ -128,66 +143,13 @@ class UserModel extends Model
                 || strpos($type, 'text') !== false
                 || strpos($type, 'enum') !== false;
 
-            return $isStringType ? 'Enable' : 1;
-        }
-
-        return 'Enable';
-    }
-
-    private function memberIdValue(?int $memberId): ?int
-    {
-        if ($this->isMemberIdNullable()) {
-            return null;
-        }
-
-        if ($memberId !== null && $memberId > 0 && $this->memberExists($memberId)) {
-            return $memberId;
-        }
-
-        return $this->firstMemberId();
-    }
-
-    private function isMemberIdNullable(): bool
-    {
-        foreach ($this->db->getFieldData($this->table) as $field) {
-            if ($field->name === 'memberID') {
-                return (bool) ($field->nullable ?? false);
+            if ($isStringType) {
+                return $enabled ? 'Enable' : 'Disabled';
             }
+
+            return $enabled ? 1 : 0;
         }
 
-        return true;
-    }
-
-    private function hasUserField(string $fieldName): bool
-    {
-        return $this->db->tableExists($this->table)
-            && $this->db->fieldExists($fieldName, $this->table);
-    }
-
-    private function memberExists(int $memberId): bool
-    {
-        if (! $this->db->tableExists('member')) {
-            return false;
-        }
-
-        return $this->db->table('member')
-            ->where('memberID', $memberId)
-            ->countAllResults() > 0;
-    }
-
-    private function firstMemberId(): ?int
-    {
-        if (! $this->db->tableExists('member')) {
-            return null;
-        }
-
-        $member = $this->db->table('member')
-            ->select('memberID')
-            ->orderBy('memberID', 'ASC')
-            ->limit(1)
-            ->get()
-            ->getRowArray();
-
-        return isset($member['memberID']) ? (int) $member['memberID'] : null;
+        return $enabled ? 'Enable' : 'Disabled';
     }
 }

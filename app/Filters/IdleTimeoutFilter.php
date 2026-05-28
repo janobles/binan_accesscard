@@ -2,6 +2,7 @@
 
 namespace App\Filters;
 
+use App\Libraries\SessionAuditLogger;
 use CodeIgniter\Filters\FilterInterface;
 use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
@@ -24,6 +25,7 @@ class IdleTimeoutFilter implements FilterInterface
         $lastActivity = (int) ($session->get('idle_last_activity') ?? time());
 
         if ((time() - $lastActivity) >= $timeoutSeconds) {
+            SessionAuditLogger::logLogoutFromSession($request, true);
             $this->clearLoginSession();
 
             if ($request->isAJAX()) {

@@ -1,68 +1,127 @@
 <?php
-helper('dashboard_view');
-extract(family_details_view_data(get_defined_vars()), EXTR_OVERWRITE);
+$head = $head ?? [];
+$members = $members ?? [];
+$serviceMap = $serviceMap ?? [];
+$serviceNameMap = $serviceNameMap ?? [];
+
+$fullName = static function (array $person): string {
+    $name = trim((string) (($person['firstname'] ?? '') . ' ' . ($person['middlename'] ?? '') . ' ' . ($person['lastname'] ?? '') . ' ' . ($person['suffix'] ?? '')));
+
+    return $name !== '' ? $name : '-';
+};
+$display = static fn (mixed $value): string => trim((string) $value) !== '' ? (string) $value : '-';
+$formatDate = static function (mixed $value): string {
+    $timestamp = strtotime((string) $value);
+
+    return $timestamp === false ? '-' : date('Y-m-d', $timestamp);
+};
+$formatTime = static function (mixed $value): string {
+    $timestamp = strtotime((string) $value);
+
+    return $timestamp === false ? '-' : date('h:i A', $timestamp);
+};
+$serviceNames = static function (array $person) use ($serviceMap, $serviceNameMap): array {
+    $memberId = (int) ($person['memberID'] ?? 0);
+    $names = [];
+
+    foreach (($serviceMap[$memberId] ?? []) as $serviceId) {
+        $serviceId = (int) $serviceId;
+        $names[] = (string) ($serviceNameMap[$serviceId] ?? ('Service #' . $serviceId));
+    }
+
+    return $names;
+};
+$detailItem = static function (string $label, mixed $value) use ($display): string {
+    return '<div class="family-detail-item"><span>' . esc($label) . '</span><strong>' . esc($display($value)) . '</strong></div>';
+};
+$fullAddress = static function (array $person): string {
+    $address = trim((string) ($person['address'] ?? ''));
+    $barangay = trim((string) ($person['barangay'] ?? ''));
+
+    if ($address !== '' && $barangay !== '' && ! str_contains(strtolower($address), strtolower($barangay))) {
+        return $address . ', ' . $barangay;
+    }
+
+    return trim($address . ($address === '' && $barangay !== '' ? $barangay : ''));
+};
+$renderServices = static function (array $names): string {
+    if ($names === []) {
+        return '<span class="text-muted">No services availed.</span>';
+    }
+
+    $items = array_map(static fn (string $name): string => '<span class="family-service-chip">' . esc($name) . '</span>', $names);
+
+    return implode('', $items);
+};
 ?>
 
-<div class="panel mb-3">
-    <div class="section-title mt-0"><span>Family Details</span></div>
-
-    <div class="member-row mb-3 p-3">
-        <h6 class="mb-3">Head of Family</h6>
-        <div class="row g-2">
-            <div class="col-md-4"><small><strong>Name:</strong> <?= esc(trim((string) (($head['firstname'] ?? '') . ' ' . ($head['middlename'] ?? '') . ' ' . ($head['lastname'] ?? '') . ' ' . ($head['suffix'] ?? '')))) ?></small></div>
-            <div class="col-md-4"><small><strong>Birthday:</strong> <?= esc((string) ($head['birthday'] ?? '-')) ?></small></div>
-            <div class="col-md-4"><small><strong>Sex:</strong> <?= esc((string) ($head['sex'] ?? '-')) ?></small></div>
-            <div class="col-md-4"><small><strong>Civil status:</strong> <?= esc((string) ($head['civilstatus'] ?? '-')) ?></small></div>
-            <div class="col-md-4"><small><strong>Contact:</strong> <?= esc((string) ($head['contactnumber'] ?? '-')) ?></small></div>
-            <div class="col-md-4"><small><strong>Education:</strong> <?= esc((string) ($head['education'] ?? '-')) ?></small></div>
-            <div class="col-md-4"><small><strong>Job:</strong> <?= esc((string) ($head['job'] ?? '-')) ?></small></div>
-            <div class="col-md-4"><small><strong>Monthly income:</strong> <?= esc((string) ($head['Salary'] ?? '-')) ?></small></div>
-            <div class="col-md-4"><small><strong>Sector:</strong> <?= esc((string) ($head['sector_name'] ?? '-')) ?></small></div>
-            <div class="col-12">
-                <small><strong>Services availed:</strong></small>
-                <ul class="mb-0">
-                    <?php foreach (($serviceMap[(int) ($head['memberID'] ?? 0)] ?? []) as $serviceId): ?>
-                        <li><?= esc((string) ($serviceNameMap[(int) $serviceId] ?? ('Service #' . (int) $serviceId))) ?></li>
-                    <?php endforeach; ?>
-                    <?php if (($serviceMap[(int) ($head['memberID'] ?? 0)] ?? []) === []): ?>
-                        <li class="text-muted">No services availed.</li>
-                    <?php endif; ?>
-                </ul>
-            </div>
+<div class="family-detail">
+    <div class="family-detail-hero">
+        <div>
+            <span class="family-detail-kicker">Record Head</span>
+            <h2><?= esc($fullName($head)) ?></h2>
+            <p><?= esc($display($head['sector_name'] ?? '')) ?></p>
+        </div>
+        <div class="family-detail-date">
+            <span>Created</span>
+            <strong><?= esc($formatDate($head['dt_created'] ?? '')) ?></strong>
+            <small><?= esc($formatTime($head['dt_created'] ?? '')) ?></small>
         </div>
     </div>
 
-    <div class="member-row p-3">
-        <h6 class="mb-3">Family Members</h6>
-        <?php foreach ($members as $member): ?>
-            <?php $memberId = (int) ($member['memberID'] ?? 0); ?>
-            <div class="border rounded p-2 mb-2 bg-light">
-                <div class="row g-2">
-                    <div class="col-md-4"><small><strong>Name:</strong> <?= esc(trim((string) (($member['firstname'] ?? '') . ' ' . ($member['middlename'] ?? '') . ' ' . ($member['lastname'] ?? '') . ' ' . ($member['suffix'] ?? '')))) ?></small></div>
-                    <div class="col-md-4"><small><strong>Relationship:</strong> <?= esc((string) ($member['relationship'] ?? '-')) ?></small></div>
-                    <div class="col-md-4"><small><strong>Sector:</strong> <?= esc((string) ($member['sector_name'] ?? '-')) ?></small></div>
-                    <div class="col-md-4"><small><strong>Birthday:</strong> <?= esc((string) ($member['birthday'] ?? '-')) ?></small></div>
-                    <div class="col-md-4"><small><strong>Sex:</strong> <?= esc((string) ($member['sex'] ?? '-')) ?></small></div>
-                    <div class="col-md-4"><small><strong>Civil status:</strong> <?= esc((string) ($member['civilstatus'] ?? '-')) ?></small></div>
-                    <div class="col-md-4"><small><strong>Education:</strong> <?= esc((string) ($member['education'] ?? '-')) ?></small></div>
-                    <div class="col-md-4"><small><strong>Job:</strong> <?= esc((string) ($member['job'] ?? '-')) ?></small></div>
-                    <div class="col-md-4"><small><strong>Contact:</strong> <?= esc((string) ($member['contactnumber'] ?? '-')) ?></small></div>
-                    <div class="col-12">
-                        <small><strong>Services availed:</strong></small>
-                        <ul class="mb-0">
-                            <?php foreach (($serviceMap[$memberId] ?? []) as $serviceId): ?>
-                                <li><?= esc((string) ($serviceNameMap[(int) $serviceId] ?? ('Service #' . (int) $serviceId))) ?></li>
-                            <?php endforeach; ?>
-                            <?php if (($serviceMap[$memberId] ?? []) === []): ?>
-                                <li class="text-muted">No services availed.</li>
-                            <?php endif; ?>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        <?php endforeach; ?>
+    <section class="family-detail-section">
+        <div class="family-detail-section-title">Profile</div>
+        <div class="family-detail-grid">
+            <?= $detailItem('Date of birth', $head['birthday'] ?? '-') ?>
+            <?= $detailItem('Gender', $head['sex'] ?? '-') ?>
+            <?= $detailItem('Civil status', $head['civilstatus'] ?? '-') ?>
+            <?= $detailItem('Contact number', $head['contactnumber'] ?? '-') ?>
+            <?= $detailItem('Religion', $head['religion'] ?? '-') ?>
+            <?= $detailItem('Education', $head['education'] ?? '-') ?>
+            <?= $detailItem('Job', $head['job'] ?? '-') ?>
+            <?= $detailItem('Monthly income', $head['Salary'] ?? '-') ?>
+            <?= $detailItem('Address', $fullAddress($head)) ?>
+            <?= $detailItem('Last updated', ($head['dt_updated'] ?? '') !== '' ? $formatDate($head['dt_updated'] ?? '') . ' ' . $formatTime($head['dt_updated'] ?? '') : '-') ?>
+        </div>
+        <div class="family-service-list mt-3">
+            <span class="family-service-label">Services and programs availed</span>
+            <div><?= $renderServices($serviceNames($head)) ?></div>
+        </div>
+    </section>
+
+    <section class="family-detail-section">
+        <div class="family-detail-section-title">Members</div>
         <?php if ($members === []): ?>
-            <p class="text-muted mb-0">No family members found.</p>
+            <p class="text-muted mb-0">No members found.</p>
         <?php endif; ?>
-    </div>
+
+        <div class="family-member-list">
+            <?php foreach ($members as $member): ?>
+                <article class="family-member-item">
+                    <div class="family-member-heading">
+                        <div>
+                            <strong><?= esc($fullName($member)) ?></strong>
+                            <span><?= esc($display($member['relationship'] ?? 'Member')) ?></span>
+                        </div>
+                        <small><?= esc($display($member['sector_name'] ?? '')) ?></small>
+                    </div>
+                    <div class="family-detail-grid is-compact">
+                        <?= $detailItem('Date of birth', $member['birthday'] ?? '-') ?>
+                        <?= $detailItem('Gender', $member['sex'] ?? '-') ?>
+                        <?= $detailItem('Civil status', $member['civilstatus'] ?? '-') ?>
+                        <?= $detailItem('Contact number', $member['contactnumber'] ?? '-') ?>
+                        <?= $detailItem('Religion', $member['religion'] ?? '-') ?>
+                        <?= $detailItem('Education', $member['education'] ?? '-') ?>
+                        <?= $detailItem('Job', $member['job'] ?? '-') ?>
+                        <?= $detailItem('Monthly income', $member['Salary'] ?? '-') ?>
+                        <?= $detailItem('Created', ($member['dt_created'] ?? '') !== '' ? $formatDate($member['dt_created'] ?? '') . ' ' . $formatTime($member['dt_created'] ?? '') : '-') ?>
+                    </div>
+                    <div class="family-service-list">
+                        <span class="family-service-label">Services and programs availed</span>
+                        <div><?= $renderServices($serviceNames($member)) ?></div>
+                    </div>
+                </article>
+            <?php endforeach; ?>
+        </div>
+    </section>
 </div>

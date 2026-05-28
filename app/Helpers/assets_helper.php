@@ -19,7 +19,6 @@ if (! function_exists('admin_dashboard_style_links')) {
             'assets/css/admin-components.css',
             'assets/css/admin-modal.css',
             'assets/css/admin-responsive.css',
-            'assets/css/dashboard/service-management.css',
         ];
 
         $links = array_map(static fn (string $path): string => versioned_css_link($path), $styles);

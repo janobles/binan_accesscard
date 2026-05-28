@@ -10,7 +10,7 @@ use App\Models\MemberServiceModel;
 use App\Models\SearchModel;
 use App\Models\SectorModel;
 use App\Models\ServiceModel;
-use App\Models\UserModel;
+use App\Models\Auth\UserModel;
 use App\Models\ViewLayoutModel;
 use CodeIgniter\HTTP\RedirectResponse;
 use Config\IdleTimeout;
@@ -45,18 +45,19 @@ trait HomeDashboardPagesTrait
         $searchFilters = $this->searchFilters();
         $hasSearchFilters = $this->hasSearchFilters($searchFilters);
         $isDeveloper = $this->normalizeRole((string) session()->get('role')) === 'Developer';
+        $userModel = new UserModel();
         $users = $isDeveloper && $activePage === 'accounts'
             ? $searchModel->staffAccounts($searchTerm, $searchFilters)
-            : [];
-        $userModel = new UserModel();
+            : $userModel->getStaffAccounts();
         $memberModel = new MemberModel();
         $sectorModel = new SectorModel();
         $serviceModel = new ServiceModel();
         $memberServiceModel = new MemberServiceModel();
-        $auditModel = new AuditTrailsModel();
-        $users = $userModel->getStaffAccounts();
 
         $familyFormViewData = (new FamilyFormOptionsModel())->getViewData();
+        $recordListData = $activePage === 'family-manage'
+            ? $this->buildRecordListData(false)
+            : [];
         $recentFamilies = $activePage === 'dashboard' && ($searchTerm !== '' || $hasSearchFilters)
             ? $searchModel->families($searchTerm, $searchFilters, 25)
             : $dashboardModel->recentFamilies(10);
@@ -82,7 +83,9 @@ trait HomeDashboardPagesTrait
             'adminAccounts' => array_values(array_filter($users, static fn ($account) => $account['role'] === 'Admin')),
             'employeeAccounts' => array_values(array_filter($users, static fn ($account) => $account['role'] === 'User')),
             'familyFormViewData' => $familyFormViewData,
+            'recordListData' => $recordListData,
             'sectors' => $this->fetchVisibleSectors($sectorModel),
+            'sectorShortcodeOptions' => $sectorModel->getShortcodeOptions(),
             'services' => $this->fetchVisibleServices($serviceModel),
             'recentFamilies' => $recentFamilies,
             'recentAudits' => $recentAudits,
@@ -91,6 +94,7 @@ trait HomeDashboardPagesTrait
             'auditActionOptions' => $searchModel->auditActions(),
             'stats' => $dashboardModel->stats(),
             'canCreateFamily' => true,
+            'idleTimeoutSeconds' => (new IdleTimeout())->seconds,
         ];
     }
 
@@ -100,23 +104,9 @@ trait HomeDashboardPagesTrait
             return [];
         }
 
-        $db = $sectorModel->db;
-        $builder = $db->table('sector');
-
-        if ($db->fieldExists('isactive', 'sector')) {
-            $builder->where('isactive', 1);
-        } elseif ($db->fieldExists('status', 'sector')) {
-            $builder->where('LOWER(status) <>', 'archived');
-        } elseif ($db->fieldExists('archived_at', 'sector')) {
-            $builder->where('archived_at IS NULL');
-        } elseif ($db->fieldExists('deleted_at', 'sector')) {
-            $builder->where('deleted_at IS NULL');
-        }
-
-        return $builder
+        return $sectorModel
             ->orderBy('sectorID', 'ASC')
-            ->get()
-            ->getResultArray();
+            ->findAll();
     }
 
     private function fetchVisibleServices(ServiceModel $serviceModel): array
@@ -125,23 +115,9 @@ trait HomeDashboardPagesTrait
             return [];
         }
 
-        $db = $serviceModel->db;
-        $builder = $db->table('services');
-
-        if ($db->fieldExists('isactive', 'services')) {
-            $builder->where('isactive', 1);
-        } elseif ($db->fieldExists('status', 'services')) {
-            $builder->where('LOWER(status) <>', 'archived');
-        } elseif ($db->fieldExists('archived_at', 'services')) {
-            $builder->where('archived_at IS NULL');
-        } elseif ($db->fieldExists('deleted_at', 'services')) {
-            $builder->where('deleted_at IS NULL');
-        }
-
-        return $builder
+        return $serviceModel
             ->orderBy('serviceID', 'ASC')
-            ->get()
-            ->getResultArray();
+            ->findAll();
     }
 
     private function renderEmployeePage(string $activePage): string|RedirectResponse
@@ -160,6 +136,9 @@ trait HomeDashboardPagesTrait
         $hasSearchFilters = $this->hasSearchFilters($searchFilters);
         $userId = (int) session()->get('user_id');
         $familyFormViewData = (new FamilyFormOptionsModel())->getViewData();
+        $recordListData = $activePage === 'family-manage'
+            ? $this->buildRecordListData(true)
+            : [];
         $recentFamilies = $activePage === 'dashboard' && ($searchTerm !== '' || $hasSearchFilters)
             ? $searchModel->families($searchTerm, $searchFilters, 25)
             : $dashboardModel->recentFamilies(10);
@@ -179,6 +158,7 @@ trait HomeDashboardPagesTrait
             ],
             'canCreateFamily' => true,
             'familyFormViewData' => $familyFormViewData,
+            'recordListData' => $recordListData,
             'recentFamilies' => $recentFamilies,
             'myAudits' => $myAudits,
             'stats' => $dashboardModel->stats(),
@@ -196,6 +176,7 @@ trait HomeDashboardPagesTrait
             'role' => (string) $this->request->getGet('role'),
             'status' => (string) $this->request->getGet('status'),
             'action' => (string) $this->request->getGet('action'),
+            'date' => (string) $this->request->getGet('date'),
             'date_from' => (string) $this->request->getGet('date_from'),
             'date_to' => (string) $this->request->getGet('date_to'),
         ];
@@ -210,5 +191,33 @@ trait HomeDashboardPagesTrait
         }
 
         return false;
+    }
+
+    private function buildRecordListData(bool $isEmployeePath): array
+    {
+        $keyword = trim((string) $this->request->getGet('q'));
+        $status = $isEmployeePath ? 'active' : strtolower(trim((string) $this->request->getGet('status')));
+        $showArchived = $status === 'archived';
+        $page = max(1, (int) $this->request->getGet('page'));
+        $perPage = 50;
+        $memberModel = new MemberModel();
+        $searchKeyword = $keyword === '' ? null : $keyword;
+        $totalFamilies = $memberModel->countSearchFamilies($searchKeyword, $showArchived);
+        $totalPages = max(1, (int) ceil($totalFamilies / $perPage));
+        $page = min($page, $totalPages);
+
+        return [
+            'families' => $memberModel->searchFamilies($searchKeyword, $perPage, ($page - 1) * $perPage, $showArchived),
+            'keyword' => $keyword,
+            'routeBase' => $isEmployeePath ? 'employee/manage-family' : 'admin/manage-family',
+            'listRoute' => $isEmployeePath ? 'employee/manage-records' : 'admin/manage-records',
+            'status' => $showArchived ? 'archived' : 'active',
+            'canRestoreArchived' => ! $isEmployeePath,
+            'useModalLinks' => false,
+            'page' => $page,
+            'perPage' => $perPage,
+            'totalFamilies' => $totalFamilies,
+            'totalPages' => $totalPages,
+        ];
     }
 }

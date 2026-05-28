@@ -17,6 +17,19 @@ $isEmployeeList = (string) session()->get('role') === 'User'
     || str_starts_with((string) $routeBase, 'employee/')
     || str_starts_with($requestPath, 'employee/')
     || str_contains('/' . $requestPath, '/employee/');
+// Filter controls + deep ("search the whole database") results are supplied by
+// App\Libraries\DashboardPageBuilder::buildMemberListData()/buildEmployeeRecordListData().
+$sectorOptions = $sectorOptions ?? [];
+$filters = $filters ?? [];
+$filterSectorId = (string) ($filters['sectorID'] ?? '');
+$filterDate = (string) ($filters['date'] ?? '');
+$deepKeyword = (string) ($deepKeyword ?? '');
+$deepResults = $deepResults ?? [];
+$deepPage = max(1, (int) ($deepPage ?? 1));
+$deepTotal = max(0, (int) ($deepTotal ?? 0));
+$deepTotalPages = max(1, (int) ($deepTotalPages ?? 1));
+$deepFromRecord = (int) ($deepFromRecord ?? 0);
+$deepToRecord = (int) ($deepToRecord ?? 0);
 $formatDate = static function (mixed $value): string {
     $timestamp = strtotime((string) $value);
 
@@ -27,7 +40,9 @@ $formatTime = static function (mixed $value): string {
 
     return $timestamp === false ? '' : date('h:i A', $timestamp);
 };
-$listUrl = static function (string $targetStatus, int $targetPage = 1) use ($listRoute, $keyword): string {
+// Records-list pagination URL. Carries the keyword AND the filter (sector/date) so
+// paging through filtered results keeps the filter applied.
+$listUrl = static function (string $targetStatus, int $targetPage = 1) use ($listRoute, $keyword, $filterSectorId, $filterDate): string {
     $params = ['page' => $targetPage];
 
     if ($targetStatus === 'archived') {
@@ -38,10 +53,28 @@ $listUrl = static function (string $targetStatus, int $targetPage = 1) use ($lis
         $params['q'] = (string) $keyword;
     }
 
+    if (trim($filterSectorId) !== '') {
+        $params['sectorID'] = $filterSectorId;
+    }
+
+    if (trim($filterDate) !== '') {
+        $params['date'] = $filterDate;
+    }
+
     return site_url($listRoute . '?' . http_build_query($params));
 };
 $partialUrl = static function (string $url): string {
     return $url . (str_contains($url, '?') ? '&' : '?') . 'partial=1';
+};
+// Deep-search pagination URL. Preserves the deep keyword and active/archived status.
+$deepUrl = static function (int $targetPage) use ($listRoute, $deepKeyword, $status): string {
+    $params = ['deep_q' => $deepKeyword, 'deep_page' => $targetPage];
+
+    if ($status === 'archived') {
+        $params['status'] = 'archived';
+    }
+
+    return site_url($listRoute . '?' . http_build_query($params));
 };
 ?>
 
@@ -69,17 +102,120 @@ $partialUrl = static function (string $url): string {
         </div>
     <?php endif; ?>
 
-    <form method="get" class="row g-2 mb-3" action="<?= site_url($listRoute) ?>">
+    <?php /* FIRST (quick) search bar + Manage Records FILTER (sector + date + status).
+             Submits q + sectorID + date (+ status) and is backed by
+             App\Models\MemberModel::searchFamilies() via DashboardPageBuilder. */ ?>
+    <form method="get" class="row g-2 mb-3 align-items-end" action="<?= site_url($listRoute) ?>">
+        <?php if ($status === 'archived'): ?>
+            <input type="hidden" name="status" value="archived">
+        <?php endif; ?>
+        <div class="col-md-5">
+            <label class="form-label small mb-1">Search records (shown list)</label>
+            <input class="form-control" type="search" name="q" value="<?= esc((string) $keyword) ?>" placeholder="Search by head name or sector">
+        </div>
+        <div class="col-md-4">
+            <label class="form-label small mb-1">Filter by sector</label>
+            <select class="form-select" name="sectorID">
+                <option value="">All sectors</option>
+                <?php foreach ($sectorOptions as $sector): ?>
+                    <?php $optionId = (string) ($sector['sectorID'] ?? ''); ?>
+                    <option value="<?= esc($optionId) ?>" <?= $filterSectorId === $optionId ? 'selected' : '' ?>><?= esc((string) ($sector['name'] ?? '')) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small mb-1">Filter by date</label>
+            <input class="form-control" type="date" name="date" value="<?= esc($filterDate) ?>">
+        </div>
+        <div class="col-12 d-flex gap-2 mt-1">
+            <button class="btn btn-outline-secondary" type="submit">Search / Filter</button>
+            <?php if (trim((string) $keyword) !== '' || $filterSectorId !== '' || $filterDate !== ''): ?>
+                <a class="btn btn-outline-secondary" href="<?= esc(site_url($listRoute . ($status === 'archived' ? '?status=archived' : '')), 'attr') ?>">Clear</a>
+            <?php endif; ?>
+        </div>
+    </form>
+
+    <?php /* SECOND ("search the whole database") bar. Unlike the first bar it finds ANY
+             member including non-head family members, and also matches by sector name and
+             service/program name. Submits deep_q and is backed by
+             App\Models\SearchModel::allMembers(). Results show in the panel below. */ ?>
+    <form method="get" class="row g-2 mb-3 align-items-end" action="<?= site_url($listRoute) ?>">
         <?php if ($status === 'archived'): ?>
             <input type="hidden" name="status" value="archived">
         <?php endif; ?>
         <div class="col-md-9">
-            <input class="form-control" type="search" name="q" value="<?= esc((string) $keyword) ?>" placeholder="Search by head name or sector">
+            <label class="form-label small mb-1">Search the entire database (any member, sector, or service)</label>
+            <input class="form-control" type="search" name="deep_q" value="<?= esc($deepKeyword) ?>" placeholder="e.g. a family member's name, a sector, or a service/program">
         </div>
         <div class="col-md-3 d-grid">
-            <button class="btn btn-outline-secondary" type="submit">Search</button>
+            <button class="btn btn-primary" type="submit">Search All</button>
         </div>
     </form>
+
+    <?php /* Deep-search results panel. Renders only when the deep search box was used.
+             Each row links to its family record via the existing view modal. */ ?>
+    <?php if ($deepKeyword !== ''): ?>
+        <div class="panel mb-3 border">
+            <div class="section-title mt-0">
+                <span>Database results for "<?= esc($deepKeyword) ?>"</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mb-2 text-muted small">
+                <span><?= esc((string) $deepFromRecord) ?>-<?= esc((string) $deepToRecord) ?> of <?= esc((string) $deepTotal) ?> matches</span>
+                <span>Page <?= esc((string) $deepPage) ?> of <?= esc((string) $deepTotalPages) ?></span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle">
+                    <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Relationship</th>
+                        <th>Belongs to</th>
+                        <th>Sector</th>
+                        <th>Service</th>
+                        <th>Date</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <?php foreach ($deepResults as $result): ?>
+                        <?php
+                        $resultHeadId = (int) ($result['headID'] ?? 0);
+                        $headName = trim((string) ($result['head_firstname'] ?? '') . ' ' . (string) ($result['head_lastname'] ?? ''));
+                        ?>
+                        <tr>
+                            <td><?= esc(trim((string) ($result['firstname'] ?? '') . ' ' . (string) ($result['lastname'] ?? ''))) ?></td>
+                            <td><?= esc((string) ($result['relationship'] ?? '')) ?></td>
+                            <td><?= esc($headName === '' ? '-' : $headName) ?></td>
+                            <td><?= esc((string) ($result['sector_name'] ?? '')) ?></td>
+                            <td><?= esc((string) ($result['service_name'] ?? '')) ?></td>
+                            <td><?= esc($formatDate($result['dt_created'] ?? '')) ?></td>
+                            <td class="text-end">
+                                <?php if ($resultHeadId > 0): ?>
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-primary btn-sm js-open-family-view-modal"
+                                        data-modal-url="<?= site_url($routeBase . '/view/' . $resultHeadId . '?partial=1') ?>"
+                                        data-modal-title="View Record">
+                                        View family
+                                    </button>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                    <?php if ($deepResults === []): ?>
+                        <tr><td colspan="7" class="text-center text-muted">No matching data found in the database.</td></tr>
+                    <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+            <?php if ($deepTotalPages > 1): ?>
+                <div class="d-flex justify-content-end gap-2 mt-3">
+                    <a class="btn btn-outline-secondary btn-sm <?= $deepPage <= 1 ? 'disabled' : '' ?>" href="<?= esc($deepUrl(max(1, $deepPage - 1)), 'attr') ?>" aria-disabled="<?= $deepPage <= 1 ? 'true' : 'false' ?>">Previous</a>
+                    <a class="btn btn-outline-secondary btn-sm <?= $deepPage >= $deepTotalPages ? 'disabled' : '' ?>" href="<?= esc($deepUrl(min($deepTotalPages, $deepPage + 1)), 'attr') ?>" aria-disabled="<?= $deepPage >= $deepTotalPages ? 'true' : 'false' ?>">Next</a>
+                </div>
+            <?php endif; ?>
+        </div>
+    <?php endif; ?>
 
     <div class="d-flex justify-content-between align-items-center mb-2 text-muted small">
         <span><?= esc((string) $fromRecord) ?>-<?= esc((string) $toRecord) ?> of <?= esc((string) $totalFamilies) ?> records</span>

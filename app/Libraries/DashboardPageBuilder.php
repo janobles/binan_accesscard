@@ -195,45 +195,31 @@ class DashboardPageBuilder
         $showArchived = $status === 'archived';
         $page = max(1, (int) $this->request->getGet('page'));
         $perPage = 50;
+
+        // Manage Records FILTER controls (sector + date). Status (active/archived)
+        // is handled separately above. Passed into MemberModel::searchFamilies().
+        $filters = [
+            'sectorID' => (string) $this->request->getGet('sectorID'),
+            'date'     => (string) $this->request->getGet('date'),
+        ];
+
         $memberModel = new MemberModel();
         $searchKeyword = $keyword === '' ? null : $keyword;
-        $totalFamilies = $memberModel->countSearchFamilies($searchKeyword, $showArchived);
+        $totalFamilies = $memberModel->countSearchFamilies($searchKeyword, $showArchived, $filters);
         $totalPages = max(1, (int) ceil($totalFamilies / $perPage));
         $page = min($page, $totalPages);
         $routeBase = 'admin/manage-family';
 
-        $listUrl = static function (string $targetStatus, int $targetPage = 1) use ($keyword): string {
-            $params = ['page' => $targetPage];
-
-            if ($targetStatus === 'archived') {
-                $params['status'] = 'archived';
-            }
-
-            if ($keyword !== '') {
-                $params['q'] = $keyword;
-            }
-
-            return site_url('admin/manage-members?' . http_build_query($params));
-        };
-
-        return [
+        return array_merge([
             'canRestoreArchived' => true,
-            'families'          => $memberModel->searchFamilies($searchKeyword, $perPage, ($page - 1) * $perPage, $showArchived),
-            'formatDate'        => static function (mixed $value): string {
-                $timestamp = strtotime((string) $value);
-
-                return $timestamp === false ? '' : date('Y-m-d', $timestamp);
-            },
-            'formatTime'        => static function (mixed $value): string {
-                $timestamp = strtotime((string) $value);
-
-                return $timestamp === false ? '' : date('h:i A', $timestamp);
-            },
+            'families'          => $memberModel->searchFamilies($searchKeyword, $perPage, ($page - 1) * $perPage, $showArchived, $filters),
             'fromRecord'        => $totalFamilies === 0 ? 0 : (($page - 1) * $perPage) + 1,
             'isEmployeeList'    => false,
             'isFullPage'        => true,
             'keyword'           => $keyword,
-            'listUrl'           => $listUrl,
+            // Full-page route so both the filter form and deep-search form reload the
+            // whole Manage Records page (not the modal/partial list endpoint).
+            'listRoute'         => 'admin/manage-records',
             'page'              => $page,
             'perPage'           => $perPage,
             'routeBase'         => $routeBase,
@@ -241,6 +227,50 @@ class DashboardPageBuilder
             'toRecord'          => min($totalFamilies, $page * $perPage),
             'totalFamilies'     => $totalFamilies,
             'totalPages'        => $totalPages,
+            // Filter UI data.
+            'sectorOptions'     => (new SectorModel())->getSectorOptions(),
+            'filters'           => $filters,
+        ], $this->buildDeepSearchData($showArchived ? 'archived' : 'active'));
+    }
+
+    /**
+     * Builds the SECOND ("search the whole database") results panel for Manage Records.
+     * Only populated when the deep-search box (deep_q) is used; otherwise deepKeyword is
+     * empty and the view hides the panel. Delegates to App\Models\SearchModel::allMembers().
+     */
+    private function buildDeepSearchData(string $status): array
+    {
+        $deepKeyword = trim((string) $this->request->getGet('deep_q'));
+
+        if ($deepKeyword === '') {
+            return [
+                'deepKeyword'    => '',
+                'deepResults'    => [],
+                'deepPage'       => 1,
+                'deepTotal'      => 0,
+                'deepTotalPages' => 1,
+                'deepFromRecord' => 0,
+                'deepToRecord'   => 0,
+            ];
+        }
+
+        $perPage = 50;
+        $page = max(1, (int) $this->request->getGet('deep_page'));
+        $filters = ['status' => $status];
+
+        $searchModel = new SearchModel();
+        $total = $searchModel->countAllMembers($deepKeyword, $filters);
+        $totalPages = max(1, (int) ceil($total / $perPage));
+        $page = min($page, $totalPages);
+
+        return [
+            'deepKeyword'    => $deepKeyword,
+            'deepResults'    => $searchModel->allMembers($deepKeyword, $filters, $perPage, ($page - 1) * $perPage),
+            'deepPage'       => $page,
+            'deepTotal'      => $total,
+            'deepTotalPages' => $totalPages,
+            'deepFromRecord' => $total === 0 ? 0 : (($page - 1) * $perPage) + 1,
+            'deepToRecord'   => min($total, $page * $perPage),
         ];
     }
 
@@ -345,24 +375,37 @@ class DashboardPageBuilder
         $keyword = trim((string) $this->request->getGet('q'));
         $page = max(1, (int) $this->request->getGet('page'));
         $perPage = 50;
+
+        // Manage Records FILTER controls (sector + date). Employees only see active records.
+        $filters = [
+            'sectorID' => (string) $this->request->getGet('sectorID'),
+            'date'     => (string) $this->request->getGet('date'),
+        ];
+
         $memberModel = new MemberModel();
         $searchKeyword = $keyword === '' ? null : $keyword;
-        $totalFamilies = $memberModel->countSearchFamilies($searchKeyword, false);
+        $totalFamilies = $memberModel->countSearchFamilies($searchKeyword, false, $filters);
         $totalPages = max(1, (int) ceil($totalFamilies / $perPage));
         $page = min($page, $totalPages);
 
-        return [
+        return array_merge([
             'canRestoreArchived' => false,
-            'families' => $memberModel->searchFamilies($searchKeyword, $perPage, ($page - 1) * $perPage, false),
+            'families' => $memberModel->searchFamilies($searchKeyword, $perPage, ($page - 1) * $perPage, false, $filters),
+            'fromRecord' => $totalFamilies === 0 ? 0 : (($page - 1) * $perPage) + 1,
+            'isEmployeeList' => true,
             'keyword' => $keyword,
             'listRoute' => 'employee/manage-records',
             'page' => $page,
             'perPage' => $perPage,
             'routeBase' => 'employee/manage-family',
             'status' => 'active',
+            'toRecord' => min($totalFamilies, $page * $perPage),
             'totalFamilies' => $totalFamilies,
             'totalPages' => $totalPages,
             'useModalLinks' => false,
-        ];
+            // Filter UI data.
+            'sectorOptions' => (new SectorModel())->getSectorOptions(),
+            'filters' => $filters,
+        ], $this->buildDeepSearchData('active'));
     }
 }

@@ -131,7 +131,7 @@ class MemberModel extends Model
     /**
      * ENCODE hook. Registered as beforeInsert/beforeUpdate, this runs right
      * before a row is written and converts the sectorID array into its JSON
-     * storage string ('[1,2,3]'). See App\Support\SectorIds::toStorage().
+    * storage string ('[1,2,3]'). See App\Libraries\SectorIds::toStorage().
      */
     protected function normalizeSectorIdStorage(array $data): array
     {
@@ -222,7 +222,10 @@ class MemberModel extends Model
         return $this->withSectorNames([$member])[0] ?? null;
     }
 
-    public function searchFamilies(?string $keyword = null, int $limit = 50, int $offset = 0, bool $archived = false): array
+    // FIRST (quick) search bar of the Manage Records tab. Lists family HEADS only.
+    // $filters carries the Manage Records filter controls (sectorID + date); see
+    // App\Libraries\DashboardPageBuilder::buildMemberListData() which supplies them.
+    public function searchFamilies(?string $keyword = null, int $limit = 50, int $offset = 0, bool $archived = false, array $filters = []): array
     {
         if (! $this->hasTable()) {
             return [];
@@ -231,7 +234,7 @@ class MemberModel extends Model
         $limit = max(1, $limit);
         $offset = max(0, $offset);
 
-        $builder = $this->familySearchBuilder($keyword, $archived)
+        $builder = $this->familySearchBuilder($keyword, $archived, $filters)
             ->orderBy('member.lastname', 'ASC')
             ->orderBy('member.firstname', 'ASC')
             ->limit($limit, $offset);
@@ -239,16 +242,19 @@ class MemberModel extends Model
         return $this->withSectorNames($builder->get()->getResultArray());
     }
 
-    public function countSearchFamilies(?string $keyword = null, bool $archived = false): int
+    public function countSearchFamilies(?string $keyword = null, bool $archived = false, array $filters = []): int
     {
         if (! $this->hasTable()) {
             return 0;
         }
 
-        return $this->familySearchBuilder($keyword, $archived)->countAllResults();
+        return $this->familySearchBuilder($keyword, $archived, $filters)->countAllResults();
     }
 
-    private function familySearchBuilder(?string $keyword = null, bool $archived = false)
+    // Builds the head-only records query. $filters (optional) applies the Manage Records
+    // filter controls: 'sectorID' (exact match inside the JSON array) and 'date'
+    // (single-day match on member.dt_created). Empty $filters = original behavior unchanged.
+    private function familySearchBuilder(?string $keyword = null, bool $archived = false, array $filters = [])
     {
         $builder = $this->memberDashboardBuilder($archived ? 'archived' : 'active')
             ->where('member.memberID = member.headID', null, false);
@@ -277,7 +283,28 @@ class MemberModel extends Model
                 ->groupEnd();
         }
 
+        $this->applyRecordFilters($builder, $filters);
+
         return $builder;
+    }
+
+    // Applies the Manage Records filter controls to a member query builder.
+    // Connects to: family-list.php filter form -> DashboardPageBuilder -> here.
+    private function applyRecordFilters($builder, array $filters): void
+    {
+        $sectorId = (int) ($filters['sectorID'] ?? 0);
+
+        if ($sectorId > 0) {
+            $builder->where(SectorIds::containsCondition($sectorId, 'member.sectorID'), null, false);
+        }
+
+        $date = trim((string) ($filters['date'] ?? ''));
+
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) === 1) {
+            $builder
+                ->where('member.dt_created >=', $date . ' 00:00:00')
+                ->where('member.dt_created <=', $date . ' 23:59:59');
+        }
     }
 
     public function getFamilyMemberIds(int $headId): array
@@ -404,7 +431,7 @@ class MemberModel extends Model
     /**
      * DECODE/display path. For each member row, takes the raw JSON sectorID
      * string and adds a 'sector_name' field with the IDs resolved to names.
-     * See App\Support\SectorIds::toNames().
+    * See App\Libraries\SectorIds::toNames().
      */
     private function withSectorNames(array $rows): array
     {

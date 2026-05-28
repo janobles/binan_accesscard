@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Support;
+namespace App\Libraries;
 
 use App\Models\AuditTrailsModel;
 use CodeIgniter\HTTP\RequestInterface;
@@ -23,7 +23,7 @@ class SessionAuditLogger
 
         self::log(
             (int) ($user['userID'] ?? 0),
-            self::positiveIntOrNull($user['memberID'] ?? null),
+            null,
             'USER_LOGIN',
             $description . '.',
             $request

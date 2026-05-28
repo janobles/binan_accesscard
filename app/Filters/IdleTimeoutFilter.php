@@ -2,7 +2,7 @@
 
 namespace App\Filters;
 
-use App\Support\SessionAuditLogger;
+use App\Libraries\SessionAuditLogger;
 use CodeIgniter\Filters\FilterInterface;
 use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;

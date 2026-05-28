@@ -11,21 +11,19 @@ extract(family_form_view_data(get_defined_vars()), EXTR_OVERWRITE);
             <div class="wizard-header-left">
                 <span class="wizard-icon" aria-hidden="true">+</span>
                 <div>
-                    <strong><?= $isEditMode ? 'Edit Family' : 'Add Family' ?></strong>
-                    <small>Step 1 of 3 - Head of the Family</small>
+                    <strong><?= $isEditMode ? 'Edit Record' : 'Add Record' ?></strong>
+                    <small>Step 1 of 3 - Record Head</small>
                 </div>
             </div>
-            <span class="wizard-header-badge" aria-hidden="true"></span>
         </div>
 
         <div class="family-wizard-steps" aria-hidden="true">
-            <div class="wizard-step is-active" data-step-target="1"><span>1</span><small>Head of the Family</small></div>
-            <div class="wizard-step" data-step-target="2"><span>2</span><small>Sector &amp; services</small></div>
-            <div class="wizard-step" data-step-target="3"><span>3</span><small>Family members</small></div>
+            <div class="wizard-step is-active" data-step-target="1"><span>1</span><small>Record Head</small></div>
+            <div class="wizard-step" data-step-target="2"><span>2</span><small>Sectors, services &amp; programs</small></div>
+            <div class="wizard-step" data-step-target="3"><span>3</span><small>Members</small></div>
         </div>
 
-        <!-- data-edit-mode is read by family-form.js to avoid resetting edit forms on AJAX success. -->
-        <form method="post" action="<?= esc($formAction, 'attr') ?>" id="familyForm" class="needs-validation js-family-form" data-edit-mode="<?= $isEditMode ? '1' : '0' ?>" novalidate>
+        <form method="post" action="<?= esc($formAction, 'attr') ?>" id="familyForm" class="needs-validation js-family-form" novalidate>
             <?= csrf_field() ?>
             <input type="hidden" name="entry_type" id="entryType" value="head">
             <div id="familyFormAlert" class="mb-3" aria-live="polite"></div>
@@ -41,7 +39,7 @@ extract(family_form_view_data(get_defined_vars()), EXTR_OVERWRITE);
                 'selectedServiceIds' => $headServiceIds,
             ]) ?>
 
-            <?= view('Dashboard/familyform/member-summary') ?>
+            <?= view('Member/member-summary') ?>
 
             <input type="hidden" id="initialFamilyData" value="<?= esc(json_encode($initialFamilyData, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?: '{}', 'attr') ?>">
 
@@ -57,4 +55,19 @@ extract(family_form_view_data(get_defined_vars()), EXTR_OVERWRITE);
     </div>
 </div>
 
-<?= view('Dashboard/familyform/member-template', $fieldViewData) ?>
+<div class="modal fade" id="familyChoiceModal" tabindex="-1" aria-labelledby="familyChoiceModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="familyChoiceModalLabel">Select options</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="familyChoiceModalBody"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Done</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<?= view('Member/member-template', $fieldViewData) ?>

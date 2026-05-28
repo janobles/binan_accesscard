@@ -7,6 +7,7 @@ $stats = $stats ?? ['families' => 0, 'members' => 0, 'sectors' => 0, 'assistance
 $recentFamilies = $recentFamilies ?? [];
 $myAudits = $myAudits ?? [];
 $familyFormViewData = $familyFormViewData ?? [];
+$recordListData = $recordListData ?? [];
 $searchTerm = $searchTerm ?? '';
 $searchFilters = $searchFilters ?? [];
 $auditActionOptions = $auditActionOptions ?? [];
@@ -44,7 +45,7 @@ $formatAuditMember = static function (array $audit): string {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="<?= base_url('assets/css/admin.css') ?>?v=<?= filemtime(FCPATH . 'assets/css/admin.css') ?>">
 </head>
-<body data-session-timeout-ms="60000" data-session-timeout-redirect="<?= site_url('logout') ?>">
+<body>
 <div class="app-shell">
     <aside class="sidebar employee">
         <div>
@@ -55,11 +56,19 @@ $formatAuditMember = static function (array $audit): string {
                     <small class="d-block">Employee Workspace</small>
                 </div>
             </div>
-            <nav class="nav flex-column mt-3">
-                <a class="nav-link <?= esc($navActive['dashboard'] ?? '') ?>" href="<?= site_url('employee/workspace') ?>">Workspace</a>
-                <a class="nav-link <?= esc($navActive['family-entry'] ?? '') ?> js-open-family-modal" href="<?= site_url('employee/manage-family') ?>" data-modal-url="<?= site_url('employee/manage-family?partial=1') ?>" data-modal-title="Add Family">Add Family</a>
-                <a class="nav-link <?= esc($navActive['family-manage'] ?? '') ?> js-open-family-list" href="<?= site_url('employee/manage-family/list') ?>" data-modal-url="<?= site_url('employee/manage-family/list?partial=1') ?>" data-modal-title="Manage Families">Manage Family</a>
-                <a class="nav-link <?= esc($navActive['activity'] ?? '') ?>" href="<?= site_url('employee/activity') ?>">My Activity</a>
+            <nav class="nav flex-column sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-label">Overview</div>
+                    <a class="nav-link <?= esc($navActive['dashboard'] ?? '') ?>" href="<?= site_url('employee/workspace') ?>">Workspace</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-label">Records</div>
+                    <a class="nav-link <?= esc($navActive['family-manage'] ?? '') ?>" href="<?= site_url('employee/manage-records') ?>">Manage Records</a>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-label">Activity</div>
+                    <a class="nav-link <?= esc($navActive['activity'] ?? '') ?>" href="<?= site_url('employee/activity') ?>">My Activity</a>
+                </div>
             </nav>
         </div>
         <div class="sidebar-footer">
@@ -89,19 +98,15 @@ $formatAuditMember = static function (array $audit): string {
 
             <?php if ($activePage === 'dashboard'): ?>
                 <div class="row g-3 mb-3">
-                    <div class="col-md-3"><div class="panel"><small>Total Families</small><div class="stat-value"><?= esc((string) ($stats['families'] ?? 0)) ?></div></div></div>
+                    <div class="col-md-3"><div class="panel"><small>Total Records</small><div class="stat-value"><?= esc((string) ($stats['families'] ?? 0)) ?></div></div></div>
                     <div class="col-md-3"><div class="panel"><small>Registered Members</small><div class="stat-value"><?= esc((string) ($stats['members'] ?? 0)) ?></div></div></div>
                     <div class="col-md-3"><div class="panel"><small>Active Sectors</small><div class="stat-value"><?= esc((string) ($stats['sectors'] ?? 0)) ?></div></div></div>
-                    <div class="col-md-3"><div class="panel"><small>Member Services</small><div class="stat-value"><?= esc((string) ($stats['assistance'] ?? 0)) ?></div></div></div>
+                    <div class="col-md-3"><div class="panel"><small>Services and Programs</small><div class="stat-value"><?= esc((string) ($stats['assistance'] ?? 0)) ?></div></div></div>
                 </div>
 
                 <div class="panel mb-3">
                     <div class="section-title mt-0">
-                        <span>Recently Added Families</span>
-                        <div class="d-flex gap-2">
-                            <button type="button" class="btn btn-primary btn-sm js-open-family-modal" data-modal-url="<?= site_url('employee/manage-family?partial=1') ?>" data-modal-title="Add Family">Add Family</button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm js-open-family-list" data-modal-url="<?= site_url('employee/manage-family/list?partial=1') ?>" data-modal-title="Manage Families">Manage Family</button>
-                        </div>
+                        <span>Recently Added Records</span>
                     </div>
                     <form class="row g-2 mb-3" method="get" action="<?= site_url('employee/workspace') ?>">
                         <div class="col-md-6 col-lg-4">
@@ -141,7 +146,7 @@ $formatAuditMember = static function (array $audit): string {
                                     </tr>
                                 <?php endforeach; ?>
                                 <?php if ($recentFamilies === []): ?>
-                                    <tr><td colspan="4" class="text-center text-muted"><?= $searchTerm !== '' || $hasSearchFilters ? 'No matching family records found.' : 'No family records yet.' ?></td></tr>
+                                    <tr><td colspan="4" class="text-center text-muted"><?= $searchTerm !== '' || $hasSearchFilters ? 'No matching records found.' : 'No records yet.' ?></td></tr>
                                 <?php endif; ?>
                             </tbody>
                         </table>
@@ -178,13 +183,17 @@ $formatAuditMember = static function (array $audit): string {
             <?php if ($activePage === 'family-entry'): ?>
                 <div class="panel">
                     <div class="section-title mt-0">
-                        <span>Family / Member Data Entry</span>
+                        <span>Add Record</span>
                     </div>
                     <?= view('Dashboard/familyform', array_merge(
                         $familyFormViewData,
                         ['canCreateFamily' => $canCreateFamily]
                     )) ?>
                 </div>
+            <?php endif; ?>
+
+            <?php if ($activePage === 'family-manage'): ?>
+                <?= view('Dashboard/familyform/family-list', $recordListData) ?>
             <?php endif; ?>
 
             <?php if ($activePage === 'activity'): ?>
@@ -244,17 +253,16 @@ $formatAuditMember = static function (array $audit): string {
     <div class="modal-dialog modal-dialog-centered modal-xl">
         <div class="modal-content">
             <div class="modal-header">
-                <button type="button" class="btn btn-outline-secondary family-modal-back js-family-modal-back" aria-label="Back">
-                    <span aria-hidden="true">&larr;</span> Back
-                </button>
-                <h5 class="modal-title visually-hidden" id="familyModalLabel">Manage Family</h5>
-                <button type="button" class="btn-close family-modal-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <h5 class="modal-title" id="familyModalLabel">Manage Record</h5>
             </div>
             <div class="modal-body" id="familyModalBody">
                 <div class="family-modal-loading" role="status" aria-live="polite">
                     <div class="spinner-border text-primary" aria-hidden="true"></div>
                     <span>Loading...</span>
                 </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary family-modal-close" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>

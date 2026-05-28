@@ -22,6 +22,7 @@ class DashboardViewData
         $adminAccounts = self::arrayValue($data['adminAccounts'] ?? []);
         $employeeAccounts = self::arrayValue($data['employeeAccounts'] ?? []);
         $familyFormViewData = self::arrayValue($data['familyFormViewData'] ?? []);
+        $sectorShortcodeOptions = self::stringList($data['sectorShortcodeOptions'] ?? []);
         $searchTerm = (string) ($data['searchTerm'] ?? '');
         $searchFilters = self::arrayValue($data['searchFilters'] ?? []);
         $auditActionOptions = self::arrayValue($data['auditActionOptions'] ?? []);
@@ -51,6 +52,7 @@ class DashboardViewData
             'recentFamilies',
             'searchFilters',
             'searchTerm',
+            'sectorShortcodeOptions',
             'sectorOptions',
             'stats',
             'user',
@@ -193,8 +195,9 @@ class DashboardViewData
     public static function sectorManagement(array $data): array
     {
         $sectors = self::arrayValue($data['sectors'] ?? []);
+        $sectorShortcodeOptions = self::stringList($data['sectorShortcodeOptions'] ?? []);
 
-        return compact('sectors');
+        return compact('sectorShortcodeOptions', 'sectors');
     }
 
     public static function serviceManagement(array $data): array

@@ -1,37 +1,38 @@
 <?php
 helper('dashboard_view');
 extract(sector_and_services_view_data(get_defined_vars()), EXTR_OVERWRITE);
+$sectorCategoryLabels = \App\Support\FamilyProfilingFormV2::SECTOR_CATEGORIES;
+$sectorCategoryKeys = array_values(array_unique(array_merge(
+	array_keys($sectorCategoryLabels),
+	array_keys($sectorCatalog),
+	$selectedSectorCategories
+)));
 ?>
 
 <div class="form-section family-step-panel" data-step="2">
 	<div class="row g-3 mb-3">
 		<div class="col-12">
-			<label class="form-label" for="sectorNameList">Sectors</label>
-			<div class="border rounded p-3 bg-white" id="sectorNameList" role="group" aria-label="Sector names">
-				<?php foreach ($sectorGroups as $groupLabel => $sectors): ?>
-					<div class="fw-semibold small text-muted mb-2"><?= esc((string) $groupLabel) ?></div>
-					<?php foreach ($sectors as $sector): ?>
-						<?php
-						$sectorId = (int) ($sector['sectorID'] ?? 0);
-						$shortcode = (string) ($sector['shortcode'] ?? '');
-						$label = trim($shortcode . ' ' . (string) ($sector['name'] ?? ''));
-						?>
-						<label class="form-check mb-1">
-							<input class="form-check-input" type="checkbox" name="sectors[]" value="<?= esc((string) $sectorId) ?>" data-name="<?= esc($label) ?>" <?= in_array($sectorId, $selectedSectorIds, true) ? 'checked' : '' ?>>
-							<span class="form-check-label"><?= esc($label) ?></span>
-						</label>
-					<?php endforeach; ?>
-				<?php endforeach; ?>
-				<?php if ($sectorGroups === []): ?>
-					<small class="text-muted">No sectors available.</small>
-				<?php endif; ?>
+			<div class="section-title mt-0">
+				<span>Sectors</span>
 			</div>
-			<small class="form-text text-muted">Select one or more sector names.</small>
+			<div class="family-form-hidden" id="sectorCategoryList" data-sector-catalog="<?= esc($sectorCatalogJson, 'attr') ?>" data-auto-select-all="1">
+				<?php foreach ($sectorCategoryKeys as $categoryKey): ?>
+					<?php $categoryKey = (string) $categoryKey; ?>
+					<?php if ($categoryKey === '') { continue; } ?>
+					<input type="checkbox" name="sector_categories[]" value="<?= esc($categoryKey) ?>" checked>
+				<?php endforeach; ?>
+			</div>
+			<label class="form-label" for="sectorNameList">Sector checklist</label>
+			<input type="hidden" id="sectorID" name="sectorID" required>
+			<div class="border rounded p-2 bg-white" id="sectorNameList" role="group" aria-label="Sector names">
+				<small class="text-muted">Loading sectors...</small>
+			</div>
+			<small class="form-text text-muted">Select one or more sectors for the record head.</small>
 		</div>
 	</div>
 
 	<div class="section-title">
-		<span>Services and Programs</span>
+		<span>Services and Programs Available</span>
 	</div>
 	<div class="row g-3">
 		<?php foreach ($serviceGroups as $category => $services): ?>
@@ -42,9 +43,15 @@ extract(sector_and_services_view_data(get_defined_vars()), EXTR_OVERWRITE);
 						<?php foreach ($services as $service): ?>
 							<?php $serviceId = (string) ($service['serviceID'] ?? ''); ?>
 							<?php $serviceInputId = 'service_' . preg_replace('/[^a-zA-Z0-9_\-]/', '_', strtolower((string) $category)) . '_' . $serviceId; ?>
+							<?php $serviceDescription = trim((string) ($service['description'] ?? '')); ?>
 							<label class="form-check" for="<?= esc($serviceInputId) ?>">
-								<input class="form-check-input" id="<?= esc($serviceInputId) ?>" type="checkbox" name="services[]" value="<?= esc($serviceId) ?>" <?= in_array((int) $serviceId, $selectedServiceIds, true) ? 'checked' : '' ?>>
-								<span class="form-check-label"><?= esc((string) ($service['name'] ?? '')) ?></span>
+								<input class="form-check-input" id="<?= esc($serviceInputId) ?>" type="checkbox" name="service_ids[]" value="<?= esc($serviceId) ?>" <?= in_array((int) $serviceId, $selectedServiceIds, true) ? 'checked' : '' ?>>
+								<span class="form-check-label">
+									<?= esc((string) ($service['name'] ?? '')) ?>
+									<?php if ($serviceDescription !== ''): ?>
+										<small class="d-block text-muted"><?= esc($serviceDescription) ?></small>
+									<?php endif; ?>
+								</span>
 							</label>
 						<?php endforeach; ?>
 					</div>

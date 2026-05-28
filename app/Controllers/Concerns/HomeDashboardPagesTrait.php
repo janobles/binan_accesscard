@@ -10,7 +10,7 @@ use App\Models\MemberServiceModel;
 use App\Models\SearchModel;
 use App\Models\SectorModel;
 use App\Models\ServiceModel;
-use App\Models\UserModel;
+use App\Models\Auth\UserModel;
 use App\Models\ViewLayoutModel;
 use CodeIgniter\HTTP\RedirectResponse;
 use Config\IdleTimeout;
@@ -28,11 +28,9 @@ trait HomeDashboardPagesTrait
             return $guard;
         }
 
-        $currentRole = $this->normalizeRole((string) session()->get('role'));
-
-        if ($activePage === 'accounts' && ! in_array($currentRole, ['Developer', 'Admin'], true)) {
+        if ($activePage === 'accounts' && $this->normalizeRole((string) session()->get('role')) !== 'Developer') {
             return redirect()->to(site_url('admin/dashboard'))
-            ->with('error', 'Developer or Admin access is required for account management.');
+                ->with('error', 'Developer access is required for account management.');
         }
 
         return view('Dashboard/admin', $this->buildAdminViewData($activePage));
@@ -46,9 +44,7 @@ trait HomeDashboardPagesTrait
         $searchTerm = trim((string) $this->request->getGet('q'));
         $searchFilters = $this->searchFilters();
         $hasSearchFilters = $this->hasSearchFilters($searchFilters);
-        $currentRole = $this->normalizeRole((string) session()->get('role'));
-        $isDeveloper = $currentRole === 'Developer';
-        $isAdmin = $currentRole === 'Admin';
+        $isDeveloper = $this->normalizeRole((string) session()->get('role')) === 'Developer';
         $userModel = new UserModel();
         $users = $isDeveloper && $activePage === 'accounts'
             ? $searchModel->staffAccounts($searchTerm, $searchFilters)
@@ -58,7 +54,10 @@ trait HomeDashboardPagesTrait
         $serviceModel = new ServiceModel();
         $memberServiceModel = new MemberServiceModel();
 
-        $familyFormViewData = $this->buildFamilyFormViewData();
+        $familyFormViewData = (new FamilyFormOptionsModel())->getViewData();
+        $recordListData = $activePage === 'family-manage'
+            ? $this->buildRecordListData(false)
+            : [];
         $recentFamilies = $activePage === 'dashboard' && ($searchTerm !== '' || $hasSearchFilters)
             ? $searchModel->families($searchTerm, $searchFilters, 25)
             : $dashboardModel->recentFamilies(10);
@@ -71,10 +70,7 @@ trait HomeDashboardPagesTrait
             'activePage' => $activePage,
             'pageTitle' => $layoutModel->pageTitle($activePage),
             'modeLabel' => $layoutModel->adminModeLabel($isDeveloper),
-            // Developers can manage all staff; admins can only disable employees.
-            'canManageAccounts' => $isDeveloper || $isAdmin,
-            'canCreateAccounts' => $isDeveloper,
-            'currentRole' => $currentRole,
+            'canManageAccounts' => $isDeveloper,
             'navActive' => [
                 'dashboard' => $layoutModel->navActive($activePage, 'dashboard'),
                 'accounts' => $layoutModel->navActive($activePage, 'accounts'),
@@ -87,7 +83,9 @@ trait HomeDashboardPagesTrait
             'adminAccounts' => array_values(array_filter($users, static fn ($account) => $account['role'] === 'Admin')),
             'employeeAccounts' => array_values(array_filter($users, static fn ($account) => $account['role'] === 'User')),
             'familyFormViewData' => $familyFormViewData,
+            'recordListData' => $recordListData,
             'sectors' => $this->fetchVisibleSectors($sectorModel),
+            'sectorShortcodeOptions' => $sectorModel->getShortcodeOptions(),
             'services' => $this->fetchVisibleServices($serviceModel),
             'recentFamilies' => $recentFamilies,
             'recentAudits' => $recentAudits,
@@ -137,7 +135,10 @@ trait HomeDashboardPagesTrait
         $searchFilters = $this->searchFilters();
         $hasSearchFilters = $this->hasSearchFilters($searchFilters);
         $userId = (int) session()->get('user_id');
-        $familyFormViewData = $this->buildFamilyFormViewData();
+        $familyFormViewData = (new FamilyFormOptionsModel())->getViewData();
+        $recordListData = $activePage === 'family-manage'
+            ? $this->buildRecordListData(true)
+            : [];
         $recentFamilies = $activePage === 'dashboard' && ($searchTerm !== '' || $hasSearchFilters)
             ? $searchModel->families($searchTerm, $searchFilters, 25)
             : $dashboardModel->recentFamilies(10);
@@ -157,6 +158,7 @@ trait HomeDashboardPagesTrait
             ],
             'canCreateFamily' => true,
             'familyFormViewData' => $familyFormViewData,
+            'recordListData' => $recordListData,
             'recentFamilies' => $recentFamilies,
             'myAudits' => $myAudits,
             'stats' => $dashboardModel->stats(),
@@ -249,5 +251,33 @@ trait HomeDashboardPagesTrait
         }
 
         return false;
+    }
+
+    private function buildRecordListData(bool $isEmployeePath): array
+    {
+        $keyword = trim((string) $this->request->getGet('q'));
+        $status = $isEmployeePath ? 'active' : strtolower(trim((string) $this->request->getGet('status')));
+        $showArchived = $status === 'archived';
+        $page = max(1, (int) $this->request->getGet('page'));
+        $perPage = 50;
+        $memberModel = new MemberModel();
+        $searchKeyword = $keyword === '' ? null : $keyword;
+        $totalFamilies = $memberModel->countSearchFamilies($searchKeyword, $showArchived);
+        $totalPages = max(1, (int) ceil($totalFamilies / $perPage));
+        $page = min($page, $totalPages);
+
+        return [
+            'families' => $memberModel->searchFamilies($searchKeyword, $perPage, ($page - 1) * $perPage, $showArchived),
+            'keyword' => $keyword,
+            'routeBase' => $isEmployeePath ? 'employee/manage-family' : 'admin/manage-family',
+            'listRoute' => $isEmployeePath ? 'employee/manage-records' : 'admin/manage-records',
+            'status' => $showArchived ? 'archived' : 'active',
+            'canRestoreArchived' => ! $isEmployeePath,
+            'useModalLinks' => false,
+            'page' => $page,
+            'perPage' => $perPage,
+            'totalFamilies' => $totalFamilies,
+            'totalPages' => $totalPages,
+        ];
     }
 }

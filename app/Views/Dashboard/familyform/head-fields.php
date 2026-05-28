@@ -1,7 +1,18 @@
 <div data-entry-panel="head">
     <div class="section-title">
-        <span>Head of Family</span>
+        <span>Record Head</span>
     </div>
+    <?php
+    $headCivilStatus = (string) ($familyRecord['civilstatus'] ?? '');
+    $headCivilIsCustom = $headCivilStatus !== '' && ! in_array($headCivilStatus, $civilOptions, true);
+    $headEducation = (string) ($familyRecord['education'] ?? '');
+    $headEducationIsCustom = $headEducation !== '' && ! in_array($headEducation, $educationOptions, true);
+    $headJob = (string) ($familyRecord['job'] ?? '');
+    $headJobIsCustom = $headJob !== '' && ! in_array($headJob, $jobOptions, true);
+    $headAddress = trim((string) ($familyRecord['address'] ?? ''));
+    $headBarangay = trim((string) ($familyRecord['barangay'] ?? ''));
+    $headFullAddress = trim($headAddress . ($headAddress !== '' && $headBarangay !== '' ? ', ' : '') . $headBarangay);
+    ?>
     <div class="row g-3">
         <div class="col-md-3">
             <label class="form-label" for="head_firstname">First name</label>
@@ -25,11 +36,11 @@
             </select>
         </div>
         <div class="col-md-3">
-            <label class="form-label" for="head_birthday">Birthday</label>
+            <label class="form-label" for="head_birthday">Date of birth</label>
             <input type="date" class="form-control" id="head_birthday" name="head_birthday" value="<?= esc((string) ($familyRecord['birthday'] ?? '')) ?>" required>
         </div>
         <div class="col-md-3">
-            <label class="form-label" for="head_sex">Sex</label>
+            <label class="form-label" for="head_sex">Gender</label>
             <select class="form-select" id="head_sex" name="head_sex" required>
                 <option value="">Select</option>
                 <?php foreach ($sexOptions as $sex): ?>
@@ -39,29 +50,41 @@
         </div>
         <div class="col-md-3">
             <label class="form-label" for="head_civilstatus">Civil status</label>
-            <select class="form-select" id="head_civilstatus" name="head_civilstatus">
+            <select class="form-select js-other-select" id="head_civilstatus" name="head_civilstatus" data-other-input="#head_civilstatus_other">
                 <option value="">Select</option>
                 <?php foreach ($civilOptions as $civilStatus): ?>
-                    <option value="<?= esc($civilStatus) ?>" <?= (string) ($familyRecord['civilstatus'] ?? '') === (string) $civilStatus ? 'selected' : '' ?>><?= esc($civilStatus) ?></option>
+                    <option value="<?= esc($civilStatus) ?>" <?= ($headCivilIsCustom && in_array((string) $civilStatus, ['Other', 'Others'], true)) || $headCivilStatus === (string) $civilStatus ? 'selected' : '' ?>><?= esc($civilStatus) ?></option>
                 <?php endforeach; ?>
             </select>
+            <input class="form-control mt-2 js-other-input <?= $headCivilIsCustom ? '' : 'family-form-hidden' ?>" id="head_civilstatus_other" value="<?= esc($headCivilIsCustom ? $headCivilStatus : '') ?>" placeholder="Enter civil status">
         </div>
         <div class="col-md-3">
             <label class="form-label" for="head_contactnumber">Contact number</label>
             <input class="form-control" id="head_contactnumber" name="head_contactnumber" value="<?= esc((string) ($familyRecord['contactnumber'] ?? '')) ?>">
         </div>
         <div class="col-md-3">
+            <label class="form-label" for="head_religion">Religion</label>
+            <input class="form-control" id="head_religion" name="head_religion" value="<?= esc((string) ($familyRecord['religion'] ?? '')) ?>">
+        </div>
+        <div class="col-md-3">
             <label class="form-label" for="head_education">Education</label>
-            <select class="form-select" id="head_education" name="head_education">
+            <select class="form-select js-other-select" id="head_education" name="head_education" data-other-input="#head_education_other">
                 <option value="">Select</option>
                 <?php foreach ($educationOptions as $education): ?>
-                    <option value="<?= esc($education) ?>" <?= (string) ($familyRecord['education'] ?? '') === (string) $education ? 'selected' : '' ?>><?= esc($education) ?></option>
+                    <option value="<?= esc($education) ?>" <?= ($headEducationIsCustom && in_array((string) $education, ['Other', 'Others'], true)) || $headEducation === (string) $education ? 'selected' : '' ?>><?= esc($education) ?></option>
                 <?php endforeach; ?>
             </select>
+            <input class="form-control mt-2 js-other-input <?= $headEducationIsCustom ? '' : 'family-form-hidden' ?>" id="head_education_other" value="<?= esc($headEducationIsCustom ? $headEducation : '') ?>" placeholder="Enter education">
         </div>
         <div class="col-md-3">
             <label class="form-label" for="head_job">Job</label>
-            <input class="form-control" id="head_job" name="head_job" value="<?= esc((string) ($familyRecord['job'] ?? '')) ?>">
+            <select class="form-select js-other-select" id="head_job" name="head_job" data-other-input="#head_job_other">
+                <option value="">Select</option>
+                <?php foreach ($jobOptions as $jobOption): ?>
+                    <option value="<?= esc((string) $jobOption) ?>" <?= ($headJobIsCustom && in_array((string) $jobOption, ['Other', 'Others'], true)) || $headJob === (string) $jobOption ? 'selected' : '' ?>><?= esc((string) $jobOption) ?></option>
+                <?php endforeach; ?>
+            </select>
+            <input class="form-control mt-2 js-other-input <?= $headJobIsCustom ? '' : 'family-form-hidden' ?>" id="head_job_other" value="<?= esc($headJobIsCustom ? $headJob : '') ?>" placeholder="Enter job">
         </div>
         <div class="col-md-3">
             <label class="form-label" for="head_salary">Monthly income</label>
@@ -72,6 +95,10 @@
                     <option value="<?= esc($incomeValue) ?>" <?= (string) ($familyRecord['Salary'] ?? '') === $incomeValue ? 'selected' : '' ?>><?= esc($incomeLabel) ?></option>
                 <?php endforeach; ?>
             </select>
+        </div>
+        <div class="col-md-12">
+            <label class="form-label" for="head_address">Address</label>
+            <input class="form-control" id="head_address" name="head_address" value="<?= esc($headFullAddress) ?>" placeholder="House no., street, subdivision, barangay">
         </div>
     </div>
 </div>

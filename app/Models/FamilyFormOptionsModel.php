@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\FamilyProfilingFormV2;
 use CodeIgniter\Model;
 
 /**
@@ -21,13 +22,8 @@ class FamilyFormOptionsModel extends Model
         return [
             'sectors' => $sectorModel->getAll(),
             'sexes' => ['Male', 'Female'],
-            'suffixes' => ['I', 'II', 'III', 'IV'],
-            'civil_statuses' => [
-                'Single',
-                'Married',
-                'Widowed',
-                'Others',
-            ],
+            'suffixes' => FamilyProfilingFormV2::suffixes(),
+            'civil_statuses' => FamilyProfilingFormV2::civilStatuses(),
             'relationships' => [
                 'Spouse',
                 'Son',
@@ -41,26 +37,8 @@ class FamilyFormOptionsModel extends Model
                 'Household Helper',
                 'Other',
             ],
-            'education_levels' => [
-                'No Grade Completed',
-                'Early Childhood Education / Day Care',
-                'Kindergarten',
-                'Elementary Undergraduate',
-                'Elementary Graduate',
-                'Junior High School Undergraduate',
-                'Junior High School Graduate',
-                'Senior High School Undergraduate',
-                'Senior High School Graduate',
-                'Alternative Learning System (ALS) Completer',
-                'Technical-Vocational Undergraduate',
-                'Technical-Vocational Graduate',
-                'College Undergraduate',
-                'Associate Degree Graduate',
-                'Bachelor\'s Degree Graduate',
-                'Post-Baccalaureate',
-                'Master\'s Degree',
-                'Doctorate Degree',
-            ],
+            'education_levels' => FamilyProfilingFormV2::educationLevels(),
+            'job_options' => FamilyProfilingFormV2::jobOptions(),
             'income_ranges' => [
                 ['value' => '', 'label' => 'Select'],
                 ['value' => '0', 'label' => 'No regular income'],
@@ -94,9 +72,33 @@ class FamilyFormOptionsModel extends Model
             'civilOptions' => $options['civil_statuses'] ?? [],
             'relationshipOptions' => $options['relationships'] ?? [],
             'educationOptions' => $options['education_levels'] ?? [],
+            'jobOptions' => $options['job_options'] ?? [],
             'incomeOptions' => $options['income_ranges'] ?? [],
             'serviceOptions' => $serviceOptions,
             'familyHeads' => $options['family_heads'] ?? [],
         ];
     }
+
+    private function getServicesByCategory(): array
+    {
+        if (! $this->db->tableExists('services')) {
+            return [];
+        }
+
+        $services = $this->db->table('services')
+            ->select('serviceID, category, name, description')
+            ->orderBy('serviceID', 'ASC')
+            ->get()
+            ->getResultArray();
+
+        $grouped = [];
+
+        foreach ($services as $service) {
+            $category = (string) ($service['category'] ?? 'Other');
+            $grouped[$category][] = $service;
+        }
+
+        return $grouped;
+    }
+
 }

@@ -2,7 +2,7 @@
 
 namespace App\Validation;
 
-use App\Support\SectorIds;
+use App\Libraries\SectorIds;
 
 class SectorRules
 {

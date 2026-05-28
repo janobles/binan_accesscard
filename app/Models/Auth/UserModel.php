@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Models;
+namespace App\Models\Auth;
 
 use CodeIgniter\Model;
 
@@ -29,13 +29,13 @@ class UserModel extends Model
             return null;
         }
 
+        if (! $this->isUserActive($user['isactive'] ?? 1)) {
+            return null;
+        }
+
         $storedPassword = (string) ($user['password'] ?? '');
         $passwordInfo = password_get_info($storedPassword);
         $isLegacyPlaintext = $passwordInfo['algo'] === 0;
-
-        // password_verify() does not 'decrypt' the hash. Instead, it extracts the salt and 
-        // algorithm settings from the $storedPassword string, hashes the input $password 
-        // using those same settings, and compares the two hashes.
         $isValid = password_verify($password, $storedPassword);
 
         if (! $isValid && $isLegacyPlaintext) {
@@ -46,16 +46,6 @@ class UserModel extends Model
             return null;
         }
 
-        // Let the controller show a specific message for disabled accounts.
-        if (! $this->isUserActive($user['isactive'] ?? 1)) {
-            $user['login_error'] = 'disabled';
-
-            return $user;
-        }
-
-        // If the password was plaintext (legacy) or uses an outdated Argon2 configuration,
-        // we generate a brand new Argon2id hash and update the database record.
-        // This provides 'automatic migration' to the latest security standards.
         if ($isLegacyPlaintext || password_needs_rehash($storedPassword, PASSWORD_ARGON2ID)) {
             $this->update((int) $user['userID'], [
                 'password' => password_hash($password, PASSWORD_ARGON2ID),
@@ -71,13 +61,26 @@ class UserModel extends Model
             return [];
         }
 
-        $select = 'userID, username, role, isactive, dt_created';
-
-        return $this->select($select)
+        return $this->select('userID, username, role, isactive, dt_created')
             ->whereIn('role', ['Admin', 'User'])
             ->orderBy('role', 'ASC')
             ->orderBy('username', 'ASC')
             ->findAll();
+    }
+
+    public function updateAccountStatus(int $userId, bool $enabled): bool
+    {
+        if (! $this->db->tableExists($this->table)) {
+            return false;
+        }
+
+        $account = $this->select('userID, role')->find($userId);
+
+        if ($account === null || ! in_array((string) ($account['role'] ?? ''), ['Admin', 'User'], true)) {
+            return false;
+        }
+
+        return $this->update($userId, ['isactive' => $this->statusValue($enabled)]) !== false;
     }
 
     // Enforces the Enable/Disabled enum while allowing legacy numeric rows.
@@ -105,10 +108,6 @@ class UserModel extends Model
     {
         $data = [
             'username' => $username,
-            // password_hash() creates a cryptographically secure, one-way hash.
-            // PASSWORD_ARGON2ID is the current industry standard (as of PHP 8.2+) 
-            // resistant to both GPU cracking and side-channel attacks.
-            // The salt is automatically generated and bundled into the output string.
             'password' => password_hash($password, PASSWORD_ARGON2ID),
             'role' => $role,
             'isactive' => $this->activeValue(),
@@ -126,6 +125,11 @@ class UserModel extends Model
     // Keeps insert compatible with either enum or numeric legacy types.
     private function activeValue(): string|int
     {
+        return $this->statusValue(true);
+    }
+
+    private function statusValue(bool $enabled): string|int
+    {
         $fieldData = $this->db->getFieldData($this->table);
 
         foreach ($fieldData as $field) {
@@ -139,10 +143,13 @@ class UserModel extends Model
                 || strpos($type, 'text') !== false
                 || strpos($type, 'enum') !== false;
 
-            return $isStringType ? 'Enable' : 1;
+            if ($isStringType) {
+                return $enabled ? 'Enable' : 'Disabled';
+            }
+
+            return $enabled ? 1 : 0;
         }
 
-        return 'Enable';
+        return $enabled ? 'Enable' : 'Disabled';
     }
-
 }

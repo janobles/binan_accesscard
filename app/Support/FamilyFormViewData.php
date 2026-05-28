@@ -17,12 +17,13 @@ class FamilyFormViewData
         $civilOptions = $data['civilOptions'] ?? ($formOptions['civil_statuses'] ?? []);
         $relationshipOptions = $data['relationshipOptions'] ?? ($formOptions['relationships'] ?? []);
         $educationOptions = $data['educationOptions'] ?? ($formOptions['education_levels'] ?? []);
+        $jobOptions = $data['jobOptions'] ?? ($formOptions['job_options'] ?? []);
         $incomeOptions = $data['incomeOptions'] ?? ($formOptions['income_ranges'] ?? []);
         $serviceGroups = self::arrayValue($data['serviceGroups'] ?? []);
         $serviceOptions = self::arrayValue($data['serviceOptions'] ?? ($formOptions['services'] ?? []));
         $familyHeads = $data['familyHeads'] ?? ($formOptions['family_heads'] ?? []);
         $formAction = $data['formAction'] ?? site_url('families');
-        $submitButtonLabel = $data['submitButtonLabel'] ?? 'Save Family Data';
+        $submitButtonLabel = $data['submitButtonLabel'] ?? 'Save Record Data';
         $familyRecord = self::arrayValue($data['familyRecord'] ?? []);
         $existingMembers = self::arrayValue($data['existingMembers'] ?? []);
         $headServiceIds = self::integerList($data['headServiceIds'] ?? ($familyRecord['services'] ?? ($familyRecord['service_ids'] ?? [])));
@@ -38,6 +39,7 @@ class FamilyFormViewData
             'educationOptions',
             'familyRecord',
             'incomeOptions',
+            'jobOptions',
             'relationshipOptions',
             'sectorGroups',
             'sectorOptions',
@@ -60,6 +62,7 @@ class FamilyFormViewData
             'incomeOptions',
             'initialFamilyData',
             'isEditMode',
+            'jobOptions',
             'relationshipOptions',
             'sectorGroups',
             'sectorOptions',
@@ -81,6 +84,7 @@ class FamilyFormViewData
             'civil_statuses' => [],
             'relationships' => [],
             'education_levels' => [],
+            'job_options' => [],
             'income_ranges' => [],
             'services' => [],
             'family_heads' => [],

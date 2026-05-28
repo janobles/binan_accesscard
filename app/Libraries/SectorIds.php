@@ -1,26 +1,9 @@
 <?php
 
-namespace App\Support;
+namespace App\Libraries;
 
 /**
- * Converts a member's sector list between the stored JSON string and a PHP
- * array of integer sector IDs.
- *
- * The `member`.`sectorID` column holds a JSON array as text, e.g. '[1,2,3]',
- * where each number is a `sector`.`sectorID`. This class is the single place
- * that does json_encode (array -> string, on save) and json_decode
- * (string -> array, on read) for that column.
- *
- * Where it connects:
- *   - App\Models\MemberModel::normalizeSectorIdStorage()  -> toStorage()
- *       on beforeInsert/beforeUpdate (encodes the array before it is saved).
- *   - App\Models\MemberModel::withSectorNames() and
- *     App\Models\DashboardModel::withSectorNames()        -> normalize()/toNames()
- *       (decodes the string and turns IDs into sector names for display).
- *   - App\Models\MemberModel::familySearchBuilder()       -> containsCondition()
- *       (builds the JSON_CONTAINS(...) clause used to search members by sector).
- *   - App\Validation\SectorRules ('valid_sector_array')   -> normalize()/
- *       hasMalformedIds() (validates the submitted value before it is saved).
+ * Normalizes sector IDs stored as arrays, JSON lists, or comma-separated text.
  */
 class SectorIds
 {
@@ -34,7 +17,7 @@ class SectorIds
     public static function normalize(mixed $value): array
     {
         $items = self::itemsFromValue($value);
-        $ids = [];
+        $ids   = [];
 
         foreach ($items as $item) {
             if (is_array($item)) {
@@ -58,6 +41,7 @@ class SectorIds
 
     public static function hasMalformedIds(mixed $value): bool
     {
+        // Associative arrays and object-like JSON are not valid sector ID lists.
         if (is_array($value) && ! self::isListArray($value)) {
             return true;
         }
@@ -109,6 +93,7 @@ class SectorIds
      */
     public static function containsCondition(int $sectorId, string $column = 'sector_array_string'): string
     {
+        // Used in query filters for the database JSON sector list column.
         return 'JSON_CONTAINS(' . $column . ", '" . $sectorId . "') = 1";
     }
 
@@ -146,9 +131,7 @@ class SectorIds
             return [];
         }
 
-        // Core decode step: try json_decode() first (handles '[1,2,3]'). If the
-        // value is not a valid JSON list, fall back to splitting a bare
-        // '1,2,3' string so legacy/hand-entered values still work.
+        // Prefer JSON lists; fall back to the older "[1,2,3]" / "1,2,3" text format.
         $decoded = json_decode($text, true);
 
         return is_array($decoded) && self::isListArray($decoded)

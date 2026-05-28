@@ -44,9 +44,6 @@
         form.dataset.familyFormInitialized = '1';
 
         const wizardCard = form.closest('.family-wizard-card');
-        const isEditMode = form.dataset.editMode === '1';
-        const formAlert = q(form, '#familyFormAlert');
-        let isSubmitting = false;
         const uiRoot = wizardCard || root;
         const panels = qa(form, '.family-step-panel');
         const stepItems = qa(uiRoot, '.family-wizard-steps .wizard-step');
@@ -55,9 +52,13 @@
         const submitBtn = q(form, '#submitFamilyBtn');
         const resetBtn = q(form, '#resetFamilyBtn');
         const addMemberBtn = q(form, '#addMemberBtn');
+        const addMemberStickyBtn = q(form, '#addMemberStickyBtn');
         const memberRows = q(form, '#memberRows');
         const memberTemplate = q(root, '#memberTemplate');
         const memberRowsEmpty = q(form, '#memberRowsEmpty');
+        const choiceModal = q(root, '#familyChoiceModal');
+        const choiceModalTitle = q(root, '#familyChoiceModalLabel');
+        const choiceModalBody = q(root, '#familyChoiceModalBody');
         const stepInfo = q(uiRoot, '.wizard-header-left small');
         const entryTypeInput = q(form, '#entryType');
         const entryButtons = qa(form, '[data-entry-type]');
@@ -70,9 +71,11 @@
             sex: q(form, '#headSummarySex'),
             civil: q(form, '#headSummaryCivil'),
             contact: q(form, '#headSummaryContact'),
+            religion: q(form, '#headSummaryReligion'),
             education: q(form, '#headSummaryEducation'),
             job: q(form, '#headSummaryJob'),
             income: q(form, '#headSummaryIncome'),
+            address: q(form, '#headSummaryAddress'),
             sectors: q(form, '#headSummarySectors'),
             services: q(form, '#headSummaryServices')
         };
@@ -80,70 +83,17 @@
         let memberIndex = 0;
         let entryType = entryTypeInput ? entryTypeInput.value : 'head';
         const initialFamilyData = parseJsonNode(initialFamilyDataNode, {});
+        const state = {
+            selectedSectorIds: normalizeIds(parseJsonNode(selectedSectorIdsNode, initialFamilyData.selectedSectorIds || [])),
+            activeChoiceSource: null,
+            activeChoicePlaceholder: null,
+        };
+        const bootstrapChoiceModal = choiceModal && window.bootstrap && window.bootstrap.Modal
+            ? new window.bootstrap.Modal(choiceModal)
+            : null;
 
         function totalSteps() {
             return entryType === 'member' ? 2 : 3;
-        }
-
-        function escapeHtml(value) {
-            return String(value || '').replace(/[&<>"']/g, function (char) {
-                return {
-                    '&': '&amp;',
-                    '<': '&lt;',
-                    '>': '&gt;',
-                    '"': '&quot;',
-                    "'": '&#039;'
-                }[char] || char;
-            });
-        }
-
-        function setFormAlert(type, message) {
-            if (!formAlert) {
-                return;
-            }
-
-            if (!message) {
-                formAlert.innerHTML = '';
-                return;
-            }
-
-            formAlert.innerHTML = '<div class="alert alert-' + type + '">' + escapeHtml(message) + '</div>';
-        }
-
-        function updateCsrfToken(token) {
-            if (!token) {
-                return;
-            }
-
-            // Keep CSRF in sync with FamilyController::store AJAX responses.
-            qa(form, 'input[type="hidden"][name]').forEach(function (input) {
-                if (String(input.name || '').toLowerCase().indexOf('csrf') !== -1) {
-                    input.value = token;
-                }
-            });
-        }
-
-        function resetFamilyForm(clearAlert) {
-            window.setTimeout(function () {
-                if (memberRows) {
-                    memberRows.innerHTML = '';
-                }
-
-                memberIndex = 0;
-                setEntryType('head');
-                resetSectorSelection();
-
-                if (typeof ui.setMemberRowsEmptyState === 'function') {
-                    ui.setMemberRowsEmptyState(memberRows, memberRowsEmpty);
-                }
-
-                updateHeadSummary();
-                setStep(1);
-
-                if (clearAlert) {
-                    setFormAlert('', '');
-                }
-            }, 0);
         }
 
         function setHidden(element, hidden) {
@@ -260,6 +210,114 @@
             if (typeof ui.setMemberRowsEmptyState === 'function') {
                 ui.setMemberRowsEmptyState(memberRows, memberRowsEmpty);
             }
+
+            initMemberChoiceFields(memberRows);
+        }
+
+        function choiceLabel(input) {
+            const dataLabel = String(input.dataset.label || '').trim();
+
+            if (dataLabel !== '') {
+                return dataLabel;
+            }
+
+            const label = input.closest('label');
+
+            return label ? String(label.textContent || '').trim() : '';
+        }
+
+        function updateChoiceSummary(field) {
+            if (!field) {
+                return;
+            }
+
+            const summary = q(field, '[data-choice-summary]');
+            const emptyText = String(field.dataset.choiceEmpty || 'No options selected');
+            const labels = qa(field, 'input[type="checkbox"]:checked')
+                .map(choiceLabel)
+                .filter(function (label) {
+                    return label !== '';
+                });
+
+            if (!summary) {
+                return;
+            }
+
+            if (labels.length === 0) {
+                summary.textContent = emptyText;
+                summary.classList.add('text-muted');
+
+                return;
+            }
+
+            summary.textContent = labels.length <= 2 ? labels.join(', ') : labels.length + ' selected';
+            summary.title = labels.join(', ');
+            summary.classList.remove('text-muted');
+        }
+
+        function returnChoiceSource() {
+            if (!state.activeChoiceSource || !state.activeChoicePlaceholder) {
+                return;
+            }
+
+            state.activeChoicePlaceholder.replaceWith(state.activeChoiceSource);
+            state.activeChoiceSource.classList.add('family-form-hidden');
+            updateChoiceSummary(state.activeChoiceSource.closest('[data-choice-field]'));
+            state.activeChoiceSource = null;
+            state.activeChoicePlaceholder = null;
+        }
+
+        function openChoiceModal(field) {
+            const source = q(field, '[data-choice-source]');
+
+            if (!source || !choiceModalBody) {
+                return;
+            }
+
+            returnChoiceSource();
+
+            const placeholder = document.createComment('family choice source');
+
+            source.replaceWith(placeholder);
+            source.classList.remove('family-form-hidden');
+            choiceModalBody.appendChild(source);
+            state.activeChoiceSource = source;
+            state.activeChoicePlaceholder = placeholder;
+
+            if (choiceModalTitle) {
+                choiceModalTitle.textContent = String(field.dataset.choiceTitle || 'Select options');
+            }
+
+            if (bootstrapChoiceModal) {
+                bootstrapChoiceModal.show();
+            }
+        }
+
+        function initMemberChoiceFields(scope) {
+            const choiceScope = scope instanceof Element ? scope : form;
+
+            qa(choiceScope, '[data-choice-field]').forEach(function (field) {
+                if (field.dataset.choiceInitialized !== '1') {
+                    field.dataset.choiceInitialized = '1';
+                    const openBtn = q(field, '[data-choice-open]');
+
+                    if (openBtn) {
+                        openBtn.addEventListener('click', function () {
+                            openChoiceModal(field);
+                        });
+                    }
+
+                    field.addEventListener('change', function (event) {
+                        const target = event.target;
+
+                        if (target instanceof HTMLInputElement && target.type === 'checkbox') {
+                            updateChoiceSummary(field);
+                        }
+                    });
+                }
+
+                updateChoiceSummary(field);
+            });
         }
 
         if (nextBtn) {
@@ -278,6 +336,16 @@
             addMemberBtn.addEventListener('click', function () {
                 createMemberRow();
             });
+        }
+
+        if (addMemberStickyBtn) {
+            addMemberStickyBtn.addEventListener('click', function () {
+                createMemberRow();
+            });
+        }
+
+        if (choiceModal) {
+            choiceModal.addEventListener('hidden.bs.modal', returnChoiceSource);
         }
 
         entryButtons.forEach(function (button) {
@@ -313,9 +381,11 @@
             '#head_sex',
             '#head_civilstatus',
             '#head_contactnumber',
+            '#head_religion',
             '#head_education',
             '#head_job',
-            '#head_salary'
+            '#head_salary',
+            '#head_address'
         ].forEach(function (selector) {
             const element = q(form, selector);
 
@@ -339,125 +409,61 @@
         form.addEventListener('change', function (event) {
             const target = event.target;
 
-            if (target instanceof HTMLInputElement && (target.name === 'services[]' || target.name === 'sectors[]')) {
+            if (target instanceof HTMLSelectElement && target.classList.contains('js-other-select')) {
+                if (typeof ui.syncOtherControl === 'function') {
+                    ui.syncOtherControl(target);
+                }
+
                 updateHeadSummary();
+            }
+
+            if (target instanceof HTMLInputElement && target.name === 'service_ids[]') {
+                updateHeadSummary();
+            }
+        });
+
+        form.addEventListener('input', function (event) {
+            const target = event.target;
+
+            if (target instanceof HTMLInputElement && target.classList.contains('js-other-input')) {
+                updateHeadSummary();
+            }
+        });
+
+        form.addEventListener('submit', function () {
+            if (typeof ui.applyOtherValues === 'function') {
+                ui.applyOtherValues(form);
             }
         });
 
         if (resetBtn) {
             resetBtn.addEventListener('click', function () {
-                resetFamilyForm(true);
+                window.setTimeout(function () {
+                    if (memberRows) {
+                        memberRows.innerHTML = '';
+                    }
+
+                    memberIndex = 0;
+                    setEntryType('head');
+                    resetSectorSelection();
+                    populateSectorsByCategory();
+
+                    if (typeof ui.setMemberRowsEmptyState === 'function') {
+                        ui.setMemberRowsEmptyState(memberRows, memberRowsEmpty);
+                    }
+
+                    initMemberChoiceFields(memberRows);
+                    updateHeadSummary();
+                    setStep(1);
+                }, 0);
             });
         }
 
-        form.addEventListener('submit', function (event) {
-            // Submit via AJAX so validation errors stay inside the family modal.
-            event.preventDefault();
-
-            if (isSubmitting) {
-                return;
-            }
-
-            isSubmitting = true;
-            setFormAlert('', '');
-
-            fetch(form.action, {
-                method: 'POST',
-                body: new FormData(form),
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            })
-                .then(function (response) {
-                    return response.text().then(function (text) {
-                        let data = {};
-
-                        try {
-                            data = JSON.parse(text || '{}');
-                        } catch (error) {
-                            data = {};
-                        }
-
-                        return { ok: response.ok, data: data };
-                    });
-                })
-                .then(function (result) {
-                    const data = result.data || {};
-
-                    updateCsrfToken(data.csrf);
-
-                    if (!result.ok || data.status === 'error') {
-                        setFormAlert('danger', data.message || 'Please review the required fields.');
-                        return;
-                    }
-
-                    setFormAlert('success', data.message || 'Family data saved successfully.');
-
-                    // Suggestion #1: clear the form after a successful add.
-                    if (!isEditMode) {
-                        form.reset();
-                        resetFamilyForm(false);
-                    }
-                })
-                .catch(function () {
-                    setFormAlert('danger', 'Unable to save the family data. Please try again.');
-                })
-                .finally(function () {
-                    isSubmitting = false;
-                });
-        });
-
-        form.addEventListener('submit', function (event) {
-            // Submit via AJAX so validation stays inside the Add Family modal.
-            event.preventDefault();
-
-            if (isSubmitting) {
-                return;
-            }
-
-            isSubmitting = true;
-            setFormAlert('', '');
-
-            fetch(form.action, {
-                method: 'POST',
-                body: new FormData(form),
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            })
-                .then(function (response) {
-                    return response.json().then(function (data) {
-                        return { ok: response.ok, data: data };
-                    }).catch(function () {
-                        return { ok: false, data: { message: 'Unable to save the family data. Please try again.' } };
-                    });
-                })
-                .then(function (result) {
-                    const data = result.data || {};
-
-                    updateCsrfToken(data.csrf);
-
-                    if (!result.ok || data.status === 'error') {
-                        setFormAlert('danger', data.message || 'Please review the required fields.');
-                        return;
-                    }
-
-                    setFormAlert('success', data.message || 'Family data saved successfully.');
-
-                    // Suggestion #1: auto-clear the form and return to Step 1 after save.
-                    if (resetBtn) {
-                        resetBtn.click();
-                    }
-                })
-                .catch(function () {
-                    setFormAlert('danger', 'Unable to save the family data. Please try again.');
-                })
-                .finally(function () {
-                    isSubmitting = false;
-                });
-        });
-
-        resetSectorSelection();
+        if (Object.keys(sectorCatalog).length > 0) {
+            populateSectorsByCategory();
+        } else {
+            resetSectorSelection();
+        }
 
         if (Array.isArray(initialFamilyData.existingMembers)) {
             initialFamilyData.existingMembers.forEach(function (member) {
@@ -468,6 +474,16 @@
         if (typeof ui.setMemberRowsEmptyState === 'function') {
             ui.setMemberRowsEmptyState(memberRows, memberRowsEmpty);
         }
+
+        if (typeof ui.syncOtherControls === 'function') {
+            ui.syncOtherControls(form);
+        }
+
+        if (typeof ui.initDropdownChecklists === 'function') {
+            ui.initDropdownChecklists(form);
+        }
+
+        initMemberChoiceFields(memberRows);
 
         updateHeadSummary();
 

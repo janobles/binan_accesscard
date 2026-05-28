@@ -9,7 +9,15 @@ class ViewLayoutModel
 {
     public function pageTitle(string $activePage): string
     {
-        return ucwords(str_replace('-', ' ', $activePage));
+        return match ($activePage) {
+            'family-entry' => 'Add Record',
+            'family-manage' => 'Manage Records',
+            'accounts' => 'Account Management',
+            'audit-trails' => 'Audit Trails',
+            'sectors' => 'Sector Management',
+            'services' => 'Services and Programs Management',
+            default => ucwords(str_replace('-', ' ', $activePage)),
+        };
     }
 
     public function employeePageTitle(string $activePage): string

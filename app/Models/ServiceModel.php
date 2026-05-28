@@ -2,8 +2,7 @@
 
 namespace App\Models;
 
-use App\Libraries\RecordArchiver;
-use App\Libraries\SectorIds;
+use App\Support\SectorIds;
 use CodeIgniter\Model;
 
 /**
@@ -14,7 +13,8 @@ class ServiceModel extends Model
     protected $table = 'services';
     protected $primaryKey = 'serviceID';
     protected $returnType = 'array';
-    protected $allowedFields = ['category', 'name', 'description'];
+    protected $allowedFields = ['serviceID', 'category', 'name', 'description'];
+    protected $useAutoIncrement = false;
     protected $useTimestamps = false;
 
     public function hasTable(): bool
@@ -22,47 +22,15 @@ class ServiceModel extends Model
         return $this->db->tableExists($this->table);
     }
 
-    public function saveServiceRecord(array $data, ?int $serviceId = null): bool
+    public function nextServiceId(): int
     {
         if (! $this->hasTable()) {
-            return false;
+            return 1;
         }
 
-        $serviceData = $this->serviceData($data);
+        $row = $this->selectMax($this->primaryKey, 'max_id')->first();
 
-        if (! $this->isValidServiceData($serviceData)) {
-            return false;
-        }
-
-        if ($serviceId === null) {
-            return (bool) $this->insert($serviceData);
-        }
-
-        return (bool) $this->update($serviceId, $serviceData);
-    }
-
-    public function archiveService(int $serviceId): bool
-    {
-        if (! $this->hasTable()) {
-            return false;
-        }
-
-        return RecordArchiver::archive($this->table, $this->primaryKey, $serviceId);
-    }
-
-    public function serviceData(array $data): array
-    {
-        return [
-            'category' => trim((string) ($data['category'] ?? '')),
-            'name' => trim((string) ($data['name'] ?? '')),
-            'description' => trim((string) ($data['description'] ?? '')),
-        ];
-    }
-
-    public function isValidServiceData(array $data): bool
-    {
-        return trim((string) ($data['category'] ?? '')) !== ''
-            && trim((string) ($data['name'] ?? '')) !== '';
+        return ((int) ($row['max_id'] ?? 0)) + 1;
     }
 
     public function getNameMapByIds(array $serviceIds): array

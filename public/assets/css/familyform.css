@@ -1,432 +1,472 @@
-﻿/* Family wizard UI styles. Field saving and validation belong in PHP controllers/models. */
+/* Family wizard UI styles. Field saving and validation belong in PHP controllers/models. */
 
-/* ── Shell & Card ───────────────────────────────────────────────── */
 .family-wizard-shell {
-    display: flex;
-    justify-content: center;
-    margin: 0;
+	display: flex;
+	justify-content: center;
+	margin: 0;
 }
 
 .family-wizard-card {
-    width: min(100%, 1180px);
-    background: #ffffff;
-    border: 1px solid #cfdceb;
-    border-radius: 8px;
-    box-shadow: 0 8px 24px rgba(9, 31, 58, 0.08);
-    overflow: hidden;
+	width: min(100%, 1180px);
+	background: #ffffff;
+	border: 1px solid #cfdceb;
+	border-radius: 8px;
+	box-shadow: 0 8px 24px rgba(9, 31, 58, 0.08);
+	overflow: hidden;
 }
 
-/* ── Header ─────────────────────────────────────────────────────── */
 .family-wizard-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 14px 18px;
-    background: #102f50;
-    color: #eff7ff;
+	display: flex;
+	align-items: center;
+	justify-content: flex-start;
+	padding: 16px 18px;
+	background: #102f50;
+	color: #eff7ff;
 }
 
 .wizard-header-left {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    min-width: 0;
+	display: flex;
+	align-items: center;
+	gap: 10px;
 }
 
 .wizard-header-left strong {
-    display: block;
-    font-size: 20px;
-    font-weight: 700;
-    line-height: 1.2;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+	display: block;
+	font-size: 22px;
+	font-weight: 700;
+	line-height: 1.15;
 }
 
 .wizard-header-left small {
-    display: block;
-    margin-top: 2px;
-    font-size: 12px;
-    color: #9fb1c6;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+	display: block;
+	margin-top: 2px;
+	font-size: 12px;
+	color: #9fb1c6;
 }
 
 .wizard-icon {
-    flex-shrink: 0;
-    width: 32px;
-    height: 32px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 7px;
-    background: #118b86;
-    font-size: 20px;
-    line-height: 1;
-    font-weight: 600;
+	width: 32px;
+	height: 32px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 7px;
+	background: #118b86;
+	font-size: 20px;
+	line-height: 1;
+	font-weight: 600;
 }
 
-.wizard-header-badge {
-    flex-shrink: 0;
-    width: 18px;
-    height: 18px;
-    border-radius: 6px;
-    border: 2px solid #294c72;
-    background: transparent;
-}
-
-/* ── Step Indicator ─────────────────────────────────────────────── */
 .family-wizard-steps {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    border-top: 1px solid #284866;
-    border-bottom: 1px solid #ccd6e2;
-    background: #edf2f7;
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	border-top: 1px solid #284866;
+	border-bottom: 1px solid #ccd6e2;
+	background: #edf2f7;
 }
 
 .wizard-step {
-    min-height: 58px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    gap: 3px;
-    padding: 8px 6px;
-    border-right: 1px solid #d2dae5;
-    cursor: pointer;
-    transition: background 0.15s;
+	min-height: 62px;
+	display: grid;
+	place-items: center;
+	text-align: center;
+	gap: 2px;
+	padding: 9px 6px;
+	border-right: 1px solid #d2dae5;
+	cursor: pointer;
 }
 
 .wizard-step:last-child {
-    border-right: 0;
+	border-right: 0;
 }
 
 .wizard-step span {
-    flex-shrink: 0;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 13px;
-    font-weight: 700;
-    color: #8d9daf;
-    background: #dce4ee;
-    transition: background 0.15s, color 0.15s;
+	width: 24px;
+	height: 24px;
+	border-radius: 50%;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 13px;
+	font-weight: 700;
+	color: #8d9daf;
+	background: #dce4ee;
 }
 
 .wizard-step small {
-    font-size: 12px;
-    line-height: 1.2;
-    color: #8c9aad;
-    max-width: 120px;
-    word-break: break-word;
+	font-size: 13px;
+	line-height: 1.15;
+	color: #8c9aad;
+	max-width: 160px;
 }
 
 .wizard-step.is-active {
-    box-shadow: inset 0 -2px 0 #2867a1;
+	box-shadow: inset 0 -2px 0 #2867a1;
 }
 
 .wizard-step.is-active span {
-    color: #fff;
-    background: #1e5f98;
+	color: #fff;
+	background: #1e5f98;
 }
 
 .wizard-step.is-active small {
-    color: #3f5c78;
-    font-weight: 600;
+	color: #3f5c78;
+	font-weight: 600;
 }
 
-/* ── Form body ──────────────────────────────────────────────────── */
 #familyForm {
-    padding: 18px 18px 16px;
+	padding: 20px 18px 18px;
 }
 
 #familyForm .form-section {
-    margin-top: 0;
-    border-top: 1px solid #d6dee8;
-    padding-top: 16px;
+	margin-top: 0;
+	border-top: 1px solid #d6dee8;
+	padding-top: 18px;
 }
 
 #familyForm .family-step-panel {
-    display: none;
+	display: none;
 }
 
 #familyForm .family-step-panel.is-visible {
-    display: block;
+	display: block;
 }
 
 #familyForm .form-section:first-of-type {
-    margin-top: 0;
+	margin-top: 0;
 }
 
 #familyForm .section-title {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 14px;
-    border-bottom: 0;
-    padding-bottom: 0;
+	margin-bottom: 16px;
+	border-bottom: 0;
+	padding-bottom: 0;
 }
 
 #familyForm .section-title .btn {
-    min-width: 112px;
-    border-radius: 8px;
-    font-weight: 600;
+	min-width: 112px;
+	border-radius: 8px;
+	font-weight: 600;
 }
 
 #familyForm .section-title span {
-    color: #4f6175;
-    font-size: 18px;
-    font-weight: 700;
+	color: #4f6175;
+	font-size: 20px;
+	font-weight: 700;
 }
 
 #familyForm .form-label {
-    margin-bottom: 5px;
-    color: #59697b;
-    font-size: 13px;
-    font-weight: 600;
+	margin-bottom: 6px;
+	color: #59697b;
+	font-size: 13px;
+	font-weight: 600;
 }
 
 #familyForm .form-control,
 #familyForm .form-select {
-    min-height: 42px;
-    border-color: #cbd6e3;
-    border-radius: 7px;
-    font-size: 14px;
-    color: #4e5f72;
-    background: #fbfdff;
+	min-height: 42px;
+	border-color: #cbd6e3;
+	border-radius: 7px;
+	font-size: 14px;
+	color: #4e5f72;
+	background: #fbfdff;
 }
 
 #familyForm .form-control::placeholder {
-    color: #95a4b5;
+	color: #95a4b5;
 }
 
 #familyForm .form-control:focus,
 #familyForm .form-select:focus {
-    border-color: #2d81bf;
-    box-shadow: 0 0 0 0.2rem rgba(45, 129, 191, 0.14);
+	border-color: #2d81bf;
+	box-shadow: 0 0 0 0.2rem rgba(45, 129, 191, 0.14);
+}
+
+.dropdown-checklist {
+	position: relative;
+}
+
+.dropdown-checklist-toggle {
+	width: 100%;
+	min-height: 42px;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
+	border: 1px solid #cbd6e3;
+	border-radius: 7px;
+	padding: 8px 11px;
+	background: #fbfdff;
+	color: #4e5f72;
+	font-size: 14px;
+	line-height: 1.3;
+	text-align: left;
+}
+
+.dropdown-checklist-toggle [data-dropdown-checklist-label] {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.dropdown-checklist.has-selection .dropdown-checklist-toggle {
+	border-color: #88b6d5;
+	background: #f2f8fc;
+	color: #254f73;
+}
+
+.dropdown-checklist-caret {
+	width: 8px;
+	height: 8px;
+	flex: 0 0 auto;
+	border-right: 2px solid #6b7f94;
+	border-bottom: 2px solid #6b7f94;
+	transform: rotate(45deg);
+	margin-top: -4px;
+}
+
+.dropdown-checklist.is-open .dropdown-checklist-caret {
+	margin-top: 4px;
+	transform: rotate(225deg);
+}
+
+.dropdown-checklist-menu {
+	display: none;
+	position: absolute;
+	z-index: 40;
+	top: calc(100% + 4px);
+	left: 0;
+	right: 0;
+	max-height: 290px;
+	overflow: auto;
+	border: 1px solid #cbd6e3;
+	border-radius: 8px;
+	padding: 8px;
+	background: #ffffff;
+	box-shadow: 0 12px 28px rgba(16, 47, 80, 0.16);
+}
+
+.dropdown-checklist.is-open .dropdown-checklist-menu {
+	display: block;
+}
+
+.dropdown-checklist-group + .dropdown-checklist-group {
+	margin-top: 8px;
+	padding-top: 8px;
+	border-top: 1px solid #e2e9f1;
+}
+
+.dropdown-checklist-group-title {
+	margin: 0 0 5px;
+	color: #48617a;
+	font-size: 12px;
+	font-weight: 700;
+	text-transform: uppercase;
+}
+
+.dropdown-checklist-option {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+	margin: 0;
+	border-radius: 6px;
+	padding: 7px 8px;
+	color: #41566d;
+	font-size: 13px;
+	line-height: 1.35;
+	cursor: pointer;
+}
+
+.dropdown-checklist-option:hover {
+	background: #f1f6fb;
+}
+
+.dropdown-checklist-option .form-check-input {
+	flex: 0 0 auto;
+	margin-top: 2px;
 }
 
 #familyForm .assistance-box,
 #familyForm .member-row {
-    border: 1px solid #d6dee9;
-    border-radius: 8px;
-    background: #f8fbff;
+	border: 1px solid #d6dee9;
+	border-radius: 8px;
+	background: #f8fbff;
 }
 
-/* ── Head summary (step 3) ─────────────────────────────────────── */
 #headOfFamilySummary small {
-    font-size: 12px;
-    color: #4f6175;
+	font-size: 12px;
+	color: #4f6175;
 }
 
 .head-summary-list {
-    font-size: 12px;
-    color: #4f6175;
+	font-size: 12px;
+	color: #4f6175;
 }
 
 .head-summary-list ul {
-    margin: 4px 0 0;
-    padding-left: 18px;
+	margin: 4px 0 0;
+	padding-left: 18px;
 }
 
 .head-summary-list li {
-    margin-bottom: 2px;
+	margin-bottom: 2px;
 }
 
-/* ── Services checklist ────────────────────────────────────────── */
 #familyForm .service-check-list {
-    display: grid;
-    gap: 8px;
+	display: grid;
+	gap: 8px;
 }
 
-/* ── Action buttons ────────────────────────────────────────────── */
+#sectorNameList .sector-name-option {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+	margin-bottom: 9px !important;
+}
+
+#sectorNameList .sector-name-option .form-check-input {
+	flex: 0 0 auto;
+	margin-top: 4px;
+}
+
+#sectorNameList .sector-name-label {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+	line-height: 1.35;
+}
+
+#sectorNameList .sector-group-badge {
+	flex: 0 0 auto;
+	min-width: 48px;
+	padding: 2px 7px;
+	border: 1px solid #b9cce0;
+	border-radius: 6px;
+	background: #edf4fb;
+	color: #285276;
+	font-size: 11px;
+	font-weight: 700;
+	line-height: 1.35;
+	text-align: center;
+	letter-spacing: 0.03em;
+}
+
+#sectorNameList .sector-group-pwd {
+	border-color: #9bc7df;
+	background: #e7f6fb;
+	color: #0f6177;
+}
+
+#sectorNameList .sector-group-sp {
+	border-color: #b7d2aa;
+	background: #eff8eb;
+	color: #3b6d2c;
+}
+
+#sectorNameList .sector-group-osca {
+	border-color: #d6c1ed;
+	background: #f4edfb;
+	color: #684293;
+}
+
+#sectorNameList .sector-name-text {
+	overflow-wrap: anywhere;
+}
+
 .family-form-actions {
-    margin-top: 16px;
-    padding-top: 12px;
-    border-top: 1px solid #d6dee8;
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-    flex-wrap: wrap;
+	margin-top: 18px;
+	padding-top: 14px;
+	border-top: 1px solid #d6dee8;
 }
 
 .family-form-hidden {
-    display: none !important;
+	display: none !important;
 }
 
 .family-form-actions .btn {
-    min-width: 110px;
-    min-height: 40px;
-    border-radius: 8px;
-    font-weight: 600;
-    font-size: 14px;
+	min-width: 116px;
+	min-height: 40px;
+	border-radius: 8px;
+	font-weight: 600;
+	font-size: 14px;
 }
 
 .family-form-actions .btn-outline-secondary {
-    border-color: #d2dbe7;
-    color: #5b6f84;
-    background: #f5f8fb;
+	border-color: #d2dbe7;
+	color: #5b6f84;
+	background: #f5f8fb;
 }
 
 .family-form-actions .btn-primary {
-    border-color: #10897f;
-    background: #10897f;
+	border-color: #10897f;
+	background: #10897f;
 }
 
 .family-form-actions .btn-primary:hover,
 .family-form-actions .btn-primary:focus,
 .family-form-actions .btn-primary:active {
-    border-color: #0d756d !important;
-    background: #0d756d !important;
+	border-color: #0d756d !important;
+	background: #0d756d !important;
 }
 
-/* ── Sector group headers ─────────────────────────────────────── */
-.sector-group-header {
-    min-width: 0;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 8px;
-    margin-bottom: 4px;
-}
-
-.sector-group-header hr {
-    flex-grow: 1;
-    border-color: #dee2e6;
-    opacity: 1;
-    margin: 0;
-}
-
-.sector-group-header:first-child {
-    margin-top: 0 !important;
-}
-
-#sectorNameList {
-    max-height: 260px;
-    overflow-y: auto;
-}
-
-/* ── Tablet (≤ 992px) ─────────────────────────────────────────── */
 @media (max-width: 992px) {
-    .wizard-step small {
-        font-size: 11px;
-    }
+	.family-wizard-steps {
+		grid-template-columns: repeat(3, 1fr);
+	}
 
-    #familyForm .section-title span {
-        font-size: 17px;
-    }
+	.wizard-step {
+		min-height: 68px;
+	}
+
+	#familyForm .section-title span {
+		font-size: 24px;
+	}
 }
 
-/* ── Mobile landscape / large phone (≤ 768px) ────────────────── */
 @media (max-width: 768px) {
-    .family-wizard-card {
-        border-radius: 6px;
-    }
+	.family-wizard-header {
+		padding: 12px;
+	}
 
-    .family-wizard-header {
-        padding: 11px 14px;
-    }
+	.wizard-header-left strong {
+		font-size: 24px;
+	}
 
-    .wizard-header-left strong {
-        font-size: 16px;
-    }
+	.family-wizard-shell {
+		overflow-x: auto;
+		justify-content: flex-start;
+	}
 
-    .wizard-header-left small {
-        font-size: 11px;
-    }
+	.family-wizard-card {
+		min-width: 760px;
+	}
 
-    .wizard-icon {
-        width: 28px;
-        height: 28px;
-        font-size: 17px;
-    }
+	.family-wizard-steps {
+		grid-template-columns: repeat(3, minmax(180px, 1fr));
+	}
 
-    .wizard-step {
-        min-height: 50px;
-        padding: 6px 4px;
-    }
+	#familyForm {
+		padding: 12px;
+	}
 
-    .wizard-step small {
-        font-size: 10px;
-        max-width: 80px;
-    }
+	#familyForm .section-title span {
+		font-size: 20px;
+	}
 
-    #familyForm {
-        padding: 14px 12px 12px;
-    }
+	.family-form-actions .btn {
+		min-width: 96px;
+	}
 
-    #familyForm .section-title span {
-        font-size: 16px;
-    }
+	#familyForm .family-step-panel[data-step="2"] {
+		overflow-x: auto;
+	}
 
-    .family-form-actions .btn {
-        min-width: 88px;
-        font-size: 13px;
-    }
+	#familyForm .family-step-panel[data-step="2"] > .row.g-3 {
+		min-width: 0;
+	}
 
-    #sectorNameList {
-        max-height: 200px;
-    }
-}
-
-/* ── Small phone (≤ 480px) ────────────────────────────────────── */
-@media (max-width: 480px) {
-    .family-wizard-card {
-        border-left: 0;
-        border-right: 0;
-        border-radius: 0;
-    }
-
-    .family-wizard-header {
-        padding: 10px 12px;
-    }
-
-    .wizard-header-left strong {
-        font-size: 15px;
-    }
-
-    /* Hide step labels on small phones — show only the circle numbers */
-    .wizard-step small {
-        display: none;
-    }
-
-    .wizard-step {
-        min-height: 40px;
-    }
-
-    #familyForm {
-        padding: 12px 10px 10px;
-    }
-
-    #familyForm .section-title span {
-        font-size: 15px;
-    }
-
-    /* Stack action buttons full width */
-    .family-form-actions {
-        flex-direction: column-reverse;
-        gap: 6px;
-    }
-
-    .family-form-actions .btn {
-        width: 100%;
-        min-width: unset;
-    }
-
-    #sectorNameList {
-        max-height: 180px;
-    }
-
-    /* Service boxes: 1 column on very small phones */
-    #familyForm .family-step-panel[data-step="2"] .col-lg-4 {
-        flex: 0 0 100%;
-        max-width: 100%;
-    }
+	#familyForm .family-step-panel[data-step="2"] > .row.g-3 > [class*="col-"] {
+		flex: 0 0 100%;
+		max-width: 100%;
+	}
 }

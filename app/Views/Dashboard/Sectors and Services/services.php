@@ -1,104 +1,98 @@
 <?php
-$services = $services ?? [];
+helper('dashboard_view');
+extract(service_management_view_data(get_defined_vars()), EXTR_OVERWRITE);
+$defaultServiceCategoryOptions = \App\Support\FamilyProfilingFormV2::SERVICE_CATEGORIES;
+$serviceCategoryOptions = array_values(array_unique(array_filter(array_map(
+    static fn (array $service): string => trim((string) ($service['category'] ?? '')),
+    $services
+))));
+$serviceCategoryOptions = array_values(array_unique(array_merge($defaultServiceCategoryOptions, $serviceCategoryOptions)));
 ?>
 
-<div class="panel mb-3">
-    <div class="section-title mt-0">
-        <span>Service List</span>
-        <div class="d-flex gap-2">
-            <button type="button" class="btn btn-primary btn-sm js-service-add-button">Add</button>
-            <button type="button" class="btn btn-outline-primary btn-sm js-service-update-button" disabled>Update</button>
-            <button type="button" class="btn btn-outline-danger btn-sm js-service-archive-button" disabled>Archive</button>
-        </div>
-    </div>
+<div class="panel mb-3" data-service-management-root>
+	<div class="section-title mt-0">
+		<span>Services and Programs Management</span>
+	</div>
 
-    <div class="table-responsive">
-        <table class="table table-sm align-middle">
-            <thead>
-                <tr>
-                    <th></th>
-                    <th>ID</th>
-                    <th>Category</th>
-                    <th>Name</th>
-                    <th>Description</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($services as $service): ?>
-                    <?php $serviceId = (int) ($service['serviceID'] ?? 0); ?>
-                    <tr>
-                        <td>
-                            <input
-                                class="form-check-input js-service-select"
-                                type="radio"
-                                name="selected_service"
-                                aria-label="Select service"
-                                data-service-id="<?= esc((string) $serviceId, 'attr') ?>"
-                                data-category="<?= esc((string) ($service['category'] ?? ''), 'attr') ?>"
-                                data-name="<?= esc((string) ($service['name'] ?? ''), 'attr') ?>"
-                                data-description="<?= esc((string) ($service['description'] ?? ''), 'attr') ?>">
-                        </td>
-                        <td><?= esc((string) $serviceId) ?></td>
-                        <td><?= esc((string) ($service['category'] ?? '')) ?></td>
-                        <td><?= esc((string) ($service['name'] ?? '')) ?></td>
-                        <td><?= esc((string) ($service['description'] ?? '')) ?></td>
-                    </tr>
-                <?php endforeach; ?>
-                <?php if ($services === []): ?>
-                    <tr>
-                        <td colspan="5" class="text-center text-muted">No service records found.</td>
-                    </tr>
-                <?php endif; ?>
-            </tbody>
-        </table>
-    </div>
-</div>
+	<datalist id="serviceCategoryOptions">
+		<?php foreach ($serviceCategoryOptions as $category): ?>
+			<option value="<?= esc($category) ?>"></option>
+		<?php endforeach; ?>
+	</datalist>
 
-<div class="modal fade" id="serviceEditorModal" tabindex="-1" aria-labelledby="serviceEditorModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <form class="modal-content" method="post" data-create-action="<?= site_url('admin/services/create') ?>" data-update-action="<?= site_url('admin/services/update') ?>">
-            <?= csrf_field() ?>
-            <div class="modal-header">
-                <h5 class="modal-title" id="serviceEditorModalLabel">Add Service</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="mb-3">
-                    <label class="form-label" for="serviceEditorCategory">Category</label>
-                    <input class="form-control" id="serviceEditorCategory" name="category" maxlength="100" required>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label" for="serviceEditorName">Name</label>
-                    <input class="form-control" id="serviceEditorName" name="name" maxlength="150" required>
-                </div>
-                <div>
-                    <label class="form-label" for="serviceEditorDescription">Description</label>
-                    <textarea class="form-control" id="serviceEditorDescription" name="description" rows="3"></textarea>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="submit" class="btn btn-primary js-service-editor-submit">Add</button>
-            </div>
-        </form>
-    </div>
-</div>
+	<form class="management-create-form mb-3" method="post" action="<?= site_url('admin/services/create') ?>">
+		<?= csrf_field() ?>
+		<div>
+			<label class="form-label" for="serviceCreateCategory">Category</label>
+			<select class="form-select js-management-other-select" id="serviceCreateCategory" name="category" data-other-input="#serviceCreateCategoryOther" required>
+				<option value="">Select</option>
+				<?php foreach ($serviceCategoryOptions as $category): ?>
+					<option value="<?= esc((string) $category) ?>"><?= esc((string) $category) ?></option>
+				<?php endforeach; ?>
+				<option value="__other__">Others</option>
+			</select>
+			<input class="form-control mt-2 d-none" id="serviceCreateCategoryOther" name="category_other" placeholder="Type new category">
+		</div>
+		<div>
+			<label class="form-label" for="serviceCreateName">Name</label>
+			<input class="form-control" id="serviceCreateName" name="name" placeholder="Service or program name" required>
+		</div>
+		<div>
+			<label class="form-label" for="serviceCreateDescription">Description</label>
+			<input class="form-control" id="serviceCreateDescription" name="description" placeholder="Description">
+		</div>
+		<div class="management-action">
+			<button class="btn btn-primary w-100" type="submit">Add Service or Program</button>
+		</div>
+	</form>
 
-<div class="modal fade" id="serviceArchiveModal" tabindex="-1" aria-labelledby="serviceArchiveModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <form class="modal-content" method="post" data-action-base="<?= site_url('admin/services/archive') ?>">
-            <?= csrf_field() ?>
-            <div class="modal-header">
-                <h5 class="modal-title" id="serviceArchiveModalLabel">Archive Service</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p class="mb-0">Archive <strong class="js-service-archive-name">this service</strong>?</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="submit" class="btn btn-danger">Archive</button>
-            </div>
-        </form>
-    </div>
+	<div class="table-responsive">
+		<table class="table table-sm align-middle management-table">
+			<thead>
+				<tr>
+					<th>Category</th>
+					<th>Name</th>
+					<th>Description</th>
+					<th class="text-end">Actions</th>
+				</tr>
+			</thead>
+			<tbody>
+				<?php foreach ($services as $service): ?>
+					<?php $serviceId = (int) ($service['serviceID'] ?? 0); ?>
+					<?php $updateFormId = 'serviceUpdateForm' . $serviceId; ?>
+					<tr data-inline-edit-row>
+						<td>
+							<input class="form-control form-control-sm" list="serviceCategoryOptions" name="category" form="<?= esc($updateFormId) ?>" value="<?= esc((string) ($service['category'] ?? '')) ?>" required data-inline-edit-field disabled>
+						</td>
+						<td>
+							<input class="form-control form-control-sm" name="name" form="<?= esc($updateFormId) ?>" value="<?= esc((string) ($service['name'] ?? '')) ?>" required data-inline-edit-field disabled>
+						</td>
+						<td>
+							<input class="form-control form-control-sm" name="description" form="<?= esc($updateFormId) ?>" value="<?= esc((string) ($service['description'] ?? '')) ?>" data-inline-edit-field disabled>
+						</td>
+						<td class="text-end">
+							<?php $deleteFormId = 'serviceDeleteForm' . $serviceId; ?>
+							<form id="<?= esc($updateFormId) ?>" method="post" action="<?= site_url('admin/services/update/' . $serviceId) ?>">
+								<?= csrf_field() ?>
+							</form>
+							<form id="<?= esc($deleteFormId) ?>" class="js-management-delete-form" method="post" action="<?= site_url('admin/services/delete/' . $serviceId) ?>" data-confirm-message="<?= esc('Delete service or program "' . (string) ($service['name'] ?? '') . '"? This is permanent.', 'attr') ?>">
+								<?= csrf_field() ?>
+							</form>
+							<div class="management-row-actions">
+								<button class="btn btn-outline-primary btn-sm js-inline-edit" type="button">Edit</button>
+								<button class="btn btn-primary btn-sm js-inline-save d-none" type="submit" form="<?= esc($updateFormId) ?>">Save</button>
+								<button class="btn btn-outline-secondary btn-sm js-inline-cancel d-none" type="button">Cancel</button>
+								<button class="btn btn-outline-danger btn-sm" type="submit" form="<?= esc($deleteFormId) ?>">Delete</button>
+							</div>
+						</td>
+					</tr>
+				<?php endforeach; ?>
+				<?php if ($services === []): ?>
+					<tr>
+						<td colspan="4" class="text-center text-muted">No service or program records found.</td>
+					</tr>
+				<?php endif; ?>
+			</tbody>
+		</table>
+	</div>
 </div>

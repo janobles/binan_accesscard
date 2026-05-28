@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Libraries\SectorIds;
+use App\Support\SectorIds;
 use CodeIgniter\Database\BaseBuilder;
 use CodeIgniter\Database\BaseConnection;
 
@@ -72,10 +72,8 @@ class SearchModel
         }
 
         $limit = max(1, $limit);
-        $select = 'userID, username, role, isactive, dt_created';
-
         $builder = $this->db->table('users')
-            ->select($select)
+            ->select('userID, username, role, isactive, dt_created')
             ->whereIn('role', ['Admin', 'User']);
 
         $keyword = $this->normalizeKeyword($keyword);

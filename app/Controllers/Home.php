@@ -69,7 +69,7 @@ class Home extends BaseController
         session()->set([
             'is_logged_in' => true,
             'user_id' => (int) $user['userID'],
-            'member_id' => (int) ($user['memberID'] ?? 0),
+            'member_id' => 0,
             'username' => $user['username'],
             'role' => $role,
             'idle_last_activity' => time(),
@@ -134,7 +134,12 @@ class Home extends BaseController
             return $this->renderAdminFamilyPartial();
         }
 
-        return (new DashboardPageBuilder($this->request))->renderAdminPage('family-entry');
+        return $this->renderAdminPage('family-entry');
+    }
+
+    public function adminManageRecords(): string|RedirectResponse
+    {
+        return $this->renderAdminPage('family-manage');
     }
 
     public function adminAuditTrails(): string|RedirectResponse
@@ -180,7 +185,12 @@ class Home extends BaseController
             return $this->renderEmployeeFamilyPartial();
         }
 
-        return (new DashboardPageBuilder($this->request))->renderEmployeePage('family-entry');
+        return $this->renderEmployeePage('family-entry');
+    }
+
+    public function employeeManageRecords(): string|RedirectResponse
+    {
+        return $this->renderEmployeePage('family-manage');
     }
 
     public function employeeActivity(): string|RedirectResponse
@@ -217,8 +227,6 @@ class Home extends BaseController
         return view('Dashboard/Manage/accounts', [
             'adminAccounts' => $viewData['adminAccounts'] ?? [],
             'employeeAccounts' => $viewData['employeeAccounts'] ?? [],
-            'canCreateAccounts' => $currentRole === 'Developer',
-            'currentRole' => $currentRole,
             'searchTerm' => $viewData['searchTerm'] ?? '',
             'searchFilters' => $viewData['searchFilters'] ?? [],
         ]);
@@ -268,6 +276,7 @@ class Home extends BaseController
 
         return view('Dashboard/Sectors and Services/sector', [
             'sectors' => $viewData['sectors'] ?? [],
+            'sectorShortcodeOptions' => $viewData['sectorShortcodeOptions'] ?? [],
         ]);
     }
 

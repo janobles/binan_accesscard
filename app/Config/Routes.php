@@ -22,6 +22,7 @@ $routes->group('admin', static function (RouteCollection $routes): void {
     $routes->get('dashboard', 'Home::adminDashboard');
     $routes->get('accounts', 'Home::adminAccounts');
     $routes->get('family-entry', 'Home::adminFamilyEntry');
+    $routes->get('manage-records', 'Home::adminManageRecords');
     $routes->get('audit-trails', 'Home::adminAuditTrails');
     $routes->get('sectors', 'Home::adminSectors');
     $routes->get('services', 'Home::adminServices');
@@ -29,7 +30,7 @@ $routes->group('admin', static function (RouteCollection $routes): void {
     // Admin-only: disable employee accounts from Account Management.
     $routes->post('accounts/disable', 'AccountController::disableEmployee');
 
-    $routes->get('manage-families', 'Home::adminFamilyEntry');
+    $routes->get('manage-families', 'Home::adminManageRecords');
     $routes->group('manage-family', static function (RouteCollection $routes): void {
         $routes->get('', 'Home::adminFamilyEntry');
         $routes->get('list', 'FamilyController::listFamilies');
@@ -43,12 +44,14 @@ $routes->group('admin', static function (RouteCollection $routes): void {
     $routes->group('sectors', static function (RouteCollection $routes): void {
         $routes->post('create', 'SectorController::create');
         $routes->post('update/(:num)', 'SectorController::update/$1');
+        $routes->post('delete/(:num)', 'SectorController::delete/$1');
         $routes->post('archive/(:num)', 'SectorController::archive/$1');
     });
 
     $routes->group('services', static function (RouteCollection $routes): void {
         $routes->post('create', 'ServiceController::create');
         $routes->post('update/(:num)', 'ServiceController::update/$1');
+        $routes->post('delete/(:num)', 'ServiceController::delete/$1');
         $routes->post('archive/(:num)', 'ServiceController::archive/$1');
     });
 });
@@ -59,9 +62,10 @@ $routes->group('admin', static function (RouteCollection $routes): void {
 $routes->group('employee', static function (RouteCollection $routes): void {
     $routes->get('workspace', 'Home::employee');
     $routes->get('family-entry', 'Home::employeeFamilyEntry');
+    $routes->get('manage-records', 'Home::employeeManageRecords');
     $routes->get('activity', 'Home::employeeActivity');
 
-    $routes->get('manage-families', 'Home::employeeFamilyEntry');
+    $routes->get('manage-families', 'Home::employeeManageRecords');
     $routes->group('manage-family', static function (RouteCollection $routes): void {
         $routes->get('', 'Home::employeeFamilyEntry');
         $routes->get('list', 'FamilyController::listFamilies');
@@ -76,6 +80,5 @@ $routes->group('employee', static function (RouteCollection $routes): void {
  * Shared submissions
  */
 $routes->post('developer/accounts', 'AccountController::create');
-// Developer-only: toggle staff account status from Account Management (Dashboard/accounts).
 $routes->post('developer/accounts/status', 'AccountController::updateStatus');
 $routes->post('families', 'FamilyController::store');

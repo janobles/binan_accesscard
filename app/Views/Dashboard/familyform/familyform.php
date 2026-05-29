@@ -126,7 +126,7 @@ $fieldViewData            = compact(
 
             <?= view('Member/member-summary') ?>
 
-            <script type="application/json" id="initialFamilyData"><?= json_encode($initialFamilyData, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?></script>
+            <div id="initialFamilyData" class="family-form-hidden" data-json="<?= esc(json_encode($initialFamilyData, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT), 'attr') ?>"></div>
 
             <div class="d-flex justify-content-end gap-2 family-form-actions">
                 <button type="button" class="btn btn-outline-secondary family-form-hidden" id="prevStepBtn">Previous</button>

@@ -126,6 +126,40 @@ class AccountController extends BaseController
             ->with('success', 'Account ' . $statusLabel . ' successfully.');
     }
 
+    public function disableEmployee(): RedirectResponse
+    {
+        $guard = $this->requireAdmin();
+
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        if (! $this->validate(['userID' => 'required|is_natural_no_zero'])) {
+            return redirect()->back()
+                ->with('error', implode(' ', $this->validator->getErrors()));
+        }
+
+        $userId = (int) $this->request->getPost('userID');
+        $userModel = new UserModel();
+        $account = $userModel->find($userId);
+
+        if ($account === null || (string) ($account['role'] ?? '') !== 'User') {
+            return redirect()->back()->with('error', 'Employee account could not be found.');
+        }
+
+        if (! $userModel->updateAccountStatus($userId, false)) {
+            return redirect()->back()->with('error', 'Employee account could not be disabled.');
+        }
+
+        $this->audit(
+            'ACCOUNT_STATUS_UPDATED',
+            'Disabled Employee account "' . (string) ($account['username'] ?? '') . '" (#' . $userId . ').'
+        );
+
+        return redirect()->to(site_url('admin/accounts'))
+            ->with('success', 'Employee account disabled successfully.');
+    }
+
     private function requireDeveloper(): ?RedirectResponse
     {
         if (! session()->get('is_logged_in')) {

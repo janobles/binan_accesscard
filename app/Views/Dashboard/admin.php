@@ -19,8 +19,6 @@ $searchTerm = $searchTerm ?? '';
 $searchFilters = $searchFilters ?? [];
 $auditActionOptions = $auditActionOptions ?? [];
 $sectorOptions = $familyFormViewData['sectorOptions'] ?? [];
-$showLookupNav = in_array($currentRole, ['Admin', 'Developer'], true);
-$lookupsActive = str_contains((string) current_url(), 'admin/lookups') ? 'active' : '';
 $hasSearchFilters = $searchTerm !== '' || array_filter($searchFilters, static fn ($value): bool => trim((string) $value) !== '') !== [];
 $canCreateFamily = $canCreateFamily ?? false;
 $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
@@ -63,7 +61,6 @@ $formatAuditUser = static function (array $audit): string {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= esc($pageTitle) ?> - Binan Access Card MIS</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <?= admin_dashboard_style_links() ?>
 </head>
 <body>
@@ -130,7 +127,7 @@ $formatAuditUser = static function (array $audit): string {
                     <div class="col-md-3"><div class="panel"><small>Total Records</small><div class="stat-value"><?= esc((string) ($stats['families'] ?? 0)) ?></div></div></div>
                     <div class="col-md-3"><div class="panel"><small>Registered Members</small><div class="stat-value"><?= esc((string) ($stats['members'] ?? 0)) ?></div></div></div>
                     <div class="col-md-3"><div class="panel"><small>Active Sectors</small><div class="stat-value"><?= esc((string) ($stats['sectors'] ?? 0)) ?></div></div></div>
-                    <div class="col-md-3"><div class="panel"><small>Services and Programs</small><div class="stat-value"><?= esc((string) ($stats['assistance'] ?? 0)) ?></div></div></div>
+                    <div class="col-md-3"><div class="panel"><small>Member Services</small><div class="stat-value"><?= esc((string) ($stats['assistance'] ?? 0)) ?></div></div></div>
                 </div>
 
                 <div class="panel mb-3">
@@ -211,13 +208,11 @@ $formatAuditUser = static function (array $audit): string {
             <?php endif; ?>
 
             <?php if ($activePage === 'accounts' && $canManageAccounts): ?>
-                <?= view('Dashboard/Manage/accounts', [
+                <?= view('Dashboard/accounts', [
                     'adminAccounts' => $adminAccounts,
                     'employeeAccounts' => $employeeAccounts,
                     'searchTerm' => $searchTerm,
                     'searchFilters' => $searchFilters,
-                    'canCreateAccounts' => $canCreateAccounts,
-                    'currentRole' => $currentRole,
                 ]) ?>
             <?php endif; ?>
 
@@ -232,11 +227,11 @@ $formatAuditUser = static function (array $audit): string {
             <?php endif; ?>
 
             <?php if ($activePage === 'family-manage'): ?>
-                <?= view('Dashboard/familyform/family-list', $recordListData) ?>
+                <?= view('Dashboard/family-list', $recordListData) ?>
             <?php endif; ?>
 
             <?php if ($activePage === 'audit-trails'): ?>
-                <?= view('Dashboard/Manage/audit-trails', [
+                <?= view('Dashboard/audit-trails', [
                     'recentAudits' => $recentAudits,
                     'searchTerm' => $searchTerm,
                     'searchFilters' => $searchFilters,
@@ -283,9 +278,7 @@ $formatAuditUser = static function (array $audit): string {
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="<?= base_url('assets/js/dashboard/family-form-ui.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form-ui.js') ?>"></script>
 <script src="<?= base_url('assets/js/dashboard/family-form.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form.js') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/family-list.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-list.js') ?>"></script>
 <script src="<?= base_url('assets/js/dashboard/management-forms.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/management-forms.js') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/audit-filters.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/audit-filters.js') ?>"></script>
 <script src="<?= base_url('assets/js/session-timeout.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/session-timeout.js') ?>" data-timeout-seconds="<?= esc((string) $idleTimeoutSeconds) ?>" data-logout-url="<?= site_url('logout?timeout=1') ?>" data-keep-alive-url="<?= site_url('session/keep-alive') ?>"></script>
 <script src="<?= base_url('assets/js/dashboard/dashboard-modal-loader.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/dashboard-modal-loader.js') ?>"></script>
 <script src="<?= base_url('assets/js/dashboard/manage-family-modal.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/manage-family-modal.js') ?>"></script>

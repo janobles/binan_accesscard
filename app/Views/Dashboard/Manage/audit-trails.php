@@ -99,17 +99,3 @@ $formatAuditUser = static function (array $audit): string {
         </table>
     </div>
 </div>
-
-<script>
-(function () {
-    document.querySelectorAll('.js-audit-action-filter').forEach(function (select) {
-        select.addEventListener('change', function () {
-            const form = select.closest('.js-audit-filter-form');
-
-            if (form) {
-                form.submit();
-            }
-        });
-    });
-})();
-</script>

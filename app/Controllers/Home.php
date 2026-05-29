@@ -229,6 +229,8 @@ class Home extends BaseController
             'employeeAccounts' => $viewData['employeeAccounts'] ?? [],
             'searchTerm' => $viewData['searchTerm'] ?? '',
             'searchFilters' => $viewData['searchFilters'] ?? [],
+            'canCreateAccounts' => $viewData['canCreateAccounts'] ?? false,
+            'currentRole' => $viewData['currentRole'] ?? '',
         ]);
     }
 

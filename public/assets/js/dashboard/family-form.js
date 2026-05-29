@@ -6,7 +6,9 @@
         }
 
         try {
-            const raw = typeof node.value !== 'undefined' ? node.value : node.textContent;
+            const raw = node.dataset && typeof node.dataset.json !== 'undefined'
+                ? node.dataset.json
+                : (typeof node.value !== 'undefined' ? node.value : node.textContent);
             return JSON.parse(raw || 'null') || fallbackValue;
         } catch (error) {
             return fallbackValue;

@@ -136,7 +136,7 @@
                     <table class="table table-sm align-middle mb-0">
                         <thead>
                             <tr>
-                                <th style="width: 80px;">ID</th>
+                                <th class="lookup-id-column">ID</th>
                                 <th>Name</th>
                                 <th>Description</th>
                                 <th class="text-end">Actions</th>

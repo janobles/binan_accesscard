@@ -13,50 +13,54 @@
 })(window);
 
 (function (window, document) {
-    function syncOtherSelect(select, root) {
-        if (!select) {
-            return;
-        }
+    // Pull the prefix->next-code map and the list of existing codes that the
+    // server embedded on the form (see sector-modal.php data-* attributes).
+    function parseJson(value, fallback) {
+        try {
+            const parsed = JSON.parse(value || '');
 
-        const input = (root || document).querySelector(select.dataset.otherInput || '');
-        const isOther = String(select.value || '') === '__other__';
-
-        if (!input) {
-            return;
-        }
-
-        input.classList.toggle('d-none', !isOther);
-        input.disabled = !isOther || select.disabled;
-        input.required = isOther && !select.disabled;
-
-        if (!isOther) {
-            input.value = '';
+            return parsed === null ? fallback : parsed;
+        } catch (error) {
+            return fallback;
         }
     }
 
-    function setShortcode(select, otherInput, value) {
-        const normalized = String(value || '').trim();
-        const hasOption = Array.from(select.options).some(function (option) {
-            return option.value === normalized;
-        });
+    // Leading alpha part of a code, e.g. "SC3" -> "SC", "LGBT" -> "LGBT".
+    function codePrefix(code) {
+        const match = String(code || '').toUpperCase().match(/^([A-Z]+)\d*$/);
 
-        if (normalized === '' || hasOption) {
-            select.value = normalized;
-            if (otherInput) {
-                otherInput.value = '';
-            }
-            syncOtherSelect(select, select.closest('.modal'));
+        return match ? match[1] : '';
+    }
 
+    // Inline duplicate check: compares the typed code against existing codes,
+    // excluding the sector's own code while editing. Toggles the error message
+    // and the submit button accordingly.
+    function validateCode(modal) {
+        const form = modal.querySelector('form');
+        const codeInput = modal.querySelector('#sectorModalShortcode');
+        const errorEl = modal.querySelector('.js-sector-code-error');
+        const submit = modal.querySelector('.js-sector-modal-submit');
+
+        if (!form || !codeInput || codeInput.disabled) {
             return;
         }
 
-        select.value = '__other__';
+        const existing = parseJson(form.dataset.existingCodes, []).map(function (code) {
+            return String(code || '').toUpperCase();
+        });
+        const ownCode = String(form.dataset.currentCode || '').toUpperCase();
+        const value = String(codeInput.value || '').trim().toUpperCase();
+        const isDuplicate = value !== '' && value !== ownCode && existing.indexOf(value) !== -1;
 
-        if (otherInput) {
-            otherInput.value = normalized;
+        if (errorEl) {
+            errorEl.classList.toggle('d-none', !isDuplicate);
         }
 
-        syncOtherSelect(select, select.closest('.modal'));
+        codeInput.classList.toggle('is-invalid', isDuplicate);
+
+        if (submit) {
+            submit.disabled = isDuplicate;
+        }
     }
 
     function openSectorModal(trigger) {
@@ -72,16 +76,19 @@
         const archiveMessage = modal.querySelector('.js-sector-archive-message');
         const title = modal.querySelector('#sectorActionModalLabel');
         const submit = modal.querySelector('.js-sector-modal-submit');
+        const prefix = modal.querySelector('#sectorModalPrefix');
         const shortcode = modal.querySelector('#sectorModalShortcode');
-        const shortcodeOther = modal.querySelector('#sectorModalShortcodeOther');
         const name = modal.querySelector('#sectorModalName');
         const description = modal.querySelector('#sectorModalDescription');
         const archiveName = modal.querySelector('.js-sector-archive-name');
         const sectorId = String(trigger.dataset.sectorId || '').trim();
         const isArchive = mode === 'archive';
+        const existingCode = mode === 'update' ? String(trigger.dataset.sectorShortcode || '') : '';
 
         form.reset();
         form.action = form.dataset.createAction || '';
+        // Remembered so the duplicate check can ignore this sector's own code.
+        form.dataset.currentCode = existingCode;
 
         if (mode === 'update') {
             form.action = (form.dataset.updateAction || '').replace(/\/$/, '') + '/' + sectorId;
@@ -97,6 +104,7 @@
             submit.textContent = mode === 'update' ? 'Update Sector' : (isArchive ? 'Archive Sector' : 'Add Sector');
             submit.classList.toggle('btn-danger', isArchive);
             submit.classList.toggle('btn-primary', !isArchive);
+            submit.disabled = false;
         }
 
         if (fields) {
@@ -107,21 +115,27 @@
             archiveMessage.classList.toggle('d-none', !isArchive);
         }
 
-        [shortcode, name, description].forEach(function (field) {
+        [prefix, shortcode, name, description].forEach(function (field) {
             if (field) {
                 field.disabled = isArchive;
                 field.required = !isArchive && field.hasAttribute('required');
             }
         });
 
-        if (shortcodeOther) {
-            shortcodeOther.disabled = true;
-            shortcodeOther.required = false;
-            shortcodeOther.classList.add('d-none');
-        }
-
         if (!isArchive) {
-            setShortcode(shortcode, shortcodeOther, mode === 'update' ? trigger.dataset.sectorShortcode : '');
+            // Set the Code first, then point the prefix dropdown at it (a known
+            // category, otherwise "Other"). Creating starts both blank.
+            if (shortcode) {
+                shortcode.value = existingCode;
+            }
+
+            if (prefix) {
+                const wanted = codePrefix(existingCode);
+                const hasOption = Array.from(prefix.options).some(function (option) {
+                    return option.value === wanted;
+                });
+                prefix.value = existingCode === '' ? '' : (hasOption ? wanted : '__other__');
+            }
 
             if (name) {
                 name.value = mode === 'update' ? String(trigger.dataset.sectorName || '') : '';
@@ -130,6 +144,8 @@
             if (description) {
                 description.value = mode === 'update' ? String(trigger.dataset.sectorDescription || '') : '';
             }
+
+            validateCode(modal);
         }
 
         if (archiveName) {
@@ -149,9 +165,38 @@
         openSectorModal(trigger);
     });
 
+    // Picking a category auto-fills the Code with the next suggested number.
+    // "Other (custom)" clears the field so the user can type a custom code.
     document.addEventListener('change', function (event) {
+        if (!event.target.matches('#sectorModalPrefix')) {
+            return;
+        }
+
+        const modal = document.getElementById('sectorActionModal');
+        const form = modal ? modal.querySelector('form') : null;
+        const code = modal ? modal.querySelector('#sectorModalShortcode') : null;
+
+        if (!form || !code) {
+            return;
+        }
+
+        const value = String(event.target.value || '');
+
+        if (value === '__other__') {
+            code.value = '';
+            code.focus();
+        } else if (value !== '') {
+            const map = parseJson(form.dataset.nextCodeMap, {});
+            code.value = map[value] || code.value;
+        }
+
+        validateCode(modal);
+    });
+
+    // Live duplicate feedback as the user edits the Code field.
+    document.addEventListener('input', function (event) {
         if (event.target.matches('#sectorModalShortcode')) {
-            syncOtherSelect(event.target, document.getElementById('sectorActionModal'));
+            validateCode(document.getElementById('sectorActionModal'));
         }
     });
 })(window, document);

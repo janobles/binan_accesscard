@@ -1,11 +1,26 @@
 <?php
+/**
+ * Admin / Developer dashboard shell (the ONLY live admin layout).
+ *
+ * Rendered by App\Libraries\DashboardPageBuilder::renderAdminPage(), which
+ * passes every variable used below (see buildAdminViewData()). The page is a
+ * single layout that swaps its main section based on $activePage; each section
+ * either renders inline (the "dashboard" overview) or delegates to a sub-view
+ * under Views/Dashboard/. Controller entry points live in App\Controllers\Home.
+ *
+ * The formatDate/formatTime/formatAuditMember/formatAuditUser helpers are
+ * provided by the builder (do not redefine them here).
+ */
 helper('assets');
+
+// Defensive defaults so the layout still renders if a value is ever missing.
 $user = $user ?? [];
 $username = $user['username'] ?? 'Admin';
 $activePage = $activePage ?? 'dashboard';
 $pageTitle = $pageTitle ?? 'Dashboard';
 $modeLabel = $modeLabel ?? 'Admin Console';
 $canManageAccounts = $canManageAccounts ?? false;
+$currentRole = $currentRole ?? '';
 $navActive = $navActive ?? [];
 $stats = $stats ?? ['families' => 0, 'members' => 0, 'sectors' => 0, 'assistance' => 0];
 $recentFamilies = $recentFamilies ?? [];
@@ -19,42 +34,12 @@ $searchTerm = $searchTerm ?? '';
 $searchFilters = $searchFilters ?? [];
 $auditActionOptions = $auditActionOptions ?? [];
 $sectorOptions = $familyFormViewData['sectorOptions'] ?? [];
-$showLookupNav = in_array($currentRole, ['Admin', 'Developer'], true);
-$lookupsActive = str_contains((string) current_url(), 'admin/lookups') ? 'active' : '';
 $hasSearchFilters = $searchTerm !== '' || array_filter($searchFilters, static fn ($value): bool => trim((string) $value) !== '') !== [];
 $canCreateFamily = $canCreateFamily ?? false;
 $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
+// Developers get the "developer" sidebar accent; plain admins get "admin".
 $sidebarRoleClass = $canManageAccounts ? 'developer' : 'admin';
 $selectedFilterDate = (string) ($searchFilters['date'] ?? $searchFilters['date_from'] ?? '');
-$formatDate = static function (mixed $value): string {
-    $timestamp = strtotime((string) $value);
-
-    return $timestamp === false ? '' : date('Y-m-d', $timestamp);
-};
-$formatTime = static function (mixed $value): string {
-    $timestamp = strtotime((string) $value);
-
-    return $timestamp === false ? '' : date('h:i A', $timestamp);
-};
-$formatAuditMember = static function (array $audit): string {
-    $memberName = trim((string) ($audit['member_name'] ?? ''));
-
-    if ($memberName === '') {
-        $memberName = trim((string) ($audit['firstname'] ?? '') . ' ' . (string) ($audit['lastname'] ?? ''));
-    }
-
-    return $memberName === '' ? '-' : $memberName;
-};
-$formatAuditUser = static function (array $audit): string {
-    $username = trim((string) ($audit['username'] ?? $audit['userID'] ?? ''));
-    $role = trim((string) ($audit['user_role'] ?? ''));
-
-    if ($role === 'User') {
-        $role = 'Employee';
-    }
-
-    return $role === '' ? $username : $username . ' (' . $role . ')';
-};
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -125,6 +110,8 @@ $formatAuditUser = static function (array $audit): string {
                 <div class="alert alert-danger"><?= esc(session()->getFlashdata('error')) ?></div>
             <?php endif; ?>
 
+            <?php /* Main content swaps on $activePage. "dashboard" is inline (stats +
+                     recent records/activity); the rest delegate to sub-views below. */ ?>
             <?php if ($activePage === 'dashboard'): ?>
                 <div class="row g-3 mb-3">
                     <div class="col-md-3"><div class="panel"><small>Total Records</small><div class="stat-value"><?= esc((string) ($stats['families'] ?? 0)) ?></div></div></div>
@@ -260,6 +247,8 @@ $formatAuditUser = static function (array $audit): string {
     </main>
 </div>
 
+<?php /* Shared modal target. The *-modal.js loaders fetch ?partial=1 fragments
+         (add/edit record, accounts, sectors, services, audit) into #familyModalBody. */ ?>
 <div class="modal fade floating-family-modal" id="familyModal" tabindex="-1" aria-labelledby="familyModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered modal-xl">
         <div class="modal-content">

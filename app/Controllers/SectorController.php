@@ -88,6 +88,12 @@ class SectorController extends BaseController
             return $this->redirectAdmin('admin/sectors', 'error', 'Shortcode and name are required.');
         }
 
+        // Block duplicate codes (excludes the current row on edit, so re-saving an
+        // unchanged code is fine). Mirrors the client-side check in the sector modal.
+        if ($model->shortcodeExists($data['shortcode'], $sectorId)) {
+            return $this->redirectAdmin('admin/sectors', 'error', 'Duplicate code "' . $data['shortcode'] . '". Please enter another code.');
+        }
+
         $isUpdate = $sectorId !== null;
 
         if (! $model->saveSectorRecord($data, $sectorId)) {

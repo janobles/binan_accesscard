@@ -108,7 +108,7 @@ $deepToRecord = (int) ($deepToRecord ?? 0);
                                     <input class="form-control" id="recordSearchDate" type="date" name="date" value="<?= esc($filterDate, 'attr') ?>">
                                 </div>
                                 <div class="d-flex justify-content-end gap-2">
-                                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <a class="btn btn-outline-secondary" href="<?= esc(site_url($listRoute . ($status === 'archived' ? '?status=archived' : '')), 'attr') ?>">Clear</a>
                                     <button class="btn btn-primary" type="submit">Search Records</button>
                                 </div>
                             </form>
@@ -175,11 +175,23 @@ $deepToRecord = (int) ($deepToRecord ?? 0);
                     <tbody>
                     <?php foreach ($deepResults as $result): ?>
                         <?php
+                        // A deep-search row is any matched MEMBER, but view/edit/archive all
+                        // operate on the family HEAD (resultHeadId), same as the main list below.
                         $resultHeadId = (int) ($result['headID'] ?? 0);
                         $headName = trim((string) ($result['head_firstname'] ?? '') . ' ' . (string) ($result['head_lastname'] ?? ''));
+                        $memberName = trim((string) ($result['firstname'] ?? '') . ' ' . (string) ($result['lastname'] ?? ''));
+                        $deepFamilyName = $headName !== '' ? $headName : $memberName;
+                        // Mirror the main list's per-status action: admins archive, employees
+                        // delete, and the archived view restores.
+                        $deepAction = $status === 'archived' ? 'restore' : ($isEmployeeList ? 'delete' : 'archive');
+                        $deepActionLabel = $status === 'archived' ? 'Restore' : ($isEmployeeList ? 'Delete' : 'Archive');
+                        $deepActionPast = $status === 'archived' ? 'restored' : ($isEmployeeList ? 'deleted' : 'archived');
+                        $deepConfirm = $status === 'archived'
+                            ? 'Restore this record to the active list?'
+                            : $deepActionLabel . ' this record? This keeps the record in the database, marks it as ' . $deepActionPast . ', and hides it from active lists.';
                         ?>
                         <tr>
-                            <td><?= esc(trim((string) ($result['firstname'] ?? '') . ' ' . (string) ($result['lastname'] ?? ''))) ?></td>
+                            <td><?= esc($memberName) ?></td>
                             <td><?= esc((string) ($result['relationship'] ?? '')) ?></td>
                             <td><?= esc($headName === '' ? '-' : $headName) ?></td>
                             <td><?= esc((string) ($result['sector_name'] ?? '')) ?></td>
@@ -187,13 +199,28 @@ $deepToRecord = (int) ($deepToRecord ?? 0);
                             <td><?= esc(family_list_format_date($result['dt_created'] ?? '')) ?></td>
                             <td class="text-end">
                                 <?php if ($resultHeadId > 0): ?>
-                                    <button
-                                        type="button"
-                                        class="btn btn-outline-primary btn-sm js-open-family-view-modal"
-                                        data-modal-url="<?= site_url($routeBase . '/view/' . $resultHeadId . '?partial=1') ?>"
-                                        data-modal-title="View Record">
-                                        View family
-                                    </button>
+                                    <div class="family-list-actions">
+                                        <?php if ($status !== 'archived'): ?>
+                                            <button
+                                                type="button"
+                                                class="btn btn-outline-primary btn-sm js-open-family-view-modal"
+                                                data-modal-url="<?= site_url($routeBase . '/view/' . $resultHeadId . '?partial=1') ?>"
+                                                data-modal-title="View Record">
+                                                View
+                                            </button>
+                                            <button
+                                                type="button"
+                                                class="btn btn-primary btn-sm js-open-family-edit-modal"
+                                                data-modal-url="<?= site_url($routeBase . '/edit/' . $resultHeadId . '?partial=1') ?>"
+                                                data-modal-title="Edit Record">
+                                                Edit
+                                            </button>
+                                        <?php endif; ?>
+                                        <form class="d-inline js-family-record-action-form" method="post" action="<?= site_url($routeBase . '/' . $deepAction . '/' . $resultHeadId) ?>" data-confirm-message="<?= esc($deepConfirm, 'attr') ?>" data-action-label="<?= esc($deepActionLabel, 'attr') ?>" data-action-past="<?= esc($deepActionPast, 'attr') ?>" data-family-name="<?= esc($deepFamilyName, 'attr') ?>">
+                                            <?= csrf_field() ?>
+                                            <button type="submit" class="btn <?= $status === 'archived' ? 'btn-outline-success' : 'btn-outline-danger' ?> btn-sm"><?= esc($deepActionLabel) ?></button>
+                                        </form>
+                                    </div>
                                 <?php endif; ?>
                             </td>
                         </tr>

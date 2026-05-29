@@ -11,11 +11,20 @@ use CodeIgniter\HTTP\RedirectResponse;
 
 /**
  * Handles authentication, session lifetime, and role-based dashboard routing.
+ *
+ * Page rendering is delegated to App\Libraries\DashboardPageBuilder: this
+ * controller only decides WHICH page/role to show, the builder assembles the
+ * view data and returns the rendered HTML. Auth/session helpers
+ * (hasValidLoginSession, clearLoginSession, normalizeRole, redirectByRole)
+ * come from App\Controllers\HomeRoleAccessTrait.
  */
 class Home extends BaseController
 {
     use HomeRoleAccessTrait;
-    use HomeDashboardPagesTrait;
+
+    // ---------------------------------------------------------------------
+    // Authentication & session lifecycle
+    // ---------------------------------------------------------------------
 
     public function index(): string|RedirectResponse
     {
@@ -109,6 +118,13 @@ class Home extends BaseController
         return $this->response->setJSON(['status' => 'ok']);
     }
 
+    // ---------------------------------------------------------------------
+    // Admin / Developer pages (full page loads).
+    // Each maps to a route in Config\Routes and an $activePage the admin shell
+    // (Views/Dashboard/Manage/admin.php) switches on. Routes are guarded for
+    // Developer/Admin inside DashboardPageBuilder::renderAdminPage().
+    // ---------------------------------------------------------------------
+
     public function admin(): RedirectResponse
     {
         return redirect()->to(site_url('admin/dashboard'));
@@ -174,6 +190,12 @@ class Home extends BaseController
         return (new DashboardPageBuilder($this->request))->renderAdminPage('family-manage');
     }
 
+    // ---------------------------------------------------------------------
+    // Employee (role "User") pages. Rendered by the employee shell
+    // (Views/Employee/index.php). Guarded for Developer/Admin/User inside
+    // DashboardPageBuilder::renderEmployeePage().
+    // ---------------------------------------------------------------------
+
     public function employee(): string|RedirectResponse
     {
         return (new DashboardPageBuilder($this->request))->renderEmployeePage('dashboard');
@@ -197,6 +219,14 @@ class Home extends BaseController
     {
         return (new DashboardPageBuilder($this->request))->renderEmployeePage('activity');
     }
+
+    // ---------------------------------------------------------------------
+    // AJAX partial rendering.
+    // The dashboard shells load some sections (accounts, family form, audit,
+    // sectors, services) into a modal/panel via fetch. When ?partial=1 or an
+    // XHR header is present we return just the inner view fragment instead of
+    // the whole page. Front-end loader: assets/js/dashboard/*-modal.js.
+    // ---------------------------------------------------------------------
 
     private function isPartialRequest(): bool
     {

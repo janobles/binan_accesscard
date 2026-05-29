@@ -40,7 +40,7 @@
             <input type="date" class="form-control" id="head_birthday" name="head_birthday" value="<?= esc((string) ($familyRecord['birthday'] ?? '')) ?>" required>
         </div>
         <div class="col-md-3">
-            <label class="form-label" for="head_sex">Gender</label>
+            <label class="form-label" for="head_sex">Sex</label>
             <select class="form-select" id="head_sex" name="head_sex" required>
                 <option value="">Select</option>
                 <?php foreach ($sexOptions as $sex): ?>

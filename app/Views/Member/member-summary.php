@@ -12,7 +12,7 @@
         <div class="row g-2">
             <div class="col-md-4"><small><strong>Name:</strong> <span id="headSummaryName">-</span></small></div>
             <div class="col-md-4"><small><strong>Date of birth:</strong> <span id="headSummaryBirthday">-</span></small></div>
-            <div class="col-md-4"><small><strong>Gender:</strong> <span id="headSummarySex">-</span></small></div>
+            <div class="col-md-4"><small><strong>Sex:</strong> <span id="headSummarySex">-</span></small></div>
             <div class="col-md-4"><small><strong>Civil status:</strong> <span id="headSummaryCivil">-</span></small></div>
             <div class="col-md-4"><small><strong>Contact:</strong> <span id="headSummaryContact">-</span></small></div>
             <div class="col-md-4"><small><strong>Religion:</strong> <span id="headSummaryReligion">-</span></small></div>

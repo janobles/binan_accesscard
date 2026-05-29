@@ -73,7 +73,7 @@ $renderServices = static function (array $names): string {
         <div class="family-detail-section-title">Profile</div>
         <div class="family-detail-grid">
             <?= $detailItem('Date of birth', $head['birthday'] ?? '-') ?>
-            <?= $detailItem('Gender', $head['sex'] ?? '-') ?>
+            <?= $detailItem('Sex', $head['sex'] ?? '-') ?>
             <?= $detailItem('Civil status', $head['civilstatus'] ?? '-') ?>
             <?= $detailItem('Contact number', $head['contactnumber'] ?? '-') ?>
             <?= $detailItem('Religion', $head['religion'] ?? '-') ?>
@@ -107,7 +107,7 @@ $renderServices = static function (array $names): string {
                     </div>
                     <div class="family-detail-grid is-compact">
                         <?= $detailItem('Date of birth', $member['birthday'] ?? '-') ?>
-                        <?= $detailItem('Gender', $member['sex'] ?? '-') ?>
+                        <?= $detailItem('Sex', $member['sex'] ?? '-') ?>
                         <?= $detailItem('Civil status', $member['civilstatus'] ?? '-') ?>
                         <?= $detailItem('Contact number', $member['contactnumber'] ?? '-') ?>
                         <?= $detailItem('Religion', $member['religion'] ?? '-') ?>

@@ -63,7 +63,7 @@ $memberSectorGroups = array_filter(
                 <input type="date" class="form-control" data-name="birthday">
             </div>
             <div class="col-md-3">
-                <label class="form-label">Gender</label>
+                <label class="form-label">Sex</label>
                 <select class="form-select" data-name="sex">
                     <option value="">Select</option>
                     <?php foreach ($sexOptions as $sex): ?>
@@ -129,8 +129,8 @@ $memberSectorGroups = array_filter(
             </div>
             <div class="col-md-12">
                 <div class="member-sector-service-block">
-                    <div class="row g-3">
-                        <div class="col-lg-6">
+                    <div class="row g-3 member-choice-grid">
+                        <div class="col-lg-5">
                             <div class="member-choice-section">
                                 <div class="member-choice-section-title">Sectors</div>
                                 <div class="member-visible-list" role="group" aria-label="Member sectors">
@@ -152,7 +152,7 @@ $memberSectorGroups = array_filter(
                                 </div>
                             </div>
                         </div>
-                        <div class="col-lg-6">
+                        <div class="col-lg-7">
                             <div class="member-choice-section">
                                 <div class="member-choice-section-title">Services and Programs Available</div>
                                 <div class="member-visible-list member-service-list" role="group" aria-label="Member services and programs">

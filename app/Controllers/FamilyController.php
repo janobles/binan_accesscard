@@ -61,41 +61,12 @@ class FamilyController extends BaseController
         $fromRecord = $totalFamilies === 0 ? 0 : (($page - 1) * $perPage) + 1;
         $toRecord   = min($totalFamilies, $page * $perPage);
 
-        $formatDate = static function (mixed $value): string {
-            $timestamp = strtotime((string) $value);
-
-            return $timestamp === false ? '' : date('Y-m-d', $timestamp);
-        };
-
-        $formatTime = static function (mixed $value): string {
-            $timestamp = strtotime((string) $value);
-
-            return $timestamp === false ? '' : date('h:i A', $timestamp);
-        };
-
-        $listUrl = static function (string $targetStatus, int $targetPage = 1) use ($routeBase, $keyword): string {
-            $params = ['page' => $targetPage];
-
-            if ($targetStatus === 'archived') {
-                $params['status'] = 'archived';
-            }
-
-            if (trim($keyword) !== '') {
-                $params['q'] = $keyword;
-            }
-
-            return site_url($routeBase . '/list?' . http_build_query($params));
-        };
-
         return view('Dashboard/familyform/family-list', [
             'canRestoreArchived' => ! $isEmployeePath,
             'families'          => $families,
-            'formatDate'        => $formatDate,
-            'formatTime'        => $formatTime,
             'fromRecord'        => $fromRecord,
             'isEmployeeList'    => $isEmployeePath,
             'keyword'           => $keyword,
-            'listUrl'           => $listUrl,
             'page'              => $page,
             'perPage'           => $perPage,
             'routeBase'         => $routeBase,

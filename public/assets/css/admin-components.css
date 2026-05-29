@@ -63,6 +63,27 @@
     box-shadow: 0 0 0 0.2rem rgba(46, 115, 159, 0.14);
 }
 
+.nav-tabs .nav-link {
+    min-height: 0;
+    border-left: 1px solid transparent;
+    border-radius: 6px 6px 0 0;
+    color: #334155;
+    background: #ffffff;
+}
+
+.nav-tabs .nav-link:hover,
+.nav-tabs .nav-link:focus {
+    color: #14365a;
+    border-color: #d8e1ec #d8e1ec #dee2e6;
+    background: #f8fbfe;
+}
+
+.nav-tabs .nav-link.active {
+    color: #14365a;
+    border-color: #d8e1ec #d8e1ec #ffffff;
+    background: #ffffff;
+}
+
 .account-form,
 .account-form-employee {
     display: grid;

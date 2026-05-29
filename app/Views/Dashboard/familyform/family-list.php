@@ -1,4 +1,6 @@
 <?php
+helper('family_list_view');
+
 $families = $families ?? [];
 $keyword = $keyword ?? '';
 $routeBase = $routeBase ?? 'admin/manage-family';
@@ -30,52 +32,6 @@ $deepTotal = max(0, (int) ($deepTotal ?? 0));
 $deepTotalPages = max(1, (int) ($deepTotalPages ?? 1));
 $deepFromRecord = (int) ($deepFromRecord ?? 0);
 $deepToRecord = (int) ($deepToRecord ?? 0);
-$formatDate = static function (mixed $value): string {
-    $timestamp = strtotime((string) $value);
-
-    return $timestamp === false ? '' : date('Y-m-d', $timestamp);
-};
-$formatTime = static function (mixed $value): string {
-    $timestamp = strtotime((string) $value);
-
-    return $timestamp === false ? '' : date('h:i A', $timestamp);
-};
-// Records-list pagination URL. Carries the keyword AND the filter (sector/date) so
-// paging through filtered results keeps the filter applied.
-$listUrl = static function (string $targetStatus, int $targetPage = 1) use ($listRoute, $keyword, $filterSectorId, $filterDate): string {
-    $params = ['page' => $targetPage];
-
-    if ($targetStatus === 'archived') {
-        $params['status'] = 'archived';
-    }
-
-    if (trim((string) $keyword) !== '') {
-        $params['q'] = (string) $keyword;
-    }
-
-    if (trim($filterSectorId) !== '') {
-        $params['sectorID'] = $filterSectorId;
-    }
-
-    if (trim($filterDate) !== '') {
-        $params['date'] = $filterDate;
-    }
-
-    return site_url($listRoute . '?' . http_build_query($params));
-};
-$partialUrl = static function (string $url): string {
-    return $url . (str_contains($url, '?') ? '&' : '?') . 'partial=1';
-};
-// Deep-search pagination URL. Preserves the deep keyword and active/archived status.
-$deepUrl = static function (int $targetPage) use ($listRoute, $deepKeyword, $status): string {
-    $params = ['deep_q' => $deepKeyword, 'deep_page' => $targetPage];
-
-    if ($status === 'archived') {
-        $params['status'] = 'archived';
-    }
-
-    return site_url($listRoute . '?' . http_build_query($params));
-};
 ?>
 
 <div
@@ -93,12 +49,12 @@ $deepUrl = static function (int $targetPage) use ($listRoute, $deepKeyword, $sta
         <div class="d-flex gap-2 mb-3">
             <a
                 class="btn btn-sm <?= $status === 'active' ? 'btn-primary' : 'btn-outline-secondary' ?>"
-                href="<?= esc($listUrl('active'), 'attr') ?>">
+                href="<?= esc(family_list_url($listRoute, (string) $keyword, $filterSectorId, $filterDate, 'active'), 'attr') ?>">
                 Active
             </a>
             <a
                 class="btn btn-sm <?= $status === 'archived' ? 'btn-primary' : 'btn-outline-secondary' ?>"
-                href="<?= esc($listUrl('archived'), 'attr') ?>">
+                href="<?= esc(family_list_url($listRoute, (string) $keyword, $filterSectorId, $filterDate, 'archived'), 'attr') ?>">
                 Archived
             </a>
         </div>
@@ -159,8 +115,24 @@ $deepUrl = static function (int $targetPage) use ($listRoute, $deepKeyword, $sta
                                 <?php if ($status === 'archived'): ?>
                                     <input type="hidden" name="status" value="archived">
                                 <?php endif; ?>
-                                <label class="form-label" for="recordAdvancedSearchKeyword">Search the entire database</label>
-                                <input class="form-control" id="recordAdvancedSearchKeyword" type="search" name="deep_q" value="<?= esc($deepKeyword) ?>" placeholder="Any member, sector, or service/program">
+                                <div class="mb-3">
+                                    <label class="form-label" for="recordAdvancedSearchKeyword">Search the entire database</label>
+                                    <input class="form-control" id="recordAdvancedSearchKeyword" type="search" name="deep_q" value="<?= esc($deepKeyword) ?>" placeholder="Any member, sector, or service/program">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label" for="recordAdvancedSearchSector">Filter entire database by sector</label>
+                                    <select class="form-select" id="recordAdvancedSearchSector" name="sectorID">
+                                        <option value="">All sectors in database</option>
+                                        <?php foreach ($sectorOptions as $sector): ?>
+                                            <?php $optionId = (string) ($sector['sectorID'] ?? ''); ?>
+                                            <option value="<?= esc($optionId) ?>" <?= $filterSectorId === $optionId ? 'selected' : '' ?>><?= esc((string) ($sector['name'] ?? '')) ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label" for="recordAdvancedSearchDate">Filter entire database by date</label>
+                                    <input class="form-control" id="recordAdvancedSearchDate" type="date" name="date" value="<?= esc($filterDate, 'attr') ?>">
+                                </div>
                                 <div class="d-flex justify-content-end gap-2 mt-3">
                                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
                                     <button class="btn btn-primary" type="submit">Search All</button>
@@ -209,7 +181,7 @@ $deepUrl = static function (int $targetPage) use ($listRoute, $deepKeyword, $sta
                             <td><?= esc($headName === '' ? '-' : $headName) ?></td>
                             <td><?= esc((string) ($result['sector_name'] ?? '')) ?></td>
                             <td><?= esc((string) ($result['service_name'] ?? '')) ?></td>
-                            <td><?= esc($formatDate($result['dt_created'] ?? '')) ?></td>
+                            <td><?= esc(family_list_format_date($result['dt_created'] ?? '')) ?></td>
                             <td class="text-end">
                                 <?php if ($resultHeadId > 0): ?>
                                     <button
@@ -231,8 +203,8 @@ $deepUrl = static function (int $targetPage) use ($listRoute, $deepKeyword, $sta
             </div>
             <?php if ($deepTotalPages > 1): ?>
                 <div class="d-flex justify-content-end gap-2 mt-3">
-                    <a class="btn btn-outline-secondary btn-sm <?= $deepPage <= 1 ? 'disabled' : '' ?>" href="<?= esc($deepUrl(max(1, $deepPage - 1)), 'attr') ?>" aria-disabled="<?= $deepPage <= 1 ? 'true' : 'false' ?>">Previous</a>
-                    <a class="btn btn-outline-secondary btn-sm <?= $deepPage >= $deepTotalPages ? 'disabled' : '' ?>" href="<?= esc($deepUrl(min($deepTotalPages, $deepPage + 1)), 'attr') ?>" aria-disabled="<?= $deepPage >= $deepTotalPages ? 'true' : 'false' ?>">Next</a>
+                    <a class="btn btn-outline-secondary btn-sm <?= $deepPage <= 1 ? 'disabled' : '' ?>" href="<?= esc(family_list_deep_url($listRoute, $deepKeyword, $filterSectorId, $filterDate, $status, max(1, $deepPage - 1)), 'attr') ?>" aria-disabled="<?= $deepPage <= 1 ? 'true' : 'false' ?>">Previous</a>
+                    <a class="btn btn-outline-secondary btn-sm <?= $deepPage >= $deepTotalPages ? 'disabled' : '' ?>" href="<?= esc(family_list_deep_url($listRoute, $deepKeyword, $filterSectorId, $filterDate, $status, min($deepTotalPages, $deepPage + 1)), 'attr') ?>" aria-disabled="<?= $deepPage >= $deepTotalPages ? 'true' : 'false' ?>">Next</a>
                 </div>
             <?php endif; ?>
         </div>
@@ -269,8 +241,8 @@ $deepUrl = static function (int $targetPage) use ($listRoute, $deepKeyword, $sta
                 <tr data-record-row>
                     <td data-record-name><?= esc((string) (($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? ''))) ?></td>
                     <td data-record-sector><?= esc((string) ($family['sector_name'] ?? '')) ?></td>
-                    <td data-record-date><?= esc($formatDate($dateValue)) ?></td>
-                    <td><?= esc($formatTime($dateValue)) ?></td>
+                    <td data-record-date><?= esc(family_list_format_date($dateValue)) ?></td>
+                    <td><?= esc(family_list_format_time($dateValue)) ?></td>
                     <td class="text-end">
                         <div class="family-list-actions">
                         <?php if ($status !== 'archived'): ?>
@@ -306,47 +278,23 @@ $deepUrl = static function (int $targetPage) use ($listRoute, $deepKeyword, $sta
     </div>
 
     <?php if ($totalPages > 1): ?>
-        <?php
-        $pageUrl = static fn (int $targetPage): string => $listUrl($status, $targetPage);
-        ?>
+        <?php $previousPageUrl = family_list_url($listRoute, (string) $keyword, $filterSectorId, $filterDate, $status, max(1, $page - 1)); ?>
+        <?php $nextPageUrl = family_list_url($listRoute, (string) $keyword, $filterSectorId, $filterDate, $status, min($totalPages, $page + 1)); ?>
         <div class="d-flex justify-content-end gap-2 mt-3">
             <a
                 class="btn btn-outline-secondary btn-sm<?= $useModalLinks ? ' js-open-family-list' : '' ?> <?= $page <= 1 ? 'disabled' : '' ?>"
-                href="<?= esc($pageUrl(max(1, $page - 1)), 'attr') ?>"
-                <?= $useModalLinks ? 'data-modal-url="' . esc($partialUrl($pageUrl(max(1, $page - 1))), 'attr') . '" data-modal-title="Manage Records"' : '' ?>
+                href="<?= esc($previousPageUrl, 'attr') ?>"
+                <?= $useModalLinks ? 'data-modal-url="' . esc(family_list_partial_url($previousPageUrl), 'attr') . '" data-modal-title="Manage Records"' : '' ?>
                 aria-disabled="<?= $page <= 1 ? 'true' : 'false' ?>">
                 Previous
             </a>
             <a
                 class="btn btn-outline-secondary btn-sm<?= $useModalLinks ? ' js-open-family-list' : '' ?> <?= $page >= $totalPages ? 'disabled' : '' ?>"
-                href="<?= esc($pageUrl(min($totalPages, $page + 1)), 'attr') ?>"
-                <?= $useModalLinks ? 'data-modal-url="' . esc($partialUrl($pageUrl(min($totalPages, $page + 1))), 'attr') . '" data-modal-title="Manage Records"' : '' ?>
+                href="<?= esc($nextPageUrl, 'attr') ?>"
+                <?= $useModalLinks ? 'data-modal-url="' . esc(family_list_partial_url($nextPageUrl), 'attr') . '" data-modal-title="Manage Records"' : '' ?>
                 aria-disabled="<?= $page >= $totalPages ? 'true' : 'false' ?>">
                 Next
             </a>
         </div>
     <?php endif; ?>
 </div>
-
-<script>
-(function () {
-    document.querySelectorAll('.js-family-record-action-form').forEach(function (form) {
-        if (form.dataset.recordActionBound === '1') {
-            return;
-        }
-
-        form.dataset.recordActionBound = '1';
-        form.addEventListener('submit', function (event) {
-            const familyName = (form.dataset.familyName || 'this record').trim();
-            const actionLabel = (form.dataset.actionLabel || 'Archive').trim();
-            const actionPast = (form.dataset.actionPast || 'archived').trim();
-            const message = (form.dataset.confirmMessage || '').trim() || (actionLabel + ' ' + familyName + '? This keeps the record in the database, marks it as ' + actionPast + ', and hides it from active lists.');
-            const confirmed = window.confirm(message);
-
-            if (!confirmed) {
-                event.preventDefault();
-            }
-        });
-    });
-})();
-</script>

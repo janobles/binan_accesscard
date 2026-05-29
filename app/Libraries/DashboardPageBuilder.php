@@ -256,7 +256,11 @@ class DashboardPageBuilder
 
         $perPage = 50;
         $page = max(1, (int) $this->request->getGet('deep_page'));
-        $filters = ['status' => $status];
+        $filters = [
+            'status'   => $status,
+            'sectorID' => (string) $this->request->getGet('sectorID'),
+            'date'     => (string) $this->request->getGet('date'),
+        ];
 
         $searchModel = new SearchModel();
         $total = $searchModel->countAllMembers($deepKeyword, $filters);

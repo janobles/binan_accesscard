@@ -5,7 +5,9 @@
 				method="post"
 				data-create-action="<?= site_url('admin/sectors/create') ?>"
 				data-update-action="<?= site_url('admin/sectors/update') ?>"
-				data-archive-action="<?= site_url('admin/sectors/archive') ?>">
+				data-archive-action="<?= site_url('admin/sectors/archive') ?>"
+				data-next-code-map="<?= esc(json_encode((object) ($sectorNextCodeMap ?? [])), 'attr') ?>"
+				data-existing-codes="<?= esc(json_encode(array_values($existingShortcodes ?? [])), 'attr') ?>">
 				<?= csrf_field() ?>
 				<div class="modal-header">
 					<h5 class="modal-title" id="sectorActionModalLabel">Sector</h5>
@@ -14,15 +16,19 @@
 				<div class="modal-body">
 					<div class="js-sector-form-fields">
 						<div class="mb-3">
-							<label class="form-label" for="sectorModalShortcode">Shortcode</label>
-							<select class="form-select js-management-other-select" id="sectorModalShortcode" name="shortcode" data-other-input="#sectorModalShortcodeOther" required>
-								<option value="">Select</option>
-								<?php foreach (($sectorShortcodeOptions ?? []) as $shortcode): ?>
-									<option value="<?= esc((string) $shortcode) ?>"><?= esc((string) $shortcode) ?></option>
+							<label class="form-label" for="sectorModalPrefix">Category</label>
+							<select class="form-select" id="sectorModalPrefix">
+								<option value="">Select category</option>
+								<?php foreach (($sectorPrefixOptions ?? []) as $prefix => $label): ?>
+									<option value="<?= esc((string) $prefix) ?>"><?= esc((string) $label) ?></option>
 								<?php endforeach; ?>
-								<option value="__other__">Others</option>
+								<option value="__other__">Other (custom)</option>
 							</select>
-							<input class="form-control mt-2 d-none" id="sectorModalShortcodeOther" name="shortcode_other" placeholder="Type new shortcode">
+						</div>
+						<div class="mb-3">
+							<label class="form-label" for="sectorModalShortcode">Code</label>
+							<input class="form-control" id="sectorModalShortcode" name="shortcode" placeholder="Pick a category to auto-fill" required>
+							<div class="invalid-feedback d-block d-none js-sector-code-error">Duplicate code — please enter another code.</div>
 						</div>
 						<div class="mb-3">
 							<label class="form-label" for="sectorModalName">Name</label>

@@ -1,12 +1,19 @@
 <?php
 helper('dashboard_view');
 extract(sector_management_view_data(get_defined_vars()), EXTR_OVERWRITE);
-$sectorShortcodeOptions = $sectorShortcodeOptions !== []
-    ? $sectorShortcodeOptions
-    : array_values(array_filter(
-        array_keys(\App\Support\FamilyProfilingFormV2::SECTOR_CATEGORIES),
-        static fn (string $shortcode): bool => $shortcode !== 'OTHER'
-    ));
+
+// Modal data: category PREFIX dropdown (no numbers) + the next suggested code
+// per prefix + every existing code for the inline duplicate check.
+$sectorModel = new \App\Models\SectorModel();
+$sectorPrefixOptions = [];
+foreach (\App\Support\FamilyProfilingFormV2::SECTOR_CATEGORIES as $prefix => $label) {
+    if ($prefix === 'OTHER') {
+        continue;
+    }
+    $sectorPrefixOptions[$prefix] = $prefix . ' — ' . $label;
+}
+$sectorNextCodeMap = $sectorModel->nextShortcodeMap();
+$existingShortcodes = $sectorModel->existingShortcodes();
 ?>
 
 <div class="panel mb-3" data-sector-management-root>
@@ -69,5 +76,7 @@ $sectorShortcodeOptions = $sectorShortcodeOptions !== []
 </div>
 
 <?= view('Dashboard/Sectors and Services/sector-modal', [
-	'sectorShortcodeOptions' => $sectorShortcodeOptions,
+	'sectorPrefixOptions' => $sectorPrefixOptions,
+	'sectorNextCodeMap' => $sectorNextCodeMap,
+	'existingShortcodes' => $existingShortcodes,
 ]) ?>

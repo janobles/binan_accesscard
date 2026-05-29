@@ -200,6 +200,63 @@ class SectorModel extends Model
         return $fallback;
     }
 
+    /**
+     * All current sector codes, uppercased and trimmed. Used by the modal's
+     * client-side duplicate check (see public/assets/js/dashboard/sectors-modal.js).
+     */
+    public function existingShortcodes(): array
+    {
+        if (! $this->hasTable()) {
+            return [];
+        }
+
+        $rows = $this->select('shortcode')->findAll();
+
+        return array_values(array_unique(array_filter(array_map(
+            static fn (array $row): string => strtoupper(trim((string) ($row['shortcode'] ?? ''))),
+            $rows
+        ))));
+    }
+
+    /**
+     * Suggested next code per category prefix, e.g. ['SC' => 'SC4', 'PWD' => 'PWD2'].
+     *
+     * Scans every existing code (including archived rows, so numbers are never
+     * reused), takes the highest trailing number per alpha prefix, and adds one.
+     * Prefixes come from FamilyProfilingFormV2::SECTOR_CATEGORIES (minus OTHER);
+     * a prefix with no codes yet starts at 1. The sector modal uses this map to
+     * auto-fill the Code field when a category is picked.
+     */
+    public function nextShortcodeMap(): array
+    {
+        $highestByPrefix = [];
+
+        foreach ($this->existingShortcodes() as $code) {
+            if (preg_match('/^([A-Z]+)(\d*)$/', $code, $matches) !== 1) {
+                continue;
+            }
+
+            $prefix = $matches[1];
+            $number = $matches[2] === '' ? 0 : (int) $matches[2];
+
+            if (! isset($highestByPrefix[$prefix]) || $number > $highestByPrefix[$prefix]) {
+                $highestByPrefix[$prefix] = $number;
+            }
+        }
+
+        $map = [];
+
+        foreach (array_keys(FamilyProfilingFormV2::SECTOR_CATEGORIES) as $prefix) {
+            if ($prefix === 'OTHER') {
+                continue;
+            }
+
+            $map[$prefix] = $prefix . (($highestByPrefix[$prefix] ?? 0) + 1);
+        }
+
+        return $map;
+    }
+
     public function saveSectorRecord(array $data, ?int $sectorId = null): bool
     {
         if (! $this->hasTable()) {

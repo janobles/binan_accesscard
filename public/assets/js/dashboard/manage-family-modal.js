@@ -103,10 +103,6 @@
             });
     }
 
-    function normalizedText(value) {
-        return String(value || '').trim().toLowerCase();
-    }
-
     function closeModalFor(element) {
         const modal = element.closest('.modal');
 
@@ -118,70 +114,6 @@
             }
         }
     }
-
-    function applyCurrentPageSearch(form) {
-        const panel = panelFor(form);
-
-        if (!panel) {
-            return;
-        }
-
-        const data = new FormData(form);
-        const keyword = normalizedText(data.get('q'));
-        const selectedSector = form.querySelector('[name="sectorID"]');
-        const selectedSectorName = selectedSector && selectedSector.selectedOptions.length > 0
-            ? normalizedText(selectedSector.selectedOptions[0].dataset.sectorName || selectedSector.selectedOptions[0].textContent)
-            : '';
-        const selectedDate = normalizedText(data.get('date'));
-        let visibleCount = 0;
-
-        panel.querySelectorAll('[data-record-row]').forEach(function (row) {
-            const name = normalizedText((row.querySelector('[data-record-name]') || {}).textContent);
-            const sector = normalizedText((row.querySelector('[data-record-sector]') || {}).textContent);
-            const date = normalizedText((row.querySelector('[data-record-date]') || {}).textContent);
-            const haystack = [name, sector, date].join(' ');
-            const matchesKeyword = keyword === '' || haystack.includes(keyword);
-            const matchesSector = selectedSectorName === '' || sector.includes(selectedSectorName);
-            const matchesDate = selectedDate === '' || date === selectedDate;
-            const matches = matchesKeyword && matchesSector && matchesDate;
-
-            row.classList.toggle('d-none', !matches);
-
-            if (matches) {
-                visibleCount += 1;
-            }
-        });
-
-        const emptyRow = panel.querySelector('[data-current-page-empty]');
-
-        if (emptyRow) {
-            emptyRow.classList.toggle('d-none', visibleCount !== 0);
-        }
-    }
-
-    document.addEventListener('submit', function (event) {
-        const form = event.target.closest('[data-family-list-panel] form[data-current-page-search]');
-
-        if (!form) {
-            return;
-        }
-
-        event.preventDefault();
-        applyCurrentPageSearch(form);
-        closeModalFor(form);
-    });
-
-    document.addEventListener('reset', function (event) {
-        const form = event.target.closest('[data-family-list-panel] form[data-current-page-search]');
-
-        if (!form) {
-            return;
-        }
-
-        window.setTimeout(function () {
-            applyCurrentPageSearch(form);
-        }, 0);
-    });
 
     document.addEventListener('submit', function (event) {
         const form = event.target.closest('[data-family-list-panel] form[method="get"]');

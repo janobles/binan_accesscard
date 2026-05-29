@@ -85,28 +85,31 @@ $deepToRecord = (int) ($deepToRecord ?? 0);
                     </ul>
                     <div class="tab-content">
                         <div class="tab-pane fade show active" id="recordNormalSearchPane" role="tabpanel" aria-labelledby="recordNormalSearchTab" tabindex="0">
-                            <form data-current-page-search>
+                            <form method="get" action="<?= site_url($listRoute) ?>">
+                                <?php if ($status === 'archived'): ?>
+                                    <input type="hidden" name="status" value="archived">
+                                <?php endif; ?>
                                 <div class="mb-3">
-                                    <label class="form-label" for="recordSearchKeyword">Search current page</label>
-                                    <input class="form-control" id="recordSearchKeyword" type="search" name="q" placeholder="Search only the records shown on this page">
+                                    <label class="form-label" for="recordSearchKeyword">Search records</label>
+                                    <input class="form-control" id="recordSearchKeyword" type="search" name="q" value="<?= esc((string) $keyword, 'attr') ?>" placeholder="Search record heads by name, contact, address, or sector">
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label" for="recordSearchSector">Filter current page by sector</label>
+                                    <label class="form-label" for="recordSearchSector">Filter records by sector</label>
                                     <select class="form-select" id="recordSearchSector" name="sectorID">
-                                        <option value="">All sectors on this page</option>
+                                        <option value="">All sectors</option>
                                         <?php foreach ($sectorOptions as $sector): ?>
                                             <?php $optionId = (string) ($sector['sectorID'] ?? ''); ?>
-                                            <option value="<?= esc($optionId) ?>" data-sector-name="<?= esc((string) ($sector['name'] ?? ''), 'attr') ?>"><?= esc((string) ($sector['name'] ?? '')) ?></option>
+                                            <option value="<?= esc($optionId) ?>" <?= $filterSectorId === $optionId ? 'selected' : '' ?>><?= esc((string) ($sector['name'] ?? '')) ?></option>
                                         <?php endforeach; ?>
                                     </select>
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label" for="recordSearchDate">Filter current page by date</label>
-                                    <input class="form-control" id="recordSearchDate" type="date" name="date">
+                                    <label class="form-label" for="recordSearchDate">Filter records by date</label>
+                                    <input class="form-control" id="recordSearchDate" type="date" name="date" value="<?= esc($filterDate, 'attr') ?>">
                                 </div>
                                 <div class="d-flex justify-content-end gap-2">
-                                    <button class="btn btn-outline-secondary" type="reset" data-current-page-search-clear>Clear</button>
-                                    <button class="btn btn-primary" type="submit">Search Current Page</button>
+                                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <button class="btn btn-primary" type="submit">Search Records</button>
                                 </div>
                             </form>
                         </div>
@@ -272,7 +275,6 @@ $deepToRecord = (int) ($deepToRecord ?? 0);
             <?php if ($families === []): ?>
                 <tr><td colspan="5" class="text-center text-muted"><?= $status === 'archived' ? 'No archived records found.' : 'No records found.' ?></td></tr>
             <?php endif; ?>
-                <tr class="d-none" data-current-page-empty><td colspan="5" class="text-center text-muted">No records on this page match the current search.</td></tr>
             </tbody>
         </table>
     </div>

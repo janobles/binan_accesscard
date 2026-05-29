@@ -1,3 +1,18 @@
+<?php
+/**
+ * Lookup Management screen (Sectors & Services reference data).
+ *
+ * Rendered by App\Controllers\Admin\SectorController and ServicesController,
+ * both of which build their data via App\Controllers\Concerns\LookupManagementTrait
+ * (buildLookupViewData). Extends layouts/admin_layout and is driven by
+ * assets/js/lookups.js, which handles the add/edit/archive/restore modals and
+ * posts to the admin/lookups/{sectors,services}/* routes referenced below.
+ *
+ * Expected data: $activeTab, $activeSectors, $archivedSectors,
+ * $sectorAssignmentCounts, $serviceGroups (category => [active, archived]),
+ * $serviceAssignmentCounts, $serviceCategories.
+ */
+?>
 <?= $this->extend('layouts/admin_layout') ?>
 
 <?= $this->section('styles') ?>
@@ -22,6 +37,8 @@
 </ul>
 
 <div class="tab-content pt-3" id="lookupTabsContent">
+    <?php /* SECTORS tab: active sectors as cards (badge colour keyed off the
+             shortcode prefix PWD/SP/OSCA) + a collapsible archived list. */ ?>
     <div class="tab-pane fade <?= $activeTab === 'sectors' ? 'show active' : '' ?>" id="tabSectors" role="tabpanel" aria-labelledby="sectors-tab">
         <div class="d-flex justify-content-end mb-3">
             <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalSectorAdd">Add New Sector</button>
@@ -110,6 +127,8 @@
         </div>
     </div>
 
+    <?php /* SERVICES tab: one card per category; each card has an active table
+             plus a hidden "archived-rows" tbody toggled by js-toggle-archived. */ ?>
     <div class="tab-pane fade <?= $activeTab === 'services' ? 'show active' : '' ?>" id="tabServices" role="tabpanel" aria-labelledby="services-tab">
         <div class="d-flex justify-content-end mb-3">
             <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalServiceAdd">Add New Service</button>
@@ -195,6 +214,9 @@
 
 <div class="toast-container" id="toastContainer"></div>
 
+<?php /* Add/Edit modals for both lookups + a shared archive-confirm dialog.
+         lookups.js fills the Edit forms from the clicked row's data-* attributes
+         and rewrites each form's action to append the record id before submit. */ ?>
 <div class="modal fade" id="modalSectorAdd" tabindex="-1" aria-labelledby="modalSectorAddLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">

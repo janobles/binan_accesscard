@@ -1,4 +1,17 @@
 <?php
+/**
+ * Employee (role "User") workspace shell.
+ *
+ * Rendered by App\Libraries\DashboardPageBuilder::renderEmployeePage(), which
+ * passes every variable used below. Like the admin shell, this is one layout
+ * that swaps its main section on $activePage (dashboard / family-entry /
+ * family-manage / activity). Controller entry points live in App\Controllers\Home
+ * (employee, employeeFamilyEntry, employeeManageRecords, employeeActivity).
+ *
+ * Employees only ever see ACTIVE records and their OWN activity (no archive,
+ * no account/sector/service management). The formatDate/formatTime/
+ * formatAuditMember helpers are provided by the builder.
+ */
 $username = $user['username'] ?? 'Employee';
 $activePage = $activePage ?? 'dashboard';
 $pageTitle = $pageTitle ?? ($activePage === 'dashboard' ? 'Workspace' : ucwords(str_replace('-', ' ', $activePage)));
@@ -16,25 +29,6 @@ $hasSearchFilters = $searchTerm !== '' || array_filter($searchFilters, static fn
 $canCreateFamily = $canCreateFamily ?? false;
 $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
 $selectedFilterDate = (string) ($searchFilters['date'] ?? $searchFilters['date_from'] ?? '');
-$formatDate = static function (mixed $value): string {
-    $timestamp = strtotime((string) $value);
-
-    return $timestamp === false ? '' : date('Y-m-d', $timestamp);
-};
-$formatTime = static function (mixed $value): string {
-    $timestamp = strtotime((string) $value);
-
-    return $timestamp === false ? '' : date('h:i A', $timestamp);
-};
-$formatAuditMember = static function (array $audit): string {
-    $memberName = trim((string) ($audit['member_name'] ?? ''));
-
-    if ($memberName === '') {
-        $memberName = trim((string) ($audit['firstname'] ?? '') . ' ' . (string) ($audit['lastname'] ?? ''));
-    }
-
-    return $memberName === '' ? '-' : $memberName;
-};
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -96,6 +90,8 @@ $formatAuditMember = static function (array $audit): string {
                 <div class="alert alert-danger"><?= esc(session()->getFlashdata('error')) ?></div>
             <?php endif; ?>
 
+            <?php /* Main content swaps on $activePage: dashboard overview, add-record
+                     form, the shared records list, and the employee's own activity. */ ?>
             <?php if ($activePage === 'dashboard'): ?>
                 <div class="row g-3 mb-3">
                     <div class="col-md-3"><div class="panel"><small>Total Records</small><div class="stat-value"><?= esc((string) ($stats['families'] ?? 0)) ?></div></div></div>
@@ -249,6 +245,8 @@ $formatAuditMember = static function (array $audit): string {
     </main>
 </div>
 
+<?php /* Shared modal target for the add/edit/view record fragments loaded by
+         assets/js/dashboard/manage-family-modal.js (?partial=1 fetch). */ ?>
 <div class="modal fade floating-family-modal" id="familyModal" tabindex="-1" aria-labelledby="familyModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered modal-xl">
         <div class="modal-content">

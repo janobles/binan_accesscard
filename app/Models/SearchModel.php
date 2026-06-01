@@ -378,9 +378,7 @@ class SearchModel
 
     private function hasAuditSearchTables(): bool
     {
-        return $this->db->tableExists('audit_trails')
-            && $this->db->tableExists('users')
-            && $this->db->tableExists('member');
+        return $this->db->tableExists('audit_trails');
     }
 
     private function withSectorNames(array $rows): array

@@ -4,8 +4,10 @@ namespace App\Controllers;
 
 use App\Libraries\RoleAccess;
 use App\Libraries\SectorIds;
+use App\Models\AuditTrailsModel;
 use App\Models\SectorModel;
 use CodeIgniter\HTTP\RedirectResponse;
+use Throwable;
 
 class SectorController extends BaseController
 {
@@ -37,9 +39,13 @@ class SectorController extends BaseController
             return $this->redirectAdmin('admin/sectors', 'error', 'This sector is assigned to one or more records and cannot be archived. Reassign them first.');
         }
 
+        $sector = $model->find($sectorId);
+
         if (! $model->archive($sectorId)) {
             return $this->redirectAdmin('admin/sectors', 'error', 'Unable to archive sector.');
         }
+
+        $this->audit('SECTOR_ARCHIVE', 'Archived ' . $this->sectorLabel($sector, $sectorId) . '.');
 
         return $this->redirectAdmin('admin/sectors', 'success', 'Sector archived successfully.');
     }
@@ -58,9 +64,13 @@ class SectorController extends BaseController
             return $this->redirectAdmin('admin/sectors?status=archived', 'error', 'Sector table is not available.');
         }
 
+        $sector = $model->find($sectorId);
+
         if (! $model->restore($sectorId)) {
             return $this->redirectAdmin('admin/sectors?status=archived', 'error', 'Unable to restore sector.');
         }
+
+        $this->audit('SECTOR_RESTORE', 'Restored ' . $this->sectorLabel($sector, $sectorId) . '.');
 
         return $this->redirectAdmin('admin/sectors', 'success', 'Sector restored successfully.');
     }
@@ -83,9 +93,13 @@ class SectorController extends BaseController
             return $this->redirectAdmin('admin/sectors', 'error', 'This sector is already used by one or more records and cannot be deleted.');
         }
 
+        $sector = $model->find($sectorId);
+
         if (! $model->delete($sectorId)) {
             return $this->redirectAdmin('admin/sectors', 'error', 'Unable to delete sector.');
         }
+
+        $this->audit('SECTOR_DELETE', 'Permanently deleted ' . $this->sectorLabel($sector, $sectorId) . '.');
 
         return redirect()->to(site_url('admin/sectors'))->with('success', 'Sector deleted successfully.');
     }
@@ -141,6 +155,11 @@ class SectorController extends BaseController
             return redirect()->to(site_url('admin/sectors'))->with('error', 'Unable to save sector.');
         }
 
+        $this->audit(
+            $isUpdate ? 'SECTOR_UPDATE' : 'SECTOR_CREATE',
+            ($isUpdate ? 'Updated' : 'Created') . ' sector ' . $data['shortcode'] . ' (' . $data['name'] . ').'
+        );
+
         $message = $isUpdate ? 'Sector updated successfully.' : 'Sector added successfully.';
 
         return $this->redirectAdmin('admin/sectors', 'success', $message);
@@ -169,5 +188,43 @@ class SectorController extends BaseController
     private function redirectAdmin(string $path, string $type, string $message): RedirectResponse
     {
         return redirect()->to(site_url($path))->with($type, $message);
+    }
+
+    /**
+     * Human-readable sector label for audit descriptions, e.g. "SC1 (Senior Citizen) #5".
+     */
+    private function sectorLabel(?array $sector, int $sectorId): string
+    {
+        $shortcode = trim((string) ($sector['shortcode'] ?? ''));
+        $name = trim((string) ($sector['name'] ?? ''));
+        $label = trim($shortcode . ($name !== '' ? ' (' . $name . ')' : ''));
+
+        return ($label === '' ? 'sector' : 'sector ' . $label) . ' #' . $sectorId;
+    }
+
+    /**
+     * Write a sector action to the audit trail. Sector actions have no affected
+     * member, so memberID is null (audit_trails.memberID is nullable).
+     */
+    private function audit(string $action, string $description): void
+    {
+        $auditModel = new AuditTrailsModel();
+
+        if (! $auditModel->hasTable()) {
+            return;
+        }
+
+        try {
+            $auditModel->logAction(
+                (int) session()->get('user_id'),
+                null,
+                $action,
+                $description,
+                $this->request->getIPAddress(),
+                $this->request->getUserAgent()->getAgentString()
+            );
+        } catch (Throwable $exception) {
+            log_message('error', 'Audit trail skipped: ' . $exception->getMessage());
+        }
     }
 }

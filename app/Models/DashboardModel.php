@@ -24,8 +24,8 @@ class DashboardModel
         return [
             'families' => $this->countFamilies(),
             'members' => $this->countMembers(),
-            'sectors' => $this->countTable('sector'),
-            'assistance' => $this->countTable('member_services'),
+            'sectors' => $this->countActiveLookupRows('sector'),
+            'assistance' => $this->countActiveLookupRows('services'),
         ];
     }
 
@@ -75,6 +75,25 @@ class DashboardModel
         return $this->db->tableExists($table)
             ? $this->db->table($table)->countAllResults()
             : 0;
+    }
+
+    /**
+     * Counts active rows from lookup tables used by dashboard stat cards.
+     * If dt_deleted exists, only non-archived rows are counted.
+     */
+    private function countActiveLookupRows(string $table): int
+    {
+        if (! $this->db->tableExists($table)) {
+            return 0;
+        }
+
+        $builder = $this->db->table($table);
+
+        if ($this->db->fieldExists('dt_deleted', $table)) {
+            $builder->where('dt_deleted IS NULL', null, false);
+        }
+
+        return $builder->countAllResults();
     }
 
     /**

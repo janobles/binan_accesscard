@@ -3,7 +3,7 @@
 namespace App\Controllers;
 
 use App\Models\AuditTrailsModel;
-use App\Models\UserModel;
+use App\Models\Auth\UserModel;
 use Throwable;
 use CodeIgniter\HTTP\RedirectResponse;
 
@@ -55,8 +55,7 @@ class AccountController extends BaseController
             $userId = (new UserModel())->createAccount(
                 $username,
                 (string) $this->request->getPost('password'),
-                $role,
-                (int) session()->get('member_id') ?: null
+                $role
             );
         } catch (Throwable $exception) {
             log_message('error', $exception->getMessage());
@@ -78,6 +77,106 @@ class AccountController extends BaseController
         return redirect()->to(site_url('admin/accounts'))->with('success', 'Account created successfully.');
     }
 
+    /**
+     * Developer-only: enable/disable Admin or Employee accounts.
+     */
+    public function updateStatus(): RedirectResponse
+    {
+        $guard = $this->requireDeveloper();
+
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        $userId = (int) $this->request->getPost('userID');
+        $status = trim((string) ($this->request->getPost('status') ?? $this->request->getPost('isactive')));
+
+        if ($userId <= 0) {
+            return redirect()->back()->with('error', 'Account is required.');
+        }
+
+        if (! in_array($status, ['Enable', 'Disabled'], true)) {
+            return redirect()->back()->with('error', 'Status must be Enable or Disabled.');
+        }
+
+        if ($userId === (int) session()->get('user_id')) {
+            return redirect()->back()->with('error', 'You cannot change your own account status.');
+        }
+
+        $userModel = new UserModel();
+        $user = $userModel->select('userID, username, role')->find($userId);
+
+        if ($user === null) {
+            return redirect()->back()->with('error', 'Account not found.');
+        }
+
+        $role = (string) ($user['role'] ?? '');
+
+        if (! in_array($role, ['Admin', 'User'], true)) {
+            return redirect()->back()->with('error', 'Only admin or employee accounts can be updated.');
+        }
+
+        $enabled = $status === 'Enable';
+
+        if (! $userModel->updateAccountStatus($userId, $enabled)) {
+            return redirect()->back()->with('error', 'Account status could not be updated.');
+        }
+
+        $displayRole = $role === 'User' ? 'Employee' : $role;
+        $auditStatus = $enabled ? 'Enabled' : 'Disabled';
+
+        $this->audit(
+            'ACCOUNT_STATUS_UPDATED',
+            $auditStatus . ' ' . $displayRole . ' account "' . (string) ($user['username'] ?? '') . '" (#' . $userId . ').'
+        );
+
+        return redirect()->to(site_url('admin/accounts'))->with('success', 'Account status updated successfully.');
+    }
+
+    /**
+     * Admin/Developer: disable an Employee account.
+     */
+    public function disableEmployee(): RedirectResponse
+    {
+        $guard = $this->requireAdminOrDeveloper();
+
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        $userId = (int) $this->request->getPost('userID');
+
+        if ($userId <= 0) {
+            return redirect()->back()->with('error', 'Account is required.');
+        }
+
+        if ($userId === (int) session()->get('user_id')) {
+            return redirect()->back()->with('error', 'You cannot disable your own account.');
+        }
+
+        $userModel = new UserModel();
+        $user = $userModel->select('userID, username, role')->find($userId);
+
+        if ($user === null) {
+            return redirect()->back()->with('error', 'Account not found.');
+        }
+
+        if ((string) ($user['role'] ?? '') !== 'User') {
+            return redirect()->back()->with('error', 'Only employee accounts can be disabled from this action.');
+        }
+
+        if (! $userModel->updateAccountStatus($userId, false)) {
+            return redirect()->back()->with('error', 'Employee account could not be disabled.');
+        }
+
+        $this->audit(
+            'ACCOUNT_STATUS_UPDATED',
+            'Disabled Employee account "' . (string) ($user['username'] ?? '') . '" (#' . $userId . ').'
+        );
+
+        return redirect()->to(site_url('admin/accounts'))->with('success', 'Employee account disabled successfully.');
+    }
+
     private function requireDeveloper(): ?RedirectResponse
     {
         if (! session()->get('is_logged_in')) {
@@ -86,6 +185,19 @@ class AccountController extends BaseController
 
         if ($this->normalizeRole((string) session()->get('role')) !== 'Developer') {
             return redirect()->to(site_url('/'))->with('error', 'Developer access is required.');
+        }
+
+        return null;
+    }
+
+    private function requireAdminOrDeveloper(): ?RedirectResponse
+    {
+        if (! session()->get('is_logged_in')) {
+            return redirect()->to(site_url('/'))->with('error', 'Please login first.');
+        }
+
+        if (! in_array($this->normalizeRole((string) session()->get('role')), ['Developer', 'Admin'], true)) {
+            return redirect()->to(site_url('/'))->with('error', 'Admin or Developer access is required.');
         }
 
         return null;

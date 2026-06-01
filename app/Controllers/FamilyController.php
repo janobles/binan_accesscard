@@ -2,10 +2,10 @@
 
 namespace App\Controllers;
 
+use App\Libraries\SectorIds;
 use App\Models\AuditTrailsModel;
 use App\Models\MemberModel;
 use App\Models\MemberServiceModel;
-use App\Models\ServiceModel;
 use App\Models\ServiceModel;
 use CodeIgniter\HTTP\RedirectResponse;
 
@@ -82,11 +82,16 @@ class FamilyController extends BaseController
             $serviceIds = [];
         }
 
-        $memberModel = new MemberModel();
-        $memberServiceModel = new MemberServiceModel();
-        $userId = (int) session()->get('user_id');
+        $members = $this->request->getPost('members');
 
-        $db->transStart();
+        if (! is_array($members)) {
+            $members = [];
+        }
+
+        $userId = (int) session()->get('user_id');
+        $successMessage = 'Family record saved successfully.';
+
+        $memberModel->beginTransaction();
 
         $headId = $memberModel->createHead($this->memberPayload('head_'));
 
@@ -171,16 +176,32 @@ class FamilyController extends BaseController
         foreach ($serviceIds as $serviceId) {
             $serviceId = (int) $serviceId;
 
-            if ($serviceId < 0 || ! $this->serviceExists($serviceId)) {
+            if ($serviceId < 0 || ! $serviceModel->existsById($serviceId)) {
                 continue;
             }
 
-            $memberServiceModel->assignService($headId, $serviceId);
+            if ($memberServiceModel->assignService($headId, $serviceId) === false) {
+                $memberModel->rollbackTransaction();
+
+                $message = 'A selected service could not be assigned to the head of family.';
+
+                if ($this->request->isAJAX()) {
+                    return $this->response
+                        ->setStatusCode(422)
+                        ->setJSON([
+                            'status' => 'error',
+                            'message' => $message,
+                            'csrf' => csrf_hash(),
+                        ]);
+                }
+
+                return redirect()->back()->withInput()->with('error', $message);
+            }
         }
 
-        if ($db->tableExists('audit_trails')) {
+        if ($auditModel->hasTable()) {
             // Tracks the creating operator plus client IP and browser agent.
-            (new AuditTrailsModel())->logAction(
+            $auditModel->logAction(
                 $userId,
                 $headId,
                 'FAMILY_CREATED',
@@ -192,7 +213,7 @@ class FamilyController extends BaseController
 
         $memberModel->completeTransaction();
 
-        if (! $db->transStatus()) {
+        if (! $memberModel->transactionStatus()) {
             $message = 'The family form was not saved.';
 
             if ($this->request->isAJAX()) {
@@ -248,8 +269,10 @@ class FamilyController extends BaseController
             'job' => $this->nullableText($this->request->getPost($prefix . 'job')),
             'Salary' => $this->moneyOrNull($this->request->getPost($prefix . 'salary')),
             'contactnumber' => $this->nullableText($this->request->getPost($prefix . 'contactnumber')),
+            'religion' => $this->nullableText($this->request->getPost($prefix . 'religion')),
+            'address' => $this->nullableText($this->request->getPost($prefix . 'address')),
             'relationship' => $prefix === 'head_' ? 'Head' : $this->nullableText($this->request->getPost($prefix . 'relationship')),
-            'sectorID' => (int) $this->request->getPost('sectorID'),
+            'sectorID' => SectorIds::normalize($this->request->getPost('sector_ids')),
         ];
     }
 
@@ -261,7 +284,7 @@ class FamilyController extends BaseController
     private function rulesForEntryType(string $entryType): array
     {
         $rules = [
-            'sectorID' => 'required|is_natural_no_zero',
+            'sector_ids' => 'required|valid_sector_array',
         ];
 
         if ($entryType === 'member') {
@@ -298,8 +321,9 @@ class FamilyController extends BaseController
             'job' => $this->nullableText($member['job'] ?? null),
             'Salary' => $this->moneyOrNull($member['salary'] ?? null),
             'contactnumber' => $this->nullableText($member['contactnumber'] ?? null),
+            'religion' => $this->nullableText($member['religion'] ?? null),
             'relationship' => $this->nullableText($member['relationship'] ?? 'Member'),
-            'sectorID' => (int) ($member['sectorID'] ?? $this->request->getPost('sectorID')),
+            'sectorID' => SectorIds::normalize($member['sector_ids'] ?? $this->request->getPost('sector_ids')),
         ];
     }
 
@@ -325,10 +349,4 @@ class FamilyController extends BaseController
         return $value === '' ? null : $value;
     }
 
-    private function serviceExists(int $serviceId): bool
-    {
-        return db_connect()->table('services')
-            ->where('serviceID', $serviceId)
-            ->countAllResults() > 0;
-    }
 }

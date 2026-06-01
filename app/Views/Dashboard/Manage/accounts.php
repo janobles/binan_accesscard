@@ -64,7 +64,7 @@ $formatStatus = [ViewFormatter::class, 'formatStatus'];
                         <input type="hidden" name="role" value="Admin">
                         <div>
                             <label class="form-label">Username</label>
-                            <input class="form-control" name="username" placeholder="admin_maria01" required minlength="4">
+                            <input class="form-control" name="username" placeholder="" required minlength="4">
                         </div>
                         <div>
                             <label class="form-label">Password</label>
@@ -84,7 +84,7 @@ $formatStatus = [ViewFormatter::class, 'formatStatus'];
                         <input type="hidden" name="role" value="User">
                         <div>
                             <label class="form-label">Username</label>
-                            <input class="form-control" name="username" placeholder="emp_juan01" required minlength="4">
+                            <input class="form-control" name="username" placeholder="" required minlength="4">
                         </div>
                         <div>
                             <label class="form-label">Password</label>

@@ -44,7 +44,7 @@ $formatAuditUser = static function (array $audit): string {
     <div class="section-title mt-0">
         <span>Audit Trails</span>
     </div>
-    <form class="row g-2 mb-3 js-audit-filter-form" method="get" action="<?= site_url('admin/audit-trails') ?>">
+    <form class="row g-2 filter-bar js-audit-filter-form" method="get" action="<?= site_url('admin/audit-trails') ?>">
         <div class="col-md-6 col-lg-4">
             <input class="form-control" type="search" name="q" value="<?= esc($searchTerm) ?>" placeholder="Search audit trails by user, action, or description">
         </div>
@@ -61,11 +61,11 @@ $formatAuditUser = static function (array $audit): string {
             <input class="form-control" type="date" name="date" value="<?= esc($selectedFilterDate) ?>" aria-label="Filter by date">
         </div>
         <div class="col-auto">
-            <button class="btn btn-primary" type="submit">Search</button>
+            <button class="btn btn-primary" type="submit"><i class="bi bi-search" aria-hidden="true"></i>Search</button>
         </div>
         <?php if ($hasSearchFilters): ?>
             <div class="col-auto">
-                <a class="btn btn-outline-secondary" href="<?= site_url('admin/audit-trails') ?>">Clear</a>
+                <a class="btn btn-outline-secondary" href="<?= site_url('admin/audit-trails') ?>"><i class="bi bi-x-lg" aria-hidden="true"></i>Clear</a>
             </div>
         <?php endif; ?>
     </form>
@@ -84,9 +84,9 @@ $formatAuditUser = static function (array $audit): string {
             <tbody>
                 <?php foreach ($recentAudits as $audit): ?>
                     <tr>
-                        <td><?= esc($formatAuditUser($audit)) ?></td>
+                        <td><span class="entity-title"><?= esc($formatAuditUser($audit)) ?></span></td>
                         <td><?= esc($formatAuditMember($audit)) ?></td>
-                        <td><?= esc((string) ($audit['user_action'] ?? '')) ?></td>
+                        <td><span class="status-pill is-muted"><?= esc((string) ($audit['user_action'] ?? '')) ?></span></td>
                         <td><?= esc((string) ($audit['description'] ?? '')) ?></td>
                         <td><?= esc($formatDate($audit['dt_created'] ?? '')) ?></td>
                         <td><?= esc($formatTime($audit['dt_created'] ?? '')) ?></td>

@@ -10,7 +10,7 @@ foreach (\App\Support\FamilyProfilingFormV2::SECTOR_CATEGORIES as $prefix => $la
     if ($prefix === 'OTHER') {
         continue;
     }
-    $sectorPrefixOptions[$prefix] = $prefix . ' — ' . $label;
+    $sectorPrefixOptions[$prefix] = $prefix . ' - ' . $label;
 }
 $sectorNextCodeMap = $sectorModel->nextShortcodeMap();
 $existingShortcodes = $sectorModel->existingShortcodes();
@@ -19,7 +19,7 @@ $existingShortcodes = $sectorModel->existingShortcodes();
 <div class="panel mb-3" data-sector-management-root>
 	<div class="section-title mt-0">
 		<span>Sector Management</span>
-		<button class="btn btn-primary btn-sm js-sector-modal-open" type="button" data-sector-mode="create">Add Sector</button>
+		<button class="btn btn-primary btn-sm js-sector-modal-open" type="button" data-sector-mode="create"><i class="bi bi-plus-lg" aria-hidden="true"></i>Add Sector</button>
 	</div>
 
 	<div class="table-responsive">
@@ -29,45 +29,57 @@ $existingShortcodes = $sectorModel->existingShortcodes();
 					<th>Shortcode</th>
 					<th>Name</th>
 					<th>Description</th>
+					<th>Status</th>
 					<th class="text-end">Actions</th>
 				</tr>
 			</thead>
 			<tbody>
 				<?php foreach ($sectors as $sector): ?>
 					<?php $sectorId = (int) ($sector['sectorID'] ?? 0); ?>
+					<?php $isArchived = trim((string) ($sector['dt_deleted'] ?? '')) !== ''; ?>
 					<tr>
-						<td><?= esc((string) ($sector['shortcode'] ?? '')) ?></td>
-						<td><?= esc((string) ($sector['name'] ?? '')) ?></td>
-						<td><?= esc((string) ($sector['description'] ?? '')) ?></td>
+						<td><span class="status-pill is-muted"><?= esc((string) ($sector['shortcode'] ?? '')) ?></span></td>
+						<td><span class="entity-title"><?= esc((string) ($sector['name'] ?? '')) ?></span></td>
+						<td><span class="text-trim d-inline-block"><?= esc((string) ($sector['description'] ?? '')) ?></span></td>
+						<td><span class="status-pill <?= $isArchived ? 'is-danger' : 'is-active' ?>"><?= $isArchived ? 'Archived' : 'Active' ?></span></td>
 						<td class="text-end">
-							<div class="management-row-actions">
-								<button
-									class="btn btn-outline-primary btn-sm js-sector-modal-open"
-									type="button"
-									data-sector-mode="update"
-									data-sector-id="<?= esc((string) $sectorId) ?>"
-									data-sector-shortcode="<?= esc((string) ($sector['shortcode'] ?? ''), 'attr') ?>"
-									data-sector-name="<?= esc((string) ($sector['name'] ?? ''), 'attr') ?>"
-									data-sector-description="<?= esc((string) ($sector['description'] ?? ''), 'attr') ?>">
-									Edit
+							<div class="dropdown actions-menu">
+								<button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false" aria-label="Sector actions">
+									<i class="bi bi-three-dots" aria-hidden="true"></i>
 								</button>
-								<button
-									class="btn btn-outline-danger btn-sm js-sector-modal-open"
-									type="button"
-									data-sector-mode="archive"
-									data-sector-id="<?= esc((string) $sectorId) ?>"
-									data-sector-shortcode="<?= esc((string) ($sector['shortcode'] ?? ''), 'attr') ?>"
-									data-sector-name="<?= esc((string) ($sector['name'] ?? ''), 'attr') ?>"
-									data-sector-description="<?= esc((string) ($sector['description'] ?? ''), 'attr') ?>">
-									Archive
-								</button>
+								<div class="dropdown-menu dropdown-menu-end">
+									<button
+										class="dropdown-item js-sector-modal-open"
+										type="button"
+										data-sector-mode="update"
+										data-sector-id="<?= esc((string) $sectorId) ?>"
+										data-sector-shortcode="<?= esc((string) ($sector['shortcode'] ?? ''), 'attr') ?>"
+										data-sector-name="<?= esc((string) ($sector['name'] ?? ''), 'attr') ?>"
+										data-sector-description="<?= esc((string) ($sector['description'] ?? ''), 'attr') ?>">
+										<i class="bi bi-pencil-square" aria-hidden="true"></i>Edit
+									</button>
+									<?php if (! $isArchived): ?>
+										<button
+											class="dropdown-item text-danger js-sector-modal-open"
+											type="button"
+											data-sector-mode="archive"
+											data-sector-id="<?= esc((string) $sectorId) ?>"
+											data-sector-shortcode="<?= esc((string) ($sector['shortcode'] ?? ''), 'attr') ?>"
+											data-sector-name="<?= esc((string) ($sector['name'] ?? ''), 'attr') ?>"
+											data-sector-description="<?= esc((string) ($sector['description'] ?? ''), 'attr') ?>">
+											<i class="bi bi-archive" aria-hidden="true"></i>Archive
+										</button>
+									<?php else: ?>
+										<span class="dropdown-item text-muted"><i class="bi bi-lock" aria-hidden="true"></i>Archived</span>
+									<?php endif; ?>
+								</div>
 							</div>
 						</td>
 					</tr>
 				<?php endforeach; ?>
 				<?php if ($sectors === []): ?>
 					<tr>
-						<td colspan="4" class="text-center text-muted">No sector records found.</td>
+						<td colspan="5" class="text-center text-muted">No sector records found.</td>
 					</tr>
 				<?php endif; ?>
 			</tbody>

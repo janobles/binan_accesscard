@@ -27,6 +27,6 @@
     <div id="memberRows" class="member-stack"></div>
     <p class="text-muted mb-0" id="memberRowsEmpty">No members added yet. Click Add Member.</p>
     <div class="member-sticky-add">
-        <button type="button" class="btn btn-primary w-100" id="addMemberStickyBtn">Add Member</button>
+        <button type="button" class="btn btn-primary w-100" id="addMemberStickyBtn"><i class="bi bi-person-plus" aria-hidden="true"></i>Add Member</button>
     </div>
 </div>

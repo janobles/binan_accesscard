@@ -20,7 +20,7 @@ $isEmployeeList = (string) session()->get('role') === 'User'
     || str_starts_with($requestPath, 'employee/')
     || str_contains('/' . $requestPath, '/employee/');
 // Filter controls + deep ("search the whole database") results are supplied by
-// App\Libraries\DashboardPageBuilder::buildMemberListData()/buildEmployeeRecordListData().
+// Admin DashboardPageBuilder and Employee WorkspaceModel supply filter controls and results.
 $sectorOptions = $sectorOptions ?? [];
 $filters = $filters ?? [];
 $filterSectorId = (string) ($filters['sectorID'] ?? '');
@@ -145,8 +145,7 @@ $deepToRecord = (int) ($deepToRecord ?? 0);
         </div>
     </div>
 
-    <?php /* Deep-search results panel. Renders only when the deep search box was used.
-             Each row links to its family record via the existing view modal. */ ?>
+    <?php?>
     <?php if ($deepKeyword !== ''): ?>
         <div class="panel mb-3 border">
             <div class="section-title mt-0">

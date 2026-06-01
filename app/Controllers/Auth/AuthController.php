@@ -47,6 +47,12 @@ class AuthController extends BaseController
                 ->with('error', 'Invalid username or password.');
         }
 
+        if (($user['login_error'] ?? '') === 'disabled') {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'This account is disabled and cannot be used.');
+        }
+
         $role = RoleAccess::normalizeRole((string) ($user['role'] ?? ''));
 
         if ($role === null) {

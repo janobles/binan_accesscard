@@ -1,4 +1,6 @@
 <?php
+use App\Libraries\ViewFormatter;
+
 helper('assets');
 $user = $user ?? [];
 $username = $user['username'] ?? 'Admin';
@@ -14,47 +16,31 @@ $adminAccounts = $adminAccounts ?? [];
 $employeeAccounts = $employeeAccounts ?? [];
 $familyFormViewData = $familyFormViewData ?? [];
 $recordListData = $recordListData ?? [];
-$sectorShortcodeOptions = $sectorShortcodeOptions ?? [];
 $searchTerm = $searchTerm ?? '';
 $searchFilters = $searchFilters ?? [];
 $auditActionOptions = $auditActionOptions ?? [];
 $sectorOptions = $familyFormViewData['sectorOptions'] ?? [];
-$showLookupNav = in_array($currentRole, ['Admin', 'Developer'], true);
-$lookupsActive = str_contains((string) current_url(), 'admin/lookups') ? 'active' : '';
-$hasSearchFilters = $searchTerm !== '' || array_filter($searchFilters, static fn ($value): bool => trim((string) $value) !== '') !== [];
+$hasSearchFilters = ViewFormatter::hasSearchFilters($searchTerm, $searchFilters);
 $canCreateFamily = $canCreateFamily ?? false;
 $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
 $sidebarRoleClass = $canManageAccounts ? 'developer' : 'admin';
 $selectedFilterDate = (string) ($searchFilters['date'] ?? $searchFilters['date_from'] ?? '');
-$formatDate = static function (mixed $value): string {
-    $timestamp = strtotime((string) $value);
+$sectorLookupActive = (string) ($navActive['sectors'] ?? '');
+$servicesLookupActive = (string) ($navActive['services'] ?? '');
+$currentUrl = (string) current_url();
 
-    return $timestamp === false ? '' : date('Y-m-d', $timestamp);
-};
-$formatTime = static function (mixed $value): string {
-    $timestamp = strtotime((string) $value);
+if ($sectorLookupActive === '' && (str_contains($currentUrl, '/admin/sectors') || str_contains($currentUrl, '/admin/lookups/sectors'))) {
+    $sectorLookupActive = 'active';
+}
 
-    return $timestamp === false ? '' : date('h:i A', $timestamp);
-};
-$formatAuditMember = static function (array $audit): string {
-    $memberName = trim((string) ($audit['member_name'] ?? ''));
+if ($servicesLookupActive === '' && (str_contains($currentUrl, '/admin/services') || str_contains($currentUrl, '/admin/lookups/services'))) {
+    $servicesLookupActive = 'active';
+}
 
-    if ($memberName === '') {
-        $memberName = trim((string) ($audit['firstname'] ?? '') . ' ' . (string) ($audit['lastname'] ?? ''));
-    }
-
-    return $memberName === '' ? '-' : $memberName;
-};
-$formatAuditUser = static function (array $audit): string {
-    $username = trim((string) ($audit['username'] ?? $audit['userID'] ?? ''));
-    $role = trim((string) ($audit['user_role'] ?? ''));
-
-    if ($role === 'User') {
-        $role = 'Employee';
-    }
-
-    return $role === '' ? $username : $username . ' (' . $role . ')';
-};
+$formatDate = [ViewFormatter::class, 'formatDate'];
+$formatTime = [ViewFormatter::class, 'formatTime'];
+$formatAuditMember = [ViewFormatter::class, 'formatAuditMember'];
+$formatAuditUser = [ViewFormatter::class, 'formatAuditUser'];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -88,8 +74,8 @@ $formatAuditUser = static function (array $audit): string {
                 </div>
                 <div class="nav-section">
                     <div class="nav-section-label">Reference Data</div>
-                    <a class="nav-link <?= esc($navActive['sectors'] ?? '') ?>" href="<?= site_url('admin/sectors') ?>">Sector Management</a>
-                    <a class="nav-link <?= esc($navActive['services'] ?? '') ?>" href="<?= site_url('admin/services') ?>">Services and Programs</a>
+                    <a class="nav-link <?= esc($sectorLookupActive) ?>" href="<?= site_url('admin/sectors') ?>">Sector Management</a>
+                    <a class="nav-link <?= esc($servicesLookupActive) ?>" href="<?= site_url('admin/services') ?>">Services and Programs Management</a>
                 </div>
                 <div class="nav-section">
                     <div class="nav-section-label">Administration</div>
@@ -211,9 +197,11 @@ $formatAuditUser = static function (array $audit): string {
             <?php endif; ?>
 
             <?php if ($activePage === 'accounts' && $canManageAccounts): ?>
-                <?= view('Dashboard/accounts', [
+                <?= view('Dashboard/Manage/accounts', [
                     'adminAccounts' => $adminAccounts,
                     'employeeAccounts' => $employeeAccounts,
+                    'canCreateAccounts' => $canCreateAccounts ?? false,
+                    'currentRole' => $currentRole ?? '',
                     'searchTerm' => $searchTerm,
                     'searchFilters' => $searchFilters,
                 ]) ?>
@@ -242,18 +230,6 @@ $formatAuditUser = static function (array $audit): string {
                 ]) ?>
             <?php endif; ?>
 
-            <?php if ($activePage === 'sectors'): ?>
-                <?= view('Dashboard/Sectors and Services/sector', [
-                    'sectors' => $sectors ?? [],
-                    'sectorShortcodeOptions' => $sectorShortcodeOptions,
-                ]) ?>
-            <?php endif; ?>
-
-            <?php if ($activePage === 'services'): ?>
-                <?= view('Dashboard/Sectors and Services/services', [
-                    'services' => $services ?? [],
-                ]) ?>
-            <?php endif; ?>
         </div>
     </main>
 </div>
@@ -282,14 +258,10 @@ $formatAuditUser = static function (array $audit): string {
 <script src="<?= base_url('assets/js/dashboard/family-form-ui.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form-ui.js') ?>"></script>
 <script src="<?= base_url('assets/js/dashboard/family-form.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form.js') ?>"></script>
 <script src="<?= base_url('assets/js/dashboard/family-list.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-list.js') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/management-forms.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/management-forms.js') ?>"></script>
 <script src="<?= base_url('assets/js/session-timeout.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/session-timeout.js') ?>" data-timeout-seconds="<?= esc((string) $idleTimeoutSeconds) ?>" data-logout-url="<?= site_url('logout?timeout=1') ?>" data-keep-alive-url="<?= site_url('session/keep-alive') ?>"></script>
 <script src="<?= base_url('assets/js/dashboard/dashboard-modal-loader.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/dashboard-modal-loader.js') ?>"></script>
 <script src="<?= base_url('assets/js/dashboard/manage-family-modal.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/manage-family-modal.js') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/accounts-modal.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/accounts-modal.js') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/sectors-modal.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/sectors-modal.js') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/services-modal.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/services-modal.js') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/audit-trails-modal.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/audit-trails-modal.js') ?>"></script>
+<script src="<?= base_url('assets/js/dashboard/view-interactions.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/view-interactions.js') ?>"></script>
 </body>
 </html>
 

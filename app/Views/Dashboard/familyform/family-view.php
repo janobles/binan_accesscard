@@ -1,13 +1,8 @@
 <?php
+use App\Libraries\ViewFormatter;
+
 $headView = (array) ($headView ?? []);
 $memberViews = (array) ($memberViews ?? []);
-$splitList = static function (mixed $value): array {
-    if (is_array($value)) {
-        return array_values(array_filter(array_map('trim', array_map('strval', $value))));
-    }
-
-    return array_values(array_filter(array_map('trim', explode(',', (string) $value))));
-};
 ?>
 
 <div class="family-detail">
@@ -35,7 +30,7 @@ $splitList = static function (mixed $value): array {
         </div>
         <div class="family-detail-list mt-3">
             <span class="family-service-label">Sectors</span>
-            <?php $headSectors = $splitList($headView['sectorName'] ?? ''); ?>
+            <?php $headSectors = ViewFormatter::splitList($headView['sectorName'] ?? ''); ?>
             <?php if ($headSectors !== []): ?>
                 <ul>
                     <?php foreach ($headSectors as $sectorName): ?>
@@ -85,7 +80,7 @@ $splitList = static function (mixed $value): array {
                     </div>
                     <div class="family-detail-list">
                         <span class="family-service-label">Sectors</span>
-                        <?php $memberSectors = $splitList($member['sectorName'] ?? ''); ?>
+                        <?php $memberSectors = ViewFormatter::splitList($member['sectorName'] ?? ''); ?>
                         <?php if ($memberSectors !== []): ?>
                             <ul>
                                 <?php foreach ($memberSectors as $sectorName): ?>

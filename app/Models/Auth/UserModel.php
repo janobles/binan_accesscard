@@ -20,16 +20,12 @@ class UserModel extends Model
     ];
     protected $useTimestamps = false;
 
-    // Used by Home::login() to authenticate staff accounts.
+    // Used by AuthController::login() to authenticate staff accounts.
     public function verifyLogin(string $username, string $password): ?array
     {
         $user = $this->where('username', $username)->first();
 
         if ($user === null) {
-            return null;
-        }
-
-        if (! $this->isUserActive($user['isactive'] ?? 1)) {
             return null;
         }
 
@@ -44,6 +40,12 @@ class UserModel extends Model
 
         if (! $isValid) {
             return null;
+        }
+
+        if (! $this->isUserActive($user['isactive'] ?? 1)) {
+            $user['login_error'] = 'disabled';
+
+            return $user;
         }
 
         if ($isLegacyPlaintext || password_needs_rehash($storedPassword, PASSWORD_ARGON2ID)) {

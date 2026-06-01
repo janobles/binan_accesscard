@@ -1,5 +1,6 @@
 <?php
 use App\Libraries\SectorIds;
+use App\Libraries\ViewFormatter;
 
 $defaultFormOptions = [
     'sectors'              => [],
@@ -48,20 +49,7 @@ $fieldLabels              = array_merge([
     'service_ids'     => 'Services availed',
 ], (array) ($fieldLabels ?? []));
 $selectedSectorIds        = SectorIds::normalize($familyRecord['sectorID'] ?? null);
-$selectedSectorCategories = (static function () use ($sectorCatalog, $selectedSectorIds): array {
-    $cats = [];
-
-    foreach ($sectorCatalog as $key => $rows) {
-        foreach ((array) $rows as $row) {
-            if (in_array((int) ($row['sectorID'] ?? 0), $selectedSectorIds, true)) {
-                $cats[] = (string) $key;
-                break;
-            }
-        }
-    }
-
-    return array_values(array_unique($cats));
-})();
+$selectedSectorCategories = ViewFormatter::selectedSectorCategories($sectorCatalog, $selectedSectorIds);
 $initialFamilyData        = [
     'selectedSectorIds'        => $selectedSectorIds,
     'selectedSectorCategories' => $selectedSectorCategories,

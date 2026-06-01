@@ -5,9 +5,12 @@
 <?= $this->endSection() ?>
 
 <?= $this->section('content') ?>
+<?php
+$lookupHeading = $activeTab === 'services' ? 'Services and Programs Management' : 'Sector Management';
+?>
 <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between mb-3">
     <div>
-        <h2 class="mb-1">Lookup Management</h2>
+        <h2 class="mb-1"><?= esc($lookupHeading) ?></h2>
         <div class="text-muted">Sectors &amp; Services</div>
     </div>
 </div>

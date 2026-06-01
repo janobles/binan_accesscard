@@ -1,4 +1,6 @@
 <?php
+use App\Libraries\ViewFormatter;
+
 $adminAccounts = $adminAccounts ?? [];
 $employeeAccounts = $employeeAccounts ?? [];
 $canCreateAccounts = $canCreateAccounts ?? false;
@@ -13,33 +15,11 @@ $adminColumnClass = $isDeveloper ? 'col-lg-6' : 'col-lg-12';
 $employeeColumnClass = $isDeveloper ? 'col-lg-6' : 'col-lg-12';
 $searchTerm = $searchTerm ?? '';
 $searchFilters = $searchFilters ?? [];
-$hasSearchFilters = $searchTerm !== '' || array_filter($searchFilters, static fn ($value): bool => trim((string) $value) !== '') !== [];
-$formatDate = static function (mixed $value): string {
-    $timestamp = strtotime((string) $value);
-
-    return $timestamp === false ? '' : date('Y-m-d', $timestamp);
-};
-$formatTime = static function (mixed $value): string {
-    $timestamp = strtotime((string) $value);
-
-    return $timestamp === false ? '' : date('h:i A', $timestamp);
-};
-$isActiveStatus = static function (mixed $value): bool {
-    if (is_bool($value)) {
-        return $value;
-    }
-
-    if (is_int($value) || is_float($value)) {
-        return (int) $value === 1;
-    }
-
-    $normalized = strtolower(trim((string) $value));
-
-    return in_array($normalized, ['enable', 'enabled', 'active', '1', 'true', 'yes', 'on'], true);
-};
-$formatStatus = static function (mixed $value) use ($isActiveStatus): string {
-    return $isActiveStatus($value) ? 'Enable' : 'Disabled';
-};
+$hasSearchFilters = ViewFormatter::hasSearchFilters($searchTerm, $searchFilters);
+$formatDate = [ViewFormatter::class, 'formatDate'];
+$formatTime = [ViewFormatter::class, 'formatTime'];
+$isActiveStatus = [ViewFormatter::class, 'isActiveStatus'];
+$formatStatus = [ViewFormatter::class, 'formatStatus'];
 ?>
 
 <div class="panel mb-3">
@@ -142,7 +122,7 @@ $formatStatus = static function (mixed $value) use ($isActiveStatus): string {
                                                 <form method="post" action="<?= site_url('developer/accounts/status') ?>">
                                                     <?= csrf_field() ?>
                                                     <input type="hidden" name="userID" value="<?= esc((string) ($account['userID'] ?? '')) ?>">
-                                                    <input type="hidden" name="isactive" value="<?= esc($nextStatus) ?>">
+                                                    <input type="hidden" name="status" value="<?= esc($nextStatus) ?>">
                                                     <button class="btn btn-sm <?= $isActive ? 'btn-outline-danger' : 'btn-outline-success' ?>" type="submit">
                                                         <?= $isActive ? 'Disable' : 'Enable' ?>
                                                     </button>
@@ -184,7 +164,7 @@ $formatStatus = static function (mixed $value) use ($isActiveStatus): string {
                                                 <form method="post" action="<?= site_url('developer/accounts/status') ?>">
                                                     <?= csrf_field() ?>
                                                     <input type="hidden" name="userID" value="<?= esc((string) ($account['userID'] ?? '')) ?>">
-                                                    <input type="hidden" name="isactive" value="<?= esc($nextStatus) ?>">
+                                                    <input type="hidden" name="status" value="<?= esc($nextStatus) ?>">
                                                     <button class="btn btn-sm <?= $isActive ? 'btn-outline-danger' : 'btn-outline-success' ?>" type="submit">
                                                         <?= $isActive ? 'Disable' : 'Enable' ?>
                                                     </button>

@@ -1,43 +1,17 @@
 <?php
+use App\Libraries\ViewFormatter;
+
 $recentAudits       = $recentAudits ?? [];
 $searchTerm         = $searchTerm ?? '';
 $searchFilters      = $searchFilters ?? [];
 $auditActionOptions = $auditActionOptions ?? [];
-$hasSearchFilters   = $searchTerm !== '' || array_filter($searchFilters, static fn ($value): bool => trim((string) $value) !== '') !== [];
+$hasSearchFilters   = ViewFormatter::hasSearchFilters($searchTerm, $searchFilters);
 $selectedFilterDate = (string) ($searchFilters['date'] ?? $searchFilters['date_from'] ?? '');
 
-$formatDate = static function (mixed $value): string {
-    $timestamp = strtotime((string) $value);
-
-    return $timestamp === false ? '' : date('Y-m-d', $timestamp);
-};
-
-$formatTime = static function (mixed $value): string {
-    $timestamp = strtotime((string) $value);
-
-    return $timestamp === false ? '' : date('h:i A', $timestamp);
-};
-
-$formatAuditMember = static function (array $audit): string {
-    $memberName = trim((string) ($audit['member_name'] ?? ''));
-
-    if ($memberName === '') {
-        $memberName = trim((string) ($audit['firstname'] ?? '') . ' ' . (string) ($audit['lastname'] ?? ''));
-    }
-
-    return $memberName === '' ? '-' : $memberName;
-};
-
-$formatAuditUser = static function (array $audit): string {
-    $username = trim((string) ($audit['username'] ?? $audit['userID'] ?? ''));
-    $role     = trim((string) ($audit['user_role'] ?? ''));
-
-    if ($role === 'User') {
-        $role = 'Employee';
-    }
-
-    return $role === '' ? $username : $username . ' (' . $role . ')';
-};
+$formatDate = [ViewFormatter::class, 'formatDate'];
+$formatTime = [ViewFormatter::class, 'formatTime'];
+$formatAuditMember = [ViewFormatter::class, 'formatAuditMember'];
+$formatAuditUser = [ViewFormatter::class, 'formatAuditUser'];
 ?>
 
 <div class="panel">
@@ -100,16 +74,4 @@ $formatAuditUser = static function (array $audit): string {
     </div>
 </div>
 
-<script>
-(function () {
-    document.querySelectorAll('.js-audit-action-filter').forEach(function (select) {
-        select.addEventListener('change', function () {
-            const form = select.closest('.js-audit-filter-form');
-
-            if (form) {
-                form.submit();
-            }
-        });
-    });
-})();
-</script>
+<script src="<?= base_url('assets/js/dashboard/view-interactions.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/view-interactions.js') ?>"></script>

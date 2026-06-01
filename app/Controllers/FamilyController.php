@@ -8,6 +8,7 @@ use App\Models\FamilyFormOptionsModel;
 use App\Models\MemberModel;
 use App\Models\MemberServiceModel;
 use App\Models\ServiceModel;
+use App\Models\Employee\WorkspaceModel as EmployeeWorkspaceModel;
 use App\Libraries\SectorIds;
 use CodeIgniter\HTTP\RedirectResponse;
 
@@ -38,7 +39,6 @@ class FamilyController extends BaseController
             return redirect()->to($target);
         }
 
-        $keyword = trim((string) $this->request->getGet('q'));
         $isEmployeePath = $this->isEmployeeRequestPath();
 
         if (! $isEmployeePath) {
@@ -47,34 +47,7 @@ class FamilyController extends BaseController
             return view('Dashboard/familyform/family-list', $viewData['recordListData'] ?? []);
         }
 
-        $status = $isEmployeePath ? 'active' : strtolower(trim((string) $this->request->getGet('status')));
-        $showArchived = $status === 'archived';
-        $page = max(1, (int) $this->request->getGet('page'));
-        $perPage = 50;
-        $memberModel = new MemberModel();
-        $searchKeyword = $keyword === '' ? null : $keyword;
-        $totalFamilies = $memberModel->countSearchFamilies($searchKeyword, $showArchived);
-        $totalPages = max(1, (int) ceil($totalFamilies / $perPage));
-        $page = min($page, $totalPages);
-        $families   = $memberModel->searchFamilies($searchKeyword, $perPage, ($page - 1) * $perPage, $showArchived);
-        $routeBase  = $this->familyRouteBase();
-        $fromRecord = $totalFamilies === 0 ? 0 : (($page - 1) * $perPage) + 1;
-        $toRecord   = min($totalFamilies, $page * $perPage);
-
-        return view('Dashboard/familyform/family-list', [
-            'canRestoreArchived' => ! $isEmployeePath,
-            'families'          => $families,
-            'fromRecord'        => $fromRecord,
-            'isEmployeeList'    => $isEmployeePath,
-            'keyword'           => $keyword,
-            'page'              => $page,
-            'perPage'           => $perPage,
-            'routeBase'         => $routeBase,
-            'status'            => $showArchived ? 'archived' : 'active',
-            'toRecord'          => $toRecord,
-            'totalFamilies'     => $totalFamilies,
-            'totalPages'        => $totalPages,
-        ]);
+        return view('Dashboard/familyform/family-list', (new EmployeeWorkspaceModel($this->request))->recordListData());
     }
 
     public function viewFamily(int $headId): string|RedirectResponse

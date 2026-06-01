@@ -181,6 +181,11 @@
 	box-shadow: 0 0 0 0.2rem rgba(45, 129, 191, 0.14);
 }
 
+#familyForm .form-check-input:focus,
+#familyForm .form-check-input:active {
+	box-shadow: none;
+}
+
 .dropdown-checklist {
 	position: relative;
 }

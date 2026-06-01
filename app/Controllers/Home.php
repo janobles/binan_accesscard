@@ -39,7 +39,7 @@ class Home extends BaseController
             return $this->redirectByRole((string) session()->get('role'));
         }
 
-        return view('Login/login');
+        return view('Auth/login');
     }
 
     public function login(): string|RedirectResponse

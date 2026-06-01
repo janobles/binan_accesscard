@@ -24,8 +24,10 @@ class DashboardModel
         return [
             'families' => $this->countFamilies(),
             'members' => $this->countMembers(),
-            'sectors' => $this->countTable('sector'),
-            'assistance' => $this->countTable('member_services'),
+            // "Active Sectors" / "Services and Programs" cards: count only live
+            // rows so archiving lowers the figure and restoring raises it again.
+            'sectors' => $this->countActiveLookup('sector'),
+            'assistance' => $this->countActiveLookup('services'),
         ];
     }
 
@@ -70,11 +72,23 @@ class DashboardModel
             ->countAllResults();
     }
 
-    private function countTable(string $table): int
+    /**
+     * Count live rows in a lookup table, excluding archived ones (dt_deleted set)
+     * when the column exists. Used by the Active Sectors / Services & Programs cards.
+     */
+    private function countActiveLookup(string $table): int
     {
-        return $this->db->tableExists($table)
-            ? $this->db->table($table)->countAllResults()
-            : 0;
+        if (! $this->db->tableExists($table)) {
+            return 0;
+        }
+
+        $builder = $this->db->table($table);
+
+        if ($this->db->fieldExists('dt_deleted', $table)) {
+            $builder->where('dt_deleted IS NULL', null, false);
+        }
+
+        return $builder->countAllResults();
     }
 
     /**

@@ -1,8 +1,8 @@
 /* Admin layout, palette, and shell structure. */
 :root {
     --bg-page: #eef2f5;
-    --nav-bg-top: #162331;
-    --nav-bg-bottom: #0f1824;
+    --nav-bg-top: #1a8132;
+    --nav-bg-bottom: #063521;
     --nav-active: #24364a;
     --nav-border: #c89a2b;
     --role-accent: #0f9b8e;
@@ -28,7 +28,7 @@ body {
     margin: 0;
     min-height: 100vh;
     background: var(--bg-page);
-    color: #1d2530;
+    color: #237b43;
     font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
 
@@ -53,15 +53,15 @@ body {
 }
 
 .sidebar.developer {
-    --role-accent: #f3c046;
+    --role-accent: #30a82e;
 }
 
 .sidebar.admin {
-    --role-accent: #2cc5b7;
+    --role-accent: #30a82e;
 }
 
 .sidebar.employee {
-    --role-accent: #74c77a;
+    --role-accent: #30a82e;
 }
 
 .brand {
@@ -69,7 +69,7 @@ body {
     align-items: center;
     gap: 10px;
     padding: 0 16px 16px;
-    border-bottom: 1px solid rgba(218, 233, 250, 0.14);
+    border-bottom: 1px solid rgba(39, 169, 48, 0.14);
 }
 
 .brand img {

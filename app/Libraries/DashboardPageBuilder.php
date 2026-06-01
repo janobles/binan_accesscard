@@ -166,6 +166,16 @@ class DashboardPageBuilder
         ];
     }
 
+    public function buildAdminRecordListViewData(): array
+    {
+        return $this->buildMemberListData();
+    }
+
+    public function buildEmployeeRecordListViewData(): array
+    {
+        return $this->buildEmployeeRecordListData();
+    }
+
     private function fetchVisibleSectors(SectorModel $sectorModel): array
     {
         if (! $sectorModel->hasTable()) {
@@ -406,7 +416,6 @@ class DashboardPageBuilder
             'toRecord' => min($totalFamilies, $page * $perPage),
             'totalFamilies' => $totalFamilies,
             'totalPages' => $totalPages,
-            'useModalLinks' => false,
             // Filter UI data.
             'sectorOptions' => (new SectorModel())->getSectorOptions(),
             'filters' => $filters,

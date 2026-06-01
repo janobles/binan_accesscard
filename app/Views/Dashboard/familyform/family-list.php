@@ -5,7 +5,6 @@ $families = $families ?? [];
 $keyword = $keyword ?? '';
 $routeBase = $routeBase ?? 'admin/manage-family';
 $listRoute = (string) ($listRoute ?? ($routeBase . '/list'));
-$useModalLinks = (bool) ($useModalLinks ?? true);
 $status = (string) ($status ?? 'active') === 'archived' ? 'archived' : 'active';
 $canRestoreArchived = (bool) ($canRestoreArchived ?? false);
 $page = max(1, (int) ($page ?? 1));
@@ -37,7 +36,6 @@ $deepToRecord = (int) ($deepToRecord ?? 0);
 <div
     class="panel mb-3"
     data-family-list-panel
-    data-family-list-partial-base="<?= esc(site_url($routeBase . '/list'), 'attr') ?>"
     data-family-list-full-base="<?= esc(site_url($listRoute), 'attr') ?>">
     <div class="section-title mt-0">
         <span><?= $status === 'archived' ? 'Archived Records' : 'Manage Records' ?></span>
@@ -311,16 +309,14 @@ $deepToRecord = (int) ($deepToRecord ?? 0);
         <?php $nextPageUrl = family_list_url($listRoute, (string) $keyword, $filterSectorId, $filterDate, $status, min($totalPages, $page + 1)); ?>
         <div class="d-flex justify-content-end gap-2 mt-3">
             <a
-                class="btn btn-outline-secondary btn-sm<?= $useModalLinks ? ' js-open-family-list' : '' ?> <?= $page <= 1 ? 'disabled' : '' ?>"
+                class="btn btn-outline-secondary btn-sm<?= $page <= 1 ? ' disabled' : '' ?>"
                 href="<?= esc($previousPageUrl, 'attr') ?>"
-                <?= $useModalLinks ? 'data-modal-url="' . esc(family_list_partial_url($previousPageUrl), 'attr') . '" data-modal-title="Manage Records"' : '' ?>
                 aria-disabled="<?= $page <= 1 ? 'true' : 'false' ?>">
                 Previous
             </a>
             <a
-                class="btn btn-outline-secondary btn-sm<?= $useModalLinks ? ' js-open-family-list' : '' ?> <?= $page >= $totalPages ? 'disabled' : '' ?>"
+                class="btn btn-outline-secondary btn-sm<?= $page >= $totalPages ? ' disabled' : '' ?>"
                 href="<?= esc($nextPageUrl, 'attr') ?>"
-                <?= $useModalLinks ? 'data-modal-url="' . esc(family_list_partial_url($nextPageUrl), 'attr') . '" data-modal-title="Manage Records"' : '' ?>
                 aria-disabled="<?= $page >= $totalPages ? 'true' : 'false' ?>">
                 Next
             </a>

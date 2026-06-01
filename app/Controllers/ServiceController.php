@@ -20,7 +20,27 @@ class ServiceController extends BaseController
 
     public function archive(int $serviceId): RedirectResponse
     {
-        return $this->delete($serviceId);
+        $guard = $this->ensureAdminAccess();
+
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        $model = new ServiceModel();
+
+        if (! $model->hasTable()) {
+            return $this->redirectAdmin('admin/services', 'error', 'Services table is not available.');
+        }
+
+        if ($this->serviceIsUsed($serviceId)) {
+            return $this->redirectAdmin('admin/services', 'error', 'This service or program is assigned to one or more records and cannot be archived. Reassign them first.');
+        }
+
+        if (! $model->archive($serviceId)) {
+            return $this->redirectAdmin('admin/services', 'error', 'Unable to archive service.');
+        }
+
+        return $this->redirectAdmin('admin/services', 'success', 'Service or program archived successfully.');
     }
 
     public function delete(int $serviceId): RedirectResponse

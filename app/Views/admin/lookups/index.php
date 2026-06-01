@@ -97,15 +97,20 @@
                                     <tr>
                                         <th>Shortcode</th>
                                         <th>Name</th>
+                                        <th>Archived On</th>
                                         <th class="text-end">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <?php foreach ($archivedSectors as $sector): ?>
-                                        <?php $sectorId = (int) ($sector['sectorID'] ?? 0); ?>
+                                        <?php
+                                        $sectorId = (int) ($sector['sectorID'] ?? 0);
+                                        $archivedOn = (string) ($sector['dt_deleted'] ?? '');
+                                        ?>
                                         <tr class="archived-row" data-sector-id="<?= esc((string) $sectorId) ?>">
                                             <td><?= esc((string) ($sector['shortcode'] ?? '')) ?></td>
                                             <td><?= esc((string) ($sector['name'] ?? '')) ?></td>
+                                            <td class="text-muted small"><?= $archivedOn !== '' ? esc(date('M j, Y g:i A', strtotime($archivedOn))) : '—' ?></td>
                                             <td class="text-end">
                                                 <button type="button" class="icon-btn js-sector-restore" aria-label="Restore sector" data-restore-url="<?= site_url('admin/lookups/sectors/restore/' . $sectorId) ?>" data-name="<?= esc((string) ($sector['name'] ?? '')) ?>">
                                                     <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
@@ -115,7 +120,7 @@
                                     <?php endforeach; ?>
                                     <?php if ($archivedSectors === []): ?>
                                         <tr>
-                                            <td colspan="3" class="text-center text-muted">No archived sectors.</td>
+                                            <td colspan="4" class="text-center text-muted">No archived sectors.</td>
                                         </tr>
                                     <?php endif; ?>
                                 </tbody>
@@ -189,10 +194,18 @@
                         </tbody>
                         <tbody class="archived-rows d-none" data-archived-body="<?= esc($categorySlug) ?>">
                             <?php foreach ($archivedServices as $service): ?>
-                                <?php $serviceId = (int) ($service['serviceID'] ?? 0); ?>
+                                <?php
+                                $serviceId = (int) ($service['serviceID'] ?? 0);
+                                $archivedOn = (string) ($service['dt_deleted'] ?? '');
+                                ?>
                                 <tr class="archived-row" data-service-id="<?= esc((string) $serviceId) ?>" data-category="<?= esc((string) ($service['category'] ?? '')) ?>" data-name="<?= esc((string) ($service['name'] ?? '')) ?>" data-description="<?= esc((string) ($service['description'] ?? '')) ?>">
                                     <td><?= esc((string) $serviceId) ?></td>
-                                    <td><?= esc((string) ($service['name'] ?? '')) ?></td>
+                                    <td>
+                                        <?= esc((string) ($service['name'] ?? '')) ?>
+                                        <?php if ($archivedOn !== ''): ?>
+                                            <div class="text-muted small">Archived <?= esc(date('M j, Y g:i A', strtotime($archivedOn))) ?></div>
+                                        <?php endif; ?>
+                                    </td>
                                     <td><?= esc((string) ($service['description'] ?? '')) ?></td>
                                     <td class="text-end">
                                         <button type="button" class="icon-btn js-service-restore" aria-label="Restore service" data-restore-url="<?= site_url('admin/lookups/services/restore/' . $serviceId) ?>" data-name="<?= esc((string) ($service['name'] ?? '')) ?>">

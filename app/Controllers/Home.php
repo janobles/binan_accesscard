@@ -309,6 +309,8 @@ class Home extends BaseController
         return view('Dashboard/Sectors and Services/sector', [
             'sectors' => $viewData['sectors'] ?? [],
             'sectorShortcodeOptions' => $viewData['sectorShortcodeOptions'] ?? [],
+            'lookupStatus' => $viewData['lookupStatus'] ?? 'active',
+            'canRestore' => $viewData['canRestoreLookups'] ?? false,
         ]);
     }
 
@@ -324,6 +326,8 @@ class Home extends BaseController
 
         return view('Dashboard/Sectors and Services/services', [
             'services' => $viewData['services'] ?? [],
+            'lookupStatus' => $viewData['lookupStatus'] ?? 'active',
+            'canRestore' => $viewData['canRestoreLookups'] ?? false,
         ]);
     }
 

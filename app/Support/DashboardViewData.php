@@ -196,15 +196,19 @@ class DashboardViewData
     {
         $sectors = self::arrayValue($data['sectors'] ?? []);
         $sectorShortcodeOptions = self::stringList($data['sectorShortcodeOptions'] ?? []);
+        $status = (string) ($data['lookupStatus'] ?? 'active') === 'archived' ? 'archived' : 'active';
+        $canRestore = (bool) ($data['canRestore'] ?? false);
 
-        return compact('sectorShortcodeOptions', 'sectors');
+        return compact('sectorShortcodeOptions', 'sectors', 'status', 'canRestore');
     }
 
     public static function serviceManagement(array $data): array
     {
         $services = self::arrayValue($data['services'] ?? []);
+        $status = (string) ($data['lookupStatus'] ?? 'active') === 'archived' ? 'archived' : 'active';
+        $canRestore = (bool) ($data['canRestore'] ?? false);
 
-        return compact('services');
+        return compact('services', 'status', 'canRestore');
     }
 
     private static function defaultStats(): array

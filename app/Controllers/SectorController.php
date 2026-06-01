@@ -44,6 +44,27 @@ class SectorController extends BaseController
         return $this->redirectAdmin('admin/sectors', 'success', 'Sector archived successfully.');
     }
 
+    public function restore(int $sectorId): RedirectResponse
+    {
+        $guard = $this->ensureAdminAccess();
+
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        $model = new SectorModel();
+
+        if (! $model->hasTable()) {
+            return $this->redirectAdmin('admin/sectors?status=archived', 'error', 'Sector table is not available.');
+        }
+
+        if (! $model->restore($sectorId)) {
+            return $this->redirectAdmin('admin/sectors?status=archived', 'error', 'Unable to restore sector.');
+        }
+
+        return $this->redirectAdmin('admin/sectors', 'success', 'Sector restored successfully.');
+    }
+
     public function delete(int $sectorId): RedirectResponse
     {
         $guard = $this->ensureAdminAccess();

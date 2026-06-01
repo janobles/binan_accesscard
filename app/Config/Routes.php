@@ -46,6 +46,7 @@ $routes->group('admin', static function (RouteCollection $routes): void {
         $routes->post('update/(:num)', 'SectorController::update/$1');
         $routes->post('delete/(:num)', 'SectorController::delete/$1');
         $routes->post('archive/(:num)', 'SectorController::archive/$1');
+        $routes->post('restore/(:num)', 'SectorController::restore/$1');
     });
 
     $routes->group('services', static function (RouteCollection $routes): void {
@@ -53,6 +54,7 @@ $routes->group('admin', static function (RouteCollection $routes): void {
         $routes->post('update/(:num)', 'ServiceController::update/$1');
         $routes->post('delete/(:num)', 'ServiceController::delete/$1');
         $routes->post('archive/(:num)', 'ServiceController::archive/$1');
+        $routes->post('restore/(:num)', 'ServiceController::restore/$1');
     });
 
     $routes->group('lookups', static function (RouteCollection $routes): void {

@@ -43,6 +43,27 @@ class ServiceController extends BaseController
         return $this->redirectAdmin('admin/services', 'success', 'Service or program archived successfully.');
     }
 
+    public function restore(int $serviceId): RedirectResponse
+    {
+        $guard = $this->ensureAdminAccess();
+
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        $model = new ServiceModel();
+
+        if (! $model->hasTable()) {
+            return $this->redirectAdmin('admin/services?status=archived', 'error', 'Services table is not available.');
+        }
+
+        if (! $model->restore($serviceId)) {
+            return $this->redirectAdmin('admin/services?status=archived', 'error', 'Unable to restore service.');
+        }
+
+        return $this->redirectAdmin('admin/services', 'success', 'Service or program restored successfully.');
+    }
+
     public function delete(int $serviceId): RedirectResponse
     {
         $guard = $this->ensureAdminAccess();

@@ -235,12 +235,16 @@ $selectedFilterDate = (string) ($searchFilters['date'] ?? $searchFilters['date_f
                 <?= view('Dashboard/Sectors and Services/sector', [
                     'sectors' => $sectors ?? [],
                     'sectorShortcodeOptions' => $sectorShortcodeOptions,
+                    'lookupStatus' => $lookupStatus ?? 'active',
+                    'canRestore' => $canRestoreLookups ?? false,
                 ]) ?>
             <?php endif; ?>
 
             <?php if ($activePage === 'services'): ?>
                 <?= view('Dashboard/Sectors and Services/services', [
                     'services' => $services ?? [],
+                    'lookupStatus' => $lookupStatus ?? 'active',
+                    'canRestore' => $canRestoreLookups ?? false,
                 ]) ?>
             <?php endif; ?>
         </div>

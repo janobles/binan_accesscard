@@ -1,17 +1,43 @@
 <?php
-use App\Libraries\ViewFormatter;
-
 $recentAudits       = $recentAudits ?? [];
 $searchTerm         = $searchTerm ?? '';
 $searchFilters      = $searchFilters ?? [];
 $auditActionOptions = $auditActionOptions ?? [];
-$hasSearchFilters   = ViewFormatter::hasSearchFilters($searchTerm, $searchFilters);
+$hasSearchFilters   = $searchTerm !== '' || array_filter($searchFilters, static fn ($value): bool => trim((string) $value) !== '') !== [];
 $selectedFilterDate = (string) ($searchFilters['date'] ?? $searchFilters['date_from'] ?? '');
 
-$formatDate = [ViewFormatter::class, 'formatDate'];
-$formatTime = [ViewFormatter::class, 'formatTime'];
-$formatAuditMember = [ViewFormatter::class, 'formatAuditMember'];
-$formatAuditUser = [ViewFormatter::class, 'formatAuditUser'];
+$formatDate = static function (mixed $value): string {
+    $timestamp = strtotime((string) $value);
+
+    return $timestamp === false ? '' : date('Y-m-d', $timestamp);
+};
+
+$formatTime = static function (mixed $value): string {
+    $timestamp = strtotime((string) $value);
+
+    return $timestamp === false ? '' : date('h:i A', $timestamp);
+};
+
+$formatAuditMember = static function (array $audit): string {
+    $memberName = trim((string) ($audit['member_name'] ?? ''));
+
+    if ($memberName === '') {
+        $memberName = trim((string) ($audit['firstname'] ?? '') . ' ' . (string) ($audit['lastname'] ?? ''));
+    }
+
+    return $memberName === '' ? '-' : $memberName;
+};
+
+$formatAuditUser = static function (array $audit): string {
+    $username = trim((string) ($audit['username'] ?? $audit['userID'] ?? ''));
+    $role     = trim((string) ($audit['user_role'] ?? ''));
+
+    if ($role === 'User') {
+        $role = 'Employee';
+    }
+
+    return $role === '' ? $username : $username . ' (' . $role . ')';
+};
 ?>
 
 <div class="panel">
@@ -73,5 +99,3 @@ $formatAuditUser = [ViewFormatter::class, 'formatAuditUser'];
         </table>
     </div>
 </div>
-
-<script src="<?= base_url('assets/js/dashboard/view-interactions.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/view-interactions.js') ?>"></script>

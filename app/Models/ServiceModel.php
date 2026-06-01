@@ -33,6 +33,29 @@ class ServiceModel extends Model
         return ((int) ($row['max_id'] ?? 0)) + 1;
     }
 
+    /**
+     * Soft-archive a service/program by stamping dt_deleted, mirroring
+     * ServicesModel::archive(). The row is hidden, never deleted.
+     */
+    public function archive(int $id): bool
+    {
+        return $this->db->table($this->table)
+            ->where($this->primaryKey, $id)
+            ->set('dt_deleted', 'NOW()', false)
+            ->update();
+    }
+
+    /**
+     * Restore a soft-archived service/program by clearing dt_deleted.
+     */
+    public function restore(int $id): bool
+    {
+        return $this->db->table($this->table)
+            ->where($this->primaryKey, $id)
+            ->set('dt_deleted', null)
+            ->update();
+    }
+
     public function getNameMapByIds(array $serviceIds): array
     {
         $serviceIds = $this->naturalIds($serviceIds) ?? [];

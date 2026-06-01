@@ -85,28 +85,31 @@ $deepToRecord = (int) ($deepToRecord ?? 0);
                     </ul>
                     <div class="tab-content">
                         <div class="tab-pane fade show active" id="recordNormalSearchPane" role="tabpanel" aria-labelledby="recordNormalSearchTab" tabindex="0">
-                            <form data-current-page-search>
+                            <form method="get" action="<?= site_url($listRoute) ?>">
+                                <?php if ($status === 'archived'): ?>
+                                    <input type="hidden" name="status" value="archived">
+                                <?php endif; ?>
                                 <div class="mb-3">
-                                    <label class="form-label" for="recordSearchKeyword">Search current page</label>
-                                    <input class="form-control" id="recordSearchKeyword" type="search" name="q" placeholder="Search only the records shown on this page">
+                                    <label class="form-label" for="recordSearchKeyword">Search records</label>
+                                    <input class="form-control" id="recordSearchKeyword" type="search" name="q" value="<?= esc((string) $keyword, 'attr') ?>" placeholder="Search by name, contact, or sector">
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label" for="recordSearchSector">Filter current page by sector</label>
+                                    <label class="form-label" for="recordSearchSector">Filter by sector</label>
                                     <select class="form-select" id="recordSearchSector" name="sectorID">
-                                        <option value="">All sectors on this page</option>
+                                        <option value="">All sectors</option>
                                         <?php foreach ($sectorOptions as $sector): ?>
                                             <?php $optionId = (string) ($sector['sectorID'] ?? ''); ?>
-                                            <option value="<?= esc($optionId) ?>" data-sector-name="<?= esc((string) ($sector['name'] ?? ''), 'attr') ?>"><?= esc((string) ($sector['name'] ?? '')) ?></option>
+                                            <option value="<?= esc($optionId) ?>" <?= $filterSectorId === $optionId ? 'selected' : '' ?>><?= esc((string) ($sector['name'] ?? '')) ?></option>
                                         <?php endforeach; ?>
                                     </select>
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label" for="recordSearchDate">Filter current page by date</label>
-                                    <input class="form-control" id="recordSearchDate" type="date" name="date">
+                                    <label class="form-label" for="recordSearchDate">Filter by date</label>
+                                    <input class="form-control" id="recordSearchDate" type="date" name="date" value="<?= esc($filterDate, 'attr') ?>">
                                 </div>
                                 <div class="d-flex justify-content-end gap-2">
-                                    <button class="btn btn-outline-secondary" type="reset" data-current-page-search-clear>Clear</button>
-                                    <button class="btn btn-primary" type="submit">Search Current Page</button>
+                                    <a class="btn btn-outline-secondary" href="<?= esc(site_url($listRoute . ($status === 'archived' ? '?status=archived' : '')), 'attr') ?>">Clear</a>
+                                    <button class="btn btn-primary" type="submit">Search</button>
                                 </div>
                             </form>
                         </div>
@@ -171,11 +174,23 @@ $deepToRecord = (int) ($deepToRecord ?? 0);
                     <tbody>
                     <?php foreach ($deepResults as $result): ?>
                         <?php
+                        // A deep-search row is any matched MEMBER, but view/edit/archive all
+                        // operate on the family HEAD (resultHeadId), same as the main list below.
                         $resultHeadId = (int) ($result['headID'] ?? 0);
                         $headName = trim((string) ($result['head_firstname'] ?? '') . ' ' . (string) ($result['head_lastname'] ?? ''));
+                        $memberName = trim((string) ($result['firstname'] ?? '') . ' ' . (string) ($result['lastname'] ?? ''));
+                        $deepFamilyName = $headName !== '' ? $headName : $memberName;
+                        // Mirror the main list's per-status action: admins archive, employees
+                        // delete, and the archived view restores.
+                        $deepAction = $status === 'archived' ? 'restore' : ($isEmployeeList ? 'delete' : 'archive');
+                        $deepActionLabel = $status === 'archived' ? 'Restore' : ($isEmployeeList ? 'Delete' : 'Archive');
+                        $deepActionPast = $status === 'archived' ? 'restored' : ($isEmployeeList ? 'deleted' : 'archived');
+                        $deepConfirm = $status === 'archived'
+                            ? 'Restore this record to the active list?'
+                            : $deepActionLabel . ' this record? This keeps the record in the database, marks it as ' . $deepActionPast . ', and hides it from active lists.';
                         ?>
                         <tr>
-                            <td><?= esc(trim((string) ($result['firstname'] ?? '') . ' ' . (string) ($result['lastname'] ?? ''))) ?></td>
+                            <td><?= esc($memberName) ?></td>
                             <td><?= esc((string) ($result['relationship'] ?? '')) ?></td>
                             <td><?= esc($headName === '' ? '-' : $headName) ?></td>
                             <td><?= esc((string) ($result['sector_name'] ?? '')) ?></td>
@@ -183,13 +198,28 @@ $deepToRecord = (int) ($deepToRecord ?? 0);
                             <td><?= esc(family_list_format_date($result['dt_created'] ?? '')) ?></td>
                             <td class="text-end">
                                 <?php if ($resultHeadId > 0): ?>
-                                    <button
-                                        type="button"
-                                        class="btn btn-outline-primary btn-sm js-open-family-view-modal"
-                                        data-modal-url="<?= site_url($routeBase . '/view/' . $resultHeadId . '?partial=1') ?>"
-                                        data-modal-title="View Record">
-                                        View family
-                                    </button>
+                                    <div class="family-list-actions">
+                                        <?php if ($status !== 'archived'): ?>
+                                            <button
+                                                type="button"
+                                                class="btn btn-outline-primary btn-sm js-open-family-view-modal"
+                                                data-modal-url="<?= site_url($routeBase . '/view/' . $resultHeadId . '?partial=1') ?>"
+                                                data-modal-title="View Record">
+                                                View
+                                            </button>
+                                            <button
+                                                type="button"
+                                                class="btn btn-primary btn-sm js-open-family-edit-modal"
+                                                data-modal-url="<?= site_url($routeBase . '/edit/' . $resultHeadId . '?partial=1') ?>"
+                                                data-modal-title="Edit Record">
+                                                Edit
+                                            </button>
+                                        <?php endif; ?>
+                                        <form class="d-inline js-family-record-action-form" method="post" action="<?= site_url($routeBase . '/' . $deepAction . '/' . $resultHeadId) ?>" data-confirm-message="<?= esc($deepConfirm, 'attr') ?>" data-action-label="<?= esc($deepActionLabel, 'attr') ?>" data-action-past="<?= esc($deepActionPast, 'attr') ?>" data-family-name="<?= esc($deepFamilyName, 'attr') ?>">
+                                            <?= csrf_field() ?>
+                                            <button type="submit" class="btn <?= $status === 'archived' ? 'btn-outline-success' : 'btn-outline-danger' ?> btn-sm"><?= esc($deepActionLabel) ?></button>
+                                        </form>
+                                    </div>
                                 <?php endif; ?>
                             </td>
                         </tr>
@@ -271,7 +301,6 @@ $deepToRecord = (int) ($deepToRecord ?? 0);
             <?php if ($families === []): ?>
                 <tr><td colspan="5" class="text-center text-muted"><?= $status === 'archived' ? 'No archived records found.' : 'No records found.' ?></td></tr>
             <?php endif; ?>
-                <tr class="d-none" data-current-page-empty><td colspan="5" class="text-center text-muted">No records on this page match the current search.</td></tr>
             </tbody>
         </table>
     </div>

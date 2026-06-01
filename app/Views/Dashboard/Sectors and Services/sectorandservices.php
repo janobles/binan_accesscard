@@ -37,8 +37,8 @@ $sectorCategoryKeys       = ViewFormatter::sectorCategoryKeys($sectorCatalog);
         </div>
     </div>
 
-    <script type="application/json" id="sectorCatalogData"><?= json_encode($sectorCatalog, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?></script>
-    <script type="application/json" id="selectedSectorIdsData"><?= json_encode($selectedSectorIds, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?></script>
+    <div id="sectorCatalogData" class="family-form-hidden" data-json="<?= esc(json_encode($sectorCatalog, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT), 'attr') ?>"></div>
+    <div id="selectedSectorIdsData" class="family-form-hidden" data-json="<?= esc(json_encode($selectedSectorIds, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT), 'attr') ?>"></div>
 
     <div class="section-title">
         <span>Services and Programs</span>

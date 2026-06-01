@@ -135,7 +135,8 @@ class AccountController extends BaseController
         }
 
         if (! $this->validate(['userID' => 'required|is_natural_no_zero'])) {
-            return redirect()->back()->with('error', implode(' ', $this->validator->getErrors()));
+            return redirect()->back()
+                ->with('error', implode(' ', $this->validator->getErrors()));
         }
 
         $userId = (int) $this->request->getPost('userID');

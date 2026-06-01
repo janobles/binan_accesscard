@@ -119,7 +119,7 @@ $formatStatus = [ViewFormatter::class, 'formatStatus'];
                                         <?php if ($showAdminActions): ?>
                                             <td>
                                                 <!-- Developer-only: posts to AccountController::updateStatus (developer/accounts/status). -->
-                                                <form method="post" action="<?= site_url('developer/accounts/status') ?>">
+                                                <form class="js-account-status-form" method="post" action="<?= site_url('developer/accounts/status') ?>" data-confirm-message="<?= esc(($isActive ? 'Disable' : 'Enable') . ' admin account "' . (string) ($account['username'] ?? '') . '"?', 'attr') ?>">
                                                     <?= csrf_field() ?>
                                                     <input type="hidden" name="userID" value="<?= esc((string) ($account['userID'] ?? '')) ?>">
                                                     <input type="hidden" name="status" value="<?= esc($nextStatus) ?>">
@@ -161,7 +161,7 @@ $formatStatus = [ViewFormatter::class, 'formatStatus'];
                                         <td>
                                             <?php if ($isDeveloper): ?>
                                                 <!-- Developer-only: posts to AccountController::updateStatus (developer/accounts/status). -->
-                                                <form method="post" action="<?= site_url('developer/accounts/status') ?>">
+                                                <form class="js-account-status-form" method="post" action="<?= site_url('developer/accounts/status') ?>" data-confirm-message="<?= esc(($isActive ? 'Disable' : 'Enable') . ' employee account "' . (string) ($account['username'] ?? '') . '"?', 'attr') ?>">
                                                     <?= csrf_field() ?>
                                                     <input type="hidden" name="userID" value="<?= esc((string) ($account['userID'] ?? '')) ?>">
                                                     <input type="hidden" name="status" value="<?= esc($nextStatus) ?>">
@@ -172,7 +172,7 @@ $formatStatus = [ViewFormatter::class, 'formatStatus'];
                                             <?php elseif ($isAdmin): ?>
                                                 <?php if ($isActive): ?>
                                                     <!-- Admin-only: posts to AccountController::disableEmployee (admin/accounts/disable). -->
-                                                    <form method="post" action="<?= site_url('admin/accounts/disable') ?>">
+                                                    <form class="js-account-status-form" method="post" action="<?= site_url('admin/accounts/disable') ?>" data-confirm-message="<?= esc('Disable employee account "' . (string) ($account['username'] ?? '') . '"?', 'attr') ?>">
                                                         <?= csrf_field() ?>
                                                         <input type="hidden" name="userID" value="<?= esc((string) ($account['userID'] ?? '')) ?>">
                                                         <button class="btn btn-sm btn-outline-danger" type="submit">Disable</button>

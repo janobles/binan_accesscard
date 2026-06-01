@@ -1,3 +1,18 @@
+<?php
+/**
+ * Lookup Management screen (Sectors & Services reference data).
+ *
+ * Rendered by App\Controllers\Admin\SectorController and ServicesController,
+ * both of which build their data via App\Controllers\Concerns\LookupManagementTrait
+ * (buildLookupViewData). Extends layouts/admin_layout and is driven by
+ * assets/js/lookups.js, which handles the add/edit/archive/restore modals and
+ * posts to the admin/lookups/{sectors,services}/* routes referenced below.
+ *
+ * Expected data: $activeTab, $activeSectors, $archivedSectors,
+ * $sectorAssignmentCounts, $serviceGroups (category => [active, archived]),
+ * $serviceAssignmentCounts, $serviceCategories.
+ */
+?>
 <?= $this->extend('layouts/admin_layout') ?>
 
 <?= $this->section('styles') ?>
@@ -25,6 +40,8 @@ $lookupHeading = $activeTab === 'services' ? 'Services and Programs Management' 
 </ul>
 
 <div class="tab-content pt-3" id="lookupTabsContent">
+    <?php /* SECTORS tab: active sectors as cards (badge colour keyed off the
+             shortcode prefix PWD/SP/OSCA) + a collapsible archived list. */ ?>
     <div class="tab-pane fade <?= $activeTab === 'sectors' ? 'show active' : '' ?>" id="tabSectors" role="tabpanel" aria-labelledby="sectors-tab">
         <div class="d-flex justify-content-end mb-3">
             <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalSectorAdd">Add New Sector</button>
@@ -83,15 +100,20 @@ $lookupHeading = $activeTab === 'services' ? 'Services and Programs Management' 
                                     <tr>
                                         <th>Shortcode</th>
                                         <th>Name</th>
+                                        <th>Archived On</th>
                                         <th class="text-end">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <?php foreach ($archivedSectors as $sector): ?>
-                                        <?php $sectorId = (int) ($sector['sectorID'] ?? 0); ?>
+                                        <?php
+                                        $sectorId = (int) ($sector['sectorID'] ?? 0);
+                                        $archivedOn = (string) ($sector['dt_deleted'] ?? '');
+                                        ?>
                                         <tr class="archived-row" data-sector-id="<?= esc((string) $sectorId) ?>">
                                             <td><?= esc((string) ($sector['shortcode'] ?? '')) ?></td>
                                             <td><?= esc((string) ($sector['name'] ?? '')) ?></td>
+                                            <td class="text-muted small"><?= $archivedOn !== '' ? esc(date('M j, Y g:i A', strtotime($archivedOn))) : '—' ?></td>
                                             <td class="text-end">
                                                 <button type="button" class="icon-btn js-sector-restore" aria-label="Restore sector" data-restore-url="<?= site_url('admin/lookups/sectors/restore/' . $sectorId) ?>" data-name="<?= esc((string) ($sector['name'] ?? '')) ?>">
                                                     <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
@@ -101,7 +123,7 @@ $lookupHeading = $activeTab === 'services' ? 'Services and Programs Management' 
                                     <?php endforeach; ?>
                                     <?php if ($archivedSectors === []): ?>
                                         <tr>
-                                            <td colspan="3" class="text-center text-muted">No archived sectors.</td>
+                                            <td colspan="4" class="text-center text-muted">No archived sectors.</td>
                                         </tr>
                                     <?php endif; ?>
                                 </tbody>
@@ -113,6 +135,8 @@ $lookupHeading = $activeTab === 'services' ? 'Services and Programs Management' 
         </div>
     </div>
 
+    <?php /* SERVICES tab: one card per category; each card has an active table
+             plus a hidden "archived-rows" tbody toggled by js-toggle-archived. */ ?>
     <div class="tab-pane fade <?= $activeTab === 'services' ? 'show active' : '' ?>" id="tabServices" role="tabpanel" aria-labelledby="services-tab">
         <div class="d-flex justify-content-end mb-3">
             <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalServiceAdd">Add New Service</button>
@@ -139,7 +163,7 @@ $lookupHeading = $activeTab === 'services' ? 'Services and Programs Management' 
                     <table class="table table-sm align-middle mb-0">
                         <thead>
                             <tr>
-                                <th style="width: 80px;">ID</th>
+                                <th class="lookup-id-column">ID</th>
                                 <th>Name</th>
                                 <th>Description</th>
                                 <th class="text-end">Actions</th>
@@ -173,10 +197,18 @@ $lookupHeading = $activeTab === 'services' ? 'Services and Programs Management' 
                         </tbody>
                         <tbody class="archived-rows d-none" data-archived-body="<?= esc($categorySlug) ?>">
                             <?php foreach ($archivedServices as $service): ?>
-                                <?php $serviceId = (int) ($service['serviceID'] ?? 0); ?>
+                                <?php
+                                $serviceId = (int) ($service['serviceID'] ?? 0);
+                                $archivedOn = (string) ($service['dt_deleted'] ?? '');
+                                ?>
                                 <tr class="archived-row" data-service-id="<?= esc((string) $serviceId) ?>" data-category="<?= esc((string) ($service['category'] ?? '')) ?>" data-name="<?= esc((string) ($service['name'] ?? '')) ?>" data-description="<?= esc((string) ($service['description'] ?? '')) ?>">
                                     <td><?= esc((string) $serviceId) ?></td>
-                                    <td><?= esc((string) ($service['name'] ?? '')) ?></td>
+                                    <td>
+                                        <?= esc((string) ($service['name'] ?? '')) ?>
+                                        <?php if ($archivedOn !== ''): ?>
+                                            <div class="text-muted small">Archived <?= esc(date('M j, Y g:i A', strtotime($archivedOn))) ?></div>
+                                        <?php endif; ?>
+                                    </td>
                                     <td><?= esc((string) ($service['description'] ?? '')) ?></td>
                                     <td class="text-end">
                                         <button type="button" class="icon-btn js-service-restore" aria-label="Restore service" data-restore-url="<?= site_url('admin/lookups/services/restore/' . $serviceId) ?>" data-name="<?= esc((string) ($service['name'] ?? '')) ?>">
@@ -198,6 +230,9 @@ $lookupHeading = $activeTab === 'services' ? 'Services and Programs Management' 
 
 <div class="toast-container" id="toastContainer"></div>
 
+<?php /* Add/Edit modals for both lookups + a shared archive-confirm dialog.
+         lookups.js fills the Edit forms from the clicked row's data-* attributes
+         and rewrites each form's action to append the record id before submit. */ ?>
 <div class="modal fade" id="modalSectorAdd" tabindex="-1" aria-labelledby="modalSectorAddLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">

@@ -8,6 +8,7 @@ use App\Models\FamilyFormOptionsModel;
 use App\Models\MemberModel;
 use App\Models\SearchModel;
 use App\Models\SectorModel;
+use App\Models\ServiceModel;
 use App\Models\Auth\UserModel;
 use App\Libraries\RoleAccess;
 use App\Models\ViewLayoutModel;
@@ -54,6 +55,15 @@ class DashboardPageBuilder
         $users = $isDeveloper && $activePage === 'accounts'
             ? $searchModel->staffAccounts($searchTerm, $searchFilters)
             : $userModel->getStaffAccounts();
+        $sectorModel = new SectorModel();
+        $serviceModel = new ServiceModel();
+
+        // Sectors / Services panels share the Manage Records active|archived toggle.
+        $lookupStatus = strtolower(trim((string) $this->request->getGet('status'))) === 'archived'
+            ? 'archived'
+            : 'active';
+        $showArchivedLookups = $lookupStatus === 'archived';
+
         $familyFormViewData = (new FamilyFormOptionsModel())->getViewData();
 
         $recentFamilies = $activePage === 'dashboard' && ($searchTerm !== '' || $hasSearchFilters)
@@ -96,6 +106,8 @@ class DashboardPageBuilder
                 'family-entry' => $layoutModel->navActive($activePage, 'family-entry'),
                 'family-manage' => $layoutModel->navActive($activePage, 'family-manage'),
                 'audit-trails' => $layoutModel->navActive($activePage, 'audit-trails'),
+                'sectors'      => $layoutModel->navActive($activePage, 'sectors'),
+                'services'     => $layoutModel->navActive($activePage, 'services'),
             ],
             'adminAccounts'      => array_values(array_filter($users, static fn ($account) => $account['role'] === 'Admin')),
             'employeeAccounts'   => array_values(array_filter($users, static fn ($account) => $account['role'] === 'User')),
@@ -104,6 +116,10 @@ class DashboardPageBuilder
             'recentAudits'       => $recentAudits,
             'recordListData'      => $memberListData,
             'memberListData'      => $memberListData,
+            'sectors'            => $this->fetchVisibleSectors($sectorModel, $showArchivedLookups),
+            'services'           => $this->fetchVisibleServices($serviceModel, $showArchivedLookups),
+            'lookupStatus'       => $lookupStatus,
+            'canRestoreLookups'  => true,
             'stats'              => $dashboardModel->stats(),
             'canCreateFamily'    => true,
             'username'           => (string) (session()->get('username') ?? 'Admin'),
@@ -156,6 +172,44 @@ class DashboardPageBuilder
                 return $role === '' ? $username : $username . ' (' . $role . ')';
             },
         ];
+    }
+
+    private function fetchVisibleSectors(SectorModel $sectorModel, bool $showArchived = false): array
+    {
+        if (! $sectorModel->hasTable()) {
+            return [];
+        }
+
+        $builder = $sectorModel->orderBy('sectorID', 'ASC');
+
+        if (db_connect()->fieldExists('dt_deleted', 'sector')) {
+            $showArchived
+                ? $builder->where('dt_deleted IS NOT NULL', null, false)
+                : $builder->where('dt_deleted', null);
+        } elseif ($showArchived) {
+            return [];
+        }
+
+        return $builder->findAll();
+    }
+
+    private function fetchVisibleServices(ServiceModel $serviceModel, bool $showArchived = false): array
+    {
+        if (! $serviceModel->hasTable()) {
+            return [];
+        }
+
+        $builder = $serviceModel->orderBy('serviceID', 'ASC');
+
+        if (db_connect()->fieldExists('dt_deleted', 'services')) {
+            $showArchived
+                ? $builder->where('dt_deleted IS NOT NULL', null, false)
+                : $builder->where('dt_deleted', null);
+        } elseif ($showArchived) {
+            return [];
+        }
+
+        return $builder->findAll();
     }
 
     private function buildMemberListData(): array
@@ -248,6 +302,78 @@ class DashboardPageBuilder
         ];
     }
 
+    public function renderEmployeePage(string $activePage): string|RedirectResponse
+    {
+        $guard = RoleAccess::requireRole(['Developer', 'Admin', 'User']);
+
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        $layoutModel = new ViewLayoutModel();
+        $dashboardModel = new DashboardModel();
+        $searchModel = new SearchModel();
+        $searchTerm = trim((string) $this->request->getGet('q'));
+        $searchFilters = $this->searchFilters();
+        $hasSearchFilters = $this->hasSearchFilters($searchFilters);
+        $userId = (int) session()->get('user_id');
+        $familyFormViewData = (new FamilyFormOptionsModel())->getViewData();
+        $recordListData = $activePage === 'family-manage'
+            ? $this->buildEmployeeRecordListData()
+            : [];
+        $recentFamilies = $activePage === 'dashboard' && ($searchTerm !== '' || $hasSearchFilters)
+            ? $searchModel->families($searchTerm, $searchFilters, 25)
+            : $dashboardModel->recentFamilies(10);
+        $myAudits = $activePage === 'activity'
+            ? $searchModel->auditTrailsByUser($userId, $searchTerm, $searchFilters, 50)
+            : (new AuditTrailsModel())->getByUser($userId, 10);
+
+        return view('Employee/index', [
+            'user' => session()->get(),
+            'activePage' => $activePage,
+            'pageTitle' => $layoutModel->employeePageTitle($activePage),
+            'navActive' => [
+                'dashboard' => $layoutModel->navActive($activePage, 'dashboard'),
+                'family-entry' => $layoutModel->navActive($activePage, 'family-entry'),
+                'family-manage' => $layoutModel->navActive($activePage, 'family-manage'),
+                'activity' => $layoutModel->navActive($activePage, 'activity'),
+            ],
+            'canCreateFamily'    => true,
+            'familyFormViewData' => $familyFormViewData,
+            'recordListData'     => $recordListData,
+            'recentFamilies'     => $recentFamilies,
+            'myAudits'           => $myAudits,
+            'stats'              => array_merge(['families' => 0, 'members' => 0, 'sectors' => 0, 'assistance' => 0], $dashboardModel->stats()),
+            'searchTerm'         => $searchTerm,
+            'searchFilters'      => $searchFilters,
+            'auditActionOptions' => $searchModel->auditActions(),
+            'idleTimeoutSeconds' => (new IdleTimeout())->seconds,
+            'username'           => (string) (session()->get('username') ?? 'Employee'),
+            'sectorOptions'      => $familyFormViewData['sectorOptions'] ?? [],
+            'selectedFilterDate' => (string) ($searchFilters['date'] ?? $searchFilters['date_from'] ?? ''),
+            'hasSearchFilters'   => $hasSearchFilters,
+            'formatDate'         => static function (mixed $value): string {
+                $timestamp = strtotime((string) $value);
+
+                return $timestamp === false ? '' : date('Y-m-d', $timestamp);
+            },
+            'formatTime'         => static function (mixed $value): string {
+                $timestamp = strtotime((string) $value);
+
+                return $timestamp === false ? '' : date('h:i A', $timestamp);
+            },
+            'formatAuditMember'  => static function (array $audit): string {
+                $memberName = trim((string) ($audit['member_name'] ?? ''));
+
+                if ($memberName === '') {
+                    $memberName = trim((string) ($audit['firstname'] ?? '') . ' ' . (string) ($audit['lastname'] ?? ''));
+                }
+
+                return $memberName === '' ? '-' : $memberName;
+            },
+        ]);
+    }
+
     private function searchFilters(): array
     {
         return [
@@ -272,4 +398,42 @@ class DashboardPageBuilder
         return false;
     }
 
+    private function buildEmployeeRecordListData(): array
+    {
+        $keyword = trim((string) $this->request->getGet('q'));
+        $page = max(1, (int) $this->request->getGet('page'));
+        $perPage = 50;
+
+        // Manage Records FILTER controls (sector + date). Employees only see active records.
+        $filters = [
+            'sectorID' => (string) $this->request->getGet('sectorID'),
+            'date'     => (string) $this->request->getGet('date'),
+        ];
+
+        $memberModel = new MemberModel();
+        $searchKeyword = $keyword === '' ? null : $keyword;
+        $totalFamilies = $memberModel->countSearchFamilies($searchKeyword, false, $filters);
+        $totalPages = max(1, (int) ceil($totalFamilies / $perPage));
+        $page = min($page, $totalPages);
+
+        return array_merge([
+            'canRestoreArchived' => false,
+            'families' => $memberModel->searchFamilies($searchKeyword, $perPage, ($page - 1) * $perPage, false, $filters),
+            'fromRecord' => $totalFamilies === 0 ? 0 : (($page - 1) * $perPage) + 1,
+            'isEmployeeList' => true,
+            'keyword' => $keyword,
+            'listRoute' => 'employee/manage-records',
+            'page' => $page,
+            'perPage' => $perPage,
+            'routeBase' => 'employee/manage-family',
+            'status' => 'active',
+            'toRecord' => min($totalFamilies, $page * $perPage),
+            'totalFamilies' => $totalFamilies,
+            'totalPages' => $totalPages,
+            'useModalLinks' => false,
+            // Filter UI data.
+            'sectorOptions' => (new SectorModel())->getSectorOptions(),
+            'filters' => $filters,
+        ], $this->buildDeepSearchData('active'));
+    }
 }

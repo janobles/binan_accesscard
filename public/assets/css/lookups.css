@@ -26,6 +26,10 @@
     margin-top: auto;
 }
 
+.lookup-id-column {
+    width: 80px;
+}
+
 .archived-row {
     opacity: 0.7;
 }

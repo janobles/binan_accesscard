@@ -155,6 +155,10 @@ class Home extends BaseController
 
     public function adminManageRecords(): string|RedirectResponse
     {
+        if ($this->isPartialRequest()) {
+            return $this->renderAdminRecordListPartial();
+        }
+
         return (new DashboardPageBuilder($this->request))->renderAdminPage('family-manage');
     }
 
@@ -212,6 +216,10 @@ class Home extends BaseController
 
     public function employeeManageRecords(): string|RedirectResponse
     {
+        if ($this->isPartialRequest()) {
+            return $this->renderEmployeeRecordListPartial();
+        }
+
         return (new DashboardPageBuilder($this->request))->renderEmployeePage('family-manage');
     }
 
@@ -276,6 +284,20 @@ class Home extends BaseController
             (new FamilyFormOptionsModel())->getViewData(),
             ['canCreateFamily' => true, 'embeddedInModal' => true]
         ));
+    }
+
+    private function renderAdminRecordListPartial(): string|RedirectResponse
+    {
+        $guard = $this->guardAdminPartialAccess();
+
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        return view(
+            'Dashboard/familyform/family-list',
+            (new DashboardPageBuilder($this->request))->buildAdminRecordListViewData()
+        );
     }
 
     private function renderAdminAuditPartial(): string|RedirectResponse
@@ -343,6 +365,20 @@ class Home extends BaseController
             (new FamilyFormOptionsModel())->getViewData(),
             ['canCreateFamily' => true, 'embeddedInModal' => true]
         ));
+    }
+
+    private function renderEmployeeRecordListPartial(): string|RedirectResponse
+    {
+        $guard = RoleAccess::requireRole(['Developer', 'Admin', 'User']);
+
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        return view(
+            'Dashboard/familyform/family-list',
+            (new DashboardPageBuilder($this->request))->buildEmployeeRecordListViewData()
+        );
     }
 
 }

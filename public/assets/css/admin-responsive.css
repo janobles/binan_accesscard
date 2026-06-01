@@ -41,6 +41,12 @@
     }
 }
 
+@media (min-width: 993px) {
+    .table-responsive {
+        overflow: visible;
+    }
+}
+
 @media (max-width: 576px) {
     .brand {
         padding-left: 10px;

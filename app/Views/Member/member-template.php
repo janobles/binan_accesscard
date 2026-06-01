@@ -7,7 +7,7 @@ $memberSectorGroups = ViewFormatter::memberSectorGroups($sectorOptions);
     <div class="member-row">
         <div class="member-row-header">
             <strong>Member</strong>
-            <button type="button" class="btn btn-sm btn-outline-danger remove-member">Remove</button>
+            <button type="button" class="btn btn-sm btn-outline-danger remove-member"><i class="bi bi-trash" aria-hidden="true"></i>Remove</button>
         </div>
         <div class="row g-2">
             <div class="col-md-3">

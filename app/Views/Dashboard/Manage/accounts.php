@@ -26,7 +26,7 @@ $formatStatus = [ViewFormatter::class, 'formatStatus'];
     <div class="section-title mt-0">
         <span>Account Management</span>
     </div>
-    <form class="row g-2 mb-3" method="get" action="<?= site_url('admin/accounts') ?>">
+    <form class="row g-2 filter-bar" method="get" action="<?= site_url('admin/accounts') ?>">
         <div class="col-md-6 col-lg-4">
             <input class="form-control" type="search" name="q" value="<?= esc($searchTerm) ?>" placeholder="Search accounts by username, role, or status">
         </div>
@@ -45,11 +45,11 @@ $formatStatus = [ViewFormatter::class, 'formatStatus'];
             </select>
         </div>
         <div class="col-auto">
-            <button class="btn btn-primary" type="submit">Search</button>
+            <button class="btn btn-primary" type="submit"><i class="bi bi-search" aria-hidden="true"></i>Search</button>
         </div>
         <?php if ($hasSearchFilters): ?>
             <div class="col-auto">
-                <a class="btn btn-outline-secondary" href="<?= site_url('admin/accounts') ?>">Clear</a>
+                <a class="btn btn-outline-secondary" href="<?= site_url('admin/accounts') ?>"><i class="bi bi-x-lg" aria-hidden="true"></i>Clear</a>
             </div>
         <?php endif; ?>
     </form>
@@ -57,7 +57,7 @@ $formatStatus = [ViewFormatter::class, 'formatStatus'];
     <?php if ($canCreateAccounts): ?>
         <div class="row g-3 mb-3">
             <div class="col-lg-6">
-                <div class="border rounded p-3 h-100 bg-light">
+                <div class="section-surface">
                     <h6 class="mb-3">Create Admin Account</h6>
                     <form class="account-form" method="post" action="<?= site_url('developer/accounts') ?>">
                         <?= csrf_field() ?>
@@ -71,13 +71,13 @@ $formatStatus = [ViewFormatter::class, 'formatStatus'];
                             <input type="password" class="form-control" name="password" required minlength="8">
                         </div>
                         <div class="account-action">
-                            <button class="btn btn-primary w-100" type="submit">Create</button>
+                            <button class="btn btn-primary w-100" type="submit"><i class="bi bi-person-plus" aria-hidden="true"></i>Create</button>
                         </div>
                     </form>
                 </div>
             </div>
             <div class="col-lg-6">
-                <div class="border rounded p-3 h-100 bg-light">
+                <div class="section-surface">
                     <h6 class="mb-3">Create Employee Account</h6>
                     <form class="account-form account-form-employee" method="post" action="<?= site_url('developer/accounts') ?>">
                         <?= csrf_field() ?>
@@ -91,7 +91,7 @@ $formatStatus = [ViewFormatter::class, 'formatStatus'];
                             <input type="password" class="form-control" name="password" required minlength="8">
                         </div>
                         <div class="account-action">
-                            <button class="btn btn-primary w-100" type="submit">Create</button>
+                            <button class="btn btn-primary w-100" type="submit"><i class="bi bi-person-plus" aria-hidden="true"></i>Create</button>
                         </div>
                     </form>
                 </div>
@@ -102,7 +102,7 @@ $formatStatus = [ViewFormatter::class, 'formatStatus'];
     <div class="row g-3">
         <?php if ($isDeveloper): ?>
             <div class="<?= esc($adminColumnClass) ?>">
-                <div class="panel">
+                <div class="section-surface">
                     <div class="section-title mt-0"><span>Admin Accounts</span></div>
                     <div class="table-responsive">
                         <table class="table table-sm">
@@ -112,8 +112,8 @@ $formatStatus = [ViewFormatter::class, 'formatStatus'];
                                     <?php $isActive = $isActiveStatus($account['isactive'] ?? null); ?>
                                     <?php $nextStatus = $isActive ? 'Disabled' : 'Enable'; ?>
                                     <tr>
-                                        <td><?= esc((string) ($account['username'] ?? '')) ?></td>
-                                        <td><?= esc($formatStatus($account['isactive'] ?? '')) ?></td>
+                                        <td><span class="entity-title"><?= esc((string) ($account['username'] ?? '')) ?></span></td>
+                                        <td><span class="status-pill <?= $isActive ? 'is-active' : 'is-danger' ?>"><?= esc($formatStatus($account['isactive'] ?? '')) ?></span></td>
                                         <td><?= esc($formatDate($account['dt_created'] ?? '')) ?></td>
                                         <td><?= esc($formatTime($account['dt_created'] ?? '')) ?></td>
                                         <?php if ($showAdminActions): ?>
@@ -124,7 +124,7 @@ $formatStatus = [ViewFormatter::class, 'formatStatus'];
                                                     <input type="hidden" name="userID" value="<?= esc((string) ($account['userID'] ?? '')) ?>">
                                                     <input type="hidden" name="status" value="<?= esc($nextStatus) ?>">
                                                     <button class="btn btn-sm <?= $isActive ? 'btn-outline-danger' : 'btn-outline-success' ?>" type="submit">
-                                                        <?= $isActive ? 'Disable' : 'Enable' ?>
+                                                        <i class="bi <?= $isActive ? 'bi-person-x' : 'bi-person-check' ?>" aria-hidden="true"></i><?= $isActive ? 'Disable' : 'Enable' ?>
                                                     </button>
                                                 </form>
                                             </td>
@@ -141,7 +141,7 @@ $formatStatus = [ViewFormatter::class, 'formatStatus'];
             </div>
         <?php endif; ?>
         <div class="<?= esc($employeeColumnClass) ?>">
-            <div class="panel">
+            <div class="section-surface">
                 <div class="section-title mt-0">
                     <span>Employee Accounts</span>
                 </div>
@@ -153,8 +153,8 @@ $formatStatus = [ViewFormatter::class, 'formatStatus'];
                                 <?php $isActive = $isActiveStatus($account['isactive'] ?? null); ?>
                                 <?php $nextStatus = $isActive ? 'Disabled' : 'Enable'; ?>
                                 <tr>
-                                    <td><?= esc((string) ($account['username'] ?? '')) ?></td>
-                                    <td><?= esc($formatStatus($account['isactive'] ?? '')) ?></td>
+                                    <td><span class="entity-title"><?= esc((string) ($account['username'] ?? '')) ?></span></td>
+                                    <td><span class="status-pill <?= $isActive ? 'is-active' : 'is-danger' ?>"><?= esc($formatStatus($account['isactive'] ?? '')) ?></span></td>
                                     <td><?= esc($formatDate($account['dt_created'] ?? '')) ?></td>
                                     <td><?= esc($formatTime($account['dt_created'] ?? '')) ?></td>
                                     <?php if ($showEmployeeActions): ?>
@@ -166,7 +166,7 @@ $formatStatus = [ViewFormatter::class, 'formatStatus'];
                                                     <input type="hidden" name="userID" value="<?= esc((string) ($account['userID'] ?? '')) ?>">
                                                     <input type="hidden" name="status" value="<?= esc($nextStatus) ?>">
                                                     <button class="btn btn-sm <?= $isActive ? 'btn-outline-danger' : 'btn-outline-success' ?>" type="submit">
-                                                        <?= $isActive ? 'Disable' : 'Enable' ?>
+                                                        <i class="bi <?= $isActive ? 'bi-person-x' : 'bi-person-check' ?>" aria-hidden="true"></i><?= $isActive ? 'Disable' : 'Enable' ?>
                                                     </button>
                                                 </form>
                                             <?php elseif ($isAdmin): ?>
@@ -175,10 +175,10 @@ $formatStatus = [ViewFormatter::class, 'formatStatus'];
                                                     <form class="js-account-status-form" method="post" action="<?= site_url('admin/accounts/disable') ?>" data-confirm-message="<?= esc('Disable employee account "' . (string) ($account['username'] ?? '') . '"?', 'attr') ?>">
                                                         <?= csrf_field() ?>
                                                         <input type="hidden" name="userID" value="<?= esc((string) ($account['userID'] ?? '')) ?>">
-                                                        <button class="btn btn-sm btn-outline-danger" type="submit">Disable</button>
+                                                        <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-person-x" aria-hidden="true"></i>Disable</button>
                                                     </form>
                                                 <?php else: ?>
-                                                    <span class="text-muted">Disabled</span>
+                                                    <span class="status-pill is-danger">Disabled</span>
                                                 <?php endif; ?>
                                             <?php endif; ?>
                                         </td>

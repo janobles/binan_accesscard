@@ -117,12 +117,12 @@ $fieldViewData            = compact(
             <div id="initialFamilyData" class="family-form-hidden" data-json="<?= esc(json_encode($initialFamilyData, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT), 'attr') ?>"></div>
 
             <div class="d-flex justify-content-end gap-2 family-form-actions">
-                <button type="button" class="btn btn-outline-secondary family-form-hidden" id="prevStepBtn">Previous</button>
+                <button type="button" class="btn btn-outline-secondary family-form-hidden" id="prevStepBtn"><i class="bi bi-arrow-left" aria-hidden="true"></i>Previous</button>
                 <?php if (! $isEditMode): ?>
-                    <button type="reset" class="btn btn-outline-secondary" id="resetFamilyBtn">Clear</button>
+                    <button type="reset" class="btn btn-outline-secondary" id="resetFamilyBtn"><i class="bi bi-x-lg" aria-hidden="true"></i>Clear</button>
                 <?php endif; ?>
-                <button type="button" class="btn btn-primary" id="nextStepBtn">Next</button>
-                <button type="submit" class="btn btn-primary family-form-hidden" id="submitFamilyBtn"><?= esc((string) $submitButtonLabel) ?></button>
+                <button type="button" class="btn btn-primary" id="nextStepBtn">Next<i class="bi bi-arrow-right ms-1" aria-hidden="true"></i></button>
+                <button type="submit" class="btn btn-primary family-form-hidden" id="submitFamilyBtn"><i class="bi bi-check2" aria-hidden="true"></i><?= esc((string) $submitButtonLabel) ?></button>
             </div>
         </form>
     </div>

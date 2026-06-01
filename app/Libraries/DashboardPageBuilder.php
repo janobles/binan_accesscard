@@ -58,12 +58,6 @@ class DashboardPageBuilder
         $sectorModel = new SectorModel();
         $serviceModel = new ServiceModel();
 
-        // Sectors / Services panels share the Manage Records active|archived toggle.
-        $lookupStatus = strtolower(trim((string) $this->request->getGet('status'))) === 'archived'
-            ? 'archived'
-            : 'active';
-        $showArchivedLookups = $lookupStatus === 'archived';
-
         $familyFormViewData = (new FamilyFormOptionsModel())->getViewData();
 
         $recentFamilies = $activePage === 'dashboard' && ($searchTerm !== '' || $hasSearchFilters)
@@ -116,10 +110,8 @@ class DashboardPageBuilder
             'recentAudits'       => $recentAudits,
             'recordListData'      => $memberListData,
             'memberListData'      => $memberListData,
-            'sectors'            => $this->fetchVisibleSectors($sectorModel, $showArchivedLookups),
-            'services'           => $this->fetchVisibleServices($serviceModel, $showArchivedLookups),
-            'lookupStatus'       => $lookupStatus,
-            'canRestoreLookups'  => true,
+            'sectors'            => $this->fetchVisibleSectors($sectorModel),
+            'services'           => $this->fetchVisibleServices($serviceModel),
             'stats'              => $dashboardModel->stats(),
             'canCreateFamily'    => true,
             'username'           => (string) (session()->get('username') ?? 'Admin'),
@@ -174,42 +166,36 @@ class DashboardPageBuilder
         ];
     }
 
-    private function fetchVisibleSectors(SectorModel $sectorModel, bool $showArchived = false): array
+    public function buildAdminRecordListViewData(): array
+    {
+        return $this->buildMemberListData();
+    }
+
+    public function buildEmployeeRecordListViewData(): array
+    {
+        return $this->buildEmployeeRecordListData();
+    }
+
+    private function fetchVisibleSectors(SectorModel $sectorModel): array
     {
         if (! $sectorModel->hasTable()) {
             return [];
         }
 
-        $builder = $sectorModel->orderBy('sectorID', 'ASC');
-
-        if (db_connect()->fieldExists('dt_deleted', 'sector')) {
-            $showArchived
-                ? $builder->where('dt_deleted IS NOT NULL', null, false)
-                : $builder->where('dt_deleted', null);
-        } elseif ($showArchived) {
-            return [];
-        }
-
-        return $builder->findAll();
+        return $sectorModel
+            ->orderBy('sectorID', 'ASC')
+            ->findAll();
     }
 
-    private function fetchVisibleServices(ServiceModel $serviceModel, bool $showArchived = false): array
+    private function fetchVisibleServices(ServiceModel $serviceModel): array
     {
         if (! $serviceModel->hasTable()) {
             return [];
         }
 
-        $builder = $serviceModel->orderBy('serviceID', 'ASC');
-
-        if (db_connect()->fieldExists('dt_deleted', 'services')) {
-            $showArchived
-                ? $builder->where('dt_deleted IS NOT NULL', null, false)
-                : $builder->where('dt_deleted', null);
-        } elseif ($showArchived) {
-            return [];
-        }
-
-        return $builder->findAll();
+        return $serviceModel
+            ->orderBy('serviceID', 'ASC')
+            ->findAll();
     }
 
     private function buildMemberListData(): array
@@ -430,7 +416,6 @@ class DashboardPageBuilder
             'toRecord' => min($totalFamilies, $page * $perPage),
             'totalFamilies' => $totalFamilies,
             'totalPages' => $totalPages,
-            'useModalLinks' => false,
             // Filter UI data.
             'sectorOptions' => (new SectorModel())->getSectorOptions(),
             'filters' => $filters,

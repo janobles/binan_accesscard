@@ -3,6 +3,10 @@
     const timeoutSeconds = Number(script?.dataset.timeoutSeconds || 900);
     const logoutUrl = script?.dataset.logoutUrl || 'logout?timeout=1';
     const keepAliveUrl = script?.dataset.keepAliveUrl || '';
+    // Where to send a tab whose session was already ended by ANOTHER tab. We go
+    // here directly instead of re-hitting the logout endpoint, so we never record
+    // a second (spurious) logout in the audit trail for a logout we didn't perform.
+    const homeUrl = script?.dataset.homeUrl || '/';
     const timeoutMs = Math.max(1, timeoutSeconds) * 1000;
     const storageKey = 'binan_accesscard_last_activity';
     const activityEvents = ['pointerdown', 'keydown', 'mousemove', 'wheel', 'scroll', 'touchstart'];
@@ -120,7 +124,15 @@
     window.addEventListener('storage', function (event) {
         if (event.key === storageKey) {
             if (event.newValue === null) {
-                logout();
+                // Another tab logged out (or timed out) and cleared the shared
+                // session. Follow it to the login page WITHOUT calling the logout
+                // endpoint again — that other tab already recorded the logout, so
+                // re-hitting it here would log a duplicate/spurious entry.
+                if (! isLoggingOut) {
+                    isLoggingOut = true;
+                    window.location.href = homeUrl;
+                }
+
                 return;
             }
 

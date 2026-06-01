@@ -16,7 +16,7 @@ $errorId = uniqid('error', true);
     </style>
 
     <script>
-        <?= file_get_contents(__DIR__ . DIRECTORY_SEPARATOR . 'debug.js') ?>
+        <?= file_get_contents(FCPATH . 'assets/js/error-debug.js') ?>
     </script>
 </head>
 <body onload="init()">

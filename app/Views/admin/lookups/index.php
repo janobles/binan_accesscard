@@ -20,9 +20,12 @@
 <?= $this->endSection() ?>
 
 <?= $this->section('content') ?>
+<?php
+$lookupHeading = $activeTab === 'services' ? 'Services and Programs Management' : 'Sector Management';
+?>
 <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between mb-3">
     <div>
-        <h2 class="mb-1">Lookup Management</h2>
+        <h2 class="mb-1"><?= esc($lookupHeading) ?></h2>
         <div class="text-muted">Sectors &amp; Services</div>
     </div>
 </div>
@@ -41,7 +44,7 @@
              shortcode prefix PWD/SP/OSCA) + a collapsible archived list. */ ?>
     <div class="tab-pane fade <?= $activeTab === 'sectors' ? 'show active' : '' ?>" id="tabSectors" role="tabpanel" aria-labelledby="sectors-tab">
         <div class="d-flex justify-content-end mb-3">
-            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalSectorAdd">Add New Sector</button>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalSectorAdd"><i class="bi bi-plus-lg" aria-hidden="true"></i>Add New Sector</button>
         </div>
 
         <div class="row g-3 sector-card-grid">
@@ -110,7 +113,7 @@
                                         <tr class="archived-row" data-sector-id="<?= esc((string) $sectorId) ?>">
                                             <td><?= esc((string) ($sector['shortcode'] ?? '')) ?></td>
                                             <td><?= esc((string) ($sector['name'] ?? '')) ?></td>
-                                            <td class="text-muted small"><?= $archivedOn !== '' ? esc(date('M j, Y g:i A', strtotime($archivedOn))) : '—' ?></td>
+                                            <td class="text-muted small"><?= $archivedOn !== '' ? esc(date('M j, Y g:i A', strtotime($archivedOn))) : '-' ?></td>
                                             <td class="text-end">
                                                 <button type="button" class="icon-btn js-sector-restore" aria-label="Restore sector" data-restore-url="<?= site_url('admin/lookups/sectors/restore/' . $sectorId) ?>" data-name="<?= esc((string) ($sector['name'] ?? '')) ?>">
                                                     <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
@@ -136,7 +139,7 @@
              plus a hidden "archived-rows" tbody toggled by js-toggle-archived. */ ?>
     <div class="tab-pane fade <?= $activeTab === 'services' ? 'show active' : '' ?>" id="tabServices" role="tabpanel" aria-labelledby="services-tab">
         <div class="d-flex justify-content-end mb-3">
-            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalServiceAdd">Add New Service</button>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalServiceAdd"><i class="bi bi-plus-lg" aria-hidden="true"></i>Add New Service</button>
         </div>
 
         <?php foreach ($serviceGroups as $category => $group): ?>
@@ -153,7 +156,7 @@
                         <?php if ($archivedCount > 0): ?>
                             <button type="button" class="btn btn-link p-0 js-toggle-archived" data-target="<?= esc($categorySlug) ?>" data-count="<?= esc((string) $archivedCount) ?>">Show archived (<?= esc((string) $archivedCount) ?>)</button>
                         <?php endif; ?>
-                        <button type="button" class="btn btn-outline-primary btn-sm js-service-add-category" data-bs-toggle="modal" data-bs-target="#modalServiceAdd" data-category="<?= esc((string) $category) ?>">Add to <?= esc((string) $category) ?></button>
+                        <button type="button" class="btn btn-outline-primary btn-sm js-service-add-category" data-bs-toggle="modal" data-bs-target="#modalServiceAdd" data-category="<?= esc((string) $category) ?>"><i class="bi bi-plus-lg" aria-hidden="true"></i>Add to <?= esc((string) $category) ?></button>
                     </div>
                 </div>
                 <div class="table-responsive">

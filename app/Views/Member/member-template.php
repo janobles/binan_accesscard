@@ -1,40 +1,13 @@
 <?php
-$memberSectorGroups = [
-    'SC' => ['label' => 'SC', 'sectors' => []],
-    'PWD' => ['label' => 'PWD', 'sectors' => []],
-    'SP' => ['label' => 'SP', 'sectors' => []],
-    'B' => ['label' => 'B', 'sectors' => []],
-    'OTHER' => ['label' => 'Others', 'sectors' => []],
-];
+use App\Libraries\ViewFormatter;
 
-foreach ($sectorOptions as $sector) {
-    $shortcode = strtoupper(trim((string) ($sector['shortcode'] ?? '')));
-
-    if (str_starts_with($shortcode, 'PWD')) {
-        $groupKey = 'PWD';
-    } elseif (str_starts_with($shortcode, 'SC') || str_starts_with($shortcode, 'OSCA') || str_starts_with($shortcode, 'OSWA')) {
-        $groupKey = 'SC';
-    } elseif (str_starts_with($shortcode, 'SP')) {
-        $groupKey = 'SP';
-    } elseif (str_starts_with($shortcode, 'B')) {
-        $groupKey = 'B';
-    } else {
-        $groupKey = 'OTHER';
-    }
-
-    $memberSectorGroups[$groupKey]['sectors'][] = $sector;
-}
-
-$memberSectorGroups = array_filter(
-    $memberSectorGroups,
-    static fn (array $group): bool => ($group['sectors'] ?? []) !== []
-);
+$memberSectorGroups = ViewFormatter::memberSectorGroups($sectorOptions);
 ?>
 <template id="memberTemplate">
     <div class="member-row">
         <div class="member-row-header">
             <strong>Member</strong>
-            <button type="button" class="btn btn-sm btn-outline-danger remove-member">Remove</button>
+            <button type="button" class="btn btn-sm btn-outline-danger remove-member"><i class="bi bi-trash" aria-hidden="true"></i>Remove</button>
         </div>
         <div class="row g-2">
             <div class="col-md-3">

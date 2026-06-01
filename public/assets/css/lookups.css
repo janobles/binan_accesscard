@@ -1,6 +1,6 @@
 .badge-pwd {
-    background-color: #cfe2ff;
-    color: #084298;
+    background-color: #dcecff;
+    color: #17416f;
 }
 
 .badge-sp {
@@ -20,10 +20,26 @@
 .sector-card {
     display: flex;
     flex-direction: column;
+    border: 1px solid #d9e4ef;
+    border-radius: 8px;
+    box-shadow: 0 8px 20px rgba(20, 38, 58, 0.06);
+}
+
+.sector-card .card-header,
+.card > .card-header {
+    border-bottom-color: #dde7f0;
+    background: #f8fbfd;
+}
+
+.card {
+    border-color: #d9e4ef;
+    border-radius: 8px;
 }
 
 .sector-card .card-footer {
     margin-top: auto;
+    border-top-color: #dde7f0;
+    background: #ffffff;
 }
 
 .lookup-id-column {
@@ -31,22 +47,25 @@
 }
 
 .archived-row {
-    opacity: 0.7;
+    opacity: 0.82;
 }
 
 .icon-btn {
-    width: 28px;
-    height: 28px;
-    border: 0;
-    background: transparent;
-    border-radius: 4px;
+    width: 34px;
+    height: 34px;
+    border: 1px solid #cfdbe8;
+    background: #ffffff;
+    border-radius: 7px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    color: #40546a;
 }
 
 .icon-btn:hover {
-    background-color: #e9ecef;
+    background-color: #eef6f5;
+    border-color: #9fcac4;
+    color: #0b7169;
 }
 
 .toast-container {

@@ -1,15 +1,14 @@
 <?php
+use App\Libraries\ViewFormatter;
+
 $servicesByCategory       = $servicesByCategory ?? [];
 $sectorCatalog            = $sectorCatalog ?? [];
-$selectedSectorIds        = array_map('intval', array_values(array_filter((array) ($selectedSectorIds ?? []), static fn ($v) => is_numeric($v))));
-$selectedSectorCategories = array_values(array_filter(array_map('strval', (array) ($selectedSectorCategories ?? [])), static fn ($v) => trim($v) !== ''));
-$selectedServiceIds       = array_map('intval', array_values(array_filter((array) ($selectedServiceIds ?? []), static fn ($v) => is_numeric($v))));
+$selectedSectorIds        = ViewFormatter::integerList($selectedSectorIds ?? [], true);
+$selectedSectorCategories = ViewFormatter::stringList($selectedSectorCategories ?? [], true);
+$selectedServiceIds       = ViewFormatter::integerList($selectedServiceIds ?? [], true);
 $sectorCatalogJson        = json_encode($sectorCatalog, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?: '{}';
 $sectorCategoryLabels     = \App\Support\FamilyProfilingFormV2::SECTOR_CATEGORIES;
-$sectorCategoryKeys       = array_values(array_filter(
-    array_keys($sectorCatalog),
-    static fn (string $key): bool => ($sectorCatalog[$key] ?? []) !== []
-));
+$sectorCategoryKeys       = ViewFormatter::sectorCategoryKeys($sectorCatalog);
 ?>
 
 <div class="form-section family-step-panel" data-step="2">

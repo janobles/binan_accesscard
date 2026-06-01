@@ -28,7 +28,7 @@
 						<div class="mb-3">
 							<label class="form-label" for="sectorModalShortcode">Code</label>
 							<input class="form-control" id="sectorModalShortcode" name="shortcode" placeholder="Pick a category to auto-fill" required>
-							<div class="invalid-feedback d-block d-none js-sector-code-error">Duplicate code — please enter another code.</div>
+							<div class="invalid-feedback d-block d-none js-sector-code-error">Duplicate code - please enter another code.</div>
 						</div>
 						<div class="mb-3">
 							<label class="form-label" for="sectorModalName">Name</label>

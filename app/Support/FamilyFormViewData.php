@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Libraries\SectorIds;
+use App\Libraries\ViewFormatter;
 
 /**
  * Prepares family form variables before the view renders HTML.
@@ -35,7 +36,7 @@ class FamilyFormViewData
         $isEditMode = $familyRecord !== [];
         $embeddedInModal = (bool) ($data['embeddedInModal'] ?? false);
         $selectedSectorIds = SectorIds::normalize($familyRecord['sectorID'] ?? null);
-        $selectedSectorCategories = self::selectedSectorCategories($sectorCatalog, $selectedSectorIds);
+        $selectedSectorCategories = ViewFormatter::selectedSectorCategories($sectorCatalog, $selectedSectorIds);
         $initialFamilyData = [
             'selectedSectorIds' => $selectedSectorIds,
             'selectedSectorCategories' => $selectedSectorCategories,
@@ -113,28 +114,9 @@ class FamilyFormViewData
         return $grouped;
     }
 
-    private static function selectedSectorCategories(array $sectorCatalog, array $selectedSectorIds): array
-    {
-        $categories = [];
-
-        foreach ($sectorCatalog as $key => $rows) {
-            foreach ((array) $rows as $row) {
-                if (in_array((int) ($row['sectorID'] ?? 0), $selectedSectorIds, true)) {
-                    $categories[] = (string) $key;
-                    break;
-                }
-            }
-        }
-
-        return array_values(array_unique($categories));
-    }
-
     private static function integerList(mixed $value): array
     {
-        return array_values(array_map(
-            static fn (mixed $id): int => (int) $id,
-            (array) $value
-        ));
+        return ViewFormatter::integerList($value);
     }
 
     private static function arrayValue(mixed $value): array

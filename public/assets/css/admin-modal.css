@@ -12,7 +12,7 @@
 
 .floating-family-modal .modal-content {
     border: 1px solid #cfdae8;
-    border-radius: 10px;
+    border-radius: 8px;
     overflow: hidden;
     box-shadow: 0 18px 46px rgba(9, 25, 47, 0.28);
     height: 100%;
@@ -21,12 +21,12 @@
 }
 
 .floating-family-modal .modal-header {
-    background: #f4f8fc;
+    background: #ffffff;
     border-bottom: 1px solid #d5dfeb;
 }
 
 .floating-family-modal .modal-footer {
-    background: #f4f8fc;
+    background: #ffffff;
     border-top: 1px solid #d5dfeb;
 }
 
@@ -40,7 +40,7 @@
     max-height: none;
     flex: 1 1 auto;
     overflow: auto;
-    background: #e9edf2;
+    background: #f2f5f8;
     padding: 14px;
 }
 

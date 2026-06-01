@@ -5,7 +5,6 @@ $families = $families ?? [];
 $keyword = $keyword ?? '';
 $routeBase = $routeBase ?? 'admin/manage-family';
 $listRoute = (string) ($listRoute ?? ($routeBase . '/list'));
-$useModalLinks = (bool) ($useModalLinks ?? true);
 $status = (string) ($status ?? 'active') === 'archived' ? 'archived' : 'active';
 $canRestoreArchived = (bool) ($canRestoreArchived ?? false);
 $page = max(1, (int) ($page ?? 1));
@@ -20,7 +19,7 @@ $isEmployeeList = (string) session()->get('role') === 'User'
     || str_starts_with($requestPath, 'employee/')
     || str_contains('/' . $requestPath, '/employee/');
 // Filter controls + deep ("search the whole database") results are supplied by
-// App\Libraries\DashboardPageBuilder::buildMemberListData()/buildEmployeeRecordListData().
+// Admin DashboardPageBuilder and Employee WorkspaceModel supply filter controls and results.
 $sectorOptions = $sectorOptions ?? [];
 $filters = $filters ?? [];
 $filterSectorId = (string) ($filters['sectorID'] ?? '');
@@ -37,33 +36,32 @@ $deepToRecord = (int) ($deepToRecord ?? 0);
 <div
     class="panel mb-3"
     data-family-list-panel
-    data-family-list-partial-base="<?= esc(site_url($routeBase . '/list'), 'attr') ?>"
     data-family-list-full-base="<?= esc(site_url($listRoute), 'attr') ?>">
     <div class="section-title mt-0">
         <span><?= $status === 'archived' ? 'Archived Records' : 'Manage Records' ?></span>
         <?php if ($status !== 'archived'): ?>
-            <button type="button" class="btn btn-primary btn-sm js-open-family-modal" data-modal-url="<?= site_url($routeBase . '?partial=1') ?>" data-modal-title="Add Record">Add Record</button>
+            <button type="button" class="btn btn-primary btn-sm js-open-family-modal" data-modal-url="<?= site_url($routeBase . '?partial=1') ?>" data-modal-title="Add Record"><i class="bi bi-plus-lg" aria-hidden="true"></i>Add Record</button>
         <?php endif; ?>
     </div>
     <?php if (! $isEmployeeList && $canRestoreArchived): ?>
-        <div class="d-flex gap-2 mb-3">
+        <div class="toolbar-row mb-3">
             <a
                 class="btn btn-sm <?= $status === 'active' ? 'btn-primary' : 'btn-outline-secondary' ?>"
                 href="<?= esc(family_list_url($listRoute, (string) $keyword, $filterSectorId, $filterDate, 'active'), 'attr') ?>">
-                Active
+                <i class="bi bi-check2-circle" aria-hidden="true"></i>Active
             </a>
             <a
                 class="btn btn-sm <?= $status === 'archived' ? 'btn-primary' : 'btn-outline-secondary' ?>"
                 href="<?= esc(family_list_url($listRoute, (string) $keyword, $filterSectorId, $filterDate, 'archived'), 'attr') ?>">
-                Archived
+                <i class="bi bi-archive" aria-hidden="true"></i>Archived
             </a>
         </div>
     <?php endif; ?>
 
-    <div class="d-flex flex-wrap gap-2 mb-3">
-        <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#recordSearchModal">Search</button>
+    <div class="toolbar-row mb-3">
+        <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#recordSearchModal"><i class="bi bi-search" aria-hidden="true"></i>Search</button>
         <?php if (trim((string) $keyword) !== '' || $filterSectorId !== '' || $filterDate !== '' || $deepKeyword !== ''): ?>
-            <a class="btn btn-outline-secondary" href="<?= esc(site_url($listRoute . ($status === 'archived' ? '?status=archived' : '')), 'attr') ?>">Clear</a>
+            <a class="btn btn-outline-secondary" href="<?= esc(site_url($listRoute . ($status === 'archived' ? '?status=archived' : '')), 'attr') ?>"><i class="bi bi-x-lg" aria-hidden="true"></i>Clear</a>
         <?php endif; ?>
     </div>
 
@@ -91,10 +89,10 @@ $deepToRecord = (int) ($deepToRecord ?? 0);
                                 <?php endif; ?>
                                 <div class="mb-3">
                                     <label class="form-label" for="recordSearchKeyword">Search records</label>
-                                    <input class="form-control" id="recordSearchKeyword" type="search" name="q" value="<?= esc((string) $keyword, 'attr') ?>" placeholder="Search by name, contact, or sector">
+                                    <input class="form-control" id="recordSearchKeyword" type="search" name="q" value="<?= esc((string) $keyword, 'attr') ?>" placeholder="Search record heads by name, contact, address, or sector">
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label" for="recordSearchSector">Filter by sector</label>
+                                    <label class="form-label" for="recordSearchSector">Filter records by sector</label>
                                     <select class="form-select" id="recordSearchSector" name="sectorID">
                                         <option value="">All sectors</option>
                                         <?php foreach ($sectorOptions as $sector): ?>
@@ -104,12 +102,12 @@ $deepToRecord = (int) ($deepToRecord ?? 0);
                                     </select>
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label" for="recordSearchDate">Filter by date</label>
+                                    <label class="form-label" for="recordSearchDate">Filter records by date</label>
                                     <input class="form-control" id="recordSearchDate" type="date" name="date" value="<?= esc($filterDate, 'attr') ?>">
                                 </div>
                                 <div class="d-flex justify-content-end gap-2">
                                     <a class="btn btn-outline-secondary" href="<?= esc(site_url($listRoute . ($status === 'archived' ? '?status=archived' : '')), 'attr') ?>">Clear</a>
-                                    <button class="btn btn-primary" type="submit">Search</button>
+                                    <button class="btn btn-primary" type="submit"><i class="bi bi-search" aria-hidden="true"></i>Search Records</button>
                                 </div>
                             </form>
                         </div>
@@ -138,7 +136,7 @@ $deepToRecord = (int) ($deepToRecord ?? 0);
                                 </div>
                                 <div class="d-flex justify-content-end gap-2 mt-3">
                                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                                    <button class="btn btn-primary" type="submit">Search All</button>
+                                    <button class="btn btn-primary" type="submit"><i class="bi bi-search" aria-hidden="true"></i>Search All</button>
                                 </div>
                             </form>
                         </div>
@@ -148,14 +146,13 @@ $deepToRecord = (int) ($deepToRecord ?? 0);
         </div>
     </div>
 
-    <?php /* Deep-search results panel. Renders only when the deep search box was used.
-             Each row links to its family record via the existing view modal. */ ?>
+    <?php?>
     <?php if ($deepKeyword !== ''): ?>
         <div class="panel mb-3 border">
             <div class="section-title mt-0">
                 <span>Database results for "<?= esc($deepKeyword) ?>"</span>
             </div>
-            <div class="d-flex justify-content-between align-items-center mb-2 text-muted small">
+            <div class="table-meta">
                 <span><?= esc((string) $deepFromRecord) ?>-<?= esc((string) $deepToRecord) ?> of <?= esc((string) $deepTotal) ?> matches</span>
                 <span>Page <?= esc((string) $deepPage) ?> of <?= esc((string) $deepTotalPages) ?></span>
             </div>
@@ -199,27 +196,34 @@ $deepToRecord = (int) ($deepToRecord ?? 0);
                             <td><?= esc(family_list_format_date($result['dt_created'] ?? '')) ?></td>
                             <td class="text-end">
                                 <?php if ($resultHeadId > 0): ?>
-                                    <div class="family-list-actions">
-                                        <?php if ($status !== 'archived'): ?>
-                                            <button
-                                                type="button"
-                                                class="btn btn-outline-primary btn-sm js-open-family-view-modal"
-                                                data-modal-url="<?= site_url($routeBase . '/view/' . $resultHeadId . '?partial=1') ?>"
-                                                data-modal-title="View Record">
-                                                View
-                                            </button>
-                                            <button
-                                                type="button"
-                                                class="btn btn-primary btn-sm js-open-family-edit-modal"
-                                                data-modal-url="<?= site_url($routeBase . '/edit/' . $resultHeadId . '?partial=1') ?>"
-                                                data-modal-title="Edit Record">
-                                                Edit
-                                            </button>
-                                        <?php endif; ?>
-                                        <form class="d-inline js-family-record-action-form" method="post" action="<?= site_url($routeBase . '/' . $deepAction . '/' . $resultHeadId) ?>" data-confirm-message="<?= esc($deepConfirm, 'attr') ?>" data-action-label="<?= esc($deepActionLabel, 'attr') ?>" data-action-past="<?= esc($deepActionPast, 'attr') ?>" data-family-name="<?= esc($deepFamilyName, 'attr') ?>">
-                                            <?= csrf_field() ?>
-                                            <button type="submit" class="btn <?= $status === 'archived' ? 'btn-outline-success' : 'btn-outline-danger' ?> btn-sm"><?= esc($deepActionLabel) ?></button>
-                                        </form>
+                                    <div class="dropdown actions-menu">
+                                        <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false" aria-label="Record actions">
+                                            <i class="bi bi-three-dots" aria-hidden="true"></i>
+                                        </button>
+                                        <div class="dropdown-menu dropdown-menu-end">
+                                            <?php if ($status !== 'archived'): ?>
+                                                <button
+                                                    type="button"
+                                                    class="dropdown-item js-open-family-view-modal"
+                                                    data-modal-url="<?= site_url($routeBase . '/view/' . $resultHeadId . '?partial=1') ?>"
+                                                    data-modal-title="View Record">
+                                                    <i class="bi bi-eye" aria-hidden="true"></i>View
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    class="dropdown-item js-open-family-edit-modal"
+                                                    data-modal-url="<?= site_url($routeBase . '/edit/' . $resultHeadId . '?partial=1') ?>"
+                                                    data-modal-title="Edit Record">
+                                                    <i class="bi bi-pencil-square" aria-hidden="true"></i>Edit
+                                                </button>
+                                            <?php endif; ?>
+                                            <form class="js-family-record-action-form" method="post" action="<?= site_url($routeBase . '/' . $deepAction . '/' . $resultHeadId) ?>" data-confirm-message="<?= esc($deepConfirm, 'attr') ?>" data-action-label="<?= esc($deepActionLabel, 'attr') ?>" data-action-past="<?= esc($deepActionPast, 'attr') ?>" data-family-name="<?= esc($deepFamilyName, 'attr') ?>">
+                                                <?= csrf_field() ?>
+                                                <button type="submit" class="dropdown-item <?= $status === 'archived' ? 'text-success' : 'text-danger' ?>">
+                                                    <i class="bi <?= $status === 'archived' ? 'bi-arrow-counterclockwise' : 'bi-archive' ?>" aria-hidden="true"></i><?= esc($deepActionLabel) ?>
+                                                </button>
+                                            </form>
+                                        </div>
                                     </div>
                                 <?php endif; ?>
                             </td>
@@ -240,7 +244,7 @@ $deepToRecord = (int) ($deepToRecord ?? 0);
         </div>
     <?php endif; ?>
 
-    <div class="d-flex justify-content-between align-items-center mb-2 text-muted small">
+    <div class="table-meta">
         <span><?= esc((string) $fromRecord) ?>-<?= esc((string) $toRecord) ?> of <?= esc((string) $totalFamilies) ?> records</span>
         <span>Page <?= esc((string) $page) ?> of <?= esc((string) $totalPages) ?></span>
     </div>
@@ -269,32 +273,41 @@ $deepToRecord = (int) ($deepToRecord ?? 0);
                     : $recordActionLabel . ' this record? This keeps the record in the database, marks it as ' . $recordActionPast . ', and hides it from active lists.';
                 ?>
                 <tr data-record-row>
-                    <td data-record-name><?= esc((string) (($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? ''))) ?></td>
+                    <td data-record-name>
+                        <span class="entity-title"><?= esc((string) (($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? ''))) ?></span>
+                    </td>
                     <td data-record-sector><?= esc((string) ($family['sector_name'] ?? '')) ?></td>
                     <td data-record-date><?= esc(family_list_format_date($dateValue)) ?></td>
                     <td><?= esc(family_list_format_time($dateValue)) ?></td>
                     <td class="text-end">
-                        <div class="family-list-actions">
-                        <?php if ($status !== 'archived'): ?>
-                        <button
-                            type="button"
-                            class="btn btn-outline-primary btn-sm js-open-family-view-modal"
-                            data-modal-url="<?= site_url($routeBase . '/view/' . $headId . '?partial=1') ?>"
-                            data-modal-title="View Record">
-                            View
-                        </button>
-                        <button
-                            type="button"
-                            class="btn btn-primary btn-sm js-open-family-edit-modal"
-                            data-modal-url="<?= site_url($routeBase . '/edit/' . $headId . '?partial=1') ?>"
-                            data-modal-title="Edit Record">
-                            Edit
-                        </button>
-                        <?php endif; ?>
-                        <form class="d-inline js-family-record-action-form" method="post" action="<?= site_url($routeBase . '/' . $recordAction . '/' . $headId) ?>" data-confirm-message="<?= esc($confirmMessage, 'attr') ?>" data-action-label="<?= esc($recordActionLabel, 'attr') ?>" data-action-past="<?= esc($recordActionPast, 'attr') ?>" data-family-name="<?= esc((string) (($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? '')), 'attr') ?>">
-                            <?= csrf_field() ?>
-                            <button type="submit" class="btn <?= $status === 'archived' ? 'btn-outline-success' : 'btn-outline-danger' ?> btn-sm"><?= esc($recordActionLabel) ?></button>
-                        </form>
+                        <div class="dropdown actions-menu">
+                            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false" aria-label="Record actions">
+                                <i class="bi bi-three-dots" aria-hidden="true"></i>
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-end">
+                                <?php if ($status !== 'archived'): ?>
+                                    <button
+                                        type="button"
+                                        class="dropdown-item js-open-family-view-modal"
+                                        data-modal-url="<?= site_url($routeBase . '/view/' . $headId . '?partial=1') ?>"
+                                        data-modal-title="View Record">
+                                        <i class="bi bi-eye" aria-hidden="true"></i>View
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="dropdown-item js-open-family-edit-modal"
+                                        data-modal-url="<?= site_url($routeBase . '/edit/' . $headId . '?partial=1') ?>"
+                                        data-modal-title="Edit Record">
+                                        <i class="bi bi-pencil-square" aria-hidden="true"></i>Edit
+                                    </button>
+                                <?php endif; ?>
+                                <form class="js-family-record-action-form" method="post" action="<?= site_url($routeBase . '/' . $recordAction . '/' . $headId) ?>" data-confirm-message="<?= esc($confirmMessage, 'attr') ?>" data-action-label="<?= esc($recordActionLabel, 'attr') ?>" data-action-past="<?= esc($recordActionPast, 'attr') ?>" data-family-name="<?= esc((string) (($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? '')), 'attr') ?>">
+                                    <?= csrf_field() ?>
+                                    <button type="submit" class="dropdown-item <?= $status === 'archived' ? 'text-success' : 'text-danger' ?>">
+                                        <i class="bi <?= $status === 'archived' ? 'bi-arrow-counterclockwise' : 'bi-archive' ?>" aria-hidden="true"></i><?= esc($recordActionLabel) ?>
+                                    </button>
+                                </form>
+                            </div>
                         </div>
                     </td>
                 </tr>
@@ -311,16 +324,14 @@ $deepToRecord = (int) ($deepToRecord ?? 0);
         <?php $nextPageUrl = family_list_url($listRoute, (string) $keyword, $filterSectorId, $filterDate, $status, min($totalPages, $page + 1)); ?>
         <div class="d-flex justify-content-end gap-2 mt-3">
             <a
-                class="btn btn-outline-secondary btn-sm<?= $useModalLinks ? ' js-open-family-list' : '' ?> <?= $page <= 1 ? 'disabled' : '' ?>"
+                class="btn btn-outline-secondary btn-sm<?= $page <= 1 ? ' disabled' : '' ?>"
                 href="<?= esc($previousPageUrl, 'attr') ?>"
-                <?= $useModalLinks ? 'data-modal-url="' . esc(family_list_partial_url($previousPageUrl), 'attr') . '" data-modal-title="Manage Records"' : '' ?>
                 aria-disabled="<?= $page <= 1 ? 'true' : 'false' ?>">
                 Previous
             </a>
             <a
-                class="btn btn-outline-secondary btn-sm<?= $useModalLinks ? ' js-open-family-list' : '' ?> <?= $page >= $totalPages ? 'disabled' : '' ?>"
+                class="btn btn-outline-secondary btn-sm<?= $page >= $totalPages ? ' disabled' : '' ?>"
                 href="<?= esc($nextPageUrl, 'attr') ?>"
-                <?= $useModalLinks ? 'data-modal-url="' . esc(family_list_partial_url($nextPageUrl), 'attr') . '" data-modal-title="Manage Records"' : '' ?>
                 aria-disabled="<?= $page >= $totalPages ? 'true' : 'false' ?>">
                 Next
             </a>

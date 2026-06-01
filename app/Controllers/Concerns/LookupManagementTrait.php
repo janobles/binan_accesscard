@@ -3,6 +3,7 @@
 namespace App\Controllers\Concerns;
 
 use App\Models\AuditTrailsModel;
+use App\Libraries\RoleAccess;
 use App\Models\SectorModel;
 use App\Models\ServicesModel;
 use App\Models\ViewLayoutModel;
@@ -16,7 +17,7 @@ trait LookupManagementTrait
 {
     private function guardLookupAccess(): ?RedirectResponse
     {
-        return $this->requireRole(['Admin', 'Developer']);
+        return RoleAccess::requireRole(['Admin', 'Developer']);
     }
 
     private function buildLookupViewData(string $activeTab): array
@@ -24,8 +25,9 @@ trait LookupManagementTrait
         $sectorModel = new SectorModel();
         $servicesModel = new ServicesModel();
         $layoutModel = new ViewLayoutModel();
-        $currentRole = $this->normalizeRole((string) session()->get('role')) ?? '';
+        $currentRole = RoleAccess::normalizeRole((string) session()->get('role')) ?? '';
         $isDeveloper = $currentRole === 'Developer';
+        $isServicesTab = $activeTab === 'services';
 
         $sectors = $sectorModel->getAllIncluding();
         $services = $servicesModel->getAllIncluding();
@@ -67,7 +69,7 @@ trait LookupManagementTrait
 
         return [
             'user' => session()->get(),
-            'pageTitle' => 'Lookup Management',
+            'pageTitle' => $isServicesTab ? 'Services and Programs Management' : 'Sector Management',
             'modeLabel' => $layoutModel->adminModeLabel($isDeveloper),
             'navActive' => [
                 'dashboard' => '',
@@ -75,8 +77,8 @@ trait LookupManagementTrait
                 'family-entry' => '',
                 'family-manage' => '',
                 'audit-trails' => '',
-                'sectors' => '',
-                'services' => '',
+                'sectors' => $isServicesTab ? '' : 'active',
+                'services' => $isServicesTab ? 'active' : '',
                 'lookups' => 'active',
             ],
             'activeTab' => $activeTab,

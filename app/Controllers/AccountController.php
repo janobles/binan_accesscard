@@ -4,17 +4,18 @@ namespace App\Controllers;
 
 use App\Models\AuditTrailsModel;
 use App\Models\Auth\UserModel;
-use CodeIgniter\HTTP\RedirectResponse;
 use Throwable;
+use CodeIgniter\HTTP\RedirectResponse;
 
 /**
  * Handles developer-only staff account creation.
+ *
+ * Validation and redirects stay here; user persistence stays in UserModel.
  */
 class AccountController extends BaseController
 {
     public function create(): RedirectResponse
     {
-        // Only the Developer role can create staff accounts.
         $guard = $this->requireDeveloper();
 
         if ($guard instanceof RedirectResponse) {
@@ -24,17 +25,16 @@ class AccountController extends BaseController
         $rules = [
             'username' => 'required|min_length[4]|max_length[255]|is_unique[users.username]',
             'password' => 'required|min_length[8]',
-            'role'     => 'required|in_list[Admin,User]',
+            'role' => 'required|in_list[Admin,User]',
         ];
-
         $messages = [
             'username' => [
-                'required'   => 'Username is required. Example: admin_maria01 or emp_juan01.',
+                'required' => 'Username is required. Example: admin_maria01 or emp_juan01.',
                 'min_length' => 'Username must have at least 4 characters. Example: emp_juan01.',
-                'is_unique'  => 'Username must be unique. Try examples like admin_maria01, admin_roberto02, emp_ana01, or emp_juan02.',
+                'is_unique' => 'Username must be unique. Try examples like admin_maria01, admin_roberto02, emp_ana01, or emp_juan02.',
             ],
             'password' => [
-                'required'   => 'Password is required.',
+                'required' => 'Password is required.',
                 'min_length' => 'Password must have at least 8 characters.',
             ],
             'role' => [
@@ -48,13 +48,11 @@ class AccountController extends BaseController
                 ->with('error', implode(' ', $this->validator->getErrors()));
         }
 
-        $role     = (string) $this->request->getPost('role');
+        $role = (string) $this->request->getPost('role');
         $username = trim((string) $this->request->getPost('username'));
 
-        $userModel = new UserModel();
-
         try {
-            $userId = $userModel->createAccount(
+            $userId = (new UserModel())->createAccount(
                 $username,
                 (string) $this->request->getPost('password'),
                 $role
@@ -74,15 +72,14 @@ class AccountController extends BaseController
         }
 
         $displayRole = $role === 'User' ? 'Employee' : $role;
-
-        $this->audit(
-            'ACCOUNT_CREATED',
-            'Created ' . $displayRole . ' account "' . $username . '" (#' . $userId . ').'
-        );
+        $this->audit('ACCOUNT_CREATED', 'Created ' . $displayRole . ' account "' . $username . '" (#' . $userId . ').');
 
         return redirect()->to(site_url('admin/accounts'))->with('success', 'Account created successfully.');
     }
 
+    /**
+     * Developer-only: enable/disable Admin or Employee accounts.
+     */
     public function updateStatus(): RedirectResponse
     {
         $guard = $this->requireDeveloper();
@@ -91,60 +88,81 @@ class AccountController extends BaseController
             return $guard;
         }
 
-        $rules = [
-            'userID' => 'required|is_natural_no_zero',
-            'status' => 'required|in_list[Enable,Disabled]',
-        ];
-
-        if (! $this->validate($rules)) {
-            return redirect()->back()
-                ->with('error', implode(' ', $this->validator->getErrors()));
-        }
-
         $userId = (int) $this->request->getPost('userID');
-        $enabled = (string) $this->request->getPost('status') === 'Enable';
-        $userModel = new UserModel();
-        $account = $userModel->find($userId);
+        $status = trim((string) ($this->request->getPost('status') ?? $this->request->getPost('isactive')));
 
-        if ($account === null || ! in_array((string) ($account['role'] ?? ''), ['Admin', 'User'], true)) {
-            return redirect()->back()->with('error', 'Account could not be found.');
+        if ($userId <= 0) {
+            return redirect()->back()->with('error', 'Account is required.');
         }
+
+        if (! in_array($status, ['Enable', 'Disabled'], true)) {
+            return redirect()->back()->with('error', 'Status must be Enable or Disabled.');
+        }
+
+        if ($userId === (int) session()->get('user_id')) {
+            return redirect()->back()->with('error', 'You cannot change your own account status.');
+        }
+
+        $userModel = new UserModel();
+        $user = $userModel->select('userID, username, role')->find($userId);
+
+        if ($user === null) {
+            return redirect()->back()->with('error', 'Account not found.');
+        }
+
+        $role = (string) ($user['role'] ?? '');
+
+        if (! in_array($role, ['Admin', 'User'], true)) {
+            return redirect()->back()->with('error', 'Only admin or employee accounts can be updated.');
+        }
+
+        $enabled = $status === 'Enable';
 
         if (! $userModel->updateAccountStatus($userId, $enabled)) {
             return redirect()->back()->with('error', 'Account status could not be updated.');
         }
 
-        $displayRole = (string) ($account['role'] ?? '') === 'User' ? 'Employee' : (string) ($account['role'] ?? '');
-        $statusLabel = $enabled ? 'enabled' : 'disabled';
+        $displayRole = $role === 'User' ? 'Employee' : $role;
+        $auditStatus = $enabled ? 'Enabled' : 'Disabled';
 
         $this->audit(
             'ACCOUNT_STATUS_UPDATED',
-            ucfirst($statusLabel) . ' ' . $displayRole . ' account "' . (string) ($account['username'] ?? '') . '" (#' . $userId . ').'
+            $auditStatus . ' ' . $displayRole . ' account "' . (string) ($user['username'] ?? '') . '" (#' . $userId . ').'
         );
 
-        return redirect()->to(site_url('admin/accounts'))
-            ->with('success', 'Account ' . $statusLabel . ' successfully.');
+        return redirect()->to(site_url('admin/accounts'))->with('success', 'Account status updated successfully.');
     }
 
+    /**
+     * Admin/Developer: disable an Employee account.
+     */
     public function disableEmployee(): RedirectResponse
     {
-        $guard = $this->requireAdmin();
+        $guard = $this->requireAdminOrDeveloper();
 
         if ($guard instanceof RedirectResponse) {
             return $guard;
         }
 
-        if (! $this->validate(['userID' => 'required|is_natural_no_zero'])) {
-            return redirect()->back()
-                ->with('error', implode(' ', $this->validator->getErrors()));
+        $userId = (int) $this->request->getPost('userID');
+
+        if ($userId <= 0) {
+            return redirect()->back()->with('error', 'Account is required.');
         }
 
-        $userId = (int) $this->request->getPost('userID');
-        $userModel = new UserModel();
-        $account = $userModel->find($userId);
+        if ($userId === (int) session()->get('user_id')) {
+            return redirect()->back()->with('error', 'You cannot disable your own account.');
+        }
 
-        if ($account === null || (string) ($account['role'] ?? '') !== 'User') {
-            return redirect()->back()->with('error', 'Employee account could not be found.');
+        $userModel = new UserModel();
+        $user = $userModel->select('userID, username, role')->find($userId);
+
+        if ($user === null) {
+            return redirect()->back()->with('error', 'Account not found.');
+        }
+
+        if ((string) ($user['role'] ?? '') !== 'User') {
+            return redirect()->back()->with('error', 'Only employee accounts can be disabled from this action.');
         }
 
         if (! $userModel->updateAccountStatus($userId, false)) {
@@ -153,24 +171,16 @@ class AccountController extends BaseController
 
         $this->audit(
             'ACCOUNT_STATUS_UPDATED',
-            'Disabled Employee account "' . (string) ($account['username'] ?? '') . '" (#' . $userId . ').'
+            'Disabled Employee account "' . (string) ($user['username'] ?? '') . '" (#' . $userId . ').'
         );
 
-        return redirect()->to(site_url('admin/accounts'))
-            ->with('success', 'Employee account disabled successfully.');
+        return redirect()->to(site_url('admin/accounts'))->with('success', 'Employee account disabled successfully.');
     }
 
     private function requireDeveloper(): ?RedirectResponse
     {
         if (! session()->get('is_logged_in')) {
             return redirect()->to(site_url('/'))->with('error', 'Please login first.');
-        }
-
-        if (! $this->sessionUserExists()) {
-            session()->destroy();
-
-            return redirect()->to(site_url('/'))
-                ->with('error', 'Your session is no longer valid after the database update. Please login again.');
         }
 
         if ($this->normalizeRole((string) session()->get('role')) !== 'Developer') {
@@ -180,43 +190,17 @@ class AccountController extends BaseController
         return null;
     }
 
-    private function requireAdmin(): ?RedirectResponse
+    private function requireAdminOrDeveloper(): ?RedirectResponse
     {
         if (! session()->get('is_logged_in')) {
             return redirect()->to(site_url('/'))->with('error', 'Please login first.');
         }
 
-        if (! $this->sessionUserExists()) {
-            session()->destroy();
-
-            return redirect()->to(site_url('/'))
-                ->with('error', 'Your session is no longer valid after the database update. Please login again.');
-        }
-
-        if ($this->normalizeRole((string) session()->get('role')) !== 'Admin') {
-            return redirect()->to(site_url('/'))->with('error', 'Admin access is required.');
+        if (! in_array($this->normalizeRole((string) session()->get('role')), ['Developer', 'Admin'], true)) {
+            return redirect()->to(site_url('/'))->with('error', 'Admin or Developer access is required.');
         }
 
         return null;
-    }
-
-    private function sessionUserExists(): bool
-    {
-        $userId = (int) session()->get('user_id');
-
-        if ($userId <= 0) {
-            return false;
-        }
-
-        $db = db_connect();
-
-        if (! $db->tableExists('users')) {
-            return false;
-        }
-
-        return $db->table('users')
-            ->where('userID', $userId)
-            ->countAllResults() > 0;
     }
 
     private function normalizeRole(string $role): ?string
@@ -240,9 +224,10 @@ class AccountController extends BaseController
         }
 
         try {
-            $auditModel->logAction(
+            // Account creation is a staff action, so memberID stays null.
+            (new AuditTrailsModel())->logAction(
                 (int) session()->get('user_id'),
-                null,
+                (int) session()->get('member_id') ?: null,
                 $action,
                 $description,
                 $this->request->getIPAddress(),

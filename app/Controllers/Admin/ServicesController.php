@@ -4,7 +4,6 @@ namespace App\Controllers\Admin;
 
 use App\Controllers\BaseController;
 use App\Controllers\Concerns\LookupManagementTrait;
-use App\Controllers\HomeRoleAccessTrait;
 use App\Models\ServicesModel;
 use CodeIgniter\HTTP\RedirectResponse;
 
@@ -13,7 +12,6 @@ use CodeIgniter\HTTP\RedirectResponse;
  */
 class ServicesController extends BaseController
 {
-    use HomeRoleAccessTrait;
     use LookupManagementTrait;
 
     public function index(): string|RedirectResponse

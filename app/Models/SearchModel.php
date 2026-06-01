@@ -75,7 +75,7 @@ class SearchModel
      * resolved sector names, and resolved service names.
      *
      * Called from App\Libraries\DashboardPageBuilder::buildMemberListData() and
-     * buildEmployeeRecordListData() when the deep search box (deep_q) is used.
+     * Employee\WorkspaceModel::recordListData() when the deep search box (deep_q) is used.
      */
     public function allMembers(string $keyword = '', array $filters = [], int $limit = 50, int $offset = 0): array
     {

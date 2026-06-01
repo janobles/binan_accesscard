@@ -8,10 +8,16 @@ $navActive = $navActive ?? [];
 $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
 $currentRole = (string) ($user['role'] ?? session()->get('role'));
 $canManageAccounts = in_array($currentRole, ['Developer', 'Admin'], true);
-$lookupsActive = (string) ($navActive['lookups'] ?? '');
+$sectorLookupActive = (string) ($navActive['sectors'] ?? '');
+$servicesLookupActive = (string) ($navActive['services'] ?? '');
+$currentUrl = (string) current_url();
 
-if ($lookupsActive === '' && str_contains((string) current_url(), 'admin/lookups')) {
-    $lookupsActive = 'active';
+if ($sectorLookupActive === '' && (str_contains($currentUrl, '/admin/sectors') || str_contains($currentUrl, '/admin/lookups/sectors'))) {
+    $sectorLookupActive = 'active';
+}
+
+if ($servicesLookupActive === '' && (str_contains($currentUrl, '/admin/services') || str_contains($currentUrl, '/admin/lookups/services'))) {
+    $servicesLookupActive = 'active';
 }
 ?>
 <!DOCTYPE html>
@@ -37,18 +43,23 @@ if ($lookupsActive === '' && str_contains((string) current_url(), 'admin/lookups
                 </div>
             </div>
             <nav class="nav flex-column mt-3">
-                <a class="nav-link <?= esc($navActive['dashboard'] ?? '') ?>" href="<?= site_url('admin/dashboard') ?>">Dashboard</a>
+                <a class="nav-link <?= esc($navActive['dashboard'] ?? '') ?>" href="<?= site_url('admin/dashboard') ?>"><i class="bi bi-speedometer2" aria-hidden="true"></i><span>Dashboard</span></a>
                 <?php if ($canManageAccounts): ?>
-                    <a class="nav-link <?= esc($navActive['accounts'] ?? '') ?>" href="<?= site_url('admin/accounts') ?>">Account Management</a>
+                    <a class="nav-link <?= esc($navActive['accounts'] ?? '') ?>" href="<?= site_url('admin/accounts') ?>"><i class="bi bi-person-gear" aria-hidden="true"></i><span>Account Management</span></a>
                 <?php endif; ?>
-                <a class="nav-link <?= esc($navActive['family-entry'] ?? '') ?>" href="<?= site_url('admin/manage-family') ?>">Add Family</a>
-                <a class="nav-link <?= esc($navActive['family-manage'] ?? '') ?>" href="<?= site_url('admin/manage-family/list') ?>">Manage Family</a>
-                <a class="nav-link <?= esc($navActive['audit-trails'] ?? '') ?>" href="<?= site_url('admin/audit-trails') ?>">Audit Trails</a>
+                <a class="nav-link <?= esc($navActive['family-entry'] ?? '') ?>" href="<?= site_url('admin/manage-family') ?>"><i class="bi bi-person-plus" aria-hidden="true"></i><span>Add Family</span></a>
+                <a class="nav-link <?= esc($navActive['family-manage'] ?? '') ?>" href="<?= site_url('admin/manage-family/list') ?>"><i class="bi bi-people" aria-hidden="true"></i><span>Manage Family</span></a>
+                <a class="nav-link <?= esc($navActive['audit-trails'] ?? '') ?>" href="<?= site_url('admin/audit-trails') ?>"><i class="bi bi-clock-history" aria-hidden="true"></i><span>Audit Trails</span></a>
                 <div class="mt-3 small text-uppercase text-muted">Administration</div>
                 <?php if (in_array($currentRole, ['Admin', 'Developer'], true)): ?>
-                    <a class="nav-link <?= esc($lookupsActive) ?>" href="<?= site_url('admin/lookups/sectors') ?>">
+                    <div class="mt-3 small text-uppercase text-muted">Reference Data</div>
+                    <a class="nav-link <?= esc($sectorLookupActive) ?>" href="<?= site_url('admin/sectors') ?>">
                         <i class="bi bi-grid-3x3-gap me-2" aria-hidden="true"></i>
-                        Sectors &amp; Services
+                        Sector Management
+                    </a>
+                    <a class="nav-link <?= esc($servicesLookupActive) ?>" href="<?= site_url('admin/services') ?>">
+                        <i class="bi bi-briefcase me-2" aria-hidden="true"></i>
+                        Services and Programs Management
                     </a>
                 <?php endif; ?>
             </nav>

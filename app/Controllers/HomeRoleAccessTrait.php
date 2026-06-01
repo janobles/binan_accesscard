@@ -6,6 +6,9 @@ use App\Libraries\RoleAccess;
 use CodeIgniter\HTTP\RedirectResponse;
 use Config\IdleTimeout;
 
+/**
+ * Shared session/role helpers used by Home controller.
+ */
 trait HomeRoleAccessTrait
 {
     private function hasValidLoginSession(): bool
@@ -14,7 +17,7 @@ trait HomeRoleAccessTrait
             return false;
         }
 
-        if ($this->normalizeRole((string) session()->get('role')) === null) {
+        if (RoleAccess::normalizeRole((string) session()->get('role')) === null) {
             return false;
         }
 

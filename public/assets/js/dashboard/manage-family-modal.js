@@ -6,7 +6,7 @@
 
     window.registerDashboardModal({
         namespace: 'family',
-        triggerSelector: '.js-open-family-modal, .js-open-family-list, .js-open-family-view-modal, .js-open-family-edit-modal',
+        triggerSelector: '.js-open-family-modal, .js-open-family-view-modal, .js-open-family-edit-modal',
         defaultTitle: 'Manage Record',
         loadingMarkup: '<div class="family-modal-loading" role="status" aria-live="polite"><div class="spinner-border text-primary" aria-hidden="true"></div><span>Loading record form...</span></div>',
         errorMarkup: '<div class="alert alert-danger mb-0">Unable to load the record form. Please try again.</div>',
@@ -23,14 +23,8 @@
         return target ? target.closest('[data-family-list-panel]') : null;
     }
 
-    function urlWithPartial(url, panel) {
+    function urlWithPartial(url) {
         const nextUrl = new URL(url, window.location.href);
-        const partialBase = panel ? panel.dataset.familyListPartialBase : '';
-
-        if (partialBase) {
-            const partialUrl = new URL(partialBase, window.location.href);
-            nextUrl.pathname = partialUrl.pathname;
-        }
 
         nextUrl.searchParams.set('partial', '1');
 
@@ -71,8 +65,21 @@
         return replacement;
     }
 
+    function scrollPanelIntoView(panel) {
+        if (!panel) {
+            return;
+        }
+
+        const top = Math.max(0, window.scrollY + panel.getBoundingClientRect().top - 16);
+
+        window.scrollTo({
+            top: top,
+            behavior: 'auto'
+        });
+    }
+
     function loadFamilyList(panel, fullUrl, pushHistory) {
-        const partialUrl = urlWithPartial(fullUrl, panel);
+        const partialUrl = urlWithPartial(fullUrl);
 
         setPanelLoading(panel, true);
 
@@ -95,6 +102,8 @@
                 if (pushHistory && nextPanel) {
                     window.history.pushState({ familyList: true }, '', fullUrl);
                 }
+
+                scrollPanelIntoView(nextPanel);
 
                 return nextPanel;
             })

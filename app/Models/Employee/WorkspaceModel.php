@@ -24,6 +24,7 @@ class WorkspaceModel
         $layoutModel = new ViewLayoutModel();
         $dashboardModel = new DashboardModel();
         $searchModel = new SearchModel();
+        $auditModel = new AuditTrailsModel();
         $searchTerm = trim((string) $this->request->getGet('q'));
         $searchFilters = $this->searchFilters();
         $hasSearchFilters = $this->hasSearchFilters($searchFilters);
@@ -46,12 +47,12 @@ class WorkspaceModel
                 ? $searchModel->families($searchTerm, $searchFilters, 25)
                 : $dashboardModel->recentFamilies(10),
             'myAudits' => $activePage === 'activity'
-                ? $searchModel->auditTrailsByUser($userId, $searchTerm, $searchFilters, 50)
-                : (new AuditTrailsModel())->getByUser($userId, 10),
+                ? $auditModel->auditTrailsByUser($userId, $searchTerm, $searchFilters, 50)
+                : $auditModel->getByUser($userId, 10),
             'stats' => array_merge(['families' => 0, 'members' => 0, 'sectors' => 0, 'assistance' => 0], $dashboardModel->stats()),
             'searchTerm' => $searchTerm,
             'searchFilters' => $searchFilters,
-            'auditActionOptions' => $searchModel->auditActions(),
+            'auditActionOptions' => $auditModel->auditActions(),
             'idleTimeoutSeconds' => (new IdleTimeout())->seconds,
             'username' => (string) (session()->get('username') ?? 'Employee'),
             'sectorOptions' => $familyFormViewData['sectorOptions'] ?? [],

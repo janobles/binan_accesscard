@@ -7,7 +7,7 @@ use CodeIgniter\Database\BaseBuilder;
 use CodeIgniter\Database\BaseConnection;
 
 /**
- * Centralizes search queries used by records, accounts, and audit trail pages.
+ * Centralizes search queries used by records and account pages.
  */
 class SearchModel
 {
@@ -212,116 +212,6 @@ class SearchModel
         return $rows;
     }
 
-    public function auditTrails(string $keyword = '', array $filters = [], int $limit = 50): array
-    {
-        if (! $this->hasAuditSearchTables()) {
-            return [];
-        }
-
-        $limit = max(1, $limit);
-        $builder = $this->auditTrailBuilder();
-        $keyword = $this->normalizeKeyword($keyword);
-
-        if ($keyword !== '') {
-            $this->applyAuditSearch($builder, $keyword);
-        }
-
-        $this->applyAuditFilters($builder, $filters);
-
-        $rows = $builder
-            ->orderBy('audit_trails.dt_created', 'DESC')
-            ->limit($limit)
-            ->get()
-            ->getResultArray();
-
-        return $this->withAuditNames($rows);
-    }
-
-    public function auditTrailsByUser(int $userId, string $keyword = '', array $filters = [], int $limit = 50): array
-    {
-        if (! $this->hasAuditSearchTables()) {
-            return [];
-        }
-
-        $limit = max(1, $limit);
-        $builder = $this->auditTrailBuilder()
-            ->where('audit_trails.userID', $userId);
-
-        $keyword = $this->normalizeKeyword($keyword);
-
-        if ($keyword !== '') {
-            $this->applyAuditSearch($builder, $keyword);
-        }
-
-        $this->applyAuditFilters($builder, $filters);
-
-        $rows = $builder
-            ->orderBy('audit_trails.dt_created', 'DESC')
-            ->limit($limit)
-            ->get()
-            ->getResultArray();
-
-        return $this->withAuditNames($rows);
-    }
-
-    public function auditActions(): array
-    {
-        if (! $this->db->tableExists('audit_trails')) {
-            return [];
-        }
-
-        return array_column(
-            $this->db->table('audit_trails')
-                ->select('TRIM(user_action) AS user_action', false)
-                ->where('user_action IS NOT NULL')
-                ->where("TRIM(user_action) != ''", null, false)
-                ->groupBy('TRIM(user_action)')
-                ->orderBy('TRIM(user_action)', 'ASC', false)
-                ->get()
-                ->getResultArray(),
-            'user_action'
-        );
-    }
-
-    private function auditTrailBuilder(): BaseBuilder
-    {
-        return $this->db->table('audit_trails')
-            ->select('audit_trails.*');
-    }
-
-    private function applyAuditSearch(BaseBuilder $builder, string $keyword): void
-    {
-        $builder->groupStart()
-            ->like('audit_trails.user_action', $keyword)
-            ->orLike('audit_trails.description', $keyword)
-            ->orLike('audit_trails.ip_address', $keyword);
-
-        $userIds = $this->userIdsForKeyword($keyword);
-
-        if ($userIds !== []) {
-            $builder->orWhereIn('audit_trails.userID', $userIds);
-        }
-
-        $memberIds = $this->memberIdsForKeyword($keyword);
-
-        if ($memberIds !== []) {
-            $builder->orWhereIn('audit_trails.memberID', $memberIds);
-        }
-
-        $builder->groupEnd();
-    }
-
-    private function applyAuditFilters(BaseBuilder $builder, array $filters): void
-    {
-        $action = $this->normalizeKeyword((string) ($filters['action'] ?? ''));
-
-        if ($action !== '') {
-            $builder->where('TRIM(audit_trails.user_action) = ' . $this->db->escape($action), null, false);
-        }
-
-        $this->applyDateRange($builder, 'audit_trails.dt_created', $filters);
-    }
-
     private function applyDateRange(BaseBuilder $builder, string $column, array $filters): void
     {
         $date = $this->normalizeDate((string) ($filters['date'] ?? ''));
@@ -374,11 +264,6 @@ class SearchModel
     {
         return $this->db->tableExists('member')
             && $this->db->tableExists('sector');
-    }
-
-    private function hasAuditSearchTables(): bool
-    {
-        return $this->db->tableExists('audit_trails');
     }
 
     private function withSectorNames(array $rows): array
@@ -507,130 +392,6 @@ class SearchModel
         }
 
         return $rows;
-    }
-
-    private function withAuditNames(array $rows): array
-    {
-        $users = $this->userMap(array_column($rows, 'userID'));
-        $memberNames = $this->memberNameMap(array_column($rows, 'memberID'));
-
-        foreach ($rows as &$row) {
-            $userId = (int) ($row['userID'] ?? 0);
-            $memberId = (int) ($row['memberID'] ?? 0);
-            $memberName = $memberNames[$memberId] ?? ['firstname' => '', 'lastname' => ''];
-            $user = $users[$userId] ?? ['username' => '', 'role' => ''];
-
-            $row['username'] = $user['username'];
-            $row['user_role'] = $user['role'];
-            $row['firstname'] = $memberName['firstname'];
-            $row['lastname'] = $memberName['lastname'];
-            $row['member_name'] = $this->formatMemberName($memberName);
-        }
-
-        return $rows;
-    }
-
-    private function userMap(array $userIds): array
-    {
-        $userIds = $this->positiveUniqueIds($userIds);
-
-        if ($userIds === [] || ! $this->db->tableExists('users')) {
-            return [];
-        }
-
-        $users = $this->db->table('users')
-            ->select('userID, username, role')
-            ->whereIn('userID', $userIds)
-            ->get()
-            ->getResultArray();
-
-        $map = [];
-
-        foreach ($users as $user) {
-            $map[(int) $user['userID']] = [
-                'username' => (string) $user['username'],
-                'role' => (string) ($user['role'] ?? ''),
-            ];
-        }
-
-        return $map;
-    }
-
-    private function memberNameMap(array $memberIds): array
-    {
-        $memberIds = $this->positiveUniqueIds($memberIds);
-
-        if ($memberIds === [] || ! $this->db->tableExists('member')) {
-            return [];
-        }
-
-        $members = $this->db->table('member')
-            ->select('memberID, firstname, lastname')
-            ->whereIn('memberID', $memberIds)
-            ->get()
-            ->getResultArray();
-
-        $map = [];
-
-        foreach ($members as $member) {
-            $map[(int) $member['memberID']] = [
-                'firstname' => (string) $member['firstname'],
-                'lastname' => (string) $member['lastname'],
-            ];
-        }
-
-        return $map;
-    }
-
-    private function formatMemberName(array $memberName): string
-    {
-        return trim(implode(' ', array_filter([
-            (string) ($memberName['firstname'] ?? ''),
-            (string) ($memberName['lastname'] ?? ''),
-        ], static fn (string $value): bool => trim($value) !== '')));
-    }
-
-    private function userIdsForKeyword(string $keyword): array
-    {
-        if (! $this->db->tableExists('users')) {
-            return [];
-        }
-
-        return array_map(
-            static fn (array $user): int => (int) $user['userID'],
-            $this->db->table('users')
-                ->select('userID')
-                ->like('username', $keyword)
-                ->get()
-                ->getResultArray()
-        );
-    }
-
-    private function memberIdsForKeyword(string $keyword): array
-    {
-        if (! $this->db->tableExists('member')) {
-            return [];
-        }
-
-        return array_map(
-            static fn (array $member): int => (int) $member['memberID'],
-            $this->db->table('member')
-                ->select('memberID')
-                ->groupStart()
-                ->like('firstname', $keyword)
-                ->orLike('lastname', $keyword)
-                ->groupEnd()
-                ->get()
-                ->getResultArray()
-        );
-    }
-
-    private function positiveUniqueIds(array $ids): array
-    {
-        return array_values(array_unique(array_filter(
-            array_map(static fn (mixed $id): int => (int) $id, $ids),
-            static fn (int $id): bool => $id > 0
-        )));
     }
 
     private function normalizeKeyword(string $keyword): string

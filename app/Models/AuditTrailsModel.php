@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use CodeIgniter\Database\BaseBuilder;
 use CodeIgniter\Model;
 
 /**
@@ -88,6 +89,132 @@ class AuditTrailsModel extends Model
             ->findAll();
 
         return $this->withNames($rows);
+    }
+
+    public function auditTrails(string $keyword = '', array $filters = [], int $limit = 50): array
+    {
+        if (! $this->hasTable()) {
+            return [];
+        }
+
+        $builder = $this->auditTrailBuilder();
+        $this->applySearchAndFilters($builder, $keyword, $filters);
+
+        $rows = $builder
+            ->orderBy('audit_trails.dt_created', 'DESC')
+            ->limit(max(1, $limit))
+            ->get()
+            ->getResultArray();
+
+        return $this->withNames($rows);
+    }
+
+    public function auditTrailsByUser(int $userId, string $keyword = '', array $filters = [], int $limit = 50): array
+    {
+        if (! $this->hasTable()) {
+            return [];
+        }
+
+        $builder = $this->auditTrailBuilder()
+            ->where('audit_trails.userID', $userId);
+
+        $this->applySearchAndFilters($builder, $keyword, $filters);
+
+        $rows = $builder
+            ->orderBy('audit_trails.dt_created', 'DESC')
+            ->limit(max(1, $limit))
+            ->get()
+            ->getResultArray();
+
+        return $this->withNames($rows);
+    }
+
+    public function auditActions(): array
+    {
+        if (! $this->hasTable()) {
+            return [];
+        }
+
+        return array_column(
+            $this->db->table($this->table)
+                ->select('TRIM(user_action) AS user_action', false)
+                ->where('user_action IS NOT NULL')
+                ->where("TRIM(user_action) != ''", null, false)
+                ->groupBy('TRIM(user_action)')
+                ->orderBy('TRIM(user_action)', 'ASC', false)
+                ->get()
+                ->getResultArray(),
+            'user_action'
+        );
+    }
+
+    private function auditTrailBuilder(): BaseBuilder
+    {
+        return $this->db->table($this->table)
+            ->select('audit_trails.*');
+    }
+
+    private function applySearchAndFilters(BaseBuilder $builder, string $keyword, array $filters): void
+    {
+        $keyword = trim($keyword);
+
+        if ($keyword !== '') {
+            $this->applyAuditSearch($builder, $keyword);
+        }
+
+        $action = trim((string) ($filters['action'] ?? ''));
+
+        if ($action !== '') {
+            $builder->where('TRIM(audit_trails.user_action) = ' . $this->db->escape($action), null, false);
+        }
+
+        $this->applyDateRange($builder, $filters);
+    }
+
+    private function applyAuditSearch(BaseBuilder $builder, string $keyword): void
+    {
+        $builder->groupStart()
+            ->like('audit_trails.user_action', $keyword)
+            ->orLike('audit_trails.description', $keyword)
+            ->orLike('audit_trails.ip_address', $keyword);
+
+        $userIds = $this->userIdsForKeyword($keyword);
+
+        if ($userIds !== []) {
+            $builder->orWhereIn('audit_trails.userID', $userIds);
+        }
+
+        $memberIds = $this->memberIdsForKeyword($keyword);
+
+        if ($memberIds !== []) {
+            $builder->orWhereIn('audit_trails.memberID', $memberIds);
+        }
+
+        $builder->groupEnd();
+    }
+
+    private function applyDateRange(BaseBuilder $builder, array $filters): void
+    {
+        $date = $this->normalizeDate((string) ($filters['date'] ?? ''));
+
+        if ($date !== '') {
+            $builder
+                ->where('audit_trails.dt_created >=', $date . ' 00:00:00')
+                ->where('audit_trails.dt_created <=', $date . ' 23:59:59');
+
+            return;
+        }
+
+        $dateFrom = $this->normalizeDate((string) ($filters['date_from'] ?? ''));
+        $dateTo = $this->normalizeDate((string) ($filters['date_to'] ?? ''));
+
+        if ($dateFrom !== '') {
+            $builder->where('audit_trails.dt_created >=', $dateFrom . ' 00:00:00');
+        }
+
+        if ($dateTo !== '') {
+            $builder->where('audit_trails.dt_created <=', $dateTo . ' 23:59:59');
+        }
     }
 
     private function appendUserAgent(?string $description, string $userAgent): string
@@ -191,6 +318,41 @@ class AuditTrailsModel extends Model
         return $map;
     }
 
+    private function userIdsForKeyword(string $keyword): array
+    {
+        if (! $this->db->tableExists('users')) {
+            return [];
+        }
+
+        return array_map(
+            static fn (array $user): int => (int) $user['userID'],
+            $this->db->table('users')
+                ->select('userID')
+                ->like('username', $keyword)
+                ->get()
+                ->getResultArray()
+        );
+    }
+
+    private function memberIdsForKeyword(string $keyword): array
+    {
+        if (! $this->db->tableExists('member')) {
+            return [];
+        }
+
+        return array_map(
+            static fn (array $member): int => (int) $member['memberID'],
+            $this->db->table('member')
+                ->select('memberID')
+                ->groupStart()
+                ->like('firstname', $keyword)
+                ->orLike('lastname', $keyword)
+                ->groupEnd()
+                ->get()
+                ->getResultArray()
+        );
+    }
+
     private function memberExists(int $memberId): bool
     {
         if (! $this->db->tableExists('member')) {
@@ -216,5 +378,12 @@ class AuditTrailsModel extends Model
             array_map(static fn (mixed $id): int => (int) $id, $ids),
             static fn (int $id): bool => $id > 0
         )));
+    }
+
+    private function normalizeDate(string $date): string
+    {
+        $date = trim($date);
+
+        return preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) === 1 ? $date : '';
     }
 }

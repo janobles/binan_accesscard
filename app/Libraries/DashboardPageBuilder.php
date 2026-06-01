@@ -45,6 +45,7 @@ class DashboardPageBuilder
         $layoutModel    = new ViewLayoutModel();
         $dashboardModel = new DashboardModel();
         $searchModel = new SearchModel();
+        $auditModel = new AuditTrailsModel();
         $searchTerm = trim((string) $this->request->getGet('q'));
         $searchFilters = $this->searchFilters();
         $hasSearchFilters = $this->hasSearchFilters($searchFilters);
@@ -65,8 +66,8 @@ class DashboardPageBuilder
             : $dashboardModel->recentFamilies(10);
 
         $recentAudits = $activePage === 'audit-trails'
-            ? $searchModel->auditTrails($searchTerm, $searchFilters, 50)
-            : (new AuditTrailsModel())->getRecent(10);
+            ? $auditModel->auditTrails($searchTerm, $searchFilters, 50)
+            : $auditModel->getRecent(10);
         $memberListData = $activePage === 'family-manage'
             ? $this->buildMemberListData()
             : [];
@@ -120,7 +121,7 @@ class DashboardPageBuilder
             'hasSearchFilters'   => $hasSearchFilters,
             'selectedFilterDate' => (string) ($searchFilters['date'] ?? $searchFilters['date_from'] ?? ''),
             'sectorOptions'      => $familyFormViewData['sectorOptions'] ?? [],
-            'auditActionOptions' => $searchModel->auditActions(),
+            'auditActionOptions' => $auditModel->auditActions(),
             'idleTimeoutSeconds' => (new IdleTimeout())->seconds,
             'isDeveloper'        => $isDeveloper,
             'isAdmin'            => $isAdmin,
@@ -299,6 +300,7 @@ class DashboardPageBuilder
         $layoutModel = new ViewLayoutModel();
         $dashboardModel = new DashboardModel();
         $searchModel = new SearchModel();
+        $auditModel = new AuditTrailsModel();
         $searchTerm = trim((string) $this->request->getGet('q'));
         $searchFilters = $this->searchFilters();
         $hasSearchFilters = $this->hasSearchFilters($searchFilters);
@@ -311,8 +313,8 @@ class DashboardPageBuilder
             ? $searchModel->families($searchTerm, $searchFilters, 25)
             : $dashboardModel->recentFamilies(10);
         $myAudits = $activePage === 'activity'
-            ? $searchModel->auditTrailsByUser($userId, $searchTerm, $searchFilters, 50)
-            : (new AuditTrailsModel())->getByUser($userId, 10);
+            ? $auditModel->auditTrailsByUser($userId, $searchTerm, $searchFilters, 50)
+            : $auditModel->getByUser($userId, 10);
 
         return view('Employee/index', [
             'user' => session()->get(),
@@ -332,7 +334,7 @@ class DashboardPageBuilder
             'stats'              => array_merge(['families' => 0, 'members' => 0, 'sectors' => 0, 'assistance' => 0], $dashboardModel->stats()),
             'searchTerm'         => $searchTerm,
             'searchFilters'      => $searchFilters,
-            'auditActionOptions' => $searchModel->auditActions(),
+            'auditActionOptions' => $auditModel->auditActions(),
             'idleTimeoutSeconds' => (new IdleTimeout())->seconds,
             'username'           => (string) (session()->get('username') ?? 'Employee'),
             'sectorOptions'      => $familyFormViewData['sectorOptions'] ?? [],

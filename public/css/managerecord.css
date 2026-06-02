@@ -1,0 +1,88 @@
+.manage-records {
+    overflow: hidden;
+    border: 1px solid #dce5e2;
+    border-radius: 0.35rem;
+    background: #ffffff;
+}
+
+.manage-records-toolbar,
+.record-table-meta {
+    display: flex;
+    align-items: center;
+}
+
+.manage-records-toolbar {
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem;
+    border-bottom: 1px solid #e2e9e7;
+}
+
+.record-status-tabs {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.manage-records .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.record-table-meta {
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.85rem 1rem;
+    color: #65736e;
+    font-size: 0.83rem;
+}
+
+.manage-record-table {
+    min-width: 48rem;
+    margin: 0;
+}
+
+.manage-record-table th {
+    padding: 0.8rem 1rem;
+    border-bottom-color: #cedbd7;
+    background: #f4f7f7;
+    color: #53635e;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.manage-record-table td {
+    padding: 0.85rem 1rem;
+    border-bottom-color: #e4ece9;
+    color: #34443f;
+    font-size: 0.85rem;
+}
+
+.manage-record-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.record-name {
+    font-weight: 700;
+}
+
+.record-actions {
+    width: 2.65rem;
+    min-height: 2.4rem;
+    justify-content: center;
+}
+
+.record-empty-state {
+    padding: 1.5rem 1rem !important;
+    color: #77847f !important;
+    text-align: center;
+}
+
+.record-pagination {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    padding: 1rem;
+    border-top: 1px solid #e2e9e7;
+}

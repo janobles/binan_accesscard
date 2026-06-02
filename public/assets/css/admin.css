@@ -1,5 +1,0 @@
-/* Admin entry stylesheet split into focused files to keep each file shorter. */
-@import url('admin-layout.css');
-@import url('admin-components.css');
-@import url('admin-modal.css');
-@import url('admin-responsive.css');

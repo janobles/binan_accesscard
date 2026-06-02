@@ -12,7 +12,18 @@ $serviceCategoryOptions = array_values(array_unique(array_merge($defaultServiceC
 <div class="panel mb-3" data-service-management-root>
 	<div class="section-title mt-0">
 		<span>Services and Programs Management</span>
-		<button class="btn btn-primary btn-sm js-service-modal-open" type="button" data-service-mode="create"><i class="bi bi-plus-lg" aria-hidden="true"></i>Add Service or Program</button>
+		<?php if ($status === 'active'): ?>
+			<button class="btn btn-primary btn-sm js-service-modal-open" type="button" data-service-mode="create"><i class="bi bi-plus-lg" aria-hidden="true"></i>Add Service or Program</button>
+		<?php endif; ?>
+	</div>
+
+	<div class="toolbar-row mb-3">
+		<a class="btn btn-sm <?= $status === 'active' ? 'btn-primary' : 'btn-outline-secondary' ?>" href="<?= site_url('admin/services') ?>">
+			<i class="bi bi-check2-circle" aria-hidden="true"></i>Active
+		</a>
+		<a class="btn btn-sm <?= $status === 'archived' ? 'btn-primary' : 'btn-outline-secondary' ?>" href="<?= site_url('admin/services?status=archived') ?>">
+			<i class="bi bi-archive" aria-hidden="true"></i>Archived
+		</a>
 	</div>
 
 	<div class="table-responsive">
@@ -41,17 +52,17 @@ $serviceCategoryOptions = array_values(array_unique(array_merge($defaultServiceC
 									<i class="bi bi-three-dots" aria-hidden="true"></i>
 								</button>
 								<div class="dropdown-menu dropdown-menu-end">
-									<button
-										class="dropdown-item js-service-modal-open"
-										type="button"
-										data-service-mode="update"
-										data-service-id="<?= esc((string) $serviceId) ?>"
-										data-service-category="<?= esc((string) ($service['category'] ?? ''), 'attr') ?>"
-										data-service-name="<?= esc((string) ($service['name'] ?? ''), 'attr') ?>"
-										data-service-description="<?= esc((string) ($service['description'] ?? ''), 'attr') ?>">
-										<i class="bi bi-pencil-square" aria-hidden="true"></i>Edit
-									</button>
-									<?php if (! $isArchived): ?>
+									<?php if ($status === 'active'): ?>
+										<button
+											class="dropdown-item js-service-modal-open"
+											type="button"
+											data-service-mode="update"
+											data-service-id="<?= esc((string) $serviceId) ?>"
+											data-service-category="<?= esc((string) ($service['category'] ?? ''), 'attr') ?>"
+											data-service-name="<?= esc((string) ($service['name'] ?? ''), 'attr') ?>"
+											data-service-description="<?= esc((string) ($service['description'] ?? ''), 'attr') ?>">
+											<i class="bi bi-pencil-square" aria-hidden="true"></i>Edit
+										</button>
 										<button
 											class="dropdown-item text-danger js-service-modal-open"
 											type="button"
@@ -62,8 +73,13 @@ $serviceCategoryOptions = array_values(array_unique(array_merge($defaultServiceC
 											data-service-description="<?= esc((string) ($service['description'] ?? ''), 'attr') ?>">
 											<i class="bi bi-archive" aria-hidden="true"></i>Archive
 										</button>
-									<?php else: ?>
-										<span class="dropdown-item text-muted"><i class="bi bi-lock" aria-hidden="true"></i>Archived</span>
+									<?php elseif ($canRestore): ?>
+										<form method="post" action="<?= site_url('admin/services/restore/' . $serviceId) ?>">
+											<?= csrf_field() ?>
+											<button class="dropdown-item text-success" type="submit">
+												<i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>Restore
+											</button>
+										</form>
 									<?php endif; ?>
 								</div>
 							</div>
@@ -72,7 +88,7 @@ $serviceCategoryOptions = array_values(array_unique(array_merge($defaultServiceC
 				<?php endforeach; ?>
 				<?php if ($services === []): ?>
 					<tr>
-						<td colspan="5" class="text-center text-muted">No service or program records found.</td>
+						<td colspan="5" class="text-center text-muted"><?= $status === 'archived' ? 'No archived services or programs found.' : 'No active services or programs found.' ?></td>
 					</tr>
 				<?php endif; ?>
 			</tbody>

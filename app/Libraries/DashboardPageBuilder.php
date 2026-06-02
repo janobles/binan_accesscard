@@ -58,6 +58,7 @@ class DashboardPageBuilder
             : $userModel->getStaffAccounts();
         $sectorModel = new SectorModel();
         $serviceModel = new ServiceModel();
+        $lookupStatus = $this->lookupStatus();
 
         $familyFormViewData = (new FamilyFormOptionsModel())->getViewData();
 
@@ -111,8 +112,10 @@ class DashboardPageBuilder
             'recentAudits'       => $recentAudits,
             'recordListData'      => $memberListData,
             'memberListData'      => $memberListData,
-            'sectors'            => $this->fetchVisibleSectors($sectorModel),
-            'services'           => $this->fetchVisibleServices($serviceModel),
+            'sectors'            => $this->fetchVisibleSectors($sectorModel, $lookupStatus),
+            'services'           => $this->fetchVisibleServices($serviceModel, $lookupStatus),
+            'lookupStatus'       => $lookupStatus,
+            'canRestoreLookups'  => true,
             'stats'              => $dashboardModel->stats(),
             'canCreateFamily'    => true,
             'username'           => (string) (session()->get('username') ?? 'Admin'),
@@ -177,26 +180,21 @@ class DashboardPageBuilder
         return $this->buildEmployeeRecordListData();
     }
 
-    private function fetchVisibleSectors(SectorModel $sectorModel): array
+    private function fetchVisibleSectors(SectorModel $sectorModel, string $status): array
     {
-        if (! $sectorModel->hasTable()) {
-            return [];
-        }
-
-        return $sectorModel
-            ->orderBy('sectorID', 'ASC')
-            ->findAll();
+        return $sectorModel->getByArchiveStatus($status === 'archived');
     }
 
-    private function fetchVisibleServices(ServiceModel $serviceModel): array
+    private function fetchVisibleServices(ServiceModel $serviceModel, string $status): array
     {
-        if (! $serviceModel->hasTable()) {
-            return [];
-        }
+        return $serviceModel->getByArchiveStatus($status === 'archived');
+    }
 
-        return $serviceModel
-            ->orderBy('serviceID', 'ASC')
-            ->findAll();
+    private function lookupStatus(): string
+    {
+        return strtolower(trim((string) $this->request->getGet('status'))) === 'archived'
+            ? 'archived'
+            : 'active';
     }
 
     private function buildMemberListData(): array

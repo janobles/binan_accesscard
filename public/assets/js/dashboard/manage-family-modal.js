@@ -7,7 +7,7 @@
     window.registerDashboardModal({
         namespace: 'family',
         triggerSelector: '.js-open-family-modal, .js-open-family-view-modal, .js-open-family-edit-modal',
-        defaultTitle: 'Manage Record',
+        defaultTitle: 'Manage Records',
         loadingMarkup: '<div class="family-modal-loading" role="status" aria-live="polite"><div class="spinner-border text-primary" aria-hidden="true"></div><span>Loading record form...</span></div>',
         errorMarkup: '<div class="alert alert-danger mb-0">Unable to load the record form. Please try again.</div>',
         onLoaded: function (container) {
@@ -187,21 +187,4 @@
         loadFamilyList(panel, window.location.href, false);
     });
 
-    document.addEventListener('submit', function (event) {
-        const form = event.target.closest('.js-family-record-action-form');
-
-        if (!form) {
-            return;
-        }
-
-        const familyName = (form.dataset.familyName || 'this family record').trim();
-        const actionLabel = (form.dataset.actionLabel || 'Archive').trim();
-        const actionPast = (form.dataset.actionPast || 'archived').trim();
-        const fallback = actionLabel + ' ' + familyName + '? This keeps the record in the database, marks it as ' + actionPast + ', and hides it from active lists.';
-        const message = (form.dataset.confirmMessage || '').trim() || fallback;
-
-        if (!window.confirm(message)) {
-            event.preventDefault();
-        }
-    });
 })(window, document);

@@ -33,6 +33,24 @@ class ServiceModel extends Model
         return ((int) ($row['max_id'] ?? 0)) + 1;
     }
 
+    public function getByArchiveStatus(bool $archived = false): array
+    {
+        if (! $this->hasTable()) {
+            return [];
+        }
+
+        $builder = $this->db->table($this->table);
+
+        if ($this->db->fieldExists('dt_deleted', $this->table)) {
+            $builder->where($archived ? 'dt_deleted IS NOT NULL' : 'dt_deleted IS NULL', null, false);
+        }
+
+        return $builder
+            ->orderBy('serviceID', 'ASC')
+            ->get()
+            ->getResultArray();
+    }
+
     /**
      * Soft-archive a service/program by stamping dt_deleted, mirroring
      * ServicesModel::archive(). The row is hidden, never deleted.

@@ -20,7 +20,7 @@
         </div>
         <div class="col-md-3">
             <label class="form-label" for="head_middlename">Middle name</label>
-            <input class="form-control" id="head_middlename" name="head_middlename" value="<?= esc((string) ($familyRecord['middlename'] ?? '')) ?>" required>
+            <input class="form-control" id="head_middlename" name="head_middlename" value="<?= esc((string) ($familyRecord['middlename'] ?? '')) ?>" placeholder="Optional">
         </div>
         <div class="col-md-3">
             <label class="form-label" for="head_lastname">Last name</label>

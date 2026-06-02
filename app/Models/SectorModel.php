@@ -63,6 +63,24 @@ class SectorModel extends Model
             ->getResultArray();
     }
 
+    public function getByArchiveStatus(bool $archived = false): array
+    {
+        if (! $this->hasTable()) {
+            return [];
+        }
+
+        $builder = $this->db->table($this->table);
+
+        if ($this->db->fieldExists('dt_deleted', $this->table)) {
+            $builder->where($archived ? 'dt_deleted IS NOT NULL' : 'dt_deleted IS NULL', null, false);
+        }
+
+        return $builder
+            ->orderBy('sectorID', 'ASC')
+            ->get()
+            ->getResultArray();
+    }
+
     /**
      * Find a single sector row by ID for edit forms.
      */

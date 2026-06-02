@@ -19,7 +19,18 @@ $existingShortcodes = $sectorModel->existingShortcodes();
 <div class="panel mb-3" data-sector-management-root>
 	<div class="section-title mt-0">
 		<span>Sector Management</span>
-		<button class="btn btn-primary btn-sm js-sector-modal-open" type="button" data-sector-mode="create"><i class="bi bi-plus-lg" aria-hidden="true"></i>Add Sector</button>
+		<?php if ($status === 'active'): ?>
+			<button class="btn btn-primary btn-sm js-sector-modal-open" type="button" data-sector-mode="create"><i class="bi bi-plus-lg" aria-hidden="true"></i>Add Sector</button>
+		<?php endif; ?>
+	</div>
+
+	<div class="toolbar-row mb-3">
+		<a class="btn btn-sm <?= $status === 'active' ? 'btn-primary' : 'btn-outline-secondary' ?>" href="<?= site_url('admin/sectors') ?>">
+			<i class="bi bi-check2-circle" aria-hidden="true"></i>Active
+		</a>
+		<a class="btn btn-sm <?= $status === 'archived' ? 'btn-primary' : 'btn-outline-secondary' ?>" href="<?= site_url('admin/sectors?status=archived') ?>">
+			<i class="bi bi-archive" aria-hidden="true"></i>Archived
+		</a>
 	</div>
 
 	<div class="table-responsive">
@@ -48,17 +59,17 @@ $existingShortcodes = $sectorModel->existingShortcodes();
 									<i class="bi bi-three-dots" aria-hidden="true"></i>
 								</button>
 								<div class="dropdown-menu dropdown-menu-end">
-									<button
-										class="dropdown-item js-sector-modal-open"
-										type="button"
-										data-sector-mode="update"
-										data-sector-id="<?= esc((string) $sectorId) ?>"
-										data-sector-shortcode="<?= esc((string) ($sector['shortcode'] ?? ''), 'attr') ?>"
-										data-sector-name="<?= esc((string) ($sector['name'] ?? ''), 'attr') ?>"
-										data-sector-description="<?= esc((string) ($sector['description'] ?? ''), 'attr') ?>">
-										<i class="bi bi-pencil-square" aria-hidden="true"></i>Edit
-									</button>
-									<?php if (! $isArchived): ?>
+									<?php if ($status === 'active'): ?>
+										<button
+											class="dropdown-item js-sector-modal-open"
+											type="button"
+											data-sector-mode="update"
+											data-sector-id="<?= esc((string) $sectorId) ?>"
+											data-sector-shortcode="<?= esc((string) ($sector['shortcode'] ?? ''), 'attr') ?>"
+											data-sector-name="<?= esc((string) ($sector['name'] ?? ''), 'attr') ?>"
+											data-sector-description="<?= esc((string) ($sector['description'] ?? ''), 'attr') ?>">
+											<i class="bi bi-pencil-square" aria-hidden="true"></i>Edit
+										</button>
 										<button
 											class="dropdown-item text-danger js-sector-modal-open"
 											type="button"
@@ -69,8 +80,13 @@ $existingShortcodes = $sectorModel->existingShortcodes();
 											data-sector-description="<?= esc((string) ($sector['description'] ?? ''), 'attr') ?>">
 											<i class="bi bi-archive" aria-hidden="true"></i>Archive
 										</button>
-									<?php else: ?>
-										<span class="dropdown-item text-muted"><i class="bi bi-lock" aria-hidden="true"></i>Archived</span>
+									<?php elseif ($canRestore): ?>
+										<form method="post" action="<?= site_url('admin/sectors/restore/' . $sectorId) ?>">
+											<?= csrf_field() ?>
+											<button class="dropdown-item text-success" type="submit">
+												<i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>Restore
+											</button>
+										</form>
 									<?php endif; ?>
 								</div>
 							</div>
@@ -79,7 +95,7 @@ $existingShortcodes = $sectorModel->existingShortcodes();
 				<?php endforeach; ?>
 				<?php if ($sectors === []): ?>
 					<tr>
-						<td colspan="5" class="text-center text-muted">No sector records found.</td>
+						<td colspan="5" class="text-center text-muted"><?= $status === 'archived' ? 'No archived sectors found.' : 'No active sectors found.' ?></td>
 					</tr>
 				<?php endif; ?>
 			</tbody>

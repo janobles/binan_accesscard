@@ -13,11 +13,17 @@ class SearchModel
 {
     private BaseConnection $db;
 
+    /** Accepts an optional DB connection (defaults to the shared one) for testing. */
     public function __construct(?BaseConnection $db = null)
     {
         $this->db = $db ?? db_connect();
     }
 
+    /**
+     * FIRST (quick) Manage Records search: family HEADS only, matched by name/
+     * contact/relationship and sector. Applies the sector + date filters and
+     * resolves sector names. Frontend: the quick search box on Manage Records.
+     */
     public function families(string $keyword = '', array $filters = [], int $limit = 25): array
     {
         if (! $this->hasFamilySearchTables()) {
@@ -169,6 +175,10 @@ class SearchModel
         return $builder;
     }
 
+    /**
+     * Searches Admin/Employee accounts by username/role/status with optional role
+     * and active-status filters. Frontend: the Account Management search/filter UI.
+     */
     public function staffAccounts(string $keyword = '', array $filters = [], int $limit = 100): array
     {
         if (! $this->db->tableExists('users')) {
@@ -212,6 +222,11 @@ class SearchModel
         return $rows;
     }
 
+    /**
+     * Searches all audit entries by action/description/IP and by related user or
+     * member name, with action + date filters. Frontend: the admin Audit Trails
+     * search/filter UI.
+     */
     public function auditTrails(string $keyword = '', array $filters = [], int $limit = 50): array
     {
         if (! $this->hasAuditSearchTables()) {
@@ -237,6 +252,10 @@ class SearchModel
         return $this->withAuditNames($rows);
     }
 
+    /**
+     * Same as auditTrails() but scoped to one user. Frontend: the employee
+     * Activity page search/filter.
+     */
     public function auditTrailsByUser(int $userId, string $keyword = '', array $filters = [], int $limit = 50): array
     {
         if (! $this->hasAuditSearchTables()) {
@@ -264,6 +283,10 @@ class SearchModel
         return $this->withAuditNames($rows);
     }
 
+    /**
+     * Returns the distinct list of audit action types, used to populate the audit
+     * "action" filter dropdown on the frontend.
+     */
     public function auditActions(): array
     {
         if (! $this->db->tableExists('audit_trails')) {
@@ -283,12 +306,17 @@ class SearchModel
         );
     }
 
+    /** Base query for audit searches (selects all audit columns). */
     private function auditTrailBuilder(): BaseBuilder
     {
         return $this->db->table('audit_trails')
             ->select('audit_trails.*');
     }
 
+    /**
+     * Adds the keyword search clause to an audit query: matches action/description/
+     * IP directly, plus audits tied to users or members whose names match.
+     */
     private function applyAuditSearch(BaseBuilder $builder, string $keyword): void
     {
         $builder->groupStart()
@@ -311,6 +339,7 @@ class SearchModel
         $builder->groupEnd();
     }
 
+    /** Applies the audit action dropdown + date filters to an audit query. */
     private function applyAuditFilters(BaseBuilder $builder, array $filters): void
     {
         $action = $this->normalizeKeyword((string) ($filters['action'] ?? ''));
@@ -322,6 +351,10 @@ class SearchModel
         $this->applyDateRange($builder, 'audit_trails.dt_created', $filters);
     }
 
+    /**
+     * Applies a date filter to a query: either a single `date` (whole day) or a
+     * `date_from`/`date_to` range. Shared by family, member, and audit searches.
+     */
     private function applyDateRange(BaseBuilder $builder, string $column, array $filters): void
     {
         $date = $this->normalizeDate((string) ($filters['date'] ?? ''));
@@ -346,6 +379,10 @@ class SearchModel
         }
     }
 
+    /**
+     * Filters accounts by active/disabled, tolerating both the Enable/Disabled
+     * enum and legacy numeric isactive values.
+     */
     private function applyActiveStatusFilter(BaseBuilder $builder, string $status): void
     {
         $normalized = strtolower($status);
@@ -370,12 +407,14 @@ class SearchModel
         }
     }
 
+    /** True if the tables needed for family search exist. */
     private function hasFamilySearchTables(): bool
     {
         return $this->db->tableExists('member')
             && $this->db->tableExists('sector');
     }
 
+    /** True if the tables needed for audit search exist. */
     private function hasAuditSearchTables(): bool
     {
         return $this->db->tableExists('audit_trails')
@@ -383,6 +422,7 @@ class SearchModel
             && $this->db->tableExists('member');
     }
 
+    /** Adds a readable 'sector_name' to each row from its JSON sectorID value. */
     private function withSectorNames(array $rows): array
     {
         $sectorNames = $this->sectorNameMap();
@@ -396,6 +436,7 @@ class SearchModel
         return $rows;
     }
 
+    /** Builds an [sectorID => name] map used by withSectorNames(). */
     private function sectorNameMap(): array
     {
         if (! $this->db->tableExists('sector')) {
@@ -416,6 +457,7 @@ class SearchModel
         return $map;
     }
 
+    /** Sector IDs whose name/description match the keyword (so search can match sector text). */
     private function sectorIdsForKeyword(string $keyword): array
     {
         if (! $this->db->tableExists('sector')) {
@@ -511,6 +553,7 @@ class SearchModel
         return $rows;
     }
 
+    /** Adds username/role and member-name display fields to audit search rows. */
     private function withAuditNames(array $rows): array
     {
         $users = $this->userMap(array_column($rows, 'userID'));
@@ -532,6 +575,7 @@ class SearchModel
         return $rows;
     }
 
+    /** Batch [userID => {username, role}] lookup used by withAuditNames(). */
     private function userMap(array $userIds): array
     {
         $userIds = $this->positiveUniqueIds($userIds);
@@ -558,6 +602,7 @@ class SearchModel
         return $map;
     }
 
+    /** Batch [memberID => {firstname, lastname}] lookup used by withAuditNames(). */
     private function memberNameMap(array $memberIds): array
     {
         $memberIds = $this->positiveUniqueIds($memberIds);
@@ -584,6 +629,7 @@ class SearchModel
         return $map;
     }
 
+    /** Joins first/last name into one display string. */
     private function formatMemberName(array $memberName): string
     {
         return trim(implode(' ', array_filter([
@@ -592,6 +638,7 @@ class SearchModel
         ], static fn (string $value): bool => trim($value) !== '')));
     }
 
+    /** User IDs whose username matches the keyword (so audit search matches by operator). */
     private function userIdsForKeyword(string $keyword): array
     {
         if (! $this->db->tableExists('users')) {
@@ -608,6 +655,7 @@ class SearchModel
         );
     }
 
+    /** Member IDs whose first/last name matches the keyword (audit search by subject). */
     private function memberIdsForKeyword(string $keyword): array
     {
         if (! $this->db->tableExists('member')) {
@@ -627,6 +675,7 @@ class SearchModel
         );
     }
 
+    /** Normalizes an ID list to unique positive ints for batched IN() lookups. */
     private function positiveUniqueIds(array $ids): array
     {
         return array_values(array_unique(array_filter(
@@ -635,11 +684,13 @@ class SearchModel
         )));
     }
 
+    /** Trims a search keyword. */
     private function normalizeKeyword(string $keyword): string
     {
         return trim($keyword);
     }
 
+    /** Returns the date only if it's a valid Y-m-d, else '' (ignored by filters). */
     private function normalizeDate(string $date): string
     {
         $date = trim($date);

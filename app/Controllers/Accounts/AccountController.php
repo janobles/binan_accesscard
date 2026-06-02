@@ -15,6 +15,13 @@ use Throwable;
  */
 class AccountController extends BaseController
 {
+    /**
+     * Creates a staff account from POST `developer/accounts`. Developer-only;
+     * validates the username/password/role, delegates persistence to
+     * UserModel::createAccount, writes an audit row, then redirects to
+     * `admin/accounts` with a flash message. Frontend: the account-creation
+     * form on the admin accounts page.
+     */
     public function create(): RedirectResponse
     {
         $guard = $this->requireDeveloper();
@@ -79,7 +86,10 @@ class AccountController extends BaseController
     }
 
     /**
-     * Developer-only: enable/disable Admin or Employee accounts.
+     * Developer-only: enable/disable Admin or Employee accounts via POST
+     * `developer/accounts/status`. Blocks self-changes, verifies the target is an
+     * Admin/User account, updates status through UserModel, and audits the change.
+     * Frontend: the enable/disable controls on the admin accounts page.
      */
     public function updateStatus(): RedirectResponse
     {
@@ -135,7 +145,10 @@ class AccountController extends BaseController
     }
 
     /**
-     * Admin/Developer: disable an Employee account.
+     * Admin/Developer: disable an Employee account via POST `admin/accounts/disable`.
+     * Only `User`-role accounts may be disabled here; self-disable is blocked.
+     * Audits the change and redirects to `admin/accounts`. Frontend: the
+     * "disable" button in the admin Account Management list.
      */
     public function disableEmployee(): RedirectResponse
     {
@@ -178,6 +191,10 @@ class AccountController extends BaseController
         return redirect()->to(site_url('admin/accounts'))->with('success', 'Employee account disabled successfully.');
     }
 
+    /**
+     * Access guard: returns a redirect (to login or with an error) unless the
+     * current session is a logged-in Developer; null means allowed to proceed.
+     */
     private function requireDeveloper(): ?RedirectResponse
     {
         if (! session()->get('is_logged_in')) {
@@ -191,6 +208,10 @@ class AccountController extends BaseController
         return null;
     }
 
+    /**
+     * Access guard for actions open to Admins and Developers; returns a redirect
+     * to block anyone else, or null to allow the action.
+     */
     private function requireAdminOrDeveloper(): ?RedirectResponse
     {
         if (! session()->get('is_logged_in')) {
@@ -204,6 +225,10 @@ class AccountController extends BaseController
         return null;
     }
 
+    /**
+     * Normalizes a raw role string to the canonical 'Developer'/'Admin'/'User'
+     * (or null if unrecognized) so guards can compare reliably.
+     */
     private function normalizeRole(string $role): ?string
     {
         $normalizedRole = strtolower(trim($role));
@@ -216,6 +241,11 @@ class AccountController extends BaseController
         };
     }
 
+    /**
+     * Writes an account-management event to audit_trails (staff action, so
+     * memberID stays null). Silently skips if the table is missing and never
+     * lets an audit failure break the account action. No frontend connection.
+     */
     private function audit(string $action, string $description): void
     {
         $auditModel = new AuditTrailsModel();

@@ -14,6 +14,11 @@ class SectorController extends BaseController
 {
     use LookupManagementTrait;
 
+    /**
+     * GET `admin/lookups/sectors`: renders the sectors management screen
+     * (`admin/lookups/index` view). The store/update/archive/restore actions
+     * below are called by assets/js/lookups.js and return JSON, not redirects.
+     */
     public function index(): string|RedirectResponse
     {
         $guard = $this->guardLookupAccess();
@@ -25,6 +30,11 @@ class SectorController extends BaseController
         return view('admin/lookups/index', $this->buildLookupViewData('sectors'));
     }
 
+    /**
+     * POST `admin/lookups/sectors/store`: validates and creates a sector, rejecting
+     * duplicate shortcodes. Returns JSON (with a fresh CSRF hash) for lookups.js;
+     * 422 on validation/duplicate errors. Audits a SECTOR_CREATE on success.
+     */
     public function store()
     {
         $guard = $this->guardLookupAccess();
@@ -83,6 +93,11 @@ class SectorController extends BaseController
         ]);
     }
 
+    /**
+     * POST `admin/lookups/sectors/update/{id}`: validates and updates a sector,
+     * guarding against duplicate shortcodes (excluding this row). Returns JSON for
+     * lookups.js; audits a SECTOR_UPDATE on success.
+     */
     public function update(int $id)
     {
         $guard = $this->guardLookupAccess();
@@ -149,6 +164,11 @@ class SectorController extends BaseController
         ]);
     }
 
+    /**
+     * POST `admin/lookups/sectors/archive/{id}`: soft-archives a sector. Returns
+     * 404 if missing/already archived, 409 if members are still assigned to it,
+     * else archives and audits SECTOR_ARCHIVE. JSON response for lookups.js.
+     */
     public function archive(int $id)
     {
         $guard = $this->guardLookupAccess();
@@ -204,6 +224,11 @@ class SectorController extends BaseController
         ]);
     }
 
+    /**
+     * POST `admin/lookups/sectors/restore/{id}`: un-archives a sector. Returns
+     * 404 if missing, 409 if already active, else restores and audits
+     * SECTOR_RESTORE. JSON response for lookups.js.
+     */
     public function restore(int $id)
     {
         $guard = $this->guardLookupAccess();

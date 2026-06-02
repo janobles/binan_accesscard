@@ -13,6 +13,12 @@ use Config\IdleTimeout;
  */
 class IdleTimeoutFilter implements FilterInterface
 {
+    /**
+     * Runs before the protected routes listed in Config\Filters (admin/*, employee/*,
+     * etc.). If the logged-in user has been idle past IdleTimeout, it audits and
+     * clears the session, then returns a 401 JSON for AJAX or a redirect to login
+     * for normal requests; otherwise it refreshes the idle timer and continues.
+     */
     public function before(RequestInterface $request, $arguments = null)
     {
         $session = session();
@@ -46,11 +52,13 @@ class IdleTimeoutFilter implements FilterInterface
         return null;
     }
 
+    /** No post-response work; required by FilterInterface. */
     public function after(RequestInterface $request, ResponseInterface $response, $arguments = null)
     {
         return null;
     }
 
+    /** Removes auth session keys when a request is rejected for inactivity. */
     private function clearLoginSession(): void
     {
         session()->remove([

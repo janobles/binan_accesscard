@@ -16,10 +16,22 @@ use CodeIgniter\HTTP\IncomingRequest;
 use CodeIgniter\HTTP\RedirectResponse;
 use Config\IdleTimeout;
 
+/**
+ * Central view-data assembler for the dashboard. Workspace\Home delegates here so
+ * controllers only choose WHICH page to show while this class gathers all the
+ * models' data and renders the admin/employee shell views. The main place to look
+ * when debugging what a dashboard page displays.
+ */
 class DashboardPageBuilder
 {
+    /** Holds the current request so query params (search/filters/page) are available. */
     public function __construct(private IncomingRequest $request) {}
 
+    /**
+     * Guards Developer/Admin access, then renders the admin shell
+     * (`Dashboard/Manage/admin`) on the given tab. Account management additionally
+     * requires Developer/Admin. Frontend: returns the full admin page HTML.
+     */
     public function renderAdminPage(string $activePage): string|RedirectResponse
     {
         $guard = RoleAccess::requireRole(['Developer', 'Admin']);
@@ -40,6 +52,14 @@ class DashboardPageBuilder
         return view('Dashboard/Manage/admin', $this->buildAdminViewData($activePage));
     }
 
+    /**
+     * Assembles every variable the admin shell and its sub-views need: page title,
+     * role flags/permissions, nav highlighting, account lists, family form options,
+     * recent families/audits, member list (on Manage Records), sector/service
+     * lists, dashboard stats, search term/filters, and view formatter closures
+     * (formatDate/Status/etc.). Also reused to build AJAX partials. Frontend:
+     * consumed directly by `Dashboard/Manage/*` views.
+     */
     public function buildAdminViewData(string $activePage): array
     {
         $layoutModel    = new ViewLayoutModel();
@@ -166,16 +186,19 @@ class DashboardPageBuilder
         ];
     }
 
+    /** Public entry for the admin records-list AJAX partial (Home::renderAdminRecordListPartial). */
     public function buildAdminRecordListViewData(): array
     {
         return $this->buildMemberListData();
     }
 
+    /** Public entry for the employee records-list AJAX partial. */
     public function buildEmployeeRecordListViewData(): array
     {
         return $this->buildEmployeeRecordListData();
     }
 
+    /** All sectors (active + archived) ordered by ID, for the admin sectors view. */
     private function fetchVisibleSectors(SectorModel $sectorModel): array
     {
         if (! $sectorModel->hasTable()) {
@@ -187,6 +210,7 @@ class DashboardPageBuilder
             ->findAll();
     }
 
+    /** All services (active + archived) ordered by ID, for the admin services view. */
     private function fetchVisibleServices(ServiceModel $serviceModel): array
     {
         if (! $serviceModel->hasTable()) {
@@ -198,6 +222,12 @@ class DashboardPageBuilder
             ->findAll();
     }
 
+    /**
+     * Builds the admin Manage Records list: reads the q/status/page/sector/date
+     * query params, runs the paginated family-head search, and merges in the deep
+     * (whole-database) search results. Frontend: the family-list view + its filter
+     * and pagination controls.
+     */
     private function buildMemberListData(): array
     {
         $keyword = trim((string) $this->request->getGet('q'));
@@ -288,6 +318,11 @@ class DashboardPageBuilder
         ];
     }
 
+    /**
+     * Guards Developer/Admin/User access, then assembles the employee view data
+     * (own activity instead of all audits, no account management) and renders the
+     * employee shell (`Employee/index`). Frontend: returns the full employee page.
+     */
     public function renderEmployeePage(string $activePage): string|RedirectResponse
     {
         $guard = RoleAccess::requireRole(['Developer', 'Admin', 'User']);
@@ -360,6 +395,7 @@ class DashboardPageBuilder
         ]);
     }
 
+    /** Collects all supported search/filter query params into one array. */
     private function searchFilters(): array
     {
         return [
@@ -373,6 +409,7 @@ class DashboardPageBuilder
         ];
     }
 
+    /** True if any search filter is set, used to decide search vs. default listing. */
     private function hasSearchFilters(array $filters): bool
     {
         foreach ($filters as $value) {
@@ -384,6 +421,11 @@ class DashboardPageBuilder
         return false;
     }
 
+    /**
+     * Employee counterpart of buildMemberListData(): same paginated family list but
+     * always active-only and without restore controls. Frontend: the employee
+     * Manage Records view.
+     */
     private function buildEmployeeRecordListData(): array
     {
         $keyword = trim((string) $this->request->getGet('q'));

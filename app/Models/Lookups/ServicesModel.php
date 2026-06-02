@@ -149,6 +149,11 @@ class ServicesModel extends Model
             ->update();
     }
 
+    /**
+     * Returns a query builder scoped to active (non-archived) services: prefers
+     * the `view_services_active` DB view, else filters dt_deleted on the base
+     * table. Returns null if neither exists. Shared by the read methods above.
+     */
     private function activeBuilder(): ?BaseBuilder
     {
         if ($this->db->tableExists('view_services_active')) {

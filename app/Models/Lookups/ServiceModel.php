@@ -17,11 +17,16 @@ class ServiceModel extends Model
     protected $useAutoIncrement = false;
     protected $useTimestamps = false;
 
+    /** True if the `services` table exists. */
     public function hasTable(): bool
     {
         return $this->db->tableExists($this->table);
     }
 
+    /**
+     * Returns the next service ID (max + 1). serviceID is not auto-increment here,
+     * so create flows assign it explicitly.
+     */
     public function nextServiceId(): int
     {
         if (! $this->hasTable()) {
@@ -56,6 +61,10 @@ class ServiceModel extends Model
             ->update();
     }
 
+    /**
+     * Returns a [serviceID => name] map for the given IDs. Used by SearchModel to
+     * label a member's assigned services in search results.
+     */
     public function getNameMapByIds(array $serviceIds): array
     {
         $serviceIds = $this->naturalIds($serviceIds) ?? [];
@@ -83,6 +92,10 @@ class ServiceModel extends Model
         return $map;
     }
 
+    /**
+     * Lists services available to a sector: those in that sector's category plus
+     * any 'General' services. Used when building eligibility options.
+     */
     public function getForSectorName(string $sectorName): array
     {
         return $this->groupStart()
@@ -93,6 +106,11 @@ class ServiceModel extends Model
             ->findAll();
     }
 
+    /**
+     * Resolves the services a specific member is eligible for, based on their
+     * sector(s) plus 'General' services. Frontend: drives the per-member service
+     * checklist in the family form/edit views.
+     */
     public function getEligibleForMember(int $memberId): array
     {
         $member = $this->db->table('member')
@@ -132,6 +150,10 @@ class ServiceModel extends Model
             ->findAll();
     }
 
+    /**
+     * True if an active (non-archived) service with this ID exists. Used by
+     * FamilyController::store() to validate selected services before linking them.
+     */
     public function existsById(int $serviceId): bool
     {
         if (! $this->db->tableExists($this->table)) {
@@ -148,6 +170,10 @@ class ServiceModel extends Model
             ->countAllResults() > 0;
     }
 
+    /**
+     * True if every given ID is an existing active service (empty list = true).
+     * Used to validate a batch of selected service IDs.
+     */
     public function idsExist(array $serviceIds): bool
     {
         $serviceIds = $this->naturalIds($serviceIds);
@@ -174,6 +200,10 @@ class ServiceModel extends Model
             ->countAllResults() === count($serviceIds);
     }
 
+    /**
+     * Normalizes a list of service IDs to unique non-negative ints, or null if any
+     * value is non-numeric/nested — letting callers reject malformed input.
+     */
     private function naturalIds(array $serviceIds): ?array
     {
         $normalizedIds = [];

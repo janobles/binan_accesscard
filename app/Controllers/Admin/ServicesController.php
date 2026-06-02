@@ -14,6 +14,11 @@ class ServicesController extends BaseController
 {
     use LookupManagementTrait;
 
+    /**
+     * GET `admin/lookups/services`: renders the services management screen
+     * (`admin/lookups/index` view). The store/update/archive/restore actions
+     * below are called by assets/js/lookups.js and return JSON, not redirects.
+     */
     public function index(): string|RedirectResponse
     {
         $guard = $this->guardLookupAccess();
@@ -25,6 +30,11 @@ class ServicesController extends BaseController
         return view('admin/lookups/index', $this->buildLookupViewData('services'));
     }
 
+    /**
+     * POST `admin/lookups/services/store`: validates and creates a service via
+     * ServicesModel. Returns JSON (with a fresh CSRF hash) for lookups.js; 422 on
+     * validation errors. Audits a SERVICE_CREATE on success.
+     */
     public function store()
     {
         $guard = $this->guardLookupAccess();
@@ -71,6 +81,10 @@ class ServicesController extends BaseController
         ]);
     }
 
+    /**
+     * POST `admin/lookups/services/update/{id}`: validates and updates a service.
+     * Returns JSON for lookups.js; audits a SERVICE_UPDATE on success.
+     */
     public function update(int $id)
     {
         $guard = $this->guardLookupAccess();
@@ -125,6 +139,11 @@ class ServicesController extends BaseController
         ]);
     }
 
+    /**
+     * POST `admin/lookups/services/archive/{id}`: soft-archives a service. Returns
+     * 404 if missing/already archived, 409 if members are still assigned to it,
+     * else archives and audits SERVICE_ARCHIVE. JSON response for lookups.js.
+     */
     public function archive(int $id)
     {
         $guard = $this->guardLookupAccess();
@@ -180,6 +199,11 @@ class ServicesController extends BaseController
         ]);
     }
 
+    /**
+     * POST `admin/lookups/services/restore/{id}`: un-archives a service. Returns
+     * 404 if missing, 409 if already active, else restores and audits
+     * SERVICE_RESTORE. JSON response for lookups.js.
+     */
     public function restore(int $id)
     {
         $guard = $this->guardLookupAccess();

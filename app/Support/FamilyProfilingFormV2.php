@@ -30,11 +30,17 @@ class FamilyProfilingFormV2
         'Emergency and Disaster Assistance',
     ];
 
+    // The methods below return fixed option lists/seed data straight from the CSWD
+    // Family Profiling Form v2. They have no DB/session dependency and feed the
+    // family form dropdowns (via FamilyFormOptionsModel) and lookup seeding.
+
+    /** Name-suffix options (Jr, Sr, I–V) for the family form. */
     public static function suffixes(): array
     {
         return ['Jr', 'Sr', 'I', 'II', 'III', 'IV', 'V'];
     }
 
+    /** Civil-status options for the family form. */
     public static function civilStatuses(): array
     {
         return [
@@ -47,6 +53,7 @@ class FamilyProfilingFormV2
         ];
     }
 
+    /** Educational-attainment options for the family form. */
     public static function educationLevels(): array
     {
         return [
@@ -60,6 +67,7 @@ class FamilyProfilingFormV2
         ];
     }
 
+    /** Occupation options for the family form. */
     public static function jobOptions(): array
     {
         return [
@@ -82,6 +90,7 @@ class FamilyProfilingFormV2
         ];
     }
 
+    /** Canonical seed rows for the `sector` lookup table (used to seed/reference defaults). */
     public static function sectorRows(): array
     {
         return [
@@ -112,6 +121,7 @@ class FamilyProfilingFormV2
         ];
     }
 
+    /** Canonical seed rows for the `services` lookup table (assistance programs). */
     public static function serviceRows(): array
     {
         return [

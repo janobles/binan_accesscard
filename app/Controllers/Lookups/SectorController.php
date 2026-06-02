@@ -10,18 +10,36 @@ use App\Models\Lookups\SectorModel;
 use CodeIgniter\HTTP\RedirectResponse;
 use Throwable;
 
+/**
+ * Handles the write/mutation actions for the `sector` lookup table, posted from
+ * the admin sectors page. Read/listing is done by Workspace\Home::adminSectors;
+ * every action here is Developer/Admin-only and redirects back to `admin/sectors`
+ * with a flash message.
+ */
 class SectorController extends BaseController
 {
+    /**
+     * POST `admin/sectors/create`: add a new sector. Delegates to saveSector().
+     * Frontend: the "Add sector" modal form.
+     */
     public function create(): RedirectResponse
     {
         return $this->saveSector();
     }
 
+    /**
+     * POST `admin/sectors/update/{id}`: edit an existing sector. Delegates to
+     * saveSector() with the id. Frontend: the "Edit sector" modal form.
+     */
     public function update(int $sectorId): RedirectResponse
     {
         return $this->saveSector($sectorId);
     }
 
+    /**
+     * POST `admin/sectors/archive/{id}`: soft-archive a sector (hide, keep data).
+     * Refuses if the sector is still assigned to any member; audits the action.
+     */
     public function archive(int $sectorId): RedirectResponse
     {
         $guard = $this->ensureAdminAccess();
@@ -51,6 +69,10 @@ class SectorController extends BaseController
         return $this->redirectAdmin('admin/sectors', 'success', 'Sector archived successfully.');
     }
 
+    /**
+     * POST `admin/sectors/restore/{id}`: un-archive a previously archived sector
+     * and audit it. Frontend: the "restore" control on the archived sectors view.
+     */
     public function restore(int $sectorId): RedirectResponse
     {
         $guard = $this->ensureAdminAccess();
@@ -76,6 +98,10 @@ class SectorController extends BaseController
         return $this->redirectAdmin('admin/sectors', 'success', 'Sector restored successfully.');
     }
 
+    /**
+     * POST `admin/sectors/delete/{id}`: permanently delete a sector. Blocked if
+     * the sector is in use by any member; audits the hard delete.
+     */
     public function delete(int $sectorId): RedirectResponse
     {
         $guard = $this->ensureAdminAccess();
@@ -105,6 +131,12 @@ class SectorController extends BaseController
         return redirect()->to(site_url('admin/sectors'))->with('success', 'Sector deleted successfully.');
     }
 
+    /**
+     * Shared create/update logic for sectors. Resolves the shortcode (including
+     * the "__other__" custom option), validates required fields, blocks duplicate
+     * codes (excluding the row being edited), saves via SectorModel, and audits.
+     * $sectorId null = create, otherwise update.
+     */
     private function saveSector(?int $sectorId = null): RedirectResponse
     {
         $guard = RoleAccess::requireRole(['Developer', 'Admin']);
@@ -166,6 +198,10 @@ class SectorController extends BaseController
         return $this->redirectAdmin('admin/sectors', 'success', $message);
     }
 
+    /**
+     * True if any `member` row references this sector ID (sectorID stores a JSON
+     * array, matched via SectorIds::containsCondition). Guards archive/delete.
+     */
     private function sectorIsUsed(int $sectorId): bool
     {
         $db = db_connect();
@@ -179,6 +215,10 @@ class SectorController extends BaseController
             ->countAllResults() > 0;
     }
 
+    /**
+     * Role guard for archive/restore/delete: returns a redirect for non
+     * Developer/Admin users, or null to proceed.
+     */
     private function ensureAdminAccess(): ?RedirectResponse
     {
         $guard = RoleAccess::requireRole(['Developer', 'Admin']);
@@ -186,6 +226,10 @@ class SectorController extends BaseController
         return $guard instanceof RedirectResponse ? $guard : null;
     }
 
+    /**
+     * Builds a redirect back to an admin path carrying a typed flash message
+     * (e.g. 'success'/'error'); keeps the redirect+flash pattern in one place.
+     */
     private function redirectAdmin(string $path, string $type, string $message): RedirectResponse
     {
         return redirect()->to(site_url($path))->with($type, $message);

@@ -9,18 +9,36 @@ use App\Models\Lookups\ServiceModel;
 use CodeIgniter\HTTP\RedirectResponse;
 use Throwable;
 
+/**
+ * Handles the write/mutation actions for the `services` lookup table, posted from
+ * the admin services page. Listing is done by Workspace\Home::adminServices; every
+ * action here is Developer/Admin-only and redirects back to `admin/services` with
+ * a flash message.
+ */
 class ServiceController extends BaseController
 {
+    /**
+     * POST `admin/services/create`: add a new service/program. Delegates to
+     * saveService(). Frontend: the "Add service" modal form.
+     */
     public function create(): RedirectResponse
     {
         return $this->saveService();
     }
 
+    /**
+     * POST `admin/services/update/{id}`: edit a service/program. Delegates to
+     * saveService() with the id. Frontend: the "Edit service" modal form.
+     */
     public function update(int $serviceId): RedirectResponse
     {
         return $this->saveService($serviceId);
     }
 
+    /**
+     * POST `admin/services/archive/{id}`: soft-archive a service. Refused if the
+     * service is still assigned to any member (member_services); audits the action.
+     */
     public function archive(int $serviceId): RedirectResponse
     {
         $guard = $this->ensureAdminAccess();
@@ -50,6 +68,10 @@ class ServiceController extends BaseController
         return $this->redirectAdmin('admin/services', 'success', 'Service or program archived successfully.');
     }
 
+    /**
+     * POST `admin/services/restore/{id}`: un-archive a service/program and audit
+     * it. Frontend: the "restore" control on the archived services view.
+     */
     public function restore(int $serviceId): RedirectResponse
     {
         $guard = $this->ensureAdminAccess();
@@ -75,6 +97,10 @@ class ServiceController extends BaseController
         return $this->redirectAdmin('admin/services', 'success', 'Service or program restored successfully.');
     }
 
+    /**
+     * POST `admin/services/delete/{id}`: permanently delete a service/program.
+     * Blocked if it is in use by any member; audits the hard delete.
+     */
     public function delete(int $serviceId): RedirectResponse
     {
         $guard = $this->ensureAdminAccess();
@@ -104,6 +130,12 @@ class ServiceController extends BaseController
         return $this->redirectAdmin('admin/services', 'success', 'Service or program deleted successfully.');
     }
 
+    /**
+     * Shared create/update logic for services. Resolves the category (including
+     * the "__other__" custom option), validates required fields, then either
+     * updates the row or inserts a new one with the next service ID, and audits.
+     * $serviceId null = create, otherwise update.
+     */
     private function saveService(?int $serviceId = null): RedirectResponse
     {
         $guard = RoleAccess::requireRole(['Developer', 'Admin']);
@@ -154,6 +186,10 @@ class ServiceController extends BaseController
         return $this->redirectAdmin('admin/services', 'success', $message);
     }
 
+    /**
+     * True if any `member_services` row links to this service ID. Guards
+     * archive/delete so in-use services cannot be removed.
+     */
     private function serviceIsUsed(int $serviceId): bool
     {
         $db = db_connect();
@@ -167,6 +203,10 @@ class ServiceController extends BaseController
             ->countAllResults() > 0;
     }
 
+    /**
+     * Role guard for archive/restore/delete: returns a redirect for non
+     * Developer/Admin users, or null to proceed.
+     */
     private function ensureAdminAccess(): ?RedirectResponse
     {
         $guard = RoleAccess::requireRole(['Developer', 'Admin']);
@@ -174,6 +214,10 @@ class ServiceController extends BaseController
         return $guard instanceof RedirectResponse ? $guard : null;
     }
 
+    /**
+     * Builds a redirect back to an admin path carrying a typed flash message
+     * (e.g. 'success'/'error').
+     */
     private function redirectAdmin(string $path, string $type, string $message): RedirectResponse
     {
         return redirect()->to(site_url($path))->with($type, $message);

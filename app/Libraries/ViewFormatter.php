@@ -5,8 +5,14 @@ namespace App\Libraries;
 /**
  * Shared presentation formatting and normalization for view templates.
  */
+/**
+ * Static presentation helpers called from the view templates (and mirrored by the
+ * closures DashboardPageBuilder passes in) to format and normalize display data.
+ * Pure functions with no DB or session access.
+ */
 class ViewFormatter
 {
+    /** True if a search term or any filter value is set (drives "filters active" UI). */
     public static function hasSearchFilters(string $searchTerm, array $filters): bool
     {
         if ($searchTerm !== '') {
@@ -22,21 +28,25 @@ class ViewFormatter
         return false;
     }
 
+    /** True if a value has non-whitespace text. */
     public static function hasText(mixed $value): bool
     {
         return trim((string) $value) !== '';
     }
 
+    /** Formats any date/time value as Y-m-d for display ('' if unparseable). */
     public static function formatDate(mixed $value): string
     {
         return self::formatTimestamp($value, 'Y-m-d', '');
     }
 
+    /** Formats any date/time value as 12-hour time for display ('' if unparseable). */
     public static function formatTime(mixed $value): string
     {
         return self::formatTimestamp($value, 'h:i A', '');
     }
 
+    /** Display name of the member an audit row concerns, or '-' when none. */
     public static function formatAuditMember(array $audit): string
     {
         $memberName = trim((string) ($audit['member_name'] ?? ''));
@@ -48,6 +58,7 @@ class ViewFormatter
         return $memberName === '' ? '-' : $memberName;
     }
 
+    /** Display label for who performed an audit action, e.g. "maria (Admin)". */
     public static function formatAuditUser(array $audit): string
     {
         $username = trim((string) ($audit['username'] ?? $audit['userID'] ?? ''));
@@ -60,6 +71,7 @@ class ViewFormatter
         return $role === '' ? $username : $username . ' (' . $role . ')';
     }
 
+    /** Interprets an isactive value (enum/numeric/string) as a boolean for display. */
     public static function isActiveStatus(mixed $value): bool
     {
         if (is_bool($value)) {
@@ -81,11 +93,13 @@ class ViewFormatter
         ], true);
     }
 
+    /** Renders an isactive value as the "Enable"/"Disabled" badge text. */
     public static function formatStatus(mixed $value): string
     {
         return self::isActiveStatus($value) ? 'Enable' : 'Disabled';
     }
 
+    /** Splits an array or comma string into a trimmed, non-empty list of strings. */
     public static function splitList(mixed $value): array
     {
         $items = is_array($value) ? $value : explode(',', (string) $value);
@@ -93,6 +107,7 @@ class ViewFormatter
         return array_values(array_filter(array_map('trim', array_map('strval', $items))));
     }
 
+    /** Coerces a value into a list of ints (optionally dropping non-numeric items). */
     public static function integerList(mixed $value, bool $numericOnly = false): array
     {
         $items = (array) $value;
@@ -104,6 +119,7 @@ class ViewFormatter
         return array_values(array_map('intval', $items));
     }
 
+    /** Coerces a value into a list of strings (optionally dropping empty items). */
     public static function stringList(mixed $value, bool $nonEmptyOnly = false): array
     {
         $items = array_values(array_map('strval', (array) $value));
@@ -111,6 +127,11 @@ class ViewFormatter
         return $nonEmptyOnly ? array_values(array_filter($items, [self::class, 'hasText'])) : $items;
     }
 
+    /**
+     * Given the grouped sector catalog and the IDs a member has, returns which
+     * category keys are selected — used to pre-expand the right sector groups in
+     * the family form.
+     */
     public static function selectedSectorCategories(array $sectorCatalog, array $selectedSectorIds): array
     {
         $categories = [];
@@ -127,6 +148,7 @@ class ViewFormatter
         return array_values(array_unique($categories));
     }
 
+    /** Category keys in the catalog that actually contain sectors (for rendering tabs). */
     public static function sectorCategoryKeys(array $sectorCatalog): array
     {
         $keys = [];
@@ -140,11 +162,13 @@ class ViewFormatter
         return $keys;
     }
 
+    /** Sector shortcode options with the catch-all "OTHER" removed, for dropdowns. */
     public static function sectorShortcodeOptions(array $options): array
     {
         return array_values(array_filter($options, static fn (string $shortcode): bool => $shortcode !== 'OTHER'));
     }
 
+    /** Distinct service category list (seeded with defaults) for category dropdowns. */
     public static function serviceCategoryOptions(array $services, array $defaults = []): array
     {
         $categories = $defaults;
@@ -160,6 +184,10 @@ class ViewFormatter
         return array_values(array_unique($categories));
     }
 
+    /**
+     * Groups sectors into the SC/PWD/SP/B/Others buckets the family form renders,
+     * dropping any empty group. Frontend: builds the grouped sector checkboxes.
+     */
     public static function memberSectorGroups(array $sectorOptions): array
     {
         $groups = [
@@ -193,6 +221,7 @@ class ViewFormatter
         return $groups;
     }
 
+    /** Compact, safe string form of any value for debug output in views. */
     public static function debugArgument(mixed $value): string
     {
         return match (true) {
@@ -203,6 +232,7 @@ class ViewFormatter
         };
     }
 
+    /** Shared date/time formatter: parses a value and formats it, or returns $fallback. */
     private static function formatTimestamp(mixed $value, string $format, string $fallback): string
     {
         $timestamp = strtotime((string) $value);

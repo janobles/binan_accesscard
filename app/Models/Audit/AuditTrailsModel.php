@@ -22,11 +22,18 @@ class AuditTrailsModel extends Model
     ];
     protected $useTimestamps = false;
 
+    /** True if the `audit_trails` table exists; callers no-op auditing otherwise. */
     public function hasTable(): bool
     {
         return $this->db->tableExists($this->table);
     }
 
+    /**
+     * Inserts one audit row capturing who did what, plus client IP/user agent.
+     * Called across controllers (login/logout, account, family, sector, service
+     * actions). $memberId is the affected member or null for staff-only actions;
+     * tolerates schemas where memberID is required or user_agent is absent.
+     */
     public function logAction(
         int $userId,
         ?int $memberId,
@@ -62,6 +69,10 @@ class AuditTrailsModel extends Model
         return $this->insert($payload) !== false;
     }
 
+    /**
+     * Returns the latest audit entries (newest first) with user and member names
+     * resolved. Frontend: the admin Audit Trails page via DashboardPageBuilder.
+     */
     public function getRecent(int $limit = 50): array
     {
         if (! $this->hasTable()) {
@@ -76,6 +87,10 @@ class AuditTrailsModel extends Model
         return $this->withNames($rows);
     }
 
+    /**
+     * Returns one user's recent audit entries (newest first) with names resolved.
+     * Frontend: the employee Activity page.
+     */
     public function getByUser(int $userId, int $limit = 50): array
     {
         if (! $this->hasTable()) {
@@ -90,6 +105,7 @@ class AuditTrailsModel extends Model
         return $this->withNames($rows);
     }
 
+    /** Fallback when there's no user_agent column: folds the UA into the description. */
     private function appendUserAgent(?string $description, string $userAgent): string
     {
         $base = $description ?? '';
@@ -98,6 +114,7 @@ class AuditTrailsModel extends Model
         return $base === '' ? $suffix : $base . ' | ' . $suffix;
     }
 
+    /** Returns the member ID only if it's a real existing member, else null. */
     private function memberIdValue(?int $memberId): ?int
     {
         if ($memberId !== null && $memberId > 0 && $this->memberExists($memberId)) {
@@ -107,6 +124,7 @@ class AuditTrailsModel extends Model
         return null;
     }
 
+    /** Whether the memberID column allows NULL, so staff-only actions are valid. */
     private function isMemberIdNullable(): bool
     {
         foreach ($this->db->getFieldData($this->table) as $field) {
@@ -118,6 +136,10 @@ class AuditTrailsModel extends Model
         return true;
     }
 
+    /**
+     * Adds display fields (username, user_role, member name) to audit rows via
+     * batched user/member lookups (avoids N+1 queries).
+     */
     private function withNames(array $rows): array
     {
         $users = $this->userMap(array_column($rows, 'userID'));
@@ -139,6 +161,7 @@ class AuditTrailsModel extends Model
         return $rows;
     }
 
+    /** Batch [userID => {username, role}] lookup used by withNames(). */
     private function userMap(array $userIds): array
     {
         $userIds = $this->positiveUniqueIds($userIds);
@@ -165,6 +188,7 @@ class AuditTrailsModel extends Model
         return $map;
     }
 
+    /** Batch [memberID => {firstname, lastname}] lookup used by withNames(). */
     private function memberNameMap(array $memberIds): array
     {
         $memberIds = $this->positiveUniqueIds($memberIds);
@@ -191,6 +215,7 @@ class AuditTrailsModel extends Model
         return $map;
     }
 
+    /** True if a member row with this ID exists; gates the memberID foreign key. */
     private function memberExists(int $memberId): bool
     {
         if (! $this->db->tableExists('member')) {
@@ -202,6 +227,7 @@ class AuditTrailsModel extends Model
             ->countAllResults() > 0;
     }
 
+    /** Joins first/last name into a single display string for the audit view. */
     private function formatMemberName(array $memberName): string
     {
         return trim(implode(' ', array_filter([
@@ -210,6 +236,7 @@ class AuditTrailsModel extends Model
         ], static fn (string $value): bool => trim($value) !== '')));
     }
 
+    /** Normalizes an ID list to unique positive ints for batched IN() lookups. */
     private function positiveUniqueIds(array $ids): array
     {
         return array_values(array_unique(array_filter(

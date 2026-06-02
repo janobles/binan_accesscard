@@ -4,8 +4,13 @@ namespace App\Libraries;
 
 use CodeIgniter\HTTP\RedirectResponse;
 
+/**
+ * Central role/authorization helper used by controllers, the page builder, and
+ * filters to gate access and route users to the right dashboard.
+ */
 class RoleAccess
 {
+    /** Canonicalizes a raw role string to 'Developer'/'Admin'/'User', or null. */
     public static function normalizeRole(string $role): ?string
     {
         $normalizedRole = strtolower(trim($role));
@@ -18,6 +23,7 @@ class RoleAccess
         };
     }
 
+    /** True if the session's user_id still maps to a real `users` row (post-DB-change safety). */
     public static function sessionUserExists(): bool
     {
         $userId = (int) session()->get('user_id');
@@ -37,6 +43,12 @@ class RoleAccess
             ->countAllResults() > 0;
     }
 
+    /**
+     * The main access gate: returns null when the current user may proceed, or a
+     * RedirectResponse otherwise — to login if not authenticated / session invalid,
+     * or to their own dashboard with an error if their role isn't in $allowedRoles.
+     * Called at the top of guarded controller actions and the page builder.
+     */
     public static function requireRole(array $allowedRoles): ?RedirectResponse
     {
         if (! session()->get('is_logged_in')) {
@@ -71,6 +83,12 @@ class RoleAccess
         return null;
     }
 
+    /**
+     * Returns a redirect to the dashboard matching the role: employees to
+     * `employee/workspace`, admins/developers to `admin/dashboard`; an invalid
+     * role destroys the session and sends back to login. Used after login and by
+     * requireRole() to bounce users to where they belong.
+     */
     public static function redirectByRole(string $role): RedirectResponse
     {
         $normalizedRole = self::normalizeRole($role);

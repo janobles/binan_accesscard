@@ -15,11 +15,21 @@ use Config\IdleTimeout;
  */
 trait LookupManagementTrait
 {
+    /**
+     * Role guard shared by Admin\SectorController and Admin\ServicesController:
+     * returns a redirect for non Admin/Developer users, or null to proceed.
+     */
     private function guardLookupAccess(): ?RedirectResponse
     {
         return RoleAccess::requireRole(['Admin', 'Developer']);
     }
 
+    /**
+     * Assembles all data the `admin/lookups/index` view needs: active vs archived
+     * sectors and services (grouped by category), per-row member assignment counts,
+     * nav highlighting, and the idle-timeout value. $activeTab toggles the page
+     * between the Sectors and Services tabs. Frontend: feeds the lookups view/JS.
+     */
     private function buildLookupViewData(string $activeTab): array
     {
         $sectorModel = new SectorModel();
@@ -92,6 +102,11 @@ trait LookupManagementTrait
         ];
     }
 
+    /**
+     * Counts non-deleted `member` rows assigned to a sector (sectorID is a JSON
+     * array, matched with JSON_CONTAINS). Used to show usage counts and to block
+     * archiving sectors that are still in use.
+     */
     private function countActiveMembersForSector(int $sectorId): int
     {
         if ($sectorId <= 0) {
@@ -110,6 +125,10 @@ trait LookupManagementTrait
             ->countAllResults();
     }
 
+    /**
+     * Counts non-deleted members linked to a service via `member_services`. Used
+     * for usage counts and to block archiving services that are still assigned.
+     */
     private function countActiveMembersForService(int $serviceId): int
     {
         if ($serviceId < 0) {
@@ -129,6 +148,11 @@ trait LookupManagementTrait
             ->countAllResults();
     }
 
+    /**
+     * Records a lookup-management event (sector/service create/update/archive/
+     * restore) to audit_trails with no affected member. No-ops when the table is
+     * missing or no user is in session. No frontend connection.
+     */
     private function logLookupAction(string $action, string $description): void
     {
         $auditModel = new AuditTrailsModel();

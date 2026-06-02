@@ -139,11 +139,13 @@ class SectorModel extends Model
         return $builder->countAllResults() > 0;
     }
 
+    /** True if the `sector` table exists; callers guard queries with this. */
     public function hasTable(): bool
     {
         return $this->db->tableExists($this->table);
     }
 
+    /** Counts sectors for dashboard stats. */
     public function countSectors(): int
     {
         if (! $this->hasTable()) {
@@ -153,6 +155,7 @@ class SectorModel extends Model
         return $this->countAllResults();
     }
 
+    /** All sectors ordered by shortcode; used to build form dropdowns/catalog. */
     public function getSectorOptions(): array
     {
         if (! $this->hasTable()) {
@@ -162,6 +165,11 @@ class SectorModel extends Model
         return $this->orderBy('shortcode', 'ASC')->findAll();
     }
 
+    /**
+     * Returns the list of shortcode prefixes for the sector modal's category
+     * dropdown. Prefers existing DB codes, falls back to the enum column values,
+     * then to the FamilyProfilingFormV2 category keys.
+     */
     public function getShortcodeOptions(): array
     {
         $fallback = array_values(array_filter(
@@ -257,6 +265,10 @@ class SectorModel extends Model
         return $map;
     }
 
+    /**
+     * Inserts or updates a sector, resolving a blank shortcode first. Used by
+     * Lookups\SectorController::saveSector(). $sectorId null = insert.
+     */
     public function saveSectorRecord(array $data, ?int $sectorId = null): bool
     {
         if (! $this->hasTable()) {
@@ -272,6 +284,11 @@ class SectorModel extends Model
         return $this->insert($data) !== false;
     }
 
+    /**
+     * Groups sectors into display categories (PWD, SP, SC/OSCA, Barangay, etc.)
+     * keyed by FamilyProfilingFormV2::SECTOR_CATEGORIES. Frontend: drives the
+     * grouped sector picker in the family form.
+     */
     public function getSectorCatalog(array $sectorOptions = []): array
     {
         if ($sectorOptions === []) {
@@ -314,6 +331,11 @@ class SectorModel extends Model
         return $catalog;
     }
 
+    /**
+     * Resolves the shortcode to store: uses the submitted one, else the existing
+     * row's code (on edit), else infers SC1 for "Registered OSCA". Keeps codes
+     * stable when a form leaves the field blank.
+     */
     private function effectiveShortcode(array $sector, ?int $sectorId = null): string
     {
         $shortcode = strtoupper(trim((string) ($sector['shortcode'] ?? '')));

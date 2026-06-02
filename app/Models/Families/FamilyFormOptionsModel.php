@@ -16,6 +16,11 @@ class FamilyFormOptionsModel extends Model
     protected $primaryKey = 'sectorID';
     protected $returnType = 'array';
 
+    /**
+     * Returns the raw option lists for the family form: DB-backed sectors and
+     * services plus static enumerations (sexes, suffixes, civil statuses,
+     * relationships, education, jobs, income ranges) from FamilyProfilingFormV2.
+     */
     public function getOptions(): array
     {
         $sectorModel = new SectorModel();
@@ -60,6 +65,11 @@ class FamilyFormOptionsModel extends Model
         ];
     }
 
+    /**
+     * Shapes getOptions() into the exact view variables the family form template
+     * expects (sectorOptions, sexOptions, servicesByCategory, etc.). Frontend:
+     * consumed directly by the `Dashboard/familyform/familyform` view.
+     */
     public function getViewData(): array
     {
         $options = $this->getOptions();
@@ -85,6 +95,10 @@ class FamilyFormOptionsModel extends Model
         ];
     }
 
+    /**
+     * Groups the flat service list into [category => services[]] so the form can
+     * render services under category headings.
+     */
     private function groupServicesByCategory(array $services): array
     {
         $grouped = [];

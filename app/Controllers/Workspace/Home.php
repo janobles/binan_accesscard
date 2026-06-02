@@ -28,6 +28,14 @@ class Home extends BaseController
     // Authentication & session lifecycle
     // ---------------------------------------------------------------------
 
+    // NOTE: index/login/logout/keepAlive mirror Auth\AuthController, which is the
+    // controller the routes actually target for `/`, `login`, `logout`, and
+    // `session/keep-alive`. They are kept here as the role-routing reference.
+
+    /**
+     * Shows the login view or, for an already-authenticated user, redirects to
+     * their role dashboard. Frontend: renders the `Auth/login` view.
+     */
     public function index(): string|RedirectResponse
     {
         if (session()->get('is_logged_in')) {
@@ -44,6 +52,11 @@ class Home extends BaseController
         return view('Auth/login');
     }
 
+    /**
+     * Authenticates the login form POST: verifies credentials via UserModel,
+     * sets the session, logs the login to audit_trails, and redirects by role.
+     * Frontend: consumes `username`/`password` from the login form.
+     */
     public function login(): string|RedirectResponse
     {
         if ($this->request->getMethod() === 'GET') {
@@ -91,6 +104,10 @@ class Home extends BaseController
         return $this->redirectByRole($role);
     }
 
+    /**
+     * Logs the logout to audit_trails, clears the session, and redirects to the
+     * login page. `?timeout=1` (from the idle JS) shows an inactivity message.
+     */
     public function logout(): RedirectResponse
     {
         if ($this->request->getGet('timeout') === '1') {
@@ -107,6 +124,10 @@ class Home extends BaseController
         return redirect()->to(site_url('login'));
     }
 
+    /**
+     * Session heartbeat polled by the dashboard keep-alive JS. Refreshes the idle
+     * timer and returns JSON `{status: ok}`, or 401 `{status: expired}`.
+     */
     public function keepAlive()
     {
         if (! session()->get('is_logged_in')) {
@@ -127,16 +148,28 @@ class Home extends BaseController
     // Developer/Admin inside DashboardPageBuilder::renderAdminPage().
     // ---------------------------------------------------------------------
 
+    /**
+     * Entry point for GET `admin`: redirects to the canonical admin dashboard URL.
+     */
     public function admin(): RedirectResponse
     {
         return redirect()->to(site_url('admin/dashboard'));
     }
 
+    /**
+     * GET `admin/dashboard`. Delegates to DashboardPageBuilder to assemble stats
+     * and render the admin shell on the "dashboard" tab. Frontend: full-page load
+     * of `Dashboard/Manage/admin`.
+     */
     public function adminDashboard(): string|RedirectResponse
     {
         return (new DashboardPageBuilder($this->request))->renderAdminPage('dashboard');
     }
 
+    /**
+     * GET `admin/accounts`. Renders the full accounts page, or—when the request
+     * is an AJAX/partial fetch from the dashboard—just the accounts fragment.
+     */
     public function adminAccounts(): string|RedirectResponse
     {
         if ($this->isPartialRequest()) {
@@ -146,6 +179,10 @@ class Home extends BaseController
         return (new DashboardPageBuilder($this->request))->renderAdminPage('accounts');
     }
 
+    /**
+     * GET `admin/family-entry`. Shows the family registration form page, or its
+     * modal partial when fetched via AJAX from the dashboard.
+     */
     public function adminFamilyEntry(): string|RedirectResponse
     {
         if ($this->isPartialRequest()) {
@@ -155,6 +192,10 @@ class Home extends BaseController
         return (new DashboardPageBuilder($this->request))->renderAdminPage('family-entry');
     }
 
+    /**
+     * GET `admin/manage-records` (and `manage-families`). Renders the family
+     * records list page, or the list fragment for AJAX search/pagination.
+     */
     public function adminManageRecords(): string|RedirectResponse
     {
         if ($this->isPartialRequest()) {
@@ -164,6 +205,10 @@ class Home extends BaseController
         return (new DashboardPageBuilder($this->request))->renderAdminPage('family-manage');
     }
 
+    /**
+     * GET `admin/audit-trails`. Renders the audit log page, or the audit fragment
+     * for AJAX search/filtering.
+     */
     public function adminAuditTrails(): string|RedirectResponse
     {
         if ($this->isPartialRequest()) {
@@ -173,6 +218,10 @@ class Home extends BaseController
         return (new DashboardPageBuilder($this->request))->renderAdminPage('audit-trails');
     }
 
+    /**
+     * GET `admin/sectors`. Renders the sector lookup page, or the sector fragment
+     * for AJAX. Mutations are posted to Lookups\SectorController.
+     */
     public function adminSectors(): string|RedirectResponse
     {
         if ($this->isPartialRequest()) {
@@ -182,6 +231,10 @@ class Home extends BaseController
         return (new DashboardPageBuilder($this->request))->renderAdminPage('sectors');
     }
 
+    /**
+     * GET `admin/services`. Renders the service lookup page, or the service
+     * fragment for AJAX. Mutations are posted to Lookups\ServiceController.
+     */
     public function adminServices(): string|RedirectResponse
     {
         if ($this->isPartialRequest()) {
@@ -191,6 +244,10 @@ class Home extends BaseController
         return (new DashboardPageBuilder($this->request))->renderAdminPage('services');
     }
 
+    /**
+     * GET `admin/manage-members`. Reuses the family-manage page (member-centric
+     * view of the same records). Frontend: full-page load of the admin shell.
+     */
     public function adminManageMembers(): string|RedirectResponse
     {
         return (new DashboardPageBuilder($this->request))->renderAdminPage('family-manage');
@@ -202,11 +259,19 @@ class Home extends BaseController
     // DashboardPageBuilder::renderEmployeePage().
     // ---------------------------------------------------------------------
 
+    /**
+     * GET `employee/workspace`. Renders the employee shell on the dashboard tab.
+     * Frontend: full-page load of `Views/Employee/index`.
+     */
     public function employee(): string|RedirectResponse
     {
         return (new DashboardPageBuilder($this->request))->renderEmployeePage('dashboard');
     }
 
+    /**
+     * GET `employee/family-entry`. Shows the employee family registration form,
+     * or its modal partial for AJAX fetches.
+     */
     public function employeeFamilyEntry(): string|RedirectResponse
     {
         if ($this->isPartialRequest()) {
@@ -216,6 +281,10 @@ class Home extends BaseController
         return (new DashboardPageBuilder($this->request))->renderEmployeePage('family-entry');
     }
 
+    /**
+     * GET `employee/manage-records` (and `manage-families`). Renders the employee
+     * records list page, or the list fragment for AJAX search/pagination.
+     */
     public function employeeManageRecords(): string|RedirectResponse
     {
         if ($this->isPartialRequest()) {
@@ -225,6 +294,9 @@ class Home extends BaseController
         return (new DashboardPageBuilder($this->request))->renderEmployeePage('family-manage');
     }
 
+    /**
+     * GET `employee/activity`. Renders the employee's recent-activity tab.
+     */
     public function employeeActivity(): string|RedirectResponse
     {
         return (new DashboardPageBuilder($this->request))->renderEmployeePage('activity');
@@ -238,16 +310,29 @@ class Home extends BaseController
     // the whole page. Front-end loader: assets/js/dashboard/*-modal.js.
     // ---------------------------------------------------------------------
 
+    /**
+     * True when the dashboard JS is fetching just a section fragment (XHR header
+     * or `?partial=1`) rather than a full page navigation.
+     */
     private function isPartialRequest(): bool
     {
         return $this->request->isAJAX() || (string) $this->request->getGet('partial') === '1';
     }
 
+    /**
+     * Role guard for admin partial fetches; returns a RedirectResponse to block
+     * non Developer/Admin users, otherwise null to continue.
+     */
     private function guardAdminPartialAccess(): ?RedirectResponse
     {
         return RoleAccess::requireRole(['Developer', 'Admin']);
     }
 
+    /**
+     * Returns just the accounts table fragment for the dashboard's AJAX loader
+     * (assets/js/dashboard/*-modal.js). Guarded for Developer/Admin; renders
+     * `Dashboard/Manage/accounts` with data from DashboardPageBuilder.
+     */
     private function renderAdminAccountsPartial(): string|RedirectResponse
     {
         $guard = $this->guardAdminPartialAccess();
@@ -274,6 +359,11 @@ class Home extends BaseController
         ]);
     }
 
+    /**
+     * Returns the family registration form fragment for the admin "add family"
+     * modal. Pulls dropdown options from FamilyFormOptionsModel and renders
+     * `Dashboard/familyform/familyform` in embedded mode.
+     */
     private function renderAdminFamilyPartial(): string|RedirectResponse
     {
         $guard = $this->guardAdminPartialAccess();
@@ -288,6 +378,11 @@ class Home extends BaseController
         ));
     }
 
+    /**
+     * Returns the family records list fragment (table rows) for the admin
+     * manage-records AJAX search/pagination. Renders
+     * `Dashboard/familyform/family-list` with data from DashboardPageBuilder.
+     */
     private function renderAdminRecordListPartial(): string|RedirectResponse
     {
         $guard = $this->guardAdminPartialAccess();
@@ -302,6 +397,10 @@ class Home extends BaseController
         );
     }
 
+    /**
+     * Returns the audit-trail list fragment for the admin audit AJAX
+     * search/filter. Renders `Dashboard/Manage/audit-trails`.
+     */
     private function renderAdminAuditPartial(): string|RedirectResponse
     {
         $guard = $this->guardAdminPartialAccess();
@@ -320,6 +419,10 @@ class Home extends BaseController
         ]);
     }
 
+    /**
+     * Returns the sectors lookup fragment for the admin sectors AJAX view.
+     * Renders `Dashboard/Sectors and Services/sector`.
+     */
     private function renderAdminSectorsPartial(): string|RedirectResponse
     {
         $guard = $this->guardAdminPartialAccess();
@@ -338,6 +441,10 @@ class Home extends BaseController
         ]);
     }
 
+    /**
+     * Returns the services lookup fragment for the admin services AJAX view.
+     * Renders `Dashboard/Sectors and Services/services`.
+     */
     private function renderAdminServicesPartial(): string|RedirectResponse
     {
         $guard = $this->guardAdminPartialAccess();
@@ -355,6 +462,10 @@ class Home extends BaseController
         ]);
     }
 
+    /**
+     * Employee counterpart of renderAdminFamilyPartial(): the family form
+     * fragment for the employee "add family" modal. Allows Developer/Admin/User.
+     */
     private function renderEmployeeFamilyPartial(): string|RedirectResponse
     {
         $guard = RoleAccess::requireRole(['Developer', 'Admin', 'User']);
@@ -369,6 +480,10 @@ class Home extends BaseController
         ));
     }
 
+    /**
+     * Employee counterpart of renderAdminRecordListPartial(): the records list
+     * fragment for employee manage-records AJAX search/pagination.
+     */
     private function renderEmployeeRecordListPartial(): string|RedirectResponse
     {
         $guard = RoleAccess::requireRole(['Developer', 'Admin', 'User']);

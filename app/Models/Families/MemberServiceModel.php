@@ -23,11 +23,13 @@ class MemberServiceModel extends Model
         'serviceID' => 'required|is_natural',
     ];
 
+    /** True if the `member_services` link table exists. */
     public function hasTable(): bool
     {
         return $this->db->tableExists($this->table);
     }
 
+    /** Total member↔service links, used for dashboard stats. */
     public function countAssignments(): int
     {
         if (! $this->hasTable()) {
@@ -37,6 +39,11 @@ class MemberServiceModel extends Model
         return $this->countAllResults();
     }
 
+    /**
+     * Links one member to one service (inserts a row in `member_services`).
+     * Called by FamilyController::store() for each selected service; returns the
+     * new link ID or false.
+     */
     public function assignService(int $memberId, int $serviceId): int|false
     {
         if (! $this->insert([
@@ -49,6 +56,10 @@ class MemberServiceModel extends Model
         return (int) $this->getInsertID();
     }
 
+    /**
+     * Returns the latest service assignments with member and service names joined
+     * in, newest first. Frontend: the dashboard/activity "recent assignments" list.
+     */
     public function recentAssignments(int $limit = 25): array
     {
         $rows = $this->select('member_services.*')
@@ -59,6 +70,10 @@ class MemberServiceModel extends Model
         return $this->withNames($rows);
     }
 
+    /**
+     * Enriches assignment rows with `service_name`, `firstname`, and `lastname`
+     * by looking up the related services and members in batch (avoids N+1 queries).
+     */
     private function withNames(array $rows): array
     {
         $serviceNames = $this->serviceNameMap(array_column($rows, 'serviceID'));
@@ -77,6 +92,7 @@ class MemberServiceModel extends Model
         return $rows;
     }
 
+    /** Batch [serviceID => name] lookup used by withNames(). */
     private function serviceNameMap(array $serviceIds): array
     {
         $serviceIds = $this->uniqueIds($serviceIds);
@@ -100,6 +116,7 @@ class MemberServiceModel extends Model
         return $map;
     }
 
+    /** Batch [memberID => {firstname, lastname}] lookup used by withNames(). */
     private function memberNameMap(array $memberIds): array
     {
         $memberIds = $this->positiveUniqueIds($memberIds);
@@ -126,6 +143,7 @@ class MemberServiceModel extends Model
         return $map;
     }
 
+    /** Normalizes an ID list to unique positive ints (members must be > 0). */
     private function positiveUniqueIds(array $ids): array
     {
         return array_values(array_unique(array_filter(
@@ -134,6 +152,7 @@ class MemberServiceModel extends Model
         )));
     }
 
+    /** Normalizes an ID list to unique ints (service IDs may include 0). */
     private function uniqueIds(array $ids): array
     {
         return array_values(array_unique(array_map(
@@ -142,6 +161,10 @@ class MemberServiceModel extends Model
         )));
     }
 
+    /**
+     * Returns a [memberID => [serviceID, ...]] map for the given members, used to
+     * pre-check the assigned services when rendering a family for edit.
+     */
     public function getServiceIdsByMemberIds(array $memberIds): array
     {
         $memberIds = array_values(array_filter(array_map(static fn ($id): int => (int) $id, $memberIds), static fn (int $id): bool => $id > 0));
@@ -171,6 +194,10 @@ class MemberServiceModel extends Model
         return $map;
     }
 
+    /**
+     * Removes all service links for the given members. Used during a family edit
+     * to clear old assignments before re-inserting the submitted selection.
+     */
     public function deleteByMemberIds(array $memberIds): bool
     {
         $memberIds = array_values(array_filter(array_map(static fn ($id): int => (int) $id, $memberIds), static fn (int $id): bool => $id > 0));

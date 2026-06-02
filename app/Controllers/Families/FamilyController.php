@@ -17,6 +17,14 @@ use CodeIgniter\HTTP\RedirectResponse;
  */
 class FamilyController extends BaseController
 {
+    /**
+     * Saves a family registration submitted to POST `families` from the family
+     * form (admin or employee). Runs in one DB transaction: creates the head in
+     * `member`, adds each family member, links chosen services in
+     * `member_services`, and logs a FAMILY_CREATED audit row. Frontend: the form
+     * usually posts via AJAX, so errors/success are returned as JSON (with a
+     * fresh CSRF hash); a non-AJAX fallback redirects back with a flash message.
+     */
     public function store()
     {
         $guard = $this->requireFamilyEntryAccess();
@@ -241,6 +249,10 @@ class FamilyController extends BaseController
         return redirect()->back()->with('success', $successMessage);
     }
 
+    /**
+     * Access guard for family entry: allows Developer/Admin/User, otherwise
+     * returns a redirect. store() converts this to a 403 JSON for AJAX requests.
+     */
     private function requireFamilyEntryAccess(): ?RedirectResponse
     {
         if (! session()->get('is_logged_in')) {
@@ -256,6 +268,11 @@ class FamilyController extends BaseController
         return redirect()->back()->with('error', 'You do not have permission to add family records.');
     }
 
+    /**
+     * Builds a `member` table row from prefixed POST fields (e.g. `head_`),
+     * normalizing money, optional text, and the multi-select sector IDs. Used for
+     * the head of family. Maps form field names to DB column names.
+     */
     private function memberPayload(string $prefix): array
     {
         return [
@@ -277,11 +294,20 @@ class FamilyController extends BaseController
         ];
     }
 
+    /**
+     * Reads the `entry_type` POST flag to decide whether this submission is a new
+     * head ('head') or an added member ('member'); drives which rules apply.
+     */
     private function entryType(): string
     {
         return (string) $this->request->getPost('entry_type') === 'member' ? 'member' : 'head';
     }
 
+    /**
+     * Returns the validation ruleset for the given entry type. Members require a
+     * parent head id and member name fields; heads require the head name/birthday/
+     * sex fields. Both require a valid sector selection.
+     */
     private function rulesForEntryType(string $entryType): array
     {
         $rules = [
@@ -308,6 +334,11 @@ class FamilyController extends BaseController
         ];
     }
 
+    /**
+     * Like memberPayload() but builds a `member` row from one entry of the
+     * repeated `members[]` array (additional family members) instead of prefixed
+     * POST fields. Falls back to the form's sector selection when a member has none.
+     */
     private function memberPayloadFromArray(array $member): array
     {
         return [
@@ -328,12 +359,20 @@ class FamilyController extends BaseController
         ];
     }
 
+    /**
+     * True only when a `members[]` row has at least a first and last name, so the
+     * form's empty extra-member rows are skipped instead of saved.
+     */
     private function hasMemberData(array $member): bool
     {
         return trim((string) ($member['firstname'] ?? '')) !== ''
             && trim((string) ($member['lastname'] ?? '')) !== '';
     }
 
+    /**
+     * Parses a salary input into a float, stripping thousands separators, or null
+     * when blank. Keeps the `Salary` column numeric/nullable.
+     */
     private function moneyOrNull(mixed $value): ?float
     {
         if ($value === null || $value === '') {
@@ -343,6 +382,10 @@ class FamilyController extends BaseController
         return (float) str_replace(',', '', (string) $value);
     }
 
+    /**
+     * Trims a value to a string, returning null when empty so optional columns
+     * store NULL rather than ''. Used throughout the payload builders.
+     */
     private function nullableText(mixed $value): ?string
     {
         $value = trim((string) $value);

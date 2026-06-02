@@ -8,8 +8,18 @@ use App\Libraries\ViewFormatter;
 /**
  * Prepares family form variables before the view renders HTML.
  */
+/**
+ * Normalizes raw data into every variable the family form view needs. Handles both
+ * create and edit modes (presence of familyRecord switches to edit), precomputes
+ * the selected sectors/categories/services, and groups services by category.
+ * Called from the family form view helper before the template renders.
+ */
 class FamilyFormViewData
 {
+    /**
+     * Builds the full family-form view-data bundle from $data, filling defaults for
+     * any missing option lists. Returns the variables the form template extracts.
+     */
     public static function prepare(array $data): array
     {
         $formOptions = array_merge(self::defaultFormOptions(), self::arrayValue($data['formOptions'] ?? []));
@@ -85,6 +95,7 @@ class FamilyFormViewData
         );
     }
 
+    /** Empty option-list skeleton merged under the supplied options for safe defaults. */
     private static function defaultFormOptions(): array
     {
         return [
@@ -102,6 +113,7 @@ class FamilyFormViewData
         ];
     }
 
+    /** Groups a flat service list into [category => services[]] for the form. */
     private static function servicesByCategory(array $services): array
     {
         $grouped = [];
@@ -114,11 +126,13 @@ class FamilyFormViewData
         return $grouped;
     }
 
+    /** Coerces a value into a list of ints (delegates to ViewFormatter). */
     private static function integerList(mixed $value): array
     {
         return ViewFormatter::integerList($value);
     }
 
+    /** Returns the value if it's an array, else an empty array (safe-default guard). */
     private static function arrayValue(mixed $value): array
     {
         return is_array($value) ? $value : [];

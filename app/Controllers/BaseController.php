@@ -30,6 +30,10 @@ abstract class BaseController extends Controller
     // protected $session;
 
     /**
+     * Bootstraps every controller request: wires up the request/response/logger
+     * and loads shared helpers (form, url). Runs automatically before any action;
+     * no direct frontend connection.
+     *
      * @return void
      */
     public function initController(RequestInterface $request, ResponseInterface $response, LoggerInterface $logger)

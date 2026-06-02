@@ -33,6 +33,8 @@ class AccountController extends BaseController
         $rules = [
             'username' => 'required|min_length[4]|max_length[255]|is_unique[users.username]',
             'password' => 'required|min_length[8]',
+            // 'User' is the DB enum value for the Employee role; the form posts it
+            // as-is so it matches the users.role enum('User','Admin','Developer').
             'role' => 'required|in_list[Admin,User]',
         ];
         $messages = [
@@ -226,8 +228,10 @@ class AccountController extends BaseController
     }
 
     /**
-     * Normalizes a raw role string to the canonical 'Developer'/'Admin'/'User'
-     * (or null if unrecognized) so guards can compare reliably.
+     * Normalizes a raw role string to the app's canonical 'Developer'/'Admin'/
+     * 'Employee' (or null) so guards can compare the session role reliably. The
+     * DB's legacy 'User' value maps to 'Employee'. Note: the raw DB enum value is
+     * still 'User' in the queries/writes below — only the app-facing label changes.
      */
     private function normalizeRole(string $role): ?string
     {
@@ -236,7 +240,7 @@ class AccountController extends BaseController
         return match ($normalizedRole) {
             'developer' => 'Developer',
             'admin', 'administrator' => 'Admin',
-            'user', 'employee' => 'User',
+            'user', 'employee' => 'Employee',
             default => null,
         };
     }

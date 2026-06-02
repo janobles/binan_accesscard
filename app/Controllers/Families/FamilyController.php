@@ -3,6 +3,7 @@
 namespace App\Controllers\Families;
 
 use App\Controllers\BaseController;
+use App\Libraries\RoleAccess;
 use App\Libraries\SectorIds;
 use App\Models\Audit\AuditTrailsModel;
 use App\Models\Families\MemberModel;
@@ -259,9 +260,9 @@ class FamilyController extends BaseController
             return redirect()->to(site_url('/'))->with('error', 'Please login first.');
         }
 
-        $role = (string) session()->get('role');
+        $role = RoleAccess::normalizeRole((string) session()->get('role'));
 
-        if (in_array($role, ['Developer', 'Admin', 'User'], true)) {
+        if (in_array($role, ['Developer', 'Admin', 'Employee'], true)) {
             return null;
         }
 

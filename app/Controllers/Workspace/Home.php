@@ -253,54 +253,9 @@ class Home extends BaseController
         return (new DashboardPageBuilder($this->request))->renderAdminPage('family-manage');
     }
 
-    // ---------------------------------------------------------------------
-    // Employee (role "User") pages. Rendered by the employee shell
-    // (Views/Employee/index.php). Guarded for Developer/Admin/User inside
-    // DashboardPageBuilder::renderEmployeePage().
-    // ---------------------------------------------------------------------
-
-    /**
-     * GET `employee/workspace`. Renders the employee shell on the dashboard tab.
-     * Frontend: full-page load of `Views/Employee/index`.
-     */
-    public function employee(): string|RedirectResponse
-    {
-        return (new DashboardPageBuilder($this->request))->renderEmployeePage('dashboard');
-    }
-
-    /**
-     * GET `employee/family-entry`. Shows the employee family registration form,
-     * or its modal partial for AJAX fetches.
-     */
-    public function employeeFamilyEntry(): string|RedirectResponse
-    {
-        if ($this->isPartialRequest()) {
-            return $this->renderEmployeeFamilyPartial();
-        }
-
-        return (new DashboardPageBuilder($this->request))->renderEmployeePage('family-entry');
-    }
-
-    /**
-     * GET `employee/manage-records` (and `manage-families`). Renders the employee
-     * records list page, or the list fragment for AJAX search/pagination.
-     */
-    public function employeeManageRecords(): string|RedirectResponse
-    {
-        if ($this->isPartialRequest()) {
-            return $this->renderEmployeeRecordListPartial();
-        }
-
-        return (new DashboardPageBuilder($this->request))->renderEmployeePage('family-manage');
-    }
-
-    /**
-     * GET `employee/activity`. Renders the employee's recent-activity tab.
-     */
-    public function employeeActivity(): string|RedirectResponse
-    {
-        return (new DashboardPageBuilder($this->request))->renderEmployeePage('activity');
-    }
+    // Employee (`employee/*`) pages were moved to
+    // App\Controllers\Employee\WorkspaceController. This controller now covers
+    // auth/session and the admin/developer pages only.
 
     // ---------------------------------------------------------------------
     // AJAX partial rendering.
@@ -460,42 +415,6 @@ class Home extends BaseController
             'lookupStatus' => $viewData['lookupStatus'] ?? 'active',
             'canRestore' => $viewData['canRestoreLookups'] ?? false,
         ]);
-    }
-
-    /**
-     * Employee counterpart of renderAdminFamilyPartial(): the family form
-     * fragment for the employee "add family" modal. Allows Developer/Admin/User.
-     */
-    private function renderEmployeeFamilyPartial(): string|RedirectResponse
-    {
-        $guard = RoleAccess::requireRole(['Developer', 'Admin', 'User']);
-
-        if ($guard instanceof RedirectResponse) {
-            return $guard;
-        }
-
-        return view('Dashboard/familyform/familyform', array_merge(
-            (new FamilyFormOptionsModel())->getViewData(),
-            ['canCreateFamily' => true, 'embeddedInModal' => true]
-        ));
-    }
-
-    /**
-     * Employee counterpart of renderAdminRecordListPartial(): the records list
-     * fragment for employee manage-records AJAX search/pagination.
-     */
-    private function renderEmployeeRecordListPartial(): string|RedirectResponse
-    {
-        $guard = RoleAccess::requireRole(['Developer', 'Admin', 'User']);
-
-        if ($guard instanceof RedirectResponse) {
-            return $guard;
-        }
-
-        return view(
-            'Dashboard/familyform/family-list',
-            (new DashboardPageBuilder($this->request))->buildEmployeeRecordListViewData()
-        );
     }
 
 }

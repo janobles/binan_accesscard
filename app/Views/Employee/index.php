@@ -1,12 +1,14 @@
 <?php
 /**
- * Employee (role "User") workspace shell.
+ * Employee workspace shell. (The Employee role is stored in the DB as the legacy
+ * enum value 'User' but is referred to as "Employee" throughout the app.)
  *
  * Rendered by App\Libraries\DashboardPageBuilder::renderEmployeePage(), which
  * passes every variable used below. Like the admin shell, this is one layout
  * that swaps its main section on $activePage (dashboard / family-entry /
- * family-manage / activity). Controller entry points live in App\Controllers\Workspace\Home
- * (employee, employeeFamilyEntry, employeeManageRecords, employeeActivity).
+ * family-manage / activity). Controller entry points live in
+ * App\Controllers\Employee\WorkspaceController
+ * (dashboard, familyEntry, manageRecords, activity).
  *
  * Employees only ever see ACTIVE records and their OWN activity (no archive,
  * no account/sector/service management). The formatDate/formatTime/

@@ -6,6 +6,12 @@ use CodeIgniter\Model;
 
 /**
  * Manages staff users, login verification, and account creation.
+ *
+ * Role note: the `role` column is the DB enum('User','Admin','Developer'). The
+ * employee role is stored as the legacy value 'User'; the rest of the app refers
+ * to it as 'Employee' (translated by App\Libraries\RoleAccess::normalizeRole).
+ * The 'User' literals in the queries below are therefore the raw DB enum value,
+ * not the app-facing role label, and must stay 'User' to match the schema.
  */
 class UserModel extends Model
 {

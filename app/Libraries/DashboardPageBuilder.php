@@ -124,6 +124,8 @@ class DashboardPageBuilder
                 'services'     => $layoutModel->navActive($activePage, 'services'),
             ],
             'adminAccounts'      => array_values(array_filter($users, static fn ($account) => $account['role'] === 'Admin')),
+            // 'User' is the raw DB enum value for the Employee role (surfaced as
+            // "Employee" in the UI); the rows here come straight from the users table.
             'employeeAccounts'   => array_values(array_filter($users, static fn ($account) => $account['role'] === 'User')),
             'familyFormViewData' => $familyFormViewData,
             'recentFamilies'     => $recentFamilies,
@@ -325,7 +327,7 @@ class DashboardPageBuilder
      */
     public function renderEmployeePage(string $activePage): string|RedirectResponse
     {
-        $guard = RoleAccess::requireRole(['Developer', 'Admin', 'User']);
+        $guard = RoleAccess::requireRole(['Developer', 'Admin', 'Employee']);
 
         if ($guard instanceof RedirectResponse) {
             return $guard;

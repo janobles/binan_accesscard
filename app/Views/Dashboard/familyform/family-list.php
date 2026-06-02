@@ -14,7 +14,7 @@ $totalPages = max(1, (int) ($totalPages ?? 1));
 $fromRecord = $totalFamilies === 0 ? 0 : (($page - 1) * $perPage) + 1;
 $toRecord = min($totalFamilies, $page * $perPage);
 $requestPath = trim((string) service('request')->getUri()->getPath(), '/');
-$isEmployeeList = (string) session()->get('role') === 'User'
+$isEmployeeList = (string) session()->get('role') === 'Employee'
     || str_starts_with((string) $routeBase, 'employee/')
     || str_starts_with($requestPath, 'employee/')
     || str_contains('/' . $requestPath, '/employee/');

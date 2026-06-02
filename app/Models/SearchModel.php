@@ -186,6 +186,8 @@ class SearchModel
         }
 
         $limit = max(1, $limit);
+        // 'User' is the DB enum value for the Employee role (shown as "Employee" in
+        // the UI); these queries use the raw enum to match the users.role column.
         $builder = $this->db->table('users')
             ->select('userID, username, role, isactive, dt_created')
             ->whereIn('role', ['Admin', 'User']);

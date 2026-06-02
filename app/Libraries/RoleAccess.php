@@ -10,7 +10,13 @@ use CodeIgniter\HTTP\RedirectResponse;
  */
 class RoleAccess
 {
-    /** Canonicalizes a raw role string to 'Developer'/'Admin'/'User', or null. */
+    /**
+     * Canonicalizes a raw role string to the app's role labels
+     * 'Developer'/'Admin'/'Employee', or null if unrecognized. This is the single
+     * translation point between the database enum (which stores the employee role
+     * as the legacy 'User') and the rest of the app, which uses 'Employee'. The DB
+     * value 'User' is accepted here and surfaced everywhere else as 'Employee'.
+     */
     public static function normalizeRole(string $role): ?string
     {
         $normalizedRole = strtolower(trim($role));
@@ -18,7 +24,7 @@ class RoleAccess
         return match ($normalizedRole) {
             'developer'              => 'Developer',
             'admin', 'administrator' => 'Admin',
-            'user', 'employee'       => 'User',
+            'user', 'employee'       => 'Employee',
             default                  => null,
         };
     }
@@ -93,7 +99,7 @@ class RoleAccess
     {
         $normalizedRole = self::normalizeRole($role);
 
-        if ($normalizedRole === 'User') {
+        if ($normalizedRole === 'Employee') {
             return redirect()->to(site_url('employee/workspace'));
         }
 

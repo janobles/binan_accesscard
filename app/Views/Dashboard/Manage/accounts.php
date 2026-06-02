@@ -81,6 +81,7 @@ $formatStatus = [ViewFormatter::class, 'formatStatus'];
                     <h6 class="mb-3">Create Employee Account</h6>
                     <form class="account-form account-form-employee" method="post" action="<?= site_url('developer/accounts') ?>">
                         <?= csrf_field() ?>
+                        <?php /* Creates an Employee account; value="User" is the DB enum value for that role. */ ?>
                         <input type="hidden" name="role" value="User">
                         <div>
                             <label class="form-label">Username</label>

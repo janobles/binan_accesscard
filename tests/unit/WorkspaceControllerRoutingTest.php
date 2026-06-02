@@ -1,6 +1,7 @@
 <?php
 
 use App\Controllers\Accounts\AccountController;
+use App\Controllers\Employee\WorkspaceController as EmployeeWorkspaceController;
 use App\Controllers\Families\FamilyController;
 use App\Controllers\Lookups\SectorController;
 use App\Controllers\Lookups\ServiceController;
@@ -10,11 +11,12 @@ use PHPUnit\Framework\TestCase;
 /**
  * Guards the feature-subnamespace layout of the backend.
  *
- * The dashboard/workspace pages live in App\Controllers\Workspace\Home, family
- * flows in App\Controllers\Families, lookup mutations in App\Controllers\Lookups,
- * and account management in App\Controllers\Accounts. These assertions fail loudly
- * if a controller is moved back to the root namespace or a route stops targeting
- * its feature slice.
+ * Auth + admin/developer dashboard pages live in App\Controllers\Workspace\Home,
+ * the employee workspace in App\Controllers\Employee, family flows in
+ * App\Controllers\Families, lookup mutations in App\Controllers\Lookups, and
+ * account management in App\Controllers\Accounts. These assertions fail loudly if
+ * a controller is moved back to the root namespace or a route stops targeting its
+ * feature slice.
  */
 final class WorkspaceControllerRoutingTest extends TestCase
 {
@@ -35,11 +37,16 @@ final class WorkspaceControllerRoutingTest extends TestCase
             'adminAuditTrails',
             'adminSectors',
             'adminServices',
-            // Employee pages
-            'employee',
-            'employeeFamilyEntry',
-            'employeeManageRecords',
-            'employeeActivity',
+        ]);
+    }
+
+    public function testEmployeeWorkspaceControllerExposesExpectedPageActions(): void
+    {
+        $this->assertPublicMethods(EmployeeWorkspaceController::class, [
+            'dashboard',
+            'familyEntry',
+            'manageRecords',
+            'activity',
         ]);
     }
 
@@ -83,7 +90,8 @@ final class WorkspaceControllerRoutingTest extends TestCase
 
         foreach ([
             "'dashboard', 'Workspace\\Home::adminDashboard'",
-            "'workspace', 'Workspace\\Home::employee'",
+            "'workspace', 'Employee\\WorkspaceController::dashboard'",
+            "'activity', 'Employee\\WorkspaceController::activity'",
             "'accounts/disable', 'Accounts\\AccountController::disableEmployee'",
             "'list', 'Families\\FamilyController::listFamilies'",
             "'create', 'Lookups\\SectorController::create'",

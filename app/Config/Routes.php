@@ -78,14 +78,14 @@ $routes->group('admin', static function (RouteCollection $routes): void {
  * Employee workspace
  */
 $routes->group('employee', static function (RouteCollection $routes): void {
-    $routes->get('workspace', 'Workspace\Home::employee');
-    $routes->get('family-entry', 'Workspace\Home::employeeFamilyEntry');
-    $routes->get('manage-records', 'Workspace\Home::employeeManageRecords');
-    $routes->get('activity', 'Workspace\Home::employeeActivity');
+    $routes->get('workspace', 'Employee\WorkspaceController::dashboard');
+    $routes->get('family-entry', 'Employee\WorkspaceController::familyEntry');
+    $routes->get('manage-records', 'Employee\WorkspaceController::manageRecords');
+    $routes->get('activity', 'Employee\WorkspaceController::activity');
 
-    $routes->get('manage-families', 'Workspace\Home::employeeManageRecords');
+    $routes->get('manage-families', 'Employee\WorkspaceController::manageRecords');
     $routes->group('manage-family', static function (RouteCollection $routes): void {
-        $routes->get('', 'Workspace\Home::employeeFamilyEntry');
+        $routes->get('', 'Employee\WorkspaceController::familyEntry');
         $routes->get('list', 'Families\FamilyController::listFamilies');
         $routes->get('view/(:num)', 'Families\FamilyController::viewFamily/$1');
         $routes->get('edit/(:num)', 'Families\FamilyController::editFamily/$1');

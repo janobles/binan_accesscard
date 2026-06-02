@@ -1,10 +1,11 @@
 <?php
 
-namespace App\Controllers;
+namespace App\Controllers\Lookups;
 
+use App\Controllers\BaseController;
 use App\Libraries\RoleAccess;
-use App\Models\AuditTrailsModel;
-use App\Models\ServiceModel;
+use App\Models\Audit\AuditTrailsModel;
+use App\Models\Lookups\ServiceModel;
 use CodeIgniter\HTTP\RedirectResponse;
 use Throwable;
 

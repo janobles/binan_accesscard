@@ -2,7 +2,7 @@
 
 namespace App\Libraries;
 
-use App\Models\AuditTrailsModel;
+use App\Models\Audit\AuditTrailsModel;
 use CodeIgniter\HTTP\RequestInterface;
 use Throwable;
 

@@ -1,12 +1,13 @@
 <?php
 
-namespace App\Controllers;
+namespace App\Controllers\Families;
 
+use App\Controllers\BaseController;
 use App\Libraries\SectorIds;
-use App\Models\AuditTrailsModel;
-use App\Models\MemberModel;
-use App\Models\MemberServiceModel;
-use App\Models\ServiceModel;
+use App\Models\Audit\AuditTrailsModel;
+use App\Models\Families\MemberModel;
+use App\Models\Families\MemberServiceModel;
+use App\Models\Lookups\ServiceModel;
 use CodeIgniter\HTTP\RedirectResponse;
 
 /**

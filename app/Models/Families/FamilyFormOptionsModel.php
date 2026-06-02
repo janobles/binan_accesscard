@@ -1,7 +1,9 @@
 <?php
 
-namespace App\Models;
+namespace App\Models\Families;
 
+use App\Models\Lookups\SectorModel;
+use App\Models\Lookups\ServicesModel;
 use App\Support\FamilyProfilingFormV2;
 use CodeIgniter\Model;
 

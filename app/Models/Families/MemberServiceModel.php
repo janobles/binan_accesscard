@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Models;
+namespace App\Models\Families;
 
 use CodeIgniter\Model;
 
@@ -182,4 +182,3 @@ class MemberServiceModel extends Model
         return $this->whereIn('memberID', $memberIds)->delete() !== false;
     }
 }
-

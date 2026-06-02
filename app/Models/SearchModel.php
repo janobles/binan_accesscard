@@ -480,7 +480,7 @@ class SearchModel
             return $rows;
         }
 
-        $serviceMap = (new \App\Models\MemberServiceModel())
+        $serviceMap = (new \App\Models\Families\MemberServiceModel())
             ->getServiceIdsByMemberIds(array_column($rows, 'memberID'));
 
         $allServiceIds = [];
@@ -491,7 +491,7 @@ class SearchModel
             }
         }
 
-        $serviceNameMap = (new \App\Models\ServiceModel())->getNameMapByIds($allServiceIds);
+        $serviceNameMap = (new \App\Models\Lookups\ServiceModel())->getNameMapByIds($allServiceIds);
 
         foreach ($rows as &$row) {
             $memberId = (int) ($row['memberID'] ?? 0);

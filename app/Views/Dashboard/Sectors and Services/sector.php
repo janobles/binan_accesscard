@@ -4,7 +4,7 @@ extract(sector_management_view_data(get_defined_vars()), EXTR_OVERWRITE);
 
 // Modal data: category PREFIX dropdown (no numbers) + the next suggested code
 // per prefix + every existing code for the inline duplicate check.
-$sectorModel = new \App\Models\SectorModel();
+$sectorModel = new \App\Models\Lookups\SectorModel();
 $sectorPrefixOptions = [];
 foreach (\App\Support\FamilyProfilingFormV2::SECTOR_CATEGORIES as $prefix => $label) {
     if ($prefix === 'OTHER') {

@@ -18,43 +18,43 @@ $routes->get('session/keep-alive', 'Auth\AuthController::keepAlive');
  * Admin workspace
  */
 $routes->group('admin', static function (RouteCollection $routes): void {
-    $routes->get('', 'Home::admin');
-    $routes->get('dashboard', 'Home::adminDashboard');
-    $routes->get('accounts', 'Home::adminAccounts');
-    $routes->get('family-entry', 'Home::adminFamilyEntry');
-    $routes->get('manage-records', 'Home::adminManageRecords');
-    $routes->get('audit-trails', 'Home::adminAuditTrails');
-    $routes->get('sectors', 'Home::adminSectors');
-    $routes->get('services', 'Home::adminServices');
-    $routes->get('manage-members', 'Home::adminManageMembers');
+    $routes->get('', 'Workspace\Home::admin');
+    $routes->get('dashboard', 'Workspace\Home::adminDashboard');
+    $routes->get('accounts', 'Workspace\Home::adminAccounts');
+    $routes->get('family-entry', 'Workspace\Home::adminFamilyEntry');
+    $routes->get('manage-records', 'Workspace\Home::adminManageRecords');
+    $routes->get('audit-trails', 'Workspace\Home::adminAuditTrails');
+    $routes->get('sectors', 'Workspace\Home::adminSectors');
+    $routes->get('services', 'Workspace\Home::adminServices');
+    $routes->get('manage-members', 'Workspace\Home::adminManageMembers');
     // Admin-only: disable employee accounts from Account Management.
-    $routes->post('accounts/disable', 'AccountController::disableEmployee');
+    $routes->post('accounts/disable', 'Accounts\AccountController::disableEmployee');
 
-    $routes->get('manage-families', 'Home::adminManageRecords');
+    $routes->get('manage-families', 'Workspace\Home::adminManageRecords');
     $routes->group('manage-family', static function (RouteCollection $routes): void {
-        $routes->get('', 'Home::adminFamilyEntry');
-        $routes->get('list', 'FamilyController::listFamilies');
-        $routes->get('view/(:num)', 'FamilyController::viewFamily/$1');
-        $routes->get('edit/(:num)', 'FamilyController::editFamily/$1');
-        $routes->post('update/(:num)', 'FamilyController::update/$1');
-        $routes->post('archive/(:num)', 'FamilyController::archive/$1');
-        $routes->post('restore/(:num)', 'FamilyController::restore/$1');
+        $routes->get('', 'Workspace\Home::adminFamilyEntry');
+        $routes->get('list', 'Families\FamilyController::listFamilies');
+        $routes->get('view/(:num)', 'Families\FamilyController::viewFamily/$1');
+        $routes->get('edit/(:num)', 'Families\FamilyController::editFamily/$1');
+        $routes->post('update/(:num)', 'Families\FamilyController::update/$1');
+        $routes->post('archive/(:num)', 'Families\FamilyController::archive/$1');
+        $routes->post('restore/(:num)', 'Families\FamilyController::restore/$1');
     });
 
     $routes->group('sectors', static function (RouteCollection $routes): void {
-        $routes->post('create', 'SectorController::create');
-        $routes->post('update/(:num)', 'SectorController::update/$1');
-        $routes->post('delete/(:num)', 'SectorController::delete/$1');
-        $routes->post('archive/(:num)', 'SectorController::archive/$1');
-        $routes->post('restore/(:num)', 'SectorController::restore/$1');
+        $routes->post('create', 'Lookups\SectorController::create');
+        $routes->post('update/(:num)', 'Lookups\SectorController::update/$1');
+        $routes->post('delete/(:num)', 'Lookups\SectorController::delete/$1');
+        $routes->post('archive/(:num)', 'Lookups\SectorController::archive/$1');
+        $routes->post('restore/(:num)', 'Lookups\SectorController::restore/$1');
     });
 
     $routes->group('services', static function (RouteCollection $routes): void {
-        $routes->post('create', 'ServiceController::create');
-        $routes->post('update/(:num)', 'ServiceController::update/$1');
-        $routes->post('delete/(:num)', 'ServiceController::delete/$1');
-        $routes->post('archive/(:num)', 'ServiceController::archive/$1');
-        $routes->post('restore/(:num)', 'ServiceController::restore/$1');
+        $routes->post('create', 'Lookups\ServiceController::create');
+        $routes->post('update/(:num)', 'Lookups\ServiceController::update/$1');
+        $routes->post('delete/(:num)', 'Lookups\ServiceController::delete/$1');
+        $routes->post('archive/(:num)', 'Lookups\ServiceController::archive/$1');
+        $routes->post('restore/(:num)', 'Lookups\ServiceController::restore/$1');
     });
 
     $routes->group('lookups', static function (RouteCollection $routes): void {
@@ -78,25 +78,25 @@ $routes->group('admin', static function (RouteCollection $routes): void {
  * Employee workspace
  */
 $routes->group('employee', static function (RouteCollection $routes): void {
-    $routes->get('workspace', 'Home::employee');
-    $routes->get('family-entry', 'Home::employeeFamilyEntry');
-    $routes->get('manage-records', 'Home::employeeManageRecords');
-    $routes->get('activity', 'Home::employeeActivity');
+    $routes->get('workspace', 'Workspace\Home::employee');
+    $routes->get('family-entry', 'Workspace\Home::employeeFamilyEntry');
+    $routes->get('manage-records', 'Workspace\Home::employeeManageRecords');
+    $routes->get('activity', 'Workspace\Home::employeeActivity');
 
-    $routes->get('manage-families', 'Home::employeeManageRecords');
+    $routes->get('manage-families', 'Workspace\Home::employeeManageRecords');
     $routes->group('manage-family', static function (RouteCollection $routes): void {
-        $routes->get('', 'Home::employeeFamilyEntry');
-        $routes->get('list', 'FamilyController::listFamilies');
-        $routes->get('view/(:num)', 'FamilyController::viewFamily/$1');
-        $routes->get('edit/(:num)', 'FamilyController::editFamily/$1');
-        $routes->post('update/(:num)', 'FamilyController::update/$1');
-        $routes->post('delete/(:num)', 'FamilyController::delete/$1');
+        $routes->get('', 'Workspace\Home::employeeFamilyEntry');
+        $routes->get('list', 'Families\FamilyController::listFamilies');
+        $routes->get('view/(:num)', 'Families\FamilyController::viewFamily/$1');
+        $routes->get('edit/(:num)', 'Families\FamilyController::editFamily/$1');
+        $routes->post('update/(:num)', 'Families\FamilyController::update/$1');
+        $routes->post('delete/(:num)', 'Families\FamilyController::delete/$1');
     });
 });
 
 /*
  * Shared submissions
  */
-$routes->post('developer/accounts', 'AccountController::create');
-$routes->post('developer/accounts/status', 'AccountController::updateStatus');
-$routes->post('families', 'FamilyController::store');
+$routes->post('developer/accounts', 'Accounts\AccountController::create');
+$routes->post('developer/accounts/status', 'Accounts\AccountController::updateStatus');
+$routes->post('families', 'Families\FamilyController::store');

@@ -1,3 +1,30 @@
+# Biñan Access Card
+
+A CodeIgniter 4 application for managing family/member access-card records,
+assistance services, and audit trails for the City of Biñan CSWD.
+
+## Backend layout
+
+The backend uses the default CodeIgniter 4 structure with controllers and models
+grouped into **feature subnamespaces** (Auth, Accounts, Families, Lookups, Audit,
+Workspace) for easier navigation and debugging. See
+[`PROJECT_STRUCTURE.md`](PROJECT_STRUCTURE.md) for the full map of where each
+feature lives and the shared libraries that cross-cut them.
+
+The database source of truth is the SQL dump (no app migrations are used).
+
+## Verifying the backend
+
+- `php spark routes` — confirm every route resolves to a controller namespace.
+- `vendor/bin/phpunit` — run the backend test suite. The `Workspace Controller
+  Routing` test guards the feature-subnamespace layout. (The two
+  `ExampleDatabaseTest` cases require the `sqlite3` PHP extension and are skipped
+  when it is not installed.)
+- Smoke-test the key flows: login, role redirect, family create/update, and audit
+  log creation.
+
+---
+
 # CodeIgniter 4 Application Starter
 
 ## What is CodeIgniter?

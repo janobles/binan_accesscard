@@ -4,7 +4,7 @@ namespace App\Controllers\Admin;
 
 use App\Controllers\BaseController;
 use App\Controllers\Concerns\LookupManagementTrait;
-use App\Models\SectorModel;
+use App\Models\Lookups\SectorModel;
 use CodeIgniter\HTTP\RedirectResponse;
 
 /**

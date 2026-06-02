@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Models;
+namespace App\Models\Families;
 
 use App\Libraries\SectorIds;
 use CodeIgniter\Model;
@@ -372,12 +372,7 @@ class MemberModel extends Model
 
     private function nextAutoIncrementId(): int
     {
-        $row = $this->db->query("
-            SELECT AUTO_INCREMENT
-            FROM information_schema.TABLES
-            WHERE TABLE_SCHEMA = DATABASE()
-              AND TABLE_NAME = 'member'
-        ")->getRowArray();
+        $row = $this->db->query("\n            SELECT AUTO_INCREMENT\n            FROM information_schema.TABLES\n            WHERE TABLE_SCHEMA = DATABASE()\n              AND TABLE_NAME = 'member'\n        ")->getRowArray();
 
         return (int) ($row['AUTO_INCREMENT'] ?? 1);
     }

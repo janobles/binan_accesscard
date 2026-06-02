@@ -1,80 +1,97 @@
 <?php
 
-use App\Controllers\Admin\WorkspaceController as AdminWorkspaceController;
-use App\Controllers\AccountController;
-use App\Controllers\Employee\WorkspaceController as EmployeeWorkspaceController;
-use App\Models\Employee\WorkspaceModel as EmployeeWorkspaceModel;
+use App\Controllers\Accounts\AccountController;
+use App\Controllers\Families\FamilyController;
+use App\Controllers\Lookups\SectorController;
+use App\Controllers\Lookups\ServiceController;
+use App\Controllers\Workspace\Home;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * Guards the feature-subnamespace layout of the backend.
+ *
+ * The dashboard/workspace pages live in App\Controllers\Workspace\Home, family
+ * flows in App\Controllers\Families, lookup mutations in App\Controllers\Lookups,
+ * and account management in App\Controllers\Accounts. These assertions fail loudly
+ * if a controller is moved back to the root namespace or a route stops targeting
+ * its feature slice.
+ */
 final class WorkspaceControllerRoutingTest extends TestCase
 {
-    public function testWorkspaceControllersExposeExpectedPageActions(): void
+    public function testWorkspaceHomeExposesExpectedPageActions(): void
     {
-        $this->assertPublicMethods(AdminWorkspaceController::class, [
+        $this->assertPublicMethods(Home::class, [
+            // Auth & session lifecycle
             'index',
-            'dashboard',
-            'accounts',
-            'familyEntry',
-            'manageRecords',
-            'auditTrails',
-            'sectors',
-            'services',
-        ]);
-
-        $this->assertPublicMethods(EmployeeWorkspaceController::class, [
-            'dashboard',
-            'familyEntry',
-            'manageRecords',
-            'activity',
+            'login',
+            'logout',
+            'keepAlive',
+            // Admin / Developer pages
+            'admin',
+            'adminDashboard',
+            'adminAccounts',
+            'adminFamilyEntry',
+            'adminManageRecords',
+            'adminAuditTrails',
+            'adminSectors',
+            'adminServices',
+            // Employee pages
+            'employee',
+            'employeeFamilyEntry',
+            'employeeManageRecords',
+            'employeeActivity',
         ]);
     }
 
-    public function testRoutesUseWorkspaceControllersAndRetainCompatibilityAliases(): void
+    public function testFeatureControllersExposeExpectedActions(): void
+    {
+        $this->assertPublicMethods(FamilyController::class, [
+            'store',
+        ]);
+
+        $this->assertPublicMethods(SectorController::class, [
+            'create',
+            'update',
+            'archive',
+            'restore',
+        ]);
+
+        $this->assertPublicMethods(ServiceController::class, [
+            'create',
+            'update',
+            'archive',
+            'restore',
+        ]);
+
+        $this->assertTrue(method_exists(AccountController::class, 'disableEmployee'));
+        $this->assertTrue(method_exists(AccountController::class, 'create'));
+    }
+
+    public function testRoutesTargetFeatureSubnamespaces(): void
     {
         $routes = file_get_contents(APPPATH . 'Config/Routes.php');
 
         $this->assertIsString($routes);
-        $this->assertStringNotContainsString('Home::', $routes);
+
+        // The root-namespace controllers were moved into feature slices; the
+        // bare targets must no longer appear in the route table.
+        $this->assertStringNotContainsString("'Home::", $routes);
+        $this->assertStringNotContainsString("'AccountController::", $routes);
+        $this->assertStringNotContainsString("'FamilyController::", $routes);
+        $this->assertStringNotContainsString("'SectorController::", $routes);
+        $this->assertStringNotContainsString("'ServiceController::", $routes);
 
         foreach ([
-            "'family-entry', 'Admin\\WorkspaceController::familyEntry'",
-            "'manage-members', 'Admin\\WorkspaceController::manageRecords'",
-            "'manage-families', 'Admin\\WorkspaceController::manageRecords'",
-            "'family-entry', 'Employee\\WorkspaceController::familyEntry'",
-            "'manage-families', 'Employee\\WorkspaceController::manageRecords'",
+            "'dashboard', 'Workspace\\Home::adminDashboard'",
+            "'workspace', 'Workspace\\Home::employee'",
+            "'accounts/disable', 'Accounts\\AccountController::disableEmployee'",
+            "'list', 'Families\\FamilyController::listFamilies'",
+            "'create', 'Lookups\\SectorController::create'",
+            "'create', 'Lookups\\ServiceController::create'",
+            "'families', 'Families\\FamilyController::store'",
         ] as $expectedRoute) {
             $this->assertStringContainsString($expectedRoute, $routes);
         }
-
-        $this->assertStringContainsString("'sectors', 'Admin\\WorkspaceController::sectors'", $routes);
-        $this->assertStringContainsString("'services', 'Admin\\WorkspaceController::services'", $routes);
-        $this->assertStringNotContainsString("group('sectors'", $routes);
-        $this->assertStringNotContainsString("group('services'", $routes);
-        $this->assertStringNotContainsString("'SectorController::create'", $routes);
-        $this->assertStringNotContainsString("'ServiceController::create'", $routes);
-    }
-
-    public function testEmployeeWorkspaceHasFocusedPagesAndOwnDataModel(): void
-    {
-        foreach ([
-            'layout.php',
-            'dashboard.php',
-            'family-entry.php',
-            'manage-records.php',
-            'activity.php',
-        ] as $view) {
-            $this->assertFileExists(APPPATH . 'Views/Employee/' . $view);
-        }
-
-        $this->assertFileDoesNotExist(APPPATH . 'Views/Employee/index.php');
-        $this->assertTrue(class_exists(EmployeeWorkspaceModel::class));
-        $this->assertTrue(method_exists(EmployeeWorkspaceModel::class, 'pageData'));
-        $this->assertTrue(method_exists(EmployeeWorkspaceModel::class, 'recordListData'));
-    }
-
-    public function testAdminAccountDisableRouteHasControllerAction(): void
-    {
-        $this->assertTrue(method_exists(AccountController::class, 'disableEmployee'));
     }
 
     /**

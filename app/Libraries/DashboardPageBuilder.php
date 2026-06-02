@@ -2,13 +2,13 @@
 
 namespace App\Libraries;
 
-use App\Models\AuditTrailsModel;
+use App\Models\Audit\AuditTrailsModel;
 use App\Models\DashboardModel;
-use App\Models\FamilyFormOptionsModel;
-use App\Models\MemberModel;
+use App\Models\Families\FamilyFormOptionsModel;
+use App\Models\Families\MemberModel;
 use App\Models\SearchModel;
-use App\Models\SectorModel;
-use App\Models\ServiceModel;
+use App\Models\Lookups\SectorModel;
+use App\Models\Lookups\ServiceModel;
 use App\Models\Auth\UserModel;
 use App\Libraries\RoleAccess;
 use App\Models\ViewLayoutModel;

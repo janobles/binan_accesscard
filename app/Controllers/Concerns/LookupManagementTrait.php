@@ -2,10 +2,10 @@
 
 namespace App\Controllers\Concerns;
 
-use App\Models\AuditTrailsModel;
+use App\Models\Audit\AuditTrailsModel;
 use App\Libraries\RoleAccess;
-use App\Models\SectorModel;
-use App\Models\ServicesModel;
+use App\Models\Lookups\SectorModel;
+use App\Models\Lookups\ServicesModel;
 use App\Models\ViewLayoutModel;
 use CodeIgniter\HTTP\RedirectResponse;
 use Config\IdleTimeout;

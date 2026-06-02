@@ -1,11 +1,12 @@
 <?php
 
-namespace App\Controllers;
+namespace App\Controllers\Accounts;
 
-use App\Models\AuditTrailsModel;
+use App\Controllers\BaseController;
+use App\Models\Audit\AuditTrailsModel;
 use App\Models\Auth\UserModel;
-use Throwable;
 use CodeIgniter\HTTP\RedirectResponse;
+use Throwable;
 
 /**
  * Handles developer-only staff account creation.

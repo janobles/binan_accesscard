@@ -5,7 +5,7 @@
  * Rendered by App\Libraries\DashboardPageBuilder::renderEmployeePage(), which
  * passes every variable used below. Like the admin shell, this is one layout
  * that swaps its main section on $activePage (dashboard / family-entry /
- * family-manage / activity). Controller entry points live in App\Controllers\Home
+ * family-manage / activity). Controller entry points live in App\Controllers\Workspace\Home
  * (employee, employeeFamilyEntry, employeeManageRecords, employeeActivity).
  *
  * Employees only ever see ACTIVE records and their OWN activity (no archive,

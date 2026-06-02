@@ -1,11 +1,12 @@
 <?php
 
-namespace App\Controllers;
+namespace App\Controllers\Lookups;
 
+use App\Controllers\BaseController;
 use App\Libraries\RoleAccess;
 use App\Libraries\SectorIds;
-use App\Models\AuditTrailsModel;
-use App\Models\SectorModel;
+use App\Models\Audit\AuditTrailsModel;
+use App\Models\Lookups\SectorModel;
 use CodeIgniter\HTTP\RedirectResponse;
 use Throwable;
 

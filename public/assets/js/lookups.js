@@ -348,25 +348,81 @@
         });
     }
 
-    function bindArchivedToggles() {
-        qsa('.js-toggle-archived').forEach(function (button) {
-            button.addEventListener('click', function () {
-                const targetKey = button.dataset.target || '';
-                const rows = qs('[data-archived-body="' + targetKey + '"]');
+    function setToggleState(activeBtn, archiveBtn, showArchive) {
+        if (activeBtn) {
+            activeBtn.classList.toggle('active', !showArchive);
+            activeBtn.setAttribute('aria-pressed', showArchive ? 'false' : 'true');
+        }
 
-                if (!rows) {
-                    return;
-                }
+        if (archiveBtn) {
+            archiveBtn.classList.toggle('active', showArchive);
+            archiveBtn.setAttribute('aria-pressed', showArchive ? 'true' : 'false');
+        }
+    }
 
-                rows.classList.toggle('d-none');
+    function bindViewToggles() {
+        // Sectors: swap the active card grid for the archived table.
+        const sectorActiveBtn = qs('#btn-sectors-active');
+        const sectorArchiveBtn = qs('#btn-sectors-archive');
+        const sectorActiveView = qs('#sectorsActiveView');
+        const sectorArchivedView = qs('#sectorsArchivedView');
+        const sectorAddWrap = qs('#sectorAddBtnWrap');
 
-                if (rows.classList.contains('d-none')) {
-                    button.textContent = 'Show archived (' + (button.dataset.count || '0') + ')';
-                } else {
-                    button.textContent = 'Hide archived';
-                }
+        function showSectorView(showArchive) {
+            if (sectorActiveView) {
+                sectorActiveView.classList.toggle('d-none', showArchive);
+            }
+            if (sectorArchivedView) {
+                sectorArchivedView.classList.toggle('d-none', !showArchive);
+            }
+            if (sectorAddWrap) {
+                sectorAddWrap.classList.toggle('d-none', showArchive);
+            }
+            setToggleState(sectorActiveBtn, sectorArchiveBtn, showArchive);
+        }
+
+        if (sectorActiveBtn) {
+            sectorActiveBtn.addEventListener('click', function () {
+                showSectorView(false);
             });
-        });
+        }
+        if (sectorArchiveBtn) {
+            sectorArchiveBtn.addEventListener('click', function () {
+                showSectorView(true);
+            });
+        }
+
+        // Services: swap each category's active tbody for its archived tbody.
+        const serviceActiveBtn = qs('#btn-services-active');
+        const serviceArchiveBtn = qs('#btn-services-archive');
+        const servicesAddWrap = qs('#servicesAddBtnWrap');
+
+        function showServiceView(showArchive) {
+            qsa('tbody.active-rows').forEach(function (body) {
+                body.classList.toggle('d-none', showArchive);
+            });
+            qsa('tbody.archived-rows').forEach(function (body) {
+                body.classList.toggle('d-none', !showArchive);
+            });
+            qsa('.js-service-add-category').forEach(function (button) {
+                button.classList.toggle('d-none', showArchive);
+            });
+            if (servicesAddWrap) {
+                servicesAddWrap.classList.toggle('d-none', showArchive);
+            }
+            setToggleState(serviceActiveBtn, serviceArchiveBtn, showArchive);
+        }
+
+        if (serviceActiveBtn) {
+            serviceActiveBtn.addEventListener('click', function () {
+                showServiceView(false);
+            });
+        }
+        if (serviceArchiveBtn) {
+            serviceArchiveBtn.addEventListener('click', function () {
+                showServiceView(true);
+            });
+        }
     }
 
     document.addEventListener('DOMContentLoaded', function () {
@@ -375,6 +431,6 @@
         bindArchiveActions();
         bindRestoreActions();
         bindTabPersistence();
-        bindArchivedToggles();
+        bindViewToggles();
     });
 })(window, document);

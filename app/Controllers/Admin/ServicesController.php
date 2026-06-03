@@ -4,7 +4,7 @@ namespace App\Controllers\Admin;
 
 use App\Controllers\BaseController;
 use App\Controllers\Concerns\LookupManagementTrait;
-use App\Models\Lookups\ServicesModel;
+use App\Models\Lookups\ServiceModel;
 use CodeIgniter\HTTP\RedirectResponse;
 
 /**
@@ -32,7 +32,7 @@ class ServicesController extends BaseController
 
     /**
      * POST `admin/lookups/services/store`: validates and creates a service via
-     * ServicesModel. Returns JSON (with a fresh CSRF hash) for lookups.js; 422 on
+     * ServiceModel. Returns JSON (with a fresh CSRF hash) for lookups.js; 422 on
      * validation errors. Audits a SERVICE_CREATE on success.
      */
     public function store()
@@ -59,7 +59,7 @@ class ServicesController extends BaseController
                 ]);
         }
 
-        $model = new ServicesModel();
+        $model = new ServiceModel();
         $data = [
             'category' => trim((string) $this->request->getPost('category')),
             'name' => trim((string) $this->request->getPost('name')),
@@ -109,7 +109,7 @@ class ServicesController extends BaseController
                 ]);
         }
 
-        $model = new ServicesModel();
+        $model = new ServiceModel();
         $data = [
             'category' => trim((string) $this->request->getPost('category')),
             'name' => trim((string) $this->request->getPost('name')),
@@ -152,7 +152,7 @@ class ServicesController extends BaseController
             return $guard;
         }
 
-        $model = new ServicesModel();
+        $model = new ServiceModel();
         $service = $model->find($id);
 
         if ($service === null || ! empty($service['dt_deleted'])) {
@@ -212,7 +212,7 @@ class ServicesController extends BaseController
             return $guard;
         }
 
-        $model = new ServicesModel();
+        $model = new ServiceModel();
         $service = $model->find($id);
 
         if ($service === null) {

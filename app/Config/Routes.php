@@ -18,22 +18,22 @@ $routes->get('session/keep-alive', 'Auth\AuthController::keepAlive');
  * Admin workspace
  */
 $routes->group('admin', static function (RouteCollection $routes): void {
-    $routes->get('', 'Workspace\Home::admin');
-    $routes->get('dashboard', 'Workspace\Home::adminDashboard');
-    $routes->get('accounts', 'Workspace\Home::adminAccounts');
-    $routes->get('family-entry', 'Workspace\Home::adminFamilyEntry');
-    $routes->get('manage-records', 'Workspace\Home::adminManageRecords');
-    $routes->get('audit-trails', 'Workspace\Home::adminAuditTrails');
-    $routes->get('sectors', 'Workspace\Home::adminSectors');
-    $routes->get('services', 'Workspace\Home::adminServices');
-    $routes->get('manage-members', 'Workspace\Home::adminManageMembers');
+    $routes->get('', 'Workspace\HomeController::admin');
+    $routes->get('dashboard', 'Workspace\HomeController::adminDashboard');
+    $routes->get('accounts', 'Workspace\HomeController::adminAccounts');
+    $routes->get('family-entry', 'Workspace\HomeController::adminFamilyEntry');
+    $routes->get('manage-records', 'Workspace\HomeController::adminManageRecords');
+    $routes->get('audit-trails', 'Workspace\HomeController::adminAuditTrails');
+    $routes->get('sectors', 'Workspace\HomeController::adminSectors');
+    $routes->get('services', 'Workspace\HomeController::adminServices');
+    $routes->get('manage-members', 'Workspace\HomeController::adminManageMembers');
     // Admin-only: disable/enable employee accounts from Account Management.
     $routes->post('accounts/disable', 'Accounts\AccountController::disableEmployee');
     $routes->post('accounts/enable', 'Accounts\AccountController::enableEmployee');
 
-    $routes->get('manage-families', 'Workspace\Home::adminManageRecords');
+    $routes->get('manage-families', 'Workspace\HomeController::adminManageRecords');
     $routes->group('manage-family', static function (RouteCollection $routes): void {
-        $routes->get('', 'Workspace\Home::adminFamilyEntry');
+        $routes->get('', 'Workspace\HomeController::adminFamilyEntry');
         $routes->get('list', 'Families\FamilyController::listFamilies');
         $routes->get('view/(:num)', 'Families\FamilyController::viewFamily/$1');
         $routes->get('edit/(:num)', 'Families\FamilyController::editFamily/$1');

@@ -6,15 +6,22 @@ use App\Controllers\BaseController;
 use App\Libraries\RoleAccess;
 use App\Libraries\SectorIds;
 use App\Models\Audit\AuditTrailsModel;
+use App\Models\Families\FamilyFormOptionsModel;
 use App\Models\Families\MemberModel;
 use App\Models\Families\MemberServiceModel;
 use App\Models\Lookups\ServiceModel;
+use App\Support\FamilyRecordPresenter;
 use CodeIgniter\HTTP\RedirectResponse;
 
 /**
- * Handles family registration submissions from admin and employee views.
+ * Handles family records for the admin and employee Manage Family screens:
+ * creating (store), viewing, editing/updating, and archiving/restoring/deleting.
  *
- * The controller validates the request and delegates database writes to models.
+ * The controller validates the request and delegates database writes to models
+ * (MemberModel, MemberServiceModel). The view/edit screens are loaded into the
+ * dashboard modal as `?partial=1` HTML fragments by
+ * assets/js/dashboard/manage-family-modal.js; the archive/restore/delete forms in
+ * `Dashboard/familyform/family-list` post here and redirect back to the list.
  */
 class FamilyController extends BaseController
 {
@@ -248,6 +255,503 @@ class FamilyController extends BaseController
         }
 
         return redirect()->back()->with('success', $successMessage);
+    }
+
+    /**
+     * GET `{admin|employee}/manage-family/list`: the "Manage Family" sidebar entry.
+     * The list itself (with search/filter/pagination) is rendered by the manage-records
+     * page, so this redirects to that canonical URL for the caller's role context.
+     */
+    public function listFamilies(): RedirectResponse
+    {
+        $guard = $this->requireFamilyEntryAccess();
+
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        return redirect()->to(site_url($this->isEmployeeContext() ? 'employee/manage-records' : 'admin/manage-records'));
+    }
+
+    /**
+     * GET `{admin|employee}/manage-family/view/{id}`: returns the read-only family
+     * detail fragment for the dashboard modal. Loaded via AJAX with `?partial=1` by
+     * manage-family-modal.js; renders `Dashboard/familyform/family-view`.
+     */
+    public function viewFamily(int $headId): string|RedirectResponse
+    {
+        $guard = $this->requireFamilyEntryAccess();
+
+        if ($guard instanceof RedirectResponse) {
+            return $this->partialGuard($guard, 'You do not have permission to view family records.');
+        }
+
+        $memberModel = new MemberModel();
+        $rows = $memberModel->getFamilyMembers($headId, 'all');
+        [$head, $members] = $this->splitHeadAndMembers($rows, $headId);
+
+        if ($head === null) {
+            return $this->recordMissing();
+        }
+
+        $serviceIdsByMember = (new MemberServiceModel())
+            ->getServiceIdsByMemberIds(array_map(static fn (array $row): int => (int) $row['memberID'], $rows));
+        $serviceNames = $this->serviceNameMap($serviceIdsByMember);
+        $incomeLabels = $this->incomeLabelMap();
+
+        $namesFor = static fn (int $memberId): array => array_values(array_filter(array_map(
+            static fn (int $id): string => $serviceNames[$id] ?? '',
+            $serviceIdsByMember[$memberId] ?? []
+        )));
+
+        $memberViews = [];
+
+        foreach ($members as $member) {
+            $memberViews[] = FamilyRecordPresenter::member($member, $namesFor((int) $member['memberID']), $incomeLabels);
+        }
+
+        return view('Dashboard/familyform/family-view', [
+            'headView'    => FamilyRecordPresenter::head($head, $namesFor($headId), $incomeLabels),
+            'memberViews' => $memberViews,
+        ]);
+    }
+
+    /**
+     * GET `{admin|employee}/manage-family/edit/{id}`: returns the family form
+     * prefilled for editing, as a modal fragment. Reuses the same
+     * `Dashboard/familyform/familyform` template as Add Family by passing the head
+     * row, its members, and selected services, with the form pointed at update().
+     */
+    public function editFamily(int $headId): string|RedirectResponse
+    {
+        $guard = $this->requireFamilyEntryAccess();
+
+        if ($guard instanceof RedirectResponse) {
+            return $this->partialGuard($guard, 'You do not have permission to edit family records.');
+        }
+
+        $memberModel = new MemberModel();
+        $rows = $memberModel->getFamilyMembers($headId, 'all');
+        [$head, $members] = $this->splitHeadAndMembers($rows, $headId);
+
+        if ($head === null) {
+            return $this->recordMissing();
+        }
+
+        $serviceIdsByMember = (new MemberServiceModel())
+            ->getServiceIdsByMemberIds(array_map(static fn (array $row): int => (int) $row['memberID'], $rows));
+
+        return view('Dashboard/familyform/familyform', array_merge(
+            (new FamilyFormOptionsModel())->getViewData(),
+            [
+                'familyRecord'      => $head,
+                'existingMembers'   => $this->shapeExistingMembers($members, $serviceIdsByMember),
+                'headServiceIds'    => $serviceIdsByMember[$headId] ?? [],
+                'formAction'        => site_url($this->currentRouteBase() . '/update/' . $headId),
+                'submitButtonLabel' => 'Update Record',
+                'embeddedInModal'   => true,
+                'canCreateFamily'   => true,
+            ]
+        ));
+    }
+
+    /**
+     * POST `{admin|employee}/manage-family/update/{id}`: saves edits to a family.
+     * Runs in one transaction: updates the head, replaces the member list, re-syncs
+     * service assignments, and logs a FAMILY_UPDATED audit row. Mirrors store()'s
+     * AJAX/non-AJAX response handling.
+     */
+    public function update(int $headId)
+    {
+        $guard = $this->requireFamilyEntryAccess();
+
+        if ($guard instanceof RedirectResponse) {
+            return $this->request->isAJAX()
+                ? $this->jsonError('You do not have permission to edit family records.', 403)
+                : $guard;
+        }
+
+        $memberModel = new MemberModel();
+        $memberServiceModel = new MemberServiceModel();
+        $serviceModel = new ServiceModel();
+        $auditModel = new AuditTrailsModel();
+
+        if (! $memberModel->hasRequiredFamilyTables()) {
+            return $this->failUpdate('The accesscard database is missing required tables from accesscardV1.4.sql.', 422);
+        }
+
+        $existingHead = $memberModel->find($headId);
+
+        if ($existingHead === null || (int) ($existingHead['headID'] ?? 0) !== $headId) {
+            return $this->failUpdate('That family record no longer exists.', 404);
+        }
+
+        $rules = $this->rulesForEntryType('head');
+
+        if (! $this->validate($rules)) {
+            return $this->failUpdate(implode(' ', $this->validator->getErrors()), 422);
+        }
+
+        $serviceIds = $this->request->getPost('service_ids');
+        $serviceIds = is_array($serviceIds) ? $serviceIds : [];
+        $members = $this->request->getPost('members');
+        $members = is_array($members) ? $members : [];
+
+        $userId = (int) session()->get('user_id');
+
+        $memberModel->beginTransaction();
+
+        // Clear the family's existing service links and relatives, then rebuild both
+        // from the submission so the edit fully replaces the prior member list.
+        $memberServiceModel->deleteByMemberIds($memberModel->getFamilyMemberIds($headId));
+
+        if (! $memberModel->updateHead($headId, $this->memberPayload('head_'))) {
+            $memberModel->rollbackTransaction();
+
+            return $this->failUpdate('Head of family could not be updated. Please check required fields.', 422);
+        }
+
+        $memberModel->deleteFamilyMembersExceptHead($headId);
+
+        foreach ($members as $member) {
+            if (! is_array($member) || ! $this->hasMemberData($member)) {
+                continue;
+            }
+
+            $memberId = $memberModel->addFamilyMember($headId, $this->memberPayloadFromArray($member));
+
+            if ($memberId === false) {
+                $memberModel->rollbackTransaction();
+
+                return $this->failUpdate('One family member could not be saved.', 422);
+            }
+
+            if (! $this->assignServices($memberServiceModel, $serviceModel, $memberId, $member['service_ids'] ?? [])) {
+                $memberModel->rollbackTransaction();
+
+                return $this->failUpdate('A selected service could not be assigned to one family member.', 422);
+            }
+        }
+
+        if (! $this->assignServices($memberServiceModel, $serviceModel, $headId, $serviceIds)) {
+            $memberModel->rollbackTransaction();
+
+            return $this->failUpdate('A selected service could not be assigned to the head of family.', 422);
+        }
+
+        if ($auditModel->hasTable()) {
+            $auditModel->logAction(
+                $userId,
+                $headId,
+                'FAMILY_UPDATED',
+                'Updated family profile for ' . trim((string) $this->request->getPost('head_firstname')) . ' ' . trim((string) $this->request->getPost('head_lastname')) . '.',
+                $this->request->getIPAddress(),
+                $this->request->getUserAgent()->getAgentString()
+            );
+        }
+
+        $memberModel->completeTransaction();
+
+        if (! $memberModel->transactionStatus()) {
+            return $this->failUpdate('The family record was not updated.', 500);
+        }
+
+        $successMessage = 'Family record updated successfully.';
+
+        if ($this->request->isAJAX()) {
+            return $this->response->setJSON([
+                'status' => 'success',
+                'message' => $successMessage,
+                'csrf' => csrf_hash(),
+            ]);
+        }
+
+        return redirect()->to(site_url($this->isEmployeeContext() ? 'employee/manage-records' : 'admin/manage-records'))
+            ->with('success', $successMessage);
+    }
+
+    /**
+     * POST `admin/manage-family/archive/{id}`: soft-archives an entire family
+     * (Developer/Admin only) and audits it. Frontend: the "Archive" action in the
+     * admin records list; redirects back with a flash message.
+     */
+    public function archive(int $headId): RedirectResponse
+    {
+        return $this->changeFamilyState(
+            $headId,
+            ['Developer', 'Admin'],
+            static fn (MemberModel $model): bool => $model->archiveFamily($headId),
+            'FAMILY_ARCHIVE',
+            'Archived',
+            'Record archived successfully.',
+            'Unable to archive record.'
+        );
+    }
+
+    /**
+     * POST `admin/manage-family/restore/{id}`: restores a soft-archived family
+     * (Developer/Admin only) and audits it. Frontend: the "Restore" action on the
+     * archived records view.
+     */
+    public function restore(int $headId): RedirectResponse
+    {
+        return $this->changeFamilyState(
+            $headId,
+            ['Developer', 'Admin'],
+            static fn (MemberModel $model): bool => $model->restoreFamily($headId),
+            'FAMILY_RESTORE',
+            'Restored',
+            'Record restored successfully.',
+            'Unable to restore record.'
+        );
+    }
+
+    /**
+     * POST `employee/manage-family/delete/{id}`: soft-deletes a family from the
+     * employee Manage Records view and audits it. Same soft-delete as archive (the
+     * row is kept and hidden, never hard-deleted).
+     */
+    public function delete(int $headId): RedirectResponse
+    {
+        return $this->changeFamilyState(
+            $headId,
+            ['Developer', 'Admin', 'Employee'],
+            static fn (MemberModel $model): bool => $model->deleteFamilyRecord($headId),
+            'FAMILY_DELETE',
+            'Deleted',
+            'Record deleted successfully.',
+            'Unable to delete record.'
+        );
+    }
+
+    /**
+     * Shared flow for the archive/restore/delete actions: role-guards the request,
+     * runs the supplied state change on MemberModel, audits it, and redirects back
+     * with a success/error flash message.
+     *
+     * @param list<string> $roles
+     */
+    private function changeFamilyState(int $headId, array $roles, callable $action, string $auditAction, string $auditVerb, string $successMessage, string $errorMessage): RedirectResponse
+    {
+        $guard = RoleAccess::requireRole($roles);
+
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        $model = new MemberModel();
+
+        if (! $model->hasTable()) {
+            return redirect()->back()->with('error', 'The family records table is not available.');
+        }
+
+        $name = $this->familyHeadName($model, $headId);
+
+        if (! $action($model)) {
+            return redirect()->back()->with('error', $errorMessage);
+        }
+
+        $auditModel = new AuditTrailsModel();
+
+        if ($auditModel->hasTable()) {
+            $auditModel->logAction(
+                (int) session()->get('user_id'),
+                $headId,
+                $auditAction,
+                $auditVerb . ' family record ' . $name . ' #' . $headId . '.',
+                $this->request->getIPAddress(),
+                $this->request->getUserAgent()->getAgentString()
+            );
+        }
+
+        return redirect()->back()->with('success', $successMessage);
+    }
+
+    /**
+     * Splits a family's rows (head + relatives) into [head, members]. The head is
+     * the row whose memberID equals its headID; everything else is a relative.
+     *
+     * @return array{0: ?array, 1: list<array>}
+     */
+    private function splitHeadAndMembers(array $rows, int $headId): array
+    {
+        $head = null;
+        $members = [];
+
+        foreach ($rows as $row) {
+            if ((int) ($row['memberID'] ?? 0) === $headId) {
+                $head = $row;
+            } else {
+                $members[] = $row;
+            }
+        }
+
+        return [$head, $members];
+    }
+
+    /**
+     * Maps family-member rows into the per-member array the family form's member
+     * template expects (data-name keys), including each member's selected service
+     * and sector IDs so the edit form pre-checks them.
+     *
+     * @param array<int, list<int>> $serviceIdsByMember
+     * @return list<array<string, mixed>>
+     */
+    private function shapeExistingMembers(array $members, array $serviceIdsByMember): array
+    {
+        return array_map(function (array $member) use ($serviceIdsByMember): array {
+            $memberId = (int) ($member['memberID'] ?? 0);
+
+            return [
+                'firstname'     => (string) ($member['firstname'] ?? ''),
+                'middlename'    => (string) ($member['middlename'] ?? ''),
+                'lastname'      => (string) ($member['lastname'] ?? ''),
+                'suffix'        => (string) ($member['suffix'] ?? ''),
+                'birthday'      => (string) ($member['birthday'] ?? ''),
+                'sex'           => (string) ($member['sex'] ?? ''),
+                'civilstatus'   => (string) ($member['civilstatus'] ?? ''),
+                'contactnumber' => (string) ($member['contactnumber'] ?? ''),
+                'religion'      => (string) ($member['religion'] ?? ''),
+                'education'     => (string) ($member['education'] ?? ''),
+                'job'           => (string) ($member['job'] ?? ''),
+                'salary'        => (string) ($member['Salary'] ?? ''),
+                'relationship'  => (string) ($member['relationship'] ?? ''),
+                'sector_ids'    => SectorIds::normalize($member['sectorID'] ?? null),
+                'service_ids'   => $serviceIdsByMember[$memberId] ?? [],
+            ];
+        }, $members);
+    }
+
+    /**
+     * Validates and links a set of selected service IDs to one member inside the
+     * update transaction. Skips invalid/non-existent services; returns false only
+     * when a valid service fails to link (so the caller can roll back).
+     */
+    private function assignServices(MemberServiceModel $memberServiceModel, ServiceModel $serviceModel, int $memberId, mixed $serviceIds): bool
+    {
+        if (! is_array($serviceIds)) {
+            return true;
+        }
+
+        foreach ($serviceIds as $serviceId) {
+            $serviceId = (int) $serviceId;
+
+            if ($serviceId < 0 || ! $serviceModel->existsById($serviceId)) {
+                continue;
+            }
+
+            if ($memberServiceModel->assignService($memberId, $serviceId) === false) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /** Resolves [serviceID => name] across every service assigned to the family. */
+    private function serviceNameMap(array $serviceIdsByMember): array
+    {
+        $allServiceIds = [];
+
+        foreach ($serviceIdsByMember as $ids) {
+            foreach ($ids as $id) {
+                $allServiceIds[] = (int) $id;
+            }
+        }
+
+        if ($allServiceIds === []) {
+            return [];
+        }
+
+        return (new ServiceModel())->getNameMapByIds(array_values(array_unique($allServiceIds)));
+    }
+
+    /** Builds an [income bracket value => label] map for the family detail view. */
+    private function incomeLabelMap(): array
+    {
+        $map = [];
+
+        foreach ((new FamilyFormOptionsModel())->getOptions()['income_ranges'] ?? [] as $range) {
+            $value = (string) ($range['value'] ?? '');
+
+            if ($value === '') {
+                continue;
+            }
+
+            $map[$value] = (string) ($range['label'] ?? $value);
+        }
+
+        return $map;
+    }
+
+    /** First + last name of a family head, for audit descriptions ('record' if missing). */
+    private function familyHeadName(MemberModel $model, int $headId): string
+    {
+        $head = $model->find($headId);
+
+        if ($head === null) {
+            return 'record';
+        }
+
+        $name = trim((string) ($head['firstname'] ?? '') . ' ' . (string) ($head['lastname'] ?? ''));
+
+        return $name === '' ? 'record' : $name;
+    }
+
+    /** True when the current request is under the `employee/` route group. */
+    private function isEmployeeContext(): bool
+    {
+        return str_starts_with(trim((string) $this->request->getUri()->getPath(), '/'), 'employee/');
+    }
+
+    /** Route base (`admin/manage-family` or `employee/manage-family`) for the request. */
+    private function currentRouteBase(): string
+    {
+        return $this->isEmployeeContext() ? 'employee/manage-family' : 'admin/manage-family';
+    }
+
+    /**
+     * For a partial (modal) request whose access guard failed, returns an inline
+     * alert fragment so the modal shows the reason; otherwise returns the redirect.
+     */
+    private function partialGuard(RedirectResponse $guard, string $message): string|RedirectResponse
+    {
+        if ($this->request->isAJAX() || (string) $this->request->getGet('partial') === '1') {
+            return '<div class="alert alert-danger mb-0">' . esc($message) . '</div>';
+        }
+
+        return $guard;
+    }
+
+    /** Inline alert fragment shown in the modal when a family record can't be found. */
+    private function recordMissing(): string
+    {
+        return '<div class="alert alert-warning mb-0">That family record could not be found. It may have been removed.</div>';
+    }
+
+    /** JSON error body (with a fresh CSRF hash) used by the AJAX update responses. */
+    private function jsonError(string $message, int $statusCode)
+    {
+        return $this->response
+            ->setStatusCode($statusCode)
+            ->setJSON([
+                'status' => 'error',
+                'message' => $message,
+                'csrf' => csrf_hash(),
+            ]);
+    }
+
+    /**
+     * Update-failure response: JSON error for AJAX, otherwise a redirect back with
+     * the input preserved and an error flash. Used throughout update().
+     */
+    private function failUpdate(string $message, int $statusCode)
+    {
+        if ($this->request->isAJAX()) {
+            return $this->jsonError($message, $statusCode);
+        }
+
+        return redirect()->back()->withInput()->with('error', $message);
     }
 
     /**

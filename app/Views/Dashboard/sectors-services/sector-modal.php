@@ -6,6 +6,7 @@
 				data-create-action="<?= site_url('admin/sectors/create') ?>"
 				data-update-action="<?= site_url('admin/sectors/update') ?>"
 				data-archive-action="<?= site_url('admin/sectors/archive') ?>"
+				data-restore-action="<?= site_url('admin/sectors/restore') ?>"
 				data-next-code-map="<?= esc(json_encode((object) ($sectorNextCodeMap ?? [])), 'attr') ?>"
 				data-existing-codes="<?= esc(json_encode(array_values($existingShortcodes ?? [])), 'attr') ?>">
 				<?= csrf_field() ?>
@@ -41,6 +42,9 @@
 					</div>
 					<div class="alert alert-warning mb-0 d-none js-sector-archive-message">
 						Archive <strong class="js-sector-archive-name">this sector</strong>? This will be blocked if records are already using it.
+					</div>
+					<div class="alert alert-info mb-0 d-none js-sector-restore-message">
+						Restore <strong class="js-sector-restore-name">this sector</strong>? It will become active again and available for assignment.
 					</div>
 				</div>
 				<div class="modal-footer">

@@ -87,6 +87,12 @@ php_errors.log
 vendor/
 
 #-------------------------
+# Project artifacts
+#-------------------------
+# Auto-generated code-analysis CSV exports (not source).
+/csv/
+
+#-------------------------
 # IDE / Development Files
 #-------------------------
 

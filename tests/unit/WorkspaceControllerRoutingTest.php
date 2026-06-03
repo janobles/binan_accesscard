@@ -5,29 +5,24 @@ use App\Controllers\Employee\WorkspaceController as EmployeeWorkspaceController;
 use App\Controllers\Families\FamilyController;
 use App\Controllers\Lookups\SectorController;
 use App\Controllers\Lookups\ServiceController;
-use App\Controllers\Workspace\Home;
+use App\Controllers\Workspace\HomeController;
 use PHPUnit\Framework\TestCase;
 
 /**
  * Guards the feature-subnamespace layout of the backend.
  *
- * Auth + admin/developer dashboard pages live in App\Controllers\Workspace\Home,
- * the employee workspace in App\Controllers\Employee, family flows in
- * App\Controllers\Families, lookup mutations in App\Controllers\Lookups, and
- * account management in App\Controllers\Accounts. These assertions fail loudly if
- * a controller is moved back to the root namespace or a route stops targeting its
- * feature slice.
+ * Admin/developer dashboard pages live in App\Controllers\Workspace\HomeController,
+ * authentication in App\Controllers\Auth, the employee workspace in
+ * App\Controllers\Employee, family flows in App\Controllers\Families, lookup
+ * mutations in App\Controllers\Lookups, and account management in
+ * App\Controllers\Accounts. These assertions fail loudly if a controller is moved
+ * back to the root namespace or a route stops targeting its feature slice.
  */
 final class WorkspaceControllerRoutingTest extends TestCase
 {
     public function testWorkspaceHomeExposesExpectedPageActions(): void
     {
-        $this->assertPublicMethods(Home::class, [
-            // Auth & session lifecycle
-            'index',
-            'login',
-            'logout',
-            'keepAlive',
+        $this->assertPublicMethods(HomeController::class, [
             // Admin / Developer pages
             'admin',
             'adminDashboard',
@@ -54,6 +49,13 @@ final class WorkspaceControllerRoutingTest extends TestCase
     {
         $this->assertPublicMethods(FamilyController::class, [
             'store',
+            'listFamilies',
+            'viewFamily',
+            'editFamily',
+            'update',
+            'archive',
+            'restore',
+            'delete',
         ]);
 
         $this->assertPublicMethods(SectorController::class, [
@@ -89,7 +91,7 @@ final class WorkspaceControllerRoutingTest extends TestCase
         $this->assertStringNotContainsString("'ServiceController::", $routes);
 
         foreach ([
-            "'dashboard', 'Workspace\\Home::adminDashboard'",
+            "'dashboard', 'Workspace\\HomeController::adminDashboard'",
             "'workspace', 'Employee\\WorkspaceController::dashboard'",
             "'activity', 'Employee\\WorkspaceController::activity'",
             "'accounts/disable', 'Accounts\\AccountController::disableEmployee'",

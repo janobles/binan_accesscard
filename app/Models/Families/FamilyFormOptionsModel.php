@@ -3,7 +3,7 @@
 namespace App\Models\Families;
 
 use App\Models\Lookups\SectorModel;
-use App\Models\Lookups\ServicesModel;
+use App\Models\Lookups\ServiceModel;
 use App\Support\FamilyProfilingFormV2;
 use CodeIgniter\Model;
 
@@ -24,7 +24,7 @@ class FamilyFormOptionsModel extends Model
     public function getOptions(): array
     {
         $sectorModel = new SectorModel();
-        $servicesModel = new ServicesModel();
+        $servicesModel = new ServiceModel();
 
         return [
             'sectors' => $sectorModel->getAll(),

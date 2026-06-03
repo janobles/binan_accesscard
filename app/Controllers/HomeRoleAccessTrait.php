@@ -7,13 +7,13 @@ use CodeIgniter\HTTP\RedirectResponse;
 use Config\IdleTimeout;
 
 /**
- * Shared session/role helpers used by Home controller.
+ * Shared session/role helpers used by the Auth and Workspace\HomeController controllers.
  */
 trait HomeRoleAccessTrait
 {
     /**
      * Confirms the current session has a real user, a valid role, and is within
-     * the IdleTimeout window. Used by Workspace\Home before serving pages.
+     * the IdleTimeout window. Used by Workspace\HomeController before serving pages.
      */
     private function hasValidLoginSession(): bool
     {

@@ -40,13 +40,21 @@ $lookupHeading = $activeTab === 'services' ? 'Services and Programs Management' 
 </ul>
 
 <div class="tab-content pt-3" id="lookupTabsContent">
-    <?php /* SECTORS tab: active sectors as cards (badge colour keyed off the
-             shortcode prefix PWD/SP/OSCA) + a collapsible archived list. */ ?>
+    <?php /* SECTORS tab: an Active/Archive toggle (bindViewToggles in lookups.js)
+             swaps #sectorsActiveView (cards, badge colour keyed off the shortcode
+             prefix PWD/SP/OSCA) for #sectorsArchivedView (restore table). */ ?>
     <div class="tab-pane fade <?= $activeTab === 'sectors' ? 'show active' : '' ?>" id="tabSectors" role="tabpanel" aria-labelledby="sectors-tab">
-        <div class="d-flex justify-content-end mb-3">
-            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalSectorAdd"><i class="bi bi-plus-lg" aria-hidden="true"></i>Add New Sector</button>
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+            <div class="btn-group" role="group" aria-label="Sector view toggle">
+                <button type="button" class="btn btn-outline-primary active" id="btn-sectors-active" aria-pressed="true">Active</button>
+                <button type="button" class="btn btn-outline-primary" id="btn-sectors-archive" aria-pressed="false">Archive (<?= esc((string) count($archivedSectors)) ?>)</button>
+            </div>
+            <div id="sectorAddBtnWrap">
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalSectorAdd"><i class="bi bi-plus-lg" aria-hidden="true"></i>Add New Sector</button>
+            </div>
         </div>
 
+        <div id="sectorsActiveView">
         <div class="row g-3 sector-card-grid">
             <?php foreach ($activeSectors as $sector): ?>
                 <?php
@@ -84,78 +92,79 @@ $lookupHeading = $activeTab === 'services' ? 'Services and Programs Management' 
                 </div>
             <?php endif; ?>
         </div>
+        </div>
 
-        <div class="accordion mt-4" id="archivedSectorsAccordion">
-            <div class="accordion-item">
-                <h2 class="accordion-header" id="archivedSectorsHeading">
-                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#archivedSectorsCollapse" aria-expanded="false" aria-controls="archivedSectorsCollapse">
-                        Archived Sectors (<?= esc((string) count($archivedSectors)) ?>)
-                    </button>
-                </h2>
-                <div id="archivedSectorsCollapse" class="accordion-collapse collapse" aria-labelledby="archivedSectorsHeading" data-bs-parent="#archivedSectorsAccordion">
-                    <div class="accordion-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-sm align-middle mb-0">
-                                <thead>
-                                    <tr>
-                                        <th>Shortcode</th>
-                                        <th>Name</th>
-                                        <th>Archived On</th>
-                                        <th class="text-end">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($archivedSectors as $sector): ?>
-                                        <?php
-                                        $sectorId = (int) ($sector['sectorID'] ?? 0);
-                                        $archivedOn = (string) ($sector['dt_deleted'] ?? '');
-                                        ?>
-                                        <tr class="archived-row" data-sector-id="<?= esc((string) $sectorId) ?>">
-                                            <td><?= esc((string) ($sector['shortcode'] ?? '')) ?></td>
-                                            <td><?= esc((string) ($sector['name'] ?? '')) ?></td>
-                                            <td class="text-muted small"><?= $archivedOn !== '' ? esc(date('M j, Y g:i A', strtotime($archivedOn))) : '-' ?></td>
-                                            <td class="text-end">
-                                                <button type="button" class="icon-btn js-sector-restore" aria-label="Restore sector" data-restore-url="<?= site_url('admin/lookups/sectors/restore/' . $sectorId) ?>" data-name="<?= esc((string) ($sector['name'] ?? '')) ?>">
-                                                    <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                    <?php if ($archivedSectors === []): ?>
-                                        <tr>
-                                            <td colspan="4" class="text-center text-muted">No archived sectors.</td>
-                                        </tr>
-                                    <?php endif; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+        <div id="sectorsArchivedView" class="d-none">
+            <div class="card">
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Shortcode</th>
+                                <th>Name</th>
+                                <th>Archived On</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($archivedSectors as $sector): ?>
+                                <?php
+                                $sectorId = (int) ($sector['sectorID'] ?? 0);
+                                $archivedOn = (string) ($sector['dt_deleted'] ?? '');
+                                ?>
+                                <tr class="archived-row" data-sector-id="<?= esc((string) $sectorId) ?>">
+                                    <td><?= esc((string) ($sector['shortcode'] ?? '')) ?></td>
+                                    <td><?= esc((string) ($sector['name'] ?? '')) ?></td>
+                                    <td class="text-muted small"><?= $archivedOn !== '' ? esc(date('M j, Y g:i A', strtotime($archivedOn))) : '-' ?></td>
+                                    <td class="text-end">
+                                        <button type="button" class="icon-btn js-sector-restore" aria-label="Restore sector" data-restore-url="<?= site_url('admin/lookups/sectors/restore/' . $sectorId) ?>" data-name="<?= esc((string) ($sector['name'] ?? '')) ?>">
+                                            <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                            <?php if ($archivedSectors === []): ?>
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted">No archived sectors.</td>
+                                </tr>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
     </div>
 
-    <?php /* SERVICES tab: one card per category; each card has an active table
-             plus a hidden "archived-rows" tbody toggled by js-toggle-archived. */ ?>
+    <?php /* SERVICES tab: one card per category; each card has an "active-rows"
+             tbody and a hidden "archived-rows" tbody. The top Active/Archive
+             toggle (bindViewToggles in lookups.js) swaps them across all cards. */ ?>
     <div class="tab-pane fade <?= $activeTab === 'services' ? 'show active' : '' ?>" id="tabServices" role="tabpanel" aria-labelledby="services-tab">
-        <div class="d-flex justify-content-end mb-3">
-            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalServiceAdd"><i class="bi bi-plus-lg" aria-hidden="true"></i>Add New Service</button>
+        <?php
+        $archivedServiceTotal = 0;
+        foreach ($serviceGroups as $group) {
+            $archivedServiceTotal += count($group['archived'] ?? []);
+        }
+        ?>
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+            <div class="btn-group" role="group" aria-label="Service view toggle">
+                <button type="button" class="btn btn-outline-primary active" id="btn-services-active" aria-pressed="true">Active</button>
+                <button type="button" class="btn btn-outline-primary" id="btn-services-archive" aria-pressed="false">Archive (<?= esc((string) $archivedServiceTotal) ?>)</button>
+            </div>
+            <div id="servicesAddBtnWrap">
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalServiceAdd"><i class="bi bi-plus-lg" aria-hidden="true"></i>Add New Service</button>
+            </div>
         </div>
 
         <?php foreach ($serviceGroups as $category => $group): ?>
             <?php
             $activeServices = $group['active'] ?? [];
             $archivedServices = $group['archived'] ?? [];
-            $archivedCount = count($archivedServices);
             $categorySlug = strtolower(preg_replace('/[^a-zA-Z0-9]+/', '-', $category));
             ?>
             <div class="card mb-3" data-service-category="<?= esc((string) $category) ?>">
                 <div class="card-header d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2">
                     <strong><?= esc((string) $category) ?></strong>
                     <div class="d-flex align-items-center gap-3">
-                        <?php if ($archivedCount > 0): ?>
-                            <button type="button" class="btn btn-link p-0 js-toggle-archived" data-target="<?= esc($categorySlug) ?>" data-count="<?= esc((string) $archivedCount) ?>">Show archived (<?= esc((string) $archivedCount) ?>)</button>
-                        <?php endif; ?>
                         <button type="button" class="btn btn-outline-primary btn-sm js-service-add-category" data-bs-toggle="modal" data-bs-target="#modalServiceAdd" data-category="<?= esc((string) $category) ?>"><i class="bi bi-plus-lg" aria-hidden="true"></i>Add to <?= esc((string) $category) ?></button>
                     </div>
                 </div>
@@ -169,7 +178,7 @@ $lookupHeading = $activeTab === 'services' ? 'Services and Programs Management' 
                                 <th class="text-end">Actions</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody class="active-rows">
                             <?php foreach ($activeServices as $service): ?>
                                 <?php
                                 $serviceId = (int) ($service['serviceID'] ?? 0);
@@ -217,6 +226,11 @@ $lookupHeading = $activeTab === 'services' ? 'Services and Programs Management' 
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
+                            <?php if ($archivedServices === []): ?>
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted">No archived services in this category.</td>
+                                </tr>
+                            <?php endif; ?>
                         </tbody>
                     </table>
                 </div>

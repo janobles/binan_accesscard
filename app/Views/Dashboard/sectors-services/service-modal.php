@@ -5,7 +5,8 @@
                                 method="post"
                                 data-create-action="<?= site_url('admin/services/create') ?>"
                                 data-update-action="<?= site_url('admin/services/update') ?>"
-                                data-archive-action="<?= site_url('admin/services/archive') ?>">
+                                data-archive-action="<?= site_url('admin/services/archive') ?>"
+                                data-restore-action="<?= site_url('admin/services/restore') ?>">
                                 <?= csrf_field() ?>
                                 <div class="modal-header">
                                         <h5 class="modal-title" id="serviceActionModalLabel">Service or Program</h5>
@@ -35,6 +36,9 @@
                                         </div>
                                         <div class="alert alert-warning mb-0 d-none js-service-archive-message">
                                                 Archive <strong class="js-service-archive-name">this service or program</strong>? This will be blocked if records are already using it.
+                                        </div>
+                                        <div class="alert alert-info mb-0 d-none js-service-restore-message">
+                                                Restore <strong class="js-service-restore-name">this service or program</strong>? It will become active again and available for assignment.
                                         </div>
                                 </div>
                                 <div class="modal-footer">

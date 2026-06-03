@@ -6,7 +6,7 @@
  * passes every variable used below (see buildAdminViewData()). The page is a
  * single layout that swaps its main section based on $activePage; each section
  * either renders inline (the "dashboard" overview) or delegates to a sub-view
- * under Views/Dashboard/. Controller entry points live in App\Controllers\Workspace\Home.
+ * under Views/Dashboard/. Controller entry points live in App\Controllers\Workspace\HomeController.
  *
  * The formatDate/formatTime/formatAuditMember/formatAuditUser helpers are
  * provided by the builder (do not redefine them here).
@@ -232,7 +232,7 @@ $selectedFilterDate = (string) ($searchFilters['date'] ?? $searchFilters['date_f
             <?php endif; ?>
 
             <?php if ($activePage === 'sectors'): ?>
-                <?= view('Dashboard/Sectors and Services/sector', [
+                <?= view('Dashboard/sectors-services/sector', [
                     'sectors' => $sectors ?? [],
                     'sectorShortcodeOptions' => $sectorShortcodeOptions,
                     'lookupStatus' => $lookupStatus ?? 'active',
@@ -241,7 +241,7 @@ $selectedFilterDate = (string) ($searchFilters['date'] ?? $searchFilters['date_f
             <?php endif; ?>
 
             <?php if ($activePage === 'services'): ?>
-                <?= view('Dashboard/Sectors and Services/services', [
+                <?= view('Dashboard/sectors-services/services', [
                     'services' => $services ?? [],
                     'lookupStatus' => $lookupStatus ?? 'active',
                     'canRestore' => $canRestoreLookups ?? false,

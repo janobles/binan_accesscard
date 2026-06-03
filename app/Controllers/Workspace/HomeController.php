@@ -6,140 +6,22 @@ use App\Controllers\BaseController;
 use App\Controllers\HomeRoleAccessTrait;
 use App\Libraries\DashboardPageBuilder;
 use App\Libraries\RoleAccess;
-use App\Libraries\SessionAuditLogger;
-use App\Models\Auth\UserModel;
 use App\Models\Families\FamilyFormOptionsModel;
 use CodeIgniter\HTTP\RedirectResponse;
 
 /**
- * Handles authentication, session lifetime, and role-based dashboard routing.
+ * Renders the admin/developer dashboard pages and their AJAX partials.
  *
  * Page rendering is delegated to App\Libraries\DashboardPageBuilder: this
- * controller only decides WHICH page/role to show, the builder assembles the
- * view data and returns the rendered HTML. Auth/session helpers
- * (hasValidLoginSession, clearLoginSession, normalizeRole, redirectByRole)
- * come from App\Controllers\HomeRoleAccessTrait.
+ * controller only decides WHICH page to show, the builder assembles the view data
+ * and returns the rendered HTML. Authentication and session lifecycle live in
+ * App\Controllers\Auth\AuthController (the controller the auth routes target);
+ * the `normalizeRole` helper used by the account partial comes from
+ * App\Controllers\HomeRoleAccessTrait.
  */
-class Home extends BaseController
+class HomeController extends BaseController
 {
     use HomeRoleAccessTrait;
-
-    // ---------------------------------------------------------------------
-    // Authentication & session lifecycle
-    // ---------------------------------------------------------------------
-
-    // NOTE: index/login/logout/keepAlive mirror Auth\AuthController, which is the
-    // controller the routes actually target for `/`, `login`, `logout`, and
-    // `session/keep-alive`. They are kept here as the role-routing reference.
-
-    /**
-     * Shows the login view or, for an already-authenticated user, redirects to
-     * their role dashboard. Frontend: renders the `Auth/login` view.
-     */
-    public function index(): string|RedirectResponse
-    {
-        if (session()->get('is_logged_in')) {
-            if (! $this->hasValidLoginSession()) {
-                $this->clearLoginSession();
-
-                return redirect()->to(site_url('login'))
-                    ->with('error', 'Your session expired. Please login again.');
-            }
-
-            return $this->redirectByRole((string) session()->get('role'));
-        }
-
-        return view('Auth/login');
-    }
-
-    /**
-     * Authenticates the login form POST: verifies credentials via UserModel,
-     * sets the session, logs the login to audit_trails, and redirects by role.
-     * Frontend: consumes `username`/`password` from the login form.
-     */
-    public function login(): string|RedirectResponse
-    {
-        if ($this->request->getMethod() === 'GET') {
-            return $this->index();
-        }
-
-        $username = trim((string) $this->request->getPost('username'));
-        $password = (string) $this->request->getPost('password');
-
-        $user = (new UserModel())->verifyLogin($username, $password);
-
-        if ($user === null) {
-            return redirect()->back()
-                ->withInput()
-                ->with('error', 'Invalid username or password.');
-        }
-
-        // Show a specific message when valid credentials belong to a disabled account.
-        if (($user['login_error'] ?? '') === 'disabled') {
-            return redirect()->back()
-                ->withInput()
-                ->with('error', 'This account is disabled and cannot be used.');
-        }
-
-        $role = $this->normalizeRole((string) ($user['role'] ?? ''));
-
-        if ($role === null) {
-            return redirect()->back()
-                ->withInput()
-                ->with('error', 'Your account role is invalid. Please contact an administrator.');
-        }
-
-        session()->regenerate();
-        session()->set([
-            'is_logged_in' => true,
-            'user_id' => (int) $user['userID'],
-            'member_id' => 0,
-            'username' => $user['username'],
-            'role' => $role,
-            'idle_last_activity' => time(),
-        ]);
-
-        SessionAuditLogger::logLogin($user, $role, $this->request);
-
-        return $this->redirectByRole($role);
-    }
-
-    /**
-     * Logs the logout to audit_trails, clears the session, and redirects to the
-     * login page. `?timeout=1` (from the idle JS) shows an inactivity message.
-     */
-    public function logout(): RedirectResponse
-    {
-        if ($this->request->getGet('timeout') === '1') {
-            SessionAuditLogger::logLogoutFromSession($this->request, true);
-            $this->clearLoginSession();
-
-            return redirect()->to(site_url('login'))
-                ->with('error', 'You were logged out due to inactivity.');
-        }
-
-        SessionAuditLogger::logLogoutFromSession($this->request);
-        $this->clearLoginSession();
-
-        return redirect()->to(site_url('login'));
-    }
-
-    /**
-     * Session heartbeat polled by the dashboard keep-alive JS. Refreshes the idle
-     * timer and returns JSON `{status: ok}`, or 401 `{status: expired}`.
-     */
-    public function keepAlive()
-    {
-        if (! session()->get('is_logged_in')) {
-            return $this->response
-                ->setStatusCode(401)
-                ->setJSON(['status' => 'expired']);
-        }
-
-        session()->set('idle_last_activity', time());
-
-        return $this->response->setJSON(['status' => 'ok']);
-    }
 
     // ---------------------------------------------------------------------
     // Admin / Developer pages (full page loads).
@@ -376,7 +258,7 @@ class Home extends BaseController
 
     /**
      * Returns the sectors lookup fragment for the admin sectors AJAX view.
-     * Renders `Dashboard/Sectors and Services/sector`.
+     * Renders `Dashboard/sectors-services/sector`.
      */
     private function renderAdminSectorsPartial(): string|RedirectResponse
     {
@@ -388,7 +270,7 @@ class Home extends BaseController
 
         $viewData = (new DashboardPageBuilder($this->request))->buildAdminViewData('sectors');
 
-        return view('Dashboard/Sectors and Services/sector', [
+        return view('Dashboard/sectors-services/sector', [
             'sectors' => $viewData['sectors'] ?? [],
             'sectorShortcodeOptions' => $viewData['sectorShortcodeOptions'] ?? [],
             'lookupStatus' => $viewData['lookupStatus'] ?? 'active',
@@ -398,7 +280,7 @@ class Home extends BaseController
 
     /**
      * Returns the services lookup fragment for the admin services AJAX view.
-     * Renders `Dashboard/Sectors and Services/services`.
+     * Renders `Dashboard/sectors-services/services`.
      */
     private function renderAdminServicesPartial(): string|RedirectResponse
     {
@@ -410,7 +292,7 @@ class Home extends BaseController
 
         $viewData = (new DashboardPageBuilder($this->request))->buildAdminViewData('services');
 
-        return view('Dashboard/Sectors and Services/services', [
+        return view('Dashboard/sectors-services/services', [
             'services' => $viewData['services'] ?? [],
             'lookupStatus' => $viewData['lookupStatus'] ?? 'active',
             'canRestore' => $viewData['canRestoreLookups'] ?? false,

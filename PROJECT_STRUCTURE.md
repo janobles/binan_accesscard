@@ -7,7 +7,7 @@ This project follows the normal CodeIgniter 4 layout. The database source of tru
 The backend keeps the default CodeIgniter 4 layout, but controllers and models are
 grouped into **feature subnamespaces** so each slice (Auth, Accounts, Families,
 Lookups, Audit, Workspace) is self-contained and easy to navigate. Routes in
-`app/Config/Routes.php` target these namespaces directly (e.g. `Workspace\Home::adminDashboard`).
+`app/Config/Routes.php` target these namespaces directly (e.g. `Workspace\HomeController::adminDashboard`).
 
 ### Controllers (`app/Controllers/`)
 
@@ -37,8 +37,8 @@ Lookups, Audit, Workspace) is self-contained and easy to navigate. Routes in
   `services`, and the exact allowed table values.
 - `Audit/AuditTrailsModel.php` — audit trail inserts and audit list queries.
 - `Lookups/SectorModel.php` — the `sector` lookup table.
-- `Lookups/ServiceModel.php` — assistance services and per-member eligibility lookups.
-- `Lookups/ServicesModel.php` — services management backed by the active view.
+- `Lookups/ServiceModel.php` — the `services` lookup table: admin CRUD/archival and
+  per-member/sector eligibility lookups (the single model for `services`).
 - `DashboardModel.php`, `SearchModel.php`, `ViewLayoutModel.php` — shared
   cross-feature query/data-assembly helpers (kept in the root namespace).
 

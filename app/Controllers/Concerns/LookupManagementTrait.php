@@ -5,7 +5,7 @@ namespace App\Controllers\Concerns;
 use App\Models\Audit\AuditTrailsModel;
 use App\Libraries\RoleAccess;
 use App\Models\Lookups\SectorModel;
-use App\Models\Lookups\ServicesModel;
+use App\Models\Lookups\ServiceModel;
 use App\Models\ViewLayoutModel;
 use CodeIgniter\HTTP\RedirectResponse;
 use Config\IdleTimeout;
@@ -33,7 +33,7 @@ trait LookupManagementTrait
     private function buildLookupViewData(string $activeTab): array
     {
         $sectorModel = new SectorModel();
-        $servicesModel = new ServicesModel();
+        $servicesModel = new ServiceModel();
         $layoutModel = new ViewLayoutModel();
         $currentRole = RoleAccess::normalizeRole((string) session()->get('role')) ?? '';
         $isDeveloper = $currentRole === 'Developer';

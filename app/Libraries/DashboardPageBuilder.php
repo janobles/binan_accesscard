@@ -17,7 +17,7 @@ use CodeIgniter\HTTP\RedirectResponse;
 use Config\IdleTimeout;
 
 /**
- * Central view-data assembler for the dashboard. Workspace\Home delegates here so
+ * Central view-data assembler for the dashboard. Workspace\HomeController delegates here so
  * controllers only choose WHICH page to show while this class gathers all the
  * models' data and renders the admin/employee shell views. The main place to look
  * when debugging what a dashboard page displays.
@@ -188,7 +188,7 @@ class DashboardPageBuilder
         ];
     }
 
-    /** Public entry for the admin records-list AJAX partial (Home::renderAdminRecordListPartial). */
+    /** Public entry for the admin records-list AJAX partial (HomeController::renderAdminRecordListPartial). */
     public function buildAdminRecordListViewData(): array
     {
         return $this->buildMemberListData();

@@ -104,7 +104,7 @@ $fieldViewData            = compact(
                 <?= view('Dashboard/familyform/head-fields', $fieldViewData) ?>
             </div>
 
-            <?= view('Dashboard/Sectors and Services/sectorandservices', [
+            <?= view('Dashboard/sectors-services/sectorandservices', [
                 'servicesByCategory' => $servicesByCategory,
                 'sectorCatalog' => $sectorCatalog,
                 'selectedSectorIds' => $selectedSectorIds,

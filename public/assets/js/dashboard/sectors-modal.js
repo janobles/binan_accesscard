@@ -74,6 +74,7 @@
         const mode = String(trigger.dataset.sectorMode || 'create');
         const fields = modal.querySelector('.js-sector-form-fields');
         const archiveMessage = modal.querySelector('.js-sector-archive-message');
+        const restoreMessage = modal.querySelector('.js-sector-restore-message');
         const title = modal.querySelector('#sectorActionModalLabel');
         const submit = modal.querySelector('.js-sector-modal-submit');
         const prefix = modal.querySelector('#sectorModalPrefix');
@@ -81,50 +82,57 @@
         const name = modal.querySelector('#sectorModalName');
         const description = modal.querySelector('#sectorModalDescription');
         const archiveName = modal.querySelector('.js-sector-archive-name');
+        const restoreName = modal.querySelector('.js-sector-restore-name');
         const sectorId = String(trigger.dataset.sectorId || '').trim();
         const isArchive = mode === 'archive';
+        const isRestore = mode === 'restore';
+        const isAction = isArchive || isRestore;
         const existingCode = mode === 'update' ? String(trigger.dataset.sectorShortcode || '') : '';
 
         form.reset();
         form.action = form.dataset.createAction || '';
-        // Remembered so the duplicate check can ignore this sector's own code.
         form.dataset.currentCode = existingCode;
 
         if (mode === 'update') {
             form.action = (form.dataset.updateAction || '').replace(/\/$/, '') + '/' + sectorId;
         } else if (isArchive) {
             form.action = (form.dataset.archiveAction || '').replace(/\/$/, '') + '/' + sectorId;
+        } else if (isRestore) {
+            form.action = (form.dataset.restoreAction || '').replace(/\/$/, '') + '/' + sectorId;
         }
 
         if (title) {
-            title.textContent = mode === 'update' ? 'Update Sector' : (isArchive ? 'Archive Sector' : 'Add Sector');
+            title.textContent = mode === 'update' ? 'Update Sector' : (isArchive ? 'Archive Sector' : (isRestore ? 'Restore Sector' : 'Add Sector'));
         }
 
         if (submit) {
-            submit.textContent = mode === 'update' ? 'Update Sector' : (isArchive ? 'Archive Sector' : 'Add Sector');
+            submit.textContent = mode === 'update' ? 'Update Sector' : (isArchive ? 'Archive Sector' : (isRestore ? 'Restore Sector' : 'Add Sector'));
             submit.classList.toggle('btn-danger', isArchive);
-            submit.classList.toggle('btn-primary', !isArchive);
+            submit.classList.toggle('btn-success', isRestore);
+            submit.classList.toggle('btn-primary', !isAction);
             submit.disabled = false;
         }
 
         if (fields) {
-            fields.classList.toggle('d-none', isArchive);
+            fields.classList.toggle('d-none', isAction);
         }
 
         if (archiveMessage) {
             archiveMessage.classList.toggle('d-none', !isArchive);
         }
 
+        if (restoreMessage) {
+            restoreMessage.classList.toggle('d-none', !isRestore);
+        }
+
         [prefix, shortcode, name, description].forEach(function (field) {
             if (field) {
-                field.disabled = isArchive;
-                field.required = !isArchive && field.hasAttribute('required');
+                field.disabled = isAction;
+                field.required = !isAction && field.hasAttribute('required');
             }
         });
 
-        if (!isArchive) {
-            // Set the Code first, then point the prefix dropdown at it (a known
-            // category, otherwise "Other"). Creating starts both blank.
+        if (!isAction) {
             if (shortcode) {
                 shortcode.value = existingCode;
             }
@@ -150,6 +158,10 @@
 
         if (archiveName) {
             archiveName.textContent = String(trigger.dataset.sectorName || 'this sector');
+        }
+
+        if (restoreName) {
+            restoreName.textContent = String(trigger.dataset.sectorName || 'this sector');
         }
 
         window.bootstrap.Modal.getOrCreateInstance(modal).show();
@@ -200,3 +212,39 @@
         }
     });
 })(window, document);
+
+(function (document) {
+    document.addEventListener('DOMContentLoaded', function () {
+        const activeBtn = document.getElementById('btn-sector-active');
+        const archiveBtn = document.getElementById('btn-sector-archive');
+        const addWrap = document.getElementById('sector-add-btn-wrap');
+
+        if (!activeBtn || !archiveBtn) {
+            return;
+        }
+
+        function showSectorView(showArchive) {
+            document.querySelectorAll('[data-row-archived]').forEach(function (row) {
+                const isArchived = row.dataset.rowArchived === '1';
+                row.classList.toggle('d-none', isArchived !== showArchive);
+            });
+
+            if (addWrap) {
+                addWrap.classList.toggle('d-none', showArchive);
+            }
+
+            activeBtn.classList.toggle('active', !showArchive);
+            activeBtn.setAttribute('aria-pressed', showArchive ? 'false' : 'true');
+            archiveBtn.classList.toggle('active', showArchive);
+            archiveBtn.setAttribute('aria-pressed', showArchive ? 'true' : 'false');
+        }
+
+        activeBtn.addEventListener('click', function () {
+            showSectorView(false);
+        });
+
+        archiveBtn.addEventListener('click', function () {
+            showSectorView(true);
+        });
+    });
+})(document);

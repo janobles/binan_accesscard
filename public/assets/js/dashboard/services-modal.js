@@ -72,6 +72,7 @@
         const mode = String(trigger.dataset.serviceMode || 'create');
         const fields = modal.querySelector('.js-service-form-fields');
         const archiveMessage = modal.querySelector('.js-service-archive-message');
+        const restoreMessage = modal.querySelector('.js-service-restore-message');
         const title = modal.querySelector('#serviceActionModalLabel');
         const submit = modal.querySelector('.js-service-modal-submit');
         const category = modal.querySelector('#serviceModalCategory');
@@ -79,8 +80,11 @@
         const name = modal.querySelector('#serviceModalName');
         const description = modal.querySelector('#serviceModalDescription');
         const archiveName = modal.querySelector('.js-service-archive-name');
+        const restoreName = modal.querySelector('.js-service-restore-name');
         const serviceId = String(trigger.dataset.serviceId || '').trim();
         const isArchive = mode === 'archive';
+        const isRestore = mode === 'restore';
+        const isAction = isArchive || isRestore;
 
         form.reset();
         form.action = form.dataset.createAction || '';
@@ -89,30 +93,37 @@
             form.action = (form.dataset.updateAction || '').replace(/\/$/, '') + '/' + serviceId;
         } else if (isArchive) {
             form.action = (form.dataset.archiveAction || '').replace(/\/$/, '') + '/' + serviceId;
+        } else if (isRestore) {
+            form.action = (form.dataset.restoreAction || '').replace(/\/$/, '') + '/' + serviceId;
         }
 
         if (title) {
-            title.textContent = mode === 'update' ? 'Update Service or Program' : (isArchive ? 'Archive Service or Program' : 'Add Service or Program');
+            title.textContent = mode === 'update' ? 'Update Service or Program' : (isArchive ? 'Archive Service or Program' : (isRestore ? 'Restore Service or Program' : 'Add Service or Program'));
         }
 
         if (submit) {
-            submit.textContent = mode === 'update' ? 'Update Service or Program' : (isArchive ? 'Archive Service or Program' : 'Add Service or Program');
+            submit.textContent = mode === 'update' ? 'Update Service or Program' : (isArchive ? 'Archive Service or Program' : (isRestore ? 'Restore Service or Program' : 'Add Service or Program'));
             submit.classList.toggle('btn-danger', isArchive);
-            submit.classList.toggle('btn-primary', !isArchive);
+            submit.classList.toggle('btn-success', isRestore);
+            submit.classList.toggle('btn-primary', !isAction);
         }
 
         if (fields) {
-            fields.classList.toggle('d-none', isArchive);
+            fields.classList.toggle('d-none', isAction);
         }
 
         if (archiveMessage) {
             archiveMessage.classList.toggle('d-none', !isArchive);
         }
 
+        if (restoreMessage) {
+            restoreMessage.classList.toggle('d-none', !isRestore);
+        }
+
         [category, name, description].forEach(function (field) {
             if (field) {
-                field.disabled = isArchive;
-                field.required = !isArchive && field.hasAttribute('required');
+                field.disabled = isAction;
+                field.required = !isAction && field.hasAttribute('required');
             }
         });
 
@@ -122,7 +133,7 @@
             categoryOther.classList.add('d-none');
         }
 
-        if (!isArchive) {
+        if (!isAction) {
             setCategory(category, categoryOther, mode === 'update' ? trigger.dataset.serviceCategory : '');
 
             if (name) {
@@ -136,6 +147,10 @@
 
         if (archiveName) {
             archiveName.textContent = String(trigger.dataset.serviceName || 'this service or program');
+        }
+
+        if (restoreName) {
+            restoreName.textContent = String(trigger.dataset.serviceName || 'this service or program');
         }
 
         window.bootstrap.Modal.getOrCreateInstance(modal).show();
@@ -157,3 +172,39 @@
         }
     });
 })(window, document);
+
+(function (document) {
+    document.addEventListener('DOMContentLoaded', function () {
+        const activeBtn = document.getElementById('btn-service-active');
+        const archiveBtn = document.getElementById('btn-service-archive');
+        const addWrap = document.getElementById('service-add-btn-wrap');
+
+        if (!activeBtn || !archiveBtn) {
+            return;
+        }
+
+        function showServiceView(showArchive) {
+            document.querySelectorAll('[data-row-archived]').forEach(function (row) {
+                const isArchived = row.dataset.rowArchived === '1';
+                row.classList.toggle('d-none', isArchived !== showArchive);
+            });
+
+            if (addWrap) {
+                addWrap.classList.toggle('d-none', showArchive);
+            }
+
+            activeBtn.classList.toggle('active', !showArchive);
+            activeBtn.setAttribute('aria-pressed', showArchive ? 'false' : 'true');
+            archiveBtn.classList.toggle('active', showArchive);
+            archiveBtn.setAttribute('aria-pressed', showArchive ? 'true' : 'false');
+        }
+
+        activeBtn.addEventListener('click', function () {
+            showServiceView(false);
+        });
+
+        archiveBtn.addEventListener('click', function () {
+            showServiceView(true);
+        });
+    });
+})(document);

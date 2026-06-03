@@ -55,7 +55,6 @@ final class WorkspaceControllerRoutingTest extends TestCase
             'update',
             'archive',
             'restore',
-            'delete',
         ]);
 
         $this->assertPublicMethods(SectorController::class, [

@@ -91,7 +91,8 @@ $routes->group('employee', static function (RouteCollection $routes): void {
         $routes->get('view/(:num)', 'Families\FamilyController::viewFamily/$1');
         $routes->get('edit/(:num)', 'Families\FamilyController::editFamily/$1');
         $routes->post('update/(:num)', 'Families\FamilyController::update/$1');
-        $routes->post('delete/(:num)', 'Families\FamilyController::delete/$1');
+        $routes->post('archive/(:num)', 'Families\FamilyController::archive/$1');
+        $routes->post('restore/(:num)', 'Families\FamilyController::restore/$1');
     });
 });
 

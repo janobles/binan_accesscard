@@ -471,15 +471,15 @@ class FamilyController extends BaseController
     }
 
     /**
-     * POST `admin/manage-family/archive/{id}`: soft-archives an entire family
-     * (Developer/Admin only) and audits it. Frontend: the "Archive" action in the
-     * admin records list; redirects back with a flash message.
+     * POST `{admin|employee}/manage-family/archive/{id}`: soft-archives an entire
+     * family (Developer/Admin/Employee) and audits it. Frontend: the "Archive"
+     * action in the records list; redirects back with a flash message.
      */
     public function archive(int $headId): RedirectResponse
     {
         return $this->changeFamilyState(
             $headId,
-            ['Developer', 'Admin'],
+            ['Developer', 'Admin', 'Employee'],
             static fn (MemberModel $model): bool => $model->archiveFamily($headId),
             'FAMILY_ARCHIVE',
             'Archived',
@@ -489,38 +489,20 @@ class FamilyController extends BaseController
     }
 
     /**
-     * POST `admin/manage-family/restore/{id}`: restores a soft-archived family
-     * (Developer/Admin only) and audits it. Frontend: the "Restore" action on the
-     * archived records view.
+     * POST `{admin|employee}/manage-family/restore/{id}`: restores a soft-archived
+     * family (Developer/Admin/Employee) and audits it. Frontend: the "Restore"
+     * action on the archived records view.
      */
     public function restore(int $headId): RedirectResponse
     {
         return $this->changeFamilyState(
             $headId,
-            ['Developer', 'Admin'],
+            ['Developer', 'Admin', 'Employee'],
             static fn (MemberModel $model): bool => $model->restoreFamily($headId),
             'FAMILY_RESTORE',
             'Restored',
             'Record restored successfully.',
             'Unable to restore record.'
-        );
-    }
-
-    /**
-     * POST `employee/manage-family/delete/{id}`: soft-deletes a family from the
-     * employee Manage Records view and audits it. Same soft-delete as archive (the
-     * row is kept and hidden, never hard-deleted).
-     */
-    public function delete(int $headId): RedirectResponse
-    {
-        return $this->changeFamilyState(
-            $headId,
-            ['Developer', 'Admin', 'Employee'],
-            static fn (MemberModel $model): bool => $model->deleteFamilyRecord($headId),
-            'FAMILY_DELETE',
-            'Deleted',
-            'Record deleted successfully.',
-            'Unable to delete record.'
         );
     }
 

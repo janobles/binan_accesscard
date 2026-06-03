@@ -13,11 +13,6 @@ $totalFamilies = max(0, (int) ($totalFamilies ?? count($families)));
 $totalPages = max(1, (int) ($totalPages ?? 1));
 $fromRecord = $totalFamilies === 0 ? 0 : (($page - 1) * $perPage) + 1;
 $toRecord = min($totalFamilies, $page * $perPage);
-$requestPath = trim((string) service('request')->getUri()->getPath(), '/');
-$isEmployeeList = (string) session()->get('role') === 'Employee'
-    || str_starts_with((string) $routeBase, 'employee/')
-    || str_starts_with($requestPath, 'employee/')
-    || str_contains('/' . $requestPath, '/employee/');
 // Filter controls + deep ("search the whole database") results are supplied by
 // Admin DashboardPageBuilder and Employee WorkspaceModel supply filter controls and results.
 $sectorOptions = $sectorOptions ?? [];
@@ -43,7 +38,7 @@ $deepToRecord = (int) ($deepToRecord ?? 0);
             <button type="button" class="btn btn-primary btn-sm js-open-family-modal" data-modal-url="<?= site_url($routeBase . '?partial=1') ?>" data-modal-title="Add Record"><i class="bi bi-plus-lg" aria-hidden="true"></i>Add Record</button>
         <?php endif; ?>
     </div>
-    <?php if (! $isEmployeeList && $canRestoreArchived): ?>
+    <?php if ($canRestoreArchived): ?>
         <div class="toolbar-row mb-3">
             <a
                 class="btn btn-sm <?= $status === 'active' ? 'btn-primary' : 'btn-outline-secondary' ?>"
@@ -178,11 +173,10 @@ $deepToRecord = (int) ($deepToRecord ?? 0);
                         $headName = trim((string) ($result['head_firstname'] ?? '') . ' ' . (string) ($result['head_lastname'] ?? ''));
                         $memberName = trim((string) ($result['firstname'] ?? '') . ' ' . (string) ($result['lastname'] ?? ''));
                         $deepFamilyName = $headName !== '' ? $headName : $memberName;
-                        // Mirror the main list's per-status action: admins archive, employees
-                        // delete, and the archived view restores.
-                        $deepAction = $status === 'archived' ? 'restore' : ($isEmployeeList ? 'delete' : 'archive');
-                        $deepActionLabel = $status === 'archived' ? 'Restore' : ($isEmployeeList ? 'Delete' : 'Archive');
-                        $deepActionPast = $status === 'archived' ? 'restored' : ($isEmployeeList ? 'deleted' : 'archived');
+                        // Active records can be archived; archived records can be restored.
+                        $deepAction = $status === 'archived' ? 'restore' : 'archive';
+                        $deepActionLabel = $status === 'archived' ? 'Restore' : 'Archive';
+                        $deepActionPast = $status === 'archived' ? 'restored' : 'archived';
                         $deepConfirm = $status === 'archived'
                             ? 'Restore this record to the active list?'
                             : $deepActionLabel . ' this record? This keeps the record in the database, marks it as ' . $deepActionPast . ', and hides it from active lists.';
@@ -265,9 +259,9 @@ $deepToRecord = (int) ($deepToRecord ?? 0);
                 <?php
                 $headId = (int) ($family['memberID'] ?? 0);
                 $dateValue = $status === 'archived' ? ($family['dt_deleted'] ?? '') : ($family['dt_created'] ?? '');
-                $recordAction = $status === 'archived' ? 'restore' : ($isEmployeeList ? 'delete' : 'archive');
-                $recordActionLabel = $status === 'archived' ? 'Restore' : ($isEmployeeList ? 'Delete' : 'Archive');
-                $recordActionPast = $status === 'archived' ? 'restored' : ($isEmployeeList ? 'deleted' : 'archived');
+                $recordAction = $status === 'archived' ? 'restore' : 'archive';
+                $recordActionLabel = $status === 'archived' ? 'Restore' : 'Archive';
+                $recordActionPast = $status === 'archived' ? 'restored' : 'archived';
                 $confirmMessage = $status === 'archived'
                     ? 'Restore this record to the active list?'
                     : $recordActionLabel . ' this record? This keeps the record in the database, marks it as ' . $recordActionPast . ', and hides it from active lists.';

@@ -256,7 +256,6 @@ class DashboardPageBuilder
             'canRestoreArchived' => true,
             'families'          => $memberModel->searchFamilies($searchKeyword, $perPage, ($page - 1) * $perPage, $showArchived, $filters),
             'fromRecord'        => $totalFamilies === 0 ? 0 : (($page - 1) * $perPage) + 1,
-            'isEmployeeList'    => false,
             'isFullPage'        => true,
             'keyword'           => $keyword,
             // Full-page route so both the filter form and deep-search form reload the
@@ -424,17 +423,21 @@ class DashboardPageBuilder
     }
 
     /**
-     * Employee counterpart of buildMemberListData(): same paginated family list but
-     * always active-only and without restore controls. Frontend: the employee
-     * Manage Records view.
+     * Employee counterpart of buildMemberListData(): the paginated family list with
+     * the same Active/Archived toggle and archive/restore controls as the admin
+     * view (employees can view, edit, and archive/restore — but never delete).
+     * Frontend: the employee Manage Records view.
      */
     private function buildEmployeeRecordListData(): array
     {
         $keyword = trim((string) $this->request->getGet('q'));
+        $status = strtolower(trim((string) $this->request->getGet('status')));
+        $showArchived = $status === 'archived';
         $page = max(1, (int) $this->request->getGet('page'));
         $perPage = 50;
 
-        // Manage Records FILTER controls (sector + date). Employees only see active records.
+        // Manage Records FILTER controls (sector + date). Status (active/archived)
+        // is handled separately above. Passed into MemberModel::searchFamilies().
         $filters = [
             'sectorID' => (string) $this->request->getGet('sectorID'),
             'date'     => (string) $this->request->getGet('date'),
@@ -442,27 +445,26 @@ class DashboardPageBuilder
 
         $memberModel = new MemberModel();
         $searchKeyword = $keyword === '' ? null : $keyword;
-        $totalFamilies = $memberModel->countSearchFamilies($searchKeyword, false, $filters);
+        $totalFamilies = $memberModel->countSearchFamilies($searchKeyword, $showArchived, $filters);
         $totalPages = max(1, (int) ceil($totalFamilies / $perPage));
         $page = min($page, $totalPages);
 
         return array_merge([
-            'canRestoreArchived' => false,
-            'families' => $memberModel->searchFamilies($searchKeyword, $perPage, ($page - 1) * $perPage, false, $filters),
+            'canRestoreArchived' => true,
+            'families' => $memberModel->searchFamilies($searchKeyword, $perPage, ($page - 1) * $perPage, $showArchived, $filters),
             'fromRecord' => $totalFamilies === 0 ? 0 : (($page - 1) * $perPage) + 1,
-            'isEmployeeList' => true,
             'keyword' => $keyword,
             'listRoute' => 'employee/manage-records',
             'page' => $page,
             'perPage' => $perPage,
             'routeBase' => 'employee/manage-family',
-            'status' => 'active',
+            'status' => $showArchived ? 'archived' : 'active',
             'toRecord' => min($totalFamilies, $page * $perPage),
             'totalFamilies' => $totalFamilies,
             'totalPages' => $totalPages,
             // Filter UI data.
             'sectorOptions' => (new SectorModel())->getSectorOptions(),
             'filters' => $filters,
-        ], $this->buildDeepSearchData('active'));
+        ], $this->buildDeepSearchData($showArchived ? 'archived' : 'active'));
     }
 }

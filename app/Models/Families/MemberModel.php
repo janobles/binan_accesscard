@@ -391,14 +391,8 @@ class MemberModel extends Model
             ->delete() !== false;
     }
 
-    /** Soft-archives an entire family (admin Manage Records "archive" action). */
+    /** Soft-archives an entire family (Manage Records "archive" action). */
     public function archiveFamily(int $headId): bool
-    {
-        return $this->markFamilyDeleted($headId);
-    }
-
-    /** Soft-deletes a family (employee "delete"); same soft-delete as archive. */
-    public function deleteFamilyRecord(int $headId): bool
     {
         return $this->markFamilyDeleted($headId);
     }

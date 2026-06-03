@@ -179,7 +179,12 @@ $formatStatus = [ViewFormatter::class, 'formatStatus'];
                                                         <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-person-x" aria-hidden="true"></i>Disable</button>
                                                     </form>
                                                 <?php else: ?>
-                                                    <span class="status-pill is-danger">Disabled</span>
+                                                    <!-- Admin-only: posts to AccountController::enableEmployee (admin/accounts/enable). -->
+                                                    <form class="js-account-status-form" method="post" action="<?= site_url('admin/accounts/enable') ?>" data-confirm-message="<?= esc('Enable employee account "' . (string) ($account['username'] ?? '') . '"?', 'attr') ?>">
+                                                        <?= csrf_field() ?>
+                                                        <input type="hidden" name="userID" value="<?= esc((string) ($account['userID'] ?? '')) ?>">
+                                                        <button class="btn btn-sm btn-outline-success" type="submit"><i class="bi bi-person-check" aria-hidden="true"></i>Enable</button>
+                                                    </form>
                                                 <?php endif; ?>
                                             <?php endif; ?>
                                         </td>

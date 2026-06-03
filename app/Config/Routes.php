@@ -27,8 +27,9 @@ $routes->group('admin', static function (RouteCollection $routes): void {
     $routes->get('sectors', 'Workspace\Home::adminSectors');
     $routes->get('services', 'Workspace\Home::adminServices');
     $routes->get('manage-members', 'Workspace\Home::adminManageMembers');
-    // Admin-only: disable employee accounts from Account Management.
+    // Admin-only: disable/enable employee accounts from Account Management.
     $routes->post('accounts/disable', 'Accounts\AccountController::disableEmployee');
+    $routes->post('accounts/enable', 'Accounts\AccountController::enableEmployee');
 
     $routes->get('manage-families', 'Workspace\Home::adminManageRecords');
     $routes->group('manage-family', static function (RouteCollection $routes): void {

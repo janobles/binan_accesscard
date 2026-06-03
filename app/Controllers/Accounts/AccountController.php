@@ -194,6 +194,53 @@ class AccountController extends BaseController
     }
 
     /**
+     * Admin/Developer: enable an Employee account via POST `admin/accounts/enable`.
+     * Only `User`-role accounts may be enabled here; self-enable is blocked.
+     * Audits the change and redirects to `admin/accounts`. Frontend: the
+     * "enable" button in the admin Account Management list.
+     */
+    public function enableEmployee(): RedirectResponse
+    {
+        $guard = $this->requireAdminOrDeveloper();
+
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        $userId = (int) $this->request->getPost('userID');
+
+        if ($userId <= 0) {
+            return redirect()->back()->with('error', 'Account is required.');
+        }
+
+        if ($userId === (int) session()->get('user_id')) {
+            return redirect()->back()->with('error', 'You cannot enable your own account.');
+        }
+
+        $userModel = new UserModel();
+        $user = $userModel->select('userID, username, role')->find($userId);
+
+        if ($user === null) {
+            return redirect()->back()->with('error', 'Account not found.');
+        }
+
+        if ((string) ($user['role'] ?? '') !== 'User') {
+            return redirect()->back()->with('error', 'Only employee accounts can be enabled from this action.');
+        }
+
+        if (! $userModel->updateAccountStatus($userId, true)) {
+            return redirect()->back()->with('error', 'Employee account could not be enabled.');
+        }
+
+        $this->audit(
+            'ACCOUNT_STATUS_UPDATED',
+            'Enabled Employee account "' . (string) ($user['username'] ?? '') . '" (#' . $userId . ').'
+        );
+
+        return redirect()->to(site_url('admin/accounts'))->with('success', 'Employee account enabled successfully.');
+    }
+
+    /**
      * Access guard: returns a redirect (to login or with an error) unless the
      * current session is a logged-in Developer; null means allowed to proceed.
      */

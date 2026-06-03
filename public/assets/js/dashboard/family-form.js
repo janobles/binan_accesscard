@@ -328,8 +328,62 @@
             });
         }
 
+        function setFieldError(field, message) {
+            if (!field) { return; }
+            field.classList.toggle('is-invalid', message !== '');
+            const feedback = field.parentElement ? field.parentElement.querySelector('.invalid-feedback') : null;
+            if (feedback) { feedback.textContent = message; }
+        }
+
+        function validateStep1() {
+            let valid = true;
+            const rules = [
+                { id: '#head_firstname', msg: 'First name is required.' },
+                { id: '#head_lastname',  msg: 'Last name is required.' },
+                { id: '#head_birthday',  msg: 'Date of birth is required.' },
+                { id: '#head_sex',       msg: 'Sex is required.' }
+            ];
+
+            rules.forEach(function (rule) {
+                const field = q(form, rule.id);
+                if (!field) { return; }
+                const empty = field.value.trim() === '';
+                setFieldError(field, empty ? rule.msg : '');
+                if (empty) { valid = false; }
+            });
+
+            const contact = q(form, '#head_contactnumber');
+            if (contact && contact.value.trim() !== '' && /[^0-9]/.test(contact.value)) {
+                setFieldError(contact, 'Contact number must contain digits only.');
+                valid = false;
+            } else if (contact) {
+                setFieldError(contact, '');
+            }
+
+            return valid;
+        }
+
+        const contactInput = q(form, '#head_contactnumber');
+        if (contactInput) {
+            contactInput.addEventListener('input', function () {
+                this.value = this.value.replace(/[^0-9]/g, '');
+                setFieldError(this, '');
+            });
+        }
+
+        ['#head_firstname', '#head_lastname', '#head_birthday', '#head_sex'].forEach(function (selector) {
+            const field = q(form, selector);
+            if (field) {
+                field.addEventListener('input', function () { if (this.value.trim() !== '') { setFieldError(this, ''); } });
+                field.addEventListener('change', function () { if (this.value.trim() !== '') { setFieldError(this, ''); } });
+            }
+        });
+
         if (nextBtn) {
             nextBtn.addEventListener('click', function () {
+                if (currentStep === 1 && !validateStep1()) {
+                    return;
+                }
                 setStep(currentStep + 1);
             });
         }

@@ -17,14 +17,16 @@
         <div class="col-md-3">
             <label class="form-label" for="head_firstname">First name</label>
             <input class="form-control" id="head_firstname" name="head_firstname" value="<?= esc((string) ($familyRecord['firstname'] ?? '')) ?>" required>
+            <div class="invalid-feedback">First name is required.</div>
         </div>
         <div class="col-md-3">
             <label class="form-label" for="head_middlename">Middle name</label>
-            <input class="form-control" id="head_middlename" name="head_middlename" value="<?= esc((string) ($familyRecord['middlename'] ?? '')) ?>" required>
+            <input class="form-control" id="head_middlename" name="head_middlename" value="<?= esc((string) ($familyRecord['middlename'] ?? '')) ?>">
         </div>
         <div class="col-md-3">
             <label class="form-label" for="head_lastname">Last name</label>
             <input class="form-control" id="head_lastname" name="head_lastname" value="<?= esc((string) ($familyRecord['lastname'] ?? '')) ?>" required>
+            <div class="invalid-feedback">Last name is required.</div>
         </div>
         <div class="col-md-3">
             <label class="form-label" for="head_suffix">Suffix</label>
@@ -38,6 +40,7 @@
         <div class="col-md-3">
             <label class="form-label" for="head_birthday">Date of birth</label>
             <input type="date" class="form-control" id="head_birthday" name="head_birthday" value="<?= esc((string) ($familyRecord['birthday'] ?? '')) ?>" required>
+            <div class="invalid-feedback">Date of birth is required.</div>
         </div>
         <div class="col-md-3">
             <label class="form-label" for="head_sex">Sex</label>
@@ -47,6 +50,7 @@
                     <option value="<?= esc($sex) ?>" <?= (string) ($familyRecord['sex'] ?? '') === (string) $sex ? 'selected' : '' ?>><?= esc($sex) ?></option>
                 <?php endforeach; ?>
             </select>
+            <div class="invalid-feedback">Sex is required.</div>
         </div>
         <div class="col-md-3">
             <label class="form-label" for="head_civilstatus">Civil status</label>
@@ -60,7 +64,8 @@
         </div>
         <div class="col-md-3">
             <label class="form-label" for="head_contactnumber">Contact number</label>
-            <input class="form-control" id="head_contactnumber" name="head_contactnumber" value="<?= esc((string) ($familyRecord['contactnumber'] ?? '')) ?>">
+            <input class="form-control" id="head_contactnumber" name="head_contactnumber" inputmode="numeric" value="<?= esc((string) ($familyRecord['contactnumber'] ?? '')) ?>">
+            <div class="invalid-feedback">Contact number must contain digits only.</div>
         </div>
         <div class="col-md-3">
             <label class="form-label" for="head_religion">Religion</label>

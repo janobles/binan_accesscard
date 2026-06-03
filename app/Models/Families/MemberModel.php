@@ -11,7 +11,7 @@ use CodeIgniter\Model;
 class MemberModel extends Model
 {
     public const VALIDATION_RULES = [
-        'sectorID' => 'required|valid_sector_array',
+        'sectorID' => 'permit_empty|valid_sector_array',
         'firstname' => 'required|max_length[100]',
         'lastname' => 'required|max_length[100]',
         'middlename' => 'permit_empty|max_length[50]',

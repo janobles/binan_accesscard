@@ -811,12 +811,12 @@ class FamilyController extends BaseController
     /**
      * Returns the validation ruleset for the given entry type. Members require a
      * parent head id and member name fields; heads require the head name/birthday/
-     * sex fields. Both require a valid sector selection.
+     * sex fields. Sectors are optional, but any IDs supplied must be well-formed.
      */
     private function rulesForEntryType(string $entryType): array
     {
         $rules = [
-            'sector_ids' => 'required|valid_sector_array',
+            'sector_ids' => 'permit_empty|valid_sector_array',
         ];
 
         if ($entryType === 'member') {
@@ -832,7 +832,7 @@ class FamilyController extends BaseController
 
         return $rules + [
             'head_firstname' => 'required|max_length[100]',
-            'head_middlename' => 'required|max_length[50]',
+            'head_middlename' => 'permit_empty|max_length[50]',
             'head_lastname' => 'required|max_length[100]',
             'head_birthday' => 'required|valid_date[Y-m-d]',
             'head_sex' => 'required|in_list[Male,Female]',

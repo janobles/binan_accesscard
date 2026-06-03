@@ -1,3 +1,24 @@
+// Wires the 3-step family record wizard (Head of Family → Sectors & Services → Members).
+// Handles step navigation, step-1 client-side validation, member row add/remove,
+// sector/service selection, "other" select syncing, choice modals, and the head
+// summary panel shown on step 3. Rendering helpers live in family-form-ui.js.
+// On submit, applyOtherValues() swaps generated <option> values so the custom
+// text is posted instead of the literal "Other" / "Others" option value.
+//
+// Step-1 validation (validateStep1):
+//   - Required: First name, Last name, Date of birth, Sex
+//   - Optional but digits-only: Contact number (letters stripped live on input)
+//   - Inline is-invalid / invalid-feedback without page refresh
+//
+// Connected to:
+//   - family-form-ui.js    : window.FamilyFormUI (all rendering helpers)
+//   - manage-family-modal.js: calls window.initFamilyForm() after AJAX load
+//   - Backend : POST families            (FamilyController::store)
+//               POST {base}/update/:id   (FamilyController::update)
+//   - Views   : Dashboard/familyform/familyform.php (form shell)
+//               Dashboard/familyform/head-fields.php (step 1 fields)
+//               Dashboard/sectors-services/sectorandservices.php (step 2)
+//               Member/member-summary.php, Member/member-template.php (step 3)
 // Wires the family wizard events while keeping rendering helpers reusable.
 (function (window, document) {
     function parseJsonNode(node, fallbackValue) {

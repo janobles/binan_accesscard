@@ -1,3 +1,22 @@
+// Two responsibilities:
+//   1. Registers Add / View / Edit family record modals with dashboard-modal-loader.js.
+//      Clicks on .js-open-family-modal, .js-open-family-view-modal, and
+//      .js-open-family-edit-modal fetch the correct partial via AJAX into #familyModal.
+//      After loading, calls window.initFamilyForm() to wire up the multi-step wizard.
+//   2. Makes the records list panel (data-family-list-panel) update in-place via fetch:
+//      search/filter form submits, pagination link clicks, and browser back/forward all
+//      replace only the panel HTML without a full page reload. Also handles the
+//      archive/restore confirmation dialog for .js-family-record-action-form.
+//
+// Connected to:
+//   - dashboard-modal-loader.js : window.registerDashboardModal()
+//   - family-form.js            : window.initFamilyForm() (initialises the wizard)
+//   - Backend : GET  {admin|employee}/manage-family/view/:id  (FamilyController::viewFamily)
+//               GET  {admin|employee}/manage-family/edit/:id  (FamilyController::editFamily)
+//               GET  {admin|employee}/manage-records?partial=1 (list fragment)
+//               POST {admin|employee}/manage-family/archive|restore/:id
+//   - Views : Dashboard/familyform/family-list.php, familyform.php, family-view.php
+//   - Both admin (admin/manage-records) and employee (employee/manage-records) pages use this
 // Registers record management screens with the shared dashboard modal loader.
 (function (window) {
     if (typeof window.registerDashboardModal !== 'function') {

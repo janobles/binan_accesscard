@@ -1,3 +1,19 @@
+// Drives the Sector management UI across two contexts:
+//   1. Dashboard modal: registers the Sectors panel with dashboard-modal-loader.js
+//      so clicking .js-open-sectors-modal loads it via AJAX.
+//   2. Sectors admin page (#sectorActionModal): handles create / update / archive /
+//      restore in a single shared modal. Auto-fills the shortcode field from the
+//      selected category prefix + the next available number (from data-next-code-map).
+//      Blocks submission when the typed shortcode already exists (data-existing-codes).
+//      Third IIFE manages the Active / Archived row toggle on the lookups page.
+//
+// Connected to:
+//   - dashboard-modal-loader.js : window.registerDashboardModal()
+//   - Backend : POST admin/lookups/sectors/store|update|archive|restore
+//               (Admin\SectorController)
+//   - Views   : Views/admin/lookups/index.php — #sectorActionModal, .js-sector-modal-open
+//               buttons carry data-sector-mode, data-sector-id, data-sector-name, etc.
+//   - Data    : PHP embeds data-next-code-map and data-existing-codes on the <form>
 (function (window) {
     if (typeof window.registerDashboardModal !== 'function') {
         return;

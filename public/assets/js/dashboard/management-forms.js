@@ -1,3 +1,13 @@
+// Handles inline-edit rows and "other" select inputs on the admin management pages.
+//   - Inline edit: clicking Edit enables the row's fields; Cancel restores originals
+//   - "Other" selects: shows a freetext input when the user picks __other__
+//   - Delete forms: shows a confirm dialog before the form is submitted
+//
+// Connected to:
+//   - Views  : Dashboard/Manage/accounts.php — [data-inline-edit-row] rows,
+//              .js-management-other-select, .js-management-delete-form
+//   - Exposes: window.initManagementForms(rootElement) so AJAX-loaded modal
+//              content can re-initialise without waiting for DOMContentLoaded
 (function (window, document) {
     function isOtherValue(value) {
         return String(value || '').trim().toLowerCase() === '__other__';

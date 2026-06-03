@@ -1,3 +1,15 @@
+// Tracks user activity and auto-logs out after an idle period (default 900s).
+// Keeps the server session alive by pinging session/keep-alive while the user
+// is active. Cross-tab sync: if another tab logs out, this tab follows via the
+// storage event without hitting the logout endpoint a second time.
+//
+// Connected to:
+//   - Backend : GET  session/keep-alive  (Auth\AuthController::keepAlive)
+//   - Backend : GET  logout?timeout=1    (Auth\AuthController::logout)
+//   - login.js: clears the shared localStorage key on the login page
+//   - Views   : admin_layout.php / Employee/layout.php — the <script> tag sets
+//               data-timeout-seconds, data-logout-url, data-keep-alive-url,
+//               and data-home-url on the script element itself
 (function () {
     const script = document.currentScript;
     const timeoutSeconds = Number(script?.dataset.timeoutSeconds || 900);

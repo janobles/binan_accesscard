@@ -1,3 +1,20 @@
+// Core shared modal loading system for the dashboard.
+// Exposes window.registerDashboardModal(config) so each feature script can register
+// its own trigger selector, loading markup, and optional onLoaded callback without
+// duplicating fetch/Bootstrap modal logic. Fetches the partial HTML via jQuery AJAX
+// into #familyModal / #familyModalBody, re-evaluates any <script> tags in the
+// response, handles 401 session-expired redirects, and maintains a history stack so
+// nested modal navigations can use a Back flow.
+//
+// Connected to:
+//   - manage-family-modal.js : registers family record modals (add/view/edit)
+//   - accounts-modal.js      : registers account management modal
+//   - audit-trails-modal.js  : registers audit trails modal
+//   - sectors-modal.js       : registers sectors management modal
+//   - services-modal.js      : registers services management modal
+//   - Views : any layout that renders #familyModal + #familyModalBody
+//             (Views/layouts/admin_layout.php, Views/Employee/layout.php)
+//   - Depends on: jQuery ($), Bootstrap Modal
 // Loads dashboard partials into modals and manages Close modal navigation.
 (function (window, $) {
     const modalHistory = [];

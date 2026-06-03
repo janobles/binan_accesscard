@@ -1,4 +1,18 @@
-// Handles lookup tab interactions and modal form submissions for sectors/services.
+// Drives the Sectors & Services management page (admin/lookups):
+//   - Edit buttons populate the correct modal form with card/row data
+//   - Lookup forms submit via AJAX (JSON response) to avoid full-page reloads
+//   - Archive confirmation modal warns when active members are assigned
+//   - Restore buttons POST directly and reload on success
+//   - Active/Archived view toggle swaps the visible card grid or table rows
+//   - Tab persistence: URL hash (#sectors / #services) survives page refresh
+//
+// Connected to:
+//   - Backend : POST admin/lookups/sectors/store|update|archive|restore
+//               POST admin/lookups/services/store|update|archive|restore
+//               (Admin\SectorController, Admin\ServicesController)
+//   - View    : Views/admin/lookups/index.php — sector cards, service rows,
+//               #modalSectorEdit, #modalServiceEdit, #modalArchiveConfirm
+//   - CSS     : assets/css/admin-components.css (sector-card, toast styles)
 (function (window, document) {
     const qs = function (selector, root) {
         return (root || document).querySelector(selector);

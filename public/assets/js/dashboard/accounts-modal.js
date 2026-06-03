@@ -1,3 +1,14 @@
+// Account management page behaviour:
+//   1. Registers the Account Management panel with the shared dashboard modal
+//      loader so clicking .js-open-accounts-modal loads it via AJAX.
+//   2. Shows a confirmation dialog before any .js-account-status-form is submitted
+//      (enable / disable account actions).
+//
+// Connected to:
+//   - dashboard-modal-loader.js : window.registerDashboardModal()
+//   - Views  : Dashboard/Manage/accounts.php — .js-account-status-form buttons
+//   - Backend: POST admin/accounts/disable|enable
+//              (Accounts\AccountController::disableEmployee, ::enableEmployee)
 // Account management page behavior.
 (function (window, document) {
     if (typeof window.registerDashboardModal === 'function') {

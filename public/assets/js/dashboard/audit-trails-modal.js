@@ -1,3 +1,11 @@
+// Registers the audit-trail detail panel with the shared dashboard modal loader.
+// Clicking any .js-open-audit-modal element fetches the audit content via AJAX
+// and displays it inside #familyModal without a full page reload.
+//
+// Connected to:
+//   - dashboard-modal-loader.js : window.registerDashboardModal()
+//   - Views : Dashboard/Manage/admin.php — audit-trails trigger buttons
+//   - Backend: GET admin/audit-trails partial (Workspace\HomeController::adminAuditTrails)
 // Registers the audit trail workspace with the shared dashboard modal loader.
 (function (window) {
     if (typeof window.registerDashboardModal !== 'function') {

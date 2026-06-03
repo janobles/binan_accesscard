@@ -1,3 +1,12 @@
+// Intercepts submissions of .js-family-record-action-form and shows a confirm
+// dialog before the form is actually submitted (archive / restore actions).
+// If the user cancels, event.preventDefault() blocks the POST.
+//
+// Connected to:
+//   - View   : Dashboard/familyform/family-list.php — .js-family-record-action-form
+//              (data-family-name, data-action-label, data-action-past, data-confirm-message)
+//   - Backend: POST {admin|employee}/manage-family/archive|restore/:id
+//              (Families\FamilyController::archive, ::restore)
 (function () {
     document.addEventListener('submit', function (event) {
         const form = event.target;

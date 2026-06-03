@@ -1,3 +1,17 @@
+// Drives the Services & Programs management UI across two contexts:
+//   1. Dashboard modal: registers the Services panel with dashboard-modal-loader.js
+//      so clicking .js-open-services-modal loads it via AJAX.
+//   2. Services admin page (#serviceActionModal): handles create / update / archive /
+//      restore in a single shared modal. Syncs the "Other (custom)" category freetext
+//      input when the category select switches to/from __other__. Third IIFE manages
+//      the Active / Archived row toggle on the lookups page.
+//
+// Connected to:
+//   - dashboard-modal-loader.js : window.registerDashboardModal()
+//   - Backend : POST admin/lookups/services/store|update|archive|restore
+//               (Admin\ServicesController)
+//   - Views   : Views/admin/lookups/index.php — #serviceActionModal, .js-service-modal-open
+//               buttons carry data-service-mode, data-service-id, data-service-name, etc.
 (function (window) {
     if (typeof window.registerDashboardModal !== 'function') {
         return;

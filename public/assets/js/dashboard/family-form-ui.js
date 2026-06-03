@@ -1,3 +1,25 @@
+// Pure UI rendering helpers for the family wizard. No event binding here —
+// family-form.js owns all event wiring and calls into this module via window.FamilyFormUI.
+//
+// Key helpers:
+//   setWizardStep()          — shows/hides panels and prev/next/submit buttons
+//   setEntryType()           — switches between "Head" and "Member" entry modes
+//   createMemberRow()        — clones #memberTemplate, assigns indexed field names,
+//                              and pre-fills values when editing an existing record
+//   renderHeadSummary()      — populates the step-3 summary card from step-1 fields
+//   populateSectorsByCategory() — rebuilds the sector checkbox list from sectorCatalog
+//                                 data embedded in the page by PHP
+//   syncOtherControl()       — shows/hides the freetext input paired with a
+//                              js-other-select when "Other" is chosen
+//   applyOtherValues()       — on submit, injects a generated <option> so the custom
+//                              text value is what gets posted to the server
+//   initDropdownChecklists() — wires the custom dropdown-checklist widgets for
+//                              multi-select sector/service fields inside member rows
+//
+// Connected to:
+//   - family-form.js : consumes all exports via window.FamilyFormUI
+//   - Views : Dashboard/familyform/familyform.php, head-fields.php,
+//             Member/member-template.php, Dashboard/sectors-services/sectorandservices.php
 // Shared UI helpers for the family wizard; backend validation stays in PHP.
 (function (window) {
     function setHidden(element, hidden) {

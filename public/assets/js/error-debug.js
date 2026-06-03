@@ -1,3 +1,9 @@
+// Legacy generic tab-switcher and element toggle utility.
+// Manages a set of <li>/<a> tab links bound to content <div> IDs via href hash.
+// The toggle() function shows/hides any element by ID.
+// Note: this is older pre-Bootstrap code kept for any views that still reference
+// the bare init() / showTab() / toggle() globals.
+// Connected to: any view that calls init() on DOMContentLoaded or toggle() inline.
 var tabLinks = new Array();
 var contentDivs = new Array();
 

@@ -42,6 +42,16 @@
     margin: 0;
 }
 
+.table-responsive {
+    font-size: 0;
+    line-height: 0;
+}
+
+.table-responsive > .table {
+    font-size: 1rem;
+    line-height: 1.5;
+}
+
 .manage-record-table th {
     padding: 0.8rem 1rem;
     border-bottom-color: #cedbd7;
@@ -71,6 +81,77 @@
     width: 2.65rem;
     min-height: 2.4rem;
     justify-content: center;
+}
+
+.record-restore-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    min-height: 2.4rem;
+    padding: 0.45rem 0.85rem;
+    font-weight: 600;
+}
+
+.record-action-menu {
+    position: relative;
+    display: inline-block;
+}
+
+.record-action-menu summary {
+    list-style: none;
+}
+
+.record-action-menu summary::-webkit-details-marker {
+    display: none;
+}
+
+.record-action-options {
+    position: absolute;
+    top: calc(100% + 0.35rem);
+    right: 0;
+    z-index: 20;
+    min-width: 9.5rem;
+    padding: 0.6rem 0.45rem;
+    border: 1px solid #dce5e2;
+    border-radius: 0.55rem;
+    background: #ffffff;
+    box-shadow: 0 0.65rem 1.35rem rgba(12, 33, 26, 0.12);
+    text-align: left;
+}
+
+.record-action-options a,
+.record-action-options button {
+    appearance: none;
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 0.6rem;
+    margin: 0;
+    padding: 0.55rem 0.7rem;
+    border: 0 !important;
+    border-radius: 0.4rem;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: #34443f;
+    font: inherit;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.record-action-options a:hover,
+.record-action-options a:focus,
+.record-action-options button:hover,
+.record-action-options button:focus {
+    background: #f4f7f7;
+    color: #23322e;
+}
+
+.record-action-danger,
+.record-action-danger:hover,
+.record-action-danger:focus {
+    color: #dc3545 !important;
 }
 
 .record-empty-state {

@@ -36,9 +36,17 @@
     width: 8.5rem;
 }
 
+.searchbar-single {
+    grid-template-columns: minmax(0, 1fr) auto;
+}
+
 @media (max-width: 70rem) {
     .searchbar {
         grid-template-columns: minmax(0, 1fr) minmax(12rem, 15rem);
+    }
+
+    .searchbar-single {
+        grid-template-columns: minmax(0, 1fr) auto;
     }
 
     .searchbar-actions {

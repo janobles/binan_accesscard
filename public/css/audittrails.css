@@ -1,0 +1,38 @@
+.audit-trails {
+    overflow: hidden;
+    border: 1px solid #dce5e2;
+    border-radius: 0.35rem;
+    background: #ffffff;
+}
+
+.audit-trails-table {
+    min-width: 56rem;
+    margin: 0;
+}
+
+.audit-trails-table th {
+    padding: 0.8rem 1rem;
+    border-bottom-color: #cedbd7;
+    background: #f4f7f7;
+    color: #53635e;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.audit-trails-table td {
+    padding: 0.85rem 1rem;
+    border-bottom-color: #e4ece9;
+    color: #34443f;
+    font-size: 0.85rem;
+}
+
+.audit-trails-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.audit-trails-empty {
+    padding: 1.5rem 1rem !important;
+    color: #77847f !important;
+    text-align: center;
+}

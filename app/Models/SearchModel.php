@@ -116,7 +116,7 @@ class SearchModel
     private function allMembersBuilder(string $keyword, array $filters): BaseBuilder
     {
         $builder = $this->db->table('member m')
-            ->select('m.memberID, m.firstname, m.middlename, m.lastname, m.contactnumber, m.relationship, m.headID, m.sectorID, m.dt_created, h.firstname AS head_firstname, h.lastname AS head_lastname')
+            ->select('m.memberID, m.firstname, m.middlename, m.lastname, m.contactnumber, m.relationship, m.headID, m.sectorID, m.birthday, m.barangay, m.dt_created, h.firstname AS head_firstname, h.lastname AS head_lastname')
             ->join('member h', 'h.memberID = m.headID', 'left');
 
         $status = strtolower(trim((string) ($filters['status'] ?? '')));

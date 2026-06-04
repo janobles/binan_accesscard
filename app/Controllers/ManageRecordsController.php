@@ -4,8 +4,10 @@ namespace App\Controllers;
 
 use App\Libraries\RoleAccess;
 use App\Models\MemberModel;
+use App\Models\MemberServiceModel;
 use App\Models\SearchModel;
 use App\Models\SectorModel;
+use App\Models\ServicesModel;
 use CodeIgniter\HTTP\RedirectResponse;
 
 class ManageRecordsController extends BaseController
@@ -118,6 +120,8 @@ class ManageRecordsController extends BaseController
                 trim((string) ($record['firstname'] ?? '') . ' ' . (string) ($record['lastname'] ?? ''))
             ),
             'display_sector' => $this->valueOrDash($record['sector_name'] ?? ''),
+            'display_barangay' => $this->valueOrDash($record['barangay'] ?? ''),
+            'display_birthday' => $this->formatDate($record['birthday'] ?? ''),
             'display_date' => $this->formatDate($record['dt_created'] ?? ''),
             'display_time' => $this->formatTime($record['dt_created'] ?? ''),
         ]);
@@ -156,5 +160,122 @@ class ManageRecordsController extends BaseController
         $value = trim((string) $value);
 
         return $value === '' ? '-' : $value;
+    }
+
+    public function newRecord(): string|RedirectResponse
+    {
+        $guard = RoleAccess::requireRole(['Developer', 'Admin']);
+
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        $viewData = array_merge($this->familyModalOptions(), [
+            'mode' => 'new',
+            'windowTitle' => 'New Family Record',
+            'submitLabel' => 'Save',
+            'recordHead' => [],
+            'familyMembers' => [],
+            'memberServiceIds' => [],
+        ]);
+
+        if ($this->request->isAJAX() || (string) $this->request->getGet('partial') === '1') {
+            helper('family_modal');
+
+            return view('Admin/familymodal', $viewData);
+        }
+
+        return view('Admin/dashboard', [
+            'activePage' => 'family-manage',
+            'pageTitle' => 'New Record',
+            'workspaceUrl' => site_url('admin/family-record/new'),
+        ]);
+    }
+
+    public function editRecord(int $memberId): string|RedirectResponse
+    {
+        $guard = RoleAccess::requireRole(['Developer', 'Admin']);
+
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        $memberModel = new MemberModel();
+        $selectedMember = $memberModel->findWithSector($memberId);
+
+        if ($selectedMember === null) {
+            return redirect()->to(site_url('admin/manage-records'));
+        }
+
+        $headId = (int) ($selectedMember['headID'] ?? $selectedMember['memberID'] ?? $memberId);
+        $familyMembers = $memberModel->getFamilyMembers($headId, 'all');
+        $recordHead = null;
+
+        foreach ($familyMembers as $familyMember) {
+            if ((int) ($familyMember['memberID'] ?? 0) === $headId) {
+                $recordHead = $familyMember;
+                break;
+            }
+        }
+
+        $recordHead ??= $memberModel->findWithSector($headId) ?? $selectedMember;
+        $familyMembers = array_values(array_filter(
+            $familyMembers,
+            static fn (array $familyMember): bool => (int) ($familyMember['memberID'] ?? 0) !== $headId
+        ));
+        $memberIds = array_values(array_filter(array_map(
+            static fn (array $familyMember): int => (int) ($familyMember['memberID'] ?? 0),
+            array_merge([$recordHead], $familyMembers)
+        )));
+
+        $viewData = array_merge($this->familyModalOptions(), [
+            'mode' => 'edit',
+            'windowTitle' => 'Edit Family Record',
+            'submitLabel' => 'Update',
+            'recordHead' => $recordHead,
+            'familyMembers' => $familyMembers,
+            'memberServiceIds' => (new MemberServiceModel())->getServiceIdsByMemberIds($memberIds),
+        ]);
+
+        if ($this->request->isAJAX() || (string) $this->request->getGet('partial') === '1') {
+            helper('family_modal');
+
+            return view('Admin/familymodal', $viewData);
+        }
+
+        return view('Admin/dashboard', [
+            'activePage' => 'family-manage',
+            'pageTitle' => 'Edit Record',
+            'workspaceUrl' => site_url('admin/family-record/' . $headId . '/edit'),
+        ]);
+    }
+
+    private function familyModalOptions(): array
+    {
+        $sectorOptions = (new SectorModel())->getAll();
+        $serviceOptions = (new ServicesModel())->getAll();
+        $sectorsByCode = [];
+        $servicesByCategory = [];
+
+        foreach ($sectorOptions as $sector) {
+            $code = strtoupper(trim((string) ($sector['shortcode'] ?? 'OTHER')));
+            $groupCode = $code === '' ? 'OTHER' : $code;
+
+            if (preg_match('/^[A-Z]+/', $code, $matches) === 1) {
+                $groupCode = $matches[0];
+            }
+
+            $sectorsByCode[$groupCode][] = $sector;
+        }
+
+        foreach ($serviceOptions as $service) {
+            $category = trim((string) ($service['category'] ?? 'Other'));
+            $servicesByCategory[$category === '' ? 'Other' : $category][] = $service;
+        }
+
+        return [
+            'sectorsByCode' => $sectorsByCode,
+            'servicesByCategory' => $servicesByCategory,
+        ];
     }
 }

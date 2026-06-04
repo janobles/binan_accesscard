@@ -4,7 +4,6 @@ namespace App\Models\Employee;
 
 use App\Models\AuditTrailsModel;
 use App\Models\DashboardModel;
-use App\Models\FamilyFormOptionsModel;
 use App\Models\MemberModel;
 use App\Models\SearchModel;
 use App\Models\SectorModel;
@@ -28,7 +27,10 @@ class WorkspaceModel
         $searchTerm = trim((string) $this->request->getGet('q'));
         $searchFilters = $this->searchFilters();
         $hasSearchFilters = $this->hasSearchFilters($searchFilters);
-        $familyFormViewData = (new FamilyFormOptionsModel())->getViewData();
+        $sectorOptions = (new SectorModel())->getSectorOptions();
+        $familyFormViewData = [
+            'sectorOptions' => $sectorOptions,
+        ];
         $userId = (int) session()->get('user_id');
 
         return [
@@ -55,7 +57,7 @@ class WorkspaceModel
             'auditActionOptions' => $auditModel->auditActions(),
             'idleTimeoutSeconds' => (new IdleTimeout())->seconds,
             'username' => (string) (session()->get('username') ?? 'Employee'),
-            'sectorOptions' => $familyFormViewData['sectorOptions'] ?? [],
+            'sectorOptions' => $sectorOptions,
             'selectedFilterDate' => (string) ($searchFilters['date'] ?? $searchFilters['date_from'] ?? ''),
             'hasSearchFilters' => $hasSearchFilters,
         ];

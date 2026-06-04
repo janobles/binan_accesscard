@@ -19,10 +19,15 @@
             </a>
         </div>
 
-        <button class="btn btn-success" type="button" enabled aria-label="new record">
-            <i class="bi bi-plus-lg" aria-hidden="true"></i>
-            <span>New Record</span>
-        </button>
+       <a
+    class="btn btn-success"
+    href="<?= site_url('admin/family-record/new') ?>"
+    data-workspace-partial-link
+    aria-label="new record"
+>
+    <i class="bi bi-plus-lg" aria-hidden="true"></i>
+    <span>New Record</span>
+</a>
     </header>
 
     <?= view('components/searchbar', [
@@ -44,8 +49,8 @@
                 <tr>
                     <th scope="col"><?= $searchScope === 'all' ? 'Name' : 'NAME' ?></th>
                     <th scope="col">Sector</th>
-                    <th scope="col">Date</th>
-                    <th scope="col">Time</th>
+                    <th scope="col">Barangay</th>
+                    <th scope="col">Birthday</th>
                     <th class="text-end" scope="col">Actions</th>
                 </tr>
             </thead>
@@ -61,12 +66,40 @@
                         <tr>
                             <td class="record-name"><?= esc($record['display_name']) ?></td>
                             <td><?= esc($record['display_sector']) ?></td>
-                            <td><?= esc($record['display_date']) ?></td>
-                            <td><?= esc($record['display_time']) ?></td>
+                            <td><?= esc($record['display_barangay']) ?></td>
+                            <td><?= esc($record['display_birthday']) ?></td>
                             <td class="text-end">
-                                <button class="btn btn-outline-secondary record-actions" type="button" enabled aria-label="Record actions">
-                                    <i class="bi bi-three-dots" aria-hidden="true"></i>
-                                </button>
+                                <?php if ($status === 'archived'): ?>
+                                    <button class="btn btn-outline-success record-restore-action" type="button">
+                                        <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
+                                        <span>Restore</span>
+                                    </button>
+                                <?php else: ?>
+                                    <details class="record-action-menu">
+                                        <summary class="btn btn-outline-secondary record-actions" aria-label="Record actions">
+                                            <i class="bi bi-three-dots" aria-hidden="true"></i>
+                                        </summary>
+
+                                        <div class="record-action-options">
+                                            <a href="#" role="menuitem">
+                                                <i class="bi bi-eye" aria-hidden="true"></i>
+                                                <span>View</span>
+                                            </a>
+                                            <a
+                                                href="<?= site_url('admin/family-record/' . (int) ($record['memberID'] ?? 0) . '/edit') ?>"
+                                                role="menuitem"
+                                                data-workspace-partial-link
+                                            >
+                                                <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                                                <span>Edit</span>
+                                            </a>
+                                            <a class="record-action-danger" href="#" role="menuitem">
+                                                <i class="bi bi-archive" aria-hidden="true"></i>
+                                                <span>Archive</span>
+                                            </a>
+                                        </div>
+                                    </details>
+                                <?php endif; ?>
                             </td>
                         </tr>
                     <?php endforeach; ?>

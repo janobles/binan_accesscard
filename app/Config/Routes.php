@@ -14,3 +14,13 @@ $routes->get('logout', 'Auth\LoginController::logout');
 
 //MANAGE RECORDS
 $routes->get('admin/manage-records', 'ManageRecordsController::index');
+$routes->get('admin/family-record/new', 'ManageRecordsController::newRecord');
+$routes->get('admin/family-record/(:num)/edit', 'ManageRecordsController::editRecord/$1');
+
+// REFERENCE DATA
+$routes->get('admin/sectors', 'SectorController::index');
+$routes->get('admin/services', 'ServiceAndProgramsController::index');
+
+// ADMINISTRATION
+$routes->get('admin/accounts', 'AccountManagementController::index');
+$routes->get('admin/audit-trails', 'AuditTrailsController::index');

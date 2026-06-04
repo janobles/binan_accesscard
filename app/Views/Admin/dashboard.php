@@ -10,6 +10,9 @@
     <link rel="stylesheet" href="<?= base_url('css/mainlayout.css') ?>?v=<?= filemtime(FCPATH . 'css/mainlayout.css') ?>">
     <link rel="stylesheet" href="<?= base_url('css/managerecord.css') ?>?v=<?= filemtime(FCPATH . 'css/managerecord.css') ?>">
     <link rel="stylesheet" href="<?= base_url('css/searchbar.css') ?>?v=<?= filemtime(FCPATH . 'css/searchbar.css') ?>">
+    <link rel="stylesheet" href="<?= base_url('css/sector.css') ?>?v=<?= filemtime(FCPATH . 'css/sector.css') ?>">
+    <link rel="stylesheet" href="<?= base_url('css/service.css') ?>?v=<?= filemtime(FCPATH . 'css/service.css') ?>">
+    <link rel="stylesheet" href="<?= base_url('css/audittrails.css') ?>?v=<?= filemtime(FCPATH . 'css/audittrails.css') ?>">
 </head>
 <body>
     <?php $currentPage = $activePage ?? 'dashboard'; ?>
@@ -64,13 +67,22 @@
                     <h2 class="sidebar-heading">Reference Data</h2>
                     <ul class="nav nav-pills flex-column">
                         <li class="nav-item">
-                            <a class="nav-link<?= $currentPage === 'sectors' ? ' active' : '' ?>" href="<?= site_url('admin/sectors') ?>">
+                            <a
+                                class="nav-link<?= $currentPage === 'sectors' ? ' active' : '' ?>"
+                                href="<?= site_url('admin/sectors') ?>"
+                                data-workspace-link
+                                data-page-title="Sector Management">
                                 <i class="bi bi-diagram-3" aria-hidden="true"></i>
                                 <span>Sector Management</span>
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link<?= $currentPage === 'services' ? ' active' : '' ?>" href="<?= site_url('admin/services') ?>">
+                            <a
+                                class="nav-link<?= $currentPage === 'services' ? ' active' : '' ?>"
+                                href="<?= site_url('admin/services') ?>"
+                                data-workspace-link
+                                data-page-title="Services and Programs"
+                            >
                                 <i class="bi bi-grid" aria-hidden="true"></i>
                                 <span>Services and Programs</span>
                             </a>
@@ -82,13 +94,23 @@
                     <h2 class="sidebar-heading">Administration</h2>
                     <ul class="nav nav-pills flex-column">
                         <li class="nav-item">
-                            <a class="nav-link<?= $currentPage === 'accounts' ? ' active' : '' ?>" href="<?= site_url('admin/accounts') ?>">
+                            <a
+                                class="nav-link<?= $currentPage === 'accounts' ? ' active' : '' ?>"
+                                href="<?= site_url('admin/accounts') ?>"
+                                data-workspace-link
+                                data-page-title="Account Management"
+                            >
                                 <i class="bi bi-person-gear" aria-hidden="true"></i>
                                 <span>Account Management</span>
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link<?= $currentPage === 'audit-trails' ? ' active' : '' ?>" href="<?= site_url('admin/audit-trails') ?>">
+                            <a
+                                class="nav-link<?= $currentPage === 'audit-trails' ? ' active' : '' ?>"
+                                href="<?= site_url('admin/audit-trails') ?>"
+                                data-workspace-link
+                                data-page-title="Audit Trails"
+                            >
                                 <i class="bi bi-clock-history" aria-hidden="true"></i>
                                 <span>Audit Trails</span>
                             </a>
@@ -127,5 +149,7 @@
     </div>
     <script src="<?= base_url('assets/js/dashboard.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard.js') ?>"></script>
     <script src="<?= base_url('assets/js/search.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/search.js') ?>"></script>
+    <script src="<?= base_url('assets/js/familymodal.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/familymodal.js') ?>"></script>
+    <script src="<?= base_url('assets/js/sector_service_modal.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/sector_service_modal.js') ?>"></script>
 </body>
 </html>

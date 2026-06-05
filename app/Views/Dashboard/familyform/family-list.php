@@ -170,8 +170,8 @@ $deepToRecord = (int) ($deepToRecord ?? 0);
             <tr>
                 <th>Record Head</th>
                 <th>Sector</th>
-                <th>Date</th>
-                <th>Time</th>
+                <th>Barangay</th>
+                <th>Birthday</th>
                 <th class="text-end">Actions</th>
             </tr>
             </thead>
@@ -179,7 +179,6 @@ $deepToRecord = (int) ($deepToRecord ?? 0);
             <?php foreach ($families as $family): ?>
                 <?php
                 $headId = (int) ($family['memberID'] ?? 0);
-                $dateValue = $status === 'archived' ? ($family['dt_deleted'] ?? '') : ($family['dt_created'] ?? '');
                 $recordAction = $status === 'archived' ? 'restore' : 'archive';
                 $recordActionLabel = $status === 'archived' ? 'Restore' : 'Archive';
                 $recordActionPast = $status === 'archived' ? 'restored' : 'archived';
@@ -192,8 +191,8 @@ $deepToRecord = (int) ($deepToRecord ?? 0);
                         <span class="entity-title"><?= esc((string) (($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? ''))) ?></span>
                     </td>
                     <td data-record-sector><?= esc((string) ($family['sector_name'] ?? '')) ?></td>
-                    <td data-record-date><?= esc(family_list_format_date($dateValue)) ?></td>
-                    <td><?= esc(family_list_format_time($dateValue)) ?></td>
+                    <td><?= esc((string) ($family['barangay'] ?? '')) ?></td>
+                    <td><?= esc((string) ($family['birthday'] ?? '')) ?></td>
                     <td class="text-end">
                         <div class="dropdown actions-menu">
                             <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false" aria-label="Record actions">

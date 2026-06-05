@@ -41,6 +41,35 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
 $sidebarRoleClass = $canManageAccounts ? 'developer' : 'admin';
 $selectedFilterDate = (string) ($searchFilters['date'] ?? $searchFilters['date_from'] ?? '');
 ?>
+<?php
+/*
+ * Jade-style reskin: this view now renders jadebranch's visual design
+ * (dashboard-shell / sidebar / overview cards + panels) while keeping every
+ * melbranch data variable, JS hook (#familyModal, .js-logout-link), route, and
+ * the server-side $activePage content switch unchanged. CSS is loaded directly
+ * from jadebranch's stylesheets (public/css/*) instead of the melbranch
+ * admin_dashboard_style_links() helper, which stays untouched.
+ */
+$cssVersion = static function (string $relativeCssPath): string {
+    $absolute = FCPATH . ltrim($relativeCssPath, '/');
+    $version  = is_file($absolute) ? (string) filemtime($absolute) : (string) time();
+
+    return base_url($relativeCssPath) . '?v=' . $version;
+};
+$jadeStyles = [
+    'css/dashboard.css',
+    'css/mainlayout.css',
+    'css/managerecord.css',
+    'css/searchbar.css',
+    'css/sector.css',
+    'css/service.css',
+    'css/audittrails.css',
+    'css/accountmanagement.css',
+    'css/familymodal.css',
+    'assets/css/session-timeout.css',
+    'css/melbranch-bridge.css',
+];
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -49,60 +78,77 @@ $selectedFilterDate = (string) ($searchFilters['date'] ?? $searchFilters['date_f
     <title><?= esc($pageTitle) ?> - Binan Access Card MIS</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <?= admin_dashboard_style_links() ?>
+    <?php foreach ($jadeStyles as $stylePath): ?>
+    <link rel="stylesheet" href="<?= esc($cssVersion($stylePath), 'attr') ?>">
+    <?php endforeach; ?>
 </head>
 <body>
-<div class="app-shell">
-    <aside class="sidebar <?= esc($sidebarRoleClass) ?>">
-        <div>
-            <div class="brand">
-                <img src="<?= base_url('assets/image/binan.png') ?>" alt="City of Binan Logo">
-                <div>
-                    <strong>Bi&ntilde;an Access Card MIS</strong>
-                    <small><?= esc($modeLabel) ?></small>
-                </div>
-            </div>
-            <nav class="nav flex-column sidebar-nav">
-                <div class="nav-section">
-                    <div class="nav-section-label">Overview</div>
-                    <a class="nav-link <?= esc($navActive['dashboard'] ?? '') ?>" href="<?= site_url('admin/dashboard') ?>"><i class="bi bi-speedometer2" aria-hidden="true"></i><span>Dashboard</span></a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-label">Records</div>
-                    <a class="nav-link <?= esc($navActive['family-manage'] ?? '') ?>" href="<?= site_url('admin/manage-records') ?>"><i class="bi bi-people" aria-hidden="true"></i><span>Manage Records</span></a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-label">Reference Data</div>
-                    <a class="nav-link <?= esc($navActive['sectors'] ?? '') ?>" href="<?= site_url('admin/sectors') ?>"><i class="bi bi-diagram-3" aria-hidden="true"></i><span>Sector Management</span></a>
-                    <a class="nav-link <?= esc($navActive['services'] ?? '') ?>" href="<?= site_url('admin/services') ?>"><i class="bi bi-ui-checks-grid" aria-hidden="true"></i><span>Services and Programs</span></a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-label">Administration</div>
+<div class="dashboard-shell">
+    <aside class="dashboard-sidebar <?= esc($sidebarRoleClass) ?>">
+        <a class="sidebar-brand" href="<?= site_url('admin/dashboard') ?>">
+            <img class="sidebar-logo" src="<?= base_url('assets/image/binan.png') ?>" alt="City of Binan Logo">
+            <span class="sidebar-brand-text">Bi&ntilde;an Access Card MIS<br><small class="sidebar-brand-mode"><?= esc($modeLabel) ?></small></span>
+        </a>
+
+        <nav aria-label="Admin navigation">
+            <section class="sidebar-section">
+                <h2 class="sidebar-heading">Overview</h2>
+                <ul class="nav nav-pills flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link <?= esc($navActive['dashboard'] ?? '') ?>" href="<?= site_url('admin/dashboard') ?>"><i class="bi bi-speedometer2" aria-hidden="true"></i><span>Dashboard</span></a>
+                    </li>
+                </ul>
+            </section>
+            <section class="sidebar-section">
+                <h2 class="sidebar-heading">Records</h2>
+                <ul class="nav nav-pills flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link <?= esc($navActive['family-manage'] ?? '') ?>" href="<?= site_url('admin/manage-records') ?>"><i class="bi bi-people" aria-hidden="true"></i><span>Manage Records</span></a>
+                    </li>
+                </ul>
+            </section>
+            <section class="sidebar-section">
+                <h2 class="sidebar-heading">Reference Data</h2>
+                <ul class="nav nav-pills flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link <?= esc($navActive['sectors'] ?? '') ?>" href="<?= site_url('admin/sectors') ?>"><i class="bi bi-diagram-3" aria-hidden="true"></i><span>Sector Management</span></a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link <?= esc($navActive['services'] ?? '') ?>" href="<?= site_url('admin/services') ?>"><i class="bi bi-grid" aria-hidden="true"></i><span>Services and Programs</span></a>
+                    </li>
+                </ul>
+            </section>
+            <section class="sidebar-section">
+                <h2 class="sidebar-heading">Administration</h2>
+                <ul class="nav nav-pills flex-column">
                     <?php if ($canManageAccounts): ?>
+                    <li class="nav-item">
                         <a class="nav-link <?= esc($navActive['accounts'] ?? '') ?>" href="<?= site_url('admin/accounts') ?>"><i class="bi bi-person-gear" aria-hidden="true"></i><span>Account Management</span></a>
+                    </li>
                     <?php endif; ?>
-                    <a class="nav-link <?= esc($navActive['audit-trails'] ?? '') ?>" href="<?= site_url('admin/audit-trails') ?>"><i class="bi bi-clock-history" aria-hidden="true"></i><span>Audit Trails</span></a>
-                </div>
-            </nav>
-        </div>
-        <div class="sidebar-footer">
-            <div class="sidebar-user"><?= esc($username) ?> &middot; <?= esc($modeLabel) ?></div>
-            <a href="<?= site_url('logout') ?>" class="btn btn-outline-light btn-sm w-100 js-logout-link">Logout</a>
-        </div>
+                    <li class="nav-item">
+                        <a class="nav-link <?= esc($navActive['audit-trails'] ?? '') ?>" href="<?= site_url('admin/audit-trails') ?>"><i class="bi bi-clock-history" aria-hidden="true"></i><span>Audit Trails</span></a>
+                    </li>
+                </ul>
+            </section>
+
+            <section class="sidebar-section sidebar-account">
+                <div class="sidebar-user"><i class="bi bi-person-circle" aria-hidden="true"></i><span><?= esc($username) ?></span></div>
+                <a href="<?= site_url('logout') ?>" class="nav-link js-logout-link"><i class="bi bi-box-arrow-right" aria-hidden="true"></i><span>Logout</span></a>
+            </section>
+        </nav>
     </aside>
 
-    <main class="content">
-        <div class="topbar">
-            <div class="topbar-brand">
-                <img src="<?= base_url('assets/image/binan.png') ?>" alt="City of Binan Logo">
+    <div class="dashboard-workspace">
+        <header class="dashboard-header">
+            <img class="header-logo" src="<?= base_url('assets/image/binan.png') ?>" alt="City of Binan Logo">
+            <div>
+                <h1 id="dashboard-page-title"><?= esc($pageTitle) ?></h1>
+                <p>Bi&ntilde;an Access Card MIS</p>
             </div>
-            <div class="topbar-text">
-                <div class="fw-bold"><?= esc($pageTitle) ?></div>
-                <small class="text-muted">Bi&ntilde;an Access Card MIS</small>
-            </div>
-        </div>
+        </header>
 
-        <div class="container-fluid py-4">
+        <main class="dashboard-content">
             <?php if (session()->getFlashdata('success')): ?>
                 <div class="alert alert-success"><?= esc(session()->getFlashdata('success')) ?></div>
             <?php endif; ?>
@@ -113,18 +159,18 @@ $selectedFilterDate = (string) ($searchFilters['date'] ?? $searchFilters['date_f
             <?php /* Main content swaps on $activePage. "dashboard" is inline (stats +
                      recent records/activity); the rest delegate to sub-views below. */ ?>
             <?php if ($activePage === 'dashboard'): ?>
-                <div class="row g-3 mb-3">
-                    <div class="col-md-3"><div class="panel stat-panel"><small>Total Records</small><div class="stat-value"><?= esc((string) ($stats['families'] ?? 0)) ?></div></div></div>
-                    <div class="col-md-3"><div class="panel stat-panel"><small>Registered Members</small><div class="stat-value"><?= esc((string) ($stats['members'] ?? 0)) ?></div></div></div>
-                    <div class="col-md-3"><div class="panel stat-panel"><small>Active Sectors</small><div class="stat-value"><?= esc((string) ($stats['sectors'] ?? 0)) ?></div></div></div>
-                    <div class="col-md-3"><div class="panel stat-panel"><small>Services and Programs</small><div class="stat-value"><?= esc((string) ($stats['assistance'] ?? 0)) ?></div></div></div>
-                </div>
+                <section class="overview-stats" aria-label="Dashboard statistics">
+                    <article class="stat-card"><p>Total Records</p><strong><?= esc((string) ($stats['families'] ?? 0)) ?></strong></article>
+                    <article class="stat-card"><p>Registered Members</p><strong><?= esc((string) ($stats['members'] ?? 0)) ?></strong></article>
+                    <article class="stat-card"><p>Active Sectors</p><strong><?= esc((string) ($stats['sectors'] ?? 0)) ?></strong></article>
+                    <article class="stat-card"><p>Services and Programs</p><strong><?= esc((string) ($stats['assistance'] ?? 0)) ?></strong></article>
+                </section>
 
-                <div class="panel mb-3">
-                    <div class="section-title mt-0">
-                        <span>Recent Records</span>
-                    </div>
-                    <form class="row g-2 filter-bar" method="get" action="<?= site_url('admin/dashboard') ?>">
+                <section class="overview-panel">
+                    <header class="panel-header">
+                        <h2>Recent Records</h2>
+                    </header>
+                    <form class="row g-2 filter-bar p-3" method="get" action="<?= site_url('admin/dashboard') ?>">
                         <div class="col-md-6 col-lg-4">
                             <input class="form-control" type="search" name="q" value="<?= esc($searchTerm) ?>" placeholder="Search records by name, contact number, or sector">
                         </div>
@@ -141,60 +187,60 @@ $selectedFilterDate = (string) ($searchFilters['date'] ?? $searchFilters['date_f
                             <input class="form-control" type="date" name="date" value="<?= esc($selectedFilterDate) ?>" aria-label="Filter by date">
                         </div>
                         <div class="col-auto">
-                            <button class="btn btn-primary" type="submit"><i class="bi bi-search" aria-hidden="true"></i>Search</button>
+                            <button class="btn btn-success" type="submit"><i class="bi bi-search me-1" aria-hidden="true"></i>Search</button>
                         </div>
                         <?php if ($hasSearchFilters): ?>
                             <div class="col-auto">
-                                <a class="btn btn-outline-secondary" href="<?= site_url('admin/dashboard') ?>"><i class="bi bi-x-lg" aria-hidden="true"></i>Clear</a>
+                                <a class="btn btn-outline-secondary" href="<?= site_url('admin/dashboard') ?>"><i class="bi bi-x-lg me-1" aria-hidden="true"></i>Clear</a>
                             </div>
                         <?php endif; ?>
                     </form>
                     <div class="table-responsive">
-                        <table class="table table-sm">
-                            <thead><tr><th>Head</th><th>Sector</th><th>Date</th><th>Time</th></tr></thead>
+                        <table class="table overview-table">
+                            <thead><tr><th scope="col">Head</th><th scope="col">Sector</th><th scope="col">Date</th><th scope="col">Time</th></tr></thead>
                             <tbody>
                                 <?php foreach ($recentFamilies as $family): ?>
                                     <tr>
-                                        <td><span class="entity-title"><?= esc(($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? '')) ?></span></td>
-                                        <td><?= esc((string) ($family['sector_name'] ?? '')) ?></td>
+                                        <td><?= esc(trim(($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? ''))) ?></td>
+                                        <td><?= esc((string) ($family['sector_name'] ?? '-')) ?></td>
                                         <td><?= esc($formatDate($family['dt_created'] ?? '')) ?></td>
                                         <td><?= esc($formatTime($family['dt_created'] ?? '')) ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                                 <?php if ($recentFamilies === []): ?>
-                                    <tr><td colspan="4" class="text-center text-muted"><?= $searchTerm !== '' || $hasSearchFilters ? 'No matching records found.' : 'No records yet.' ?></td></tr>
+                                    <tr><td colspan="4" class="empty-state"><?= $searchTerm !== '' || $hasSearchFilters ? 'No matching records found.' : 'No records yet.' ?></td></tr>
                                 <?php endif; ?>
                             </tbody>
                         </table>
                     </div>
-                </div>
+                </section>
 
-                <div class="panel mb-3">
-                    <div class="section-title mt-0">
-                        <span>Recent Activity</span>
-                        <a class="btn btn-outline-secondary btn-sm" href="<?= site_url('admin/audit-trails') ?>"><i class="bi bi-arrow-right" aria-hidden="true"></i>View All</a>
-                    </div>
+                <section class="overview-panel">
+                    <header class="panel-header">
+                        <h2>Recent Activity</h2>
+                        <a class="btn btn-sm panel-action" href="<?= site_url('admin/audit-trails') ?>"><i class="bi bi-arrow-right" aria-hidden="true"></i><span>View All</span></a>
+                    </header>
                     <div class="table-responsive">
-                        <table class="table table-sm">
-                            <thead><tr><th>User</th><th>Member</th><th>Action</th><th>Description</th><th>Date</th><th>Time</th></tr></thead>
+                        <table class="table overview-table">
+                            <thead><tr><th scope="col">User</th><th scope="col">Member</th><th scope="col">Action</th><th scope="col">Description</th><th scope="col">Date</th><th scope="col">Time</th></tr></thead>
                             <tbody>
                                 <?php foreach ($recentAudits as $audit): ?>
                                     <tr>
                                         <td><?= esc($formatAuditUser($audit)) ?></td>
                                         <td><?= esc($formatAuditMember($audit)) ?></td>
-                                        <td><span class="status-pill is-muted"><?= esc((string) ($audit['user_action'] ?? '')) ?></span></td>
+                                        <td><span class="badge bg-light text-dark border"><?= esc((string) ($audit['user_action'] ?? '')) ?></span></td>
                                         <td><?= esc((string) ($audit['description'] ?? '')) ?></td>
                                         <td><?= esc($formatDate($audit['dt_created'] ?? '')) ?></td>
                                         <td><?= esc($formatTime($audit['dt_created'] ?? '')) ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                                 <?php if ($recentAudits === []): ?>
-                                    <tr><td colspan="6" class="text-center text-muted">No activity yet.</td></tr>
+                                    <tr><td colspan="6" class="empty-state">No activity yet.</td></tr>
                                 <?php endif; ?>
                             </tbody>
                         </table>
                     </div>
-                </div>
+                </section>
             <?php endif; ?>
 
             <?php if ($activePage === 'accounts' && $canManageAccounts): ?>
@@ -247,8 +293,8 @@ $selectedFilterDate = (string) ($searchFilters['date'] ?? $searchFilters['date_f
                     'canRestore' => $canRestoreLookups ?? false,
                 ]) ?>
             <?php endif; ?>
-        </div>
-    </main>
+        </main>
+    </div>
 </div>
 
 <?php /* Shared modal target. The *-modal.js loaders fetch ?partial=1 fragments

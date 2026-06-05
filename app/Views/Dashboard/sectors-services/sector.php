@@ -19,22 +19,22 @@ $activeSectorCount   = count(array_filter($sectors, static fn ($s) => trim((stri
 $archivedSectorCount = count($sectors) - $activeSectorCount;
 ?>
 
-<div class="panel mb-3" data-sector-management-root>
-	<div class="section-title mt-0">
-		<span>Sector Management</span>
-		<div class="d-flex align-items-center gap-2 flex-wrap">
-			<div class="btn-group btn-group-sm" role="group" aria-label="Sector view toggle">
-				<button type="button" class="btn btn-outline-primary active" id="btn-sector-active" aria-pressed="true">Active (<?= esc((string) $activeSectorCount) ?>)</button>
-				<button type="button" class="btn btn-outline-primary" id="btn-sector-archive" aria-pressed="false">Archive (<?= esc((string) $archivedSectorCount) ?>)</button>
-			</div>
-			<span id="sector-add-btn-wrap">
-				<button class="btn btn-primary btn-sm js-sector-modal-open" type="button" data-sector-mode="create"><i class="bi bi-plus-lg" aria-hidden="true"></i>Add Sector</button>
-			</span>
+<?php /* Jade-style reskin (sector-* classes). All melbranch hooks preserved:
+         data-sector-management-root, #btn-sector-active/#btn-sector-archive toggle,
+         .js-sector-modal-open + data-sector-* attributes, the sector-modal include. */ ?>
+<div class="sector-management" data-sector-management-root>
+	<header class="sector-toolbar">
+		<div class="sector-status-tabs btn-group" role="group" aria-label="Sector view toggle">
+			<button type="button" class="btn btn-success active" id="btn-sector-active" aria-pressed="true">Active (<?= esc((string) $activeSectorCount) ?>)</button>
+			<button type="button" class="btn btn-outline-secondary" id="btn-sector-archive" aria-pressed="false">Archive (<?= esc((string) $archivedSectorCount) ?>)</button>
 		</div>
-	</div>
+		<span id="sector-add-btn-wrap">
+			<button class="btn btn-success js-sector-modal-open" type="button" data-sector-mode="create"><i class="bi bi-plus-lg" aria-hidden="true"></i><span>Add Sector</span></button>
+		</span>
+	</header>
 
 	<div class="table-responsive">
-		<table class="table table-sm align-middle management-table">
+		<table class="table sector-table align-middle management-table">
 			<thead>
 				<tr>
 					<th>Shortcode</th>
@@ -49,10 +49,10 @@ $archivedSectorCount = count($sectors) - $activeSectorCount;
 					<?php $sectorId = (int) ($sector['sectorID'] ?? 0); ?>
 					<?php $isArchived = trim((string) ($sector['dt_deleted'] ?? '')) !== ''; ?>
 					<tr data-row-archived="<?= $isArchived ? '1' : '0' ?>"<?= $isArchived ? ' class="d-none"' : '' ?>>
-						<td><span class="status-pill is-muted"><?= esc((string) ($sector['shortcode'] ?? '')) ?></span></td>
-						<td><span class="entity-title"><?= esc((string) ($sector['name'] ?? '')) ?></span></td>
+						<td><span class="badge bg-light text-dark border"><?= esc((string) ($sector['shortcode'] ?? '')) ?></span></td>
+						<td><span class="sector-name"><?= esc((string) ($sector['name'] ?? '')) ?></span></td>
 						<td><span class="text-trim d-inline-block"><?= esc((string) ($sector['description'] ?? '')) ?></span></td>
-						<td><span class="status-pill <?= $isArchived ? 'is-danger' : 'is-active' ?>"><?= $isArchived ? 'Archived' : 'Active' ?></span></td>
+						<td><span class="sector-status-badge <?= $isArchived ? 'sector-status-archived' : 'sector-status-active' ?>"><?= $isArchived ? 'Archived' : 'Active' ?></span></td>
 						<td class="text-end">
 							<div class="dropdown actions-menu">
 								<button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false" aria-label="Sector actions">
@@ -97,7 +97,7 @@ $archivedSectorCount = count($sectors) - $activeSectorCount;
 				<?php endforeach; ?>
 				<?php if ($sectors === []): ?>
 					<tr>
-						<td colspan="5" class="text-center text-muted">No sector records found.</td>
+						<td colspan="5" class="sector-empty-state">No sector records found.</td>
 					</tr>
 				<?php endif; ?>
 			</tbody>

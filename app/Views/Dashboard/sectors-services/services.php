@@ -12,22 +12,23 @@ $activeServiceCount   = count(array_filter($services, static fn ($s) => trim((st
 $archivedServiceCount = count($services) - $activeServiceCount;
 ?>
 
-<div class="panel mb-3" data-service-management-root>
-	<div class="section-title mt-0">
-		<span>Services and Programs Management</span>
-		<div class="d-flex align-items-center gap-2 flex-wrap">
-			<div class="btn-group btn-group-sm" role="group" aria-label="Service view toggle">
-				<button type="button" class="btn btn-outline-primary active" id="btn-service-active" aria-pressed="true">Active (<?= esc((string) $activeServiceCount) ?>)</button>
-				<button type="button" class="btn btn-outline-primary" id="btn-service-archive" aria-pressed="false">Archive (<?= esc((string) $archivedServiceCount) ?>)</button>
-			</div>
-			<span id="service-add-btn-wrap">
-				<button class="btn btn-primary btn-sm js-service-modal-open" type="button" data-service-mode="create"><i class="bi bi-plus-lg" aria-hidden="true"></i>Add Service or Program</button>
-			</span>
+<?php /* Jade-style reskin (sector-* class system, shared with service.css). All
+         melbranch hooks preserved: data-service-management-root, the
+         #btn-service-active/#btn-service-archive toggle, .js-service-modal-open
+         + data-service-* attributes, and the service-modal include. */ ?>
+<div class="sector-management" data-service-management-root>
+	<header class="sector-toolbar">
+		<div class="sector-status-tabs btn-group" role="group" aria-label="Service view toggle">
+			<button type="button" class="btn btn-success active" id="btn-service-active" aria-pressed="true">Active (<?= esc((string) $activeServiceCount) ?>)</button>
+			<button type="button" class="btn btn-outline-secondary" id="btn-service-archive" aria-pressed="false">Archive (<?= esc((string) $archivedServiceCount) ?>)</button>
 		</div>
-	</div>
+		<span id="service-add-btn-wrap">
+			<button class="btn btn-success js-service-modal-open" type="button" data-service-mode="create"><i class="bi bi-plus-lg" aria-hidden="true"></i><span>Add Service or Program</span></button>
+		</span>
+	</header>
 
 	<div class="table-responsive">
-		<table class="table table-sm align-middle management-table">
+		<table class="table sector-table align-middle management-table">
 			<thead>
 				<tr>
 					<th>Category</th>
@@ -42,10 +43,10 @@ $archivedServiceCount = count($services) - $activeServiceCount;
 					<?php $serviceId = (int) ($service['serviceID'] ?? 0); ?>
 					<?php $isArchived = trim((string) ($service['dt_deleted'] ?? '')) !== ''; ?>
 					<tr data-row-archived="<?= $isArchived ? '1' : '0' ?>"<?= $isArchived ? ' class="d-none"' : '' ?>>
-						<td><span class="status-pill is-muted"><?= esc((string) ($service['category'] ?? '')) ?></span></td>
-						<td><span class="entity-title"><?= esc((string) ($service['name'] ?? '')) ?></span></td>
+						<td><span class="badge bg-light text-dark border"><?= esc((string) ($service['category'] ?? '')) ?></span></td>
+						<td><span class="sector-name"><?= esc((string) ($service['name'] ?? '')) ?></span></td>
 						<td><span class="text-trim d-inline-block"><?= esc((string) ($service['description'] ?? '')) ?></span></td>
-						<td><span class="status-pill <?= $isArchived ? 'is-danger' : 'is-active' ?>"><?= $isArchived ? 'Archived' : 'Active' ?></span></td>
+						<td><span class="sector-status-badge <?= $isArchived ? 'sector-status-archived' : 'sector-status-active' ?>"><?= $isArchived ? 'Archived' : 'Active' ?></span></td>
 						<td class="text-end">
 							<div class="dropdown actions-menu">
 								<button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false" aria-label="Service actions">
@@ -90,7 +91,7 @@ $archivedServiceCount = count($services) - $activeServiceCount;
 				<?php endforeach; ?>
 				<?php if ($services === []): ?>
 					<tr>
-						<td colspan="5" class="text-center text-muted">No service or program records found.</td>
+						<td colspan="5" class="sector-empty-state">No service or program records found.</td>
 					</tr>
 				<?php endif; ?>
 			</tbody>

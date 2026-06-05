@@ -40,11 +40,14 @@ $formatAuditUser = static function (array $audit): string {
 };
 ?>
 
-<div class="panel">
-    <div class="section-title mt-0">
-        <span>Audit Trails</span>
-    </div>
-    <form class="row g-2 filter-bar js-audit-filter-form" method="get" action="<?= site_url('admin/audit-trails') ?>">
+<?php /* Jade-style reskin (audit-trails-* classes). Filter form + JS hooks
+         (.js-audit-filter-form, .js-audit-action-filter) and the Date/Time
+         columns are melbranch features preserved on top of jade's table look. */ ?>
+<section class="overview-panel audit-trails" aria-label="Audit trails">
+    <header class="panel-header">
+        <h2>Audit Trails</h2>
+    </header>
+    <form class="row g-2 filter-bar js-audit-filter-form p-3" method="get" action="<?= site_url('admin/audit-trails') ?>">
         <div class="col-md-6 col-lg-4">
             <input class="form-control" type="search" name="q" value="<?= esc($searchTerm) ?>" placeholder="Search audit trails by user, action, or description">
         </div>
@@ -61,41 +64,41 @@ $formatAuditUser = static function (array $audit): string {
             <input class="form-control" type="date" name="date" value="<?= esc($selectedFilterDate) ?>" aria-label="Filter by date">
         </div>
         <div class="col-auto">
-            <button class="btn btn-primary" type="submit"><i class="bi bi-search" aria-hidden="true"></i>Search</button>
+            <button class="btn btn-success" type="submit"><i class="bi bi-search me-1" aria-hidden="true"></i>Search</button>
         </div>
         <?php if ($hasSearchFilters): ?>
             <div class="col-auto">
-                <a class="btn btn-outline-secondary" href="<?= site_url('admin/audit-trails') ?>"><i class="bi bi-x-lg" aria-hidden="true"></i>Clear</a>
+                <a class="btn btn-outline-secondary" href="<?= site_url('admin/audit-trails') ?>"><i class="bi bi-x-lg me-1" aria-hidden="true"></i>Clear</a>
             </div>
         <?php endif; ?>
     </form>
     <div class="table-responsive">
-        <table class="table table-sm">
+        <table class="table audit-trails-table align-middle">
             <thead>
                 <tr>
-                    <th>User</th>
-                    <th>Member</th>
-                    <th>Action</th>
-                    <th>Description</th>
-                    <th>Date</th>
-                    <th>Time</th>
+                    <th scope="col">User</th>
+                    <th scope="col">Member</th>
+                    <th scope="col">Action</th>
+                    <th scope="col">Description</th>
+                    <th scope="col">Date</th>
+                    <th scope="col">Time</th>
                 </tr>
             </thead>
             <tbody>
                 <?php foreach ($recentAudits as $audit): ?>
                     <tr>
-                        <td><span class="entity-title"><?= esc($formatAuditUser($audit)) ?></span></td>
+                        <td><strong><?= esc($formatAuditUser($audit)) ?></strong></td>
                         <td><?= esc($formatAuditMember($audit)) ?></td>
-                        <td><span class="status-pill is-muted"><?= esc((string) ($audit['user_action'] ?? '')) ?></span></td>
+                        <td><span class="badge bg-light text-dark border"><?= esc((string) ($audit['user_action'] ?? '')) ?></span></td>
                         <td><?= esc((string) ($audit['description'] ?? '')) ?></td>
                         <td><?= esc($formatDate($audit['dt_created'] ?? '')) ?></td>
                         <td><?= esc($formatTime($audit['dt_created'] ?? '')) ?></td>
                     </tr>
                 <?php endforeach; ?>
                 <?php if ($recentAudits === []): ?>
-                    <tr><td colspan="6" class="text-center text-muted"><?= $hasSearchFilters ? 'No matching audit logs found.' : 'No audit logs yet.' ?></td></tr>
+                    <tr><td colspan="6" class="audit-trails-empty"><?= $hasSearchFilters ? 'No matching audit logs found.' : 'No audit logs yet.' ?></td></tr>
                 <?php endif; ?>
             </tbody>
         </table>
     </div>
-</div>
+</section>

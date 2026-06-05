@@ -31,6 +31,30 @@ $hasSearchFilters = $searchTerm !== '' || array_filter($searchFilters, static fn
 $canCreateFamily = $canCreateFamily ?? false;
 $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
 $selectedFilterDate = (string) ($searchFilters['date'] ?? $searchFilters['date_from'] ?? '');
+
+/*
+ * Jade-style reskin: employee shell now uses jadebranch's dashboard-shell /
+ * sidebar / header visual structure (matching the admin shell). Content keeps
+ * melbranch's classes and is themed by css/melbranch-bridge.css. All data,
+ * routes, JS hooks (#familyModal, .js-logout-link, .js-audit-filter-form) and
+ * scripts are unchanged.
+ */
+$cssVersion = static function (string $relativeCssPath): string {
+    $absolute = FCPATH . ltrim($relativeCssPath, '/');
+    $version  = is_file($absolute) ? (string) filemtime($absolute) : (string) time();
+
+    return base_url($relativeCssPath) . '?v=' . $version;
+};
+$jadeStyles = [
+    'css/dashboard.css',
+    'css/mainlayout.css',
+    'css/managerecord.css',
+    'css/searchbar.css',
+    'css/audittrails.css',
+    'css/familymodal.css',
+    'assets/css/session-timeout.css',
+    'css/melbranch-bridge.css',
+];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -40,52 +64,59 @@ $selectedFilterDate = (string) ($searchFilters['date'] ?? $searchFilters['date_f
     <title><?= esc($pageTitle) ?> - Binan Access Card MIS</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="<?= base_url('assets/css/admin.css') ?>?v=<?= filemtime(FCPATH . 'assets/css/admin.css') ?>">
+    <?php foreach ($jadeStyles as $stylePath): ?>
+    <link rel="stylesheet" href="<?= esc($cssVersion($stylePath), 'attr') ?>">
+    <?php endforeach; ?>
 </head>
 <body>
-<div class="app-shell">
-    <aside class="sidebar employee">
-        <div>
-            <div class="brand">
-                <img src="<?= base_url('assets/image/binan.png') ?>" alt="City of Binan Logo">
-                <div>
-                    <strong>Bi&ntilde;an Access Card MIS</strong>
-                    <small class="d-block">Employee Workspace</small>
-                </div>
-            </div>
-            <nav class="nav flex-column sidebar-nav">
-                <div class="nav-section">
-                    <div class="nav-section-label">Overview</div>
-                    <a class="nav-link <?= esc($navActive['dashboard'] ?? '') ?>" href="<?= site_url('employee/workspace') ?>"><i class="bi bi-speedometer2" aria-hidden="true"></i><span>Workspace</span></a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-label">Records</div>
-                    <a class="nav-link <?= esc($navActive['family-manage'] ?? '') ?>" href="<?= site_url('employee/manage-records') ?>"><i class="bi bi-people" aria-hidden="true"></i><span>Manage Records</span></a>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-label">Activity</div>
-                    <a class="nav-link <?= esc($navActive['activity'] ?? '') ?>" href="<?= site_url('employee/activity') ?>"><i class="bi bi-clock-history" aria-hidden="true"></i><span>My Activity</span></a>
-                </div>
-            </nav>
-        </div>
-        <div class="sidebar-footer">
-            <div class="sidebar-user"><?= esc($username) ?> &middot; Employee</div>
-            <a href="<?= site_url('logout') ?>" class="btn btn-outline-light btn-sm w-100 js-logout-link">Logout</a>
-        </div>
+<div class="dashboard-shell">
+    <aside class="dashboard-sidebar employee">
+        <a class="sidebar-brand" href="<?= site_url('employee/workspace') ?>">
+            <img class="sidebar-logo" src="<?= base_url('assets/image/binan.png') ?>" alt="City of Binan Logo">
+            <span class="sidebar-brand-text">Bi&ntilde;an Access Card MIS<br><small class="sidebar-brand-mode">Employee Workspace</small></span>
+        </a>
+        <nav aria-label="Employee navigation">
+            <section class="sidebar-section">
+                <h2 class="sidebar-heading">Overview</h2>
+                <ul class="nav nav-pills flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link <?= esc($navActive['dashboard'] ?? '') ?>" href="<?= site_url('employee/workspace') ?>"><i class="bi bi-speedometer2" aria-hidden="true"></i><span>Workspace</span></a>
+                    </li>
+                </ul>
+            </section>
+            <section class="sidebar-section">
+                <h2 class="sidebar-heading">Records</h2>
+                <ul class="nav nav-pills flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link <?= esc($navActive['family-manage'] ?? '') ?>" href="<?= site_url('employee/manage-records') ?>"><i class="bi bi-people" aria-hidden="true"></i><span>Manage Records</span></a>
+                    </li>
+                </ul>
+            </section>
+            <section class="sidebar-section">
+                <h2 class="sidebar-heading">Activity</h2>
+                <ul class="nav nav-pills flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link <?= esc($navActive['activity'] ?? '') ?>" href="<?= site_url('employee/activity') ?>"><i class="bi bi-clock-history" aria-hidden="true"></i><span>My Activity</span></a>
+                    </li>
+                </ul>
+            </section>
+            <section class="sidebar-section sidebar-account">
+                <div class="sidebar-user"><i class="bi bi-person-circle" aria-hidden="true"></i><span><?= esc($username) ?> &middot; Employee</span></div>
+                <a href="<?= site_url('logout') ?>" class="nav-link js-logout-link"><i class="bi bi-box-arrow-right" aria-hidden="true"></i><span>Logout</span></a>
+            </section>
+        </nav>
     </aside>
 
-    <main class="content">
-        <div class="topbar">
-            <div class="topbar-brand">
-                <img src="<?= base_url('assets/image/binan.png') ?>" alt="City of Binan Logo">
+    <div class="dashboard-workspace">
+        <header class="dashboard-header">
+            <img class="header-logo" src="<?= base_url('assets/image/binan.png') ?>" alt="City of Binan Logo">
+            <div>
+                <h1 id="dashboard-page-title"><?= esc($pageTitle) ?></h1>
+                <p>Bi&ntilde;an Access Card MIS</p>
             </div>
-            <div class="topbar-text">
-                <div class="fw-bold"><?= esc($pageTitle) ?></div>
-                <small class="text-muted">Bi&ntilde;an Access Card MIS</small>
-            </div>
-        </div>
+        </header>
 
-        <div class="container-fluid py-4">
+        <main class="dashboard-content">
             <?php if (session()->getFlashdata('success')): ?>
                 <div class="alert alert-success"><?= esc(session()->getFlashdata('success')) ?></div>
             <?php endif; ?>
@@ -244,8 +275,8 @@ $selectedFilterDate = (string) ($searchFilters['date'] ?? $searchFilters['date_f
                     </div>
                 </div>
             <?php endif; ?>
-        </div>
-    </main>
+        </main>
+    </div>
 </div>
 
 <?php /* Shared modal target for the add/edit/view record fragments loaded by

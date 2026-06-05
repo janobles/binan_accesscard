@@ -11,22 +11,21 @@
     $headJobIsCustom = $headJob !== '' && ! in_array($headJob, $jobOptions, true);
     $headAddress = trim((string) ($familyRecord['address'] ?? ''));
     $headBarangay = trim((string) ($familyRecord['barangay'] ?? ''));
-    $headFullAddress = trim($headAddress . ($headAddress !== '' && $headBarangay !== '' ? ', ' : '') . $headBarangay);
     ?>
     <div class="row g-3">
         <div class="col-md-3">
-            <label class="form-label" for="head_firstname">First name</label>
+            <label class="form-label" for="head_lastname">Last Name</label>
+            <input class="form-control" id="head_lastname" name="head_lastname" value="<?= esc((string) ($familyRecord['lastname'] ?? '')) ?>" required>
+            <div class="invalid-feedback">Last name is required.</div>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label" for="head_firstname">First Name</label>
             <input class="form-control" id="head_firstname" name="head_firstname" value="<?= esc((string) ($familyRecord['firstname'] ?? '')) ?>" required>
             <div class="invalid-feedback">First name is required.</div>
         </div>
         <div class="col-md-3">
-            <label class="form-label" for="head_middlename">Middle name</label>
+            <label class="form-label" for="head_middlename">Middle Name</label>
             <input class="form-control" id="head_middlename" name="head_middlename" value="<?= esc((string) ($familyRecord['middlename'] ?? '')) ?>">
-        </div>
-        <div class="col-md-3">
-            <label class="form-label" for="head_lastname">Last name</label>
-            <input class="form-control" id="head_lastname" name="head_lastname" value="<?= esc((string) ($familyRecord['lastname'] ?? '')) ?>" required>
-            <div class="invalid-feedback">Last name is required.</div>
         </div>
         <div class="col-md-3">
             <label class="form-label" for="head_suffix">Suffix</label>
@@ -94,6 +93,7 @@
         <div class="col-md-3">
             <label class="form-label" for="head_salary">Monthly income</label>
             <select class="form-select" id="head_salary" name="head_salary">
+                <option value="">Select</option>
                 <?php foreach ($incomeOptions as $incomeOption): ?>
                     <?php $incomeValue = (string) ($incomeOption['value'] ?? ''); ?>
                     <?php $incomeLabel = (string) ($incomeOption['label'] ?? $incomeValue); ?>
@@ -101,9 +101,13 @@
                 <?php endforeach; ?>
             </select>
         </div>
-        <div class="col-md-12">
+        <div class="col-md-9">
             <label class="form-label" for="head_address">Address</label>
-            <input class="form-control" id="head_address" name="head_address" value="<?= esc($headFullAddress) ?>" placeholder="House no., street, subdivision, barangay">
+            <input class="form-control" id="head_address" name="head_address" value="<?= esc($headAddress) ?>" placeholder="House no., street, subdivision">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label" for="head_barangay">Barangay</label>
+            <input class="form-control" id="head_barangay" name="head_barangay" value="<?= esc($headBarangay) ?>" placeholder="Barangay">
         </div>
     </div>
 </div>

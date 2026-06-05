@@ -33,6 +33,11 @@ $archivedSectorCount = count($sectors) - $activeSectorCount;
 		</span>
 	</header>
 
+	<form class="searchbar searchbar-single" role="search" data-lookup-search aria-label="Search sectors">
+		<input class="form-control" type="search" data-lookup-search-input placeholder="Search sectors by name, code, or description" aria-label="Search sectors">
+		<button class="btn btn-success searchbar-action" type="submit"><i class="bi bi-search" aria-hidden="true"></i><span>Search</span></button>
+	</form>
+
 	<div class="table-responsive">
 		<table class="table sector-table align-middle management-table">
 			<thead>

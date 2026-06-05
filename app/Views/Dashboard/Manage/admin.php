@@ -39,7 +39,6 @@ $canCreateFamily = $canCreateFamily ?? false;
 $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
 // Developers get the "developer" sidebar accent; plain admins get "admin".
 $sidebarRoleClass = $canManageAccounts ? 'developer' : 'admin';
-$selectedFilterDate = (string) ($searchFilters['date'] ?? $searchFilters['date_from'] ?? '');
 ?>
 <?php
 /*
@@ -170,45 +169,25 @@ $jadeStyles = [
                     <header class="panel-header">
                         <h2>Recent Records</h2>
                     </header>
-                    <form class="row g-2 filter-bar p-3" method="get" action="<?= site_url('admin/dashboard') ?>">
-                        <div class="col-md-6 col-lg-4">
-                            <input class="form-control" type="search" name="q" value="<?= esc($searchTerm) ?>" placeholder="Search records by name, contact number, or sector">
-                        </div>
-                        <div class="col-md-4 col-lg-3">
-                            <select class="form-select" name="sectorID">
-                                <option value="">All sectors</option>
-                                <?php foreach ($sectorOptions as $sector): ?>
-                                    <?php $sectorId = (string) ($sector['sectorID'] ?? ''); ?>
-                                    <option value="<?= esc($sectorId) ?>" <?= (string) ($searchFilters['sectorID'] ?? '') === $sectorId ? 'selected' : '' ?>><?= esc((string) ($sector['name'] ?? '')) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="col-md-3 col-lg-2">
-                            <input class="form-control" type="date" name="date" value="<?= esc($selectedFilterDate) ?>" aria-label="Filter by date">
-                        </div>
-                        <div class="col-auto">
-                            <button class="btn btn-success" type="submit"><i class="bi bi-search me-1" aria-hidden="true"></i>Search</button>
-                        </div>
-                        <?php if ($hasSearchFilters): ?>
-                            <div class="col-auto">
-                                <a class="btn btn-outline-secondary" href="<?= site_url('admin/dashboard') ?>"><i class="bi bi-x-lg me-1" aria-hidden="true"></i>Clear</a>
-                            </div>
-                        <?php endif; ?>
-                    </form>
+                    <?= view('Dashboard/partials/search-bar', [
+                        'searchTerm'       => $searchTerm,
+                        'sectorOptions'    => $sectorOptions,
+                        'selectedSectorId' => (string) ($searchFilters['sectorID'] ?? ''),
+                        'searchAction'     => site_url('admin/dashboard'),
+                        'searchAllAction'  => site_url('admin/manage-records'),
+                    ]) ?>
                     <div class="table-responsive">
                         <table class="table overview-table">
-                            <thead><tr><th scope="col">Head</th><th scope="col">Sector</th><th scope="col">Date</th><th scope="col">Time</th></tr></thead>
+                            <thead><tr><th scope="col">Name (Head)</th><th scope="col">Sector</th></tr></thead>
                             <tbody>
                                 <?php foreach ($recentFamilies as $family): ?>
                                     <tr>
                                         <td><?= esc(trim(($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? ''))) ?></td>
                                         <td><?= esc((string) ($family['sector_name'] ?? '-')) ?></td>
-                                        <td><?= esc($formatDate($family['dt_created'] ?? '')) ?></td>
-                                        <td><?= esc($formatTime($family['dt_created'] ?? '')) ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                                 <?php if ($recentFamilies === []): ?>
-                                    <tr><td colspan="4" class="empty-state"><?= $searchTerm !== '' || $hasSearchFilters ? 'No matching records found.' : 'No records yet.' ?></td></tr>
+                                    <tr><td colspan="2" class="empty-state"><?= $searchTerm !== '' || $hasSearchFilters ? 'No matching records found.' : 'No records yet.' ?></td></tr>
                                 <?php endif; ?>
                             </tbody>
                         </table>
@@ -222,7 +201,7 @@ $jadeStyles = [
                     </header>
                     <div class="table-responsive">
                         <table class="table overview-table">
-                            <thead><tr><th scope="col">User</th><th scope="col">Member</th><th scope="col">Action</th><th scope="col">Description</th><th scope="col">Date</th><th scope="col">Time</th></tr></thead>
+                            <thead><tr><th scope="col">User</th><th scope="col">Member</th><th scope="col">Action</th><th scope="col">Description</th></tr></thead>
                             <tbody>
                                 <?php foreach ($recentAudits as $audit): ?>
                                     <tr>
@@ -230,12 +209,10 @@ $jadeStyles = [
                                         <td><?= esc($formatAuditMember($audit)) ?></td>
                                         <td><span class="badge bg-light text-dark border"><?= esc((string) ($audit['user_action'] ?? '')) ?></span></td>
                                         <td><?= esc((string) ($audit['description'] ?? '')) ?></td>
-                                        <td><?= esc($formatDate($audit['dt_created'] ?? '')) ?></td>
-                                        <td><?= esc($formatTime($audit['dt_created'] ?? '')) ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                                 <?php if ($recentAudits === []): ?>
-                                    <tr><td colspan="6" class="empty-state">No activity yet.</td></tr>
+                                    <tr><td colspan="4" class="empty-state">No activity yet.</td></tr>
                                 <?php endif; ?>
                             </tbody>
                         </table>
@@ -343,6 +320,7 @@ $dashboardScripts = [
     'assets/js/dashboard/family-form.js',
     'assets/js/dashboard/family-list.js',
     'assets/js/dashboard/management-forms.js',
+    'assets/js/dashboard/lookup-search.js',
     'assets/js/dashboard/audit-filters.js',
     'assets/js/dashboard/dashboard-modal-loader.js',
     'assets/js/dashboard/manage-family-modal.js',

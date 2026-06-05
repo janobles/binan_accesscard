@@ -701,6 +701,47 @@
 	overflow: auto;
 }
 
+/* ---- Jade-green reskin: matches the dashboard/manage-records design ----
+   The wizard markup/JS is unchanged; only the accent colour moves from the
+   melbranch blue to jade green for the step circles, footer buttons, and the
+   checked sector/service boxes. */
+:root {
+	--family-jade-green: #168465;
+	--family-jade-green-deep: #12684f;
+}
+
+.wizard-step.is-active {
+	box-shadow: inset 0 -3px 0 var(--family-jade-green);
+}
+
+.wizard-step.is-active span {
+	color: #fff;
+	background: var(--family-jade-green);
+}
+
+.wizard-step.is-active small {
+	color: var(--family-jade-green-deep);
+	font-weight: 600;
+}
+
+.family-form-actions .btn-success {
+	--bs-btn-bg: var(--family-jade-green);
+	--bs-btn-border-color: var(--family-jade-green);
+	--bs-btn-hover-bg: var(--family-jade-green-deep);
+	--bs-btn-hover-border-color: var(--family-jade-green-deep);
+	--bs-btn-active-bg: var(--family-jade-green-deep);
+	--bs-btn-active-border-color: var(--family-jade-green-deep);
+	min-width: 116px;
+	min-height: 40px;
+	border-radius: 8px;
+	font-weight: 600;
+}
+
+#familyForm .form-check-input:checked {
+	background-color: var(--family-jade-green);
+	border-color: var(--family-jade-green);
+}
+
 @media (max-width: 992px) {
 	.family-wizard-steps {
 		grid-template-columns: repeat(3, 1fr);

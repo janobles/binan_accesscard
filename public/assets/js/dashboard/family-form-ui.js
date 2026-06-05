@@ -528,8 +528,7 @@
             ['contact', '#head_contactnumber'],
             ['religion', '#head_religion'],
             ['education', '#head_education'],
-            ['job', '#head_job'],
-            ['address', '#head_address']
+            ['job', '#head_job']
         ].forEach(function (field) {
             const target = targets[field[0]];
             const element = form.querySelector(field[1]);
@@ -549,6 +548,14 @@
                 : '';
 
             targets.income.textContent = (label || '').trim() !== '' ? label.trim() : '-';
+        }
+
+        if (targets.address) {
+            const addressValue = ((form.querySelector('#head_address') || {}).value || '').trim();
+            const barangayValue = ((form.querySelector('#head_barangay') || {}).value || '').trim();
+            const fullAddress = [addressValue, barangayValue].filter(Boolean).join(', ');
+
+            targets.address.textContent = fullAddress !== '' ? fullAddress : '-';
         }
 
         const selectedSectors = Array.from(form.querySelectorAll('#sectorNameList input[type="checkbox"]:checked')).map(function (checkbox) {

@@ -4,19 +4,6 @@ $searchTerm         = $searchTerm ?? '';
 $searchFilters      = $searchFilters ?? [];
 $auditActionOptions = $auditActionOptions ?? [];
 $hasSearchFilters   = $searchTerm !== '' || array_filter($searchFilters, static fn ($value): bool => trim((string) $value) !== '') !== [];
-$selectedFilterDate = (string) ($searchFilters['date'] ?? $searchFilters['date_from'] ?? '');
-
-$formatDate = static function (mixed $value): string {
-    $timestamp = strtotime((string) $value);
-
-    return $timestamp === false ? '' : date('Y-m-d', $timestamp);
-};
-
-$formatTime = static function (mixed $value): string {
-    $timestamp = strtotime((string) $value);
-
-    return $timestamp === false ? '' : date('h:i A', $timestamp);
-};
 
 $formatAuditMember = static function (array $audit): string {
     $memberName = trim((string) ($audit['member_name'] ?? ''));
@@ -40,9 +27,9 @@ $formatAuditUser = static function (array $audit): string {
 };
 ?>
 
-<?php /* Jade-style reskin (audit-trails-* classes). Filter form + JS hooks
-         (.js-audit-filter-form, .js-audit-action-filter) and the Date/Time
-         columns are melbranch features preserved on top of jade's table look. */ ?>
+<?php /* Jade-style reskin (audit-trails-* classes). Keeps the melbranch filter
+         form + JS hooks (.js-audit-filter-form, .js-audit-action-filter). The
+         date filter and Date/Time columns were removed to match the jade design. */ ?>
 <section class="overview-panel audit-trails" aria-label="Audit trails">
     <header class="panel-header">
         <h2>Audit Trails</h2>
@@ -59,9 +46,6 @@ $formatAuditUser = static function (array $audit): string {
                     <option value="<?= esc($action) ?>" <?= trim((string) ($searchFilters['action'] ?? '')) === $action ? 'selected' : '' ?>><?= esc($action) ?></option>
                 <?php endforeach; ?>
             </select>
-        </div>
-        <div class="col-md-3 col-lg-2">
-            <input class="form-control" type="date" name="date" value="<?= esc($selectedFilterDate) ?>" aria-label="Filter by date">
         </div>
         <div class="col-auto">
             <button class="btn btn-success" type="submit"><i class="bi bi-search me-1" aria-hidden="true"></i>Search</button>
@@ -80,8 +64,6 @@ $formatAuditUser = static function (array $audit): string {
                     <th scope="col">Member</th>
                     <th scope="col">Action</th>
                     <th scope="col">Description</th>
-                    <th scope="col">Date</th>
-                    <th scope="col">Time</th>
                 </tr>
             </thead>
             <tbody>
@@ -91,12 +73,10 @@ $formatAuditUser = static function (array $audit): string {
                         <td><?= esc($formatAuditMember($audit)) ?></td>
                         <td><span class="badge bg-light text-dark border"><?= esc((string) ($audit['user_action'] ?? '')) ?></span></td>
                         <td><?= esc((string) ($audit['description'] ?? '')) ?></td>
-                        <td><?= esc($formatDate($audit['dt_created'] ?? '')) ?></td>
-                        <td><?= esc($formatTime($audit['dt_created'] ?? '')) ?></td>
                     </tr>
                 <?php endforeach; ?>
                 <?php if ($recentAudits === []): ?>
-                    <tr><td colspan="6" class="audit-trails-empty"><?= $hasSearchFilters ? 'No matching audit logs found.' : 'No audit logs yet.' ?></td></tr>
+                    <tr><td colspan="4" class="audit-trails-empty"><?= $hasSearchFilters ? 'No matching audit logs found.' : 'No audit logs yet.' ?></td></tr>
                 <?php endif; ?>
             </tbody>
         </table>

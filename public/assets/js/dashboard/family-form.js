@@ -468,7 +468,8 @@
             '#head_education',
             '#head_job',
             '#head_salary',
-            '#head_address'
+            '#head_address',
+            '#head_barangay'
         ].forEach(function (selector) {
             const element = q(form, selector);
 

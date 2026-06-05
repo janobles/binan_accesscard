@@ -776,6 +776,7 @@ class FamilyController extends BaseController
             'contactnumber' => $this->nullableText($this->request->getPost($prefix . 'contactnumber')),
             'religion' => $this->nullableText($this->request->getPost($prefix . 'religion')),
             'address' => $this->nullableText($this->request->getPost($prefix . 'address')),
+            'barangay' => $this->nullableText($this->request->getPost($prefix . 'barangay')),
             'relationship' => $prefix === 'head_' ? 'Head' : $this->nullableText($this->request->getPost($prefix . 'relationship')),
             'sectorID' => SectorIds::normalize($this->request->getPost('sector_ids')),
         ];

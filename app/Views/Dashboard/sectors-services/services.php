@@ -27,6 +27,11 @@ $archivedServiceCount = count($services) - $activeServiceCount;
 		</span>
 	</header>
 
+	<form class="searchbar searchbar-single" role="search" data-lookup-search aria-label="Search services and programs">
+		<input class="form-control" type="search" data-lookup-search-input placeholder="Search services by category, name, or description" aria-label="Search services and programs">
+		<button class="btn btn-success searchbar-action" type="submit"><i class="bi bi-search" aria-hidden="true"></i><span>Search</span></button>
+	</form>
+
 	<div class="table-responsive">
 		<table class="table sector-table align-middle management-table">
 			<thead>

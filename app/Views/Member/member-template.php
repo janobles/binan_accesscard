@@ -11,16 +11,16 @@ $memberSectorGroups = ViewFormatter::memberSectorGroups($sectorOptions);
         </div>
         <div class="row g-2">
             <div class="col-md-3">
-                <label class="form-label">First name</label>
+                <label class="form-label">Last Name</label>
+                <input class="form-control" data-name="lastname">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">First Name</label>
                 <input class="form-control" data-name="firstname">
             </div>
             <div class="col-md-3">
-                <label class="form-label">Middle name</label>
+                <label class="form-label">Middle Name</label>
                 <input class="form-control" data-name="middlename">
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">Last name</label>
-                <input class="form-control" data-name="lastname">
             </div>
             <div class="col-md-3">
                 <label class="form-label">Suffix</label>

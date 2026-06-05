@@ -248,3 +248,18 @@
 .dashboard-content > .alert {
     margin-bottom: 1rem;
 }
+
+/* ---- Lookup (sector/service) client-side search filter ----
+   Composes with the Active/Archived toggle's .d-none: a row shows only when it
+   is in the current view AND matches the search keyword. */
+tr.lookup-hidden {
+    display: none !important;
+}
+
+/* The lookup search bar sits inside the management card, not a search panel, so
+   drop the panel chrome the .searchbar base class carries. */
+.sector-management .searchbar {
+    padding: 0 0 1rem;
+    background: transparent;
+    border-bottom: 0;
+}

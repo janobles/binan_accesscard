@@ -75,18 +75,17 @@ $fieldViewData            = compact(
 
 <div class="family-wizard-shell">
     <div class="family-wizard-card">
-        <?php if (! $embeddedInModal): ?>
-            <div class="family-wizard-header">
-                <div class="wizard-header-left">
-                    <span class="wizard-icon" aria-hidden="true">+</span>
-                    <div>
-                        <strong><?= $isEditMode ? 'Edit Record' : 'Add Record' ?></strong>
-                        <small>Step 1 of 3 - Head of Family</small>
-                    </div>
-                </div>
-                <span class="wizard-header-badge" aria-hidden="true"></span>
+        <header class="family-window-header">
+            <div class="family-window-heading">
+                <p class="family-window-kicker">Manage Records</p>
+                <h2 class="family-window-title"><?= $isEditMode ? 'Edit Family Record' : 'New Family Record' ?></h2>
             </div>
-        <?php endif; ?>
+            <?php if ($embeddedInModal): ?>
+                <button type="button" class="family-window-close" data-bs-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            <?php endif; ?>
+        </header>
 
         <div class="family-wizard-steps" aria-hidden="true">
             <div class="wizard-step is-active" data-step-target="1" aria-current="step"><span>1</span><small>Head of Family</small></div>

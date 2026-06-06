@@ -1,32 +1,39 @@
 <?php
-// Member summary placeholders are filled by the family form script.
+// Member summary placeholders are filled by the family form script (renderHeadSummary).
 ?>
 <div class="form-section family-step-panel" data-step="3">
-    <div class="section-title member-section-title">
-        <span>Members</span>
-    </div>
-    <div class="member-row mb-3" id="headOfFamilySummary">
-        <div class="member-row-header">
-            <strong>Current Record Head</strong>
+    <article class="family-summary-card" id="headOfFamilySummary">
+        <h2 class="family-summary-title">Current Record Head</h2>
+
+        <div class="family-summary-grid">
+            <p class="family-summary-item"><strong>Name:</strong> <span id="headSummaryName">-</span></p>
+            <p class="family-summary-item"><strong>Date of birth:</strong> <span id="headSummaryBirthday">-</span></p>
+            <p class="family-summary-item"><strong>Sex:</strong> <span id="headSummarySex">-</span></p>
+            <p class="family-summary-item"><strong>Civil status:</strong> <span id="headSummaryCivil">-</span></p>
+            <p class="family-summary-item"><strong>Contact:</strong> <span id="headSummaryContact">-</span></p>
+            <p class="family-summary-item"><strong>Religion:</strong> <span id="headSummaryReligion">-</span></p>
+            <p class="family-summary-item"><strong>Education:</strong> <span id="headSummaryEducation">-</span></p>
+            <p class="family-summary-item"><strong>Job:</strong> <span id="headSummaryJob">-</span></p>
+            <p class="family-summary-item"><strong>Monthly income:</strong> <span id="headSummaryIncome">-</span></p>
+            <p class="family-summary-item family-summary-wide"><strong>Address:</strong> <span id="headSummaryAddress">-</span></p>
         </div>
-        <div class="row g-2">
-            <div class="col-md-4"><small><strong>Name:</strong> <span id="headSummaryName">-</span></small></div>
-            <div class="col-md-4"><small><strong>Date of birth:</strong> <span id="headSummaryBirthday">-</span></small></div>
-            <div class="col-md-4"><small><strong>Sex:</strong> <span id="headSummarySex">-</span></small></div>
-            <div class="col-md-4"><small><strong>Civil status:</strong> <span id="headSummaryCivil">-</span></small></div>
-            <div class="col-md-4"><small><strong>Contact:</strong> <span id="headSummaryContact">-</span></small></div>
-            <div class="col-md-4"><small><strong>Religion:</strong> <span id="headSummaryReligion">-</span></small></div>
-            <div class="col-md-4"><small><strong>Education:</strong> <span id="headSummaryEducation">-</span></small></div>
-            <div class="col-md-4"><small><strong>Job:</strong> <span id="headSummaryJob">-</span></small></div>
-            <div class="col-md-4"><small><strong>Monthly income:</strong> <span id="headSummaryIncome">-</span></small></div>
-            <div class="col-md-12"><small><strong>Address:</strong> <span id="headSummaryAddress">-</span></small></div>
-            <div class="col-md-6"><small><strong>Sector(s):</strong></small><div id="headSummarySectors" class="head-summary-list">-</div></div>
-            <div class="col-md-6"><small><strong>Services and programs availed:</strong></small><div id="headSummaryServices" class="head-summary-list">-</div></div>
+
+        <div class="family-summary-lists">
+            <div class="family-summary-list">
+                <strong>Sector(s):</strong>
+                <div id="headSummarySectors" class="head-summary-list">-</div>
+            </div>
+            <div class="family-summary-list">
+                <strong>Services and programs availed:</strong>
+                <div id="headSummaryServices" class="head-summary-list">-</div>
+            </div>
         </div>
-    </div>
-    <div id="memberRows" class="member-stack"></div>
-    <p class="text-muted mb-0" id="memberRowsEmpty">No members added yet. Click Add Member.</p>
-    <div class="member-sticky-add">
-        <button type="button" class="btn btn-primary w-100" id="addMemberStickyBtn"><i class="bi bi-person-plus" aria-hidden="true"></i>Add Member</button>
-    </div>
+
+        <div class="family-member-actions">
+            <button type="button" class="btn btn-success" id="addMemberStickyBtn"><i class="bi bi-person-plus" aria-hidden="true"></i>Add Member</button>
+        </div>
+    </article>
+
+    <div id="memberRows" class="family-members-list"></div>
+    <p class="text-muted mb-0 family-members-empty" id="memberRowsEmpty">No members added yet. Click Add Member.</p>
 </div>

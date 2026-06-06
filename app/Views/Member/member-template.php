@@ -4,12 +4,12 @@ use App\Libraries\ViewFormatter;
 $memberSectorGroups = ViewFormatter::memberSectorGroups($sectorOptions);
 ?>
 <template id="memberTemplate">
-    <div class="member-row">
+    <div class="member-row family-member-card">
         <div class="member-row-header">
             <strong>Member</strong>
-            <button type="button" class="btn btn-sm btn-outline-danger remove-member"><i class="bi bi-trash" aria-hidden="true"></i>Remove</button>
+            <button type="button" class="btn btn-sm btn-danger remove-member"><i class="bi bi-trash" aria-hidden="true"></i>Remove</button>
         </div>
-        <div class="row g-2">
+        <div class="row g-3">
             <div class="col-md-3">
                 <label class="form-label">Last Name</label>
                 <input class="form-control" data-name="lastname">

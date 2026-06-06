@@ -558,11 +558,16 @@
             targets.address.textContent = fullAddress !== '' ? fullAddress : '-';
         }
 
-        const selectedSectors = Array.from(form.querySelectorAll('#sectorNameList input[type="checkbox"]:checked')).map(function (checkbox) {
-            const group = String(checkbox.dataset.group || '').trim();
-            const name = String(checkbox.dataset.name || '').trim();
+        const selectedSectors = Array.from(form.querySelectorAll('input[name="sector_ids[]"]:checked')).map(function (checkbox) {
+            const dataLabel = String(checkbox.dataset.label || '').trim();
 
-            return group !== '' && name !== '' ? group + ' - ' + name : name;
+            if (dataLabel !== '') {
+                return dataLabel;
+            }
+
+            const label = checkbox.closest('label');
+
+            return label ? String(label.textContent || '').trim() : '';
         }).filter(function (value) {
             return value !== '';
         });

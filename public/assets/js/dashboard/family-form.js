@@ -512,7 +512,7 @@
                 updateHeadSummary();
             }
 
-            if (target instanceof HTMLInputElement && target.name === 'service_ids[]') {
+            if (target instanceof HTMLInputElement && (target.name === 'service_ids[]' || target.name === 'sector_ids[]')) {
                 updateHeadSummary();
             }
         });

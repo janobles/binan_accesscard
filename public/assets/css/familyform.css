@@ -816,3 +816,304 @@
 		max-width: 100%;
 	}
 }
+
+/* ================================================================
+   "Manage Records / New Family Record" window redesign.
+   Ported from jadebranch public/css/familymodal.css onto the
+   melbranch wizard markup (all ids/classes/data-attrs kept so
+   family-form.js keeps working). Cascade-last so it wins.
+   ================================================================ */
+
+/* Show the wizard card as the window inside the shared #familyModal.
+   Scope the modal-header hide to the family form (via :has) so the other
+   modals that reuse #familyModal keep their own header. */
+#familyModal .modal-content:has(#familyForm) {
+	border: none;
+	background: transparent;
+}
+
+#familyModal .modal-content:has(#familyForm) .modal-header {
+	display: none;
+}
+
+#familyModal .modal-body:has(#familyForm) {
+	padding: 0;
+}
+
+.family-wizard-card {
+	border-color: #b7cce0;
+	box-shadow: 0 1.4rem 3.5rem rgba(10, 28, 45, 0.18);
+}
+
+/* Header: kicker + title + boxed close button */
+.family-window-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	padding: 16px 20px;
+	border-bottom: 1px solid #cbdbea;
+	background: #f8fbfd;
+}
+
+.family-window-kicker {
+	margin: 0 0 2px;
+	color: #6b7f93;
+	font-size: 12px;
+	font-weight: 700;
+	letter-spacing: 0.03em;
+	text-transform: uppercase;
+}
+
+.family-window-title {
+	margin: 0;
+	color: #163552;
+	font-size: 22px;
+	font-weight: 800;
+}
+
+.family-window-close {
+	display: inline-flex;
+	width: 38px;
+	height: 38px;
+	flex: 0 0 auto;
+	align-items: center;
+	justify-content: center;
+	border: 1px solid #c4d3e1;
+	border-radius: 7px;
+	background: #fff;
+	color: #23455f;
+	font-size: 24px;
+	line-height: 1;
+	cursor: pointer;
+}
+
+.family-window-close:hover,
+.family-window-close:focus {
+	border-color: #2d75af;
+	color: #1d679f;
+	box-shadow: 0 0 0 0.2rem rgba(45, 117, 175, 0.14);
+}
+
+/* Step tabs (boxed, circular numbers, green active circle, blue underline) */
+.family-wizard-steps {
+	border-top: 0;
+	border-bottom: 1px solid #c7d8e9;
+	background: #edf5fb;
+}
+
+.wizard-step {
+	position: relative;
+	min-height: 74px;
+	border-right: 1px solid #cfdeec;
+}
+
+.wizard-step span {
+	width: 28px;
+	height: 28px;
+	background: #d8e6f2;
+	color: #879bb1;
+	font-weight: 800;
+}
+
+.wizard-step small {
+	color: #8399b4;
+	font-size: 14px;
+	font-weight: 500;
+}
+
+.wizard-step.is-active {
+	box-shadow: none;
+}
+
+.wizard-step.is-active::after {
+	content: "";
+	position: absolute;
+	right: 0;
+	bottom: -1px;
+	left: 0;
+	height: 3px;
+	background: #1d6da9;
+}
+
+.wizard-step.is-active span {
+	background: var(--family-jade-green);
+	color: #fff;
+}
+
+.wizard-step.is-active small {
+	color: #1c5f9b;
+	font-weight: 600;
+}
+
+/* Slightly taller inputs to match the design */
+#familyForm .form-control,
+#familyForm .form-select {
+	min-height: 46px;
+}
+
+/* Step 2: flat sectors + services columns */
+.family-step-two-grid {
+	display: grid;
+	grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+	gap: 24px;
+}
+
+.family-choice-group {
+	min-width: 0;
+}
+
+.family-choice-box {
+	max-height: 360px;
+	overflow-y: auto;
+	border: 1px solid #bdd1e6;
+	border-radius: 8px;
+	background: #f8fbff;
+	padding: 0 16px;
+}
+
+.family-choice-section {
+	padding: 14px 0;
+	border-bottom: 1px solid #d9e4ef;
+}
+
+.family-choice-section:last-child {
+	border-bottom: 0;
+}
+
+.family-choice-section h3 {
+	margin: 0 0 8px;
+	color: #486887;
+	font-size: 14px;
+	font-weight: 800;
+	text-transform: uppercase;
+}
+
+.family-choice-row {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	margin: 0;
+	padding: 7px 4px;
+	color: #254461;
+	font-size: 14px;
+	line-height: 1.35;
+	cursor: pointer;
+}
+
+.family-choice-row:hover {
+	background: #eef5fb;
+	border-radius: 6px;
+}
+
+.family-choice-row .form-check-input {
+	flex: 0 0 auto;
+	float: none;
+	margin: 2px 0 0;
+}
+
+.family-choice-row .form-check-label {
+	flex: 1 1 auto;
+	min-width: 0;
+	overflow-wrap: break-word;
+}
+
+.family-choice-empty {
+	margin: 0;
+	padding: 16px 0;
+	color: #6f8196;
+}
+
+/* Step 3: "Current Record Head" summary card */
+.family-summary-card {
+	border: 1px solid #bdd1e6;
+	border-radius: 8px;
+	background: #f8fbff;
+	padding: 22px 18px 16px;
+	color: #254461;
+}
+
+.family-summary-title {
+	margin: 0 0 22px;
+	color: #09233f;
+	font-size: 24px;
+	font-weight: 800;
+}
+
+.family-summary-grid {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	column-gap: 40px;
+	row-gap: 16px;
+}
+
+.family-summary-item {
+	margin: 0;
+	min-width: 0;
+	font-size: 14px;
+	line-height: 1.45;
+}
+
+.family-summary-item strong,
+.family-summary-list strong {
+	color: #405675;
+	font-weight: 800;
+}
+
+.family-summary-wide {
+	grid-column: 1 / -1;
+}
+
+.family-summary-lists {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 32px;
+	margin-top: 18px;
+}
+
+.family-summary-list {
+	min-width: 0;
+	font-size: 14px;
+	line-height: 1.45;
+}
+
+.family-summary-list .head-summary-list {
+	margin-top: 4px;
+}
+
+.family-member-actions {
+	display: flex;
+	justify-content: flex-end;
+	margin-top: 18px;
+}
+
+.family-members-list {
+	margin-top: 4px;
+}
+
+.family-members-empty {
+	margin-top: 12px;
+}
+
+@media (max-width: 991px) {
+	.family-step-two-grid {
+		grid-template-columns: 1fr;
+	}
+
+	.family-summary-grid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		column-gap: 24px;
+	}
+}
+
+@media (max-width: 767px) {
+	.family-summary-grid,
+	.family-summary-lists {
+		grid-template-columns: 1fr;
+		gap: 16px;
+	}
+
+	.family-window-title {
+		font-size: 20px;
+	}
+}

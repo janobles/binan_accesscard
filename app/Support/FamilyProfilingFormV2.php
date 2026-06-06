@@ -21,13 +21,9 @@ class FamilyProfilingFormV2
     ];
 
     public const SERVICE_CATEGORIES = [
-        'Senior Citizen',
-        'Person with Disability',
-        'Solo Parent',
-        'Children',
-        'Financial Assistance',
+        'Financial Assistance Programs',
         'Social Welfare Programs and Services',
-        'Emergency and Disaster Assistance',
+        'Emergency / Disaster Assistance Programs',
     ];
 
     // The methods below return fixed option lists/seed data straight from the CSWD

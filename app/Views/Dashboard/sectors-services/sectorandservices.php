@@ -23,7 +23,9 @@ $selectedServiceIds = ViewFormatter::integerList($selectedServiceIds ?? [], true
                     }
                     $hasSectors = true;
                     $categoryLabel = (string) ($groupSectors[0]['category_label'] ?? $groupCode);
-                    $heading = $groupCode === 'OTHER' ? $categoryLabel : $groupCode . ' (' . $categoryLabel . ')';
+                    $heading = ($categoryLabel === '' || $categoryLabel === $groupCode)
+                        ? $groupCode
+                        : $groupCode . ' (' . $categoryLabel . ')';
                     ?>
                     <section class="family-choice-section" aria-label="<?= esc($heading, 'attr') ?>">
                         <h3><?= esc($heading) ?></h3>

@@ -6,11 +6,10 @@ extract(sector_management_view_data(get_defined_vars()), EXTR_OVERWRITE);
 // per prefix + every existing code for the inline duplicate check.
 $sectorModel = new \App\Models\Lookups\SectorModel();
 $sectorPrefixOptions = [];
-foreach (\App\Support\FamilyProfilingFormV2::SECTOR_CATEGORIES as $prefix => $label) {
-    if ($prefix === 'OTHER') {
-        continue;
-    }
-    $sectorPrefixOptions[$prefix] = $prefix . ' - ' . $label;
+foreach ($sectorModel->sectorPrefixOptions() as $prefix => $label) {
+    // Official prefixes show "CODE - Label"; custom prefixes (label === code)
+    // show just the bare code so the dropdown reads cleanly (e.g. "TEST").
+    $sectorPrefixOptions[$prefix] = $label === $prefix ? $prefix : $prefix . ' - ' . $label;
 }
 $sectorNextCodeMap = $sectorModel->nextShortcodeMap();
 $existingShortcodes = $sectorModel->existingShortcodes();

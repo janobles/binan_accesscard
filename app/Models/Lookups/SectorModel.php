@@ -232,8 +232,12 @@ class SectorModel extends Model
      * Scans every existing code (including archived rows, so numbers are never
      * reused), takes the highest trailing number per alpha prefix, and adds one.
      * Prefixes come from FamilyProfilingFormV2::SECTOR_CATEGORIES (minus OTHER);
-     * a prefix with no codes yet starts at 1. The sector modal uses this map to
-     * auto-fill the Code field when a category is picked.
+     * a prefix with no codes yet starts at 1, except the single-instance
+     * categories (LGBT, OFW, IP, IDP, PDL) which get the bare code. Custom
+     * prefixes already used by saved codes are included too, so a category made
+     * via "Other (custom)" can be re-picked and auto-numbered (e.g. TEST2). The
+     * sector modal uses this map to auto-fill the Code field when a category is
+     * picked.
      */
     public function nextShortcodeMap(): array
     {
@@ -253,16 +257,65 @@ class SectorModel extends Model
         }
 
         $map = [];
+        $singleInstance = ['LGBT', 'OFW', 'IP', 'IDP', 'PDL'];
 
         foreach (array_keys(FamilyProfilingFormV2::SECTOR_CATEGORIES) as $prefix) {
             if ($prefix === 'OTHER') {
                 continue;
             }
 
+            // Single-instance categories take the bare code (e.g. LGBT) until one
+            // exists; the numbered series (PWD2, SC4, …) applies to the rest.
+            if (in_array($prefix, $singleInstance, true) && ! isset($highestByPrefix[$prefix])) {
+                $map[$prefix] = $prefix;
+
+                continue;
+            }
+
             $map[$prefix] = $prefix . (($highestByPrefix[$prefix] ?? 0) + 1);
         }
 
+        // Custom prefixes (created via "Other (custom)") get a next number too,
+        // so re-picking that category in the modal auto-fills e.g. TEST2.
+        foreach ($highestByPrefix as $prefix => $highest) {
+            if (! isset($map[$prefix])) {
+                $map[$prefix] = $prefix . ($highest + 1);
+            }
+        }
+
         return $map;
+    }
+
+    /**
+     * Prefix => label map for the sector modal's category dropdown: the official
+     * categories (FamilyProfilingFormV2::SECTOR_CATEGORIES, minus OTHER) first,
+     * then any custom prefixes already used by saved codes (labelled by the bare
+     * prefix) — so a category created via "Other (custom)" can be re-picked next
+     * time instead of retyped. Pairs with nextShortcodeMap() for code auto-fill.
+     */
+    public function sectorPrefixOptions(): array
+    {
+        $options = [];
+
+        foreach (FamilyProfilingFormV2::SECTOR_CATEGORIES as $prefix => $label) {
+            if ($prefix !== 'OTHER') {
+                $options[$prefix] = $label;
+            }
+        }
+
+        $custom = [];
+
+        foreach ($this->existingShortcodes() as $code) {
+            $prefix = $this->sectorPrefix($code);
+
+            if ($prefix !== '' && ! isset($options[$prefix])) {
+                $custom[$prefix] = $prefix;
+            }
+        }
+
+        ksort($custom);
+
+        return $options + $custom;
     }
 
     /**
@@ -285,9 +338,11 @@ class SectorModel extends Model
     }
 
     /**
-     * Groups sectors into display categories (PWD, SP, SC/OSCA, Barangay, etc.)
-     * keyed by FamilyProfilingFormV2::SECTOR_CATEGORIES. Frontend: drives the
-     * grouped sector picker in the family form.
+     * Groups sectors into display categories keyed by the shortcode's leading
+     * alpha prefix (PWD, SP, SC, B, LGBT, …; OSCA/OSWA fold into SC). The label
+     * comes from FamilyProfilingFormV2::SECTOR_CATEGORIES, falling back to the
+     * raw prefix for custom codes, so there is no generic "Other Sectors"
+     * bucket. Frontend: drives the grouped sector picker in the family form.
      */
     public function getSectorCatalog(array $sectorOptions = []): array
     {
@@ -295,8 +350,7 @@ class SectorModel extends Model
             $sectorOptions = $this->getSectorOptions();
         }
 
-        $catalog = array_fill_keys(array_keys(FamilyProfilingFormV2::SECTOR_CATEGORIES), []);
-        $catalog['OSCA'] = [];
+        $catalog = [];
 
         foreach ($sectorOptions as $sector) {
             $shortcode = $this->effectiveShortcode($sector);
@@ -305,22 +359,10 @@ class SectorModel extends Model
                 continue;
             }
 
-            if (str_starts_with($shortcode, 'PWD')) {
-                $group = 'PWD';
-            } elseif (str_starts_with($shortcode, 'SP')) {
-                $group = 'SP';
-            } elseif (str_starts_with($shortcode, 'SC') || str_starts_with($shortcode, 'OSCA') || str_starts_with($shortcode, 'OSWA')) {
-                $group = 'SC';
-            } elseif (str_starts_with($shortcode, 'B')) {
-                $group = 'B';
-            } else {
-                $group = array_key_exists($shortcode, FamilyProfilingFormV2::SECTOR_CATEGORIES)
-                    ? $shortcode
-                    : 'OTHER';
-            }
+            $group = $this->sectorPrefix($shortcode);
 
             $catalog[$group][] = [
-                'category_label' => FamilyProfilingFormV2::SECTOR_CATEGORIES[$group] ?? 'Other Sectors',
+                'category_label' => FamilyProfilingFormV2::SECTOR_CATEGORIES[$group] ?? $group,
                 'sectorID' => (string) ($sector['sectorID'] ?? ''),
                 'shortcode' => $shortcode,
                 'name' => (string) ($sector['name'] ?? ''),
@@ -328,7 +370,43 @@ class SectorModel extends Model
             ];
         }
 
-        return $catalog;
+        return $this->orderByCategory($catalog);
+    }
+
+    /**
+     * Group key for a shortcode: its leading letters, with OSCA/OSWA folded into
+     * SC. Falls back to the whole code if it has no leading letters.
+     */
+    private function sectorPrefix(string $shortcode): string
+    {
+        $prefix = preg_match('/^([A-Z]+)/', $shortcode, $matches) === 1 ? $matches[1] : $shortcode;
+
+        return ($prefix === 'OSCA' || $prefix === 'OSWA') ? 'SC' : $prefix;
+    }
+
+    /**
+     * Reorders catalog groups so the official prefixes lead (in
+     * FamilyProfilingFormV2::SECTOR_CATEGORIES order), with any custom prefixes
+     * appended alphabetically. Keeps the picker tidy without a schema column.
+     */
+    private function orderByCategory(array $catalog): array
+    {
+        $ordered = [];
+
+        foreach (array_keys(FamilyProfilingFormV2::SECTOR_CATEGORIES) as $prefix) {
+            if ($prefix === 'OTHER') {
+                continue;
+            }
+
+            if (isset($catalog[$prefix])) {
+                $ordered[$prefix] = $catalog[$prefix];
+                unset($catalog[$prefix]);
+            }
+        }
+
+        ksort($catalog);
+
+        return $ordered + $catalog;
     }
 
     /**

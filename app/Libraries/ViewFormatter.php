@@ -2,6 +2,8 @@
 
 namespace App\Libraries;
 
+use App\Support\FamilyProfilingFormV2;
+
 /**
  * Shared presentation formatting and normalization for view templates.
  */
@@ -185,40 +187,57 @@ class ViewFormatter
     }
 
     /**
-     * Groups sectors into the SC/PWD/SP/B/Others buckets the family form renders,
-     * dropping any empty group. Frontend: builds the grouped sector checkboxes.
+     * Groups sectors by their shortcode's leading alpha prefix (SC/PWD/SP/B/
+     * LGBT/…; OSCA/OSWA fold into SC), labelling each group from
+     * FamilyProfilingFormV2::SECTOR_CATEGORIES or the raw prefix for custom
+     * codes — so there is no catch-all "Others" bucket. Official prefixes lead
+     * in form order, custom prefixes follow alphabetically; empty groups drop.
+     * Frontend: builds the grouped sector checkboxes for member rows.
      */
     public static function memberSectorGroups(array $sectorOptions): array
     {
-        $groups = [
-            'SC' => ['label' => 'SC', 'sectors' => []],
-            'PWD' => ['label' => 'PWD', 'sectors' => []],
-            'SP' => ['label' => 'SP', 'sectors' => []],
-            'B' => ['label' => 'B', 'sectors' => []],
-            'OTHER' => ['label' => 'Others', 'sectors' => []],
-        ];
+        $groups = [];
 
         foreach ($sectorOptions as $sector) {
             $shortcode = strtoupper(trim((string) ($sector['shortcode'] ?? '')));
-            $groupKey = match (true) {
-                str_starts_with($shortcode, 'PWD') => 'PWD',
-                str_starts_with($shortcode, 'SC'),
-                str_starts_with($shortcode, 'OSCA'),
-                str_starts_with($shortcode, 'OSWA') => 'SC',
-                str_starts_with($shortcode, 'SP') => 'SP',
-                str_starts_with($shortcode, 'B') => 'B',
-                default => 'OTHER',
-            };
-            $groups[$groupKey]['sectors'][] = $sector;
+
+            if ($shortcode === '') {
+                continue;
+            }
+
+            $prefix = preg_match('/^([A-Z]+)/', $shortcode, $matches) === 1 ? $matches[1] : $shortcode;
+
+            if ($prefix === 'OSCA' || $prefix === 'OSWA') {
+                $prefix = 'SC';
+            }
+
+            if (! isset($groups[$prefix])) {
+                $groups[$prefix] = [
+                    'label' => FamilyProfilingFormV2::SECTOR_CATEGORIES[$prefix] ?? $prefix,
+                    'sectors' => [],
+                ];
+            }
+
+            $groups[$prefix]['sectors'][] = $sector;
         }
 
-        foreach ($groups as $key => $group) {
-            if (($group['sectors'] ?? []) === []) {
-                unset($groups[$key]);
+        // Official prefixes first (form order), then custom prefixes alphabetically.
+        $ordered = [];
+
+        foreach (array_keys(FamilyProfilingFormV2::SECTOR_CATEGORIES) as $prefix) {
+            if ($prefix === 'OTHER') {
+                continue;
+            }
+
+            if (isset($groups[$prefix])) {
+                $ordered[$prefix] = $groups[$prefix];
+                unset($groups[$prefix]);
             }
         }
 
-        return $groups;
+        ksort($groups);
+
+        return $ordered + $groups;
     }
 
     /** Compact, safe string form of any value for debug output in views. */

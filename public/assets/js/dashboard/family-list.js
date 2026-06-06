@@ -29,6 +29,32 @@
         }
     });
 
+    // Live search: filter dashboard overview rows on every keystroke.
+    document.addEventListener('input', function (event) {
+        var input = event.target;
+        if (!input || input.name !== 'q') {
+            return;
+        }
+        var panel = input.closest('[data-dashboard-search-panel]');
+        if (!panel) {
+            return;
+        }
+        var keyword  = input.value.toLowerCase().trim();
+        var sel      = panel.querySelector('select[name="sectorID"]');
+        var sectorId = sel ? parseInt(sel.value || '0', 10) : 0;
+        panel.querySelectorAll('[data-record-row]').forEach(function (row) {
+            var nameEl = row.querySelector('[data-record-name]');
+            var name   = nameEl ? nameEl.textContent.toLowerCase().trim() : '';
+            var rawIds = row.dataset.sectorIds || '[]';
+            var ids    = [];
+            try { ids = JSON.parse(rawIds); } catch (_) {}
+            if (!Array.isArray(ids)) { ids = ids ? [ids] : []; }
+            var nameOk = !keyword  || name.indexOf(keyword)             !== -1;
+            var secOk  = !sectorId || ids.map(Number).indexOf(sectorId) !== -1;
+            row.style.display = (nameOk && secOk) ? '' : 'none';
+        });
+    });
+
     // Client-side "Search" for the dashboard overview panels (Recent Records on admin +
     // employee dashboards). Filters [data-record-row] rows without a server round-trip.
     document.addEventListener('submit', function (event) {

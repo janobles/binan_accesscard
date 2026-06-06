@@ -200,6 +200,22 @@
         loadFamilyList(panel, fullUrl.toString(), true);
     });
 
+    // Live search: filter rows on every keystroke in the search text field.
+    document.addEventListener('input', function (event) {
+        const input = event.target;
+        if (!input || input.name !== 'q') {
+            return;
+        }
+        const panel = input.closest('[data-family-list-panel]');
+        if (!panel) {
+            return;
+        }
+        const keyword  = input.value.toLowerCase().trim();
+        const sel      = panel.querySelector('select[name="sectorID"]');
+        const sectorId = sel ? parseInt(sel.value || '0', 10) : 0;
+        filterTableRows(panel, keyword, sectorId);
+    });
+
     document.addEventListener('click', function (event) {
         const link = event.target.closest('[data-family-list-panel] a[href]');
 

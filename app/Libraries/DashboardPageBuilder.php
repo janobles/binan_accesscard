@@ -236,8 +236,7 @@ class DashboardPageBuilder
         $status = strtolower(trim((string) $this->request->getGet('status')));
         $showArchived = $status === 'archived';
         $page = max(1, (int) $this->request->getGet('page'));
-        // 100 family heads per page keeps the table responsive even with ~50k members.
-        $perPage = 100;
+        $perPage = 50;
 
         // Manage Records FILTER controls (sector + date). Status (active/archived)
         // is handled separately above. Passed into MemberModel::searchFamilies().
@@ -442,8 +441,7 @@ class DashboardPageBuilder
         $status = strtolower(trim((string) $this->request->getGet('status')));
         $showArchived = $status === 'archived';
         $page = max(1, (int) $this->request->getGet('page'));
-        // 100 family heads per page keeps the table responsive even with ~50k members.
-        $perPage = 100;
+        $perPage = 50;
 
         // Manage Records FILTER controls (sector + date). Status (active/archived)
         // is handled separately above. Passed into MemberModel::searchFamilies().

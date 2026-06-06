@@ -97,6 +97,19 @@
         });
     }
 
+    function filterTableRows(panel, keyword, sectorId) {
+        panel.querySelectorAll('[data-record-row]').forEach(function (row) {
+            var name = (row.querySelector('[data-record-name]') ? row.querySelector('[data-record-name]').textContent : '').toLowerCase().trim();
+            var rawIds = row.dataset.sectorIds || '[]';
+            var ids = [];
+            try { ids = JSON.parse(rawIds); } catch (_) {}
+            if (!Array.isArray(ids)) { ids = ids ? [ids] : []; }
+            var nameOk = !keyword || name.indexOf(keyword) !== -1;
+            var secOk  = !sectorId || ids.map(Number).indexOf(sectorId) !== -1;
+            row.style.display = (nameOk && secOk) ? '' : 'none';
+        });
+    }
+
     function loadFamilyList(panel, fullUrl, pushHistory) {
         const partialUrl = urlWithPartial(fullUrl);
 
@@ -152,15 +165,29 @@
 
         const panel = panelFor(form);
 
-        if (!panel || !window.fetch || !window.history) {
+        if (!panel) {
             return;
         }
 
         event.preventDefault();
 
+        // "Search" button — filter current rows in-browser without a server round-trip.
+        if (event.submitter && event.submitter.dataset.searchMode === 'local') {
+            const keyword  = (form.querySelector('input[name="q"]') ? form.querySelector('input[name="q"]').value : '').toLowerCase().trim();
+            const sectorId = parseInt((form.querySelector('select[name="sectorID"]') ? form.querySelector('select[name="sectorID"]').value : '0') || '0', 10);
+            filterTableRows(panel, keyword, sectorId);
+            return;
+        }
+
+        if (!window.fetch || !window.history) {
+            form.submit();
+            return;
+        }
+
         closeModalFor(form);
 
-        const fullUrl = new URL(form.action, window.location.href);
+        const actionUrl = (event.submitter && event.submitter.getAttribute('formaction')) || form.action;
+        const fullUrl = new URL(actionUrl, window.location.href);
         const formData = new FormData(form);
 
         fullUrl.search = '';

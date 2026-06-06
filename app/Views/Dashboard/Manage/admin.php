@@ -165,7 +165,7 @@ $jadeStyles = [
                     <article class="stat-card"><p>Services and Programs</p><strong><?= esc((string) ($stats['assistance'] ?? 0)) ?></strong></article>
                 </section>
 
-                <section class="overview-panel">
+                <section class="overview-panel" data-dashboard-search-panel>
                     <header class="panel-header">
                         <h2>Recent Records</h2>
                     </header>
@@ -181,9 +181,9 @@ $jadeStyles = [
                             <thead><tr><th scope="col">Name (Head)</th><th scope="col">Sector</th></tr></thead>
                             <tbody>
                                 <?php foreach ($recentFamilies as $family): ?>
-                                    <tr>
-                                        <td><?= esc(trim(($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? ''))) ?></td>
-                                        <td><?= esc((string) ($family['sector_name'] ?? '-')) ?></td>
+                                    <tr data-record-row data-sector-ids="<?= esc((string) ($family['sectorID'] ?? '[]'), 'attr') ?>">
+                                        <td data-record-name><?= esc(trim(($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? ''))) ?></td>
+                                        <td data-record-sector><?= esc((string) ($family['sector_name'] ?? '-')) ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                                 <?php if ($recentFamilies === []): ?>

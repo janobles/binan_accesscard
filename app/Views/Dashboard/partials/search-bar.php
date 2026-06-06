@@ -52,7 +52,7 @@ $searchPlaceholder = (string) ($searchPlaceholder ?? 'Search records by name, co
     </select>
 
     <div class="searchbar-actions">
-        <button class="btn btn-success searchbar-action" type="submit">
+        <button class="btn btn-success searchbar-action" type="submit" data-search-mode="local">
             <i class="bi bi-search" aria-hidden="true"></i>
             <span>Search</span>
         </button>
@@ -60,8 +60,6 @@ $searchPlaceholder = (string) ($searchPlaceholder ?? 'Search records by name, co
         <button
             class="btn btn-outline-success searchbar-action"
             type="submit"
-            name="search_scope"
-            value="all"
             formaction="<?= esc($searchAllAction, 'attr') ?>"
         >
             <i class="bi bi-database-search" aria-hidden="true"></i>

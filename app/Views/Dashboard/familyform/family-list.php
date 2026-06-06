@@ -186,7 +186,7 @@ $deepToRecord = (int) ($deepToRecord ?? 0);
                     ? 'Restore this record to the active list?'
                     : $recordActionLabel . ' this record? This keeps the record in the database, marks it as ' . $recordActionPast . ', and hides it from active lists.';
                 ?>
-                <tr data-record-row>
+                <tr data-record-row data-sector-ids="<?= esc((string) ($family['sectorID'] ?? '[]'), 'attr') ?>">
                     <td data-record-name>
                         <span class="entity-title"><?= esc((string) (($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? ''))) ?></span>
                     </td>

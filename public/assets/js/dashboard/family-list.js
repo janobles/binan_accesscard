@@ -2,6 +2,9 @@
 // dialog before the form is actually submitted (archive / restore actions).
 // If the user cancels, event.preventDefault() blocks the POST.
 //
+// Also handles client-side "Search" filtering for [data-dashboard-search-panel]
+// (admin + employee dashboard overview panels).
+//
 // Connected to:
 //   - View   : Dashboard/familyform/family-list.php — .js-family-record-action-form
 //              (data-family-name, data-action-label, data-action-past, data-confirm-message)
@@ -24,5 +27,44 @@
         if (!window.confirm(message)) {
             event.preventDefault();
         }
+    });
+
+    // Client-side "Search" for the dashboard overview panels (Recent Records on admin +
+    // employee dashboards). Filters [data-record-row] rows without a server round-trip.
+    document.addEventListener('submit', function (event) {
+        const submitter = event.submitter;
+        if (!submitter || submitter.dataset.searchMode !== 'local') {
+            return;
+        }
+
+        const form = event.target;
+        if (!(form instanceof HTMLFormElement)) {
+            return;
+        }
+
+        const panel = form.closest('[data-dashboard-search-panel]');
+        if (!panel) {
+            return;
+        }
+
+        event.preventDefault();
+
+        const keywordInput = form.querySelector('input[name="q"]');
+        const sectorSelect = form.querySelector('select[name="sectorID"]');
+        const keyword  = keywordInput  ? keywordInput.value.toLowerCase().trim()  : '';
+        const sectorId = sectorSelect ? parseInt(sectorSelect.value || '0', 10)   : 0;
+
+        panel.querySelectorAll('[data-record-row]').forEach(function (row) {
+            var nameEl = row.querySelector('[data-record-name]');
+            var name   = nameEl ? nameEl.textContent.toLowerCase().trim() : '';
+            var rawIds = row.dataset.sectorIds || '[]';
+            var ids    = [];
+            try { ids = JSON.parse(rawIds); } catch (_) {}
+            if (!Array.isArray(ids)) { ids = ids ? [ids] : []; }
+
+            var nameOk = !keyword  || name.indexOf(keyword)              !== -1;
+            var secOk  = !sectorId || ids.map(Number).indexOf(sectorId)  !== -1;
+            row.style.display = (nameOk && secOk) ? '' : 'none';
+        });
     });
 })();

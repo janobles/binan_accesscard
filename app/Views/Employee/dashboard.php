@@ -18,16 +18,22 @@ $hasSearchFilters = $hasSearchFilters ?? false;
     <div class="col-md-3"><div class="panel"><small>Active Sectors</small><div class="stat-value"><?= esc((string) ($stats['sectors'] ?? 0)) ?></div></div></div>
     <div class="col-md-3"><div class="panel"><small>Services and Programs</small><div class="stat-value"><?= esc((string) ($stats['assistance'] ?? 0)) ?></div></div></div>
 </div>
-<div class="panel mb-3">
+<div class="panel mb-3" data-dashboard-search-panel>
     <div class="section-title mt-0"><span>Recently Added Records</span></div>
-    <form class="row g-2 mb-3" method="get" action="<?= site_url('employee/workspace') ?>">
-        <div class="col-md-6 col-lg-4"><input class="form-control" type="search" name="q" value="<?= esc($searchTerm) ?>" placeholder="Search records by name, contact number, or sector"></div>
-        <div class="col-md-4 col-lg-3"><select class="form-select" name="sectorID"><option value="">All sectors</option><?php foreach ($sectorOptions as $sector): ?><?php $sectorId = (string) ($sector['sectorID'] ?? ''); ?><option value="<?= esc($sectorId) ?>" <?= (string) ($searchFilters['sectorID'] ?? '') === $sectorId ? 'selected' : '' ?>><?= esc((string) ($sector['name'] ?? '')) ?></option><?php endforeach; ?></select></div>
-        <div class="col-auto"><button class="btn btn-primary" type="submit">Search</button></div>
-        <?php if ($hasSearchFilters): ?><div class="col-auto"><a class="btn btn-outline-secondary" href="<?= site_url('employee/workspace') ?>">Clear</a></div><?php endif; ?>
-    </form>
+    <?= view('Dashboard/partials/search-bar', [
+        'searchTerm'        => $searchTerm,
+        'sectorOptions'     => $sectorOptions,
+        'selectedSectorId'  => (string) ($searchFilters['sectorID'] ?? ''),
+        'searchAction'      => site_url('employee/workspace'),
+        'searchAllAction'   => site_url('employee/manage-records'),
+    ]) ?>
     <div class="table-responsive"><table class="table table-sm"><thead><tr><th>Name (Head)</th><th>Sector</th></tr></thead><tbody>
-        <?php foreach ($recentFamilies as $family): ?><tr><td><?= esc(($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? '')) ?></td><td><?= esc((string) ($family['sector_name'] ?? '')) ?></td></tr><?php endforeach; ?>
+        <?php foreach ($recentFamilies as $family): ?>
+            <tr data-record-row data-sector-ids="<?= esc((string) ($family['sectorID'] ?? '[]'), 'attr') ?>">
+                <td data-record-name><?= esc(trim(($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? ''))) ?></td>
+                <td data-record-sector><?= esc((string) ($family['sector_name'] ?? '')) ?></td>
+            </tr>
+        <?php endforeach; ?>
         <?php if ($recentFamilies === []): ?><tr><td colspan="2" class="text-center text-muted"><?= $searchTerm !== '' || $hasSearchFilters ? 'No matching records found.' : 'No records yet.' ?></td></tr><?php endif; ?>
     </tbody></table></div>
 </div>

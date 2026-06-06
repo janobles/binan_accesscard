@@ -254,7 +254,12 @@ class FamilyController extends BaseController
             ]);
         }
 
-        return redirect()->back()->with('success', $successMessage);
+        // family_record_saved signals the manage-records page to clear the
+        // client-side "Add Record" draft (see family-form.js). Set on a new
+        // record save only — never on edit/update.
+        return redirect()->back()
+            ->with('family_record_saved', '1')
+            ->with('success', $successMessage);
     }
 
     /**
@@ -793,8 +798,9 @@ class FamilyController extends BaseController
 
     /**
      * Returns the validation ruleset for the given entry type. Members require a
-     * parent head id and member name fields; heads require the head name/birthday/
-     * sex fields. Sectors are optional, but any IDs supplied must be well-formed.
+     * parent head id and member name fields; heads require name/birthday/sex plus
+     * civil status, education, job, monthly income, address and barangay. Sectors are
+     * optional, but any IDs supplied must be well-formed.
      */
     private function rulesForEntryType(string $entryType): array
     {
@@ -819,6 +825,12 @@ class FamilyController extends BaseController
             'head_lastname' => 'required|max_length[100]',
             'head_birthday' => 'required|valid_date[Y-m-d]',
             'head_sex' => 'required|in_list[Male,Female]',
+            'head_civilstatus' => 'required',
+            'head_education' => 'required',
+            'head_job' => 'required',
+            'head_salary' => 'required',
+            'head_address' => 'required|max_length[255]',
+            'head_barangay' => 'required|max_length[100]',
         ];
     }
 

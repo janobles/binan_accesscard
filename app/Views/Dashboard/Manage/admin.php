@@ -154,6 +154,9 @@ $jadeStyles = [
             <?php if (session()->getFlashdata('error')): ?>
                 <div class="alert alert-danger"><?= esc(session()->getFlashdata('error')) ?></div>
             <?php endif; ?>
+            <?php if (session()->getFlashdata('family_record_saved')): ?>
+                <span id="familyDraftSavedMarker" hidden></span>
+            <?php endif; ?>
 
             <?php /* Main content swaps on $activePage. "dashboard" is inline (stats +
                      recent records/activity); the rest delegate to sub-views below. */ ?>

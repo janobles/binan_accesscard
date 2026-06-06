@@ -48,6 +48,69 @@
         });
     }
 
+    // ---- Draft auto-save (new records only) ----------------------------------
+    // The in-progress "Add Record" wizard is mirrored to localStorage so an
+    // accidental refresh, a closed modal, or a brief network drop never loses
+    // typed input. The draft is cleared only after a confirmed successful save
+    // (signalled by #familyDraftSavedMarker on the page we land on), so a submit
+    // that fails mid-flight still leaves the data recoverable.
+    const FAMILY_DRAFT_KEY = 'binan_family_draft_v1';
+
+    function readDraft() {
+        try {
+            const raw = window.localStorage.getItem(FAMILY_DRAFT_KEY);
+
+            return raw ? JSON.parse(raw) : null;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function clearDraft() {
+        try {
+            window.localStorage.removeItem(FAMILY_DRAFT_KEY);
+        } catch (error) {
+            // localStorage unavailable (private mode / disabled) — nothing to clear.
+        }
+    }
+
+    function draftIsEmpty(snapshot) {
+        if (!snapshot || typeof snapshot !== 'object') {
+            return true;
+        }
+
+        const head = snapshot.head || {};
+        const hasHead = Object.keys(head).some(function (id) {
+            return String(head[id] || '').trim() !== '';
+        });
+
+        return !hasHead
+            && (snapshot.members || []).length === 0
+            && (snapshot.sector_ids || []).length === 0
+            && (snapshot.service_ids || []).length === 0;
+    }
+
+    function formatDraftAge(savedAt) {
+        const ts = Number(savedAt) || 0;
+
+        if (ts <= 0) {
+            return 'a moment ago';
+        }
+
+        const mins = Math.floor((Date.now() - ts) / 60000);
+
+        if (mins < 1) { return 'just now'; }
+        if (mins < 60) { return mins + (mins === 1 ? ' minute ago' : ' minutes ago'); }
+
+        const hrs = Math.floor(mins / 60);
+
+        if (hrs < 24) { return hrs + (hrs === 1 ? ' hour ago' : ' hours ago'); }
+
+        const days = Math.floor(hrs / 24);
+
+        return days + (days === 1 ? ' day ago' : ' days ago');
+    }
+
     function initFamilyForm(rootElement) {
         const ui = window.FamilyFormUI || {};
         const q = function (root, selector) {
@@ -83,6 +146,7 @@
         const choiceModalTitle = q(root, '#familyChoiceModalLabel');
         const choiceModalBody = q(root, '#familyChoiceModalBody');
         const stepInfo = q(uiRoot, '.wizard-header-left small');
+        const formAlert = q(form, '#familyFormAlert');
         const entryTypeInput = q(form, '#entryType');
         const entryButtons = qa(form, '[data-entry-type]');
         const entryPanels = qa(form, '[data-entry-panel]');
@@ -107,6 +171,7 @@
         };
         let currentStep = 1;
         let memberIndex = 0;
+        let firstInvalidMemberField = null;
         let entryType = entryTypeInput ? entryTypeInput.value : 'head';
         const initialFamilyData = parseJsonNode(initialFamilyDataNode, {});
         const sectorCatalog = parseJsonNode(sectorCatalogNode, {});
@@ -353,35 +418,131 @@
             if (!field) { return; }
             field.classList.toggle('is-invalid', message !== '');
             const feedback = field.parentElement ? field.parentElement.querySelector('.invalid-feedback') : null;
-            if (feedback) { feedback.textContent = message; }
+            // Only overwrite when showing an error so the template's default message survives.
+            if (feedback && message !== '') { feedback.textContent = message; }
         }
 
-        function validateStep1() {
+        function showFormAlert(message) {
+            if (!formAlert) { return; }
+
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-danger mb-0';
+            alert.setAttribute('role', 'alert');
+            alert.textContent = message;
+            formAlert.innerHTML = '';
+            formAlert.appendChild(alert);
+        }
+
+        function clearFormAlert() {
+            if (formAlert) { formAlert.innerHTML = ''; }
+        }
+
+        // `silent: true` returns the boolean without painting errors — used to compute
+        // step-lock state on load without flashing red on an untouched new form.
+        function validateStep1(options) {
+            const silent = !!(options && options.silent);
             let valid = true;
             const rules = [
-                { id: '#head_firstname', msg: 'First name is required.' },
-                { id: '#head_lastname',  msg: 'Last name is required.' },
-                { id: '#head_birthday',  msg: 'Date of birth is required.' },
-                { id: '#head_sex',       msg: 'Sex is required.' }
+                { id: '#head_firstname',   msg: 'First name is required.' },
+                { id: '#head_lastname',    msg: 'Last name is required.' },
+                { id: '#head_birthday',    msg: 'Date of birth is required.' },
+                { id: '#head_sex',         msg: 'Sex is required.' },
+                { id: '#head_civilstatus', msg: 'Civil status is required.' },
+                { id: '#head_education',   msg: 'Education is required.' },
+                { id: '#head_job',         msg: 'Job is required.' },
+                { id: '#head_salary',      msg: 'Monthly income is required.' },
+                { id: '#head_address',     msg: 'Address is required.' },
+                { id: '#head_barangay',    msg: 'Barangay is required.' }
             ];
 
             rules.forEach(function (rule) {
                 const field = q(form, rule.id);
                 if (!field) { return; }
                 const empty = field.value.trim() === '';
-                setFieldError(field, empty ? rule.msg : '');
+                if (!silent) { setFieldError(field, empty ? rule.msg : ''); }
                 if (empty) { valid = false; }
             });
 
             const contact = q(form, '#head_contactnumber');
             if (contact && contact.value.trim() !== '' && /[^0-9]/.test(contact.value)) {
-                setFieldError(contact, 'Contact number must contain digits only.');
+                if (!silent) { setFieldError(contact, 'Contact number must contain digits only.'); }
                 valid = false;
-            } else if (contact) {
+            } else if (contact && !silent) {
                 setFieldError(contact, '');
             }
 
             return valid;
+        }
+
+        // Step 1 must be valid before Sectors (2) or Members (3) can be entered.
+        // Step 2 is optional, so a valid step 1 unlocks both 2 and 3.
+        function canEnterStep(target) {
+            if (Number(target) <= 1) { return true; }
+
+            return validateStep1({ silent: true });
+        }
+
+        function updateStepLocks() {
+            const unlocked = validateStep1({ silent: true });
+
+            stepItems.forEach(function (item) {
+                const target = Number(item.dataset.stepTarget);
+                const locked = target > 1 && !unlocked;
+
+                item.classList.toggle('is-locked', locked);
+                item.setAttribute('aria-disabled', locked ? 'true' : 'false');
+            });
+        }
+
+        // Members validate exactly like the head: first/last name, birthday and sex are
+        // required on every row; contact number is optional but digits-only when present.
+        function validateMembers() {
+            let valid = true;
+            let firstInvalid = null;
+            const rows = memberRows ? qa(memberRows, '.member-row') : [];
+
+            rows.forEach(function (row) {
+                const checks = [
+                    { sel: '[name$="[firstname]"]',   msg: 'First name is required.' },
+                    { sel: '[name$="[lastname]"]',    msg: 'Last name is required.' },
+                    { sel: '[name$="[birthday]"]',    msg: 'Date of birth is required.' },
+                    { sel: '[name$="[sex]"]',         msg: 'Sex is required.' },
+                    { sel: '[name$="[civilstatus]"]', msg: 'Civil status is required.' },
+                    { sel: '[name$="[education]"]',   msg: 'Education is required.' },
+                    { sel: '[name$="[job]"]',         msg: 'Job is required.' },
+                    { sel: '[name$="[salary]"]',      msg: 'Monthly income is required.' }
+                ];
+
+                checks.forEach(function (check) {
+                    const field = q(row, check.sel);
+                    if (!field) { return; }
+                    const empty = String(field.value || '').trim() === '';
+                    setFieldError(field, empty ? check.msg : '');
+                    if (empty) {
+                        valid = false;
+                        if (!firstInvalid) { firstInvalid = field; }
+                    }
+                });
+
+                const contact = q(row, '[name$="[contactnumber]"]');
+                if (contact && String(contact.value || '').trim() !== '' && /[^0-9]/.test(contact.value)) {
+                    setFieldError(contact, 'Contact number must contain digits only.');
+                    valid = false;
+                    if (!firstInvalid) { firstInvalid = contact; }
+                } else if (contact) {
+                    setFieldError(contact, '');
+                }
+            });
+
+            firstInvalidMemberField = firstInvalid;
+
+            return valid;
+        }
+
+        function focusFirstInvalidMember() {
+            if (firstInvalidMemberField && typeof firstInvalidMemberField.focus === 'function') {
+                firstInvalidMemberField.focus();
+            }
         }
 
         const contactInput = q(form, '#head_contactnumber');
@@ -392,7 +553,11 @@
             });
         }
 
-        ['#head_firstname', '#head_lastname', '#head_birthday', '#head_sex'].forEach(function (selector) {
+        [
+            '#head_firstname', '#head_lastname', '#head_birthday', '#head_sex',
+            '#head_civilstatus', '#head_education', '#head_job', '#head_salary',
+            '#head_address', '#head_barangay'
+        ].forEach(function (selector) {
             const field = q(form, selector);
             if (field) {
                 field.addEventListener('input', function () { if (this.value.trim() !== '') { setFieldError(this, ''); } });
@@ -403,9 +568,12 @@
         if (nextBtn) {
             nextBtn.addEventListener('click', function () {
                 if (currentStep === 1 && !validateStep1()) {
+                    showFormAlert('Complete the Head of Family fields before continuing.');
                     return;
                 }
+                clearFormAlert();
                 setStep(currentStep + 1);
+                updateStepLocks();
             });
         }
 
@@ -453,6 +621,38 @@
                     }
                 }
             });
+
+            // Member fields are dynamic, so digit-strip and error-clearing are delegated.
+            memberRows.addEventListener('input', function (event) {
+                const target = event.target;
+
+                if (!(target instanceof HTMLInputElement)) { return; }
+
+                const name = target.getAttribute('name') || '';
+
+                if (/\[contactnumber\]$/.test(name)) {
+                    target.value = target.value.replace(/[^0-9]/g, '');
+                    setFieldError(target, '');
+
+                    return;
+                }
+
+                if (/\[(firstname|lastname|birthday)\]$/.test(name) && String(target.value || '').trim() !== '') {
+                    setFieldError(target, '');
+                }
+            });
+
+            memberRows.addEventListener('change', function (event) {
+                const target = event.target;
+
+                if (!(target instanceof HTMLElement)) { return; }
+
+                const name = target.getAttribute('name') || '';
+
+                if (/\[(firstname|lastname|birthday|sex|civilstatus|education|job|salary)\]$/.test(name) && String(target.value || '').trim() !== '') {
+                    setFieldError(target, '');
+                }
+            });
         }
 
         [
@@ -474,8 +674,8 @@
             const element = q(form, selector);
 
             if (element) {
-                element.addEventListener('input', updateHeadSummary);
-                element.addEventListener('change', updateHeadSummary);
+                element.addEventListener('input', function () { updateHeadSummary(); updateStepLocks(); });
+                element.addEventListener('change', function () { updateHeadSummary(); updateStepLocks(); });
             }
         });
 
@@ -525,7 +725,32 @@
             }
         });
 
-        form.addEventListener('submit', function () {
+        form.addEventListener('submit', function (event) {
+            const headOk = validateStep1();
+            const membersOk = validateMembers();
+
+            // Block invalid submits client-side so the page never reloads with errors;
+            // the offending step is shown with the missing fields highlighted inline.
+            if (!headOk) {
+                event.preventDefault();
+                setStep(1);
+                updateStepLocks();
+                showFormAlert('Complete the Head of Family fields before saving.');
+
+                return;
+            }
+
+            if (!membersOk) {
+                event.preventDefault();
+                setStep(3);
+                focusFirstInvalidMember();
+                showFormAlert('Complete the highlighted member fields before saving.');
+
+                return;
+            }
+
+            clearFormAlert();
+
             if (typeof ui.applyOtherValues === 'function') {
                 ui.applyOtherValues(form);
             }
@@ -584,17 +809,222 @@
 
         stepItems.forEach(function (item) {
             item.addEventListener('click', function () {
-                setStep(Number(item.dataset.stepTarget));
+                const target = Number(item.dataset.stepTarget);
+
+                if (!canEnterStep(target)) {
+                    validateStep1();
+                    showFormAlert('Complete the Head of Family fields before continuing.');
+                    setStep(1);
+                    updateStepLocks();
+
+                    return;
+                }
+
+                clearFormAlert();
+                setStep(target);
             });
         });
 
         setEntryType(entryType);
         setStep(1);
+        updateStepLocks();
+
+        // ---- Draft auto-save / restore (new records only) -------------------
+        let isRestoring = false;
+        let saveTimer = null;
+
+        function collectHeadSnapshot() {
+            const head = {};
+            const step1 = q(form, '.family-step-panel[data-step="1"]');
+
+            if (step1) {
+                qa(step1, 'input, select, textarea').forEach(function (field) {
+                    if (field.id) {
+                        head[field.id] = field.value;
+                    }
+                });
+            }
+
+            return head;
+        }
+
+        function collectCheckedValues(name) {
+            return qa(form, 'input[name="' + name + '"]:checked').map(function (checkbox) {
+                return checkbox.value;
+            });
+        }
+
+        function collectMembersSnapshot() {
+            if (!memberRows) {
+                return [];
+            }
+
+            return qa(memberRows, '.member-row').map(function (row) {
+                const data = {};
+
+                qa(row, '[data-name]').forEach(function (input) {
+                    const fieldName = input.getAttribute('data-name') || '';
+
+                    if (fieldName === '') {
+                        return;
+                    }
+
+                    if (fieldName.endsWith('[]')) {
+                        const base = fieldName.slice(0, -2);
+
+                        if (!Array.isArray(data[base])) {
+                            data[base] = [];
+                        }
+
+                        if (input instanceof HTMLInputElement && input.type === 'checkbox') {
+                            if (input.checked) {
+                                data[base].push(input.value);
+                            }
+                        } else if (input instanceof HTMLSelectElement) {
+                            Array.from(input.selectedOptions).forEach(function (option) {
+                                data[base].push(option.value);
+                            });
+                        }
+
+                        return;
+                    }
+
+                    if (input instanceof HTMLSelectElement && typeof ui.selectedFieldValue === 'function') {
+                        data[fieldName] = ui.selectedFieldValue(input);
+                    } else {
+                        data[fieldName] = input.value;
+                    }
+                });
+
+                return data;
+            });
+        }
+
+        function saveDraft() {
+            if (isRestoring) {
+                return;
+            }
+
+            const snapshot = {
+                v: 1,
+                entryType: entryType,
+                step: currentStep,
+                head: collectHeadSnapshot(),
+                sector_ids: collectCheckedValues('sector_ids[]'),
+                service_ids: collectCheckedValues('service_ids[]'),
+                members: collectMembersSnapshot(),
+                savedAt: Date.now()
+            };
+
+            if (draftIsEmpty(snapshot)) {
+                clearDraft();
+
+                return;
+            }
+
+            try {
+                window.localStorage.setItem(FAMILY_DRAFT_KEY, JSON.stringify(snapshot));
+            } catch (error) {
+                // Storage full or unavailable — skip this save silently.
+            }
+        }
+
+        function scheduleSave() {
+            if (isRestoring) {
+                return;
+            }
+
+            if (saveTimer) {
+                window.clearTimeout(saveTimer);
+            }
+
+            saveTimer = window.setTimeout(saveDraft, 400);
+        }
+
+        function restoreChecked(name, values) {
+            const wanted = Array.isArray(values) ? values.map(String) : [];
+
+            qa(form, 'input[name="' + name + '"]').forEach(function (checkbox) {
+                checkbox.checked = wanted.indexOf(String(checkbox.value)) !== -1;
+            });
+        }
+
+        function restoreDraft(snapshot) {
+            isRestoring = true;
+
+            try {
+                const head = snapshot.head || {};
+
+                Object.keys(head).forEach(function (id) {
+                    const field = document.getElementById(id);
+
+                    // Only touch fields that belong to this form instance.
+                    if (field && form.contains(field)) {
+                        field.value = head[id];
+                    }
+                });
+
+                if (typeof ui.syncOtherControls === 'function') {
+                    ui.syncOtherControls(form);
+                }
+
+                restoreChecked('sector_ids[]', snapshot.sector_ids);
+                restoreChecked('service_ids[]', snapshot.service_ids);
+
+                if (memberRows) {
+                    memberRows.innerHTML = '';
+                    memberIndex = 0;
+                }
+
+                (snapshot.members || []).forEach(function (memberData) {
+                    createMemberRow(memberData);
+                });
+
+                if (typeof ui.setMemberRowsEmptyState === 'function') {
+                    ui.setMemberRowsEmptyState(memberRows, memberRowsEmpty);
+                }
+
+                setEntryType(snapshot.entryType === 'member' ? 'member' : 'head');
+                updateHeadSummary();
+                updateStepLocks();
+                setStep(snapshot.step);
+            } finally {
+                isRestoring = false;
+            }
+        }
+
+        // Edit forms load real saved data — never auto-save or restore over them.
+        if (form.dataset.editMode !== '1') {
+            const existingDraft = readDraft();
+
+            if (!draftIsEmpty(existingDraft)) {
+                if (window.confirm('You have an unsaved record from ' + formatDraftAge(existingDraft.savedAt) + '. Restore it?')) {
+                    restoreDraft(existingDraft);
+                } else {
+                    clearDraft();
+                }
+            }
+
+            form.addEventListener('input', scheduleSave);
+            form.addEventListener('change', scheduleSave);
+
+            if (resetBtn) {
+                resetBtn.addEventListener('click', function () {
+                    clearDraft();
+                });
+            }
+        }
     }
 
     window.initFamilyForm = initFamilyForm;
 
     document.addEventListener('DOMContentLoaded', function () {
+        // Rendered only after a confirmed successful save — the draft is now
+        // safely persisted server-side, so discard the local copy.
+        if (document.getElementById('familyDraftSavedMarker')) {
+            clearDraft();
+        }
+
         initFamilyForm(document);
     });
 })(window, document);

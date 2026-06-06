@@ -16,10 +16,12 @@ $memberSectorGroups = ViewFormatter::memberSectorGroups(
             <div class="col-md-3">
                 <label class="form-label">Last Name</label>
                 <input class="form-control" data-name="lastname">
+                <div class="invalid-feedback">Last name is required.</div>
             </div>
             <div class="col-md-3">
                 <label class="form-label">First Name</label>
                 <input class="form-control" data-name="firstname">
+                <div class="invalid-feedback">First name is required.</div>
             </div>
             <div class="col-md-3">
                 <label class="form-label">Middle Name</label>
@@ -37,6 +39,7 @@ $memberSectorGroups = ViewFormatter::memberSectorGroups(
             <div class="col-md-3">
                 <label class="form-label">Date of birth</label>
                 <input type="date" class="form-control" data-name="birthday">
+                <div class="invalid-feedback">Date of birth is required.</div>
             </div>
             <div class="col-md-3">
                 <label class="form-label">Sex</label>
@@ -46,6 +49,7 @@ $memberSectorGroups = ViewFormatter::memberSectorGroups(
                         <option value="<?= esc($sex) ?>"><?= esc($sex) ?></option>
                     <?php endforeach; ?>
                 </select>
+                <div class="invalid-feedback">Sex is required.</div>
             </div>
             <div class="col-md-3">
                 <label class="form-label">Civil status</label>
@@ -55,11 +59,13 @@ $memberSectorGroups = ViewFormatter::memberSectorGroups(
                         <option value="<?= esc($civilStatus) ?>"><?= esc($civilStatus) ?></option>
                     <?php endforeach; ?>
                 </select>
+                <div class="invalid-feedback">Civil status is required.</div>
                 <input class="form-control mt-2 js-other-input family-form-hidden" data-other-for="civilstatus" placeholder="Enter civil status">
             </div>
             <div class="col-md-3">
                 <label class="form-label">Contact number</label>
-                <input class="form-control" data-name="contactnumber">
+                <input class="form-control" data-name="contactnumber" inputmode="numeric">
+                <div class="invalid-feedback">Contact number must contain digits only.</div>
             </div>
             <div class="col-md-3">
                 <label class="form-label">Religion</label>
@@ -73,6 +79,7 @@ $memberSectorGroups = ViewFormatter::memberSectorGroups(
                         <option value="<?= esc($education) ?>"><?= esc($education) ?></option>
                     <?php endforeach; ?>
                 </select>
+                <div class="invalid-feedback">Education is required.</div>
                 <input class="form-control mt-2 js-other-input family-form-hidden" data-other-for="education" placeholder="Enter education">
             </div>
             <div class="col-md-3">
@@ -83,6 +90,7 @@ $memberSectorGroups = ViewFormatter::memberSectorGroups(
                         <option value="<?= esc((string) $jobOption) ?>"><?= esc((string) $jobOption) ?></option>
                     <?php endforeach; ?>
                 </select>
+                <div class="invalid-feedback">Job is required.</div>
                 <input class="form-control mt-2 js-other-input family-form-hidden" data-other-for="job" placeholder="Enter job">
             </div>
             <div class="col-md-3">
@@ -92,6 +100,7 @@ $memberSectorGroups = ViewFormatter::memberSectorGroups(
                         <option value="<?= esc((string) ($incomeOption['value'] ?? '')) ?>"><?= esc((string) ($incomeOption['label'] ?? '')) ?></option>
                     <?php endforeach; ?>
                 </select>
+                <div class="invalid-feedback">Monthly income is required.</div>
             </div>
             <div class="col-md-3">
                 <label class="form-label">Relationship</label>

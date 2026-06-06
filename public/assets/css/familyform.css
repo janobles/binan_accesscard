@@ -114,6 +114,17 @@
 	font-weight: 600;
 }
 
+/* Steps 2 & 3 stay locked until the Head of Family fields are valid. Clicks are kept
+   active (pointer-events left on) so tapping a locked step surfaces the validation. */
+.wizard-step.is-locked {
+	cursor: not-allowed;
+	opacity: 0.55;
+}
+
+.wizard-step.is-locked small {
+	color: #8c9aad;
+}
+
 #familyForm {
 	padding: 20px 18px 18px;
 }

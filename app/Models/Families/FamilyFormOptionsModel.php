@@ -82,17 +82,45 @@ class FamilyFormOptionsModel extends Model
             'formOptions' => $options,
             'sectorOptions' => $sectorOptions,
             'sectorCatalog' => $sectorModel->getSectorCatalog($sectorOptions),
-            'sexOptions' => $options['sexes'] ?? [],
+            // Text dropdowns are alphabetized for the form ("Other/Others" pinned last).
+            // Suffix (Jr, Sr, I-V) and income brackets (numeric low->high) keep their order.
+            'sexOptions' => $this->sortLabelOptions($options['sexes'] ?? []),
             'suffixOptions' => $options['suffixes'] ?? [],
-            'civilOptions' => $options['civil_statuses'] ?? [],
-            'relationshipOptions' => $options['relationships'] ?? [],
-            'educationOptions' => $options['education_levels'] ?? [],
-            'jobOptions' => $options['job_options'] ?? [],
+            'civilOptions' => $this->sortLabelOptions($options['civil_statuses'] ?? []),
+            'relationshipOptions' => $this->sortLabelOptions($options['relationships'] ?? []),
+            'educationOptions' => $this->sortLabelOptions($options['education_levels'] ?? []),
+            'jobOptions' => $this->sortLabelOptions($options['job_options'] ?? []),
             'incomeOptions' => $options['income_ranges'] ?? [],
             'serviceOptions' => $serviceOptions,
             'servicesByCategory' => $servicesByCategory,
             'familyHeads' => $options['family_heads'] ?? [],
         ];
+    }
+
+    /**
+     * Sorts a flat list of dropdown labels alphabetically (case-insensitive), keeping
+     * any "Other"/"Others" entry pinned at the end. Used for the family form's text
+     * selects so options appear in a predictable order on both the head and member forms.
+     *
+     * @param list<string> $values
+     * @return list<string>
+     */
+    private function sortLabelOptions(array $values): array
+    {
+        $values = array_values($values);
+
+        usort($values, static function ($a, $b): int {
+            $aIsOther = (bool) preg_match('/^others?$/i', trim((string) $a));
+            $bIsOther = (bool) preg_match('/^others?$/i', trim((string) $b));
+
+            if ($aIsOther !== $bIsOther) {
+                return $aIsOther ? 1 : -1;
+            }
+
+            return strcasecmp((string) $a, (string) $b);
+        });
+
+        return $values;
     }
 
     /**

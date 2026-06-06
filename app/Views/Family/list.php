@@ -53,7 +53,7 @@ $deepToRecord = (int) ($deepToRecord ?? 0);
         </div>
     <?php endif; ?>
 
-    <?= view('Dashboard/partials/search-bar', [
+    <?= view('components/search-bar', [
         'searchTerm'        => $keyword,
         'sectorOptions'     => $sectorOptions,
         'selectedSectorId'  => $filterSectorId,

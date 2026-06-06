@@ -2,7 +2,7 @@
 // giving instant filtering without needing a separate submit button click.
 //
 // Connected to:
-//   - View   : Dashboard/Manage/admin.php audit-trails section
+//   - View   : Admin/layout.php audit-trails section
 //              .js-audit-action-filter select inside .js-audit-filter-form
 //   - Backend: GET admin/audit-trails (Workspace\HomeController::adminAuditTrails)
 //   - view-interactions.js also binds the same behaviour for AJAX-loaded content

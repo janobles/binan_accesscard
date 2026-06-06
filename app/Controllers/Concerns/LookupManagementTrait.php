@@ -25,7 +25,7 @@ trait LookupManagementTrait
     }
 
     /**
-     * Assembles all data the `admin/lookups/index` view needs: active vs archived
+     * Assembles all data the `Admin/lookups/index` view needs: active vs archived
      * sectors and services (grouped by category), per-row member assignment counts,
      * nav highlighting, and the idle-timeout value. $activeTab toggles the page
      * between the Sectors and Services tabs. Frontend: feeds the lookups view/JS.

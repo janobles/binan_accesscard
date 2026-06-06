@@ -6,7 +6,7 @@
 //
 // Connected to:
 //   - dashboard-modal-loader.js : window.registerDashboardModal()
-//   - Views  : Dashboard/Manage/accounts.php — .js-account-status-form buttons
+//   - Views  : Admin/accounts.php — .js-account-status-form buttons
 //   - Backend: POST admin/accounts/disable|enable
 //              (Accounts\AccountController::disableEmployee, ::enableEmployee)
 // Account management page behavior.

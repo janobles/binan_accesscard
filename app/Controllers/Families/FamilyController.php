@@ -21,7 +21,7 @@ use CodeIgniter\HTTP\RedirectResponse;
  * (MemberModel, MemberServiceModel). The view/edit screens are loaded into the
  * dashboard modal as `?partial=1` HTML fragments by
  * assets/js/dashboard/manage-family-modal.js; the archive/restore/delete forms in
- * `Dashboard/familyform/family-list` post here and redirect back to the list.
+ * `Family/list` post here and redirect back to the list.
  */
 class FamilyController extends BaseController
 {
@@ -281,7 +281,7 @@ class FamilyController extends BaseController
     /**
      * GET `{admin|employee}/manage-family/view/{id}`: returns the read-only family
      * detail fragment for the dashboard modal. Loaded via AJAX with `?partial=1` by
-     * manage-family-modal.js; renders `Dashboard/familyform/family-view`.
+     * manage-family-modal.js; renders `Family/view`.
      */
     public function viewFamily(int $headId): string|RedirectResponse
     {
@@ -315,7 +315,7 @@ class FamilyController extends BaseController
             $memberViews[] = FamilyRecordPresenter::member($member, $namesFor((int) $member['memberID']), $incomeLabels);
         }
 
-        return view('Dashboard/familyform/family-view', [
+        return view('Family/view', [
             'headView'    => FamilyRecordPresenter::head($head, $namesFor($headId), $incomeLabels),
             'memberViews' => $memberViews,
         ]);
@@ -324,7 +324,7 @@ class FamilyController extends BaseController
     /**
      * GET `{admin|employee}/manage-family/edit/{id}`: returns the family form
      * prefilled for editing, as a modal fragment. Reuses the same
-     * `Dashboard/familyform/familyform` template as Add Family by passing the head
+     * `Family/form` template as Add Family by passing the head
      * row, its members, and selected services, with the form pointed at update().
      */
     public function editFamily(int $headId): string|RedirectResponse
@@ -346,7 +346,7 @@ class FamilyController extends BaseController
         $serviceIdsByMember = (new MemberServiceModel())
             ->getServiceIdsByMemberIds(array_map(static fn (array $row): int => (int) $row['memberID'], $rows));
 
-        return view('Dashboard/familyform/familyform', array_merge(
+        return view('Family/form', array_merge(
             (new FamilyFormOptionsModel())->getViewData(),
             [
                 'familyRecord'      => $head,

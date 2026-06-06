@@ -13,7 +13,7 @@
 //   - sectors-modal.js       : registers sectors management modal
 //   - services-modal.js      : registers services management modal
 //   - Views : any layout that renders #familyModal + #familyModalBody
-//             (Views/layouts/admin_layout.php, Views/Employee/index.php)
+//             (Views/layouts/admin_layout.php, Views/Employee/layout.php)
 //   - Depends on: jQuery ($), Bootstrap Modal
 // Loads dashboard partials into modals and manages Close modal navigation.
 (function (window, $) {

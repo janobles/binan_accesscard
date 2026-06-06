@@ -140,7 +140,7 @@ $jadeStyles = [
                     <div class="section-title mt-0">
                         <span>Recently Added Records</span>
                     </div>
-                    <?= view('Dashboard/partials/search-bar', [
+                    <?= view('components/search-bar', [
                         'searchTerm'       => $searchTerm,
                         'sectorOptions'    => $sectorOptions,
                         'selectedSectorId' => (string) ($searchFilters['sectorID'] ?? ''),
@@ -195,7 +195,7 @@ $jadeStyles = [
                     <div class="section-title mt-0">
                         <span>Add Record</span>
                     </div>
-                    <?= view('Dashboard/familyform', array_merge(
+                    <?= view('Family/entry', array_merge(
                         $familyFormViewData,
                         ['canCreateFamily' => $canCreateFamily]
                     )) ?>
@@ -203,7 +203,7 @@ $jadeStyles = [
             <?php endif; ?>
 
             <?php if ($activePage === 'family-manage'): ?>
-                <?= view('Dashboard/familyform/family-list', $recordListData) ?>
+                <?= view('Family/list', $recordListData) ?>
             <?php endif; ?>
 
             <?php if ($activePage === 'activity'): ?>

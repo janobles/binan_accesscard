@@ -265,7 +265,7 @@ tr.lookup-hidden {
 }
 
 /* ---- Family record "View" modal ----------------------------------------
- * Themes Dashboard/familyform/family-view.php into the jade design language.
+ * Themes Family/view.php into the jade design language.
  * Lives here (not admin-components.css) because the reskinned admin/employee
  * shells load this bridge but not admin-components.css.
  * --------------------------------------------------------------------- */

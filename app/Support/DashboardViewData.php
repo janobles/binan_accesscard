@@ -12,7 +12,7 @@ namespace App\Support;
  */
 class DashboardViewData
 {
-    /** Prepares variables for the admin shell (`Dashboard/Manage/admin`). */
+    /** Prepares variables for the admin shell (`Admin/layout`). */
     public static function admin(array $data): array
     {
         $user = self::arrayValue($data['user'] ?? []);
@@ -66,7 +66,7 @@ class DashboardViewData
         );
     }
 
-    /** Prepares variables for the employee shell (`Employee/index`). */
+    /** Prepares variables for the employee shell (`Employee/layout`). */
     public static function employee(array $data): array
     {
         $user = self::arrayValue($data['user'] ?? []);

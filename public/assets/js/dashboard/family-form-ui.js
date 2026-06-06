@@ -18,8 +18,8 @@
 //
 // Connected to:
 //   - family-form.js : consumes all exports via window.FamilyFormUI
-//   - Views : Dashboard/familyform/familyform.php, head-fields.php,
-//             Member/member-template.php, Dashboard/sectors-services/sectorandservices.php
+//   - Views : Family/form.php, head-fields.php,
+//             Family/member-fields.php, Lookups/picker.php
 // Shared UI helpers for the family wizard; backend validation stays in PHP.
 (function (window) {
     function setHidden(element, hidden) {

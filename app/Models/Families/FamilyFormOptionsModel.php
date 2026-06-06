@@ -68,7 +68,7 @@ class FamilyFormOptionsModel extends Model
     /**
      * Shapes getOptions() into the exact view variables the family form template
      * expects (sectorOptions, sexOptions, servicesByCategory, etc.). Frontend:
-     * consumed directly by the `Dashboard/familyform/familyform` view.
+     * consumed directly by the `Family/form` view.
      */
     public function getViewData(): array
     {

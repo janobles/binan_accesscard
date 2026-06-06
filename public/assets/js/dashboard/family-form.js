@@ -15,10 +15,10 @@
 //   - manage-family-modal.js: calls window.initFamilyForm() after AJAX load
 //   - Backend : POST families            (FamilyController::store)
 //               POST {base}/update/:id   (FamilyController::update)
-//   - Views   : Dashboard/familyform/familyform.php (form shell)
-//               Dashboard/familyform/head-fields.php (step 1 fields)
-//               Dashboard/sectors-services/sectorandservices.php (step 2)
-//               Member/member-summary.php, Member/member-template.php (step 3)
+//   - Views   : Family/form.php (form shell)
+//               Family/head-fields.php (step 1 fields)
+//               Lookups/picker.php (step 2)
+//               Family/member-summary.php, Family/member-fields.php (step 3)
 // Wires the family wizard events while keeping rendering helpers reusable.
 (function (window, document) {
     function parseJsonNode(node, fallbackValue) {

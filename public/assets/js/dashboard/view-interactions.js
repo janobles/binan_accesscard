@@ -4,7 +4,7 @@
 //   - Account status forms: confirm dialog before .js-account-status-form submits
 //
 // Connected to:
-//   - Views  : Dashboard/Manage/admin.php (audit tab, accounts tab)
+//   - Views  : Admin/layout.php (audit tab, accounts tab)
 //   - Backend: GET admin/audit-trails, POST admin/accounts/disable|enable
 //   - Exposes: window.initViewInteractions(rootElement) for re-init after
 //              AJAX-loaded content replaces the DOM

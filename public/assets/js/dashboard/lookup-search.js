@@ -8,7 +8,7 @@
 // keeps the keyword applied, so archived matches appear when you open the Archive
 // view — no separate "search all" needed.
 //
-// Connected to: Dashboard/sectors-services/sector.php + services.php
+// Connected to: Lookups/sectors.php + services.php
 //   - [data-lookup-search]        the search <form>
 //   - [data-lookup-search-input]  the search <input>
 //   - the nearest [data-sector-management-root] / [data-service-management-root]

@@ -16,7 +16,7 @@ class SectorController extends BaseController
 
     /**
      * GET `admin/lookups/sectors`: renders the sectors management screen
-     * (`admin/lookups/index` view). The store/update/archive/restore actions
+     * (`Admin/lookups/index` view). The store/update/archive/restore actions
      * below are called by assets/js/lookups.js and return JSON, not redirects.
      */
     public function index(): string|RedirectResponse
@@ -27,7 +27,7 @@ class SectorController extends BaseController
             return $guard;
         }
 
-        return view('admin/lookups/index', $this->buildLookupViewData('sectors'));
+        return view('Admin/lookups/index', $this->buildLookupViewData('sectors'));
     }
 
     /**

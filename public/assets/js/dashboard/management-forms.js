@@ -4,7 +4,7 @@
 //   - Delete forms: shows a confirm dialog before the form is submitted
 //
 // Connected to:
-//   - Views  : Dashboard/Manage/accounts.php — [data-inline-edit-row] rows,
+//   - Views  : Admin/accounts.php — [data-inline-edit-row] rows,
 //              .js-management-other-select, .js-management-delete-form
 //   - Exposes: window.initManagementForms(rootElement) so AJAX-loaded modal
 //              content can re-initialise without waiting for DOMContentLoaded

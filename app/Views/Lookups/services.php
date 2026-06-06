@@ -104,6 +104,6 @@ $archivedServiceCount = count($services) - $activeServiceCount;
 	</div>
 </div>
 
-<?= view('Dashboard/sectors-services/service-modal', [
+<?= view('Lookups/service-modal', [
 	'serviceCategoryOptions' => $serviceCategoryOptions,
 ]) ?>

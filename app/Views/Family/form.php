@@ -100,10 +100,10 @@ $fieldViewData            = compact(
             <div id="familyFormAlert" class="mb-3" aria-live="polite"></div>
 
             <div class="form-section family-step-panel is-visible" data-step="1">
-                <?= view('Dashboard/familyform/head-fields', $fieldViewData) ?>
+                <?= view('Family/head-fields', $fieldViewData) ?>
             </div>
 
-            <?= view('Dashboard/sectors-services/sectorandservices', [
+            <?= view('Lookups/picker', [
                 'servicesByCategory' => $servicesByCategory,
                 'sectorCatalog' => $sectorCatalog,
                 'sectorOptions' => $sectorOptions,
@@ -112,7 +112,7 @@ $fieldViewData            = compact(
                 'selectedServiceIds' => $headServiceIds,
             ]) ?>
 
-            <?= view('Member/member-summary') ?>
+            <?= view('Family/member-summary') ?>
 
             <div id="initialFamilyData" class="family-form-hidden" data-json="<?= esc(json_encode($initialFamilyData, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT), 'attr') ?>"></div>
 
@@ -128,4 +128,4 @@ $fieldViewData            = compact(
     </div>
 </div>
 
-<?= view('Member/member-template', $fieldViewData) ?>
+<?= view('Family/member-fields', $fieldViewData) ?>

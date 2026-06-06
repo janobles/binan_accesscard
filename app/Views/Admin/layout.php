@@ -172,7 +172,7 @@ $jadeStyles = [
                     <header class="panel-header">
                         <h2>Recent Records</h2>
                     </header>
-                    <?= view('Dashboard/partials/search-bar', [
+                    <?= view('components/search-bar', [
                         'searchTerm'       => $searchTerm,
                         'sectorOptions'    => $sectorOptions,
                         'selectedSectorId' => (string) ($searchFilters['sectorID'] ?? ''),
@@ -224,7 +224,7 @@ $jadeStyles = [
             <?php endif; ?>
 
             <?php if ($activePage === 'accounts' && $canManageAccounts): ?>
-                <?= view('Dashboard/Manage/accounts', [
+                <?= view('Admin/accounts', [
                     'adminAccounts' => $adminAccounts,
                     'employeeAccounts' => $employeeAccounts,
                     'searchTerm' => $searchTerm,
@@ -237,7 +237,7 @@ $jadeStyles = [
             <?php if ($activePage === 'family-entry'): ?>
                 <div class="panel mb-3">
                     <div class="section-title mt-0"><span>Add Record</span></div>
-                    <?= view('Dashboard/familyform', array_merge(
+                    <?= view('Family/entry', array_merge(
                         $familyFormViewData,
                         ['canCreateFamily' => $canCreateFamily]
                     )) ?>
@@ -245,11 +245,11 @@ $jadeStyles = [
             <?php endif; ?>
 
             <?php if ($activePage === 'family-manage'): ?>
-                <?= view('Dashboard/familyform/family-list', $recordListData) ?>
+                <?= view('Family/list', $recordListData) ?>
             <?php endif; ?>
 
             <?php if ($activePage === 'audit-trails'): ?>
-                <?= view('Dashboard/Manage/audit-trails', [
+                <?= view('Admin/audit-trails', [
                     'recentAudits' => $recentAudits,
                     'searchTerm' => $searchTerm,
                     'searchFilters' => $searchFilters,
@@ -258,7 +258,7 @@ $jadeStyles = [
             <?php endif; ?>
 
             <?php if ($activePage === 'sectors'): ?>
-                <?= view('Dashboard/sectors-services/sector', [
+                <?= view('Lookups/sectors', [
                     'sectors' => $sectors ?? [],
                     'sectorShortcodeOptions' => $sectorShortcodeOptions,
                     'lookupStatus' => $lookupStatus ?? 'active',
@@ -267,7 +267,7 @@ $jadeStyles = [
             <?php endif; ?>
 
             <?php if ($activePage === 'services'): ?>
-                <?= view('Dashboard/sectors-services/services', [
+                <?= view('Lookups/services', [
                     'services' => $services ?? [],
                     'lookupStatus' => $lookupStatus ?? 'active',
                     'canRestore' => $canRestoreLookups ?? false,

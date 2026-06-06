@@ -26,7 +26,7 @@ class HomeController extends BaseController
     // ---------------------------------------------------------------------
     // Admin / Developer pages (full page loads).
     // Each maps to a route in Config\Routes and an $activePage the admin shell
-    // (Views/Dashboard/Manage/admin.php) switches on. Routes are guarded for
+    // (Views/Admin/layout.php) switches on. Routes are guarded for
     // Developer/Admin inside DashboardPageBuilder::renderAdminPage().
     // ---------------------------------------------------------------------
 
@@ -41,7 +41,7 @@ class HomeController extends BaseController
     /**
      * GET `admin/dashboard`. Delegates to DashboardPageBuilder to assemble stats
      * and render the admin shell on the "dashboard" tab. Frontend: full-page load
-     * of `Dashboard/Manage/admin`.
+     * of `Admin/layout`.
      */
     public function adminDashboard(): string|RedirectResponse
     {
@@ -168,7 +168,7 @@ class HomeController extends BaseController
     /**
      * Returns just the accounts table fragment for the dashboard's AJAX loader
      * (assets/js/dashboard/*-modal.js). Guarded for Developer/Admin; renders
-     * `Dashboard/Manage/accounts` with data from DashboardPageBuilder.
+     * `Admin/accounts` with data from DashboardPageBuilder.
      */
     private function renderAdminAccountsPartial(): string|RedirectResponse
     {
@@ -186,7 +186,7 @@ class HomeController extends BaseController
 
         $viewData = (new DashboardPageBuilder($this->request))->buildAdminViewData('accounts');
 
-        return view('Dashboard/Manage/accounts', [
+        return view('Admin/accounts', [
             'adminAccounts' => $viewData['adminAccounts'] ?? [],
             'employeeAccounts' => $viewData['employeeAccounts'] ?? [],
             'searchTerm' => $viewData['searchTerm'] ?? '',
@@ -199,7 +199,7 @@ class HomeController extends BaseController
     /**
      * Returns the family registration form fragment for the admin "add family"
      * modal. Pulls dropdown options from FamilyFormOptionsModel and renders
-     * `Dashboard/familyform/familyform` in embedded mode.
+     * `Family/form` in embedded mode.
      */
     private function renderAdminFamilyPartial(): string|RedirectResponse
     {
@@ -209,7 +209,7 @@ class HomeController extends BaseController
             return $guard;
         }
 
-        return view('Dashboard/familyform/familyform', array_merge(
+        return view('Family/form', array_merge(
             (new FamilyFormOptionsModel())->getViewData(),
             ['canCreateFamily' => true, 'embeddedInModal' => true]
         ));
@@ -218,7 +218,7 @@ class HomeController extends BaseController
     /**
      * Returns the family records list fragment (table rows) for the admin
      * manage-records AJAX search/pagination. Renders
-     * `Dashboard/familyform/family-list` with data from DashboardPageBuilder.
+     * `Family/list` with data from DashboardPageBuilder.
      */
     private function renderAdminRecordListPartial(): string|RedirectResponse
     {
@@ -229,14 +229,14 @@ class HomeController extends BaseController
         }
 
         return view(
-            'Dashboard/familyform/family-list',
+            'Family/list',
             (new DashboardPageBuilder($this->request))->buildAdminRecordListViewData()
         );
     }
 
     /**
      * Returns the audit-trail list fragment for the admin audit AJAX
-     * search/filter. Renders `Dashboard/Manage/audit-trails`.
+     * search/filter. Renders `Admin/audit-trails`.
      */
     private function renderAdminAuditPartial(): string|RedirectResponse
     {
@@ -248,7 +248,7 @@ class HomeController extends BaseController
 
         $viewData = (new DashboardPageBuilder($this->request))->buildAdminViewData('audit-trails');
 
-        return view('Dashboard/Manage/audit-trails', [
+        return view('Admin/audit-trails', [
             'recentAudits' => $viewData['recentAudits'] ?? [],
             'searchTerm' => $viewData['searchTerm'] ?? '',
             'searchFilters' => $viewData['searchFilters'] ?? [],
@@ -258,7 +258,7 @@ class HomeController extends BaseController
 
     /**
      * Returns the sectors lookup fragment for the admin sectors AJAX view.
-     * Renders `Dashboard/sectors-services/sector`.
+     * Renders `Lookups/sectors`.
      */
     private function renderAdminSectorsPartial(): string|RedirectResponse
     {
@@ -270,7 +270,7 @@ class HomeController extends BaseController
 
         $viewData = (new DashboardPageBuilder($this->request))->buildAdminViewData('sectors');
 
-        return view('Dashboard/sectors-services/sector', [
+        return view('Lookups/sectors', [
             'sectors' => $viewData['sectors'] ?? [],
             'sectorShortcodeOptions' => $viewData['sectorShortcodeOptions'] ?? [],
             'lookupStatus' => $viewData['lookupStatus'] ?? 'active',
@@ -280,7 +280,7 @@ class HomeController extends BaseController
 
     /**
      * Returns the services lookup fragment for the admin services AJAX view.
-     * Renders `Dashboard/sectors-services/services`.
+     * Renders `Lookups/services`.
      */
     private function renderAdminServicesPartial(): string|RedirectResponse
     {
@@ -292,7 +292,7 @@ class HomeController extends BaseController
 
         $viewData = (new DashboardPageBuilder($this->request))->buildAdminViewData('services');
 
-        return view('Dashboard/sectors-services/services', [
+        return view('Lookups/services', [
             'services' => $viewData['services'] ?? [],
             'lookupStatus' => $viewData['lookupStatus'] ?? 'active',
             'canRestore' => $viewData['canRestoreLookups'] ?? false,

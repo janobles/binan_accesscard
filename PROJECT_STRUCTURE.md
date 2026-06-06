@@ -51,17 +51,27 @@ Lookups, Audit, Workspace) is self-contained and easy to navigate. Routes in
 
 ## Views
 
-- `app/Views/Login/login.php`  
+- `app/Views/Auth/login.php`  
   Login form.
 
-- `app/Views/Dashboard/admin.php`  
-  Developer/Admin pages.
+- `app/Views/Admin/layout.php`  
+  Developer/Admin shell; swaps in `accounts.php`, `audit-trails.php`, and the
+  `Family/` and `Lookups/` views by active page. The standalone lookups screen
+  lives in `Admin/lookups/index.php`.
 
-- `app/Views/Employee/index.php`  
-  Employee workspace pages.
+- `app/Views/Employee/layout.php`  
+  Employee workspace shell.
 
-- `app/Views/Dashboard/form.php`  
-  Shared family/member form markup. Options are passed in from the controller.
+- `app/Views/Family/`  
+  Family record views: `form.php` (+ `entry.php` data-prep wrapper),
+  `head-fields.php`, `member-fields.php`, `member-summary.php`, `list.php`, `view.php`.
+
+- `app/Views/Lookups/`  
+  Sector/service management (`sectors.php`, `services.php`), the family-form
+  `picker.php`, and the add/edit modals.
+
+- `app/Views/components/search-bar.php`  
+  Shared search bar partial.
 
 ## Database
 

@@ -6,7 +6,7 @@ use App\Libraries\ViewFormatter;
 
 /**
  * Shapes a raw `member` row (from MemberModel) into the read-only structure the
- * family detail view (`Dashboard/familyform/family-view`) renders: a display name,
+ * family detail view (`Family/view`) renders: a display name,
  * a label/value detail grid, the comma-joined sector names, and resolved service
  * names. Pure presentation — no DB or session access; callers pass in the already
  * resolved service names and the income value→label map.

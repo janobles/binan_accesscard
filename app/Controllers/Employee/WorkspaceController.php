@@ -21,7 +21,7 @@ class WorkspaceController extends BaseController
 {
     /**
      * GET `employee/workspace`. Renders the employee shell on the dashboard tab.
-     * Frontend: full-page load of `Views/Employee/index`.
+     * Frontend: full-page load of `Views/Employee/layout`.
      */
     public function dashboard(): string|RedirectResponse
     {
@@ -80,7 +80,7 @@ class WorkspaceController extends BaseController
     /**
      * Returns the family registration form fragment for the employee "add family"
      * modal. Allows Developer/Admin/Employee; renders
-     * `Dashboard/familyform/familyform` in embedded mode.
+     * `Family/form` in embedded mode.
      */
     private function renderFamilyPartial(): string|RedirectResponse
     {
@@ -90,7 +90,7 @@ class WorkspaceController extends BaseController
             return $guard;
         }
 
-        return view('Dashboard/familyform/familyform', array_merge(
+        return view('Family/form', array_merge(
             (new FamilyFormOptionsModel())->getViewData(),
             ['canCreateFamily' => true, 'embeddedInModal' => true]
         ));
@@ -98,7 +98,7 @@ class WorkspaceController extends BaseController
 
     /**
      * Returns the records list fragment for employee manage-records AJAX
-     * search/pagination. Renders `Dashboard/familyform/family-list`.
+     * search/pagination. Renders `Family/list`.
      */
     private function renderRecordListPartial(): string|RedirectResponse
     {
@@ -109,7 +109,7 @@ class WorkspaceController extends BaseController
         }
 
         return view(
-            'Dashboard/familyform/family-list',
+            'Family/list',
             $this->pageBuilder()->buildEmployeeRecordListViewData()
         );
     }

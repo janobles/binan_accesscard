@@ -113,11 +113,11 @@ $archivedSectorCount = count($sectors) - $activeSectorCount;
 	</div>
 </div>
 
-<?= view('Dashboard/sectors-services/sector-modal', [
+<?= view('Lookups/sector-modal', [
 	'sectorPrefixOptions' => $sectorPrefixOptions,
 	'sectorNextCodeMap' => $sectorNextCodeMap,
 	'existingShortcodes' => $existingShortcodes,
 ]) ?>
-<?= view('Dashboard/sectors-services/sector-category-modal', [
+<?= view('Lookups/sector-category-modal', [
 	'sectorCategories' => $sectorCategories,
 ]) ?>

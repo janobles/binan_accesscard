@@ -15,7 +15,7 @@
 //               GET  {admin|employee}/manage-family/edit/:id  (FamilyController::editFamily)
 //               GET  {admin|employee}/manage-records?partial=1 (list fragment)
 //               POST {admin|employee}/manage-family/archive|restore/:id
-//   - Views : Dashboard/familyform/family-list.php, familyform.php, family-view.php
+//   - Views : Family/list.php, form.php, view.php
 //   - Both admin (admin/manage-records) and employee (employee/manage-records) pages use this
 // Registers record management screens with the shared dashboard modal loader.
 (function (window) {

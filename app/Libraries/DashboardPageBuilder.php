@@ -29,7 +29,7 @@ class DashboardPageBuilder
 
     /**
      * Guards Developer/Admin access, then renders the admin shell
-     * (`Dashboard/Manage/admin`) on the given tab. Account management additionally
+     * (`Admin/layout`) on the given tab. Account management additionally
      * requires Developer/Admin. Frontend: returns the full admin page HTML.
      */
     public function renderAdminPage(string $activePage): string|RedirectResponse
@@ -49,7 +49,7 @@ class DashboardPageBuilder
 
         helper('assets');
 
-        return view('Dashboard/Manage/admin', $this->buildAdminViewData($activePage));
+        return view('Admin/layout', $this->buildAdminViewData($activePage));
     }
 
     /**
@@ -58,7 +58,7 @@ class DashboardPageBuilder
      * recent families/audits, member list (on Manage Records), sector/service
      * lists, dashboard stats, search term/filters, and view formatter closures
      * (formatDate/Status/etc.). Also reused to build AJAX partials. Frontend:
-     * consumed directly by `Dashboard/Manage/*` views.
+     * consumed directly by `Admin/*` views.
      */
     public function buildAdminViewData(string $activePage): array
     {
@@ -329,7 +329,7 @@ class DashboardPageBuilder
     /**
      * Guards Developer/Admin/User access, then assembles the employee view data
      * (own activity instead of all audits, no account management) and renders the
-     * employee shell (`Employee/index`). Frontend: returns the full employee page.
+     * employee shell (`Employee/layout`). Frontend: returns the full employee page.
      */
     public function renderEmployeePage(string $activePage): string|RedirectResponse
     {
@@ -357,7 +357,7 @@ class DashboardPageBuilder
             ? $searchModel->auditTrailsByUser($userId, $searchTerm, $searchFilters, 50)
             : (new AuditTrailsModel())->getByUser($userId, 10);
 
-        return view('Employee/index', [
+        return view('Employee/layout', [
             'user' => session()->get(),
             'activePage' => $activePage,
             'pageTitle' => $layoutModel->employeePageTitle($activePage),

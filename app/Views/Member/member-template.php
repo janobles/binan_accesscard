@@ -1,7 +1,10 @@
 <?php
 use App\Libraries\ViewFormatter;
 
-$memberSectorGroups = ViewFormatter::memberSectorGroups($sectorOptions);
+$memberSectorGroups = ViewFormatter::memberSectorGroups(
+    $sectorOptions,
+    (new \App\Models\Lookups\SectorModel())->categoryLabelMap()
+);
 ?>
 <template id="memberTemplate">
     <div class="member-row family-member-card">

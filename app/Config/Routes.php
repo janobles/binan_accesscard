@@ -50,6 +50,11 @@ $routes->group('admin', static function (RouteCollection $routes): void {
         $routes->post('restore/(:num)', 'Lookups\SectorController::restore/$1');
     });
 
+    $routes->group('sector-categories', static function (RouteCollection $routes): void {
+        $routes->post('save', 'Lookups\SectorCategoryController::save');
+        $routes->post('delete', 'Lookups\SectorCategoryController::delete');
+    });
+
     $routes->group('services', static function (RouteCollection $routes): void {
         $routes->post('create', 'Lookups\ServiceController::create');
         $routes->post('update/(:num)', 'Lookups\ServiceController::update/$1');

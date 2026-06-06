@@ -20,7 +20,10 @@ $sectorOptions      = $sectorOptions ?? [];
 $sectorCatalog      = (array) ($sectorCatalog ?? []);
 $selectedSectorIds  = array_map('intval', (array) ($selectedSectorIds ?? []));
 $selectedServiceIds = array_map('intval', (array) ($selectedServiceIds ?? []));
-$headSectorGroups   = ViewFormatter::memberSectorGroups($sectorOptions);
+$headSectorGroups   = ViewFormatter::memberSectorGroups(
+	$sectorOptions,
+	(new \App\Models\Lookups\SectorModel())->categoryLabelMap()
+);
 ?>
 
 <div class="form-section family-step-panel" data-step="2">

@@ -2,6 +2,7 @@
 
 namespace App\Models\Lookups;
 
+use App\Libraries\SectorCategoryStore;
 use App\Support\FamilyProfilingFormV2;
 use CodeIgniter\Model;
 
@@ -283,15 +284,88 @@ class SectorModel extends Model
             }
         }
 
+        // Named categories that have no sectors yet still get a starting code,
+        // so a category created in the manager can be picked and auto-filled.
+        foreach (SectorCategoryStore::all() as $prefix => $name) {
+            if (! isset($map[$prefix])) {
+                $map[$prefix] = $prefix . '1';
+            }
+        }
+
         return $map;
+    }
+
+    /**
+     * Prefix => display-name map for every category: the official categories
+     * (FamilyProfilingFormV2::SECTOR_CATEGORIES, minus OTHER) with their fixed
+     * names, overlaid with custom names from SectorCategoryStore for any
+     * non-official prefix. Official names always win. Drives the grouped sector
+     * headings in the family form and the modal category dropdown labels.
+     */
+    public function categoryLabelMap(): array
+    {
+        $labels = [];
+
+        foreach (FamilyProfilingFormV2::SECTOR_CATEGORIES as $prefix => $label) {
+            if ($prefix !== 'OTHER') {
+                $labels[$prefix] = $label;
+            }
+        }
+
+        foreach (SectorCategoryStore::all() as $prefix => $name) {
+            if (! isset($labels[$prefix])) {
+                $labels[$prefix] = $name;
+            }
+        }
+
+        return $labels;
+    }
+
+    /**
+     * Rows for the "Manage Categories" screen: one entry per custom prefix that
+     * either has saved sectors or a saved name. Each row carries its prefix, the
+     * current custom name ('' if unnamed) and how many sectors use it. Official
+     * categories are excluded (their names are fixed).
+     */
+    public function customCategories(): array
+    {
+        $names = SectorCategoryStore::all();
+
+        $counts = [];
+
+        foreach ($this->existingShortcodes() as $code) {
+            $prefix = $this->sectorPrefix($code);
+
+            if ($prefix === '' || isset(FamilyProfilingFormV2::SECTOR_CATEGORIES[$prefix])) {
+                continue;
+            }
+
+            $counts[$prefix] = ($counts[$prefix] ?? 0) + 1;
+        }
+
+        $prefixes = array_unique(array_merge(array_keys($counts), array_keys($names)));
+        sort($prefixes);
+
+        $rows = [];
+
+        foreach ($prefixes as $prefix) {
+            $rows[] = [
+                'prefix' => $prefix,
+                'name' => $names[$prefix] ?? '',
+                'sectorCount' => $counts[$prefix] ?? 0,
+            ];
+        }
+
+        return $rows;
     }
 
     /**
      * Prefix => label map for the sector modal's category dropdown: the official
      * categories (FamilyProfilingFormV2::SECTOR_CATEGORIES, minus OTHER) first,
-     * then any custom prefixes already used by saved codes (labelled by the bare
-     * prefix) — so a category created via "Other (custom)" can be re-picked next
-     * time instead of retyped. Pairs with nextShortcodeMap() for code auto-fill.
+     * then any custom prefixes — labelled by their saved name (SectorCategoryStore)
+     * or the bare prefix when unnamed. Includes named categories that have no
+     * sectors yet, so a category created in the manager can be picked straight
+     * away. Pairs with nextShortcodeMap() for code auto-fill.
      */
     public function sectorPrefixOptions(): array
     {
@@ -303,13 +377,22 @@ class SectorModel extends Model
             }
         }
 
+        $customNames = SectorCategoryStore::all();
         $custom = [];
 
+        // Prefixes already used by saved sector codes (named or bare).
         foreach ($this->existingShortcodes() as $code) {
             $prefix = $this->sectorPrefix($code);
 
             if ($prefix !== '' && ! isset($options[$prefix])) {
-                $custom[$prefix] = $prefix;
+                $custom[$prefix] = $customNames[$prefix] ?? $prefix;
+            }
+        }
+
+        // Named categories that have no sectors yet are still pickable.
+        foreach ($customNames as $prefix => $name) {
+            if (! isset($options[$prefix]) && ! isset($custom[$prefix])) {
+                $custom[$prefix] = $name;
             }
         }
 
@@ -350,6 +433,7 @@ class SectorModel extends Model
             $sectorOptions = $this->getSectorOptions();
         }
 
+        $labels = $this->categoryLabelMap();
         $catalog = [];
 
         foreach ($sectorOptions as $sector) {
@@ -362,7 +446,7 @@ class SectorModel extends Model
             $group = $this->sectorPrefix($shortcode);
 
             $catalog[$group][] = [
-                'category_label' => FamilyProfilingFormV2::SECTOR_CATEGORIES[$group] ?? $group,
+                'category_label' => $labels[$group] ?? $group,
                 'sectorID' => (string) ($sector['sectorID'] ?? ''),
                 'shortcode' => $shortcode,
                 'name' => (string) ($sector['name'] ?? ''),

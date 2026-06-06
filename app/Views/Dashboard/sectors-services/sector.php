@@ -13,6 +13,7 @@ foreach ($sectorModel->sectorPrefixOptions() as $prefix => $label) {
 }
 $sectorNextCodeMap = $sectorModel->nextShortcodeMap();
 $existingShortcodes = $sectorModel->existingShortcodes();
+$sectorCategories = $sectorModel->customCategories();
 
 $activeSectorCount   = count(array_filter($sectors, static fn ($s) => trim((string) ($s['dt_deleted'] ?? '')) === ''));
 $archivedSectorCount = count($sectors) - $activeSectorCount;
@@ -27,9 +28,12 @@ $archivedSectorCount = count($sectors) - $activeSectorCount;
 			<button type="button" class="btn btn-success active" id="btn-sector-active" aria-pressed="true">Active (<?= esc((string) $activeSectorCount) ?>)</button>
 			<button type="button" class="btn btn-outline-secondary" id="btn-sector-archive" aria-pressed="false">Archive (<?= esc((string) $archivedSectorCount) ?>)</button>
 		</div>
-		<span id="sector-add-btn-wrap">
-			<button class="btn btn-success js-sector-modal-open" type="button" data-sector-mode="create"><i class="bi bi-plus-lg" aria-hidden="true"></i><span>Add Sector</span></button>
-		</span>
+		<div class="sector-toolbar-actions d-flex gap-2">
+			<button class="btn btn-outline-success" type="button" data-bs-toggle="modal" data-bs-target="#sectorCategoryModal"><i class="bi bi-tags" aria-hidden="true"></i><span>Manage Categories</span></button>
+			<span id="sector-add-btn-wrap">
+				<button class="btn btn-success js-sector-modal-open" type="button" data-sector-mode="create"><i class="bi bi-plus-lg" aria-hidden="true"></i><span>Add Sector</span></button>
+			</span>
+		</div>
 	</header>
 
 	<form class="searchbar searchbar-single" role="search" data-lookup-search aria-label="Search sectors">
@@ -113,4 +117,7 @@ $archivedSectorCount = count($sectors) - $activeSectorCount;
 	'sectorPrefixOptions' => $sectorPrefixOptions,
 	'sectorNextCodeMap' => $sectorNextCodeMap,
 	'existingShortcodes' => $existingShortcodes,
+]) ?>
+<?= view('Dashboard/sectors-services/sector-category-modal', [
+	'sectorCategories' => $sectorCategories,
 ]) ?>

@@ -192,9 +192,11 @@ class ViewFormatter
      * FamilyProfilingFormV2::SECTOR_CATEGORIES or the raw prefix for custom
      * codes — so there is no catch-all "Others" bucket. Official prefixes lead
      * in form order, custom prefixes follow alphabetically; empty groups drop.
+     * Pass $categoryLabels (prefix => name, from SectorModel::categoryLabelMap)
+     * to show custom category names; it overrides the built-in form labels.
      * Frontend: builds the grouped sector checkboxes for member rows.
      */
-    public static function memberSectorGroups(array $sectorOptions): array
+    public static function memberSectorGroups(array $sectorOptions, array $categoryLabels = []): array
     {
         $groups = [];
 
@@ -213,7 +215,7 @@ class ViewFormatter
 
             if (! isset($groups[$prefix])) {
                 $groups[$prefix] = [
-                    'label' => FamilyProfilingFormV2::SECTOR_CATEGORIES[$prefix] ?? $prefix,
+                    'label' => $categoryLabels[$prefix] ?? FamilyProfilingFormV2::SECTOR_CATEGORIES[$prefix] ?? $prefix,
                     'sectors' => [],
                 ];
             }

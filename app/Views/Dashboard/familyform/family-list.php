@@ -67,6 +67,11 @@ $deepToRecord = (int) ($deepToRecord ?? 0);
         <div class="panel mb-3 border">
             <div class="section-title mt-0">
                 <span>Database results for "<?= esc($deepKeyword) ?>"</span>
+                <a
+                    class="btn btn-outline-secondary btn-sm js-exit-deep-search"
+                    href="<?= esc(family_list_url($listRoute, '', $filterSectorId, $filterDate, $status), 'attr') ?>">
+                    <i class="bi bi-x-lg" aria-hidden="true"></i>Exit database results
+                </a>
             </div>
             <div class="table-meta">
                 <span><?= esc((string) $deepFromRecord) ?>-<?= esc((string) $deepToRecord) ?> of <?= esc((string) $deepTotal) ?> matches</span>

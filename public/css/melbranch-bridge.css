@@ -263,3 +263,295 @@ tr.lookup-hidden {
     background: transparent;
     border-bottom: 0;
 }
+
+/* ---- Family record "View" modal ----------------------------------------
+ * Themes Dashboard/familyform/family-view.php into the jade design language.
+ * Lives here (not admin-components.css) because the reskinned admin/employee
+ * shells load this bridge but not admin-components.css.
+ * --------------------------------------------------------------------- */
+.family-detail {
+    display: grid;
+    gap: 1rem;
+}
+
+.family-detail-hero {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.15rem;
+    padding: 1.25rem 1.4rem;
+    border-radius: 0.75rem;
+    background: linear-gradient(135deg, var(--jade-green) 0%, var(--jade-green-deep) 100%);
+    color: #ffffff;
+    box-shadow: 0 0.4rem 1.1rem rgba(18, 104, 79, 0.22);
+}
+
+.family-detail-hero-main {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    min-width: 0;
+}
+
+.family-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 3.6rem;
+    height: 3.6rem;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.18);
+    border: 1.5px solid rgba(255, 255, 255, 0.45);
+    color: #ffffff;
+    font-size: 1.35rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.family-avatar.is-sm {
+    width: 2.5rem;
+    height: 2.5rem;
+    font-size: 0.95rem;
+    background: var(--jade-green-soft);
+    border: 1.5px solid #bce6d5;
+    color: var(--jade-green-deep);
+}
+
+.family-detail-kicker,
+.family-service-label,
+.family-detail-item span {
+    display: block;
+    color: #5d716a;
+    font-size: 0.69rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.family-detail-kicker {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.family-detail-hero h2 {
+    margin: 0.15rem 0 0;
+    color: #ffffff;
+    font-size: 1.45rem;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+.family-detail-date {
+    flex: 0 0 auto;
+    min-width: 8rem;
+    padding-left: 1.1rem;
+    border-left: 1px solid rgba(255, 255, 255, 0.25);
+    text-align: right;
+}
+
+.family-detail-date span,
+.family-detail-date small {
+    display: block;
+    color: rgba(255, 255, 255, 0.74);
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.family-detail-date strong {
+    display: block;
+    margin: 0.1rem 0;
+    color: #ffffff;
+    font-size: 1.1rem;
+}
+
+.family-detail-date small {
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 0.75rem;
+}
+
+.family-detail-section {
+    padding: 1.15rem;
+    border: 1px solid var(--jade-card-border);
+    border-radius: 0.75rem;
+    background: #ffffff;
+}
+
+.family-detail-section-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.9rem;
+    padding-bottom: 0.65rem;
+    border-bottom: 1px solid #e7efeb;
+    color: var(--jade-ink);
+    font-size: 0.95rem;
+    font-weight: 700;
+}
+
+.family-detail-section-title .bi {
+    color: var(--jade-green);
+    font-size: 1rem;
+}
+
+.family-detail-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.4rem;
+    height: 1.4rem;
+    padding: 0 0.45rem;
+    border-radius: 999px;
+    background: var(--jade-green-soft);
+    color: var(--jade-green-deep);
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.family-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.65rem;
+}
+
+.family-detail-grid.is-compact {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.family-detail-item {
+    min-height: 3.75rem;
+    padding: 0.7rem 0.75rem;
+    border: 1px solid #e1ebe7;
+    border-radius: 0.55rem;
+    background: #f7faf9;
+}
+
+.family-detail-item strong {
+    display: block;
+    margin-top: 0.25rem;
+    color: var(--jade-ink);
+    font-size: 0.82rem;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.family-detail-list,
+.family-service-list {
+    display: grid;
+    gap: 0.5rem;
+}
+
+.family-chip-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+}
+
+.family-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.32rem 0.75rem;
+    border-radius: 999px;
+    background: var(--jade-green-soft);
+    border: 1px solid #bce6d5;
+    color: var(--jade-green-deep);
+    font-size: 0.8rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.family-chip.is-service {
+    background: #eef6f2;
+    border-color: #d4e6dd;
+    color: #2f5448;
+}
+
+.family-empty {
+    color: #8a9893;
+    font-size: 0.82rem;
+    font-style: italic;
+}
+
+.family-member-list {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.family-member-item {
+    display: grid;
+    gap: 0.85rem;
+    padding: 1rem;
+    border: 1px solid #e1ebe7;
+    border-left: 3px solid var(--jade-green);
+    border-radius: 0.65rem;
+    background: #fbfdfc;
+}
+
+.family-member-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #e7efeb;
+}
+
+.family-member-identity {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    min-width: 0;
+}
+
+.family-member-identity strong {
+    color: var(--jade-ink);
+    font-size: 0.95rem;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+.family-relationship {
+    flex: 0 0 auto;
+    padding: 0.25rem 0.7rem;
+    border-radius: 999px;
+    background: #eef3f1;
+    color: #4c635b;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+
+@media (max-width: 992px) {
+    .family-detail-hero {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .family-detail-date {
+        width: 100%;
+        padding-top: 0.85rem;
+        padding-left: 0;
+        border-top: 1px solid rgba(255, 255, 255, 0.25);
+        border-left: 0;
+        text-align: left;
+    }
+
+    .family-detail-grid,
+    .family-detail-grid.is-compact {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 576px) {
+    .family-member-heading {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .family-detail-grid,
+    .family-detail-grid.is-compact {
+        grid-template-columns: 1fr;
+    }
+}

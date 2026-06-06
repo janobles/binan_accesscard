@@ -219,6 +219,26 @@
             return;
         }
         const keyword  = input.value.toLowerCase().trim();
+
+        // Clearing the search box exits "Search All" (whole-database) mode and
+        // reloads the normal records list. The deep-results panel is server state,
+        // so client-side row filtering alone can't dismiss it — we reuse the
+        // Exit link's URL (present only while deep results are shown).
+        const exitLink = panel.querySelector('.js-exit-deep-search');
+        if (keyword === '' && exitLink && window.fetch && window.history) {
+            const exitUrl = exitLink.getAttribute('href') || '';
+            if (exitUrl !== '') {
+                loadFamilyList(panel, new URL(exitUrl, window.location.href).toString(), true)
+                    .then(function (nextPanel) {
+                        const nextInput = nextPanel && nextPanel.querySelector('input[name="q"]');
+                        if (nextInput) {
+                            nextInput.focus();
+                        }
+                    });
+                return;
+            }
+        }
+
         const sel      = panel.querySelector('select[name="sectorID"]');
         const sectorId = sel ? parseInt(sel.value || '0', 10) : 0;
         filterTableRows(panel, keyword, sectorId);

@@ -11,6 +11,53 @@
 //   - Backend: POST {admin|employee}/manage-family/archive|restore/:id
 //              (Families\FamilyController::archive, ::restore)
 (function () {
+    // Render the row action menus with Popper's "fixed" positioning strategy so
+    // the menu escapes the `.table-responsive { overflow-x: auto }` scroll box.
+    // Without this the menu is trapped inside that overflow container and gets
+    // clipped when the table is short (e.g. a single search result), forcing the
+    // user to scroll just to reach View / Edit / Archive. Bootstrap's dropdown
+    // config has no `strategy` option, so the `data-bs-strategy="fixed"` markup
+    // attribute is ignored on its own — we wire it through popperConfig here.
+    function initFixedActionDropdowns(root) {
+        if (!window.bootstrap || !window.bootstrap.Dropdown) return;
+        (root || document)
+            .querySelectorAll('.actions-menu [data-bs-toggle="dropdown"][data-bs-strategy="fixed"]')
+            .forEach(function (toggle) {
+                window.bootstrap.Dropdown.getOrCreateInstance(toggle, {
+                    popperConfig: function (defaultConfig) {
+                        return Object.assign({}, defaultConfig, { strategy: 'fixed' });
+                    }
+                });
+            });
+    }
+
+    // Exposed so manage-family-modal.js can re-apply the fixed strategy after it
+    // replaces the records panel in-place (Search All, pagination, AJAX filter).
+    window.initFamilyListActionDropdowns = initFixedActionDropdowns;
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function () { initFixedActionDropdowns(); });
+    } else {
+        initFixedActionDropdowns();
+    }
+
+    // Auto-flip action dropdowns upward when there isn't enough room below.
+    document.addEventListener('show.bs.dropdown', function (event) {
+        var btn = event.target;
+        if (!btn) return;
+        var dropdown = btn.closest('.dropdown');
+        if (!dropdown) return;
+        var rect = btn.getBoundingClientRect();
+        dropdown.classList.toggle('dropup', window.innerHeight - rect.bottom < 180);
+    });
+
+    document.addEventListener('hidden.bs.dropdown', function (event) {
+        var btn = event.target;
+        if (!btn) return;
+        var dropdown = btn.closest('.dropdown');
+        if (dropdown) dropdown.classList.remove('dropup');
+    });
+
     document.addEventListener('submit', function (event) {
         const form = event.target;
 

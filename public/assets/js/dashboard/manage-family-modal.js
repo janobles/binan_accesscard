@@ -74,6 +74,14 @@
         }
 
         panel.replaceWith(replacement);
+
+        // Re-apply Popper's fixed positioning to the freshly injected row action
+        // menus, otherwise they revert to absolute positioning and get clipped by
+        // the .table-responsive overflow when the new panel has few rows.
+        if (typeof window.initFamilyListActionDropdowns === 'function') {
+            window.initFamilyListActionDropdowns(replacement);
+        }
+
         document.querySelectorAll('.modal-backdrop').forEach(function (backdrop) {
             backdrop.remove();
         });

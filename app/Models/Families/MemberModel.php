@@ -277,8 +277,7 @@ class MemberModel extends Model
         $offset = max(0, $offset);
 
         $builder = $this->familySearchBuilder($keyword, $archived, $filters)
-            ->orderBy('member.lastname', 'ASC')
-            ->orderBy('member.firstname', 'ASC')
+            ->orderBy('member.memberID', 'DESC')
             ->limit($limit, $offset);
 
         return $this->withSectorNames($builder->get()->getResultArray());

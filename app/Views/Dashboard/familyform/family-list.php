@@ -112,7 +112,7 @@ $deepToRecord = (int) ($deepToRecord ?? 0);
                             <td class="text-end">
                                 <?php if ($resultHeadId > 0): ?>
                                     <div class="dropdown actions-menu">
-                                        <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false" aria-label="Record actions">
+                                        <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" data-bs-strategy="fixed" aria-expanded="false" aria-label="Record actions">
                                             <i class="bi bi-three-dots" aria-hidden="true"></i>
                                         </button>
                                         <div class="dropdown-menu dropdown-menu-end">
@@ -195,7 +195,7 @@ $deepToRecord = (int) ($deepToRecord ?? 0);
                     <td><?= esc((string) ($family['birthday'] ?? '')) ?></td>
                     <td class="text-end">
                         <div class="dropdown actions-menu">
-                            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false" aria-label="Record actions">
+                            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" data-bs-strategy="fixed" aria-expanded="false" aria-label="Record actions">
                                 <i class="bi bi-three-dots" aria-hidden="true"></i>
                             </button>
                             <div class="dropdown-menu dropdown-menu-end">

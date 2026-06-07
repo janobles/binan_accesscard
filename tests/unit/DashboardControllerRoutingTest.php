@@ -1,43 +1,44 @@
 <?php
 
 use App\Controllers\Accounts\AccountController;
-use App\Controllers\Employee\WorkspaceController as EmployeeWorkspaceController;
+use App\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Controllers\Employee\DashboardController as EmployeeDashboardController;
 use App\Controllers\Families\FamilyController;
 use App\Controllers\Lookups\SectorController;
 use App\Controllers\Lookups\ServiceController;
-use App\Controllers\Workspace\HomeController;
 use PHPUnit\Framework\TestCase;
 
 /**
  * Guards the feature-subnamespace layout of the backend.
  *
- * Admin/developer dashboard pages live in App\Controllers\Workspace\HomeController,
- * authentication in App\Controllers\Auth, the employee workspace in
- * App\Controllers\Employee, family flows in App\Controllers\Families, lookup
- * mutations in App\Controllers\Lookups, and account management in
+ * Admin/developer dashboard pages live in App\Controllers\Admin\DashboardController,
+ * the employee workspace in App\Controllers\Employee\DashboardController,
+ * authentication in App\Controllers\Auth, family flows in App\Controllers\Families,
+ * lookup mutations in App\Controllers\Lookups, and account management in
  * App\Controllers\Accounts. These assertions fail loudly if a controller is moved
  * back to the root namespace or a route stops targeting its feature slice.
  */
-final class WorkspaceControllerRoutingTest extends TestCase
+final class DashboardControllerRoutingTest extends TestCase
 {
-    public function testWorkspaceHomeExposesExpectedPageActions(): void
+    public function testAdminDashboardExposesExpectedPageActions(): void
     {
-        $this->assertPublicMethods(HomeController::class, [
+        $this->assertPublicMethods(AdminDashboardController::class, [
             // Admin / Developer pages
-            'admin',
-            'adminDashboard',
-            'adminAccounts',
-            'adminFamilyEntry',
-            'adminManageRecords',
-            'adminAuditTrails',
-            'adminSectors',
-            'adminServices',
+            'index',
+            'dashboard',
+            'accounts',
+            'familyEntry',
+            'manageRecords',
+            'auditTrails',
+            'sectors',
+            'services',
+            'manageMembers',
         ]);
     }
 
-    public function testEmployeeWorkspaceControllerExposesExpectedPageActions(): void
+    public function testEmployeeDashboardExposesExpectedPageActions(): void
     {
-        $this->assertPublicMethods(EmployeeWorkspaceController::class, [
+        $this->assertPublicMethods(EmployeeDashboardController::class, [
             'dashboard',
             'familyEntry',
             'manageRecords',
@@ -90,9 +91,9 @@ final class WorkspaceControllerRoutingTest extends TestCase
         $this->assertStringNotContainsString("'ServiceController::", $routes);
 
         foreach ([
-            "'dashboard', 'Workspace\\HomeController::adminDashboard'",
-            "'workspace', 'Employee\\WorkspaceController::dashboard'",
-            "'activity', 'Employee\\WorkspaceController::activity'",
+            "'dashboard', 'Admin\\DashboardController::dashboard'",
+            "'workspace', 'Employee\\DashboardController::dashboard'",
+            "'activity', 'Employee\\DashboardController::activity'",
             "'accounts/disable', 'Accounts\\AccountController::disableEmployee'",
             "'list', 'Families\\FamilyController::listFamilies'",
             "'create', 'Lookups\\SectorController::create'",

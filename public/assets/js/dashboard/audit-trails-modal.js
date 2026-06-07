@@ -5,7 +5,7 @@
 // Connected to:
 //   - dashboard-modal-loader.js : window.registerDashboardModal()
 //   - Views : Admin/layout.php — audit-trails trigger buttons
-//   - Backend: GET admin/audit-trails partial (Workspace\HomeController::adminAuditTrails)
+//   - Backend: GET admin/audit-trails partial (Admin\DashboardController::auditTrails)
 // Registers the audit trail workspace with the shared dashboard modal loader.
 (function (window) {
     if (typeof window.registerDashboardModal !== 'function') {

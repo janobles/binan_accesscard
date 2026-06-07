@@ -6,8 +6,8 @@ This project follows the normal CodeIgniter 4 layout. The database source of tru
 
 The backend keeps the default CodeIgniter 4 layout, but controllers and models are
 grouped into **feature subnamespaces** so each slice (Auth, Accounts, Families,
-Lookups, Audit, Workspace) is self-contained and easy to navigate. Routes in
-`app/Config/Routes.php` target these namespaces directly (e.g. `Workspace\HomeController::adminDashboard`).
+Lookups, Audit, Admin, Employee) is self-contained and easy to navigate. Routes in
+`app/Config/Routes.php` target these namespaces directly (e.g. `Admin\DashboardController::dashboard`).
 
 ### Controllers (`app/Controllers/`)
 

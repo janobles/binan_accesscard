@@ -7,7 +7,7 @@
  * passes every variable used below. Like the admin shell, this is one layout
  * that swaps its main section on $activePage (dashboard / family-entry /
  * family-manage / activity). Controller entry points live in
- * App\Controllers\Employee\WorkspaceController
+ * App\Controllers\Employee\DashboardController
  * (dashboard, familyEntry, manageRecords, activity).
  *
  * Employees only ever see ACTIVE records and their OWN activity (no archive,

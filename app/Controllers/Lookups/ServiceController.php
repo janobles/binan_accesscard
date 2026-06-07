@@ -11,7 +11,7 @@ use Throwable;
 
 /**
  * Handles the write/mutation actions for the `services` lookup table, posted from
- * the admin services page. Listing is done by Workspace\HomeController::adminServices; every
+ * the admin services page. Listing is done by Admin\DashboardController::services; every
  * action here is Developer/Admin-only and redirects back to `admin/services` with
  * a flash message.
  */

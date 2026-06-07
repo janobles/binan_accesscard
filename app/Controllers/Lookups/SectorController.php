@@ -12,7 +12,7 @@ use Throwable;
 
 /**
  * Handles the write/mutation actions for the `sector` lookup table, posted from
- * the admin sectors page. Read/listing is done by Workspace\HomeController::adminSectors;
+ * the admin sectors page. Read/listing is done by Admin\DashboardController::sectors;
  * every action here is Developer/Admin-only and redirects back to `admin/sectors`
  * with a flash message.
  */

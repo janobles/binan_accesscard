@@ -1,27 +1,31 @@
 <?php
 
-namespace App\Controllers\Workspace;
+namespace App\Controllers\Admin;
 
 use App\Controllers\BaseController;
+use App\Controllers\Concerns\DashboardPartialsTrait;
 use App\Controllers\HomeRoleAccessTrait;
 use App\Libraries\DashboardPageBuilder;
 use App\Libraries\RoleAccess;
-use App\Models\Families\FamilyFormOptionsModel;
 use CodeIgniter\HTTP\RedirectResponse;
 
 /**
- * Renders the admin/developer dashboard pages and their AJAX partials.
+ * Renders the admin/developer dashboard pages and their AJAX partials (the
+ * `admin/*` routes). The sibling Employee\DashboardController owns the
+ * `employee/*` pages.
  *
  * Page rendering is delegated to App\Libraries\DashboardPageBuilder: this
  * controller only decides WHICH page to show, the builder assembles the view data
  * and returns the rendered HTML. Authentication and session lifecycle live in
  * App\Controllers\Auth\AuthController (the controller the auth routes target);
  * the `normalizeRole` helper used by the account partial comes from
- * App\Controllers\HomeRoleAccessTrait.
+ * App\Controllers\HomeRoleAccessTrait. The shared AJAX-partial helpers come from
+ * App\Controllers\Concerns\DashboardPartialsTrait.
  */
-class HomeController extends BaseController
+class DashboardController extends BaseController
 {
     use HomeRoleAccessTrait;
+    use DashboardPartialsTrait;
 
     // ---------------------------------------------------------------------
     // Admin / Developer pages (full page loads).
@@ -33,7 +37,7 @@ class HomeController extends BaseController
     /**
      * Entry point for GET `admin`: redirects to the canonical admin dashboard URL.
      */
-    public function admin(): RedirectResponse
+    public function index(): RedirectResponse
     {
         return redirect()->to(site_url('admin/dashboard'));
     }
@@ -43,7 +47,7 @@ class HomeController extends BaseController
      * and render the admin shell on the "dashboard" tab. Frontend: full-page load
      * of `Admin/layout`.
      */
-    public function adminDashboard(): string|RedirectResponse
+    public function dashboard(): string|RedirectResponse
     {
         return (new DashboardPageBuilder($this->request))->renderAdminPage('dashboard');
     }
@@ -52,10 +56,10 @@ class HomeController extends BaseController
      * GET `admin/accounts`. Renders the full accounts page, or—when the request
      * is an AJAX/partial fetch from the dashboard—just the accounts fragment.
      */
-    public function adminAccounts(): string|RedirectResponse
+    public function accounts(): string|RedirectResponse
     {
         if ($this->isPartialRequest()) {
-            return $this->renderAdminAccountsPartial();
+            return $this->renderAccountsPartial();
         }
 
         return (new DashboardPageBuilder($this->request))->renderAdminPage('accounts');
@@ -65,10 +69,10 @@ class HomeController extends BaseController
      * GET `admin/family-entry`. Shows the family registration form page, or its
      * modal partial when fetched via AJAX from the dashboard.
      */
-    public function adminFamilyEntry(): string|RedirectResponse
+    public function familyEntry(): string|RedirectResponse
     {
         if ($this->isPartialRequest()) {
-            return $this->renderAdminFamilyPartial();
+            return $this->renderFamilyFormPartial(['Developer', 'Admin']);
         }
 
         return (new DashboardPageBuilder($this->request))->renderAdminPage('family-entry');
@@ -78,10 +82,10 @@ class HomeController extends BaseController
      * GET `admin/manage-records` (and `manage-families`). Renders the family
      * records list page, or the list fragment for AJAX search/pagination.
      */
-    public function adminManageRecords(): string|RedirectResponse
+    public function manageRecords(): string|RedirectResponse
     {
         if ($this->isPartialRequest()) {
-            return $this->renderAdminRecordListPartial();
+            return $this->renderRecordListPartial();
         }
 
         return (new DashboardPageBuilder($this->request))->renderAdminPage('family-manage');
@@ -91,10 +95,10 @@ class HomeController extends BaseController
      * GET `admin/audit-trails`. Renders the audit log page, or the audit fragment
      * for AJAX search/filtering.
      */
-    public function adminAuditTrails(): string|RedirectResponse
+    public function auditTrails(): string|RedirectResponse
     {
         if ($this->isPartialRequest()) {
-            return $this->renderAdminAuditPartial();
+            return $this->renderAuditPartial();
         }
 
         return (new DashboardPageBuilder($this->request))->renderAdminPage('audit-trails');
@@ -104,10 +108,10 @@ class HomeController extends BaseController
      * GET `admin/sectors`. Renders the sector lookup page, or the sector fragment
      * for AJAX. Mutations are posted to Lookups\SectorController.
      */
-    public function adminSectors(): string|RedirectResponse
+    public function sectors(): string|RedirectResponse
     {
         if ($this->isPartialRequest()) {
-            return $this->renderAdminSectorsPartial();
+            return $this->renderSectorsPartial();
         }
 
         return (new DashboardPageBuilder($this->request))->renderAdminPage('sectors');
@@ -117,10 +121,10 @@ class HomeController extends BaseController
      * GET `admin/services`. Renders the service lookup page, or the service
      * fragment for AJAX. Mutations are posted to Lookups\ServiceController.
      */
-    public function adminServices(): string|RedirectResponse
+    public function services(): string|RedirectResponse
     {
         if ($this->isPartialRequest()) {
-            return $this->renderAdminServicesPartial();
+            return $this->renderServicesPartial();
         }
 
         return (new DashboardPageBuilder($this->request))->renderAdminPage('services');
@@ -130,31 +134,20 @@ class HomeController extends BaseController
      * GET `admin/manage-members`. Reuses the family-manage page (member-centric
      * view of the same records). Frontend: full-page load of the admin shell.
      */
-    public function adminManageMembers(): string|RedirectResponse
+    public function manageMembers(): string|RedirectResponse
     {
         return (new DashboardPageBuilder($this->request))->renderAdminPage('family-manage');
     }
 
-    // Employee (`employee/*`) pages were moved to
-    // App\Controllers\Employee\WorkspaceController. This controller now covers
-    // auth/session and the admin/developer pages only.
-
     // ---------------------------------------------------------------------
     // AJAX partial rendering.
-    // The dashboard shells load some sections (accounts, family form, audit,
+    // The dashboard shell loads some sections (accounts, family form, audit,
     // sectors, services) into a modal/panel via fetch. When ?partial=1 or an
     // XHR header is present we return just the inner view fragment instead of
     // the whole page. Front-end loader: assets/js/dashboard/*-modal.js.
+    // isPartialRequest() and renderFamilyFormPartial() come from
+    // DashboardPartialsTrait.
     // ---------------------------------------------------------------------
-
-    /**
-     * True when the dashboard JS is fetching just a section fragment (XHR header
-     * or `?partial=1`) rather than a full page navigation.
-     */
-    private function isPartialRequest(): bool
-    {
-        return $this->request->isAJAX() || (string) $this->request->getGet('partial') === '1';
-    }
 
     /**
      * Role guard for admin partial fetches; returns a RedirectResponse to block
@@ -170,7 +163,7 @@ class HomeController extends BaseController
      * (assets/js/dashboard/*-modal.js). Guarded for Developer/Admin; renders
      * `Admin/accounts` with data from DashboardPageBuilder.
      */
-    private function renderAdminAccountsPartial(): string|RedirectResponse
+    private function renderAccountsPartial(): string|RedirectResponse
     {
         $guard = $this->guardAdminPartialAccess();
 
@@ -197,30 +190,11 @@ class HomeController extends BaseController
     }
 
     /**
-     * Returns the family registration form fragment for the admin "add family"
-     * modal. Pulls dropdown options from FamilyFormOptionsModel and renders
-     * `Family/form` in embedded mode.
-     */
-    private function renderAdminFamilyPartial(): string|RedirectResponse
-    {
-        $guard = $this->guardAdminPartialAccess();
-
-        if ($guard instanceof RedirectResponse) {
-            return $guard;
-        }
-
-        return view('Family/form', array_merge(
-            (new FamilyFormOptionsModel())->getViewData(),
-            ['canCreateFamily' => true, 'embeddedInModal' => true]
-        ));
-    }
-
-    /**
      * Returns the family records list fragment (table rows) for the admin
      * manage-records AJAX search/pagination. Renders
      * `Family/list` with data from DashboardPageBuilder.
      */
-    private function renderAdminRecordListPartial(): string|RedirectResponse
+    private function renderRecordListPartial(): string|RedirectResponse
     {
         $guard = $this->guardAdminPartialAccess();
 
@@ -238,7 +212,7 @@ class HomeController extends BaseController
      * Returns the audit-trail list fragment for the admin audit AJAX
      * search/filter. Renders `Admin/audit-trails`.
      */
-    private function renderAdminAuditPartial(): string|RedirectResponse
+    private function renderAuditPartial(): string|RedirectResponse
     {
         $guard = $this->guardAdminPartialAccess();
 
@@ -260,7 +234,7 @@ class HomeController extends BaseController
      * Returns the sectors lookup fragment for the admin sectors AJAX view.
      * Renders `Lookups/sectors`.
      */
-    private function renderAdminSectorsPartial(): string|RedirectResponse
+    private function renderSectorsPartial(): string|RedirectResponse
     {
         $guard = $this->guardAdminPartialAccess();
 
@@ -282,7 +256,7 @@ class HomeController extends BaseController
      * Returns the services lookup fragment for the admin services AJAX view.
      * Renders `Lookups/services`.
      */
-    private function renderAdminServicesPartial(): string|RedirectResponse
+    private function renderServicesPartial(): string|RedirectResponse
     {
         $guard = $this->guardAdminPartialAccess();
 
@@ -298,5 +272,4 @@ class HomeController extends BaseController
             'canRestore' => $viewData['canRestoreLookups'] ?? false,
         ]);
     }
-
 }

@@ -4,7 +4,7 @@
 // Connected to:
 //   - View   : Admin/layout.php audit-trails section
 //              .js-audit-action-filter select inside .js-audit-filter-form
-//   - Backend: GET admin/audit-trails (Workspace\HomeController::adminAuditTrails)
+//   - Backend: GET admin/audit-trails (Admin\DashboardController::auditTrails)
 //   - view-interactions.js also binds the same behaviour for AJAX-loaded content
 (function (document) {
     document.addEventListener('change', function (event) {

@@ -9,9 +9,9 @@
 //
 // Connected to:
 //   - dashboard-modal-loader.js : window.registerDashboardModal()
-//   - Backend : POST admin/lookups/sectors/store|update|archive|restore
-//               (Admin\SectorController)
-//   - Views   : Views/admin/lookups/index.php — #sectorActionModal, .js-sector-modal-open
+//   - Backend : POST admin/sectors/create|update|archive|restore
+//               (Lookups\SectorController, via the modal's data-*-action attributes)
+//   - Views   : Views/Lookups/sector-modal.php — #sectorActionModal, .js-sector-modal-open
 //               buttons carry data-sector-mode, data-sector-id, data-sector-name, etc.
 //   - Data    : PHP embeds data-next-code-map and data-existing-codes on the <form>
 (function (window) {

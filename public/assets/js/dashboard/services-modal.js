@@ -8,9 +8,9 @@
 //
 // Connected to:
 //   - dashboard-modal-loader.js : window.registerDashboardModal()
-//   - Backend : POST admin/lookups/services/store|update|archive|restore
-//               (Admin\ServicesController)
-//   - Views   : Views/admin/lookups/index.php — #serviceActionModal, .js-service-modal-open
+//   - Backend : POST admin/services/create|update|archive|restore
+//               (Lookups\ServiceController, via the modal's data-*-action attributes)
+//   - Views   : Views/Lookups/service-modal.php — #serviceActionModal, .js-service-modal-open
 //               buttons carry data-service-mode, data-service-id, data-service-name, etc.
 (function (window) {
     if (typeof window.registerDashboardModal !== 'function') {

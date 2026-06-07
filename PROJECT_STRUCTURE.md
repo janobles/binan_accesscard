@@ -22,9 +22,7 @@ Lookups, Audit, Workspace) is self-contained and easy to navigate. Routes in
   `member`, selected services to `member_services`, and audit logs to `audit_trails`.
 - `Lookups/SectorController.php`, `Lookups/ServiceController.php` — create/update/
   archive/restore/delete mutations for the `sector` and `services` lookup tables.
-- `Admin/SectorController.php`, `Admin/ServicesController.php` — the `admin/lookups/*`
-  management screens (list pages + their CRUD), sharing
-  `Controllers/Concerns/LookupManagementTrait.php`.
+  These back the live `admin/sectors` and `admin/services` management screens.
 - `BaseController.php`, `HomeRoleAccessTrait.php`, `Concerns/` — cross-cutting base
   class and shared traits.
 
@@ -56,8 +54,8 @@ Lookups, Audit, Workspace) is self-contained and easy to navigate. Routes in
 
 - `app/Views/Admin/layout.php`  
   Developer/Admin shell; swaps in `accounts.php`, `audit-trails.php`, and the
-  `Family/` and `Lookups/` views by active page. The standalone lookups screen
-  lives in `Admin/lookups/index.php`.
+  `Family/` and `Lookups/` views by active page. The sector and service lookup
+  screens live in `Lookups/sectors.php` and `Lookups/services.php`.
 
 - `app/Views/Employee/layout.php`  
   Employee workspace shell.

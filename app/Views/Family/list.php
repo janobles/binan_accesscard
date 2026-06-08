@@ -71,7 +71,7 @@ $deepToRecord = (int) ($deepToRecord ?? 0);
                 <a
                     class="btn btn-outline-secondary btn-sm js-exit-deep-search"
                     href="<?= esc(family_list_url($listRoute, '', $filterSectorId, $filterDate, $status), 'attr') ?>">
-                    <i class="bi bi-x-lg" aria-hidden="true"></i>Exit database results
+                    <i class= aria-hidden="true"></i>Remove filters
                 </a>
             </div>
             <div class="table-meta">

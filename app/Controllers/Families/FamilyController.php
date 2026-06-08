@@ -536,13 +536,13 @@ class FamilyController extends BaseController
         $model = new MemberModel();
 
         if (! $model->hasTable()) {
-            return redirect()->back()->with('error', 'The family records table is not available.');
+            return redirect()->to($this->listUrlWithoutDeepSearch())->with('error', 'The family records table is not available.');
         }
 
         $name = $this->familyHeadName($model, $headId);
 
         if (! $action($model)) {
-            return redirect()->back()->with('error', $errorMessage);
+            return redirect()->to($this->listUrlWithoutDeepSearch())->with('error', $errorMessage);
         }
 
         $auditModel = new AuditTrailsModel();
@@ -558,7 +558,37 @@ class FamilyController extends BaseController
             );
         }
 
-        return redirect()->back()->with('success', $successMessage);
+        return redirect()->to($this->listUrlWithoutDeepSearch())->with('success', $successMessage);
+    }
+
+    /**
+     * Builds a redirect URL from the HTTP Referer but strips the deep-search
+     * parameters (`search_scope`, `deep_q`, `deep_page`) so that archiving or
+     * restoring a record never lands back on the database-search results panel.
+     * Falls back to the clean manage-records page when the Referer is absent or
+     * points to a different host.
+     */
+    private function listUrlWithoutDeepSearch(): string
+    {
+        $fallback = site_url($this->isEmployeeContext() ? 'employee/manage-records' : 'admin/manage-records');
+        $referer  = (string) ($this->request->getServer('HTTP_REFERER') ?? '');
+
+        if ($referer === '') {
+            return $fallback;
+        }
+
+        $parsed = parse_url($referer);
+
+        if (($parsed['host'] ?? '') !== (string) ($this->request->getServer('HTTP_HOST') ?? '')) {
+            return $fallback;
+        }
+
+        parse_str($parsed['query'] ?? '', $params);
+        unset($params['search_scope'], $params['deep_q'], $params['deep_page']);
+
+        $query = http_build_query($params);
+
+        return ($parsed['scheme'] ?? 'https') . '://' . ($parsed['host'] ?? '') . ($parsed['path'] ?? '/') . ($query !== '' ? '?' . $query : '');
     }
 
     /**

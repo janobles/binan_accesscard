@@ -854,6 +854,8 @@ class FamilyController extends BaseController
             'Salary' => $this->moneyOrNull($member['salary'] ?? null),
             'contactnumber' => $this->nullableText($member['contactnumber'] ?? null),
             'religion' => $this->nullableText($member['religion'] ?? null),
+            'address' => $this->nullableText($this->request->getPost('head_address')),
+            'barangay' => $this->nullableText($this->request->getPost('head_barangay')),
             'relationship' => $this->nullableText($member['relationship'] ?? 'Member'),
             'sectorID' => SectorIds::normalize($member['sector_ids'] ?? $this->request->getPost('sector_ids')),
         ];

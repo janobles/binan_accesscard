@@ -491,7 +491,7 @@ class FamilyController extends BaseController
     {
         return $this->changeFamilyState(
             $headId,
-            ['Developer', 'Admin', 'Employee'],
+            ['Developer', 'Admin'],
             static fn (MemberModel $model): bool => $model->archiveFamily($headId),
             'FAMILY_ARCHIVE',
             'Archived',
@@ -509,7 +509,7 @@ class FamilyController extends BaseController
     {
         return $this->changeFamilyState(
             $headId,
-            ['Developer', 'Admin', 'Employee'],
+            ['Developer', 'Admin'],
             static fn (MemberModel $model): bool => $model->restoreFamily($headId),
             'FAMILY_RESTORE',
             'Restored',

@@ -10,8 +10,8 @@
  * App\Controllers\Employee\DashboardController
  * (dashboard, familyEntry, manageRecords, activity).
  *
- * Employees only ever see ACTIVE records and their OWN activity (no archive,
- * no account/sector/service management). The formatDate/formatTime/
+ * Employees can view and edit family records only. Archive, restore, and
+ * delete are restricted to Admin and Developer roles. The formatDate/formatTime/
  * formatAuditMember helpers are provided by the builder.
  */
 $username = $user['username'] ?? 'Employee';

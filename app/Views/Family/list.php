@@ -7,6 +7,7 @@ $routeBase = $routeBase ?? 'admin/manage-family';
 $listRoute = (string) ($listRoute ?? ($routeBase . '/list'));
 $status = (string) ($status ?? 'active') === 'archived' ? 'archived' : 'active';
 $canRestoreArchived = (bool) ($canRestoreArchived ?? false);
+$canArchive = (bool) ($canArchive ?? false);
 $page = max(1, (int) ($page ?? 1));
 $perPage = max(1, (int) ($perPage ?? 50));
 $totalFamilies = max(0, (int) ($totalFamilies ?? count($families)));
@@ -138,12 +139,14 @@ $deepToRecord = (int) ($deepToRecord ?? 0);
                                                     <i class="bi bi-pencil-square" aria-hidden="true"></i>Edit
                                                 </button>
                                             <?php endif; ?>
-                                            <form class="js-family-record-action-form" method="post" action="<?= site_url($routeBase . '/' . $deepAction . '/' . $resultHeadId) ?>" data-confirm-message="<?= esc($deepConfirm, 'attr') ?>" data-action-label="<?= esc($deepActionLabel, 'attr') ?>" data-action-past="<?= esc($deepActionPast, 'attr') ?>" data-family-name="<?= esc($deepFamilyName, 'attr') ?>">
-                                                <?= csrf_field() ?>
-                                                <button type="submit" class="dropdown-item <?= $status === 'archived' ? 'text-success' : 'text-danger' ?>">
-                                                    <i class="bi <?= $status === 'archived' ? 'bi-arrow-counterclockwise' : 'bi-archive' ?>" aria-hidden="true"></i><?= esc($deepActionLabel) ?>
-                                                </button>
-                                            </form>
+                                            <?php if ($canArchive): ?>
+                                                <form class="js-family-record-action-form" method="post" action="<?= site_url($routeBase . '/' . $deepAction . '/' . $resultHeadId) ?>" data-confirm-message="<?= esc($deepConfirm, 'attr') ?>" data-action-label="<?= esc($deepActionLabel, 'attr') ?>" data-action-past="<?= esc($deepActionPast, 'attr') ?>" data-family-name="<?= esc($deepFamilyName, 'attr') ?>">
+                                                    <?= csrf_field() ?>
+                                                    <button type="submit" class="dropdown-item <?= $status === 'archived' ? 'text-success' : 'text-danger' ?>">
+                                                        <i class="bi <?= $status === 'archived' ? 'bi-arrow-counterclockwise' : 'bi-archive' ?>" aria-hidden="true"></i><?= esc($deepActionLabel) ?>
+                                                    </button>
+                                                </form>
+                                            <?php endif; ?>
                                         </div>
                                     </div>
                                 <?php endif; ?>
@@ -222,12 +225,14 @@ $deepToRecord = (int) ($deepToRecord ?? 0);
                                         <i class="bi bi-pencil-square" aria-hidden="true"></i>Update
                                     </button>
                                 <?php endif; ?>
-                                <form class="js-family-record-action-form" method="post" action="<?= site_url($routeBase . '/' . $recordAction . '/' . $headId) ?>" data-confirm-message="<?= esc($confirmMessage, 'attr') ?>" data-action-label="<?= esc($recordActionLabel, 'attr') ?>" data-action-past="<?= esc($recordActionPast, 'attr') ?>" data-family-name="<?= esc((string) (($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? '')), 'attr') ?>">
-                                    <?= csrf_field() ?>
-                                    <button type="submit" class="dropdown-item <?= $status === 'archived' ? 'text-success' : 'text-danger' ?>">
-                                        <i class="bi <?= $status === 'archived' ? 'bi-arrow-counterclockwise' : 'bi-archive' ?>" aria-hidden="true"></i><?= esc($recordActionLabel) ?>
-                                    </button>
-                                </form>
+                                <?php if ($canArchive): ?>
+                                    <form class="js-family-record-action-form" method="post" action="<?= site_url($routeBase . '/' . $recordAction . '/' . $headId) ?>" data-confirm-message="<?= esc($confirmMessage, 'attr') ?>" data-action-label="<?= esc($recordActionLabel, 'attr') ?>" data-action-past="<?= esc($recordActionPast, 'attr') ?>" data-family-name="<?= esc((string) (($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? '')), 'attr') ?>">
+                                        <?= csrf_field() ?>
+                                        <button type="submit" class="dropdown-item <?= $status === 'archived' ? 'text-success' : 'text-danger' ?>">
+                                            <i class="bi <?= $status === 'archived' ? 'bi-arrow-counterclockwise' : 'bi-archive' ?>" aria-hidden="true"></i><?= esc($recordActionLabel) ?>
+                                        </button>
+                                    </form>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </td>

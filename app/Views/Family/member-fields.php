@@ -69,7 +69,13 @@ $memberSectorGroups = ViewFormatter::memberSectorGroups(
             </div>
             <div class="col-md-3">
                 <label class="form-label">Religion</label>
-                <input class="form-control" data-name="religion">
+                <select class="form-select js-other-select" data-name="religion" data-other-field="religion">
+                    <option value="">Select</option>
+                    <?php foreach ($religionOptions as $religion): ?>
+                        <option value="<?= esc($religion) ?>"><?= esc($religion) ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <input class="form-control mt-2 js-other-input family-form-hidden" data-other-for="religion" placeholder="Enter religion">
             </div>
             <div class="col-md-3">
                 <label class="form-label">Education</label>

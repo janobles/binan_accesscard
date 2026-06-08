@@ -9,6 +9,8 @@
     $headEducationIsCustom = $headEducation !== '' && ! in_array($headEducation, $educationOptions, true);
     $headJob = (string) ($familyRecord['job'] ?? '');
     $headJobIsCustom = $headJob !== '' && ! in_array($headJob, $jobOptions, true);
+    $headReligion = (string) ($familyRecord['religion'] ?? '');
+    $headReligionIsCustom = $headReligion !== '' && ! in_array($headReligion, $religionOptions, true);
     $headAddress = trim((string) ($familyRecord['address'] ?? ''));
     $headBarangay = trim((string) ($familyRecord['barangay'] ?? ''));
     ?>
@@ -69,7 +71,13 @@
         </div>
         <div class="col-md-3">
             <label class="form-label" for="head_religion">Religion</label>
-            <input class="form-control" id="head_religion" name="head_religion" value="<?= esc((string) ($familyRecord['religion'] ?? '')) ?>">
+            <select class="form-select js-other-select" id="head_religion" name="head_religion" data-other-input="#head_religion_other">
+                <option value="">Select</option>
+                <?php foreach ($religionOptions as $religion): ?>
+                    <option value="<?= esc($religion) ?>" <?= ($headReligionIsCustom && in_array((string) $religion, ['Other', 'Others'], true)) || $headReligion === (string) $religion ? 'selected' : '' ?>><?= esc($religion) ?></option>
+                <?php endforeach; ?>
+            </select>
+            <input class="form-control mt-2 js-other-input <?= $headReligionIsCustom ? '' : 'family-form-hidden' ?>" id="head_religion_other" value="<?= esc($headReligionIsCustom ? $headReligion : '') ?>" placeholder="Enter religion">
         </div>
         <div class="col-md-3">
             <label class="form-label" for="head_education">Education</label>

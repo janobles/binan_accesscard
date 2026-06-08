@@ -253,6 +253,7 @@ class DashboardPageBuilder
         $routeBase = 'admin/manage-family';
 
         return array_merge([
+            'canArchive'        => true,
             'canRestoreArchived' => true,
             'families'          => $memberModel->searchFamilies($searchKeyword, $perPage, ($page - 1) * $perPage, $showArchived, $filters),
             'fromRecord'        => $totalFamilies === 0 ? 0 : (($page - 1) * $perPage) + 1,
@@ -438,9 +439,8 @@ class DashboardPageBuilder
     }
 
     /**
-     * Employee counterpart of buildMemberListData(): the paginated family list with
-     * the same Active/Archived toggle and archive/restore controls as the admin
-     * view (employees can view, edit, and archive/restore — but never delete).
+     * Employee counterpart of buildMemberListData(): the paginated family list.
+     * Employees can view and edit records but cannot archive, restore, or delete.
      * Frontend: the employee Manage Records view.
      */
     private function buildEmployeeRecordListData(): array
@@ -465,7 +465,7 @@ class DashboardPageBuilder
         $page = min($page, $totalPages);
 
         return array_merge([
-            'canRestoreArchived' => true,
+            'canRestoreArchived' => false,
             'families' => $memberModel->searchFamilies($searchKeyword, $perPage, ($page - 1) * $perPage, $showArchived, $filters),
             'fromRecord' => $totalFamilies === 0 ? 0 : (($page - 1) * $perPage) + 1,
             'keyword' => $keyword,

@@ -47,6 +47,7 @@ class FamilyFormOptionsModel extends Model
             ],
             'education_levels' => FamilyProfilingFormV2::educationLevels(),
             'job_options' => FamilyProfilingFormV2::jobOptions(),
+            'religions' => FamilyProfilingFormV2::religions(),
             'income_ranges' => [
                 ['value' => '', 'label' => 'Select'],
                 ['value' => '0', 'label' => 'No regular income'],
@@ -92,6 +93,7 @@ class FamilyFormOptionsModel extends Model
             'relationshipOptions' => $this->sortLabelOptions($options['relationships'] ?? []),
             'educationOptions' => $this->sortLabelOptions($options['education_levels'] ?? []),
             'jobOptions' => $this->sortLabelOptions($options['job_options'] ?? []),
+            'religionOptions' => $this->sortLabelOptions($options['religions'] ?? []),
             'incomeOptions' => $options['income_ranges'] ?? [],
             'serviceOptions' => $serviceOptions,
             'servicesByCategory' => $servicesByCategory,

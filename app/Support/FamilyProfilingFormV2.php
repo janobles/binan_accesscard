@@ -98,6 +98,26 @@ class FamilyProfilingFormV2
         ];
     }
 
+    /** Religion options for the family form. */
+    public static function religions(): array
+    {
+        return [
+            'Roman Catholic',
+            'Iglesia ni Cristo',
+            'Islam',
+            'Born Again Christian',
+            'Protestant',
+            'Seventh-day Adventist',
+            'Iglesia Filipina Independiente',
+            'Bible Baptist',
+            "Jehovah's Witness",
+            'Church of Christ',
+            'Indigenous Beliefs',
+            'No Religion',
+            'Others',
+        ];
+    }
+
     /** Canonical seed rows for the `sector` lookup table (used to seed/reference defaults). */
     public static function sectorRows(): array
     {

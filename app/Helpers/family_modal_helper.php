@@ -95,6 +95,7 @@ if (! function_exists('familySelectOptions')) {
                 'PHP 18,001 - 25,000',
                 'PHP 25,001 - 40,000',
                 'PHP 40,001 - 65,000',
+                'PHP 70,001 - 80,000',
                 'Above PHP 100,000',
             ],
             'relationship' => [

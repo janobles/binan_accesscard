@@ -116,7 +116,7 @@
         </div>
         <div class="col-md-9">
             <label class="form-label" for="head_address">Address</label>
-            <input class="form-control" id="head_address" name="head_address" value="<?= esc($headAddress) ?>" placeholder="House no., street, subdivision" required>
+            <input class="form-control" id="head_address" name="head_address" value="<?= esc($headAddress) ?>" required>
             <div class="invalid-feedback">Address is required.</div>
         </div>
         <div class="col-md-3">

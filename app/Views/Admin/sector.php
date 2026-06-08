@@ -94,14 +94,14 @@
                                         <button
                                             type="button"
                                             data-sector-service-modal-open="sector-modal"
-                                            data-sector-service-modal-title="Edit Sector"
+                                            data-sector-service-modal-title="Update Sector"
                                             data-sector-service-modal-save-label="Update"
                                             data-sector-service-modal-field-sector-short-code="<?= esc((string) ($sector['shortcode'] ?? ''), 'attr') ?>"
                                             data-sector-service-modal-field-sector-name="<?= esc((string) ($sector['name'] ?? ''), 'attr') ?>"
                                             data-sector-service-modal-field-sector-description="<?= esc((string) ($sector['description'] ?? ''), 'attr') ?>"
                                         >
                                             <i class="bi bi-pencil-square" aria-hidden="true"></i>
-                                            <span>Edit</span>
+                                            <span>Update</span>
                                         </button>
                                         <button class="sector-action-danger" type="button">
                                             <i class="bi bi-archive" aria-hidden="true"></i>

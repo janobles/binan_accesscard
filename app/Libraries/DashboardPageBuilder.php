@@ -282,16 +282,23 @@ class DashboardPageBuilder
     private function buildDeepSearchData(string $status): array
     {
         $deepKeyword = trim((string) $this->request->getGet('deep_q'));
+        $scopeAll = strtolower(trim((string) $this->request->getGet('search_scope'))) === 'all';
 
         // The shared search bar's "Search All" button submits search_scope=all with
         // the keyword still in `q` (not deep_q). Treat that q as the deep keyword so
         // "Search All" runs the whole-database search and shows the deep results panel.
-        if ($deepKeyword === '' && strtolower(trim((string) $this->request->getGet('search_scope'))) === 'all') {
+        if ($deepKeyword === '' && $scopeAll) {
             $deepKeyword = trim((string) $this->request->getGet('q'));
         }
 
-        if ($deepKeyword === '') {
+        // Deep search is active when explicitly requested (search_scope=all) or when a
+        // deep keyword is present. An empty keyword with scope=all lists everyone in the
+        // database (filters still narrow it), matching the "show what's in the DB" intent.
+        $deepActive = $scopeAll || $deepKeyword !== '';
+
+        if (! $deepActive) {
             return [
+                'deepActive'     => false,
                 'deepKeyword'    => '',
                 'deepResults'    => [],
                 'deepPage'       => 1,
@@ -316,6 +323,7 @@ class DashboardPageBuilder
         $page = min($page, $totalPages);
 
         return [
+            'deepActive'     => true,
             'deepKeyword'    => $deepKeyword,
             'deepResults'    => $searchModel->allMembers($deepKeyword, $filters, $perPage, ($page - 1) * $perPage),
             'deepPage'       => $page,

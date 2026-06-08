@@ -305,32 +305,57 @@ class MemberModel extends Model
             ->where('member.memberID = member.headID', null, false);
 
         if ($keyword !== null && trim($keyword) !== '') {
-            $keyword = trim($keyword);
-
-            $builder->groupStart()
-                ->like('member.firstname', $keyword)
-                ->orLike('member.middlename', $keyword)
-                ->orLike('member.lastname', $keyword)
-                ->orLike('member.contactnumber', $keyword)
-                ->orLike('member.relationship', $keyword);
-
-            foreach (['religion', 'address', 'barangay'] as $field) {
-                if ($this->memberFieldExists($field)) {
-                    $builder->orLike('member.' . $field, $keyword);
-                }
-            }
-
-            foreach ($this->sectorIdsForKeyword($keyword) as $sectorId) {
-                $builder->orWhere(SectorIds::containsCondition($sectorId, 'member.sectorID'), null, false);
-            }
-
-            $builder
-                ->groupEnd();
+            $this->applyMemberKeyword($builder, trim($keyword));
         }
 
         $this->applyRecordFilters($builder, $filters);
 
         return $builder;
+    }
+
+    /**
+     * Adds the Manage Records keyword clause to a member query. Each whitespace
+     * token must match one of the name columns (AND across tokens, OR across
+     * firstname/middlename/lastname), so a full "Firstname Lastname" matches even
+     * though the words live in different columns. The whole keyword is still matched
+     * against the non-name fields (contact/relationship/religion/address/sector) as
+     * an OR branch, so single-word and non-name searches behave as before.
+     */
+    private function applyMemberKeyword($builder, string $keyword): void
+    {
+        $tokens = preg_split('/\s+/', $keyword, -1, PREG_SPLIT_NO_EMPTY) ?: [$keyword];
+
+        $builder->groupStart();
+
+        // Name tokens, AND-ed together.
+        $builder->groupStart();
+        foreach ($tokens as $token) {
+            $builder->groupStart()
+                ->like('member.firstname', $token)
+                ->orLike('member.middlename', $token)
+                ->orLike('member.lastname', $token)
+                ->groupEnd();
+        }
+        $builder->groupEnd();
+
+        // Whole-keyword matches on the non-name fields, OR-ed with the name match.
+        $builder->orGroupStart()
+            ->like('member.contactnumber', $keyword)
+            ->orLike('member.relationship', $keyword);
+
+        foreach (['religion', 'address', 'barangay'] as $field) {
+            if ($this->memberFieldExists($field)) {
+                $builder->orLike('member.' . $field, $keyword);
+            }
+        }
+
+        foreach ($this->sectorIdsForKeyword($keyword) as $sectorId) {
+            $builder->orWhere(SectorIds::containsCondition($sectorId, 'member.sectorID'), null, false);
+        }
+
+        $builder->groupEnd();
+
+        $builder->groupEnd();
     }
 
     // Applies the Manage Records filter controls to a member query builder.

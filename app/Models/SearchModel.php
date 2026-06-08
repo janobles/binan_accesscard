@@ -39,19 +39,7 @@ class SearchModel
         $keyword = $this->normalizeKeyword($keyword);
 
         if ($keyword !== '') {
-            $builder->groupStart()
-                ->like('firstname', $keyword)
-                ->orLike('middlename', $keyword)
-                ->orLike('lastname', $keyword)
-                ->orLike('contactnumber', $keyword)
-                ->orLike('relationship', $keyword)
-                ->orLike('sectorID', $keyword);
-
-            foreach ($this->sectorIdsForKeyword($keyword) as $sectorId) {
-                $builder->orWhere(SectorIds::containsCondition($sectorId, 'sectorID'), null, false);
-            }
-
-            $builder->groupEnd();
+            $this->applyMemberKeyword($builder, $keyword, '', ['sectorID'], 'sectorID');
         }
 
         $sectorId = (int) ($filters['sectorID'] ?? 0);
@@ -136,32 +124,10 @@ class SearchModel
         $keyword = $this->normalizeKeyword($keyword);
 
         if ($keyword !== '') {
-            $builder->groupStart()
-                ->like('m.firstname', $keyword)
-                ->orLike('m.middlename', $keyword)
-                ->orLike('m.lastname', $keyword)
-                ->orLike('m.contactnumber', $keyword)
-                ->orLike('m.relationship', $keyword);
-
-            foreach (['address', 'religion', 'job'] as $field) {
-                if ($this->db->fieldExists($field, 'member')) {
-                    $builder->orLike('m.' . $field, $keyword);
-                }
-            }
-
-            // Match by sector name -> sector IDs -> JSON array contains the ID.
-            foreach ($this->sectorIdsForKeyword($keyword) as $sectorId) {
-                $builder->orWhere(SectorIds::containsCondition($sectorId, 'm.sectorID'), null, false);
-            }
-
             // Match by service/program name -> the members assigned that service.
             $serviceMemberIds = $this->memberIdsForServiceKeyword($keyword);
 
-            if ($serviceMemberIds !== []) {
-                $builder->orWhereIn('m.memberID', $serviceMemberIds);
-            }
-
-            $builder->groupEnd();
+            $this->applyMemberKeyword($builder, $keyword, 'm.', ['address', 'religion', 'job'], 'm.sectorID', $serviceMemberIds);
         }
 
         $sectorId = (int) ($filters['sectorID'] ?? 0);
@@ -173,6 +139,57 @@ class SearchModel
         $this->applyDateRange($builder, 'm.dt_created', $filters);
 
         return $builder;
+    }
+
+    /**
+     * Adds a member keyword clause to a query. Each whitespace token must match one
+     * of the name columns (AND across tokens, OR across firstname/middlename/lastname),
+     * so a full "Firstname Lastname" matches even though the words live in different
+     * columns. The whole keyword is still matched against the non-name fields
+     * (contact/relationship + $likeColumns + sector + assigned services) as an OR
+     * branch, so single-word and non-name searches behave as before. $prefix is the
+     * table alias prefix ('' or 'm.'); $sectorColumn is the sectorID column to test.
+     */
+    private function applyMemberKeyword(BaseBuilder $builder, string $keyword, string $prefix, array $likeColumns, string $sectorColumn, array $serviceMemberIds = []): void
+    {
+        $tokens = preg_split('/\s+/', $keyword, -1, PREG_SPLIT_NO_EMPTY) ?: [$keyword];
+
+        $builder->groupStart();
+
+        // Name tokens, AND-ed together.
+        $builder->groupStart();
+        foreach ($tokens as $token) {
+            $builder->groupStart()
+                ->like($prefix . 'firstname', $token)
+                ->orLike($prefix . 'middlename', $token)
+                ->orLike($prefix . 'lastname', $token)
+                ->groupEnd();
+        }
+        $builder->groupEnd();
+
+        // Whole-keyword matches on the non-name fields, OR-ed with the name match.
+        $builder->orGroupStart()
+            ->like($prefix . 'contactnumber', $keyword)
+            ->orLike($prefix . 'relationship', $keyword);
+
+        foreach ($likeColumns as $field) {
+            if ($this->db->fieldExists($field, 'member')) {
+                $builder->orLike($prefix . $field, $keyword);
+            }
+        }
+
+        // Match by sector name -> sector IDs -> JSON array contains the ID.
+        foreach ($this->sectorIdsForKeyword($keyword) as $sectorId) {
+            $builder->orWhere(SectorIds::containsCondition($sectorId, $sectorColumn), null, false);
+        }
+
+        if ($serviceMemberIds !== []) {
+            $builder->orWhereIn($prefix . 'memberID', $serviceMemberIds);
+        }
+
+        $builder->groupEnd();
+
+        $builder->groupEnd();
     }
 
     /**

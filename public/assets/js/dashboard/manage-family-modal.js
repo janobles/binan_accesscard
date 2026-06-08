@@ -106,13 +106,20 @@
     }
 
     function filterTableRows(panel, keyword, sectorId) {
+        // Split into tokens so a full name ("Juan Cruz") matches even though the
+        // tokens live in different parts of the name; every token must be present.
+        var tokens = keyword ? keyword.split(/\s+/).filter(Boolean) : [];
         panel.querySelectorAll('[data-record-row]').forEach(function (row) {
-            var name = (row.querySelector('[data-record-name]') ? row.querySelector('[data-record-name]').textContent : '').toLowerCase().trim();
+            // Prefer the full name (incl. middle name) for matching; fall back to the
+            // visible name cell when the attribute isn't present.
+            var name = (row.dataset.recordFullname
+                || (row.querySelector('[data-record-name]') ? row.querySelector('[data-record-name]').textContent : '')
+            ).toLowerCase().trim();
             var rawIds = row.dataset.sectorIds || '[]';
             var ids = [];
             try { ids = JSON.parse(rawIds); } catch (_) {}
             if (!Array.isArray(ids)) { ids = ids ? [ids] : []; }
-            var nameOk = !keyword || name.indexOf(keyword) !== -1;
+            var nameOk = tokens.every(function (token) { return name.indexOf(token) !== -1; });
             var secOk  = !sectorId || ids.map(Number).indexOf(sectorId) !== -1;
             row.style.display = (nameOk && secOk) ? '' : 'none';
         });
@@ -204,6 +211,13 @@
                 fullUrl.searchParams.append(key, value);
             }
         });
+
+        // "Search All" runs the whole-database (deep) search, including non-head
+        // family members. The submitter's name/value isn't in FormData, so flag the
+        // deep scope here; DashboardPageBuilder reads search_scope to build the panel.
+        if (event.submitter && event.submitter.dataset.searchMode === 'all') {
+            fullUrl.searchParams.set('search_scope', 'all');
+        }
 
         loadFamilyList(panel, fullUrl.toString(), true);
     });

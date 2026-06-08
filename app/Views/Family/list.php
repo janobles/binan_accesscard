@@ -20,6 +20,7 @@ $filters = $filters ?? [];
 $filterSectorId = (string) ($filters['sectorID'] ?? '');
 $filterDate = (string) ($filters['date'] ?? '');
 $deepKeyword = (string) ($deepKeyword ?? '');
+$deepActive = (bool) ($deepActive ?? ($deepKeyword !== ''));
 $deepResults = $deepResults ?? [];
 $deepPage = max(1, (int) ($deepPage ?? 1));
 $deepTotal = max(0, (int) ($deepTotal ?? 0));
@@ -63,10 +64,10 @@ $deepToRecord = (int) ($deepToRecord ?? 0);
         'searchPlaceholder' => 'Search records by name, contact number, or sector',
     ]) ?>
 
-    <?php if ($deepKeyword !== ''): ?>
+    <?php if ($deepActive): ?>
         <div class="panel mb-3 border">
             <div class="section-title mt-0">
-                <span>Database results for "<?= esc($deepKeyword) ?>"</span>
+                <span><?= $deepKeyword === '' ? 'Database results' : 'Database results for "' . esc($deepKeyword) . '"' ?></span>
                 <a
                     class="btn btn-outline-secondary btn-sm js-exit-deep-search"
                     href="<?= esc(family_list_url($listRoute, '', $filterSectorId, $filterDate, $status), 'attr') ?>">
@@ -191,7 +192,8 @@ $deepToRecord = (int) ($deepToRecord ?? 0);
                     ? 'Restore this record to the active list?'
                     : $recordActionLabel . ' this record? This keeps the record in the database, marks it as ' . $recordActionPast . ', and hides it from active lists.';
                 ?>
-                <tr data-record-row data-sector-ids="<?= esc((string) ($family['sectorID'] ?? '[]'), 'attr') ?>">
+                <?php $recordFullName = trim((string) ($family['firstname'] ?? '') . ' ' . (string) ($family['middlename'] ?? '') . ' ' . (string) ($family['lastname'] ?? '')); ?>
+                <tr data-record-row data-sector-ids="<?= esc((string) ($family['sectorID'] ?? '[]'), 'attr') ?>" data-record-fullname="<?= esc(strtolower($recordFullName), 'attr') ?>">
                     <td data-record-name>
                         <span class="entity-title"><?= esc((string) (($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? ''))) ?></span>
                     </td>

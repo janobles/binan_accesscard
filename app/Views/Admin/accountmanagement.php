@@ -14,13 +14,13 @@
             >
 
             <select class="form-select" aria-label="Filter by role">
-                <option selected>All roles</option>
+                <option selected>Roles</option>
             </select>
 
             <select class="form-select" aria-label="Filter by status">
-                <option selected>All statuses</option>
+                <option selected>Status</option>
             </select>
-
+    
             <button class="btn btn-success px-4" type="button">
                 <i class="bi bi-search" aria-hidden="true"></i>
                 <span>Search</span>

@@ -10,6 +10,7 @@ use App\Models\Families\FamilyFormOptionsModel;
 use App\Models\Families\MemberModel;
 use App\Models\Families\MemberServiceModel;
 use App\Models\Lookups\ServiceModel;
+use App\Support\FamilyProfilingFormV2;
 use App\Support\FamilyRecordPresenter;
 use CodeIgniter\HTTP\RedirectResponse;
 
@@ -342,6 +343,12 @@ class FamilyController extends BaseController
         if ($head === null) {
             return $this->recordMissing();
         }
+
+        // Address stores "address, barangay" combined; split it so the edit form
+        // can prefill the separate Address and Barangay inputs.
+        $addressParts = $this->splitAddressBarangay($head['address'] ?? '');
+        $head['address'] = $addressParts['address'];
+        $head['barangay'] = $addressParts['barangay'];
 
         $serviceIdsByMember = (new MemberServiceModel())
             ->getServiceIdsByMemberIds(array_map(static fn (array $row): int => (int) $row['memberID'], $rows));
@@ -780,11 +787,60 @@ class FamilyController extends BaseController
             'Salary' => $this->moneyOrNull($this->request->getPost($prefix . 'salary')),
             'contactnumber' => $this->nullableText($this->request->getPost($prefix . 'contactnumber')),
             'religion' => $this->nullableText($this->request->getPost($prefix . 'religion')),
-            'address' => $this->nullableText($this->request->getPost($prefix . 'address')),
-            'barangay' => $this->nullableText($this->request->getPost($prefix . 'barangay')),
+            'address' => $this->combineAddressBarangay(
+                $this->request->getPost($prefix . 'address'),
+                $this->request->getPost($prefix . 'barangay')
+            ),
             'relationship' => $prefix === 'head_' ? 'Head' : $this->nullableText($this->request->getPost($prefix . 'relationship')),
             'sectorID' => SectorIds::normalize($this->request->getPost('sector_ids')),
         ];
+    }
+
+    /**
+     * Combines the separate Address and Barangay form inputs into the single
+     * `member.address` column ("address, barangay"). The schema has no barangay
+     * column; barangay is kept only as a form field for entry/editing.
+     */
+    private function combineAddressBarangay(mixed $address, mixed $barangay): ?string
+    {
+        $address = trim((string) $address);
+        $barangay = trim((string) $barangay);
+        $combined = trim($address . ($address !== '' && $barangay !== '' ? ', ' : '') . $barangay);
+
+        return $combined === '' ? null : $combined;
+    }
+
+    /**
+     * Inverse of combineAddressBarangay(): splits a stored address back into its
+     * address + barangay parts so the edit form can prefill both inputs. Matches the
+     * trailing barangay against the canonical list (longest match first so
+     * "Binan (Poblacion)" wins over "Poblacion").
+     *
+     * @return array{address: string, barangay: string}
+     */
+    private function splitAddressBarangay(mixed $combined): array
+    {
+        $combined = trim((string) $combined);
+        $barangays = FamilyProfilingFormV2::barangays();
+        usort($barangays, static fn (string $a, string $b): int => mb_strlen($b) <=> mb_strlen($a));
+
+        foreach ($barangays as $barangay) {
+            $suffix = ', ' . $barangay;
+
+            if (mb_strlen($combined) >= mb_strlen($suffix)
+                && strcasecmp(mb_substr($combined, -mb_strlen($suffix)), $suffix) === 0) {
+                return [
+                    'address' => rtrim(mb_substr($combined, 0, mb_strlen($combined) - mb_strlen($suffix))),
+                    'barangay' => $barangay,
+                ];
+            }
+
+            if (strcasecmp($combined, $barangay) === 0) {
+                return ['address' => '', 'barangay' => $barangay];
+            }
+        }
+
+        return ['address' => $combined, 'barangay' => ''];
     }
 
     /**
@@ -854,8 +910,10 @@ class FamilyController extends BaseController
             'Salary' => $this->moneyOrNull($member['salary'] ?? null),
             'contactnumber' => $this->nullableText($member['contactnumber'] ?? null),
             'religion' => $this->nullableText($member['religion'] ?? null),
-            'address' => $this->nullableText($this->request->getPost('head_address')),
-            'barangay' => $this->nullableText($this->request->getPost('head_barangay')),
+            'address' => $this->combineAddressBarangay(
+                $this->request->getPost('head_address'),
+                $this->request->getPost('head_barangay')
+            ),
             'relationship' => $this->nullableText($member['relationship'] ?? 'Member'),
             'sectorID' => SectorIds::normalize($member['sector_ids'] ?? $this->request->getPost('sector_ids')),
         ];

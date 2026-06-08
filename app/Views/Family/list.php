@@ -175,7 +175,7 @@ $deepToRecord = (int) ($deepToRecord ?? 0);
             <tr>
                 <th>Record Head</th>
                 <th>Sector</th>
-                <th>Barangay</th>
+                <th>Address</th>
                 <th>Birthday</th>
                 <th class="text-end">Actions</th>
             </tr>
@@ -196,7 +196,7 @@ $deepToRecord = (int) ($deepToRecord ?? 0);
                         <span class="entity-title"><?= esc((string) (($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? ''))) ?></span>
                     </td>
                     <td data-record-sector><?= esc((string) ($family['sector_name'] ?? '')) ?></td>
-                    <td><?= esc((string) ($family['barangay'] ?? '')) ?></td>
+                    <td><?= esc((string) ($family['address'] ?? '')) ?></td>
                     <td><?= esc((string) ($family['birthday'] ?? '')) ?></td>
                     <td class="text-end">
                         <div class="dropdown actions-menu">
@@ -217,7 +217,7 @@ $deepToRecord = (int) ($deepToRecord ?? 0);
                                         class="dropdown-item js-open-family-edit-modal"
                                         data-modal-url="<?= site_url($routeBase . '/edit/' . $headId . '?partial=1') ?>"
                                         data-modal-title="Edit Record">
-                                        <i class="bi bi-pencil-square" aria-hidden="true"></i>Edit
+                                        <i class="bi bi-pencil-square" aria-hidden="true"></i>Update
                                     </button>
                                 <?php endif; ?>
                                 <form class="js-family-record-action-form" method="post" action="<?= site_url($routeBase . '/' . $recordAction . '/' . $headId) ?>" data-confirm-message="<?= esc($confirmMessage, 'attr') ?>" data-action-label="<?= esc($recordActionLabel, 'attr') ?>" data-action-past="<?= esc($recordActionPast, 'attr') ?>" data-family-name="<?= esc((string) (($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? '')), 'attr') ?>">

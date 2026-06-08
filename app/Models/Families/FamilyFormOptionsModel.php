@@ -31,6 +31,7 @@ class FamilyFormOptionsModel extends Model
             'sexes' => ['Male', 'Female'],
             'suffixes' => FamilyProfilingFormV2::suffixes(),
             'civil_statuses' => FamilyProfilingFormV2::civilStatuses(),
+            'barangays' => FamilyProfilingFormV2::barangays(),
             'relationships' => [
                 'Spouse',
                 'Son',
@@ -87,6 +88,7 @@ class FamilyFormOptionsModel extends Model
             'sexOptions' => $this->sortLabelOptions($options['sexes'] ?? []),
             'suffixOptions' => $options['suffixes'] ?? [],
             'civilOptions' => $this->sortLabelOptions($options['civil_statuses'] ?? []),
+            'barangayOptions' => $this->sortLabelOptions($options['barangays'] ?? []),
             'relationshipOptions' => $this->sortLabelOptions($options['relationships'] ?? []),
             'educationOptions' => $this->sortLabelOptions($options['education_levels'] ?? []),
             'jobOptions' => $this->sortLabelOptions($options['job_options'] ?? []),

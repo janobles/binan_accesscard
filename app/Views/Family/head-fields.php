@@ -113,7 +113,12 @@
         </div>
         <div class="col-md-3">
             <label class="form-label" for="head_barangay">Barangay</label>
-            <input class="form-control" id="head_barangay" name="head_barangay" value="<?= esc($headBarangay) ?>" placeholder="Barangay" required>
+            <input class="form-control" id="head_barangay" name="head_barangay" value="<?= esc($headBarangay) ?>" list="head_barangay_options" placeholder="Barangay" required autocomplete="off">
+            <datalist id="head_barangay_options">
+                <?php foreach (($barangayOptions ?? []) as $barangay): ?>
+                    <option value="<?= esc($barangay) ?>"></option>
+                <?php endforeach; ?>
+            </datalist>
             <div class="invalid-feedback">Barangay is required.</div>
         </div>
     </div>

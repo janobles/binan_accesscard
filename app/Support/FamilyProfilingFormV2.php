@@ -36,6 +36,18 @@ class FamilyProfilingFormV2
         return ['Jr', 'Sr', 'I', 'II', 'III', 'IV', 'V'];
     }
 
+    /** Biñan barangay options for the family form address. */
+    public static function barangays(): array
+    {
+        return [
+            'Binan (Poblacion)', 'Bungahan', 'Santo Tomas (Calabuso)', 'Canlalay',
+            'Casile', 'De La Paz', 'Ganado', 'San Francisco (Halang)', 'Langkiwa',
+            'Loma', 'Malaban', 'Malamig', 'Mampalasan (Mamplasan)', 'Platero',
+            'Poblacion', 'Santo Nino', 'San Antonio', 'San Jose', 'San Vicente',
+            'Soro-Soro', 'Santo Domingo', 'Timbao', 'Tubigan', 'Zapote',
+        ];
+    }
+
     /** Civil-status options for the family form. */
     public static function civilStatuses(): array
     {

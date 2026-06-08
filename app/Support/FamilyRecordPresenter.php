@@ -59,15 +59,14 @@ class FamilyRecordPresenter
 
     /**
      * Builds the [{label, value}] profile grid shared by the head and member cards.
-     * Maps the income bracket value to its human label and merges address + barangay.
+     * Maps the income bracket value to its human label. Address already contains the
+     * barangay (combined on save), so it renders as a single Address row.
      */
     private static function details(array $row, array $incomeLabels): array
     {
         $salary = (string) ($row['Salary'] ?? '');
         $income = $salary === '' ? '' : (string) ($incomeLabels[$salary] ?? $salary);
         $address = trim((string) ($row['address'] ?? ''));
-        $barangay = trim((string) ($row['barangay'] ?? ''));
-        $fullAddress = trim($address . ($address !== '' && $barangay !== '' ? ', ' : '') . $barangay);
 
         $details = [
             ['label' => 'First name', 'value' => (string) ($row['firstname'] ?? '')],
@@ -81,7 +80,7 @@ class FamilyRecordPresenter
             ['label' => 'Education', 'value' => (string) ($row['education'] ?? '')],
             ['label' => 'Job', 'value' => (string) ($row['job'] ?? '')],
             ['label' => 'Monthly income', 'value' => $income],
-            ['label' => 'Address', 'value' => $fullAddress],
+            ['label' => 'Address', 'value' => $address],
         ];
 
         // Blank values render as '-' in the view; normalize empties so that holds.

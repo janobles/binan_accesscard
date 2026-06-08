@@ -7,6 +7,7 @@ $defaultFormOptions = [
     'sexes'                => [],
     'suffixes'             => [],
     'civil_statuses'       => [],
+    'barangays'            => [],
     'relationships'        => [],
     'education_levels'     => [],
     'income_ranges'        => [],
@@ -20,6 +21,7 @@ $sectorCatalog            = (array) ($sectorCatalog ?? []);
 $sexOptions               = $sexOptions ?? ($formOptions['sexes'] ?? []);
 $suffixOptions            = $suffixOptions ?? ($formOptions['suffixes'] ?? []);
 $civilOptions             = $civilOptions ?? ($formOptions['civil_statuses'] ?? []);
+$barangayOptions          = $barangayOptions ?? ($formOptions['barangays'] ?? []);
 $relationshipOptions      = $relationshipOptions ?? ($formOptions['relationships'] ?? []);
 $educationOptions         = $educationOptions ?? ($formOptions['education_levels'] ?? []);
 $incomeOptions            = $incomeOptions ?? ($formOptions['income_ranges'] ?? []);
@@ -57,6 +59,7 @@ $initialFamilyData        = [
     'existingMembers'          => $existingMembers,
 ];
 $fieldViewData            = compact(
+    'barangayOptions',
     'civilOptions',
     'educationOptions',
     'familyRecord',

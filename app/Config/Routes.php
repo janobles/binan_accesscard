@@ -23,4 +23,12 @@ $routes->get('admin/services', 'ServiceAndProgramsController::index');
 
 // ADMINISTRATION
 $routes->get('admin/accounts', 'AccountManagementController::index');
+$routes->post('admin/accounts/create', 'AccountManagementController::create');
 $routes->get('admin/audit-trails', 'AuditTrailsController::index');
+
+// EMPLOYEE
+$routes->get('employee/workspace', 'EmployeeWorkspaceController::workspace');
+$routes->get('employee/manage-records', 'EmployeeWorkspaceController::manageRecords');
+$routes->get('employee/family-record/new', 'EmployeeWorkspaceController::newRecord');
+$routes->get('employee/family-record/(:num)/edit', 'EmployeeWorkspaceController::editRecord/$1');
+$routes->get('employee/activity', 'EmployeeWorkspaceController::activity');

@@ -38,10 +38,10 @@ class LoginController extends BaseController
 
         $role = RoleAccess::normalizeRole((string) ($user['role'] ?? ''));
 
-        if (! in_array($role, ['Developer', 'Admin'], true)) {
+        if (! in_array($role, ['Developer', 'Admin', 'User'], true)) {
             return redirect()->back()
                 ->withInput()
-                ->with('error', 'Only Developer and Admin accounts can access this dashboard.');
+                ->with('error', 'Your account role is invalid. Please contact an administrator.');
         }
 
         session()->regenerate();
@@ -54,7 +54,7 @@ class LoginController extends BaseController
             'idle_last_activity' => time(),
         ]);
 
-        return redirect()->to(site_url('admin/dashboard'));
+        return RoleAccess::redirectByRole($role);
     }
 
     public function logout(): RedirectResponse

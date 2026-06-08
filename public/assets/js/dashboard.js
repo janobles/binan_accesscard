@@ -29,11 +29,11 @@
     };
 
     const isNewFamilyRecordWindowUrl = (workspaceUrl) => (
-        /\/admin\/family-record\/new\/?$/.test(createUrl(workspaceUrl).pathname)
+        /\/(?:admin|employee)\/family-record\/new\/?$/.test(createUrl(workspaceUrl).pathname)
     );
 
     const isEditFamilyRecordWindowUrl = (workspaceUrl) => (
-        /\/admin\/family-record\/\d+\/edit\/?$/.test(createUrl(workspaceUrl).pathname)
+        /\/(?:admin|employee)\/family-record\/\d+\/edit\/?$/.test(createUrl(workspaceUrl).pathname)
     );
 
     const isFamilyRecordWindowUrl = (workspaceUrl) => (

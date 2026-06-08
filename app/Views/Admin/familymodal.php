@@ -1,4 +1,6 @@
 <?php
+helper('family_modal');
+
 $sectorSectionLabels = [
     'PWD' => 'PWD (Persons with Disabilities)',
     'SP' => 'SP (Solo Parents)',
@@ -8,7 +10,7 @@ $sectorSectionLabels = [
     'OFW' => 'OFW (Overseas Filipino Workers)',
     'IP' => 'IP (Indigenous Peoples)',
     'IDP' => 'IDP (Internally Displaced Persons)',
-    'PDL' => 'PDL (Persons Deprived of Liberty)x`',
+    'PDL' => 'PDL (Persons Deprived of Liberty)',
 ];
 
 $serviceSectionLabels = [

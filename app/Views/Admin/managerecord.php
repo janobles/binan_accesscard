@@ -1,3 +1,14 @@
+<?php
+$canCreateFamily = (bool) ($canCreateFamily ?? true);
+$canEditFamily = (bool) ($canEditFamily ?? true);
+$canDeleteFamily = (bool) ($canDeleteFamily ?? true);
+$canRestoreArchived = (bool) ($canRestoreArchived ?? true);
+$newRecordUrl = (string) ($newRecordUrl ?? site_url('admin/family-record/new'));
+$editRecordBaseUrl = rtrim((string) ($editRecordBaseUrl ?? site_url('admin/family-record')), '/');
+$searchRouteAction = (string) ($searchRouteAction ?? site_url('admin/manage-records'));
+$showArchivedTab = (bool) ($showArchivedTab ?? true);
+?>
+
 <section class="manage-records" aria-label="Manage records">
     <header class="manage-records-toolbar">
         <div class="record-status-tabs" aria-label="Record status">
@@ -9,25 +20,29 @@
                 <i class="bi bi-check2-circle" aria-hidden="true"></i>
                 <span>Active</span>
             </a>
-            <a
-                class="btn <?= $status === 'archived' ? 'btn-success' : 'btn-outline-secondary' ?>"
-                href="<?= esc($archivedUrl, 'attr') ?>"
-                data-workspace-partial-link
-            >
-                <i class="bi bi-archive" aria-hidden="true"></i>
-                <span>Archived</span>
-            </a>
+            <?php if ($showArchivedTab): ?>
+                <a
+                    class="btn <?= $status === 'archived' ? 'btn-success' : 'btn-outline-secondary' ?>"
+                    href="<?= esc($archivedUrl, 'attr') ?>"
+                    data-workspace-partial-link
+                >
+                    <i class="bi bi-archive" aria-hidden="true"></i>
+                    <span>Archived</span>
+                </a>
+            <?php endif; ?>
         </div>
 
-       <a
-    class="btn btn-success"
-    href="<?= site_url('admin/family-record/new') ?>"
-    data-workspace-partial-link
-    aria-label="new record"
->
-    <i class="bi bi-plus-lg" aria-hidden="true"></i>
-    <span>New Record</span>
-</a>
+        <?php if ($canCreateFamily): ?>
+            <a
+                class="btn btn-success"
+                href="<?= esc($newRecordUrl, 'attr') ?>"
+                data-workspace-partial-link
+                aria-label="new record"
+            >
+                <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                <span>New Record</span>
+            </a>
+        <?php endif; ?>
     </header>
 
     <?= view('components/searchbar', [
@@ -36,6 +51,7 @@
         'sectorOptions' => $sectorOptions,
         'status' => $status,
         'pageTitle' => 'Manage Records',
+        'routeAction' => $searchRouteAction,
     ]) ?>
 
     <div class="record-table-meta">
@@ -70,10 +86,14 @@
                             <td><?= esc($record['display_birthday']) ?></td>
                             <td class="text-end">
                                 <?php if ($status === 'archived'): ?>
+                                    <?php if (! $canRestoreArchived): ?>
+                                        <span class="text-secondary">-</span>
+                                    <?php else: ?>
                                     <button class="btn btn-outline-success record-restore-action" type="button">
                                         <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
                                         <span>Restore</span>
                                     </button>
+                                    <?php endif; ?>
                                 <?php else: ?>
                                     <details class="record-action-menu">
                                         <summary class="btn btn-outline-secondary record-actions" aria-label="Record actions">
@@ -85,18 +105,22 @@
                                                 <i class="bi bi-eye" aria-hidden="true"></i>
                                                 <span>View</span>
                                             </a>
-                                            <a
-                                                href="<?= site_url('admin/family-record/' . (int) ($record['memberID'] ?? 0) . '/edit') ?>"
-                                                role="menuitem"
-                                                data-workspace-partial-link
-                                            >
-                                                <i class="bi bi-pencil-square" aria-hidden="true"></i>
-                                                <span>Update</span>
-                                            </a>
-                                            <a class="record-action-danger" href="#" role="menuitem">
-                                                <i class="bi bi-archive" aria-hidden="true"></i>
-                                                <span>Archive</span>
-                                            </a>
+                                            <?php if ($canEditFamily): ?>
+                                                <a
+                                                    href="<?= esc($editRecordBaseUrl . '/' . (int) ($record['memberID'] ?? 0) . '/edit', 'attr') ?>"
+                                                    role="menuitem"
+                                                    data-workspace-partial-link
+                                                >
+                                                    <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                                                    <span>Update</span>
+                                                </a>
+                                            <?php endif; ?>
+                                            <?php if ($canDeleteFamily): ?>
+                                                <a class="record-action-danger" href="#" role="menuitem">
+                                                    <i class="bi bi-archive" aria-hidden="true"></i>
+                                                    <span>Archive</span>
+                                                </a>
+                                            <?php endif; ?>
                                         </div>
                                     </details>
                                 <?php endif; ?>

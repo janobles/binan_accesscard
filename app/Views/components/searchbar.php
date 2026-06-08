@@ -4,12 +4,13 @@ $sectorId = (string) ($sectorId ?? '');
 $sectorOptions = $sectorOptions ?? [];
 $status = (string) ($status ?? 'active') === 'archived' ? 'archived' : 'active';
 $pageTitle = (string) ($pageTitle ?? 'Manage Records');
+$routeAction = (string) ($routeAction ?? site_url('admin/manage-records'));
 ?>
 
 <form
     class="searchbar"
     method="get"
-    action="<?= site_url('admin/manage-records') ?>"
+    action="<?= esc($routeAction, 'attr') ?>"
     data-workspace-search-form
     data-page-title="<?= esc($pageTitle, 'attr') ?>"
     aria-label="Search records"

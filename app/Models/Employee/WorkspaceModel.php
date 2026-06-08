@@ -43,6 +43,9 @@ class WorkspaceModel
                 'activity' => $layoutModel->navActive($activePage, 'activity'),
             ],
             'canCreateFamily' => true,
+            'canEditFamily' => true,
+            'canDeleteFamily' => false,
+            'canRestoreArchived' => false,
             'familyFormViewData' => $familyFormViewData,
             'recordListData' => $activePage === 'family-manage' ? $this->recordListData() : [],
             'recentFamilies' => $activePage === 'dashboard' && ($searchTerm !== '' || $hasSearchFilters)

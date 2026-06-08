@@ -3,8 +3,8 @@
         try {
             const pathname = new URL(url, window.location.origin).pathname;
 
-            return /\/admin\/family-record\/new\/?$/.test(pathname)
-                || /\/admin\/family-record\/\d+\/edit\/?$/.test(pathname);
+            return /\/(?:admin|employee)\/family-record\/new\/?$/.test(pathname)
+                || /\/(?:admin|employee)\/family-record\/\d+\/edit\/?$/.test(pathname);
         } catch {
             return false;
         }

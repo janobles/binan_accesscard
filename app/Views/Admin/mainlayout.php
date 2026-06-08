@@ -1,3 +1,10 @@
+<?php
+$recentAudits = $recentAudits ?? ($myAudits ?? []);
+$activityUrl = (string) ($activityUrl ?? site_url('admin/audit-trails'));
+$manageRecordsUrl = (string) ($manageRecordsUrl ?? site_url('admin/manage-records'));
+$activityLinkLabel = (string) ($activityLinkLabel ?? 'View All');
+?>
+
 <section class="overview-stats" aria-label="Dashboard statistics">
     <article class="stat-card">
         <p>Total Records</p>
@@ -25,6 +32,7 @@
     <?= view('components/searchbar', [
         'sectorOptions' => $sectorOptions ?? [],
         'pageTitle' => 'Manage Records',
+        'routeAction' => $manageRecordsUrl,
     ]) ?>
 
     <div class="table-responsive">
@@ -56,9 +64,9 @@
 <section class="overview-panel">
     <header class="panel-header">
         <h2>Recent Activity</h2>
-        <a class="btn btn-sm panel-action" href="<?= site_url('admin/audit-trails') ?>">
+        <a class="btn btn-sm panel-action" href="<?= esc($activityUrl, 'attr') ?>" data-workspace-partial-link>
             <i class="bi bi-arrow-right" aria-hidden="true"></i>
-            <span>View All</span>
+            <span><?= esc($activityLinkLabel) ?></span>
         </a>
     </header>
 

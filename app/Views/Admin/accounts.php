@@ -42,12 +42,12 @@ $statusBadge = static function (bool $isActive, string $label): string {
         <form class="account-filter-bar" method="get" action="<?= site_url('admin/accounts') ?>" aria-label="Account filters">
             <input class="form-control" type="search" name="q" value="<?= esc($searchTerm) ?>" aria-label="Search accounts" placeholder="Search accounts by username, role, or status">
             <select class="form-select" name="role" aria-label="Filter by role">
-                <option value="">All roles</option>
+                <option value="">Roles</option>
                 <option value="Admin" <?= (string) ($searchFilters['role'] ?? '') === 'Admin' ? 'selected' : '' ?>>Admin</option>
                 <option value="User" <?= (string) ($searchFilters['role'] ?? '') === 'User' ? 'selected' : '' ?>>Employee</option>
             </select>
             <select class="form-select" name="status" aria-label="Filter by status">
-                <option value="">All statuses</option>
+                <option value="">Statuses</option>
                 <option value="Enable" <?= (string) ($searchFilters['status'] ?? '') === 'Enable' ? 'selected' : '' ?>>Enable</option>
                 <option value="Disabled" <?= (string) ($searchFilters['status'] ?? '') === 'Disabled' ? 'selected' : '' ?>>Disabled</option>
             </select>

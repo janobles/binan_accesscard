@@ -229,8 +229,8 @@ class ManageRecordsController extends BaseController
         )));
 
         $viewData = array_merge($this->familyModalOptions(), [
-            'mode' => 'edit',
-            'windowTitle' => 'Edit Family Record',
+            'mode' => 'update',
+            'windowTitle' => 'Update Family Record',
             'submitLabel' => 'Update',
             'recordHead' => $recordHead,
             'familyMembers' => $familyMembers,
@@ -245,7 +245,7 @@ class ManageRecordsController extends BaseController
 
         return view('Admin/dashboard', [
             'activePage' => 'family-manage',
-            'pageTitle' => 'Edit Record',
+            'pageTitle' => 'update Record',
             'workspaceUrl' => site_url('admin/family-record/' . $headId . '/edit'),
         ]);
     }

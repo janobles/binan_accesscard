@@ -91,7 +91,7 @@
                                                 data-workspace-partial-link
                                             >
                                                 <i class="bi bi-pencil-square" aria-hidden="true"></i>
-                                                <span>Edit</span>
+                                                <span>Update</span>
                                             </a>
                                             <a class="record-action-danger" href="#" role="menuitem">
                                                 <i class="bi bi-archive" aria-hidden="true"></i>

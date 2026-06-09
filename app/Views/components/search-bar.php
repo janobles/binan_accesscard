@@ -61,6 +61,8 @@ $searchPlaceholder = (string) ($searchPlaceholder ?? 'Search records by name, co
             class="btn btn-outline-success searchbar-action"
             type="submit"
             data-search-mode="all"
+            name="search_scope"
+            value="all"
             formaction="<?= esc($searchAllAction, 'attr') ?>"
         >
             <i class="bi bi-database-search" aria-hidden="true"></i>

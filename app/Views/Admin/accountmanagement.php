@@ -1,4 +1,4 @@
-<link rel="stylesheet" href="<?= base_url('css/accountmanagement.css') ?>?v=<?= filemtime(FCPATH . 'css/accountmanagement.css') ?>">
+<?= account_management_styles() ?>
 
 <?php
 $adminAccounts = is_array($adminAccounts ?? null) ? $adminAccounts : [];

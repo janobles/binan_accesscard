@@ -310,7 +310,7 @@ $recordHeadAddress = trim(implode(', ', array_filter([
 ])));
 ?>
 
-<link rel="stylesheet" href="<?= base_url('css/familymodal.css') ?>?v=<?= filemtime(FCPATH . 'css/familymodal.css') ?>">
+<?= family_modal_styles() ?>
 
 <div class="family-window-overlay" data-family-window-backdrop>
     <section

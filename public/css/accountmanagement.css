@@ -3,10 +3,12 @@
     border: 1px solid #d5e2ee;
     border-radius: 0.45rem;
     background: #ffffff;
+    box-shadow: var(--workspace-shadow, 0 0.15rem 1.35rem rgba(18, 47, 37, 0.08));
 }
 
 .account-management-inner {
     padding: 1.35rem;
+    min-width: 0;
 }
 
 .account-management-title {
@@ -35,6 +37,7 @@
     gap: 1rem;
     align-items: center;
     padding: 1rem;
+    min-width: 0;
 }
 
 .account-grid {
@@ -46,6 +49,7 @@
 
 .account-card {
     padding: 1.15rem 1.25rem;
+    min-width: 0;
 }
 
 .account-card-title {
@@ -60,6 +64,7 @@
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
     gap: 0.75rem;
     align-items: end;
+    min-width: 0;
 }
 
 .account-management-panel .form-label {
@@ -71,6 +76,7 @@
 .account-management-panel .form-control,
 .account-management-panel .form-select,
 .account-management-panel .btn {
+    width: 100%;
     min-height: 3rem;
     font-size: 0.95rem;
 }
@@ -131,9 +137,19 @@
     }
 }
 
+@media (max-width: 56rem) {
+    .account-create-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .account-management-panel .table-responsive {
+        overflow-x: auto;
+    }
+}
+
 @media (max-width: 42rem) {
     .account-management-inner {
-        padding: 1rem;
+        padding: 0.85rem;
     }
 
     .account-filter-bar,
@@ -141,7 +157,20 @@
         grid-template-columns: 1fr;
     }
 
+    .account-filter-bar,
+    .account-card {
+        padding: 0.85rem;
+    }
+
     .account-management-panel .btn {
         width: 100%;
+    }
+
+    .account-management-title {
+        font-size: 1.05rem;
+    }
+
+    .account-card-title {
+        font-size: 0.98rem;
     }
 }

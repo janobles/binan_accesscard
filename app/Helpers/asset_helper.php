@@ -50,3 +50,95 @@ if (! function_exists('bootstrap_scripts')) {
         return script_tag('bootstrap/js/bootstrap.bundle.min.js');
     }
 }
+
+if (! function_exists('stylesheet_tags')) {
+    function stylesheet_tags(array $paths, bool $versioned = true): string
+    {
+        return implode(PHP_EOL . '    ', array_map(
+            static fn (string $path): string => stylesheet_tag($path, $versioned),
+            $paths
+        ));
+    }
+}
+
+if (! function_exists('script_tags')) {
+    function script_tags(array $paths, bool $versioned = true): string
+    {
+        return implode(PHP_EOL . '    ', array_map(
+            static fn (string $path): string => script_tag($path, $versioned),
+            $paths
+        ));
+    }
+}
+
+if (! function_exists('dashboard_styles')) {
+    function dashboard_styles(): string
+    {
+        $styles = [
+            'css/dashboard.css',
+            'css/mainlayout.css',
+            'css/managerecord.css',
+            'css/searchbar.css',
+            'css/sector.css',
+            'css/service.css',
+            'css/audittrails.css',
+        ];
+
+        return implode(PHP_EOL . '    ', [
+            bootstrap_styles(),
+            stylesheet_tags($styles),
+        ]);
+    }
+}
+
+if (! function_exists('dashboard_scripts')) {
+    function dashboard_scripts(bool $includeAdminModules = true): string
+    {
+        $scripts = [
+            'assets/js/dashboard.js',
+            'assets/js/search.js',
+            'assets/js/familymodal.js',
+        ];
+
+        if ($includeAdminModules) {
+            $scripts[] = 'assets/js/accountmanagement.js';
+            $scripts[] = 'assets/js/sector_service_modal.js';
+        }
+
+        return implode(PHP_EOL . '    ', [
+            bootstrap_scripts(),
+            script_tags($scripts),
+        ]);
+    }
+}
+
+if (! function_exists('login_styles')) {
+    function login_styles(): string
+    {
+        return implode(PHP_EOL . '    ', [
+            bootstrap_styles(false),
+            stylesheet_tag('css/login.css', true),
+        ]);
+    }
+}
+
+if (! function_exists('login_scripts')) {
+    function login_scripts(): string
+    {
+        return bootstrap_scripts();
+    }
+}
+
+if (! function_exists('account_management_styles')) {
+    function account_management_styles(): string
+    {
+        return stylesheet_tag('css/accountmanagement.css', true);
+    }
+}
+
+if (! function_exists('family_modal_styles')) {
+    function family_modal_styles(): string
+    {
+        return stylesheet_tag('css/familymodal.css', true);
+    }
+}

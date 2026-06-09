@@ -1,8 +1,9 @@
 .manage-records {
     overflow: hidden;
     border: 1px solid #dce5e2;
-    border-radius: 0.35rem;
+    border-radius: var(--workspace-radius);
     background: #ffffff;
+    box-shadow: var(--workspace-shadow);
 }
 
 .manage-records-toolbar,
@@ -166,4 +167,31 @@
     gap: 0.5rem;
     padding: 1rem;
     border-top: 1px solid #e2e9e7;
+}
+
+@media (max-width: 48rem) {
+    .manage-records-toolbar,
+    .record-table-meta {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .record-status-tabs,
+    .manage-records-toolbar > .btn {
+        width: 100%;
+    }
+
+    .record-status-tabs .btn,
+    .manage-records-toolbar > .btn {
+        justify-content: center;
+    }
+
+    .record-pagination {
+        justify-content: stretch;
+    }
+
+    .record-pagination .btn {
+        flex: 1 1 0;
+        justify-content: center;
+    }
 }

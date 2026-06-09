@@ -29,6 +29,13 @@
     box-shadow: 0 1.4rem 3.5rem rgba(10, 28, 45, 0.26);
 }
 
+.family-window,
+.family-window *,
+.family-record-wizard,
+.family-form-panel {
+    min-width: 0;
+}
+
 .family-window:focus {
     outline: none;
 }
@@ -346,6 +353,7 @@
     padding: 0.4rem 0.45rem;
     color: #254461;
     font-size: 0.95rem;
+    overflow-wrap: anywhere;
 }
 
 .family-choice-row .form-check-input {
@@ -390,6 +398,7 @@
     color: #254461;
     font-size: 0.95rem;
     line-height: 1.45;
+    overflow-wrap: anywhere;
 }
 
 .family-summary-item strong,
@@ -455,6 +464,11 @@
 }
 
 @media (max-width: 991.98px) {
+    .family-window {
+        width: min(calc(100vw - 3rem), 960px);
+        max-height: calc(100vh - 3rem);
+    }
+
     .family-step-two-grid {
         grid-template-columns: 1fr;
     }
@@ -485,12 +499,15 @@
     }
 
     .family-window-footer {
+        flex-wrap: wrap;
         gap: 0.5rem;
         padding: 0.7rem 0.9rem;
     }
 
     .family-window-footer-button {
-        width: 4.5rem;
+        width: auto;
+        min-width: calc(50% - 0.25rem);
+        flex: 1 1 calc(50% - 0.25rem);
     }
 
     .family-wizard-steps {
@@ -527,5 +544,31 @@
     .family-summary-lists {
         grid-template-columns: 1fr;
         gap: 1rem;
+    }
+}
+
+@media (max-width: 420px) {
+    .family-window-overlay {
+        padding: 0;
+    }
+
+    .family-window {
+        width: 100vw;
+        max-height: 100vh;
+        border-radius: 0;
+    }
+
+    .family-window-header h2 {
+        font-size: 1rem;
+    }
+
+    .family-form-panel {
+        padding: 1rem 0.8rem;
+    }
+
+    .family-record-wizard .form-control,
+    .family-record-wizard .form-select {
+        height: 3rem;
+        min-height: 3rem;
     }
 }

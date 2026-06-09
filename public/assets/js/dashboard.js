@@ -2,6 +2,8 @@
     const content = document.getElementById("dashboard-content");
     const pageTitle = document.getElementById("dashboard-page-title");
     const workspaceLinks = Array.from(document.querySelectorAll("[data-workspace-link]"));
+    const sidebar = document.getElementById("dashboard-sidebar");
+    const sidebarToggle = document.querySelector("[data-sidebar-toggle]");
 
     if (!content || !pageTitle) {
         return;
@@ -14,6 +16,21 @@
     }
 
     const createUrl = (url) => new URL(url, window.location.origin);
+
+    const setSidebarOpen = (isOpen) => {
+        document.body.classList.toggle("sidebar-open", isOpen);
+
+        if (sidebarToggle) {
+            sidebarToggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+        }
+    };
+
+    if (sidebar && sidebarToggle) {
+        sidebarToggle.addEventListener("click", (event) => {
+            event.stopPropagation();
+            setSidebarOpen(!document.body.classList.contains("sidebar-open"));
+        });
+    }
 
     const partialUrl = (workspaceUrl) => {
         const url = createUrl(workspaceUrl);
@@ -228,6 +245,7 @@
     workspaceLinks.forEach((link) => {
         link.addEventListener("click", (event) => {
             event.preventDefault();
+            setSidebarOpen(false);
             loadWorkspace(link.href, { title: link.dataset.pageTitle || "Page" });
         });
     });
@@ -250,6 +268,16 @@
     });
 
     document.addEventListener("click", (event) => {
+        if (
+            document.body.classList.contains("sidebar-open")
+            && sidebar
+            && sidebarToggle
+            && !sidebar.contains(event.target)
+            && !sidebarToggle.contains(event.target)
+        ) {
+            setSidebarOpen(false);
+        }
+
         const closeButton = event.target.closest("[data-family-window-close]");
 
         if (closeButton) {
@@ -273,6 +301,8 @@
         if (event.key !== "Escape") {
             return;
         }
+
+        setSidebarOpen(false);
 
         const windowElement = document.querySelector("[data-family-window-backdrop]");
 

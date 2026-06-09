@@ -356,3 +356,25 @@
         width: 100%;
     }
 }
+
+@media (min-width: 48.01rem) and (max-width: 75rem) {
+    .sector-service-modal-overlay {
+        align-items: flex-start;
+        padding-top: 8.5rem;
+    }
+
+    .sector-service-modal-window {
+        width: min(72vw, 34rem);
+        max-height: calc(100vh - 10rem);
+    }
+}
+
+@media (min-width: 48.01rem) and (max-width: 75rem) and (orientation: landscape) {
+    .sector-service-modal-overlay {
+        padding-top: 6.75rem;
+    }
+
+    .sector-service-modal-window {
+        max-height: calc(100vh - 7.5rem);
+    }
+}

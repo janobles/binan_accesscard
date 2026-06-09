@@ -131,4 +131,26 @@ body {
     .login-card-body {
         padding: 1.75rem 1.25rem;
     }
+
+    .login-logo {
+        width: 5rem;
+        height: 5rem;
+    }
+
+    .login-heading h1 {
+        font-size: 1.15rem;
+    }
+
+    .login-heading p,
+    .form-label,
+    .alert {
+        font-size: 0.86rem;
+    }
+}
+
+@media (max-height: 38rem) {
+    .login-page {
+        align-items: flex-start;
+        overflow-y: auto;
+    }
 }

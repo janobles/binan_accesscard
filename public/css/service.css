@@ -69,8 +69,9 @@
 }
 
 .service-table {
-    min-width: 48rem;
+    min-width: 42rem;
     margin: 0;
+    table-layout: auto;
 }
 
 .service-table th {
@@ -81,6 +82,7 @@
     font-size: 0.7rem;
     font-weight: 700;
     text-transform: uppercase;
+    word-break: keep-all;
 }
 
 .service-table td {
@@ -88,6 +90,8 @@
     border-bottom-color: #e4ece9;
     color: #34443f;
     font-size: 0.85rem;
+    overflow-wrap: break-word;
+    word-break: normal;
 }
 
 .service-table tbody tr:last-child td {
@@ -190,35 +194,75 @@
 
 @media (max-width: 48rem) {
     .service-toolbar {
-        align-items: stretch;
-        flex-direction: column;
+        align-items: center;
+        flex-direction: row;
         flex-wrap: nowrap;
+        gap: 0.55rem;
+        overflow-x: auto;
+        padding: 0.7rem;
     }
 
     .service-status-tabs,
     .service-toolbar > .btn {
-        width: 100%;
+        width: auto;
+        flex: 0 0 auto;
     }
 
     .service-status-tabs .btn,
     .service-toolbar > .btn {
         justify-content: center;
+        min-height: 2.2rem;
+        padding: 0.4rem 0.7rem;
+        font-size: 0.8rem;
     }
 
     .service-toolbar > .btn {
-        margin-left: 0;
+        margin-left: auto;
     }
 
     .service-searchbar {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(8rem, 1fr) auto;
+        gap: 0.55rem;
+        overflow-x: auto;
+        padding: 0.7rem;
+    }
+
+    .service-searchbar .form-control,
+    .service-searchbar .btn {
+        min-height: 2.25rem;
+        font-size: 0.8rem;
     }
 
     .service-searchbar-actions {
-        width: 100%;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: auto;
+        grid-template-columns: repeat(2, 6.75rem);
+        gap: 0.5rem;
     }
 
     .service-searchbar-action {
-        width: 100%;
+        width: 6.75rem;
+    }
+
+    .service-table {
+        min-width: 38rem;
+    }
+
+    .service-table th,
+    .service-table td {
+        padding: 0.5rem 0.45rem;
+        font-size: 0.68rem;
+        line-height: 1.22;
+    }
+
+    .service-status-badge {
+        min-width: 0;
+        padding: 0.18rem 0.42rem;
+        font-size: 0.65rem;
+    }
+
+    .service-actions {
+        width: 2.15rem;
+        min-height: 2rem;
+        padding: 0.25rem;
     }
 }

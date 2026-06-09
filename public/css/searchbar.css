@@ -56,15 +56,31 @@
 
 @media (max-width: 48rem) {
     .searchbar {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(9rem, 1fr) minmax(7rem, 0.7fr);
+        gap: 0.5rem;
+        padding: 0.65rem;
+        overflow-x: auto;
+    }
+
+    .searchbar .form-control,
+    .searchbar .form-select,
+    .searchbar .btn {
+        min-height: 2.2rem;
+        font-size: 0.78rem;
     }
 
     .searchbar-actions {
-        width: 100%;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-column: auto;
+        width: auto;
+        grid-template-columns: repeat(2, minmax(5.6rem, 1fr));
+        gap: 0.5rem;
     }
 
     .searchbar-action {
-        width: 100%;
+        width: auto;
+    }
+
+    .searchbar-single {
+        grid-template-columns: minmax(9rem, 1fr) auto;
     }
 }

@@ -29,11 +29,11 @@
             </div>
         </div>
 
-        <div class="family-member-actions">
-            <button type="button" class="btn btn-success" id="addMemberStickyBtn"><i class="bi bi-person-plus" aria-hidden="true"></i>Add Member</button>
-        </div>
     </article>
 
     <div id="memberRows" class="family-members-list"></div>
     <p class="text-muted mb-0 family-members-empty" id="memberRowsEmpty">No members added yet. Click Add Member.</p>
+    <div class="family-member-actions">
+        <button type="button" class="btn btn-success" id="addMemberStickyBtn"><i class="bi bi-person-plus" aria-hidden="true"></i>Add Member</button>
+    </div>
 </div>

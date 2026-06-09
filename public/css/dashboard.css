@@ -10,6 +10,15 @@
     --sidebar-active: rgba(255, 255, 255, 0.14);
     --workspace-background: #f4f7f6;
     --workspace-border: #dce5e2;
+    --workspace-radius: 0.4rem;
+    --workspace-shadow: 0 0.35rem 1.15rem rgba(18, 47, 37, 0.08);
+    --ui-font-xs: 0.68rem;
+    --ui-font-sm: 0.8rem;
+    --ui-font-md: 0.9rem;
+    --ui-font-lg: 1rem;
+    --ui-control-height: 2.5rem;
+    --ui-control-padding-x: 0.85rem;
+    --ui-control-padding-y: 0.45rem;
 }
 
 * {
@@ -42,20 +51,22 @@
 }
 
 .dashboard-header h1 {
-    font-size: 1rem;
+    font-size: var(--ui-font-lg);
     font-weight: 700;
 }
 
 .dashboard-header p {
     color: #6c757d;
-    font-size: 0.8rem;
+    font-size: var(--ui-font-sm);
 }
 
 body {
     margin: 0;
     min-height: 100vh;
     background: var(--workspace-background);
+    font-size: var(--ui-font-md);
     font-family: "Public Sans", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    overflow-x: hidden;
 }
 
 .dashboard-shell {
@@ -66,6 +77,7 @@ body {
 
 .dashboard-sidebar {
     position: sticky;
+    z-index: 30;
     top: 0;
     height: 100vh;
     overflow-y: auto;
@@ -97,7 +109,7 @@ body {
 
 .sidebar-brand-text {
     max-width: 10rem;
-    font-size: 0.83rem;
+    font-size: var(--ui-font-sm);
     font-weight: 700;
     line-height: 1.25;
 }
@@ -110,7 +122,7 @@ body {
     margin: 0 0 0.35rem;
     padding: 0 0.65rem;
     color: var(--sidebar-heading);
-    font-size: 0.68rem;
+    font-size: var(--ui-font-xs);
     font-weight: 700;
     text-transform: uppercase;
 }
@@ -119,11 +131,11 @@ body {
     display: flex;
     align-items: center;
     gap: 0.65rem;
-    min-height: 2.6rem;
-    padding: 0.65rem;
+    min-height: var(--ui-control-height);
+    padding: var(--ui-control-padding-y) 0.65rem;
     border-radius: 0.35rem;
     color: var(--sidebar-muted);
-    font-size: 0.86rem;
+    font-size: var(--ui-font-sm);
     font-weight: 600;
 }
 
@@ -170,13 +182,184 @@ body {
     padding: 1.5rem;
 }
 
-@media (max-width: 48rem) {
+.dashboard-sidebar-toggle {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 2.35rem;
+    height: 2.35rem;
+    flex: 0 0 2.35rem;
+    border: 1px solid #cfdad7;
+    border-radius: 50%;
+    background: #ffffff;
+    color: #244138;
+    font-size: 1.25rem;
+    line-height: 1;
+}
+
+.dashboard-sidebar-toggle:hover,
+.dashboard-sidebar-toggle:focus {
+    border-color: #168465;
+    color: #12684f;
+}
+
+.dashboard-content,
+.dashboard-content > *,
+.dashboard-workspace {
+    min-width: 0;
+}
+
+.dashboard-content img,
+.dashboard-content svg,
+.dashboard-content video,
+.dashboard-content input,
+.dashboard-content select,
+.dashboard-content textarea,
+.dashboard-content button {
+    max-width: 100%;
+}
+
+@media (max-width: 75rem) {
+    :root {
+        --sidebar-width: 15rem;
+        --header-height: 3.8rem;
+        --ui-font-xs: 0.64rem;
+        --ui-font-sm: 0.76rem;
+        --ui-font-md: 0.84rem;
+        --ui-font-lg: 0.95rem;
+        --ui-control-height: 2.35rem;
+        --ui-control-padding-x: 0.75rem;
+        --ui-control-padding-y: 0.4rem;
+    }
+
+    .dashboard-content {
+        padding: 1rem;
+    }
+}
+
+@media (max-width: 62rem) {
+    body.dashboard-sidebar-open {
+        overflow: hidden;
+    }
+
     .dashboard-shell {
-        grid-template-columns: 1fr;
+        display: block;
+        min-height: 100vh;
     }
 
     .dashboard-sidebar {
-        position: static;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: min(17rem, 82vw);
+        height: 100vh;
+        transform: translateX(-100%);
+        transition: transform 180ms ease;
+        box-shadow: 0.75rem 0 2rem rgba(13, 30, 23, 0.18);
+    }
+
+    body.dashboard-sidebar-open .dashboard-sidebar {
+        transform: translateX(0);
+    }
+
+    body.dashboard-sidebar-open::before {
+        position: fixed;
+        z-index: 25;
+        inset: 0;
+        background: rgba(12, 20, 18, 0.38);
+        content: "";
+    }
+
+    .dashboard-workspace {
         height: auto;
+        min-height: 100vh;
+        overflow: visible;
+    }
+
+    .dashboard-sidebar-toggle {
+        display: inline-flex;
+    }
+}
+
+@media (max-width: 48rem) {
+    :root {
+        --header-height: 3.55rem;
+        --ui-font-xs: 0.6rem;
+        --ui-font-sm: 0.7rem;
+        --ui-font-md: 0.78rem;
+        --ui-font-lg: 0.88rem;
+        --ui-control-height: 2.2rem;
+        --ui-control-padding-x: 0.65rem;
+        --ui-control-padding-y: 0.35rem;
+    }
+
+    .dashboard-header {
+        gap: 0.65rem;
+        padding: 0.55rem 0.8rem;
+    }
+
+    .header-logo {
+        width: 1.9rem;
+        height: 1.9rem;
+    }
+
+    .dashboard-content {
+        padding: 0.75rem;
+    }
+}
+
+@media (max-width: 40rem) {
+    .dashboard-content {
+        padding: 0.65rem;
+    }
+
+    .dashboard-sidebar-toggle {
+        width: 2.2rem;
+        height: 2.2rem;
+        flex-basis: 2.2rem;
+        font-size: 1.1rem;
+    }
+}
+
+@media (max-width: 30rem) {
+    :root {
+        --header-height: 3.2rem;
+        --ui-font-xs: 0.54rem;
+        --ui-font-sm: 0.62rem;
+        --ui-font-md: 0.7rem;
+        --ui-font-lg: 0.78rem;
+        --ui-control-height: 2rem;
+        --ui-control-padding-x: 0.55rem;
+        --ui-control-padding-y: 0.3rem;
+    }
+
+    .dashboard-header {
+        gap: 0.45rem;
+        padding: 0.45rem 0.55rem;
+    }
+
+    .header-logo {
+        width: 1.55rem;
+        height: 1.55rem;
+    }
+
+    .dashboard-header h1,
+    .dashboard-header p {
+        line-height: 1.1;
+    }
+}
+
+@media (max-height: 34rem) and (orientation: landscape) {
+    :root {
+        --header-height: 3.25rem;
+    }
+
+    .dashboard-header {
+        padding-top: 0.45rem;
+        padding-bottom: 0.45rem;
+    }
+
+    .dashboard-content {
+        padding-top: 0.55rem;
     }
 }

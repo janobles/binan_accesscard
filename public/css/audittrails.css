@@ -6,8 +6,9 @@
 }
 
 .audit-trails-table {
-    min-width: 56rem;
+    min-width: 46rem;
     margin: 0;
+    table-layout: auto;
 }
 
 .audit-trails-table th {
@@ -18,6 +19,7 @@
     font-size: 0.7rem;
     font-weight: 700;
     text-transform: uppercase;
+    word-break: keep-all;
 }
 
 .audit-trails-table td {
@@ -25,6 +27,8 @@
     border-bottom-color: #e4ece9;
     color: #34443f;
     font-size: 0.85rem;
+    overflow-wrap: break-word;
+    word-break: normal;
 }
 
 .audit-trails-table tbody tr:last-child td {
@@ -35,4 +39,17 @@
     padding: 1.5rem 1rem !important;
     color: #77847f !important;
     text-align: center;
+}
+
+@media (max-width: 48rem) {
+    .audit-trails-table {
+        min-width: 40rem;
+    }
+
+    .audit-trails-table th,
+    .audit-trails-table td {
+        padding: 0.5rem 0.45rem;
+        font-size: 0.68rem;
+        line-height: 1.22;
+    }
 }

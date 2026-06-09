@@ -40,9 +40,9 @@ $deepToRecord = (int) ($deepToRecord ?? 0);
             <input
                 class="form-control"
                 type="search"
-                name="q"
+                name="keyword"
                 value="<?= esc((string) $keyword, 'attr') ?>"
-                placeholder="Keyword"
+  
                 aria-label="Keyword"
                 autocomplete="off"
             >

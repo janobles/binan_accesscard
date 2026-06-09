@@ -9,6 +9,49 @@
 //   - Exposes: window.initViewInteractions(rootElement) for re-init after
 //              AJAX-loaded content replaces the DOM
 (function (window, document) {
+    function bindDashboardSidebar() {
+        const sidebar = document.getElementById('dashboard-sidebar');
+        const toggle = document.querySelector('[data-dashboard-sidebar-toggle]');
+
+        if (!sidebar || !toggle || toggle.dataset.sidebarToggleBound === '1') {
+            return;
+        }
+
+        toggle.dataset.sidebarToggleBound = '1';
+
+        const setOpen = function (isOpen) {
+            document.body.classList.toggle('dashboard-sidebar-open', isOpen);
+            toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        };
+
+        toggle.addEventListener('click', function (event) {
+            event.stopPropagation();
+            setOpen(!document.body.classList.contains('dashboard-sidebar-open'));
+        });
+
+        document.addEventListener('click', function (event) {
+            if (
+                document.body.classList.contains('dashboard-sidebar-open')
+                && !sidebar.contains(event.target)
+                && !toggle.contains(event.target)
+            ) {
+                setOpen(false);
+            }
+        });
+
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape') {
+                setOpen(false);
+            }
+        });
+
+        sidebar.querySelectorAll('a[href]').forEach(function (link) {
+            link.addEventListener('click', function () {
+                setOpen(false);
+            });
+        });
+    }
+
     function bindAuditFilters(root) {
         root.querySelectorAll('.js-audit-action-filter').forEach(function (select) {
             if (select.dataset.auditFilterBound === '1') {
@@ -53,6 +96,7 @@
     window.initViewInteractions = initViewInteractions;
 
     document.addEventListener('DOMContentLoaded', function () {
+        bindDashboardSidebar();
         initViewInteractions(document);
     });
 })(window, document);

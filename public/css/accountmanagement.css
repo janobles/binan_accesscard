@@ -97,6 +97,7 @@
 .account-table {
     min-width: 36rem;
     margin: 0;
+    table-layout: auto;
 }
 
 .account-table th {
@@ -107,6 +108,7 @@
     font-size: 0.78rem;
     font-weight: 800;
     text-transform: uppercase;
+    word-break: keep-all;
 }
 
 .account-table td {
@@ -114,6 +116,8 @@
     border-bottom-color: #dfe8f1;
     color: #09233f;
     font-size: 0.92rem;
+    overflow-wrap: break-word;
+    word-break: normal;
 }
 
 .account-empty-state {
@@ -127,21 +131,59 @@
     }
 
     .account-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, minmax(18rem, 1fr));
+        overflow-x: auto;
     }
 }
 
 @media (max-width: 42rem) {
     .account-management-inner {
-        padding: 1rem;
+        padding: 0.75rem;
     }
 
-    .account-filter-bar,
+    .account-filter-bar {
+        grid-template-columns: minmax(9rem, 1.4fr) minmax(7rem, 0.7fr) minmax(7rem, 0.7fr) auto;
+        gap: 0.55rem;
+        overflow-x: auto;
+        padding: 0.75rem;
+    }
+
     .account-create-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(8rem, 1fr) minmax(8rem, 1fr) auto;
+        gap: 0.65rem;
+        overflow-x: auto;
+    }
+
+    .account-card {
+        padding: 0.85rem;
+    }
+
+    .account-card-title {
+        margin-bottom: 0.8rem;
+        font-size: 0.95rem;
+    }
+
+    .account-management-panel .form-control,
+    .account-management-panel .form-select,
+    .account-management-panel .btn {
+        min-height: 2.35rem;
+        font-size: 0.82rem;
     }
 
     .account-management-panel .btn {
-        width: 100%;
+        width: auto;
+        padding-right: 0.75rem;
+        padding-left: 0.75rem;
+    }
+
+    .account-table {
+        min-width: 32rem;
+    }
+
+    .account-table th,
+    .account-table td {
+        padding: 0.5rem 0.45rem;
+        font-size: 0.7rem;
+        line-height: 1.22;
     }
 }

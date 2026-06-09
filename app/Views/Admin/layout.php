@@ -83,7 +83,7 @@ $jadeStyles = [
 </head>
 <body>
 <div class="dashboard-shell">
-    <aside class="dashboard-sidebar <?= esc($sidebarRoleClass) ?>">
+    <aside class="dashboard-sidebar <?= esc($sidebarRoleClass) ?>" id="dashboard-sidebar">
         <a class="sidebar-brand" href="<?= site_url('admin/dashboard') ?>">
             <img class="sidebar-logo" src="<?= base_url('assets/image/binan.png') ?>" alt="City of Binan Logo">
             <span class="sidebar-brand-text">Bi&ntilde;an Access Card MIS<br><small class="sidebar-brand-mode"><?= esc($modeLabel) ?></small></span>
@@ -140,6 +140,17 @@ $jadeStyles = [
 
     <div class="dashboard-workspace">
         <header class="dashboard-header">
+            <button
+                class="dashboard-sidebar-toggle"
+                type="button"
+                aria-label="Toggle navigation menu"
+                aria-controls="dashboard-sidebar"
+                aria-expanded="false"
+                data-dashboard-sidebar-toggle
+            >
+                <i class="bi bi-list" aria-hidden="true"></i>
+            </button>
+
             <img class="header-logo" src="<?= base_url('assets/image/binan.png') ?>" alt="City of Binan Logo">
             <div>
                 <h1 id="dashboard-page-title"><?= esc($pageTitle) ?></h1>
@@ -316,6 +327,7 @@ $versionedAssetUrl = static function (string $relativePath): ?string {
 };
 
 $dashboardScripts = [
+    'assets/js/dashboard/view-interactions.js',
     'assets/js/dashboard/family-form-ui.js',
     'assets/js/dashboard/family-form.js',
     'assets/js/dashboard/family-list.js',

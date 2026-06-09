@@ -80,6 +80,7 @@ $fieldViewData            = compact(
     <div class="family-wizard-card">
         <header class="family-window-header">
             <div class="family-window-heading">
+                <p class="family-window-kicker">Manage Records</p>
                 <h2 class="family-window-title"><?= $isEditMode ? 'Edit Family Record' : 'New Family Record' ?></h2>
             </div>
             <?php if ($embeddedInModal): ?>
@@ -99,24 +100,26 @@ $fieldViewData            = compact(
         <form method="post" action="<?= esc($formAction, 'attr') ?>" id="familyForm" class="needs-validation js-family-form" data-edit-mode="<?= $isEditMode ? '1' : '0' ?>" novalidate>
             <?= csrf_field() ?>
             <input type="hidden" name="entry_type" id="entryType" value="head">
-            <div id="familyFormAlert" class="mb-3" aria-live="polite"></div>
+            <div class="family-form-body">
+                <div id="familyFormAlert" class="mb-3" aria-live="polite"></div>
 
-            <div class="form-section family-step-panel is-visible" data-step="1">
-                <?= view('Family/head-fields', $fieldViewData) ?>
+                <div class="form-section family-step-panel is-visible" data-step="1">
+                    <?= view('Family/head-fields', $fieldViewData) ?>
+                </div>
+
+                <?= view('Lookups/picker', [
+                    'servicesByCategory' => $servicesByCategory,
+                    'sectorCatalog' => $sectorCatalog,
+                    'sectorOptions' => $sectorOptions,
+                    'selectedSectorIds' => $selectedSectorIds,
+                    'selectedSectorCategories' => $selectedSectorCategories,
+                    'selectedServiceIds' => $headServiceIds,
+                ]) ?>
+
+                <?= view('Family/member-summary') ?>
+
+                <div id="initialFamilyData" class="family-form-hidden" data-json="<?= esc(json_encode($initialFamilyData, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT), 'attr') ?>"></div>
             </div>
-
-            <?= view('Lookups/picker', [
-                'servicesByCategory' => $servicesByCategory,
-                'sectorCatalog' => $sectorCatalog,
-                'sectorOptions' => $sectorOptions,
-                'selectedSectorIds' => $selectedSectorIds,
-                'selectedSectorCategories' => $selectedSectorCategories,
-                'selectedServiceIds' => $headServiceIds,
-            ]) ?>
-
-            <?= view('Family/member-summary') ?>
-
-            <div id="initialFamilyData" class="family-form-hidden" data-json="<?= esc(json_encode($initialFamilyData, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT), 'attr') ?>"></div>
 
             <div class="d-flex justify-content-end gap-2 family-form-actions">
                 <?php if (! $isEditMode): ?>

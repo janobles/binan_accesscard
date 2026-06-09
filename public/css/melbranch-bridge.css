@@ -46,6 +46,24 @@
     color: var(--jade-green-deep) !important;
 }
 
+.dashboard-content :is(.btn, .form-control, .form-select),
+.floating-family-modal :is(.btn, .form-control, .form-select) {
+    min-height: var(--ui-control-height);
+    padding: var(--ui-control-padding-y) var(--ui-control-padding-x);
+    font-size: var(--ui-font-md);
+    line-height: 1.2;
+}
+
+.dashboard-content :is(.table, .table td),
+.floating-family-modal :is(.table, .table td) {
+    font-size: var(--ui-font-md);
+}
+
+.dashboard-content :is(.table th, .form-label, small),
+.floating-family-modal :is(.table th, .form-label, small) {
+    font-size: var(--ui-font-sm);
+}
+
 /* Inline-icon buttons used throughout melbranch markup */
 .btn i.bi {
     margin-right: 0.35rem;
@@ -78,7 +96,7 @@
 
 .stat-panel small {
     color: #64716d;
-    font-size: 0.72rem;
+    font-size: var(--ui-font-xs);
     font-weight: 700;
     text-transform: uppercase;
 }
@@ -86,7 +104,7 @@
 .stat-panel .stat-value {
     margin-top: 0.6rem;
     color: var(--jade-ink);
-    font-size: 1.75rem;
+    font-size: calc(var(--ui-font-lg) + 0.75rem);
     font-weight: 700;
     line-height: 1;
 }
@@ -100,7 +118,7 @@
     flex-wrap: wrap;
     margin: 1.25rem 0 0.85rem;
     color: #2a3935;
-    font-size: 1.02rem;
+    font-size: var(--ui-font-lg);
     font-weight: 700;
 }
 
@@ -120,6 +138,29 @@
     align-items: center;
 }
 
+@media (max-width: 48rem) {
+    .filter-bar {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+    }
+
+    .filter-bar > [class*="col-"] {
+        width: auto;
+        flex: 0 0 auto;
+    }
+
+    .filter-bar .form-control,
+    .filter-bar .form-select,
+    .filter-bar .btn {
+        min-height: 2.2rem;
+        font-size: 0.78rem;
+    }
+
+    .filter-bar .form-control {
+        width: min(15rem, 50vw);
+    }
+}
+
 /* ---- Tables ---- */
 .table.management-table,
 .table.family-list-table,
@@ -134,7 +175,7 @@
     border-bottom-color: var(--jade-card-border);
     background: #f4f7f7;
     color: #53635e;
-    font-size: 0.7rem;
+    font-size: var(--ui-font-xs);
     font-weight: 700;
     text-transform: uppercase;
 }
@@ -144,7 +185,7 @@
 .family-list-table td {
     border-bottom-color: #e4ece9;
     color: #34443f;
-    font-size: 0.85rem;
+    font-size: var(--ui-font-md);
 }
 
 .table-meta {
@@ -154,7 +195,7 @@
     gap: 1rem;
     margin: 0.75rem 0;
     color: var(--jade-muted);
-    font-size: 0.8rem;
+    font-size: var(--ui-font-sm);
 }
 
 .entity-title {
@@ -177,7 +218,7 @@
     min-width: 4.6rem;
     padding: 0.25rem 0.6rem;
     border-radius: 999px;
-    font-size: 0.74rem;
+    font-size: var(--ui-font-xs);
     font-weight: 700;
 }
 
@@ -555,3 +596,4 @@ tr.lookup-hidden {
         grid-template-columns: 1fr;
     }
 }
+

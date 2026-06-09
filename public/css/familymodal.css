@@ -165,6 +165,45 @@
     box-shadow: 0 0 0 0.2rem rgba(45, 117, 175, 0.14);
 }
 
+/* Shared Bootstrap modal window used by sector, service, account, audit, and
+   family fragments. Keep the desktop appearance, but fit it into tablet/mobile
+   viewports so the window does not sit too low or spill off-screen. */
+.floating-family-modal {
+    --modal-window-gap: clamp(0.5rem, 2vw, 1.5rem);
+    --modal-window-width: min(72rem, calc(100vw - (var(--modal-window-gap) * 2)));
+    --modal-window-height: min(44rem, calc(100dvh - (var(--modal-window-gap) * 2)));
+}
+
+.floating-family-modal .modal-dialog {
+    width: var(--modal-window-width);
+    max-width: var(--modal-window-width);
+    height: var(--modal-window-height);
+    max-height: var(--modal-window-height);
+    margin: var(--modal-window-gap) auto;
+}
+
+.floating-family-modal .modal-content {
+    display: flex;
+    height: 100%;
+    max-height: 100%;
+    overflow: hidden;
+    border: 1px solid #c8d9d4;
+    border-radius: 0.45rem;
+}
+
+.floating-family-modal .modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    padding: 0;
+}
+
+.floating-family-modal .modal-footer {
+    flex: 0 0 auto;
+    padding: 0.75rem 1rem;
+    border-top-color: #d7e3df;
+}
+
 .family-record-wizard {
     overflow: hidden;
     width: 100%;
@@ -455,6 +494,54 @@
 }
 
 @media (max-width: 991.98px) {
+    .floating-family-modal {
+        --modal-window-gap: 0.85rem;
+        --modal-window-width: min(43rem, calc(100vw - 1.7rem));
+        --modal-window-height: min(43rem, calc(100dvh - 1.7rem));
+    }
+
+    .floating-family-modal .modal-dialog {
+        margin-top: 0.85rem;
+        margin-bottom: 0.85rem;
+    }
+
+    .floating-family-modal .modal-dialog-centered {
+        min-height: calc(100% - (var(--modal-window-gap) * 2));
+        align-items: center;
+    }
+
+    .floating-family-modal .modal-content {
+        border-radius: 0.4rem;
+    }
+
+    .floating-family-modal .modal-footer {
+        padding: 0.65rem 0.85rem;
+    }
+
+    .floating-family-modal .modal-title,
+    .family-window-header h2,
+    .family-form-title {
+        font-size: 1rem;
+    }
+
+    .family-window-kicker,
+    .family-record-wizard .form-label {
+        font-size: 0.76rem;
+    }
+
+    .family-record-wizard .form-control,
+    .family-record-wizard .form-select {
+        height: 2.7rem;
+        min-height: 2.7rem;
+        padding: 0.55rem 0.7rem;
+        font-size: 0.84rem;
+    }
+
+    .family-record-wizard textarea.form-control {
+        height: auto;
+        min-height: 6rem;
+    }
+
     .family-step-two-grid {
         grid-template-columns: 1fr;
     }
@@ -466,6 +553,31 @@
 }
 
 @media (max-width: 767.98px) {
+    .floating-family-modal {
+        --modal-window-gap: 0.55rem;
+        --modal-window-width: calc(100vw - 1.1rem);
+        --modal-window-height: calc(100dvh - 1.1rem);
+    }
+
+    .floating-family-modal .modal-dialog {
+        margin-top: 0.55rem;
+        margin-bottom: 0.55rem;
+    }
+
+    .floating-family-modal .modal-footer {
+        justify-content: flex-end;
+        gap: 0.5rem;
+        padding: 0.6rem;
+    }
+
+    .floating-family-modal .modal-footer .btn {
+        flex: 0 0 auto;
+        min-height: 2.35rem;
+        padding-right: 0.85rem;
+        padding-left: 0.85rem;
+        font-size: 0.82rem;
+    }
+
     .family-window-overlay {
         align-items: stretch;
         padding: 0.6rem;
@@ -490,7 +602,9 @@
     }
 
     .family-window-footer-button {
-        width: 4.5rem;
+        width: 5rem;
+        height: 2.1rem;
+        font-size: 0.82rem;
     }
 
     .family-wizard-steps {
@@ -527,5 +641,48 @@
     .family-summary-lists {
         grid-template-columns: 1fr;
         gap: 1rem;
+    }
+}
+
+@media (max-height: 640px) and (orientation: landscape) {
+    .floating-family-modal {
+        --modal-window-gap: 0.45rem;
+        --modal-window-width: calc(100vw - 0.9rem);
+        --modal-window-height: calc(100dvh - 0.9rem);
+    }
+
+    .floating-family-modal .modal-dialog {
+        margin-top: 0.45rem;
+        margin-bottom: 0.45rem;
+    }
+
+    .floating-family-modal .modal-dialog-centered {
+        min-height: calc(100% - (var(--modal-window-gap) * 2));
+        align-items: center;
+    }
+
+    .floating-family-modal .modal-footer {
+        padding: 0.45rem 0.75rem;
+    }
+
+    .family-window-overlay {
+        padding: 0.45rem;
+    }
+
+    .family-window {
+        width: min(calc(100vw - 0.9rem), 60rem);
+        max-height: calc(100dvh - 0.9rem);
+    }
+
+    .family-window-header {
+        padding: 0.65rem 0.85rem;
+    }
+
+    .family-window-body {
+        padding: 0.6rem;
+    }
+
+    .family-window-footer {
+        padding: 0.55rem 0.85rem;
     }
 }

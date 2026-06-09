@@ -85,13 +85,16 @@
 }
 
 .manage-record-table {
-    min-width: 48rem;
+    min-width: 44rem;
     margin: 0;
+    table-layout: auto;
 }
 
 .table-responsive {
     font-size: 0;
     line-height: 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 .table-responsive > .table {
@@ -106,7 +109,9 @@
     color: #53635e;
     font-size: 0.7rem;
     font-weight: 700;
+    overflow-wrap: normal;
     text-transform: uppercase;
+    word-break: keep-all;
 }
 
 .manage-record-table td {
@@ -114,6 +119,8 @@
     border-bottom-color: #e4ece9;
     color: #34443f;
     font-size: 0.85rem;
+    overflow-wrap: break-word;
+    word-break: normal;
 }
 
 .manage-record-table tbody tr:last-child td {
@@ -222,6 +229,17 @@
 }
 
 @media (max-width: 62rem) {
+    .manage-record-table {
+        min-width: 42rem;
+    }
+
+    .manage-record-table th,
+    .manage-record-table td {
+        padding: 0.58rem 0.5rem;
+        font-size: 0.72rem;
+        line-height: 1.25;
+    }
+
     .records-quick-search {
         grid-template-columns: minmax(0, 1fr) minmax(9rem, 12rem);
     }
@@ -232,6 +250,17 @@
 }
 
 @media (max-width: 40rem) {
+    .manage-record-table {
+        min-width: 40rem;
+    }
+
+    .manage-record-table th,
+    .manage-record-table td {
+        padding: 0.42rem 0.34rem;
+        font-size: 0.62rem;
+        line-height: 1.22;
+    }
+
     .records-search-panel {
         margin-right: 0;
         margin-left: 0;
@@ -239,10 +268,21 @@
 
     .records-quick-search,
     .records-database-search {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(8rem, 1fr) minmax(6.5rem, auto);
+        gap: 0.5rem;
+        overflow-x: auto;
+    }
+
+    .records-search-row .form-control,
+    .records-search-row .form-select,
+    .records-search-row .btn {
+        min-height: 2.15rem;
+        font-size: 0.76rem;
     }
 
     .records-search-action {
-        width: 100%;
+        width: auto;
+        padding-right: 0.55rem;
+        padding-left: 0.55rem;
     }
 }

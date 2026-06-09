@@ -102,6 +102,50 @@
         });
     });
 
+    // Dashboard "Search All": send the keyword to the Manage Records *deep* ("Search
+    // All") bar instead of its quick keyword box. A plain submit would carry the term
+    // in `q`, which Manage Records runs as the ordinary keyword search — not what the
+    // user asked for. Navigate to the formaction with the term as `deep_q` plus
+    // search_scope=all so the whole-database results panel opens with the keyword in
+    // the Search All field. The button's name/value (search_scope=all) is the no-JS
+    // fallback; DashboardPageBuilder treats `q` as the deep keyword in that case.
+    document.addEventListener('submit', function (event) {
+        const submitter = event.submitter;
+        if (!submitter || submitter.dataset.searchMode !== 'all') {
+            return;
+        }
+
+        const form = event.target;
+        if (!(form instanceof HTMLFormElement)) {
+            return;
+        }
+
+        const panel = form.closest('[data-dashboard-search-panel]');
+        if (!panel) {
+            return;
+        }
+
+        event.preventDefault();
+
+        const actionUrl = submitter.getAttribute('formaction') || form.action;
+        const fullUrl = new URL(actionUrl, window.location.href);
+        const keywordInput = form.querySelector('input[name="q"]');
+        const sectorSelect = form.querySelector('select[name="sectorID"]');
+        const keyword  = keywordInput ? keywordInput.value.trim() : '';
+        const sectorId = sectorSelect ? sectorSelect.value.trim()  : '';
+
+        fullUrl.search = '';
+        if (keyword !== '') {
+            fullUrl.searchParams.set('deep_q', keyword);
+        }
+        if (sectorId !== '') {
+            fullUrl.searchParams.set('sectorID', sectorId);
+        }
+        fullUrl.searchParams.set('search_scope', 'all');
+
+        window.location.assign(fullUrl.toString());
+    });
+
     // Client-side "Search" for the dashboard overview panels (Recent Records on admin +
     // employee dashboards). Filters [data-record-row] rows without a server round-trip.
     document.addEventListener('submit', function (event) {

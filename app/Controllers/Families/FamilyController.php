@@ -805,9 +805,9 @@ class FamilyController extends BaseController
     private function memberPayload(string $prefix): array
     {
         return [
-            'firstname' => trim((string) $this->request->getPost($prefix . 'firstname')),
-            'middlename' => trim((string) $this->request->getPost($prefix . 'middlename')),
-            'lastname' => trim((string) $this->request->getPost($prefix . 'lastname')),
+            'firstname' => $this->cleanName($this->request->getPost($prefix . 'firstname')),
+            'middlename' => $this->cleanName($this->request->getPost($prefix . 'middlename')),
+            'lastname' => $this->cleanName($this->request->getPost($prefix . 'lastname')),
             'suffix' => $this->nullableText($this->request->getPost($prefix . 'suffix')),
             'birthday' => $this->request->getPost($prefix . 'birthday'),
             'civilstatus' => $this->nullableText($this->request->getPost($prefix . 'civilstatus')),
@@ -833,8 +833,8 @@ class FamilyController extends BaseController
      */
     private function combineAddressBarangay(mixed $address, mixed $barangay): ?string
     {
-        $address = trim((string) $address);
-        $barangay = trim((string) $barangay);
+        $address = $this->cleanAddress($address);
+        $barangay = $this->cleanAddress($barangay);
         $combined = trim($address . ($address !== '' && $barangay !== '' ? ', ' : '') . $barangay);
 
         return $combined === '' ? null : $combined;
@@ -928,9 +928,9 @@ class FamilyController extends BaseController
     private function memberPayloadFromArray(array $member): array
     {
         return [
-            'firstname' => trim((string) ($member['firstname'] ?? '')),
-            'middlename' => trim((string) ($member['middlename'] ?? '')),
-            'lastname' => trim((string) ($member['lastname'] ?? '')),
+            'firstname' => $this->cleanName($member['firstname'] ?? ''),
+            'middlename' => $this->cleanName($member['middlename'] ?? ''),
+            'lastname' => $this->cleanName($member['lastname'] ?? ''),
             'suffix' => $this->nullableText($member['suffix'] ?? null),
             'birthday' => $member['birthday'] ?? null,
             'civilstatus' => $this->nullableText($member['civilstatus'] ?? null),
@@ -981,6 +981,35 @@ class FamilyController extends BaseController
         $value = trim((string) $value);
 
         return $value === '' ? null : $value;
+    }
+
+    /**
+     * Cleans a person-name field on save/update: keeps only letters (incl. ñ/Ñ and
+     * accents), spaces and the - ' . punctuation real names use, collapses repeated
+     * whitespace, then applies Title Case (first letter of each word capitalized).
+     * Workers may type freely; the stored value is normalized here. Used for
+     * first/middle/last names of head and members.
+     */
+    private function cleanName(mixed $value): string
+    {
+        $value = preg_replace("/[^\\p{L}\\s.'-]/u", '', (string) $value);
+        $value = trim((string) preg_replace('/\\s+/u', ' ', (string) $value));
+
+        return mb_convert_case($value, MB_CASE_TITLE, 'UTF-8');
+    }
+
+    /**
+     * Cleans an address/barangay field on save/update: address-safe allowlist of
+     * letters, digits, spaces and # , . - / ' ( ) & (so house/block numbers survive),
+     * collapses repeated whitespace, then applies Title Case. Strips odd symbols such
+     * as < > | \ " : ] [.
+     */
+    private function cleanAddress(mixed $value): string
+    {
+        $value = preg_replace("/[^\\p{L}\\p{N}\\s#,.\\-\\/'()&]/u", '', (string) $value);
+        $value = trim((string) preg_replace('/\\s+/u', ' ', (string) $value));
+
+        return mb_convert_case($value, MB_CASE_TITLE, 'UTF-8');
     }
 
 }

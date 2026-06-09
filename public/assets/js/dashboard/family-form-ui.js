@@ -40,6 +40,21 @@
         });
     }
 
+    // Cleans a custom "Other" free-text value at submit: keeps letters, digits, spaces
+    // and . , ' - / & ( ), collapses whitespace, then Title Case (first letter of each
+    // word capitalized). Only ever runs on genuinely typed "Other" text, so canonical
+    // dropdown picks stay untouched.
+    function cleanOtherValue(value) {
+        return String(value || '')
+            .replace(/[^\p{L}\p{N}\s.,'\-/&()]/gu, '')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .toLowerCase()
+            .replace(/(^|[^\p{L}])(\p{L})/gu, function (match, boundary, letter) {
+                return boundary + letter.toUpperCase();
+            });
+    }
+
     function isOtherValue(value) {
         const normalized = String(value || '').trim().toLowerCase();
 
@@ -134,7 +149,7 @@
                 return;
             }
 
-            const otherValue = String(otherInput.value || '').trim();
+            const otherValue = cleanOtherValue(otherInput.value);
 
             if (otherValue === '') {
                 return;

@@ -29,6 +29,53 @@
     gap: 0.4rem;
 }
 
+.records-search-panel {
+    display: grid;
+    gap: 0.75rem;
+    margin: -0.15rem -0.1rem 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e2e9e7;
+}
+
+.records-search-row {
+    display: grid;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0;
+}
+
+.records-quick-search {
+    grid-template-columns: minmax(16rem, 1fr) minmax(9rem, 11rem) repeat(3, minmax(6.75rem, auto));
+}
+
+.records-database-search {
+    grid-template-columns: minmax(16rem, 1fr) minmax(7.5rem, auto);
+}
+
+.records-search-row .form-control,
+.records-search-row .form-select,
+.records-search-row .btn {
+    min-height: 2.65rem;
+    font-size: 0.9rem;
+}
+
+.records-search-row .form-control,
+.records-search-row .form-select {
+    min-width: 0;
+}
+
+.records-search-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    white-space: nowrap;
+}
+
+.records-status-select {
+    cursor: pointer;
+}
+
 .record-table-meta {
     justify-content: space-between;
     gap: 1rem;
@@ -166,4 +213,36 @@
     gap: 0.5rem;
     padding: 1rem;
     border-top: 1px solid #e2e9e7;
+}
+
+@media (max-width: 74rem) {
+    .records-quick-search {
+        grid-template-columns: minmax(0, 1fr) minmax(9rem, 11rem) repeat(3, minmax(6.25rem, auto));
+    }
+}
+
+@media (max-width: 62rem) {
+    .records-quick-search {
+        grid-template-columns: minmax(0, 1fr) minmax(9rem, 12rem);
+    }
+
+    .records-quick-search .records-search-action {
+        min-width: 0;
+    }
+}
+
+@media (max-width: 40rem) {
+    .records-search-panel {
+        margin-right: 0;
+        margin-left: 0;
+    }
+
+    .records-quick-search,
+    .records-database-search {
+        grid-template-columns: 1fr;
+    }
+
+    .records-search-action {
+        width: 100%;
+    }
 }

@@ -33,37 +33,57 @@ $deepToRecord = (int) ($deepToRecord ?? 0);
 <div
     class="panel mb-3"
     data-family-list-panel
+    data-current-status="<?= esc($status, 'attr') ?>"
     data-family-list-full-base="<?= esc(site_url($listRoute), 'attr') ?>">
-    <div class="section-title mt-0">
-        <span><?= $status === 'archived' ? 'Archived Records' : 'Manage Records' ?></span>
-        <?php if ($status !== 'archived'): ?>
-            <button type="button" class="btn btn-primary btn-sm js-open-family-modal" data-modal-url="<?= site_url($routeBase . '?partial=1') ?>" data-modal-title="Add Record"><i class="bi bi-plus-lg" aria-hidden="true"></i>Add Record</button>
-        <?php endif; ?>
-    </div>
-    <?php if ($canRestoreArchived): ?>
-        <div class="toolbar-row mb-3">
-            <a
-                class="btn btn-sm <?= $status === 'active' ? 'btn-primary' : 'btn-outline-secondary' ?>"
-                href="<?= esc(family_list_url($listRoute, (string) $keyword, $filterSectorId, $filterDate, 'active'), 'attr') ?>">
-                <i class="bi bi-check2-circle" aria-hidden="true"></i>Active
-            </a>
-            <a
-                class="btn btn-sm <?= $status === 'archived' ? 'btn-primary' : 'btn-outline-secondary' ?>"
-                href="<?= esc(family_list_url($listRoute, (string) $keyword, $filterSectorId, $filterDate, 'archived'), 'attr') ?>">
-                <i class="bi bi-archive" aria-hidden="true"></i>Archived
-            </a>
-        </div>
-    <?php endif; ?>
+    <div class="records-search-panel">
+        <form class="records-search-row records-quick-search" method="get" action="<?= esc(site_url($listRoute), 'attr') ?>" aria-label="Manual records search" data-records-search="quick">
+            <input
+                class="form-control"
+                type="search"
+                name="q"
+                value="<?= esc((string) $keyword, 'attr') ?>"
+                placeholder="Keyword"
+                aria-label="Keyword"
+                autocomplete="off"
+            >
+            <select class="form-select records-status-select" name="status" aria-label="Record status">
+                <option value="active" <?= $status === 'active' ? 'selected' : '' ?>>Active</option>
+                <option value="archived" <?= $status === 'archived' ? 'selected' : '' ?>>Archived</option>
+            </select>
+            <button class="btn btn-success records-search-action" type="submit" data-search-mode="local">
+                <i class="bi bi-search" aria-hidden="true"></i>
+                <span>Search</span>
+            </button>
+            <button class="btn btn-outline-secondary records-search-action" type="button" data-records-clear>
+                <i class="bi bi-x-lg" aria-hidden="true"></i>
+                <span>Clear</span>
+            </button>
+            <button type="button" class="btn btn-primary records-search-action js-open-family-modal" data-modal-url="<?= site_url($routeBase . '?partial=1') ?>" data-modal-title="Add Record">
+                <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                <span>Add</span>
+            </button>
+        </form>
 
-    <?= view('components/search-bar', [
-        'searchTerm'        => $keyword,
-        'sectorOptions'     => $sectorOptions,
-        'selectedSectorId'  => $filterSectorId,
-        'searchAction'      => site_url($listRoute),
-        'searchAllAction'   => site_url($listRoute),
-        'status'            => $status,
-        'searchPlaceholder' => 'Search records by name, contact number, or sector',
-    ]) ?>
+        <form class="records-search-row records-database-search" method="get" action="<?= esc(site_url($listRoute), 'attr') ?>" aria-label="Database records search" data-records-search="database">
+            <input type="hidden" name="search_scope" value="all">
+            <?php if ($status === 'archived'): ?>
+                <input type="hidden" name="status" value="archived">
+            <?php endif; ?>
+            <input
+                class="form-control"
+                type="search"
+                name="deep_q"
+                value="<?= esc($deepKeyword, 'attr') ?>"
+                placeholder="Search the full database"
+                aria-label="Search the full database"
+                autocomplete="off"
+            >
+            <button class="btn btn-outline-success records-search-action" type="submit" data-search-mode="database">
+                <i class="bi bi-database-search" aria-hidden="true"></i>
+                <span>Search</span>
+            </button>
+        </form>
+    </div>
 
     <?php if ($deepActive): ?>
         <div class="panel mb-3 border">
@@ -72,7 +92,7 @@ $deepToRecord = (int) ($deepToRecord ?? 0);
                 <a
                     class="btn btn-outline-secondary btn-sm js-exit-deep-search"
                     href="<?= esc(family_list_url($listRoute, '', $filterSectorId, $filterDate, $status), 'attr') ?>">
-                    <i class= aria-hidden="true"></i>Remove filters
+                    <i class="bi bi-x-lg" aria-hidden="true"></i>Remove filters
                 </a>
             </div>
             <div class="table-meta">

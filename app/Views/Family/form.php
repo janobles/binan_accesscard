@@ -80,7 +80,6 @@ $fieldViewData            = compact(
     <div class="family-wizard-card">
         <header class="family-window-header">
             <div class="family-window-heading">
-                <p class="family-window-kicker">Manage Records</p>
                 <h2 class="family-window-title"><?= $isEditMode ? 'Edit Family Record' : 'New Family Record' ?></h2>
             </div>
             <?php if ($embeddedInModal): ?>

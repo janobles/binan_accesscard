@@ -26,7 +26,7 @@
     window.registerDashboardModal({
         namespace: 'family',
         triggerSelector: '.js-open-family-modal, .js-open-family-view-modal, .js-open-family-edit-modal',
-        defaultTitle: 'Manage Record',
+        defaultTitle: 'Record',
         loadingMarkup: '<div class="family-modal-loading" role="status" aria-live="polite"><div class="spinner-border text-primary" aria-hidden="true"></div><span>Loading record form...</span></div>',
         errorMarkup: '<div class="alert alert-danger mb-0">Unable to load the record form. Please try again.</div>',
         onLoaded: function (container) {
@@ -115,14 +115,35 @@
             var name = (row.dataset.recordFullname
                 || (row.querySelector('[data-record-name]') ? row.querySelector('[data-record-name]').textContent : '')
             ).toLowerCase().trim();
+            var rowText = row.textContent ? row.textContent.toLowerCase().trim() : '';
+            var searchableText = (name + ' ' + rowText).trim();
             var rawIds = row.dataset.sectorIds || '[]';
             var ids = [];
             try { ids = JSON.parse(rawIds); } catch (_) {}
             if (!Array.isArray(ids)) { ids = ids ? [ids] : []; }
-            var nameOk = tokens.every(function (token) { return name.indexOf(token) !== -1; });
+            var nameOk = tokens.every(function (token) { return searchableText.indexOf(token) !== -1; });
             var secOk  = !sectorId || ids.map(Number).indexOf(sectorId) !== -1;
             row.style.display = (nameOk && secOk) ? '' : 'none';
         });
+    }
+
+    function selectedStatus(form, panel) {
+        const select = form.querySelector('select[name="status"]');
+        const status = select ? select.value : (panel.dataset.currentStatus || 'active');
+
+        return status === 'archived' ? 'archived' : 'active';
+    }
+
+    function statusListUrl(action, status) {
+        const fullUrl = new URL(action, window.location.href);
+
+        fullUrl.search = '';
+
+        if (status === 'archived') {
+            fullUrl.searchParams.set('status', 'archived');
+        }
+
+        return fullUrl;
     }
 
     function loadFamilyList(panel, fullUrl, pushHistory) {
@@ -190,6 +211,37 @@
         if (event.submitter && event.submitter.dataset.searchMode === 'local') {
             const keyword  = (form.querySelector('input[name="q"]') ? form.querySelector('input[name="q"]').value : '').toLowerCase().trim();
             const sectorId = parseInt((form.querySelector('select[name="sectorID"]') ? form.querySelector('select[name="sectorID"]').value : '0') || '0', 10);
+            const nextStatus = selectedStatus(form, panel);
+            const currentStatus = (panel.dataset.currentStatus || 'active') === 'archived' ? 'archived' : 'active';
+
+            if (nextStatus !== currentStatus) {
+                if (!window.fetch || !window.history) {
+                    form.submit();
+                    return;
+                }
+
+                loadFamilyList(panel, statusListUrl(form.action, nextStatus).toString(), true)
+                    .then(function (nextPanel) {
+                        const nextForm = nextPanel && nextPanel.querySelector('[data-records-search="quick"]');
+                        const nextInput = nextForm && nextForm.querySelector('input[name="q"]');
+                        const nextSelect = nextForm && nextForm.querySelector('select[name="status"]');
+
+                        if (nextInput) {
+                            nextInput.value = keyword;
+                            nextInput.focus();
+                        }
+
+                        if (nextSelect) {
+                            nextSelect.value = nextStatus;
+                        }
+
+                        if (nextPanel) {
+                            filterTableRows(nextPanel, keyword, sectorId);
+                        }
+                    });
+                return;
+            }
+
             filterTableRows(panel, keyword, sectorId);
             return;
         }
@@ -205,8 +257,20 @@
         const fullUrl = new URL(actionUrl, window.location.href);
         const formData = new FormData(form);
 
+        if (form.dataset.recordsSearch === 'database') {
+            const statusSelect = panel.querySelector('[data-records-search="quick"] select[name="status"]');
+
+            if (statusSelect) {
+                formData.set('status', statusSelect.value);
+            }
+        }
+
         fullUrl.search = '';
         formData.forEach(function (value, key) {
+            if (key === 'status' && String(value).trim() !== 'archived') {
+                return;
+            }
+
             if (String(value).trim() !== '') {
                 fullUrl.searchParams.append(key, value);
             }
@@ -222,7 +286,7 @@
         loadFamilyList(panel, fullUrl.toString(), true);
     });
 
-    // Live search: filter rows on every keystroke in the search text field.
+    // Live search: filter rows on every keystroke in the manual keyword field.
     document.addEventListener('input', function (event) {
         const input = event.target;
         if (!input || input.name !== 'q') {
@@ -232,30 +296,34 @@
         if (!panel) {
             return;
         }
-        const keyword  = input.value.toLowerCase().trim();
-
-        // Clearing the search box exits "Search All" (whole-database) mode and
-        // reloads the normal records list. The deep-results panel is server state,
-        // so client-side row filtering alone can't dismiss it — we reuse the
-        // Exit link's URL (present only while deep results are shown).
-        const exitLink = panel.querySelector('.js-exit-deep-search');
-        if (keyword === '' && exitLink && window.fetch && window.history) {
-            const exitUrl = exitLink.getAttribute('href') || '';
-            if (exitUrl !== '') {
-                loadFamilyList(panel, new URL(exitUrl, window.location.href).toString(), true)
-                    .then(function (nextPanel) {
-                        const nextInput = nextPanel && nextPanel.querySelector('input[name="q"]');
-                        if (nextInput) {
-                            nextInput.focus();
-                        }
-                    });
-                return;
-            }
+        const form = input.closest('[data-records-search="quick"]');
+        if (!form) {
+            return;
         }
+        const keyword  = input.value.toLowerCase().trim();
 
         const sel      = panel.querySelector('select[name="sectorID"]');
         const sectorId = sel ? parseInt(sel.value || '0', 10) : 0;
         filterTableRows(panel, keyword, sectorId);
+    });
+
+    document.addEventListener('click', function (event) {
+        const clearButton = event.target.closest('[data-records-clear]');
+        if (!clearButton) {
+            return;
+        }
+
+        const panel = panelFor(clearButton);
+        const form = clearButton.closest('[data-records-search="quick"]');
+        const input = form && form.querySelector('input[name="q"]');
+
+        if (!panel || !input) {
+            return;
+        }
+
+        input.value = '';
+        filterTableRows(panel, '', 0);
+        input.focus();
     });
 
     document.addEventListener('click', function (event) {

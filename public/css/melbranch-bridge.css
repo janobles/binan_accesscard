@@ -13,7 +13,7 @@
  */
 
 :root {
-    --jade-green: #168465;
+    --jade-green: #257a2e;
     --jade-green-deep: #12684f;
     --jade-green-soft: #dcf7ec;
     --jade-card-border: #dce5e2;
@@ -272,7 +272,7 @@
     margin-bottom: 0.4rem;
     padding: 0 0.65rem;
     color: var(--sidebar-muted, #cae1d7);
-    font-size: 0.82rem;
+    font-size: 1.0rem;
     font-weight: 600;
 }
 

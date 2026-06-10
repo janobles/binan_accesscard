@@ -11,6 +11,7 @@
 // Connected to: Lookups/sectors.php + services.php
 //   - [data-lookup-search]        the search <form>
 //   - [data-lookup-search-input]  the search <input>
+//   - [data-lookup-search-all]    optional button that clears the keyword filter
 //   - the nearest [data-sector-management-root] / [data-service-management-root]
 // Exposes window.initLookupSearch(root) so AJAX-loaded fragments can re-bind.
 (function (window, document) {
@@ -64,6 +65,16 @@
                     applyFilter(form);
                 });
             }
+
+            form.querySelectorAll('[data-lookup-search-all]').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    if (input) {
+                        input.value = '';
+                    }
+
+                    applyFilter(form);
+                });
+            });
         });
     }
 

@@ -17,7 +17,7 @@ body {
     margin: 0;
     color: var(--login-ink);
     background: var(--login-background);
-    font-family: Arial, Helvetica, sans-serif;
+    font-family: Calibri, "Calibri Body", "Segoe UI", Arial, sans-serif;
 }
 
 .login-page {

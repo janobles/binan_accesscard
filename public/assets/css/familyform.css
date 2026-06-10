@@ -903,7 +903,7 @@
 
 #familyForm .form-section {
 	border-top: 1px solid #cbdbea;
-	padding-top: 34px;
+	padding-top: 10px;
 }
 
 #familyForm .section-title {
@@ -931,8 +931,8 @@
 
 #familyForm .form-control,
 #familyForm .form-select {
-	min-height: 66px;
-	padding: 12px 16px;
+	min-height: 52px;
+	padding: 9px 14px;
 	border-color: #bcd4ec;
 	border-radius: 7px;
 	color: #000;
@@ -1050,8 +1050,8 @@
 
 	#familyForm .form-control,
 	#familyForm .form-select {
-		min-height: 54px;
-		padding: 9px 12px;
+		min-height: 48px;
+		padding: 8px 11px;
 		font-size: 15px;
 	}
 
@@ -1140,8 +1140,8 @@
 
 	#familyForm .form-control,
 	#familyForm .form-select {
-		min-height: 50px;
-		padding: 8px 10px;
+		min-height: 44px;
+		padding: 7px 10px;
 		font-size: 14px;
 	}
 

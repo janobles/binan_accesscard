@@ -20,7 +20,7 @@
     box-shadow: 0 12px 28px rgba(0, 0, 0, 0.2);
     max-width: 420px;
     width: 90%;
-    font-family: "Segoe UI", sans-serif;
+    font-family: Calibri, "Calibri Body", "Segoe UI", Arial, sans-serif;
 }
 
 .session-timeout-title {

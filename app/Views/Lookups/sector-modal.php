@@ -23,7 +23,7 @@
 								<?php foreach (($sectorPrefixOptions ?? []) as $prefix => $label): ?>
 									<option value="<?= esc((string) $prefix) ?>"><?= esc((string) $label) ?></option>
 								<?php endforeach; ?>
-								<option value="__other__">Other (custom)</option>
+
 							</select>
 						</div>
 						<div class="mb-3">

@@ -14,22 +14,20 @@ $archivedServiceCount = count($services) - $activeServiceCount;
 
 <?php /* Jade-style reskin (sector-* class system, shared with service.css). All
          melbranch hooks preserved: data-service-management-root, the
-         #btn-service-active/#btn-service-archive toggle, .js-service-modal-open
+         #service-status-select toggle, .js-service-modal-open
          + data-service-* attributes, and the service-modal include. */ ?>
 <div class="sector-management" data-service-management-root>
-	<header class="sector-toolbar">
-		<div class="sector-status-tabs btn-group" role="group" aria-label="Service view toggle">
-			<button type="button" class="btn btn-success active" id="btn-service-active" aria-pressed="true">Active (<?= esc((string) $activeServiceCount) ?>)</button>
-			<button type="button" class="btn btn-outline-secondary" id="btn-service-archive" aria-pressed="false">Archive (<?= esc((string) $archivedServiceCount) ?>)</button>
-		</div>
+	<form class="sector-toolbar sector-lookup-toolbar" role="search" data-lookup-search aria-label="Search services and programs">
+		<input class="form-control sector-toolbar-search" type="search" data-lookup-search-input placeholder="Search services by category, name, or description" aria-label="Search services and programs">
+		<select class="form-select sector-status-select" id="service-status-select" name="status" aria-label="Service view">
+			<option value="active">Active (<?= esc((string) $activeServiceCount) ?>)</option>
+			<option value="archived">Archive (<?= esc((string) $archivedServiceCount) ?>)</option>
+		</select>
+		<button class="btn btn-success sector-toolbar-action" type="submit"><i class="bi bi-search" aria-hidden="true"></i><span>Search</span></button>
+		<button class="btn btn-outline-success sector-toolbar-action" type="button" data-lookup-search-all><i class="bi bi-list-ul" aria-hidden="true"></i><span>Search All</span></button>
 		<span id="service-add-btn-wrap">
-			<button class="btn btn-success js-service-modal-open" type="button" data-service-mode="create"><i class="bi bi-plus-lg" aria-hidden="true"></i><span>Add Service or Program</span></button>
+			<button class="btn btn-success sector-toolbar-action js-service-modal-open" type="button" data-service-mode="create"><i class="bi bi-plus-lg" aria-hidden="true"></i><span>Add Program</span></button>
 		</span>
-	</header>
-
-	<form class="searchbar searchbar-single" role="search" data-lookup-search aria-label="Search services and programs">
-		<input class="form-control" type="search" data-lookup-search-input placeholder="Search services by category, name, or description" aria-label="Search services and programs">
-		<button class="btn btn-success searchbar-action" type="submit"><i class="bi bi-search" aria-hidden="true"></i><span>Search</span></button>
 	</form>
 
 	<div class="table-responsive">

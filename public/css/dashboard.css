@@ -12,9 +12,9 @@
     --workspace-border: #dce5e2;
     --workspace-radius: 0.4rem;
     --workspace-shadow: 0 0.35rem 1.15rem rgba(18, 47, 37, 0.08);
-    --ui-font-xs: 0.68rem;
-    --ui-font-sm: 0.8rem;
-    --ui-font-md: 0.9rem;
+    --ui-font-xs: 0.9rem;
+    --ui-font-sm: 1.0rem;
+    --ui-font-md: 1.0rem;
     --ui-font-lg: 1rem;
     --ui-control-height: 2.5rem;
     --ui-control-padding-x: 0.85rem;
@@ -65,7 +65,7 @@ body {
     min-height: 100vh;
     background: var(--workspace-background);
     font-size: var(--ui-font-md);
-    font-family: "Public Sans", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-family: Calibri, "Calibri Body", "Segoe UI", Arial, sans-serif;
     overflow-x: hidden;
 }
 
@@ -223,7 +223,7 @@ body {
     :root {
         --sidebar-width: 15rem;
         --header-height: 3.8rem;
-        --ui-font-xs: 0.64rem;
+        --ui-font-xs: 0.9rem;
         --ui-font-sm: 0.76rem;
         --ui-font-md: 0.84rem;
         --ui-font-lg: 0.95rem;

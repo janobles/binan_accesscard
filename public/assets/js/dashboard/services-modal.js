@@ -189,11 +189,12 @@
 
 (function (document) {
     document.addEventListener('DOMContentLoaded', function () {
+        const statusSelect = document.getElementById('service-status-select');
         const activeBtn = document.getElementById('btn-service-active');
         const archiveBtn = document.getElementById('btn-service-archive');
         const addWrap = document.getElementById('service-add-btn-wrap');
 
-        if (!activeBtn || !archiveBtn) {
+        if (!statusSelect && (!activeBtn || !archiveBtn)) {
             return;
         }
 
@@ -207,18 +208,32 @@
                 addWrap.classList.toggle('d-none', showArchive);
             }
 
-            activeBtn.classList.toggle('active', !showArchive);
-            activeBtn.setAttribute('aria-pressed', showArchive ? 'false' : 'true');
-            archiveBtn.classList.toggle('active', showArchive);
-            archiveBtn.setAttribute('aria-pressed', showArchive ? 'true' : 'false');
+            if (statusSelect) {
+                statusSelect.value = showArchive ? 'archived' : 'active';
+            }
+
+            if (activeBtn && archiveBtn) {
+                activeBtn.classList.toggle('active', !showArchive);
+                activeBtn.setAttribute('aria-pressed', showArchive ? 'false' : 'true');
+                archiveBtn.classList.toggle('active', showArchive);
+                archiveBtn.setAttribute('aria-pressed', showArchive ? 'true' : 'false');
+            }
         }
 
-        activeBtn.addEventListener('click', function () {
-            showServiceView(false);
-        });
+        if (statusSelect) {
+            statusSelect.addEventListener('change', function () {
+                showServiceView(statusSelect.value === 'archived');
+            });
+        }
 
-        archiveBtn.addEventListener('click', function () {
-            showServiceView(true);
-        });
+        if (activeBtn && archiveBtn) {
+            activeBtn.addEventListener('click', function () {
+                showServiceView(false);
+            });
+
+            archiveBtn.addEventListener('click', function () {
+                showServiceView(true);
+            });
+        }
     });
 })(document);

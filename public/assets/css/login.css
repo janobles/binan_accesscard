@@ -6,7 +6,7 @@
 
 body {
 	margin: 0;
-	font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+	font-family: Calibri, "Calibri Body", "Segoe UI", Arial, sans-serif;
 	background: #000;
 	min-height: 100vh;
 	position: relative;
@@ -67,7 +67,7 @@ body::before {
 .login-title {
 	margin: 0 0 16px;
 	text-align: center;
-    font-family: 'Roboto', sans-serif;
+    font-family: Calibri, "Calibri Body", "Segoe UI", Arial, sans-serif;
 	font-size: 31px;
     font-weight: 700;
 	color: #3c3c3c;

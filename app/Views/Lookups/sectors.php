@@ -20,25 +20,20 @@ $archivedSectorCount = count($sectors) - $activeSectorCount;
 ?>
 
 <?php /* Jade-style reskin (sector-* classes). All melbranch hooks preserved:
-         data-sector-management-root, #btn-sector-active/#btn-sector-archive toggle,
+         data-sector-management-root, #sector-status-select toggle,
          .js-sector-modal-open + data-sector-* attributes, the sector-modal include. */ ?>
 <div class="sector-management" data-sector-management-root>
-	<header class="sector-toolbar">
-		<div class="sector-status-tabs btn-group" role="group" aria-label="Sector view toggle">
-			<button type="button" class="btn btn-success active" id="btn-sector-active" aria-pressed="true">Active (<?= esc((string) $activeSectorCount) ?>)</button>
-			<button type="button" class="btn btn-outline-secondary" id="btn-sector-archive" aria-pressed="false">Archive (<?= esc((string) $archivedSectorCount) ?>)</button>
-		</div>
-		<div class="sector-toolbar-actions d-flex gap-2">
-			<button class="btn btn-outline-success" type="button" data-bs-toggle="modal" data-bs-target="#sectorCategoryModal"><i class="bi bi-tags" aria-hidden="true"></i><span>Manage Categories</span></button>
-			<span id="sector-add-btn-wrap">
-				<button class="btn btn-success js-sector-modal-open" type="button" data-sector-mode="create"><i class="bi bi-plus-lg" aria-hidden="true"></i><span>Add Sector</span></button>
-			</span>
-		</div>
-	</header>
-
-	<form class="searchbar searchbar-single" role="search" data-lookup-search aria-label="Search sectors">
-		<input class="form-control" type="search" data-lookup-search-input placeholder="Search sectors by name, code, or description" aria-label="Search sectors">
-		<button class="btn btn-success searchbar-action" type="submit"><i class="bi bi-search" aria-hidden="true"></i><span>Search</span></button>
+	<form class="sector-toolbar sector-lookup-toolbar" role="search" data-lookup-search aria-label="Search sectors">
+		<input class="form-control sector-toolbar-search" type="search" data-lookup-search-input placeholder="Search sectors by name, code, or description" aria-label="Search sectors">
+		<select class="form-select sector-status-select" id="sector-status-select" name="status" aria-label="Sector view">
+			<option value="active">Active (<?= esc((string) $activeSectorCount) ?>)</option>
+			<option value="archived">Archive (<?= esc((string) $archivedSectorCount) ?>)</option>
+		</select>
+		<button class="btn btn-outline-success sector-toolbar-action" type="button" data-bs-toggle="modal" data-bs-target="#sectorCategoryModal"><i class="bi bi-tags" aria-hidden="true"></i><span>Manage Categories</span></button>
+		<button class="btn btn-success sector-toolbar-action" type="submit"><i class="bi bi-search" aria-hidden="true"></i><span>Search</span></button>
+		<span id="sector-add-btn-wrap">
+			<button class="btn btn-success sector-toolbar-action js-sector-modal-open" type="button" data-sector-mode="create"><i class="bi bi-plus-lg" aria-hidden="true"></i><span>Add Sector</span></button>
+		</span>
 	</form>
 
 	<div class="table-responsive">

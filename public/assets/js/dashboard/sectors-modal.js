@@ -231,11 +231,12 @@
 
 (function (document) {
     document.addEventListener('DOMContentLoaded', function () {
+        const statusSelect = document.getElementById('sector-status-select');
         const activeBtn = document.getElementById('btn-sector-active');
         const archiveBtn = document.getElementById('btn-sector-archive');
         const addWrap = document.getElementById('sector-add-btn-wrap');
 
-        if (!activeBtn || !archiveBtn) {
+        if (!statusSelect && (!activeBtn || !archiveBtn)) {
             return;
         }
 
@@ -249,18 +250,32 @@
                 addWrap.classList.toggle('d-none', showArchive);
             }
 
-            activeBtn.classList.toggle('active', !showArchive);
-            activeBtn.setAttribute('aria-pressed', showArchive ? 'false' : 'true');
-            archiveBtn.classList.toggle('active', showArchive);
-            archiveBtn.setAttribute('aria-pressed', showArchive ? 'true' : 'false');
+            if (statusSelect) {
+                statusSelect.value = showArchive ? 'archived' : 'active';
+            }
+
+            if (activeBtn && archiveBtn) {
+                activeBtn.classList.toggle('active', !showArchive);
+                activeBtn.setAttribute('aria-pressed', showArchive ? 'false' : 'true');
+                archiveBtn.classList.toggle('active', showArchive);
+                archiveBtn.setAttribute('aria-pressed', showArchive ? 'true' : 'false');
+            }
         }
 
-        activeBtn.addEventListener('click', function () {
-            showSectorView(false);
-        });
+        if (statusSelect) {
+            statusSelect.addEventListener('change', function () {
+                showSectorView(statusSelect.value === 'archived');
+            });
+        }
 
-        archiveBtn.addEventListener('click', function () {
-            showSectorView(true);
-        });
+        if (activeBtn && archiveBtn) {
+            activeBtn.addEventListener('click', function () {
+                showSectorView(false);
+            });
+
+            archiveBtn.addEventListener('click', function () {
+                showSectorView(true);
+            });
+        }
     });
 })(document);

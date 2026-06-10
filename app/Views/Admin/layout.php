@@ -39,6 +39,7 @@ $canCreateFamily = $canCreateFamily ?? false;
 $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
 // Developers get the "developer" sidebar accent; plain admins get "admin".
 $sidebarRoleClass = $canManageAccounts ? 'developer' : 'admin';
+$sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('admin/dashboard');
 ?>
 <?php
 /*
@@ -132,7 +133,7 @@ $jadeStyles = [
             </section>
 
             <section class="sidebar-section sidebar-account">
-                <div class="sidebar-user"><i class="bi bi-person-circle" aria-hidden="true"></i><span><?= esc($username) ?></span></div>
+                <a href="<?= esc($sidebarUserUrl, 'attr') ?>" class="sidebar-user sidebar-user-link"><i class="bi bi-person-circle" aria-hidden="true"></i><span><?= esc($username) ?></span></a>
                 <a href="<?= site_url('logout') ?>" class="nav-link js-logout-link"><i class="bi bi-box-arrow-right" aria-hidden="true"></i><span>Logout</span></a>
             </section>
         </nav>

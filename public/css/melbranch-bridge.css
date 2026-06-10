@@ -271,13 +271,22 @@
     gap: 0.55rem;
     margin-bottom: 0.4rem;
     padding: 0 0.65rem;
+    border-radius: 0.35rem;
     color: var(--sidebar-muted, #cae1d7);
-    font-size: 1.0rem;
+    font-size: 0.95rem;
     font-weight: 600;
+    min-height: 2.35rem;
+    text-decoration: none;
 }
 
 .sidebar-account .sidebar-user .bi {
     font-size: 1.1rem;
+}
+
+.sidebar-account .sidebar-user-link:hover,
+.sidebar-account .sidebar-user-link:focus {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.12);
 }
 
 /* Developer/Admin accent dot on the brand for parity with melbranch role hints */

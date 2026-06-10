@@ -1,8 +1,8 @@
 // Account management page behaviour:
 //   1. Registers the Account Management panel with the shared dashboard modal
 //      loader so clicking .js-open-accounts-modal loads it via AJAX.
-//   2. Shows a confirmation dialog before any .js-account-status-form is submitted
-//      (enable / disable account actions).
+//      Account status confirmations are handled by view-interactions.js so they
+//      work in both full-page and AJAX-loaded account views.
 //
 // Connected to:
 //   - dashboard-modal-loader.js : window.registerDashboardModal()
@@ -21,17 +21,4 @@
         });
     }
 
-    document.addEventListener('submit', function (event) {
-        const form = event.target;
-
-        if (!(form instanceof HTMLFormElement) || !form.classList.contains('js-account-status-form')) {
-            return;
-        }
-
-        const message = String(form.dataset.confirmMessage || 'Update this account status?').trim();
-
-        if (!window.confirm(message)) {
-            event.preventDefault();
-        }
-    });
 })(window, document);

@@ -33,6 +33,7 @@ class AccountController extends BaseController
         $rules = [
             'username' => 'required|min_length[4]|max_length[255]|is_unique[users.username]',
             'password' => 'required|min_length[8]',
+            'password_confirm' => 'required|matches[password]',
             // 'User' is the DB enum value for the Employee role; the form posts it
             // as-is so it matches the users.role enum('User','Admin','Developer').
             'role' => 'required|in_list[Admin,User]',
@@ -46,6 +47,10 @@ class AccountController extends BaseController
             'password' => [
                 'required' => 'Password is required.',
                 'min_length' => 'Password must have at least 8 characters.',
+            ],
+            'password_confirm' => [
+                'required' => 'Confirm password is required.',
+                'matches' => 'Confirm password must match the password.',
             ],
             'role' => [
                 'in_list' => 'Account type must be Admin or Employee.',

@@ -74,7 +74,7 @@ $fieldViewData            = compact(
 );
 ?>
 
-<link rel="stylesheet" href="<?= base_url('assets/css/familyform.css') ?>?v=<?= filemtime(FCPATH . 'assets/css/familyform.css') ?>">
+<link rel="stylesheet" href="<?= base_url('css/familyform.css') ?>?v=<?= filemtime(FCPATH . 'css/familyform.css') ?>">
 
 <div class="family-wizard-shell">
     <div class="family-wizard-card">

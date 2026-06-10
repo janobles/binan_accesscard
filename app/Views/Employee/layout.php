@@ -32,11 +32,8 @@ $canCreateFamily = $canCreateFamily ?? false;
 $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
 
 /*
- * Jade-style reskin: employee shell now uses jadebranch's dashboard-shell /
- * sidebar / header visual structure (matching the admin shell). Content keeps
- * melbranch's classes and is themed by css/melbranch-bridge.css. All data,
- * routes, JS hooks (#familyModal, .js-logout-link, .js-audit-filter-form) and
- * scripts are unchanged.
+ * SB Admin-style shell: keep employee data, routes, modal target, and page
+ * switch while using the same responsive frame as the admin workspace.
  */
 $cssVersion = static function (string $relativeCssPath): string {
     $absolute = FCPATH . ltrim($relativeCssPath, '/');
@@ -45,13 +42,12 @@ $cssVersion = static function (string $relativeCssPath): string {
     return base_url($relativeCssPath) . '?v=' . $version;
 };
 $jadeStyles = [
-    'css/dashboard.css',
-    'css/mainlayout.css',
+    'css/sb-admin-adapter.css',
     'css/managerecord.css',
     'css/searchbar.css',
     'css/audittrails.css',
     'css/familymodal.css',
-    'assets/css/session-timeout.css',
+    'css/session-timeout.css',
     'css/melbranch-bridge.css',
 ];
 ?>
@@ -68,54 +64,58 @@ $jadeStyles = [
     <?php endforeach; ?>
 </head>
 <body>
-<div class="dashboard-shell">
-    <aside class="dashboard-sidebar employee">
-        <a class="sidebar-brand" href="<?= site_url('employee/workspace') ?>">
-            <img class="sidebar-logo" src="<?= base_url('assets/image/binan.png') ?>" alt="City of Binan Logo">
-            <span class="sidebar-brand-text">Bi&ntilde;an Access Card MIS<br><small class="sidebar-brand-mode">Employee Workspace</small></span>
-        </a>
-        <nav aria-label="Employee navigation">
-            <section class="sidebar-section">
-                <h2 class="sidebar-heading">Overview</h2>
-                <ul class="nav nav-pills flex-column">
-                    <li class="nav-item">
-                        <a class="nav-link <?= esc($navActive['dashboard'] ?? '') ?>" href="<?= site_url('employee/workspace') ?>"><i class="bi bi-speedometer2" aria-hidden="true"></i><span>Workspace</span></a>
-                    </li>
-                </ul>
-            </section>
-            <section class="sidebar-section">
-                <h2 class="sidebar-heading">Records</h2>
-                <ul class="nav nav-pills flex-column">
-                    <li class="nav-item">
-                        <a class="nav-link <?= esc($navActive['family-manage'] ?? '') ?>" href="<?= site_url('employee/manage-records') ?>"><i class="bi bi-people" aria-hidden="true"></i><span>Manage Records</span></a>
-                    </li>
-                </ul>
-            </section>
-            <section class="sidebar-section">
-                <h2 class="sidebar-heading">Activity</h2>
-                <ul class="nav nav-pills flex-column">
-                    <li class="nav-item">
-                        <a class="nav-link <?= esc($navActive['activity'] ?? '') ?>" href="<?= site_url('employee/activity') ?>"><i class="bi bi-clock-history" aria-hidden="true"></i><span>My Activity</span></a>
-                    </li>
-                </ul>
-            </section>
-            <section class="sidebar-section sidebar-account">
-                <div class="sidebar-user"><i class="bi bi-person-circle" aria-hidden="true"></i><span><?= esc($username) ?> &middot; Employee</span></div>
-                <a href="<?= site_url('logout') ?>" class="nav-link js-logout-link"><i class="bi bi-box-arrow-right" aria-hidden="true"></i><span>Logout</span></a>
-            </section>
-        </nav>
-    </aside>
+<div id="wrapper">
+    <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion employee" id="dashboard-sidebar">
+        <li class="sidebar-brand-wrap">
+            <a class="sidebar-brand d-flex align-items-center justify-content-center" href="<?= site_url('employee/workspace') ?>">
+                <img class="sidebar-brand-icon" src="<?= base_url('assets/image/binan.png') ?>" alt="City of Binan Logo">
+                <span class="sidebar-brand-text mx-2">Bi&ntilde;an Access Card MIS<small>Employee Workspace</small></span>
+            </a>
+        </li>
+        <li><hr class="sidebar-divider my-0"></li>
+        <li class="nav-item">
+            <a class="nav-link <?= esc($navActive['dashboard'] ?? '') ?>" href="<?= site_url('employee/workspace') ?>"><i class="bi bi-speedometer2" aria-hidden="true"></i><span>Workspace</span></a>
+        </li>
+        <li><hr class="sidebar-divider"></li>
+        <li><div class="sidebar-heading">Records</div></li>
+        <li class="nav-item">
+            <a class="nav-link <?= esc($navActive['family-manage'] ?? '') ?>" href="<?= site_url('employee/manage-records') ?>"><i class="bi bi-people" aria-hidden="true"></i><span>Manage Records</span></a>
+        </li>
+        <li><hr class="sidebar-divider"></li>
+        <li><div class="sidebar-heading">Activity</div></li>
+        <li class="nav-item">
+            <a class="nav-link <?= esc($navActive['activity'] ?? '') ?>" href="<?= site_url('employee/activity') ?>"><i class="bi bi-clock-history" aria-hidden="true"></i><span>My Activity</span></a>
+        </li>
+        <li><hr class="sidebar-divider d-none d-md-block"></li>
+        <li class="text-center d-none d-md-inline">
+            <button class="rounded-circle border-0" id="sidebarToggle" type="button" aria-label="Collapse sidebar" aria-controls="dashboard-sidebar" aria-expanded="true"></button>
+        </li>
+    </ul>
 
-    <div class="dashboard-workspace">
-        <header class="dashboard-header">
-            <img class="header-logo" src="<?= base_url('assets/image/binan.png') ?>" alt="City of Binan Logo">
-            <div>
-                <h1 id="dashboard-page-title"><?= esc($pageTitle) ?></h1>
-                <p>Bi&ntilde;an Access Card MIS</p>
-            </div>
-        </header>
+    <div id="content-wrapper" class="d-flex flex-column">
+        <div id="content">
+            <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow-sm">
+                <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle me-3" type="button" aria-label="Toggle navigation menu" aria-controls="dashboard-sidebar" aria-expanded="false">
+                    <i class="bi bi-list" aria-hidden="true"></i>
+                </button>
+                <div class="topbar-title">
+                    <img class="topbar-logo" src="<?= base_url('assets/image/binan.png') ?>" alt="City of Binan Logo">
+                    <div>
+                        <h1 id="dashboard-page-title"><?= esc($pageTitle) ?></h1>
+                        <p>Bi&ntilde;an Access Card MIS</p>
+                    </div>
+                </div>
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <span class="nav-link topbar-user"><i class="bi bi-person-circle" aria-hidden="true"></i><span><?= esc($username) ?> &middot; Employee</span></span>
+                    </li>
+                    <li class="nav-item">
+                        <a href="<?= site_url('logout') ?>" class="nav-link js-logout-link"><i class="bi bi-box-arrow-right" aria-hidden="true"></i><span>Logout</span></a>
+                    </li>
+                </ul>
+            </nav>
 
-        <main class="dashboard-content">
+            <main class="container-fluid dashboard-content">
             <?php if (session()->getFlashdata('success')): ?>
                 <div class="alert alert-success"><?= esc(session()->getFlashdata('success')) ?></div>
             <?php endif; ?>
@@ -250,7 +250,8 @@ $jadeStyles = [
                     </div>
                 </div>
             <?php endif; ?>
-        </main>
+            </main>
+        </div>
     </div>
 </div>
 
@@ -274,6 +275,7 @@ $jadeStyles = [
 
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="<?= base_url('assets/js/dashboard/view-interactions.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/view-interactions.js') ?>"></script>
 <script src="<?= base_url('assets/js/dashboard/family-form-ui.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form-ui.js') ?>"></script>
 <script src="<?= base_url('assets/js/dashboard/family-form.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form.js') ?>"></script>
 <script src="<?= base_url('assets/js/dashboard/family-list.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-list.js') ?>"></script>

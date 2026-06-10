@@ -74,13 +74,12 @@ $deepToRecord = (int) ($deepToRecord ?? 0);
                 type="search"
                 name="deep_q"
                 value="<?= esc($deepKeyword, 'attr') ?>"
-                placeholder="Search the full database"
                 aria-label="Search the full database"
                 autocomplete="off"
             >
             <button class="btn btn-outline-success records-search-action" type="submit" data-search-mode="database">
                 <i class="bi bi-database-search" aria-hidden="true"></i>
-                <span>Search</span>
+                <span>Search All</span>
             </button>
         </form>
     </div>

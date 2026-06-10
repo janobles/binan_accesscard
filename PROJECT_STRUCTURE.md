@@ -81,9 +81,6 @@ Lookups, Audit, Admin, Employee) is self-contained and easy to navigate. Routes 
 
 ## Public Assets
 
-- `public/assets/css/login.css`  
-  Login page styling.
-
 - `public/assets/css/mis.css`  
   Shared dashboard/workspace styling.
 

@@ -3,7 +3,9 @@
 .family-wizard-shell {
 	display: flex;
 	justify-content: center;
-	margin: 0;
+	width: min(72rem, calc(100vw - 2rem)); /* definite width -> card can't shrink-wrap to per-step content */
+	min-width: 0;
+	margin-inline: auto;                    /* centers the shell within the flex modal-body */
 }
 
 .family-wizard-card {
@@ -123,6 +125,7 @@
 	flex: 1 1 auto;
 	min-height: 0;
 	overflow: auto;
+	scrollbar-gutter: stable;
 	padding: 0 14px;
 }
 

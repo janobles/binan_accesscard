@@ -11,8 +11,6 @@
  * The formatDate/formatTime/formatAuditMember/formatAuditUser helpers are
  * provided by the builder (do not redefine them here).
  */
-helper('assets');
-
 // Defensive defaults so the layout still renders if a value is ever missing.
 $user = $user ?? [];
 $username = $user['username'] ?? 'Admin';
@@ -48,7 +46,7 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
  * melbranch data variable, JS hook (#familyModal, .js-logout-link), route, and
  * the server-side $activePage content switch unchanged. CSS is loaded directly
  * from jadebranch's stylesheets (public/css/*) instead of the melbranch
- * admin_dashboard_style_links() helper, which stays untouched.
+ * stylesheets (loaded by the $jadeStyles list below).
  */
 $cssVersion = static function (string $relativeCssPath): string {
     $absolute = FCPATH . ltrim($relativeCssPath, '/');

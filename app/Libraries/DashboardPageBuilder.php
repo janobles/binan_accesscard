@@ -47,8 +47,6 @@ class DashboardPageBuilder
             ->with('error', 'Developer or Admin access is required for account management.');
         }
 
-        helper('assets');
-
         return view('Admin/layout', $this->buildAdminViewData($activePage));
     }
 

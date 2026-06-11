@@ -34,9 +34,17 @@ class AccountController extends BaseController
             'username' => 'required|min_length[4]|max_length[255]|is_unique[users.username]',
             'password' => 'required|min_length[8]',
             'password_confirm' => 'required|matches[password]',
-            // 'User' is the DB enum value for the Employee role; the form posts it
-            // as-is so it matches the users.role enum('User','Admin','Developer').
-            'role' => 'required|in_list[Admin,User]',
+            // Personal details are packed into the single users.full_description
+            // column (see buildFullDescription). Suffix is optional.
+            'last_name' => 'required|max_length[100]',
+            'first_name' => 'required|max_length[100]',
+            'middle_name' => 'required|max_length[100]',
+            'suffix' => 'permit_empty|max_length[20]',
+            'address' => 'required|max_length[255]',
+            'contact_no' => 'required|max_length[50]',
+            'birthday' => 'required|valid_date[Y-m-d]',
+            // The form posts the DB enum value for account_level directly.
+            'role' => 'required|in_list[administrator,encoder,viewer]',
         ];
         $messages = [
             'username' => [
@@ -52,8 +60,11 @@ class AccountController extends BaseController
                 'required' => 'Confirm password is required.',
                 'matches' => 'Confirm password must match the password.',
             ],
+            'birthday' => [
+                'valid_date' => 'Birthday must be a valid date.',
+            ],
             'role' => [
-                'in_list' => 'Account type must be Admin or Employee.',
+                'in_list' => 'Account level must be Administrator, Encoder, or Viewer.',
             ],
         ];
 
@@ -65,12 +76,14 @@ class AccountController extends BaseController
 
         $role = (string) $this->request->getPost('role');
         $username = trim((string) $this->request->getPost('username'));
+        $fullDescription = $this->buildFullDescription();
 
         try {
             $userId = (new UserModel())->createAccount(
                 $username,
                 (string) $this->request->getPost('password'),
-                $role
+                $role,
+                $fullDescription
             );
         } catch (Throwable $exception) {
             log_message('error', $exception->getMessage());
@@ -86,7 +99,7 @@ class AccountController extends BaseController
                 ->with('error', 'Account could not be created. Use a unique username such as admin_maria01 or emp_juan01.');
         }
 
-        $displayRole = $role === 'User' ? 'Employee' : $role;
+        $displayRole = $this->normalizeRole($role) ?? $role;
         $this->audit('ACCOUNT_CREATED', 'Created ' . $displayRole . ' account "' . $username . '" (#' . $userId . ').');
 
         return redirect()->to(site_url('admin/accounts'))->with('success', 'Account created successfully.');
@@ -122,7 +135,7 @@ class AccountController extends BaseController
         }
 
         $userModel = new UserModel();
-        $user = $userModel->select('userID, username, role')->find($userId);
+        $user = $userModel->select('userID, username, account_level AS role')->find($userId);
 
         if ($user === null) {
             return redirect()->back()->with('error', 'Account not found.');
@@ -130,7 +143,7 @@ class AccountController extends BaseController
 
         $role = (string) ($user['role'] ?? '');
 
-        if (! in_array($role, ['Admin', 'User'], true)) {
+        if (! in_array($role, ['administrator', 'encoder'], true)) {
             return redirect()->back()->with('error', 'Only admin or employee accounts can be updated.');
         }
 
@@ -140,7 +153,7 @@ class AccountController extends BaseController
             return redirect()->back()->with('error', 'Account status could not be updated.');
         }
 
-        $displayRole = $role === 'User' ? 'Employee' : $role;
+        $displayRole = $this->normalizeRole($role) ?? $role;
         $auditStatus = $enabled ? 'Enabled' : 'Disabled';
 
         $this->audit(
@@ -176,13 +189,13 @@ class AccountController extends BaseController
         }
 
         $userModel = new UserModel();
-        $user = $userModel->select('userID, username, role')->find($userId);
+        $user = $userModel->select('userID, username, account_level AS role')->find($userId);
 
         if ($user === null) {
             return redirect()->back()->with('error', 'Account not found.');
         }
 
-        if ((string) ($user['role'] ?? '') !== 'User') {
+        if ((string) ($user['role'] ?? '') !== 'encoder') {
             return redirect()->back()->with('error', 'Only employee accounts can be disabled from this action.');
         }
 
@@ -223,13 +236,13 @@ class AccountController extends BaseController
         }
 
         $userModel = new UserModel();
-        $user = $userModel->select('userID, username, role')->find($userId);
+        $user = $userModel->select('userID, username, account_level AS role')->find($userId);
 
         if ($user === null) {
             return redirect()->back()->with('error', 'Account not found.');
         }
 
-        if ((string) ($user['role'] ?? '') !== 'User') {
+        if ((string) ($user['role'] ?? '') !== 'encoder') {
             return redirect()->back()->with('error', 'Only employee accounts can be enabled from this action.');
         }
 
@@ -280,10 +293,39 @@ class AccountController extends BaseController
     }
 
     /**
-     * Normalizes a raw role string to the app's canonical 'Developer'/'Admin'/
-     * 'Employee' (or null) so guards can compare the session role reliably. The
-     * DB's legacy 'User' value maps to 'Employee'. Note: the raw DB enum value is
-     * still 'User' in the queries/writes below — only the app-facing label changes.
+     * Packs the create-account form's personal fields into the single
+     * users.full_description column as a labeled `LABEL:value; ...` string
+     * (LN/FN/MN/SF/ADDR/CN/BD). Empty segments (e.g. a missing suffix) are omitted
+     * so they can be split back out reliably later. No frontend connection.
+     */
+    private function buildFullDescription(): string
+    {
+        $segments = [
+            'LN'   => trim((string) $this->request->getPost('last_name')),
+            'FN'   => trim((string) $this->request->getPost('first_name')),
+            'MN'   => trim((string) $this->request->getPost('middle_name')),
+            'SF'   => trim((string) $this->request->getPost('suffix')),
+            'ADDR' => trim((string) $this->request->getPost('address')),
+            'CN'   => trim((string) $this->request->getPost('contact_no')),
+            'BD'   => trim((string) $this->request->getPost('birthday')),
+        ];
+
+        $parts = [];
+
+        foreach ($segments as $label => $value) {
+            if ($value !== '') {
+                $parts[] = $label . ':' . $value;
+            }
+        }
+
+        return implode('; ', $parts);
+    }
+
+    /**
+     * Normalizes a raw account-level string to the app's canonical 'Developer'/
+     * 'Admin'/'Employee'/'Viewer' (or null) so guards can compare the session role
+     * reliably. The DB enum values 'administrator'/'encoder'/'viewer' map to
+     * 'Admin'/'Employee'/'Viewer'; legacy 'User'/'Admin' are still accepted.
      */
     private function normalizeRole(string $role): ?string
     {
@@ -292,7 +334,8 @@ class AccountController extends BaseController
         return match ($normalizedRole) {
             'developer' => 'Developer',
             'admin', 'administrator' => 'Admin',
-            'user', 'employee' => 'Employee',
+            'user', 'encoder', 'employee' => 'Employee',
+            'viewer' => 'Viewer',
             default => null,
         };
     }

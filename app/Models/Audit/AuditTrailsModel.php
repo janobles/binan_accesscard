@@ -51,7 +51,10 @@ class AuditTrailsModel extends Model
         }
 
         $payload = [
-            'userID' => $userId,
+            // The .env Developer has no users row (userID 0). Its audit rows are
+            // stored with a NULL userID so they don't violate the users FK and stay
+            // invisible to non-developer viewers (see getRecent / withNames).
+            'userID' => $userId > 0 ? $userId : null,
             'memberID' => $memberId,
             'user_action' => $action,
             'description' => $description,
@@ -71,20 +74,25 @@ class AuditTrailsModel extends Model
 
     /**
      * Returns the latest audit entries (newest first) with user and member names
-     * resolved. Frontend: the admin Audit Trails page via DashboardPageBuilder.
+     * resolved. Developer audit rows (NULL userID) are excluded unless
+     * $includeDeveloper is true, so only the Developer sees its own activity.
+     * Frontend: the admin Audit Trails page via DashboardPageBuilder.
      */
-    public function getRecent(int $limit = 50): array
+    public function getRecent(int $limit = 50, bool $includeDeveloper = false): array
     {
         if (! $this->hasTable()) {
             return [];
         }
 
-        $rows = $this->select('audit_trails.*')
+        $builder = $this->select('audit_trails.*')
             ->orderBy('audit_trails.dt_created', 'DESC')
-            ->limit($limit)
-            ->findAll();
+            ->limit($limit);
 
-        return $this->withNames($rows);
+        if (! $includeDeveloper) {
+            $builder->where('audit_trails.userID IS NOT NULL');
+        }
+
+        return $this->withNames($builder->findAll());
     }
 
     /**
@@ -149,7 +157,11 @@ class AuditTrailsModel extends Model
             $userId = (int) ($row['userID'] ?? 0);
             $memberId = (int) ($row['memberID'] ?? 0);
             $memberName = $memberNames[$memberId] ?? ['firstname' => '', 'lastname' => ''];
-            $user = $users[$userId] ?? ['username' => '', 'role' => ''];
+            // A NULL/0 userID marks a .env Developer action (no users row); surface
+            // it as the Developer. Only the Developer ever receives these rows.
+            $user = $userId > 0
+                ? ($users[$userId] ?? ['username' => '', 'role' => ''])
+                : ['username' => 'developer', 'role' => 'Developer'];
 
             $row['username'] = $user['username'];
             $row['user_role'] = $user['role'];
@@ -171,7 +183,7 @@ class AuditTrailsModel extends Model
         }
 
         $users = $this->db->table('users')
-            ->select('userID, username, role')
+            ->select('userID, username, account_level AS role')
             ->whereIn('userID', $userIds)
             ->get()
             ->getResultArray();

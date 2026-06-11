@@ -83,9 +83,12 @@ class DashboardPageBuilder
             ? $searchModel->families($searchTerm, $searchFilters, 25)
             : $dashboardModel->recentFamilies(10);
 
+        // Only the Developer may see Developer (NULL-userID) audit rows; admins must
+        // never learn a Developer exists.
+        $includeDeveloperAudits = $currentRole === 'Developer';
         $recentAudits = $activePage === 'audit-trails'
-            ? $searchModel->auditTrails($searchTerm, $searchFilters, 50)
-            : (new AuditTrailsModel())->getRecent(10);
+            ? $searchModel->auditTrails($searchTerm, $searchFilters, 50, $includeDeveloperAudits)
+            : (new AuditTrailsModel())->getRecent(10, $includeDeveloperAudits);
         $memberListData = $activePage === 'family-manage'
             ? $this->buildMemberListData()
             : [];
@@ -123,10 +126,11 @@ class DashboardPageBuilder
                 'services'     => $layoutModel->navActive($activePage, 'services'),
                 'categories'   => $layoutModel->navActive($activePage, 'categories'),
             ],
-            'adminAccounts'      => array_values(array_filter($users, static fn ($account) => $account['role'] === 'Admin')),
-            // 'User' is the raw DB enum value for the Employee role (surfaced as
-            // "Employee" in the UI); the rows here come straight from the users table.
-            'employeeAccounts'   => array_values(array_filter($users, static fn ($account) => $account['role'] === 'User')),
+            'adminAccounts'      => array_values(array_filter($users, static fn ($account) => $account['role'] === 'administrator')),
+            // 'encoder' is the raw DB enum value for the Employee role (surfaced as
+            // "Employee" in the UI); the rows here come straight from the users table
+            // (account_level aliased back to `role` by UserModel::getStaffAccounts).
+            'employeeAccounts'   => array_values(array_filter($users, static fn ($account) => $account['role'] === 'encoder')),
             'familyFormViewData' => $familyFormViewData,
             'recentFamilies'     => $recentFamilies,
             'recentAudits'       => $recentAudits,
@@ -179,10 +183,7 @@ class DashboardPageBuilder
             'formatAuditUser'    => static function (array $audit): string {
                 $username = trim((string) ($audit['username'] ?? $audit['userID'] ?? ''));
                 $role     = trim((string) ($audit['user_role'] ?? ''));
-
-                if ($role === 'User') {
-                    $role = 'Employee';
-                }
+                $role     = RoleAccess::normalizeRole($role) ?? $role;
 
                 return $role === '' ? $username : $username . ' (' . $role . ')';
             },

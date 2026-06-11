@@ -11,21 +11,25 @@ use CodeIgniter\HTTP\RedirectResponse;
 class RoleAccess
 {
     /**
-     * Canonicalizes a raw role string to the app's role labels
-     * 'Developer'/'Admin'/'Employee', or null if unrecognized. This is the single
-     * translation point between the database enum (which stores the employee role
-     * as the legacy 'User') and the rest of the app, which uses 'Employee'. The DB
-     * value 'User' is accepted here and surfaced everywhere else as 'Employee'.
+     * Canonicalizes a raw account-level string to the app's role labels
+     * 'Developer'/'Admin'/'Employee'/'Viewer', or null if unrecognized. This is the
+     * single translation point between the database enum (account_level:
+     * 'administrator'/'encoder'/'viewer') and the rest of the app. The legacy enum
+     * values ('Admin'/'User') and the app labels are still accepted so stale
+     * sessions and pre-migration rows keep resolving: 'administrator'/'Admin' map to
+     * the Admin label, 'encoder'/'User' map to Employee. The developer is no longer
+     * a DB row (it lives in .env) but its 'developer' value still maps here.
      */
     public static function normalizeRole(string $role): ?string
     {
         $normalizedRole = strtolower(trim($role));
 
         return match ($normalizedRole) {
-            'developer'              => 'Developer',
-            'admin', 'administrator' => 'Admin',
-            'user', 'employee'       => 'Employee',
-            default                  => null,
+            'developer'                    => 'Developer',
+            'admin', 'administrator'       => 'Admin',
+            'user', 'encoder', 'employee'  => 'Employee',
+            'viewer'                       => 'Viewer',
+            default                        => null,
         };
     }
 
@@ -61,14 +65,17 @@ class RoleAccess
             return redirect()->to(site_url('login'))->with('error', 'Please login first.');
         }
 
-        if (! self::sessionUserExists()) {
+        $currentRole = self::normalizeRole((string) session()->get('role'));
+
+        // The developer logs in from .env (no users row, user_id 0), so the row
+        // existence check does not apply to it.
+        if ($currentRole !== 'Developer' && ! self::sessionUserExists()) {
             session()->destroy();
 
             return redirect()->to(site_url('login'))
                 ->with('error', 'Your session is no longer valid after the database update. Please login again.');
         }
 
-        $currentRole = self::normalizeRole((string) session()->get('role'));
         $normalizedAllowedRoles = array_values(array_filter(array_map(
             fn (string $role): ?string => self::normalizeRole($role),
             $allowedRoles
@@ -105,6 +112,15 @@ class RoleAccess
 
         if ($normalizedRole === 'Admin' || $normalizedRole === 'Developer') {
             return redirect()->to(site_url('admin/dashboard'));
+        }
+
+        // Viewer is recognized but has no gated dashboard yet (read-only access is a
+        // planned follow-up). Refuse the session cleanly so login does not loop.
+        if ($normalizedRole === 'Viewer') {
+            session()->destroy();
+
+            return redirect()->to(site_url('login'))
+                ->with('error', 'Viewer accounts are not yet enabled. Please contact an administrator.');
         }
 
         session()->destroy();

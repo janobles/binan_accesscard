@@ -135,11 +135,15 @@ class AuthController extends BaseController
      */
     private function hasValidLoginSession(): bool
     {
-        if (! RoleAccess::sessionUserExists()) {
+        $role = RoleAccess::normalizeRole((string) session()->get('role'));
+
+        if ($role === null) {
             return false;
         }
 
-        if (RoleAccess::normalizeRole((string) session()->get('role')) === null) {
+        // The developer logs in from .env (no users row), so the row existence
+        // check does not apply to it.
+        if ($role !== 'Developer' && ! RoleAccess::sessionUserExists()) {
             return false;
         }
 

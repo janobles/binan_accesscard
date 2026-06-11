@@ -18,10 +18,7 @@ $formatAuditMember = static function (array $audit): string {
 $formatAuditUser = static function (array $audit): string {
     $username = trim((string) ($audit['username'] ?? $audit['userID'] ?? ''));
     $role     = trim((string) ($audit['user_role'] ?? ''));
-
-    if ($role === 'User') {
-        $role = 'Employee';
-    }
+    $role     = \App\Libraries\RoleAccess::normalizeRole($role) ?? $role;
 
     return $role === '' ? $username : $username . ' (' . $role . ')';
 };

@@ -25,19 +25,31 @@ $accounts = $isDeveloper ? array_merge($adminAccounts, $employeeAccounts) : $emp
                     <div class="account-field-group" aria-label="Personal information">
                         <div class="account-field">
                             <label class="form-label" for="account-last-name">Last Name</label>
-                            <input class="form-control" id="account-last-name" name="last_name" type="text" value="<?= esc((string) old('last_name')) ?>" placeholder="Enter last name">
+                            <input class="form-control" id="account-last-name" name="last_name" type="text" value="<?= esc((string) old('last_name')) ?>" placeholder="Enter last name" required>
                         </div>
                         <div class="account-field">
                             <label class="form-label" for="account-first-name">First Name</label>
-                            <input class="form-control" id="account-first-name" name="first_name" type="text" value="<?= esc((string) old('first_name')) ?>" placeholder="Enter first name">
+                            <input class="form-control" id="account-first-name" name="first_name" type="text" value="<?= esc((string) old('first_name')) ?>" placeholder="Enter first name" required>
+                        </div>
+                        <div class="account-field">
+                            <label class="form-label" for="account-middle-name">Middle Name</label>
+                            <input class="form-control" id="account-middle-name" name="middle_name" type="text" value="<?= esc((string) old('middle_name')) ?>" placeholder="Enter middle name" required>
+                        </div>
+                        <div class="account-field">
+                            <label class="form-label" for="account-suffix">Suffix <span class="text-muted">(optional)</span></label>
+                            <input class="form-control" id="account-suffix" name="suffix" type="text" value="<?= esc((string) old('suffix')) ?>" placeholder="e.g. Jr, Sr, III">
                         </div>
                         <div class="account-field">
                             <label class="form-label" for="account-address">Address</label>
-                            <input class="form-control" id="account-address" name="address" type="text" value="<?= esc((string) old('address')) ?>" placeholder="Enter address">
+                            <input class="form-control" id="account-address" name="address" type="text" value="<?= esc((string) old('address')) ?>" placeholder="Enter address" required>
                         </div>
                         <div class="account-field">
                             <label class="form-label" for="account-contact-no">Contact No.</label>
-                            <input class="form-control" id="account-contact-no" name="contact_no" type="text" value="<?= esc((string) old('contact_no')) ?>" placeholder="Enter contact number">
+                            <input class="form-control" id="account-contact-no" name="contact_no" type="text" value="<?= esc((string) old('contact_no')) ?>" placeholder="Enter contact number" required>
+                        </div>
+                        <div class="account-field">
+                            <label class="form-label" for="account-birthday">Birthday</label>
+                            <input class="form-control" id="account-birthday" name="birthday" type="date" value="<?= esc((string) old('birthday')) ?>" required>
                         </div>
                     </div>
 
@@ -57,10 +69,10 @@ $accounts = $isDeveloper ? array_merge($adminAccounts, $employeeAccounts) : $emp
                         <div class="account-field">
                             <label class="form-label" for="account-role">Account Level</label>
                             <select class="form-select" id="account-role" name="role" required>
-                                <option value="">Choose role</option>
-                                <option value="Admin" <?= old('role') === 'Admin' ? 'selected' : '' ?>>Administrator</option>
-                                <option value="User" <?= old('role') === 'User' ? 'selected' : '' ?>>Encoder</option>
-                                <option value="Viewer" <?= old('role') === 'Viewer' ? 'selected' : '' ?>>Viewer</option>
+                                <option value="">Choose account level</option>
+                                <option value="administrator" <?= old('role') === 'administrator' ? 'selected' : '' ?>>Administrator</option>
+                                <option value="encoder" <?= old('role') === 'encoder' ? 'selected' : '' ?>>Encoder</option>
+                                <option value="viewer" <?= old('role') === 'viewer' ? 'selected' : '' ?>>Viewer</option>
                             </select>
                         </div>
                         <div class="account-create-actions">
@@ -94,7 +106,7 @@ $accounts = $isDeveloper ? array_merge($adminAccounts, $employeeAccounts) : $emp
                         <?php
                         $userId = (int) ($account['userID'] ?? 0);
                         $rawRole = (string) ($account['role'] ?? '');
-                        $roleLabel = $rawRole === 'User' ? 'Employee' : $rawRole;
+                        $roleLabel = \App\Libraries\RoleAccess::normalizeRole($rawRole) ?? $rawRole;
                         $isActive = ViewFormatter::isActiveStatus($account['isactive'] ?? null);
                         $nextStatus = $isActive ? 'Disabled' : 'Enable';
                         $statusLabel = $isActive ? 'Enable' : 'Disabled';
@@ -105,7 +117,7 @@ $accounts = $isDeveloper ? array_merge($adminAccounts, $employeeAccounts) : $emp
                             <td><?= esc($roleLabel) ?></td>
                             <td><span class="account-status-badge <?= esc($statusClass) ?>"><?= esc($statusLabel) ?></span></td>
                             <td>
-                                <?php if ($isDeveloper && in_array($rawRole, ['Admin', 'User'], true)): ?>
+                                <?php if ($isDeveloper && in_array($rawRole, ['administrator', 'encoder'], true)): ?>
                                     <form class="js-account-status-form" method="post" action="<?= site_url('developer/accounts/status') ?>" data-confirm-message="<?= esc(($isActive ? 'Disable' : 'Enable') . ' ' . $roleLabel . ' account "' . (string) ($account['username'] ?? '') . '"?', 'attr') ?>">
                                         <?= csrf_field() ?>
                                         <input type="hidden" name="userID" value="<?= esc((string) $userId) ?>">
@@ -114,7 +126,7 @@ $accounts = $isDeveloper ? array_merge($adminAccounts, $employeeAccounts) : $emp
                                             <i class="bi <?= $isActive ? 'bi-person-x' : 'bi-person-check' ?>" aria-hidden="true"></i><?= $isActive ? 'Disable' : 'Enable' ?>
                                         </button>
                                     </form>
-                                <?php elseif ($isAdmin && $rawRole === 'User'): ?>
+                                <?php elseif ($isAdmin && $rawRole === 'encoder'): ?>
                                     <form class="js-account-status-form" method="post" action="<?= site_url($isActive ? 'admin/accounts/disable' : 'admin/accounts/enable') ?>" data-confirm-message="<?= esc(($isActive ? 'Disable' : 'Enable') . ' employee account "' . (string) ($account['username'] ?? '') . '"?', 'attr') ?>">
                                         <?= csrf_field() ?>
                                         <input type="hidden" name="userID" value="<?= esc((string) $userId) ?>">

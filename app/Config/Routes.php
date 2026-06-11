@@ -26,6 +26,7 @@ $routes->group('admin', static function (RouteCollection $routes): void {
     $routes->get('audit-trails', 'Admin\DashboardController::auditTrails');
     $routes->get('sectors', 'Admin\DashboardController::sectors');
     $routes->get('services', 'Admin\DashboardController::services');
+    $routes->get('categories', 'Admin\DashboardController::categories');
     $routes->get('manage-members', 'Admin\DashboardController::manageMembers');
     // Admin-only: disable/enable employee accounts from Account Management.
     $routes->post('accounts/disable', 'Accounts\AccountController::disableEmployee');
@@ -50,9 +51,12 @@ $routes->group('admin', static function (RouteCollection $routes): void {
         $routes->post('restore/(:num)', 'Lookups\SectorController::restore/$1');
     });
 
-    $routes->group('sector-categories', static function (RouteCollection $routes): void {
-        $routes->post('save', 'Lookups\SectorCategoryController::save');
-        $routes->post('delete', 'Lookups\SectorCategoryController::delete');
+    $routes->group('categories', static function (RouteCollection $routes): void {
+        $routes->post('create', 'Lookups\CategoryController::create');
+        $routes->post('update/(:num)', 'Lookups\CategoryController::update/$1');
+        $routes->post('delete/(:num)', 'Lookups\CategoryController::delete/$1');
+        $routes->post('archive/(:num)', 'Lookups\CategoryController::archive/$1');
+        $routes->post('restore/(:num)', 'Lookups\CategoryController::restore/$1');
     });
 
     $routes->group('services', static function (RouteCollection $routes): void {

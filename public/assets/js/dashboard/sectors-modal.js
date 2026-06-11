@@ -3,7 +3,8 @@
 //      so clicking .js-open-sectors-modal loads it via AJAX.
 //   2. Sectors admin page (#sectorActionModal): handles create / update / archive /
 //      restore in a single shared modal. Auto-fills the shortcode field from the
-//      selected category prefix + the next available number (from data-next-code-map).
+//      selected category (by categoryID) + the next available number (from
+//      data-next-code-map, keyed by categoryID).
 //      Blocks submission when the typed shortcode already exists (data-existing-codes).
 //      Third IIFE manages the Active / Archived row toggle on the lookups page.
 //
@@ -39,13 +40,6 @@
         } catch (error) {
             return fallback;
         }
-    }
-
-    // Leading alpha part of a code, e.g. "SC3" -> "SC", "LGBT" -> "LGBT".
-    function codePrefix(code) {
-        const match = String(code || '').toUpperCase().match(/^([A-Z]+)\d*$/);
-
-        return match ? match[1] : '';
     }
 
     // Inline duplicate check: compares the typed code against existing codes,
@@ -93,7 +87,10 @@
         const restoreMessage = modal.querySelector('.js-sector-restore-message');
         const title = modal.querySelector('#sectorActionModalLabel');
         const submit = modal.querySelector('.js-sector-modal-submit');
-        const prefix = modal.querySelector('#sectorModalPrefix');
+        const category = modal.querySelector('#sectorModalCategory');
+        const customGroup = modal.querySelector('.js-sector-custom-category');
+        const newCategoryCode = modal.querySelector('#sectorModalNewCategoryCode');
+        const newCategoryName = modal.querySelector('#sectorModalNewCategoryName');
         const shortcode = modal.querySelector('#sectorModalShortcode');
         const name = modal.querySelector('#sectorModalName');
         const description = modal.querySelector('#sectorModalDescription');
@@ -141,7 +138,7 @@
             restoreMessage.classList.toggle('d-none', !isRestore);
         }
 
-        [prefix, shortcode, name, description].forEach(function (field) {
+        [category, shortcode, name, description].forEach(function (field) {
             if (field) {
                 field.disabled = isAction;
                 field.required = !isAction && field.hasAttribute('required');
@@ -153,13 +150,26 @@
                 shortcode.value = existingCode;
             }
 
-            if (prefix) {
-                const wanted = codePrefix(existingCode);
-                const hasOption = Array.from(prefix.options).some(function (option) {
+            if (category) {
+                const wanted = mode === 'update' ? String(trigger.dataset.sectorCategoryId || '') : '';
+                const hasOption = Array.from(category.options).some(function (option) {
                     return option.value === wanted;
                 });
-                prefix.value = existingCode === '' ? '' : (hasOption ? wanted : '__other__');
+                category.value = hasOption ? wanted : '';
             }
+
+            // Custom-category fields start hidden/optional; toggled by the
+            // category change handler when "+ Add custom category" is picked.
+            if (customGroup) {
+                customGroup.classList.add('d-none');
+            }
+
+            [newCategoryCode, newCategoryName].forEach(function (field) {
+                if (field) {
+                    field.value = '';
+                    field.required = false;
+                }
+            });
 
             if (name) {
                 name.value = mode === 'update' ? String(trigger.dataset.sectorName || '') : '';
@@ -193,31 +203,69 @@
         openSectorModal(trigger);
     });
 
-    // Picking a category auto-fills the Code with the next suggested number.
-    // "Other (custom)" clears the field so the user can type a custom code.
+    // Picking a category auto-fills the Code with its next suggested number
+    // (data-next-code-map is keyed by categoryID). "+ Add custom category"
+    // reveals the new-category fields and clears the code for manual entry.
     document.addEventListener('change', function (event) {
-        if (!event.target.matches('#sectorModalPrefix')) {
+        if (!event.target.matches('#sectorModalCategory')) {
             return;
         }
 
         const modal = document.getElementById('sectorActionModal');
         const form = modal ? modal.querySelector('form') : null;
         const code = modal ? modal.querySelector('#sectorModalShortcode') : null;
+        const customGroup = modal ? modal.querySelector('.js-sector-custom-category') : null;
+        const newCategoryCode = modal ? modal.querySelector('#sectorModalNewCategoryCode') : null;
+        const newCategoryName = modal ? modal.querySelector('#sectorModalNewCategoryName') : null;
 
         if (!form || !code) {
             return;
         }
 
         const value = String(event.target.value || '');
+        const isOther = value === '__other__';
 
-        if (value === '__other__') {
+        if (customGroup) {
+            customGroup.classList.toggle('d-none', !isOther);
+        }
+
+        if (newCategoryCode) {
+            newCategoryCode.required = isOther;
+        }
+
+        if (newCategoryName) {
+            newCategoryName.required = isOther;
+        }
+
+        if (isOther) {
             code.value = '';
-            code.focus();
+
+            if (newCategoryCode) {
+                newCategoryCode.focus();
+            }
         } else if (value !== '') {
             const map = parseJson(form.dataset.nextCodeMap, {});
             code.value = map[value] || code.value;
         }
 
+        validateCode(modal);
+    });
+
+    // Typing a new custom category code suggests the first sector code (e.g. NEW1).
+    document.addEventListener('input', function (event) {
+        if (!event.target.matches('#sectorModalNewCategoryCode')) {
+            return;
+        }
+
+        const modal = document.getElementById('sectorActionModal');
+        const code = modal ? modal.querySelector('#sectorModalShortcode') : null;
+
+        if (!code) {
+            return;
+        }
+
+        const value = String(event.target.value || '').trim().toUpperCase();
+        code.value = value === '' ? '' : value + '1';
         validateCode(modal);
     });
 

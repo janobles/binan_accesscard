@@ -7,6 +7,7 @@ use App\Models\DashboardModel;
 use App\Models\Families\FamilyFormOptionsModel;
 use App\Models\Families\MemberModel;
 use App\Models\SearchModel;
+use App\Models\Lookups\CategoryModel;
 use App\Models\Lookups\SectorModel;
 use App\Models\Lookups\ServiceModel;
 use App\Models\Auth\UserModel;
@@ -120,6 +121,7 @@ class DashboardPageBuilder
                 'audit-trails' => $layoutModel->navActive($activePage, 'audit-trails'),
                 'sectors'      => $layoutModel->navActive($activePage, 'sectors'),
                 'services'     => $layoutModel->navActive($activePage, 'services'),
+                'categories'   => $layoutModel->navActive($activePage, 'categories'),
             ],
             'adminAccounts'      => array_values(array_filter($users, static fn ($account) => $account['role'] === 'Admin')),
             // 'User' is the raw DB enum value for the Employee role (surfaced as
@@ -132,6 +134,7 @@ class DashboardPageBuilder
             'memberListData'      => $memberListData,
             'sectors'            => $this->fetchVisibleSectors($sectorModel),
             'services'           => $this->fetchVisibleServices($serviceModel),
+            'categories'         => $this->fetchVisibleCategories(new CategoryModel()),
             'stats'              => $dashboardModel->stats(),
             'canCreateFamily'    => true,
             'username'           => (string) (session()->get('username') ?? 'Admin'),
@@ -220,6 +223,16 @@ class DashboardPageBuilder
         return $serviceModel
             ->orderBy('serviceID', 'ASC')
             ->findAll();
+    }
+
+    /** All categories (active + archived), official first, for the Manage Categories view. */
+    private function fetchVisibleCategories(CategoryModel $categoryModel): array
+    {
+        if (! $categoryModel->hasTable()) {
+            return [];
+        }
+
+        return $categoryModel->getAllIncluding();
     }
 
     /**

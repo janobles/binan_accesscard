@@ -101,7 +101,6 @@ if (! function_exists('dashboard_scripts')) {
         ];
 
         if ($includeAdminModules) {
-            $scripts[] = 'assets/js/accountmanagement.js';
             $scripts[] = 'assets/js/sector_service_modal.js';
         }
 
@@ -126,13 +125,6 @@ if (! function_exists('login_scripts')) {
     function login_scripts(): string
     {
         return bootstrap_scripts();
-    }
-}
-
-if (! function_exists('account_management_styles')) {
-    function account_management_styles(): string
-    {
-        return stylesheet_tag('css/accountmanagement.css', true);
     }
 }
 

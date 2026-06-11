@@ -45,13 +45,13 @@ $showArchivedTab = (bool) ($showArchivedTab ?? true);
         <?php endif; ?>
     </header>
 
-    <?= view('components/searchbar', [
-        'keyword' => $keyword,
-        'sectorId' => $sectorId,
+    <?= view('components/search-bar', [
+        'searchTerm' => $keyword,
+        'selectedSectorId' => $sectorId,
         'sectorOptions' => $sectorOptions,
         'status' => $status,
-        'pageTitle' => 'Manage Records',
-        'routeAction' => $searchRouteAction,
+        'searchAction' => $searchRouteAction,
+        'searchAllAction' => $searchRouteAction,
     ]) ?>
 
     <div class="record-table-meta">

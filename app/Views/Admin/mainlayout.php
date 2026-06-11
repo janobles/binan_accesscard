@@ -29,10 +29,12 @@ $activityLinkLabel = (string) ($activityLinkLabel ?? 'View All');
         <h2>Recent Records</h2>
     </header>
 
-    <?= view('components/searchbar', [
+    <?= view('components/search-bar', [
+        'searchTerm' => $searchTerm ?? '',
         'sectorOptions' => $sectorOptions ?? [],
-        'pageTitle' => 'Manage Records',
-        'routeAction' => $manageRecordsUrl,
+        'selectedSectorId' => (string) ($searchFilters['sectorID'] ?? ''),
+        'searchAction' => $manageRecordsUrl,
+        'searchAllAction' => $manageRecordsUrl,
     ]) ?>
 
     <div class="table-responsive">

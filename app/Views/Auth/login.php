@@ -4,6 +4,7 @@
  * css/login.css). The POST target, CSRF field, input names, old() repopulation,
  * and login.js (idle-timer reset) are melbranch's and unchanged.
  */
+$bootstrapCss = base_url('assets/bootstrap/css/bootstrap.min.css') . '?v=' . (is_file(FCPATH . 'assets/bootstrap/css/bootstrap.min.css') ? filemtime(FCPATH . 'assets/bootstrap/css/bootstrap.min.css') : time());
 $loginCss = base_url('css/login.css') . '?v=' . (is_file(FCPATH . 'css/login.css') ? filemtime(FCPATH . 'css/login.css') : time());
 ?>
 <!DOCTYPE html>
@@ -12,7 +13,7 @@ $loginCss = base_url('css/login.css') . '?v=' . (is_file(FCPATH . 'css/login.css
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login | Binan Access Card Portal</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="<?= esc($bootstrapCss, 'attr') ?>" rel="stylesheet">
     <link rel="stylesheet" href="<?= esc($loginCss, 'attr') ?>">
 </head>
 <body>

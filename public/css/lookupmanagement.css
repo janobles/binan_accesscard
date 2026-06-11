@@ -1,3 +1,6 @@
+/* Shared lookup-management styles for Sector and Services pages.
+   The markup still uses sector-* classes for compatibility with existing views/JS. */
+
 .sector-management {
     overflow: hidden;
     border: 1px solid #dce5e2;

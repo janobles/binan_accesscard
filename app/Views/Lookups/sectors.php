@@ -19,7 +19,7 @@ $activeSectorCount   = count(array_filter($sectors, static fn ($s) => trim((stri
 $archivedSectorCount = count($sectors) - $activeSectorCount;
 ?>
 
-<?php /* Jade-style reskin (sector-* classes). All melbranch hooks preserved:
+<?php /* Shared lookup-management styling (sector-* classes kept for compatibility). All melbranch hooks preserved:
          data-sector-management-root, #sector-status-select toggle,
          .js-sector-modal-open + data-sector-* attributes, the sector-modal include. */ ?>
 <div class="sector-management" data-sector-management-root>

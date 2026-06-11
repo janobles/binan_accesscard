@@ -1,6 +1,6 @@
 <div data-entry-panel="head">
     <div class="section-title">
-        <span>Record Head</span>
+        <span>Personal Information</span>
     </div>
     <?php
     $headCivilStatus = (string) ($familyRecord['civilstatus'] ?? '');

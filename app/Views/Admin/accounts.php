@@ -55,11 +55,12 @@ $accounts = $isDeveloper ? array_merge($adminAccounts, $employeeAccounts) : $emp
                             <input class="form-control" id="account-confirm-password" name="password_confirm" type="password" placeholder="Confirm password" required minlength="8">
                         </div>
                         <div class="account-field">
-                            <label class="form-label" for="account-role">Role</label>
+                            <label class="form-label" for="account-role">Account Level</label>
                             <select class="form-select" id="account-role" name="role" required>
                                 <option value="">Choose role</option>
-                                <option value="Admin" <?= old('role') === 'Admin' ? 'selected' : '' ?>>Admin</option>
-                                <option value="User" <?= old('role') === 'User' ? 'selected' : '' ?>>Employee</option>
+                                <option value="Admin" <?= old('role') === 'Admin' ? 'selected' : '' ?>>Administrator</option>
+                                <option value="User" <?= old('role') === 'User' ? 'selected' : '' ?>>Encoder</option>
+                                <option value="Viewer" <?= old('role') === 'Viewer' ? 'selected' : '' ?>>Viewer</option>
                             </select>
                         </div>
                         <div class="account-create-actions">

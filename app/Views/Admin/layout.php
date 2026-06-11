@@ -55,8 +55,7 @@ $jadeStyles = [
     'css/sb-admin-adapter.css',
     'css/managerecord.css',
     'css/searchbar.css',
-    'css/sector.css',
-    'css/service.css',
+    'css/lookupmanagement.css',
     'css/audittrails.css',
     'css/accountmanagement.css',
     'css/familymodal.css',
@@ -70,8 +69,8 @@ $jadeStyles = [
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= esc($pageTitle) ?> - Binan Access Card MIS</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="<?= esc($cssVersion('assets/bootstrap/css/bootstrap.min.css'), 'attr') ?>" rel="stylesheet">
+    <link href="<?= esc($cssVersion('assets/bootstrap-icons/font/bootstrap-icons.min.css'), 'attr') ?>" rel="stylesheet">
     <?php foreach ($jadeStyles as $stylePath): ?>
     <link rel="stylesheet" href="<?= esc($cssVersion($stylePath), 'attr') ?>">
     <?php endforeach; ?>
@@ -301,8 +300,8 @@ $jadeStyles = [
     </div>
 </div>
 
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="<?= base_url('assets/jquery/jquery-3.7.1.min.js') ?>?v=<?= filemtime(FCPATH . 'assets/jquery/jquery-3.7.1.min.js') ?>"></script>
+<script src="<?= base_url('assets/bootstrap/js/bootstrap.bundle.min.js') ?>?v=<?= filemtime(FCPATH . 'assets/bootstrap/js/bootstrap.bundle.min.js') ?>"></script>
 <?php
 $versionedAssetUrl = static function (string $relativePath): ?string {
     $fullPath = FCPATH . ltrim($relativePath, '/');

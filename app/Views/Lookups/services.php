@@ -12,7 +12,7 @@ $activeServiceCount   = count(array_filter($services, static fn ($s) => trim((st
 $archivedServiceCount = count($services) - $activeServiceCount;
 ?>
 
-<?php /* Jade-style reskin (sector-* class system, shared with service.css). All
+<?php /* Shared lookup-management styling (sector-* classes kept for compatibility). All
          melbranch hooks preserved: data-service-management-root, the
          #service-status-select toggle, .js-service-modal-open
          + data-service-* attributes, and the service-modal include. */ ?>

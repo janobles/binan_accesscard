@@ -17,6 +17,7 @@ class FamilyProfilingFormV2
         'IP' => 'Indigenous People',
         'IDP' => 'Internally Displaced Person',
         'PDL' => 'Persons Deprived of Liberty',
+        'SBS' => 'Small Business Sector',
         'OTHER' => 'Other Sectors',
     ];
 
@@ -42,7 +43,7 @@ class FamilyProfilingFormV2
         return [
             'Binan (Poblacion)', 'Bungahan', 'Santo Tomas (Calabuso)', 'Canlalay',
             'Casile', 'De La Paz', 'Ganado', 'San Francisco (Halang)', 'Langkiwa',
-            'Loma', 'Malaban', 'Malamig', 'Mampalasan (Mamplasan)', 'Platero',
+            'Loma', 'Malaban', 'Malamig', 'Mamplasan', 'Platero',
             'Poblacion', 'Santo Nino', 'San Antonio', 'San Jose', 'San Vicente',
             'Soro-Soro', 'Santo Domingo', 'Timbao', 'Tubigan', 'Zapote',
         ];

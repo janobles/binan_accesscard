@@ -196,7 +196,7 @@ $deepToRecord = (int) ($deepToRecord ?? 0);
         <table class="table table-sm family-list-table align-middle">
             <thead>
             <tr>
-                <th>Record Head</th>
+                <th>Head of the Family</th>
                 <th>Sector</th>
                 <th>Address</th>
                 <th>Birthday</th>

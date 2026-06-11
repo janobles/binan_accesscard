@@ -1,3 +1,10 @@
+<?php
+/*
+ * Jade-style reskin of the login page (jadebranch's login-card design + jade
+ * css/login.css). The POST target, CSRF field, input names, old() repopulation,
+ * and login.js (idle-timer reset) are melbranch's and unchanged.
+ */
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>

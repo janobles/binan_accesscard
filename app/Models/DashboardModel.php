@@ -14,11 +14,16 @@ class DashboardModel
 {
     private BaseConnection $db;
 
+    /** Accepts an optional DB connection (defaults to the shared one) for testing. */
     public function __construct(?BaseConnection $db = null)
     {
         $this->db = $db ?? db_connect();
     }
 
+    /**
+     * Returns the four headline counts (families, members, active sectors, active
+     * services) for the dashboard summary cards. Frontend: dashboard overview.
+     */
     public function stats(): array
     {
         return [
@@ -31,6 +36,11 @@ class DashboardModel
         ];
     }
 
+    /**
+     * Returns the newest family heads with sector names resolved, for the
+     * dashboard's recent-families list. (DashboardModel is a lightweight reporting
+     * model separate from the Eloquent-style MemberModel.)
+     */
     public function recentFamilies(int $limit = 10): array
     {
         if (! $this->db->tableExists('member')) {
@@ -49,6 +59,7 @@ class DashboardModel
         return $this->withSectorNames($rows);
     }
 
+    /** Counts active family heads (memberID = headID). */
     private function countFamilies(): int
     {
         if (! $this->db->tableExists('member')) {
@@ -61,6 +72,7 @@ class DashboardModel
             ->countAllResults();
     }
 
+    /** Counts all active members (heads + relatives). */
     private function countMembers(): int
     {
         if (! $this->db->tableExists('member')) {
@@ -108,6 +120,7 @@ class DashboardModel
         return $rows;
     }
 
+    /** Builds an [sectorID => name] map used by withSectorNames(). */
     private function sectorNameMap(): array
     {
         if (! $this->db->tableExists('sector')) {

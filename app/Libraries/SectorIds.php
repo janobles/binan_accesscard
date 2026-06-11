@@ -39,6 +39,11 @@ class SectorIds
         return array_values(array_unique($ids));
     }
 
+    /**
+     * True if the value isn't a clean list of numeric IDs (object-like JSON,
+     * associative arrays, or non-numeric items). Backs the `valid_sector_array`
+     * validation rule so bad sector input is rejected before saving.
+     */
     public static function hasMalformedIds(mixed $value): bool
     {
         // Associative arrays and object-like JSON are not valid sector ID lists.
@@ -115,6 +120,11 @@ class SectorIds
         return implode(', ', $names);
     }
 
+    /**
+     * Turns any accepted input (array, JSON list, or comma text) into a flat list
+     * of raw items for normalize()/hasMalformedIds() to inspect. Object-like values
+     * yield an empty list.
+     */
     private static function itemsFromValue(mixed $value): array
     {
         if (is_array($value)) {
@@ -139,11 +149,13 @@ class SectorIds
             : explode(',', trim($text, "[] \t\n\r\0\x0B"));
     }
 
+    /** True if the array is a sequential (0..n) list rather than associative. */
     private static function isListArray(array $value): bool
     {
         return $value === [] || array_keys($value) === range(0, count($value) - 1);
     }
 
+    /** True if the item is a positive-integer-like value (int or digit string). */
     private static function isNumericId(mixed $value): bool
     {
         if (is_int($value)) {

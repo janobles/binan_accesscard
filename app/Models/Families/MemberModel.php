@@ -1,0 +1,594 @@
+<?php
+
+namespace App\Models\Families;
+
+use App\Libraries\SectorIds;
+use CodeIgniter\Model;
+
+/**
+ * Manages family heads and family member records.
+ */
+class MemberModel extends Model
+{
+    public const VALIDATION_RULES = [
+        'sectorID' => 'permit_empty|valid_sector_array',
+        'firstname' => 'required|max_length[100]',
+        'lastname' => 'required|max_length[100]',
+        'middlename' => 'permit_empty|max_length[50]',
+        'suffix' => 'permit_empty|max_length[20]',
+        'birthday' => 'permit_empty|valid_date[Y-m-d]',
+        'civilstatus' => 'permit_empty|max_length[100]',
+        'sex' => 'permit_empty|in_list[Male,Female]',
+        'education' => 'permit_empty|max_length[150]',
+        'job' => 'permit_empty|max_length[150]',
+        'contactnumber' => 'permit_empty|max_length[30]',
+        'religion' => 'permit_empty|max_length[100]',
+        'address' => 'permit_empty|max_length[255]',
+        'barangay' => 'permit_empty|max_length[100]',
+    ];
+
+    protected $table = 'member';
+    protected $primaryKey = 'memberID';
+    protected $returnType = 'array';
+    protected $allowedFields = [
+        'memberID',
+        'lastname',
+        'firstname',
+        'middlename',
+        'suffix',
+        'birthday',
+        'civilstatus',
+        'sex',
+        'education',
+        'job',
+        'Salary',
+        'contactnumber',
+        'religion',
+        'address',
+        'barangay',
+        'relationship',
+        'headID',
+        'sectorID',
+    ];
+    protected $useTimestamps = false;
+    protected $validationRules = self::VALIDATION_RULES;
+    protected $beforeInsert = ['normalizeSectorIdStorage'];
+    protected $beforeUpdate = ['normalizeSectorIdStorage'];
+
+    /** True if the `member` table exists; callers guard queries with this. */
+    public function hasTable(): bool
+    {
+        return $this->db->tableExists($this->table);
+    }
+
+    /**
+     * Confirms every table the family-save flow needs exists. FamilyController::store()
+     * calls this up front and aborts with a clear message if the schema is incomplete.
+     */
+    public function hasRequiredFamilyTables(): bool
+    {
+        foreach (['member', 'sector', 'services', 'member_services', 'audit_trails'] as $table) {
+            if (! $this->db->tableExists($table)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    // Transaction wrappers used by FamilyController::store() so the head, members,
+    // service links, and audit row all commit together or roll back as one unit.
+
+    /** Opens a managed DB transaction. */
+    public function beginTransaction(): void
+    {
+        $this->db->transStart();
+    }
+
+    /** Rolls back the current transaction after a save failure. */
+    public function rollbackTransaction(): void
+    {
+        $this->db->transRollback();
+    }
+
+    /** Commits the current transaction (or rolls back if any query failed). */
+    public function completeTransaction(): void
+    {
+        $this->db->transComplete();
+    }
+
+    /** Whether the just-completed transaction succeeded. */
+    public function transactionStatus(): bool
+    {
+        return $this->db->transStatus();
+    }
+
+    /**
+     * Returns the most recent family heads for the dashboard "recent families"
+     * panel, newest first, with sector IDs resolved to names. Frontend: dashboard
+     * overview via DashboardPageBuilder.
+     */
+    public function getRecentFamilies(int $limit = 10): array
+    {
+        if (! $this->hasTable()) {
+            return [];
+        }
+
+        $rows = $this->memberDashboardBuilder()
+            ->where('member.memberID = member.headID', null, false)
+            ->orderBy('member.memberID', 'DESC')
+            ->limit($limit)
+            ->get()
+            ->getResultArray();
+
+        return $this->withSectorNames($rows);
+    }
+
+    /** Counts active family heads (headID = memberID) for dashboard stats. */
+    public function countHeads(): int
+    {
+        if (! $this->hasTable()) {
+            return 0;
+        }
+
+        return $this->where('headID = memberID')
+            ->where('dt_deleted IS NULL', null, false)
+            ->countAllResults();
+    }
+
+    /** Counts all active members (heads + relatives) for dashboard stats. */
+    public function countMembers(): int
+    {
+        if (! $this->hasTable()) {
+            return 0;
+        }
+
+        return $this->where('dt_deleted IS NULL', null, false)
+            ->countAllResults();
+    }
+
+    /**
+     * ENCODE hook. Registered as beforeInsert/beforeUpdate, this runs right
+     * before a row is written and converts the sectorID array into its JSON
+    * storage string ('[1,2,3]'). See App\Libraries\SectorIds::toStorage().
+     */
+    protected function normalizeSectorIdStorage(array $data): array
+    {
+        if (array_key_exists('sectorID', $data['data'] ?? [])) {
+            $data['data']['sectorID'] = SectorIds::toStorage($data['data']['sectorID']);
+        }
+
+        return $data;
+    }
+
+    /**
+     * Returns per-person validation rules (without the sector rule, which is
+     * validated at the form level). When $requireHeadDetails is true it tightens
+     * middlename/birthday/sex to required, as the head of family needs them.
+     */
+    public static function personValidationRules(bool $requireHeadDetails = false): array
+    {
+        $rules = self::VALIDATION_RULES;
+        unset($rules['sectorID']);
+
+        if ($requireHeadDetails) {
+            $rules['middlename'] = 'required|max_length[50]';
+            $rules['birthday'] = 'required|valid_date[Y-m-d]';
+            $rules['sex'] = 'required|in_list[Male,Female]';
+        }
+
+        return $rules;
+    }
+
+    /**
+     * Inserts a head-of-family row, where headID points to its own memberID.
+     * Called by FamilyController::store(); returns the new memberID or false.
+     */
+    public function createHead(array $data): int|false
+    {
+        $data['memberID'] = $this->nextAutoIncrementId();
+        $data['headID'] = $data['memberID'];
+        $data['relationship'] = $data['relationship'] ?? 'Head';
+        $data = $this->memberColumnPayload($data);
+
+        if (! $this->insert($data)) {
+            return false;
+        }
+
+        return (int) $data['memberID'];
+    }
+
+    /**
+     * Inserts a relative under an existing head (validating the head exists).
+     * Called per member by FamilyController::store(); returns the new memberID
+     * or false.
+     */
+    public function addFamilyMember(int $headId, array $data): int|false
+    {
+        $head = $this->find($headId);
+
+        if ($head === null || (int) ($head['headID'] ?? 0) !== $headId) {
+            return false;
+        }
+
+        $data['headID'] = $headId;
+        $data['relationship'] = $data['relationship'] ?? 'Member';
+        $data = $this->memberColumnPayload($data);
+
+        if (! $this->insert($data)) {
+            return false;
+        }
+
+        return (int) $this->getInsertID();
+    }
+
+    /**
+     * Returns all members of one family (by head ID) with sector names resolved.
+     * $visibility filters active/archived/all. Frontend: the family view/edit
+     * screens via DashboardPageBuilder.
+     */
+    public function getFamilyMembers(int $headId, string $visibility = 'active'): array
+    {
+        if (! $this->hasTable()) {
+            return [];
+        }
+
+        $rows = $this->memberDashboardBuilder($visibility)
+            ->where('member.headID', $headId)
+            ->orderBy('member.memberID', 'ASC')
+            ->get()
+            ->getResultArray();
+
+        return $this->withSectorNames($rows);
+    }
+
+    /**
+     * Fetches a single member (joined with head name) with sector IDs resolved to
+     * names, or null if not found. Used by the family view/edit detail screens.
+     */
+    public function findWithSector(int $memberId): ?array
+    {
+        if (! $this->hasTable()) {
+            return null;
+        }
+
+        $member = $this->memberDashboardBuilder()
+            ->where('member.memberID', $memberId)
+            ->get()
+            ->getRowArray();
+
+        if ($member === null) {
+            return null;
+        }
+
+        return $this->withSectorNames([$member])[0] ?? null;
+    }
+
+    // FIRST (quick) search bar of the Manage Records tab. Lists family HEADS only.
+    // $filters carries the Manage Records filter controls (sectorID + date); see
+    // App\Libraries\DashboardPageBuilder::buildMemberListData() which supplies them.
+    public function searchFamilies(?string $keyword = null, int $limit = 50, int $offset = 0, bool $archived = false, array $filters = []): array
+    {
+        if (! $this->hasTable()) {
+            return [];
+        }
+
+        $limit = max(1, $limit);
+        $offset = max(0, $offset);
+
+        $builder = $this->familySearchBuilder($keyword, $archived, $filters)
+            ->orderBy('member.memberID', 'DESC')
+            ->limit($limit, $offset);
+
+        return $this->withSectorNames($builder->get()->getResultArray());
+    }
+
+    /**
+     * Total count for the same query as searchFamilies(), used to drive the Manage
+     * Records pagination controls on the frontend.
+     */
+    public function countSearchFamilies(?string $keyword = null, bool $archived = false, array $filters = []): int
+    {
+        if (! $this->hasTable()) {
+            return 0;
+        }
+
+        return $this->familySearchBuilder($keyword, $archived, $filters)->countAllResults();
+    }
+
+    // Builds the head-only records query. $filters (optional) applies the Manage Records
+    // filter controls: 'sectorID' (exact match inside the JSON array) and 'date'
+    // (single-day match on member.dt_created). Empty $filters = original behavior unchanged.
+    private function familySearchBuilder(?string $keyword = null, bool $archived = false, array $filters = [])
+    {
+        $builder = $this->memberDashboardBuilder($archived ? 'archived' : 'active')
+            ->where('member.memberID = member.headID', null, false);
+
+        if ($keyword !== null && trim($keyword) !== '') {
+            $this->applyMemberKeyword($builder, trim($keyword));
+        }
+
+        $this->applyRecordFilters($builder, $filters);
+
+        return $builder;
+    }
+
+    /**
+     * Adds the Manage Records keyword clause to a member query. Each whitespace
+     * token must match one of the name columns (AND across tokens, OR across
+     * firstname/middlename/lastname), so a full "Firstname Lastname" matches even
+     * though the words live in different columns. The whole keyword is still matched
+     * against the non-name fields (contact/relationship/religion/address/sector) as
+     * an OR branch, so single-word and non-name searches behave as before.
+     */
+    private function applyMemberKeyword($builder, string $keyword): void
+    {
+        $tokens = preg_split('/\s+/', $keyword, -1, PREG_SPLIT_NO_EMPTY) ?: [$keyword];
+
+        $builder->groupStart();
+
+        // Name tokens, AND-ed together.
+        $builder->groupStart();
+        foreach ($tokens as $token) {
+            $builder->groupStart()
+                ->like('member.firstname', $token)
+                ->orLike('member.middlename', $token)
+                ->orLike('member.lastname', $token)
+                ->groupEnd();
+        }
+        $builder->groupEnd();
+
+        // Whole-keyword matches on the non-name fields, OR-ed with the name match.
+        $builder->orGroupStart()
+            ->like('member.contactnumber', $keyword)
+            ->orLike('member.relationship', $keyword);
+
+        foreach (['religion', 'address', 'barangay'] as $field) {
+            if ($this->memberFieldExists($field)) {
+                $builder->orLike('member.' . $field, $keyword);
+            }
+        }
+
+        foreach ($this->sectorIdsForKeyword($keyword) as $sectorId) {
+            $builder->orWhere(SectorIds::containsCondition($sectorId, 'member.sectorID'), null, false);
+        }
+
+        $builder->groupEnd();
+
+        $builder->groupEnd();
+    }
+
+    // Applies the Manage Records filter controls to a member query builder.
+    // Connects to: family-list.php filter form -> DashboardPageBuilder -> here.
+    private function applyRecordFilters($builder, array $filters): void
+    {
+        $sectorId = (int) ($filters['sectorID'] ?? 0);
+
+        if ($sectorId > 0) {
+            $builder->where(SectorIds::containsCondition($sectorId, 'member.sectorID'), null, false);
+        }
+
+        $date = trim((string) ($filters['date'] ?? ''));
+
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) === 1) {
+            $builder
+                ->where('member.dt_created >=', $date . ' 00:00:00')
+                ->where('member.dt_created <=', $date . ' 23:59:59');
+        }
+    }
+
+    /**
+     * Returns the member IDs belonging to a family, used when re-syncing a
+     * family's service assignments during an edit.
+     */
+    public function getFamilyMemberIds(int $headId): array
+    {
+        if (! $this->hasTable()) {
+            return [];
+        }
+
+        $rows = $this->select('memberID')
+            ->where('headID', $headId)
+            ->findAll();
+
+        return array_values(array_map(static fn (array $row): int => (int) ($row['memberID'] ?? 0), $rows));
+    }
+
+    /** Updates the head-of-family row during a family edit submission. */
+    public function updateHead(int $headId, array $data): bool
+    {
+        $data['headID'] = $headId;
+        $data['relationship'] = 'Head';
+        $data = $this->memberColumnPayload($data);
+
+        return $this->update($headId, $data) !== false;
+    }
+
+    /**
+     * Hard-deletes all relatives of a family but keeps the head. Used when an edit
+     * replaces the member list before re-inserting the submitted members.
+     */
+    public function deleteFamilyMembersExceptHead(int $headId): bool
+    {
+        return $this->where('headID', $headId)
+            ->where('memberID !=', $headId)
+            ->delete() !== false;
+    }
+
+    /** Soft-archives an entire family (Manage Records "archive" action). */
+    public function archiveFamily(int $headId): bool
+    {
+        return $this->markFamilyDeleted($headId);
+    }
+
+    /** Restores a soft-archived family by clearing dt_deleted on all its rows. */
+    public function restoreFamily(int $headId): bool
+    {
+        if (! $this->hasTable() || ! $this->db->fieldExists('dt_deleted', $this->table)) {
+            return false;
+        }
+
+        return (bool) $this->db->table($this->table)
+            ->where('headID', $headId)
+            ->where('dt_deleted IS NOT NULL', null, false)
+            ->update(['dt_deleted' => null]);
+    }
+
+    /** Shared soft-delete: stamps dt_deleted on a family's active rows. */
+    private function markFamilyDeleted(int $headId): bool
+    {
+        if (! $this->hasTable() || ! $this->db->fieldExists('dt_deleted', $this->table)) {
+            return false;
+        }
+
+        return (bool) $this->db->table($this->table)
+            ->where('headID', $headId)
+            ->where('dt_deleted IS NULL', null, false)
+            ->update(['dt_deleted' => date('Y-m-d H:i:s')]);
+    }
+
+    /**
+     * Reads the table's next AUTO_INCREMENT so a head can set its own memberID and
+     * headID to the same value in one insert (head points at itself).
+     */
+    private function nextAutoIncrementId(): int
+    {
+        $row = $this->db->query("\n            SELECT AUTO_INCREMENT\n            FROM information_schema.TABLES\n            WHERE TABLE_SCHEMA = DATABASE()\n              AND TABLE_NAME = 'member'\n        ")->getRowArray();
+
+        return (int) ($row['AUTO_INCREMENT'] ?? 1);
+    }
+
+    /**
+     * Central query builder for member listings: selects the display columns,
+     * left-joins the head's name, and applies the active/archived/all visibility
+     * filter. Shared by the recent, search, family, and detail queries.
+     */
+    private function memberDashboardBuilder(string $visibility = 'active')
+    {
+        $select = [
+            'member.memberID',
+            'member.lastname',
+            'member.firstname',
+            'member.middlename',
+            'member.suffix',
+            'member.birthday',
+            'member.civilstatus',
+            'member.sex',
+            'member.education',
+            'member.job',
+            'member.Salary',
+            'member.contactnumber',
+            'member.relationship',
+            'member.dt_created',
+            'member.dt_updated',
+            'member.dt_deleted',
+            'member.headID',
+            'member.sectorID',
+            'head.firstname AS head_firstname',
+            'head.lastname AS head_lastname',
+        ];
+
+        foreach (['religion', 'address', 'barangay'] as $field) {
+            if ($this->memberFieldExists($field)) {
+                $select[] = 'member.' . $field;
+            }
+        }
+
+        $builder = $this->db->table('member')
+            ->select($select)
+            ->join('member head', 'head.memberID = member.headID', 'left');
+
+        if ($this->db->fieldExists('dt_deleted', 'member')) {
+            if ($visibility === 'archived') {
+                $builder->where('member.dt_deleted IS NOT NULL', null, false);
+            } elseif ($visibility !== 'all') {
+                $builder->where('member.dt_deleted IS NULL', null, false);
+            }
+        }
+
+        return $builder;
+    }
+
+    /**
+     * DECODE/display path. For each member row, takes the raw JSON sectorID
+     * string and adds a 'sector_name' field with the IDs resolved to names.
+    * See App\Libraries\SectorIds::toNames().
+     */
+    private function withSectorNames(array $rows): array
+    {
+        $sectorNames = $this->sectorNameMap();
+
+        foreach ($rows as &$row) {
+            $sectorValue = $row['sector_array_string'] ?? $row['sectorID'] ?? '[]';
+            $row['sectorID'] = $sectorValue;
+            $row['sector_name'] = SectorIds::toNames($sectorValue, $sectorNames);
+        }
+
+        return $rows;
+    }
+
+    /** Builds an [sectorID => name] map used to resolve sector names for display. */
+    private function sectorNameMap(): array
+    {
+        if (! $this->db->tableExists('sector')) {
+            return [];
+        }
+
+        $sectors = $this->db->table('sector')
+            ->select('sectorID, name')
+            ->get()
+            ->getResultArray();
+
+        $map = [];
+
+        foreach ($sectors as $sector) {
+            $map[(int) $sector['sectorID']] = (string) $sector['name'];
+        }
+
+        return $map;
+    }
+
+    /**
+     * Finds sector IDs whose name/description match a search keyword, so the
+     * Manage Records search can also match members by their sector text.
+     */
+    private function sectorIdsForKeyword(string $keyword): array
+    {
+        if (! $this->db->tableExists('sector')) {
+            return [];
+        }
+
+        return array_map(
+            static fn (array $sector): int => (int) $sector['sectorID'],
+            $this->db->table('sector')
+                ->select('sectorID')
+                ->like('name', $keyword)
+                ->orLike('description', $keyword)
+                ->get()
+                ->getResultArray()
+        );
+    }
+
+    /**
+     * Drops any keys that aren't real `member` columns before an insert/update, so
+     * the model tolerates schema differences between SQL-dump versions.
+     */
+    private function memberColumnPayload(array $data): array
+    {
+        if (! $this->hasTable()) {
+            return $data;
+        }
+
+        return array_filter(
+            $data,
+            fn (mixed $value, string $field): bool => $this->memberFieldExists($field),
+            ARRAY_FILTER_USE_BOTH
+        );
+    }
+
+    /** True if a given column exists on the `member` table (schema-tolerance helper). */
+    private function memberFieldExists(string $field): bool
+    {
+        return $this->db->fieldExists($field, $this->table);
+    }
+}

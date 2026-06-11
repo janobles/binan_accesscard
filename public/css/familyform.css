@@ -1,0 +1,1367 @@
+/* Family wizard UI styles. Field saving and validation belong in PHP controllers/models. */
+
+.family-wizard-shell {
+	display: flex;
+	justify-content: center;
+	width: min(72rem, calc(100vw - 2rem)); /* definite width -> card can't shrink-wrap to per-step content */
+	min-width: 0;
+	margin-inline: auto;                    /* centers the shell within the flex modal-body */
+}
+
+.family-wizard-card {
+	width: min(100%, 1180px);
+	background: #ffffff;
+	border: 1px solid #cfdceb;
+	border-radius: 8px;
+	box-shadow: 0 8px 24px rgba(9, 31, 58, 0.08);
+}
+
+.family-wizard-header {
+	display: flex;
+	align-items: center;
+	justify-content: flex-start;
+	padding: 16px 18px;
+	background: #102f50;
+	color: #eff7ff;
+}
+
+.wizard-header-left {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.wizard-header-left strong {
+	display: block;
+	font-size: 22px;
+	font-weight: 700;
+	line-height: 1.15;
+}
+
+.wizard-header-left small {
+	display: block;
+	margin-top: 2px;
+	font-size: 12px;
+	color: #9fb1c6;
+}
+
+.wizard-icon {
+	width: 32px;
+	height: 32px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 7px;
+	background: #118b86;
+	font-size: 20px;
+	line-height: 1;
+	font-weight: 600;
+}
+
+.family-wizard-steps {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	border-top: 1px solid #284866;
+	border-bottom: 1px solid #ccd6e2;
+	background: #edf2f7;
+}
+
+.wizard-step {
+	min-height: 62px;
+	display: grid;
+	place-items: center;
+	text-align: center;
+	gap: 2px;
+	padding: 9px 6px;
+	border-right: 1px solid #d2dae5;
+	cursor: pointer;
+}
+
+.wizard-step:last-child {
+	border-right: 0;
+}
+
+.wizard-step span {
+	width: 24px;
+	height: 24px;
+	border-radius: 50%;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 13px;
+	font-weight: 700;
+	color: #8d9daf;
+	background: #dce4ee;
+}
+
+.wizard-step small {
+	font-size: 13px;
+	line-height: 1.15;
+	color: #8c9aad;
+	max-width: 160px;
+}
+
+/* Steps 2 & 3 stay locked until the Head of Family fields are valid. Clicks are kept
+   active (pointer-events left on) so tapping a locked step surfaces the validation. */
+.wizard-step.is-locked {
+	cursor: not-allowed;
+	opacity: 0.55;
+}
+
+.wizard-step.is-locked small {
+	color: #8c9aad;
+}
+
+#familyForm {
+	display: flex;
+	flex: 1 1 auto;
+	min-height: 0;
+	flex-direction: column;
+	padding: 0;
+	overflow: hidden;
+}
+
+.family-form-body {
+	flex: 1 1 auto;
+	min-height: 0;
+	overflow: auto;
+	scrollbar-gutter: stable;
+	padding: 0 14px;
+}
+
+#familyFormAlert:empty {
+	display: none;
+}
+
+#familyForm .form-section {
+	margin-top: 0;
+	border-top: 1px solid #d6dee8;
+	padding-top: 4px;
+}
+
+#familyForm .family-step-panel {
+	display: none;
+}
+
+#familyForm .family-step-panel.is-visible {
+	display: block;
+}
+
+#familyForm .form-section:first-of-type {
+	margin-top: 0;
+}
+
+#familyForm .section-title {
+	margin: 0 0 8px;
+	border-bottom: 0;
+	padding-bottom: 0;
+}
+
+#familyForm .section-title .btn {
+	min-width: 112px;
+	border-radius: 8px;
+	font-weight: 600;
+}
+
+#familyForm .section-title span {
+	color: #4f6175;
+	font-size: calc(var(--ui-font-lg) + 0.12rem);
+	font-weight: 700;
+}
+
+#familyForm .form-label {
+	margin-bottom: 3px;
+	color: #59697b;
+	font-size: var(--ui-font-sm);
+	font-weight: 600;
+}
+
+#familyForm .form-control,
+#familyForm .form-select {
+	min-height: calc(var(--ui-control-height) - 0.55rem);
+	padding: calc(var(--ui-control-padding-y) - 0.16rem) calc(var(--ui-control-padding-x) - 0.1rem);
+	border-color: #cbd6e3;
+	border-radius: 4px;
+	font-size: var(--ui-font-md);
+	line-height: 1.2;
+	color: #4e5f72;
+	background: #fbfdff;
+}
+
+#familyForm .form-control::placeholder {
+	color: #95a4b5;
+	font-size: inherit;
+	line-height: 1.2;
+}
+
+#familyForm .form-control:focus,
+#familyForm .form-select:focus {
+	border-color: #2d81bf;
+	box-shadow: 0 0 0 0.2rem rgba(45, 129, 191, 0.14);
+}
+
+#familyForm .form-check-input:focus,
+#familyForm .form-check-input:active {
+	box-shadow: none;
+}
+
+.dropdown-checklist {
+	position: relative;
+}
+
+.dropdown-checklist-toggle {
+	width: 100%;
+	min-height: calc(var(--ui-control-height) - 0.25rem);
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
+	border: 1px solid #cbd6e3;
+	border-radius: 4px;
+	padding: calc(var(--ui-control-padding-y) - 0.08rem) var(--ui-control-padding-x);
+	background: #fbfdff;
+	color: #4e5f72;
+	font-size: var(--ui-font-md);
+	line-height: 1.3;
+	text-align: left;
+}
+
+.dropdown-checklist-toggle [data-dropdown-checklist-label] {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.dropdown-checklist.has-selection .dropdown-checklist-toggle {
+	border-color: #88b6d5;
+	background: #f2f8fc;
+	color: #254f73;
+}
+
+.dropdown-checklist-caret {
+	width: 8px;
+	height: 8px;
+	flex: 0 0 auto;
+	border-right: 2px solid #6b7f94;
+	border-bottom: 2px solid #6b7f94;
+	transform: rotate(45deg);
+	margin-top: -4px;
+}
+
+.dropdown-checklist.is-open .dropdown-checklist-caret {
+	margin-top: 4px;
+	transform: rotate(225deg);
+}
+
+.dropdown-checklist-menu {
+	display: none;
+	position: absolute;
+	z-index: 40;
+	top: calc(100% + 4px);
+	left: 0;
+	right: 0;
+	max-height: 290px;
+	overflow: auto;
+	border: 1px solid #cbd6e3;
+	border-radius: 8px;
+	padding: 8px;
+	background: #ffffff;
+	box-shadow: 0 12px 28px rgba(16, 47, 80, 0.16);
+}
+
+.dropdown-checklist.is-open .dropdown-checklist-menu {
+	display: block;
+}
+
+.dropdown-checklist-group + .dropdown-checklist-group {
+	margin-top: 8px;
+	padding-top: 8px;
+	border-top: 1px solid #e2e9f1;
+}
+
+.dropdown-checklist-group-title {
+	margin: 0 0 5px;
+	color: #48617a;
+	font-size: 12px;
+	font-weight: 700;
+	text-transform: uppercase;
+}
+
+.dropdown-checklist-option {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+	margin: 0;
+	min-height: auto;
+	min-width: 0;
+	border-radius: 6px;
+	padding: 7px 8px;
+	color: #41566d;
+	font-size: 13px;
+	line-height: 1.35;
+	cursor: pointer;
+}
+
+.dropdown-checklist-option:hover {
+	background: #f1f6fb;
+}
+
+.dropdown-checklist-option .form-check-input {
+	flex: 0 0 auto;
+	float: none;
+	margin-left: 0;
+	margin-top: 2px;
+}
+
+.dropdown-checklist-option .form-check-label {
+	display: block;
+	flex: 1 1 auto;
+	min-width: 0;
+	overflow-wrap: break-word;
+	white-space: normal;
+}
+
+#familyForm .assistance-box,
+#familyForm .member-row {
+	border: 1px solid #d6dee9;
+	border-radius: 8px;
+	background: #f8fbff;
+}
+
+#familyForm .assistance-box {
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	padding: 12px;
+}
+
+#familyForm .assistance-box h6 {
+	margin: 0 0 10px;
+	color: #38536f;
+	font-size: 13px;
+	font-weight: 700;
+	line-height: 1.25;
+	text-transform: uppercase;
+}
+
+#familyForm .member-row {
+	padding: 14px;
+}
+
+#familyForm .member-row-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	margin-bottom: 14px;
+}
+
+#familyForm .member-row-header strong {
+	color: #0f2135;
+	font-size: 20px;
+	font-weight: 700;
+}
+
+#headOfFamilySummary small {
+	font-size: 12px;
+	color: #4f6175;
+}
+
+.head-summary-list {
+	font-size: 12px;
+	color: #4f6175;
+}
+
+.head-summary-list ul {
+	margin: 4px 0 0;
+	padding-left: 18px;
+}
+
+.head-summary-list li {
+	margin-bottom: 2px;
+}
+
+#familyForm .service-check-list {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	min-width: 0;
+}
+
+#familyForm .assistance-box .service-check-list {
+	max-height: 260px;
+	overflow: auto;
+	padding-right: 4px;
+}
+
+#familyForm .assistance-box .form-check {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+	margin: 0;
+	min-height: auto;
+	min-width: 0;
+	padding: 6px 2px 6px 0;
+	width: 100%;
+}
+
+#familyForm .assistance-box .form-check-input {
+	flex: 0 0 auto;
+	float: none;
+	margin-left: 0;
+	margin-top: 3px;
+}
+
+#familyForm .assistance-box .form-check-label {
+	display: block;
+	flex: 1 1 auto;
+	min-width: 0;
+	color: #11233a;
+	font-size: 14px;
+	line-height: 1.35;
+	overflow-wrap: break-word;
+	white-space: normal;
+}
+
+#sectorNameList {
+	max-height: 320px;
+	overflow: auto;
+	padding: 12px !important;
+}
+
+#sectorNameList .sector-name-section + .sector-name-section {
+	margin-top: 14px;
+	padding-top: 12px;
+	border-top: 1px solid #dce5ef;
+}
+
+#sectorNameList .sector-name-section-title {
+	margin: 0 0 10px;
+	color: #38536f;
+	font-size: 14px;
+	font-weight: 700;
+	line-height: 1.25;
+}
+
+#sectorNameList .sector-name-option {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+	min-height: auto;
+	min-width: 0;
+	padding-left: 0;
+	margin-bottom: 10px !important;
+}
+
+#sectorNameList .sector-name-option .form-check-input {
+	flex: 0 0 auto;
+	float: none;
+	margin-left: 0;
+	margin-top: 4px;
+}
+
+#sectorNameList .sector-name-label {
+	display: flex;
+	align-items: flex-start;
+	flex: 1 1 auto;
+	min-width: 0;
+	line-height: 1.35;
+}
+
+#sectorNameList .sector-name-text {
+	overflow-wrap: break-word;
+	white-space: normal;
+}
+
+.family-form-actions {
+	position: static;
+	z-index: 20;
+	display: flex;
+	flex-wrap: wrap;
+	flex: 0 0 auto;
+	justify-content: flex-end;
+	margin-top: 0;
+	padding: 14px 18px 18px;
+	border-top: 1px solid #d6dee8;
+	background: #ffffff;
+}
+
+.family-form-hidden {
+	display: none !important;
+}
+
+.family-form-actions .btn {
+	min-width: 116px;
+	min-height: var(--ui-control-height);
+	border-radius: 8px;
+	font-weight: 600;
+	font-size: var(--ui-font-md);
+}
+
+.family-form-actions .btn-outline-secondary {
+	border-color: #d2dbe7;
+	color: #5b6f84;
+	background: #f5f8fb;
+}
+
+.family-form-actions .btn-primary {
+	border-color: #10897f;
+	background: #10897f;
+}
+
+.family-form-actions .btn-primary:hover,
+.family-form-actions .btn-primary:focus,
+.family-form-actions .btn-primary:active {
+	border-color: #0d756d !important;
+	background: #0d756d !important;
+}
+
+.member-section-title {
+	position: sticky;
+	z-index: 15;
+	top: 0;
+	align-items: center;
+	padding: 10px 0;
+	background: #ffffff;
+}
+
+.member-sticky-add {
+	position: sticky;
+	z-index: 18;
+	bottom: 64px;
+	display: flex;
+	justify-content: flex-end;
+	margin-top: 14px;
+	padding: 10px 0 0;
+	background: rgba(255, 255, 255, 0.96);
+	backdrop-filter: blur(6px);
+}
+
+.member-sticky-add .btn {
+	max-width: 220px;
+	min-height: 40px;
+	border-radius: 8px;
+	font-weight: 600;
+}
+
+.member-choice-open {
+	min-height: 42px;
+	border-color: #cbd6e3;
+	color: #4e5f72;
+	background: #fbfdff;
+	text-align: left;
+}
+
+.member-sector-service-block {
+	margin-top: 4px;
+	border: 1px solid #d8e2ee;
+	border-radius: 8px;
+	padding: 16px;
+	background: #ffffff;
+	overflow: hidden;
+}
+
+.member-choice-grid {
+	align-items: stretch;
+	--bs-gutter-x: 16px;
+	--bs-gutter-y: 16px;
+}
+
+.member-choice-grid > [class*="col-"] {
+	display: flex;
+	min-width: 0;
+}
+
+.member-choice-section {
+	height: 100%;
+	width: 100%;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+}
+
+.member-choice-section-title {
+	display: flex;
+	align-items: center;
+	min-height: 28px;
+	margin-bottom: 8px;
+	color: #4f6175;
+	font-size: 18px;
+	font-weight: 700;
+	line-height: 1.25;
+}
+
+.member-visible-list {
+	display: grid;
+	align-content: start;
+	gap: 8px;
+	height: clamp(280px, 42vh, 380px);
+	min-height: 0;
+	overflow: auto;
+	border: 1px solid #d6dee9;
+	border-radius: 8px;
+	padding: 12px;
+	background: #f8fbff;
+}
+
+.member-service-list {
+	min-height: 0;
+}
+
+.member-visible-option {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+	margin: 0;
+	min-height: auto;
+	min-width: 0;
+	border-radius: 6px;
+	padding: 8px;
+	color: #41566d;
+	font-size: 13px;
+	line-height: 1.35;
+}
+
+.member-visible-option:hover {
+	background: #eef5fb;
+}
+
+.member-visible-option .form-check-input {
+	flex: 0 0 auto;
+	float: none;
+	margin-left: 0;
+	margin-top: 2px;
+}
+
+.member-visible-option .form-check-label {
+	display: block;
+	flex: 1 1 auto;
+	min-width: 0;
+	overflow-wrap: break-word;
+	white-space: normal;
+}
+
+.member-visible-group + .member-visible-group {
+	margin-top: 8px;
+	padding-top: 8px;
+	border-top: 1px solid #e2e9f1;
+}
+
+.member-visible-group-title {
+	margin: 0 0 5px;
+	color: #48617a;
+	font-size: 12px;
+	font-weight: 700;
+	text-transform: uppercase;
+}
+
+.member-choice-summary {
+	margin-top: 6px;
+	overflow: hidden;
+	color: #315f7d;
+	font-size: 12px;
+	line-height: 1.35;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.member-choice-option {
+	display: flex;
+	align-items: flex-start;
+	gap: 9px;
+	margin: 0;
+	min-height: auto;
+	min-width: 0;
+	border-radius: 7px;
+	padding: 9px 10px;
+	color: #41566d;
+	font-size: 14px;
+	line-height: 1.35;
+	cursor: pointer;
+}
+
+.member-choice-option:hover {
+	background: #f1f6fb;
+}
+
+.member-choice-option .form-check-input {
+	flex: 0 0 auto;
+	float: none;
+	margin-left: 0;
+	margin-top: 2px;
+}
+
+.member-choice-option .form-check-label {
+	display: block;
+	flex: 1 1 auto;
+	min-width: 0;
+	overflow-wrap: break-word;
+	white-space: normal;
+}
+
+.member-choice-group + .member-choice-group {
+	margin-top: 10px;
+	padding-top: 10px;
+	border-top: 1px solid #e2e9f1;
+}
+
+.member-choice-group-title {
+	margin: 0 0 6px;
+	color: #48617a;
+	font-size: 12px;
+	font-weight: 700;
+	text-transform: uppercase;
+}
+
+#familyChoiceModalBody {
+	max-height: min(66vh, 560px);
+	overflow: auto;
+}
+
+/* ---- Jade-green reskin: matches the dashboard/manage-records design ----
+   The wizard markup/JS is unchanged; only the accent colour moves from the
+   melbranch blue to jade green for the step circles, footer buttons, and the
+   checked sector/service boxes. */
+:root {
+	--family-jade-green: #168465;
+	--family-jade-green-deep: #12684f;
+}
+
+.family-form-actions .btn-success {
+	--bs-btn-bg: var(--family-jade-green);
+	--bs-btn-border-color: var(--family-jade-green);
+	--bs-btn-hover-bg: var(--family-jade-green-deep);
+	--bs-btn-hover-border-color: var(--family-jade-green-deep);
+	--bs-btn-active-bg: var(--family-jade-green-deep);
+	--bs-btn-active-border-color: var(--family-jade-green-deep);
+}
+
+#familyForm .form-check-input:checked {
+	background-color: var(--family-jade-green);
+	border-color: var(--family-jade-green);
+}
+
+/* ================================================================
+   "Manage Records / New Family Record" window redesign.
+   Ported from jadebranch public/css/familymodal.css onto the
+   melbranch wizard markup (all ids/classes/data-attrs kept so
+   family-form.js keeps working). Cascade-last so it wins.
+   ================================================================ */
+
+/* Show the wizard card as the window inside the shared #familyModal.
+   Scope the modal-header hide to the family form (via :has) so the other
+   modals that reuse #familyModal keep their own header. */
+#familyModal .modal-content:has(#familyForm) {
+	display: flex;
+	height: 100%;
+	border: none;
+	background: transparent;
+}
+
+#familyModal .modal-content:has(#familyForm) .modal-header {
+	display: none;
+}
+
+#familyModal .modal-content:has(#familyForm) > .modal-footer {
+	display: none;
+}
+
+#familyModal .modal-body:has(#familyForm) {
+	display: flex;
+	min-height: 0;
+	padding: 0;
+	overflow: hidden;
+}
+
+.family-wizard-card {
+	display: flex;
+	width: 100%;
+	height: 100%;
+	min-height: 0;
+	flex-direction: column;
+	overflow: hidden;
+	border-color: #b7cce0;
+	border-radius: 4px;
+	background: #fff;
+	box-shadow: 0 1.4rem 3.5rem rgba(10, 28, 45, 0.18);
+}
+
+/* Header: kicker + title + boxed close button */
+.family-window-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	min-height: 96px;
+	padding: 20px 24px;
+	border-bottom: 1px solid #cbdbea;
+	background: #fff;
+	flex: 0 0 auto;
+}
+
+.family-window-kicker {
+	margin: 0 0 6px;
+	color: #000;
+	font-size: 14px;
+	font-weight: 800;
+	letter-spacing: 0;
+	text-transform: uppercase;
+}
+
+.family-window-title {
+	margin: 0;
+	color: #000;
+	font-size: 22px;
+	font-weight: 800;
+}
+
+.family-window-close {
+	display: inline-flex;
+	width: 52px;
+	height: 52px;
+	flex: 0 0 auto;
+	align-items: center;
+	justify-content: center;
+	border: 1px solid #a8c9e7;
+	border-radius: 10px;
+	background: #fff;
+	color: #000;
+	font-size: 30px;
+	font-weight: 800;
+	line-height: 1;
+	cursor: pointer;
+}
+
+.family-window-close:hover,
+.family-window-close:focus {
+	border-color: #2d75af;
+	color: #1d679f;
+	box-shadow: 0 0 0 0.2rem rgba(45, 117, 175, 0.14);
+}
+
+/* Step tabs (boxed, circular numbers, green active circle, blue underline) */
+.family-wizard-steps {
+	margin: 18px 20px 0;
+	overflow: hidden;
+	border: 1px solid #bcd4ec;
+	border-radius: 7px 7px 0 0;
+	background: #edf5fb;
+	flex: 0 0 auto;
+}
+
+.wizard-step {
+	position: relative;
+	min-height: 92px;
+	border-right: 1px solid #cfdeec;
+}
+
+.wizard-step span {
+	width: 28px;
+	height: 28px;
+	background: #d8e6f2;
+	color: #000;
+	font-weight: 800;
+}
+
+.wizard-step small {
+	color: #000;
+	font-size: 16px;
+	font-weight: 500;
+}
+
+.wizard-step.is-active {
+	box-shadow: none;
+}
+
+.wizard-step.is-active::after {
+	content: "";
+	position: absolute;
+	right: 0;
+	bottom: -1px;
+	left: 0;
+	height: 3px;
+	background: #1d6da9;
+}
+
+.wizard-step.is-active span {
+	background: var(--family-jade-green);
+	color: #fff;
+}
+
+.wizard-step.is-active small {
+	color: #000;
+	font-weight: 600;
+}
+
+#familyForm {
+	min-height: 0;
+}
+
+.family-form-body {
+	padding: 38px 28px 0;
+	background: #fff;
+}
+
+#familyForm .form-section {
+	border-top: 1px solid #cbdbea;
+	padding-top: 10px;
+}
+
+#familyForm .section-title {
+	margin-bottom: 30px;
+}
+
+#familyForm .section-title span {
+	color: #000;
+	font-size: 24px;
+	font-weight: 800;
+}
+
+#familyForm .row.g-3 {
+	--bs-gutter-x: 30px;
+	--bs-gutter-y: 30px;
+}
+
+#familyForm .form-label {
+	margin-bottom: 12px;
+	color: #000;
+	font-size: 15px;
+	font-weight: 800;
+	line-height: 1.15;
+}
+
+#familyForm .form-control,
+#familyForm .form-select {
+	min-height: 52px;
+	padding: 9px 14px;
+	border-color: #bcd4ec;
+	border-radius: 7px;
+	color: #000;
+	font-size: 16px;
+	line-height: 1.2;
+	background-color: #fbfdff;
+}
+
+#familyForm .form-control::placeholder {
+	color: #000;
+	opacity: 1;
+}
+
+.family-form-actions {
+	gap: 14px;
+	padding: 16px 20px 14px;
+	border-top: 1px solid #cbdbea;
+	background: #f8fbfd;
+}
+
+.family-form-actions .btn {
+	min-width: 130px;
+	min-height: 48px;
+	border-radius: 8px;
+	font-size: 16px;
+}
+
+@media (max-width: 768px) {
+	#familyModal .modal-dialog:has(#familyForm) {
+		width: calc(100vw - 16px);
+		max-width: calc(100vw - 16px);
+		height: calc(100dvh - 16px);
+		max-height: calc(100dvh - 16px);
+		margin: 8px auto;
+	}
+
+	.family-window-header {
+		min-height: 82px;
+		padding: 16px 20px;
+	}
+
+	.family-window-kicker {
+		margin-bottom: 4px;
+		font-size: 12px;
+	}
+
+	.family-window-title {
+		font-size: 18px;
+	}
+
+	.family-window-close {
+		width: 48px;
+		height: 48px;
+		font-size: 28px;
+	}
+
+	.family-wizard-steps {
+		margin: 14px 14px 0;
+	}
+
+	.wizard-step {
+		min-height: 72px;
+		padding: 8px 4px;
+	}
+
+	.wizard-step span {
+		width: 30px;
+		height: 30px;
+	}
+
+	.wizard-step small {
+		font-size: 12px;
+		line-height: 1.15;
+	}
+
+	.family-form-body {
+		padding: 22px 18px 0;
+	}
+
+	#familyForm .form-section {
+		padding-top: 22px;
+	}
+
+	#familyForm .section-title {
+		margin-bottom: 20px;
+	}
+
+	#familyForm .section-title span {
+		font-size: 21px;
+	}
+
+	#familyForm .row.g-3 {
+		--bs-gutter-x: 16px;
+		--bs-gutter-y: 18px;
+	}
+
+	#familyForm .row.g-3 > .col-md-3 {
+		flex: 0 0 auto;
+		width: 50%;
+	}
+
+	#familyForm .row.g-3 > .col-md-9,
+	#familyForm .row.g-3 > .col-md-12,
+	#familyForm .row.g-3 > .col-12 {
+		flex: 0 0 auto;
+		width: 100%;
+	}
+
+	#familyForm .form-label {
+		margin-bottom: 8px;
+		font-size: 13px;
+		line-height: 1.15;
+		overflow-wrap: anywhere;
+	}
+
+	#familyForm .form-control,
+	#familyForm .form-select {
+		min-height: 48px;
+		padding: 8px 11px;
+		font-size: 15px;
+	}
+
+	.family-form-actions {
+		gap: 10px;
+		padding: 12px 14px;
+	}
+
+	.family-form-actions .btn {
+		min-width: 96px;
+		min-height: 44px;
+		font-size: 14px;
+	}
+
+	.member-section-title {
+		top: 0;
+	}
+
+	.member-sticky-add {
+		bottom: 76px;
+	}
+
+	.member-sticky-add .btn {
+		max-width: none;
+	}
+
+	#familyForm .family-step-panel[data-step="2"] {
+		overflow-x: visible;
+	}
+
+	#familyForm .family-step-panel[data-step="2"] > .row.g-3 {
+		min-width: 0;
+	}
+
+	#familyForm .family-step-panel[data-step="2"] > .row.g-3 > [class*="col-"] {
+		flex: 0 0 auto;
+		max-width: none;
+	}
+
+	.dropdown-checklist-toggle,
+	.member-choice-open {
+		min-height: calc(var(--ui-control-height) - 0.6rem);
+		padding: calc(var(--ui-control-padding-y) - 0.18rem) calc(var(--ui-control-padding-x) - 0.12rem);
+		border-radius: 4px;
+		font-size: var(--ui-font-md);
+		line-height: 1.15;
+	}
+}
+
+@media (max-width: 420px) {
+	#familyModal .modal-dialog:has(#familyForm) {
+		width: calc(100vw - 10px);
+		max-width: calc(100vw - 10px);
+		height: calc(100dvh - 10px);
+		max-height: calc(100dvh - 10px);
+		margin: 5px auto;
+	}
+
+	.family-window-header {
+		min-height: 74px;
+		padding: 14px 16px;
+	}
+
+	.family-window-title {
+		font-size: 17px;
+	}
+
+	.family-window-close {
+		width: 44px;
+		height: 44px;
+		font-size: 26px;
+	}
+
+	.family-wizard-steps {
+		margin: 12px 10px 0;
+	}
+
+	.family-form-body {
+		padding: 18px 14px 0;
+	}
+
+	#familyForm .row.g-3 {
+		--bs-gutter-x: 12px;
+		--bs-gutter-y: 16px;
+	}
+
+	#familyForm .form-control,
+	#familyForm .form-select {
+		min-height: 44px;
+		padding: 7px 10px;
+		font-size: 14px;
+	}
+
+	.family-form-actions .btn {
+		min-width: 82px;
+	}
+}
+
+/* Step 2: flat sectors + services columns */
+.family-step-two-grid {
+	display: grid;
+	grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+	gap: 24px;
+}
+
+.family-choice-group {
+	min-width: 0;
+}
+
+.family-choice-box {
+	max-height: 360px;
+	overflow-y: auto;
+	border: 1px solid #bdd1e6;
+	border-radius: 8px;
+	background: #f8fbff;
+	padding: 0 16px;
+}
+
+.family-choice-section {
+	padding: 14px 0;
+	border-bottom: 1px solid #d9e4ef;
+}
+
+.family-choice-section:last-child {
+	border-bottom: 0;
+}
+
+.family-choice-section h3 {
+	margin: 0 0 8px;
+	color: #486887;
+	font-size: 14px;
+	font-weight: 800;
+	text-transform: uppercase;
+}
+
+.family-choice-row {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	margin: 0;
+	padding: 7px 4px;
+	color: #254461;
+	font-size: 14px;
+	line-height: 1.35;
+	cursor: pointer;
+}
+
+.family-choice-row:hover {
+	background: #eef5fb;
+	border-radius: 6px;
+}
+
+.family-choice-row .form-check-input {
+	flex: 0 0 auto;
+	float: none;
+	margin: 2px 0 0;
+}
+
+.family-choice-row .form-check-label {
+	flex: 1 1 auto;
+	min-width: 0;
+	overflow-wrap: break-word;
+}
+
+.family-choice-empty {
+	margin: 0;
+	padding: 16px 0;
+	color: #6f8196;
+}
+
+/* Step 3: "Current Record Head" summary card */
+.family-summary-card {
+	border: 1px solid #bdd1e6;
+	border-radius: 8px;
+	background: #f8fbff;
+	padding: 22px 18px 16px;
+	color: #254461;
+}
+
+.family-summary-title {
+	margin: 0 0 22px;
+	color: #09233f;
+	font-size: 24px;
+	font-weight: 800;
+}
+
+.family-summary-grid {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	column-gap: 24px;
+	row-gap: 16px;
+}
+
+.family-summary-item {
+	display: grid;
+	gap: 7px;
+	margin: 0;
+	min-width: 0;
+	font-size: 14px;
+	line-height: 1.45;
+}
+
+.family-summary-item strong,
+.family-summary-list strong {
+	color: #405675;
+	font-weight: 800;
+}
+
+.family-summary-item span,
+.family-summary-list .head-summary-list {
+	display: block;
+	width: 100%;
+	min-height: 46px;
+	padding: 10px 12px;
+	overflow: hidden;
+	border: 1px solid #bcd4ec;
+	border-radius: 7px;
+	background: #fbfdff;
+	color: #09233f;
+	font-size: 15px;
+	line-height: 1.35;
+	overflow-wrap: break-word;
+	user-select: text;
+}
+
+.family-summary-wide {
+	grid-column: 1 / -1;
+}
+
+.family-summary-lists {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 24px;
+	margin-top: 18px;
+}
+
+.family-summary-list {
+	display: grid;
+	gap: 7px;
+	min-width: 0;
+	font-size: 14px;
+	line-height: 1.45;
+}
+
+.family-summary-list .head-summary-list {
+	min-height: 94px;
+}
+
+.family-member-actions {
+	display: flex;
+	justify-content: flex-end;
+	margin-top: 16px;
+	padding: 0;
+	background: transparent;
+}
+
+.family-members-list {
+	margin-top: 16px;
+}
+
+.family-members-empty {
+	margin-top: 12px;
+}
+
+@media (max-width: 991px) {
+	.family-step-two-grid {
+		grid-template-columns: 1fr;
+	}
+
+	.family-summary-grid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		column-gap: 24px;
+	}
+
+	.family-summary-lists {
+		gap: 18px;
+	}
+}
+
+@media (max-width: 767px) {
+	.family-summary-grid,
+	.family-summary-lists {
+		grid-template-columns: 1fr;
+		gap: 16px;
+	}
+
+	.family-summary-card {
+		padding: 18px 14px 14px;
+	}
+
+	.family-summary-title {
+		margin-bottom: 18px;
+		font-size: 21px;
+	}
+
+	.family-summary-item span,
+	.family-summary-list .head-summary-list {
+		min-height: 42px;
+		padding: 8px 10px;
+		font-size: 14px;
+	}
+
+	.family-summary-list .head-summary-list {
+		min-height: 78px;
+	}
+
+	.family-window-title {
+		font-size: 20px;
+	}
+}

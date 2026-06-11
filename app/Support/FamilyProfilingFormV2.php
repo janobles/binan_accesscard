@@ -17,24 +17,39 @@ class FamilyProfilingFormV2
         'IP' => 'Indigenous People',
         'IDP' => 'Internally Displaced Person',
         'PDL' => 'Persons Deprived of Liberty',
+        'SBS' => 'Small Business Sector',
         'OTHER' => 'Other Sectors',
     ];
 
     public const SERVICE_CATEGORIES = [
-        'Senior Citizen',
-        'Person with Disability',
-        'Solo Parent',
-        'Children',
-        'Financial Assistance',
+        'Financial Assistance Programs',
         'Social Welfare Programs and Services',
-        'Emergency and Disaster Assistance',
+        'Emergency / Disaster Assistance Programs',
     ];
 
+    // The methods below return fixed option lists/seed data straight from the CSWD
+    // Family Profiling Form v2. They have no DB/session dependency and feed the
+    // family form dropdowns (via FamilyFormOptionsModel) and lookup seeding.
+
+    /** Name-suffix options (Jr, Sr, I–V) for the family form. */
     public static function suffixes(): array
     {
         return ['Jr', 'Sr', 'I', 'II', 'III', 'IV', 'V'];
     }
 
+    /** Biñan barangay options for the family form address. */
+    public static function barangays(): array
+    {
+        return [
+            'Binan (Poblacion)', 'Bungahan', 'Santo Tomas (Calabuso)', 'Canlalay',
+            'Casile', 'De La Paz', 'Ganado', 'San Francisco (Halang)', 'Langkiwa',
+            'Loma', 'Malaban', 'Malamig', 'Mamplasan', 'Platero',
+            'Poblacion', 'Santo Nino', 'San Antonio', 'San Jose', 'San Vicente',
+            'Soro-Soro', 'Santo Domingo', 'Timbao', 'Tubigan', 'Zapote',
+        ];
+    }
+
+    /** Civil-status options for the family form. */
     public static function civilStatuses(): array
     {
         return [
@@ -47,6 +62,7 @@ class FamilyProfilingFormV2
         ];
     }
 
+    /** Educational-attainment options for the family form. */
     public static function educationLevels(): array
     {
         return [
@@ -60,6 +76,7 @@ class FamilyProfilingFormV2
         ];
     }
 
+    /** Occupation options for the family form. */
     public static function jobOptions(): array
     {
         return [
@@ -82,6 +99,27 @@ class FamilyProfilingFormV2
         ];
     }
 
+    /** Religion options for the family form. */
+    public static function religions(): array
+    {
+        return [
+            'Roman Catholic',
+            'Iglesia ni Cristo',
+            'Islam',
+            'Born Again Christian',
+            'Protestant',
+            'Seventh-day Adventist',
+            'Iglesia Filipina Independiente',
+            'Bible Baptist',
+            "Jehovah's Witness",
+            'Church of Christ',
+            'Indigenous Beliefs',
+            'No Religion',
+            'Others',
+        ];
+    }
+
+    /** Canonical seed rows for the `sector` lookup table (used to seed/reference defaults). */
     public static function sectorRows(): array
     {
         return [
@@ -112,6 +150,7 @@ class FamilyProfilingFormV2
         ];
     }
 
+    /** Canonical seed rows for the `services` lookup table (assistance programs). */
     public static function serviceRows(): array
     {
         return [

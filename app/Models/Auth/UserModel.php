@@ -6,6 +6,12 @@ use CodeIgniter\Model;
 
 /**
  * Manages staff users, login verification, and account creation.
+ *
+ * Role note: the `role` column is the DB enum('User','Admin','Developer'). The
+ * employee role is stored as the legacy value 'User'; the rest of the app refers
+ * to it as 'Employee' (translated by App\Libraries\RoleAccess::normalizeRole).
+ * The 'User' literals in the queries below are therefore the raw DB enum value,
+ * not the app-facing role label, and must stay 'User' to match the schema.
  */
 class UserModel extends Model
 {
@@ -20,7 +26,12 @@ class UserModel extends Model
     ];
     protected $useTimestamps = false;
 
-    // Used by AuthController::login() to authenticate staff accounts.
+    /**
+     * Authenticates a staff login for AuthController::login(). Looks up the user,
+     * verifies the password (supporting legacy plaintext rows and transparently
+     * re-hashing to Argon2id), and returns the user row. Disabled accounts are
+     * returned with a `login_error` flag; null means invalid credentials.
+     */
     public function verifyLogin(string $username, string $password): ?array
     {
         $user = $this->where('username', $username)->first();
@@ -57,6 +68,11 @@ class UserModel extends Model
         return $user;
     }
 
+    /**
+     * Returns all Admin and Employee (User) accounts for the admin Account
+     * Management page, ordered by role then username. Excludes Developer accounts.
+     * Frontend: feeds the accounts table via DashboardPageBuilder.
+     */
     public function getStaffAccounts(): array
     {
         if (! $this->db->tableExists($this->table)) {
@@ -70,6 +86,11 @@ class UserModel extends Model
             ->findAll();
     }
 
+    /**
+     * Enables or disables an Admin/Employee account (only those roles are
+     * eligible). Called by AccountController's status actions. Returns false if
+     * the user is missing or not an updatable role.
+     */
     public function updateAccountStatus(int $userId, bool $enabled): bool
     {
         if (! $this->db->tableExists($this->table)) {
@@ -85,7 +106,10 @@ class UserModel extends Model
         return $this->update($userId, ['isactive' => $this->statusValue($enabled)]) !== false;
     }
 
-    // Enforces the Enable/Disabled enum while allowing legacy numeric rows.
+    /**
+     * Interprets the `isactive` column as a boolean, tolerating the Enable/Disabled
+     * enum, legacy numeric (1/0), and common truthy strings. Used during login.
+     */
     private function isUserActive(mixed $value): bool
     {
         if (is_bool($value)) {
@@ -105,7 +129,10 @@ class UserModel extends Model
         return in_array($normalized, ['1', 'true', 'yes', 'y', 'on'], true);
     }
 
-    // Creates staff accounts for AccountController::create().
+    /**
+     * Inserts a new staff account (Argon2id-hashed password, active by default)
+     * for AccountController::create(). Returns the new userID, or false on failure.
+     */
     public function createAccount(string $username, string $password, string $role): int|false
     {
         $data = [
@@ -124,12 +151,19 @@ class UserModel extends Model
         return (int) $this->getInsertID();
     }
 
-    // Keeps insert compatible with either enum or numeric legacy types.
+    /**
+     * The "active" value for a new account, format-matched to the column type.
+     */
     private function activeValue(): string|int
     {
         return $this->statusValue(true);
     }
 
+    /**
+     * Returns the correct `isactive` value for the column's actual type: the
+     * 'Enable'/'Disabled' enum for string columns, or 1/0 for numeric ones. Keeps
+     * writes compatible across schema variants. No frontend connection.
+     */
     private function statusValue(bool $enabled): string|int
     {
         $fieldData = $this->db->getFieldData($this->table);

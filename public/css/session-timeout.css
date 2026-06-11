@@ -1,0 +1,43 @@
+.session-timeout-modal {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 99999;
+}
+
+.session-timeout-modal.is-visible {
+    display: flex;
+}
+
+.session-timeout-card {
+    background: #ffffff;
+    padding: 28px 36px;
+    border-radius: 10px;
+    text-align: center;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.2);
+    max-width: 420px;
+    width: 90%;
+    font-family: Calibri, "Calibri Body", "Segoe UI", Arial, sans-serif;
+}
+
+.session-timeout-title {
+    margin: 0 0 12px;
+    color: #dc3545;
+    font-weight: 700;
+    font-size: 20px;
+}
+
+.session-timeout-text {
+    margin: 0 0 8px;
+    color: #333333;
+    font-size: 16px;
+}
+
+.session-timeout-subtext {
+    margin: 0;
+    color: #666666;
+    font-size: 14px;
+}

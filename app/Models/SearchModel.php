@@ -7,17 +7,23 @@ use CodeIgniter\Database\BaseBuilder;
 use CodeIgniter\Database\BaseConnection;
 
 /**
- * Centralizes search queries used by records and account pages.
+ * Centralizes search queries used by records, accounts, and audit trail pages.
  */
 class SearchModel
 {
     private BaseConnection $db;
 
+    /** Accepts an optional DB connection (defaults to the shared one) for testing. */
     public function __construct(?BaseConnection $db = null)
     {
         $this->db = $db ?? db_connect();
     }
 
+    /**
+     * FIRST (quick) Manage Records search: family HEADS only, matched by name/
+     * contact/relationship and sector. Applies the sector + date filters and
+     * resolves sector names. Frontend: the quick search box on Manage Records.
+     */
     public function families(string $keyword = '', array $filters = [], int $limit = 25): array
     {
         if (! $this->hasFamilySearchTables()) {
@@ -33,19 +39,7 @@ class SearchModel
         $keyword = $this->normalizeKeyword($keyword);
 
         if ($keyword !== '') {
-            $builder->groupStart()
-                ->like('firstname', $keyword)
-                ->orLike('middlename', $keyword)
-                ->orLike('lastname', $keyword)
-                ->orLike('contactnumber', $keyword)
-                ->orLike('relationship', $keyword)
-                ->orLike('sectorID', $keyword);
-
-            foreach ($this->sectorIdsForKeyword($keyword) as $sectorId) {
-                $builder->orWhere(SectorIds::containsCondition($sectorId, 'sectorID'), null, false);
-            }
-
-            $builder->groupEnd();
+            $this->applyMemberKeyword($builder, $keyword, '', ['sectorID'], 'sectorID');
         }
 
         $sectorId = (int) ($filters['sectorID'] ?? 0);
@@ -116,7 +110,7 @@ class SearchModel
     private function allMembersBuilder(string $keyword, array $filters): BaseBuilder
     {
         $builder = $this->db->table('member m')
-            ->select('m.memberID, m.firstname, m.middlename, m.lastname, m.contactnumber, m.relationship, m.headID, m.sectorID, m.birthday, m.barangay, m.dt_created, h.firstname AS head_firstname, h.lastname AS head_lastname')
+            ->select('m.memberID, m.firstname, m.middlename, m.lastname, m.contactnumber, m.relationship, m.headID, m.sectorID, m.dt_created, h.firstname AS head_firstname, h.lastname AS head_lastname')
             ->join('member h', 'h.memberID = m.headID', 'left');
 
         $status = strtolower(trim((string) ($filters['status'] ?? '')));
@@ -130,32 +124,10 @@ class SearchModel
         $keyword = $this->normalizeKeyword($keyword);
 
         if ($keyword !== '') {
-            $builder->groupStart()
-                ->like('m.firstname', $keyword)
-                ->orLike('m.middlename', $keyword)
-                ->orLike('m.lastname', $keyword)
-                ->orLike('m.contactnumber', $keyword)
-                ->orLike('m.relationship', $keyword);
-
-            foreach (['address', 'religion', 'job'] as $field) {
-                if ($this->db->fieldExists($field, 'member')) {
-                    $builder->orLike('m.' . $field, $keyword);
-                }
-            }
-
-            // Match by sector name -> sector IDs -> JSON array contains the ID.
-            foreach ($this->sectorIdsForKeyword($keyword) as $sectorId) {
-                $builder->orWhere(SectorIds::containsCondition($sectorId, 'm.sectorID'), null, false);
-            }
-
             // Match by service/program name -> the members assigned that service.
             $serviceMemberIds = $this->memberIdsForServiceKeyword($keyword);
 
-            if ($serviceMemberIds !== []) {
-                $builder->orWhereIn('m.memberID', $serviceMemberIds);
-            }
-
-            $builder->groupEnd();
+            $this->applyMemberKeyword($builder, $keyword, 'm.', ['address', 'religion', 'job'], 'm.sectorID', $serviceMemberIds);
         }
 
         $sectorId = (int) ($filters['sectorID'] ?? 0);
@@ -169,6 +141,61 @@ class SearchModel
         return $builder;
     }
 
+    /**
+     * Adds a member keyword clause to a query. Each whitespace token must match one
+     * of the name columns (AND across tokens, OR across firstname/middlename/lastname),
+     * so a full "Firstname Lastname" matches even though the words live in different
+     * columns. The whole keyword is still matched against the non-name fields
+     * (contact/relationship + $likeColumns + sector + assigned services) as an OR
+     * branch, so single-word and non-name searches behave as before. $prefix is the
+     * table alias prefix ('' or 'm.'); $sectorColumn is the sectorID column to test.
+     */
+    private function applyMemberKeyword(BaseBuilder $builder, string $keyword, string $prefix, array $likeColumns, string $sectorColumn, array $serviceMemberIds = []): void
+    {
+        $tokens = preg_split('/\s+/', $keyword, -1, PREG_SPLIT_NO_EMPTY) ?: [$keyword];
+
+        $builder->groupStart();
+
+        // Name tokens, AND-ed together.
+        $builder->groupStart();
+        foreach ($tokens as $token) {
+            $builder->groupStart()
+                ->like($prefix . 'firstname', $token)
+                ->orLike($prefix . 'middlename', $token)
+                ->orLike($prefix . 'lastname', $token)
+                ->groupEnd();
+        }
+        $builder->groupEnd();
+
+        // Whole-keyword matches on the non-name fields, OR-ed with the name match.
+        $builder->orGroupStart()
+            ->like($prefix . 'contactnumber', $keyword)
+            ->orLike($prefix . 'relationship', $keyword);
+
+        foreach ($likeColumns as $field) {
+            if ($this->db->fieldExists($field, 'member')) {
+                $builder->orLike($prefix . $field, $keyword);
+            }
+        }
+
+        // Match by sector name -> sector IDs -> JSON array contains the ID.
+        foreach ($this->sectorIdsForKeyword($keyword) as $sectorId) {
+            $builder->orWhere(SectorIds::containsCondition($sectorId, $sectorColumn), null, false);
+        }
+
+        if ($serviceMemberIds !== []) {
+            $builder->orWhereIn($prefix . 'memberID', $serviceMemberIds);
+        }
+
+        $builder->groupEnd();
+
+        $builder->groupEnd();
+    }
+
+    /**
+     * Searches Admin/Employee accounts by username/role/status with optional role
+     * and active-status filters. Frontend: the Account Management search/filter UI.
+     */
     public function staffAccounts(string $keyword = '', array $filters = [], int $limit = 100): array
     {
         if (! $this->db->tableExists('users')) {
@@ -176,6 +203,8 @@ class SearchModel
         }
 
         $limit = max(1, $limit);
+        // 'User' is the DB enum value for the Employee role (shown as "Employee" in
+        // the UI); these queries use the raw enum to match the users.role column.
         $builder = $this->db->table('users')
             ->select('userID, username, role, isactive, dt_created')
             ->whereIn('role', ['Admin', 'User']);
@@ -212,6 +241,139 @@ class SearchModel
         return $rows;
     }
 
+    /**
+     * Searches all audit entries by action/description/IP and by related user or
+     * member name, with action + date filters. Frontend: the admin Audit Trails
+     * search/filter UI.
+     */
+    public function auditTrails(string $keyword = '', array $filters = [], int $limit = 50): array
+    {
+        if (! $this->hasAuditSearchTables()) {
+            return [];
+        }
+
+        $limit = max(1, $limit);
+        $builder = $this->auditTrailBuilder();
+        $keyword = $this->normalizeKeyword($keyword);
+
+        if ($keyword !== '') {
+            $this->applyAuditSearch($builder, $keyword);
+        }
+
+        $this->applyAuditFilters($builder, $filters);
+
+        $rows = $builder
+            ->orderBy('audit_trails.dt_created', 'DESC')
+            ->limit($limit)
+            ->get()
+            ->getResultArray();
+
+        return $this->withAuditNames($rows);
+    }
+
+    /**
+     * Same as auditTrails() but scoped to one user. Frontend: the employee
+     * Activity page search/filter.
+     */
+    public function auditTrailsByUser(int $userId, string $keyword = '', array $filters = [], int $limit = 50): array
+    {
+        if (! $this->hasAuditSearchTables()) {
+            return [];
+        }
+
+        $limit = max(1, $limit);
+        $builder = $this->auditTrailBuilder()
+            ->where('audit_trails.userID', $userId);
+
+        $keyword = $this->normalizeKeyword($keyword);
+
+        if ($keyword !== '') {
+            $this->applyAuditSearch($builder, $keyword);
+        }
+
+        $this->applyAuditFilters($builder, $filters);
+
+        $rows = $builder
+            ->orderBy('audit_trails.dt_created', 'DESC')
+            ->limit($limit)
+            ->get()
+            ->getResultArray();
+
+        return $this->withAuditNames($rows);
+    }
+
+    /**
+     * Returns the distinct list of audit action types, used to populate the audit
+     * "action" filter dropdown on the frontend.
+     */
+    public function auditActions(): array
+    {
+        if (! $this->db->tableExists('audit_trails')) {
+            return [];
+        }
+
+        return array_column(
+            $this->db->table('audit_trails')
+                ->select('TRIM(user_action) AS user_action', false)
+                ->where('user_action IS NOT NULL')
+                ->where("TRIM(user_action) != ''", null, false)
+                ->groupBy('TRIM(user_action)')
+                ->orderBy('TRIM(user_action)', 'ASC', false)
+                ->get()
+                ->getResultArray(),
+            'user_action'
+        );
+    }
+
+    /** Base query for audit searches (selects all audit columns). */
+    private function auditTrailBuilder(): BaseBuilder
+    {
+        return $this->db->table('audit_trails')
+            ->select('audit_trails.*');
+    }
+
+    /**
+     * Adds the keyword search clause to an audit query: matches action/description/
+     * IP directly, plus audits tied to users or members whose names match.
+     */
+    private function applyAuditSearch(BaseBuilder $builder, string $keyword): void
+    {
+        $builder->groupStart()
+            ->like('audit_trails.user_action', $keyword)
+            ->orLike('audit_trails.description', $keyword)
+            ->orLike('audit_trails.ip_address', $keyword);
+
+        $userIds = $this->userIdsForKeyword($keyword);
+
+        if ($userIds !== []) {
+            $builder->orWhereIn('audit_trails.userID', $userIds);
+        }
+
+        $memberIds = $this->memberIdsForKeyword($keyword);
+
+        if ($memberIds !== []) {
+            $builder->orWhereIn('audit_trails.memberID', $memberIds);
+        }
+
+        $builder->groupEnd();
+    }
+
+    /** Applies the audit action dropdown + date filters to an audit query. */
+    private function applyAuditFilters(BaseBuilder $builder, array $filters): void
+    {
+        $action = $this->normalizeKeyword((string) ($filters['action'] ?? ''));
+
+        if ($action !== '') {
+            $builder->where('TRIM(audit_trails.user_action) = ' . $this->db->escape($action), null, false);
+        }
+
+        $this->applyDateRange($builder, 'audit_trails.dt_created', $filters);
+    }
+
+    /**
+     * Applies a date filter to a query: either a single `date` (whole day) or a
+     * `date_from`/`date_to` range. Shared by family, member, and audit searches.
+     */
     private function applyDateRange(BaseBuilder $builder, string $column, array $filters): void
     {
         $date = $this->normalizeDate((string) ($filters['date'] ?? ''));
@@ -236,6 +398,10 @@ class SearchModel
         }
     }
 
+    /**
+     * Filters accounts by active/disabled, tolerating both the Enable/Disabled
+     * enum and legacy numeric isactive values.
+     */
     private function applyActiveStatusFilter(BaseBuilder $builder, string $status): void
     {
         $normalized = strtolower($status);
@@ -260,12 +426,22 @@ class SearchModel
         }
     }
 
+    /** True if the tables needed for family search exist. */
     private function hasFamilySearchTables(): bool
     {
         return $this->db->tableExists('member')
             && $this->db->tableExists('sector');
     }
 
+    /** True if the tables needed for audit search exist. */
+    private function hasAuditSearchTables(): bool
+    {
+        return $this->db->tableExists('audit_trails')
+            && $this->db->tableExists('users')
+            && $this->db->tableExists('member');
+    }
+
+    /** Adds a readable 'sector_name' to each row from its JSON sectorID value. */
     private function withSectorNames(array $rows): array
     {
         $sectorNames = $this->sectorNameMap();
@@ -279,6 +455,7 @@ class SearchModel
         return $rows;
     }
 
+    /** Builds an [sectorID => name] map used by withSectorNames(). */
     private function sectorNameMap(): array
     {
         if (! $this->db->tableExists('sector')) {
@@ -299,6 +476,7 @@ class SearchModel
         return $map;
     }
 
+    /** Sector IDs whose name/description match the keyword (so search can match sector text). */
     private function sectorIdsForKeyword(string $keyword): array
     {
         if (! $this->db->tableExists('sector')) {
@@ -363,7 +541,7 @@ class SearchModel
             return $rows;
         }
 
-        $serviceMap = (new \App\Models\MemberServiceModel())
+        $serviceMap = (new \App\Models\Families\MemberServiceModel())
             ->getServiceIdsByMemberIds(array_column($rows, 'memberID'));
 
         $allServiceIds = [];
@@ -374,7 +552,7 @@ class SearchModel
             }
         }
 
-        $serviceNameMap = (new \App\Models\ServiceModel())->getNameMapByIds($allServiceIds);
+        $serviceNameMap = (new \App\Models\Lookups\ServiceModel())->getNameMapByIds($allServiceIds);
 
         foreach ($rows as &$row) {
             $memberId = (int) ($row['memberID'] ?? 0);
@@ -394,11 +572,144 @@ class SearchModel
         return $rows;
     }
 
+    /** Adds username/role and member-name display fields to audit search rows. */
+    private function withAuditNames(array $rows): array
+    {
+        $users = $this->userMap(array_column($rows, 'userID'));
+        $memberNames = $this->memberNameMap(array_column($rows, 'memberID'));
+
+        foreach ($rows as &$row) {
+            $userId = (int) ($row['userID'] ?? 0);
+            $memberId = (int) ($row['memberID'] ?? 0);
+            $memberName = $memberNames[$memberId] ?? ['firstname' => '', 'lastname' => ''];
+            $user = $users[$userId] ?? ['username' => '', 'role' => ''];
+
+            $row['username'] = $user['username'];
+            $row['user_role'] = $user['role'];
+            $row['firstname'] = $memberName['firstname'];
+            $row['lastname'] = $memberName['lastname'];
+            $row['member_name'] = $this->formatMemberName($memberName);
+        }
+
+        return $rows;
+    }
+
+    /** Batch [userID => {username, role}] lookup used by withAuditNames(). */
+    private function userMap(array $userIds): array
+    {
+        $userIds = $this->positiveUniqueIds($userIds);
+
+        if ($userIds === [] || ! $this->db->tableExists('users')) {
+            return [];
+        }
+
+        $users = $this->db->table('users')
+            ->select('userID, username, role')
+            ->whereIn('userID', $userIds)
+            ->get()
+            ->getResultArray();
+
+        $map = [];
+
+        foreach ($users as $user) {
+            $map[(int) $user['userID']] = [
+                'username' => (string) $user['username'],
+                'role' => (string) ($user['role'] ?? ''),
+            ];
+        }
+
+        return $map;
+    }
+
+    /** Batch [memberID => {firstname, lastname}] lookup used by withAuditNames(). */
+    private function memberNameMap(array $memberIds): array
+    {
+        $memberIds = $this->positiveUniqueIds($memberIds);
+
+        if ($memberIds === [] || ! $this->db->tableExists('member')) {
+            return [];
+        }
+
+        $members = $this->db->table('member')
+            ->select('memberID, firstname, lastname')
+            ->whereIn('memberID', $memberIds)
+            ->get()
+            ->getResultArray();
+
+        $map = [];
+
+        foreach ($members as $member) {
+            $map[(int) $member['memberID']] = [
+                'firstname' => (string) $member['firstname'],
+                'lastname' => (string) $member['lastname'],
+            ];
+        }
+
+        return $map;
+    }
+
+    /** Joins first/last name into one display string. */
+    private function formatMemberName(array $memberName): string
+    {
+        return trim(implode(' ', array_filter([
+            (string) ($memberName['firstname'] ?? ''),
+            (string) ($memberName['lastname'] ?? ''),
+        ], static fn (string $value): bool => trim($value) !== '')));
+    }
+
+    /** User IDs whose username matches the keyword (so audit search matches by operator). */
+    private function userIdsForKeyword(string $keyword): array
+    {
+        if (! $this->db->tableExists('users')) {
+            return [];
+        }
+
+        return array_map(
+            static fn (array $user): int => (int) $user['userID'],
+            $this->db->table('users')
+                ->select('userID')
+                ->like('username', $keyword)
+                ->get()
+                ->getResultArray()
+        );
+    }
+
+    /** Member IDs whose first/last name matches the keyword (audit search by subject). */
+    private function memberIdsForKeyword(string $keyword): array
+    {
+        if (! $this->db->tableExists('member')) {
+            return [];
+        }
+
+        return array_map(
+            static fn (array $member): int => (int) $member['memberID'],
+            $this->db->table('member')
+                ->select('memberID')
+                ->groupStart()
+                ->like('firstname', $keyword)
+                ->orLike('lastname', $keyword)
+                ->groupEnd()
+                ->get()
+                ->getResultArray()
+        );
+    }
+
+    /** Normalizes an ID list to unique positive ints for batched IN() lookups. */
+    private function positiveUniqueIds(array $ids): array
+    {
+        return array_values(array_unique(array_filter(
+            array_map(static fn (mixed $id): int => (int) $id, $ids),
+            static fn (int $id): bool => $id > 0
+        )));
+    }
+
+    /** Trims a search keyword. */
     private function normalizeKeyword(string $keyword): string
     {
         return trim($keyword);
     }
 
+    /** Returns the date only if it's a valid Y-m-d, else '' (ignored by filters). */
     private function normalizeDate(string $date): string
     {
         $date = trim($date);

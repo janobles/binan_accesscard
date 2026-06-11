@@ -5,8 +5,14 @@ namespace App\Support;
 /**
  * Prepares dashboard view variables before templates render markup.
  */
+/**
+ * Normalizes raw controller data into the exact variables each dashboard view/
+ * partial expects (with safe defaults). Called from the dashboard view helper just
+ * before templates render, so views never deal with missing keys.
+ */
 class DashboardViewData
 {
+    /** Prepares variables for the admin shell (`Admin/layout`). */
     public static function admin(array $data): array
     {
         $user = self::arrayValue($data['user'] ?? []);
@@ -60,6 +66,7 @@ class DashboardViewData
         );
     }
 
+    /** Prepares variables for the employee shell (`Employee/layout`). */
     public static function employee(array $data): array
     {
         $user = self::arrayValue($data['user'] ?? []);
@@ -103,6 +110,7 @@ class DashboardViewData
         );
     }
 
+    /** Prepares variables for the accounts table view/partial. */
     public static function accounts(array $data): array
     {
         $adminAccounts = self::arrayValue($data['adminAccounts'] ?? []);
@@ -124,6 +132,7 @@ class DashboardViewData
         );
     }
 
+    /** Prepares variables for the audit-trails view/partial. */
     public static function auditTrails(array $data): array
     {
         $recentAudits = self::arrayValue($data['recentAudits'] ?? []);
@@ -145,6 +154,7 @@ class DashboardViewData
         );
     }
 
+    /** Prepares variables for the family records list view/partial. */
     public static function familyList(array $data): array
     {
         $families = self::arrayValue($data['families'] ?? []);
@@ -162,6 +172,7 @@ class DashboardViewData
         );
     }
 
+    /** Prepares variables for the single-family detail (view/edit) view. */
     public static function familyDetails(array $data): array
     {
         $head = self::arrayValue($data['head'] ?? []);
@@ -177,6 +188,7 @@ class DashboardViewData
         );
     }
 
+    /** Prepares the combined sector/service selection data for the family form. */
     public static function sectorAndServices(array $data): array
     {
         $serviceGroups = self::arrayValue($data['serviceGroups'] ?? []);
@@ -192,6 +204,7 @@ class DashboardViewData
         );
     }
 
+    /** Prepares variables for the sector management view (active/archived + restore flag). */
     public static function sectorManagement(array $data): array
     {
         $sectors = self::arrayValue($data['sectors'] ?? []);
@@ -202,6 +215,7 @@ class DashboardViewData
         return compact('sectorShortcodeOptions', 'sectors', 'status', 'canRestore');
     }
 
+    /** Prepares variables for the service management view (active/archived + restore flag). */
     public static function serviceManagement(array $data): array
     {
         $services = self::arrayValue($data['services'] ?? []);
@@ -211,6 +225,7 @@ class DashboardViewData
         return compact('services', 'status', 'canRestore');
     }
 
+    /** Zeroed stats array used as a default before real counts are merged in. */
     private static function defaultStats(): array
     {
         return [
@@ -221,6 +236,7 @@ class DashboardViewData
         ];
     }
 
+    /** True if a search term or any filter is set (toggles "filters active" UI). */
     private static function hasSearchFilters(string $searchTerm, array $searchFilters): bool
     {
         if ($searchTerm !== '') {
@@ -236,6 +252,7 @@ class DashboardViewData
         return false;
     }
 
+    /** Returns a Y-m-d date-formatting closure passed to views as $formatDate. */
     private static function formatDateCallback(): callable
     {
         return static function (mixed $value): string {
@@ -245,6 +262,7 @@ class DashboardViewData
         };
     }
 
+    /** Returns a 12-hour time-formatting closure passed to views as $formatTime. */
     private static function formatTimeCallback(): callable
     {
         return static function (mixed $value): string {
@@ -254,6 +272,7 @@ class DashboardViewData
         };
     }
 
+    /** Coerces a value into a list of ints. */
     private static function integerList(mixed $value): array
     {
         return array_values(array_map(
@@ -262,6 +281,7 @@ class DashboardViewData
         ));
     }
 
+    /** Coerces a value into a list of strings. */
     private static function stringList(mixed $value): array
     {
         return array_values(array_map(
@@ -270,6 +290,7 @@ class DashboardViewData
         ));
     }
 
+    /** Returns the value if it's an array, else an empty array (safe-default guard). */
     private static function arrayValue(mixed $value): array
     {
         return is_array($value) ? $value : [];

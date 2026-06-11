@@ -1,0 +1,379 @@
+// Two responsibilities:
+//   1. Registers Add / View / Edit family record modals with dashboard-modal-loader.js.
+//      Clicks on .js-open-family-modal, .js-open-family-view-modal, and
+//      .js-open-family-edit-modal fetch the correct partial via AJAX into #familyModal.
+//      After loading, calls window.initFamilyForm() to wire up the multi-step wizard.
+//   2. Makes the records list panel (data-family-list-panel) update in-place via fetch:
+//      search/filter form submits, pagination link clicks, and browser back/forward all
+//      replace only the panel HTML without a full page reload. Also handles the
+//      archive/restore confirmation dialog for .js-family-record-action-form.
+//
+// Connected to:
+//   - dashboard-modal-loader.js : window.registerDashboardModal()
+//   - family-form.js            : window.initFamilyForm() (initialises the wizard)
+//   - Backend : GET  {admin|employee}/manage-family/view/:id  (FamilyController::viewFamily)
+//               GET  {admin|employee}/manage-family/edit/:id  (FamilyController::editFamily)
+//               GET  {admin|employee}/manage-records?partial=1 (list fragment)
+//               POST {admin|employee}/manage-family/archive|restore/:id
+//   - Views : Family/list.php, form.php, view.php
+//   - Both admin (admin/manage-records) and employee (employee/manage-records) pages use this
+// Registers record management screens with the shared dashboard modal loader.
+(function (window) {
+    if (typeof window.registerDashboardModal !== 'function') {
+        return;
+    }
+
+    window.registerDashboardModal({
+        namespace: 'family',
+        triggerSelector: '.js-open-family-modal, .js-open-family-view-modal, .js-open-family-edit-modal',
+        defaultTitle: 'Record',
+        loadingMarkup: '<div class="family-modal-loading" role="status" aria-live="polite"><div class="spinner-border text-primary" aria-hidden="true"></div><span>Loading record form...</span></div>',
+        errorMarkup: '<div class="alert alert-danger mb-0">Unable to load the record form. Please try again.</div>',
+        onLoaded: function (container) {
+            if (typeof window.initFamilyForm === 'function') {
+                window.initFamilyForm(container);
+            }
+        }
+    });
+})(window);
+
+(function (window, document) {
+    function panelFor(target) {
+        return target ? target.closest('[data-family-list-panel]') : null;
+    }
+
+    function urlWithPartial(url) {
+        const nextUrl = new URL(url, window.location.href);
+
+        nextUrl.searchParams.set('partial', '1');
+
+        return nextUrl;
+    }
+
+    function setPanelLoading(panel, loading) {
+        panel.classList.toggle('is-loading', loading);
+        panel.querySelectorAll('button, input, select, a').forEach(function (control) {
+            if (control.tagName === 'A') {
+                control.classList.toggle('disabled', loading);
+                control.setAttribute('aria-disabled', loading ? 'true' : 'false');
+                return;
+            }
+
+            control.disabled = loading;
+        });
+    }
+
+    function replacePanel(panel, html) {
+        const template = document.createElement('template');
+        template.innerHTML = html.trim();
+        const replacement = template.content.querySelector('[data-family-list-panel]');
+
+        if (!replacement) {
+            window.location.reload();
+            return null;
+        }
+
+        panel.replaceWith(replacement);
+
+        // Re-apply Popper's fixed positioning to the freshly injected row action
+        // menus, otherwise they revert to absolute positioning and get clipped by
+        // the .table-responsive overflow when the new panel has few rows.
+        if (typeof window.initFamilyListActionDropdowns === 'function') {
+            window.initFamilyListActionDropdowns(replacement);
+        }
+
+        document.querySelectorAll('.modal-backdrop').forEach(function (backdrop) {
+            backdrop.remove();
+        });
+        document.body.classList.remove('modal-open');
+        document.body.style.removeProperty('overflow');
+        document.body.style.removeProperty('padding-right');
+
+        return replacement;
+    }
+
+    function scrollPanelIntoView(panel) {
+        if (!panel) {
+            return;
+        }
+
+        const top = Math.max(0, window.scrollY + panel.getBoundingClientRect().top - 16);
+
+        window.scrollTo({
+            top: top,
+            behavior: 'auto'
+        });
+    }
+
+    function filterTableRows(panel, keyword, sectorId) {
+        // Split into tokens so a full name ("Juan Cruz") matches even though the
+        // tokens live in different parts of the name; every token must be present.
+        var tokens = keyword ? keyword.split(/\s+/).filter(Boolean) : [];
+        panel.querySelectorAll('[data-record-row]').forEach(function (row) {
+            // Prefer the full name (incl. middle name) for matching; fall back to the
+            // visible name cell when the attribute isn't present.
+            var name = (row.dataset.recordFullname
+                || (row.querySelector('[data-record-name]') ? row.querySelector('[data-record-name]').textContent : '')
+            ).toLowerCase().trim();
+            var rowText = row.textContent ? row.textContent.toLowerCase().trim() : '';
+            var searchableText = (name + ' ' + rowText).trim();
+            var rawIds = row.dataset.sectorIds || '[]';
+            var ids = [];
+            try { ids = JSON.parse(rawIds); } catch (_) {}
+            if (!Array.isArray(ids)) { ids = ids ? [ids] : []; }
+            var nameOk = tokens.every(function (token) { return searchableText.indexOf(token) !== -1; });
+            var secOk  = !sectorId || ids.map(Number).indexOf(sectorId) !== -1;
+            row.style.display = (nameOk && secOk) ? '' : 'none';
+        });
+    }
+
+    function selectedStatus(form, panel) {
+        const select = form.querySelector('select[name="status"]');
+        const status = select ? select.value : (panel.dataset.currentStatus || 'active');
+
+        return status === 'archived' ? 'archived' : 'active';
+    }
+
+    function statusListUrl(action, status) {
+        const fullUrl = new URL(action, window.location.href);
+
+        fullUrl.search = '';
+
+        if (status === 'archived') {
+            fullUrl.searchParams.set('status', 'archived');
+        }
+
+        return fullUrl;
+    }
+
+    function loadFamilyList(panel, fullUrl, pushHistory) {
+        const partialUrl = urlWithPartial(fullUrl);
+
+        setPanelLoading(panel, true);
+
+        return window.fetch(partialUrl.toString(), {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            credentials: 'same-origin'
+        })
+            .then(function (response) {
+                if (!response.ok) {
+                    throw new Error('Unable to load records.');
+                }
+
+                return response.text();
+            })
+            .then(function (html) {
+                const nextPanel = replacePanel(panel, html);
+
+                if (pushHistory && nextPanel) {
+                    window.history.pushState({ familyList: true }, '', fullUrl);
+                }
+
+                scrollPanelIntoView(nextPanel);
+
+                return nextPanel;
+            })
+            .catch(function () {
+                window.location.href = fullUrl;
+            });
+    }
+
+    function closeModalFor(element) {
+        const modal = element.closest('.modal');
+
+        if (modal && window.bootstrap) {
+            const instance = window.bootstrap.Modal.getInstance(modal);
+
+            if (instance) {
+                instance.hide();
+            }
+        }
+    }
+
+    document.addEventListener('submit', function (event) {
+        const form = event.target.closest('[data-family-list-panel] form[method="get"]');
+
+        if (!form) {
+            return;
+        }
+
+        const panel = panelFor(form);
+
+        if (!panel) {
+            return;
+        }
+
+        event.preventDefault();
+
+        // "Search" button — filter current rows in-browser without a server round-trip.
+        if (event.submitter && event.submitter.dataset.searchMode === 'local') {
+            const keyword  = (form.querySelector('input[name="q"]') ? form.querySelector('input[name="q"]').value : '').toLowerCase().trim();
+            const sectorId = parseInt((form.querySelector('select[name="sectorID"]') ? form.querySelector('select[name="sectorID"]').value : '0') || '0', 10);
+            const nextStatus = selectedStatus(form, panel);
+            const currentStatus = (panel.dataset.currentStatus || 'active') === 'archived' ? 'archived' : 'active';
+
+            if (nextStatus !== currentStatus) {
+                if (!window.fetch || !window.history) {
+                    form.submit();
+                    return;
+                }
+
+                loadFamilyList(panel, statusListUrl(form.action, nextStatus).toString(), true)
+                    .then(function (nextPanel) {
+                        const nextForm = nextPanel && nextPanel.querySelector('[data-records-search="quick"]');
+                        const nextInput = nextForm && nextForm.querySelector('input[name="q"]');
+                        const nextSelect = nextForm && nextForm.querySelector('select[name="status"]');
+
+                        if (nextInput) {
+                            nextInput.value = keyword;
+                            nextInput.focus();
+                        }
+
+                        if (nextSelect) {
+                            nextSelect.value = nextStatus;
+                        }
+
+                        if (nextPanel) {
+                            filterTableRows(nextPanel, keyword, sectorId);
+                        }
+                    });
+                return;
+            }
+
+            filterTableRows(panel, keyword, sectorId);
+            return;
+        }
+
+        if (!window.fetch || !window.history) {
+            form.submit();
+            return;
+        }
+
+        closeModalFor(form);
+
+        const actionUrl = (event.submitter && event.submitter.getAttribute('formaction')) || form.action;
+        const fullUrl = new URL(actionUrl, window.location.href);
+        const formData = new FormData(form);
+
+        if (form.dataset.recordsSearch === 'database') {
+            const statusSelect = panel.querySelector('[data-records-search="quick"] select[name="status"]');
+
+            if (statusSelect) {
+                formData.set('status', statusSelect.value);
+            }
+        }
+
+        fullUrl.search = '';
+        formData.forEach(function (value, key) {
+            if (key === 'status' && String(value).trim() !== 'archived') {
+                return;
+            }
+
+            if (String(value).trim() !== '') {
+                fullUrl.searchParams.append(key, value);
+            }
+        });
+
+        // "Search All" runs the whole-database (deep) search, including non-head
+        // family members. The submitter's name/value isn't in FormData, so flag the
+        // deep scope here; DashboardPageBuilder reads search_scope to build the panel.
+        if (event.submitter && event.submitter.dataset.searchMode === 'all') {
+            fullUrl.searchParams.set('search_scope', 'all');
+        }
+
+        loadFamilyList(panel, fullUrl.toString(), true);
+    });
+
+    // Live search: filter rows on every keystroke in the manual keyword field.
+    document.addEventListener('input', function (event) {
+        const input = event.target;
+        if (!input || input.name !== 'q') {
+            return;
+        }
+        const panel = input.closest('[data-family-list-panel]');
+        if (!panel) {
+            return;
+        }
+        const form = input.closest('[data-records-search="quick"]');
+        if (!form) {
+            return;
+        }
+        const keyword  = input.value.toLowerCase().trim();
+
+        const sel      = panel.querySelector('select[name="sectorID"]');
+        const sectorId = sel ? parseInt(sel.value || '0', 10) : 0;
+        filterTableRows(panel, keyword, sectorId);
+    });
+
+    document.addEventListener('click', function (event) {
+        const clearButton = event.target.closest('[data-records-clear]');
+        if (!clearButton) {
+            return;
+        }
+
+        const panel = panelFor(clearButton);
+        const form = clearButton.closest('[data-records-search="quick"]');
+        const input = form && form.querySelector('input[name="q"]');
+
+        if (!panel || !input) {
+            return;
+        }
+
+        input.value = '';
+        filterTableRows(panel, '', 0);
+        input.focus();
+    });
+
+    document.addEventListener('click', function (event) {
+        const link = event.target.closest('[data-family-list-panel] a[href]');
+
+        if (!link || link.classList.contains('disabled')) {
+            return;
+        }
+
+        const panel = panelFor(link);
+
+        if (!panel || !window.fetch || !window.history) {
+            return;
+        }
+
+        const href = link.getAttribute('href') || '';
+
+        if (href === '' || href.startsWith('#')) {
+            return;
+        }
+
+        event.preventDefault();
+        loadFamilyList(panel, new URL(href, window.location.href).toString(), true);
+    });
+
+    window.addEventListener('popstate', function () {
+        const panel = document.querySelector('[data-family-list-panel]');
+
+        if (!panel || !window.fetch) {
+            return;
+        }
+
+        loadFamilyList(panel, window.location.href, false);
+    });
+
+    document.addEventListener('submit', function (event) {
+        const form = event.target.closest('.js-family-record-action-form');
+
+        if (!form) {
+            return;
+        }
+
+        const familyName = (form.dataset.familyName || 'this family record').trim();
+        const actionLabel = (form.dataset.actionLabel || 'Archive').trim();
+        const actionPast = (form.dataset.actionPast || 'archived').trim();
+        const fallback = actionLabel + ' ' + familyName + '? This keeps the record in the database, marks it as ' + actionPast + ', and hides it from active lists.';
+        const message = (form.dataset.confirmMessage || '').trim() || fallback;
+
+        if (!window.confirm(message)) {
+            event.preventDefault();
+        }
+    });
+})(window, document);

@@ -142,7 +142,7 @@ class CategoryController extends BaseController
     /**
      * Shared create/update logic. Validates the code (letters only) and name,
      * blocks duplicate codes, and protects official categories (their code and
-     * official flag stay fixed; only the name/description can change).
+     * official flag stay fixed; only the name can change).
      * $categoryId null = create, otherwise update.
      */
     private function saveCategory(?int $categoryId = null): RedirectResponse
@@ -161,7 +161,6 @@ class CategoryController extends BaseController
 
         $code = strtoupper(trim((string) $this->request->getPost('code')));
         $name = trim((string) $this->request->getPost('name'));
-        $description = trim((string) $this->request->getPost('description'));
 
         $isUpdate = $categoryId !== null;
         $existing = $isUpdate ? $model->find($categoryId) : null;
@@ -170,7 +169,7 @@ class CategoryController extends BaseController
             return $this->redirect('error', 'Category not found.');
         }
 
-        // Official categories keep their code fixed; only name/description change.
+        // Official categories keep their code fixed; only name changes.
         $isOfficial = $isUpdate && (int) ($existing['is_official'] ?? 0) === 1;
 
         if ($isOfficial) {
@@ -192,7 +191,6 @@ class CategoryController extends BaseController
         $data = [
             'code' => $code,
             'name' => $name,
-            'description' => $description,
         ];
 
         if ($isUpdate) {

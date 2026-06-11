@@ -16,7 +16,7 @@ class CategoryModel extends Model
     protected $table = 'category';
     protected $primaryKey = 'categoryID';
     protected $returnType = 'array';
-    protected $allowedFields = ['code', 'name', 'description', 'is_official'];
+    protected $allowedFields = ['code', 'name', 'is_official'];
     protected $useTimestamps = false;
 
     /** Single-instance categories whose first code is the bare prefix (no "1"). */

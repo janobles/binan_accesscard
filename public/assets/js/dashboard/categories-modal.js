@@ -68,7 +68,6 @@
         const submit = modal.querySelector('.js-category-modal-submit');
         const code = modal.querySelector('#categoryModalCode');
         const name = modal.querySelector('#categoryModalName');
-        const description = modal.querySelector('#categoryModalDescription');
         const archiveName = modal.querySelector('.js-category-archive-name');
         const deleteName = modal.querySelector('.js-category-delete-name');
         const restoreName = modal.querySelector('.js-category-restore-name');
@@ -146,10 +145,6 @@
 
             if (name) {
                 name.value = mode === 'update' ? String(trigger.dataset.categoryName || '') : '';
-            }
-
-            if (description) {
-                description.value = mode === 'update' ? String(trigger.dataset.categoryDescription || '') : '';
             }
 
             validateCode(modal);

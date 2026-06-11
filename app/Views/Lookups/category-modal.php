@@ -22,13 +22,9 @@
 							<div class="invalid-feedback d-block d-none js-category-code-error">Duplicate code - please enter another code.</div>
 							<small class="text-muted d-none js-category-official-note">Official category codes can't be changed; you can still rename it.</small>
 						</div>
-						<div class="mb-3">
+						<div class="mb-0">
 							<label class="form-label" for="categoryModalName">Name</label>
 							<input class="form-control" id="categoryModalName" name="name" maxlength="150" required>
-						</div>
-						<div class="mb-0">
-							<label class="form-label" for="categoryModalDescription">Description</label>
-							<textarea class="form-control" id="categoryModalDescription" name="description" rows="3"></textarea>
 						</div>
 					</div>
 					<div class="alert alert-warning mb-0 d-none js-category-archive-message">

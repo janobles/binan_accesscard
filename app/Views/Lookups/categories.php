@@ -65,7 +65,6 @@ $archivedCategoryCount = count($categories) - $activeCategoryCount;
 											data-category-id="<?= esc((string) $categoryId) ?>"
 											data-category-code="<?= esc((string) ($category['code'] ?? ''), 'attr') ?>"
 											data-category-name="<?= esc((string) ($category['name'] ?? ''), 'attr') ?>"
-											data-category-description="<?= esc((string) ($category['description'] ?? ''), 'attr') ?>"
 											data-category-official="<?= $isOfficial ? '1' : '0' ?>">
 											<i class="bi bi-pencil-square" aria-hidden="true"></i>Edit
 										</button>

@@ -28,7 +28,6 @@ CREATE TABLE IF NOT EXISTS `category` (
   `categoryID`  INT(11)       NOT NULL AUTO_INCREMENT,
   `code`        VARCHAR(30)   NOT NULL,
   `name`        VARCHAR(150)  NOT NULL,
-  `description` TEXT          DEFAULT NULL,
   `is_official` TINYINT(1)    NOT NULL DEFAULT 0,
   `dt_created`  TIMESTAMP     NOT NULL DEFAULT current_timestamp(),
   `dt_updated`  TIMESTAMP     NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),

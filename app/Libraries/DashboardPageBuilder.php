@@ -82,8 +82,16 @@ class DashboardPageBuilder
             ? $searchModel->families($searchTerm, $searchFilters, 25)
             : $dashboardModel->recentFamilies(10);
 
+        $auditPage = max(1, (int) $this->request->getGet('page'));
+        $auditPerPage = 50;
+        $auditTotal = $activePage === 'audit-trails'
+            ? $searchModel->countAuditTrails($searchTerm, $searchFilters)
+            : 0;
+        $auditTotalPages = max(1, (int) ceil($auditTotal / $auditPerPage));
+        $auditPage = min($auditPage, $auditTotalPages);
+
         $recentAudits = $activePage === 'audit-trails'
-            ? $searchModel->auditTrails($searchTerm, $searchFilters, 50)
+            ? $searchModel->auditTrails($searchTerm, $searchFilters, $auditPerPage, ($auditPage - 1) * $auditPerPage)
             : (new AuditTrailsModel())->getRecent(10);
         $memberListData = $activePage === 'family-manage'
             ? $this->buildMemberListData()
@@ -138,6 +146,12 @@ class DashboardPageBuilder
             'searchTerm'         => $searchTerm,
             'searchFilters'      => $searchFilters,
             'hasSearchFilters'   => $hasSearchFilters,
+            'auditPage'          => $auditPage,
+            'auditPerPage'       => $auditPerPage,
+            'auditTotal'         => $auditTotal,
+            'auditTotalPages'    => $auditTotalPages,
+            'auditFromRecord'    => $auditTotal === 0 ? 0 : (($auditPage - 1) * $auditPerPage) + 1,
+            'auditToRecord'      => min($auditTotal, $auditPage * $auditPerPage),
             'selectedFilterDate' => (string) ($searchFilters['date'] ?? $searchFilters['date_from'] ?? ''),
             'sectorOptions'      => $familyFormViewData['sectorOptions'] ?? [],
             'auditActionOptions' => $searchModel->auditActions(),

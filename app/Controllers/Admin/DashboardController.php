@@ -227,6 +227,12 @@ class DashboardController extends BaseController
             'searchTerm' => $viewData['searchTerm'] ?? '',
             'searchFilters' => $viewData['searchFilters'] ?? [],
             'auditActionOptions' => $viewData['auditActionOptions'] ?? [],
+            'auditPage' => $viewData['auditPage'] ?? 1,
+            'auditPerPage' => $viewData['auditPerPage'] ?? 50,
+            'auditTotal' => $viewData['auditTotal'] ?? 0,
+            'auditTotalPages' => $viewData['auditTotalPages'] ?? 1,
+            'auditFromRecord' => $viewData['auditFromRecord'] ?? 0,
+            'auditToRecord' => $viewData['auditToRecord'] ?? 0,
         ]);
     }
 

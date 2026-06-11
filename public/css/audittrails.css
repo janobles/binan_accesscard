@@ -1,12 +1,102 @@
 .audit-trails {
     overflow: hidden;
     border: 1px solid #dce5e2;
-    border-radius: 0.35rem;
+    border-radius: 0.45rem;
     background: #ffffff;
 }
 
+.audit-trails-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    border-bottom: 1px solid #e2e9e7;
+    background: #fbfcfc;
+}
+
+.audit-trails-action-filter {
+    flex: 0 0 14rem;
+    min-width: 12rem;
+    border-color: #198754;
+    color: #12684f;
+    font-weight: 700;
+}
+
+.audit-trails-search-group {
+    display: flex;
+    flex: 1 1 34rem;
+    min-width: 18rem;
+    gap: 0.75rem;
+}
+
+.audit-trails-search {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.audit-trails .form-control,
+.audit-trails .form-select,
+.audit-trails .btn {
+    min-height: 2.65rem;
+    border-radius: 0.35rem;
+    font-size: 0.9rem;
+}
+
+.audit-trails .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    font-weight: 700;
+}
+
+.audit-trails-toolbar-action {
+    flex: 0 0 auto;
+    min-width: 7.5rem;
+}
+
+.audit-trails-clear {
+    color: #b42318;
+    border-color: #d7aaa6;
+    background-color: #ffffff;
+}
+
+.audit-trails-clear:hover,
+.audit-trails-clear:focus {
+    color: #ffffff;
+    background-color: #b42318;
+    border-color: #b42318;
+}
+
+.audit-trails-meta-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 0.8rem 1rem;
+    border-bottom: 1px solid #e2e9e7;
+    background: #ffffff;
+    color: #61706b;
+    font-size: 0.86rem;
+}
+
+.audit-trails-results-summary {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    min-width: 0;
+    gap: 0.4rem;
+    padding-left: 0.75rem;
+    border-left: 0.2rem solid #168465;
+    line-height: 1.35;
+}
+
+.audit-trails-results-summary strong {
+    color: #12684f;
+    font-weight: 800;
+}
+
 .audit-trails-table {
-    min-width: 46rem;
+    min-width: 78rem;
     margin: 0;
     table-layout: auto;
 }
@@ -29,10 +119,58 @@
     font-size: 0.85rem;
     overflow-wrap: break-word;
     word-break: normal;
+    vertical-align: top;
 }
 
 .audit-trails-table tbody tr:last-child td {
     border-bottom: 0;
+}
+
+.audit-trails-timestamp {
+    width: 9.5rem;
+    white-space: nowrap;
+}
+
+.audit-trails-timestamp span,
+.audit-trails-timestamp small {
+    display: block;
+}
+
+.audit-trails-timestamp span {
+    font-weight: 700;
+}
+
+.audit-trails-timestamp small {
+    margin-top: 0.15rem;
+    color: #6f7d78;
+    font-size: 0.76rem;
+}
+
+.audit-trails-action {
+    font-size: 0.74rem;
+    letter-spacing: 0;
+    white-space: nowrap;
+}
+
+.audit-trails-description {
+    min-width: 18rem;
+}
+
+.audit-trails-meta,
+.audit-trails-user {
+    white-space: nowrap;
+}
+
+.audit-trails-agent {
+    max-width: 18rem;
+}
+
+.audit-trails-agent span {
+    display: block;
+    max-width: 24rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .audit-trails-empty {
@@ -41,9 +179,70 @@
     text-align: center;
 }
 
+.audit-trails-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding: 1rem;
+    border-top: 1px solid #e2e9e7;
+    background: #fbfcfc;
+}
+
+.audit-trails-pagination-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+@media (max-width: 62rem) {
+    .audit-trails-toolbar {
+        flex-wrap: wrap;
+    }
+
+    .audit-trails-search-group {
+        flex-basis: 100%;
+    }
+}
+
 @media (max-width: 48rem) {
+    .audit-trails-toolbar {
+        padding: 0.75rem;
+    }
+
+    .audit-trails-meta-row {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 0.5rem;
+        padding: 0.75rem;
+    }
+
+    .audit-trails-results-summary {
+        align-items: flex-start;
+        flex-wrap: wrap;
+    }
+
+    .audit-trails-pagination {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .audit-trails-pagination-actions {
+        flex-wrap: wrap;
+    }
+
+    .audit-trails-action-filter,
+    .audit-trails-search-group {
+        flex: 1 1 100%;
+        min-width: 100%;
+    }
+
+    .audit-trails-toolbar-action {
+        min-width: 6.75rem;
+    }
+
     .audit-trails-table {
-        min-width: 40rem;
+        min-width: 68rem;
     }
 
     .audit-trails-table th,

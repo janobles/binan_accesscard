@@ -38,6 +38,7 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
 // Developers get the "developer" sidebar accent; plain admins get "admin".
 $sidebarRoleClass = $canManageAccounts ? 'developer' : 'admin';
 $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('admin/dashboard');
+$showTopbarBranding = $activePage !== 'audit-trails';
 ?>
 <?php
 /*
@@ -124,10 +125,14 @@ $jadeStyles = [
                     <i class="bi bi-list" aria-hidden="true"></i>
                 </button>
                 <div class="topbar-title">
+                    <?php if ($showTopbarBranding): ?>
                     <img class="topbar-logo" src="<?= base_url('assets/image/binan.png') ?>" alt="City of Binan Logo">
+                    <?php endif; ?>
                     <div>
                         <h1 id="dashboard-page-title"><?= esc($pageTitle) ?></h1>
+                        <?php if ($showTopbarBranding): ?>
                         <p>Bi&ntilde;an Access Card MIS</p>
+                        <?php endif; ?>
                     </div>
                 </div>
                 <ul class="navbar-nav ms-auto">
@@ -247,6 +252,12 @@ $jadeStyles = [
                     'searchTerm' => $searchTerm,
                     'searchFilters' => $searchFilters,
                     'auditActionOptions' => $auditActionOptions,
+                    'auditPage' => $auditPage,
+                    'auditPerPage' => $auditPerPage,
+                    'auditTotal' => $auditTotal,
+                    'auditTotalPages' => $auditTotalPages,
+                    'auditFromRecord' => $auditFromRecord,
+                    'auditToRecord' => $auditToRecord,
                 ]) ?>
             <?php endif; ?>
 

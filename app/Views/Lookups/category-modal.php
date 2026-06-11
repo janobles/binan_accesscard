@@ -20,7 +20,6 @@
 							<label class="form-label" for="categoryModalCode">Code</label>
 							<input class="form-control text-uppercase" id="categoryModalCode" name="code" placeholder="e.g. NEW" pattern="[A-Za-z]+" title="Letters only" maxlength="30" required>
 							<div class="invalid-feedback d-block d-none js-category-code-error">Duplicate code - please enter another code.</div>
-							<small class="text-muted d-none js-category-official-note">Official category codes can't be changed; you can still rename it.</small>
 						</div>
 						<div class="mb-0">
 							<label class="form-label" for="categoryModalName">Name</label>

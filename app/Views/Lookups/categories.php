@@ -4,9 +4,9 @@
  * `category` table and lets an admin add/rename/archive/restore/delete them via
  * the shared #categoryActionModal (see category-modal.php + categories-modal.js).
  *
- * Official categories (is_official = 1) can be renamed but never archived or
- * deleted — those actions are hidden here and blocked server-side in
- * Lookups\CategoryController. Reuses the sector-* CSS classes (css/sector.css).
+ * Every category is fully editable, archivable, and deletable; the only
+ * server-side guard (in Lookups\CategoryController) blocks archiving/deleting a
+ * category still linked to sectors. Reuses the sector-* CSS classes (css/sector.css).
  */
 $categories = (array) ($categories ?? []);
 
@@ -46,7 +46,6 @@ $archivedCategoryCount = count($categories) - $activeCategoryCount;
 					<?php
 					$categoryId = (int) ($category['categoryID'] ?? 0);
 					$isArchived = trim((string) ($category['dt_deleted'] ?? '')) !== '';
-					$isOfficial = (int) ($category['is_official'] ?? 0) === 1;
 					?>
 					<tr data-row-archived="<?= $isArchived ? '1' : '0' ?>"<?= $isArchived ? ' class="d-none"' : '' ?>>
 						<td><span class="badge bg-light text-dark border"><?= esc((string) ($category['code'] ?? '')) ?></span></td>
@@ -64,31 +63,28 @@ $archivedCategoryCount = count($categories) - $activeCategoryCount;
 											data-category-mode="update"
 											data-category-id="<?= esc((string) $categoryId) ?>"
 											data-category-code="<?= esc((string) ($category['code'] ?? ''), 'attr') ?>"
-											data-category-name="<?= esc((string) ($category['name'] ?? ''), 'attr') ?>"
-											data-category-official="<?= $isOfficial ? '1' : '0' ?>">
+											data-category-name="<?= esc((string) ($category['name'] ?? ''), 'attr') ?>">
 											<i class="bi bi-pencil-square" aria-hidden="true"></i>Edit
 										</button>
-										<?php if (! $isOfficial): ?>
-											<button
-												class="dropdown-item text-danger js-category-modal-open"
-												type="button"
-												data-category-mode="archive"
-												data-category-id="<?= esc((string) $categoryId) ?>"
-												data-category-code="<?= esc((string) ($category['code'] ?? ''), 'attr') ?>"
-												data-category-name="<?= esc((string) ($category['name'] ?? ''), 'attr') ?>">
-												<i class="bi bi-archive" aria-hidden="true"></i>Archive
-											</button>
-											<button
-												class="dropdown-item text-danger js-category-modal-open"
-												type="button"
-												data-category-mode="delete"
-												data-category-id="<?= esc((string) $categoryId) ?>"
-												data-category-code="<?= esc((string) ($category['code'] ?? ''), 'attr') ?>"
-												data-category-name="<?= esc((string) ($category['name'] ?? ''), 'attr') ?>">
-												<i class="bi bi-trash" aria-hidden="true"></i>Delete
-											</button>
-										<?php endif; ?>
-									<?php elseif (! $isOfficial): ?>
+										<button
+											class="dropdown-item text-danger js-category-modal-open"
+											type="button"
+											data-category-mode="archive"
+											data-category-id="<?= esc((string) $categoryId) ?>"
+											data-category-code="<?= esc((string) ($category['code'] ?? ''), 'attr') ?>"
+											data-category-name="<?= esc((string) ($category['name'] ?? ''), 'attr') ?>">
+											<i class="bi bi-archive" aria-hidden="true"></i>Archive
+										</button>
+										<button
+											class="dropdown-item text-danger js-category-modal-open"
+											type="button"
+											data-category-mode="delete"
+											data-category-id="<?= esc((string) $categoryId) ?>"
+											data-category-code="<?= esc((string) ($category['code'] ?? ''), 'attr') ?>"
+											data-category-name="<?= esc((string) ($category['name'] ?? ''), 'attr') ?>">
+											<i class="bi bi-trash" aria-hidden="true"></i>Delete
+										</button>
+									<?php else: ?>
 										<button
 											class="dropdown-item text-success js-category-modal-open"
 											type="button"

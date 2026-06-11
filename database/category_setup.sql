@@ -28,7 +28,6 @@ CREATE TABLE IF NOT EXISTS `category` (
   `categoryID`  INT(11)       NOT NULL AUTO_INCREMENT,
   `code`        VARCHAR(30)   NOT NULL,
   `name`        VARCHAR(150)  NOT NULL,
-  `is_official` TINYINT(1)    NOT NULL DEFAULT 0,
   `dt_created`  TIMESTAMP     NOT NULL DEFAULT current_timestamp(),
   `dt_updated`  TIMESTAMP     NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   `dt_deleted`  DATETIME      DEFAULT NULL,
@@ -37,30 +36,30 @@ CREATE TABLE IF NOT EXISTS `category` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- ---------------------------------------------------------------------
--- 2. SEED the official categories (mirrors
+-- 2. SEED the standard CSWD categories (mirrors
 --    App\Support\FamilyProfilingFormV2::SECTOR_CATEGORIES, minus 'OTHER').
---    is_official = 1  -> protected: can be renamed, never archived/deleted.
+--    Seeded as ordinary categories -- fully editable/archivable/deletable.
 -- ---------------------------------------------------------------------
-INSERT INTO `category` (`code`, `name`, `is_official`) VALUES
-  ('SC',   'Senior Citizen',              1),
-  ('PWD',  'Person with Disability',      1),
-  ('SP',   'Solo Parent',                 1),
-  ('B',    'Bata (Children)',             1),
-  ('LGBT', 'LGBTQIA+',                    1),
-  ('OFW',  'Overseas Filipino Worker',    1),
-  ('IP',   'Indigenous People',           1),
-  ('IDP',  'Internally Displaced Person', 1),
-  ('PDL',  'Persons Deprived of Liberty', 1)
-ON DUPLICATE KEY UPDATE `is_official` = 1;
+INSERT INTO `category` (`code`, `name`) VALUES
+  ('SC',   'Senior Citizen'),
+  ('PWD',  'Person with Disability'),
+  ('SP',   'Solo Parent'),
+  ('B',    'Bata (Children)'),
+  ('LGBT', 'LGBTQIA+'),
+  ('OFW',  'Overseas Filipino Worker'),
+  ('IP',   'Indigenous People'),
+  ('IDP',  'Internally Displaced Person'),
+  ('PDL',  'Persons Deprived of Liberty')
+ON DUPLICATE KEY UPDATE `name` = VALUES(`name`);
 
 -- ---------------------------------------------------------------------
--- 3. DERIVE custom categories from existing non-official sector prefixes.
+-- 3. DERIVE custom categories from existing sector prefixes not already seeded.
 --    Prefix = leading letters of the shortcode (trailing digits stripped),
 --    folding OSCA/OSWA into SC. Name defaults to the prefix; display names
 --    are applied in step 4.
 -- ---------------------------------------------------------------------
-INSERT IGNORE INTO `category` (`code`, `name`, `is_official`)
-SELECT prefix, prefix, 0
+INSERT IGNORE INTO `category` (`code`, `name`)
+SELECT prefix, prefix
 FROM (
   SELECT DISTINCT
     CASE
@@ -78,9 +77,9 @@ WHERE prefix <> ''
 --      {"SBS":"Sabotage","SS":"SS - Super Special"}
 --    SBS has no sectors yet -> still seeded so the named category survives.
 -- ---------------------------------------------------------------------
-INSERT INTO `category` (`code`, `name`, `is_official`) VALUES
-  ('SS',  'SS - Super Special', 0),
-  ('SBS', 'Sabotage',           0)
+INSERT INTO `category` (`code`, `name`) VALUES
+  ('SS',  'SS - Super Special'),
+  ('SBS', 'Sabotage')
 ON DUPLICATE KEY UPDATE `name` = VALUES(`name`);
 
 -- ---------------------------------------------------------------------

@@ -63,7 +63,6 @@
         const archiveMessage = modal.querySelector('.js-category-archive-message');
         const deleteMessage = modal.querySelector('.js-category-delete-message');
         const restoreMessage = modal.querySelector('.js-category-restore-message');
-        const officialNote = modal.querySelector('.js-category-official-note');
         const title = modal.querySelector('#categoryActionModalLabel');
         const submit = modal.querySelector('.js-category-modal-submit');
         const code = modal.querySelector('#categoryModalCode');
@@ -76,7 +75,6 @@
         const isRestore = mode === 'restore';
         const isDelete = mode === 'delete';
         const isAction = isArchive || isRestore || isDelete;
-        const isOfficial = String(trigger.dataset.categoryOfficial || '') === '1';
         const existingCode = mode === 'update' ? String(trigger.dataset.categoryCode || '') : '';
 
         form.reset();
@@ -125,7 +123,7 @@
             restoreMessage.classList.toggle('d-none', !isRestore);
         }
 
-        [code, name, description].forEach(function (field) {
+        [code, name].forEach(function (field) {
             if (field) {
                 field.disabled = isAction;
                 field.required = !isAction && field.hasAttribute('required');
@@ -133,14 +131,8 @@
         });
 
         if (!isAction) {
-            // Official categories keep their code fixed; only name/description change.
             if (code) {
                 code.value = existingCode;
-                code.readOnly = mode === 'update' && isOfficial;
-            }
-
-            if (officialNote) {
-                officialNote.classList.toggle('d-none', !(mode === 'update' && isOfficial));
             }
 
             if (name) {

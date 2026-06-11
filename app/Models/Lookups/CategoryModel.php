@@ -6,17 +6,17 @@ use CodeIgniter\Model;
 
 /**
  * Manages the sector categories table (`category`). A category groups sectors
- * by a short alpha code (SC, PWD, LGBT, …) and a display name. Official
- * categories (is_official = 1) are seeded from the CSWD form and may be renamed
- * but never archived or deleted. Custom categories are fully managed from the
- * "Manage Categories" admin page. Sectors link here via `sector.categoryID`.
+ * by a short alpha code (SC, PWD, LGBT, …) and a display name. The standard CSWD
+ * categories are seeded from the form, but every category — seeded or custom —
+ * is fully managed from the "Manage Categories" admin page (rename, archive,
+ * delete). Sectors link here via `sector.categoryID`.
  */
 class CategoryModel extends Model
 {
     protected $table = 'category';
     protected $primaryKey = 'categoryID';
     protected $returnType = 'array';
-    protected $allowedFields = ['code', 'name', 'is_official'];
+    protected $allowedFields = ['code', 'name'];
     protected $useTimestamps = false;
 
     /** Single-instance categories whose first code is the bare prefix (no "1"). */
@@ -29,8 +29,7 @@ class CategoryModel extends Model
     }
 
     /**
-     * All categories including archived, for the management table. Official
-     * categories lead, then the rest by code.
+     * All categories including archived, for the management table, ordered by code.
      */
     public function getAllIncluding(): array
     {
@@ -39,7 +38,6 @@ class CategoryModel extends Model
         }
 
         return $this->db->table($this->table)
-            ->orderBy('is_official', 'DESC')
             ->orderBy('code', 'ASC')
             ->get()
             ->getResultArray();
@@ -47,7 +45,7 @@ class CategoryModel extends Model
 
     /**
      * Active (non-archived) categories for dropdowns and the family-form
-     * grouping order: official first, then the rest alphabetically by name.
+     * grouping, ordered alphabetically by name.
      */
     public function getActive(): array
     {
@@ -61,8 +59,7 @@ class CategoryModel extends Model
             $builder->where('dt_deleted IS NULL', null, false);
         }
 
-        return $builder->orderBy('is_official', 'DESC')
-            ->orderBy('name', 'ASC')
+        return $builder->orderBy('name', 'ASC')
             ->get()
             ->getResultArray();
     }
@@ -142,14 +139,6 @@ class CategoryModel extends Model
         }
 
         return $builder->countAllResults() > 0;
-    }
-
-    /** True if the category is official (seeded, protected from delete/archive). */
-    public function isOfficial(int $id): bool
-    {
-        $row = $this->find($id);
-
-        return $row !== null && (int) ($row['is_official'] ?? 0) === 1;
     }
 
     /** Count of non-archived sectors linked to this category. Guards archive/delete. */

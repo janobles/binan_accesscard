@@ -15,8 +15,8 @@ use Throwable;
  * Admin\DashboardController::categories; every action here is Developer/Admin-only
  * and redirects back to `admin/categories` with a flash message.
  *
- * Official categories (is_official = 1) may be renamed but never have their code
- * changed and cannot be archived or deleted.
+ * Every category is fully editable, archivable, and deletable; the only guard is
+ * that a category still linked to sectors cannot be archived or deleted.
  */
 class CategoryController extends BaseController
 {
@@ -38,8 +38,8 @@ class CategoryController extends BaseController
     }
 
     /**
-     * POST `admin/categories/archive/{id}`: soft-archive a custom category.
-     * Refused for official categories and for categories still used by sectors.
+     * POST `admin/categories/archive/{id}`: soft-archive a category.
+     * Refused for categories still used by sectors.
      */
     public function archive(int $categoryId): RedirectResponse
     {
@@ -53,10 +53,6 @@ class CategoryController extends BaseController
 
         if (! $model->hasTable()) {
             return $this->redirect('error', 'Category table is not available.');
-        }
-
-        if ($model->isOfficial($categoryId)) {
-            return $this->redirect('error', 'Official categories cannot be archived.');
         }
 
         if ($model->countSectors($categoryId) > 0) {
@@ -103,8 +99,8 @@ class CategoryController extends BaseController
     }
 
     /**
-     * POST `admin/categories/delete/{id}`: permanently delete a custom category.
-     * Refused for official categories and for categories still used by sectors.
+     * POST `admin/categories/delete/{id}`: permanently delete a category.
+     * Refused for categories still used by sectors.
      */
     public function delete(int $categoryId): RedirectResponse
     {
@@ -118,10 +114,6 @@ class CategoryController extends BaseController
 
         if (! $model->hasTable()) {
             return $this->redirect('error', 'Category table is not available.');
-        }
-
-        if ($model->isOfficial($categoryId)) {
-            return $this->redirect('error', 'Official categories cannot be deleted.');
         }
 
         if ($model->countSectors($categoryId) > 0) {
@@ -141,8 +133,7 @@ class CategoryController extends BaseController
 
     /**
      * Shared create/update logic. Validates the code (letters only) and name,
-     * blocks duplicate codes, and protects official categories (their code and
-     * official flag stay fixed; only the name can change).
+     * and blocks duplicate codes.
      * $categoryId null = create, otherwise update.
      */
     private function saveCategory(?int $categoryId = null): RedirectResponse
@@ -169,13 +160,6 @@ class CategoryController extends BaseController
             return $this->redirect('error', 'Category not found.');
         }
 
-        // Official categories keep their code fixed; only name changes.
-        $isOfficial = $isUpdate && (int) ($existing['is_official'] ?? 0) === 1;
-
-        if ($isOfficial) {
-            $code = strtoupper(trim((string) ($existing['code'] ?? '')));
-        }
-
         if ($code === '' || preg_match('/^[A-Z]+$/', $code) !== 1) {
             return $this->redirect('error', 'Category code must be letters only (e.g. NEW).');
         }
@@ -196,8 +180,6 @@ class CategoryController extends BaseController
         if ($isUpdate) {
             $saved = $model->update($categoryId, $data) !== false;
         } else {
-            // New categories are always custom (official rows come from the seed).
-            $data['is_official'] = 0;
             $saved = $model->create($data) > 0;
         }
 

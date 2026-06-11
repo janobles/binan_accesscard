@@ -177,8 +177,6 @@ class SectorController extends BaseController
                 $categoryId = $categoryModel->create([
                     'code' => $newCode,
                     'name' => $newName,
-                    'description' => '',
-                    'is_official' => 0,
                 ]);
                 $category = $categoryModel->find($categoryId);
                 $this->audit('CATEGORY_CREATE', 'Created category ' . $newCode . ' (' . $newName . ') from the Add Sector form.');

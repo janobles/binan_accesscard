@@ -1,0 +1,23 @@
+# ----------------------------------------------------------------------
+# Front-controller forwarder
+# ----------------------------------------------------------------------
+# This project keeps the standard CodeIgniter layout where the real web
+# root is the public/ folder. To get clean URLs WITHOUT exposing /public/
+# in the address bar, every incoming request is internally rewritten into
+# public/ — the browser never sees it. The public/.htaccess then routes
+# non-file requests to index.php, so index.php is also hidden.
+#
+# DO NOT delete public/ or public/index.php — index.php is the front
+# controller that boots the framework; this file only hides them.
+
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+	RewriteEngine On
+
+	# Forward anything that isn't already targeting public/ into public/.
+	RewriteRule ^(?!public/)(.*)$ public/$1 [L]
+</IfModule>
+
+# Disable server signature
+ServerSignature Off

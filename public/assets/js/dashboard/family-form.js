@@ -111,25 +111,58 @@
         return days + (days === 1 ? ' day ago' : ' days ago');
     }
 
-    function askRestoreDraft(form, savedAt) {
+    function askFamilyFormDialog(form, options) {
         return new Promise(function (resolve) {
             const host = form.closest('#familyModalBody') || form;
             const overlay = document.createElement('div');
+            const dialog = document.createElement('div');
+            const icon = document.createElement('div');
+            const iconGlyph = document.createElement('i');
+            const copy = document.createElement('div');
+            const title = document.createElement('h3');
+            const message = document.createElement('p');
+            const actions = document.createElement('div');
+            const cancelButton = document.createElement('button');
+            const confirmButton = document.createElement('button');
+
             overlay.className = 'family-draft-dialog-backdrop';
             overlay.setAttribute('role', 'presentation');
-            overlay.innerHTML = [
-                '<div class="family-draft-dialog" role="dialog" aria-modal="true" aria-labelledby="familyDraftDialogTitle" aria-describedby="familyDraftDialogText">',
-                '  <div class="family-draft-dialog-icon" aria-hidden="true"><i class="bi bi-arrow-counterclockwise"></i></div>',
-                '  <div class="family-draft-dialog-copy">',
-                '    <h3 id="familyDraftDialogTitle">Restore unsaved record?</h3>',
-                '    <p id="familyDraftDialogText">You have an unsaved record from ' + formatDraftAge(savedAt) + '. Restore it?</p>',
-                '  </div>',
-                '  <div class="family-draft-dialog-actions">',
-                '    <button type="button" class="btn btn-outline-secondary" data-draft-action="discard">Discard</button>',
-                '    <button type="button" class="btn btn-success" data-draft-action="restore">Restore</button>',
-                '  </div>',
-                '</div>'
-            ].join('');
+
+            dialog.className = 'family-draft-dialog';
+            dialog.setAttribute('role', 'dialog');
+            dialog.setAttribute('aria-modal', 'true');
+            dialog.setAttribute('aria-labelledby', 'familyFormDialogTitle');
+            dialog.setAttribute('aria-describedby', 'familyFormDialogText');
+
+            icon.className = 'family-draft-dialog-icon' + (options.tone === 'warning' ? ' is-warning' : '');
+            icon.setAttribute('aria-hidden', 'true');
+            iconGlyph.className = options.iconClass || 'bi bi-question-lg';
+            icon.appendChild(iconGlyph);
+
+            copy.className = 'family-draft-dialog-copy';
+            title.id = 'familyFormDialogTitle';
+            title.textContent = options.title || 'Confirm action';
+            message.id = 'familyFormDialogText';
+            message.textContent = options.message || '';
+            copy.appendChild(title);
+            copy.appendChild(message);
+
+            actions.className = 'family-draft-dialog-actions';
+            cancelButton.type = 'button';
+            cancelButton.className = 'btn btn-outline-secondary';
+            cancelButton.dataset.dialogAction = 'cancel';
+            cancelButton.textContent = options.cancelLabel || 'Cancel';
+            confirmButton.type = 'button';
+            confirmButton.className = options.confirmClass || 'btn btn-success';
+            confirmButton.dataset.dialogAction = 'confirm';
+            confirmButton.textContent = options.confirmLabel || 'Confirm';
+            actions.appendChild(cancelButton);
+            actions.appendChild(confirmButton);
+
+            dialog.appendChild(icon);
+            dialog.appendChild(copy);
+            dialog.appendChild(actions);
+            overlay.appendChild(dialog);
 
             const finish = function (shouldRestore) {
                 overlay.remove();
@@ -142,12 +175,12 @@
                     return;
                 }
 
-                const button = event.target.closest('[data-draft-action]');
+                const button = event.target.closest('[data-dialog-action]');
                 if (!button) {
                     return;
                 }
 
-                finish(button.dataset.draftAction === 'restore');
+                finish(button.dataset.dialogAction === 'confirm');
             });
 
             overlay.addEventListener('keydown', function (event) {
@@ -159,10 +192,32 @@
 
             host.appendChild(overlay);
 
-            const restoreButton = overlay.querySelector('[data-draft-action="restore"]');
-            if (restoreButton) {
-                restoreButton.focus();
+            if (confirmButton) {
+                confirmButton.focus();
             }
+        });
+    }
+
+    function askRestoreDraft(form, savedAt) {
+        return askFamilyFormDialog(form, {
+            title: 'Restore unsaved record?',
+            message: 'You have an unsaved record from ' + formatDraftAge(savedAt) + '. Restore it?',
+            iconClass: 'bi bi-arrow-counterclockwise',
+            cancelLabel: 'Discard',
+            confirmLabel: 'Restore',
+            confirmClass: 'btn btn-success'
+        });
+    }
+
+    function askRemoveArchivedItem(form, label) {
+        return askFamilyFormDialog(form, {
+            title: 'Remove archived item?',
+            message: '"' + label + '" is archived. If you remove it, this person loses the benefit and it can\'t be added back later.',
+            iconClass: 'bi bi-exclamation-triangle',
+            tone: 'warning',
+            cancelLabel: 'Keep',
+            confirmLabel: 'Remove',
+            confirmClass: 'btn btn-danger'
         });
     }
 
@@ -771,11 +826,17 @@
             ) {
                 const archivedLabel = String(target.dataset.label || '').trim() || 'This item';
 
-                if (!window.confirm('"' + archivedLabel + '" is archived. If you remove it, this person loses the benefit and it can\'t be added back later (archived items are no longer selectable). Remove it anyway?')) {
-                    target.checked = true;
+                target.checked = true;
+                askRemoveArchivedItem(form, archivedLabel).then(function (shouldRemove) {
+                    if (shouldRemove) {
+                        target.checked = false;
+                    }
 
-                    return;
-                }
+                    updateSectorSelection();
+                    updateHeadSummary();
+                });
+
+                return;
             }
 
             if (target instanceof HTMLSelectElement && target.classList.contains('js-other-select')) {

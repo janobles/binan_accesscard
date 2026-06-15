@@ -72,6 +72,11 @@
     font-size: 1.15rem;
 }
 
+.family-draft-dialog-icon.is-warning {
+    background: #fff4db;
+    color: #9a5b00;
+}
+
 .family-draft-dialog h3 {
     margin: 0;
     color: #243b35;

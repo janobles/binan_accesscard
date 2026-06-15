@@ -195,9 +195,11 @@ class DashboardController extends BaseController
         return view('Admin/accounts', [
             'adminAccounts' => $viewData['adminAccounts'] ?? [],
             'employeeAccounts' => $viewData['employeeAccounts'] ?? [],
+            'viewerAccounts' => $viewData['viewerAccounts'] ?? [],
             'searchTerm' => $viewData['searchTerm'] ?? '',
             'searchFilters' => $viewData['searchFilters'] ?? [],
             'canCreateAccounts' => $viewData['canCreateAccounts'] ?? false,
+            'canEditAccounts' => $viewData['canEditAccounts'] ?? false,
             'currentRole' => $viewData['currentRole'] ?? '',
         ]);
     }

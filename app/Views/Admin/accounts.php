@@ -3,11 +3,15 @@ use App\Libraries\ViewFormatter;
 
 $adminAccounts = $adminAccounts ?? [];
 $employeeAccounts = $employeeAccounts ?? [];
+$viewerAccounts = $viewerAccounts ?? [];
 $canCreateAccounts = (bool) ($canCreateAccounts ?? false);
+$canEditAccounts = (bool) ($canEditAccounts ?? false);
 $currentRole = (string) ($currentRole ?? '');
 $isDeveloper = $currentRole === 'Developer';
 $isAdmin = $currentRole === 'Admin';
-$accounts = $isDeveloper ? array_merge($adminAccounts, $employeeAccounts) : $employeeAccounts;
+$currentUserId = (int) session()->get('user_id');
+// Admins and developers both manage every non-developer account now.
+$accounts = array_merge($adminAccounts, $employeeAccounts, $viewerAccounts);
 ?>
 
 <div class="accounts-page">
@@ -113,26 +117,48 @@ $accounts = $isDeveloper ? array_merge($adminAccounts, $employeeAccounts) : $emp
                             <td><?= esc($roleLabel) ?></td>
                             <td><span class="account-status-badge <?= esc($statusClass) ?>"><?= esc($statusLabel) ?></span></td>
                             <td>
-                                <?php if ($isDeveloper && in_array($rawRole, ['administrator', 'encoder'], true)): ?>
-                                    <form class="js-account-status-form" method="post" action="<?= site_url('developer/accounts/status') ?>" data-confirm-message="<?= esc(($isActive ? 'Disable' : 'Enable') . ' ' . $roleLabel . ' account "' . (string) ($account['username'] ?? '') . '"?', 'attr') ?>">
-                                        <?= csrf_field() ?>
-                                        <input type="hidden" name="userID" value="<?= esc((string) $userId) ?>">
-                                        <input type="hidden" name="status" value="<?= esc($nextStatus) ?>">
-                                        <button class="btn btn-sm <?= $isActive ? 'btn-outline-danger' : 'btn-outline-success' ?>" type="submit">
-                                            <i class="bi <?= $isActive ? 'bi-person-x' : 'bi-person-check' ?>" aria-hidden="true"></i><?= $isActive ? 'Disable' : 'Enable' ?>
+                                <div class="account-actions">
+                                    <?php if ($canEditAccounts && in_array($rawRole, ['administrator', 'encoder', 'viewer'], true)): ?>
+                                        <button class="btn btn-sm btn-outline-primary js-open-account-edit-modal" type="button"
+                                                data-modal-url="<?= site_url('accounts/edit/' . $userId) ?>"
+                                                data-modal-title="Edit Account">
+                                            <i class="bi bi-pencil-square" aria-hidden="true"></i>Edit
                                         </button>
-                                    </form>
-                                <?php elseif ($isAdmin && $rawRole === 'encoder'): ?>
-                                    <form class="js-account-status-form" method="post" action="<?= site_url($isActive ? 'admin/accounts/disable' : 'admin/accounts/enable') ?>" data-confirm-message="<?= esc(($isActive ? 'Disable' : 'Enable') . ' employee account "' . (string) ($account['username'] ?? '') . '"?', 'attr') ?>">
-                                        <?= csrf_field() ?>
-                                        <input type="hidden" name="userID" value="<?= esc((string) $userId) ?>">
-                                        <button class="btn btn-sm <?= $isActive ? 'btn-outline-danger' : 'btn-outline-success' ?>" type="submit">
-                                            <i class="bi <?= $isActive ? 'bi-person-x' : 'bi-person-check' ?>" aria-hidden="true"></i><?= $isActive ? 'Disable' : 'Enable' ?>
-                                        </button>
-                                    </form>
-                                <?php else: ?>
-                                    <span class="text-muted">-</span>
-                                <?php endif; ?>
+                                    <?php endif; ?>
+
+                                    <?php if ($canEditAccounts && $userId !== $currentUserId && in_array($rawRole, ['administrator', 'encoder', 'viewer'], true)): ?>
+                                        <form class="js-account-status-form" method="post" action="<?= site_url('accounts/reset-password') ?>" data-confirm-message="<?= esc('Generate a new random password for "' . (string) ($account['username'] ?? '') . '"? The current password will stop working.', 'attr') ?>">
+                                            <?= csrf_field() ?>
+                                            <input type="hidden" name="userID" value="<?= esc((string) $userId) ?>">
+                                            <button class="btn btn-sm btn-outline-warning" type="submit">
+                                                <i class="bi bi-key" aria-hidden="true"></i>Reset Password
+                                            </button>
+                                        </form>
+                                    <?php endif; ?>
+
+                                    <?php if ($isDeveloper && in_array($rawRole, ['administrator', 'encoder'], true)): ?>
+                                        <form class="js-account-status-form" method="post" action="<?= site_url('developer/accounts/status') ?>" data-confirm-message="<?= esc(($isActive ? 'Disable' : 'Enable') . ' ' . $roleLabel . ' account "' . (string) ($account['username'] ?? '') . '"?', 'attr') ?>">
+                                            <?= csrf_field() ?>
+                                            <input type="hidden" name="userID" value="<?= esc((string) $userId) ?>">
+                                            <input type="hidden" name="status" value="<?= esc($nextStatus) ?>">
+                                            <button class="btn btn-sm <?= $isActive ? 'btn-outline-danger' : 'btn-outline-success' ?>" type="submit">
+                                                <i class="bi <?= $isActive ? 'bi-person-x' : 'bi-person-check' ?>" aria-hidden="true"></i><?= $isActive ? 'Disable' : 'Enable' ?>
+                                            </button>
+                                        </form>
+                                    <?php elseif ($isAdmin && $rawRole === 'encoder'): ?>
+                                        <form class="js-account-status-form" method="post" action="<?= site_url($isActive ? 'admin/accounts/disable' : 'admin/accounts/enable') ?>" data-confirm-message="<?= esc(($isActive ? 'Disable' : 'Enable') . ' employee account "' . (string) ($account['username'] ?? '') . '"?', 'attr') ?>">
+                                            <?= csrf_field() ?>
+                                            <input type="hidden" name="userID" value="<?= esc((string) $userId) ?>">
+                                            <button class="btn btn-sm <?= $isActive ? 'btn-outline-danger' : 'btn-outline-success' ?>" type="submit">
+                                                <i class="bi <?= $isActive ? 'bi-person-x' : 'bi-person-check' ?>" aria-hidden="true"></i><?= $isActive ? 'Disable' : 'Enable' ?>
+                                            </button>
+                                        </form>
+                                    <?php endif; ?>
+
+                                    <?php if (! $canEditAccounts && ! ($isDeveloper && in_array($rawRole, ['administrator', 'encoder'], true)) && ! ($isAdmin && $rawRole === 'encoder')): ?>
+                                        <span class="text-muted">-</span>
+                                    <?php endif; ?>
+                                </div>
                             </td>
                         </tr>
                     <?php endforeach; ?>

@@ -3,6 +3,7 @@
 namespace App\Controllers\Accounts;
 
 use App\Controllers\BaseController;
+use App\Libraries\ViewFormatter;
 use App\Models\Audit\AuditTrailsModel;
 use App\Models\Auth\UserModel;
 use CodeIgniter\HTTP\RedirectResponse;
@@ -24,7 +25,9 @@ class AccountController extends BaseController
      */
     public function create(): RedirectResponse
     {
-        $guard = $this->requireDeveloper();
+        // Admins now have the same create privilege as the Developer: they can add
+        // administrator, encoder, and viewer accounts.
+        $guard = $this->requireAdminOrDeveloper();
 
         if ($guard instanceof RedirectResponse) {
             return $guard;
@@ -98,6 +101,183 @@ class AccountController extends BaseController
         $this->audit('ACCOUNT_CREATED', 'Created ' . $displayRole . ' account "' . $username . '" (#' . $userId . ').');
 
         return redirect()->to(site_url('admin/accounts'))->with('success', 'Account created successfully.');
+    }
+
+    /**
+     * Returns the prefilled edit-account modal fragment for GET `accounts/edit/{id}`.
+     * Admin/Developer only. Loads the target account, unpacks full_description into
+     * form fields, and renders `Accounts/edit-account-modal`. The Developer (no DB
+     * row) and unknown roles cannot be edited. Frontend: the Edit button in the
+     * admin Account Management list (loaded by the dashboard modal loader).
+     */
+    public function editForm(int $userId): string|RedirectResponse
+    {
+        $guard = $this->requireAdminOrDeveloper();
+
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        $account = (new UserModel())->getAccountById($userId);
+
+        if ($account === null) {
+            return '<div class="alert alert-danger mb-0">Account not found.</div>';
+        }
+
+        if (! in_array((string) ($account['role'] ?? ''), ['administrator', 'encoder', 'viewer'], true)) {
+            return '<div class="alert alert-danger mb-0">This account cannot be edited.</div>';
+        }
+
+        return view('Accounts/edit-account-modal', [
+            'account' => $account,
+            'details' => ViewFormatter::parseFullDescription((string) ($account['full_description'] ?? '')),
+            'isSelf'  => $userId === (int) session()->get('user_id'),
+        ]);
+    }
+
+    /**
+     * Saves edits to an existing account from POST `accounts/update`. Admin/Developer
+     * only. Validates username (unique except itself), the personal fields, and the
+     * role; rebuilds full_description and persists via UserModel::updateProfile.
+     * Blocks editing the Developer and blocks changing your own account level (to
+     * avoid self-lockout). Audits ACCOUNT_UPDATED. Frontend: the edit-account modal.
+     */
+    public function update(): RedirectResponse
+    {
+        $guard = $this->requireAdminOrDeveloper();
+
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        $userId = (int) $this->request->getPost('userID');
+
+        if ($userId <= 0) {
+            return redirect()->to(site_url('admin/accounts'))->with('error', 'Account is required.');
+        }
+
+        $userModel = new UserModel();
+        $account = $userModel->getAccountById($userId);
+
+        if ($account === null) {
+            return redirect()->to(site_url('admin/accounts'))->with('error', 'Account not found.');
+        }
+
+        $currentRole = (string) ($account['role'] ?? '');
+
+        if (! in_array($currentRole, ['administrator', 'encoder', 'viewer'], true)) {
+            return redirect()->to(site_url('admin/accounts'))->with('error', 'This account cannot be edited.');
+        }
+
+        $rules = [
+            'username' => 'required|min_length[4]|max_length[255]|is_unique[users.username,userID,' . $userId . ']',
+            'last_name' => 'required|max_length[100]',
+            'first_name' => 'required|max_length[100]',
+            'middle_name' => 'required|max_length[100]',
+            'suffix' => 'permit_empty|max_length[20]',
+            'address' => 'required|max_length[255]',
+            'contact_no' => 'required|max_length[50]',
+            'birthday' => 'required|valid_date[Y-m-d]',
+            'role' => 'required|in_list[administrator,encoder,viewer]',
+        ];
+        $messages = [
+            'username' => [
+                'is_unique' => 'Username is already taken. Choose a different one.',
+            ],
+            'birthday' => [
+                'valid_date' => 'Birthday must be a valid date.',
+            ],
+            'role' => [
+                'in_list' => 'Account level must be Administrator, Encoder, or Viewer.',
+            ],
+        ];
+
+        if (! $this->validate($rules, $messages)) {
+            return redirect()->to(site_url('admin/accounts'))
+                ->with('error', implode(' ', $this->validator->getErrors()));
+        }
+
+        $newRole = (string) $this->request->getPost('role');
+        $isSelf = $userId === (int) session()->get('user_id');
+
+        // Changing your own account level could lock you out of your own dashboard.
+        if ($isSelf && $newRole !== $currentRole) {
+            return redirect()->to(site_url('admin/accounts'))
+                ->with('error', 'You cannot change your own account level.');
+        }
+
+        $username = trim((string) $this->request->getPost('username'));
+        $fields = [
+            'username' => $username,
+            'account_level' => $newRole,
+            'full_description' => $this->buildFullDescription(),
+        ];
+
+        if (! $userModel->updateProfile($userId, $fields)) {
+            return redirect()->to(site_url('admin/accounts'))->with('error', 'Account could not be updated.');
+        }
+
+        // Keep the topbar/session in sync if an admin renamed their own account.
+        if ($isSelf) {
+            session()->set('username', $username);
+        }
+
+        $displayRole = $this->normalizeRole($newRole) ?? $newRole;
+        $this->audit('ACCOUNT_UPDATED', 'Updated ' . $displayRole . ' account "' . $username . '" (#' . $userId . ').');
+
+        return redirect()->to(site_url('admin/accounts'))->with('success', 'Account updated successfully.');
+    }
+
+    /**
+     * Generates a fresh random password for an account from POST
+     * `accounts/reset-password` (admin/developer "forgot password" recovery). Hashes
+     * and stores it, audits ACCOUNT_PASSWORD_RESET, and flashes the plaintext once so
+     * the staffer can hand it to the user, who then changes it in My Account. Self
+     * resets are pushed to My Account instead. Frontend: the Reset button in the
+     * admin Account Management list.
+     */
+    public function resetPassword(): RedirectResponse
+    {
+        $guard = $this->requireAdminOrDeveloper();
+
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        $userId = (int) $this->request->getPost('userID');
+
+        if ($userId <= 0) {
+            return redirect()->to(site_url('admin/accounts'))->with('error', 'Account is required.');
+        }
+
+        if ($userId === (int) session()->get('user_id')) {
+            return redirect()->to(site_url('admin/accounts'))
+                ->with('error', 'Use My Account to change your own password.');
+        }
+
+        $userModel = new UserModel();
+        $account = $userModel->getAccountById($userId);
+
+        if ($account === null) {
+            return redirect()->to(site_url('admin/accounts'))->with('error', 'Account not found.');
+        }
+
+        if (! in_array((string) ($account['role'] ?? ''), ['administrator', 'encoder', 'viewer'], true)) {
+            return redirect()->to(site_url('admin/accounts'))->with('error', 'This account password cannot be reset.');
+        }
+
+        $newPassword = $userModel->generateRandomPassword();
+
+        if (! $userModel->updatePassword($userId, $newPassword)) {
+            return redirect()->to(site_url('admin/accounts'))->with('error', 'Password could not be reset.');
+        }
+
+        $username = (string) ($account['username'] ?? '');
+        $this->audit('ACCOUNT_PASSWORD_RESET', 'Reset password for account "' . $username . '" (#' . $userId . ').');
+
+        return redirect()->to(site_url('admin/accounts'))
+            ->with('success', 'New password for "' . $username . '": ' . $newPassword
+                . ' — share it with the user and ask them to change it in My Account.');
     }
 
     /**

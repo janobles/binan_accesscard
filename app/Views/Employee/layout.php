@@ -55,6 +55,7 @@ $jadeStyles = [
     'css/searchbar.css',
     'css/audittrails.css',
     'css/familymodal.css',
+    'css/accounts.css',
     'css/session-timeout.css',
 ];
 ?>
@@ -112,7 +113,7 @@ $jadeStyles = [
                 </div>
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
-                        <span class="nav-link topbar-user"><i class="bi bi-person-circle" aria-hidden="true"></i><span><?= esc($username) ?> &middot; Employee</span></span>
+                        <a href="#" class="nav-link topbar-user js-open-my-account-modal" data-modal-url="<?= site_url('account/profile') ?>" data-modal-title="My Account"><i class="bi bi-person-circle" aria-hidden="true"></i><span><?= esc($username) ?> &middot; Employee</span></a>
                     </li>
                     <li class="nav-item">
                         <a href="<?= site_url('logout') ?>" class="nav-link js-logout-link"><i class="bi bi-box-arrow-right" aria-hidden="true"></i><span>Logout</span></a>
@@ -288,5 +289,6 @@ $jadeStyles = [
 <script src="<?= base_url('assets/js/session-timeout.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/session-timeout.js') ?>" data-timeout-seconds="<?= esc((string) $idleTimeoutSeconds) ?>" data-logout-url="<?= site_url('logout?timeout=1') ?>" data-home-url="<?= site_url('/') ?>" data-keep-alive-url="<?= site_url('session/keep-alive') ?>"></script>
 <script src="<?= base_url('assets/js/dashboard/dashboard-modal-loader.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/dashboard-modal-loader.js') ?>"></script>
 <script src="<?= base_url('assets/js/dashboard/manage-family-modal.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/manage-family-modal.js') ?>"></script>
+<script src="<?= base_url('assets/js/dashboard/my-account-modal.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/my-account-modal.js') ?>"></script>
 </body>
 </html>

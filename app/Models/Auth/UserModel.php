@@ -94,10 +94,102 @@ class UserModel extends Model
         }
 
         return $this->select('userID, username, account_level AS role, isactive, dt_created')
-            ->whereIn('account_level', ['administrator', 'encoder'])
+            ->whereIn('account_level', ['administrator', 'encoder', 'viewer'])
             ->orderBy('account_level', 'ASC')
             ->orderBy('username', 'ASC')
             ->findAll();
+    }
+
+    /**
+     * Fetches a single staff account for the edit / My Account prefill, with the
+     * enum column aliased back to `role` and the packed personal details. Returns
+     * null when the id is missing or the table does not exist.
+     */
+    public function getAccountById(int $userId): ?array
+    {
+        if ($userId <= 0 || ! $this->db->tableExists($this->table)) {
+            return null;
+        }
+
+        return $this->select('userID, username, account_level AS role, full_description, isactive')
+            ->find($userId);
+    }
+
+    /**
+     * Updates profile fields on an existing account. Only username/account_level/
+     * full_description keys present in $fields are written. Returns false on
+     * failure. Callers own all authorization/validation. No password handling here
+     * (see updatePassword).
+     */
+    public function updateProfile(int $userId, array $fields): bool
+    {
+        if ($userId <= 0) {
+            return false;
+        }
+
+        $data = array_intersect_key($fields, array_flip(['username', 'account_level', 'full_description']));
+
+        if ($data === []) {
+            return false;
+        }
+
+        return $this->update($userId, $data) !== false;
+    }
+
+    /**
+     * Sets a new Argon2id-hashed password on an account (self change-password and
+     * admin/developer reset). Returns false on failure.
+     */
+    public function updatePassword(int $userId, string $newPassword): bool
+    {
+        if ($userId <= 0) {
+            return false;
+        }
+
+        return $this->update($userId, [
+            'password' => password_hash($newPassword, PASSWORD_ARGON2ID),
+        ]) !== false;
+    }
+
+    /**
+     * Confirms a plaintext password matches the stored hash for a user — used for
+     * the "current password" check in self change-password. Mirrors the legacy
+     * plaintext fallback in verifyLogin so old rows still verify.
+     */
+    public function verifyUserPassword(int $userId, string $password): bool
+    {
+        $user = $this->find($userId);
+
+        if ($user === null) {
+            return false;
+        }
+
+        $stored = (string) ($user['password'] ?? '');
+
+        if (password_verify($password, $stored)) {
+            return true;
+        }
+
+        return password_get_info($stored)['algo'] === 0 && hash_equals($stored, $password);
+    }
+
+    /**
+     * Builds a readable random password (no ambiguous characters like 0/O/1/l) for
+     * the admin/developer "reset password" action. The caller shows the plaintext
+     * to the staffer once and hashes it via updatePassword.
+     */
+    public function generateRandomPassword(int $length = 12): string
+    {
+        $length = max(8, $length);
+        $alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+        $maxIndex = strlen($alphabet) - 1;
+        $password = '';
+
+        for ($i = 0; $i < $length; $i++) {
+            $password .= $alphabet[random_int(0, $maxIndex)];
+        }
+
+        return $password;
     }
 
     /**

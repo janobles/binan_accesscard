@@ -98,6 +98,53 @@ class ViewFormatter
         return self::isActiveStatus($value) ? 'Enable' : 'Disabled';
     }
 
+    /**
+     * Unpacks the labeled `users.full_description` string back into form fields —
+     * the inverse of AccountController::buildFullDescription. Returns every key
+     * (last_name/first_name/middle_name/suffix/address/contact_no/birthday) with
+     * '' for any segment that was absent, so edit/My-Account forms can prefill
+     * reliably. Unknown labels are ignored.
+     */
+    public static function parseFullDescription(string $packed): array
+    {
+        $fields = [
+            'last_name'   => '',
+            'first_name'  => '',
+            'middle_name' => '',
+            'suffix'      => '',
+            'address'     => '',
+            'contact_no'  => '',
+            'birthday'    => '',
+        ];
+
+        $labelMap = [
+            'LN'   => 'last_name',
+            'FN'   => 'first_name',
+            'MN'   => 'middle_name',
+            'SF'   => 'suffix',
+            'ADDR' => 'address',
+            'CN'   => 'contact_no',
+            'BD'   => 'birthday',
+        ];
+
+        foreach (explode(';', $packed) as $segment) {
+            $segment = trim($segment);
+
+            if ($segment === '' || strpos($segment, ':') === false) {
+                continue;
+            }
+
+            [$label, $value] = explode(':', $segment, 2);
+            $label = strtoupper(trim($label));
+
+            if (isset($labelMap[$label])) {
+                $fields[$labelMap[$label]] = trim($value);
+            }
+        }
+
+        return $fields;
+    }
+
     /** Splits an array or comma string into a trimmed, non-empty list of strings. */
     public static function splitList(mixed $value): array
     {

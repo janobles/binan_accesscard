@@ -232,7 +232,7 @@ class SearchModel
         // column, aliased back to `role` so downstream callers keep the same key.
         $builder = $this->db->table('users')
             ->select('userID, username, account_level AS role, isactive, dt_created')
-            ->whereIn('account_level', ['administrator', 'encoder']);
+            ->whereIn('account_level', ['administrator', 'encoder', 'viewer']);
 
         $keyword = $this->normalizeKeyword($keyword);
 
@@ -246,7 +246,7 @@ class SearchModel
 
         $role = $this->normalizeKeyword((string) ($filters['role'] ?? ''));
 
-        if (in_array($role, ['administrator', 'encoder'], true)) {
+        if (in_array($role, ['administrator', 'encoder', 'viewer'], true)) {
             $builder->where('account_level', $role);
         }
 

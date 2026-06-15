@@ -116,6 +116,13 @@
     margin: 0;
 }
 
+.account-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+}
+
 .account-table .btn {
     display: inline-flex;
     align-items: center;

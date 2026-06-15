@@ -134,10 +134,8 @@ $jadeStyles = [
                     <i class="bi bi-list" aria-hidden="true"></i>
                 </button>
                 <div class="topbar-title">
-                    <img class="topbar-logo" src="<?= base_url('assets/image/binan.png') ?>" alt="City of Binan Logo">
                     <div>
                         <h1 id="dashboard-page-title"><?= esc($pageTitle) ?></h1>
-                        <p>Bi&ntilde;an Access Card MIS</p>
                     </div>
                 </div>
                 <ul class="navbar-nav ms-auto">

@@ -3,13 +3,13 @@
 .family-wizard-shell {
 	display: flex;
 	justify-content: center;
-	width: min(72rem, calc(100vw - 2rem)); /* definite width -> card can't shrink-wrap to per-step content */
+	width: 100%;
 	min-width: 0;
 	margin-inline: auto;                    /* centers the shell within the flex modal-body */
 }
 
 .family-wizard-card {
-	width: min(100%, 1180px);
+	width: 100%;
 	background: #ffffff;
 	border: 1px solid #cfdceb;
 	border-radius: 8px;
@@ -60,7 +60,7 @@
 
 .family-wizard-steps {
 	display: grid;
-	grid-template-columns: repeat(3, 1fr);
+	grid-template-columns: repeat(2, minmax(0, 1fr));
 	border-top: 1px solid #284866;
 	border-bottom: 1px solid #ccd6e2;
 	background: #edf2f7;
@@ -126,7 +126,7 @@
 	min-height: 0;
 	overflow: auto;
 	scrollbar-gutter: stable;
-	padding: 0 14px;
+	padding: 0 10px;
 }
 
 #familyFormAlert:empty {
@@ -569,6 +569,24 @@
 	--bs-gutter-y: 16px;
 }
 
+.head-sector-service-block {
+	margin-top: 20px;
+	padding: 14px;
+}
+
+#familyForm .head-sector-service-block .section-title {
+	margin-bottom: 12px;
+}
+
+#familyForm .head-sector-service-block .member-choice-grid {
+	--bs-gutter-x: 18px;
+	--bs-gutter-y: 14px;
+}
+
+#familyForm .head-sector-service-block .member-visible-list {
+	height: clamp(300px, 44vh, 430px);
+}
+
 .member-choice-grid > [class*="col-"] {
 	display: flex;
 	min-width: 0;
@@ -794,15 +812,15 @@
 	align-items: center;
 	justify-content: space-between;
 	gap: 1rem;
-	min-height: 96px;
-	padding: 20px 24px;
+	min-height: 76px;
+	padding: 12px 20px;
 	border-bottom: 1px solid #cbdbea;
 	background: #fff;
 	flex: 0 0 auto;
 }
 
 .family-window-kicker {
-	margin: 0 0 6px;
+	margin: 0 0 3px;
 	color: #000;
 	font-size: 14px;
 	font-weight: 800;
@@ -813,14 +831,14 @@
 .family-window-title {
 	margin: 0;
 	color: #000;
-	font-size: 22px;
+	font-size: 21px;
 	font-weight: 800;
 }
 
 .family-window-close {
 	display: inline-flex;
-	width: 52px;
-	height: 52px;
+	width: 44px;
+	height: 44px;
 	flex: 0 0 auto;
 	align-items: center;
 	justify-content: center;
@@ -828,7 +846,7 @@
 	border-radius: 10px;
 	background: #fff;
 	color: #000;
-	font-size: 30px;
+	font-size: 28px;
 	font-weight: 800;
 	line-height: 1;
 	cursor: pointer;
@@ -843,7 +861,7 @@
 
 /* Step tabs (boxed, circular numbers, green active circle, blue underline) */
 .family-wizard-steps {
-	margin: 18px 20px 0;
+	margin: 10px 14px 0;
 	overflow: hidden;
 	border: 1px solid #bcd4ec;
 	border-radius: 7px 7px 0 0;
@@ -853,13 +871,13 @@
 
 .wizard-step {
 	position: relative;
-	min-height: 92px;
+	min-height: 66px;
 	border-right: 1px solid #cfdeec;
 }
 
 .wizard-step span {
-	width: 28px;
-	height: 28px;
+	width: 26px;
+	height: 26px;
 	background: #d8e6f2;
 	color: #000;
 	font-weight: 800;
@@ -867,7 +885,7 @@
 
 .wizard-step small {
 	color: #000;
-	font-size: 16px;
+	font-size: 15px;
 	font-weight: 500;
 }
 
@@ -900,13 +918,13 @@
 }
 
 .family-form-body {
-	padding: 38px 28px 0;
+	padding: 14px 22px 0;
 	background: #fff;
 }
 
 #familyForm .form-section {
 	border-top: 1px solid #cbdbea;
-	padding-top: 10px;
+	padding-top: 8px;
 }
 
 #familyForm .section-title {
@@ -1247,7 +1265,7 @@
 	color: #8a6d1b;
 }
 
-/* Step 3: "Current Record Head" summary card */
+/* Members step: "Current Record Head" summary card */
 .family-summary-card {
 	border: 1px solid #bdd1e6;
 	border-radius: 8px;

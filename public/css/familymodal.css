@@ -2,9 +2,9 @@
    Family form internals live in familyform.css, which Family/form.php loads with the form. */
 
 .floating-family-modal {
-    --modal-window-gap: clamp(0.5rem, 2vw, 1.5rem);
-    --modal-window-width: min(72rem, calc(100vw - (var(--modal-window-gap) * 2)));
-    --modal-window-height: min(44rem, calc(100dvh - (var(--modal-window-gap) * 2)));
+    --modal-window-gap: clamp(0.25rem, 1vw, 0.75rem);
+    --modal-window-width: min(94rem, calc(100vw - (var(--modal-window-gap) * 2)));
+    --modal-window-height: min(56rem, calc(100dvh - (var(--modal-window-gap) * 2)));
 }
 
 .floating-family-modal .modal-dialog {

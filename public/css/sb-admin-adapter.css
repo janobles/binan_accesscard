@@ -48,11 +48,16 @@ body {
 
 #content {
     min-width: 0;
+    padding-top: 4.375rem;
 }
 
 .sidebar {
     width: var(--sb-sidebar-width);
+    position: sticky;
+    top: 0;
+    z-index: 1020;
     min-height: 100vh;
+    max-height: 100vh;
     flex: 0 0 var(--sb-sidebar-width);
     overflow-y: auto;
     transition: width 180ms ease, flex-basis 180ms ease, margin-left 180ms ease;
@@ -197,8 +202,18 @@ body {
 }
 
 .topbar {
+    position: fixed;
+    top: 0;
+    right: 0;
+    left: var(--sb-sidebar-width);
+    z-index: 1030;
     min-height: 4.375rem;
     padding: 0 1.5rem;
+    margin-bottom: 0 !important;
+}
+
+.sidebar.toggled + #content-wrapper .topbar {
+    left: var(--sb-sidebar-width-collapsed);
 }
 
 .topbar .btn-link {
@@ -209,7 +224,7 @@ body {
     display: flex;
     align-items: center;
     min-width: 0;
-    gap: 0.75rem;
+    gap: 0;
 }
 
 .topbar-logo {
@@ -227,7 +242,7 @@ body {
 
 .topbar-title h1 {
     color: #243c35;
-    font-size: 1.1rem;
+    font-size: 1.15rem;
     font-weight: 800;
 }
 
@@ -477,8 +492,13 @@ body {
     }
 
     .topbar {
+        left: 0;
         min-height: 3.75rem;
         padding: 0 0.75rem;
+    }
+
+    #content {
+        padding-top: 3.75rem;
     }
 
     .topbar-title {

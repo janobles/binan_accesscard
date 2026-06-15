@@ -1,7 +1,7 @@
-// Wires the 3-step family record wizard (Head of Family → Sectors & Services → Members).
+// Wires the 2-step family record wizard (Head of Family + Sectors & Services → Members).
 // Handles step navigation, step-1 client-side validation, member row add/remove,
 // sector/service selection, "other" select syncing, choice modals, and the head
-// summary panel shown on step 3. Rendering helpers live in family-form-ui.js.
+// summary panel shown on step 2. Rendering helpers live in family-form-ui.js.
 // On submit, applyOtherValues() swaps generated <option> values so the custom
 // text is posted instead of the literal "Other" / "Others" option value.
 //
@@ -17,8 +17,8 @@
 //               POST {base}/update/:id   (FamilyController::update)
 //   - Views   : Family/form.php (form shell)
 //               Family/head-fields.php (step 1 fields)
-//               Lookups/picker.php (step 2)
-//               Family/member-summary.php, Family/member-fields.php (step 3)
+//               Lookups/picker.php (inside step 1)
+//               Family/member-summary.php, Family/member-fields.php (step 2)
 // Wires the family wizard events while keeping rendering helpers reusable.
 (function (window, document) {
     function parseJsonNode(node, fallbackValue) {
@@ -185,7 +185,7 @@
             : null;
 
         function totalSteps() {
-            return entryType === 'member' ? 2 : 3;
+            return 2;
         }
 
         function setHidden(element, hidden) {
@@ -474,8 +474,7 @@
             return valid;
         }
 
-        // Step 1 must be valid before Sectors (2) or Members (3) can be entered.
-        // Step 2 is optional, so a valid step 1 unlocks both 2 and 3.
+        // Step 1 must be valid before Members (2) can be entered.
         function canEnterStep(target) {
             if (Number(target) <= 1) { return true; }
 
@@ -762,7 +761,7 @@
 
             if (!membersOk) {
                 event.preventDefault();
-                setStep(3);
+                setStep(2);
                 focusFirstInvalidMember();
                 showFormAlert('Complete the highlighted member fields before saving.');
 

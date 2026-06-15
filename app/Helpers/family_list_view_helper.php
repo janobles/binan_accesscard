@@ -40,8 +40,8 @@ if (! function_exists('family_list_url')) {
             $params['per_page'] = $perPage;
         }
 
-        if ($status === 'archived') {
-            $params['status'] = 'archived';
+        if (in_array($status, ['all', 'active', 'archived'], true)) {
+            $params['status'] = $status;
         }
 
         if (trim($keyword) !== '') {
@@ -80,8 +80,8 @@ if (! function_exists('family_list_deep_url')) {
             $params['per_page'] = $perPage;
         }
 
-        if ($status === 'archived') {
-            $params['status'] = 'archived';
+        if (in_array($status, ['all', 'active', 'archived'], true)) {
+            $params['status'] = $status;
         }
 
         $sectorIds = array_values(array_filter((array) $sectorId, static fn (mixed $value): bool => trim((string) $value) !== '' && trim((string) $value) !== '__all'));

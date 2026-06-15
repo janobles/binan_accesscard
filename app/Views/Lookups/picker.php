@@ -10,11 +10,13 @@ $selectedSectorIds  = ViewFormatter::integerList($selectedSectorIds ?? [], true)
 $selectedServiceIds = ViewFormatter::integerList($selectedServiceIds ?? [], true);
 ?>
 
-<div class="form-section family-step-panel" data-step="2">
-    <div class="family-step-two-grid">
-        <div class="family-choice-group">
-            <div class="section-title"><span>Sectors</span></div>
-            <div class="family-choice-box" role="group" aria-label="Sectors">
+<div class="member-sector-service-block head-sector-service-block">
+    <div class="section-title"><span>Sectors and Services</span></div>
+    <div class="row g-3 member-choice-grid">
+        <div class="col-lg-5">
+            <div class="member-choice-section">
+                <div class="member-choice-section-title">Sectors</div>
+                <div class="member-visible-list" role="group" aria-label="Sectors">
                 <?php
                 $hasSectors = false;
                 foreach ($sectorCatalog as $groupCode => $groupSectors):
@@ -27,8 +29,8 @@ $selectedServiceIds = ViewFormatter::integerList($selectedServiceIds ?? [], true
                         ? $groupCode
                         : $groupCode . ' (' . $categoryLabel . ')';
                     ?>
-                    <section class="family-choice-section" aria-label="<?= esc($heading, 'attr') ?>">
-                        <h3><?= esc($heading) ?></h3>
+                    <div class="member-visible-group" aria-label="<?= esc($heading, 'attr') ?>">
+                        <div class="member-visible-group-title"><?= esc($heading) ?></div>
                         <?php foreach ($groupSectors as $sector): ?>
                             <?php
                             $sectorId = (string) ($sector['sectorID'] ?? '');
@@ -42,20 +44,22 @@ $selectedServiceIds = ViewFormatter::integerList($selectedServiceIds ?? [], true
                                 <span class="form-check-label"><?= esc($sectorLabel) ?><?php if ($isArchived): ?> <span class="family-choice-badge">Archived</span><?php endif; ?></span>
                             </label>
                         <?php endforeach; ?>
-                    </section>
+                    </div>
                 <?php endforeach; ?>
                 <?php if (! $hasSectors): ?>
-                    <p class="family-choice-empty">No sectors available.</p>
+                    <small class="text-muted">No sectors available.</small>
                 <?php endif; ?>
+                </div>
             </div>
         </div>
 
-        <div class="family-choice-group">
-            <div class="section-title"><span>Services and Programs Available</span></div>
-            <div class="family-choice-box" role="group" aria-label="Services and programs available">
+        <div class="col-lg-7">
+            <div class="member-choice-section">
+                <div class="member-choice-section-title">Services and Programs Available</div>
+                <div class="member-visible-list member-service-list" role="group" aria-label="Services and programs available">
                 <?php foreach ($servicesByCategory as $category => $services): ?>
-                    <section class="family-choice-section" aria-label="<?= esc((string) $category, 'attr') ?>">
-                        <h3><?= esc((string) $category) ?></h3>
+                    <div class="member-visible-group" aria-label="<?= esc((string) $category, 'attr') ?>">
+                        <div class="member-visible-group-title"><?= esc((string) $category) ?></div>
                         <?php foreach ($services as $service): ?>
                             <?php
                             $serviceId = (string) ($service['serviceID'] ?? '');
@@ -69,11 +73,12 @@ $selectedServiceIds = ViewFormatter::integerList($selectedServiceIds ?? [], true
                                 <span class="form-check-label"><?= esc($serviceLabel) ?><?php if ($isArchived): ?> <span class="family-choice-badge">Archived</span><?php endif; ?></span>
                             </label>
                         <?php endforeach; ?>
-                    </section>
+                    </div>
                 <?php endforeach; ?>
                 <?php if ($servicesByCategory === []): ?>
-                    <p class="family-choice-empty">No services or programs available.</p>
+                    <small class="text-muted">No services or programs available.</small>
                 <?php endif; ?>
+                </div>
             </div>
         </div>
     </div>

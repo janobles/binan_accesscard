@@ -429,10 +429,10 @@
         }
 
         if (currentStep === 2) {
-            return 'Step 2 of ' + totalSteps + ' - Sectors, services & programs';
+            return 'Step 2 of ' + totalSteps + ' - Members';
         }
 
-        return 'Step 3 of 3 - Members';
+        return 'Step ' + currentStep + ' of ' + totalSteps;
     }
 
     function setWizardStep(config) {
@@ -459,7 +459,7 @@
         setHidden(config.submitBtn, currentStep !== totalSteps);
         setHidden(config.resetBtn, currentStep === totalSteps);
 
-        if (currentStep === 3 && config.entryType === 'head' && typeof config.onHeadSummary === 'function') {
+        if (currentStep === 2 && config.entryType === 'head' && typeof config.onHeadSummary === 'function') {
             config.onHeadSummary();
         }
     }

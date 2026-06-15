@@ -1,11 +1,13 @@
 <?php
+use App\Libraries\SectorIds;
+
 helper('family_list_view');
 
 $families = $families ?? [];
 $keyword = (string) ($keyword ?? '');
 $routeBase = (string) ($routeBase ?? 'admin/manage-family');
 $listRoute = (string) ($listRoute ?? ($routeBase . '/list'));
-$status = (string) ($status ?? 'active') === 'archived' ? 'archived' : 'active';
+$status = in_array((string) ($status ?? 'all'), ['active', 'archived'], true) ? (string) $status : 'all';
 $canArchive = (bool) ($canArchive ?? false);
 $page = max(1, (int) ($page ?? 1));
 $perPage = max(1, (int) ($perPage ?? 50));
@@ -29,6 +31,59 @@ $activeTotalPages = $deepActive ? $deepTotalPages : $totalPages;
 $emptyMessage = $deepActive
     ? 'No matching data found in the database.'
     : ($status === 'archived' ? 'No archived records found.' : 'No records found.');
+$displayUpper = static fn (mixed $value): string => mb_strtoupper((string) $value);
+$displayTimestamp = static function (mixed $value): string {
+    $timestamp = strtotime((string) $value);
+
+    return $timestamp === false ? '-' : date('Y-m-d h:i A', $timestamp);
+};
+$sectorShortcodeMap = [];
+
+foreach ((array) $sectorOptions as $sector) {
+    $sectorId = (int) ($sector['sectorID'] ?? $sector['id'] ?? 0);
+    $shortcode = trim((string) ($sector['shortcode'] ?? ''));
+
+    if ($sectorId > 0 && $shortcode !== '') {
+        $sectorShortcodeMap[$sectorId] = mb_strtoupper($shortcode);
+    }
+}
+
+$sectorShortcodesFor = static function (mixed $value) use ($sectorShortcodeMap): string {
+    $shortcodes = [];
+
+    foreach (SectorIds::normalize($value) as $sectorId) {
+        if (isset($sectorShortcodeMap[$sectorId])) {
+            $shortcodes[] = $sectorShortcodeMap[$sectorId];
+        }
+    }
+
+    return implode(', ', array_values(array_unique($shortcodes)));
+};
+
+$sectorOptionLabel = static function (array $sector): string {
+    $shortcode = trim((string) ($sector['shortcode'] ?? ''));
+    $name = trim((string) ($sector['sector_name'] ?? $sector['name'] ?? $sector['label'] ?? ''));
+
+    if ($shortcode !== '' && $name !== '') {
+        return mb_strtoupper($shortcode) . ' - ' . $name;
+    }
+
+    return $shortcode !== '' ? mb_strtoupper($shortcode) : $name;
+};
+$displayListName = static function (string $lastName, string $firstName, string $middleName): string {
+    $middleInitial = trim($middleName) !== '' ? mb_substr(trim($middleName), 0, 1) . '.' : '';
+    $lastName = trim($lastName);
+    $firstNameParts = trim(implode(' ', array_filter([
+        trim($firstName),
+        $middleInitial,
+    ], static fn (string $part): bool => $part !== '')));
+
+    if ($lastName !== '' && $firstNameParts !== '') {
+        return $lastName . ', ' . $firstNameParts;
+    }
+
+    return $lastName !== '' ? $lastName : $firstNameParts;
+};
 ?>
 
 <div
@@ -59,7 +114,7 @@ $emptyMessage = $deepActive
                     <?php foreach ($sectorOptions as $sector): ?>
                         <?php
                         $sectorId = (string) ($sector['sectorID'] ?? $sector['id'] ?? '');
-                        $sectorName = (string) ($sector['sector_name'] ?? $sector['name'] ?? $sector['label'] ?? '');
+                        $sectorName = $sectorOptionLabel((array) $sector);
                         ?>
                         <?php if ($sectorId !== '' && $sectorName !== ''): ?>
                             <label class="dropdown-item records-check-option">
@@ -91,6 +146,7 @@ $emptyMessage = $deepActive
                 </div>
             </div>
             <select class="form-select records-status-select" name="status" aria-label="Record status">
+                <option value="all" <?= $status === 'all' ? 'selected' : '' ?>>All</option>
                 <option value="active" <?= $status === 'active' ? 'selected' : '' ?>>Active</option>
                 <option value="archived" <?= $status === 'archived' ? 'selected' : '' ?>>Archived</option>
             </select>
@@ -116,8 +172,8 @@ $emptyMessage = $deepActive
                 <?php if ($keyword !== ''): ?>
                     <input type="hidden" name="q" value="<?= esc($keyword, 'attr') ?>">
                 <?php endif; ?>
-                <?php if ($status === 'archived'): ?>
-                    <input type="hidden" name="status" value="archived">
+                <?php if ($status !== 'all'): ?>
+                    <input type="hidden" name="status" value="<?= esc($status, 'attr') ?>">
                 <?php endif; ?>
                 <?php foreach ($filterSectorIds as $selectedSectorId): ?>
                     <input type="hidden" name="sectorID[]" value="<?= esc($selectedSectorId, 'attr') ?>">
@@ -141,8 +197,8 @@ $emptyMessage = $deepActive
                 <span>entries</span>
             </form>
             <form class="records-table-search-form" method="get" action="<?= esc(site_url($listRoute), 'attr') ?>" data-records-search="table">
-                <?php if ($status === 'archived'): ?>
-                    <input type="hidden" name="status" value="archived">
+                <?php if ($status !== 'all'): ?>
+                    <input type="hidden" name="status" value="<?= esc($status, 'attr') ?>">
                 <?php endif; ?>
                 <?php foreach ($filterSectorIds as $selectedSectorId): ?>
                     <input type="hidden" name="sectorID[]" value="<?= esc($selectedSectorId, 'attr') ?>">
@@ -159,7 +215,7 @@ $emptyMessage = $deepActive
                     type="search"
                     id="recordsKeyword"
                     name="q"
-                    value="<?= esc($deepActive ? $deepKeyword : $keyword, 'attr') ?>"
+                    value=""
                     placeholder="Type to search..."
                     autocomplete="off"
                     data-records-table-keyword
@@ -172,11 +228,12 @@ $emptyMessage = $deepActive
         <table class="table table-sm manage-record-table align-middle">
             <thead>
             <tr>
-                <th><?= $deepActive ? 'Name (Head)' : 'Head of the Family' ?></th>
-                <th>Sector</th>
-                <th>Address</th>
-                <th>Birthday</th>
-                <th class="text-end">Actions</th>
+                <th><?= esc($displayUpper('Timestamp')) ?></th>
+                <th><?= esc($displayUpper($deepActive ? 'Name (Head)' : 'Head of the Family')) ?></th>
+                <th><?= esc($displayUpper('Sector')) ?></th>
+                <th><?= esc($displayUpper('Address')) ?></th>
+                <th><?= esc($displayUpper('Birthday')) ?></th>
+                <th class="text-end"><?= esc($displayUpper('Actions')) ?></th>
             </tr>
             </thead>
             <tbody>
@@ -187,23 +244,25 @@ $emptyMessage = $deepActive
                 $middleName = (string) ($row['middlename'] ?? '');
                 $lastName = (string) ($row['lastname'] ?? '');
                 $fullName = trim($firstName . ' ' . $middleName . ' ' . $lastName);
-                $displayName = trim($firstName . ' ' . $lastName);
-                $recordAction = $status === 'archived' ? 'restore' : 'archive';
-                $recordActionLabel = $status === 'archived' ? 'Restore' : 'Archive';
-                $recordActionPast = $status === 'archived' ? 'restored' : 'archived';
-                $confirmMessage = $status === 'archived'
+                $displayName = $displayListName($lastName, $firstName, $middleName);
+                $rowArchived = trim((string) ($row['dt_deleted'] ?? '')) !== '';
+                $recordAction = $rowArchived ? 'restore' : 'archive';
+                $recordActionLabel = $rowArchived ? 'Restore' : 'Archive';
+                $recordActionPast = $rowArchived ? 'restored' : 'archived';
+                $confirmMessage = $rowArchived
                     ? 'Restore this record to the active list?'
                     : $recordActionLabel . ' this record? This keeps the record in the database, marks it as ' . $recordActionPast . ', and hides it from active lists.';
                 ?>
                 <tr data-record-row data-sector-ids="<?= esc((string) ($row['sectorID'] ?? '[]'), 'attr') ?>" data-record-fullname="<?= esc(strtolower($fullName), 'attr') ?>">
+                    <td><?= esc($displayTimestamp($row['dt_created'] ?? '')) ?></td>
                     <td data-record-name>
-                        <span class="entity-title"><?= esc($displayName) ?></span>
+                        <span class="entity-title"><?= esc($displayUpper($displayName)) ?></span>
                         <?php if ($deepActive && trim((string) ($row['relationship'] ?? '')) !== ''): ?>
-                            <small class="text-muted d-block"><?= esc((string) $row['relationship']) ?></small>
+                            <small class="text-muted d-block"><?= esc($displayUpper($row['relationship'])) ?></small>
                         <?php endif; ?>
                     </td>
-                    <td data-record-sector><?= esc((string) ($row['sector_name'] ?? '')) ?></td>
-                    <td><?= esc((string) ($row['address'] ?? '')) ?></td>
+                    <td data-record-sector><?= esc($sectorShortcodesFor($row['sectorID'] ?? '')) ?></td>
+                    <td><?= esc($displayUpper($row['address'] ?? '')) ?></td>
                     <td><?= esc(family_list_format_date($row['birthday'] ?? '')) ?></td>
                     <td class="text-end">
                         <?php if ($headId > 0): ?>
@@ -212,27 +271,27 @@ $emptyMessage = $deepActive
                                     <i class="bi bi-three-dots" aria-hidden="true"></i>
                                 </button>
                                 <div class="dropdown-menu dropdown-menu-end">
-                                    <?php if ($status !== 'archived'): ?>
+                                    <?php if (! $rowArchived): ?>
                                         <button
                                             type="button"
                                             class="dropdown-item js-open-family-view-modal"
                                             data-modal-url="<?= site_url($routeBase . '/view/' . $headId . '?partial=1') ?>"
                                             data-modal-title="View Record">
-                                            <i class="bi bi-eye" aria-hidden="true"></i>View
+                                            <i class="bi bi-eye" aria-hidden="true"></i><?= esc($displayUpper('View')) ?>
                                         </button>
                                         <button
                                             type="button"
                                             class="dropdown-item js-open-family-edit-modal"
                                             data-modal-url="<?= site_url($routeBase . '/edit/' . $headId . '?partial=1') ?>"
                                             data-modal-title="Edit Record">
-                                            <i class="bi bi-pencil-square" aria-hidden="true"></i>Update
+                                            <i class="bi bi-pencil-square" aria-hidden="true"></i><?= esc($displayUpper('Update')) ?>
                                         </button>
                                     <?php endif; ?>
                                     <?php if ($canArchive): ?>
                                         <form class="js-family-record-action-form" method="post" action="<?= site_url($routeBase . '/' . $recordAction . '/' . $headId) ?>" data-confirm-message="<?= esc($confirmMessage, 'attr') ?>" data-action-label="<?= esc($recordActionLabel, 'attr') ?>" data-action-past="<?= esc($recordActionPast, 'attr') ?>" data-family-name="<?= esc($displayName, 'attr') ?>">
                                             <?= csrf_field() ?>
-                                            <button type="submit" class="dropdown-item <?= $status === 'archived' ? 'text-success' : 'text-danger' ?>">
-                                                <i class="bi <?= $status === 'archived' ? 'bi-arrow-counterclockwise' : 'bi-archive' ?>" aria-hidden="true"></i><?= esc($recordActionLabel) ?>
+                                            <button type="submit" class="dropdown-item <?= $rowArchived ? 'text-success' : 'text-danger' ?>">
+                                                <i class="bi <?= $rowArchived ? 'bi-arrow-counterclockwise' : 'bi-archive' ?>" aria-hidden="true"></i><?= esc($displayUpper($recordActionLabel)) ?>
                                             </button>
                                         </form>
                                     <?php endif; ?>
@@ -243,7 +302,7 @@ $emptyMessage = $deepActive
                 </tr>
             <?php endforeach; ?>
             <?php if ($activeRows === []): ?>
-                <tr><td colspan="5" class="text-center text-muted"><?= esc($emptyMessage) ?></td></tr>
+                <tr><td colspan="6" class="text-center text-muted"><?= esc($displayUpper($emptyMessage)) ?></td></tr>
             <?php endif; ?>
             </tbody>
         </table>

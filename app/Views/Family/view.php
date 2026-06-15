@@ -21,71 +21,56 @@ $familyInitials = static function (string $name): string {
     return mb_strtoupper($first . $last);
 };
 
-$headName = (string) ($headView['fullName'] ?? '-');
+$displayUpper = static fn (mixed $value): string => mb_strtoupper((string) $value);
 ?>
 
 <div class="family-detail">
-    <div class="family-detail-hero">
-        <div class="family-detail-hero-main">
-            <span class="family-avatar" aria-hidden="true"><?= esc($familyInitials($headName)) ?></span>
-            <div>
-                <span class="family-detail-kicker">Head of Family</span>
-                <h2><?= esc($headName) ?></h2>
-            </div>
-        </div>
-        <div class="family-detail-date">
-            <span>Created</span>
-            <strong><?= esc((string) ($headView['createdDate'] ?? '-')) ?></strong>
-            <small><?= esc((string) ($headView['createdTime'] ?? '-')) ?></small>
-        </div>
-    </div>
-
     <section class="family-detail-section">
         <div class="family-detail-section-title">
-            <i class="bi bi-person-vcard" aria-hidden="true"></i>Profile
+            <i class="bi bi-person-vcard" aria-hidden="true"></i><?= esc($displayUpper('Profile')) ?>
         </div>
         <div class="family-detail-grid">
             <?php foreach ((array) ($headView['details'] ?? []) as $detail): ?>
                 <div class="family-detail-item">
-                    <span><?= esc((string) ($detail['label'] ?? '')) ?></span>
-                    <strong><?= esc((string) ($detail['value'] ?? '-')) ?></strong>
+                    <span><?= esc($displayUpper($detail['label'] ?? '')) ?></span>
+                    <strong><?= esc($displayUpper($detail['value'] ?? '-')) ?></strong>
                 </div>
             <?php endforeach; ?>
         </div>
         <div class="family-detail-list mt-3">
-            <span class="family-service-label">Sectors</span>
+            <span class="family-service-label"><?= esc($displayUpper('Sectors')) ?></span>
             <?php $headSectors = ViewFormatter::splitList($headView['sectorName'] ?? ''); ?>
             <?php if ($headSectors !== []): ?>
                 <div class="family-chip-group">
                     <?php foreach ($headSectors as $sectorName): ?>
-                        <span class="family-chip"><?= esc($sectorName) ?></span>
+                        <span class="family-chip"><?= esc($displayUpper($sectorName)) ?></span>
                     <?php endforeach; ?>
                 </div>
             <?php else: ?>
-                <span class="family-empty">No sectors listed.</span>
+                <span class="family-empty"><?= esc($displayUpper('No sectors listed.')) ?></span>
             <?php endif; ?>
         </div>
         <div class="family-service-list mt-3">
-            <span class="family-service-label">Services availed</span>
+            <span class="family-service-label"><?= esc($displayUpper('Services availed')) ?></span>
             <?php if (($headView['services'] ?? []) !== []): ?>
                 <div class="family-chip-group">
                     <?php foreach ((array) ($headView['services'] ?? []) as $serviceName): ?>
-                        <span class="family-chip is-service"><?= esc((string) $serviceName) ?></span>
+                        <span class="family-chip is-service"><?= esc($displayUpper($serviceName)) ?></span>
                     <?php endforeach; ?>
                 </div>
             <?php else: ?>
-                <span class="family-empty">No services availed.</span>
+                <span class="family-empty"><?= esc($displayUpper('No services availed.')) ?></span>
             <?php endif; ?>
         </div>
     </section>
 
     <section class="family-detail-section">
         <div class="family-detail-section-title">
-            <i class="bi bi-people" aria-hidden="true"></i>Family Members
+            <i class="bi bi-people" aria-hidden="true"></i><?= esc($displayUpper('Family Members')) ?>
             <span class="family-detail-count"><?= count($memberViews) ?></span>
         </div>
         <?php if ($memberViews === []): ?>
-            <p class="family-empty mb-0">No family members found.</p>
+            <p class="family-empty mb-0"><?= esc($displayUpper('No family members found.')) ?></p>
         <?php endif; ?>
 
         <div class="family-member-list">
@@ -95,41 +80,41 @@ $headName = (string) ($headView['fullName'] ?? '-');
                     <div class="family-member-heading">
                         <div class="family-member-identity">
                             <span class="family-avatar is-sm" aria-hidden="true"><?= esc($familyInitials($memberName)) ?></span>
-                            <strong><?= esc($memberName) ?></strong>
+                            <strong><?= esc($displayUpper($memberName)) ?></strong>
                         </div>
-                        <span class="family-relationship"><?= esc((string) ($member['relationship'] ?? 'Member')) ?></span>
+                        <span class="family-relationship"><?= esc($displayUpper($member['relationship'] ?? 'Member')) ?></span>
                     </div>
                     <div class="family-detail-grid is-compact">
                         <?php foreach ((array) ($member['details'] ?? []) as $detail): ?>
                             <div class="family-detail-item">
-                                <span><?= esc((string) ($detail['label'] ?? '')) ?></span>
-                                <strong><?= esc((string) ($detail['value'] ?? '-')) ?></strong>
+                                <span><?= esc($displayUpper($detail['label'] ?? '')) ?></span>
+                                <strong><?= esc($displayUpper($detail['value'] ?? '-')) ?></strong>
                             </div>
                         <?php endforeach; ?>
                     </div>
                     <div class="family-detail-list">
-                        <span class="family-service-label">Sectors</span>
+                        <span class="family-service-label"><?= esc($displayUpper('Sectors')) ?></span>
                         <?php $memberSectors = ViewFormatter::splitList($member['sectorName'] ?? ''); ?>
                         <?php if ($memberSectors !== []): ?>
                             <div class="family-chip-group">
                                 <?php foreach ($memberSectors as $sectorName): ?>
-                                    <span class="family-chip"><?= esc($sectorName) ?></span>
+                                    <span class="family-chip"><?= esc($displayUpper($sectorName)) ?></span>
                                 <?php endforeach; ?>
                             </div>
                         <?php else: ?>
-                            <span class="family-empty">No sectors listed.</span>
+                            <span class="family-empty"><?= esc($displayUpper('No sectors listed.')) ?></span>
                         <?php endif; ?>
                     </div>
                     <div class="family-service-list">
-                        <span class="family-service-label">Services availed</span>
+                        <span class="family-service-label"><?= esc($displayUpper('Services availed')) ?></span>
                         <?php if (($member['services'] ?? []) !== []): ?>
                             <div class="family-chip-group">
                                 <?php foreach ((array) ($member['services'] ?? []) as $serviceName): ?>
-                                    <span class="family-chip is-service"><?= esc((string) $serviceName) ?></span>
+                                    <span class="family-chip is-service"><?= esc($displayUpper($serviceName)) ?></span>
                                 <?php endforeach; ?>
                             </div>
                         <?php else: ?>
-                            <span class="family-empty">No services availed.</span>
+                            <span class="family-empty"><?= esc($displayUpper('No services availed.')) ?></span>
                         <?php endif; ?>
                     </div>
                 </article>

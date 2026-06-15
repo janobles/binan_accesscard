@@ -32,7 +32,15 @@ $searchTerm = $searchTerm ?? '';
 $searchFilters = $searchFilters ?? [];
 $auditActionOptions = $auditActionOptions ?? [];
 $sectorOptions = $familyFormViewData['sectorOptions'] ?? [];
-$hasSearchFilters = $searchTerm !== '' || array_filter($searchFilters, static fn ($value): bool => trim((string) $value) !== '') !== [];
+$hasSearchFilters = $searchTerm !== '' || array_filter($searchFilters, static function ($value): bool {
+    if (is_array($value)) {
+        return array_filter($value, static fn ($item): bool => trim((string) $item) !== '' && trim((string) $item) !== '__all') !== [];
+    }
+
+    $normalized = trim((string) $value);
+
+    return $normalized !== '' && $normalized !== '__all';
+}) !== [];
 $canCreateFamily = $canCreateFamily ?? false;
 $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
 // Developers get the "developer" sidebar accent; plain admins get "admin".
@@ -56,10 +64,9 @@ $jadeStyles = [
     'css/searchbar.css',
     'css/lookupmanagement.css',
     'css/audittrails.css',
-    'css/accountmanagement.css',
+    'css/accounts.css',
     'css/familymodal.css',
     'css/session-timeout.css',
-    'css/melbranch-bridge.css',
 ];
 ?>
 <!DOCTYPE html>

@@ -1,8 +1,20 @@
 .audit-trails {
+    margin-top: 0;
     overflow: hidden;
     border: 1px solid #dce5e2;
     border-radius: 0.35rem;
     background: #ffffff;
+}
+
+.audit-filter-bar {
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid #e2e9e7;
+}
+
+.audit-filter-bar .form-control,
+.audit-filter-bar .form-select,
+.audit-filter-bar .btn {
+    min-height: 2.5rem;
 }
 
 .audit-trails-table {

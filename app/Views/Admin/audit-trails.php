@@ -34,7 +34,7 @@ $formatAuditUser = static function (array $audit): string {
     <header class="panel-header">
         <h2>Audit Trails</h2>
     </header>
-    <form class="row g-2 filter-bar js-audit-filter-form p-3" method="get" action="<?= site_url('admin/audit-trails') ?>">
+    <form class="row g-2 filter-bar audit-filter-bar js-audit-filter-form" method="get" action="<?= site_url('admin/audit-trails') ?>">
         <div class="col-md-6 col-lg-4">
             <input class="form-control" type="search" name="q" value="<?= esc($searchTerm) ?>" placeholder="Search audit trails by user, action, or description">
         </div>

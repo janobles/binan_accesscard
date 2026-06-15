@@ -1,4 +1,4 @@
-.account-management-page {
+.accounts-page {
     display: grid;
     gap: 1rem;
 }
@@ -60,15 +60,15 @@
     min-width: 0;
 }
 
-.account-management-page .form-label {
+.accounts-page .form-label {
     margin: 0;
     color: #10251f;
     font-size: 0.84rem;
     font-weight: 700;
 }
 
-.account-management-page .form-control,
-.account-management-page .form-select {
+.accounts-page .form-control,
+.accounts-page .form-select {
     min-height: 2.65rem;
     border-color: #c7d8d3;
     border-radius: 0.35rem;
@@ -172,8 +172,8 @@
         border-left: 0;
     }
 
-    .account-management-page .form-control,
-    .account-management-page .form-select,
+    .accounts-page .form-control,
+    .accounts-page .form-select,
     .account-create-actions .btn {
         min-height: 2.35rem;
         font-size: 0.82rem;

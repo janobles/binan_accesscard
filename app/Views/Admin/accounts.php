@@ -10,7 +10,7 @@ $isAdmin = $currentRole === 'Admin';
 $accounts = $isDeveloper ? array_merge($adminAccounts, $employeeAccounts) : $employeeAccounts;
 ?>
 
-<div class="account-management-page">
+<div class="accounts-page">
     <?php if ($canCreateAccounts): ?>
         <section class="account-card account-create-card" aria-labelledby="create-account-title">
             <div class="account-card-header">
@@ -97,7 +97,7 @@ $accounts = $isDeveloper ? array_merge($adminAccounts, $employeeAccounts) : $emp
                         $roleLabel = $rawRole === 'User' ? 'Employee' : $rawRole;
                         $isActive = ViewFormatter::isActiveStatus($account['isactive'] ?? null);
                         $nextStatus = $isActive ? 'Disabled' : 'Enable';
-                        $statusLabel = $isActive ? 'Enable' : 'Disabled';
+                        $statusLabel = $isActive ? 'Active' : 'Inactive';
                         $statusClass = $isActive ? 'is-active' : 'is-disabled';
                         ?>
                         <tr>

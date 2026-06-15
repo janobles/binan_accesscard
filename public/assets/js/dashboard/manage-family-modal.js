@@ -74,6 +74,8 @@
         }
 
         panel.replaceWith(replacement);
+        updateAllFilterDropdowns(replacement);
+        updateSearchAllState(replacement);
 
         // Re-apply Popper's fixed positioning to the freshly injected row action
         // menus, otherwise they revert to absolute positioning and get clipped by
@@ -105,10 +107,89 @@
         });
     }
 
-    function filterTableRows(panel, keyword, sectorId) {
+    function selectedValues(container) {
+        if (!container) {
+            return [];
+        }
+
+        return Array.from(container.querySelectorAll('input[type="checkbox"]:checked') || [])
+            .map(function (input) { return input.value; })
+            .filter(function (value) { return value !== '' && value !== '__all'; });
+    }
+
+    function updateFilterDropdown(dropdown) {
+        if (!dropdown) {
+            return;
+        }
+
+        const label = dropdown.querySelector('[data-records-filter-label]');
+        dropdown.querySelectorAll('.records-check-option').forEach(function (option) {
+            const input = option.querySelector('input[type="checkbox"]');
+
+            option.classList.toggle('is-selected', !!(input && input.checked));
+        });
+
+        const checked = Array.from(dropdown.querySelectorAll('input[type="checkbox"]:checked'));
+        const selected = checked.filter(function (input) { return input.value !== '__all'; });
+        const allChecked = checked.some(function (input) { return input.value === '__all'; });
+        const isBarangay = dropdown.dataset.recordsFilter === 'barangay';
+
+        if (!label) {
+            return;
+        }
+
+        if (allChecked) {
+            label.textContent = isBarangay ? 'All barangays' : 'All sectors';
+        } else if (selected.length === 0) {
+            label.textContent = isBarangay ? '-Select barangay-' : '-Select sector-';
+        } else if (selected.length === 1) {
+            const optionLabel = selected[0].closest('label');
+            label.textContent = optionLabel ? optionLabel.textContent.trim() : selected[0].value;
+        } else {
+            label.textContent = selected.length + ' selected';
+        }
+    }
+
+    function updateAllFilterDropdowns(root) {
+        (root || document).querySelectorAll('[data-records-filter]').forEach(updateFilterDropdown);
+    }
+
+    function hasDatabaseSearchCriteria(panel) {
+        if (!panel) {
+            return false;
+        }
+
+        const keywordInput = panel.querySelector('[data-records-database-keyword]');
+        const keyword = keywordInput ? keywordInput.value.trim() : '';
+        const hasSector = selectedValues(panel.querySelector('[data-records-filter="sector"]')).length > 0;
+        const hasBarangay = selectedValues(panel.querySelector('[data-records-filter="barangay"]')).length > 0;
+
+        return keyword !== '' || hasSector || hasBarangay;
+    }
+
+    function updateSearchAllState(panel) {
+        if (!panel) {
+            return;
+        }
+
+        const button = panel.querySelector('[data-search-mode="all"]');
+
+        if (!button) {
+            return;
+        }
+
+        const enabled = hasDatabaseSearchCriteria(panel);
+        button.disabled = !enabled;
+        button.setAttribute('aria-disabled', enabled ? 'false' : 'true');
+    }
+
+    function filterTableRows(panel, keyword, sectorIds) {
         // Split into tokens so a full name ("Juan Cruz") matches even though the
         // tokens live in different parts of the name; every token must be present.
         var tokens = keyword ? keyword.split(/\s+/).filter(Boolean) : [];
+        var selectedIds = (Array.isArray(sectorIds) ? sectorIds : [sectorIds])
+            .map(Number)
+            .filter(function (id) { return id > 0; });
         panel.querySelectorAll('[data-record-row]').forEach(function (row) {
             // Prefer the full name (incl. middle name) for matching; fall back to the
             // visible name cell when the attribute isn't present.
@@ -122,28 +203,22 @@
             try { ids = JSON.parse(rawIds); } catch (_) {}
             if (!Array.isArray(ids)) { ids = ids ? [ids] : []; }
             var nameOk = tokens.every(function (token) { return searchableText.indexOf(token) !== -1; });
-            var secOk  = !sectorId || ids.map(Number).indexOf(sectorId) !== -1;
+            var numericIds = ids.map(Number);
+            var secOk  = selectedIds.length === 0 || selectedIds.some(function (sectorId) {
+                return numericIds.indexOf(sectorId) !== -1;
+            });
             row.style.display = (nameOk && secOk) ? '' : 'none';
         });
     }
 
-    function selectedStatus(form, panel) {
-        const select = form.querySelector('select[name="status"]');
-        const status = select ? select.value : (panel.dataset.currentStatus || 'active');
-
-        return status === 'archived' ? 'archived' : 'active';
+    function keywordInputFor(panel) {
+        return panel ? panel.querySelector('[data-records-table-keyword]') : null;
     }
 
-    function statusListUrl(action, status) {
-        const fullUrl = new URL(action, window.location.href);
+    function keywordValueFor(panel) {
+        const input = keywordInputFor(panel);
 
-        fullUrl.search = '';
-
-        if (status === 'archived') {
-            fullUrl.searchParams.set('status', 'archived');
-        }
-
-        return fullUrl;
+        return input ? input.value : '';
     }
 
     function loadFamilyList(panel, fullUrl, pushHistory) {
@@ -207,45 +282,15 @@
 
         event.preventDefault();
 
-        // "Search" button — filter current rows in-browser without a server round-trip.
-        if (event.submitter && event.submitter.dataset.searchMode === 'local') {
-            const keyword  = (form.querySelector('input[name="q"]') ? form.querySelector('input[name="q"]').value : '').toLowerCase().trim();
-            const sectorId = parseInt((form.querySelector('select[name="sectorID"]') ? form.querySelector('select[name="sectorID"]').value : '0') || '0', 10);
-            const nextStatus = selectedStatus(form, panel);
-            const currentStatus = (panel.dataset.currentStatus || 'active') === 'archived' ? 'archived' : 'active';
+        if (form.dataset.recordsSearch === 'table') {
+            const keyword = keywordValueFor(panel).toLowerCase().trim();
+            const sectorSelect = panel.querySelector('[data-records-filter="sector"]');
 
-            if (nextStatus !== currentStatus) {
-                if (!window.fetch || !window.history) {
-                    form.submit();
-                    return;
-                }
-
-                loadFamilyList(panel, statusListUrl(form.action, nextStatus).toString(), true)
-                    .then(function (nextPanel) {
-                        const nextForm = nextPanel && nextPanel.querySelector('[data-records-search="quick"]');
-                        const nextInput = nextForm && nextForm.querySelector('input[name="q"]');
-                        const nextSelect = nextForm && nextForm.querySelector('select[name="status"]');
-
-                        if (nextInput) {
-                            nextInput.value = keyword;
-                            nextInput.focus();
-                        }
-
-                        if (nextSelect) {
-                            nextSelect.value = nextStatus;
-                        }
-
-                        if (nextPanel) {
-                            filterTableRows(nextPanel, keyword, sectorId);
-                        }
-                    });
-                return;
-            }
-
-            filterTableRows(panel, keyword, sectorId);
+            filterTableRows(panel, keyword, selectedValues(sectorSelect));
             return;
         }
 
+        // "Search" button — filter current rows in-browser without a server round-trip.
         if (!window.fetch || !window.history) {
             form.submit();
             return;
@@ -253,17 +298,14 @@
 
         closeModalFor(form);
 
+        if (event.submitter && event.submitter.dataset.searchMode === 'all' && !hasDatabaseSearchCriteria(panel)) {
+            updateSearchAllState(panel);
+            return;
+        }
+
         const actionUrl = (event.submitter && event.submitter.getAttribute('formaction')) || form.action;
         const fullUrl = new URL(actionUrl, window.location.href);
         const formData = new FormData(form);
-
-        if (form.dataset.recordsSearch === 'database') {
-            const statusSelect = panel.querySelector('[data-records-search="quick"] select[name="status"]');
-
-            if (statusSelect) {
-                formData.set('status', statusSelect.value);
-            }
-        }
 
         fullUrl.search = '';
         formData.forEach(function (value, key) {
@@ -289,22 +331,73 @@
     // Live search: filter rows on every keystroke in the manual keyword field.
     document.addEventListener('input', function (event) {
         const input = event.target;
-        if (!input || input.name !== 'q') {
+        if (input && input.matches('[data-records-database-keyword]')) {
+            updateSearchAllState(input.closest('[data-family-list-panel]'));
+            return;
+        }
+
+        if (!input || !input.matches('[data-records-table-keyword]')) {
             return;
         }
         const panel = input.closest('[data-family-list-panel]');
         if (!panel) {
             return;
         }
-        const form = input.closest('[data-records-search="quick"]');
-        if (!form) {
-            return;
-        }
         const keyword  = input.value.toLowerCase().trim();
 
-        const sel      = panel.querySelector('select[name="sectorID"]');
-        const sectorId = sel ? parseInt(sel.value || '0', 10) : 0;
-        filterTableRows(panel, keyword, sectorId);
+        const sel = panel.querySelector('[data-records-filter="sector"]');
+        filterTableRows(panel, keyword, selectedValues(sel));
+    });
+
+    document.addEventListener('change', function (event) {
+        const select = event.target;
+        if (!select || !['status', 'per_page', 'sectorID[]', 'barangay[]'].includes(select.name)) {
+            return;
+        }
+
+        const panel = select.closest('[data-family-list-panel]');
+        const form = select.closest('form[method="get"]');
+
+        if (!panel || !form) {
+            return;
+        }
+
+        if (select.type === 'checkbox') {
+            const dropdown = select.closest('[data-records-filter]');
+            const allInput = dropdown ? dropdown.querySelector('[data-filter-all]') : null;
+
+            if (select.dataset.filterAll !== undefined && select.checked && dropdown) {
+                dropdown.querySelectorAll('input[type="checkbox"]').forEach(function (input) {
+                    input.checked = input === select;
+                });
+            } else if (select.checked && allInput) {
+                allInput.checked = false;
+            }
+
+            updateFilterDropdown(dropdown);
+            updateSearchAllState(panel);
+        }
+
+        if (!window.fetch || !window.history) {
+            form.submit();
+            return;
+        }
+
+        const fullUrl = new URL(form.action, window.location.href);
+        const formData = new FormData(form);
+        fullUrl.search = '';
+
+        formData.forEach(function (value, key) {
+            if (key === 'status' && String(value).trim() !== 'archived') {
+                return;
+            }
+
+            if (String(value).trim() !== '') {
+                fullUrl.searchParams.append(key, value);
+            }
+        });
+
+        loadFamilyList(panel, fullUrl.toString(), true);
     });
 
     document.addEventListener('click', function (event) {
@@ -314,16 +407,59 @@
         }
 
         const panel = panelFor(clearButton);
-        const form = clearButton.closest('[data-records-search="quick"]');
-        const input = form && form.querySelector('input[name="q"]');
+        const form = clearButton.closest('[data-records-search="database"]');
+        const quickInput = keywordInputFor(panel);
+        const databaseInput = panel ? panel.querySelector('[data-records-database-keyword]') : null;
+        const sectorSelect = form && form.querySelector('[data-records-filter="sector"]');
+        const barangaySelect = form && form.querySelector('[data-records-filter="barangay"]');
 
-        if (!panel || !input) {
+        if (!panel || !form) {
             return;
         }
 
-        input.value = '';
-        filterTableRows(panel, '', 0);
-        input.focus();
+        if (quickInput) {
+            quickInput.value = '';
+        }
+        if (databaseInput) {
+            databaseInput.value = '';
+        }
+        if (sectorSelect) {
+            sectorSelect.querySelectorAll('input[type="checkbox"]').forEach(function (input) {
+                input.checked = false;
+            });
+            updateFilterDropdown(sectorSelect);
+        }
+        if (barangaySelect) {
+            barangaySelect.querySelectorAll('input[type="checkbox"]').forEach(function (input) {
+                input.checked = false;
+            });
+            updateFilterDropdown(barangaySelect);
+        }
+        updateSearchAllState(panel);
+
+        if (window.fetch && window.history) {
+            const clearUrl = new URL(form.action, window.location.href);
+            const statusSelect = form.querySelector('select[name="status"]');
+            const perPageInput = form.querySelector('input[name="per_page"]');
+
+            clearUrl.search = '';
+
+            if (statusSelect && statusSelect.value === 'archived') {
+                clearUrl.searchParams.set('status', 'archived');
+            }
+
+            if (perPageInput && perPageInput.value !== '') {
+                clearUrl.searchParams.set('per_page', perPageInput.value);
+            }
+
+            loadFamilyList(panel, clearUrl.toString(), true);
+            return;
+        }
+
+        filterTableRows(panel, '', []);
+        if (databaseInput) {
+            databaseInput.focus();
+        }
     });
 
     document.addEventListener('click', function (event) {
@@ -376,4 +512,7 @@
             event.preventDefault();
         }
     });
+
+    updateAllFilterDropdowns(document);
+    document.querySelectorAll('[data-family-list-panel]').forEach(updateSearchAllState);
 })(window, document);

@@ -10,6 +10,7 @@ use App\Models\SearchModel;
 use App\Models\Lookups\SectorModel;
 use App\Models\Lookups\ServiceModel;
 use App\Models\Auth\UserModel;
+use App\Support\FamilyProfilingFormV2;
 use App\Libraries\RoleAccess;
 use App\Models\ViewLayoutModel;
 use CodeIgniter\HTTP\IncomingRequest;
@@ -234,12 +235,13 @@ class DashboardPageBuilder
         $status = strtolower(trim((string) $this->request->getGet('status')));
         $showArchived = $status === 'archived';
         $page = max(1, (int) $this->request->getGet('page'));
-        $perPage = 50;
+        $perPage = $this->recordsPerPage();
 
         // Manage Records FILTER controls (sector + date). Status (active/archived)
         // is handled separately above. Passed into MemberModel::searchFamilies().
         $filters = [
-            'sectorID' => (string) $this->request->getGet('sectorID'),
+            'sectorID' => $this->request->getGet('sectorID'),
+            'barangay' => $this->request->getGet('barangay'),
             'date'     => (string) $this->request->getGet('date'),
         ];
 
@@ -269,6 +271,7 @@ class DashboardPageBuilder
             'totalPages'        => $totalPages,
             // Filter UI data.
             'sectorOptions'     => (new SectorModel())->getSectorOptions(),
+            'barangayOptions'   => FamilyProfilingFormV2::barangays(),
             'filters'           => $filters,
         ], $this->buildDeepSearchData($showArchived ? 'archived' : 'active'));
     }
@@ -308,11 +311,12 @@ class DashboardPageBuilder
             ];
         }
 
-        $perPage = 50;
+        $perPage = $this->recordsPerPage();
         $page = max(1, (int) $this->request->getGet('deep_page'));
         $filters = [
             'status'   => $status,
-            'sectorID' => (string) $this->request->getGet('sectorID'),
+            'sectorID' => $this->request->getGet('sectorID'),
+            'barangay' => $this->request->getGet('barangay'),
             'date'     => (string) $this->request->getGet('date'),
         ];
 
@@ -414,7 +418,8 @@ class DashboardPageBuilder
     private function searchFilters(): array
     {
         return [
-            'sectorID' => (string) $this->request->getGet('sectorID'),
+            'sectorID' => $this->request->getGet('sectorID'),
+            'barangay' => $this->request->getGet('barangay'),
             'role' => (string) $this->request->getGet('role'),
             'status' => (string) $this->request->getGet('status'),
             'action' => (string) $this->request->getGet('action'),
@@ -428,7 +433,17 @@ class DashboardPageBuilder
     private function hasSearchFilters(array $filters): bool
     {
         foreach ($filters as $value) {
-            if (trim((string) $value) !== '') {
+            if (is_array($value)) {
+                if ($this->hasSearchFilters($value)) {
+                    return true;
+                }
+
+                continue;
+            }
+
+            $normalized = trim((string) $value);
+
+            if ($normalized !== '' && $normalized !== '__all') {
                 return true;
             }
         }
@@ -447,12 +462,13 @@ class DashboardPageBuilder
         $status = strtolower(trim((string) $this->request->getGet('status')));
         $showArchived = $status === 'archived';
         $page = max(1, (int) $this->request->getGet('page'));
-        $perPage = 50;
+        $perPage = $this->recordsPerPage();
 
         // Manage Records FILTER controls (sector + date). Status (active/archived)
         // is handled separately above. Passed into MemberModel::searchFamilies().
         $filters = [
-            'sectorID' => (string) $this->request->getGet('sectorID'),
+            'sectorID' => $this->request->getGet('sectorID'),
+            'barangay' => $this->request->getGet('barangay'),
             'date'     => (string) $this->request->getGet('date'),
         ];
 
@@ -477,7 +493,16 @@ class DashboardPageBuilder
             'totalPages' => $totalPages,
             // Filter UI data.
             'sectorOptions' => (new SectorModel())->getSectorOptions(),
+            'barangayOptions' => FamilyProfilingFormV2::barangays(),
             'filters' => $filters,
         ], $this->buildDeepSearchData($showArchived ? 'archived' : 'active'));
+    }
+
+    /** Whitelisted page sizes for Manage Records and deep-search pagination. */
+    private function recordsPerPage(): int
+    {
+        $perPage = (int) $this->request->getGet('per_page');
+
+        return in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 50;
     }
 }

@@ -161,6 +161,151 @@
     text-align: center;
 }
 
+/* ---- My Account modal ------------------------------------------------- */
+.my-account-modal {
+    display: grid;
+    gap: 1rem;
+}
+
+.my-account-hero {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.1rem 1.25rem;
+    border-radius: 0.6rem;
+    background: linear-gradient(135deg, #145c3b, #0f4a30);
+    color: #ffffff;
+    box-shadow: 0 6px 18px rgba(15, 74, 48, 0.18);
+}
+
+.my-account-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 3.4rem;
+    height: 3.4rem;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.16);
+    font-size: 2rem;
+    line-height: 1;
+}
+
+.my-account-hero-kicker {
+    margin: 0;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: rgba(234, 255, 244, 0.78);
+}
+
+.my-account-name {
+    margin: 0.1rem 0 0.35rem;
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: #ffffff;
+    word-break: break-word;
+}
+
+.my-account-role-badge {
+    display: inline-block;
+    padding: 0.18rem 0.65rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.18);
+    color: #eafff4;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.my-account-section {
+    overflow: hidden;
+    border: 1px solid #dce5e2;
+    border-radius: 0.5rem;
+    background: #ffffff;
+}
+
+.my-account-section-head {
+    padding: 0.85rem 1.1rem;
+    border-bottom: 1px solid #e8efec;
+    background: #f7faf9;
+}
+
+.my-account-section-head h3 {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 800;
+    color: #10251f;
+}
+
+.my-account-section-head h3 .bi {
+    color: #145c3b;
+}
+
+.my-account-section-head p {
+    margin: 0.2rem 0 0;
+    font-size: 0.8rem;
+    color: #6b7d77;
+}
+
+.my-account-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.9rem 1.1rem;
+    padding: 1.1rem;
+}
+
+.my-account-grid .account-field {
+    display: grid;
+    gap: 0.35rem;
+    min-width: 0;
+}
+
+.my-account-modal .form-label {
+    margin: 0;
+    color: #10251f;
+    font-size: 0.84rem;
+    font-weight: 700;
+}
+
+.my-account-modal .form-control {
+    min-height: 2.65rem;
+    border-color: #c7d8d3;
+    border-radius: 0.35rem;
+    color: #23322e;
+    font-size: 0.9rem;
+}
+
+.my-account-modal .form-control:focus {
+    border-color: #2f8f63;
+    box-shadow: 0 0 0 0.18rem rgba(20, 92, 59, 0.15);
+}
+
+.my-account-readonly {
+    background: #eef4f1;
+    color: #51635d !important;
+    font-weight: 600;
+}
+
+@media (max-width: 48rem) {
+    .my-account-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .my-account-hero {
+        padding: 0.9rem 1rem;
+    }
+
+    .my-account-modal .form-control {
+        min-height: 2.35rem;
+        font-size: 0.82rem;
+    }
+}
+
 @media (max-width: 48rem) {
     .account-card-header,
     .account-create-grid {

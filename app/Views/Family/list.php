@@ -87,7 +87,7 @@ $displayListName = static function (string $lastName, string $firstName, string 
 ?>
 
 <div
-    class="panel mb-3"
+    class="panel mb-3 records-scroll-panel"
     data-family-list-panel
     data-current-status="<?= esc($status, 'attr') ?>"
     data-family-list-full-base="<?= esc(site_url($listRoute), 'attr') ?>">

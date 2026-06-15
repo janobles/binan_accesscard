@@ -52,7 +52,7 @@ $categoryClearUrl = static function () use ($listRoute, $status, $perPage): stri
 };
 ?>
 
-<div class="sector-management" data-category-management-root>
+<div class="sector-management records-scroll-panel" data-category-management-root>
 	<?php /* Database search across the whole category table (server-side GET) + status + Add. */ ?>
 	<div class="records-search-panel">
 		<form class="records-search-row records-lookup-search" method="get" action="<?= esc(site_url($listRoute), 'attr') ?>" role="search" aria-label="Search the category database">

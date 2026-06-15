@@ -24,8 +24,18 @@
     gap: 0.4rem;
 }
 
+.records-scroll-panel {
+    display: flex;
+    height: 100%;
+    min-height: 0;
+    flex-direction: column;
+    overflow: hidden;
+    margin-bottom: 0 !important;
+}
+
 .records-search-panel {
-    margin: -0.15rem -0.1rem 1rem;
+    flex: 0 0 auto;
+    margin: 0 -0.1rem 1rem;
     padding-bottom: 1rem;
     border-bottom: 1px solid #e2e9e7;
 }
@@ -124,6 +134,7 @@
 
 .table-meta {
     justify-content: space-between;
+    flex: 0 0 auto;
     gap: 1rem;
     padding: 0.85rem 1rem;
     color: #65736e;
@@ -177,19 +188,28 @@
     table-layout: auto;
 }
 
-.table-responsive {
+.records-scroll-panel .table-responsive {
+    flex: 1 1 auto;
+    min-height: 0;
     font-size: 0;
     line-height: 0;
-    overflow-x: auto;
+    overflow: auto;
     -webkit-overflow-scrolling: touch;
 }
 
-.table-responsive > .table {
+.records-scroll-panel .table-responsive > .table {
     font-size: 1rem;
     line-height: 1.5;
 }
 
+.records-scroll-panel > .d-flex.justify-content-end {
+    flex: 0 0 auto;
+}
+
 .manage-record-table th {
+    position: sticky;
+    top: 0;
+    z-index: 3;
     padding: 0.8rem 1rem;
     border-bottom-color: #cedbd7;
     background: #f4f7f7;

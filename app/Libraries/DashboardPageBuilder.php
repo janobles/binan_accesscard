@@ -360,9 +360,8 @@ class DashboardPageBuilder
         $deepKeyword = trim((string) $this->request->getGet('deep_q'));
         $scopeAll = strtolower(trim((string) $this->request->getGet('search_scope'))) === 'all';
 
-        // The shared search bar's "Search All" button submits search_scope=all with
-        // the keyword still in `q` (not deep_q). Treat that q as the deep keyword so
-        // "Search All" runs the whole-database search and shows the deep results panel.
+        // Some links/forms can still submit search_scope=all with the keyword in `q`.
+        // Treat that value as the deep keyword so the whole-database results panel opens.
         if ($deepKeyword === '' && $scopeAll) {
             $deepKeyword = trim((string) $this->request->getGet('q'));
         }

@@ -26,7 +26,6 @@ $recordListData = $recordListData ?? [];
 $searchTerm = $searchTerm ?? '';
 $searchFilters = $searchFilters ?? [];
 $auditActionOptions = $auditActionOptions ?? [];
-$sectorOptions = $familyFormViewData['sectorOptions'] ?? [];
 $hasSearchFilters = $searchTerm !== '' || array_filter($searchFilters, static function ($value): bool {
     if (is_array($value)) {
         return array_filter($value, static fn ($item): bool => trim((string) $item) !== '' && trim((string) $item) !== '__all') !== [];
@@ -52,7 +51,6 @@ $cssVersion = static function (string $relativeCssPath): string {
 $jadeStyles = [
     'css/sb-admin-adapter.css',
     'css/managerecord.css',
-    'css/searchbar.css',
     'css/audittrails.css',
     'css/familymodal.css',
     'css/session-timeout.css',
@@ -134,63 +132,58 @@ $jadeStyles = [
             <?php /* Main content swaps on $activePage: dashboard overview, add-record
                      form, the shared records list, and the employee's own activity. */ ?>
             <?php if ($activePage === 'dashboard'): ?>
-                <div class="row g-3 mb-3">
-                    <div class="col-md-3"><div class="panel stat-panel"><small>Total Records</small><div class="stat-value"><?= esc((string) ($stats['families'] ?? 0)) ?></div></div></div>
-                    <div class="col-md-3"><div class="panel stat-panel"><small>Registered Members</small><div class="stat-value"><?= esc((string) ($stats['members'] ?? 0)) ?></div></div></div>
-                    <div class="col-md-3"><div class="panel stat-panel"><small>Active Sectors</small><div class="stat-value"><?= esc((string) ($stats['sectors'] ?? 0)) ?></div></div></div>
-                    <div class="col-md-3"><div class="panel stat-panel"><small>Services and Programs</small><div class="stat-value"><?= esc((string) ($stats['assistance'] ?? 0)) ?></div></div></div>
-                </div>
+                <div class="dashboard-overview" data-dashboard-overview>
+                    <div class="row g-3 mb-3 employee-overview-stats">
+                        <div class="col-md-3"><div class="panel stat-panel"><small>Total Records</small><div class="stat-value"><?= esc((string) ($stats['families'] ?? 0)) ?></div></div></div>
+                        <div class="col-md-3"><div class="panel stat-panel"><small>Registered Members</small><div class="stat-value"><?= esc((string) ($stats['members'] ?? 0)) ?></div></div></div>
+                        <div class="col-md-3"><div class="panel stat-panel"><small>Active Sectors</small><div class="stat-value"><?= esc((string) ($stats['sectors'] ?? 0)) ?></div></div></div>
+                        <div class="col-md-3"><div class="panel stat-panel"><small>Services and Programs</small><div class="stat-value"><?= esc((string) ($stats['assistance'] ?? 0)) ?></div></div></div>
+                    </div>
 
-                <div class="panel mb-3">
-                    <div class="section-title mt-0">
-                        <span>Recently Added Records</span>
+                    <div class="panel dashboard-table-panel">
+                        <div class="section-title mt-0">
+                            <span>Recently Added Records</span>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-sm overview-table">
+                                <thead><tr><th>Name (Head)</th><th>Sector</th></tr></thead>
+                                <tbody>
+                                    <?php foreach ($recentFamilies as $family): ?>
+                                        <tr>
+                                            <td><span class="entity-title"><?= esc(($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? '')) ?></span></td>
+                                            <td><?= esc((string) ($family['sector_name'] ?? '')) ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                    <?php if ($recentFamilies === []): ?>
+                                        <tr><td colspan="2" class="text-center text-muted">No records yet.</td></tr>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                    <?= view('components/search-bar', [
-                        'searchTerm'       => $searchTerm,
-                        'sectorOptions'    => $sectorOptions,
-                        'selectedSectorId' => (string) ($searchFilters['sectorID'] ?? ''),
-                        'searchAction'     => site_url('employee/workspace'),
-                        'searchAllAction'  => site_url('employee/manage-records'),
-                    ]) ?>
-                    <div class="table-responsive">
-                        <table class="table table-sm">
-                            <thead><tr><th>Name (Head)</th><th>Sector</th></tr></thead>
-                            <tbody>
-                                <?php foreach ($recentFamilies as $family): ?>
-                                    <tr>
-                                        <td><span class="entity-title"><?= esc(($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? '')) ?></span></td>
-                                        <td><?= esc((string) ($family['sector_name'] ?? '')) ?></td>
-                                    </tr>
-                                <?php endforeach; ?>
-                                <?php if ($recentFamilies === []): ?>
-                                    <tr><td colspan="2" class="text-center text-muted"><?= $searchTerm !== '' || $hasSearchFilters ? 'No matching records found.' : 'No records yet.' ?></td></tr>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
 
-                <div class="panel">
-                    <div class="section-title mt-0">
-                        <span>Recent Activity</span>
-                        <a class="btn btn-outline-secondary btn-sm" href="<?= site_url('employee/activity') ?>"><i class="bi bi-arrow-right" aria-hidden="true"></i>View All</a>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table table-sm">
-                            <thead><tr><th>Action</th><th>Member</th><th>Description</th></tr></thead>
-                            <tbody>
-                                <?php foreach ($myAudits as $audit): ?>
-                                    <tr>
-                                        <td><span class="status-pill is-muted"><?= esc((string) ($audit['user_action'] ?? '')) ?></span></td>
-                                        <td><?= esc($formatAuditMember($audit)) ?></td>
-                                        <td><?= esc((string) ($audit['description'] ?? '')) ?></td>
-                                    </tr>
-                                <?php endforeach; ?>
-                                <?php if ($myAudits === []): ?>
-                                    <tr><td colspan="3" class="text-center text-muted">No activity yet.</td></tr>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
+                    <div class="panel dashboard-table-panel">
+                        <div class="section-title mt-0">
+                            <span>Recent Activity</span>
+                            <a class="btn btn-outline-secondary btn-sm" href="<?= site_url('employee/activity') ?>"><i class="bi bi-arrow-right" aria-hidden="true"></i>View All</a>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-sm overview-table">
+                                <thead><tr><th>Action</th><th>Member</th><th>Description</th></tr></thead>
+                                <tbody>
+                                    <?php foreach ($myAudits as $audit): ?>
+                                        <tr>
+                                            <td><span class="status-pill is-muted"><?= esc((string) ($audit['user_action'] ?? '')) ?></span></td>
+                                            <td><?= esc($formatAuditMember($audit)) ?></td>
+                                            <td><?= esc((string) ($audit['description'] ?? '')) ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                    <?php if ($myAudits === []): ?>
+                                        <tr><td colspan="3" class="text-center text-muted">No activity yet.</td></tr>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             <?php endif; ?>

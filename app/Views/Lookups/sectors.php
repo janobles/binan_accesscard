@@ -54,7 +54,7 @@ $sectorClearUrl = static function () use ($listRoute, $status, $perPage): string
 <?php /* Reuses the Manage Records .records-* layout (managerecord.css). All melbranch hooks preserved:
          data-sector-management-root, #sector-status-select (data-lookup-status-select),
          data-lookup-search local filter, .js-sector-modal-open + data-sector-* attributes, the sector-modal include. */ ?>
-<div class="sector-management" data-sector-management-root>
+<div class="sector-management records-scroll-panel" data-sector-management-root>
 	<?php /* Database search across the whole sector table (server-side GET) + status + Add. */ ?>
 	<div class="records-search-panel">
 		<form class="records-search-row records-lookup-search" method="get" action="<?= esc(site_url($listRoute), 'attr') ?>" role="search" aria-label="Search the sector database">

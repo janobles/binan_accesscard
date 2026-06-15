@@ -56,6 +56,7 @@
 
 /* "Showing X–Y of Z" meta line + Prev/Next pagination under the list. */
 .lookup-list-footer {
+    flex: 0 0 auto;
     padding: 0.75rem 1rem;
 }
 

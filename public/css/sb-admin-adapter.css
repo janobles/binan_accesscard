@@ -281,6 +281,27 @@ body {
     padding: 1.5rem;
 }
 
+.dashboard-content:has([data-family-list-panel]),
+.dashboard-content:has([data-sector-management-root]),
+.dashboard-content:has([data-service-management-root]),
+.dashboard-content:has([data-category-management-root]),
+.dashboard-content:has([data-dashboard-overview]) {
+    display: flex;
+    height: calc(100vh - 4.375rem);
+    min-height: 0;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.dashboard-content:has([data-family-list-panel]) > [data-family-list-panel],
+.dashboard-content:has([data-sector-management-root]) > [data-sector-management-root],
+.dashboard-content:has([data-service-management-root]) > [data-service-management-root],
+.dashboard-content:has([data-category-management-root]) > [data-category-management-root],
+.dashboard-content:has([data-dashboard-overview]) > [data-dashboard-overview] {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
 .dashboard-content,
 .dashboard-content > * {
     min-width: 0;
@@ -334,6 +355,49 @@ body {
 .overview-panel {
     margin-top: 1rem;
     overflow: hidden;
+}
+
+.dashboard-overview {
+    display: flex;
+    height: 100%;
+    min-height: 0;
+    flex-direction: column;
+    gap: 1rem;
+    overflow: hidden;
+}
+
+.dashboard-overview .overview-stats,
+.dashboard-overview .employee-overview-stats {
+    flex: 0 0 auto;
+    margin-bottom: 0 !important;
+}
+
+.dashboard-table-panel {
+    display: flex;
+    flex: 1 1 0;
+    min-height: 0;
+    flex-direction: column;
+    margin-top: 0;
+    overflow: hidden;
+}
+
+.dashboard-table-panel > .panel-header,
+.dashboard-table-panel > .section-title {
+    flex: 0 0 auto;
+}
+
+.dashboard-table-panel > .table-responsive {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.dashboard-table-panel .overview-table th {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    background: #ffffff;
 }
 
 .panel-header {
@@ -499,6 +563,14 @@ body {
 
     #content {
         padding-top: 3.75rem;
+    }
+
+    .dashboard-content:has([data-family-list-panel]),
+    .dashboard-content:has([data-sector-management-root]),
+    .dashboard-content:has([data-service-management-root]),
+    .dashboard-content:has([data-category-management-root]),
+    .dashboard-content:has([data-dashboard-overview]) {
+        height: calc(100vh - 3.75rem);
     }
 
     .topbar-title {

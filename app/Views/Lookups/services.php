@@ -44,7 +44,7 @@ $serviceClearUrl = static function () use ($listRoute, $status, $perPage): strin
 <?php /* Reuses the Manage Records .records-* layout (managerecord.css). All melbranch hooks preserved:
          data-service-management-root, #service-status-select (data-lookup-status-select),
          data-lookup-search local filter, .js-service-modal-open + data-service-* attributes, the service-modal include. */ ?>
-<div class="sector-management" data-service-management-root>
+<div class="sector-management records-scroll-panel" data-service-management-root>
 	<?php /* Database search across the whole services table (server-side GET) + status + Add. */ ?>
 	<div class="records-search-panel">
 		<form class="records-search-row records-lookup-search" method="get" action="<?= esc(site_url($listRoute), 'attr') ?>" role="search" aria-label="Search the services database">

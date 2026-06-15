@@ -32,7 +32,6 @@ $sectorShortcodeOptions = $sectorShortcodeOptions ?? [];
 $searchTerm = $searchTerm ?? '';
 $searchFilters = $searchFilters ?? [];
 $auditActionOptions = $auditActionOptions ?? [];
-$sectorOptions = $familyFormViewData['sectorOptions'] ?? [];
 $hasSearchFilters = $searchTerm !== '' || array_filter($searchFilters, static function ($value): bool {
     if (is_array($value)) {
         return array_filter($value, static fn ($item): bool => trim((string) $item) !== '' && trim((string) $item) !== '__all') !== [];
@@ -62,7 +61,6 @@ $cssVersion = static function (string $relativeCssPath): string {
 $jadeStyles = [
     'css/sb-admin-adapter.css',
     'css/managerecord.css',
-    'css/searchbar.css',
     'css/lookupmanagement.css',
     'css/audittrails.css',
     'css/accounts.css',
@@ -162,66 +160,61 @@ $jadeStyles = [
             <?php /* Main content swaps on $activePage. "dashboard" is inline (stats +
                      recent records/activity); the rest delegate to sub-views below. */ ?>
             <?php if ($activePage === 'dashboard'): ?>
-                <section class="overview-stats" aria-label="Dashboard statistics">
-                    <article class="stat-card"><p>Total Records</p><strong><?= esc((string) ($stats['families'] ?? 0)) ?></strong></article>
-                    <article class="stat-card"><p>Registered Members</p><strong><?= esc((string) ($stats['members'] ?? 0)) ?></strong></article>
-                    <article class="stat-card"><p>Active Sectors</p><strong><?= esc((string) ($stats['sectors'] ?? 0)) ?></strong></article>
-                    <article class="stat-card"><p>Services and Programs</p><strong><?= esc((string) ($stats['assistance'] ?? 0)) ?></strong></article>
-                </section>
+                <div class="dashboard-overview" data-dashboard-overview>
+                    <section class="overview-stats" aria-label="Dashboard statistics">
+                        <article class="stat-card"><p>Total Records</p><strong><?= esc((string) ($stats['families'] ?? 0)) ?></strong></article>
+                        <article class="stat-card"><p>Registered Members</p><strong><?= esc((string) ($stats['members'] ?? 0)) ?></strong></article>
+                        <article class="stat-card"><p>Active Sectors</p><strong><?= esc((string) ($stats['sectors'] ?? 0)) ?></strong></article>
+                        <article class="stat-card"><p>Services and Programs</p><strong><?= esc((string) ($stats['assistance'] ?? 0)) ?></strong></article>
+                    </section>
 
-                <section class="overview-panel" data-dashboard-search-panel>
-                    <header class="panel-header">
-                        <h2>Recent Records</h2>
-                    </header>
-                    <?= view('components/search-bar', [
-                        'searchTerm'       => $searchTerm,
-                        'sectorOptions'    => $sectorOptions,
-                        'selectedSectorId' => (string) ($searchFilters['sectorID'] ?? ''),
-                        'searchAction'     => site_url('admin/dashboard'),
-                        'searchAllAction'  => site_url('admin/manage-records'),
-                    ]) ?>
-                    <div class="table-responsive">
-                        <table class="table overview-table">
-                            <thead><tr><th scope="col">Name (Head)</th><th scope="col">Sector</th></tr></thead>
-                            <tbody>
-                                <?php foreach ($recentFamilies as $family): ?>
-                                    <tr data-record-row data-sector-ids="<?= esc((string) ($family['sectorID'] ?? '[]'), 'attr') ?>">
-                                        <td data-record-name><?= esc(trim(($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? ''))) ?></td>
-                                        <td data-record-sector><?= esc((string) ($family['sector_name'] ?? '-')) ?></td>
-                                    </tr>
-                                <?php endforeach; ?>
-                                <?php if ($recentFamilies === []): ?>
-                                    <tr><td colspan="2" class="empty-state"><?= $searchTerm !== '' || $hasSearchFilters ? 'No matching records found.' : 'No records yet.' ?></td></tr>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                </section>
+                    <section class="overview-panel dashboard-table-panel">
+                        <header class="panel-header">
+                            <h2>Recent Records</h2>
+                        </header>
+                        <div class="table-responsive">
+                            <table class="table overview-table">
+                                <thead><tr><th scope="col">Name (Head)</th><th scope="col">Sector</th></tr></thead>
+                                <tbody>
+                                    <?php foreach ($recentFamilies as $family): ?>
+                                        <tr>
+                                            <td><?= esc(trim(($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? ''))) ?></td>
+                                            <td><?= esc((string) ($family['sector_name'] ?? '-')) ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                    <?php if ($recentFamilies === []): ?>
+                                        <tr><td colspan="2" class="empty-state">No records yet.</td></tr>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
 
-                <section class="overview-panel">
-                    <header class="panel-header">
-                        <h2>Recent Activity</h2>
-                        <a class="btn btn-sm panel-action" href="<?= site_url('admin/audit-trails') ?>"><i class="bi bi-arrow-right" aria-hidden="true"></i><span>View All</span></a>
-                    </header>
-                    <div class="table-responsive">
-                        <table class="table overview-table">
-                            <thead><tr><th scope="col">User</th><th scope="col">Member</th><th scope="col">Action</th><th scope="col">Description</th></tr></thead>
-                            <tbody>
-                                <?php foreach ($recentAudits as $audit): ?>
-                                    <tr>
-                                        <td><?= esc($formatAuditUser($audit)) ?></td>
-                                        <td><?= esc($formatAuditMember($audit)) ?></td>
-                                        <td><span class="badge bg-light text-dark border"><?= esc((string) ($audit['user_action'] ?? '')) ?></span></td>
-                                        <td><?= esc((string) ($audit['description'] ?? '')) ?></td>
-                                    </tr>
-                                <?php endforeach; ?>
-                                <?php if ($recentAudits === []): ?>
-                                    <tr><td colspan="4" class="empty-state">No activity yet.</td></tr>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                </section>
+                    <section class="overview-panel dashboard-table-panel">
+                        <header class="panel-header">
+                            <h2>Recent Activity</h2>
+                            <a class="btn btn-sm panel-action" href="<?= site_url('admin/audit-trails') ?>"><i class="bi bi-arrow-right" aria-hidden="true"></i><span>View All</span></a>
+                        </header>
+                        <div class="table-responsive">
+                            <table class="table overview-table">
+                                <thead><tr><th scope="col">User</th><th scope="col">Member</th><th scope="col">Action</th><th scope="col">Description</th></tr></thead>
+                                <tbody>
+                                    <?php foreach ($recentAudits as $audit): ?>
+                                        <tr>
+                                            <td><?= esc($formatAuditUser($audit)) ?></td>
+                                            <td><?= esc($formatAuditMember($audit)) ?></td>
+                                            <td><span class="badge bg-light text-dark border"><?= esc((string) ($audit['user_action'] ?? '')) ?></span></td>
+                                            <td><?= esc((string) ($audit['description'] ?? '')) ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                    <?php if ($recentAudits === []): ?>
+                                        <tr><td colspan="4" class="empty-state">No activity yet.</td></tr>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                </div>
             <?php endif; ?>
 
             <?php if ($activePage === 'accounts' && $canManageAccounts): ?>

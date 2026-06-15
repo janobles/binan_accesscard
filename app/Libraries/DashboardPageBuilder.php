@@ -94,6 +94,18 @@ class DashboardPageBuilder
             ? $this->buildMemberListData()
             : [];
 
+        // Paginated server-side list bundles for the lookup-management pages (built
+        // only for the active page; other pages keep the full fetchVisible* lists).
+        $sectorListData = $activePage === 'sectors'
+            ? $this->buildLookupListData($sectorModel, 'admin/sectors', 'sectorID')
+            : [];
+        $serviceListData = $activePage === 'services'
+            ? $this->buildLookupListData($serviceModel, 'admin/services', 'serviceID')
+            : [];
+        $categoryListData = $activePage === 'categories'
+            ? $this->buildLookupListData(new CategoryModel(), 'admin/categories', 'categoryID')
+            : [];
+
         $isActiveStatus = static function (mixed $value): bool {
             if (is_bool($value)) {
                 return $value;
@@ -137,9 +149,12 @@ class DashboardPageBuilder
             'recentAudits'       => $recentAudits,
             'recordListData'      => $memberListData,
             'memberListData'      => $memberListData,
-            'sectors'            => $this->fetchVisibleSectors($sectorModel),
-            'services'           => $this->fetchVisibleServices($serviceModel),
-            'categories'         => $this->fetchVisibleCategories(new CategoryModel()),
+            'sectors'            => $sectorListData['rows'] ?? $this->fetchVisibleSectors($sectorModel),
+            'services'           => $serviceListData['rows'] ?? $this->fetchVisibleServices($serviceModel),
+            'categories'         => $categoryListData['rows'] ?? $this->fetchVisibleCategories(new CategoryModel()),
+            'sectorListData'     => $sectorListData,
+            'serviceListData'    => $serviceListData,
+            'categoryListData'   => $categoryListData,
             'stats'              => $dashboardModel->stats(),
             'canCreateFamily'    => true,
             'username'           => (string) (session()->get('username') ?? 'Admin'),
@@ -235,6 +250,51 @@ class DashboardPageBuilder
         }
 
         return $categoryModel->getAllIncluding();
+    }
+
+    /**
+     * Builds a paginated lookup-management list (Sectors / Services / Categories).
+     * Reads the q/status/page query params, runs the model's status-aware keyword
+     * search (50/page), and returns the row page plus pagination + count metadata.
+     * The model must expose searchLookup()/countLookup()/statusCounts() (all three
+     * lookup models do). Frontend: the Lookups/* views + their database-search bar,
+     * status dropdown and pagination controls.
+     *
+     * @param object $model     A lookup model (SectorModel|ServiceModel|CategoryModel).
+     * @param string $listRoute Full-page route the search/pagination forms post to.
+     * @param string $idField   Primary-key column name (unused in the query; kept for clarity).
+     */
+    private function buildLookupListData(object $model, string $listRoute, string $idField): array
+    {
+        $keyword = trim((string) $this->request->getGet('q'));
+        $status  = strtolower(trim((string) $this->request->getGet('status')));
+        $status  = in_array($status, ['active', 'archived', 'all'], true) ? $status : 'active';
+        $page    = max(1, (int) $this->request->getGet('page'));
+        $perPageOptions = [10, 25, 50, 100];
+        $perPage = (int) $this->request->getGet('per_page');
+        $perPage = in_array($perPage, $perPageOptions, true) ? $perPage : 50;
+
+        $searchKeyword = $keyword === '' ? null : $keyword;
+        $total      = $model->countLookup($searchKeyword, $status);
+        $totalPages = max(1, (int) ceil($total / $perPage));
+        $page       = min($page, $totalPages);
+        $counts     = $model->statusCounts();
+
+        return [
+            'rows'          => $model->searchLookup($searchKeyword, $status, $perPage, ($page - 1) * $perPage),
+            'keyword'       => $keyword,
+            'status'        => $status,
+            'page'          => $page,
+            'perPage'       => $perPage,
+            'perPageOptions'=> $perPageOptions,
+            'totalPages'    => $totalPages,
+            'totalRows'     => $total,
+            'fromRecord'    => $total === 0 ? 0 : (($page - 1) * $perPage) + 1,
+            'toRecord'      => min($total, $page * $perPage),
+            'activeCount'   => (int) ($counts['active'] ?? 0),
+            'archivedCount' => (int) ($counts['archived'] ?? 0),
+            'listRoute'     => $listRoute,
+        ];
     }
 
     /**

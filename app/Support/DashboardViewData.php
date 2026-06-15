@@ -204,25 +204,70 @@ class DashboardViewData
         );
     }
 
-    /** Prepares variables for the sector management view (active/archived + restore flag). */
+    /** Prepares variables for the sector management view (paginated list + search/status). */
     public static function sectorManagement(array $data): array
     {
-        $sectors = self::arrayValue($data['sectors'] ?? []);
+        $bundle = (array) ($data['sectorListData'] ?? []);
+        $sectors = self::arrayValue($bundle['rows'] ?? $data['sectors'] ?? []);
         $sectorShortcodeOptions = self::stringList($data['sectorShortcodeOptions'] ?? []);
-        $status = (string) ($data['lookupStatus'] ?? 'active') === 'archived' ? 'archived' : 'active';
         $canRestore = (bool) ($data['canRestore'] ?? false);
 
-        return compact('sectorShortcodeOptions', 'sectors', 'status', 'canRestore');
+        return array_merge(
+            compact('sectorShortcodeOptions', 'sectors', 'canRestore'),
+            self::lookupListVars($bundle, 'admin/sectors')
+        );
     }
 
-    /** Prepares variables for the service management view (active/archived + restore flag). */
+    /** Prepares variables for the service management view (paginated list + search/status). */
     public static function serviceManagement(array $data): array
     {
-        $services = self::arrayValue($data['services'] ?? []);
-        $status = (string) ($data['lookupStatus'] ?? 'active') === 'archived' ? 'archived' : 'active';
+        $bundle = (array) ($data['serviceListData'] ?? []);
+        $services = self::arrayValue($bundle['rows'] ?? $data['services'] ?? []);
         $canRestore = (bool) ($data['canRestore'] ?? false);
 
-        return compact('services', 'status', 'canRestore');
+        return array_merge(
+            compact('services', 'canRestore'),
+            self::lookupListVars($bundle, 'admin/services')
+        );
+    }
+
+    /** Prepares variables for the manage-categories view (paginated list + search/status). */
+    public static function categoryManagement(array $data): array
+    {
+        $bundle = (array) ($data['categoryListData'] ?? []);
+        $categories = self::arrayValue($bundle['rows'] ?? $data['categories'] ?? []);
+        $canRestore = (bool) ($data['canRestore'] ?? false);
+
+        return array_merge(
+            compact('categories', 'canRestore'),
+            self::lookupListVars($bundle, 'admin/categories')
+        );
+    }
+
+    /**
+     * Normalizes the paginated lookup-list bundle (from DashboardPageBuilder::
+     * buildLookupListData) into the view vars shared by all three lookup pages:
+     * status, keyword, pagination markers and the active/archived count badges.
+     */
+    private static function lookupListVars(array $bundle, string $defaultRoute): array
+    {
+        $status = (string) ($bundle['status'] ?? 'active');
+        $status = in_array($status, ['active', 'archived', 'all'], true) ? $status : 'active';
+
+        return [
+            'status'        => $status,
+            'keyword'       => (string) ($bundle['keyword'] ?? ''),
+            'page'          => max(1, (int) ($bundle['page'] ?? 1)),
+            'perPage'       => max(1, (int) ($bundle['perPage'] ?? 50)),
+            'perPageOptions'=> array_values(array_map('intval', (array) ($bundle['perPageOptions'] ?? []))) ?: [10, 25, 50, 100],
+            'totalPages'    => max(1, (int) ($bundle['totalPages'] ?? 1)),
+            'totalRows'     => max(0, (int) ($bundle['totalRows'] ?? 0)),
+            'fromRecord'    => max(0, (int) ($bundle['fromRecord'] ?? 0)),
+            'toRecord'      => max(0, (int) ($bundle['toRecord'] ?? 0)),
+            'activeCount'   => max(0, (int) ($bundle['activeCount'] ?? 0)),
+            'archivedCount' => max(0, (int) ($bundle['archivedCount'] ?? 0)),
+            'listRoute'     => (string) ($bundle['listRoute'] ?? $defaultRoute),
+        ];
     }
 
     /** Zeroed stats array used as a default before real counts are merged in. */

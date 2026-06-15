@@ -33,7 +33,6 @@ class AccountController extends BaseController
         $rules = [
             'username' => 'required|min_length[4]|max_length[255]|is_unique[users.username]',
             'password' => 'required|min_length[8]',
-            'password_confirm' => 'required|matches[password]',
             // Personal details are packed into the single users.full_description
             // column (see buildFullDescription). Suffix is optional.
             'last_name' => 'required|max_length[100]',
@@ -55,10 +54,6 @@ class AccountController extends BaseController
             'password' => [
                 'required' => 'Password is required.',
                 'min_length' => 'Password must have at least 8 characters.',
-            ],
-            'password_confirm' => [
-                'required' => 'Confirm password is required.',
-                'matches' => 'Confirm password must match the password.',
             ],
             'birthday' => [
                 'valid_date' => 'Birthday must be a valid date.',

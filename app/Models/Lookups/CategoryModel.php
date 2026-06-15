@@ -64,6 +64,76 @@ class CategoryModel extends Model
             ->getResultArray();
     }
 
+    /**
+     * Status-aware, keyword-filtered builder for the Manage Categories list.
+     * Mirrors MemberModel::familySearchBuilder. $status: active|archived|all.
+     * Searches the columns the page advertises: code, name.
+     */
+    private function lookupBuilder(?string $keyword, string $status)
+    {
+        $builder = $this->db->table($this->table);
+
+        if ($this->db->fieldExists('dt_deleted', $this->table)) {
+            if ($status === 'archived') {
+                $builder->where('dt_deleted IS NOT NULL', null, false);
+            } elseif ($status !== 'all') {
+                $builder->where('dt_deleted IS NULL', null, false);
+            }
+        }
+
+        $keyword = trim((string) $keyword);
+
+        if ($keyword !== '') {
+            $builder->groupStart()
+                ->like('code', $keyword)
+                ->orLike('name', $keyword)
+                ->groupEnd();
+        }
+
+        return $builder;
+    }
+
+    /**
+     * One page of categories for the management list: status-filtered, keyword-matched,
+     * active rows first (dt_deleted ASC) then by code. $status: active|archived|all.
+     */
+    public function searchLookup(?string $keyword, string $status = 'active', int $limit = 50, int $offset = 0): array
+    {
+        if (! $this->hasTable()) {
+            return [];
+        }
+
+        $builder = $this->lookupBuilder($keyword, $status);
+
+        if ($this->db->fieldExists('dt_deleted', $this->table)) {
+            $builder->orderBy('dt_deleted', 'ASC');
+        }
+
+        return $builder->orderBy('code', 'ASC')
+            ->limit(max(1, $limit), max(0, $offset))
+            ->get()
+            ->getResultArray();
+    }
+
+    /** Total categories matching the keyword/status filter (for pagination). */
+    public function countLookup(?string $keyword, string $status = 'active'): int
+    {
+        if (! $this->hasTable()) {
+            return 0;
+        }
+
+        return $this->lookupBuilder($keyword, $status)->countAllResults();
+    }
+
+    /** Unfiltered active/archived totals for the status dropdown badges. */
+    public function statusCounts(): array
+    {
+        return [
+            'active'   => $this->countLookup(null, 'active'),
+            'archived' => $this->countLookup(null, 'archived'),
+        ];
+    }
+
     /** Find a single category row by ID (includes archived) for edit/guards. */
     public function find($id = null)
     {

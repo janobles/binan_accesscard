@@ -101,6 +101,78 @@ class ServiceModel extends Model
     }
 
     /**
+     * Status-aware, keyword-filtered builder for the Services management list.
+     * Mirrors MemberModel::familySearchBuilder. $status: active|archived|all.
+     * Searches the columns the page advertises: category, name, description.
+     */
+    private function lookupBuilder(?string $keyword, string $status): BaseBuilder
+    {
+        $builder = $this->db->table($this->table);
+
+        if ($this->db->fieldExists('dt_deleted', $this->table)) {
+            if ($status === 'archived') {
+                $builder->where('dt_deleted IS NOT NULL', null, false);
+            } elseif ($status !== 'all') {
+                $builder->where('dt_deleted IS NULL', null, false);
+            }
+        }
+
+        $keyword = trim((string) $keyword);
+
+        if ($keyword !== '') {
+            $builder->groupStart()
+                ->like('category', $keyword)
+                ->orLike('name', $keyword)
+                ->orLike('description', $keyword)
+                ->groupEnd();
+        }
+
+        return $builder;
+    }
+
+    /**
+     * One page of services for the management list: status-filtered, keyword-matched,
+     * active rows first (dt_deleted ASC) then by category/ID. $status: active|archived|all.
+     */
+    public function searchLookup(?string $keyword, string $status = 'active', int $limit = 50, int $offset = 0): array
+    {
+        if (! $this->hasTable()) {
+            return [];
+        }
+
+        $builder = $this->lookupBuilder($keyword, $status);
+
+        if ($this->db->fieldExists('dt_deleted', $this->table)) {
+            $builder->orderBy('dt_deleted', 'ASC');
+        }
+
+        return $builder->orderBy('category', 'ASC')
+            ->orderBy('serviceID', 'ASC')
+            ->limit(max(1, $limit), max(0, $offset))
+            ->get()
+            ->getResultArray();
+    }
+
+    /** Total services matching the keyword/status filter (for pagination). */
+    public function countLookup(?string $keyword, string $status = 'active'): int
+    {
+        if (! $this->hasTable()) {
+            return 0;
+        }
+
+        return $this->lookupBuilder($keyword, $status)->countAllResults();
+    }
+
+    /** Unfiltered active/archived totals for the status dropdown badges. */
+    public function statusCounts(): array
+    {
+        return [
+            'active'   => $this->countLookup(null, 'active'),
+            'archived' => $this->countLookup(null, 'archived'),
+        ];
+    }
+
+    /**
      * Find a single service row by ID (including archived) for the admin edit/
      * archive/restore flows. Returns null when the table or row is missing.
      */

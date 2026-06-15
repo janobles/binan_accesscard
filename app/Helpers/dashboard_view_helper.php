@@ -80,3 +80,11 @@ if (! function_exists('service_management_view_data')) {
         return DashboardViewData::serviceManagement($data);
     }
 }
+
+if (! function_exists('category_management_view_data')) {
+    /** View variables for the manage-categories screen. */
+    function category_management_view_data(array $data): array
+    {
+        return DashboardViewData::categoryManagement($data);
+    }
+}

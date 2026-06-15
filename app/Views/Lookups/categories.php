@@ -8,28 +8,58 @@
  * server-side guard (in Lookups\CategoryController) blocks archiving/deleting a
  * category still linked to sectors. Reuses the sector-* CSS classes (css/sector.css).
  */
-$categories = (array) ($categories ?? []);
+helper('dashboard_view');
+extract(category_management_view_data(get_defined_vars()), EXTR_OVERWRITE);
 
+// All codes (incl. archived, across every page) for the modal's duplicate check —
+// sourced from the model, not the 50-row page below, so the check stays complete.
 $existingCodes = array_values(array_unique(array_filter(array_map(
     static fn (array $c): string => strtoupper(trim((string) ($c['code'] ?? ''))),
-    $categories
+    (new \App\Models\Lookups\CategoryModel())->getAllIncluding()
 ))));
 
-$activeCategoryCount   = count(array_filter($categories, static fn ($c) => trim((string) ($c['dt_deleted'] ?? '')) === ''));
-$archivedCategoryCount = count($categories) - $activeCategoryCount;
+// Counts come from the server bundle (whole table), not the 50-row page below.
+$activeCategoryCount   = (int) ($activeCount ?? 0);
+$archivedCategoryCount = (int) ($archivedCount ?? 0);
+$allCategoryCount      = $activeCategoryCount + $archivedCategoryCount;
+$status                = (string) ($status ?? 'active');
+$keyword               = (string) ($keyword ?? '');
+$listRoute             = (string) ($listRoute ?? 'admin/categories');
+
+// Builds a page URL preserving the current database keyword + status filter.
+$categoryPageUrl = static function (int $targetPage) use ($listRoute, $keyword, $status): string {
+    $params = array_filter([
+        'q'      => $keyword,
+        'status' => $status === 'active' ? '' : $status,
+        'page'   => $targetPage > 1 ? (string) $targetPage : '',
+    ], static fn ($value): bool => $value !== '');
+
+    return site_url($listRoute) . ($params === [] ? '' : '?' . http_build_query($params));
+};
 ?>
 
 <div class="sector-management" data-category-management-root>
-	<form class="sector-toolbar sector-lookup-toolbar" role="search" data-lookup-search aria-label="Search categories">
-		<input class="form-control sector-toolbar-search" type="search" data-lookup-search-input placeholder="Search categories by code or name" aria-label="Search categories">
-		<select class="form-select sector-status-select" id="category-status-select" name="status" aria-label="Category view">
-			<option value="active">Active (<?= esc((string) $activeCategoryCount) ?>)</option>
-			<option value="archived">Archive (<?= esc((string) $archivedCategoryCount) ?>)</option>
+	<?php /* Bar 1 — local quick filter over the rows currently shown (client-side, no reload) + status + Add. */ ?>
+	<form class="sector-toolbar sector-lookup-toolbar" role="search" data-lookup-search aria-label="Filter shown categories">
+		<input class="form-control sector-toolbar-search" type="search" data-lookup-search-input placeholder="Filter the categories shown below" aria-label="Filter shown categories">
+		<select class="form-select sector-status-select" id="category-status-select" name="status" data-lookup-status-select aria-label="Category view">
+			<option value="active" <?= $status === 'active' ? 'selected' : '' ?>>Active (<?= esc((string) $activeCategoryCount) ?>)</option>
+			<option value="archived" <?= $status === 'archived' ? 'selected' : '' ?>>Archive (<?= esc((string) $archivedCategoryCount) ?>)</option>
+			<option value="all" <?= $status === 'all' ? 'selected' : '' ?>>All (<?= esc((string) $allCategoryCount) ?>)</option>
 		</select>
-		<button class="btn btn-success sector-toolbar-action" type="submit"><i class="bi bi-search" aria-hidden="true"></i><span>Search</span></button>
 		<span id="category-add-btn-wrap">
 			<button class="btn btn-success sector-toolbar-action js-category-modal-open" type="button" data-category-mode="create"><i class="bi bi-plus-lg" aria-hidden="true"></i><span>Add Category</span></button>
 		</span>
+	</form>
+
+	<?php /* Bar 2 — database search across the whole category table (server-side GET + pagination). */ ?>
+	<form class="sector-toolbar sector-lookup-toolbar sector-database-search" method="get" action="<?= esc(site_url($listRoute), 'attr') ?>" role="search" aria-label="Search the category database">
+		<?php if ($status !== 'active'): ?><input type="hidden" name="status" value="<?= esc($status, 'attr') ?>"><?php endif; ?>
+		<input class="form-control sector-toolbar-search" type="search" name="q" value="<?= esc($keyword, 'attr') ?>" placeholder="Search the whole category database" aria-label="Search the category database" autocomplete="off">
+		<button class="btn btn-outline-success sector-toolbar-action" type="submit"><i class="bi bi-search" aria-hidden="true"></i><span>Search All</span></button>
+		<?php if ($keyword !== ''): ?>
+			<a class="btn btn-outline-secondary sector-toolbar-action" href="<?= esc(site_url($listRoute) . ($status === 'active' ? '' : '?status=' . $status), 'attr') ?>"><i class="bi bi-x-lg" aria-hidden="true"></i><span>Clear</span></a>
+		<?php endif; ?>
 	</form>
 
 	<div class="table-responsive">
@@ -47,7 +77,7 @@ $archivedCategoryCount = count($categories) - $activeCategoryCount;
 					$categoryId = (int) ($category['categoryID'] ?? 0);
 					$isArchived = trim((string) ($category['dt_deleted'] ?? '')) !== '';
 					?>
-					<tr data-row-archived="<?= $isArchived ? '1' : '0' ?>"<?= $isArchived ? ' class="d-none"' : '' ?>>
+					<tr data-row-archived="<?= $isArchived ? '1' : '0' ?>">
 						<td><span class="badge bg-light text-dark border"><?= esc((string) ($category['code'] ?? '')) ?></span></td>
 						<td><span class="sector-name"><?= esc((string) ($category['name'] ?? '')) ?></span></td>
 						<td class="text-end">
@@ -101,12 +131,25 @@ $archivedCategoryCount = count($categories) - $activeCategoryCount;
 				<?php endforeach; ?>
 				<?php if ($categories === []): ?>
 					<tr>
-						<td colspan="3" class="sector-empty-state">No category records found.</td>
+						<td colspan="3" class="sector-empty-state"><?= $keyword !== '' ? 'No categories match your search.' : 'No category records found.' ?></td>
 					</tr>
 				<?php endif; ?>
 			</tbody>
 		</table>
 	</div>
+
+	<?php if (($totalRows ?? 0) > 0): ?>
+		<div class="lookup-list-footer d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2">
+			<span class="text-muted small">Showing <?= esc((string) $fromRecord) ?>–<?= esc((string) $toRecord) ?> of <?= esc((string) $totalRows) ?></span>
+			<?php if (($totalPages ?? 1) > 1): ?>
+				<div class="d-flex gap-2">
+					<a class="btn btn-outline-secondary btn-sm<?= $page <= 1 ? ' disabled' : '' ?>" href="<?= esc($categoryPageUrl(max(1, $page - 1)), 'attr') ?>" aria-disabled="<?= $page <= 1 ? 'true' : 'false' ?>">Previous</a>
+					<span class="btn btn-sm disabled">Page <?= esc((string) $page) ?> of <?= esc((string) $totalPages) ?></span>
+					<a class="btn btn-outline-secondary btn-sm<?= $page >= $totalPages ? ' disabled' : '' ?>" href="<?= esc($categoryPageUrl(min($totalPages, $page + 1)), 'attr') ?>" aria-disabled="<?= $page >= $totalPages ? 'true' : 'false' ?>">Next</a>
+				</div>
+			<?php endif; ?>
+		</div>
+	<?php endif; ?>
 </div>
 
 <?= view('Lookups/category-modal', [

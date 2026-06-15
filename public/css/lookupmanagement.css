@@ -22,6 +22,16 @@
     justify-content: flex-start;
 }
 
+/* Bar 2 — the whole-database search row sits directly under the Bar 1 toolbar. */
+.sector-database-search {
+    padding-top: 0.55rem;
+}
+
+/* "Showing X–Y of Z" meta line + Prev/Next pagination under the list. */
+.lookup-list-footer {
+    padding: 0.75rem 1rem;
+}
+
 .sector-toolbar-search {
     flex: 1 1 28rem;
     min-width: 16rem;

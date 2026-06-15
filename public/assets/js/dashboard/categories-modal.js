@@ -174,30 +174,6 @@
     });
 })(window, document);
 
-(function (document) {
-    document.addEventListener('DOMContentLoaded', function () {
-        const statusSelect = document.getElementById('category-status-select');
-        const addWrap = document.getElementById('category-add-btn-wrap');
-
-        if (!statusSelect) {
-            return;
-        }
-
-        function showCategoryView(showArchive) {
-            document.querySelectorAll('[data-category-management-root] [data-row-archived]').forEach(function (row) {
-                const isArchived = row.dataset.rowArchived === '1';
-                row.classList.toggle('d-none', isArchived !== showArchive);
-            });
-
-            if (addWrap) {
-                addWrap.classList.toggle('d-none', showArchive);
-            }
-
-            statusSelect.value = showArchive ? 'archived' : 'active';
-        }
-
-        statusSelect.addEventListener('change', function () {
-            showCategoryView(statusSelect.value === 'archived');
-        });
-    });
-})(document);
+// NOTE: the Active/Archived row toggle that used to live here is gone — status is
+// now server-driven (the #category-status-select dropdown reloads the page via
+// lookup-search.js, and the server renders only the matching 50-row page).

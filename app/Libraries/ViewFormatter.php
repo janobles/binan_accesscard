@@ -65,10 +65,7 @@ class ViewFormatter
     {
         $username = trim((string) ($audit['username'] ?? $audit['userID'] ?? ''));
         $role = trim((string) ($audit['user_role'] ?? ''));
-
-        if ($role === 'User') {
-            $role = 'Employee';
-        }
+        $role = RoleAccess::normalizeRole($role) ?? $role;
 
         return $role === '' ? $username : $username . ' (' . $role . ')';
     }

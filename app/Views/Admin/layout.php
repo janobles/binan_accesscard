@@ -27,6 +27,7 @@ $adminAccounts = $adminAccounts ?? [];
 $employeeAccounts = $employeeAccounts ?? [];
 $familyFormViewData = $familyFormViewData ?? [];
 $recordListData = $recordListData ?? [];
+$categories = $categories ?? [];
 $sectorShortcodeOptions = $sectorShortcodeOptions ?? [];
 $searchTerm = $searchTerm ?? '';
 $searchFilters = $searchFilters ?? [];
@@ -106,6 +107,9 @@ $jadeStyles = [
         </li>
         <li class="nav-item">
             <a class="nav-link <?= esc($navActive['services'] ?? '') ?>" href="<?= site_url('admin/services') ?>"><i class="bi bi-grid" aria-hidden="true"></i><span>Services and Programs</span></a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link <?= esc($navActive['categories'] ?? '') ?>" href="<?= site_url('admin/categories') ?>"><i class="bi bi-tags" aria-hidden="true"></i><span>Manage Categories</span></a>
         </li>
         <li><hr class="sidebar-divider"></li>
         <li><div class="sidebar-heading">Administration</div></li>
@@ -272,6 +276,14 @@ $jadeStyles = [
                     'canRestore' => $canRestoreLookups ?? false,
                 ]) ?>
             <?php endif; ?>
+
+            <?php if ($activePage === 'categories'): ?>
+                <?= view('Lookups/categories', [
+                    'categories' => $categories ?? [],
+                    'lookupStatus' => $lookupStatus ?? 'active',
+                    'canRestore' => $canRestoreLookups ?? false,
+                ]) ?>
+            <?php endif; ?>
             </main>
         </div>
     </div>
@@ -328,6 +340,7 @@ $dashboardScripts = [
     'assets/js/dashboard/accounts-modal.js',
     'assets/js/dashboard/sectors-modal.js',
     'assets/js/dashboard/services-modal.js',
+    'assets/js/dashboard/categories-modal.js',
     'assets/js/dashboard/audit-trails-modal.js',
 ];
 

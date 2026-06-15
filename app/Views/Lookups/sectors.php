@@ -2,18 +2,21 @@
 helper('dashboard_view');
 extract(sector_management_view_data(get_defined_vars()), EXTR_OVERWRITE);
 
-// Modal data: category PREFIX dropdown (no numbers) + the next suggested code
-// per prefix + every existing code for the inline duplicate check.
+// Add Sector modal data: category dropdown (categoryID => "CODE - Name") from the
+// `category` table, the next suggested sector code per category, and every existing
+// code for the inline duplicate check.
 $sectorModel = new \App\Models\Lookups\SectorModel();
-$sectorPrefixOptions = [];
-foreach ($sectorModel->sectorPrefixOptions() as $prefix => $label) {
-    // Official prefixes show "CODE - Label"; custom prefixes (label === code)
-    // show just the bare code so the dropdown reads cleanly (e.g. "TEST").
-    $sectorPrefixOptions[$prefix] = $label === $prefix ? $prefix : $prefix . ' - ' . $label;
+$categoryModel = new \App\Models\Lookups\CategoryModel();
+$sectorCategoryOptions = [];
+$sectorNextCodeMap = [];
+foreach ($categoryModel->getActive() as $category) {
+    $categoryId = (int) ($category['categoryID'] ?? 0);
+    $code = (string) ($category['code'] ?? '');
+    $name = (string) ($category['name'] ?? '');
+    $sectorCategoryOptions[$categoryId] = ($name === '' || $name === $code) ? $code : $code . ' - ' . $name;
+    $sectorNextCodeMap[$categoryId] = $categoryModel->nextSectorCodeFor($code);
 }
-$sectorNextCodeMap = $sectorModel->nextShortcodeMap();
 $existingShortcodes = $sectorModel->existingShortcodes();
-$sectorCategories = $sectorModel->customCategories();
 
 $activeSectorCount   = count(array_filter($sectors, static fn ($s) => trim((string) ($s['dt_deleted'] ?? '')) === ''));
 $archivedSectorCount = count($sectors) - $activeSectorCount;
@@ -29,7 +32,6 @@ $archivedSectorCount = count($sectors) - $activeSectorCount;
 			<option value="active">Active (<?= esc((string) $activeSectorCount) ?>)</option>
 			<option value="archived">Archive (<?= esc((string) $archivedSectorCount) ?>)</option>
 		</select>
-		<button class="btn btn-outline-success sector-toolbar-action" type="button" data-bs-toggle="modal" data-bs-target="#sectorCategoryModal"><i class="bi bi-tags" aria-hidden="true"></i><span>Manage Categories</span></button>
 		<button class="btn btn-success sector-toolbar-action" type="submit"><i class="bi bi-search" aria-hidden="true"></i><span>Search</span></button>
 		<span id="sector-add-btn-wrap">
 			<button class="btn btn-success sector-toolbar-action js-sector-modal-open" type="button" data-sector-mode="create"><i class="bi bi-plus-lg" aria-hidden="true"></i><span>Add Sector</span></button>
@@ -68,6 +70,7 @@ $archivedSectorCount = count($sectors) - $activeSectorCount;
 											type="button"
 											data-sector-mode="update"
 											data-sector-id="<?= esc((string) $sectorId) ?>"
+											data-sector-category-id="<?= esc((string) ($sector['categoryID'] ?? ''), 'attr') ?>"
 											data-sector-shortcode="<?= esc((string) ($sector['shortcode'] ?? ''), 'attr') ?>"
 											data-sector-name="<?= esc((string) ($sector['name'] ?? ''), 'attr') ?>"
 											data-sector-description="<?= esc((string) ($sector['description'] ?? ''), 'attr') ?>">
@@ -109,10 +112,7 @@ $archivedSectorCount = count($sectors) - $activeSectorCount;
 </div>
 
 <?= view('Lookups/sector-modal', [
-	'sectorPrefixOptions' => $sectorPrefixOptions,
+	'sectorCategoryOptions' => $sectorCategoryOptions,
 	'sectorNextCodeMap' => $sectorNextCodeMap,
 	'existingShortcodes' => $existingShortcodes,
-]) ?>
-<?= view('Lookups/sector-category-modal', [
-	'sectorCategories' => $sectorCategories,
 ]) ?>

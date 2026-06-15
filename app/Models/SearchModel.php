@@ -227,26 +227,27 @@ class SearchModel
         }
 
         $limit = max(1, $limit);
-        // 'User' is the DB enum value for the Employee role (shown as "Employee" in
-        // the UI); these queries use the raw enum to match the users.role column.
+        // 'administrator'/'encoder' are the DB enum values for the Admin/Employee
+        // roles; these queries use the raw enum to match the users.account_level
+        // column, aliased back to `role` so downstream callers keep the same key.
         $builder = $this->db->table('users')
-            ->select('userID, username, role, isactive, dt_created')
-            ->whereIn('role', ['Admin', 'User']);
+            ->select('userID, username, account_level AS role, isactive, dt_created')
+            ->whereIn('account_level', ['administrator', 'encoder']);
 
         $keyword = $this->normalizeKeyword($keyword);
 
         if ($keyword !== '') {
             $builder->groupStart()
                 ->like('username', $keyword)
-                ->orLike('role', $keyword)
+                ->orLike('account_level', $keyword)
                 ->orLike('isactive', $keyword)
                 ->groupEnd();
         }
 
         $role = $this->normalizeKeyword((string) ($filters['role'] ?? ''));
 
-        if (in_array($role, ['Admin', 'User'], true)) {
-            $builder->where('role', $role);
+        if (in_array($role, ['administrator', 'encoder'], true)) {
+            $builder->where('account_level', $role);
         }
 
         $status = $this->normalizeKeyword((string) ($filters['status'] ?? ''));
@@ -256,7 +257,7 @@ class SearchModel
         }
 
         $rows = $builder
-            ->orderBy('role', 'ASC')
+            ->orderBy('account_level', 'ASC')
             ->orderBy('username', 'ASC')
             ->limit($limit)
             ->get()
@@ -270,7 +271,7 @@ class SearchModel
      * member name, with action + date filters. Frontend: the admin Audit Trails
      * search/filter UI.
      */
-    public function auditTrails(string $keyword = '', array $filters = [], int $limit = 50): array
+    public function auditTrails(string $keyword = '', array $filters = [], int $limit = 50, bool $includeDeveloper = false): array
     {
         if (! $this->hasAuditSearchTables()) {
             return [];
@@ -278,6 +279,13 @@ class SearchModel
 
         $limit = max(1, $limit);
         $builder = $this->auditTrailBuilder();
+
+        // Developer audit rows (NULL userID, no users row) stay hidden from
+        // non-developer viewers so the other roles never learn a Developer exists.
+        if (! $includeDeveloper) {
+            $builder->where('audit_trails.userID IS NOT NULL');
+        }
+
         $keyword = $this->normalizeKeyword($keyword);
 
         if ($keyword !== '') {
@@ -606,7 +614,11 @@ class SearchModel
             $userId = (int) ($row['userID'] ?? 0);
             $memberId = (int) ($row['memberID'] ?? 0);
             $memberName = $memberNames[$memberId] ?? ['firstname' => '', 'lastname' => ''];
-            $user = $users[$userId] ?? ['username' => '', 'role' => ''];
+            // NULL/0 userID marks a .env Developer action; surface it as the
+            // Developer (only the Developer ever receives these rows).
+            $user = $userId > 0
+                ? ($users[$userId] ?? ['username' => '', 'role' => ''])
+                : ['username' => 'developer', 'role' => 'Developer'];
 
             $row['username'] = $user['username'];
             $row['user_role'] = $user['role'];
@@ -628,7 +640,7 @@ class SearchModel
         }
 
         $users = $this->db->table('users')
-            ->select('userID, username, role')
+            ->select('userID, username, account_level AS role')
             ->whereIn('userID', $userIds)
             ->get()
             ->getResultArray();

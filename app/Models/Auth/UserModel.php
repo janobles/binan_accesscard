@@ -7,11 +7,14 @@ use CodeIgniter\Model;
 /**
  * Manages staff users, login verification, and account creation.
  *
- * Role note: the `role` column is the DB enum('User','Admin','Developer'). The
- * employee role is stored as the legacy value 'User'; the rest of the app refers
- * to it as 'Employee' (translated by App\Libraries\RoleAccess::normalizeRole).
- * The 'User' literals in the queries below are therefore the raw DB enum value,
- * not the app-facing role label, and must stay 'User' to match the schema.
+ * Role note: the `account_level` column is the DB enum('administrator','encoder',
+ * 'viewer'). 'administrator' is the Admin role and 'encoder' is the staff/employee
+ * role; the rest of the app refers to them as 'Admin'/'Employee' (translated by
+ * App\Libraries\RoleAccess::normalizeRole). The literals in the queries below are
+ * the raw DB enum values and must match the schema. Read queries alias the column
+ * back as `account_level AS role` so existing `$row['role']` callers keep working.
+ * The Developer no longer lives in this table — it authenticates from .env (see
+ * verifyLogin) so it cannot be seen, disabled, or edited through the app.
  */
 class UserModel extends Model
 {
@@ -21,7 +24,8 @@ class UserModel extends Model
     protected $allowedFields = [
         'username',
         'password',
-        'role',
+        'account_level',
+        'full_description',
         'isactive',
     ];
     protected $useTimestamps = false;
@@ -34,6 +38,12 @@ class UserModel extends Model
      */
     public function verifyLogin(string $username, string $password): ?array
     {
+        $developer = $this->verifyDeveloperLogin($username, $password);
+
+        if ($developer !== null) {
+            return $developer;
+        }
+
         $user = $this->where('username', $username)->first();
 
         if ($user === null) {
@@ -69,9 +79,9 @@ class UserModel extends Model
     }
 
     /**
-     * Returns all Admin and Employee (User) accounts for the admin Account
-     * Management page, ordered by role then username. Excludes Developer accounts.
-     * Frontend: feeds the accounts table via DashboardPageBuilder.
+     * Returns all administrator and encoder (Admin/Employee) accounts for the admin
+     * Account Management page, ordered by account level then username. The Developer
+     * is not in this table. Frontend: feeds the accounts table via DashboardPageBuilder.
      */
     public function getStaffAccounts(): array
     {
@@ -79,9 +89,9 @@ class UserModel extends Model
             return [];
         }
 
-        return $this->select('userID, username, role, isactive, dt_created')
-            ->whereIn('role', ['Admin', 'User'])
-            ->orderBy('role', 'ASC')
+        return $this->select('userID, username, account_level AS role, isactive, dt_created')
+            ->whereIn('account_level', ['administrator', 'encoder'])
+            ->orderBy('account_level', 'ASC')
             ->orderBy('username', 'ASC')
             ->findAll();
     }
@@ -97,9 +107,9 @@ class UserModel extends Model
             return false;
         }
 
-        $account = $this->select('userID, role')->find($userId);
+        $account = $this->select('userID, account_level AS role')->find($userId);
 
-        if ($account === null || ! in_array((string) ($account['role'] ?? ''), ['Admin', 'User'], true)) {
+        if ($account === null || ! in_array((string) ($account['role'] ?? ''), ['administrator', 'encoder'], true)) {
             return false;
         }
 
@@ -130,15 +140,18 @@ class UserModel extends Model
     }
 
     /**
-     * Inserts a new staff account (Argon2id-hashed password, active by default)
-     * for AccountController::create(). Returns the new userID, or false on failure.
+     * Inserts a new staff account (Argon2id-hashed password, active by default) for
+     * AccountController::create(). `$accountLevel` is the DB enum value
+     * ('administrator'/'encoder'/'viewer'); `$fullDescription` is the prebuilt
+     * labeled personal-details string. Returns the new userID, or false on failure.
      */
-    public function createAccount(string $username, string $password, string $role): int|false
+    public function createAccount(string $username, string $password, string $accountLevel, string $fullDescription = ''): int|false
     {
         $data = [
             'username' => $username,
             'password' => password_hash($password, PASSWORD_ARGON2ID),
-            'role' => $role,
+            'account_level' => $accountLevel,
+            'full_description' => $fullDescription,
             'isactive' => $this->activeValue(),
         ];
 
@@ -149,6 +162,35 @@ class UserModel extends Model
         }
 
         return (int) $this->getInsertID();
+    }
+
+    /**
+     * Authenticates the hardcoded Developer account from .env (developer.username +
+     * developer.passwordHash, an Argon2id hash) before any DB lookup. Returns a
+     * synthetic user row (userID 0, role 'developer', active) on success, or null
+     * when the env credentials are unset or do not match. Keeping the Developer out
+     * of the `users` table means it cannot be seen, disabled, or edited via the app.
+     */
+    private function verifyDeveloperLogin(string $username, string $password): ?array
+    {
+        $devUsername = env('developer.username');
+        $devHash = env('developer.passwordHash');
+
+        if (! is_string($devUsername) || $devUsername === '' || ! is_string($devHash) || $devHash === '') {
+            return null;
+        }
+
+        if (! hash_equals($devUsername, $username) || ! password_verify($password, $devHash)) {
+            return null;
+        }
+
+        return [
+            'userID' => 0,
+            'memberID' => 0,
+            'username' => $username,
+            'role' => 'developer',
+            'isactive' => 'Enable',
+        ];
     }
 
     /**

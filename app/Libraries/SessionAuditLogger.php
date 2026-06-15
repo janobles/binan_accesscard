@@ -73,7 +73,10 @@ class SessionAuditLogger
         string $description,
         ?RequestInterface $request
     ): void {
-        if ($userId <= 0) {
+        // userID 0 is the .env Developer (no users row); it is a valid actor and is
+        // logged with a NULL userID by AuditTrailsModel. Only negative IDs are bogus.
+        // Both callers here run only after authentication, so 0 always means Developer.
+        if ($userId < 0) {
             return;
         }
 
@@ -111,8 +114,9 @@ class SessionAuditLogger
         return match (strtolower(trim($role))) {
             'developer' => 'Developer',
             'admin', 'administrator' => 'Admin',
-            'user', 'employee' => 'Employee',
-            default => 'User',
+            'user', 'encoder', 'employee' => 'Employee',
+            'viewer' => 'Viewer',
+            default => 'Employee',
         };
     }
 

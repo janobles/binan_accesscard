@@ -111,6 +111,61 @@
         return days + (days === 1 ? ' day ago' : ' days ago');
     }
 
+    function askRestoreDraft(form, savedAt) {
+        return new Promise(function (resolve) {
+            const host = form.closest('#familyModalBody') || form;
+            const overlay = document.createElement('div');
+            overlay.className = 'family-draft-dialog-backdrop';
+            overlay.setAttribute('role', 'presentation');
+            overlay.innerHTML = [
+                '<div class="family-draft-dialog" role="dialog" aria-modal="true" aria-labelledby="familyDraftDialogTitle" aria-describedby="familyDraftDialogText">',
+                '  <div class="family-draft-dialog-icon" aria-hidden="true"><i class="bi bi-arrow-counterclockwise"></i></div>',
+                '  <div class="family-draft-dialog-copy">',
+                '    <h3 id="familyDraftDialogTitle">Restore unsaved record?</h3>',
+                '    <p id="familyDraftDialogText">You have an unsaved record from ' + formatDraftAge(savedAt) + '. Restore it?</p>',
+                '  </div>',
+                '  <div class="family-draft-dialog-actions">',
+                '    <button type="button" class="btn btn-outline-secondary" data-draft-action="discard">Discard</button>',
+                '    <button type="button" class="btn btn-success" data-draft-action="restore">Restore</button>',
+                '  </div>',
+                '</div>'
+            ].join('');
+
+            const finish = function (shouldRestore) {
+                overlay.remove();
+                resolve(shouldRestore);
+            };
+
+            overlay.addEventListener('click', function (event) {
+                if (event.target === overlay) {
+                    finish(false);
+                    return;
+                }
+
+                const button = event.target.closest('[data-draft-action]');
+                if (!button) {
+                    return;
+                }
+
+                finish(button.dataset.draftAction === 'restore');
+            });
+
+            overlay.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape') {
+                    event.preventDefault();
+                    finish(false);
+                }
+            });
+
+            host.appendChild(overlay);
+
+            const restoreButton = overlay.querySelector('[data-draft-action="restore"]');
+            if (restoreButton) {
+                restoreButton.focus();
+            }
+        });
+    }
+
     function initFamilyForm(rootElement) {
         const ui = window.FamilyFormUI || {};
         const q = function (root, selector) {
@@ -1017,11 +1072,13 @@
             const existingDraft = readDraft();
 
             if (!draftIsEmpty(existingDraft)) {
-                if (window.confirm('You have an unsaved record from ' + formatDraftAge(existingDraft.savedAt) + '. Restore it?')) {
-                    restoreDraft(existingDraft);
-                } else {
-                    clearDraft();
-                }
+                askRestoreDraft(form, existingDraft.savedAt).then(function (shouldRestore) {
+                    if (shouldRestore) {
+                        restoreDraft(existingDraft);
+                    } else {
+                        clearDraft();
+                    }
+                });
             }
 
             form.addEventListener('input', scheduleSave);

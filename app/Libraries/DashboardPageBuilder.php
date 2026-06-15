@@ -125,9 +125,11 @@ class DashboardPageBuilder
             'activePage' => $activePage,
             'pageTitle' => $layoutModel->pageTitle($activePage),
             'modeLabel' => $layoutModel->adminModeLabel($isDeveloper),
-            // Developers can manage all staff; admins can only disable employees.
+            // Developers and admins both manage all non-developer staff accounts:
+            // create, edit, reset password, and (for admin/encoder) enable/disable.
             'canManageAccounts' => $isDeveloper || $isAdmin,
-            'canCreateAccounts' => $isDeveloper,
+            'canCreateAccounts' => $isDeveloper || $isAdmin,
+            'canEditAccounts' => $isDeveloper || $isAdmin,
             'currentRole' => $currentRole,
             'navActive' => [
                 'dashboard'    => $layoutModel->navActive($activePage, 'dashboard'),
@@ -144,6 +146,7 @@ class DashboardPageBuilder
             // "Employee" in the UI); the rows here come straight from the users table
             // (account_level aliased back to `role` by UserModel::getStaffAccounts).
             'employeeAccounts'   => array_values(array_filter($users, static fn ($account) => $account['role'] === 'encoder')),
+            'viewerAccounts'     => array_values(array_filter($users, static fn ($account) => $account['role'] === 'viewer')),
             'familyFormViewData' => $familyFormViewData,
             'recentFamilies'     => $recentFamilies,
             'recentAudits'       => $recentAudits,

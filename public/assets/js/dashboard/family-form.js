@@ -704,6 +704,26 @@
         form.addEventListener('change', function (event) {
             const target = event.target;
 
+            // Archived sector/service guard: an archived item only appears here when it
+            // was already assigned to this family. Unticking it permanently removes a
+            // grandfathered benefit — archived items can't be re-selected — so confirm
+            // first and re-tick on cancel. Covers head (name="sector_ids[]") and member
+            // (name="members[i][sector_ids][]") checkboxes, which both bubble here.
+            if (
+                target instanceof HTMLInputElement
+                && target.type === 'checkbox'
+                && target.dataset.archived === '1'
+                && !target.checked
+            ) {
+                const archivedLabel = String(target.dataset.label || '').trim() || 'This item';
+
+                if (!window.confirm('"' + archivedLabel + '" is archived. If you remove it, this person loses the benefit and it can\'t be added back later (archived items are no longer selectable). Remove it anyway?')) {
+                    target.checked = true;
+
+                    return;
+                }
+            }
+
             if (target instanceof HTMLSelectElement && target.classList.contains('js-other-select')) {
                 if (typeof ui.syncOtherControl === 'function') {
                     ui.syncOtherControl(target);

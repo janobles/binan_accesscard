@@ -211,20 +211,20 @@ class CategoryModel extends Model
         return $builder->countAllResults() > 0;
     }
 
-    /** Count of non-archived sectors linked to this category. Guards archive/delete. */
-    public function countSectors(int $id): int
+    /**
+     * Count of all sectors linked to this category, including archived ones. Guards
+     * permanent delete: a category whose sectors only got cascade-archived still owns
+     * them, so deleting it would orphan those sector.categoryID references.
+     */
+    public function countSectorsIncludingArchived(int $id): int
     {
         if (! $this->db->tableExists('sector')) {
             return 0;
         }
 
-        $builder = $this->db->table('sector')->where('categoryID', $id);
-
-        if ($this->db->fieldExists('dt_deleted', 'sector')) {
-            $builder->where('dt_deleted IS NULL', null, false);
-        }
-
-        return $builder->countAllResults();
+        return $this->db->table('sector')
+            ->where('categoryID', $id)
+            ->countAllResults();
     }
 
     /**

@@ -36,8 +36,10 @@ class ServiceController extends BaseController
     }
 
     /**
-     * POST `admin/services/archive/{id}`: soft-archive a service. Refused if the
-     * service is still assigned to any member (member_services); audits the action.
+     * POST `admin/services/archive/{id}`: soft-archive a service. Allowed even when
+     * the service is still assigned to members: archiving only retires it from new
+     * selections; existing records keep the service (the family edit form preserves
+     * archived-but-assigned services). Permanent delete is still guarded. Audits the action.
      */
     public function archive(int $serviceId): RedirectResponse
     {
@@ -51,10 +53,6 @@ class ServiceController extends BaseController
 
         if (! $model->hasTable()) {
             return $this->redirectAdmin('admin/services', 'error', 'Services table is not available.');
-        }
-
-        if ($this->serviceIsUsed($serviceId)) {
-            return $this->redirectAdmin('admin/services', 'error', 'This service or program is assigned to one or more records and cannot be archived. Reassign them first.');
         }
 
         $service = $model->find($serviceId);

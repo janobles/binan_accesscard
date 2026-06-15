@@ -1225,6 +1225,28 @@
 	color: #6f8196;
 }
 
+/* Archived (grandfathered) sectors/services shown on the edit form: a kept benefit
+   that can no longer be picked for anyone new. Badged so staff see it's retired. */
+.family-choice-badge {
+	display: inline-block;
+	margin-left: 6px;
+	padding: 1px 7px;
+	border-radius: 10px;
+	background: #fff3cd;
+	color: #8a6d1b;
+	border: 1px solid #f1d98a;
+	font-size: 11px;
+	font-weight: 600;
+	line-height: 1.5;
+	vertical-align: middle;
+	white-space: nowrap;
+}
+
+.family-choice-row--archived,
+.member-visible-option--archived {
+	color: #8a6d1b;
+}
+
 /* Step 3: "Current Record Head" summary card */
 .family-summary-card {
 	border: 1px solid #bdd1e6;

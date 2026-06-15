@@ -191,6 +191,67 @@ class SectorModel extends Model
     }
 
     /**
+     * Cascade-archive the active sectors of a category, stamping each with the same
+     * dt_deleted as the category so CategoryController::restore can match and restore
+     * exactly this batch later. Returns the number of sectors archived.
+     */
+    public function archiveByCategory(int $categoryId, string $stampedAt): int
+    {
+        if (! $this->hasTable() || ! $this->db->fieldExists('dt_deleted', $this->table)) {
+            return 0;
+        }
+
+        $this->db->table($this->table)
+            ->where('categoryID', $categoryId)
+            ->where('dt_deleted IS NULL', null, false)
+            ->set('dt_deleted', $stampedAt)
+            ->update();
+
+        return $this->db->affectedRows();
+    }
+
+    /**
+     * Restore the sectors that were cascade-archived together with their category,
+     * i.e. those whose dt_deleted matches the category's archive timestamp. Sectors
+     * archived independently keep a different timestamp and stay archived.
+     */
+    public function restoreByCategoryArchivedAt(int $categoryId, string $stampedAt): int
+    {
+        if ($stampedAt === '' || ! $this->hasTable() || ! $this->db->fieldExists('dt_deleted', $this->table)) {
+            return 0;
+        }
+
+        $this->db->table($this->table)
+            ->where('categoryID', $categoryId)
+            ->where('dt_deleted', $stampedAt)
+            ->set('dt_deleted', null)
+            ->update();
+
+        return $this->db->affectedRows();
+    }
+
+    /**
+     * Fetch specific sectors by ID, including archived ones. Used by the family edit
+     * form to keep showing sectors a member already has even after they were archived.
+     *
+     * @param list<int> $ids
+     */
+    public function getByIdsIncludingArchived(array $ids): array
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids), static fn (int $id): bool => $id > 0)));
+
+        if ($ids === [] || ! $this->hasTable()) {
+            return [];
+        }
+
+        return $this->db->table($this->table)
+            ->whereIn($this->primaryKey, $ids)
+            ->orderBy('sectorID', 'ASC')
+            ->get()
+            ->getResultArray();
+    }
+
+    /**
      * Check for an existing shortcode, excluding one ID when editing.
      */
     public function shortcodeExists(string $shortcode, ?int $excludeId = null): bool

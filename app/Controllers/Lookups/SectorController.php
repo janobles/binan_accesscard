@@ -39,7 +39,10 @@ class SectorController extends BaseController
 
     /**
      * POST `admin/sectors/archive/{id}`: soft-archive a sector (hide, keep data).
-     * Refuses if the sector is still assigned to any member; audits the action.
+     * Allowed even when the sector is still assigned to members: archiving only
+     * retires it from new selections; existing records keep the sector (the family
+     * edit form preserves archived-but-assigned sectors). Permanent delete is still
+     * guarded. Audits the action.
      */
     public function archive(int $sectorId): RedirectResponse
     {
@@ -53,10 +56,6 @@ class SectorController extends BaseController
 
         if (! $model->hasTable()) {
             return $this->redirectAdmin('admin/sectors', 'error', 'Sector table is not available.');
-        }
-
-        if ($this->sectorIsUsed($sectorId)) {
-            return $this->redirectAdmin('admin/sectors', 'error', 'This sector is assigned to one or more records and cannot be archived. Reassign them first.');
         }
 
         $sector = $model->find($sectorId);

@@ -35,10 +35,11 @@ $selectedServiceIds = ViewFormatter::integerList($selectedServiceIds ?? [], true
                             $shortcode = trim((string) ($sector['shortcode'] ?? ''));
                             $name = trim((string) ($sector['name'] ?? ''));
                             $sectorLabel = trim($shortcode . ' - ' . $name, ' -');
+                            $isArchived = ! empty($sector['is_archived']);
                             ?>
-                            <label class="family-choice-row">
-                                <input class="form-check-input" type="checkbox" name="sector_ids[]" value="<?= esc($sectorId, 'attr') ?>" data-label="<?= esc($sectorLabel, 'attr') ?>" <?= in_array((int) $sectorId, $selectedSectorIds, true) ? 'checked' : '' ?>>
-                                <span class="form-check-label"><?= esc($sectorLabel) ?></span>
+                            <label class="family-choice-row<?= $isArchived ? ' family-choice-row--archived' : '' ?>">
+                                <input class="form-check-input" type="checkbox" name="sector_ids[]" value="<?= esc($sectorId, 'attr') ?>" data-label="<?= esc($sectorLabel, 'attr') ?>"<?= $isArchived ? ' data-archived="1"' : '' ?> <?= in_array((int) $sectorId, $selectedSectorIds, true) ? 'checked' : '' ?>>
+                                <span class="form-check-label"><?= esc($sectorLabel) ?><?php if ($isArchived): ?> <span class="family-choice-badge">Archived</span><?php endif; ?></span>
                             </label>
                         <?php endforeach; ?>
                     </section>
@@ -61,10 +62,11 @@ $selectedServiceIds = ViewFormatter::integerList($selectedServiceIds ?? [], true
                             $name = trim((string) ($service['name'] ?? ''));
                             $description = trim((string) ($service['description'] ?? ''));
                             $serviceLabel = $description === '' ? $name : $name . ' - ' . $description;
+                            $isArchived = ! empty($service['is_archived']);
                             ?>
-                            <label class="family-choice-row">
-                                <input class="form-check-input" type="checkbox" name="service_ids[]" value="<?= esc($serviceId, 'attr') ?>" data-label="<?= esc($name, 'attr') ?>" <?= in_array((int) $serviceId, $selectedServiceIds, true) ? 'checked' : '' ?>>
-                                <span class="form-check-label"><?= esc($serviceLabel) ?></span>
+                            <label class="family-choice-row<?= $isArchived ? ' family-choice-row--archived' : '' ?>">
+                                <input class="form-check-input" type="checkbox" name="service_ids[]" value="<?= esc($serviceId, 'attr') ?>" data-label="<?= esc($name, 'attr') ?>"<?= $isArchived ? ' data-archived="1"' : '' ?> <?= in_array((int) $serviceId, $selectedServiceIds, true) ? 'checked' : '' ?>>
+                                <span class="form-check-label"><?= esc($serviceLabel) ?><?php if ($isArchived): ?> <span class="family-choice-badge">Archived</span><?php endif; ?></span>
                             </label>
                         <?php endforeach; ?>
                     </section>

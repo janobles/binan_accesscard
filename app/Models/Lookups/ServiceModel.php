@@ -85,6 +85,28 @@ class ServiceModel extends Model
     }
 
     /**
+     * Fetch specific services by ID, including archived ones. Used by the family edit
+     * form to keep showing services a member already has even after they were archived.
+     *
+     * @param list<int> $ids
+     */
+    public function getByIdsIncludingArchived(array $ids): array
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids), static fn (int $id): bool => $id > 0)));
+
+        if ($ids === [] || ! $this->db->tableExists($this->table)) {
+            return [];
+        }
+
+        return $this->db->table($this->table)
+            ->whereIn($this->primaryKey, $ids)
+            ->orderBy('category', 'ASC')
+            ->orderBy('serviceID', 'ASC')
+            ->get()
+            ->getResultArray();
+    }
+
+    /**
      * Fetch all services, including archived, for the admin lookup management screen.
      */
     public function getAllIncluding(): array

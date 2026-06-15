@@ -42,10 +42,19 @@ class SearchModel
             $this->applyMemberKeyword($builder, $keyword, '', ['sectorID'], 'sectorID');
         }
 
-        $sectorId = (int) ($filters['sectorID'] ?? 0);
+        $sectorIds = $this->normalizeFilterList($filters['sectorID'] ?? []);
 
-        if ($sectorId > 0) {
-            $builder->where(SectorIds::containsCondition($sectorId, 'sectorID'), null, false);
+        if ($sectorIds !== []) {
+            $builder->groupStart();
+            foreach ($sectorIds as $index => $sectorId) {
+                if ($index === 0) {
+                    $builder->where(SectorIds::containsCondition((int) $sectorId, 'sectorID'), null, false);
+                    continue;
+                }
+
+                $builder->orWhere(SectorIds::containsCondition((int) $sectorId, 'sectorID'), null, false);
+            }
+            $builder->groupEnd();
         }
 
         $this->applyDateRange($builder, 'dt_created', $filters);
@@ -110,7 +119,7 @@ class SearchModel
     private function allMembersBuilder(string $keyword, array $filters): BaseBuilder
     {
         $builder = $this->db->table('member m')
-            ->select('m.memberID, m.firstname, m.middlename, m.lastname, m.contactnumber, m.relationship, m.headID, m.sectorID, m.dt_created, h.firstname AS head_firstname, h.lastname AS head_lastname')
+            ->select('m.memberID, m.firstname, m.middlename, m.lastname, m.birthday, m.contactnumber, m.relationship, m.address, m.headID, m.sectorID, m.dt_created, h.firstname AS head_firstname, h.lastname AS head_lastname')
             ->join('member h', 'h.memberID = m.headID', 'left');
 
         $status = strtolower(trim((string) ($filters['status'] ?? '')));
@@ -130,10 +139,25 @@ class SearchModel
             $this->applyMemberKeyword($builder, $keyword, 'm.', ['address', 'religion', 'job'], 'm.sectorID', $serviceMemberIds);
         }
 
-        $sectorId = (int) ($filters['sectorID'] ?? 0);
+        $sectorIds = $this->normalizeFilterList($filters['sectorID'] ?? []);
 
-        if ($sectorId > 0) {
-            $builder->where(SectorIds::containsCondition($sectorId, 'm.sectorID'), null, false);
+        if ($sectorIds !== []) {
+            $builder->groupStart();
+            foreach ($sectorIds as $index => $sectorId) {
+                if ($index === 0) {
+                    $builder->where(SectorIds::containsCondition((int) $sectorId, 'm.sectorID'), null, false);
+                    continue;
+                }
+
+                $builder->orWhere(SectorIds::containsCondition((int) $sectorId, 'm.sectorID'), null, false);
+            }
+            $builder->groupEnd();
+        }
+
+        $barangays = $this->normalizeFilterList($filters['barangay'] ?? [], false);
+
+        if ($barangays !== [] && $this->db->fieldExists('barangay', 'member')) {
+            $builder->whereIn('m.barangay', $barangays);
         }
 
         $this->applyDateRange($builder, 'm.dt_created', $filters);
@@ -719,6 +743,27 @@ class SearchModel
     private function normalizeKeyword(string $keyword): string
     {
         return trim($keyword);
+    }
+
+    private function normalizeFilterList(mixed $value, bool $integers = true): array
+    {
+        $values = is_array($value) ? $value : [$value];
+        $normalized = [];
+
+        foreach ($values as $item) {
+            $item = trim((string) $item);
+
+            if ($item === '' || $item === '__all') {
+                continue;
+            }
+
+            $normalized[] = $integers ? (string) (int) $item : $item;
+        }
+
+        return array_values(array_unique(array_filter(
+            $normalized,
+            static fn (string $item): bool => $item !== '' && $item !== '0'
+        )));
     }
 
     /** Returns the date only if it's a valid Y-m-d, else '' (ignored by filters). */

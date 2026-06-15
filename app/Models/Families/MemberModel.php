@@ -297,7 +297,8 @@ class MemberModel extends Model
     }
 
     // Builds the head-only records query. $filters (optional) applies the Manage Records
-    // filter controls: 'sectorID' (exact match inside the JSON array) and 'date'
+    // filter controls: 'sectorID' (exact match inside the JSON array), 'barangay',
+    // and 'date'
     // (single-day match on member.dt_created). Empty $filters = original behavior unchanged.
     private function familySearchBuilder(?string $keyword = null, bool $archived = false, array $filters = [])
     {
@@ -362,10 +363,25 @@ class MemberModel extends Model
     // Connects to: family-list.php filter form -> DashboardPageBuilder -> here.
     private function applyRecordFilters($builder, array $filters): void
     {
-        $sectorId = (int) ($filters['sectorID'] ?? 0);
+        $sectorIds = $this->normalizeFilterList($filters['sectorID'] ?? []);
 
-        if ($sectorId > 0) {
-            $builder->where(SectorIds::containsCondition($sectorId, 'member.sectorID'), null, false);
+        if ($sectorIds !== []) {
+            $builder->groupStart();
+            foreach ($sectorIds as $index => $sectorId) {
+                if ($index === 0) {
+                    $builder->where(SectorIds::containsCondition((int) $sectorId, 'member.sectorID'), null, false);
+                    continue;
+                }
+
+                $builder->orWhere(SectorIds::containsCondition((int) $sectorId, 'member.sectorID'), null, false);
+            }
+            $builder->groupEnd();
+        }
+
+        $barangays = $this->normalizeFilterList($filters['barangay'] ?? [], false);
+
+        if ($barangays !== [] && $this->memberFieldExists('barangay')) {
+            $builder->whereIn('member.barangay', $barangays);
         }
 
         $date = trim((string) ($filters['date'] ?? ''));
@@ -375,6 +391,27 @@ class MemberModel extends Model
                 ->where('member.dt_created >=', $date . ' 00:00:00')
                 ->where('member.dt_created <=', $date . ' 23:59:59');
         }
+    }
+
+    private function normalizeFilterList(mixed $value, bool $integers = true): array
+    {
+        $values = is_array($value) ? $value : [$value];
+        $normalized = [];
+
+        foreach ($values as $item) {
+            $item = trim((string) $item);
+
+            if ($item === '' || $item === '__all') {
+                continue;
+            }
+
+            $normalized[] = $integers ? (string) (int) $item : $item;
+        }
+
+        return array_values(array_unique(array_filter(
+            $normalized,
+            static fn (string $item): bool => $item !== '' && $item !== '0'
+        )));
     }
 
     /**

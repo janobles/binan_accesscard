@@ -270,7 +270,9 @@ class DashboardPageBuilder
         $status  = strtolower(trim((string) $this->request->getGet('status')));
         $status  = in_array($status, ['active', 'archived', 'all'], true) ? $status : 'active';
         $page    = max(1, (int) $this->request->getGet('page'));
-        $perPage = 50;
+        $perPageOptions = [10, 25, 50, 100];
+        $perPage = (int) $this->request->getGet('per_page');
+        $perPage = in_array($perPage, $perPageOptions, true) ? $perPage : 50;
 
         $searchKeyword = $keyword === '' ? null : $keyword;
         $total      = $model->countLookup($searchKeyword, $status);
@@ -284,6 +286,7 @@ class DashboardPageBuilder
             'status'        => $status,
             'page'          => $page,
             'perPage'       => $perPage,
+            'perPageOptions'=> $perPageOptions,
             'totalPages'    => $totalPages,
             'totalRows'     => $total,
             'fromRecord'    => $total === 0 ? 0 : (($page - 1) * $perPage) + 1,

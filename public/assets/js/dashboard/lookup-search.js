@@ -1,8 +1,8 @@
 // Client-side "local" quick filter for the Sector / Services / Categories lookup
-// lists — Bar 1 of the two-bar layout. It filters only the rows the server already
-// rendered on this page (the 50-row status page) by toggling `.lookup-hidden`; it
-// does NOT hit the database. Bar 2 (the [method=get] database-search form) and the
-// status dropdown are server-driven (whole-table search + pagination).
+// lists — the controls-row "Search:" box. It filters only the rows the server already
+// rendered on this page by hiding non-matching rows (inline display:none); it does NOT
+// hit the database. The top [method=get] database-search form and the status dropdown
+// are server-driven (whole-table search + pagination).
 //
 // This file also wires the status dropdown ([data-lookup-status-select]): changing
 // it reloads the page with ?status=active|archived|all (preserving the database `q`,
@@ -56,13 +56,20 @@
         window.location.href = window.location.pathname + (query ? '?' + query : '');
     }
 
+    // Mirrors Manage Records' table filter (manage-family-modal.js filterTableRows):
+    // split the keyword into tokens (every token must be present) and match against
+    // row.textContent — which works regardless of the row's current visibility, so
+    // deleting characters correctly re-shows rows. Show/hide via inline display.
     function applyFilter(form) {
         const input = form.querySelector('[data-lookup-search-input]');
-        const keyword = normalize(input && input.value);
+        const tokens = normalize(input && input.value).split(/\s+/).filter(Boolean);
 
         dataRows(form).forEach(function (row) {
-            const matches = keyword === '' || normalize(row.innerText).indexOf(keyword) !== -1;
-            row.classList.toggle('lookup-hidden', !matches);
+            const text = String(row.textContent || '').toLowerCase();
+            const matches = tokens.every(function (token) {
+                return text.indexOf(token) !== -1;
+            });
+            row.style.display = matches ? '' : 'none';
         });
     }
 

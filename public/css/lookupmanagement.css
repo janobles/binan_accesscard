@@ -27,6 +27,33 @@
     padding-top: 0.55rem;
 }
 
+/* Manage Records is card-less and gets its side padding from the page content area;
+   inside the bordered .sector-management card we supply that padding on the search
+   panel so its inputs align with the controls row, table cells and footer (all 1rem). */
+.sector-management .records-search-panel {
+    margin: 0;
+    padding: 0.85rem 1rem 1rem;
+}
+
+/* Lookup pages reuse Manage Records' .records-* layout (managerecord.css), but the
+   top database form has only 5 controls (keyword + status + Clear/Search/Add), not
+   the 7 of .records-quick-search — so it needs its own grid template. */
+.records-lookup-search {
+    grid-template-columns: minmax(22rem, 1fr) minmax(7.5rem, 10rem) repeat(3, minmax(6.25rem, 8.5rem));
+}
+
+@media (max-width: 62rem) {
+    .records-lookup-search {
+        grid-template-columns: repeat(2, minmax(9rem, 1fr));
+    }
+}
+
+@media (max-width: 40rem) {
+    .records-lookup-search {
+        grid-template-columns: repeat(2, minmax(8rem, 1fr));
+    }
+}
+
 /* "Showing X–Y of Z" meta line + Prev/Next pagination under the list. */
 .lookup-list-footer {
     padding: 0.75rem 1rem;

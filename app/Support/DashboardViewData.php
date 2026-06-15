@@ -259,6 +259,7 @@ class DashboardViewData
             'keyword'       => (string) ($bundle['keyword'] ?? ''),
             'page'          => max(1, (int) ($bundle['page'] ?? 1)),
             'perPage'       => max(1, (int) ($bundle['perPage'] ?? 50)),
+            'perPageOptions'=> array_values(array_map('intval', (array) ($bundle['perPageOptions'] ?? []))) ?: [10, 25, 50, 100],
             'totalPages'    => max(1, (int) ($bundle['totalPages'] ?? 1)),
             'totalRows'     => max(0, (int) ($bundle['totalRows'] ?? 0)),
             'fromRecord'    => max(0, (int) ($bundle['fromRecord'] ?? 0)),

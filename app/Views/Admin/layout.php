@@ -88,7 +88,7 @@ $jadeStyles = [
         <li class="sidebar-brand-wrap">
             <a class="sidebar-brand d-flex align-items-center justify-content-center" href="<?= site_url('admin/dashboard') ?>">
                 <img class="sidebar-brand-icon" src="<?= base_url('assets/image/binan.png') ?>" alt="City of Binan Logo">
-                <span class="sidebar-brand-text mx-2">Bi&ntilde;an Access Card MIS<small><?= esc($modeLabel) ?></small></span>
+                <span class="sidebar-brand-text mx-2">Bi&ntilde;an Access Card MIS</span>
             </a>
         </li>
         <li><hr class="sidebar-divider my-0"></li>

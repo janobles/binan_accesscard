@@ -119,14 +119,14 @@ class SearchModel
     private function allMembersBuilder(string $keyword, array $filters): BaseBuilder
     {
         $builder = $this->db->table('member m')
-            ->select('m.memberID, m.firstname, m.middlename, m.lastname, m.birthday, m.contactnumber, m.relationship, m.address, m.headID, m.sectorID, m.dt_created, h.firstname AS head_firstname, h.lastname AS head_lastname')
+            ->select('m.memberID, m.firstname, m.middlename, m.lastname, m.birthday, m.contactnumber, m.relationship, m.address, m.headID, m.sectorID, m.dt_created, m.dt_deleted, h.firstname AS head_firstname, h.lastname AS head_lastname')
             ->join('member h', 'h.memberID = m.headID', 'left');
 
         $status = strtolower(trim((string) ($filters['status'] ?? '')));
 
         if ($status === 'archived') {
             $builder->where('m.dt_deleted IS NOT NULL', null, false);
-        } else {
+        } elseif ($status !== 'all') {
             $builder->where('m.dt_deleted IS NULL', null, false);
         }
 

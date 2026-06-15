@@ -179,8 +179,19 @@
         }
 
         const enabled = hasDatabaseSearchCriteria(panel);
-        button.disabled = !enabled;
-        button.setAttribute('aria-disabled', enabled ? 'false' : 'true');
+        button.disabled = false;
+        button.setAttribute('aria-disabled', 'false');
+        button.classList.toggle('has-search-criteria', enabled);
+    }
+
+    function hideTableRows(panel) {
+        if (!panel) {
+            return;
+        }
+
+        panel.querySelectorAll('[data-record-row]').forEach(function (row) {
+            row.style.display = 'none';
+        });
     }
 
     function filterTableRows(panel, keyword, sectorIds) {
@@ -300,6 +311,7 @@
 
         if (event.submitter && event.submitter.dataset.searchMode === 'all' && !hasDatabaseSearchCriteria(panel)) {
             updateSearchAllState(panel);
+            hideTableRows(panel);
             return;
         }
 
@@ -309,7 +321,7 @@
 
         fullUrl.search = '';
         formData.forEach(function (value, key) {
-            if (key === 'status' && String(value).trim() !== 'archived') {
+            if (key === 'status') {
                 return;
             }
 
@@ -376,6 +388,35 @@
 
             updateFilterDropdown(dropdown);
             updateSearchAllState(panel);
+
+            if (select.name === 'sectorID[]' || select.name === 'barangay[]') {
+                return;
+            }
+        }
+
+        if (select.name === 'status') {
+            updateSearchAllState(panel);
+
+            if (!window.fetch || !window.history) {
+                form.submit();
+                return;
+            }
+
+            const statusUrl = new URL(form.action, window.location.href);
+            const perPageInput = form.querySelector('input[name="per_page"]');
+
+            statusUrl.search = '';
+
+            if (select.value !== '') {
+                statusUrl.searchParams.set('status', select.value);
+            }
+
+            if (perPageInput && perPageInput.value !== '') {
+                statusUrl.searchParams.set('per_page', perPageInput.value);
+            }
+
+            loadFamilyList(panel, statusUrl.toString(), true);
+            return;
         }
 
         if (!window.fetch || !window.history) {
@@ -388,7 +429,7 @@
         fullUrl.search = '';
 
         formData.forEach(function (value, key) {
-            if (key === 'status' && String(value).trim() !== 'archived') {
+            if (key === 'status') {
                 return;
             }
 
@@ -444,8 +485,8 @@
 
             clearUrl.search = '';
 
-            if (statusSelect && statusSelect.value === 'archived') {
-                clearUrl.searchParams.set('status', 'archived');
+            if (statusSelect && statusSelect.value !== '') {
+                clearUrl.searchParams.set('status', statusSelect.value);
             }
 
             if (perPageInput && perPageInput.value !== '') {

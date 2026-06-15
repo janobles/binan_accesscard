@@ -92,8 +92,7 @@ $fieldViewData            = compact(
 
         <div class="family-wizard-steps" aria-hidden="true">
             <div class="wizard-step is-active" data-step-target="1" aria-current="step"><span>1</span><small>Head of Family</small></div>
-            <div class="wizard-step" data-step-target="2"><span>2</span><small>Sector &amp; Services</small></div>
-            <div class="wizard-step" data-step-target="3"><span>3</span><small>Members</small></div>
+            <div class="wizard-step" data-step-target="2"><span>2</span><small>Members</small></div>
         </div>
 
         <!-- data-edit-mode is read by family-form.js to avoid resetting edit forms on AJAX success. -->
@@ -105,16 +104,16 @@ $fieldViewData            = compact(
 
                 <div class="form-section family-step-panel is-visible" data-step="1">
                     <?= view('Family/head-fields', $fieldViewData) ?>
-                </div>
 
-                <?= view('Lookups/picker', [
-                    'servicesByCategory' => $servicesByCategory,
-                    'sectorCatalog' => $sectorCatalog,
-                    'sectorOptions' => $sectorOptions,
-                    'selectedSectorIds' => $selectedSectorIds,
-                    'selectedSectorCategories' => $selectedSectorCategories,
-                    'selectedServiceIds' => $headServiceIds,
-                ]) ?>
+                    <?= view('Lookups/picker', [
+                        'servicesByCategory' => $servicesByCategory,
+                        'sectorCatalog' => $sectorCatalog,
+                        'sectorOptions' => $sectorOptions,
+                        'selectedSectorIds' => $selectedSectorIds,
+                        'selectedSectorCategories' => $selectedSectorCategories,
+                        'selectedServiceIds' => $headServiceIds,
+                    ]) ?>
+                </div>
 
                 <?= view('Family/member-summary') ?>
 

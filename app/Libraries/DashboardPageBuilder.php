@@ -247,7 +247,7 @@ class DashboardPageBuilder
     {
         $keyword = trim((string) $this->request->getGet('q'));
         $status = strtolower(trim((string) $this->request->getGet('status')));
-        $showArchived = $status === 'archived';
+        $status = in_array($status, ['all', 'active', 'archived'], true) ? $status : 'all';
         $page = max(1, (int) $this->request->getGet('page'));
         $perPage = $this->recordsPerPage();
 
@@ -261,7 +261,7 @@ class DashboardPageBuilder
 
         $memberModel = new MemberModel();
         $searchKeyword = $keyword === '' ? null : $keyword;
-        $totalFamilies = $memberModel->countSearchFamilies($searchKeyword, $showArchived, $filters);
+        $totalFamilies = $memberModel->countSearchFamilies($searchKeyword, $status, $filters);
         $totalPages = max(1, (int) ceil($totalFamilies / $perPage));
         $page = min($page, $totalPages);
         $routeBase = 'admin/manage-family';
@@ -269,7 +269,7 @@ class DashboardPageBuilder
         return array_merge([
             'canArchive'        => true,
             'canRestoreArchived' => true,
-            'families'          => $memberModel->searchFamilies($searchKeyword, $perPage, ($page - 1) * $perPage, $showArchived, $filters),
+            'families'          => $memberModel->searchFamilies($searchKeyword, $perPage, ($page - 1) * $perPage, $status, $filters),
             'fromRecord'        => $totalFamilies === 0 ? 0 : (($page - 1) * $perPage) + 1,
             'isFullPage'        => true,
             'keyword'           => $keyword,
@@ -279,7 +279,7 @@ class DashboardPageBuilder
             'page'              => $page,
             'perPage'           => $perPage,
             'routeBase'         => $routeBase,
-            'status'            => $showArchived ? 'archived' : 'active',
+            'status'            => $status,
             'toRecord'          => min($totalFamilies, $page * $perPage),
             'totalFamilies'     => $totalFamilies,
             'totalPages'        => $totalPages,
@@ -287,7 +287,7 @@ class DashboardPageBuilder
             'sectorOptions'     => (new SectorModel())->getSectorOptions(),
             'barangayOptions'   => FamilyProfilingFormV2::barangays(),
             'filters'           => $filters,
-        ], $this->buildDeepSearchData($showArchived ? 'archived' : 'active'));
+        ], $this->buildDeepSearchData($status));
     }
 
     /**
@@ -474,7 +474,7 @@ class DashboardPageBuilder
     {
         $keyword = trim((string) $this->request->getGet('q'));
         $status = strtolower(trim((string) $this->request->getGet('status')));
-        $showArchived = $status === 'archived';
+        $status = in_array($status, ['all', 'active', 'archived'], true) ? $status : 'all';
         $page = max(1, (int) $this->request->getGet('page'));
         $perPage = $this->recordsPerPage();
 
@@ -488,20 +488,20 @@ class DashboardPageBuilder
 
         $memberModel = new MemberModel();
         $searchKeyword = $keyword === '' ? null : $keyword;
-        $totalFamilies = $memberModel->countSearchFamilies($searchKeyword, $showArchived, $filters);
+        $totalFamilies = $memberModel->countSearchFamilies($searchKeyword, $status, $filters);
         $totalPages = max(1, (int) ceil($totalFamilies / $perPage));
         $page = min($page, $totalPages);
 
         return array_merge([
             'canRestoreArchived' => false,
-            'families' => $memberModel->searchFamilies($searchKeyword, $perPage, ($page - 1) * $perPage, $showArchived, $filters),
+            'families' => $memberModel->searchFamilies($searchKeyword, $perPage, ($page - 1) * $perPage, $status, $filters),
             'fromRecord' => $totalFamilies === 0 ? 0 : (($page - 1) * $perPage) + 1,
             'keyword' => $keyword,
             'listRoute' => 'employee/manage-records',
             'page' => $page,
             'perPage' => $perPage,
             'routeBase' => 'employee/manage-family',
-            'status' => $showArchived ? 'archived' : 'active',
+            'status' => $status,
             'toRecord' => min($totalFamilies, $page * $perPage),
             'totalFamilies' => $totalFamilies,
             'totalPages' => $totalPages,
@@ -509,7 +509,7 @@ class DashboardPageBuilder
             'sectorOptions' => (new SectorModel())->getSectorOptions(),
             'barangayOptions' => FamilyProfilingFormV2::barangays(),
             'filters' => $filters,
-        ], $this->buildDeepSearchData($showArchived ? 'archived' : 'active'));
+        ], $this->buildDeepSearchData($status));
     }
 
     /** Whitelisted page sizes for Manage Records and deep-search pagination. */

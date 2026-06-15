@@ -3,8 +3,8 @@
 
 .floating-family-modal {
     --modal-window-gap: clamp(0.5rem, 2vw, 1.5rem);
-    --modal-window-width: min(72rem, calc(100vw - (var(--modal-window-gap) * 2)));
-    --modal-window-height: min(44rem, calc(100dvh - (var(--modal-window-gap) * 2)));
+    --modal-window-width: min(86rem, calc(100vw - (var(--modal-window-gap) * 2)));
+    --modal-window-height: min(54rem, calc(100dvh - (var(--modal-window-gap) * 2)));
 }
 
 .floating-family-modal .modal-dialog {

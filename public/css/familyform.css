@@ -60,7 +60,7 @@
 
 .family-wizard-steps {
 	display: grid;
-	grid-template-columns: repeat(2, minmax(0, 1fr));
+	grid-template-columns: repeat(2, 1fr);
 	border-top: 1px solid #284866;
 	border-bottom: 1px solid #ccd6e2;
 	background: #edf2f7;
@@ -812,8 +812,8 @@
 	align-items: center;
 	justify-content: space-between;
 	gap: 1rem;
-	min-height: 76px;
-	padding: 12px 20px;
+	min-height: 64px;
+	padding: 14px 24px;
 	border-bottom: 1px solid #cbdbea;
 	background: #fff;
 	flex: 0 0 auto;
@@ -861,7 +861,7 @@
 
 /* Step tabs (boxed, circular numbers, green active circle, blue underline) */
 .family-wizard-steps {
-	margin: 10px 14px 0;
+	margin: 12px 20px 0;
 	overflow: hidden;
 	border: 1px solid #bcd4ec;
 	border-radius: 7px 7px 0 0;
@@ -871,7 +871,7 @@
 
 .wizard-step {
 	position: relative;
-	min-height: 66px;
+	min-height: 60px;
 	border-right: 1px solid #cfdeec;
 }
 
@@ -918,7 +918,7 @@
 }
 
 .family-form-body {
-	padding: 14px 22px 0;
+	padding: 22px 28px 0;
 	background: #fff;
 }
 

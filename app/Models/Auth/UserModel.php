@@ -50,6 +50,10 @@ class UserModel extends Model
             return null;
         }
 
+        // Expose the DB enum column under the `role` key the rest of the auth flow
+        // reads (RoleAccess::normalizeRole), matching the developer's synthetic row.
+        $user['role'] = $user['account_level'] ?? '';
+
         $storedPassword = (string) ($user['password'] ?? '');
         $passwordInfo = password_get_info($storedPassword);
         $isLegacyPlaintext = $passwordInfo['algo'] === 0;

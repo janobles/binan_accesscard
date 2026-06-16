@@ -64,8 +64,8 @@ $memberSectorGroups = ViewFormatter::memberSectorGroups(
             </div>
             <div class="col-md-3">
                 <label class="form-label">Contact number</label>
-                <input class="form-control" data-name="contactnumber" inputmode="numeric">
-                <div class="invalid-feedback">Contact number must contain digits only.</div>
+                <input class="form-control" data-name="contactnumber" inputmode="numeric" maxlength="11">
+                <div class="invalid-feedback">Contact number must be exactly 11 digits.</div>
             </div>
             <div class="col-md-3">
                 <label class="form-label">Religion</label>

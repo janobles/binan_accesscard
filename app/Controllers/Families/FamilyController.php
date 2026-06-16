@@ -286,7 +286,7 @@ class FamilyController extends BaseController
      */
     public function viewFamily(int $headId): string|RedirectResponse
     {
-        $guard = $this->requireFamilyEntryAccess();
+        $guard = $this->requireFamilyViewAccess();
 
         if ($guard instanceof RedirectResponse) {
             return $this->partialGuard($guard, 'You do not have permission to view family records.');
@@ -856,6 +856,27 @@ class FamilyController extends BaseController
         }
 
         return redirect()->back()->with('error', 'You do not have permission to add family records.');
+    }
+
+    /**
+     * Access guard for the READ-ONLY family detail fragment (viewFamily). Same as
+     * requireFamilyEntryAccess but also permits the Viewer role — viewers may look
+     * at a record but never reach the edit/update/archive/restore actions, which
+     * keep the stricter requireFamilyEntryAccess guard.
+     */
+    private function requireFamilyViewAccess(): ?RedirectResponse
+    {
+        if (! session()->get('is_logged_in')) {
+            return redirect()->to(site_url('/'))->with('error', 'Please login first.');
+        }
+
+        $role = RoleAccess::normalizeRole((string) session()->get('role'));
+
+        if (in_array($role, ['Developer', 'Admin', 'Employee', 'Viewer'], true)) {
+            return null;
+        }
+
+        return redirect()->back()->with('error', 'You do not have permission to view family records.');
     }
 
     /**

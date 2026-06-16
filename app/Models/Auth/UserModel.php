@@ -178,7 +178,7 @@ class UserModel extends Model
      * the admin/developer "reset password" action. The caller shows the plaintext
      * to the staffer once and hashes it via updatePassword.
      */
-    public function generateRandomPassword(int $length = 12): string
+    public function generateRandomPassword(int $length = 8): string
     {
         $length = max(8, $length);
         $alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
@@ -193,7 +193,7 @@ class UserModel extends Model
     }
 
     /**
-     * Enables or disables an Admin/Employee account (only those roles are
+     * Enables or disables an Admin/Employee/Viewer account (only those roles are
      * eligible). Called by AccountController's status actions. Returns false if
      * the user is missing or not an updatable role.
      */
@@ -205,7 +205,7 @@ class UserModel extends Model
 
         $account = $this->select('userID, account_level AS role')->find($userId);
 
-        if ($account === null || ! in_array((string) ($account['role'] ?? ''), ['administrator', 'encoder'], true)) {
+        if ($account === null || ! in_array((string) ($account['role'] ?? ''), ['administrator', 'encoder', 'viewer'], true)) {
             return false;
         }
 

@@ -106,6 +106,14 @@ class DashboardPageBuilder
             ? $this->buildLookupListData(new CategoryModel(), 'admin/categories', 'categoryID')
             : [];
 
+        // Hide the logged-in user's own account from their Account Management list;
+        // other admins/developers still see it. The Developer logs in from .env
+        // (userID 0, no users row), so nothing is hidden for it.
+        $currentUserId = (int) session()->get('user_id');
+        $visibleAccounts = $currentUserId > 0
+            ? array_values(array_filter($users, static fn ($account) => (int) ($account['userID'] ?? 0) !== $currentUserId))
+            : $users;
+
         $isActiveStatus = static function (mixed $value): bool {
             if (is_bool($value)) {
                 return $value;
@@ -141,12 +149,12 @@ class DashboardPageBuilder
                 'services'     => $layoutModel->navActive($activePage, 'services'),
                 'categories'   => $layoutModel->navActive($activePage, 'categories'),
             ],
-            'adminAccounts'      => array_values(array_filter($users, static fn ($account) => $account['role'] === 'administrator')),
+            'adminAccounts'      => array_values(array_filter($visibleAccounts, static fn ($account) => $account['role'] === 'administrator')),
             // 'encoder' is the raw DB enum value for the Employee role (surfaced as
             // "Employee" in the UI); the rows here come straight from the users table
             // (account_level aliased back to `role` by UserModel::getStaffAccounts).
-            'employeeAccounts'   => array_values(array_filter($users, static fn ($account) => $account['role'] === 'encoder')),
-            'viewerAccounts'     => array_values(array_filter($users, static fn ($account) => $account['role'] === 'viewer')),
+            'employeeAccounts'   => array_values(array_filter($visibleAccounts, static fn ($account) => $account['role'] === 'encoder')),
+            'viewerAccounts'     => array_values(array_filter($visibleAccounts, static fn ($account) => $account['role'] === 'viewer')),
             'familyFormViewData' => $familyFormViewData,
             'recentFamilies'     => $recentFamilies,
             'recentAudits'       => $recentAudits,
@@ -488,6 +496,129 @@ class DashboardPageBuilder
                 return $memberName === '' ? '-' : $memberName;
             },
         ]);
+    }
+
+    /**
+     * Read-only counterpart of renderAdminPage/renderEmployeePage for the Viewer
+     * role. Guards Viewer access, then renders the viewer shell (`Viewer/layout`)
+     * with view-only data: dashboard stats + recent records, the family records
+     * list (no add/edit/archive), and the read-only Sector/Service lookup lists.
+     * Frontend: returns the full viewer page HTML.
+     */
+    public function renderViewerPage(string $activePage): string|RedirectResponse
+    {
+        $guard = RoleAccess::requireRole(['Viewer']);
+
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        $layoutModel = new ViewLayoutModel();
+        $dashboardModel = new DashboardModel();
+        $searchModel = new SearchModel();
+        $searchTerm = trim((string) $this->request->getGet('q'));
+        $searchFilters = $this->searchFilters();
+        $hasSearchFilters = $this->hasSearchFilters($searchFilters);
+
+        $recordListData = $activePage === 'family-manage'
+            ? $this->buildViewerRecordListData()
+            : [];
+        $recentFamilies = $activePage === 'dashboard' && ($searchTerm !== '' || $hasSearchFilters)
+            ? $searchModel->families($searchTerm, $searchFilters, 25)
+            : $dashboardModel->recentFamilies(10);
+        $sectorListData = $activePage === 'sectors'
+            ? $this->buildLookupListData(new SectorModel(), 'viewer/sectors', 'sectorID')
+            : [];
+        $serviceListData = $activePage === 'services'
+            ? $this->buildLookupListData(new ServiceModel(), 'viewer/services', 'serviceID')
+            : [];
+
+        return view('Viewer/layout', [
+            'user' => session()->get(),
+            'activePage' => $activePage,
+            'pageTitle' => $layoutModel->pageTitle($activePage),
+            'navActive' => [
+                'dashboard' => $layoutModel->navActive($activePage, 'dashboard'),
+                'family-manage' => $layoutModel->navActive($activePage, 'family-manage'),
+                'sectors' => $layoutModel->navActive($activePage, 'sectors'),
+                'services' => $layoutModel->navActive($activePage, 'services'),
+            ],
+            'recordListData'     => $recordListData,
+            'recentFamilies'     => $recentFamilies,
+            'sectorListData'     => $sectorListData,
+            'serviceListData'    => $serviceListData,
+            'sectors'            => $sectorListData['rows'] ?? [],
+            'services'           => $serviceListData['rows'] ?? [],
+            'stats'              => array_merge(['families' => 0, 'members' => 0, 'sectors' => 0, 'assistance' => 0], $dashboardModel->stats()),
+            'searchTerm'         => $searchTerm,
+            'searchFilters'      => $searchFilters,
+            'hasSearchFilters'   => $hasSearchFilters,
+            'idleTimeoutSeconds' => (new IdleTimeout())->seconds,
+            'username'           => (string) (session()->get('username') ?? 'Viewer'),
+            'formatDate'         => static function (mixed $value): string {
+                $timestamp = strtotime((string) $value);
+
+                return $timestamp === false ? '' : date('Y-m-d', $timestamp);
+            },
+            'formatTime'         => static function (mixed $value): string {
+                $timestamp = strtotime((string) $value);
+
+                return $timestamp === false ? '' : date('h:i A', $timestamp);
+            },
+        ]);
+    }
+
+    /** Public entry for the viewer records-list AJAX partial (Viewer\DashboardController). */
+    public function buildViewerRecordListViewData(): array
+    {
+        return $this->buildViewerRecordListData();
+    }
+
+    /**
+     * Viewer counterpart of buildEmployeeRecordListData(): the same paginated
+     * family list, but strictly read-only — no add, edit, archive, or restore.
+     * Frontend: the viewer Manage Records view (`Family/list`).
+     */
+    private function buildViewerRecordListData(): array
+    {
+        $keyword = trim((string) $this->request->getGet('q'));
+        $status = strtolower(trim((string) $this->request->getGet('status')));
+        $status = in_array($status, ['all', 'active', 'archived'], true) ? $status : 'all';
+        $page = max(1, (int) $this->request->getGet('page'));
+        $perPage = $this->recordsPerPage();
+
+        $filters = [
+            'sectorID' => $this->request->getGet('sectorID'),
+            'barangay' => $this->request->getGet('barangay'),
+            'date'     => (string) $this->request->getGet('date'),
+        ];
+
+        $memberModel = new MemberModel();
+        $searchKeyword = $keyword === '' ? null : $keyword;
+        $totalFamilies = $memberModel->countSearchFamilies($searchKeyword, $status, $filters);
+        $totalPages = max(1, (int) ceil($totalFamilies / $perPage));
+        $page = min($page, $totalPages);
+
+        return array_merge([
+            'canEdit'            => false,
+            'canArchive'         => false,
+            'canRestoreArchived' => false,
+            'families'           => $memberModel->searchFamilies($searchKeyword, $perPage, ($page - 1) * $perPage, $status, $filters),
+            'fromRecord'         => $totalFamilies === 0 ? 0 : (($page - 1) * $perPage) + 1,
+            'keyword'            => $keyword,
+            'listRoute'          => 'viewer/manage-records',
+            'page'               => $page,
+            'perPage'            => $perPage,
+            'routeBase'          => 'viewer/manage-family',
+            'status'             => $status,
+            'toRecord'           => min($totalFamilies, $page * $perPage),
+            'totalFamilies'      => $totalFamilies,
+            'totalPages'         => $totalPages,
+            // Filter UI data.
+            'sectorOptions'      => (new SectorModel())->getSectorOptions(),
+            'barangayOptions'    => FamilyProfilingFormV2::barangays(),
+            'filters'            => $filters,
+        ], $this->buildDeepSearchData($status));
     }
 
     /** Collects all supported search/filter query params into one array. */

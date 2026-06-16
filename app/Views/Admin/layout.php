@@ -154,6 +154,21 @@ $jadeStyles = [
             <?php if (session()->getFlashdata('success')): ?>
                 <div class="alert alert-success"><?= esc(session()->getFlashdata('success')) ?></div>
             <?php endif; ?>
+            <?php if ($resetInfo = session()->getFlashdata('reset_password')): ?>
+                <div class="reset-password-callout" role="alert">
+                    <div class="reset-password-callout__head">
+                        <i class="bi bi-key-fill" aria-hidden="true"></i>
+                        <span>New password for <strong><?= esc((string) ($resetInfo['username'] ?? '')) ?></strong></span>
+                    </div>
+                    <div class="reset-password-callout__body">
+                        <code class="reset-password-callout__value" id="resetPasswordValue"><?= esc((string) ($resetInfo['password'] ?? '')) ?></code>
+                        <button type="button" class="btn btn-sm btn-outline-success js-copy-password" data-copy-target="#resetPasswordValue">
+                            <i class="bi bi-clipboard" aria-hidden="true"></i><span>Copy</span>
+                        </button>
+                    </div>
+                    <p class="reset-password-callout__hint">Share it with the user and ask them to change it in My Account.</p>
+                </div>
+            <?php endif; ?>
             <?php if (session()->getFlashdata('error')): ?>
                 <div class="alert alert-danger"><?= esc(session()->getFlashdata('error')) ?></div>
             <?php endif; ?>

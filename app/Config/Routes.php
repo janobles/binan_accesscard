@@ -90,6 +90,23 @@ $routes->group('employee', static function (RouteCollection $routes): void {
 });
 
 /*
+ * Viewer workspace (read-only). GET routes only — no mutation endpoints are
+ * exposed. The read-only family detail fragment reuses FamilyController::viewFamily,
+ * which permits the Viewer role via requireFamilyViewAccess().
+ */
+$routes->group('viewer', static function (RouteCollection $routes): void {
+    $routes->get('', 'Viewer\DashboardController::index');
+    $routes->get('dashboard', 'Viewer\DashboardController::dashboard');
+    $routes->get('manage-records', 'Viewer\DashboardController::manageRecords');
+    $routes->get('manage-families', 'Viewer\DashboardController::manageRecords');
+    $routes->get('sectors', 'Viewer\DashboardController::sectors');
+    $routes->get('services', 'Viewer\DashboardController::services');
+    $routes->group('manage-family', static function (RouteCollection $routes): void {
+        $routes->get('view/(:num)', 'Families\FamilyController::viewFamily/$1');
+    });
+});
+
+/*
  * Shared submissions
  */
 $routes->post('developer/accounts', 'Accounts\AccountController::create');

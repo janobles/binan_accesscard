@@ -115,6 +115,8 @@ class Filters extends BaseFilters
                 'admin',
                 'admin/*',
                 'employee/*',
+                'viewer',
+                'viewer/*',
                 'developer/*',
                 'session/keep-alive',
                 'families',

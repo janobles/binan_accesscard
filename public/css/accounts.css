@@ -349,3 +349,59 @@
         font-size: 0.72rem;
     }
 }
+
+/* Reset-password result callout shown once after an admin resets an account. */
+.reset-password-callout {
+    margin-bottom: 1rem;
+    padding: 1rem 1.1rem;
+    border: 1px solid #168465;
+    border-left: 0.28rem solid #168465;
+    border-radius: 0.5rem;
+    background: #f1faf6;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.reset-password-callout__head {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #244138;
+    font-size: 0.95rem;
+}
+
+.reset-password-callout__head i {
+    color: #168465;
+}
+
+.reset-password-callout__body {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin: 0.65rem 0 0.5rem;
+    flex-wrap: wrap;
+}
+
+.reset-password-callout__value {
+    padding: 0.4rem 0.8rem;
+    border: 1px dashed #168465;
+    border-radius: 0.4rem;
+    background: #ffffff;
+    color: #133;
+    font-family: "Courier New", monospace;
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: 0.18rem;
+    user-select: all;
+}
+
+.reset-password-callout .js-copy-password {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.reset-password-callout__hint {
+    margin: 0;
+    color: #5b6b66;
+    font-size: 0.8rem;
+}

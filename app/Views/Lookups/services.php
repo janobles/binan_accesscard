@@ -17,6 +17,9 @@ $keyword              = (string) ($keyword ?? '');
 $listRoute            = (string) ($listRoute ?? 'admin/services');
 $perPage              = (int) ($perPage ?? 50);
 $perPageOptions       = ($perPageOptions ?? []) ?: [10, 25, 50, 100];
+// Read-only roles (Viewer) see the list without Add / Edit / Archive / Restore.
+// Defaults true so the admin/developer services page is unaffected.
+$canManage            = (bool) ($canManage ?? true);
 
 // Builds a page URL preserving the current database keyword + status + page size.
 $servicePageUrl = static function (int $targetPage) use ($listRoute, $keyword, $status, $perPage): string {
@@ -57,7 +60,9 @@ $serviceClearUrl = static function () use ($listRoute, $status, $perPage): strin
 			<?php if ($perPage !== 50): ?><input type="hidden" name="per_page" value="<?= esc((string) $perPage, 'attr') ?>"><?php endif; ?>
 			<a class="btn btn-outline-secondary records-search-action" href="<?= esc($serviceClearUrl(), 'attr') ?>"><i class="bi bi-x-lg" aria-hidden="true"></i><span>Clear</span></a>
 			<button class="btn btn-outline-success records-search-action" type="submit"><i class="bi bi-search" aria-hidden="true"></i><span>Search All</span></button>
+			<?php if ($canManage): ?>
 			<button class="btn btn-primary records-search-action js-service-modal-open" type="button" data-service-mode="create"><i class="bi bi-plus-lg" aria-hidden="true"></i><span>Add Program</span></button>
+			<?php endif; ?>
 		</form>
 	</div>
 
@@ -90,7 +95,7 @@ $serviceClearUrl = static function () use ($listRoute, $status, $perPage): strin
 					<th>Name</th>
 					<th>Description</th>
 					<th>Status</th>
-					<th class="text-end">Actions</th>
+					<?php if ($canManage): ?><th class="text-end">Actions</th><?php endif; ?>
 				</tr>
 			</thead>
 			<tbody>
@@ -102,7 +107,7 @@ $serviceClearUrl = static function () use ($listRoute, $status, $perPage): strin
 						<td><span class="sector-name"><?= esc((string) ($service['name'] ?? '')) ?></span></td>
 						<td><span class="text-trim d-inline-block"><?= esc((string) ($service['description'] ?? '')) ?></span></td>
 						<td><span class="sector-status-badge <?= $isArchived ? 'sector-status-archived' : 'sector-status-active' ?>"><?= $isArchived ? 'Archived' : 'Active' ?></span></td>
-						<td class="text-end">
+						<?php if ($canManage): ?><td class="text-end">
 							<div class="dropdown actions-menu">
 								<button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false" aria-label="Service actions">
 									<i class="bi bi-three-dots" aria-hidden="true"></i>
@@ -142,6 +147,7 @@ $serviceClearUrl = static function () use ($listRoute, $status, $perPage): strin
 								</div>
 							</div>
 						</td>
+						<?php endif; ?>
 					</tr>
 				<?php endforeach; ?>
 				<?php if ($services === []): ?>
@@ -167,6 +173,8 @@ $serviceClearUrl = static function () use ($listRoute, $status, $perPage): strin
 	<?php endif; ?>
 </div>
 
+<?php if ($canManage): ?>
 <?= view('Lookups/service-modal', [
 	'serviceCategoryOptions' => $serviceCategoryOptions,
 ]) ?>
+<?php endif; ?>

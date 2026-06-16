@@ -134,12 +134,12 @@ $jadeStyles = [
                      form, the shared records list, and the employee's own activity. */ ?>
             <?php if ($activePage === 'dashboard'): ?>
                 <div class="dashboard-overview" data-dashboard-overview>
-                    <div class="row g-3 mb-3 employee-overview-stats">
-                        <div class="col-md-3"><div class="panel stat-panel"><small>Total Records</small><div class="stat-value"><?= esc((string) ($stats['families'] ?? 0)) ?></div></div></div>
-                        <div class="col-md-3"><div class="panel stat-panel"><small>Registered Members</small><div class="stat-value"><?= esc((string) ($stats['members'] ?? 0)) ?></div></div></div>
-                        <div class="col-md-3"><div class="panel stat-panel"><small>Active Sectors</small><div class="stat-value"><?= esc((string) ($stats['sectors'] ?? 0)) ?></div></div></div>
-                        <div class="col-md-3"><div class="panel stat-panel"><small>Services and Programs</small><div class="stat-value"><?= esc((string) ($stats['assistance'] ?? 0)) ?></div></div></div>
-                    </div>
+                    <section class="overview-stats" aria-label="Dashboard statistics">
+                        <article class="stat-card"><p>Total Records</p><strong><?= esc((string) ($stats['families'] ?? 0)) ?></strong></article>
+                        <article class="stat-card"><p>Registered Members</p><strong><?= esc((string) ($stats['members'] ?? 0)) ?></strong></article>
+                        <article class="stat-card"><p>Active Sectors</p><strong><?= esc((string) ($stats['sectors'] ?? 0)) ?></strong></article>
+                        <article class="stat-card"><p>Services and Programs</p><strong><?= esc((string) ($stats['assistance'] ?? 0)) ?></strong></article>
+                    </section>
 
                     <div class="panel dashboard-table-panel">
                         <div class="section-title mt-0">

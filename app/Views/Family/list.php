@@ -9,6 +9,9 @@ $routeBase = (string) ($routeBase ?? 'admin/manage-family');
 $listRoute = (string) ($listRoute ?? ($routeBase . '/list'));
 $status = in_array((string) ($status ?? 'all'), ['active', 'archived'], true) ? (string) $status : 'all';
 $canArchive = (bool) ($canArchive ?? false);
+// Add + Update are hidden for read-only roles (Viewer). Defaults true so the
+// admin and employee record lists are unaffected.
+$canEdit = (bool) ($canEdit ?? true);
 $page = max(1, (int) ($page ?? 1));
 $perPage = max(1, (int) ($perPage ?? 50));
 $perPageOptions = [10, 25, 50, 100];
@@ -159,10 +162,12 @@ $displayListName = static function (string $lastName, string $firstName, string 
                 <i class="bi bi-database-search" aria-hidden="true"></i>
                 <span>Search</span>
             </button>
+            <?php if ($canEdit): ?>
             <button type="button" class="btn btn-primary records-search-action js-open-family-modal" data-modal-url="<?= site_url($routeBase . '?partial=1') ?>" data-modal-title="Add Record">
                 <i class="bi bi-plus-lg" aria-hidden="true"></i>
                 <span>Add</span>
             </button>
+            <?php endif; ?>
         </form>
     </div>
 
@@ -265,7 +270,13 @@ $displayListName = static function (string $lastName, string $firstName, string 
                     <td><?= esc($displayUpper($row['address'] ?? '')) ?></td>
                     <td><?= esc(family_list_format_date($row['birthday'] ?? '')) ?></td>
                     <td class="text-end">
-                        <?php if ($headId > 0): ?>
+                        <?php
+                        // An active row always has at least "View"; an archived row only
+                        // has actions when archive/restore is allowed. Hiding the menu
+                        // entirely avoids an empty dropdown for read-only roles (Viewer).
+                        $rowHasActions = ! $rowArchived || $canArchive;
+                        ?>
+                        <?php if ($headId > 0 && $rowHasActions): ?>
                             <div class="dropdown actions-menu">
                                 <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" data-bs-strategy="fixed" aria-expanded="false" aria-label="Record actions">
                                     <i class="bi bi-three-dots" aria-hidden="true"></i>
@@ -279,6 +290,7 @@ $displayListName = static function (string $lastName, string $firstName, string 
                                             data-modal-title="View Record">
                                             <i class="bi bi-eye" aria-hidden="true"></i><?= esc($displayUpper('View')) ?>
                                         </button>
+                                        <?php if ($canEdit): ?>
                                         <button
                                             type="button"
                                             class="dropdown-item js-open-family-edit-modal"
@@ -286,6 +298,7 @@ $displayListName = static function (string $lastName, string $firstName, string 
                                             data-modal-title="Edit Record">
                                             <i class="bi bi-pencil-square" aria-hidden="true"></i><?= esc($displayUpper('Update')) ?>
                                         </button>
+                                        <?php endif; ?>
                                     <?php endif; ?>
                                     <?php if ($canArchive): ?>
                                         <form class="js-family-record-action-form" method="post" action="<?= site_url($routeBase . '/' . $recordAction . '/' . $headId) ?>" data-confirm-message="<?= esc($confirmMessage, 'attr') ?>" data-action-label="<?= esc($recordActionLabel, 'attr') ?>" data-action-past="<?= esc($recordActionPast, 'attr') ?>" data-family-name="<?= esc($displayName, 'attr') ?>">

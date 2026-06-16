@@ -36,4 +36,52 @@
         });
     }
 
+    // Copy-to-clipboard for the reset-password result callout. Delegated so it
+    // works whether the callout is on a full page or an AJAX-loaded view.
+    document.addEventListener('click', function (event) {
+        var button = event.target.closest('.js-copy-password');
+
+        if (!button) {
+            return;
+        }
+
+        var target = document.querySelector(button.getAttribute('data-copy-target'));
+
+        if (!target) {
+            return;
+        }
+
+        var value = target.textContent.trim();
+        var label = button.querySelector('span');
+
+        var done = function () {
+            if (label) {
+                var original = label.textContent;
+                label.textContent = 'Copied!';
+                window.setTimeout(function () {
+                    label.textContent = original;
+                }, 1500);
+            }
+        };
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(value).then(done).catch(function () {});
+        } else {
+            var range = document.createRange();
+            range.selectNodeContents(target);
+            var selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+
+            try {
+                document.execCommand('copy');
+                done();
+            } catch (error) {
+                /* clipboard unavailable; the value stays selected for manual copy */
+            }
+
+            selection.removeAllRanges();
+        }
+    });
+
 })(window, document);

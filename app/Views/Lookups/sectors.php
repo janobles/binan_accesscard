@@ -27,6 +27,9 @@ $keyword             = (string) ($keyword ?? '');
 $listRoute           = (string) ($listRoute ?? 'admin/sectors');
 $perPage             = (int) ($perPage ?? 50);
 $perPageOptions      = ($perPageOptions ?? []) ?: [10, 25, 50, 100];
+// Read-only roles (Viewer) see the list without Add / Edit / Archive / Restore.
+// Defaults true so the admin/developer sector page is unaffected.
+$canManage           = (bool) ($canManage ?? true);
 
 // Builds a page URL preserving the current database keyword + status + page size.
 $sectorPageUrl = static function (int $targetPage) use ($listRoute, $keyword, $status, $perPage): string {
@@ -67,7 +70,9 @@ $sectorClearUrl = static function () use ($listRoute, $status, $perPage): string
 			<?php if ($perPage !== 50): ?><input type="hidden" name="per_page" value="<?= esc((string) $perPage, 'attr') ?>"><?php endif; ?>
 			<a class="btn btn-outline-secondary records-search-action" href="<?= esc($sectorClearUrl(), 'attr') ?>"><i class="bi bi-x-lg" aria-hidden="true"></i><span>Clear</span></a>
 			<button class="btn btn-outline-success records-search-action" type="submit"><i class="bi bi-search" aria-hidden="true"></i><span>Search All</span></button>
+			<?php if ($canManage): ?>
 			<button class="btn btn-primary records-search-action js-sector-modal-open" type="button" data-sector-mode="create"><i class="bi bi-plus-lg" aria-hidden="true"></i><span>Add Sector</span></button>
+			<?php endif; ?>
 		</form>
 	</div>
 
@@ -100,7 +105,7 @@ $sectorClearUrl = static function () use ($listRoute, $status, $perPage): string
 					<th>Name</th>
 					<th>Description</th>
 					<th>Status</th>
-					<th class="text-end">Actions</th>
+					<?php if ($canManage): ?><th class="text-end">Actions</th><?php endif; ?>
 				</tr>
 			</thead>
 			<tbody>
@@ -112,7 +117,7 @@ $sectorClearUrl = static function () use ($listRoute, $status, $perPage): string
 						<td><span class="sector-name"><?= esc((string) ($sector['name'] ?? '')) ?></span></td>
 						<td><span class="text-trim d-inline-block"><?= esc((string) ($sector['description'] ?? '')) ?></span></td>
 						<td><span class="sector-status-badge <?= $isArchived ? 'sector-status-archived' : 'sector-status-active' ?>"><?= $isArchived ? 'Archived' : 'Active' ?></span></td>
-						<td class="text-end">
+						<?php if ($canManage): ?><td class="text-end">
 							<div class="dropdown actions-menu">
 								<button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false" aria-label="Sector actions">
 									<i class="bi bi-three-dots" aria-hidden="true"></i>
@@ -153,6 +158,7 @@ $sectorClearUrl = static function () use ($listRoute, $status, $perPage): string
 								</div>
 							</div>
 						</td>
+						<?php endif; ?>
 					</tr>
 				<?php endforeach; ?>
 				<?php if ($sectors === []): ?>
@@ -178,8 +184,10 @@ $sectorClearUrl = static function () use ($listRoute, $status, $perPage): string
 	<?php endif; ?>
 </div>
 
+<?php if ($canManage): ?>
 <?= view('Lookups/sector-modal', [
 	'sectorCategoryOptions' => $sectorCategoryOptions,
 	'sectorNextCodeMap' => $sectorNextCodeMap,
 	'existingShortcodes' => $existingShortcodes,
 ]) ?>
+<?php endif; ?>

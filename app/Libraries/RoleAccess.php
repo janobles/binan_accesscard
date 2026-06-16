@@ -114,13 +114,9 @@ class RoleAccess
             return redirect()->to(site_url('admin/dashboard'));
         }
 
-        // Viewer is recognized but has no gated dashboard yet (read-only access is a
-        // planned follow-up). Refuse the session cleanly so login does not loop.
+        // Viewer has a read-only dashboard (Viewer\DashboardController).
         if ($normalizedRole === 'Viewer') {
-            session()->destroy();
-
-            return redirect()->to(site_url('login'))
-                ->with('error', 'Viewer accounts are not yet enabled. Please contact an administrator.');
+            return redirect()->to(site_url('viewer/dashboard'));
         }
 
         session()->destroy();

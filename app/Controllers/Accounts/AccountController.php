@@ -276,8 +276,10 @@ class AccountController extends BaseController
         $this->audit('ACCOUNT_PASSWORD_RESET', 'Reset password for account "' . $username . '" (#' . $userId . ').');
 
         return redirect()->to(site_url('admin/accounts'))
-            ->with('success', 'New password for "' . $username . '": ' . $newPassword
-                . ' — share it with the user and ask them to change it in My Account.');
+            ->with('reset_password', [
+                'username' => $username,
+                'password' => $newPassword,
+            ]);
     }
 
     /**
@@ -318,8 +320,8 @@ class AccountController extends BaseController
 
         $role = (string) ($user['role'] ?? '');
 
-        if (! in_array($role, ['administrator', 'encoder'], true)) {
-            return redirect()->back()->with('error', 'Only admin or employee accounts can be updated.');
+        if (! in_array($role, ['administrator', 'encoder', 'viewer'], true)) {
+            return redirect()->back()->with('error', 'Only admin, employee, or viewer accounts can be updated.');
         }
 
         $enabled = $status === 'Enable';
@@ -370,20 +372,22 @@ class AccountController extends BaseController
             return redirect()->back()->with('error', 'Account not found.');
         }
 
-        if ((string) ($user['role'] ?? '') !== 'encoder') {
-            return redirect()->back()->with('error', 'Only employee accounts can be disabled from this action.');
+        if (! in_array((string) ($user['role'] ?? ''), ['encoder', 'viewer'], true)) {
+            return redirect()->back()->with('error', 'Only employee or viewer accounts can be disabled from this action.');
         }
 
+        $displayRole = $this->normalizeRole((string) ($user['role'] ?? '')) ?? (string) ($user['role'] ?? '');
+
         if (! $userModel->updateAccountStatus($userId, false)) {
-            return redirect()->back()->with('error', 'Employee account could not be disabled.');
+            return redirect()->back()->with('error', $displayRole . ' account could not be disabled.');
         }
 
         $this->audit(
             'ACCOUNT_STATUS_UPDATED',
-            'Disabled Employee account "' . (string) ($user['username'] ?? '') . '" (#' . $userId . ').'
+            'Disabled ' . $displayRole . ' account "' . (string) ($user['username'] ?? '') . '" (#' . $userId . ').'
         );
 
-        return redirect()->to(site_url('admin/accounts'))->with('success', 'Employee account disabled successfully.');
+        return redirect()->to(site_url('admin/accounts'))->with('success', $displayRole . ' account disabled successfully.');
     }
 
     /**
@@ -417,20 +421,22 @@ class AccountController extends BaseController
             return redirect()->back()->with('error', 'Account not found.');
         }
 
-        if ((string) ($user['role'] ?? '') !== 'encoder') {
-            return redirect()->back()->with('error', 'Only employee accounts can be enabled from this action.');
+        if (! in_array((string) ($user['role'] ?? ''), ['encoder', 'viewer'], true)) {
+            return redirect()->back()->with('error', 'Only employee or viewer accounts can be enabled from this action.');
         }
 
+        $displayRole = $this->normalizeRole((string) ($user['role'] ?? '')) ?? (string) ($user['role'] ?? '');
+
         if (! $userModel->updateAccountStatus($userId, true)) {
-            return redirect()->back()->with('error', 'Employee account could not be enabled.');
+            return redirect()->back()->with('error', $displayRole . ' account could not be enabled.');
         }
 
         $this->audit(
             'ACCOUNT_STATUS_UPDATED',
-            'Enabled Employee account "' . (string) ($user['username'] ?? '') . '" (#' . $userId . ').'
+            'Enabled ' . $displayRole . ' account "' . (string) ($user['username'] ?? '') . '" (#' . $userId . ').'
         );
 
-        return redirect()->to(site_url('admin/accounts'))->with('success', 'Employee account enabled successfully.');
+        return redirect()->to(site_url('admin/accounts'))->with('success', $displayRole . ' account enabled successfully.');
     }
 
     /**

@@ -136,7 +136,7 @@ $accounts = array_merge($adminAccounts, $employeeAccounts, $viewerAccounts);
                                         </form>
                                     <?php endif; ?>
 
-                                    <?php if ($isDeveloper && in_array($rawRole, ['administrator', 'encoder'], true)): ?>
+                                    <?php if ($isDeveloper && in_array($rawRole, ['administrator', 'encoder', 'viewer'], true)): ?>
                                         <form class="js-account-status-form" method="post" action="<?= site_url('developer/accounts/status') ?>" data-confirm-message="<?= esc(($isActive ? 'Disable' : 'Enable') . ' ' . $roleLabel . ' account "' . (string) ($account['username'] ?? '') . '"?', 'attr') ?>">
                                             <?= csrf_field() ?>
                                             <input type="hidden" name="userID" value="<?= esc((string) $userId) ?>">
@@ -145,8 +145,8 @@ $accounts = array_merge($adminAccounts, $employeeAccounts, $viewerAccounts);
                                                 <i class="bi <?= $isActive ? 'bi-person-x' : 'bi-person-check' ?>" aria-hidden="true"></i><?= $isActive ? 'Disable' : 'Enable' ?>
                                             </button>
                                         </form>
-                                    <?php elseif ($isAdmin && $rawRole === 'encoder'): ?>
-                                        <form class="js-account-status-form" method="post" action="<?= site_url($isActive ? 'admin/accounts/disable' : 'admin/accounts/enable') ?>" data-confirm-message="<?= esc(($isActive ? 'Disable' : 'Enable') . ' employee account "' . (string) ($account['username'] ?? '') . '"?', 'attr') ?>">
+                                    <?php elseif ($isAdmin && in_array($rawRole, ['encoder', 'viewer'], true)): ?>
+                                        <form class="js-account-status-form" method="post" action="<?= site_url($isActive ? 'admin/accounts/disable' : 'admin/accounts/enable') ?>" data-confirm-message="<?= esc(($isActive ? 'Disable' : 'Enable') . ' ' . $roleLabel . ' account "' . (string) ($account['username'] ?? '') . '"?', 'attr') ?>">
                                             <?= csrf_field() ?>
                                             <input type="hidden" name="userID" value="<?= esc((string) $userId) ?>">
                                             <button class="btn btn-sm <?= $isActive ? 'btn-outline-danger' : 'btn-outline-success' ?>" type="submit">
@@ -155,7 +155,7 @@ $accounts = array_merge($adminAccounts, $employeeAccounts, $viewerAccounts);
                                         </form>
                                     <?php endif; ?>
 
-                                    <?php if (! $canEditAccounts && ! ($isDeveloper && in_array($rawRole, ['administrator', 'encoder'], true)) && ! ($isAdmin && $rawRole === 'encoder')): ?>
+                                    <?php if (! $canEditAccounts && ! ($isDeveloper && in_array($rawRole, ['administrator', 'encoder', 'viewer'], true)) && ! ($isAdmin && in_array($rawRole, ['encoder', 'viewer'], true))): ?>
                                         <span class="text-muted">-</span>
                                     <?php endif; ?>
                                 </div>

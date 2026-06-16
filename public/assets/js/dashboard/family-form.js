@@ -574,9 +574,13 @@
             });
 
             const contact = q(form, '#head_contactnumber');
-            if (contact && contact.value.trim() !== '' && /[^0-9]/.test(contact.value)) {
-                if (!silent) { setFieldError(contact, 'Contact number must contain digits only.'); }
-                valid = false;
+            if (contact && contact.value.trim() !== '') {
+                if (/[^0-9]/.test(contact.value) || contact.value.length !== 11) {
+                    if (!silent) { setFieldError(contact, 'Contact number must be exactly 11 digits.'); }
+                    valid = false;
+                } else if (!silent) {
+                    setFieldError(contact, '');
+                }
             } else if (contact && !silent) {
                 setFieldError(contact, '');
             }
@@ -634,10 +638,14 @@
                 });
 
                 const contact = q(row, '[name$="[contactnumber]"]');
-                if (contact && String(contact.value || '').trim() !== '' && /[^0-9]/.test(contact.value)) {
-                    setFieldError(contact, 'Contact number must contain digits only.');
-                    valid = false;
-                    if (!firstInvalid) { firstInvalid = contact; }
+                if (contact && String(contact.value || '').trim() !== '') {
+                    if (/[^0-9]/.test(contact.value) || contact.value.length !== 11) {
+                        setFieldError(contact, 'Contact number must be exactly 11 digits.');
+                        valid = false;
+                        if (!firstInvalid) { firstInvalid = contact; }
+                    } else {
+                        setFieldError(contact, '');
+                    }
                 } else if (contact) {
                     setFieldError(contact, '');
                 }
@@ -657,8 +665,17 @@
         const contactInput = q(form, '#head_contactnumber');
         if (contactInput) {
             contactInput.addEventListener('input', function () {
-                this.value = this.value.replace(/[^0-9]/g, '');
-                setFieldError(this, '');
+                this.value = this.value.replace(/[^0-9]/g, '').slice(0, 11);
+                if (this.value === '' || this.value.length === 11) {
+                    setFieldError(this, '');
+                }
+            });
+            contactInput.addEventListener('blur', function () {
+                if (this.value !== '' && this.value.length !== 11) {
+                    setFieldError(this, 'Contact number must be exactly 11 digits.');
+                } else {
+                    setFieldError(this, '');
+                }
             });
         }
 
@@ -740,8 +757,10 @@
                 const name = target.getAttribute('name') || '';
 
                 if (/\[contactnumber\]$/.test(name)) {
-                    target.value = target.value.replace(/[^0-9]/g, '');
-                    setFieldError(target, '');
+                    target.value = target.value.replace(/[^0-9]/g, '').slice(0, 11);
+                    if (target.value === '' || target.value.length === 11) {
+                        setFieldError(target, '');
+                    }
 
                     return;
                 }
@@ -762,6 +781,22 @@
                     setFieldError(target, '');
                 }
             });
+
+            memberRows.addEventListener('blur', function (event) {
+                const target = event.target;
+
+                if (!(target instanceof HTMLInputElement)) { return; }
+
+                const name = target.getAttribute('name') || '';
+
+                if (/\[contactnumber\]$/.test(name)) {
+                    if (target.value !== '' && target.value.length !== 11) {
+                        setFieldError(target, 'Contact number must be exactly 11 digits.');
+                    } else {
+                        setFieldError(target, '');
+                    }
+                }
+            }, true);
         }
 
         [

@@ -65,3 +65,57 @@
         line-height: 1.22;
     }
 }
+
+/* Per-row audit detail modal (#auditDetailModal) */
+.audit-detail-list {
+    display: grid;
+    grid-template-columns: minmax(8rem, 12rem) 1fr;
+    gap: 0.4rem 1rem;
+    margin: 0 0 1rem;
+}
+
+.audit-detail-list dt {
+    color: #53635e;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.audit-detail-list dd {
+    margin: 0;
+    color: #34443f;
+    font-size: 0.88rem;
+    overflow-wrap: anywhere;
+}
+
+.audit-detail-full-label {
+    color: #53635e;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-bottom: 0.35rem;
+}
+
+.audit-detail-full {
+    margin: 0;
+    padding: 0.75rem 0.9rem;
+    border: 1px solid #e2e9e7;
+    border-radius: 0.35rem;
+    background: #f7faf9;
+    color: #34443f;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 40rem) {
+    .audit-detail-list {
+        grid-template-columns: 1fr;
+        gap: 0.15rem;
+    }
+
+    .audit-detail-list dd {
+        margin-bottom: 0.5rem;
+    }
+}

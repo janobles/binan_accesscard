@@ -232,17 +232,29 @@ $jadeStyles = [
                     </form>
                     <div class="table-responsive">
                         <table class="table table-sm">
-                            <thead><tr><th>Action</th><th>Member</th><th>Description</th></tr></thead>
+                            <thead><tr><th>Action</th><th>Member</th><th>Description</th><th class="text-end">Details</th></tr></thead>
                             <tbody>
                                 <?php foreach ($myAudits as $audit): ?>
                                     <tr>
                                         <td><span class="status-pill is-muted"><?= esc((string) ($audit['user_action'] ?? '')) ?></span></td>
                                         <td><?= esc($formatAuditMember($audit)) ?></td>
                                         <td><?= esc((string) ($audit['description'] ?? '')) ?></td>
+                                        <td class="text-end">
+                                            <button type="button" class="btn btn-sm btn-outline-primary js-audit-detail"
+                                                data-action="<?= esc((string) ($audit['user_action'] ?? ''), 'attr') ?>"
+                                                data-user="<?= esc($formatAuditUser($audit), 'attr') ?>"
+                                                data-member="<?= esc($formatAuditMember($audit), 'attr') ?>"
+                                                data-when="<?= esc((string) ($audit['dt_created'] ?? ''), 'attr') ?>"
+                                                data-ip="<?= esc((string) ($audit['ip_address'] ?? ''), 'attr') ?>"
+                                                data-ua="<?= esc((string) ($audit['user_agent'] ?? ''), 'attr') ?>"
+                                                data-full="<?= esc((string) ($audit['full_description'] ?? ''), 'attr') ?>">
+                                                <i class="bi bi-eye" aria-hidden="true"></i>View
+                                            </button>
+                                        </td>
                                     </tr>
                                 <?php endforeach; ?>
                                 <?php if ($myAudits === []): ?>
-                                    <tr><td colspan="3" class="text-center text-muted"><?= $hasSearchFilters ? 'No matching activity found.' : 'No activity yet.' ?></td></tr>
+                                    <tr><td colspan="4" class="text-center text-muted"><?= $hasSearchFilters ? 'No matching activity found.' : 'No activity yet.' ?></td></tr>
                                 <?php endif; ?>
                             </tbody>
                         </table>
@@ -272,6 +284,33 @@ $jadeStyles = [
     </div>
 </div>
 
+<?php /* Per-row audit detail modal, populated client-side by audit-detail-modal.js. */ ?>
+<div class="modal fade audit-detail-modal" id="auditDetailModal" tabindex="-1" aria-labelledby="auditDetailTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="auditDetailTitle">Activity Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <dl class="audit-detail-list">
+                    <dt>Action</dt><dd id="auditDetailAction">—</dd>
+                    <dt>User (who)</dt><dd id="auditDetailUser">—</dd>
+                    <dt>Member</dt><dd id="auditDetailMember">—</dd>
+                    <dt>When</dt><dd id="auditDetailWhen">—</dd>
+                    <dt>IP address (where)</dt><dd id="auditDetailIp">—</dd>
+                    <dt>Device / browser</dt><dd id="auditDetailUa">—</dd>
+                </dl>
+                <div class="audit-detail-full-label">Full description (who / what / when / where)</div>
+                <p class="audit-detail-full" id="auditDetailFull">—</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="<?= base_url('assets/jquery/jquery-3.7.1.min.js') ?>?v=<?= filemtime(FCPATH . 'assets/jquery/jquery-3.7.1.min.js') ?>"></script>
 <script src="<?= base_url('assets/bootstrap/js/bootstrap.bundle.min.js') ?>?v=<?= filemtime(FCPATH . 'assets/bootstrap/js/bootstrap.bundle.min.js') ?>"></script>
 <script src="<?= base_url('assets/js/dashboard/view-interactions.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/view-interactions.js') ?>"></script>
@@ -279,6 +318,7 @@ $jadeStyles = [
 <script src="<?= base_url('assets/js/dashboard/family-form.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form.js') ?>"></script>
 <script src="<?= base_url('assets/js/dashboard/family-list.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-list.js') ?>"></script>
 <script src="<?= base_url('assets/js/dashboard/audit-filters.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/audit-filters.js') ?>"></script>
+<script src="<?= base_url('assets/js/dashboard/audit-detail-modal.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/audit-detail-modal.js') ?>"></script>
 <script src="<?= base_url('assets/js/session-timeout.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/session-timeout.js') ?>" data-timeout-seconds="<?= esc((string) $idleTimeoutSeconds) ?>" data-logout-url="<?= site_url('logout?timeout=1') ?>" data-home-url="<?= site_url('/') ?>" data-keep-alive-url="<?= site_url('session/keep-alive') ?>"></script>
 <script src="<?= base_url('assets/js/dashboard/dashboard-modal-loader.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/dashboard-modal-loader.js') ?>"></script>
 <script src="<?= base_url('assets/js/dashboard/manage-family-modal.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/manage-family-modal.js') ?>"></script>

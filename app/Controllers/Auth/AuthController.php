@@ -54,12 +54,16 @@ class AuthController extends BaseController
         $user = (new UserModel())->verifyLogin($username, $password);
 
         if ($user === null) {
+            SessionAuditLogger::logFailedLogin($username, 'invalid username or password', $this->request);
+
             return redirect()->back()
                 ->withInput()
                 ->with('error', 'Invalid username or password.');
         }
 
         if (($user['login_error'] ?? '') === 'disabled') {
+            SessionAuditLogger::logFailedLogin($username, 'account disabled', $this->request);
+
             return redirect()->back()
                 ->withInput()
                 ->with('error', 'This account is disabled and cannot be used.');
@@ -68,6 +72,8 @@ class AuthController extends BaseController
         $role = RoleAccess::normalizeRole((string) ($user['role'] ?? ''));
 
         if ($role === null) {
+            SessionAuditLogger::logFailedLogin($username, 'invalid account role', $this->request);
+
             return redirect()->back()
                 ->withInput()
                 ->with('error', 'Your account role is invalid. Please contact an administrator.');

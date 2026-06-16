@@ -116,6 +116,24 @@ class UserModel extends Model
     }
 
     /**
+     * Resolves a username to its userID for audit attribution (e.g. a failed login
+     * against a known account), or null when no such account exists. Read-only and
+     * password-agnostic — never use this for authentication.
+     */
+    public function userIdByUsername(string $username): ?int
+    {
+        $username = trim($username);
+
+        if ($username === '' || ! $this->db->tableExists($this->table)) {
+            return null;
+        }
+
+        $row = $this->select('userID')->where('username', $username)->first();
+
+        return $row === null ? null : (int) $row['userID'];
+    }
+
+    /**
      * Updates profile fields on an existing account. Only username/account_level/
      * full_description keys present in $fields are written. Returns false on
      * failure. Callers own all authorization/validation. No password handling here

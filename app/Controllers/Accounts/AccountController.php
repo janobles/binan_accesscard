@@ -213,7 +213,15 @@ class AccountController extends BaseController
             'full_description' => $this->buildFullDescription(),
         ];
 
-        if (! $userModel->updateProfile($userId, $fields)) {
+        try {
+            $saved = $userModel->updateProfile($userId, $fields);
+        } catch (Throwable $exception) {
+            $this->auditSystemError('account update', $exception);
+
+            return redirect()->to(site_url('admin/accounts'))->with('error', 'Account could not be updated due to a system error.');
+        }
+
+        if (! $saved) {
             return redirect()->to(site_url('admin/accounts'))->with('error', 'Account could not be updated.');
         }
 
@@ -223,7 +231,19 @@ class AccountController extends BaseController
         }
 
         $displayRole = $this->normalizeRole($newRole) ?? $newRole;
-        $this->audit('ACCOUNT_UPDATED', 'Updated ' . $displayRole . ' account "' . $username . '" (#' . $userId . ').');
+
+        // A privilege change is security-relevant, so it gets its own action type and
+        // records the old→new role; plain edits stay ACCOUNT_UPDATED.
+        if ($newRole !== $currentRole) {
+            $oldDisplayRole = $this->normalizeRole($currentRole) ?? $currentRole;
+            $this->audit(
+                'ACCOUNT_ROLE_CHANGED',
+                'Changed account level of "' . $username . '" (#' . $userId . ') to ' . $displayRole . '.',
+                'Role changed from ' . $oldDisplayRole . ' to ' . $displayRole
+            );
+        } else {
+            $this->audit('ACCOUNT_UPDATED', 'Updated ' . $displayRole . ' account "' . $username . '" (#' . $userId . ').');
+        }
 
         return redirect()->to(site_url('admin/accounts'))->with('success', 'Account updated successfully.');
     }
@@ -526,7 +546,7 @@ class AccountController extends BaseController
      * memberID stays null). Silently skips if the table is missing and never
      * lets an audit failure break the account action. No frontend connection.
      */
-    private function audit(string $action, string $description): void
+    private function audit(string $action, string $description, ?string $detail = null): void
     {
         $auditModel = new AuditTrailsModel();
 
@@ -542,10 +562,29 @@ class AccountController extends BaseController
                 $action,
                 $description,
                 $this->request->getIPAddress(),
-                $this->request->getUserAgent()->getAgentString()
+                $this->request->getUserAgent()->getAgentString(),
+                $detail
             );
         } catch (Throwable $exception) {
             log_message('error', 'Audit trail skipped: ' . $exception->getMessage());
+        }
+    }
+
+    /**
+     * Records a SYSTEM_ERROR audit row for an unexpected failure during an account
+     * action, so operators see it on the audit page (visible to admins). Best-effort:
+     * a failure here must never mask the original error, hence the nested try/catch.
+     */
+    private function auditSystemError(string $context, Throwable $exception): void
+    {
+        try {
+            $this->audit(
+                'SYSTEM_ERROR',
+                'System error during ' . $context . '.',
+                $exception->getMessage()
+            );
+        } catch (Throwable $ignored) {
+            // Swallow — the caller already handles the originating error.
         }
     }
 }

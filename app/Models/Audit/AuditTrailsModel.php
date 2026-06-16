@@ -6,6 +6,14 @@ use CodeIgniter\Model;
 
 /**
  * Records and retrieves audit trail entries for staff actions.
+ *
+ * Append-only (WORM at the app level): this model only ever inserts and selects.
+ * There is intentionally no update or delete path for audit rows, and no caller
+ * should add one — an audit trail must not be editable or erasable from the app.
+ *
+ * Each row carries two narratives: `description` is a short one-line summary, and
+ * `full_description` is the composed who/what/when/where detail (see
+ * composeFullDescription()).
  */
 class AuditTrailsModel extends Model
 {
@@ -15,12 +23,17 @@ class AuditTrailsModel extends Model
     protected $allowedFields = [
         'user_action',
         'description',
+        'full_description',
         'ip_address',
         'user_agent',
         'userID',
         'memberID',
     ];
     protected $useTimestamps = false;
+
+    /** Action types authored without a real users row that are still security-relevant
+     *  and therefore shown to admins (unlike Developer rows, which stay hidden). */
+    private const SYSTEM_ACTIONS = ['LOGIN_FAILED', 'SYSTEM_ERROR'];
 
     /** True if the `audit_trails` table exists; callers no-op auditing otherwise. */
     public function hasTable(): bool
@@ -40,7 +53,8 @@ class AuditTrailsModel extends Model
         string $action,
         ?string $description = null,
         ?string $ipAddress = null,
-        ?string $userAgent = null
+        ?string $userAgent = null,
+        ?string $detail = null
     ): bool {
         $memberId = $this->memberIdValue($memberId);
 
@@ -58,6 +72,17 @@ class AuditTrailsModel extends Model
             'memberID' => $memberId,
             'user_action' => $action,
             'description' => $description,
+            // Full who/what/when/where narrative, composed from the same data plus
+            // the optional caller-supplied $detail (members added, fields changed…).
+            'full_description' => $this->composeFullDescription(
+                $userId,
+                $memberId,
+                $action,
+                $description,
+                $ipAddress,
+                $userAgent,
+                $detail
+            ),
             'ip_address' => $ipAddress,
         ];
 
@@ -89,7 +114,14 @@ class AuditTrailsModel extends Model
             ->limit($limit);
 
         if (! $includeDeveloper) {
-            $builder->where('audit_trails.userID IS NOT NULL');
+            // Hide only the Developer's own rows. Security events authored without a
+            // users row (failed logins, system errors) still surface to admins.
+            $builder->where(
+                "(audit_trails.userID IS NOT NULL OR audit_trails.user_action IN ("
+                    . $this->systemActionsInList() . "))",
+                null,
+                false
+            );
         }
 
         return $this->withNames($builder->findAll());
@@ -120,6 +152,137 @@ class AuditTrailsModel extends Model
         $suffix = 'UA: ' . $userAgent;
 
         return $base === '' ? $suffix : $base . ' | ' . $suffix;
+    }
+
+    /**
+     * Builds the full who/what/when/where narrative stored in `full_description`.
+     * Assembled from the same data logAction already has, so most call sites get a
+     * rich entry for free; $detail (e.g. members added, "Role changed from X to Y")
+     * enriches the WHAT clause when a caller supplies it.
+     */
+    private function composeFullDescription(
+        int $userId,
+        ?int $memberId,
+        string $action,
+        ?string $description,
+        ?string $ipAddress,
+        ?string $userAgent,
+        ?string $detail
+    ): string {
+        $what = trim($action);
+        $summary = trim((string) $description);
+
+        if ($summary !== '') {
+            $what .= ' — ' . $summary;
+        }
+
+        if ($detail !== null && trim($detail) !== '') {
+            $what .= ' — ' . trim($detail);
+        }
+
+        $parts = [
+            'WHO: ' . $this->actorNarrative($userId, $action),
+            'WHAT: ' . $what,
+            'WHEN: ' . date('Y-m-d H:i:s'),
+            'WHERE: ' . $this->whereNarrative($ipAddress, $userAgent),
+        ];
+
+        $memberLabel = $this->memberNarrative($memberId);
+
+        if ($memberLabel !== '') {
+            $parts[] = 'MEMBER: ' . $memberLabel;
+        }
+
+        return implode(' · ', $parts);
+    }
+
+    /**
+     * "Who did it" label for the narrative. Prefers the live session actor when it
+     * matches $userId (free, no query); falls back to a users lookup; resolves the
+     * no-users-row cases (Developer / failed login / system error) by action.
+     */
+    private function actorNarrative(int $userId, string $action): string
+    {
+        if ($userId <= 0) {
+            $label = $this->systemActorLabel($action);
+            $role = trim((string) $label['role']);
+
+            return $role === '' ? $label['username'] : $label['username'] . ' (' . $role . ')';
+        }
+
+        $session = session();
+
+        if ($session !== null && (int) $session->get('user_id') === $userId) {
+            $username = trim((string) $session->get('username'));
+            $role = trim((string) $session->get('role'));
+
+            if ($username !== '') {
+                return $role === '' ? $username . ' (#' . $userId . ')'
+                    : $username . ' (' . $role . ', #' . $userId . ')';
+            }
+        }
+
+        $user = $this->userMap([$userId])[$userId] ?? null;
+
+        if ($user === null) {
+            return 'user #' . $userId;
+        }
+
+        // Normalize the raw account_level enum to the app-facing label (Admin/Employee/…)
+        // so the narrative matches what the session-actor path stores.
+        $role = trim((string) ($user['role'] ?? ''));
+        $role = \App\Libraries\RoleAccess::normalizeRole($role) ?? $role;
+
+        return $role === ''
+            ? trim((string) $user['username']) . ' (#' . $userId . ')'
+            : trim((string) $user['username']) . ' (' . $role . ', #' . $userId . ')';
+    }
+
+    /** "Where from" clause: client IP and browser user agent (or "unknown"). */
+    private function whereNarrative(?string $ipAddress, ?string $userAgent): string
+    {
+        $ip = trim((string) $ipAddress);
+        $ua = trim((string) $userAgent);
+
+        return 'IP=' . ($ip === '' ? 'unknown' : $ip)
+            . '; UA=' . ($ua === '' ? 'unknown' : $ua);
+    }
+
+    /** Affected-member clause for the narrative, or '' for staff-only actions. */
+    private function memberNarrative(?int $memberId): string
+    {
+        if ($memberId === null || $memberId <= 0) {
+            return '';
+        }
+
+        $name = $this->memberNameMap([$memberId])[$memberId] ?? null;
+
+        if ($name === null) {
+            return '#' . $memberId;
+        }
+
+        $full = $this->formatMemberName($name);
+
+        return ($full === '' ? 'member' : $full) . ' (#' . $memberId . ')';
+    }
+
+    /** {username, role} label for a row with no users row, keyed by its action. */
+    private function systemActorLabel(string $action): array
+    {
+        return match (strtoupper(trim($action))) {
+            'LOGIN_FAILED' => ['username' => 'unknown user', 'role' => 'Login'],
+            'SYSTEM_ERROR' => ['username' => 'system', 'role' => 'System'],
+            default => ['username' => 'developer', 'role' => 'Developer'],
+        };
+    }
+
+    /** Escaped, comma-joined SYSTEM_ACTIONS list for raw SQL IN() clauses. */
+    private function systemActionsInList(): string
+    {
+        return implode(',', array_map(
+            fn (string $action): string => $this->db->escape($action),
+            self::SYSTEM_ACTIONS
+        ));
     }
 
     /** Returns the member ID only if it's a real existing member, else null. */
@@ -157,11 +320,12 @@ class AuditTrailsModel extends Model
             $userId = (int) ($row['userID'] ?? 0);
             $memberId = (int) ($row['memberID'] ?? 0);
             $memberName = $memberNames[$memberId] ?? ['firstname' => '', 'lastname' => ''];
-            // A NULL/0 userID marks a .env Developer action (no users row); surface
-            // it as the Developer. Only the Developer ever receives these rows.
+            // A NULL/0 userID is an action with no users row. Failed logins and system
+            // errors are real (non-Developer) events shown to admins; everything else
+            // with no user is the .env Developer.
             $user = $userId > 0
                 ? ($users[$userId] ?? ['username' => '', 'role' => ''])
-                : ['username' => 'developer', 'role' => 'Developer'];
+                : $this->systemActorLabel((string) ($row['user_action'] ?? ''));
 
             $row['username'] = $user['username'];
             $row['user_role'] = $user['role'];

@@ -61,6 +61,7 @@ $formatAuditUser = static function (array $audit): string {
                     <th scope="col">Member</th>
                     <th scope="col">Action</th>
                     <th scope="col">Description</th>
+                    <th scope="col" class="text-end">Details</th>
                 </tr>
             </thead>
             <tbody>
@@ -70,10 +71,22 @@ $formatAuditUser = static function (array $audit): string {
                         <td><?= esc($formatAuditMember($audit)) ?></td>
                         <td><span class="badge bg-light text-dark border"><?= esc((string) ($audit['user_action'] ?? '')) ?></span></td>
                         <td><?= esc((string) ($audit['description'] ?? '')) ?></td>
+                        <td class="text-end">
+                            <button type="button" class="btn btn-sm btn-outline-success js-audit-detail"
+                                data-action="<?= esc((string) ($audit['user_action'] ?? ''), 'attr') ?>"
+                                data-user="<?= esc($formatAuditUser($audit), 'attr') ?>"
+                                data-member="<?= esc($formatAuditMember($audit), 'attr') ?>"
+                                data-when="<?= esc((string) ($audit['dt_created'] ?? ''), 'attr') ?>"
+                                data-ip="<?= esc((string) ($audit['ip_address'] ?? ''), 'attr') ?>"
+                                data-ua="<?= esc((string) ($audit['user_agent'] ?? ''), 'attr') ?>"
+                                data-full="<?= esc((string) ($audit['full_description'] ?? ''), 'attr') ?>">
+                                <i class="bi bi-eye me-1" aria-hidden="true"></i>View
+                            </button>
+                        </td>
                     </tr>
                 <?php endforeach; ?>
                 <?php if ($recentAudits === []): ?>
-                    <tr><td colspan="4" class="audit-trails-empty"><?= $hasSearchFilters ? 'No matching audit logs found.' : 'No audit logs yet.' ?></td></tr>
+                    <tr><td colspan="5" class="audit-trails-empty"><?= $hasSearchFilters ? 'No matching audit logs found.' : 'No audit logs yet.' ?></td></tr>
                 <?php endif; ?>
             </tbody>
         </table>

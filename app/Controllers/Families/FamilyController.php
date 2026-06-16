@@ -13,6 +13,7 @@ use App\Models\Lookups\ServiceModel;
 use App\Support\FamilyProfilingFormV2;
 use App\Support\FamilyRecordPresenter;
 use CodeIgniter\HTTP\RedirectResponse;
+use Throwable;
 
 /**
  * Handles family records for the admin and employee Manage Family screens:
@@ -218,14 +219,19 @@ class FamilyController extends BaseController
         }
 
         if ($auditModel->hasTable()) {
+            $headName = trim(trim((string) $this->request->getPost('head_firstname')) . ' ' . trim((string) $this->request->getPost('head_lastname')));
+            $memberCount = is_array($members) ? count($members) : 0;
+            $serviceCount = is_array($serviceIds) ? count($serviceIds) : 0;
             // Tracks the creating operator plus client IP and browser agent.
             $auditModel->logAction(
                 $userId,
                 $headId,
                 'FAMILY_CREATED',
-                'Created family profile for ' . trim((string) $this->request->getPost('head_firstname')) . ' ' . trim((string) $this->request->getPost('head_lastname')) . '.',
+                'Created family profile for ' . $headName . '.',
                 $this->request->getIPAddress(),
-                $this->request->getUserAgent()->getAgentString()
+                $this->request->getUserAgent()->getAgentString(),
+                'Head of family: ' . $headName . '; added ' . $memberCount . ' additional member(s); '
+                    . $serviceCount . ' service(s) assigned to the head'
             );
         }
 
@@ -478,13 +484,18 @@ class FamilyController extends BaseController
         }
 
         if ($auditModel->hasTable()) {
+            $headName = trim(trim((string) $this->request->getPost('head_firstname')) . ' ' . trim((string) $this->request->getPost('head_lastname')));
+            $memberCount = is_array($members) ? count($members) : 0;
+            $serviceCount = is_array($serviceIds) ? count($serviceIds) : 0;
             $auditModel->logAction(
                 $userId,
                 $headId,
                 'FAMILY_UPDATED',
-                'Updated family profile for ' . trim((string) $this->request->getPost('head_firstname')) . ' ' . trim((string) $this->request->getPost('head_lastname')) . '.',
+                'Updated family profile for ' . $headName . '.',
                 $this->request->getIPAddress(),
-                $this->request->getUserAgent()->getAgentString()
+                $this->request->getUserAgent()->getAgentString(),
+                'Head of family: ' . $headName . '; ' . $memberCount . ' member(s) in household; '
+                    . $serviceCount . ' service(s) on the head after update'
             );
         }
 
@@ -567,7 +578,15 @@ class FamilyController extends BaseController
 
         $name = $this->familyHeadName($model, $headId);
 
-        if (! $action($model)) {
+        try {
+            $changed = $action($model);
+        } catch (Throwable $exception) {
+            $this->auditSystemError(strtolower($auditVerb) . ' family record #' . $headId, $exception);
+
+            return redirect()->to($this->listUrlWithoutDeepSearch())->with('error', $errorMessage);
+        }
+
+        if (! $changed) {
             return redirect()->to($this->listUrlWithoutDeepSearch())->with('error', $errorMessage);
         }
 
@@ -580,11 +599,40 @@ class FamilyController extends BaseController
                 $auditAction,
                 $auditVerb . ' family record ' . $name . ' #' . $headId . '.',
                 $this->request->getIPAddress(),
-                $this->request->getUserAgent()->getAgentString()
+                $this->request->getUserAgent()->getAgentString(),
+                $auditVerb . ' the entire family record headed by ' . $name . ' (head #' . $headId . ')'
             );
         }
 
         return redirect()->to($this->listUrlWithoutDeepSearch())->with('success', $successMessage);
+    }
+
+    /**
+     * Records a SYSTEM_ERROR audit row for an unexpected failure during a family
+     * action, so it surfaces on the audit page (visible to admins). Best-effort —
+     * a failure here must never mask the original error.
+     */
+    private function auditSystemError(string $context, Throwable $exception): void
+    {
+        try {
+            $auditModel = new AuditTrailsModel();
+
+            if (! $auditModel->hasTable()) {
+                return;
+            }
+
+            $auditModel->logAction(
+                (int) session()->get('user_id'),
+                null,
+                'SYSTEM_ERROR',
+                'System error during ' . $context . '.',
+                $this->request->getIPAddress(),
+                $this->request->getUserAgent()->getAgentString(),
+                $exception->getMessage()
+            );
+        } catch (Throwable $ignored) {
+            log_message('error', 'Audit SYSTEM_ERROR skipped: ' . $ignored->getMessage());
+        }
     }
 
     /**

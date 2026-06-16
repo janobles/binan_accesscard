@@ -495,6 +495,13 @@ class DashboardPageBuilder
 
                 return $memberName === '' ? '-' : $memberName;
             },
+            'formatAuditUser'    => static function (array $audit): string {
+                $username = trim((string) ($audit['username'] ?? $audit['userID'] ?? ''));
+                $role     = trim((string) ($audit['user_role'] ?? ''));
+                $role     = RoleAccess::normalizeRole($role) ?? $role;
+
+                return $role === '' ? $username : $username . ' (' . $role . ')';
+            },
         ]);
     }
 

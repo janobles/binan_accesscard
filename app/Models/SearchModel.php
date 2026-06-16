@@ -283,7 +283,13 @@ class SearchModel
         // Developer audit rows (NULL userID, no users row) stay hidden from
         // non-developer viewers so the other roles never learn a Developer exists.
         if (! $includeDeveloper) {
-            $builder->where('audit_trails.userID IS NOT NULL');
+            // Hide only the Developer's own rows; failed logins and system errors
+            // (logged without a users row) still surface to admins.
+            $builder->where(
+                "(audit_trails.userID IS NOT NULL OR audit_trails.user_action IN ('LOGIN_FAILED','SYSTEM_ERROR'))",
+                null,
+                false
+            );
         }
 
         $keyword = $this->normalizeKeyword($keyword);
@@ -373,6 +379,7 @@ class SearchModel
         $builder->groupStart()
             ->like('audit_trails.user_action', $keyword)
             ->orLike('audit_trails.description', $keyword)
+            ->orLike('audit_trails.full_description', $keyword)
             ->orLike('audit_trails.ip_address', $keyword);
 
         $userIds = $this->userIdsForKeyword($keyword);
@@ -614,11 +621,12 @@ class SearchModel
             $userId = (int) ($row['userID'] ?? 0);
             $memberId = (int) ($row['memberID'] ?? 0);
             $memberName = $memberNames[$memberId] ?? ['firstname' => '', 'lastname' => ''];
-            // NULL/0 userID marks a .env Developer action; surface it as the
-            // Developer (only the Developer ever receives these rows).
+            // NULL/0 userID is an action with no users row. Failed logins / system
+            // errors are real (non-Developer) events shown to admins; everything else
+            // with no user is the .env Developer.
             $user = $userId > 0
                 ? ($users[$userId] ?? ['username' => '', 'role' => ''])
-                : ['username' => 'developer', 'role' => 'Developer'];
+                : $this->systemAuditActor((string) ($row['user_action'] ?? ''));
 
             $row['username'] = $user['username'];
             $row['user_role'] = $user['role'];
@@ -628,6 +636,16 @@ class SearchModel
         }
 
         return $rows;
+    }
+
+    /** {username, role} label for an audit row with no users row, keyed by action. */
+    private function systemAuditActor(string $action): array
+    {
+        return match (strtoupper(trim($action))) {
+            'LOGIN_FAILED' => ['username' => 'unknown user', 'role' => 'Login'],
+            'SYSTEM_ERROR' => ['username' => 'system', 'role' => 'System'],
+            default => ['username' => 'developer', 'role' => 'Developer'],
+        };
     }
 
     /** Batch [userID => {username, role}] lookup used by withAuditNames(). */

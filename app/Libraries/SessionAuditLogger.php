@@ -3,6 +3,7 @@
 namespace App\Libraries;
 
 use App\Models\Audit\AuditTrailsModel;
+use App\Models\Auth\UserModel;
 use CodeIgniter\HTTP\RequestInterface;
 use Throwable;
 
@@ -31,6 +32,36 @@ class SessionAuditLogger
             'USER_LOGIN',
             $description . '.',
             $request
+        );
+    }
+
+    /**
+     * Records a LOGIN_FAILED audit row for a rejected login attempt (invalid
+     * credentials, disabled account, or invalid role). Attributes the row to the
+     * targeted account's userID when the username matches a real one (so admins see
+     * failed attempts against known accounts); otherwise userID is null and the row
+     * still surfaces to admins via the SYSTEM_ACTIONS allowance. The attempted
+     * username is carried into the full narrative as detail. Never throws.
+     */
+    public static function logFailedLogin(string $username, string $reason, ?RequestInterface $request = null): void
+    {
+        $username = trim($username);
+        $shown = $username === '' ? '(blank)' : $username;
+        $description = 'Failed login for "' . $shown . '" (' . $reason . ').';
+
+        try {
+            $userId = (new UserModel())->userIdByUsername($username) ?? 0;
+        } catch (Throwable $exception) {
+            $userId = 0;
+        }
+
+        self::log(
+            $userId,
+            null,
+            'LOGIN_FAILED',
+            $description,
+            $request,
+            'Attempted username "' . $shown . '"; reason: ' . $reason
         );
     }
 
@@ -71,11 +102,12 @@ class SessionAuditLogger
         ?int $memberId,
         string $action,
         string $description,
-        ?RequestInterface $request
+        ?RequestInterface $request,
+        ?string $detail = null
     ): void {
-        // userID 0 is the .env Developer (no users row); it is a valid actor and is
-        // logged with a NULL userID by AuditTrailsModel. Only negative IDs are bogus.
-        // Both callers here run only after authentication, so 0 always means Developer.
+        // userID 0 is either the .env Developer (login/logout) or an unknown/targeted
+        // account on a failed login; both are valid and logged with a NULL userID by
+        // AuditTrailsModel. Only negative IDs are bogus.
         if ($userId < 0) {
             return;
         }
@@ -93,7 +125,8 @@ class SessionAuditLogger
                 $action,
                 $description,
                 self::ipAddress($request),
-                self::userAgent($request)
+                self::userAgent($request),
+                $detail
             );
         } catch (Throwable $exception) {
             log_message('error', 'Session audit trail skipped: ' . $exception->getMessage());

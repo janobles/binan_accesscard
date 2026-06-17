@@ -29,6 +29,13 @@ $displayUpper = static fn (mixed $value): string => mb_strtoupper((string) $valu
         <div class="family-detail-section-title">
             <i class="bi bi-person-vcard" aria-hidden="true"></i><?= esc($displayUpper('Profile')) ?>
         </div>
+        <?php $headName = (string) ($headView['fullName'] ?? '-'); ?>
+        <div class="family-member-heading">
+            <div class="family-member-identity">
+                <span class="family-avatar is-sm" aria-hidden="true"><?= esc($familyInitials($headName)) ?></span>
+                <strong><?= esc($displayUpper($headName)) ?></strong>
+            </div>
+        </div>
         <div class="family-detail-grid">
             <?php foreach ((array) ($headView['details'] ?? []) as $detail): ?>
                 <div class="family-detail-item">

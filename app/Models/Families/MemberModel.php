@@ -342,6 +342,7 @@ class MemberModel extends Model
                 ->like('member.firstname', $token)
                 ->orLike('member.middlename', $token)
                 ->orLike('member.lastname', $token)
+                ->orLike('member.suffix', $token)
                 ->groupEnd();
         }
         $builder->groupEnd();

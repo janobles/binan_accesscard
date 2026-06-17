@@ -5,8 +5,8 @@
 //      After loading, calls window.initFamilyForm() to wire up the multi-step wizard.
 //   2. Makes the records list panel (data-family-list-panel) update in-place via fetch:
 //      search/filter form submits, pagination link clicks, and browser back/forward all
-//      replace only the panel HTML without a full page reload. Also handles the
-//      archive/restore confirmation dialog for .js-family-record-action-form.
+//      replace only the panel HTML without a full page reload.
+//      (The archive/restore confirmation dialog lives in family-list.js.)
 //
 // Connected to:
 //   - dashboard-modal-loader.js : window.registerDashboardModal()
@@ -534,24 +534,6 @@
         }
 
         loadFamilyList(panel, window.location.href, false);
-    });
-
-    document.addEventListener('submit', function (event) {
-        const form = event.target.closest('.js-family-record-action-form');
-
-        if (!form) {
-            return;
-        }
-
-        const familyName = (form.dataset.familyName || 'this family record').trim();
-        const actionLabel = (form.dataset.actionLabel || 'Archive').trim();
-        const actionPast = (form.dataset.actionPast || 'archived').trim();
-        const fallback = actionLabel + ' ' + familyName + '? This keeps the record in the database, marks it as ' + actionPast + ', and hides it from active lists.';
-        const message = (form.dataset.confirmMessage || '').trim() || fallback;
-
-        if (!window.confirm(message)) {
-            event.preventDefault();
-        }
     });
 
     updateAllFilterDropdowns(document);

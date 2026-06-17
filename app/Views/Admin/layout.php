@@ -320,6 +320,8 @@ $jadeStyles = [
     </div>
 </div>
 
+<?= view('Family/action-confirm-modal') ?>
+
 <?php /* Per-row audit detail modal, populated client-side by audit-detail-modal.js
          from the clicked row's data-* attributes (no AJAX). */ ?>
 <div class="modal fade audit-detail-modal" id="auditDetailModal" tabindex="-1" aria-labelledby="auditDetailTitle" aria-hidden="true">

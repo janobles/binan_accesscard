@@ -54,7 +54,6 @@ $routes->group('admin', static function (RouteCollection $routes): void {
     $routes->group('categories', static function (RouteCollection $routes): void {
         $routes->post('create', 'Lookups\CategoryController::create');
         $routes->post('update/(:num)', 'Lookups\CategoryController::update/$1');
-        $routes->post('delete/(:num)', 'Lookups\CategoryController::delete/$1');
         $routes->post('archive/(:num)', 'Lookups\CategoryController::archive/$1');
         $routes->post('restore/(:num)', 'Lookups\CategoryController::restore/$1');
     });

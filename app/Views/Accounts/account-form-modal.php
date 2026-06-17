@@ -16,6 +16,10 @@ $userId = (int) ($account['userID'] ?? 0);
 $username = ($isEdit || $isSelfProfile) ? (string) ($account['username'] ?? '') : (string) old('username');
 $role = ($isEdit || $isSelfProfile) ? (string) ($account['role'] ?? '') : (string) old('role');
 $isSelf = (bool) ($isSelf ?? false);
+// True when an admin edits another administrator: personal details are locked
+// (read-only), but username/account level/reset password stay editable.
+$personalLocked = (bool) ($personalLocked ?? false);
+$lockAttr = $personalLocked ? ' disabled' : '';
 $roleLabel = (string) ($roleLabel ?? $role);
 $fieldPrefix = $isEdit ? 'edit-account' : ($isSelfProfile ? 'my-account' : 'account');
 $title = $isEdit ? 'Edit Account' : ($isSelfProfile ? 'My Account' : 'Create Account');
@@ -49,33 +53,36 @@ $value = static function (array $details, string $key, bool $isEdit): string {
 
             <div class="account-create-grid">
                 <div class="account-field-group" aria-label="Personal information">
+                    <?php if ($personalLocked): ?>
+                        <p class="text-muted account-field small mb-0">Personal details are read-only. As an administrator you can only update this account's username, account level, and password.</p>
+                    <?php endif; ?>
                     <div class="account-field">
                         <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>-last-name">Last Name</label>
-                        <input class="form-control" id="<?= esc($fieldPrefix, 'attr') ?>-last-name" name="last_name" type="text" value="<?= esc($value($details, 'last_name', $isEdit || $isSelfProfile), 'attr') ?>" placeholder="Enter last name" required>
+                        <input class="form-control" id="<?= esc($fieldPrefix, 'attr') ?>-last-name" name="last_name" type="text" value="<?= esc($value($details, 'last_name', $isEdit || $isSelfProfile), 'attr') ?>" placeholder="Enter last name" required<?= $lockAttr ?>>
                     </div>
                     <div class="account-field">
                         <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>-first-name">First Name</label>
-                        <input class="form-control" id="<?= esc($fieldPrefix, 'attr') ?>-first-name" name="first_name" type="text" value="<?= esc($value($details, 'first_name', $isEdit || $isSelfProfile), 'attr') ?>" placeholder="Enter first name" required>
+                        <input class="form-control" id="<?= esc($fieldPrefix, 'attr') ?>-first-name" name="first_name" type="text" value="<?= esc($value($details, 'first_name', $isEdit || $isSelfProfile), 'attr') ?>" placeholder="Enter first name" required<?= $lockAttr ?>>
                     </div>
                     <div class="account-field">
                         <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>-middle-name">Middle Name</label>
-                        <input class="form-control" id="<?= esc($fieldPrefix, 'attr') ?>-middle-name" name="middle_name" type="text" value="<?= esc($value($details, 'middle_name', $isEdit || $isSelfProfile), 'attr') ?>" placeholder="Enter middle name" required>
+                        <input class="form-control" id="<?= esc($fieldPrefix, 'attr') ?>-middle-name" name="middle_name" type="text" value="<?= esc($value($details, 'middle_name', $isEdit || $isSelfProfile), 'attr') ?>" placeholder="Enter middle name" required<?= $lockAttr ?>>
                     </div>
                     <div class="account-field">
                         <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>-suffix">Suffix <span class="text-muted">(optional)</span></label>
-                        <input class="form-control" id="<?= esc($fieldPrefix, 'attr') ?>-suffix" name="suffix" type="text" value="<?= esc($value($details, 'suffix', $isEdit || $isSelfProfile), 'attr') ?>" placeholder="e.g. Jr, Sr, III">
+                        <input class="form-control" id="<?= esc($fieldPrefix, 'attr') ?>-suffix" name="suffix" type="text" value="<?= esc($value($details, 'suffix', $isEdit || $isSelfProfile), 'attr') ?>" placeholder="e.g. Jr, Sr, III"<?= $lockAttr ?>>
                     </div>
                     <div class="account-field">
                         <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>-address">Address</label>
-                        <input class="form-control" id="<?= esc($fieldPrefix, 'attr') ?>-address" name="address" type="text" value="<?= esc($value($details, 'address', $isEdit || $isSelfProfile), 'attr') ?>" placeholder="Enter address" required>
+                        <input class="form-control" id="<?= esc($fieldPrefix, 'attr') ?>-address" name="address" type="text" value="<?= esc($value($details, 'address', $isEdit || $isSelfProfile), 'attr') ?>" placeholder="Enter address" required<?= $lockAttr ?>>
                     </div>
                     <div class="account-field">
                         <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>-contact-no">Contact No.</label>
-                        <input class="form-control" id="<?= esc($fieldPrefix, 'attr') ?>-contact-no" name="contact_no" type="text" value="<?= esc($value($details, 'contact_no', $isEdit || $isSelfProfile), 'attr') ?>" placeholder="Enter contact number" required>
+                        <input class="form-control" id="<?= esc($fieldPrefix, 'attr') ?>-contact-no" name="contact_no" type="text" value="<?= esc($value($details, 'contact_no', $isEdit || $isSelfProfile), 'attr') ?>" placeholder="Enter contact number" required<?= $lockAttr ?>>
                     </div>
                     <div class="account-field">
                         <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>-birthday">Birthday</label>
-                        <input class="form-control" id="<?= esc($fieldPrefix, 'attr') ?>-birthday" name="birthday" type="date" value="<?= esc($value($details, 'birthday', $isEdit || $isSelfProfile), 'attr') ?>" required>
+                        <input class="form-control" id="<?= esc($fieldPrefix, 'attr') ?>-birthday" name="birthday" type="date" value="<?= esc($value($details, 'birthday', $isEdit || $isSelfProfile), 'attr') ?>" required<?= $lockAttr ?>>
                     </div>
                 </div>
 

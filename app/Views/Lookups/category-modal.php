@@ -7,7 +7,6 @@
 				data-update-action="<?= site_url('admin/categories/update') ?>"
 				data-archive-action="<?= site_url('admin/categories/archive') ?>"
 				data-restore-action="<?= site_url('admin/categories/restore') ?>"
-				data-delete-action="<?= site_url('admin/categories/delete') ?>"
 				data-existing-codes="<?= esc(json_encode(array_values($existingCodes ?? [])), 'attr') ?>">
 				<?= csrf_field() ?>
 				<div class="modal-header">
@@ -28,9 +27,6 @@
 					</div>
 					<div class="alert alert-warning mb-0 d-none js-category-archive-message">
 						Archive <strong class="js-category-archive-name">this category</strong>? This will be blocked if any sectors still use it.
-					</div>
-					<div class="alert alert-danger mb-0 d-none js-category-delete-message">
-						Permanently delete <strong class="js-category-delete-name">this category</strong>? This cannot be undone and will be blocked if any sectors still use it.
 					</div>
 					<div class="alert alert-info mb-0 d-none js-category-restore-message">
 						Restore <strong class="js-category-restore-name">this category</strong>? It will become active again and available for sectors.

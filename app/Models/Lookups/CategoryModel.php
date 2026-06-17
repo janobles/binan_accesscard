@@ -212,22 +212,6 @@ class CategoryModel extends Model
     }
 
     /**
-     * Count of all sectors linked to this category, including archived ones. Guards
-     * permanent delete: a category whose sectors only got cascade-archived still owns
-     * them, so deleting it would orphan those sector.categoryID references.
-     */
-    public function countSectorsIncludingArchived(int $id): int
-    {
-        if (! $this->db->tableExists('sector')) {
-            return 0;
-        }
-
-        return $this->db->table('sector')
-            ->where('categoryID', $id)
-            ->countAllResults();
-    }
-
-    /**
      * Suggested next sector shortcode for a category code, e.g. 'SC' => 'SC10'.
      * Scans every existing sector shortcode (incl. archived, so numbers are
      * never reused) sharing this prefix and returns prefix.(max+1). Single-

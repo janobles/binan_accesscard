@@ -133,15 +133,6 @@ $categoryClearUrl = static function () use ($listRoute, $status, $perPage): stri
 											data-category-name="<?= esc((string) ($category['name'] ?? ''), 'attr') ?>">
 											<i class="bi bi-archive" aria-hidden="true"></i>Archive
 										</button>
-										<button
-											class="dropdown-item text-danger js-category-modal-open"
-											type="button"
-											data-category-mode="delete"
-											data-category-id="<?= esc((string) $categoryId) ?>"
-											data-category-code="<?= esc((string) ($category['code'] ?? ''), 'attr') ?>"
-											data-category-name="<?= esc((string) ($category['name'] ?? ''), 'attr') ?>">
-											<i class="bi bi-trash" aria-hidden="true"></i>Delete
-										</button>
 									<?php else: ?>
 										<button
 											class="dropdown-item text-success js-category-modal-open"

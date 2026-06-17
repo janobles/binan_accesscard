@@ -144,11 +144,17 @@ class AccountController extends BaseController
             return '<div class="alert alert-danger mb-0">This account cannot be edited.</div>';
         }
 
+        $currentUserId = (int) session()->get('user_id');
+
         return view('Accounts/account-form-modal', [
             'mode'    => 'edit',
             'account' => $account,
             'details' => ViewFormatter::parseFullDescription((string) ($account['full_description'] ?? '')),
-            'isSelf'  => $userId === (int) session()->get('user_id'),
+            'isSelf'  => $userId === $currentUserId,
+            // An admin may manage another administrator's login (username, account
+            // level, password) but not their personal details; the developer and
+            // editing your own row are unrestricted.
+            'personalLocked' => $this->isPersonalLocked((string) ($account['role'] ?? ''), $userId === $currentUserId),
         ]);
     }
 
@@ -186,28 +192,39 @@ class AccountController extends BaseController
             return redirect()->to(site_url('admin/accounts'))->with('error', 'This account cannot be edited.');
         }
 
+        $isSelf = $userId === (int) session()->get('user_id');
+        // When an admin edits another administrator, the personal details are locked
+        // (only username/account level/password may change), so those fields are not
+        // posted/validated and the existing full_description is kept as-is.
+        $personalLocked = $this->isPersonalLocked($currentRole, $isSelf);
+
         $rules = [
             'username' => 'required|min_length[4]|max_length[255]|is_unique[users.username,userID,' . $userId . ']',
-            'last_name' => 'required|max_length[100]',
-            'first_name' => 'required|max_length[100]',
-            'middle_name' => 'required|max_length[100]',
-            'suffix' => 'permit_empty|max_length[20]',
-            'address' => 'required|max_length[255]',
-            'contact_no' => 'required|max_length[50]',
-            'birthday' => 'required|valid_date[Y-m-d]',
             'role' => 'required|in_list[administrator,encoder,viewer]',
         ];
         $messages = [
             'username' => [
                 'is_unique' => 'Username is already taken. Choose a different one.',
             ],
-            'birthday' => [
-                'valid_date' => 'Birthday must be a valid date.',
-            ],
             'role' => [
                 'in_list' => 'Account level must be Administrator, Encoder, or Viewer.',
             ],
         ];
+
+        if (! $personalLocked) {
+            $rules += [
+                'last_name' => 'required|max_length[100]',
+                'first_name' => 'required|max_length[100]',
+                'middle_name' => 'required|max_length[100]',
+                'suffix' => 'permit_empty|max_length[20]',
+                'address' => 'required|max_length[255]',
+                'contact_no' => 'required|max_length[50]',
+                'birthday' => 'required|valid_date[Y-m-d]',
+            ];
+            $messages['birthday'] = [
+                'valid_date' => 'Birthday must be a valid date.',
+            ];
+        }
 
         if (! $this->validate($rules, $messages)) {
             return redirect()->to(site_url('admin/accounts'))
@@ -215,7 +232,6 @@ class AccountController extends BaseController
         }
 
         $newRole = (string) $this->request->getPost('role');
-        $isSelf = $userId === (int) session()->get('user_id');
 
         // Changing your own account level could lock you out of your own dashboard.
         if ($isSelf && $newRole !== $currentRole) {
@@ -227,7 +243,10 @@ class AccountController extends BaseController
         $fields = [
             'username' => $username,
             'account_level' => $newRole,
-            'full_description' => $this->buildFullDescription(),
+            // A locked editor cannot touch personal details, so keep the stored value.
+            'full_description' => $personalLocked
+                ? (string) ($account['full_description'] ?? '')
+                : $this->buildFullDescription(),
         ];
 
         try {
@@ -537,6 +556,25 @@ class AccountController extends BaseController
         }
 
         return implode('; ', $parts);
+    }
+
+    /**
+     * Whether the current editor may NOT change the target account's personal
+     * details (name, suffix, birthday, contact no, address). True only when an
+     * administrator edits another administrator: an admin can still manage that
+     * account's username, account level, and password, but not its personal info.
+     * The developer is unrestricted, and editing your own row is never locked.
+     *
+     * @param string $targetRole the target account's raw account_level enum value
+     */
+    private function isPersonalLocked(string $targetRole, bool $isSelf): bool
+    {
+        if ($isSelf) {
+            return false;
+        }
+
+        return $this->normalizeRole((string) session()->get('role')) === 'Admin'
+            && $this->normalizeRole($targetRole) === 'Admin';
     }
 
     /**

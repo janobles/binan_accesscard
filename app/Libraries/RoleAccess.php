@@ -33,6 +33,20 @@ class RoleAccess
         };
     }
 
+    /**
+     * Audit-trail display label for a role. Same as normalizeRole(), except the
+     * encoder/staff role is surfaced as 'Encoder' (the audit trails and account UI
+     * label) instead of the legacy 'Employee'. Returns null for unrecognized values
+     * so callers can fall back to the raw string (e.g. system rows: Login/System).
+     * Kept separate from normalizeRole() so routing/guards still compare 'Employee'.
+     */
+    public static function auditRoleLabel(string $role): ?string
+    {
+        $normalizedRole = self::normalizeRole($role);
+
+        return $normalizedRole === 'Employee' ? 'Encoder' : $normalizedRole;
+    }
+
     /** True if the session's user_id still maps to a real `users` row (post-DB-change safety). */
     public static function sessionUserExists(): bool
     {

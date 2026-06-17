@@ -141,16 +141,10 @@ class SessionAuditLogger
         return $value > 0 ? $value : null;
     }
 
-    /** Human-friendly role label for audit descriptions ('User' shown as 'Employee'). */
+    /** Human-friendly role label for audit descriptions (the encoder/staff role is shown as 'Encoder'). */
     private static function roleLabel(string $role): string
     {
-        return match (strtolower(trim($role))) {
-            'developer' => 'Developer',
-            'admin', 'administrator' => 'Admin',
-            'user', 'encoder', 'employee' => 'Employee',
-            'viewer' => 'Viewer',
-            default => 'Employee',
-        };
+        return RoleAccess::auditRoleLabel($role) ?? 'Encoder';
     }
 
     /** Safely extracts the client IP from the request, or null. */

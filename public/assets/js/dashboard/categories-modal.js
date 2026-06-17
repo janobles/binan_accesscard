@@ -1,10 +1,11 @@
 // Drives the "Manage Categories" admin page (#categoryActionModal): handles
-// create / update / archive / restore / delete in a single shared modal, blocks
+// create / update / archive / restore in a single shared modal, blocks
 // submission when the typed code already exists (data-existing-codes), and
-// manages the Active / Archived row toggle.
+// manages the Active / Archived row toggle. Categories are never permanently
+// deleted — archive is the only retirement path.
 //
 // Connected to:
-//   - Backend : POST admin/categories/create|update|archive|restore|delete
+//   - Backend : POST admin/categories/create|update|archive|restore
 //               (Lookups\CategoryController, via the modal's data-*-action attributes)
 //   - Views   : Views/Lookups/category-modal.php — #categoryActionModal,
 //               .js-category-modal-open buttons carry data-category-mode,
@@ -61,20 +62,17 @@
         const mode = String(trigger.dataset.categoryMode || 'create');
         const fields = modal.querySelector('.js-category-form-fields');
         const archiveMessage = modal.querySelector('.js-category-archive-message');
-        const deleteMessage = modal.querySelector('.js-category-delete-message');
         const restoreMessage = modal.querySelector('.js-category-restore-message');
         const title = modal.querySelector('#categoryActionModalLabel');
         const submit = modal.querySelector('.js-category-modal-submit');
         const code = modal.querySelector('#categoryModalCode');
         const name = modal.querySelector('#categoryModalName');
         const archiveName = modal.querySelector('.js-category-archive-name');
-        const deleteName = modal.querySelector('.js-category-delete-name');
         const restoreName = modal.querySelector('.js-category-restore-name');
         const categoryId = String(trigger.dataset.categoryId || '').trim();
         const isArchive = mode === 'archive';
         const isRestore = mode === 'restore';
-        const isDelete = mode === 'delete';
-        const isAction = isArchive || isRestore || isDelete;
+        const isAction = isArchive || isRestore;
         const existingCode = mode === 'update' ? String(trigger.dataset.categoryCode || '') : '';
 
         form.reset();
@@ -87,21 +85,19 @@
             form.action = (form.dataset.archiveAction || '').replace(/\/$/, '') + '/' + categoryId;
         } else if (isRestore) {
             form.action = (form.dataset.restoreAction || '').replace(/\/$/, '') + '/' + categoryId;
-        } else if (isDelete) {
-            form.action = (form.dataset.deleteAction || '').replace(/\/$/, '') + '/' + categoryId;
         }
 
         if (title) {
             title.textContent = mode === 'update'
                 ? 'Update Category'
-                : (isArchive ? 'Archive Category' : (isRestore ? 'Restore Category' : (isDelete ? 'Delete Category' : 'Add Category')));
+                : (isArchive ? 'Archive Category' : (isRestore ? 'Restore Category' : 'Add Category'));
         }
 
         if (submit) {
             submit.textContent = mode === 'update'
                 ? 'Update Category'
-                : (isArchive ? 'Archive Category' : (isRestore ? 'Restore Category' : (isDelete ? 'Delete Category' : 'Add Category')));
-            submit.classList.toggle('btn-danger', isArchive || isDelete);
+                : (isArchive ? 'Archive Category' : (isRestore ? 'Restore Category' : 'Add Category'));
+            submit.classList.toggle('btn-danger', isArchive);
             submit.classList.toggle('btn-success', isRestore);
             submit.classList.toggle('btn-primary', !isAction);
             submit.disabled = false;
@@ -113,10 +109,6 @@
 
         if (archiveMessage) {
             archiveMessage.classList.toggle('d-none', !isArchive);
-        }
-
-        if (deleteMessage) {
-            deleteMessage.classList.toggle('d-none', !isDelete);
         }
 
         if (restoreMessage) {
@@ -144,10 +136,6 @@
 
         if (archiveName) {
             archiveName.textContent = String(trigger.dataset.categoryName || 'this category');
-        }
-
-        if (deleteName) {
-            deleteName.textContent = String(trigger.dataset.categoryName || 'this category');
         }
 
         if (restoreName) {

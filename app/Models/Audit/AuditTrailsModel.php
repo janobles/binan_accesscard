@@ -242,6 +242,7 @@ class AuditTrailsModel extends Model
             if ($session !== null && (int) $session->get('user_id') === $userId) {
                 $username = trim((string) $session->get('username'));
                 $role = trim((string) $session->get('role'));
+                $role = \App\Libraries\RoleAccess::auditRoleLabel($role) ?? $role;
 
                 if ($username !== '') {
                     return $role === '' ? $username . ' (#' . $userId . ')'
@@ -256,10 +257,10 @@ class AuditTrailsModel extends Model
             return 'user #' . $userId;
         }
 
-        // Normalize the raw account_level enum to the app-facing label (Admin/Employee/…)
+        // Normalize the raw account_level enum to the audit-facing label (Admin/Encoder/…)
         // so the narrative matches what the session-actor path stores.
         $role = trim((string) ($user['role'] ?? ''));
-        $role = \App\Libraries\RoleAccess::normalizeRole($role) ?? $role;
+        $role = \App\Libraries\RoleAccess::auditRoleLabel($role) ?? $role;
 
         return $role === ''
             ? trim((string) $user['username']) . ' (#' . $userId . ')'

@@ -16,10 +16,10 @@ use Throwable;
  * Admin\DashboardController::categories; every action here is Developer/Admin-only
  * and redirects back to `admin/categories` with a flash message.
  *
- * Every category is fully editable, archivable, and deletable. Archiving a category
+ * Every category is editable, archivable, and restorable; categories are never
+ * permanently deleted (archive is the only retirement path). Archiving a category
  * cascades to its active sectors (they are retired together but existing records keep
- * them); restoring the category brings back exactly that cascaded batch. Permanent
- * delete is still blocked while any sector references the category.
+ * them); restoring the category brings back exactly that cascaded batch.
  */
 class CategoryController extends BaseController
 {
@@ -115,38 +115,6 @@ class CategoryController extends BaseController
         return $this->redirect('success', 'Category restored successfully.' . $this->cascadeMessage($sectorCount, 'restored'));
     }
 
-    /**
-     * POST `admin/categories/delete/{id}`: permanently delete a category.
-     * Refused for categories still used by sectors.
-     */
-    public function delete(int $categoryId): RedirectResponse
-    {
-        $guard = $this->ensureAdminAccess();
-
-        if ($guard instanceof RedirectResponse) {
-            return $guard;
-        }
-
-        $model = new CategoryModel();
-
-        if (! $model->hasTable()) {
-            return $this->redirect('error', 'Category table is not available.');
-        }
-
-        if ($model->countSectorsIncludingArchived($categoryId) > 0) {
-            return $this->redirect('error', 'This category is used by one or more sectors (including archived) and cannot be deleted.');
-        }
-
-        $category = $model->find($categoryId);
-
-        if (! $model->delete($categoryId)) {
-            return $this->redirect('error', 'Unable to delete category.');
-        }
-
-        $this->audit('CATEGORY_DELETE', 'Permanently deleted ' . $this->categoryLabel($category, $categoryId) . '.');
-
-        return $this->redirect('success', 'Category deleted successfully.');
-    }
 
     /**
      * Shared create/update logic. Validates the code (letters only) and name,

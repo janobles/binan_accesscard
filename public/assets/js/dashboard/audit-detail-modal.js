@@ -1,8 +1,8 @@
 // Per-row audit "Details" modal.
 //
-// Clicking any .js-audit-detail button reads the who/what/when/where data carried
-// on the button's data-* attributes and shows them in the shared #auditDetailModal,
-// without any AJAX call or new backend route. Used on:
+// Clicking any .js-audit-detail button reads the row's data-full narrative and
+// shows it in the shared #auditDetailModal, without any AJAX call or new backend
+// route. Used on:
 //   - Views/Admin/audit-trails.php       (admin Audit Trails table)
 //   - Views/Employee/layout.php          (employee My Activity table)
 // Depends on: Bootstrap Modal (bootstrap.bundle.min.js). jQuery not required.
@@ -27,12 +27,6 @@
             return;
         }
 
-        setField(modalEl, 'auditDetailAction', button.getAttribute('data-action'));
-        setField(modalEl, 'auditDetailUser', button.getAttribute('data-user'));
-        setField(modalEl, 'auditDetailMember', button.getAttribute('data-member'));
-        setField(modalEl, 'auditDetailWhen', button.getAttribute('data-when'));
-        setField(modalEl, 'auditDetailIp', button.getAttribute('data-ip'));
-        setField(modalEl, 'auditDetailUa', button.getAttribute('data-ua'));
         setField(modalEl, 'auditDetailFull', button.getAttribute('data-full'));
 
         window.bootstrap.Modal.getOrCreateInstance(modalEl).show();

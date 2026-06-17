@@ -121,14 +121,8 @@ $formatAuditUser = static function (array $audit): string {
                         $auditUa = trim((string) ($audit['user_agent'] ?? ''));
                     ?>
                     <?php /* The whole row is the detail trigger (js-audit-detail) — audit-detail-modal.js
-                             reads the data-* attributes; Member/IP/full narrative surface in that modal. */ ?>
+                             reads data-full and surfaces the narrative in that modal. */ ?>
                     <tr class="audit-row js-audit-detail" tabindex="0" role="button" aria-label="View audit log details"
-                        data-action="<?= esc((string) ($audit['user_action'] ?? ''), 'attr') ?>"
-                        data-user="<?= esc($formatAuditUser($audit), 'attr') ?>"
-                        data-member="<?= esc($formatAuditMember($audit), 'attr') ?>"
-                        data-when="<?= esc((string) ($audit['dt_created'] ?? ''), 'attr') ?>"
-                        data-ip="<?= esc((string) ($audit['ip_address'] ?? ''), 'attr') ?>"
-                        data-ua="<?= esc((string) ($audit['user_agent'] ?? ''), 'attr') ?>"
                         data-full="<?= esc((string) ($audit['full_description'] ?? ''), 'attr') ?>">
                         <td class="audit-when"><?= $auditTs ? esc(date('M j, Y h:i A', $auditTs)) : '—' ?></td>
                         <td><span class="audit-action-pill"><?= esc((string) ($audit['user_action'] ?? '')) ?></span></td>

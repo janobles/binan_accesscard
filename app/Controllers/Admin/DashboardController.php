@@ -242,6 +242,7 @@ class DashboardController extends BaseController
             'searchTerm' => $viewData['searchTerm'] ?? '',
             'searchFilters' => $viewData['searchFilters'] ?? [],
             'auditActionOptions' => $viewData['auditActionOptions'] ?? [],
+            'auditListData' => $viewData['auditListData'] ?? [],
         ]);
     }
 

@@ -87,9 +87,10 @@ class DashboardPageBuilder
         // Only the Developer may see Developer (NULL-userID) audit rows; admins must
         // never learn a Developer exists.
         $includeDeveloperAudits = $currentRole === 'Developer';
-        $recentAudits = $activePage === 'audit-trails'
-            ? $searchModel->auditTrails($searchTerm, $searchFilters, 50, $includeDeveloperAudits)
-            : (new AuditTrailsModel())->getRecent(10, $includeDeveloperAudits);
+        $auditListData = $activePage === 'audit-trails'
+            ? $this->buildAuditListData($includeDeveloperAudits, null, 'admin/audit-trails')
+            : [];
+        $recentAudits = $auditListData['rows'] ?? (new AuditTrailsModel())->getRecent(10, $includeDeveloperAudits);
         $memberListData = $activePage === 'family-manage'
             ? $this->buildMemberListData()
             : [];
@@ -158,6 +159,7 @@ class DashboardPageBuilder
             'familyFormViewData' => $familyFormViewData,
             'recentFamilies'     => $recentFamilies,
             'recentAudits'       => $recentAudits,
+            'auditListData'      => $auditListData,
             'recordListData'      => $memberListData,
             'memberListData'      => $memberListData,
             'sectors'            => $sectorListData['rows'] ?? $this->fetchVisibleSectors($sectorModel),
@@ -309,6 +311,53 @@ class DashboardPageBuilder
     }
 
     /**
+     * Builds a paginated audit-trail list bundle for the admin Audit Trails page
+     * and the employee Activity page. Mirrors buildLookupListData(): reads the
+     * q/action/page/per_page query params, runs the keyword + action/date search
+     * (paginated), and returns the row page plus pagination + count metadata. The
+     * action filter reuses searchFilters(). Frontend: the audit views' database
+     * search bar, show-entries selector and pagination controls.
+     *
+     * @param bool     $includeDeveloper Whether Developer (NULL-userID) rows are visible (admin only).
+     * @param int|null $userId           Scopes to one user's own rows (employee Activity), or null for all users.
+     * @param string   $listRoute        Full-page route the search/pagination forms post to.
+     */
+    private function buildAuditListData(bool $includeDeveloper, ?int $userId, string $listRoute): array
+    {
+        $searchModel = new SearchModel();
+        $keyword = trim((string) $this->request->getGet('q'));
+        $filters = $this->searchFilters();
+        $page    = max(1, (int) $this->request->getGet('page'));
+        $perPageOptions = [10, 25, 50, 100];
+        $perPage = (int) $this->request->getGet('per_page');
+        $perPage = in_array($perPage, $perPageOptions, true) ? $perPage : 50;
+
+        $total = $userId === null
+            ? $searchModel->countAuditTrails($keyword, $filters, $includeDeveloper)
+            : $searchModel->countAuditTrailsByUser($userId, $keyword, $filters);
+        $totalPages = max(1, (int) ceil($total / $perPage));
+        $page   = min($page, $totalPages);
+        $offset = ($page - 1) * $perPage;
+
+        $rows = $userId === null
+            ? $searchModel->auditTrails($keyword, $filters, $perPage, $includeDeveloper, $offset)
+            : $searchModel->auditTrailsByUser($userId, $keyword, $filters, $perPage, $offset);
+
+        return [
+            'rows'          => $rows,
+            'keyword'       => $keyword,
+            'page'          => $page,
+            'perPage'       => $perPage,
+            'perPageOptions'=> $perPageOptions,
+            'totalPages'    => $totalPages,
+            'totalRows'     => $total,
+            'fromRecord'    => $total === 0 ? 0 : $offset + 1,
+            'toRecord'      => min($total, $page * $perPage),
+            'listRoute'     => $listRoute,
+        ];
+    }
+
+    /**
      * Builds the admin Manage Records list: reads the q/status/page/sector/date
      * query params, runs the paginated family-head search, and merges in the deep
      * (whole-database) search results. Frontend: the family-list view + its filter
@@ -448,9 +497,10 @@ class DashboardPageBuilder
         $recentFamilies = $activePage === 'dashboard' && ($searchTerm !== '' || $hasSearchFilters)
             ? $searchModel->families($searchTerm, $searchFilters, 25)
             : $dashboardModel->recentFamilies(10);
-        $myAudits = $activePage === 'activity'
-            ? $searchModel->auditTrailsByUser($userId, $searchTerm, $searchFilters, 50)
-            : (new AuditTrailsModel())->getByUser($userId, 10);
+        $auditListData = $activePage === 'activity'
+            ? $this->buildAuditListData(false, $userId, 'employee/activity')
+            : [];
+        $myAudits = $auditListData['rows'] ?? (new AuditTrailsModel())->getByUser($userId, 10);
 
         return view('Employee/layout', [
             'user' => session()->get(),
@@ -467,6 +517,7 @@ class DashboardPageBuilder
             'recordListData'     => $recordListData,
             'recentFamilies'     => $recentFamilies,
             'myAudits'           => $myAudits,
+            'auditListData'      => $auditListData,
             'stats'              => array_merge(['families' => 0, 'members' => 0, 'sectors' => 0, 'assistance' => 0], $dashboardModel->stats()),
             'searchTerm'         => $searchTerm,
             'searchFilters'      => $searchFilters,

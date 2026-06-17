@@ -21,7 +21,7 @@
     }
 
     function managementRoot(el) {
-        return el.closest('[data-sector-management-root], [data-service-management-root], [data-category-management-root]') || document;
+        return el.closest('[data-sector-management-root], [data-service-management-root], [data-category-management-root], [data-audit-management-root]') || document;
     }
 
     function dataRows(form) {
@@ -34,7 +34,7 @@
 
         // Skip the "no records" empty-state row (it spans all columns).
         return Array.prototype.filter.call(table.tBodies[0].rows, function (row) {
-            return !row.querySelector('.sector-empty-state, .service-empty-state');
+            return !row.querySelector('.sector-empty-state, .service-empty-state, .audit-empty-state');
         });
     }
 

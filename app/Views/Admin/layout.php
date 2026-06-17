@@ -269,6 +269,7 @@ $jadeStyles = [
                     'searchTerm' => $searchTerm,
                     'searchFilters' => $searchFilters,
                     'auditActionOptions' => $auditActionOptions,
+                    'auditListData' => $auditListData ?? [],
                 ]) ?>
             <?php endif; ?>
 

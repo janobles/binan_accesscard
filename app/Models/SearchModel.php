@@ -267,22 +267,28 @@ class SearchModel
     }
 
     /**
-     * Searches all audit entries by action/description/IP and by related user or
-     * member name, with action + date filters. Frontend: the admin Audit Trails
-     * search/filter UI.
+     * Builds the filtered audit query shared by the list + count methods so a
+     * page's row set and its total always match. Applies (in order): the optional
+     * per-user scope, the Developer-visibility guard (admin views only), the
+     * keyword search, and the action/date filters. Ordering/limit/offset are added
+     * by the callers.
+     *
+     * @param int|null $userId When set, scopes to that user's own rows (employee
+     *                         Activity) — the Developer guard is then skipped.
      */
-    public function auditTrails(string $keyword = '', array $filters = [], int $limit = 50, bool $includeDeveloper = false): array
+    private function auditSearchBuilder(string $keyword, array $filters, bool $includeDeveloper, ?int $userId = null): BaseBuilder
     {
-        if (! $this->hasAuditSearchTables()) {
-            return [];
-        }
-
-        $limit = max(1, $limit);
         $builder = $this->auditTrailBuilder();
+
+        if ($userId !== null) {
+            // AND-ed scope, kept outside the keyword OR-group below.
+            $builder->where('audit_trails.userID', $userId);
+        }
 
         // Developer audit rows (NULL userID, no users row) stay hidden from
         // non-developer viewers so the other roles never learn a Developer exists.
-        if (! $includeDeveloper) {
+        // Only relevant to the all-users admin view ($userId === null).
+        if ($userId === null && ! $includeDeveloper) {
             // Hide only the Developer's own rows; failed logins and system errors
             // (logged without a users row) still surface to admins.
             $builder->where(
@@ -300,44 +306,66 @@ class SearchModel
 
         $this->applyAuditFilters($builder, $filters);
 
-        $rows = $builder
+        return $builder;
+    }
+
+    /**
+     * Searches all audit entries by action/description/IP and by related user or
+     * member name, with action + date filters. Frontend: the admin Audit Trails
+     * search/filter UI.
+     */
+    public function auditTrails(string $keyword = '', array $filters = [], int $limit = 50, bool $includeDeveloper = false, int $offset = 0): array
+    {
+        if (! $this->hasAuditSearchTables()) {
+            return [];
+        }
+
+        $rows = $this->auditSearchBuilder($keyword, $filters, $includeDeveloper)
             ->orderBy('audit_trails.dt_created', 'DESC')
-            ->limit($limit)
+            ->limit(max(1, $limit), max(0, $offset))
             ->get()
             ->getResultArray();
 
         return $this->withAuditNames($rows);
     }
 
+    /** Total audit rows matching the keyword/action/date filter (for pagination). */
+    public function countAuditTrails(string $keyword = '', array $filters = [], bool $includeDeveloper = false): int
+    {
+        if (! $this->hasAuditSearchTables()) {
+            return 0;
+        }
+
+        return $this->auditSearchBuilder($keyword, $filters, $includeDeveloper)->countAllResults();
+    }
+
     /**
      * Same as auditTrails() but scoped to one user. Frontend: the employee
      * Activity page search/filter.
      */
-    public function auditTrailsByUser(int $userId, string $keyword = '', array $filters = [], int $limit = 50): array
+    public function auditTrailsByUser(int $userId, string $keyword = '', array $filters = [], int $limit = 50, int $offset = 0): array
     {
         if (! $this->hasAuditSearchTables()) {
             return [];
         }
 
-        $limit = max(1, $limit);
-        $builder = $this->auditTrailBuilder()
-            ->where('audit_trails.userID', $userId);
-
-        $keyword = $this->normalizeKeyword($keyword);
-
-        if ($keyword !== '') {
-            $this->applyAuditSearch($builder, $keyword);
-        }
-
-        $this->applyAuditFilters($builder, $filters);
-
-        $rows = $builder
+        $rows = $this->auditSearchBuilder($keyword, $filters, false, $userId)
             ->orderBy('audit_trails.dt_created', 'DESC')
-            ->limit($limit)
+            ->limit(max(1, $limit), max(0, $offset))
             ->get()
             ->getResultArray();
 
         return $this->withAuditNames($rows);
+    }
+
+    /** Total audit rows for one user matching the filter (for pagination). */
+    public function countAuditTrailsByUser(int $userId, string $keyword = '', array $filters = []): int
+    {
+        if (! $this->hasAuditSearchTables()) {
+            return 0;
+        }
+
+        return $this->auditSearchBuilder($keyword, $filters, false, $userId)->countAllResults();
     }
 
     /**

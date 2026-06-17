@@ -65,20 +65,18 @@ $value = static function (array $details, string $key, bool $isEdit): string {
                         <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>-suffix">Suffix <span class="text-muted">(optional)</span></label>
                         <input class="form-control" id="<?= esc($fieldPrefix, 'attr') ?>-suffix" name="suffix" type="text" value="<?= esc($value($details, 'suffix', $isEdit || $isSelfProfile), 'attr') ?>" placeholder="e.g. Jr, Sr, III">
                     </div>
-                    <?php if (! $isSelfProfile): ?>
-                        <div class="account-field">
-                            <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>-address">Address</label>
-                            <input class="form-control" id="<?= esc($fieldPrefix, 'attr') ?>-address" name="address" type="text" value="<?= esc($value($details, 'address', $isEdit), 'attr') ?>" placeholder="Enter address" required>
-                        </div>
-                        <div class="account-field">
-                            <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>-contact-no">Contact No.</label>
-                            <input class="form-control" id="<?= esc($fieldPrefix, 'attr') ?>-contact-no" name="contact_no" type="text" value="<?= esc($value($details, 'contact_no', $isEdit), 'attr') ?>" placeholder="Enter contact number" required>
-                        </div>
-                        <div class="account-field">
-                            <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>-birthday">Birthday</label>
-                            <input class="form-control" id="<?= esc($fieldPrefix, 'attr') ?>-birthday" name="birthday" type="date" value="<?= esc($value($details, 'birthday', $isEdit), 'attr') ?>" required>
-                        </div>
-                    <?php endif; ?>
+                    <div class="account-field">
+                        <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>-address">Address</label>
+                        <input class="form-control" id="<?= esc($fieldPrefix, 'attr') ?>-address" name="address" type="text" value="<?= esc($value($details, 'address', $isEdit || $isSelfProfile), 'attr') ?>" placeholder="Enter address" required>
+                    </div>
+                    <div class="account-field">
+                        <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>-contact-no">Contact No.</label>
+                        <input class="form-control" id="<?= esc($fieldPrefix, 'attr') ?>-contact-no" name="contact_no" type="text" value="<?= esc($value($details, 'contact_no', $isEdit || $isSelfProfile), 'attr') ?>" placeholder="Enter contact number" required>
+                    </div>
+                    <div class="account-field">
+                        <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>-birthday">Birthday</label>
+                        <input class="form-control" id="<?= esc($fieldPrefix, 'attr') ?>-birthday" name="birthday" type="date" value="<?= esc($value($details, 'birthday', $isEdit || $isSelfProfile), 'attr') ?>" required>
+                    </div>
                 </div>
 
                 <div class="account-field-group" aria-label="Login information">

@@ -9,6 +9,86 @@
     box-shadow: 0 1rem 2.5rem rgba(16, 37, 31, 0.08);
 }
 
+.floating-family-modal:has(.edit-account-modal) {
+    --modal-window-gap: clamp(0.5rem, 1.5vw, 1rem);
+    --modal-window-width: min(64rem, calc(100vw - (var(--modal-window-gap) * 2)));
+    --modal-window-height: min(43rem, calc(100dvh - (var(--modal-window-gap) * 2)));
+}
+
+.floating-family-modal:has(.edit-account-modal) .modal-footer {
+    display: none;
+}
+
+.edit-account-modal {
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 0.55rem;
+    min-height: 100%;
+    padding: 0.65rem;
+}
+
+.edit-account-modal form {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
+    min-height: 0;
+}
+
+.edit-account-modal .account-card {
+    min-height: 0;
+    overflow: auto;
+}
+
+.edit-account-modal > .account-card-header h2 {
+    font-size: 1.25rem;
+}
+
+.edit-account-modal > .account-card-header p {
+    font-size: 0.86rem;
+}
+
+.edit-account-modal .account-card-header {
+    padding: 0.7rem 0.85rem;
+}
+
+.edit-account-modal .account-card h2 {
+    font-size: 0.95rem;
+}
+
+.edit-account-modal .account-create-grid {
+    gap: 0.75rem;
+    padding: 0.75rem 0.85rem;
+}
+
+.edit-account-modal .account-field-group {
+    gap: 0.55rem;
+}
+
+.edit-account-modal .account-field-group + .account-field-group {
+    padding-left: 0.85rem;
+}
+
+.edit-account-modal .form-label {
+    font-size: 0.76rem;
+}
+
+.edit-account-modal .form-control,
+.edit-account-modal .form-select {
+    min-height: 2.25rem;
+    font-size: 0.82rem;
+}
+
+.edit-account-modal .account-create-actions {
+    margin: 0 -0.65rem -0.65rem !important;
+    padding: 0.65rem 0.85rem;
+    border-top: 1px solid #d7e3df;
+    background: #ffffff;
+}
+
+.edit-account-modal .account-create-actions .btn {
+    min-width: 7.25rem;
+    min-height: 2.3rem;
+    font-size: 0.84rem;
+}
+
 .accounts-page[data-account-management] {
     gap: 0;
     padding: 0;

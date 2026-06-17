@@ -190,7 +190,7 @@ $jadeStyles = [
 
                         return site_url($listRoute) . ($params === [] ? '' : '?' . http_build_query($params));
                     };
-
+    
                     $auditClearUrl = static function () use ($listRoute, $auditAction, $perPage): string {
                         $params = array_filter([
                             'action' => $auditAction,

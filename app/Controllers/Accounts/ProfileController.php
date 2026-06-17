@@ -72,14 +72,15 @@ class ProfileController extends BaseController
             return redirect()->to(site_url('/'))->with('error', 'Your account could not be loaded.');
         }
 
-        // Address / contact / birthday are not editable from My Account (set only at
-        // account creation), so they are validated and rebuilt from the stored row.
         $rules = [
             'username' => 'required|min_length[4]|max_length[255]|is_unique[users.username,userID,' . $userId . ']',
             'last_name' => 'required|max_length[100]',
             'first_name' => 'required|max_length[100]',
             'middle_name' => 'required|max_length[100]',
             'suffix' => 'permit_empty|max_length[20]',
+            'address' => 'required|max_length[255]',
+            'contact_no' => 'required|max_length[50]',
+            'birthday' => 'required|valid_date[Y-m-d]',
         ];
         $messages = [
             'username' => [
@@ -114,12 +115,10 @@ class ProfileController extends BaseController
 
         $username = trim((string) $this->request->getPost('username'));
 
-        // Self-service cannot change account level — only username/name details.
-        $existingDetails = ViewFormatter::parseFullDescription((string) ($account['full_description'] ?? ''));
-
+        // Self-service cannot change account level.
         if (! $userModel->updateProfile($userId, [
             'username' => $username,
-            'full_description' => $this->buildFullDescription($existingDetails),
+            'full_description' => $this->buildFullDescription(),
         ])) {
             return redirect()->back()->with('error', 'Your profile could not be saved.');
         }
@@ -159,21 +158,18 @@ class ProfileController extends BaseController
     }
 
     /**
-     * Repacks users.full_description for a My Account save: the name fields come
-     * from the posted form, while address/contact/birthday are carried over from
-     * the existing parsed details ($existing) since they are not editable here.
-     * Produces the same LN/FN/MN/SF/ADDR/CN/BD labeled string the parser round-trips.
+     * Repacks users.full_description from the shared account form.
      */
-    private function buildFullDescription(array $existing): string
+    private function buildFullDescription(): string
     {
         $segments = [
             'LN'   => trim((string) $this->request->getPost('last_name')),
             'FN'   => trim((string) $this->request->getPost('first_name')),
             'MN'   => trim((string) $this->request->getPost('middle_name')),
             'SF'   => trim((string) $this->request->getPost('suffix')),
-            'ADDR' => trim((string) ($existing['address'] ?? '')),
-            'CN'   => trim((string) ($existing['contact_no'] ?? '')),
-            'BD'   => trim((string) ($existing['birthday'] ?? '')),
+            'ADDR' => trim((string) $this->request->getPost('address')),
+            'CN'   => trim((string) $this->request->getPost('contact_no')),
+            'BD'   => trim((string) $this->request->getPost('birthday')),
         ];
 
         $parts = [];

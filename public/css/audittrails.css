@@ -154,3 +154,115 @@
     padding-left: 1rem;
     padding-right: 1rem;
 }
+
+/* --- Audit log table reskin (CEDO-style layout: Date/Time · Action pill · Description ·
+       User Agent · User; airy clickable rows; full-width "search this page" + show-entries). */
+.audit-table-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem 1rem;
+    padding: 0.85rem 1rem 0;
+}
+
+.audit-page-search-form {
+    flex: 1 1 100%;
+    margin: 0;
+}
+
+.audit-page-search {
+    width: 100%;
+    min-height: 2.5rem;
+}
+
+.audit-show-entries {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-left: auto;
+    margin-bottom: 0;
+    color: #65736e;
+    font-size: 0.83rem;
+}
+
+.audit-show-entries label {
+    margin: 0;
+    font-weight: 700;
+}
+
+.audit-show-entries .form-select {
+    width: 5rem;
+    min-height: 2rem;
+    padding-top: 0.2rem;
+    padding-bottom: 0.2rem;
+}
+
+/* Whole row opens the per-row detail modal (.js-audit-detail). */
+.audit-row {
+    cursor: pointer;
+    transition: background-color 0.12s ease;
+}
+
+.audit-row:hover,
+.audit-row:focus-visible {
+    background: #eef5f2;
+    outline: none;
+}
+
+.audit-row td {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+}
+
+.audit-when {
+    white-space: nowrap;
+    color: #4a5a55;
+    font-size: 0.82rem;
+}
+
+.audit-action-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.32rem 0.85rem;
+    border: 1px solid #b9d2f2;
+    border-radius: 999px;
+    background: #eef5ff;
+    color: #2563c9;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.audit-desc {
+    color: #34443f;
+    font-size: 0.85rem;
+}
+
+.audit-ua {
+    max-width: 22rem;
+    color: #6c7a75;
+    font-size: 0.78rem;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+.audit-user {
+    color: #34443f;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+@media (max-width: 48rem) {
+    .audit-ua {
+        max-width: 14rem;
+    }
+
+    .audit-show-entries {
+        margin-left: 0;
+    }
+}

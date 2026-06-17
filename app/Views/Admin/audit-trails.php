@@ -85,57 +85,56 @@ $formatAuditUser = static function (array $audit): string {
         </form>
     </div>
 
-    <?php /* Bar 2: page size (server) + local "Search:" live filter (client-side, no reload). */ ?>
-    <div class="table-meta">
-        <div class="records-table-controls">
-            <form class="records-page-size-form" method="get" action="<?= esc(site_url($listRoute), 'attr') ?>">
-                <?php if ($searchTerm !== ''): ?><input type="hidden" name="q" value="<?= esc($searchTerm, 'attr') ?>"><?php endif; ?>
-                <?php if ($auditAction !== ''): ?><input type="hidden" name="action" value="<?= esc($auditAction, 'attr') ?>"><?php endif; ?>
-                <label for="auditPerPage">Show</label>
-                <select class="form-select form-select-sm" id="auditPerPage" name="per_page" onchange="this.form.submit()">
-                    <?php foreach ($perPageOptions as $option): ?>
-                        <option value="<?= esc((string) $option, 'attr') ?>" <?= $perPage === (int) $option ? 'selected' : '' ?>><?= esc((string) $option) ?></option>
-                    <?php endforeach; ?>
-                </select>
-                <span>entries</span>
-            </form>
-            <form class="records-table-search-form" role="search" data-lookup-search aria-label="Filter shown audit logs">
-                <label for="auditLocalSearch">Search:</label>
-                <input class="form-control form-control-sm" type="search" id="auditLocalSearch" data-lookup-search-input placeholder="Type to filter..." autocomplete="off" aria-label="Filter shown audit logs">
-            </form>
-        </div>
+    <?php /* Bar 2: full-width "search this page" local filter (client-side, no reload) + show-entries. */ ?>
+    <div class="audit-table-toolbar">
+        <form class="records-table-search-form audit-page-search-form" role="search" data-lookup-search aria-label="Filter shown audit logs">
+            <input class="form-control audit-page-search" type="search" id="auditLocalSearch" data-lookup-search-input placeholder="Enter keyword to search this page" autocomplete="off" aria-label="Filter shown audit logs">
+        </form>
+        <form class="records-page-size-form audit-show-entries" method="get" action="<?= esc(site_url($listRoute), 'attr') ?>">
+            <?php if ($searchTerm !== ''): ?><input type="hidden" name="q" value="<?= esc($searchTerm, 'attr') ?>"><?php endif; ?>
+            <?php if ($auditAction !== ''): ?><input type="hidden" name="action" value="<?= esc($auditAction, 'attr') ?>"><?php endif; ?>
+            <label for="auditPerPage">Show</label>
+            <select class="form-select form-select-sm" id="auditPerPage" name="per_page" onchange="this.form.submit()">
+                <?php foreach ($perPageOptions as $option): ?>
+                    <option value="<?= esc((string) $option, 'attr') ?>" <?= $perPage === (int) $option ? 'selected' : '' ?>><?= esc((string) $option) ?></option>
+                <?php endforeach; ?>
+            </select>
+            <span>entries</span>
+        </form>
     </div>
 
     <div class="table-responsive">
         <table class="table audit-trails-table align-middle">
             <thead>
                 <tr>
-                    <th scope="col">User</th>
-                    <th scope="col">Member</th>
+                    <th scope="col">Date/Time</th>
                     <th scope="col">Action</th>
                     <th scope="col">Description</th>
-                    <th scope="col" class="text-end">Details</th>
+                    <th scope="col">User Agent</th>
+                    <th scope="col">User</th>
                 </tr>
             </thead>
             <tbody>
                 <?php foreach ($recentAudits as $audit): ?>
-                    <tr>
-                        <td><strong><?= esc($formatAuditUser($audit)) ?></strong></td>
-                        <td><?= esc($formatAuditMember($audit)) ?></td>
-                        <td><span class="badge bg-light text-dark border"><?= esc((string) ($audit['user_action'] ?? '')) ?></span></td>
-                        <td><?= esc((string) ($audit['description'] ?? '')) ?></td>
-                        <td class="text-end">
-                            <button type="button" class="btn btn-sm btn-outline-success js-audit-detail"
-                                data-action="<?= esc((string) ($audit['user_action'] ?? ''), 'attr') ?>"
-                                data-user="<?= esc($formatAuditUser($audit), 'attr') ?>"
-                                data-member="<?= esc($formatAuditMember($audit), 'attr') ?>"
-                                data-when="<?= esc((string) ($audit['dt_created'] ?? ''), 'attr') ?>"
-                                data-ip="<?= esc((string) ($audit['ip_address'] ?? ''), 'attr') ?>"
-                                data-ua="<?= esc((string) ($audit['user_agent'] ?? ''), 'attr') ?>"
-                                data-full="<?= esc((string) ($audit['full_description'] ?? ''), 'attr') ?>">
-                                <i class="bi bi-eye me-1" aria-hidden="true"></i>View
-                            </button>
-                        </td>
+                    <?php
+                        $auditTs = strtotime((string) ($audit['dt_created'] ?? ''));
+                        $auditUa = trim((string) ($audit['user_agent'] ?? ''));
+                    ?>
+                    <?php /* The whole row is the detail trigger (js-audit-detail) — audit-detail-modal.js
+                             reads the data-* attributes; Member/IP/full narrative surface in that modal. */ ?>
+                    <tr class="audit-row js-audit-detail" tabindex="0" role="button" aria-label="View audit log details"
+                        data-action="<?= esc((string) ($audit['user_action'] ?? ''), 'attr') ?>"
+                        data-user="<?= esc($formatAuditUser($audit), 'attr') ?>"
+                        data-member="<?= esc($formatAuditMember($audit), 'attr') ?>"
+                        data-when="<?= esc((string) ($audit['dt_created'] ?? ''), 'attr') ?>"
+                        data-ip="<?= esc((string) ($audit['ip_address'] ?? ''), 'attr') ?>"
+                        data-ua="<?= esc((string) ($audit['user_agent'] ?? ''), 'attr') ?>"
+                        data-full="<?= esc((string) ($audit['full_description'] ?? ''), 'attr') ?>">
+                        <td class="audit-when"><?= $auditTs ? esc(date('M j, Y h:i A', $auditTs)) : '—' ?></td>
+                        <td><span class="audit-action-pill"><?= esc((string) ($audit['user_action'] ?? '')) ?></span></td>
+                        <td class="audit-desc"><?= esc((string) ($audit['description'] ?? '')) ?></td>
+                        <td class="audit-ua"><?= $auditUa === '' ? '—' : esc($auditUa) ?></td>
+                        <td class="audit-user"><?= esc($formatAuditUser($audit)) ?></td>
                     </tr>
                 <?php endforeach; ?>
                 <?php if ($recentAudits === []): ?>

@@ -1,14 +1,23 @@
 // Re-initialisable shared interaction bindings that work inside AJAX-loaded modal
 // content (they cannot rely on DOMContentLoaded which fires only once):
 //   - Audit filters: auto-submit .js-audit-filter-form when the action select changes
-//   - Account status forms: confirm dialog before .js-account-status-form submits
+//   - Account status forms: a styled #accountStatusModal (Accounts/status-confirm-modal.php)
+//     confirms enable/disable before .js-account-status-form submits, falling back
+//     to window.confirm when Bootstrap or the modal markup is unavailable.
 //
 // Connected to:
-//   - Views  : Admin/layout.php (audit tab, accounts tab)
+//   - Views  : Admin/layout.php (audit tab, accounts tab),
+//              Accounts/status-confirm-modal.php - #accountStatusModal
 //   - Backend: GET admin/audit-trails, POST admin/accounts/disable|enable
 //   - Exposes: window.initViewInteractions(rootElement) for re-init after
 //              AJAX-loaded content replaces the DOM
 (function (window, document) {
+    // Status form whose submission is paused while the confirmation modal is open.
+    var pendingStatusForm = null;
+
+    function accountStatusModalEl() {
+        return document.getElementById('accountStatusModal');
+    }
     function bindDashboardSidebar() {
         const sidebar = document.getElementById('dashboard-sidebar');
         const toggles = document.querySelectorAll('#sidebarToggle, #sidebarToggleTop');
@@ -110,13 +119,79 @@
             form.dataset.statusFormBound = '1';
             form.addEventListener('submit', function (event) {
                 const message = form.dataset.confirmMessage || 'Update this account status?';
+                const modalEl = accountStatusModalEl();
 
-                if (!window.confirm(message)) {
-                    event.preventDefault();
+                // Graceful fallback when the styled modal isn't available.
+                if (!modalEl || !window.bootstrap || !window.bootstrap.Modal) {
+                    if (!window.confirm(message)) {
+                        event.preventDefault();
+                    }
+
+                    return;
                 }
+
+                event.preventDefault();
+                pendingStatusForm = form;
+
+                const normalized = message.trim().toLowerCase();
+                const isDisable = normalized.indexOf('disable') === 0;
+                const isEnable = normalized.indexOf('enable') === 0;
+                const title = modalEl.querySelector('#accountStatusModalLabel');
+                const messageEl = modalEl.querySelector('.js-account-status-message');
+                const confirmBtn = modalEl.querySelector('.js-account-status-confirm');
+
+                if (title) {
+                    title.textContent = isDisable ? 'Disable Account' : (isEnable ? 'Enable Account' : 'Update Account Status');
+                }
+
+                if (messageEl) {
+                    messageEl.textContent = message;
+                }
+
+                if (confirmBtn) {
+                    confirmBtn.textContent = isDisable ? 'Disable' : (isEnable ? 'Enable' : 'Confirm');
+                    confirmBtn.classList.toggle('btn-danger', isDisable);
+                    confirmBtn.classList.toggle('btn-success', isEnable);
+                    confirmBtn.classList.toggle('btn-primary', !isDisable && !isEnable);
+                }
+
+                window.bootstrap.Modal.getOrCreateInstance(modalEl).show();
             });
         });
     }
+
+    // Confirm button inside #accountStatusModal: submit the stashed form. Native
+    // submit() does not re-fire the delegated submit listener, so the modal does
+    // not reopen and no second dialog appears. Bound once at script load.
+    document.addEventListener('click', function (event) {
+        if (!event.target.closest('.js-account-status-confirm')) {
+            return;
+        }
+
+        const form = pendingStatusForm;
+        const modalEl = accountStatusModalEl();
+
+        pendingStatusForm = null;
+
+        if (modalEl && window.bootstrap && window.bootstrap.Modal) {
+            const instance = window.bootstrap.Modal.getInstance(modalEl);
+
+            if (instance) {
+                instance.hide();
+            }
+        }
+
+        if (form) {
+            form.submit();
+        }
+    });
+
+    // Drop the stashed form if the user dismisses the modal (Cancel / backdrop / Esc).
+    document.addEventListener('hidden.bs.modal', function (event) {
+        if (event.target && event.target.id === 'accountStatusModal') {
+            pendingStatusForm = null;
+        }
+    });
 
     function initViewInteractions(rootElement) {
         const root = rootElement instanceof HTMLElement ? rootElement : document;

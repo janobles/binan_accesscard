@@ -49,6 +49,15 @@
     border-bottom: 1px solid #e2e9e7;
 }
 
+.manage-records .records-search-panel {
+    margin: 0;
+    padding: 0.85rem 1rem 1rem;
+}
+
+.manage-records .table-meta {
+    border-bottom: 1px solid #e2e9e7;
+}
+
 .records-search-row {
     display: grid;
     align-items: center;

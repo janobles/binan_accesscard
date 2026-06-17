@@ -107,9 +107,17 @@ $value = static function (array $details, string $key, bool $isEdit): string {
                             <input type="hidden" name="role" value="<?= esc($role, 'attr') ?>">
                         <?php endif; ?>
                     </div>
-                    <?php if ($isEdit): ?>
+                    <?php if ($isEdit && ! $isSelf): ?>
                         <div class="account-field">
-                            <p class="text-muted mb-0" style="font-size:0.82rem;">To reset this user's password, use the <strong>Reset Password</strong> button in the accounts list.</p>
+                            <button class="btn btn-outline-warning account-reset-password-action" type="submit"
+                                    formaction="<?= site_url('accounts/reset-password') ?>"
+                                    formmethod="post"
+                                    formnovalidate
+                                    onclick="return confirm('Generate a new random password for this account? The current password will stop working.');">
+                                <i class="bi bi-key" aria-hidden="true"></i>
+                                <span>Reset Password</span>
+                            </button>
+                            <small class="text-muted">Generates a new password for this account.</small>
                         </div>
                     <?php endif; ?>
                     <?php if ($isSelfProfile): ?>

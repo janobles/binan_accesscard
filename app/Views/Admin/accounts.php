@@ -65,6 +65,10 @@ $accounts = array_merge($adminAccounts, $employeeAccounts, $viewerAccounts);
                         $statusLabel = $isActive ? 'Active' : 'Inactive';
                         $statusClass = $isActive ? 'is-active' : 'is-disabled';
                         $statusFilter = $isActive ? 'active' : 'inactive';
+                        $canEditRow = $canEditAccounts && in_array($rawRole, ['administrator', 'encoder', 'viewer'], true);
+                        $canDeveloperToggle = $isDeveloper && in_array($rawRole, ['administrator', 'encoder', 'viewer'], true);
+                        $canAdminToggle = $isAdmin && in_array($rawRole, ['encoder', 'viewer'], true);
+                        $hasRowActions = $canEditRow || $canDeveloperToggle || $canAdminToggle;
                         ?>
                         <tr data-account-row data-account-username="<?= esc(mb_strtolower((string) ($account['username'] ?? '')), 'attr') ?>" data-account-role="<?= esc(mb_strtolower($rawRole), 'attr') ?>" data-account-status="<?= esc($statusFilter, 'attr') ?>">
                             <td><strong><?= esc((string) ($account['username'] ?? '')) ?></strong></td>
@@ -72,44 +76,44 @@ $accounts = array_merge($adminAccounts, $employeeAccounts, $viewerAccounts);
                             <td><span class="account-status-badge <?= esc($statusClass) ?>"><?= esc($statusLabel) ?></span></td>
                             <td>
                                 <div class="account-actions">
-                                    <?php if ($canEditAccounts && in_array($rawRole, ['administrator', 'encoder', 'viewer'], true)): ?>
-                                        <button class="btn btn-sm btn-outline-primary js-open-account-edit-modal" type="button"
-                                                data-modal-url="<?= site_url('accounts/edit/' . $userId) ?>"
-                                                data-modal-title="Edit Account">
-                                            <i class="bi bi-pencil-square" aria-hidden="true"></i>Edit
-                                        </button>
-                                    <?php endif; ?>
-
-                                    <?php if ($canEditAccounts && $userId !== $currentUserId && in_array($rawRole, ['administrator', 'encoder', 'viewer'], true)): ?>
-                                        <form class="js-account-status-form" method="post" action="<?= site_url('accounts/reset-password') ?>" data-confirm-message="<?= esc('Generate a new random password for "' . (string) ($account['username'] ?? '') . '"? The current password will stop working.', 'attr') ?>">
-                                            <?= csrf_field() ?>
-                                            <input type="hidden" name="userID" value="<?= esc((string) $userId) ?>">
-                                            <button class="btn btn-sm btn-outline-warning" type="submit">
-                                                <i class="bi bi-key" aria-hidden="true"></i>Reset Password
+                                    <?php if ($hasRowActions): ?>
+                                        <div class="dropdown">
+                                            <button class="btn btn-sm btn-outline-secondary account-action-toggle dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false">
+                                                Actions
                                             </button>
-                                        </form>
-                                    <?php endif; ?>
+                                            <div class="dropdown-menu account-action-menu">
+                                                <?php if ($canEditRow): ?>
+                                                    <button class="dropdown-item js-open-account-edit-modal" type="button"
+                                                            data-modal-url="<?= site_url('accounts/edit/' . $userId) ?>"
+                                                            data-modal-title="Edit Account">
+                                                        <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                                                        <span>Edit</span>
+                                                    </button>
+                                                <?php endif; ?>
 
-                                    <?php if ($isDeveloper && in_array($rawRole, ['administrator', 'encoder', 'viewer'], true)): ?>
-                                        <form class="js-account-status-form" method="post" action="<?= site_url('developer/accounts/status') ?>" data-confirm-message="<?= esc(($isActive ? 'Disable' : 'Enable') . ' ' . $roleLabel . ' account "' . (string) ($account['username'] ?? '') . '"?', 'attr') ?>">
-                                            <?= csrf_field() ?>
-                                            <input type="hidden" name="userID" value="<?= esc((string) $userId) ?>">
-                                            <input type="hidden" name="status" value="<?= esc($nextStatus) ?>">
-                                            <button class="btn btn-sm <?= $isActive ? 'btn-outline-danger' : 'btn-outline-success' ?>" type="submit">
-                                                <i class="bi <?= $isActive ? 'bi-person-x' : 'bi-person-check' ?>" aria-hidden="true"></i><?= $isActive ? 'Disable' : 'Enable' ?>
-                                            </button>
-                                        </form>
-                                    <?php elseif ($isAdmin && in_array($rawRole, ['encoder', 'viewer'], true)): ?>
-                                        <form class="js-account-status-form" method="post" action="<?= site_url($isActive ? 'admin/accounts/disable' : 'admin/accounts/enable') ?>" data-confirm-message="<?= esc(($isActive ? 'Disable' : 'Enable') . ' ' . $roleLabel . ' account "' . (string) ($account['username'] ?? '') . '"?', 'attr') ?>">
-                                            <?= csrf_field() ?>
-                                            <input type="hidden" name="userID" value="<?= esc((string) $userId) ?>">
-                                            <button class="btn btn-sm <?= $isActive ? 'btn-outline-danger' : 'btn-outline-success' ?>" type="submit">
-                                                <i class="bi <?= $isActive ? 'bi-person-x' : 'bi-person-check' ?>" aria-hidden="true"></i><?= $isActive ? 'Disable' : 'Enable' ?>
-                                            </button>
-                                        </form>
-                                    <?php endif; ?>
-
-                                    <?php if (! $canEditAccounts && ! ($isDeveloper && in_array($rawRole, ['administrator', 'encoder', 'viewer'], true)) && ! ($isAdmin && in_array($rawRole, ['encoder', 'viewer'], true))): ?>
+                                                <?php if ($canDeveloperToggle): ?>
+                                                    <form class="js-account-status-form" method="post" action="<?= site_url('developer/accounts/status') ?>" data-confirm-message="<?= esc(($isActive ? 'Disable' : 'Enable') . ' ' . $roleLabel . ' account "' . (string) ($account['username'] ?? '') . '"?', 'attr') ?>">
+                                                        <?= csrf_field() ?>
+                                                        <input type="hidden" name="userID" value="<?= esc((string) $userId) ?>">
+                                                        <input type="hidden" name="status" value="<?= esc($nextStatus) ?>">
+                                                        <button class="dropdown-item <?= $isActive ? 'text-danger' : 'text-success' ?>" type="submit">
+                                                            <i class="bi <?= $isActive ? 'bi-person-x' : 'bi-person-check' ?>" aria-hidden="true"></i>
+                                                            <span><?= $isActive ? 'Disable' : 'Enable' ?></span>
+                                                        </button>
+                                                    </form>
+                                                <?php elseif ($canAdminToggle): ?>
+                                                    <form class="js-account-status-form" method="post" action="<?= site_url($isActive ? 'admin/accounts/disable' : 'admin/accounts/enable') ?>" data-confirm-message="<?= esc(($isActive ? 'Disable' : 'Enable') . ' ' . $roleLabel . ' account "' . (string) ($account['username'] ?? '') . '"?', 'attr') ?>">
+                                                        <?= csrf_field() ?>
+                                                        <input type="hidden" name="userID" value="<?= esc((string) $userId) ?>">
+                                                        <button class="dropdown-item <?= $isActive ? 'text-danger' : 'text-success' ?>" type="submit">
+                                                            <i class="bi <?= $isActive ? 'bi-person-x' : 'bi-person-check' ?>" aria-hidden="true"></i>
+                                                            <span><?= $isActive ? 'Disable' : 'Enable' ?></span>
+                                                        </button>
+                                                    </form>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                    <?php else: ?>
                                         <span class="text-muted">-</span>
                                     <?php endif; ?>
                                 </div>

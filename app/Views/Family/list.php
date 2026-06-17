@@ -111,10 +111,6 @@ $displayListName = static function (string $lastName, string $firstName, string 
                     <span data-records-filter-label>-Select sector-</span>
                 </button>
                 <div class="dropdown-menu records-multiselect-menu">
-                    <label class="dropdown-item records-check-option">
-                        <input class="form-check-input" type="checkbox" name="sectorID[]" value="__all" data-filter-all>
-                        <span>All sectors</span>
-                    </label>
                     <?php foreach ($sectorOptions as $sector): ?>
                         <?php
                         $sectorId = (string) ($sector['sectorID'] ?? $sector['id'] ?? '');
@@ -134,10 +130,6 @@ $displayListName = static function (string $lastName, string $firstName, string 
                     <span data-records-filter-label>-Select barangay-</span>
                 </button>
                 <div class="dropdown-menu records-multiselect-menu">
-                    <label class="dropdown-item records-check-option">
-                        <input class="form-check-input" type="checkbox" name="barangay[]" value="__all" data-filter-all>
-                        <span>All barangays</span>
-                    </label>
                     <?php foreach ($barangayOptions as $barangay): ?>
                         <?php $barangayName = (string) $barangay; ?>
                         <?php if ($barangayName !== ''): ?>
@@ -160,7 +152,7 @@ $displayListName = static function (string $lastName, string $firstName, string 
                 <span>Clear</span>
             </button>
             <button class="btn btn-outline-success records-search-action" type="submit" name="search_scope" value="all" data-search-mode="all">
-                <i class="bi bi-database-search" aria-hidden="true"></i>
+                <i class="bi bi-search" aria-hidden="true"></i>
                 <span>Search</span>
             </button>
             <?php if ($canEdit): ?>
@@ -234,7 +226,7 @@ $displayListName = static function (string $lastName, string $firstName, string 
         <table class="table table-sm manage-record-table align-middle">
             <thead>
             <tr>
-                <th><?= esc($displayUpper('Timestamp')) ?></th>
+                <th><?= esc($displayUpper('Date')) ?></th>
                 <th><?= esc($displayUpper($deepActive ? 'Name (Head)' : 'Head of the Family')) ?></th>
                 <th><?= esc($displayUpper('Sector')) ?></th>
                 <th><?= esc($displayUpper('Address')) ?></th>

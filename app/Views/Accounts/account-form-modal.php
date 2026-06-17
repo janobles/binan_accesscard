@@ -21,7 +21,7 @@ $fieldPrefix = $isEdit ? 'edit-account' : ($isSelfProfile ? 'my-account' : 'acco
 $title = $isEdit ? 'Edit Account' : ($isSelfProfile ? 'My Account' : 'Create Account');
 $subtitle = $isEdit ? "Update this account's profile details and access level." : ($isSelfProfile ? 'Update your profile details and password.' : 'Add a new system user and assign an access level.');
 $action = $isEdit ? site_url('accounts/update') : ($isSelfProfile ? site_url('account/profile/update') : site_url('developer/accounts'));
-$submitLabel = $isEdit ? 'Save Changes' : ($isSelfProfile ? 'Save Account' : 'Create');
+$submitLabel = $isEdit ? 'Save Changes' : ($isSelfProfile ? 'Save Account' : 'Create Account');
 $value = static function (array $details, string $key, bool $isEdit): string {
     return $isEdit ? (string) ($details[$key] ?? '') : (string) old($key);
 };

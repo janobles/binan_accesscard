@@ -45,4 +45,17 @@
             openFromButton(button);
         }
     });
+
+    // Keyboard support for row-style triggers (role="button" table rows): Enter / Space.
+    document.addEventListener('keydown', function (event) {
+        if (event.key !== 'Enter' && event.key !== ' ' && event.key !== 'Spacebar') {
+            return;
+        }
+
+        var trigger = event.target.closest('.js-audit-detail[role="button"]');
+        if (trigger) {
+            event.preventDefault();
+            openFromButton(trigger);
+        }
+    });
 })(window, document);

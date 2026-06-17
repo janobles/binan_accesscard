@@ -73,9 +73,10 @@ $sectorOptionLabel = static function (array $sector): string {
 
     return $shortcode !== '' ? mb_strtoupper($shortcode) : $name;
 };
-$displayListName = static function (string $lastName, string $firstName, string $middleName): string {
+$displayListName = static function (string $lastName, string $firstName, string $middleName, string $suffix = ''): string {
     $middleInitial = trim($middleName) !== '' ? mb_substr(trim($middleName), 0, 1) . '.' : '';
-    $lastName = trim($lastName);
+    // Suffix (Jr./Sr./III) belongs with the surname: "Dela Cruz Jr., Juan A.".
+    $lastName = trim(trim($lastName) . (trim($suffix) !== '' ? ' ' . trim($suffix) : ''));
     $firstNameParts = trim(implode(' ', array_filter([
         trim($firstName),
         $middleInitial,
@@ -248,8 +249,9 @@ $displayListName = static function (string $lastName, string $firstName, string 
                 $firstName = (string) ($row['firstname'] ?? '');
                 $middleName = (string) ($row['middlename'] ?? '');
                 $lastName = (string) ($row['lastname'] ?? '');
-                $fullName = trim($firstName . ' ' . $middleName . ' ' . $lastName);
-                $displayName = $displayListName($lastName, $firstName, $middleName);
+                $suffix = (string) ($row['suffix'] ?? '');
+                $fullName = trim($firstName . ' ' . $middleName . ' ' . $lastName . ' ' . $suffix);
+                $displayName = $displayListName($lastName, $firstName, $middleName, $suffix);
                 $rowArchived = trim((string) ($row['dt_deleted'] ?? '')) !== '';
                 $recordAction = $rowArchived ? 'restore' : 'archive';
                 $recordActionLabel = $rowArchived ? 'Restore' : 'Archive';

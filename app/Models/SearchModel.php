@@ -156,8 +156,20 @@ class SearchModel
 
         $barangays = $this->normalizeFilterList($filters['barangay'] ?? [], false);
 
-        if ($barangays !== [] && $this->db->fieldExists('barangay', 'member')) {
-            $builder->whereIn('m.barangay', $barangays);
+        if ($barangays !== []) {
+            // No barangay column exists; barangay is stored as the trailing part
+            // of the combined `address` value ("address, barangay" or just
+            // "barangay"). Mirror splitAddressBarangay(): exact match or a
+            // ", barangay" suffix. OR across the selected barangays.
+            $builder->groupStart();
+            foreach ($barangays as $index => $barangay) {
+                $open = $index === 0 ? 'groupStart' : 'orGroupStart';
+                $builder->{$open}()
+                    ->where('m.address', $barangay)
+                    ->orLike('m.address', ', ' . $barangay, 'before')
+                    ->groupEnd();
+            }
+            $builder->groupEnd();
         }
 
         $this->applyDateRange($builder, 'm.dt_created', $filters);

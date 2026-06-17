@@ -72,16 +72,16 @@ class AuditTrailsModel extends Model
             'memberID' => $memberId,
             'user_action' => $action,
             'description' => $description,
-            // Full who/what/when/where narrative, composed from the same data plus
-            // the optional caller-supplied $detail (members added, fields changed…).
+            // Clean labeled-line narrative carrying all six facets — What / Who /
+            // When / Where (IP) / Device (UA) — built from the same data logAction
+            // already has. Rendered as-is in the per-row Details modal.
             'full_description' => $this->composeFullDescription(
                 $userId,
-                $memberId,
                 $action,
                 $description,
+                $detail,
                 $ipAddress,
-                $userAgent,
-                $detail
+                $userAgent
             ),
             'ip_address' => $ipAddress,
         ];
@@ -155,20 +155,32 @@ class AuditTrailsModel extends Model
     }
 
     /**
-     * Builds the full who/what/when/where narrative stored in `full_description`.
-     * Assembled from the same data logAction already has, so most call sites get a
-     * rich entry for free; $detail (e.g. members added, "Role changed from X to Y")
-     * enriches the WHAT clause when a caller supplies it.
+     * Builds the labeled-line narrative stored in `full_description` for a new row:
+     * composes the "What" clause (action + summary + optional $detail) then wraps it
+     * with Who/When/Where/Device via assembleNarrative(). $detail (e.g. members
+     * added, "Role changed from X to Y") enriches the What clause when supplied.
      */
     private function composeFullDescription(
         int $userId,
-        ?int $memberId,
         string $action,
         ?string $description,
+        ?string $detail,
         ?string $ipAddress,
-        ?string $userAgent,
-        ?string $detail
+        ?string $userAgent
     ): string {
+        return $this->assembleNarrative(
+            $this->composeWhat($action, $description, $detail),
+            $userId,
+            $action,
+            $ipAddress,
+            $userAgent,
+            date('Y-m-d H:i:s')
+        );
+    }
+
+    /** "What happened" clause: action + short summary + optional caller detail. */
+    private function composeWhat(string $action, ?string $description, ?string $detail): string
+    {
         $what = trim($action);
         $summary = trim((string) $description);
 
@@ -180,26 +192,40 @@ class AuditTrailsModel extends Model
             $what .= ' — ' . trim($detail);
         }
 
-        $parts = [
-            'WHO: ' . $this->actorNarrative($userId, $action),
-            'WHAT: ' . $what,
-            'WHEN: ' . date('Y-m-d H:i:s'),
-            'WHERE: ' . $this->whereNarrative($ipAddress, $userAgent),
-        ];
-
-        $memberLabel = $this->memberNarrative($memberId);
-
-        if ($memberLabel !== '') {
-            $parts[] = 'MEMBER: ' . $memberLabel;
-        }
-
-        return implode(' · ', $parts);
+        return $what;
     }
 
     /**
-     * "Who did it" label for the narrative. Prefers the live session actor when it
-     * matches $userId (free, no query); falls back to a users lookup; resolves the
-     * no-users-row cases (Developer / failed login / system error) by action.
+     * Assembles the six-facet, labeled-line narrative shown in the Details modal.
+     * Public so the one-time backfill command can rebuild historical rows from their
+     * columns using the exact same format. Lines are newline-joined; the modal box
+     * renders them with `white-space: pre-wrap`.
+     */
+    public function assembleNarrative(
+        string $what,
+        int $userId,
+        string $action,
+        ?string $ipAddress,
+        ?string $userAgent,
+        string $when
+    ): string {
+        $ip = trim((string) $ipAddress);
+        $ua = trim((string) $userAgent);
+
+        return implode("\n", [
+            'What: ' . trim($what),
+            'Who: ' . $this->actorNarrative($userId, $action),
+            'When: ' . $when,
+            'Where: ' . ($ip === '' ? 'unknown' : $ip),
+            'Device: ' . ($ua === '' ? 'unknown' : $ua),
+        ]);
+    }
+
+    /**
+     * "Who did it" label for the narrative. In a web request, prefers the live
+     * session actor when it matches $userId (free, no query); otherwise (and always
+     * in CLI) falls back to a users lookup, then to the no-users-row cases
+     * (Developer / failed login / system error) resolved by action.
      */
     private function actorNarrative(int $userId, string $action): string
     {
@@ -210,15 +236,17 @@ class AuditTrailsModel extends Model
             return $role === '' ? $label['username'] : $label['username'] . ' (' . $role . ')';
         }
 
-        $session = session();
+        if (! is_cli()) {
+            $session = session();
 
-        if ($session !== null && (int) $session->get('user_id') === $userId) {
-            $username = trim((string) $session->get('username'));
-            $role = trim((string) $session->get('role'));
+            if ($session !== null && (int) $session->get('user_id') === $userId) {
+                $username = trim((string) $session->get('username'));
+                $role = trim((string) $session->get('role'));
 
-            if ($username !== '') {
-                return $role === '' ? $username . ' (#' . $userId . ')'
-                    : $username . ' (' . $role . ', #' . $userId . ')';
+                if ($username !== '') {
+                    return $role === '' ? $username . ' (#' . $userId . ')'
+                        : $username . ' (' . $role . ', #' . $userId . ')';
+                }
             }
         }
 
@@ -236,34 +264,6 @@ class AuditTrailsModel extends Model
         return $role === ''
             ? trim((string) $user['username']) . ' (#' . $userId . ')'
             : trim((string) $user['username']) . ' (' . $role . ', #' . $userId . ')';
-    }
-
-    /** "Where from" clause: client IP and browser user agent (or "unknown"). */
-    private function whereNarrative(?string $ipAddress, ?string $userAgent): string
-    {
-        $ip = trim((string) $ipAddress);
-        $ua = trim((string) $userAgent);
-
-        return 'IP=' . ($ip === '' ? 'unknown' : $ip)
-            . '; UA=' . ($ua === '' ? 'unknown' : $ua);
-    }
-
-    /** Affected-member clause for the narrative, or '' for staff-only actions. */
-    private function memberNarrative(?int $memberId): string
-    {
-        if ($memberId === null || $memberId <= 0) {
-            return '';
-        }
-
-        $name = $this->memberNameMap([$memberId])[$memberId] ?? null;
-
-        if ($name === null) {
-            return '#' . $memberId;
-        }
-
-        $full = $this->formatMemberName($name);
-
-        return ($full === '' ? 'member' : $full) . ' (#' . $memberId . ')';
     }
 
     /** {username, role} label for a row with no users row, keyed by its action. */

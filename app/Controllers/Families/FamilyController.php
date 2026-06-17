@@ -834,7 +834,12 @@ class FamilyController extends BaseController
     /** True when the current request is under the `employee/` route group. */
     private function isEmployeeContext(): bool
     {
-        return str_starts_with(trim((string) $this->request->getUri()->getPath(), '/'), 'employee/');
+        // uri_string() returns the path relative to baseURL (e.g. "employee/manage-family/
+        // update/5"). Using the URI's getPath() here would include the subfolder the app
+        // is installed in (e.g. "/binan_accesscard/employee/..."), so the str_starts_with
+        // check would fail and an encoder's save would redirect to the admin-only
+        // manage-records page ("You do not have access to that page.").
+        return str_starts_with(uri_string(), 'employee/');
     }
 
     /** Route base (`admin/manage-family` or `employee/manage-family`) for the request. */

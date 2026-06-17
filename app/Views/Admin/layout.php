@@ -330,15 +330,6 @@ $jadeStyles = [
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <dl class="audit-detail-list">
-                    <dt>Action</dt><dd id="auditDetailAction">—</dd>
-                    <dt>User (who)</dt><dd id="auditDetailUser">—</dd>
-                    <dt>Member</dt><dd id="auditDetailMember">—</dd>
-                    <dt>When</dt><dd id="auditDetailWhen">—</dd>
-                    <dt>IP address (where)</dt><dd id="auditDetailIp">—</dd>
-                    <dt>Device / browser</dt><dd id="auditDetailUa">—</dd>
-                </dl>
-                <div class="audit-detail-full-label">Full description (who / what / when / where)</div>
                 <p class="audit-detail-full" id="auditDetailFull">—</p>
             </div>
             <div class="modal-footer">

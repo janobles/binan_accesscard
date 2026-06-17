@@ -34,6 +34,14 @@
             loadingMarkup: '<div class="family-modal-loading" role="status" aria-live="polite"><div class="spinner-border text-primary" aria-hidden="true"></div><span>Loading account...</span></div>',
             errorMarkup: '<div class="alert alert-danger mb-0">Unable to load this account. Please try again.</div>'
         });
+
+        window.registerDashboardModal({
+            namespace: 'account-create',
+            triggerSelector: '.js-open-account-create-modal',
+            defaultTitle: 'Create Account',
+            loadingMarkup: '<div class="family-modal-loading" role="status" aria-live="polite"><div class="spinner-border text-primary" aria-hidden="true"></div><span>Loading account form...</span></div>',
+            errorMarkup: '<div class="alert alert-danger mb-0">Unable to load the account form. Please try again.</div>'
+        });
     }
 
     // Copy-to-clipboard for the reset-password result callout. Delegated so it
@@ -83,5 +91,105 @@
             selection.removeAllRanges();
         }
     });
+
+    function filterAccountRows(root) {
+        var panel = root || document;
+        var searchInput = panel.querySelector('[data-account-search]');
+        var levelFilter = panel.querySelector('[data-account-level-filter]');
+        var statusFilter = panel.querySelector('[data-account-status-filter]');
+
+        if (!searchInput || !levelFilter || !statusFilter) {
+            return;
+        }
+
+        var keyword = searchInput.value.trim().toLowerCase();
+        var level = levelFilter.value;
+        var status = statusFilter.value;
+        var rows = Array.from(panel.querySelectorAll('[data-account-row]'));
+        var visibleCount = 0;
+
+        rows.forEach(function (row) {
+            var username = row.dataset.accountUsername || '';
+            var role = row.dataset.accountRole || '';
+            var rowStatus = row.dataset.accountStatus || '';
+            var matchesKeyword = keyword === '' || username.indexOf(keyword) !== -1;
+            var matchesLevel = level === '' || role === level;
+            var matchesStatus = status === '' || rowStatus === status;
+            var shouldShow = matchesKeyword && matchesLevel && matchesStatus;
+
+            row.hidden = !shouldShow;
+
+            if (shouldShow) {
+                visibleCount += 1;
+            }
+        });
+
+        var emptyRow = panel.querySelector('[data-account-filter-empty]');
+
+        if (emptyRow) {
+            emptyRow.hidden = visibleCount !== 0;
+        }
+    }
+
+    function initAccountFilters(root) {
+        var panel = root || document;
+
+        if (!panel.querySelector('[data-account-management]')) {
+            return;
+        }
+
+        filterAccountRows(panel);
+    }
+
+    document.addEventListener('input', function (event) {
+        if (!event.target.matches('[data-account-search]')) {
+            return;
+        }
+
+        filterAccountRows(event.target.closest('[data-account-management]') || document);
+    });
+
+    document.addEventListener('change', function (event) {
+        if (!event.target.matches('[data-account-level-filter], [data-account-status-filter]')) {
+            return;
+        }
+
+        filterAccountRows(event.target.closest('[data-account-management]') || document);
+    });
+
+    document.addEventListener('click', function (event) {
+        var button = event.target.closest('[data-account-clear-filters]');
+
+        if (!button) {
+            return;
+        }
+
+        var panel = button.closest('[data-account-management]') || document;
+        var searchInput = panel.querySelector('[data-account-search]');
+        var levelFilter = panel.querySelector('[data-account-level-filter]');
+        var statusFilter = panel.querySelector('[data-account-status-filter]');
+
+        if (searchInput) {
+            searchInput.value = '';
+        }
+
+        if (levelFilter) {
+            levelFilter.value = '';
+        }
+
+        if (statusFilter) {
+            statusFilter.value = '';
+        }
+
+        filterAccountRows(panel);
+    });
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function () {
+            initAccountFilters(document);
+        });
+    } else {
+        initAccountFilters(document);
+    }
 
 })(window, document);

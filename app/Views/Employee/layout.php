@@ -387,6 +387,6 @@ $jadeStyles = [
 <script src="<?= base_url('assets/js/session-timeout.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/session-timeout.js') ?>" data-timeout-seconds="<?= esc((string) $idleTimeoutSeconds) ?>" data-logout-url="<?= site_url('logout?timeout=1') ?>" data-home-url="<?= site_url('/') ?>" data-keep-alive-url="<?= site_url('session/keep-alive') ?>"></script>
 <script src="<?= base_url('assets/js/dashboard/dashboard-modal-loader.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/dashboard-modal-loader.js') ?>"></script>
 <script src="<?= base_url('assets/js/dashboard/manage-family-modal.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/manage-family-modal.js') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/my-account-modal.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/my-account-modal.js') ?>"></script>
+<script src="<?= base_url('assets/js/dashboard/account-form-modal.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/account-form-modal.js') ?>"></script>
 </body>
 </html>

@@ -378,7 +378,7 @@ $dashboardScripts = [
     'assets/js/dashboard/audit-filters.js',
     'assets/js/dashboard/dashboard-modal-loader.js',
     'assets/js/dashboard/manage-family-modal.js',
-    'assets/js/dashboard/my-account-modal.js',
+    'assets/js/dashboard/account-form-modal.js',
     'assets/js/dashboard/accounts-modal.js',
     'assets/js/dashboard/sectors-modal.js',
     'assets/js/dashboard/services-modal.js',

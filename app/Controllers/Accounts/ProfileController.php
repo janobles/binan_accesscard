@@ -42,7 +42,8 @@ class ProfileController extends BaseController
 
         $role = (string) ($account['role'] ?? '');
 
-        return view('Accounts/my-account-modal', [
+        return view('Accounts/account-form-modal', [
+            'mode'      => 'self',
             'account'   => $account,
             'details'   => ViewFormatter::parseFullDescription((string) ($account['full_description'] ?? '')),
             'roleLabel' => RoleAccess::normalizeRole($role) ?? $role,

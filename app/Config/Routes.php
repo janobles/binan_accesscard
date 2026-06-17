@@ -113,6 +113,7 @@ $routes->post('developer/accounts', 'Accounts\AccountController::create');
 $routes->post('developer/accounts/status', 'Accounts\AccountController::updateStatus');
 
 // Account management edit + password reset (Admin/Developer; controllers self-guard).
+$routes->get('accounts/create', 'Accounts\AccountController::createForm');
 $routes->get('accounts/edit/(:num)', 'Accounts\AccountController::editForm/$1');
 $routes->post('accounts/update', 'Accounts\AccountController::update');
 $routes->post('accounts/reset-password', 'Accounts\AccountController::resetPassword');

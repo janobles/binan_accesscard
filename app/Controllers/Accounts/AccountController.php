@@ -17,6 +17,22 @@ use Throwable;
 class AccountController extends BaseController
 {
     /**
+     * Returns the create-account modal fragment. Admin/Developer only.
+     */
+    public function createForm(): string|RedirectResponse
+    {
+        $guard = $this->requireAdminOrDeveloper();
+
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        return view('Accounts/account-form-modal', [
+            'mode' => 'create',
+        ]);
+    }
+
+    /**
      * Creates a staff account from POST `developer/accounts`. Developer-only;
      * validates the username/password/role, delegates persistence to
      * UserModel::createAccount, writes an audit row, then redirects to
@@ -106,7 +122,7 @@ class AccountController extends BaseController
     /**
      * Returns the prefilled edit-account modal fragment for GET `accounts/edit/{id}`.
      * Admin/Developer only. Loads the target account, unpacks full_description into
-     * form fields, and renders `Accounts/edit-account-modal`. The Developer (no DB
+     * form fields, and renders the shared account form modal. The Developer (no DB
      * row) and unknown roles cannot be edited. Frontend: the Edit button in the
      * admin Account Management list (loaded by the dashboard modal loader).
      */
@@ -128,7 +144,8 @@ class AccountController extends BaseController
             return '<div class="alert alert-danger mb-0">This account cannot be edited.</div>';
         }
 
-        return view('Accounts/edit-account-modal', [
+        return view('Accounts/account-form-modal', [
+            'mode'    => 'edit',
             'account' => $account,
             'details' => ViewFormatter::parseFullDescription((string) ($account['full_description'] ?? '')),
             'isSelf'  => $userId === (int) session()->get('user_id'),

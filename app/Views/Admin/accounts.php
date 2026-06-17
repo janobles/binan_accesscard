@@ -14,81 +14,34 @@ $currentUserId = (int) session()->get('user_id');
 $accounts = array_merge($adminAccounts, $employeeAccounts, $viewerAccounts);
 ?>
 
-<div class="accounts-page">
-    <?php if ($canCreateAccounts): ?>
-        <section class="account-card account-create-card" aria-labelledby="create-account-title">
-            <div class="account-card-header">
-                <div>
-                    <h2 id="create-account-title">Create Account</h2>
-                </div>
-            </div>
-
-            <form method="post" action="<?= site_url('developer/accounts') ?>">
-                <?= csrf_field() ?>
-                <div class="account-create-grid">
-                    <div class="account-field-group" aria-label="Personal information">
-                        <div class="account-field">
-                            <label class="form-label" for="account-last-name">Last Name</label>
-                            <input class="form-control" id="account-last-name" name="last_name" type="text" value="<?= esc((string) old('last_name')) ?>" placeholder="Enter last name" required>
-                        </div>
-                        <div class="account-field">
-                            <label class="form-label" for="account-first-name">First Name</label>
-                            <input class="form-control" id="account-first-name" name="first_name" type="text" value="<?= esc((string) old('first_name')) ?>" placeholder="Enter first name" required>
-                        </div>
-                        <div class="account-field">
-                            <label class="form-label" for="account-middle-name">Middle Name</label>
-                            <input class="form-control" id="account-middle-name" name="middle_name" type="text" value="<?= esc((string) old('middle_name')) ?>" placeholder="Enter middle name" required>
-                        </div>
-                        <div class="account-field">
-                            <label class="form-label" for="account-suffix">Suffix <span class="text-muted">(optional)</span></label>
-                            <input class="form-control" id="account-suffix" name="suffix" type="text" value="<?= esc((string) old('suffix')) ?>" placeholder="e.g. Jr, Sr, III">
-                        </div>
-                        <div class="account-field">
-                            <label class="form-label" for="account-address">Address</label>
-                            <input class="form-control" id="account-address" name="address" type="text" value="<?= esc((string) old('address')) ?>" placeholder="Enter address" required>
-                        </div>
-                        <div class="account-field">
-                            <label class="form-label" for="account-contact-no">Contact No.</label>
-                            <input class="form-control" id="account-contact-no" name="contact_no" type="text" value="<?= esc((string) old('contact_no')) ?>" placeholder="Enter contact number" required>
-                        </div>
-                        <div class="account-field">
-                            <label class="form-label" for="account-birthday">Birthday</label>
-                            <input class="form-control" id="account-birthday" name="birthday" type="date" value="<?= esc((string) old('birthday')) ?>" required>
-                        </div>
-                    </div>
-
-                    <div class="account-field-group" aria-label="Login information">
-                        <div class="account-field">
-                            <label class="form-label" for="account-username">Username</label>
-                            <input class="form-control" id="account-username" name="username" type="text" value="<?= esc((string) old('username')) ?>" placeholder="Enter username" required minlength="4">
-                        </div>
-                        <div class="account-field">
-                            <label class="form-label" for="account-password">Password</label>
-                            <input class="form-control" id="account-password" name="password" type="password" placeholder="Enter password" required minlength="8">
-                        </div>
-                        <div class="account-field">
-                            <label class="form-label" for="account-role">Account Level</label>
-                            <select class="form-select" id="account-role" name="role" required>
-                                <option value="">Choose account level</option>
-                                <option value="administrator" <?= old('role') === 'administrator' ? 'selected' : '' ?>>Administrator</option>
-                                <option value="encoder" <?= old('role') === 'encoder' ? 'selected' : '' ?>>Encoder</option>
-                                <option value="viewer" <?= old('role') === 'viewer' ? 'selected' : '' ?>>Viewer</option>
-                            </select>
-                        </div>
-                        <div class="account-create-actions">
-                            <button class="btn btn-success" type="submit">Create</button>
-                        </div>
-                    </div>
-                </div>
-            </form>
-        </section>
-    <?php endif; ?>
-
+<div class="accounts-page" data-account-management>
     <section class="account-card" aria-labelledby="accounts-title">
         <div class="account-card-header">
-            <div>
-                <h2 id="accounts-title">Accounts</h2>
-            </div>
+        </div>
+
+        <div class="account-list-toolbar" role="search" aria-label="Filter accounts">
+            <input class="form-control" type="search" data-account-search placeholder="Search username..." autocomplete="off" aria-label="Search accounts by username">
+            <select class="form-select" data-account-level-filter aria-label="Filter by account level">
+                <option value="">Select Level</option>
+                <option value="administrator">Administrator</option>
+                <option value="encoder">Encoder</option>
+                <option value="viewer">Viewer</option>
+            </select>
+            <select class="form-select" data-account-status-filter aria-label="Filter by account status">
+                <option value="">Select Status</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+            </select>
+            <button class="btn btn-outline-secondary account-filter-clear" type="button" data-account-clear-filters>
+                <i class="bi bi-x-lg" aria-hidden="true"></i>
+                <span>Clear</span>
+            </button>
+            <?php if ($canCreateAccounts): ?>
+                <button class="btn btn-success account-create-trigger js-open-account-create-modal" type="button" data-modal-url="<?= site_url('accounts/create') ?>" data-modal-title="Create Account">
+                    <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                    <span>Create Account</span>
+                </button>
+            <?php endif; ?>
         </div>
 
         <div class="table-responsive">
@@ -111,8 +64,9 @@ $accounts = array_merge($adminAccounts, $employeeAccounts, $viewerAccounts);
                         $nextStatus = $isActive ? 'Disabled' : 'Enable';
                         $statusLabel = $isActive ? 'Active' : 'Inactive';
                         $statusClass = $isActive ? 'is-active' : 'is-disabled';
+                        $statusFilter = $isActive ? 'active' : 'inactive';
                         ?>
-                        <tr>
+                        <tr data-account-row data-account-username="<?= esc(mb_strtolower((string) ($account['username'] ?? '')), 'attr') ?>" data-account-role="<?= esc(mb_strtolower($rawRole), 'attr') ?>" data-account-status="<?= esc($statusFilter, 'attr') ?>">
                             <td><strong><?= esc((string) ($account['username'] ?? '')) ?></strong></td>
                             <td><?= esc($roleLabel) ?></td>
                             <td><span class="account-status-badge <?= esc($statusClass) ?>"><?= esc($statusLabel) ?></span></td>
@@ -165,6 +119,10 @@ $accounts = array_merge($adminAccounts, $employeeAccounts, $viewerAccounts);
                     <?php if ($accounts === []): ?>
                         <tr>
                             <td colspan="4" class="account-empty-state">No accounts found.</td>
+                        </tr>
+                    <?php else: ?>
+                        <tr data-account-filter-empty hidden>
+                            <td colspan="4" class="account-empty-state">No matching accounts found.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>

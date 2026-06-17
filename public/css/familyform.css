@@ -745,6 +745,12 @@
 :root {
 	--family-jade-green: #168465;
 	--family-jade-green-deep: #12684f;
+	--hci-clear-color: #b42318;
+	--hci-clear-hover: #8f1d14;
+	--hci-search-color: #146c43;
+	--hci-search-hover: #0f5132;
+	--hci-add-color: #0d6efd;
+	--hci-add-hover: #0b5ed7;
 }
 
 .family-form-actions .btn-success {
@@ -754,6 +760,44 @@
 	--bs-btn-hover-border-color: var(--family-jade-green-deep);
 	--bs-btn-active-bg: var(--family-jade-green-deep);
 	--bs-btn-active-border-color: var(--family-jade-green-deep);
+}
+
+#resetFamilyBtn {
+	--bs-btn-bg: var(--hci-clear-color);
+	--bs-btn-border-color: var(--hci-clear-color);
+	--bs-btn-hover-bg: var(--hci-clear-hover);
+	--bs-btn-hover-border-color: var(--hci-clear-hover);
+	--bs-btn-active-bg: var(--hci-clear-hover);
+	--bs-btn-active-border-color: var(--hci-clear-hover);
+	background-color: var(--hci-clear-color);
+	border-color: var(--hci-clear-color);
+	color: #ffffff;
+}
+
+#resetFamilyBtn:hover,
+#resetFamilyBtn:focus {
+	background-color: var(--hci-clear-hover);
+	border-color: var(--hci-clear-hover);
+	color: #ffffff;
+}
+
+#addMemberStickyBtn {
+	--bs-btn-bg: var(--hci-add-color);
+	--bs-btn-border-color: var(--hci-add-color);
+	--bs-btn-hover-bg: var(--hci-add-hover);
+	--bs-btn-hover-border-color: var(--hci-add-hover);
+	--bs-btn-active-bg: var(--hci-add-hover);
+	--bs-btn-active-border-color: var(--hci-add-hover);
+	background-color: var(--hci-add-color);
+	border-color: var(--hci-add-color);
+	color: #ffffff;
+}
+
+#addMemberStickyBtn:hover,
+#addMemberStickyBtn:focus {
+	background-color: var(--hci-add-hover);
+	border-color: var(--hci-add-hover);
+	color: #ffffff;
 }
 
 #familyForm .form-check-input:checked {

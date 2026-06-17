@@ -367,7 +367,7 @@ class DashboardPageBuilder
     {
         $keyword = trim((string) $this->request->getGet('q'));
         $status = strtolower(trim((string) $this->request->getGet('status')));
-        $status = in_array($status, ['all', 'active', 'archived'], true) ? $status : 'all';
+        $status = in_array($status, ['all', 'active', 'archived'], true) ? $status : 'active';
         $page = max(1, (int) $this->request->getGet('page'));
         $perPage = $this->recordsPerPage();
 
@@ -641,7 +641,7 @@ class DashboardPageBuilder
     {
         $keyword = trim((string) $this->request->getGet('q'));
         $status = strtolower(trim((string) $this->request->getGet('status')));
-        $status = in_array($status, ['all', 'active', 'archived'], true) ? $status : 'all';
+        $status = in_array($status, ['all', 'active', 'archived'], true) ? $status : 'active';
         $page = max(1, (int) $this->request->getGet('page'));
         $perPage = $this->recordsPerPage();
 
@@ -725,7 +725,7 @@ class DashboardPageBuilder
     {
         $keyword = trim((string) $this->request->getGet('q'));
         $status = strtolower(trim((string) $this->request->getGet('status')));
-        $status = in_array($status, ['all', 'active', 'archived'], true) ? $status : 'all';
+        $status = in_array($status, ['all', 'active', 'archived'], true) ? $status : 'active';
         $page = max(1, (int) $this->request->getGet('page'));
         $perPage = $this->recordsPerPage();
 

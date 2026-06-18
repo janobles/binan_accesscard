@@ -77,8 +77,8 @@ class SearchModel
      * assistance they are tied to. Each row carries its head ("belongs to") name,
      * resolved sector names, and resolved service names.
      *
-     * Called from App\Libraries\DashboardPageBuilder::buildMemberListData() and
-     * Employee\WorkspaceModel::recordListData() when the deep search box (deep_q) is used.
+     * Called from App\Libraries\DashboardPageBuilder::buildMemberListData() when
+     * the deep search box (deep_q) is used.
      */
     public function allMembers(string $keyword = '', array $filters = [], int $limit = 50, int $offset = 0): array
     {
@@ -535,7 +535,7 @@ class SearchModel
         return $rows;
     }
 
-    /** Builds an [sectorID => name] map used by withSectorNames(). */
+    /** Builds an [sectorID => "SHORTCODE - name"] map used by withSectorNames(). */
     private function sectorNameMap(): array
     {
         if (! $this->db->tableExists('sector')) {
@@ -543,14 +543,16 @@ class SearchModel
         }
 
         $sectors = $this->db->table('sector')
-            ->select('sectorID, name')
+            ->select('sectorID, shortcode, name')
             ->get()
             ->getResultArray();
 
         $map = [];
 
         foreach ($sectors as $sector) {
-            $map[(int) $sector['sectorID']] = (string) $sector['name'];
+            $shortcode = trim((string) ($sector['shortcode'] ?? ''));
+            $name = trim((string) ($sector['name'] ?? ''));
+            $map[(int) $sector['sectorID']] = trim(($shortcode !== '' ? mb_strtoupper($shortcode, 'UTF-8') : '') . ' - ' . $name, ' -');
         }
 
         return $map;

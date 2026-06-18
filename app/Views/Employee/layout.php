@@ -4,9 +4,8 @@
  * Uses the same dashboard frame as Admin, limited to Dashboard, Manage Records,
  * and My Activity.
  */
-$username = $user['username'] ?? 'Employee';
 $activePage = $activePage ?? 'dashboard';
-$pageTitle = $pageTitle ?? ($activePage === 'dashboard' ? 'Workspace' : ucwords(str_replace('-', ' ', $activePage)));
+$pageTitle = $pageTitle ?? ($activePage === 'dashboard' ? 'Dashboard' : ucwords(str_replace('-', ' ', $activePage)));
 $navActive = $navActive ?? [];
 $stats = $stats ?? ['families' => 0, 'members' => 0, 'sectors' => 0, 'assistance' => 0];
 $recentFamilies = $recentFamilies ?? [];
@@ -83,12 +82,11 @@ $jadeStyles = [
                     </div>
                 </div>
                 <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a href="#" class="nav-link topbar-user js-open-my-account-modal" data-modal-url="<?= site_url('account/profile') ?>" data-modal-title="My Account"><i class="bi bi-person-circle" aria-hidden="true"></i><span><?= esc($username) ?> &middot; Encoder</span></a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="<?= site_url('logout') ?>" class="nav-link js-logout-link"><i class="bi bi-box-arrow-right" aria-hidden="true"></i><span>Logout</span></a>
-                    </li>
+                    <?= view('Partials/topbar-account-menu', [
+                        'user' => $user,
+                        'accountLevelLabel' => 'Encoder',
+                        'accountSettingsUrl' => site_url('account/profile'),
+                    ]) ?>
                 </ul>
             </nav>
 
@@ -122,8 +120,8 @@ $jadeStyles = [
                                     <tbody>
                                         <?php foreach ($recentFamilies as $family): ?>
                                             <tr>
-                                                <td><span class="entity-title"><?= esc(($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? '')) ?></span></td>
-                                                <td><?= esc((string) ($family['sector_name'] ?? '')) ?></td>
+                                                <td><span class="entity-title"><?= esc(mb_strtoupper(trim(($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? '')), 'UTF-8')) ?></span></td>
+                                                <td><?= view('Partials/sector-label-list', ['sectorLabel' => mb_strtoupper((string) ($family['sector_name'] ?? ''), 'UTF-8')]) ?></td>
                                             </tr>
                                         <?php endforeach; ?>
                                         <?php if ($recentFamilies === []): ?>

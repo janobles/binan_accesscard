@@ -105,7 +105,7 @@ class DashboardModel
 
     /**
      * DECODE/display path for dashboard lists. Resolves each row's raw JSON
-    * sectorID string into a readable 'sector_name'. See App\Libraries\SectorIds::toNames().
+     * sectorID string into readable 'sector_name' labels.
      */
     private function withSectorNames(array $rows): array
     {
@@ -120,7 +120,7 @@ class DashboardModel
         return $rows;
     }
 
-    /** Builds an [sectorID => name] map used by withSectorNames(). */
+    /** Builds an [sectorID => "SHORTCODE - name"] map used by withSectorNames(). */
     private function sectorNameMap(): array
     {
         if (! $this->db->tableExists('sector')) {
@@ -128,14 +128,16 @@ class DashboardModel
         }
 
         $sectors = $this->db->table('sector')
-            ->select('sectorID, name')
+            ->select('sectorID, shortcode, name')
             ->get()
             ->getResultArray();
 
         $map = [];
 
         foreach ($sectors as $sector) {
-            $map[(int) $sector['sectorID']] = (string) $sector['name'];
+            $shortcode = trim((string) ($sector['shortcode'] ?? ''));
+            $name = trim((string) ($sector['name'] ?? ''));
+            $map[(int) $sector['sectorID']] = trim(($shortcode !== '' ? mb_strtoupper($shortcode, 'UTF-8') : '') . ' - ' . $name, ' -');
         }
 
         return $map;

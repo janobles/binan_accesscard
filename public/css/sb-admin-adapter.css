@@ -277,6 +277,87 @@ body {
     white-space: nowrap;
 }
 
+.topbar-account-toggle {
+    border: 0;
+    background: transparent;
+}
+
+.topbar-account-toggle::after {
+    margin-left: 0.1rem;
+}
+
+.topbar-account-menu {
+    min-width: 15rem;
+    padding: 0.45rem;
+    border-color: #d7e3df;
+    border-radius: 0.4rem;
+    box-shadow: 0 0.8rem 1.8rem rgba(18, 47, 37, 0.14);
+}
+
+.topbar-account-summary {
+    padding: 0.55rem 0.65rem 0.65rem;
+    border-bottom: 1px solid #e2e9e7;
+    margin-bottom: 0.35rem;
+    text-align: center;
+}
+
+.topbar-account-avatar {
+    display: block;
+    width: 3.25rem;
+    height: 3.25rem;
+    margin: 0 auto 0.5rem;
+    border: 2px solid #d7e9e3;
+    border-radius: 50%;
+    background: #ffffff;
+    object-fit: cover;
+}
+
+.topbar-account-summary strong,
+.topbar-account-summary small {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.topbar-account-summary strong {
+    color: #10251f;
+    font-size: 0.86rem;
+    line-height: 1.25;
+}
+
+.topbar-account-summary small {
+    color: #647873;
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.topbar-account-menu .dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 2.25rem;
+    border-radius: 0.3rem;
+    color: #263b35;
+    font-weight: 700;
+}
+
+.topbar-account-menu .dropdown-item i {
+    color: #48655d;
+}
+
+.sector-label-list {
+    display: grid;
+    gap: 0.18rem;
+    margin: 0;
+    padding-left: 1rem;
+}
+
+.sector-label-list li {
+    line-height: 1.35;
+}
+
 .dashboard-content {
     min-width: 0;
     padding: var(--dashboard-content-padding);
@@ -588,7 +669,6 @@ body {
     }
 
     .topbar-title p,
-    .topbar .js-logout-link span,
     .topbar-user span {
         display: none;
     }

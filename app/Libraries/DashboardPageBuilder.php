@@ -130,7 +130,7 @@ class DashboardPageBuilder
         };
 
         return [
-            'user' => session()->get(),
+            'user' => $this->currentSessionUser(),
             'activePage' => $activePage,
             'pageTitle' => $layoutModel->pageTitle($activePage),
             'modeLabel' => $layoutModel->adminModeLabel($isDeveloper),
@@ -357,6 +357,25 @@ class DashboardPageBuilder
         ];
     }
 
+    /** Session user plus stored profile details for topbar/account menus. */
+    private function currentSessionUser(): array
+    {
+        $sessionUser = session()->get();
+        $userId = (int) ($sessionUser['user_id'] ?? 0);
+
+        if ($userId <= 0) {
+            return $sessionUser;
+        }
+
+        $account = (new UserModel())->getAccountById($userId);
+
+        if ($account === null) {
+            return $sessionUser;
+        }
+
+        return array_merge($sessionUser, $account);
+    }
+
     /**
      * Builds the admin Manage Records list: reads the q/status/page/sector/date
      * query params, runs the paginated family-head search, and merges in the deep
@@ -503,7 +522,7 @@ class DashboardPageBuilder
         $myAudits = $auditListData['rows'] ?? (new AuditTrailsModel())->getByUser($userId, 10);
 
         return view('Employee/layout', [
-            'user' => session()->get(),
+            'user' => $this->currentSessionUser(),
             'activePage' => $activePage,
             'pageTitle' => $layoutModel->employeePageTitle($activePage),
             'navActive' => [
@@ -592,7 +611,7 @@ class DashboardPageBuilder
             : [];
 
         return view('Viewer/layout', [
-            'user' => session()->get(),
+            'user' => $this->currentSessionUser(),
             'activePage' => $activePage,
             'pageTitle' => $layoutModel->pageTitle($activePage),
             'navActive' => [

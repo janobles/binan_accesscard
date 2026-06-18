@@ -131,7 +131,7 @@ $formatAuditUser = static function (array $audit): string {
                         <td class="audit-user"><?= esc($formatAuditUser($audit)) ?></td>
                     </tr>
                 <?php endforeach; ?>
-                <?php if ($recentAudits === []): ?>
+                <?php if ($recentAudits === []): ?> 
                     <tr><td colspan="5" class="audit-trails-empty audit-empty-state"><?= $hasSearchFilters ? 'No matching audit logs found.' : 'No audit logs yet.' ?></td></tr>
                 <?php endif; ?>
             </tbody>

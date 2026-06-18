@@ -175,6 +175,114 @@
         Array.from(root.querySelectorAll('.js-other-select')).forEach(syncOtherControl);
     }
 
+    function initBarangayComboboxes(root) {
+        Array.from(root.querySelectorAll('[data-barangay-combobox]')).forEach(function (combobox) {
+            if (combobox.dataset.barangayBound === '1') {
+                return;
+            }
+
+            const input = combobox.querySelector('[data-barangay-input]');
+            const optionsPanel = combobox.querySelector('[data-barangay-options]');
+
+            if (!(input instanceof HTMLInputElement) || !optionsPanel) {
+                return;
+            }
+
+            const options = Array.from(optionsPanel.querySelectorAll('[data-barangay-option]'));
+
+            combobox.dataset.barangayBound = '1';
+
+            const visibleOptions = function () {
+                return options.filter(function (option) {
+                    return !option.hidden;
+                });
+            };
+
+            const setHighlighted = function (target) {
+                options.forEach(function (option) {
+                    option.classList.toggle('is-highlighted', option === target);
+                });
+            };
+
+            const filterOptions = function () {
+                const keyword = input.value.trim().toLowerCase();
+                let firstVisible = null;
+
+                options.forEach(function (option) {
+                    const label = option.textContent.trim();
+                    const words = label.toLowerCase().split(/[\s()\-]+/).filter(Boolean);
+                    const matches = keyword === '' || words.some(function (word) {
+                        return word.startsWith(keyword);
+                    });
+
+                    option.hidden = !matches;
+
+                    if (matches && firstVisible === null) {
+                        firstVisible = option;
+                    }
+                });
+
+                setHighlighted(firstVisible);
+            };
+
+            const openOptions = function () {
+                filterOptions();
+                optionsPanel.hidden = false;
+            };
+
+            const closeOptions = function () {
+                optionsPanel.hidden = true;
+                setHighlighted(null);
+            };
+
+            input.addEventListener('focus', openOptions);
+            input.addEventListener('click', openOptions);
+            input.addEventListener('input', openOptions);
+
+            input.addEventListener('keydown', function (event) {
+                const visible = visibleOptions();
+                const current = optionsPanel.querySelector('.barangay-option.is-highlighted');
+                const currentIndex = current ? visible.indexOf(current) : -1;
+
+                if (event.key === 'ArrowDown') {
+                    event.preventDefault();
+                    openOptions();
+                    setHighlighted(visible[Math.min(currentIndex + 1, visible.length - 1)] || visible[0] || null);
+                } else if (event.key === 'ArrowUp') {
+                    event.preventDefault();
+                    openOptions();
+                    setHighlighted(visible[Math.max(currentIndex - 1, 0)] || visible[visible.length - 1] || null);
+                } else if (event.key === 'Enter' && !optionsPanel.hidden && current) {
+                    event.preventDefault();
+                    input.value = current.textContent.trim();
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                    closeOptions();
+                } else if (event.key === 'Escape') {
+                    closeOptions();
+                }
+            });
+
+            options.forEach(function (option) {
+                option.addEventListener('mousedown', function (event) {
+                    event.preventDefault();
+                });
+
+                option.addEventListener('click', function () {
+                    input.value = option.textContent.trim();
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                    closeOptions();
+                    input.focus();
+                });
+            });
+
+            document.addEventListener('click', function (event) {
+                if (!combobox.contains(event.target)) {
+                    closeOptions();
+                }
+            });
+        });
+    }
+
     let dropdownChecklistCloseBound = false;
 
     function dropdownChecklistInputLabel(input) {
@@ -683,6 +791,7 @@
         applyOtherValues: applyOtherValues,
         collectSelectedSectorIds: collectSelectedSectorIds,
         createMemberRow: createMemberRow,
+        initBarangayComboboxes: initBarangayComboboxes,
         initDropdownChecklists: initDropdownChecklists,
         readSectorCatalog: readSectorCatalog,
         renderHeadSummary: renderHeadSummary,

@@ -969,6 +969,10 @@
             ui.syncOtherControls(form);
         }
 
+        if (typeof ui.initBarangayComboboxes === 'function') {
+            ui.initBarangayComboboxes(form);
+        }
+
         if (typeof ui.initDropdownChecklists === 'function') {
             ui.initDropdownChecklists(form);
         }

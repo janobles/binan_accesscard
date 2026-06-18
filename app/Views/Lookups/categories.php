@@ -23,7 +23,7 @@ $existingCodes = array_values(array_unique(array_filter(array_map(
 $activeCategoryCount   = (int) ($activeCount ?? 0);
 $archivedCategoryCount = (int) ($archivedCount ?? 0);
 $allCategoryCount      = $activeCategoryCount + $archivedCategoryCount;
-$status                = (string) ($status ?? 'active');
+$status                = (string) ($status ?? 'all');
 $keyword               = (string) ($keyword ?? '');
 $listRoute             = (string) ($listRoute ?? 'admin/categories');
 $perPage               = (int) ($perPage ?? 50);
@@ -33,7 +33,7 @@ $perPageOptions        = ($perPageOptions ?? []) ?: [10, 25, 50, 100];
 $categoryPageUrl = static function (int $targetPage) use ($listRoute, $keyword, $status, $perPage): string {
     $params = array_filter([
         'q'        => $keyword,
-        'status'   => $status === 'active' ? '' : $status,
+        'status'   => $status === 'all' ? '' : $status,
         'per_page' => $perPage !== 50 ? (string) $perPage : '',
         'page'     => $targetPage > 1 ? (string) $targetPage : '',
     ], static fn ($value): bool => $value !== '');
@@ -44,7 +44,7 @@ $categoryPageUrl = static function (int $targetPage) use ($listRoute, $keyword, 
 // "Clear" drops the keyword (and resets to page 1) but keeps status + page size.
 $categoryClearUrl = static function () use ($listRoute, $status, $perPage): string {
     $params = array_filter([
-        'status'   => $status === 'active' ? '' : $status,
+        'status'   => $status === 'all' ? '' : $status,
         'per_page' => $perPage !== 50 ? (string) $perPage : '',
     ], static fn ($value): bool => $value !== '');
 
@@ -58,9 +58,9 @@ $categoryClearUrl = static function () use ($listRoute, $status, $perPage): stri
 		<form class="records-search-row records-lookup-search" method="get" action="<?= esc(site_url($listRoute), 'attr') ?>" role="search" aria-label="Search the category database">
 			<input class="form-control" type="search" name="q" value="<?= esc($keyword, 'attr') ?>" placeholder="Search the whole category database" aria-label="Search the category database" autocomplete="off">
 			<select class="form-select records-status-select" id="category-status-select" name="status" data-lookup-status-select aria-label="Category view">
+				<option value="all" <?= $status === 'all' ? 'selected' : '' ?>>Select Status</option>
 				<option value="active" <?= $status === 'active' ? 'selected' : '' ?>>Active (<?= esc((string) $activeCategoryCount) ?>)</option>
 				<option value="archived" <?= $status === 'archived' ? 'selected' : '' ?>>Archive (<?= esc((string) $archivedCategoryCount) ?>)</option>
-				<option value="all" <?= $status === 'all' ? 'selected' : '' ?>>All (<?= esc((string) $allCategoryCount) ?>)</option>
 			</select>
 			<?php if ($perPage !== 50): ?><input type="hidden" name="per_page" value="<?= esc((string) $perPage, 'attr') ?>"><?php endif; ?>
 			<a class="btn btn-outline-secondary records-search-action" href="<?= esc($categoryClearUrl(), 'attr') ?>"><i class="bi bi-x-lg" aria-hidden="true"></i><span>Clear</span></a>
@@ -74,7 +74,7 @@ $categoryClearUrl = static function () use ($listRoute, $status, $perPage): stri
 		<div class="records-table-controls">
 			<form class="records-page-size-form" method="get" action="<?= esc(site_url($listRoute), 'attr') ?>">
 				<?php if ($keyword !== ''): ?><input type="hidden" name="q" value="<?= esc($keyword, 'attr') ?>"><?php endif; ?>
-				<?php if ($status !== 'active'): ?><input type="hidden" name="status" value="<?= esc($status, 'attr') ?>"><?php endif; ?>
+				<?php if ($status !== 'all'): ?><input type="hidden" name="status" value="<?= esc($status, 'attr') ?>"><?php endif; ?>
 				<label for="categoryPerPage">Show</label>
 				<select class="form-select form-select-sm" id="categoryPerPage" name="per_page" onchange="this.form.submit()">
 					<?php foreach ($perPageOptions as $option): ?>

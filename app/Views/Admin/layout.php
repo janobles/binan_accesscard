@@ -148,7 +148,7 @@ $jadeStyles = [
 
             <main class="container-fluid dashboard-content">
             <?php if (session()->getFlashdata('success')): ?>
-                <div class="alert alert-success"><?= esc(session()->getFlashdata('success')) ?></div>
+                <div class="alert alert-success" data-auto-dismiss-alert><?= esc(session()->getFlashdata('success')) ?></div>
             <?php endif; ?>
             <?php if ($resetInfo = session()->getFlashdata('reset_password')): ?>
                 <div class="reset-password-callout" role="alert">
@@ -166,7 +166,7 @@ $jadeStyles = [
                 </div>
             <?php endif; ?>
             <?php if (session()->getFlashdata('error')): ?>
-                <div class="alert alert-danger"><?= esc(session()->getFlashdata('error')) ?></div>
+                <div class="alert alert-danger" data-auto-dismiss-alert><?= esc(session()->getFlashdata('error')) ?></div>
             <?php endif; ?>
             <?php if (session()->getFlashdata('family_record_saved')): ?>
                 <span id="familyDraftSavedMarker" hidden></span>

@@ -281,7 +281,7 @@ class DashboardPageBuilder
     {
         $keyword = trim((string) $this->request->getGet('q'));
         $status  = strtolower(trim((string) $this->request->getGet('status')));
-        $status  = in_array($status, ['active', 'archived', 'all'], true) ? $status : 'active';
+        $status  = in_array($status, ['active', 'archived', 'all'], true) ? $status : 'all';
         $page    = max(1, (int) $this->request->getGet('page'));
         $perPageOptions = [10, 25, 50, 100];
         $perPage = (int) $this->request->getGet('per_page');

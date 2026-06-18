@@ -22,7 +22,7 @@ $existingShortcodes = $sectorModel->existingShortcodes();
 $activeSectorCount   = (int) ($activeCount ?? 0);
 $archivedSectorCount = (int) ($archivedCount ?? 0);
 $allSectorCount      = $activeSectorCount + $archivedSectorCount;
-$status              = (string) ($status ?? 'active');
+$status              = (string) ($status ?? 'all');
 $keyword             = (string) ($keyword ?? '');
 $listRoute           = (string) ($listRoute ?? 'admin/sectors');
 $perPage             = (int) ($perPage ?? 50);
@@ -35,7 +35,7 @@ $canManage           = (bool) ($canManage ?? true);
 $sectorPageUrl = static function (int $targetPage) use ($listRoute, $keyword, $status, $perPage): string {
     $params = array_filter([
         'q'        => $keyword,
-        'status'   => $status === 'active' ? '' : $status,
+        'status'   => $status === 'all' ? '' : $status,
         'per_page' => $perPage !== 50 ? (string) $perPage : '',
         'page'     => $targetPage > 1 ? (string) $targetPage : '',
     ], static fn ($value): bool => $value !== '');
@@ -46,7 +46,7 @@ $sectorPageUrl = static function (int $targetPage) use ($listRoute, $keyword, $s
 // "Clear" drops the keyword (and resets to page 1) but keeps status + page size.
 $sectorClearUrl = static function () use ($listRoute, $status, $perPage): string {
     $params = array_filter([
-        'status'   => $status === 'active' ? '' : $status,
+        'status'   => $status === 'all' ? '' : $status,
         'per_page' => $perPage !== 50 ? (string) $perPage : '',
     ], static fn ($value): bool => $value !== '');
 
@@ -63,9 +63,9 @@ $sectorClearUrl = static function () use ($listRoute, $status, $perPage): string
 		<form class="records-search-row records-lookup-search" method="get" action="<?= esc(site_url($listRoute), 'attr') ?>" role="search" aria-label="Search the sector database">
 			<input class="form-control" type="search" name="q" value="<?= esc($keyword, 'attr') ?>" placeholder="Search the whole sector database" aria-label="Search the sector database" autocomplete="off">
 			<select class="form-select records-status-select" id="sector-status-select" name="status" data-lookup-status-select aria-label="Sector view">
+				<option value="all" <?= $status === 'all' ? 'selected' : '' ?>>Select Status</option>
 				<option value="active" <?= $status === 'active' ? 'selected' : '' ?>>Active (<?= esc((string) $activeSectorCount) ?>)</option>
 				<option value="archived" <?= $status === 'archived' ? 'selected' : '' ?>>Archive (<?= esc((string) $archivedSectorCount) ?>)</option>
-				<option value="all" <?= $status === 'all' ? 'selected' : '' ?>>All (<?= esc((string) $allSectorCount) ?>)</option>
 			</select>
 			<?php if ($perPage !== 50): ?><input type="hidden" name="per_page" value="<?= esc((string) $perPage, 'attr') ?>"><?php endif; ?>
 			<a class="btn btn-outline-secondary records-search-action" href="<?= esc($sectorClearUrl(), 'attr') ?>"><i class="bi bi-x-lg" aria-hidden="true"></i><span>Clear</span></a>
@@ -81,7 +81,7 @@ $sectorClearUrl = static function () use ($listRoute, $status, $perPage): string
 		<div class="records-table-controls">
 			<form class="records-page-size-form" method="get" action="<?= esc(site_url($listRoute), 'attr') ?>">
 				<?php if ($keyword !== ''): ?><input type="hidden" name="q" value="<?= esc($keyword, 'attr') ?>"><?php endif; ?>
-				<?php if ($status !== 'active'): ?><input type="hidden" name="status" value="<?= esc($status, 'attr') ?>"><?php endif; ?>
+				<?php if ($status !== 'all'): ?><input type="hidden" name="status" value="<?= esc($status, 'attr') ?>"><?php endif; ?>
 				<label for="sectorPerPage">Show</label>
 				<select class="form-select form-select-sm" id="sectorPerPage" name="per_page" onchange="this.form.submit()">
 					<?php foreach ($perPageOptions as $option): ?>

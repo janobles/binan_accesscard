@@ -69,10 +69,6 @@ $jadeStyles = [
         <li class="nav-item">
             <a class="nav-link <?= esc($navActive['activity'] ?? '') ?>" href="<?= site_url('employee/activity') ?>"><i class="bi bi-clock-history" aria-hidden="true"></i><span>My Activity</span></a>
         </li>
-        <li><hr class="sidebar-divider d-none d-md-block"></li>
-        <li class="text-center d-none d-md-inline">
-            <button class="rounded-circle border-0" id="sidebarToggle" type="button" aria-label="Collapse sidebar" aria-controls="dashboard-sidebar" aria-expanded="true"></button>
-        </li>
     </ul>
 
     <div id="content-wrapper" class="d-flex flex-column">

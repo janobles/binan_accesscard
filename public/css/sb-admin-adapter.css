@@ -1,5 +1,5 @@
 :root {
-    --sb-sidebar-width: 14rem;
+    --sb-sidebar-width: clamp(11.5rem, 17vw, 14rem);
     --sb-sidebar-width-collapsed: 6.5rem;
     --sb-sidebar-bg: #145c3b;
     --sb-sidebar-bg-deep: #0f4a30;
@@ -17,6 +17,7 @@
     --ui-control-height: 2.5rem;
     --ui-control-padding-x: 0.85rem;
     --ui-control-padding-y: 0.45rem;
+    --dashboard-content-padding: clamp(0.75rem, 1.8vw, 1.5rem);
 }
 
 * {
@@ -278,7 +279,7 @@ body {
 
 .dashboard-content {
     min-width: 0;
-    padding: 1.5rem;
+    padding: var(--dashboard-content-padding);
 }
 
 .dashboard-content:has([data-family-list-panel]),
@@ -477,7 +478,7 @@ body {
     }
 
     .dashboard-content {
-        padding: 1rem;
+        padding: var(--dashboard-content-padding);
     }
 
     .overview-stats {

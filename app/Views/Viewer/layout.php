@@ -79,10 +79,6 @@ $jadeStyles = [
         <li class="nav-item">
             <a class="nav-link <?= esc($navActive['services'] ?? '') ?>" href="<?= site_url('viewer/services') ?>"><i class="bi bi-grid" aria-hidden="true"></i><span>Services and Programs</span></a>
         </li>
-        <li><hr class="sidebar-divider d-none d-md-block"></li>
-        <li class="text-center d-none d-md-inline">
-            <button class="rounded-circle border-0" id="sidebarToggle" type="button" aria-label="Collapse sidebar" aria-controls="dashboard-sidebar" aria-expanded="true"></button>
-        </li>
     </ul>
 
     <div id="content-wrapper" class="d-flex flex-column">

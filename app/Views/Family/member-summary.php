@@ -1,7 +1,7 @@
 <?php
 // Member summary placeholders are filled by the family form script (renderHeadSummary).
 ?>
-<div class="form-section family-step-panel" data-step="3">
+<div class="form-section family-step-panel" data-step="2">
     <article class="family-summary-card" id="headOfFamilySummary">
         <h2 class="family-summary-title">Current Record Head</h2>
 

@@ -20,6 +20,7 @@ class ViewLayoutModel
             'audit-trails' => 'Audit Trails',
             'sectors' => 'Sector Management',
             'services' => 'Services and Programs Management',
+            'categories' => 'Manage Categories',
             default => ucwords(str_replace('-', ' ', $activePage)),
         };
     }

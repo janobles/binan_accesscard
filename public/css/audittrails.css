@@ -1,102 +1,24 @@
 .audit-trails {
+    margin-top: 0;
     overflow: hidden;
     border: 1px solid #dce5e2;
-    border-radius: 0.45rem;
-    background: #ffffff;
-}
-
-.audit-trails-toolbar {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 1rem;
-    border-bottom: 1px solid #e2e9e7;
-    background: #fbfcfc;
-}
-
-.audit-trails-action-filter {
-    flex: 0 0 14rem;
-    min-width: 12rem;
-    border-color: #198754;
-    color: #12684f;
-    font-weight: 700;
-}
-
-.audit-trails-search-group {
-    display: flex;
-    flex: 1 1 34rem;
-    min-width: 18rem;
-    gap: 0.75rem;
-}
-
-.audit-trails-search {
-    flex: 1 1 auto;
-    min-width: 0;
-}
-
-.audit-trails .form-control,
-.audit-trails .form-select,
-.audit-trails .btn {
-    min-height: 2.65rem;
     border-radius: 0.35rem;
-    font-size: 0.9rem;
-}
-
-.audit-trails .btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.4rem;
-    font-weight: 700;
-}
-
-.audit-trails-toolbar-action {
-    flex: 0 0 auto;
-    min-width: 7.5rem;
-}
-
-.audit-trails-clear {
-    color: #b42318;
-    border-color: #d7aaa6;
-    background-color: #ffffff;
-}
-
-.audit-trails-clear:hover,
-.audit-trails-clear:focus {
-    color: #ffffff;
-    background-color: #b42318;
-    border-color: #b42318;
-}
-
-.audit-trails-meta-row {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    padding: 0.8rem 1rem;
-    border-bottom: 1px solid #e2e9e7;
     background: #ffffff;
-    color: #61706b;
-    font-size: 0.86rem;
 }
 
-.audit-trails-results-summary {
-    display: inline-flex;
-    align-items: center;
-    flex-wrap: wrap;
-    min-width: 0;
-    gap: 0.4rem;
-    padding-left: 0.75rem;
-    border-left: 0.2rem solid #168465;
-    line-height: 1.35;
+.audit-filter-bar {
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid #e2e9e7;
 }
 
-.audit-trails-results-summary strong {
-    color: #12684f;
-    font-weight: 800;
+.audit-filter-bar .form-control,
+.audit-filter-bar .form-select,
+.audit-filter-bar .btn {
+    min-height: 2.5rem;
 }
 
 .audit-trails-table {
-    min-width: 78rem;
+    min-width: 46rem;
     margin: 0;
     table-layout: auto;
 }
@@ -119,58 +41,10 @@
     font-size: 0.85rem;
     overflow-wrap: break-word;
     word-break: normal;
-    vertical-align: top;
 }
 
 .audit-trails-table tbody tr:last-child td {
     border-bottom: 0;
-}
-
-.audit-trails-timestamp {
-    width: 9.5rem;
-    white-space: nowrap;
-}
-
-.audit-trails-timestamp span,
-.audit-trails-timestamp small {
-    display: block;
-}
-
-.audit-trails-timestamp span {
-    font-weight: 700;
-}
-
-.audit-trails-timestamp small {
-    margin-top: 0.15rem;
-    color: #6f7d78;
-    font-size: 0.76rem;
-}
-
-.audit-trails-action {
-    font-size: 0.74rem;
-    letter-spacing: 0;
-    white-space: nowrap;
-}
-
-.audit-trails-description {
-    min-width: 18rem;
-}
-
-.audit-trails-meta,
-.audit-trails-user {
-    white-space: nowrap;
-}
-
-.audit-trails-agent {
-    max-width: 18rem;
-}
-
-.audit-trails-agent span {
-    display: block;
-    max-width: 24rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
 }
 
 .audit-trails-empty {
@@ -179,70 +53,9 @@
     text-align: center;
 }
 
-.audit-trails-pagination {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 0.75rem;
-    padding: 1rem;
-    border-top: 1px solid #e2e9e7;
-    background: #fbfcfc;
-}
-
-.audit-trails-pagination-actions {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-@media (max-width: 62rem) {
-    .audit-trails-toolbar {
-        flex-wrap: wrap;
-    }
-
-    .audit-trails-search-group {
-        flex-basis: 100%;
-    }
-}
-
 @media (max-width: 48rem) {
-    .audit-trails-toolbar {
-        padding: 0.75rem;
-    }
-
-    .audit-trails-meta-row {
-        align-items: flex-start;
-        flex-direction: column;
-        gap: 0.5rem;
-        padding: 0.75rem;
-    }
-
-    .audit-trails-results-summary {
-        align-items: flex-start;
-        flex-wrap: wrap;
-    }
-
-    .audit-trails-pagination {
-        align-items: flex-start;
-        flex-direction: column;
-    }
-
-    .audit-trails-pagination-actions {
-        flex-wrap: wrap;
-    }
-
-    .audit-trails-action-filter,
-    .audit-trails-search-group {
-        flex: 1 1 100%;
-        min-width: 100%;
-    }
-
-    .audit-trails-toolbar-action {
-        min-width: 6.75rem;
-    }
-
     .audit-trails-table {
-        min-width: 68rem;
+        min-width: 40rem;
     }
 
     .audit-trails-table th,
@@ -250,5 +63,166 @@
         padding: 0.5rem 0.45rem;
         font-size: 0.68rem;
         line-height: 1.22;
+    }
+}
+
+/* Per-row audit detail modal (#auditDetailModal) — single full-description box */
+.audit-detail-full {
+    margin: 0;
+    padding: 0.75rem 0.9rem;
+    border: 1px solid #e2e9e7;
+    border-radius: 0.35rem;
+    background: #f7faf9;
+    color: #34443f;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+/* Dual-search layout (Bar 1 database search + Bar 2 page-size / local filter) reusing
+   the Manage Records .records-* grid from managerecord.css. The audit Bar 1 has only 4
+   controls (keyword + action + Clear + Search All), so it needs its own column template;
+   and the employee shell doesn't load lookupmanagement.css, so the grid + footer rules
+   audit relies on are defined here (loaded by both the admin and employee shells). */
+[data-audit-management-root] .records-lookup-search {
+    grid-template-columns: minmax(18rem, 1fr) minmax(9rem, 13rem) repeat(2, minmax(6.25rem, 9rem));
+}
+
+@media (max-width: 62rem) {
+    [data-audit-management-root] .records-lookup-search {
+        grid-template-columns: repeat(2, minmax(9rem, 1fr));
+    }
+}
+
+@media (max-width: 40rem) {
+    [data-audit-management-root] .records-lookup-search {
+        grid-template-columns: repeat(2, minmax(8rem, 1fr));
+    }
+}
+
+[data-audit-management-root] .lookup-list-footer {
+    flex: 0 0 auto;
+    padding: 0.75rem 1rem;
+}
+
+/* The admin audit card (.audit-trails) is a bordered overflow:hidden panel with no inner
+   padding of its own, so pad the database-search row to line up with the 1rem table cells.
+   (The employee Activity panel supplies its own padding, so it is left untouched.) */
+.audit-trails .records-search-panel {
+    padding-top: 0.85rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+}
+
+/* --- Audit log table reskin (CEDO-style layout: Date/Time · Action pill · Description ·
+       User Agent · User; airy clickable rows; full-width "search this page" + show-entries). */
+.audit-table-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem 1rem;
+    padding: 0.85rem 1rem 0;
+}
+
+.audit-page-search-form {
+    flex: 1 1 100%;
+    margin: 0;
+}
+
+.audit-page-search {
+    width: 100%;
+    min-height: 2.5rem;
+}
+
+.audit-show-entries {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-left: auto;
+    margin-bottom: 0;
+    color: #65736e;
+    font-size: 0.83rem;
+}
+
+.audit-show-entries label {
+    margin: 0;
+    font-weight: 700;
+}
+
+.audit-show-entries .form-select {
+    width: 5rem;
+    min-height: 2rem;
+    padding-top: 0.2rem;
+    padding-bottom: 0.2rem;
+}
+
+/* Whole row opens the per-row detail modal (.js-audit-detail). */
+.audit-row {
+    cursor: pointer;
+    transition: background-color 0.12s ease;
+}
+
+.audit-row:hover,
+.audit-row:focus-visible {
+    background: #eef5f2;
+    outline: none;
+}
+
+.audit-row td {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+}
+
+.audit-when {
+    white-space: nowrap;
+    color: #4a5a55;
+    font-size: 0.82rem;
+}
+
+.audit-action-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.32rem 0.85rem;
+    border: 1px solid #b9d2f2;
+    border-radius: 999px;
+    background: #eef5ff;
+    color: #2563c9;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.audit-desc {
+    color: #34443f;
+    font-size: 0.85rem;
+}
+
+.audit-ua {
+    max-width: 22rem;
+    color: #6c7a75;
+    font-size: 0.78rem;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+.audit-user {
+    color: #34443f;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+@media (max-width: 48rem) {
+    .audit-ua {
+        max-width: 14rem;
+    }
+
+    .audit-show-entries {
+        margin-left: 0;
     }
 }

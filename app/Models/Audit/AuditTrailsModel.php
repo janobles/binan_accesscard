@@ -6,6 +6,14 @@ use CodeIgniter\Model;
 
 /**
  * Records and retrieves audit trail entries for staff actions.
+ *
+ * Append-only (WORM at the app level): this model only ever inserts and selects.
+ * There is intentionally no update or delete path for audit rows, and no caller
+ * should add one — an audit trail must not be editable or erasable from the app.
+ *
+ * Each row carries two narratives: `description` is a short one-line summary, and
+ * `full_description` is the composed who/what/when/where detail (see
+ * composeFullDescription()).
  */
 class AuditTrailsModel extends Model
 {
@@ -15,12 +23,17 @@ class AuditTrailsModel extends Model
     protected $allowedFields = [
         'user_action',
         'description',
+        'full_description',
         'ip_address',
         'user_agent',
         'userID',
         'memberID',
     ];
     protected $useTimestamps = false;
+
+    /** Action types authored without a real users row that are still security-relevant
+     *  and therefore shown to admins (unlike Developer rows, which stay hidden). */
+    private const SYSTEM_ACTIONS = ['LOGIN_FAILED', 'SYSTEM_ERROR'];
 
     /** True if the `audit_trails` table exists; callers no-op auditing otherwise. */
     public function hasTable(): bool
@@ -40,7 +53,8 @@ class AuditTrailsModel extends Model
         string $action,
         ?string $description = null,
         ?string $ipAddress = null,
-        ?string $userAgent = null
+        ?string $userAgent = null,
+        ?string $detail = null
     ): bool {
         $memberId = $this->memberIdValue($memberId);
 
@@ -51,10 +65,24 @@ class AuditTrailsModel extends Model
         }
 
         $payload = [
-            'userID' => $userId,
+            // The .env Developer has no users row (userID 0). Its audit rows are
+            // stored with a NULL userID so they don't violate the users FK and stay
+            // invisible to non-developer viewers (see getRecent / withNames).
+            'userID' => $userId > 0 ? $userId : null,
             'memberID' => $memberId,
             'user_action' => $action,
             'description' => $description,
+            // Clean labeled-line narrative carrying all six facets — What / Who /
+            // When / Where (IP) / Device (UA) — built from the same data logAction
+            // already has. Rendered as-is in the per-row Details modal.
+            'full_description' => $this->composeFullDescription(
+                $userId,
+                $action,
+                $description,
+                $detail,
+                $ipAddress,
+                $userAgent
+            ),
             'ip_address' => $ipAddress,
         ];
 
@@ -71,20 +99,32 @@ class AuditTrailsModel extends Model
 
     /**
      * Returns the latest audit entries (newest first) with user and member names
-     * resolved. Frontend: the admin Audit Trails page via DashboardPageBuilder.
+     * resolved. Developer audit rows (NULL userID) are excluded unless
+     * $includeDeveloper is true, so only the Developer sees its own activity.
+     * Frontend: the admin Audit Trails page via DashboardPageBuilder.
      */
-    public function getRecent(int $limit = 50): array
+    public function getRecent(int $limit = 50, bool $includeDeveloper = false): array
     {
         if (! $this->hasTable()) {
             return [];
         }
 
-        $rows = $this->select('audit_trails.*')
+        $builder = $this->select('audit_trails.*')
             ->orderBy('audit_trails.dt_created', 'DESC')
-            ->limit($limit)
-            ->findAll();
+            ->limit($limit);
 
-        return $this->withNames($rows);
+        if (! $includeDeveloper) {
+            // Hide only the Developer's own rows. Security events authored without a
+            // users row (failed logins, system errors) still surface to admins.
+            $builder->where(
+                "(audit_trails.userID IS NOT NULL OR audit_trails.user_action IN ("
+                    . $this->systemActionsInList() . "))",
+                null,
+                false
+            );
+        }
+
+        return $this->withNames($builder->findAll());
     }
 
     /**
@@ -112,6 +152,138 @@ class AuditTrailsModel extends Model
         $suffix = 'UA: ' . $userAgent;
 
         return $base === '' ? $suffix : $base . ' | ' . $suffix;
+    }
+
+    /**
+     * Builds the labeled-line narrative stored in `full_description` for a new row:
+     * composes the "What" clause (action + summary + optional $detail) then wraps it
+     * with Who/When/Where/Device via assembleNarrative(). $detail (e.g. members
+     * added, "Role changed from X to Y") enriches the What clause when supplied.
+     */
+    private function composeFullDescription(
+        int $userId,
+        string $action,
+        ?string $description,
+        ?string $detail,
+        ?string $ipAddress,
+        ?string $userAgent
+    ): string {
+        return $this->assembleNarrative(
+            $this->composeWhat($action, $description, $detail),
+            $userId,
+            $action,
+            $ipAddress,
+            $userAgent,
+            date('Y-m-d H:i:s')
+        );
+    }
+
+    /** "What happened" clause: action + short summary + optional caller detail. */
+    private function composeWhat(string $action, ?string $description, ?string $detail): string
+    {
+        $what = trim($action);
+        $summary = trim((string) $description);
+
+        if ($summary !== '') {
+            $what .= ' — ' . $summary;
+        }
+
+        if ($detail !== null && trim($detail) !== '') {
+            $what .= ' — ' . trim($detail);
+        }
+
+        return $what;
+    }
+
+    /**
+     * Assembles the six-facet, labeled-line narrative shown in the Details modal.
+     * Public so the one-time backfill command can rebuild historical rows from their
+     * columns using the exact same format. Lines are newline-joined; the modal box
+     * renders them with `white-space: pre-wrap`.
+     */
+    public function assembleNarrative(
+        string $what,
+        int $userId,
+        string $action,
+        ?string $ipAddress,
+        ?string $userAgent,
+        string $when
+    ): string {
+        $ip = trim((string) $ipAddress);
+        $ua = trim((string) $userAgent);
+
+        return implode("\n", [
+            'What: ' . trim($what),
+            'Who: ' . $this->actorNarrative($userId, $action),
+            'When: ' . $when,
+            'Where: ' . ($ip === '' ? 'unknown' : $ip),
+            'Device: ' . ($ua === '' ? 'unknown' : $ua),
+        ]);
+    }
+
+    /**
+     * "Who did it" label for the narrative. In a web request, prefers the live
+     * session actor when it matches $userId (free, no query); otherwise (and always
+     * in CLI) falls back to a users lookup, then to the no-users-row cases
+     * (Developer / failed login / system error) resolved by action.
+     */
+    private function actorNarrative(int $userId, string $action): string
+    {
+        if ($userId <= 0) {
+            $label = $this->systemActorLabel($action);
+            $role = trim((string) $label['role']);
+
+            return $role === '' ? $label['username'] : $label['username'] . ' (' . $role . ')';
+        }
+
+        if (! is_cli()) {
+            $session = session();
+
+            if ($session !== null && (int) $session->get('user_id') === $userId) {
+                $username = trim((string) $session->get('username'));
+                $role = trim((string) $session->get('role'));
+                $role = \App\Libraries\RoleAccess::auditRoleLabel($role) ?? $role;
+
+                if ($username !== '') {
+                    return $role === '' ? $username . ' (#' . $userId . ')'
+                        : $username . ' (' . $role . ', #' . $userId . ')';
+                }
+            }
+        }
+
+        $user = $this->userMap([$userId])[$userId] ?? null;
+
+        if ($user === null) {
+            return 'user #' . $userId;
+        }
+
+        // Normalize the raw account_level enum to the audit-facing label (Admin/Encoder/…)
+        // so the narrative matches what the session-actor path stores.
+        $role = trim((string) ($user['role'] ?? ''));
+        $role = \App\Libraries\RoleAccess::auditRoleLabel($role) ?? $role;
+
+        return $role === ''
+            ? trim((string) $user['username']) . ' (#' . $userId . ')'
+            : trim((string) $user['username']) . ' (' . $role . ', #' . $userId . ')';
+    }
+
+    /** {username, role} label for a row with no users row, keyed by its action. */
+    private function systemActorLabel(string $action): array
+    {
+        return match (strtoupper(trim($action))) {
+            'LOGIN_FAILED' => ['username' => 'unknown user', 'role' => 'Login'],
+            'SYSTEM_ERROR' => ['username' => 'system', 'role' => 'System'],
+            default => ['username' => 'developer', 'role' => 'Developer'],
+        };
+    }
+
+    /** Escaped, comma-joined SYSTEM_ACTIONS list for raw SQL IN() clauses. */
+    private function systemActionsInList(): string
+    {
+        return implode(',', array_map(
+            fn (string $action): string => $this->db->escape($action),
+            self::SYSTEM_ACTIONS
+        ));
     }
 
     /** Returns the member ID only if it's a real existing member, else null. */
@@ -149,7 +321,12 @@ class AuditTrailsModel extends Model
             $userId = (int) ($row['userID'] ?? 0);
             $memberId = (int) ($row['memberID'] ?? 0);
             $memberName = $memberNames[$memberId] ?? ['firstname' => '', 'lastname' => ''];
-            $user = $users[$userId] ?? ['username' => '', 'role' => ''];
+            // A NULL/0 userID is an action with no users row. Failed logins and system
+            // errors are real (non-Developer) events shown to admins; everything else
+            // with no user is the .env Developer.
+            $user = $userId > 0
+                ? ($users[$userId] ?? ['username' => '', 'role' => ''])
+                : $this->systemActorLabel((string) ($row['user_action'] ?? ''));
 
             $row['username'] = $user['username'];
             $row['user_role'] = $user['role'];
@@ -171,7 +348,7 @@ class AuditTrailsModel extends Model
         }
 
         $users = $this->db->table('users')
-            ->select('userID, username, role')
+            ->select('userID, username, account_level AS role')
             ->whereIn('userID', $userIds)
             ->get()
             ->getResultArray();

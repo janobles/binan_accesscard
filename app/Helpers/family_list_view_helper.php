@@ -31,20 +31,31 @@ if (! function_exists('family_list_url')) {
      * Builds a records-list URL carrying the current keyword/sector/date/status
      * and page. Frontend: the href for filter and pagination links.
      */
-    function family_list_url(string $listRoute, string $keyword, string $sectorId, string $date, string $status, int $page = 1): string
+    function family_list_url(string $listRoute, string $keyword, mixed $sectorId, string $date, string $status, int $page = 1, int $perPage = 50, mixed $barangay = ''): string
     {
         $params = ['page' => $page];
+        $allowedPerPage = [10, 25, 50, 100];
 
-        if ($status === 'archived') {
-            $params['status'] = 'archived';
+        if (in_array($perPage, $allowedPerPage, true) && $perPage !== 50) {
+            $params['per_page'] = $perPage;
+        }
+
+        if (in_array($status, ['all', 'active', 'archived'], true)) {
+            $params['status'] = $status;
         }
 
         if (trim($keyword) !== '') {
             $params['q'] = $keyword;
         }
 
-        if (trim($sectorId) !== '') {
-            $params['sectorID'] = $sectorId;
+        $sectorIds = array_values(array_filter((array) $sectorId, static fn (mixed $value): bool => trim((string) $value) !== '' && trim((string) $value) !== '__all'));
+        if ($sectorIds !== []) {
+            $params['sectorID'] = $sectorIds;
+        }
+
+        $barangays = array_values(array_filter((array) $barangay, static fn (mixed $value): bool => trim((string) $value) !== '' && trim((string) $value) !== '__all'));
+        if ($barangays !== []) {
+            $params['barangay'] = $barangays;
         }
 
         if (trim($date) !== '') {
@@ -60,16 +71,27 @@ if (! function_exists('family_list_deep_url')) {
      * Builds a deep ("search the whole database") URL using deep_q/deep_page plus
      * the active filters. Frontend: the href for deep-search pagination links.
      */
-    function family_list_deep_url(string $listRoute, string $keyword, string $sectorId, string $date, string $status, int $page): string
+    function family_list_deep_url(string $listRoute, string $keyword, mixed $sectorId, string $date, string $status, int $page, int $perPage = 50, mixed $barangay = ''): string
     {
         $params = ['deep_q' => $keyword, 'deep_page' => $page];
+        $allowedPerPage = [10, 25, 50, 100];
 
-        if ($status === 'archived') {
-            $params['status'] = 'archived';
+        if (in_array($perPage, $allowedPerPage, true) && $perPage !== 50) {
+            $params['per_page'] = $perPage;
         }
 
-        if (trim($sectorId) !== '') {
-            $params['sectorID'] = $sectorId;
+        if (in_array($status, ['all', 'active', 'archived'], true)) {
+            $params['status'] = $status;
+        }
+
+        $sectorIds = array_values(array_filter((array) $sectorId, static fn (mixed $value): bool => trim((string) $value) !== '' && trim((string) $value) !== '__all'));
+        if ($sectorIds !== []) {
+            $params['sectorID'] = $sectorIds;
+        }
+
+        $barangays = array_values(array_filter((array) $barangay, static fn (mixed $value): bool => trim((string) $value) !== '' && trim((string) $value) !== '__all'));
+        if ($barangays !== []) {
+            $params['barangay'] = $barangays;
         }
 
         if (trim($date) !== '') {

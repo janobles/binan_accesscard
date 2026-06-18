@@ -1,177 +1,10 @@
-.family-window-host {
-    position: relative;
-    z-index: 2000;
-}
+/* Shared Bootstrap modal window used by record, lookup, account, and audit fragments.
+   Family form internals live in familyform.css, which Family/form.php loads with the form. */
 
-.family-window-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 2000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1.5rem;
-    background: rgba(9, 24, 40, 0.48);
-}
-
-.family-window {
-    display: flex;
-    width: min(calc(100vw - 12rem), 960px);
-    max-height: min(calc(100vh - 12rem), 700px);
-    min-height: 0;
-    flex-direction: column;
-    overflow: hidden;
-    border: 1px solid #b7cce0;
-    border-radius: 0.55rem;
-    background: #ffffff;
-    color: #000000;
-    font-family: Calibri, "Segoe UI", Arial, sans-serif;
-    box-shadow: 0 1.4rem 3.5rem rgba(10, 28, 45, 0.26);
-}
-
-.family-window:focus {
-    outline: none;
-}
-
-.family-window :is(
-    h1,
-    h2,
-    h3,
-    p,
-    label,
-    span,
-    button,
-    input,
-    select,
-    textarea,
-    option,
-    strong
-) {
-    color: #000000 !important;
-    font-family: Calibri, "Segoe UI", Arial, sans-serif;
-}
-
-.family-window .form-control::placeholder {
-    color: #000000 !important;
-}
-
-.family-window-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    flex: 0 0 auto;
-    padding: 1rem 1.25rem;
-    border-bottom: 1px solid #cbdbea;
-    background: #f8fbfd;
-}
-
-.family-window-kicker {
-    margin: 0 0 0.15rem;
-    color: #6b7f93;
-    font-size: 0.82rem;
-    font-weight: 700;
-    text-transform: uppercase;
-}
-
-.family-window-header h2 {
-    margin: 0;
-    color: #163552;
-    font-size: 1.15rem;
-    font-weight: 800;
-    letter-spacing: 0;
-}
-
-.family-window-close {
-    display: inline-flex;
-    width: 2.35rem;
-    height: 2.35rem;
-    flex: 0 0 auto;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid #c4d3e1;
-    border-radius: 0.45rem;
-    background: #ffffff;
-    color: #23455f;
-    cursor: pointer;
-    font-size: 1.6rem;
-    font-weight: 700;
-    line-height: 1;
-}
-
-.family-window-close:hover,
-.family-window-close:focus {
-    border-color: #2d75af;
-    color: #1d679f;
-    box-shadow: 0 0 0 0.2rem rgba(45, 117, 175, 0.14);
-}
-
-.family-window-body {
-    min-height: 0;
-    overflow-y: auto;
-    padding: 1rem;
-    background: #f4f8fb;
-}
-
-.family-window-footer {
-    display: flex;
-    flex: 0 0 auto;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 0.75rem;
-    padding: 0.85rem 1.25rem;
-    border-top: 1px solid #cbdbea;
-    background: #f8fbfd;
-}
-
-.family-window-footer-button {
-    display: inline-flex;
-    width: 6.5rem;
-    height: 2.35rem;
-    flex: 0 0 auto;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid transparent;
-    border-radius: 0.45rem;
-    background: #ffffff;
-    color: #ffffff !important;
-    cursor: pointer;
-    font: inherit;
-}
-
-.family-window .family-window-footer-button {
-    color: #ffffff !important;
-}
-
-.family-window-footer-button:nth-child(1) {
-    background: #188a3a;
-}
-
-.family-window-footer-button:nth-child(2) {
-    background: #188a3a;
-}
-
-.family-window-footer-button:nth-child(3) {
-    background: #188a3a;
-}
-
-.family-window-footer-button:nth-child(4) {
-    background: #188a3a;
-}
-
-.family-window-footer-button:hover,
-.family-window-footer-button:focus {
-    filter: brightness(0.94);
-    box-shadow: 0 0 0 0.2rem rgba(45, 117, 175, 0.14);
-}
-
-/* Shared Bootstrap modal window used by sector, service, account, audit, and
-   family fragments. Keep the desktop appearance, but fit it into tablet/mobile
-   viewports so the window does not sit too low or spill off-screen. */
 .floating-family-modal {
     --modal-window-gap: clamp(0.5rem, 2vw, 1.5rem);
-    --modal-window-width: min(72rem, calc(100vw - (var(--modal-window-gap) * 2)));
-    --modal-window-height: min(44rem, calc(100dvh - (var(--modal-window-gap) * 2)));
+    --modal-window-width: min(86rem, calc(100vw - (var(--modal-window-gap) * 2)));
+    --modal-window-height: min(54rem, calc(100dvh - (var(--modal-window-gap) * 2)));
 }
 
 .floating-family-modal .modal-dialog {
@@ -192,6 +25,7 @@
 }
 
 .floating-family-modal .modal-body {
+    position: relative;
     flex: 1 1 auto;
     min-height: 0;
     overflow: auto;
@@ -204,293 +38,265 @@
     border-top-color: #d7e3df;
 }
 
-.family-record-wizard {
-    overflow: hidden;
-    width: 100%;
-    border: 1px solid #bfd2e5;
-    border-radius: 0.45rem;
-    background: #ffffff;
-    color: #3f5570;
-    box-shadow: 0 0.35rem 1.25rem rgba(35, 82, 124, 0.08);
-}
-
-.family-wizard-steps {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    border-bottom: 1px solid #c7d8e9;
-    background: #edf5fb;
-}
-
-.family-wizard-step {
-    position: relative;
-    display: flex;
-    min-height: 4.6rem;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.35rem;
-    border: 0;
-    border-right: 1px solid #cfdeec;
-    background: transparent;
-    color: #8399b4;
-    font: inherit;
-    text-align: center;
-}
-
-.family-wizard-step:last-child {
-    border-right: 0;
-}
-
-.family-wizard-step.is-active {
-    color: #1c5f9b;
-}
-
-.family-wizard-step.is-active::after {
+.family-draft-dialog-backdrop {
     position: absolute;
-    right: 0;
-    bottom: -1px;
-    left: 0;
-    height: 3px;
-    background: #1d6da9;
-    content: "";
-}
-
-.family-step-number {
-    display: inline-flex;
-    width: 1.75rem;
-    height: 1.75rem;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    background: #d8e6f2;
-    color: #879bb1;
-    font-size: 0.85rem;
-    font-weight: 800;
-}
-
-.family-wizard-step.is-active .family-step-number {
-    background: #188a3a;
-    color: #ffffff;
-}
-
-.family-step-label {
-    color: currentColor;
-    font-size: 0.92rem;
-    font-weight: 500;
-}
-
-.family-record-form {
-    margin: 0;
-    background: #ffffff;
-}
-
-.family-form-panel {
-    padding: 2rem 1.4rem 1.4rem;
-}
-
-.family-form-divider {
-    height: 1px;
-    margin: 0 0 1.7rem;
-    background: #d0dbe7;
-}
-
-.family-form-title {
-    margin: 0 0 1.35rem;
-    color: #405675;
-    font-size: 1.35rem;
-    font-weight: 800;
-    letter-spacing: 0;
-}
-
-.family-record-wizard .form-label {
-    margin-bottom: 0.55rem;
-    color: #405675;
-    font-size: 0.88rem;
-    font-weight: 700;
-}
-
-.family-record-wizard .form-control,
-.family-record-wizard .form-select {
-    width: 100%;
-    height: 3.3rem;
-    min-height: 3.3rem;
-    padding: 0.75rem 0.85rem;
-    border: 1px solid #bdd1e6;
-    border-radius: 0.45rem;
-    background-color: #fbfdff;
-    color: #254461;
-    font-size: 0.92rem;
-    line-height: 1.2;
-    box-shadow: none;
-}
-
-.family-record-wizard .form-control::placeholder {
-    color: #8a9db9;
-    opacity: 1;
-}
-
-.family-record-wizard .form-control:focus,
-.family-record-wizard .form-select:focus {
-    border-color: #2d75af;
-    box-shadow: 0 0 0 0.2rem rgba(45, 117, 175, 0.14);
-}
-
-.family-form-panel-hidden {
-    display: none;
-}
-
-.family-step-two-grid {
-    display: grid;
-    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
-    gap: 1.5rem;
-}
-
-.family-choice-group {
-    min-width: 0;
-}
-
-.family-choice-box {
-    max-height: 21rem;
-    overflow-y: auto;
-    border: 1px solid #bdd1e6;
-    border-radius: 0.45rem;
-    background: #f8fbff;
-    padding: 0 1rem;
-    scrollbar-color: #8a8a8a transparent;
-    scrollbar-width: thin;
-}
-
-.family-choice-section {
-    padding: 0.95rem 0;
-    border-bottom: 1px solid #d9e4ef;
-}
-
-.family-choice-section:last-child {
-    border-bottom: 0;
-}
-
-.family-choice-section h3 {
-    margin: 0 0 0.55rem;
-    color: #486887;
-    font-size: 0.9rem;
-    font-weight: 800;
-    text-transform: uppercase;
-}
-
-.family-choice-row {
+    z-index: 12;
+    inset: 0;
     display: flex;
     align-items: center;
-    gap: 0.65rem;
-    margin: 0;
-    padding: 0.4rem 0.45rem;
-    color: #254461;
-    font-size: 0.95rem;
+    justify-content: center;
+    padding: 1.5rem;
+    background: rgba(20, 35, 31, 0.44);
 }
 
-.family-choice-row .form-check-input {
-    width: 0.95rem;
-    height: 0.95rem;
-    margin: 0;
-    border-color: #cbd8e6;
-}
-
-.family-choice-empty {
-    margin: 0;
-    padding: 1rem 0;
-    color: #6f8196;
-}
-
-.family-summary-card {
-    border: 1px solid #bdd1e6;
+.family-draft-dialog {
+    width: min(28rem, 100%);
+    padding: 1.25rem;
+    border: 1px solid #cfe0db;
     border-radius: 0.45rem;
-    background: #f8fbff;
-    padding: 1.45rem 1.1rem 1.15rem;
-    color: #254461;
+    background: #ffffff;
+    box-shadow: 0 1rem 2.5rem rgba(22, 37, 33, 0.18);
+    color: #263b35;
 }
 
-.family-summary-title {
-    margin: 0 0 1.65rem;
-    color: #09233f;
-    font-size: 1.55rem;
-    font-weight: 800;
-    letter-spacing: 0;
+.family-draft-dialog-icon {
+    display: inline-flex;
+    width: 2.5rem;
+    height: 2.5rem;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.85rem;
+    border-radius: 50%;
+    background: #e7f2ee;
+    color: #157347;
+    font-size: 1.15rem;
 }
 
-.family-summary-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    column-gap: 3rem;
-    row-gap: 1.15rem;
+.family-draft-dialog-icon.is-warning {
+    background: #fff4db;
+    color: #9a5b00;
 }
 
-.family-summary-item {
+.family-draft-dialog h3 {
     margin: 0;
-    min-width: 0;
-    color: #254461;
-    font-size: 0.95rem;
-    line-height: 1.45;
-}
-
-.family-summary-item strong,
-.family-summary-list strong {
-    color: #405675;
+    color: #243b35;
+    font-size: 1.05rem;
     font-weight: 800;
 }
 
-.family-summary-wide {
-    grid-column: 1 / -1;
-}
-
-.family-summary-lists {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 2rem;
-    margin-top: 1.35rem;
-}
-
-.family-summary-list {
-    min-width: 0;
-    color: #254461;
+.family-draft-dialog p {
+    margin: 0.45rem 0 0;
+    color: #5f6f69;
     font-size: 0.95rem;
-    line-height: 1.45;
 }
 
-.family-summary-list p {
-    margin: 0.35rem 0 0;
-}
-
-.family-member-actions {
+.family-draft-dialog-actions {
     display: flex;
     justify-content: flex-end;
-    margin-top: 1rem;
-}
-
-.family-member-actions-bottom {
+    gap: 0.65rem;
     margin-top: 1.25rem;
 }
 
-.family-members-list {
-    margin-top: 1rem;
+.family-draft-dialog-actions .btn {
+    min-width: 6.5rem;
 }
 
-.family-member-card {
+.family-detail {
+    padding: 1.25rem;
+    color: #263b35;
+}
+
+.family-detail-hero {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    padding: 1rem;
+    border: 1px solid #dce7e3;
+    border-radius: 0.45rem;
+    background: #f6faf8;
+}
+
+.family-detail-hero-main {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    min-width: 0;
+}
+
+.family-avatar {
+    display: inline-flex;
+    width: 3.25rem;
+    height: 3.25rem;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: #157347;
+    color: #ffffff;
+    font-weight: 800;
+    letter-spacing: 0;
+}
+
+.family-avatar.is-sm {
+    width: 2.15rem;
+    height: 2.15rem;
+    font-size: 0.78rem;
+}
+
+.family-detail-kicker,
+.family-detail-date span,
+.family-detail-item span,
+.family-service-label,
+.family-relationship {
+    display: block;
+    color: #65736e;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.family-detail h2 {
+    margin: 0.15rem 0 0;
+    color: #243b35;
+    font-size: clamp(1.35rem, 2vw, 2rem);
+    font-weight: 800;
+    letter-spacing: 0;
+}
+
+.family-detail-date {
+    flex: 0 0 auto;
+    text-align: right;
+}
+
+.family-detail-date strong,
+.family-detail-date small {
+    display: block;
+}
+
+.family-detail-section {
     margin-top: 1rem;
     padding: 1rem;
-    border: 1px solid #bdd1e6;
+    border: 1px solid #dce7e3;
     border-radius: 0.45rem;
-    background: #f8fbff;
+    background: #ffffff;
 }
 
-.family-member-card-actions {
+.family-detail-section-title {
     display: flex;
-    justify-content: flex-end;
-    margin-bottom: 1rem;
+    align-items: center;
+    gap: 0.45rem;
+    margin-bottom: 0.85rem;
+    color: #243b35;
+    font-size: 1rem;
+    font-weight: 800;
 }
 
-@media (min-width: 1200px) {
-    .family-form-panel {
-        padding: 2rem 1.35rem 1.5rem;
-    }
+.family-detail-count {
+    display: inline-flex;
+    min-width: 1.6rem;
+    height: 1.6rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: #e7f2ee;
+    color: #157347;
+    font-size: 0.78rem;
+    font-weight: 800;
+}
+
+.family-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.family-detail-grid.is-compact {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.family-detail-item {
+    min-width: 0;
+    padding: 0.75rem;
+    border: 1px solid #e1ebe8;
+    border-radius: 0.4rem;
+    background: #f9fbfa;
+}
+
+.family-detail-item strong {
+    display: block;
+    margin-top: 0.25rem;
+    overflow-wrap: anywhere;
+    color: #263b35;
+    font-size: 0.95rem;
+}
+
+.family-detail-list,
+.family-service-list {
+    display: grid;
+    gap: 0.45rem;
+}
+
+.family-chip-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+}
+
+.family-chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.85rem;
+    padding: 0.3rem 0.65rem;
+    border: 1px solid #b8d8cc;
+    border-radius: 999px;
+    background: #eef8f4;
+    color: #145c3d;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.family-chip.is-service {
+    border-color: #c8d8f0;
+    background: #f2f6fd;
+    color: #244f8f;
+}
+
+.family-empty {
+    color: #788983;
+    font-size: 0.9rem;
+}
+
+.family-member-list {
+    display: grid;
+    gap: 0.85rem;
+}
+
+.family-member-item {
+    padding: 0.85rem;
+    border: 1px solid #e1ebe8;
+    border-radius: 0.45rem;
+    background: #fbfdfc;
+}
+
+.family-member-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.family-member-identity {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-width: 0;
+}
+
+.family-member-identity strong {
+    overflow-wrap: anywhere;
 }
 
 @media (max-width: 991.98px) {
@@ -518,37 +324,12 @@
         padding: 0.65rem 0.85rem;
     }
 
-    .floating-family-modal .modal-title,
-    .family-window-header h2,
-    .family-form-title {
+    .floating-family-modal .modal-title {
         font-size: 1rem;
     }
 
-    .family-window-kicker,
-    .family-record-wizard .form-label {
-        font-size: 0.76rem;
-    }
-
-    .family-record-wizard .form-control,
-    .family-record-wizard .form-select {
-        height: 2.7rem;
-        min-height: 2.7rem;
-        padding: 0.55rem 0.7rem;
-        font-size: 0.84rem;
-    }
-
-    .family-record-wizard textarea.form-control {
-        height: auto;
-        min-height: 6rem;
-    }
-
-    .family-step-two-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .family-summary-grid {
+    .family-detail-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        column-gap: 1.5rem;
     }
 }
 
@@ -578,69 +359,23 @@
         font-size: 0.82rem;
     }
 
-    .family-window-overlay {
-        align-items: stretch;
-        padding: 0.6rem;
+    .family-detail {
+        padding: 0.85rem;
     }
 
-    .family-window {
-        width: 100%;
-        max-height: calc(100vh - 1.2rem);
+    .family-detail-hero,
+    .family-member-heading {
+        align-items: flex-start;
+        flex-direction: column;
     }
 
-    .family-window-header {
-        padding: 0.85rem 0.9rem;
+    .family-detail-date {
+        text-align: left;
     }
 
-    .family-window-body {
-        padding: 0.7rem;
-    }
-
-    .family-window-footer {
-        gap: 0.5rem;
-        padding: 0.7rem 0.9rem;
-    }
-
-    .family-window-footer-button {
-        width: 5rem;
-        height: 2.1rem;
-        font-size: 0.82rem;
-    }
-
-    .family-wizard-steps {
+    .family-detail-grid,
+    .family-detail-grid.is-compact {
         grid-template-columns: 1fr;
-    }
-
-    .family-wizard-step {
-        min-height: 4.3rem;
-        border-right: 0;
-        border-bottom: 1px solid #cfdeec;
-    }
-
-    .family-wizard-step:last-child {
-        border-bottom: 0;
-    }
-
-    .family-form-panel {
-        padding: 1.35rem 1rem;
-    }
-
-    .family-form-title {
-        font-size: 1.35rem;
-    }
-
-    .family-summary-card {
-        padding: 1.15rem 1rem;
-    }
-
-    .family-summary-title {
-        font-size: 1.35rem;
-    }
-
-    .family-summary-grid,
-    .family-summary-lists {
-        grid-template-columns: 1fr;
-        gap: 1rem;
     }
 }
 
@@ -663,26 +398,5 @@
 
     .floating-family-modal .modal-footer {
         padding: 0.45rem 0.75rem;
-    }
-
-    .family-window-overlay {
-        padding: 0.45rem;
-    }
-
-    .family-window {
-        width: min(calc(100vw - 0.9rem), 60rem);
-        max-height: calc(100dvh - 0.9rem);
-    }
-
-    .family-window-header {
-        padding: 0.65rem 0.85rem;
-    }
-
-    .family-window-body {
-        padding: 0.6rem;
-    }
-
-    .family-window-footer {
-        padding: 0.55rem 0.85rem;
     }
 }

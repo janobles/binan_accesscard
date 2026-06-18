@@ -6,6 +6,7 @@ use App\Controllers\BaseController;
 use App\Libraries\RoleAccess;
 use App\Libraries\SectorIds;
 use App\Models\Audit\AuditTrailsModel;
+use App\Models\Lookups\CategoryModel;
 use App\Models\Lookups\SectorModel;
 use CodeIgniter\HTTP\RedirectResponse;
 use Throwable;
@@ -38,7 +39,10 @@ class SectorController extends BaseController
 
     /**
      * POST `admin/sectors/archive/{id}`: soft-archive a sector (hide, keep data).
-     * Refuses if the sector is still assigned to any member; audits the action.
+     * Allowed even when the sector is still assigned to members: archiving only
+     * retires it from new selections; existing records keep the sector (the family
+     * edit form preserves archived-but-assigned sectors). Permanent delete is still
+     * guarded. Audits the action.
      */
     public function archive(int $sectorId): RedirectResponse
     {
@@ -52,10 +56,6 @@ class SectorController extends BaseController
 
         if (! $model->hasTable()) {
             return $this->redirectAdmin('admin/sectors', 'error', 'Sector table is not available.');
-        }
-
-        if ($this->sectorIsUsed($sectorId)) {
-            return $this->redirectAdmin('admin/sectors', 'error', 'This sector is assigned to one or more records and cannot be archived. Reassign them first.');
         }
 
         $sector = $model->find($sectorId);
@@ -151,14 +151,51 @@ class SectorController extends BaseController
             return $this->redirectAdmin('admin/sectors', 'error', 'Sector table is not available.');
         }
 
-        $shortcode = trim((string) $this->request->getPost('shortcode'));
+        // The category dropdown posts a categoryID linking the sector to the
+        // `category` table. The special "__other__" value means the user typed a
+        // new custom category inline (created/reused here before the sector saves).
+        $categoryModel = new CategoryModel();
+        $categoryRaw = trim((string) $this->request->getPost('categoryID'));
 
-        if ($shortcode === '__other__') {
-            $shortcode = trim((string) $this->request->getPost('shortcode_other'));
+        if ($categoryRaw === '__other__') {
+            $newCode = strtoupper(trim((string) $this->request->getPost('new_category_code')));
+            $newName = trim((string) $this->request->getPost('new_category_name'));
+
+            if ($newCode === '' || preg_match('/^[A-Z]+$/', $newCode) !== 1) {
+                return $this->redirectAdmin('admin/sectors', 'error', 'Custom category code must be letters only (e.g. NEW).');
+            }
+
+            if ($newName === '') {
+                return $this->redirectAdmin('admin/sectors', 'error', 'Custom category name is required.');
+            }
+
+            // Reuse an existing category with the same code, otherwise create one.
+            $category = $categoryModel->findByCode($newCode);
+
+            if ($category === null) {
+                $categoryId = $categoryModel->create([
+                    'code' => $newCode,
+                    'name' => $newName,
+                ]);
+                $category = $categoryModel->find($categoryId);
+                $this->audit('CATEGORY_CREATE', 'Created category ' . $newCode . ' (' . $newName . ') from the Add Sector form.');
+            } else {
+                $categoryId = (int) ($category['categoryID'] ?? 0);
+            }
+        } else {
+            $categoryId = (int) $categoryRaw;
+            $category = $categoryModel->find($categoryId);
+
+            if ($categoryId <= 0 || $category === null) {
+                return $this->redirectAdmin('admin/sectors', 'error', 'Please select a category.');
+            }
         }
+
+        $shortcode = trim((string) $this->request->getPost('shortcode'));
 
         $data = [
             'shortcode' => strtoupper($shortcode),
+            'categoryID' => $categoryId,
             'name' => trim((string) $this->request->getPost('name')),
             'description' => trim((string) $this->request->getPost('description')),
         ];
@@ -190,7 +227,8 @@ class SectorController extends BaseController
 
         $this->audit(
             $isUpdate ? 'SECTOR_UPDATE' : 'SECTOR_CREATE',
-            ($isUpdate ? 'Updated' : 'Created') . ' sector ' . $data['shortcode'] . ' (' . $data['name'] . ').'
+            ($isUpdate ? 'Updated' : 'Created') . ' sector ' . $data['shortcode'] . ' (' . $data['name'] . ')'
+                . ' under category ' . (string) ($category['code'] ?? '') . '.'
         );
 
         $message = $isUpdate ? 'Sector updated successfully.' : 'Sector added successfully.';

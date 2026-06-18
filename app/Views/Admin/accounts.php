@@ -3,79 +3,45 @@ use App\Libraries\ViewFormatter;
 
 $adminAccounts = $adminAccounts ?? [];
 $employeeAccounts = $employeeAccounts ?? [];
+$viewerAccounts = $viewerAccounts ?? [];
 $canCreateAccounts = (bool) ($canCreateAccounts ?? false);
+$canEditAccounts = (bool) ($canEditAccounts ?? false);
 $currentRole = (string) ($currentRole ?? '');
 $isDeveloper = $currentRole === 'Developer';
 $isAdmin = $currentRole === 'Admin';
-$accounts = $isDeveloper ? array_merge($adminAccounts, $employeeAccounts) : $employeeAccounts;
+$currentUserId = (int) session()->get('user_id');
+// Admins and developers both manage every non-developer account now.
+$accounts = array_merge($adminAccounts, $employeeAccounts, $viewerAccounts);
 ?>
 
-<div class="account-management-page">
-    <?php if ($canCreateAccounts): ?>
-        <section class="account-card account-create-card" aria-labelledby="create-account-title">
-            <div class="account-card-header">
-                <div>
-                    <h2 id="create-account-title">Create Account</h2>
-                </div>
-            </div>
-
-            <form method="post" action="<?= site_url('developer/accounts') ?>">
-                <?= csrf_field() ?>
-                <div class="account-create-grid">
-                    <div class="account-field-group" aria-label="Personal information">
-                        <div class="account-field">
-                            <label class="form-label" for="account-last-name">Last Name</label>
-                            <input class="form-control" id="account-last-name" name="last_name" type="text" value="<?= esc((string) old('last_name')) ?>" placeholder="Enter last name">
-                        </div>
-                        <div class="account-field">
-                            <label class="form-label" for="account-first-name">First Name</label>
-                            <input class="form-control" id="account-first-name" name="first_name" type="text" value="<?= esc((string) old('first_name')) ?>" placeholder="Enter first name">
-                        </div>
-                        <div class="account-field">
-                            <label class="form-label" for="account-address">Address</label>
-                            <input class="form-control" id="account-address" name="address" type="text" value="<?= esc((string) old('address')) ?>" placeholder="Enter address">
-                        </div>
-                        <div class="account-field">
-                            <label class="form-label" for="account-contact-no">Contact No.</label>
-                            <input class="form-control" id="account-contact-no" name="contact_no" type="text" value="<?= esc((string) old('contact_no')) ?>" placeholder="Enter contact number">
-                        </div>
-                    </div>
-
-                    <div class="account-field-group" aria-label="Login information">
-                        <div class="account-field">
-                            <label class="form-label" for="account-username">Username</label>
-                            <input class="form-control" id="account-username" name="username" type="text" value="<?= esc((string) old('username')) ?>" placeholder="Enter username" required minlength="4">
-                        </div>
-                        <div class="account-field">
-                            <label class="form-label" for="account-password">Password</label>
-                            <input class="form-control" id="account-password" name="password" type="password" placeholder="Enter password" required minlength="8">
-                        </div>
-                        <div class="account-field">
-                            <label class="form-label" for="account-confirm-password">Confirm Password</label>
-                            <input class="form-control" id="account-confirm-password" name="password_confirm" type="password" placeholder="Confirm password" required minlength="8">
-                        </div>
-                        <div class="account-field">
-                            <label class="form-label" for="account-role">Role</label>
-                            <select class="form-select" id="account-role" name="role" required>
-                                <option value="">Choose role</option>
-                                <option value="Admin" <?= old('role') === 'Admin' ? 'selected' : '' ?>>Admin</option>
-                                <option value="User" <?= old('role') === 'User' ? 'selected' : '' ?>>Employee</option>
-                            </select>
-                        </div>
-                        <div class="account-create-actions">
-                            <button class="btn btn-success" type="submit">Create</button>
-                        </div>
-                    </div>
-                </div>
-            </form>
-        </section>
-    <?php endif; ?>
-
+<div class="accounts-page" data-account-management>
     <section class="account-card" aria-labelledby="accounts-title">
         <div class="account-card-header">
-            <div>
-                <h2 id="accounts-title">Accounts</h2>
-            </div>
+        </div>
+
+        <div class="account-list-toolbar" role="search" aria-label="Filter accounts">
+            <input class="form-control" type="search" data-account-search placeholder="Search username..." autocomplete="off" aria-label="Search accounts by username">
+            <select class="form-select" data-account-level-filter aria-label="Filter by account level">
+                <option value="">Select Level</option>
+                <option value="administrator">Administrator</option>
+                <option value="encoder">Encoder</option>
+                <option value="viewer">Viewer</option>
+            </select>
+            <select class="form-select" data-account-status-filter aria-label="Filter by account status">
+                <option value="">Select Status</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+            </select>
+            <button class="btn btn-outline-secondary account-filter-clear" type="button" data-account-clear-filters>
+                <i class="bi bi-x-lg" aria-hidden="true"></i>
+                <span>Clear</span>
+            </button>
+            <?php if ($canCreateAccounts): ?>
+                <button class="btn btn-success account-create-trigger js-open-account-create-modal" type="button" data-modal-url="<?= site_url('accounts/create') ?>" data-modal-title="Create Account">
+                    <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                    <span>Create Account</span>
+                </button>
+            <?php endif; ?>
         </div>
 
         <div class="table-responsive">
@@ -93,43 +59,74 @@ $accounts = $isDeveloper ? array_merge($adminAccounts, $employeeAccounts) : $emp
                         <?php
                         $userId = (int) ($account['userID'] ?? 0);
                         $rawRole = (string) ($account['role'] ?? '');
-                        $roleLabel = $rawRole === 'User' ? 'Employee' : $rawRole;
+                        $roleLabel = \App\Libraries\RoleAccess::normalizeRole($rawRole) ?? $rawRole;
                         $isActive = ViewFormatter::isActiveStatus($account['isactive'] ?? null);
                         $nextStatus = $isActive ? 'Disabled' : 'Enable';
-                        $statusLabel = $isActive ? 'Enable' : 'Disabled';
+                        $statusLabel = $isActive ? 'Active' : 'Inactive';
                         $statusClass = $isActive ? 'is-active' : 'is-disabled';
+                        $statusFilter = $isActive ? 'active' : 'inactive';
+                        $canEditRow = $canEditAccounts && in_array($rawRole, ['administrator', 'encoder', 'viewer'], true);
+                        $canDeveloperToggle = $isDeveloper && in_array($rawRole, ['administrator', 'encoder', 'viewer'], true);
+                        $canAdminToggle = $isAdmin && in_array($rawRole, ['encoder', 'viewer'], true);
+                        $hasRowActions = $canEditRow || $canDeveloperToggle || $canAdminToggle;
                         ?>
-                        <tr>
+                        <tr data-account-row data-account-username="<?= esc(mb_strtolower((string) ($account['username'] ?? '')), 'attr') ?>" data-account-role="<?= esc(mb_strtolower($rawRole), 'attr') ?>" data-account-status="<?= esc($statusFilter, 'attr') ?>">
                             <td><strong><?= esc((string) ($account['username'] ?? '')) ?></strong></td>
                             <td><?= esc($roleLabel) ?></td>
                             <td><span class="account-status-badge <?= esc($statusClass) ?>"><?= esc($statusLabel) ?></span></td>
                             <td>
-                                <?php if ($isDeveloper && in_array($rawRole, ['Admin', 'User'], true)): ?>
-                                    <form class="js-account-status-form" method="post" action="<?= site_url('developer/accounts/status') ?>" data-confirm-message="<?= esc(($isActive ? 'Disable' : 'Enable') . ' ' . $roleLabel . ' account "' . (string) ($account['username'] ?? '') . '"?', 'attr') ?>">
-                                        <?= csrf_field() ?>
-                                        <input type="hidden" name="userID" value="<?= esc((string) $userId) ?>">
-                                        <input type="hidden" name="status" value="<?= esc($nextStatus) ?>">
-                                        <button class="btn btn-sm <?= $isActive ? 'btn-outline-danger' : 'btn-outline-success' ?>" type="submit">
-                                            <i class="bi <?= $isActive ? 'bi-person-x' : 'bi-person-check' ?>" aria-hidden="true"></i><?= $isActive ? 'Disable' : 'Enable' ?>
-                                        </button>
-                                    </form>
-                                <?php elseif ($isAdmin && $rawRole === 'User'): ?>
-                                    <form class="js-account-status-form" method="post" action="<?= site_url($isActive ? 'admin/accounts/disable' : 'admin/accounts/enable') ?>" data-confirm-message="<?= esc(($isActive ? 'Disable' : 'Enable') . ' employee account "' . (string) ($account['username'] ?? '') . '"?', 'attr') ?>">
-                                        <?= csrf_field() ?>
-                                        <input type="hidden" name="userID" value="<?= esc((string) $userId) ?>">
-                                        <button class="btn btn-sm <?= $isActive ? 'btn-outline-danger' : 'btn-outline-success' ?>" type="submit">
-                                            <i class="bi <?= $isActive ? 'bi-person-x' : 'bi-person-check' ?>" aria-hidden="true"></i><?= $isActive ? 'Disable' : 'Enable' ?>
-                                        </button>
-                                    </form>
-                                <?php else: ?>
-                                    <span class="text-muted">-</span>
-                                <?php endif; ?>
+                                <div class="account-actions">
+                                    <?php if ($hasRowActions): ?>
+                                        <div class="dropdown">
+                                            <button class="btn btn-sm btn-outline-secondary account-action-toggle dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false">
+                                                Actions
+                                            </button>
+                                            <div class="dropdown-menu account-action-menu">
+                                                <?php if ($canEditRow): ?>
+                                                    <button class="dropdown-item js-open-account-edit-modal" type="button"
+                                                            data-modal-url="<?= site_url('accounts/edit/' . $userId) ?>"
+                                                            data-modal-title="Edit Account">
+                                                        <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                                                        <span>Edit</span>
+                                                    </button>
+                                                <?php endif; ?>
+
+                                                <?php if ($canDeveloperToggle): ?>
+                                                    <form class="js-account-status-form" method="post" action="<?= site_url('developer/accounts/status') ?>" data-confirm-message="<?= esc(($isActive ? 'Disable' : 'Enable') . ' ' . $roleLabel . ' account "' . (string) ($account['username'] ?? '') . '"?', 'attr') ?>">
+                                                        <?= csrf_field() ?>
+                                                        <input type="hidden" name="userID" value="<?= esc((string) $userId) ?>">
+                                                        <input type="hidden" name="status" value="<?= esc($nextStatus) ?>">
+                                                        <button class="dropdown-item <?= $isActive ? 'text-danger' : 'text-success' ?>" type="submit">
+                                                            <i class="bi <?= $isActive ? 'bi-person-x' : 'bi-person-check' ?>" aria-hidden="true"></i>
+                                                            <span><?= $isActive ? 'Disable' : 'Enable' ?></span>
+                                                        </button>
+                                                    </form>
+                                                <?php elseif ($canAdminToggle): ?>
+                                                    <form class="js-account-status-form" method="post" action="<?= site_url($isActive ? 'admin/accounts/disable' : 'admin/accounts/enable') ?>" data-confirm-message="<?= esc(($isActive ? 'Disable' : 'Enable') . ' ' . $roleLabel . ' account "' . (string) ($account['username'] ?? '') . '"?', 'attr') ?>">
+                                                        <?= csrf_field() ?>
+                                                        <input type="hidden" name="userID" value="<?= esc((string) $userId) ?>">
+                                                        <button class="dropdown-item <?= $isActive ? 'text-danger' : 'text-success' ?>" type="submit">
+                                                            <i class="bi <?= $isActive ? 'bi-person-x' : 'bi-person-check' ?>" aria-hidden="true"></i>
+                                                            <span><?= $isActive ? 'Disable' : 'Enable' ?></span>
+                                                        </button>
+                                                    </form>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                    <?php else: ?>
+                                        <span class="text-muted">-</span>
+                                    <?php endif; ?>
+                                </div>
                             </td>
                         </tr>
                     <?php endforeach; ?>
                     <?php if ($accounts === []): ?>
                         <tr>
                             <td colspan="4" class="account-empty-state">No accounts found.</td>
+                        </tr>
+                    <?php else: ?>
+                        <tr data-account-filter-empty hidden>
+                            <td colspan="4" class="account-empty-state">No matching accounts found.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>

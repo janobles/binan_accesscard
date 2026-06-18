@@ -13,6 +13,7 @@ use App\Models\Lookups\ServiceModel;
 use App\Support\FamilyProfilingFormV2;
 use App\Support\FamilyRecordPresenter;
 use CodeIgniter\HTTP\RedirectResponse;
+use Throwable;
 
 /**
  * Handles family records for the admin and employee Manage Family screens:
@@ -218,14 +219,19 @@ class FamilyController extends BaseController
         }
 
         if ($auditModel->hasTable()) {
+            $headName = trim(trim((string) $this->request->getPost('head_firstname')) . ' ' . trim((string) $this->request->getPost('head_lastname')));
+            $memberCount = is_array($members) ? count($members) : 0;
+            $serviceCount = is_array($serviceIds) ? count($serviceIds) : 0;
             // Tracks the creating operator plus client IP and browser agent.
             $auditModel->logAction(
                 $userId,
                 $headId,
                 'FAMILY_CREATED',
-                'Created family profile for ' . trim((string) $this->request->getPost('head_firstname')) . ' ' . trim((string) $this->request->getPost('head_lastname')) . '.',
+                'Created family profile for ' . $headName . '.',
                 $this->request->getIPAddress(),
-                $this->request->getUserAgent()->getAgentString()
+                $this->request->getUserAgent()->getAgentString(),
+                'Head of family: ' . $headName . '; added ' . $memberCount . ' additional member(s); '
+                    . $serviceCount . ' service(s) assigned to the head'
             );
         }
 
@@ -286,7 +292,7 @@ class FamilyController extends BaseController
      */
     public function viewFamily(int $headId): string|RedirectResponse
     {
-        $guard = $this->requireFamilyEntryAccess();
+        $guard = $this->requireFamilyViewAccess();
 
         if ($guard instanceof RedirectResponse) {
             return $this->partialGuard($guard, 'You do not have permission to view family records.');
@@ -353,8 +359,28 @@ class FamilyController extends BaseController
         $serviceIdsByMember = (new MemberServiceModel())
             ->getServiceIdsByMemberIds(array_map(static fn (array $row): int => (int) $row['memberID'], $rows));
 
+        // Gather every sector/service the family currently holds so the edit form can
+        // keep showing (and re-posting) any that have since been archived — otherwise
+        // saving would silently drop those grandfathered benefits.
+        $assignedSectorIds = [];
+        foreach ($rows as $row) {
+            foreach (SectorIds::normalize($row['sectorID'] ?? null) as $sectorId) {
+                $assignedSectorIds[] = (int) $sectorId;
+            }
+        }
+
+        $assignedServiceIds = [];
+        foreach ($serviceIdsByMember as $ids) {
+            foreach ($ids as $id) {
+                $assignedServiceIds[] = (int) $id;
+            }
+        }
+
         return view('Family/form', array_merge(
-            (new FamilyFormOptionsModel())->getViewData(),
+            (new FamilyFormOptionsModel())->getViewDataForEdit(
+                array_values(array_unique($assignedSectorIds)),
+                array_values(array_unique($assignedServiceIds))
+            ),
             [
                 'familyRecord'      => $head,
                 'existingMembers'   => $this->shapeExistingMembers($members, $serviceIdsByMember),
@@ -413,9 +439,15 @@ class FamilyController extends BaseController
 
         $memberModel->beginTransaction();
 
+        // Snapshot the family's current service IDs before clearing, so archived-but-
+        // already-assigned services survive the re-save (they fail the active-only
+        // existsById() check, so they must be grandfathered through assignServices()).
+        $familyMemberIds = $memberModel->getFamilyMemberIds($headId);
+        $grandfatheredServiceIds = $this->collectAssignedServiceIds($memberServiceModel, $familyMemberIds);
+
         // Clear the family's existing service links and relatives, then rebuild both
         // from the submission so the edit fully replaces the prior member list.
-        $memberServiceModel->deleteByMemberIds($memberModel->getFamilyMemberIds($headId));
+        $memberServiceModel->deleteByMemberIds($familyMemberIds);
 
         if (! $memberModel->updateHead($headId, $this->memberPayload('head_'))) {
             $memberModel->rollbackTransaction();
@@ -438,27 +470,32 @@ class FamilyController extends BaseController
                 return $this->failUpdate('One family member could not be saved.', 422);
             }
 
-            if (! $this->assignServices($memberServiceModel, $serviceModel, $memberId, $member['service_ids'] ?? [])) {
+            if (! $this->assignServices($memberServiceModel, $serviceModel, $memberId, $member['service_ids'] ?? [], $grandfatheredServiceIds)) {
                 $memberModel->rollbackTransaction();
 
                 return $this->failUpdate('A selected service could not be assigned to one family member.', 422);
             }
         }
 
-        if (! $this->assignServices($memberServiceModel, $serviceModel, $headId, $serviceIds)) {
+        if (! $this->assignServices($memberServiceModel, $serviceModel, $headId, $serviceIds, $grandfatheredServiceIds)) {
             $memberModel->rollbackTransaction();
 
             return $this->failUpdate('A selected service could not be assigned to the head of family.', 422);
         }
 
         if ($auditModel->hasTable()) {
+            $headName = trim(trim((string) $this->request->getPost('head_firstname')) . ' ' . trim((string) $this->request->getPost('head_lastname')));
+            $memberCount = is_array($members) ? count($members) : 0;
+            $serviceCount = is_array($serviceIds) ? count($serviceIds) : 0;
             $auditModel->logAction(
                 $userId,
                 $headId,
                 'FAMILY_UPDATED',
-                'Updated family profile for ' . trim((string) $this->request->getPost('head_firstname')) . ' ' . trim((string) $this->request->getPost('head_lastname')) . '.',
+                'Updated family profile for ' . $headName . '.',
                 $this->request->getIPAddress(),
-                $this->request->getUserAgent()->getAgentString()
+                $this->request->getUserAgent()->getAgentString(),
+                'Head of family: ' . $headName . '; ' . $memberCount . ' member(s) in household; '
+                    . $serviceCount . ' service(s) on the head after update'
             );
         }
 
@@ -541,7 +578,15 @@ class FamilyController extends BaseController
 
         $name = $this->familyHeadName($model, $headId);
 
-        if (! $action($model)) {
+        try {
+            $changed = $action($model);
+        } catch (Throwable $exception) {
+            $this->auditSystemError(strtolower($auditVerb) . ' family record #' . $headId, $exception);
+
+            return redirect()->to($this->listUrlWithoutDeepSearch())->with('error', $errorMessage);
+        }
+
+        if (! $changed) {
             return redirect()->to($this->listUrlWithoutDeepSearch())->with('error', $errorMessage);
         }
 
@@ -554,11 +599,40 @@ class FamilyController extends BaseController
                 $auditAction,
                 $auditVerb . ' family record ' . $name . ' #' . $headId . '.',
                 $this->request->getIPAddress(),
-                $this->request->getUserAgent()->getAgentString()
+                $this->request->getUserAgent()->getAgentString(),
+                $auditVerb . ' the entire family record headed by ' . $name . ' (head #' . $headId . ')'
             );
         }
 
         return redirect()->to($this->listUrlWithoutDeepSearch())->with('success', $successMessage);
+    }
+
+    /**
+     * Records a SYSTEM_ERROR audit row for an unexpected failure during a family
+     * action, so it surfaces on the audit page (visible to admins). Best-effort —
+     * a failure here must never mask the original error.
+     */
+    private function auditSystemError(string $context, Throwable $exception): void
+    {
+        try {
+            $auditModel = new AuditTrailsModel();
+
+            if (! $auditModel->hasTable()) {
+                return;
+            }
+
+            $auditModel->logAction(
+                (int) session()->get('user_id'),
+                null,
+                'SYSTEM_ERROR',
+                'System error during ' . $context . '.',
+                $this->request->getIPAddress(),
+                $this->request->getUserAgent()->getAgentString(),
+                $exception->getMessage()
+            );
+        } catch (Throwable $ignored) {
+            log_message('error', 'Audit SYSTEM_ERROR skipped: ' . $ignored->getMessage());
+        }
     }
 
     /**
@@ -648,19 +722,30 @@ class FamilyController extends BaseController
 
     /**
      * Validates and links a set of selected service IDs to one member inside the
-     * update transaction. Skips invalid/non-existent services; returns false only
-     * when a valid service fails to link (so the caller can roll back).
+     * update transaction. A service is accepted when it is an active service, OR it
+     * is in $grandfatheredServiceIds — the set the family already held before this
+     * edit — so archived-but-assigned services are preserved rather than dropped.
+     * Other invalid/non-existent services are skipped; returns false only when a
+     * valid service fails to link (so the caller can roll back).
+     *
+     * @param list<int> $grandfatheredServiceIds
      */
-    private function assignServices(MemberServiceModel $memberServiceModel, ServiceModel $serviceModel, int $memberId, mixed $serviceIds): bool
+    private function assignServices(MemberServiceModel $memberServiceModel, ServiceModel $serviceModel, int $memberId, mixed $serviceIds, array $grandfatheredServiceIds = []): bool
     {
         if (! is_array($serviceIds)) {
             return true;
         }
 
+        $grandfathered = array_flip(array_map('intval', $grandfatheredServiceIds));
+
         foreach ($serviceIds as $serviceId) {
             $serviceId = (int) $serviceId;
 
-            if ($serviceId < 0 || ! $serviceModel->existsById($serviceId)) {
+            if ($serviceId < 0) {
+                continue;
+            }
+
+            if (! isset($grandfathered[$serviceId]) && ! $serviceModel->existsById($serviceId)) {
                 continue;
             }
 
@@ -670,6 +755,30 @@ class FamilyController extends BaseController
         }
 
         return true;
+    }
+
+    /**
+     * Flat list of distinct service IDs currently assigned across the given members.
+     * Used to grandfather archived-but-assigned services through an update re-save.
+     *
+     * @param list<int> $memberIds
+     * @return list<int>
+     */
+    private function collectAssignedServiceIds(MemberServiceModel $memberServiceModel, array $memberIds): array
+    {
+        if ($memberIds === []) {
+            return [];
+        }
+
+        $ids = [];
+
+        foreach ($memberServiceModel->getServiceIdsByMemberIds($memberIds) as $serviceIds) {
+            foreach ($serviceIds as $serviceId) {
+                $ids[] = (int) $serviceId;
+            }
+        }
+
+        return array_values(array_unique($ids));
     }
 
     /** Resolves [serviceID => name] across every service assigned to the family. */
@@ -725,7 +834,12 @@ class FamilyController extends BaseController
     /** True when the current request is under the `employee/` route group. */
     private function isEmployeeContext(): bool
     {
-        return str_starts_with(trim((string) $this->request->getUri()->getPath(), '/'), 'employee/');
+        // uri_string() returns the path relative to baseURL (e.g. "employee/manage-family/
+        // update/5"). Using the URI's getPath() here would include the subfolder the app
+        // is installed in (e.g. "/binan_accesscard/employee/..."), so the str_starts_with
+        // check would fail and an encoder's save would redirect to the admin-only
+        // manage-records page ("You do not have access to that page.").
+        return str_starts_with(uri_string(), 'employee/');
     }
 
     /** Route base (`admin/manage-family` or `employee/manage-family`) for the request. */
@@ -795,6 +909,27 @@ class FamilyController extends BaseController
         }
 
         return redirect()->back()->with('error', 'You do not have permission to add family records.');
+    }
+
+    /**
+     * Access guard for the READ-ONLY family detail fragment (viewFamily). Same as
+     * requireFamilyEntryAccess but also permits the Viewer role — viewers may look
+     * at a record but never reach the edit/update/archive/restore actions, which
+     * keep the stricter requireFamilyEntryAccess guard.
+     */
+    private function requireFamilyViewAccess(): ?RedirectResponse
+    {
+        if (! session()->get('is_logged_in')) {
+            return redirect()->to(site_url('/'))->with('error', 'Please login first.');
+        }
+
+        $role = RoleAccess::normalizeRole((string) session()->get('role'));
+
+        if (in_array($role, ['Developer', 'Admin', 'Employee', 'Viewer'], true)) {
+            return null;
+        }
+
+        return redirect()->back()->with('error', 'You do not have permission to view family records.');
     }
 
     /**

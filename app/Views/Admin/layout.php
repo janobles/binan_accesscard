@@ -27,18 +27,25 @@ $adminAccounts = $adminAccounts ?? [];
 $employeeAccounts = $employeeAccounts ?? [];
 $familyFormViewData = $familyFormViewData ?? [];
 $recordListData = $recordListData ?? [];
+$categories = $categories ?? [];
 $sectorShortcodeOptions = $sectorShortcodeOptions ?? [];
 $searchTerm = $searchTerm ?? '';
 $searchFilters = $searchFilters ?? [];
 $auditActionOptions = $auditActionOptions ?? [];
-$sectorOptions = $familyFormViewData['sectorOptions'] ?? [];
-$hasSearchFilters = $searchTerm !== '' || array_filter($searchFilters, static fn ($value): bool => trim((string) $value) !== '') !== [];
+$hasSearchFilters = $searchTerm !== '' || array_filter($searchFilters, static function ($value): bool {
+    if (is_array($value)) {
+        return array_filter($value, static fn ($item): bool => trim((string) $item) !== '' && trim((string) $item) !== '__all') !== [];
+    }
+
+    $normalized = trim((string) $value);
+
+    return $normalized !== '' && $normalized !== '__all';
+}) !== [];
 $canCreateFamily = $canCreateFamily ?? false;
 $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
 // Developers get the "developer" sidebar accent; plain admins get "admin".
 $sidebarRoleClass = $canManageAccounts ? 'developer' : 'admin';
 $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('admin/dashboard');
-$showTopbarBranding = $activePage !== 'audit-trails';
 ?>
 <?php
 /*
@@ -54,14 +61,11 @@ $cssVersion = static function (string $relativeCssPath): string {
 $jadeStyles = [
     'css/sb-admin-adapter.css',
     'css/managerecord.css',
-    'css/searchbar.css',
-    'css/sector.css',
-    'css/service.css',
+    'css/lookupmanagement.css',
     'css/audittrails.css',
-    'css/accountmanagement.css',
+    'css/accounts.css',
     'css/familymodal.css',
     'css/session-timeout.css',
-    'css/melbranch-bridge.css',
 ];
 ?>
 <!DOCTYPE html>
@@ -70,8 +74,8 @@ $jadeStyles = [
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= esc($pageTitle) ?> - Binan Access Card MIS</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="<?= esc($cssVersion('assets/bootstrap/css/bootstrap.min.css'), 'attr') ?>" rel="stylesheet">
+    <link href="<?= esc($cssVersion('assets/bootstrap-icons/font/bootstrap-icons.min.css'), 'attr') ?>" rel="stylesheet">
     <?php foreach ($jadeStyles as $stylePath): ?>
     <link rel="stylesheet" href="<?= esc($cssVersion($stylePath), 'attr') ?>">
     <?php endforeach; ?>
@@ -82,7 +86,7 @@ $jadeStyles = [
         <li class="sidebar-brand-wrap">
             <a class="sidebar-brand d-flex align-items-center justify-content-center" href="<?= site_url('admin/dashboard') ?>">
                 <img class="sidebar-brand-icon" src="<?= base_url('assets/image/binan.png') ?>" alt="City of Binan Logo">
-                <span class="sidebar-brand-text mx-2">Bi&ntilde;an Access Card MIS<small><?= esc($modeLabel) ?></small></span>
+                <span class="sidebar-brand-text mx-2">Bi&ntilde;an Access Card MIS</span>
             </a>
         </li>
         <li><hr class="sidebar-divider my-0"></li>
@@ -101,6 +105,9 @@ $jadeStyles = [
         </li>
         <li class="nav-item">
             <a class="nav-link <?= esc($navActive['services'] ?? '') ?>" href="<?= site_url('admin/services') ?>"><i class="bi bi-grid" aria-hidden="true"></i><span>Services and Programs</span></a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link <?= esc($navActive['categories'] ?? '') ?>" href="<?= site_url('admin/categories') ?>"><i class="bi bi-tags" aria-hidden="true"></i><span>Manage Categories</span></a>
         </li>
         <li><hr class="sidebar-divider"></li>
         <li><div class="sidebar-heading">Administration</div></li>
@@ -125,19 +132,17 @@ $jadeStyles = [
                     <i class="bi bi-list" aria-hidden="true"></i>
                 </button>
                 <div class="topbar-title">
-                    <?php if ($showTopbarBranding): ?>
-                    <img class="topbar-logo" src="<?= base_url('assets/image/binan.png') ?>" alt="City of Binan Logo">
-                    <?php endif; ?>
                     <div>
                         <h1 id="dashboard-page-title"><?= esc($pageTitle) ?></h1>
-                        <?php if ($showTopbarBranding): ?>
-                        <p>Bi&ntilde;an Access Card MIS</p>
-                        <?php endif; ?>
                     </div>
                 </div>
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
-                        <a href="<?= esc($sidebarUserUrl, 'attr') ?>" class="nav-link topbar-user"><i class="bi bi-person-circle" aria-hidden="true"></i><span><?= esc($username) ?></span></a>
+                        <?php if (($currentRole ?? '') === 'Developer'): ?>
+                            <a href="<?= esc($sidebarUserUrl, 'attr') ?>" class="nav-link topbar-user"><i class="bi bi-person-circle" aria-hidden="true"></i><span><?= esc($username) ?> &middot; Developer</span></a>
+                        <?php else: ?>
+                            <a href="#" class="nav-link topbar-user js-open-my-account-modal" data-modal-url="<?= site_url('account/profile') ?>" data-modal-title="My Account"><i class="bi bi-person-circle" aria-hidden="true"></i><span><?= esc($username) ?> &middot; Administrator</span></a>
+                        <?php endif; ?>
                     </li>
                     <li class="nav-item">
                         <a href="<?= site_url('logout') ?>" class="nav-link js-logout-link"><i class="bi bi-box-arrow-right" aria-hidden="true"></i><span>Logout</span></a>
@@ -149,6 +154,21 @@ $jadeStyles = [
             <?php if (session()->getFlashdata('success')): ?>
                 <div class="alert alert-success"><?= esc(session()->getFlashdata('success')) ?></div>
             <?php endif; ?>
+            <?php if ($resetInfo = session()->getFlashdata('reset_password')): ?>
+                <div class="reset-password-callout" role="alert">
+                    <div class="reset-password-callout__head">
+                        <i class="bi bi-key-fill" aria-hidden="true"></i>
+                        <span>New password for <strong><?= esc((string) ($resetInfo['username'] ?? '')) ?></strong></span>
+                    </div>
+                    <div class="reset-password-callout__body">
+                        <code class="reset-password-callout__value" id="resetPasswordValue"><?= esc((string) ($resetInfo['password'] ?? '')) ?></code>
+                        <button type="button" class="btn btn-sm btn-outline-success js-copy-password" data-copy-target="#resetPasswordValue">
+                            <i class="bi bi-clipboard" aria-hidden="true"></i><span>Copy</span>
+                        </button>
+                    </div>
+                    <p class="reset-password-callout__hint">Share it with the user and ask them to change it in My Account.</p>
+                </div>
+            <?php endif; ?>
             <?php if (session()->getFlashdata('error')): ?>
                 <div class="alert alert-danger"><?= esc(session()->getFlashdata('error')) ?></div>
             <?php endif; ?>
@@ -159,75 +179,72 @@ $jadeStyles = [
             <?php /* Main content swaps on $activePage. "dashboard" is inline (stats +
                      recent records/activity); the rest delegate to sub-views below. */ ?>
             <?php if ($activePage === 'dashboard'): ?>
-                <section class="overview-stats" aria-label="Dashboard statistics">
-                    <article class="stat-card"><p>Total Records</p><strong><?= esc((string) ($stats['families'] ?? 0)) ?></strong></article>
-                    <article class="stat-card"><p>Registered Members</p><strong><?= esc((string) ($stats['members'] ?? 0)) ?></strong></article>
-                    <article class="stat-card"><p>Active Sectors</p><strong><?= esc((string) ($stats['sectors'] ?? 0)) ?></strong></article>
-                    <article class="stat-card"><p>Services and Programs</p><strong><?= esc((string) ($stats['assistance'] ?? 0)) ?></strong></article>
-                </section>
+                <div class="dashboard-overview" data-dashboard-overview>
+                    <section class="overview-stats" aria-label="Dashboard statistics">
+                        <article class="stat-card"><p>Total Records</p><strong><?= esc((string) ($stats['families'] ?? 0)) ?></strong></article>
+                        <article class="stat-card"><p>Registered Members</p><strong><?= esc((string) ($stats['members'] ?? 0)) ?></strong></article>
+                        <article class="stat-card"><p>Active Sectors</p><strong><?= esc((string) ($stats['sectors'] ?? 0)) ?></strong></article>
+                        <article class="stat-card"><p>Services and Programs</p><strong><?= esc((string) ($stats['assistance'] ?? 0)) ?></strong></article>
+                    </section>
 
-                <section class="overview-panel" data-dashboard-search-panel>
-                    <header class="panel-header">
-                        <h2>Recent Records</h2>
-                    </header>
-                    <?= view('components/search-bar', [
-                        'searchTerm'       => $searchTerm,
-                        'sectorOptions'    => $sectorOptions,
-                        'selectedSectorId' => (string) ($searchFilters['sectorID'] ?? ''),
-                        'searchAction'     => site_url('admin/dashboard'),
-                        'searchAllAction'  => site_url('admin/manage-records'),
-                    ]) ?>
-                    <div class="table-responsive">
-                        <table class="table overview-table">
-                            <thead><tr><th scope="col">Name (Head)</th><th scope="col">Sector</th></tr></thead>
-                            <tbody>
-                                <?php foreach ($recentFamilies as $family): ?>
-                                    <tr data-record-row data-sector-ids="<?= esc((string) ($family['sectorID'] ?? '[]'), 'attr') ?>">
-                                        <td data-record-name><?= esc(trim(($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? ''))) ?></td>
-                                        <td data-record-sector><?= esc((string) ($family['sector_name'] ?? '-')) ?></td>
-                                    </tr>
-                                <?php endforeach; ?>
-                                <?php if ($recentFamilies === []): ?>
-                                    <tr><td colspan="2" class="empty-state"><?= $searchTerm !== '' || $hasSearchFilters ? 'No matching records found.' : 'No records yet.' ?></td></tr>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                </section>
+                    <section class="overview-panel dashboard-table-panel">
+                        <header class="panel-header">
+                            <h2>Recent Records</h2>
+                        </header>
+                        <div class="table-responsive">
+                            <table class="table overview-table">
+                                <thead><tr><th scope="col">Name (Head)</th><th scope="col">Sector</th></tr></thead>
+                                <tbody>
+                                    <?php foreach ($recentFamilies as $family): ?>
+                                        <tr>
+                                            <td><?= esc(trim(($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? ''))) ?></td>
+                                            <td><?= esc((string) ($family['sector_name'] ?? '-')) ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                    <?php if ($recentFamilies === []): ?>
+                                        <tr><td colspan="2" class="empty-state">No records yet.</td></tr>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
 
-                <section class="overview-panel">
-                    <header class="panel-header">
-                        <h2>Recent Activity</h2>
-                        <a class="btn btn-sm panel-action" href="<?= site_url('admin/audit-trails') ?>"><i class="bi bi-arrow-right" aria-hidden="true"></i><span>View All</span></a>
-                    </header>
-                    <div class="table-responsive">
-                        <table class="table overview-table">
-                            <thead><tr><th scope="col">User</th><th scope="col">Member</th><th scope="col">Action</th><th scope="col">Description</th></tr></thead>
-                            <tbody>
-                                <?php foreach ($recentAudits as $audit): ?>
-                                    <tr>
-                                        <td><?= esc($formatAuditUser($audit)) ?></td>
-                                        <td><?= esc($formatAuditMember($audit)) ?></td>
-                                        <td><span class="badge bg-light text-dark border"><?= esc((string) ($audit['user_action'] ?? '')) ?></span></td>
-                                        <td><?= esc((string) ($audit['description'] ?? '')) ?></td>
-                                    </tr>
-                                <?php endforeach; ?>
-                                <?php if ($recentAudits === []): ?>
-                                    <tr><td colspan="4" class="empty-state">No activity yet.</td></tr>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                </section>
+                    <section class="overview-panel dashboard-table-panel">
+                        <header class="panel-header">
+                            <h2>Recent Activity</h2>
+                            <a class="btn btn-sm panel-action" href="<?= site_url('admin/audit-trails') ?>"><i class="bi bi-arrow-right" aria-hidden="true"></i><span>View All</span></a>
+                        </header>
+                        <div class="table-responsive">
+                            <table class="table overview-table">
+                                <thead><tr><th scope="col">User</th><th scope="col">Member</th><th scope="col">Action</th><th scope="col">Description</th></tr></thead>
+                                <tbody>
+                                    <?php foreach ($recentAudits as $audit): ?>
+                                        <tr>
+                                            <td><?= esc($formatAuditUser($audit)) ?></td>
+                                            <td><?= esc($formatAuditMember($audit)) ?></td>
+                                            <td><span class="badge bg-light text-dark border"><?= esc((string) ($audit['user_action'] ?? '')) ?></span></td>
+                                            <td><?= esc((string) ($audit['description'] ?? '')) ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                    <?php if ($recentAudits === []): ?>
+                                        <tr><td colspan="4" class="empty-state">No activity yet.</td></tr>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                </div>
             <?php endif; ?>
 
             <?php if ($activePage === 'accounts' && $canManageAccounts): ?>
                 <?= view('Admin/accounts', [
                     'adminAccounts' => $adminAccounts,
                     'employeeAccounts' => $employeeAccounts,
+                    'viewerAccounts' => $viewerAccounts ?? [],
                     'searchTerm' => $searchTerm,
                     'searchFilters' => $searchFilters,
                     'canCreateAccounts' => $canCreateAccounts,
+                    'canEditAccounts' => $canEditAccounts ?? false,
                     'currentRole' => $currentRole,
                 ]) ?>
             <?php endif; ?>
@@ -252,12 +269,7 @@ $jadeStyles = [
                     'searchTerm' => $searchTerm,
                     'searchFilters' => $searchFilters,
                     'auditActionOptions' => $auditActionOptions,
-                    'auditPage' => $auditPage,
-                    'auditPerPage' => $auditPerPage,
-                    'auditTotal' => $auditTotal,
-                    'auditTotalPages' => $auditTotalPages,
-                    'auditFromRecord' => $auditFromRecord,
-                    'auditToRecord' => $auditToRecord,
+                    'auditListData' => $auditListData ?? [],
                 ]) ?>
             <?php endif; ?>
 
@@ -273,6 +285,14 @@ $jadeStyles = [
             <?php if ($activePage === 'services'): ?>
                 <?= view('Lookups/services', [
                     'services' => $services ?? [],
+                    'lookupStatus' => $lookupStatus ?? 'active',
+                    'canRestore' => $canRestoreLookups ?? false,
+                ]) ?>
+            <?php endif; ?>
+
+            <?php if ($activePage === 'categories'): ?>
+                <?= view('Lookups/categories', [
+                    'categories' => $categories ?? [],
                     'lookupStatus' => $lookupStatus ?? 'active',
                     'canRestore' => $canRestoreLookups ?? false,
                 ]) ?>
@@ -300,8 +320,31 @@ $jadeStyles = [
     </div>
 </div>
 
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<?= view('Family/action-confirm-modal') ?>
+
+<?= view('Accounts/status-confirm-modal') ?>
+
+<?php /* Per-row audit detail modal, populated client-side by audit-detail-modal.js
+         from the clicked row's data-* attributes (no AJAX). */ ?>
+<div class="modal fade audit-detail-modal" id="auditDetailModal" tabindex="-1" aria-labelledby="auditDetailTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="auditDetailTitle">Audit Entry Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="audit-detail-full" id="auditDetailFull">—</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="<?= base_url('assets/jquery/jquery-3.7.1.min.js') ?>?v=<?= filemtime(FCPATH . 'assets/jquery/jquery-3.7.1.min.js') ?>"></script>
+<script src="<?= base_url('assets/bootstrap/js/bootstrap.bundle.min.js') ?>?v=<?= filemtime(FCPATH . 'assets/bootstrap/js/bootstrap.bundle.min.js') ?>"></script>
 <?php
 $versionedAssetUrl = static function (string $relativePath): ?string {
     $fullPath = FCPATH . ltrim($relativePath, '/');
@@ -330,10 +373,13 @@ $dashboardScripts = [
     'assets/js/dashboard/audit-filters.js',
     'assets/js/dashboard/dashboard-modal-loader.js',
     'assets/js/dashboard/manage-family-modal.js',
+    'assets/js/dashboard/account-form-modal.js',
     'assets/js/dashboard/accounts-modal.js',
     'assets/js/dashboard/sectors-modal.js',
     'assets/js/dashboard/services-modal.js',
+    'assets/js/dashboard/categories-modal.js',
     'assets/js/dashboard/audit-trails-modal.js',
+    'assets/js/dashboard/audit-detail-modal.js',
 ];
 
 $sessionTimeoutScript = $versionedAssetUrl('assets/js/session-timeout.js');

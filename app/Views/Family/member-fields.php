@@ -64,8 +64,8 @@ $memberSectorGroups = ViewFormatter::memberSectorGroups(
             </div>
             <div class="col-md-3">
                 <label class="form-label">Contact number</label>
-                <input class="form-control" data-name="contactnumber" inputmode="numeric">
-                <div class="invalid-feedback">Contact number must contain digits only.</div>
+                <input class="form-control" data-name="contactnumber" inputmode="numeric" maxlength="11">
+                <div class="invalid-feedback">Contact number must be exactly 11 digits.</div>
             </div>
             <div class="col-md-3">
                 <label class="form-label">Religion</label>
@@ -129,10 +129,13 @@ $memberSectorGroups = ViewFormatter::memberSectorGroups(
                                         <div class="member-visible-group">
                                             <div class="member-visible-group-title"><?= esc((string) ($sectorGroup['label'] ?? 'Other Sectors')) ?></div>
                                             <?php foreach (($sectorGroup['sectors'] ?? []) as $sector): ?>
-                                                <?php $sectorLabel = trim((string) ($sector['shortcode'] ?? '')) !== '' ? (string) ($sector['shortcode'] ?? '') . ' - ' . (string) ($sector['name'] ?? '') : (string) ($sector['name'] ?? ''); ?>
-                                                <label class="form-check member-visible-option">
-                                                    <input class="form-check-input" type="checkbox" data-name="sector_ids[]" value="<?= esc((string) ($sector['sectorID'] ?? '')) ?>" data-label="<?= esc($sectorLabel, 'attr') ?>">
-                                                    <span class="form-check-label"><?= esc($sectorLabel) ?></span>
+                                                <?php
+                                                $sectorLabel = trim((string) ($sector['shortcode'] ?? '')) !== '' ? (string) ($sector['shortcode'] ?? '') . ' - ' . (string) ($sector['name'] ?? '') : (string) ($sector['name'] ?? '');
+                                                $isArchived = ! empty($sector['is_archived']);
+                                                ?>
+                                                <label class="form-check member-visible-option<?= $isArchived ? ' member-visible-option--archived' : '' ?>">
+                                                    <input class="form-check-input" type="checkbox" data-name="sector_ids[]" value="<?= esc((string) ($sector['sectorID'] ?? '')) ?>" data-label="<?= esc($sectorLabel, 'attr') ?>"<?= $isArchived ? ' data-archived="1"' : '' ?>>
+                                                    <span class="form-check-label"><?= esc($sectorLabel) ?><?php if ($isArchived): ?> <span class="family-choice-badge">Archived</span><?php endif; ?></span>
                                                 </label>
                                             <?php endforeach; ?>
                                         </div>
@@ -151,10 +154,13 @@ $memberSectorGroups = ViewFormatter::memberSectorGroups(
                                         <div class="member-visible-group">
                                             <div class="member-visible-group-title"><?= esc((string) $category) ?></div>
                                             <?php foreach ($services as $service): ?>
-                                                <?php $serviceLabel = trim((string) ($service['description'] ?? '')) !== '' ? (string) ($service['name'] ?? '') . ' - ' . trim((string) ($service['description'] ?? '')) : (string) ($service['name'] ?? ''); ?>
-                                                <label class="form-check member-visible-option">
-                                                    <input class="form-check-input" type="checkbox" data-name="service_ids[]" value="<?= esc((string) ($service['serviceID'] ?? '')) ?>" data-label="<?= esc((string) ($service['name'] ?? ''), 'attr') ?>">
-                                                    <span class="form-check-label"><?= esc($serviceLabel) ?></span>
+                                                <?php
+                                                $serviceLabel = trim((string) ($service['description'] ?? '')) !== '' ? (string) ($service['name'] ?? '') . ' - ' . trim((string) ($service['description'] ?? '')) : (string) ($service['name'] ?? '');
+                                                $isArchived = ! empty($service['is_archived']);
+                                                ?>
+                                                <label class="form-check member-visible-option<?= $isArchived ? ' member-visible-option--archived' : '' ?>">
+                                                    <input class="form-check-input" type="checkbox" data-name="service_ids[]" value="<?= esc((string) ($service['serviceID'] ?? '')) ?>" data-label="<?= esc((string) ($service['name'] ?? ''), 'attr') ?>"<?= $isArchived ? ' data-archived="1"' : '' ?>>
+                                                    <span class="form-check-label"><?= esc($serviceLabel) ?><?php if ($isArchived): ?> <span class="family-choice-badge">Archived</span><?php endif; ?></span>
                                                 </label>
                                             <?php endforeach; ?>
                                         </div>

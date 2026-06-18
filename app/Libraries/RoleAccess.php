@@ -11,22 +11,40 @@ use CodeIgniter\HTTP\RedirectResponse;
 class RoleAccess
 {
     /**
-     * Canonicalizes a raw role string to the app's role labels
-     * 'Developer'/'Admin'/'Employee', or null if unrecognized. This is the single
-     * translation point between the database enum (which stores the employee role
-     * as the legacy 'User') and the rest of the app, which uses 'Employee'. The DB
-     * value 'User' is accepted here and surfaced everywhere else as 'Employee'.
+     * Canonicalizes a raw account-level string to the app's role labels
+     * 'Developer'/'Admin'/'Employee'/'Viewer', or null if unrecognized. This is the
+     * single translation point between the database enum (account_level:
+     * 'administrator'/'encoder'/'viewer') and the rest of the app. The legacy enum
+     * values ('Admin'/'User') and the app labels are still accepted so stale
+     * sessions and pre-migration rows keep resolving: 'administrator'/'Admin' map to
+     * the Admin label, 'encoder'/'User' map to Employee. The developer is no longer
+     * a DB row (it lives in .env) but its 'developer' value still maps here.
      */
     public static function normalizeRole(string $role): ?string
     {
         $normalizedRole = strtolower(trim($role));
 
         return match ($normalizedRole) {
-            'developer'              => 'Developer',
-            'admin', 'administrator' => 'Admin',
-            'user', 'employee'       => 'Employee',
-            default                  => null,
+            'developer'                    => 'Developer',
+            'admin', 'administrator'       => 'Admin',
+            'user', 'encoder', 'employee'  => 'Employee',
+            'viewer'                       => 'Viewer',
+            default                        => null,
         };
+    }
+
+    /**
+     * Audit-trail display label for a role. Same as normalizeRole(), except the
+     * encoder/staff role is surfaced as 'Encoder' (the audit trails and account UI
+     * label) instead of the legacy 'Employee'. Returns null for unrecognized values
+     * so callers can fall back to the raw string (e.g. system rows: Login/System).
+     * Kept separate from normalizeRole() so routing/guards still compare 'Employee'.
+     */
+    public static function auditRoleLabel(string $role): ?string
+    {
+        $normalizedRole = self::normalizeRole($role);
+
+        return $normalizedRole === 'Employee' ? 'Encoder' : $normalizedRole;
     }
 
     /** True if the session's user_id still maps to a real `users` row (post-DB-change safety). */
@@ -61,14 +79,17 @@ class RoleAccess
             return redirect()->to(site_url('login'))->with('error', 'Please login first.');
         }
 
-        if (! self::sessionUserExists()) {
+        $currentRole = self::normalizeRole((string) session()->get('role'));
+
+        // The developer logs in from .env (no users row, user_id 0), so the row
+        // existence check does not apply to it.
+        if ($currentRole !== 'Developer' && ! self::sessionUserExists()) {
             session()->destroy();
 
             return redirect()->to(site_url('login'))
                 ->with('error', 'Your session is no longer valid after the database update. Please login again.');
         }
 
-        $currentRole = self::normalizeRole((string) session()->get('role'));
         $normalizedAllowedRoles = array_values(array_filter(array_map(
             fn (string $role): ?string => self::normalizeRole($role),
             $allowedRoles
@@ -105,6 +126,11 @@ class RoleAccess
 
         if ($normalizedRole === 'Admin' || $normalizedRole === 'Developer') {
             return redirect()->to(site_url('admin/dashboard'));
+        }
+
+        // Viewer has a read-only dashboard (Viewer\DashboardController).
+        if ($normalizedRole === 'Viewer') {
+            return redirect()->to(site_url('viewer/dashboard'));
         }
 
         session()->destroy();

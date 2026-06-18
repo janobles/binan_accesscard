@@ -59,7 +59,7 @@ class Filters extends BaseFilters
         'after' => [
             'pagecache',   // Web Page Caching
             'performance', // Performance Metrics
-            'toolbar',     // Debug Toolbar
+            // 'toolbar',  // Debug Toolbar disabled locally; current CI toolbar crashes page output.
         ],
     ];
 
@@ -115,6 +115,8 @@ class Filters extends BaseFilters
                 'admin',
                 'admin/*',
                 'employee/*',
+                'viewer',
+                'viewer/*',
                 'developer/*',
                 'session/keep-alive',
                 'families',

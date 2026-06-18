@@ -131,6 +131,19 @@ class DashboardController extends BaseController
     }
 
     /**
+     * GET `admin/categories`. Renders the sector-category lookup page, or the
+     * category fragment for AJAX. Mutations are posted to Lookups\CategoryController.
+     */
+    public function categories(): string|RedirectResponse
+    {
+        if ($this->isPartialRequest()) {
+            return $this->renderCategoriesPartial();
+        }
+
+        return (new DashboardPageBuilder($this->request))->renderAdminPage('categories');
+    }
+
+    /**
      * GET `admin/manage-members`. Reuses the family-manage page (member-centric
      * view of the same records). Frontend: full-page load of the admin shell.
      */
@@ -182,9 +195,11 @@ class DashboardController extends BaseController
         return view('Admin/accounts', [
             'adminAccounts' => $viewData['adminAccounts'] ?? [],
             'employeeAccounts' => $viewData['employeeAccounts'] ?? [],
+            'viewerAccounts' => $viewData['viewerAccounts'] ?? [],
             'searchTerm' => $viewData['searchTerm'] ?? '',
             'searchFilters' => $viewData['searchFilters'] ?? [],
             'canCreateAccounts' => $viewData['canCreateAccounts'] ?? false,
+            'canEditAccounts' => $viewData['canEditAccounts'] ?? false,
             'currentRole' => $viewData['currentRole'] ?? '',
         ]);
     }
@@ -227,12 +242,7 @@ class DashboardController extends BaseController
             'searchTerm' => $viewData['searchTerm'] ?? '',
             'searchFilters' => $viewData['searchFilters'] ?? [],
             'auditActionOptions' => $viewData['auditActionOptions'] ?? [],
-            'auditPage' => $viewData['auditPage'] ?? 1,
-            'auditPerPage' => $viewData['auditPerPage'] ?? 50,
-            'auditTotal' => $viewData['auditTotal'] ?? 0,
-            'auditTotalPages' => $viewData['auditTotalPages'] ?? 1,
-            'auditFromRecord' => $viewData['auditFromRecord'] ?? 0,
-            'auditToRecord' => $viewData['auditToRecord'] ?? 0,
+            'auditListData' => $viewData['auditListData'] ?? [],
         ]);
     }
 
@@ -274,6 +284,27 @@ class DashboardController extends BaseController
 
         return view('Lookups/services', [
             'services' => $viewData['services'] ?? [],
+            'lookupStatus' => $viewData['lookupStatus'] ?? 'active',
+            'canRestore' => $viewData['canRestoreLookups'] ?? false,
+        ]);
+    }
+
+    /**
+     * Returns the categories lookup fragment for the admin categories AJAX view.
+     * Renders `Lookups/categories`.
+     */
+    private function renderCategoriesPartial(): string|RedirectResponse
+    {
+        $guard = $this->guardAdminPartialAccess();
+
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        $viewData = (new DashboardPageBuilder($this->request))->buildAdminViewData('categories');
+
+        return view('Lookups/categories', [
+            'categories' => $viewData['categories'] ?? [],
             'lookupStatus' => $viewData['lookupStatus'] ?? 'active',
             'canRestore' => $viewData['canRestoreLookups'] ?? false,
         ]);

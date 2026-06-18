@@ -267,7 +267,7 @@ class MemberModel extends Model
     // FIRST (quick) search bar of the Manage Records tab. Lists family HEADS only.
     // $filters carries the Manage Records filter controls (sectorID + date); see
     // App\Libraries\DashboardPageBuilder::buildMemberListData() which supplies them.
-    public function searchFamilies(?string $keyword = null, int $limit = 50, int $offset = 0, bool $archived = false, array $filters = []): array
+    public function searchFamilies(?string $keyword = null, int $limit = 50, int $offset = 0, string $visibility = 'all', array $filters = []): array
     {
         if (! $this->hasTable()) {
             return [];
@@ -276,7 +276,7 @@ class MemberModel extends Model
         $limit = max(1, $limit);
         $offset = max(0, $offset);
 
-        $builder = $this->familySearchBuilder($keyword, $archived, $filters)
+        $builder = $this->familySearchBuilder($keyword, $visibility, $filters)
             ->orderBy('member.memberID', 'DESC')
             ->limit($limit, $offset);
 
@@ -287,21 +287,29 @@ class MemberModel extends Model
      * Total count for the same query as searchFamilies(), used to drive the Manage
      * Records pagination controls on the frontend.
      */
-    public function countSearchFamilies(?string $keyword = null, bool $archived = false, array $filters = []): int
+    public function countSearchFamilies(?string $keyword = null, string $visibility = 'all', array $filters = []): int
     {
         if (! $this->hasTable()) {
             return 0;
         }
 
-        return $this->familySearchBuilder($keyword, $archived, $filters)->countAllResults();
+        return $this->familySearchBuilder($keyword, $visibility, $filters)->countAllResults();
     }
 
     // Builds the head-only records query. $filters (optional) applies the Manage Records
-    // filter controls: 'sectorID' (exact match inside the JSON array) and 'date'
+    // filter controls: 'sectorID' (exact match inside the JSON array), 'barangay',
+    // and 'date'
     // (single-day match on member.dt_created). Empty $filters = original behavior unchanged.
-    private function familySearchBuilder(?string $keyword = null, bool $archived = false, array $filters = [])
+    private function familySearchBuilder(?string $keyword = null, string $visibility = 'all', array $filters = [])
     {
-        $builder = $this->memberDashboardBuilder($archived ? 'archived' : 'active')
+        if ($visibility === '1') {
+            $visibility = 'archived';
+        } elseif ($visibility === '') {
+            $visibility = 'active';
+        }
+
+        $visibility = in_array($visibility, ['active', 'archived', 'all'], true) ? $visibility : 'all';
+        $builder = $this->memberDashboardBuilder($visibility)
             ->where('member.memberID = member.headID', null, false);
 
         if ($keyword !== null && trim($keyword) !== '') {
@@ -334,6 +342,7 @@ class MemberModel extends Model
                 ->like('member.firstname', $token)
                 ->orLike('member.middlename', $token)
                 ->orLike('member.lastname', $token)
+                ->orLike('member.suffix', $token)
                 ->groupEnd();
         }
         $builder->groupEnd();
@@ -362,10 +371,25 @@ class MemberModel extends Model
     // Connects to: family-list.php filter form -> DashboardPageBuilder -> here.
     private function applyRecordFilters($builder, array $filters): void
     {
-        $sectorId = (int) ($filters['sectorID'] ?? 0);
+        $sectorIds = $this->normalizeFilterList($filters['sectorID'] ?? []);
 
-        if ($sectorId > 0) {
-            $builder->where(SectorIds::containsCondition($sectorId, 'member.sectorID'), null, false);
+        if ($sectorIds !== []) {
+            $builder->groupStart();
+            foreach ($sectorIds as $index => $sectorId) {
+                if ($index === 0) {
+                    $builder->where(SectorIds::containsCondition((int) $sectorId, 'member.sectorID'), null, false);
+                    continue;
+                }
+
+                $builder->orWhere(SectorIds::containsCondition((int) $sectorId, 'member.sectorID'), null, false);
+            }
+            $builder->groupEnd();
+        }
+
+        $barangays = $this->normalizeFilterList($filters['barangay'] ?? [], false);
+
+        if ($barangays !== [] && $this->memberFieldExists('barangay')) {
+            $builder->whereIn('member.barangay', $barangays);
         }
 
         $date = trim((string) ($filters['date'] ?? ''));
@@ -375,6 +399,27 @@ class MemberModel extends Model
                 ->where('member.dt_created >=', $date . ' 00:00:00')
                 ->where('member.dt_created <=', $date . ' 23:59:59');
         }
+    }
+
+    private function normalizeFilterList(mixed $value, bool $integers = true): array
+    {
+        $values = is_array($value) ? $value : [$value];
+        $normalized = [];
+
+        foreach ($values as $item) {
+            $item = trim((string) $item);
+
+            if ($item === '' || $item === '__all') {
+                continue;
+            }
+
+            $normalized[] = $integers ? (string) (int) $item : $item;
+        }
+
+        return array_values(array_unique(array_filter(
+            $normalized,
+            static fn (string $item): bool => $item !== '' && $item !== '0'
+        )));
     }
 
     /**

@@ -70,11 +70,62 @@ class FamilyFormOptionsModel extends Model
     /**
      * Shapes getOptions() into the exact view variables the family form template
      * expects (sectorOptions, sexOptions, servicesByCategory, etc.). Frontend:
-     * consumed directly by the `Family/form` view.
+     * consumed directly by the `Family/form` view. Add-Family path: only active
+     * sectors/services appear (archived items are never offered to new records).
      */
     public function getViewData(): array
     {
+        return $this->buildViewData($this->getOptions());
+    }
+
+    /**
+     * Edit-Family variant of getViewData(): on top of the active sectors/services, it
+     * merges in any sectors/services a family already has that have since been archived,
+     * tagging each merged row/catalog entry with is_archived => true. This keeps
+     * grandfathered benefits visible (and re-postable) on the edit form so saving the
+     * record never silently drops an archived-but-assigned item.
+     *
+     * @param list<int> $assignedSectorIds  Sector IDs currently assigned across the family.
+     * @param list<int> $assignedServiceIds Service IDs currently assigned across the family.
+     */
+    public function getViewDataForEdit(array $assignedSectorIds, array $assignedServiceIds): array
+    {
+        $sectorModel = new SectorModel();
+        $serviceModel = new ServiceModel();
+
         $options = $this->getOptions();
+
+        $activeSectorIds = array_map(static fn (array $s): int => (int) ($s['sectorID'] ?? 0), $options['sectors'] ?? []);
+        $activeServiceIds = array_map(static fn (array $s): int => (int) ($s['serviceID'] ?? 0), $options['services'] ?? []);
+
+        $missingSectorIds = array_diff(array_map('intval', $assignedSectorIds), $activeSectorIds);
+        $missingServiceIds = array_diff(array_map('intval', $assignedServiceIds), $activeServiceIds);
+
+        $archivedSectorIds = [];
+
+        foreach ($sectorModel->getByIdsIncludingArchived($missingSectorIds) as $sector) {
+            $sector['is_archived'] = true;
+            $options['sectors'][] = $sector;
+            $archivedSectorIds[(int) ($sector['sectorID'] ?? 0)] = true;
+        }
+
+        foreach ($serviceModel->getByIdsIncludingArchived($missingServiceIds) as $service) {
+            $service['is_archived'] = true;
+            $options['services'][] = $service;
+        }
+
+        $viewData = $this->buildViewData($options);
+        $viewData['sectorCatalog'] = $this->flagArchivedSectors($viewData['sectorCatalog'], $archivedSectorIds);
+
+        return $viewData;
+    }
+
+    /**
+     * Builds the family-form view variables from a (possibly augmented) options array.
+     * Shared by getViewData() and getViewDataForEdit().
+     */
+    private function buildViewData(array $options): array
+    {
         $sectorOptions = $options['sectors'] ?? [];
         $serviceOptions = $options['services'] ?? [];
         $sectorModel = new SectorModel();
@@ -99,6 +150,31 @@ class FamilyFormOptionsModel extends Model
             'servicesByCategory' => $servicesByCategory,
             'familyHeads' => $options['family_heads'] ?? [],
         ];
+    }
+
+    /**
+     * Marks the sector-catalog entries whose sectorID is in the archived set with
+     * is_archived => true, so the picker can badge them. Leaves the catalog otherwise
+     * untouched.
+     *
+     * @param array<string, list<array<string, mixed>>> $catalog
+     * @param array<int, true>                          $archivedSectorIds
+     */
+    private function flagArchivedSectors(array $catalog, array $archivedSectorIds): array
+    {
+        if ($archivedSectorIds === []) {
+            return $catalog;
+        }
+
+        foreach ($catalog as $group => $entries) {
+            foreach ($entries as $index => $entry) {
+                if (isset($archivedSectorIds[(int) ($entry['sectorID'] ?? 0)])) {
+                    $catalog[$group][$index]['is_archived'] = true;
+                }
+            }
+        }
+
+        return $catalog;
     }
 
     /**

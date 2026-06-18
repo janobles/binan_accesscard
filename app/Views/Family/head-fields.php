@@ -1,6 +1,6 @@
 <div data-entry-panel="head">
     <div class="section-title">
-        <span>Record Head</span>
+        <span>Personal Information</span>
     </div>
     <?php
     $headCivilStatus = (string) ($familyRecord['civilstatus'] ?? '');
@@ -66,8 +66,8 @@
         </div>
         <div class="col-md-3">
             <label class="form-label" for="head_contactnumber">Contact number</label>
-            <input class="form-control" id="head_contactnumber" name="head_contactnumber" inputmode="numeric" value="<?= esc((string) ($familyRecord['contactnumber'] ?? '')) ?>">
-            <div class="invalid-feedback">Contact number must contain digits only.</div>
+            <input class="form-control" id="head_contactnumber" name="head_contactnumber" inputmode="numeric" maxlength="11" value="<?= esc((string) ($familyRecord['contactnumber'] ?? '')) ?>">
+            <div class="invalid-feedback">Contact number must be exactly 11 digits.</div>
         </div>
         <div class="col-md-3">
             <label class="form-label" for="head_religion">Religion</label>

@@ -72,6 +72,7 @@ class FamilyRecordPresenter
             ['label' => 'First name', 'value' => (string) ($row['firstname'] ?? '')],
             ['label' => 'Middle name', 'value' => (string) ($row['middlename'] ?? '')],
             ['label' => 'Last name', 'value' => (string) ($row['lastname'] ?? '')],
+            ['label' => 'Suffix', 'value' => (string) ($row['suffix'] ?? '')],
             ['label' => 'Birthday', 'value' => ViewFormatter::formatDate($row['birthday'] ?? '')],
             ['label' => 'Sex', 'value' => (string) ($row['sex'] ?? '')],
             ['label' => 'Civil status', 'value' => (string) ($row['civilstatus'] ?? '')],

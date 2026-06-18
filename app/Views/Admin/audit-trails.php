@@ -1,169 +1,153 @@
 <?php
-use App\Libraries\ViewFormatter;
-
 $recentAudits       = $recentAudits ?? [];
 $searchTerm         = $searchTerm ?? '';
 $searchFilters      = $searchFilters ?? [];
 $auditActionOptions = $auditActionOptions ?? [];
+$auditListData      = $auditListData ?? [];
 $hasSearchFilters   = $searchTerm !== '' || array_filter($searchFilters, static fn ($value): bool => trim((string) $value) !== '') !== [];
-$auditPage          = max(1, (int) ($auditPage ?? 1));
-$auditPerPage       = max(1, (int) ($auditPerPage ?? 50));
-$auditTotal         = max(0, (int) ($auditTotal ?? count($recentAudits)));
-$auditTotalPages    = max(1, (int) ($auditTotalPages ?? (int) ceil($auditTotal / $auditPerPage)));
-$auditFromRecord    = max(0, (int) ($auditFromRecord ?? ($auditTotal === 0 ? 0 : (($auditPage - 1) * $auditPerPage) + 1)));
-$auditToRecord      = max(0, (int) ($auditToRecord ?? min($auditTotal, $auditPage * $auditPerPage)));
-$auditHasRows       = $auditTotal > 0;
 
-$auditPageUrl = static function (int $page) use ($searchTerm, $searchFilters): string {
-    $params = [];
+// Pagination + page-size bundle (from DashboardPageBuilder::buildAuditListData).
+$listRoute      = (string) ($auditListData['listRoute'] ?? 'admin/audit-trails');
+$auditAction    = trim((string) ($searchFilters['action'] ?? ''));
+$perPage        = (int) ($auditListData['perPage'] ?? 50);
+$perPageOptions = ($auditListData['perPageOptions'] ?? []) ?: [10, 25, 50, 100];
+$page           = (int) ($auditListData['page'] ?? 1);
+$totalPages     = (int) ($auditListData['totalPages'] ?? 1);
+$totalRows      = (int) ($auditListData['totalRows'] ?? count($recentAudits));
+$fromRecord     = (int) ($auditListData['fromRecord'] ?? 0);
+$toRecord       = (int) ($auditListData['toRecord'] ?? 0);
 
-    if ($searchTerm !== '') {
-        $params['q'] = $searchTerm;
+// Page URL preserving the database keyword + action filter + page size.
+$auditPageUrl = static function (int $targetPage) use ($listRoute, $searchTerm, $auditAction, $perPage): string {
+    $params = array_filter([
+        'q'        => $searchTerm,
+        'action'   => $auditAction,
+        'per_page' => $perPage !== 50 ? (string) $perPage : '',
+        'page'     => $targetPage > 1 ? (string) $targetPage : '',
+    ], static fn ($value): bool => $value !== '');
+
+    return site_url($listRoute) . ($params === [] ? '' : '?' . http_build_query($params));
+};
+
+// "Clear" drops the keyword (resets to page 1) but keeps the action filter + page size.
+$auditClearUrl = static function () use ($listRoute, $auditAction, $perPage): string {
+    $params = array_filter([
+        'action'   => $auditAction,
+        'per_page' => $perPage !== 50 ? (string) $perPage : '',
+    ], static fn ($value): bool => $value !== '');
+
+    return site_url($listRoute) . ($params === [] ? '' : '?' . http_build_query($params));
+};
+
+$formatAuditMember = static function (array $audit): string {
+    $memberName = trim((string) ($audit['member_name'] ?? ''));
+
+    if ($memberName === '') {
+        $memberName = trim((string) ($audit['firstname'] ?? '') . ' ' . (string) ($audit['lastname'] ?? ''));
     }
 
-    foreach (['action', 'date', 'date_from', 'date_to'] as $filterKey) {
-        $filterValue = trim((string) ($searchFilters[$filterKey] ?? ''));
-
-        if ($filterValue !== '') {
-            $params[$filterKey] = $filterValue;
-        }
-    }
-
-    if ($page > 1) {
-        $params['page'] = $page;
-    }
-
-    $query = http_build_query($params);
-
-    return site_url('admin/audit-trails' . ($query === '' ? '' : '?' . $query));
+    return $memberName === '' ? '-' : $memberName;
 };
 
 $formatAuditUser = static function (array $audit): string {
-    $username = trim((string) ($audit['username'] ?? ''));
-    $userId   = (int) ($audit['userID'] ?? 0);
+    $username = trim((string) ($audit['username'] ?? $audit['userID'] ?? ''));
     $role     = trim((string) ($audit['user_role'] ?? ''));
-
-    if ($username === '') {
-        $username = $userId > 0 ? 'User #' . $userId : 'System';
-    }
-
-    if ($role === 'User') {
-        $role = 'Employee';
-    }
+    $role     = \App\Libraries\RoleAccess::auditRoleLabel($role) ?? $role;
 
     return $role === '' ? $username : $username . ' (' . $role . ')';
 };
 ?>
 
-<?php /* Jade-style reskin (audit-trails-* classes). Keeps the melbranch filter
-         form + JS hooks (.js-audit-filter-form, .js-audit-action-filter). The
-         table now focuses on timestamp/action metadata instead of member rows. */ ?>
-<section class="overview-panel audit-trails" aria-label="Audit trails">
-    <form class="audit-trails-toolbar js-audit-filter-form" method="get" action="<?= site_url('admin/audit-trails') ?>">
-        <select class="form-select audit-trails-action-filter js-audit-action-filter" name="action" aria-label="Filter audit trails by action">
-            <option value="">All actions</option>
-            <?php foreach ($auditActionOptions as $action): ?>
-                <?php $action = trim((string) $action); ?>
-                <option value="<?= esc($action) ?>" <?= trim((string) ($searchFilters['action'] ?? '')) === $action ? 'selected' : '' ?>><?= esc($action) ?></option>
-            <?php endforeach; ?>
-        </select>
-        <div class="audit-trails-search-group">
-            <input class="form-control audit-trails-search" type="search" name="q" value="<?= esc($searchTerm) ?>" placeholder="Search timestamp, action, description, IP, agent, or user" aria-label="Search audit trails" data-audit-manual-search>
-            <button class="btn btn-success audit-trails-toolbar-action" type="submit"><i class="bi bi-search" aria-hidden="true"></i><span>Search</span></button>
-        </div>
-        <?php if ($hasSearchFilters): ?>
-            <a class="btn btn-outline-danger audit-trails-toolbar-action audit-trails-clear" href="<?= site_url('admin/audit-trails') ?>"><i class="bi bi-x-lg" aria-hidden="true"></i><span>Clear</span></a>
-        <?php endif; ?>
-    </form>
-    <div class="audit-trails-meta-row" data-audit-pagination-summary>
-        <div class="audit-trails-results-summary">
-            <?php if ($auditHasRows): ?>
-                <strong>Page <?= esc(number_format($auditPage)) ?></strong>
-                <span>showing audit trails <?= esc(number_format($auditFromRecord)) ?>-<?= esc(number_format($auditToRecord)) ?> of <?= esc(number_format($auditTotal)) ?></span>
-            <?php else: ?>
-                <strong>No audit trails to show</strong>
-            <?php endif; ?>
-        </div>
+<?php /* Jade-style audit panel reusing the Lookups dual-search layout (records-* classes,
+         managerecord.css). Bar 1 = database search (server GET) keeping the melbranch hooks
+         .js-audit-filter-form + .js-audit-action-filter (audit-filters.js auto-submit). Bar 2 =
+         page-size + client-side local "Search:" filter via data-lookup-search (lookup-search.js,
+         scoped by data-audit-management-root). */ ?>
+<section class="overview-panel audit-trails" aria-label="Audit trails" data-audit-management-root>
+    <header class="panel-header">
+        <h2>Audit Trails</h2>
+    </header>
+
+    <?php /* Bar 1: search the whole audit database (server-side GET) + action filter. */ ?>
+    <div class="records-search-panel">
+        <form class="records-search-row records-lookup-search js-audit-filter-form" method="get" action="<?= esc(site_url($listRoute), 'attr') ?>" role="search" aria-label="Search the audit database">
+            <input class="form-control" type="search" name="q" value="<?= esc($searchTerm, 'attr') ?>" placeholder="Search the whole audit database by user, action, or description" aria-label="Search the audit database" autocomplete="off">
+            <select class="form-select records-status-select js-audit-action-filter" name="action" aria-label="Filter by action">
+                <option value="">All actions</option>
+                <?php foreach ($auditActionOptions as $action): ?>
+                    <?php $action = trim((string) $action); ?>
+                    <option value="<?= esc($action) ?>" <?= $auditAction === $action ? 'selected' : '' ?>><?= esc($action) ?></option>
+                <?php endforeach; ?>
+            </select>
+            <?php if ($perPage !== 50): ?><input type="hidden" name="per_page" value="<?= esc((string) $perPage, 'attr') ?>"><?php endif; ?>
+            <a class="btn btn-outline-secondary records-search-action" href="<?= esc($auditClearUrl(), 'attr') ?>"><i class="bi bi-x-lg" aria-hidden="true"></i><span>Clear</span></a>
+            <button class="btn btn-outline-success records-search-action" type="submit"><i class="bi bi-search" aria-hidden="true"></i><span>Search All</span></button>
+        </form>
     </div>
+
+    <?php /* Bar 2: full-width "search this page" local filter (client-side, no reload) + show-entries. */ ?>
+    <div class="audit-table-toolbar">
+        <form class="records-table-search-form audit-page-search-form" role="search" data-lookup-search aria-label="Filter shown audit logs">
+            <input class="form-control audit-page-search" type="search" id="auditLocalSearch" data-lookup-search-input placeholder="Enter keyword to search this page" autocomplete="off" aria-label="Filter shown audit logs">
+        </form>
+        <form class="records-page-size-form audit-show-entries" method="get" action="<?= esc(site_url($listRoute), 'attr') ?>">
+            <?php if ($searchTerm !== ''): ?><input type="hidden" name="q" value="<?= esc($searchTerm, 'attr') ?>"><?php endif; ?>
+            <?php if ($auditAction !== ''): ?><input type="hidden" name="action" value="<?= esc($auditAction, 'attr') ?>"><?php endif; ?>
+            <label for="auditPerPage">Show</label>
+            <select class="form-select form-select-sm" id="auditPerPage" name="per_page" onchange="this.form.submit()">
+                <?php foreach ($perPageOptions as $option): ?>
+                    <option value="<?= esc((string) $option, 'attr') ?>" <?= $perPage === (int) $option ? 'selected' : '' ?>><?= esc((string) $option) ?></option>
+                <?php endforeach; ?>
+            </select>
+            <span>entries</span>
+        </form>
+    </div>
+
     <div class="table-responsive">
         <table class="table audit-trails-table align-middle">
             <thead>
                 <tr>
-                    <th scope="col">Timestamp</th>
+                    <th scope="col">Date/Time</th>
                     <th scope="col">Action</th>
                     <th scope="col">Description</th>
-                    <th scope="col">IP Address</th>
-                    <th scope="col">Agent</th>
+                    <th scope="col">User Agent</th>
                     <th scope="col">User</th>
                 </tr>
             </thead>
             <tbody>
                 <?php foreach ($recentAudits as $audit): ?>
                     <?php
-                    $createdAt = $audit['dt_created'] ?? '';
-                    $date = ViewFormatter::formatDate($createdAt);
-                    $time = ViewFormatter::formatTime($createdAt);
-                    $description = trim((string) ($audit['description'] ?? ''));
-                    $ipAddress = trim((string) ($audit['ip_address'] ?? ''));
-                    $userAgent = trim((string) ($audit['user_agent'] ?? ''));
+                        $auditTs = strtotime((string) ($audit['dt_created'] ?? ''));
+                        $auditUa = trim((string) ($audit['user_agent'] ?? ''));
                     ?>
-                    <tr data-audit-row>
-                        <td class="audit-trails-timestamp">
-                            <?php if ($date !== '' || $time !== ''): ?>
-                                <span><?= esc($date) ?></span>
-                                <small><?= esc($time) ?></small>
-                            <?php else: ?>
-                                <span>-</span>
-                            <?php endif; ?>
-                        </td>
-                        <td><span class="badge bg-light text-dark border audit-trails-action"><?= esc((string) ($audit['user_action'] ?? '')) ?></span></td>
-                        <td class="audit-trails-description"><?= esc($description === '' ? '-' : $description) ?></td>
-                        <td class="audit-trails-meta"><?= esc($ipAddress === '' ? '-' : $ipAddress) ?></td>
-                        <td class="audit-trails-agent"><span title="<?= esc($userAgent === '' ? '-' : $userAgent, 'attr') ?>"><?= esc($userAgent === '' ? '-' : $userAgent) ?></span></td>
-                        <td class="audit-trails-user"><strong><?= esc($formatAuditUser($audit)) ?></strong></td>
+                    <?php /* The whole row is the detail trigger (js-audit-detail) — audit-detail-modal.js
+                             reads data-full and surfaces the narrative in that modal. */ ?>
+                    <tr class="audit-row js-audit-detail" tabindex="0" role="button" aria-label="View audit log details"
+                        data-full="<?= esc((string) ($audit['full_description'] ?? ''), 'attr') ?>">
+                        <td class="audit-when"><?= $auditTs ? esc(date('M j, Y h:i A', $auditTs)) : '—' ?></td>
+                        <td><span class="audit-action-pill"><?= esc((string) ($audit['user_action'] ?? '')) ?></span></td>
+                        <td class="audit-desc"><?= esc((string) ($audit['description'] ?? '')) ?></td>
+                        <td class="audit-ua"><?= $auditUa === '' ? '—' : esc($auditUa) ?></td>
+                        <td class="audit-user"><?= esc($formatAuditUser($audit)) ?></td>
                     </tr>
                 <?php endforeach; ?>
-                <?php if ($recentAudits !== []): ?>
-                    <tr class="audit-trails-manual-empty d-none" data-audit-manual-empty><td colspan="6" class="audit-trails-empty">No matching rows on this page.</td></tr>
-                <?php endif; ?>
                 <?php if ($recentAudits === []): ?>
-                    <tr><td colspan="6" class="audit-trails-empty"><?= $hasSearchFilters ? 'No matching audit logs found.' : 'No audit logs yet.' ?></td></tr>
+                    <tr><td colspan="5" class="audit-trails-empty audit-empty-state"><?= $hasSearchFilters ? 'No matching audit logs found.' : 'No audit logs yet.' ?></td></tr>
                 <?php endif; ?>
             </tbody>
         </table>
     </div>
-    <?php if ($auditTotalPages > 1): ?>
-        <?php $firstPageUrl = $auditPageUrl(1); ?>
-        <?php $previousPageUrl = $auditPageUrl(max(1, $auditPage - 1)); ?>
-        <?php $nextPageUrl = $auditPageUrl(min($auditTotalPages, $auditPage + 1)); ?>
-        <?php $lastPageUrl = $auditPageUrl($auditTotalPages); ?>
-        <nav class="audit-trails-pagination" aria-label="Audit trails pages">
-            <div class="audit-trails-pagination-actions">
-                <a
-                    class="btn btn-outline-secondary btn-sm<?= $auditPage <= 1 ? ' disabled' : '' ?>"
-                    href="<?= esc($firstPageUrl, 'attr') ?>"
-                    aria-disabled="<?= $auditPage <= 1 ? 'true' : 'false' ?>">
-                    First
-                </a>
-                <a
-                    class="btn btn-outline-secondary btn-sm<?= $auditPage <= 1 ? ' disabled' : '' ?>"
-                    href="<?= esc($previousPageUrl, 'attr') ?>"
-                    aria-disabled="<?= $auditPage <= 1 ? 'true' : 'false' ?>">
-                    Previous
-                </a>
-                <a
-                    class="btn btn-outline-secondary btn-sm<?= $auditPage >= $auditTotalPages ? ' disabled' : '' ?>"
-                    href="<?= esc($nextPageUrl, 'attr') ?>"
-                    aria-disabled="<?= $auditPage >= $auditTotalPages ? 'true' : 'false' ?>">
-                    Next
-                </a>
-                <a
-                    class="btn btn-outline-secondary btn-sm<?= $auditPage >= $auditTotalPages ? ' disabled' : '' ?>"
-                    href="<?= esc($lastPageUrl, 'attr') ?>"
-                    aria-disabled="<?= $auditPage >= $auditTotalPages ? 'true' : 'false' ?>">
-                    Last
-                </a>
-            </div>
-        </nav>
+
+    <?php if ($totalRows > 0): ?>
+        <div class="lookup-list-footer d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <span class="text-muted small">Showing <?= esc((string) $fromRecord) ?>–<?= esc((string) $toRecord) ?> of <?= esc((string) $totalRows) ?></span>
+            <?php if ($totalPages > 1): ?>
+                <div class="d-flex gap-2">
+                    <a class="btn btn-outline-secondary btn-sm<?= $page <= 1 ? ' disabled' : '' ?>" href="<?= esc($auditPageUrl(max(1, $page - 1)), 'attr') ?>" aria-disabled="<?= $page <= 1 ? 'true' : 'false' ?>">Previous</a>
+                    <span class="btn btn-sm disabled">Page <?= esc((string) $page) ?> of <?= esc((string) $totalPages) ?></span>
+                    <a class="btn btn-outline-secondary btn-sm<?= $page >= $totalPages ? ' disabled' : '' ?>" href="<?= esc($auditPageUrl(min($totalPages, $page + 1)), 'attr') ?>" aria-disabled="<?= $page >= $totalPages ? 'true' : 'false' ?>">Next</a>
+                </div>
+            <?php endif; ?>
+        </div>
     <?php endif; ?>
 </section>

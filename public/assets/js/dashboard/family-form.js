@@ -1,7 +1,7 @@
-// Wires the 3-step family record wizard (Head of Family → Sectors & Services → Members).
+// Wires the 2-step family record wizard (Head of Family + Sectors & Services → Members).
 // Handles step navigation, step-1 client-side validation, member row add/remove,
 // sector/service selection, "other" select syncing, choice modals, and the head
-// summary panel shown on step 3. Rendering helpers live in family-form-ui.js.
+// summary panel shown on step 2. Rendering helpers live in family-form-ui.js.
 // On submit, applyOtherValues() swaps generated <option> values so the custom
 // text is posted instead of the literal "Other" / "Others" option value.
 //
@@ -17,8 +17,8 @@
 //               POST {base}/update/:id   (FamilyController::update)
 //   - Views   : Family/form.php (form shell)
 //               Family/head-fields.php (step 1 fields)
-//               Lookups/picker.php (step 2)
-//               Family/member-summary.php, Family/member-fields.php (step 3)
+//               Lookups/picker.php (inside step 1)
+//               Family/member-summary.php, Family/member-fields.php (step 2)
 // Wires the family wizard events while keeping rendering helpers reusable.
 (function (window, document) {
     function parseJsonNode(node, fallbackValue) {
@@ -111,6 +111,116 @@
         return days + (days === 1 ? ' day ago' : ' days ago');
     }
 
+    function askFamilyFormDialog(form, options) {
+        return new Promise(function (resolve) {
+            const host = form.closest('#familyModalBody') || form;
+            const overlay = document.createElement('div');
+            const dialog = document.createElement('div');
+            const icon = document.createElement('div');
+            const iconGlyph = document.createElement('i');
+            const copy = document.createElement('div');
+            const title = document.createElement('h3');
+            const message = document.createElement('p');
+            const actions = document.createElement('div');
+            const cancelButton = document.createElement('button');
+            const confirmButton = document.createElement('button');
+
+            overlay.className = 'family-draft-dialog-backdrop';
+            overlay.setAttribute('role', 'presentation');
+
+            dialog.className = 'family-draft-dialog';
+            dialog.setAttribute('role', 'dialog');
+            dialog.setAttribute('aria-modal', 'true');
+            dialog.setAttribute('aria-labelledby', 'familyFormDialogTitle');
+            dialog.setAttribute('aria-describedby', 'familyFormDialogText');
+
+            icon.className = 'family-draft-dialog-icon' + (options.tone === 'warning' ? ' is-warning' : '');
+            icon.setAttribute('aria-hidden', 'true');
+            iconGlyph.className = options.iconClass || 'bi bi-question-lg';
+            icon.appendChild(iconGlyph);
+
+            copy.className = 'family-draft-dialog-copy';
+            title.id = 'familyFormDialogTitle';
+            title.textContent = options.title || 'Confirm action';
+            message.id = 'familyFormDialogText';
+            message.textContent = options.message || '';
+            copy.appendChild(title);
+            copy.appendChild(message);
+
+            actions.className = 'family-draft-dialog-actions';
+            cancelButton.type = 'button';
+            cancelButton.className = 'btn btn-outline-secondary';
+            cancelButton.dataset.dialogAction = 'cancel';
+            cancelButton.textContent = options.cancelLabel || 'Cancel';
+            confirmButton.type = 'button';
+            confirmButton.className = options.confirmClass || 'btn btn-success';
+            confirmButton.dataset.dialogAction = 'confirm';
+            confirmButton.textContent = options.confirmLabel || 'Confirm';
+            actions.appendChild(cancelButton);
+            actions.appendChild(confirmButton);
+
+            dialog.appendChild(icon);
+            dialog.appendChild(copy);
+            dialog.appendChild(actions);
+            overlay.appendChild(dialog);
+
+            const finish = function (shouldRestore) {
+                overlay.remove();
+                resolve(shouldRestore);
+            };
+
+            overlay.addEventListener('click', function (event) {
+                if (event.target === overlay) {
+                    finish(false);
+                    return;
+                }
+
+                const button = event.target.closest('[data-dialog-action]');
+                if (!button) {
+                    return;
+                }
+
+                finish(button.dataset.dialogAction === 'confirm');
+            });
+
+            overlay.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape') {
+                    event.preventDefault();
+                    finish(false);
+                }
+            });
+
+            host.appendChild(overlay);
+
+            if (confirmButton) {
+                confirmButton.focus();
+            }
+        });
+    }
+
+    function askRestoreDraft(form, savedAt) {
+        return askFamilyFormDialog(form, {
+            title: 'Restore unsaved record?',
+            message: 'You have an unsaved record from ' + formatDraftAge(savedAt) + '. Restore it?',
+            iconClass: 'bi bi-arrow-counterclockwise',
+            cancelLabel: 'Discard',
+            confirmLabel: 'Restore',
+            confirmClass: 'btn btn-success'
+        });
+    }
+
+    function askRemoveArchivedItem(form, label) {
+        return askFamilyFormDialog(form, {
+            title: 'Remove archived item?',
+            message: '"' + label + '" is archived. If you remove it, this person loses the benefit and it can\'t be added back later.',
+            iconClass: 'bi bi-exclamation-triangle',
+            tone: 'warning',
+            cancelLabel: 'Keep',
+            confirmLabel: 'Remove',
+            confirmClass: 'btn btn-danger'
+        });
+    }
+
     function initFamilyForm(rootElement) {
         const ui = window.FamilyFormUI || {};
         const q = function (root, selector) {
@@ -185,7 +295,7 @@
             : null;
 
         function totalSteps() {
-            return entryType === 'member' ? 2 : 3;
+            return 2;
         }
 
         function setHidden(element, hidden) {
@@ -464,9 +574,13 @@
             });
 
             const contact = q(form, '#head_contactnumber');
-            if (contact && contact.value.trim() !== '' && /[^0-9]/.test(contact.value)) {
-                if (!silent) { setFieldError(contact, 'Contact number must contain digits only.'); }
-                valid = false;
+            if (contact && contact.value.trim() !== '') {
+                if (/[^0-9]/.test(contact.value) || contact.value.length !== 11) {
+                    if (!silent) { setFieldError(contact, 'Contact number must be exactly 11 digits.'); }
+                    valid = false;
+                } else if (!silent) {
+                    setFieldError(contact, '');
+                }
             } else if (contact && !silent) {
                 setFieldError(contact, '');
             }
@@ -474,8 +588,7 @@
             return valid;
         }
 
-        // Step 1 must be valid before Sectors (2) or Members (3) can be entered.
-        // Step 2 is optional, so a valid step 1 unlocks both 2 and 3.
+        // Step 1 must be valid before Members (2) can be entered.
         function canEnterStep(target) {
             if (Number(target) <= 1) { return true; }
 
@@ -525,10 +638,14 @@
                 });
 
                 const contact = q(row, '[name$="[contactnumber]"]');
-                if (contact && String(contact.value || '').trim() !== '' && /[^0-9]/.test(contact.value)) {
-                    setFieldError(contact, 'Contact number must contain digits only.');
-                    valid = false;
-                    if (!firstInvalid) { firstInvalid = contact; }
+                if (contact && String(contact.value || '').trim() !== '') {
+                    if (/[^0-9]/.test(contact.value) || contact.value.length !== 11) {
+                        setFieldError(contact, 'Contact number must be exactly 11 digits.');
+                        valid = false;
+                        if (!firstInvalid) { firstInvalid = contact; }
+                    } else {
+                        setFieldError(contact, '');
+                    }
                 } else if (contact) {
                     setFieldError(contact, '');
                 }
@@ -548,8 +665,17 @@
         const contactInput = q(form, '#head_contactnumber');
         if (contactInput) {
             contactInput.addEventListener('input', function () {
-                this.value = this.value.replace(/[^0-9]/g, '');
-                setFieldError(this, '');
+                this.value = this.value.replace(/[^0-9]/g, '').slice(0, 11);
+                if (this.value === '' || this.value.length === 11) {
+                    setFieldError(this, '');
+                }
+            });
+            contactInput.addEventListener('blur', function () {
+                if (this.value !== '' && this.value.length !== 11) {
+                    setFieldError(this, 'Contact number must be exactly 11 digits.');
+                } else {
+                    setFieldError(this, '');
+                }
             });
         }
 
@@ -631,8 +757,10 @@
                 const name = target.getAttribute('name') || '';
 
                 if (/\[contactnumber\]$/.test(name)) {
-                    target.value = target.value.replace(/[^0-9]/g, '');
-                    setFieldError(target, '');
+                    target.value = target.value.replace(/[^0-9]/g, '').slice(0, 11);
+                    if (target.value === '' || target.value.length === 11) {
+                        setFieldError(target, '');
+                    }
 
                     return;
                 }
@@ -653,6 +781,22 @@
                     setFieldError(target, '');
                 }
             });
+
+            memberRows.addEventListener('blur', function (event) {
+                const target = event.target;
+
+                if (!(target instanceof HTMLInputElement)) { return; }
+
+                const name = target.getAttribute('name') || '';
+
+                if (/\[contactnumber\]$/.test(name)) {
+                    if (target.value !== '' && target.value.length !== 11) {
+                        setFieldError(target, 'Contact number must be exactly 11 digits.');
+                    } else {
+                        setFieldError(target, '');
+                    }
+                }
+            }, true);
         }
 
         [
@@ -704,6 +848,32 @@
         form.addEventListener('change', function (event) {
             const target = event.target;
 
+            // Archived sector/service guard: an archived item only appears here when it
+            // was already assigned to this family. Unticking it permanently removes a
+            // grandfathered benefit — archived items can't be re-selected — so confirm
+            // first and re-tick on cancel. Covers head (name="sector_ids[]") and member
+            // (name="members[i][sector_ids][]") checkboxes, which both bubble here.
+            if (
+                target instanceof HTMLInputElement
+                && target.type === 'checkbox'
+                && target.dataset.archived === '1'
+                && !target.checked
+            ) {
+                const archivedLabel = String(target.dataset.label || '').trim() || 'This item';
+
+                target.checked = true;
+                askRemoveArchivedItem(form, archivedLabel).then(function (shouldRemove) {
+                    if (shouldRemove) {
+                        target.checked = false;
+                    }
+
+                    updateSectorSelection();
+                    updateHeadSummary();
+                });
+
+                return;
+            }
+
             if (target instanceof HTMLSelectElement && target.classList.contains('js-other-select')) {
                 if (typeof ui.syncOtherControl === 'function') {
                     ui.syncOtherControl(target);
@@ -742,7 +912,7 @@
 
             if (!membersOk) {
                 event.preventDefault();
-                setStep(3);
+                setStep(2);
                 focusFirstInvalidMember();
                 showFormAlert('Complete the highlighted member fields before saving.');
 
@@ -998,11 +1168,13 @@
             const existingDraft = readDraft();
 
             if (!draftIsEmpty(existingDraft)) {
-                if (window.confirm('You have an unsaved record from ' + formatDraftAge(existingDraft.savedAt) + '. Restore it?')) {
-                    restoreDraft(existingDraft);
-                } else {
-                    clearDraft();
-                }
+                askRestoreDraft(form, existingDraft.savedAt).then(function (shouldRestore) {
+                    if (shouldRestore) {
+                        restoreDraft(existingDraft);
+                    } else {
+                        clearDraft();
+                    }
+                });
             }
 
             form.addEventListener('input', scheduleSave);

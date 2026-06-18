@@ -26,6 +26,7 @@ $routes->group('admin', static function (RouteCollection $routes): void {
     $routes->get('audit-trails', 'Admin\DashboardController::auditTrails');
     $routes->get('sectors', 'Admin\DashboardController::sectors');
     $routes->get('services', 'Admin\DashboardController::services');
+    $routes->get('categories', 'Admin\DashboardController::categories');
     $routes->get('manage-members', 'Admin\DashboardController::manageMembers');
     // Admin-only: disable/enable employee accounts from Account Management.
     $routes->post('accounts/disable', 'Accounts\AccountController::disableEmployee');
@@ -50,9 +51,11 @@ $routes->group('admin', static function (RouteCollection $routes): void {
         $routes->post('restore/(:num)', 'Lookups\SectorController::restore/$1');
     });
 
-    $routes->group('sector-categories', static function (RouteCollection $routes): void {
-        $routes->post('save', 'Lookups\SectorCategoryController::save');
-        $routes->post('delete', 'Lookups\SectorCategoryController::delete');
+    $routes->group('categories', static function (RouteCollection $routes): void {
+        $routes->post('create', 'Lookups\CategoryController::create');
+        $routes->post('update/(:num)', 'Lookups\CategoryController::update/$1');
+        $routes->post('archive/(:num)', 'Lookups\CategoryController::archive/$1');
+        $routes->post('restore/(:num)', 'Lookups\CategoryController::restore/$1');
     });
 
     $routes->group('services', static function (RouteCollection $routes): void {
@@ -86,8 +89,36 @@ $routes->group('employee', static function (RouteCollection $routes): void {
 });
 
 /*
+ * Viewer workspace (read-only). GET routes only — no mutation endpoints are
+ * exposed. The read-only family detail fragment reuses FamilyController::viewFamily,
+ * which permits the Viewer role via requireFamilyViewAccess().
+ */
+$routes->group('viewer', static function (RouteCollection $routes): void {
+    $routes->get('', 'Viewer\DashboardController::index');
+    $routes->get('dashboard', 'Viewer\DashboardController::dashboard');
+    $routes->get('manage-records', 'Viewer\DashboardController::manageRecords');
+    $routes->get('manage-families', 'Viewer\DashboardController::manageRecords');
+    $routes->get('sectors', 'Viewer\DashboardController::sectors');
+    $routes->get('services', 'Viewer\DashboardController::services');
+    $routes->group('manage-family', static function (RouteCollection $routes): void {
+        $routes->get('view/(:num)', 'Families\FamilyController::viewFamily/$1');
+    });
+});
+
+/*
  * Shared submissions
  */
 $routes->post('developer/accounts', 'Accounts\AccountController::create');
 $routes->post('developer/accounts/status', 'Accounts\AccountController::updateStatus');
+
+// Account management edit + password reset (Admin/Developer; controllers self-guard).
+$routes->get('accounts/create', 'Accounts\AccountController::createForm');
+$routes->get('accounts/edit/(:num)', 'Accounts\AccountController::editForm/$1');
+$routes->post('accounts/update', 'Accounts\AccountController::update');
+$routes->post('accounts/reset-password', 'Accounts\AccountController::resetPassword');
+
+// Self-service My Account (any logged-in non-developer).
+$routes->get('account/profile', 'Accounts\ProfileController::myAccount');
+$routes->post('account/profile/update', 'Accounts\ProfileController::update');
+
 $routes->post('families', 'Families\FamilyController::store');

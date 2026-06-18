@@ -17,14 +17,21 @@
 				<div class="modal-body">
 					<div class="js-sector-form-fields">
 						<div class="mb-3">
-							<label class="form-label" for="sectorModalPrefix">Category</label>
-							<select class="form-select" id="sectorModalPrefix">
+							<label class="form-label" for="sectorModalCategory">Category</label>
+							<select class="form-select" id="sectorModalCategory" name="categoryID" required>
 								<option value="">Select category</option>
-								<?php foreach (($sectorPrefixOptions ?? []) as $prefix => $label): ?>
-									<option value="<?= esc((string) $prefix) ?>"><?= esc((string) $label) ?></option>
+								<option value="__other__">+ Add custom category&hellip;</option>
+								<?php foreach (($sectorCategoryOptions ?? []) as $categoryId => $label): ?>
+									<option value="<?= esc((string) $categoryId) ?>"><?= esc((string) $label) ?></option>
 								<?php endforeach; ?>
-
 							</select>
+						</div>
+						<div class="mb-3 d-none js-sector-custom-category">
+							<label class="form-label" for="sectorModalNewCategoryCode">New category code</label>
+							<input class="form-control text-uppercase" id="sectorModalNewCategoryCode" name="new_category_code" placeholder="e.g. NEW" pattern="[A-Za-z]+" title="Letters only" maxlength="30">
+							<label class="form-label mt-2" for="sectorModalNewCategoryName">New category name</label>
+							<input class="form-control" id="sectorModalNewCategoryName" name="new_category_name" placeholder="e.g. New Families" maxlength="150">
+							<small class="text-muted">A new category will be created and this sector added under it.</small>
 						</div>
 						<div class="mb-3">
 							<label class="form-label" for="sectorModalShortcode">Code</label>

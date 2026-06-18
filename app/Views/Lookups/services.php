@@ -8,49 +8,106 @@ $serviceCategoryOptions = array_values(array_unique(array_filter(array_map(
 ))));
 $serviceCategoryOptions = array_values(array_unique(array_merge($defaultServiceCategoryOptions, $serviceCategoryOptions)));
 
-$activeServiceCount   = count(array_filter($services, static fn ($s) => trim((string) ($s['dt_deleted'] ?? '')) === ''));
-$archivedServiceCount = count($services) - $activeServiceCount;
+// Counts come from the server bundle (whole table), not the current page below.
+$activeServiceCount   = (int) ($activeCount ?? 0);
+$archivedServiceCount = (int) ($archivedCount ?? 0);
+$allServiceCount      = $activeServiceCount + $archivedServiceCount;
+$status               = (string) ($status ?? 'active');
+$keyword              = (string) ($keyword ?? '');
+$listRoute            = (string) ($listRoute ?? 'admin/services');
+$perPage              = (int) ($perPage ?? 50);
+$perPageOptions       = ($perPageOptions ?? []) ?: [10, 25, 50, 100];
+// Read-only roles (Viewer) see the list without Add / Edit / Archive / Restore.
+// Defaults true so the admin/developer services page is unaffected.
+$canManage            = (bool) ($canManage ?? true);
+
+// Builds a page URL preserving the current database keyword + status + page size.
+$servicePageUrl = static function (int $targetPage) use ($listRoute, $keyword, $status, $perPage): string {
+    $params = array_filter([
+        'q'        => $keyword,
+        'status'   => $status === 'active' ? '' : $status,
+        'per_page' => $perPage !== 50 ? (string) $perPage : '',
+        'page'     => $targetPage > 1 ? (string) $targetPage : '',
+    ], static fn ($value): bool => $value !== '');
+
+    return site_url($listRoute) . ($params === [] ? '' : '?' . http_build_query($params));
+};
+
+// "Clear" drops the keyword (and resets to page 1) but keeps status + page size.
+$serviceClearUrl = static function () use ($listRoute, $status, $perPage): string {
+    $params = array_filter([
+        'status'   => $status === 'active' ? '' : $status,
+        'per_page' => $perPage !== 50 ? (string) $perPage : '',
+    ], static fn ($value): bool => $value !== '');
+
+    return site_url($listRoute) . ($params === [] ? '' : '?' . http_build_query($params));
+};
 ?>
 
-<?php /* Jade-style reskin (sector-* class system, shared with service.css). All
-         melbranch hooks preserved: data-service-management-root, the
-         #service-status-select toggle, .js-service-modal-open
-         + data-service-* attributes, and the service-modal include. */ ?>
-<div class="sector-management" data-service-management-root>
-	<form class="sector-toolbar sector-lookup-toolbar" role="search" data-lookup-search aria-label="Search services and programs">
-		<input class="form-control sector-toolbar-search" type="search" data-lookup-search-input placeholder="Search services by category, name, or description" aria-label="Search services and programs">
-		<select class="form-select sector-status-select" id="service-status-select" name="status" aria-label="Service view">
-			<option value="active">Active (<?= esc((string) $activeServiceCount) ?>)</option>
-			<option value="archived">Archive (<?= esc((string) $archivedServiceCount) ?>)</option>
-		</select>
-		<button class="btn btn-success sector-toolbar-action" type="submit"><i class="bi bi-search" aria-hidden="true"></i><span>Search</span></button>
-		<button class="btn btn-outline-success sector-toolbar-action" type="button" data-lookup-search-all><i class="bi bi-list-ul" aria-hidden="true"></i><span>Search All</span></button>
-		<span id="service-add-btn-wrap">
-			<button class="btn btn-success sector-toolbar-action js-service-modal-open" type="button" data-service-mode="create"><i class="bi bi-plus-lg" aria-hidden="true"></i><span>Add Program</span></button>
-		</span>
-	</form>
+<?php /* Reuses the Manage Records .records-* layout (managerecord.css). All melbranch hooks preserved:
+         data-service-management-root, #service-status-select (data-lookup-status-select),
+         data-lookup-search local filter, .js-service-modal-open + data-service-* attributes, the service-modal include. */ ?>
+<div class="sector-management records-scroll-panel" data-service-management-root>
+	<?php /* Database search across the whole services table (server-side GET) + status + Add. */ ?>
+	<div class="records-search-panel">
+		<form class="records-search-row records-lookup-search" method="get" action="<?= esc(site_url($listRoute), 'attr') ?>" role="search" aria-label="Search the services database">
+			<input class="form-control" type="search" name="q" value="<?= esc($keyword, 'attr') ?>" placeholder="Search the whole services database" aria-label="Search the services database" autocomplete="off">
+			<select class="form-select records-status-select" id="service-status-select" name="status" data-lookup-status-select aria-label="Service view">
+				<option value="active" <?= $status === 'active' ? 'selected' : '' ?>>Active (<?= esc((string) $activeServiceCount) ?>)</option>
+				<option value="archived" <?= $status === 'archived' ? 'selected' : '' ?>>Archive (<?= esc((string) $archivedServiceCount) ?>)</option>
+				<option value="all" <?= $status === 'all' ? 'selected' : '' ?>>All (<?= esc((string) $allServiceCount) ?>)</option>
+			</select>
+			<?php if ($perPage !== 50): ?><input type="hidden" name="per_page" value="<?= esc((string) $perPage, 'attr') ?>"><?php endif; ?>
+			<a class="btn btn-outline-secondary records-search-action" href="<?= esc($serviceClearUrl(), 'attr') ?>"><i class="bi bi-x-lg" aria-hidden="true"></i><span>Clear</span></a>
+			<button class="btn btn-outline-success records-search-action" type="submit"><i class="bi bi-search" aria-hidden="true"></i><span>Search All</span></button>
+			<?php if ($canManage): ?>
+			<button class="btn btn-primary records-search-action js-service-modal-open" type="button" data-service-mode="create"><i class="bi bi-plus-lg" aria-hidden="true"></i><span>Add Program</span></button>
+			<?php endif; ?>
+		</form>
+	</div>
+
+	<?php /* Controls row: page size (server) + local "Search:" live filter (client-side, no reload). */ ?>
+	<div class="table-meta">
+		<div class="records-table-controls">
+			<form class="records-page-size-form" method="get" action="<?= esc(site_url($listRoute), 'attr') ?>">
+				<?php if ($keyword !== ''): ?><input type="hidden" name="q" value="<?= esc($keyword, 'attr') ?>"><?php endif; ?>
+				<?php if ($status !== 'active'): ?><input type="hidden" name="status" value="<?= esc($status, 'attr') ?>"><?php endif; ?>
+				<label for="servicePerPage">Show</label>
+				<select class="form-select form-select-sm" id="servicePerPage" name="per_page" onchange="this.form.submit()">
+					<?php foreach ($perPageOptions as $option): ?>
+						<option value="<?= esc((string) $option, 'attr') ?>" <?= $perPage === (int) $option ? 'selected' : '' ?>><?= esc((string) $option) ?></option>
+					<?php endforeach; ?>
+				</select>
+				<span>entries</span>
+			</form>
+			<form class="records-table-search-form" role="search" data-lookup-search aria-label="Filter shown services">
+				<label for="serviceLocalSearch">Search:</label>
+				<input class="form-control form-control-sm" type="search" id="serviceLocalSearch" data-lookup-search-input placeholder="Type to filter..." autocomplete="off" aria-label="Filter shown services">
+			</form>
+		</div>
+	</div>
 
 	<div class="table-responsive">
-		<table class="table sector-table align-middle management-table">
+		<table class="table table-sm manage-record-table align-middle">
 			<thead>
 				<tr>
 					<th>Category</th>
 					<th>Name</th>
 					<th>Description</th>
 					<th>Status</th>
-					<th class="text-end">Actions</th>
+					<?php if ($canManage): ?><th class="text-end">Actions</th><?php endif; ?>
 				</tr>
 			</thead>
 			<tbody>
 				<?php foreach ($services as $service): ?>
 					<?php $serviceId = (int) ($service['serviceID'] ?? 0); ?>
 					<?php $isArchived = trim((string) ($service['dt_deleted'] ?? '')) !== ''; ?>
-					<tr data-row-archived="<?= $isArchived ? '1' : '0' ?>"<?= $isArchived ? ' class="d-none"' : '' ?>>
+					<tr data-row-archived="<?= $isArchived ? '1' : '0' ?>">
 						<td><span class="badge bg-light text-dark border"><?= esc((string) ($service['category'] ?? '')) ?></span></td>
 						<td><span class="sector-name"><?= esc((string) ($service['name'] ?? '')) ?></span></td>
 						<td><span class="text-trim d-inline-block"><?= esc((string) ($service['description'] ?? '')) ?></span></td>
 						<td><span class="sector-status-badge <?= $isArchived ? 'sector-status-archived' : 'sector-status-active' ?>"><?= $isArchived ? 'Archived' : 'Active' ?></span></td>
-						<td class="text-end">
+						<?php if ($canManage): ?><td class="text-end">
 							<div class="dropdown actions-menu">
 								<button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false" aria-label="Service actions">
 									<i class="bi bi-three-dots" aria-hidden="true"></i>
@@ -90,18 +147,34 @@ $archivedServiceCount = count($services) - $activeServiceCount;
 								</div>
 							</div>
 						</td>
+						<?php endif; ?>
 					</tr>
 				<?php endforeach; ?>
 				<?php if ($services === []): ?>
 					<tr>
-						<td colspan="5" class="sector-empty-state">No service or program records found.</td>
+						<td colspan="5" class="sector-empty-state"><?= $keyword !== '' ? 'No services match your search.' : 'No service or program records found.' ?></td>
 					</tr>
 				<?php endif; ?>
 			</tbody>
 		</table>
 	</div>
+
+	<?php if (($totalRows ?? 0) > 0): ?>
+		<div class="lookup-list-footer d-flex flex-wrap justify-content-between align-items-center gap-2">
+			<span class="text-muted small">Showing <?= esc((string) $fromRecord) ?>–<?= esc((string) $toRecord) ?> of <?= esc((string) $totalRows) ?></span>
+			<?php if (($totalPages ?? 1) > 1): ?>
+				<div class="d-flex gap-2">
+					<a class="btn btn-outline-secondary btn-sm<?= $page <= 1 ? ' disabled' : '' ?>" href="<?= esc($servicePageUrl(max(1, $page - 1)), 'attr') ?>" aria-disabled="<?= $page <= 1 ? 'true' : 'false' ?>">Previous</a>
+					<span class="btn btn-sm disabled">Page <?= esc((string) $page) ?> of <?= esc((string) $totalPages) ?></span>
+					<a class="btn btn-outline-secondary btn-sm<?= $page >= $totalPages ? ' disabled' : '' ?>" href="<?= esc($servicePageUrl(min($totalPages, $page + 1)), 'attr') ?>" aria-disabled="<?= $page >= $totalPages ? 'true' : 'false' ?>">Next</a>
+				</div>
+			<?php endif; ?>
+		</div>
+	<?php endif; ?>
 </div>
 
+<?php if ($canManage): ?>
 <?= view('Lookups/service-modal', [
 	'serviceCategoryOptions' => $serviceCategoryOptions,
 ]) ?>
+<?php endif; ?>

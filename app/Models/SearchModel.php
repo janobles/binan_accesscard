@@ -42,10 +42,19 @@ class SearchModel
             $this->applyMemberKeyword($builder, $keyword, '', ['sectorID'], 'sectorID');
         }
 
-        $sectorId = (int) ($filters['sectorID'] ?? 0);
+        $sectorIds = $this->normalizeFilterList($filters['sectorID'] ?? []);
 
-        if ($sectorId > 0) {
-            $builder->where(SectorIds::containsCondition($sectorId, 'sectorID'), null, false);
+        if ($sectorIds !== []) {
+            $builder->groupStart();
+            foreach ($sectorIds as $index => $sectorId) {
+                if ($index === 0) {
+                    $builder->where(SectorIds::containsCondition((int) $sectorId, 'sectorID'), null, false);
+                    continue;
+                }
+
+                $builder->orWhere(SectorIds::containsCondition((int) $sectorId, 'sectorID'), null, false);
+            }
+            $builder->groupEnd();
         }
 
         $this->applyDateRange($builder, 'dt_created', $filters);
@@ -110,14 +119,14 @@ class SearchModel
     private function allMembersBuilder(string $keyword, array $filters): BaseBuilder
     {
         $builder = $this->db->table('member m')
-            ->select('m.memberID, m.firstname, m.middlename, m.lastname, m.contactnumber, m.relationship, m.headID, m.sectorID, m.dt_created, h.firstname AS head_firstname, h.lastname AS head_lastname')
+            ->select('m.memberID, m.firstname, m.middlename, m.lastname, m.suffix, m.birthday, m.contactnumber, m.relationship, m.address, m.headID, m.sectorID, m.dt_created, m.dt_deleted, h.firstname AS head_firstname, h.lastname AS head_lastname, h.suffix AS head_suffix')
             ->join('member h', 'h.memberID = m.headID', 'left');
 
         $status = strtolower(trim((string) ($filters['status'] ?? '')));
 
         if ($status === 'archived') {
             $builder->where('m.dt_deleted IS NOT NULL', null, false);
-        } else {
+        } elseif ($status !== 'all') {
             $builder->where('m.dt_deleted IS NULL', null, false);
         }
 
@@ -130,10 +139,37 @@ class SearchModel
             $this->applyMemberKeyword($builder, $keyword, 'm.', ['address', 'religion', 'job'], 'm.sectorID', $serviceMemberIds);
         }
 
-        $sectorId = (int) ($filters['sectorID'] ?? 0);
+        $sectorIds = $this->normalizeFilterList($filters['sectorID'] ?? []);
 
-        if ($sectorId > 0) {
-            $builder->where(SectorIds::containsCondition($sectorId, 'm.sectorID'), null, false);
+        if ($sectorIds !== []) {
+            $builder->groupStart();
+            foreach ($sectorIds as $index => $sectorId) {
+                if ($index === 0) {
+                    $builder->where(SectorIds::containsCondition((int) $sectorId, 'm.sectorID'), null, false);
+                    continue;
+                }
+
+                $builder->orWhere(SectorIds::containsCondition((int) $sectorId, 'm.sectorID'), null, false);
+            }
+            $builder->groupEnd();
+        }
+
+        $barangays = $this->normalizeFilterList($filters['barangay'] ?? [], false);
+
+        if ($barangays !== []) {
+            // No barangay column exists; barangay is stored as the trailing part
+            // of the combined `address` value ("address, barangay" or just
+            // "barangay"). Mirror splitAddressBarangay(): exact match or a
+            // ", barangay" suffix. OR across the selected barangays.
+            $builder->groupStart();
+            foreach ($barangays as $index => $barangay) {
+                $open = $index === 0 ? 'groupStart' : 'orGroupStart';
+                $builder->{$open}()
+                    ->where('m.address', $barangay)
+                    ->orLike('m.address', ', ' . $barangay, 'before')
+                    ->groupEnd();
+            }
+            $builder->groupEnd();
         }
 
         $this->applyDateRange($builder, 'm.dt_created', $filters);
@@ -163,6 +199,7 @@ class SearchModel
                 ->like($prefix . 'firstname', $token)
                 ->orLike($prefix . 'middlename', $token)
                 ->orLike($prefix . 'lastname', $token)
+                ->orLike($prefix . 'suffix', $token)
                 ->groupEnd();
         }
         $builder->groupEnd();
@@ -203,26 +240,27 @@ class SearchModel
         }
 
         $limit = max(1, $limit);
-        // 'User' is the DB enum value for the Employee role (shown as "Employee" in
-        // the UI); these queries use the raw enum to match the users.role column.
+        // 'administrator'/'encoder' are the DB enum values for the Admin/Employee
+        // roles; these queries use the raw enum to match the users.account_level
+        // column, aliased back to `role` so downstream callers keep the same key.
         $builder = $this->db->table('users')
-            ->select('userID, username, role, isactive, dt_created')
-            ->whereIn('role', ['Admin', 'User']);
+            ->select('userID, username, account_level AS role, isactive, dt_created')
+            ->whereIn('account_level', ['administrator', 'encoder', 'viewer']);
 
         $keyword = $this->normalizeKeyword($keyword);
 
         if ($keyword !== '') {
             $builder->groupStart()
                 ->like('username', $keyword)
-                ->orLike('role', $keyword)
+                ->orLike('account_level', $keyword)
                 ->orLike('isactive', $keyword)
                 ->groupEnd();
         }
 
         $role = $this->normalizeKeyword((string) ($filters['role'] ?? ''));
 
-        if (in_array($role, ['Admin', 'User'], true)) {
-            $builder->where('role', $role);
+        if (in_array($role, ['administrator', 'encoder', 'viewer'], true)) {
+            $builder->where('account_level', $role);
         }
 
         $status = $this->normalizeKeyword((string) ($filters['status'] ?? ''));
@@ -232,7 +270,7 @@ class SearchModel
         }
 
         $rows = $builder
-            ->orderBy('role', 'ASC')
+            ->orderBy('account_level', 'ASC')
             ->orderBy('username', 'ASC')
             ->limit($limit)
             ->get()
@@ -242,68 +280,36 @@ class SearchModel
     }
 
     /**
-     * Searches all audit entries by timestamp/action/description/IP/agent and
-     * user, with action + date filters. Frontend: the admin Audit Trails
-     * search/filter UI.
+     * Builds the filtered audit query shared by the list + count methods so a
+     * page's row set and its total always match. Applies (in order): the optional
+     * per-user scope, the Developer-visibility guard (admin views only), the
+     * keyword search, and the action/date filters. Ordering/limit/offset are added
+     * by the callers.
+     *
+     * @param int|null $userId When set, scopes to that user's own rows (employee
+     *                         Activity) — the Developer guard is then skipped.
      */
-    public function auditTrails(string $keyword = '', array $filters = [], int $limit = 50, int $offset = 0): array
+    private function auditSearchBuilder(string $keyword, array $filters, bool $includeDeveloper, ?int $userId = null): BaseBuilder
     {
-        if (! $this->hasAuditSearchTables()) {
-            return [];
-        }
-
-        $limit = max(1, $limit);
-        $offset = max(0, $offset);
         $builder = $this->auditTrailBuilder();
-        $keyword = $this->normalizeKeyword($keyword);
 
-        if ($keyword !== '') {
-            $this->applyAuditSearch($builder, $keyword, false);
+        if ($userId !== null) {
+            // AND-ed scope, kept outside the keyword OR-group below.
+            $builder->where('audit_trails.userID', $userId);
         }
 
-        $this->applyAuditFilters($builder, $filters);
-
-        $rows = $builder
-            ->orderBy('audit_trails.dt_created', 'DESC')
-            ->limit($limit, $offset)
-            ->get()
-            ->getResultArray();
-
-        return $this->withAuditNames($rows);
-    }
-
-    /** Counts matching admin audit entries for 50-row database pagination. */
-    public function countAuditTrails(string $keyword = '', array $filters = []): int
-    {
-        if (! $this->hasAuditSearchTables()) {
-            return 0;
+        // Developer audit rows (NULL userID, no users row) stay hidden from
+        // non-developer viewers so the other roles never learn a Developer exists.
+        // Only relevant to the all-users admin view ($userId === null).
+        if ($userId === null && ! $includeDeveloper) {
+            // Hide only the Developer's own rows; failed logins and system errors
+            // (logged without a users row) still surface to admins.
+            $builder->where(
+                "(audit_trails.userID IS NOT NULL OR audit_trails.user_action IN ('LOGIN_FAILED','SYSTEM_ERROR'))",
+                null,
+                false
+            );
         }
-
-        $builder = $this->auditTrailBuilder();
-        $keyword = $this->normalizeKeyword($keyword);
-
-        if ($keyword !== '') {
-            $this->applyAuditSearch($builder, $keyword, false);
-        }
-
-        $this->applyAuditFilters($builder, $filters);
-
-        return (int) $builder->countAllResults();
-    }
-
-    /**
-     * Same as auditTrails() but scoped to one user. Frontend: the employee
-     * Activity page search/filter.
-     */
-    public function auditTrailsByUser(int $userId, string $keyword = '', array $filters = [], int $limit = 50): array
-    {
-        if (! $this->hasAuditSearchTables()) {
-            return [];
-        }
-
-        $limit = max(1, $limit);
-        $builder = $this->auditTrailBuilder()
-            ->where('audit_trails.userID', $userId);
 
         $keyword = $this->normalizeKeyword($keyword);
 
@@ -313,13 +319,66 @@ class SearchModel
 
         $this->applyAuditFilters($builder, $filters);
 
-        $rows = $builder
+        return $builder;
+    }
+
+    /**
+     * Searches all audit entries by action/description/IP and by related user or
+     * member name, with action + date filters. Frontend: the admin Audit Trails
+     * search/filter UI.
+     */
+    public function auditTrails(string $keyword = '', array $filters = [], int $limit = 50, bool $includeDeveloper = false, int $offset = 0): array
+    {
+        if (! $this->hasAuditSearchTables()) {
+            return [];
+        }
+
+        $rows = $this->auditSearchBuilder($keyword, $filters, $includeDeveloper)
             ->orderBy('audit_trails.dt_created', 'DESC')
-            ->limit($limit)
+            ->limit(max(1, $limit), max(0, $offset))
             ->get()
             ->getResultArray();
 
         return $this->withAuditNames($rows);
+    }
+
+    /** Total audit rows matching the keyword/action/date filter (for pagination). */
+    public function countAuditTrails(string $keyword = '', array $filters = [], bool $includeDeveloper = false): int
+    {
+        if (! $this->hasAuditSearchTables()) {
+            return 0;
+        }
+
+        return $this->auditSearchBuilder($keyword, $filters, $includeDeveloper)->countAllResults();
+    }
+
+    /**
+     * Same as auditTrails() but scoped to one user. Frontend: the employee
+     * Activity page search/filter.
+     */
+    public function auditTrailsByUser(int $userId, string $keyword = '', array $filters = [], int $limit = 50, int $offset = 0): array
+    {
+        if (! $this->hasAuditSearchTables()) {
+            return [];
+        }
+
+        $rows = $this->auditSearchBuilder($keyword, $filters, false, $userId)
+            ->orderBy('audit_trails.dt_created', 'DESC')
+            ->limit(max(1, $limit), max(0, $offset))
+            ->get()
+            ->getResultArray();
+
+        return $this->withAuditNames($rows);
+    }
+
+    /** Total audit rows for one user matching the filter (for pagination). */
+    public function countAuditTrailsByUser(int $userId, string $keyword = '', array $filters = []): int
+    {
+        if (! $this->hasAuditSearchTables()) {
+            return 0;
+        }
+
+        return $this->auditSearchBuilder($keyword, $filters, false, $userId)->countAllResults();
     }
 
     /**
@@ -353,20 +412,16 @@ class SearchModel
     }
 
     /**
-     * Adds the keyword search clause to an audit query. Admin audit trails search
-     * visible metadata; employee activity keeps member-name matching.
+     * Adds the keyword search clause to an audit query: matches action/description/
+     * IP directly, plus audits tied to users or members whose names match.
      */
-    private function applyAuditSearch(BaseBuilder $builder, string $keyword, bool $includeMemberSearch = true): void
+    private function applyAuditSearch(BaseBuilder $builder, string $keyword): void
     {
         $builder->groupStart()
-            ->like('audit_trails.dt_created', $keyword)
-            ->orLike('audit_trails.user_action', $keyword)
+            ->like('audit_trails.user_action', $keyword)
             ->orLike('audit_trails.description', $keyword)
+            ->orLike('audit_trails.full_description', $keyword)
             ->orLike('audit_trails.ip_address', $keyword);
-
-        if ($this->db->fieldExists('user_agent', 'audit_trails')) {
-            $builder->orLike('audit_trails.user_agent', $keyword);
-        }
 
         $userIds = $this->userIdsForKeyword($keyword);
 
@@ -374,12 +429,10 @@ class SearchModel
             $builder->orWhereIn('audit_trails.userID', $userIds);
         }
 
-        if ($includeMemberSearch) {
-            $memberIds = $this->memberIdsForKeyword($keyword);
+        $memberIds = $this->memberIdsForKeyword($keyword);
 
-            if ($memberIds !== []) {
-                $builder->orWhereIn('audit_trails.memberID', $memberIds);
-            }
+        if ($memberIds !== []) {
+            $builder->orWhereIn('audit_trails.memberID', $memberIds);
         }
 
         $builder->groupEnd();
@@ -609,7 +662,12 @@ class SearchModel
             $userId = (int) ($row['userID'] ?? 0);
             $memberId = (int) ($row['memberID'] ?? 0);
             $memberName = $memberNames[$memberId] ?? ['firstname' => '', 'lastname' => ''];
-            $user = $users[$userId] ?? ['username' => '', 'role' => ''];
+            // NULL/0 userID is an action with no users row. Failed logins / system
+            // errors are real (non-Developer) events shown to admins; everything else
+            // with no user is the .env Developer.
+            $user = $userId > 0
+                ? ($users[$userId] ?? ['username' => '', 'role' => ''])
+                : $this->systemAuditActor((string) ($row['user_action'] ?? ''));
 
             $row['username'] = $user['username'];
             $row['user_role'] = $user['role'];
@@ -619,6 +677,16 @@ class SearchModel
         }
 
         return $rows;
+    }
+
+    /** {username, role} label for an audit row with no users row, keyed by action. */
+    private function systemAuditActor(string $action): array
+    {
+        return match (strtoupper(trim($action))) {
+            'LOGIN_FAILED' => ['username' => 'unknown user', 'role' => 'Login'],
+            'SYSTEM_ERROR' => ['username' => 'system', 'role' => 'System'],
+            default => ['username' => 'developer', 'role' => 'Developer'],
+        };
     }
 
     /** Batch [userID => {username, role}] lookup used by withAuditNames(). */
@@ -631,7 +699,7 @@ class SearchModel
         }
 
         $users = $this->db->table('users')
-            ->select('userID, username, role')
+            ->select('userID, username, account_level AS role')
             ->whereIn('userID', $userIds)
             ->get()
             ->getResultArray();
@@ -684,36 +752,20 @@ class SearchModel
         ], static fn (string $value): bool => trim($value) !== '')));
     }
 
-    /** User IDs whose username or role matches the keyword (audit search by operator). */
+    /** User IDs whose username matches the keyword (so audit search matches by operator). */
     private function userIdsForKeyword(string $keyword): array
     {
         if (! $this->db->tableExists('users')) {
             return [];
         }
 
-        $roleKeyword = strtolower(trim($keyword));
-        $builder = $this->db->table('users')
-            ->select('userID')
-            ->groupStart()
-            ->like('username', $keyword)
-            ->orLike('role', $keyword);
-
-        if ($roleKeyword === 'employee') {
-            $builder->orWhere('role', 'User');
-        }
-
-        if ($roleKeyword === 'administrator') {
-            $builder->orWhere('role', 'Admin');
-        }
-
-        $rows = $builder
-            ->groupEnd()
-            ->get()
-            ->getResultArray();
-
         return array_map(
             static fn (array $user): int => (int) $user['userID'],
-            $rows
+            $this->db->table('users')
+                ->select('userID')
+                ->like('username', $keyword)
+                ->get()
+                ->getResultArray()
         );
     }
 
@@ -750,6 +802,27 @@ class SearchModel
     private function normalizeKeyword(string $keyword): string
     {
         return trim($keyword);
+    }
+
+    private function normalizeFilterList(mixed $value, bool $integers = true): array
+    {
+        $values = is_array($value) ? $value : [$value];
+        $normalized = [];
+
+        foreach ($values as $item) {
+            $item = trim((string) $item);
+
+            if ($item === '' || $item === '__all') {
+                continue;
+            }
+
+            $normalized[] = $integers ? (string) (int) $item : $item;
+        }
+
+        return array_values(array_unique(array_filter(
+            $normalized,
+            static fn (string $item): bool => $item !== '' && $item !== '0'
+        )));
     }
 
     /** Returns the date only if it's a valid Y-m-d, else '' (ignored by filters). */

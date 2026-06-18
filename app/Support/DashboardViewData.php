@@ -32,6 +32,7 @@ class DashboardViewData
         $searchTerm = (string) ($data['searchTerm'] ?? '');
         $searchFilters = self::arrayValue($data['searchFilters'] ?? []);
         $auditActionOptions = self::arrayValue($data['auditActionOptions'] ?? []);
+        $auditListData = self::arrayValue($data['auditListData'] ?? []);
         $sectorOptions = self::arrayValue($familyFormViewData['sectorOptions'] ?? []);
         $hasSearchFilters = self::hasSearchFilters($searchTerm, $searchFilters);
         $canCreateFamily = (bool) ($data['canCreateFamily'] ?? false);
@@ -43,6 +44,7 @@ class DashboardViewData
             'activePage',
             'adminAccounts',
             'auditActionOptions',
+            'auditListData',
             'canCreateFamily',
             'canManageAccounts',
             'employeeAccounts',
@@ -81,6 +83,7 @@ class DashboardViewData
         $searchTerm = (string) ($data['searchTerm'] ?? '');
         $searchFilters = self::arrayValue($data['searchFilters'] ?? []);
         $auditActionOptions = self::arrayValue($data['auditActionOptions'] ?? []);
+        $auditListData = self::arrayValue($data['auditListData'] ?? []);
         $sectorOptions = self::arrayValue($familyFormViewData['sectorOptions'] ?? []);
         $hasSearchFilters = self::hasSearchFilters($searchTerm, $searchFilters);
         $canCreateFamily = (bool) ($data['canCreateFamily'] ?? false);
@@ -91,6 +94,7 @@ class DashboardViewData
         return compact(
             'activePage',
             'auditActionOptions',
+            'auditListData',
             'canCreateFamily',
             'familyFormViewData',
             'formatDate',

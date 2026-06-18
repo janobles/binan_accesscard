@@ -5,6 +5,7 @@
     --records-search-hover: #0f5132;
     --records-add-color: #0d6efd;
     --records-add-hover: #0b5ed7;
+    --records-search-control-height: 2.65rem;
 }
 
 .manage-records {
@@ -66,14 +67,18 @@
 }
 
 .records-quick-search {
-    grid-template-columns: minmax(22rem, 22rem) minmax(9rem, 14rem) minmax(9rem, 13rem) minmax(7.5rem, 10rem) repeat(3, minmax(6.25rem, 8.5rem));
+    grid-template-columns: minmax(16rem, 1.9fr) repeat(3, minmax(8rem, 0.95fr)) repeat(3, minmax(6.5rem, 0.8fr));
 }
 
 .records-search-row .form-control,
 .records-search-row .form-select,
 .records-search-row .btn {
-    min-height: 2.65rem;
-    font-size: 0.9rem;
+    height: var(--records-search-control-height);
+    min-height: var(--records-search-control-height);
+    padding-top: 0.48rem;
+    padding-bottom: 0.48rem;
+    font-size: 0.84rem;
+    line-height: 1.25;
 }
 
 .records-search-row .form-control,
@@ -143,6 +148,7 @@
     justify-content: center;
     gap: 0.4rem;
     width: 100%;
+    min-width: 0;
     white-space: nowrap;
 }
 
@@ -359,6 +365,10 @@
 }
 
 @media (max-width: 40rem) {
+    :root {
+        --records-search-control-height: 2.15rem;
+    }
+
     .manage-record-table {
         min-width: 40rem;
     }

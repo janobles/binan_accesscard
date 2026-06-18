@@ -837,6 +837,12 @@
 	overflow: hidden;
 }
 
+#familyModal:has(#familyForm) {
+	--modal-window-gap: clamp(0.5rem, 1.5vw, 1rem);
+	--modal-window-width: min(64rem, calc(100vw - (var(--modal-window-gap) * 2)));
+	--modal-window-height: min(43rem, calc(100dvh - (var(--modal-window-gap) * 2)));
+}
+
 .family-wizard-card {
 	display: flex;
 	width: 100%;
@@ -856,17 +862,17 @@
 	align-items: center;
 	justify-content: space-between;
 	gap: 1rem;
-	min-height: 64px;
-	padding: 14px 24px;
+	min-height: 54px;
+	padding: 10px 18px;
 	border-bottom: 1px solid #cbdbea;
 	background: #fff;
 	flex: 0 0 auto;
 }
 
 .family-window-kicker {
-	margin: 0 0 3px;
+	margin: 0 0 2px;
 	color: #000;
-	font-size: 14px;
+	font-size: 12px;
 	font-weight: 800;
 	letter-spacing: 0;
 	text-transform: uppercase;
@@ -875,22 +881,22 @@
 .family-window-title {
 	margin: 0;
 	color: #000;
-	font-size: 21px;
+	font-size: 18px;
 	font-weight: 800;
 }
 
 .family-window-close {
 	display: inline-flex;
-	width: 44px;
-	height: 44px;
+	width: 36px;
+	height: 36px;
 	flex: 0 0 auto;
 	align-items: center;
 	justify-content: center;
 	border: 1px solid #a8c9e7;
-	border-radius: 10px;
+	border-radius: 8px;
 	background: #fff;
 	color: #000;
-	font-size: 28px;
+	font-size: 23px;
 	font-weight: 800;
 	line-height: 1;
 	cursor: pointer;
@@ -905,7 +911,7 @@
 
 /* Step tabs (boxed, circular numbers, green active circle, blue underline) */
 .family-wizard-steps {
-	margin: 12px 20px 0;
+	margin: 10px 16px 0;
 	overflow: hidden;
 	border: 1px solid #bcd4ec;
 	border-radius: 7px 7px 0 0;
@@ -915,21 +921,22 @@
 
 .wizard-step {
 	position: relative;
-	min-height: 60px;
+	min-height: 46px;
 	border-right: 1px solid #cfdeec;
 }
 
 .wizard-step span {
-	width: 26px;
-	height: 26px;
+	width: 22px;
+	height: 22px;
 	background: #d8e6f2;
 	color: #000;
 	font-weight: 800;
+	font-size: 12px;
 }
 
 .wizard-step small {
 	color: #000;
-	font-size: 15px;
+	font-size: 13px;
 	font-weight: 500;
 }
 
@@ -962,46 +969,46 @@
 }
 
 .family-form-body {
-	padding: 22px 28px 0;
+	padding: 16px 20px 0;
 	background: #fff;
 }
 
 #familyForm .form-section {
 	border-top: 1px solid #cbdbea;
-	padding-top: 8px;
+	padding-top: 6px;
 }
 
 #familyForm .section-title {
-	margin-bottom: 30px;
+	margin-bottom: 18px;
 }
 
 #familyForm .section-title span {
 	color: #000;
-	font-size: 24px;
+	font-size: 18px;
 	font-weight: 800;
 }
 
 #familyForm .row.g-3 {
-	--bs-gutter-x: 30px;
-	--bs-gutter-y: 30px;
+	--bs-gutter-x: 20px;
+	--bs-gutter-y: 18px;
 }
 
 #familyForm .form-label {
-	margin-bottom: 12px;
+	margin-bottom: 7px;
 	color: #000;
-	font-size: 15px;
+	font-size: 12px;
 	font-weight: 800;
 	line-height: 1.15;
 }
 
 #familyForm .form-control,
 #familyForm .form-select {
-	min-height: 52px;
-	padding: 9px 14px;
+	min-height: 38px;
+	padding: 7px 11px;
 	border-color: #bcd4ec;
-	border-radius: 7px;
+	border-radius: 6px;
 	color: #000;
-	font-size: 16px;
+	font-size: 13px;
 	line-height: 1.2;
 	background-color: #fbfdff;
 }
@@ -1012,17 +1019,17 @@
 }
 
 .family-form-actions {
-	gap: 14px;
-	padding: 16px 20px 14px;
+	gap: 10px;
+	padding: 12px 16px;
 	border-top: 1px solid #cbdbea;
 	background: #f8fbfd;
 }
 
 .family-form-actions .btn {
-	min-width: 130px;
-	min-height: 48px;
-	border-radius: 8px;
-	font-size: 16px;
+	min-width: 106px;
+	min-height: 38px;
+	border-radius: 6px;
+	font-size: 13px;
 }
 
 @media (max-width: 768px) {
@@ -1035,37 +1042,37 @@
 	}
 
 	.family-window-header {
-		min-height: 82px;
-		padding: 16px 20px;
+		min-height: 52px;
+		padding: 10px 16px;
 	}
 
 	.family-window-kicker {
-		margin-bottom: 4px;
-		font-size: 12px;
+		margin-bottom: 2px;
+		font-size: 11px;
 	}
 
 	.family-window-title {
-		font-size: 18px;
+		font-size: 16px;
 	}
 
 	.family-window-close {
-		width: 48px;
-		height: 48px;
-		font-size: 28px;
+		width: 34px;
+		height: 34px;
+		font-size: 22px;
 	}
 
 	.family-wizard-steps {
-		margin: 14px 14px 0;
+		margin: 10px 12px 0;
 	}
 
 	.wizard-step {
-		min-height: 72px;
-		padding: 8px 4px;
+		min-height: 44px;
+		padding: 6px 4px;
 	}
 
 	.wizard-step span {
-		width: 30px;
-		height: 30px;
+		width: 22px;
+		height: 22px;
 	}
 
 	.wizard-step small {
@@ -1074,19 +1081,19 @@
 	}
 
 	.family-form-body {
-		padding: 22px 18px 0;
+		padding: 14px 16px 0;
 	}
 
 	#familyForm .form-section {
-		padding-top: 22px;
+		padding-top: 12px;
 	}
 
 	#familyForm .section-title {
-		margin-bottom: 20px;
+		margin-bottom: 14px;
 	}
 
 	#familyForm .section-title span {
-		font-size: 21px;
+		font-size: 17px;
 	}
 
 	#familyForm .row.g-3 {
@@ -1107,17 +1114,17 @@
 	}
 
 	#familyForm .form-label {
-		margin-bottom: 8px;
-		font-size: 13px;
+		margin-bottom: 6px;
+		font-size: 12px;
 		line-height: 1.15;
 		overflow-wrap: anywhere;
 	}
 
 	#familyForm .form-control,
 	#familyForm .form-select {
-		min-height: 48px;
-		padding: 8px 11px;
-		font-size: 15px;
+		min-height: 38px;
+		padding: 7px 10px;
+		font-size: 13px;
 	}
 
 	.family-form-actions {
@@ -1127,8 +1134,8 @@
 
 	.family-form-actions .btn {
 		min-width: 96px;
-		min-height: 44px;
-		font-size: 14px;
+		min-height: 38px;
+		font-size: 13px;
 	}
 
 	.member-section-title {
@@ -1176,26 +1183,26 @@
 	}
 
 	.family-window-header {
-		min-height: 74px;
-		padding: 14px 16px;
+		min-height: 50px;
+		padding: 9px 14px;
 	}
 
 	.family-window-title {
-		font-size: 17px;
+		font-size: 15px;
 	}
 
 	.family-window-close {
-		width: 44px;
-		height: 44px;
-		font-size: 26px;
+		width: 32px;
+		height: 32px;
+		font-size: 21px;
 	}
 
 	.family-wizard-steps {
-		margin: 12px 10px 0;
+		margin: 9px 10px 0;
 	}
 
 	.family-form-body {
-		padding: 18px 14px 0;
+		padding: 12px 12px 0;
 	}
 
 	#familyForm .row.g-3 {
@@ -1205,9 +1212,9 @@
 
 	#familyForm .form-control,
 	#familyForm .form-select {
-		min-height: 44px;
-		padding: 7px 10px;
-		font-size: 14px;
+		min-height: 36px;
+		padding: 6px 9px;
+		font-size: 13px;
 	}
 
 	.family-form-actions .btn {

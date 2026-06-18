@@ -142,7 +142,7 @@ $displayListName = static function (string $lastName, string $firstName, string 
                 </div>
             </div>
             <select class="form-select records-status-select" name="status" aria-label="Record status">
-                <option value="all" <?= $status === 'all' ? 'selected' : '' ?>>All</option>
+                <option value="all" <?= $status === 'all' ? 'selected' : '' ?>>-Select Status-</option>
                 <option value="active" <?= $status === 'active' ? 'selected' : '' ?>>Active</option>
                 <option value="archived" <?= $status === 'archived' ? 'selected' : '' ?>>Archived</option>
             </select>

@@ -10,7 +10,10 @@ namespace App\Libraries;
  * listing (see App\Libraries\RoleAccess and App\Models\Auth\UserModel::verifyDeveloperLogin).
  * To still give it a "My Account" profile without touching the database:
  *   - editable personal details live in writable/developer/profile.json, and
- *   - a password change rewrites ONLY the developer.passwordHash line in .env.
+ *   - editable credentials live in writable/developer/credentials.json, seeded from
+ *     the .env developer.* keys on first use. The .env values are only the initial
+ *     defaults and are NEVER written at runtime, so the account is fully editable on
+ *     any deploy where writable/ is writable (which the app already requires).
  *
  * Everything here is intentionally isolated from the DB so the Developer can never
  * leak into the users table or be seen/edited by other roles.
@@ -26,10 +29,45 @@ class DeveloperProfile
         return WRITEPATH . 'developer' . DIRECTORY_SEPARATOR . 'profile.json';
     }
 
-    /** The Developer username, sourced from .env (never editable via the UI). */
+    /** Absolute path to the JSON credentials file (born on first credential change). */
+    public static function credentialsPath(): string
+    {
+        return WRITEPATH . 'developer' . DIRECTORY_SEPARATOR . 'credentials.json';
+    }
+
+    /**
+     * The live Developer credentials as ['username' => ..., 'passwordHash' => ...].
+     * Single source of truth: the writable credentials.json when present and valid,
+     * otherwise the .env developer.* keys (the seed/default used until the first
+     * runtime change). A missing/partial/corrupt file transparently falls back to
+     * the seed.
+     */
+    public static function credentials(): array
+    {
+        $file = self::credentialsPath();
+        if (is_file($file)) {
+            $decoded = json_decode((string) file_get_contents($file), true);
+            if (
+                is_array($decoded)
+                && isset($decoded['username'], $decoded['passwordHash'])
+                && is_string($decoded['username']) && $decoded['username'] !== ''
+                && is_string($decoded['passwordHash']) && $decoded['passwordHash'] !== ''
+            ) {
+                return ['username' => $decoded['username'], 'passwordHash' => $decoded['passwordHash']];
+            }
+        }
+
+        // Seed from .env — only the initial default, never written back to .env.
+        return [
+            'username'     => (string) env('developer.username'),
+            'passwordHash' => (string) env('developer.passwordHash'),
+        ];
+    }
+
+    /** The current Developer username (live file value, else .env seed). */
     public static function username(): string
     {
-        return (string) env('developer.username');
+        return self::credentials()['username'];
     }
 
     /**
@@ -85,27 +123,32 @@ class DeveloperProfile
         return self::atomicWrite(self::path(), $json);
     }
 
-    /** Verifies a plaintext password against the live .env Argon2id hash. */
+    /** Verifies a plaintext password against the live Argon2id hash (file or seed). */
     public static function verifyPassword(string $plain): bool
     {
-        $hash = (string) env('developer.passwordHash');
+        $hash = self::credentials()['passwordHash'];
 
         return $hash !== '' && password_verify($plain, $hash);
     }
 
     /**
-     * Rewrites the `developer.username` line in .env. The new username takes effect
-     * on the next login (dotenv is loaded at boot); the current session is not
-     * affected. Returns false (old username intact) if .env cannot be written.
+     * Changes the Developer username, persisting it to writable/developer/credentials.json
+     * (seeded from the current credentials first, so the password hash is preserved).
+     * Never touches .env. Takes effect on the next login. Returns false if the file
+     * cannot be written.
      */
     public static function changeUsername(string $newUsername): bool
     {
-        return self::writeEnvLine('developer.username', $newUsername);
+        $creds = self::credentials();
+        $creds['username'] = $newUsername;
+
+        return self::writeCredentials($creds);
     }
 
     /**
-     * Rewrites the `developer.passwordHash` line in .env with a fresh Argon2id hash
-     * of $newPlain. Same persistence + timing rules as changeUsername().
+     * Changes the Developer password: hashes the new password (Argon2id) and writes
+     * the merged credentials to the writable file, preserving the current username.
+     * Never touches .env.
      */
     public static function changePassword(string $newPlain): bool
     {
@@ -114,42 +157,40 @@ class DeveloperProfile
             return false;
         }
 
-        return self::writeEnvLine('developer.passwordHash', $hash);
+        $creds = self::credentials();
+        $creds['passwordHash'] = $hash;
+
+        return self::writeCredentials($creds);
     }
 
     /**
-     * Replaces ONLY the `key = '...'` line in .env, preserving the rest of the file.
-     * Single-quoted so $-segments are not interpolated by dotenv; rejects values
-     * containing a quote or newline so the file can never be corrupted. Writes in
-     * place under an exclusive lock (not unlink+rename, which would briefly leave no
-     * .env on Windows). Returns false on any failure, so the old value survives.
+     * Writes the username + passwordHash pair to writable/developer/credentials.json.
+     * Both must be non-empty. writable/ is always app-writable (sessions/cache live
+     * there) and web-blocked by writable/.htaccess, so no special deploy setup or
+     * .env write permission is needed. Returns false on any failure.
      */
-    private static function writeEnvLine(string $key, string $value): bool
+    private static function writeCredentials(array $creds): bool
     {
-        if (strpbrk($value, "'\r\n") !== false) {
+        $clean = [
+            'username'     => trim((string) ($creds['username'] ?? '')),
+            'passwordHash' => (string) ($creds['passwordHash'] ?? ''),
+        ];
+
+        if ($clean['username'] === '' || $clean['passwordHash'] === '') {
             return false;
         }
 
-        $envFile = ROOTPATH . '.env';
-        if (! is_file($envFile) || ! is_writable($envFile)) {
+        $dir = dirname(self::credentialsPath());
+        if (! is_dir($dir) && ! @mkdir($dir, 0775, true) && ! is_dir($dir)) {
             return false;
         }
 
-        $contents = (string) file_get_contents($envFile);
-        $replacement = $key . " = '" . $value . "'";
-        $updated = preg_replace(
-            '/^[ \t]*' . preg_quote($key, '/') . '[ \t]*=.*$/m',
-            $replacement,
-            $contents,
-            1,
-            $count
-        );
-
-        if ($updated === null || $count === 0) {
+        $json = json_encode($clean, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        if ($json === false) {
             return false;
         }
 
-        return file_put_contents($envFile, $updated, LOCK_EX) !== false;
+        return self::atomicWrite(self::credentialsPath(), $json);
     }
 
     /**

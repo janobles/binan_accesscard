@@ -10,14 +10,9 @@
  * (managerecord.css) plus the shared lookup badge/action styles (lookupmanagement.css).
  */
 helper('dashboard_view');
+// category_management_view_data() also supplies $existingCodes (all codes incl.
+// archived, for the modal's duplicate check) so this view stays model-free.
 extract(category_management_view_data(get_defined_vars()), EXTR_OVERWRITE);
-
-// All codes (incl. archived, across every page) for the modal's duplicate check —
-// sourced from the model, not the current page below, so the check stays complete.
-$existingCodes = array_values(array_unique(array_filter(array_map(
-    static fn (array $c): string => strtoupper(trim((string) ($c['code'] ?? ''))),
-    (new \App\Models\Lookups\CategoryModel())->getAllIncluding()
-))));
 
 // Counts come from the server bundle (whole table), not the current page below.
 $activeCategoryCount   = (int) ($activeCount ?? 0);

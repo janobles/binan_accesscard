@@ -2,6 +2,7 @@
 
 namespace App\Filters;
 
+use App\Libraries\RoleAccess;
 use App\Libraries\SessionAuditLogger;
 use CodeIgniter\Filters\FilterInterface;
 use CodeIgniter\HTTP\RequestInterface;
@@ -32,7 +33,7 @@ class IdleTimeoutFilter implements FilterInterface
 
         if ((time() - $lastActivity) >= $timeoutSeconds) {
             SessionAuditLogger::logLogoutFromSession($request, true);
-            $this->clearLoginSession();
+            RoleAccess::forgetLoginSession();
 
             if ($request->isAJAX()) {
                 return service('response')
@@ -56,18 +57,5 @@ class IdleTimeoutFilter implements FilterInterface
     public function after(RequestInterface $request, ResponseInterface $response, $arguments = null)
     {
         return null;
-    }
-
-    /** Removes auth session keys when a request is rejected for inactivity. */
-    private function clearLoginSession(): void
-    {
-        session()->remove([
-            'is_logged_in',
-            'user_id',
-            'member_id',
-            'username',
-            'role',
-            'idle_last_activity',
-        ]);
     }
 }

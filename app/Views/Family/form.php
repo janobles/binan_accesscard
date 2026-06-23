@@ -18,6 +18,7 @@ $defaultFormOptions = [
 $formOptions              = array_merge($defaultFormOptions, (array) ($formOptions ?? []));
 $sectorOptions            = $sectorOptions ?? ($formOptions['sectors'] ?? []);
 $sectorCatalog            = (array) ($sectorCatalog ?? []);
+$sectorCategoryLabels     = (array) ($sectorCategoryLabels ?? []);
 $sexOptions               = $sexOptions ?? ($formOptions['sexes'] ?? []);
 $suffixOptions            = $suffixOptions ?? ($formOptions['suffixes'] ?? []);
 $civilOptions             = $civilOptions ?? ($formOptions['civil_statuses'] ?? []);
@@ -67,6 +68,7 @@ $fieldViewData            = compact(
     'incomeOptions',
     'jobOptions',
     'relationshipOptions',
+    'sectorCategoryLabels',
     'sectorOptions',
     'servicesByCategory',
     'sexOptions',

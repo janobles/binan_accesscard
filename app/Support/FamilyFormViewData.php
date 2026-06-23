@@ -25,6 +25,7 @@ class FamilyFormViewData
         $formOptions = array_merge(self::defaultFormOptions(), self::arrayValue($data['formOptions'] ?? []));
         $sectorOptions = $data['sectorOptions'] ?? ($formOptions['sectors'] ?? []);
         $sectorCatalog = self::arrayValue($data['sectorCatalog'] ?? []);
+        $sectorCategoryLabels = self::arrayValue($data['sectorCategoryLabels'] ?? []);
         $sexOptions = $data['sexOptions'] ?? ($formOptions['sexes'] ?? []);
         $suffixOptions = $data['suffixOptions'] ?? ($formOptions['suffixes'] ?? []);
         $civilOptions = $data['civilOptions'] ?? ($formOptions['civil_statuses'] ?? []);
@@ -60,6 +61,7 @@ class FamilyFormViewData
             'incomeOptions',
             'jobOptions',
             'relationshipOptions',
+            'sectorCategoryLabels',
             'sectorOptions',
             'servicesByCategory',
             'serviceOptions',
@@ -84,6 +86,7 @@ class FamilyFormViewData
             'jobOptions',
             'relationshipOptions',
             'sectorCatalog',
+            'sectorCategoryLabels',
             'sectorOptions',
             'selectedSectorIds',
             'selectedSectorCategories',

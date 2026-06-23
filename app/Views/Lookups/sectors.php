@@ -1,22 +1,9 @@
 <?php
 helper('dashboard_view');
+// sector_management_view_data() also supplies the Add-Sector modal data
+// ($sectorCategoryOptions, $sectorNextCodeMap, $existingShortcodes) so this view
+// never instantiates a model itself.
 extract(sector_management_view_data(get_defined_vars()), EXTR_OVERWRITE);
-
-// Add Sector modal data: category dropdown (categoryID => "CODE - Name") from the
-// `category` table, the next suggested sector code per category, and every existing
-// code for the inline duplicate check.
-$sectorModel = new \App\Models\Lookups\SectorModel();
-$categoryModel = new \App\Models\Lookups\CategoryModel();
-$sectorCategoryOptions = [];
-$sectorNextCodeMap = [];
-foreach ($categoryModel->getActive() as $category) {
-    $categoryId = (int) ($category['categoryID'] ?? 0);
-    $code = (string) ($category['code'] ?? '');
-    $name = (string) ($category['name'] ?? '');
-    $sectorCategoryOptions[$categoryId] = ($name === '' || $name === $code) ? $code : $code . ' - ' . $name;
-    $sectorNextCodeMap[$categoryId] = $categoryModel->nextSectorCodeFor($code);
-}
-$existingShortcodes = $sectorModel->existingShortcodes();
 
 // Counts come from the server bundle (whole table), not the current page below.
 $activeSectorCount   = (int) ($activeCount ?? 0);

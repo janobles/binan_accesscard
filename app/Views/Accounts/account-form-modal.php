@@ -20,6 +20,8 @@ $isSelf = (bool) ($isSelf ?? false);
 // (read-only), but username/account level/reset password stay editable.
 $personalLocked = (bool) ($personalLocked ?? false);
 $lockAttr = $personalLocked ? ' disabled' : '';
+// Developer self-profile: username + account level are .env-managed (read-only).
+$isDeveloper = (bool) ($isDeveloper ?? false);
 $roleLabel = (string) ($roleLabel ?? $role);
 $fieldPrefix = $isEdit ? 'edit-account' : ($isSelfProfile ? 'my-account' : 'account');
 $title = $isEdit ? 'Edit Account' : ($isSelfProfile ? 'My Account' : 'Create Account');
@@ -99,6 +101,10 @@ $value = static function (array $details, string $key, bool $isEdit): string {
                     <?php endif; ?>
                     <div class="account-field">
                         <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>-role">Account Level</label>
+                        <?php if ($isDeveloper): ?>
+                            <input class="form-control" id="<?= esc($fieldPrefix, 'attr') ?>-role" type="text" value="Developer" readonly>
+                            <small class="text-muted">Your account level is read-only.</small>
+                        <?php else: ?>
                         <select class="form-select" id="<?= esc($fieldPrefix, 'attr') ?>-role" name="role" required <?= ($isEdit && $isSelf) || $isSelfProfile ? 'disabled' : '' ?>>
                             <?php if (! $isEdit && ! $isSelfProfile): ?>
                                 <option value="">Choose account level</option>
@@ -110,6 +116,7 @@ $value = static function (array $details, string $key, bool $isEdit): string {
                         <?php if (($isEdit && $isSelf) || $isSelfProfile): ?>
                             <small class="text-muted"><?= $isSelfProfile ? 'Your account level is read-only.' : 'You cannot change your own account level.' ?></small>
                             <input type="hidden" name="role" value="<?= esc($role, 'attr') ?>">
+                        <?php endif; ?>
                         <?php endif; ?>
                     </div>
                     <?php if ($isEdit && ! $isSelf): ?>

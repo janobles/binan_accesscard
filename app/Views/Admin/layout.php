@@ -132,11 +132,7 @@ $jadeStyles = [
                 </div>
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
-                        <?php if (($currentRole ?? '') === 'Developer'): ?>
-                            <a href="<?= esc($sidebarUserUrl, 'attr') ?>" class="nav-link topbar-user"><i class="bi bi-person-circle" aria-hidden="true"></i><span><?= esc($username) ?> &middot; Developer</span></a>
-                        <?php else: ?>
-                            <a href="#" class="nav-link topbar-user js-open-my-account-modal" data-modal-url="<?= site_url('account/profile') ?>" data-modal-title="My Account"><i class="bi bi-person-circle" aria-hidden="true"></i><span><?= esc($username) ?> &middot; Administrator</span></a>
-                        <?php endif; ?>
+                        <a href="#" class="nav-link topbar-user js-open-my-account-modal" data-modal-url="<?= site_url('account/profile') ?>" data-modal-title="My Account"><i class="bi bi-person-circle" aria-hidden="true"></i><span><?= esc($username) ?> &middot; <?= ($currentRole ?? '') === 'Developer' ? 'Developer' : 'Administrator' ?></span></a>
                     </li>
                     <li class="nav-item">
                         <a href="<?= site_url('logout') ?>" class="nav-link js-logout-link"><i class="bi bi-box-arrow-right" aria-hidden="true"></i><span>Logout</span></a>

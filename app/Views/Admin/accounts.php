@@ -32,16 +32,18 @@ $accounts = array_merge($adminAccounts, $employeeAccounts, $viewerAccounts);
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
             </select>
-            <button class="btn btn-outline-secondary account-filter-clear" type="button" data-account-clear-filters>
-                <i class="bi bi-x-lg" aria-hidden="true"></i>
-                <span>Clear</span>
-            </button>
-            <?php if ($canCreateAccounts): ?>
-                <button class="btn btn-success account-create-trigger js-open-account-create-modal" type="button" data-modal-url="<?= site_url('accounts/create') ?>" data-modal-title="Create Account">
-                    <i class="bi bi-plus-lg" aria-hidden="true"></i>
-                    <span>Create Account</span>
-                </button>
-            <?php endif; ?>
+            <div class="btn-toolbar" role="toolbar" aria-label="Account actions">
+                <div class="btn-group" role="group" aria-label="Filter and account actions">
+                    <button class="btn btn-outline-secondary account-filter-clear" type="button" data-account-clear-filters>
+                        <span>Clear</span>
+                    </button>
+                    <?php if ($canCreateAccounts): ?>
+                        <button class="btn btn-success account-create-trigger js-open-account-create-modal" type="button" data-modal-url="<?= site_url('accounts/create') ?>" data-modal-title="Create Account">
+                            <span>Create Account</span>
+                        </button>
+                    <?php endif; ?>
+                </div>
+            </div>
         </div>
 
         <div class="table-responsive">
@@ -86,7 +88,6 @@ $accounts = array_merge($adminAccounts, $employeeAccounts, $viewerAccounts);
                                                     <button class="dropdown-item js-open-account-edit-modal" type="button"
                                                             data-modal-url="<?= site_url('accounts/edit/' . $userId) ?>"
                                                             data-modal-title="Edit Account">
-                                                        <i class="bi bi-pencil-square" aria-hidden="true"></i>
                                                         <span>Edit</span>
                                                     </button>
                                                 <?php endif; ?>
@@ -97,7 +98,6 @@ $accounts = array_merge($adminAccounts, $employeeAccounts, $viewerAccounts);
                                                         <input type="hidden" name="userID" value="<?= esc((string) $userId) ?>">
                                                         <input type="hidden" name="status" value="<?= esc($nextStatus) ?>">
                                                         <button class="dropdown-item <?= $isActive ? 'text-danger' : 'text-success' ?>" type="submit">
-                                                            <i class="bi <?= $isActive ? 'bi-person-x' : 'bi-person-check' ?>" aria-hidden="true"></i>
                                                             <span><?= $isActive ? 'Disable' : 'Enable' ?></span>
                                                         </button>
                                                     </form>
@@ -106,7 +106,6 @@ $accounts = array_merge($adminAccounts, $employeeAccounts, $viewerAccounts);
                                                         <?= csrf_field() ?>
                                                         <input type="hidden" name="userID" value="<?= esc((string) $userId) ?>">
                                                         <button class="dropdown-item <?= $isActive ? 'text-danger' : 'text-success' ?>" type="submit">
-                                                            <i class="bi <?= $isActive ? 'bi-person-x' : 'bi-person-check' ?>" aria-hidden="true"></i>
                                                             <span><?= $isActive ? 'Disable' : 'Enable' ?></span>
                                                         </button>
                                                     </form>

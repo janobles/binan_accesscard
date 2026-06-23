@@ -68,11 +68,15 @@ $sectorClearUrl = static function () use ($listRoute, $status, $perPage): string
 				<option value="archived" <?= $status === 'archived' ? 'selected' : '' ?>>Archive (<?= esc((string) $archivedSectorCount) ?>)</option>
 			</select>
 			<?php if ($perPage !== 50): ?><input type="hidden" name="per_page" value="<?= esc((string) $perPage, 'attr') ?>"><?php endif; ?>
-			<a class="btn btn-outline-secondary records-search-action" href="<?= esc($sectorClearUrl(), 'attr') ?>"><i class="bi bi-x-lg" aria-hidden="true"></i><span>Clear</span></a>
-			<button class="btn btn-outline-success records-search-action" type="submit"><i class="bi bi-search" aria-hidden="true"></i><span>Search</span></button>
-			<?php if ($canManage): ?>
-			<button class="btn btn-primary records-search-action js-sector-modal-open" type="button" data-sector-mode="create"><i class="bi bi-plus-lg" aria-hidden="true"></i><span>Add Sector</span></button>
-			<?php endif; ?>
+			<div class="btn-toolbar" role="toolbar" aria-label="Sector actions">
+				<div class="btn-group" role="group" aria-label="Search and sector actions">
+					<a class="btn btn-outline-secondary records-search-action" href="<?= esc($sectorClearUrl(), 'attr') ?>"><span>Clear</span></a>
+					<button class="btn btn-outline-success records-search-action" type="submit"><span>Search</span></button>
+					<?php if ($canManage): ?>
+					<button class="btn btn-primary records-search-action js-sector-modal-open" type="button" data-sector-mode="create"><span>Add Sector</span></button>
+					<?php endif; ?>
+				</div>
+			</div>
 		</form>
 	</div>
 
@@ -120,7 +124,7 @@ $sectorClearUrl = static function () use ($listRoute, $status, $perPage): string
 						<?php if ($canManage): ?><td class="text-end">
 							<div class="dropdown actions-menu">
 								<button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false" aria-label="Sector actions">
-									<i class="bi bi-three-dots" aria-hidden="true"></i>
+									Actions
 								</button>
 								<div class="dropdown-menu dropdown-menu-end">
 									<?php if (! $isArchived): ?>
@@ -133,7 +137,7 @@ $sectorClearUrl = static function () use ($listRoute, $status, $perPage): string
 											data-sector-shortcode="<?= esc((string) ($sector['shortcode'] ?? ''), 'attr') ?>"
 											data-sector-name="<?= esc((string) ($sector['name'] ?? ''), 'attr') ?>"
 											data-sector-description="<?= esc((string) ($sector['description'] ?? ''), 'attr') ?>">
-											<i class="bi bi-pencil-square" aria-hidden="true"></i>Edit
+											Edit
 										</button>
 										<button
 											class="dropdown-item text-danger js-sector-modal-open"
@@ -143,7 +147,7 @@ $sectorClearUrl = static function () use ($listRoute, $status, $perPage): string
 											data-sector-shortcode="<?= esc((string) ($sector['shortcode'] ?? ''), 'attr') ?>"
 											data-sector-name="<?= esc((string) ($sector['name'] ?? ''), 'attr') ?>"
 											data-sector-description="<?= esc((string) ($sector['description'] ?? ''), 'attr') ?>">
-											<i class="bi bi-archive" aria-hidden="true"></i>Archive
+											Archive
 										</button>
 									<?php else: ?>
 										<button
@@ -152,7 +156,7 @@ $sectorClearUrl = static function () use ($listRoute, $status, $perPage): string
 											data-sector-mode="restore"
 											data-sector-id="<?= esc((string) $sectorId) ?>"
 											data-sector-name="<?= esc((string) ($sector['name'] ?? ''), 'attr') ?>">
-											<i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>Restore
+											Restore
 										</button>
 									<?php endif; ?>
 								</div>

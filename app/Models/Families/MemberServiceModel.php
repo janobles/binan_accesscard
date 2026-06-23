@@ -41,8 +41,8 @@ class MemberServiceModel extends Model
 
     /**
      * Links one member to one service (inserts a row in `member_services`).
-     * Called by FamilyController::store() for each selected service; returns the
-     * new link ID or false.
+     * Kept for the future Bootstrap family form rebuild; returns the new link ID
+     * or false.
      */
     public function assignService(int $memberId, int $serviceId): int|false
     {

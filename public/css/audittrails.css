@@ -14,7 +14,21 @@
 .audit-filter-bar .form-control,
 .audit-filter-bar .form-select,
 .audit-filter-bar .btn {
-    min-height: 2.5rem;
+    min-height: 2.35rem;
+    font-size: 0.82rem;
+}
+
+.audit-filter-bar .btn-toolbar,
+.audit-filter-bar .btn-group {
+    height: 2.35rem;
+    min-height: 2.35rem;
+}
+
+.audit-filter-bar .btn-group .btn {
+    min-width: 5.5rem;
+    padding-right: 0.85rem;
+    padding-left: 0.85rem;
+    font-weight: 700;
 }
 
 .audit-trails-table {

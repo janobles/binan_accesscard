@@ -5,33 +5,14 @@
     --records-search-hover: #0f5132;
     --records-add-color: #0d6efd;
     --records-add-hover: #0b5ed7;
-    --records-search-control-height: clamp(2.25rem, 3.1vw, 2.65rem);
+    --records-search-control-height: var(--ui-control-height, 2.15rem);
+    --records-toolbar-button-min-width: 5.25rem;
+    --records-toolbar-button-padding-x: 0.85rem;
 }
 
-.manage-records {
-    overflow: hidden;
-    border: 1px solid #dce5e2;
-    border-radius: 0.35rem;
-    background: #ffffff;
-}
-
-.manage-records-toolbar,
 .table-meta {
     display: flex;
     align-items: center;
-}
-
-.manage-records-toolbar {
-    justify-content: space-between;
-    gap: 1rem;
-    padding: 0.85rem 1rem;
-    border-bottom: 1px solid #e2e9e7;
-}
-
-.manage-records .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
 }
 
 .records-scroll-panel {
@@ -50,15 +31,6 @@
     border-bottom: 1px solid #e2e9e7;
 }
 
-.manage-records .records-search-panel {
-    margin: 0;
-    padding: 0.85rem 1rem 1rem;
-}
-
-.manage-records .table-meta {
-    border-bottom: 1px solid #e2e9e7;
-}
-
 .records-search-row {
     display: grid;
     align-items: center;
@@ -66,8 +38,46 @@
     margin: 0;
 }
 
-.records-quick-search {
-    grid-template-columns: minmax(min(100%, 13rem), 1.7fr) repeat(3, minmax(min(100%, 7rem), 0.95fr)) repeat(3, minmax(min(100%, 5.5rem), 0.75fr));
+#familyDataTableFilters .btn-toolbar,
+#familyDataTableFilters .btn-group {
+    height: 100%;
+    min-height: var(--records-search-control-height);
+}
+
+#familyDataTableFilters [data-records-filter],
+#familyDataTableFilters .form-select[name="status"] {
+    min-width: 0;
+}
+
+#familyDataTableFilters [data-records-filter] .dropdown-toggle,
+#familyDataTableFilters .form-select[name="status"] {
+    font-size: var(--ui-font-sm, 0.8rem);
+}
+
+@media (min-width: 75rem) {
+    #familyDataTableFilters .family-keyword-field {
+        flex: 0 0 34%;
+        max-width: 34%;
+    }
+
+    #familyDataTableFilters .family-filter-field {
+        flex: 0 0 13%;
+        max-width: 13%;
+    }
+
+    #familyDataTableFilters .family-action-field {
+        flex: 0 0 27%;
+        max-width: 27%;
+    }
+}
+
+#familyDataTableFilters .btn-group .btn {
+    min-width: 0;
+    flex: 1 1 0;
+    padding-right: 0.75rem;
+    padding-left: 0.75rem;
+    font-size: var(--ui-font-sm, 0.8rem);
+    font-weight: 700;
 }
 
 .records-search-row .form-control,
@@ -75,71 +85,33 @@
 .records-search-row .btn {
     height: var(--records-search-control-height);
     min-height: var(--records-search-control-height);
-    padding-top: 0.48rem;
-    padding-bottom: 0.48rem;
-    font-size: clamp(0.76rem, 1.1vw, 0.84rem);
+    padding-top: var(--ui-control-padding-y, 0.25rem);
+    padding-bottom: var(--ui-control-padding-y, 0.25rem);
+    font-size: var(--ui-font-sm, 0.8rem);
     line-height: 1.25;
+}
+
+.records-search-row .btn-toolbar {
+    height: var(--records-search-control-height);
+    min-height: var(--records-search-control-height);
+}
+
+.records-search-row .btn-group {
+    height: 100%;
+}
+
+.records-search-row .btn-group .btn {
+    width: auto;
+    min-width: var(--records-toolbar-button-min-width);
+    padding-right: var(--records-toolbar-button-padding-x);
+    padding-left: var(--records-toolbar-button-padding-x);
+    font-size: var(--ui-font-sm, 0.8rem);
+    font-weight: 700;
 }
 
 .records-search-row .form-control,
 .records-search-row .form-select {
     min-width: 0;
-}
-
-.records-multiselect {
-    min-width: 0;
-}
-
-.records-multiselect-toggle {
-    display: flex;
-    width: 100%;
-    align-items: center;
-    text-align: left;
-}
-
-.records-multiselect-toggle span {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.records-multiselect-menu {
-    width: 100%;
-    min-width: 14rem;
-    max-height: 16rem;
-    overflow-y: auto;
-    padding: 0.35rem;
-}
-
-.records-check-option {
-    display: flex;
-    align-items: center;
-    gap: 0.55rem;
-    min-height: 2.1rem;
-    border-radius: 0.25rem;
-    cursor: pointer;
-    white-space: normal;
-}
-
-.records-check-option .form-check-input {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-}
-
-.records-check-option.is-selected {
-    background: #e7f2ee;
-    color: #145c3d;
-    font-weight: 700;
-}
-
-.records-check-option.is-selected:hover,
-.records-check-option.is-selected:focus {
-    background: #f2eeee;
 }
 
 .records-search-action {
@@ -150,6 +122,11 @@
     width: 100%;
     min-width: 0;
     white-space: nowrap;
+}
+
+.btn-group .records-search-action {
+    width: auto;
+    min-width: var(--records-toolbar-button-min-width);
 }
 
 .records-search-action.btn-outline-secondary,
@@ -301,10 +278,6 @@
     line-height: 1.5;
 }
 
-.records-scroll-panel > .d-flex.justify-content-end {
-    flex: 0 0 auto;
-}
-
 .manage-record-table th {
     position: sticky;
     top: 0;
@@ -333,33 +306,9 @@
     border-bottom: 0;
 }
 
-@media (max-width: 74rem) {
-    .records-quick-search {
-        grid-template-columns: repeat(6, minmax(0, 1fr));
-    }
-
-    .records-quick-search > .form-control:first-child {
-        grid-column: 1 / -1;
-    }
-
-    .records-quick-search > .records-multiselect,
-    .records-quick-search > .records-status-select {
-        grid-column: span 2;
-    }
-
-    .records-quick-search .records-search-action {
-        grid-column: span 2;
-        min-width: 0;
-    }
-}
-
 @media (min-width: 74.01rem) and (max-width: 82rem) {
     .records-search-row {
         gap: 0.5rem;
-    }
-
-    .records-quick-search {
-        grid-template-columns: minmax(10.5rem, 1.35fr) repeat(3, minmax(6.5rem, 0.85fr)) repeat(3, minmax(5rem, 0.7fr));
     }
 
     .records-search-row .form-control,
@@ -387,23 +336,6 @@
         line-height: 1.25;
     }
 
-    .records-quick-search {
-        grid-template-columns: repeat(6, minmax(0, 1fr));
-    }
-
-    .records-quick-search > .form-control:first-child {
-        grid-column: span 6;
-    }
-
-    .records-quick-search > .records-multiselect,
-    .records-quick-search > .records-status-select {
-        grid-column: span 2;
-    }
-
-    .records-quick-search .records-search-action {
-        grid-column: span 2;
-        min-width: 0;
-    }
 }
 
 @media (max-width: 40rem) {
@@ -427,21 +359,6 @@
         margin-left: 0;
     }
 
-    .records-quick-search {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 0.5rem;
-    }
-
-    .records-quick-search > .form-control:first-child {
-        grid-column: 1 / -1;
-    }
-
-    .records-quick-search > .records-multiselect,
-    .records-quick-search > .records-status-select,
-    .records-quick-search .records-search-action {
-        grid-column: span 1;
-    }
-
     .table-meta,
     .records-table-controls {
         align-items: flex-start;
@@ -462,6 +379,17 @@
 
     .records-search-action {
         width: auto;
+        padding-right: 0.55rem;
+        padding-left: 0.55rem;
+    }
+
+    .records-search-row .btn-toolbar,
+    .records-search-row .btn-group {
+        width: 100%;
+    }
+
+    .records-search-row .btn-group .btn {
+        min-width: 0;
         padding-right: 0.55rem;
         padding-left: 0.55rem;
     }

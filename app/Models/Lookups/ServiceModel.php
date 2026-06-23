@@ -389,8 +389,8 @@ class ServiceModel extends Model
     }
 
     /**
-     * True if an active (non-archived) service with this ID exists. Used by
-     * FamilyController::store() to validate selected services before linking them.
+     * True if an active (non-archived) service with this ID exists. Kept for the
+     * future Bootstrap family form rebuild when selected services are saved again.
      */
     public function existsById(int $serviceId): bool
     {

@@ -27,7 +27,6 @@ final class DashboardControllerRoutingTest extends TestCase
             'index',
             'dashboard',
             'accounts',
-            'familyEntry',
             'manageRecords',
             'auditTrails',
             'sectors',
@@ -40,7 +39,6 @@ final class DashboardControllerRoutingTest extends TestCase
     {
         $this->assertPublicMethods(EmployeeDashboardController::class, [
             'dashboard',
-            'familyEntry',
             'manageRecords',
             'activity',
         ]);
@@ -49,11 +47,9 @@ final class DashboardControllerRoutingTest extends TestCase
     public function testFeatureControllersExposeExpectedActions(): void
     {
         $this->assertPublicMethods(FamilyController::class, [
-            'store',
             'listFamilies',
+            'dataTable',
             'viewFamily',
-            'editFamily',
-            'update',
             'archive',
             'restore',
         ]);
@@ -74,6 +70,11 @@ final class DashboardControllerRoutingTest extends TestCase
 
         $this->assertTrue(method_exists(AccountController::class, 'disableEmployee'));
         $this->assertTrue(method_exists(AccountController::class, 'create'));
+        $this->assertFalse(method_exists(AdminDashboardController::class, 'familyEntry'));
+        $this->assertFalse(method_exists(EmployeeDashboardController::class, 'familyEntry'));
+        $this->assertFalse(method_exists(FamilyController::class, 'editFamily'));
+        $this->assertFalse(method_exists(FamilyController::class, 'store'));
+        $this->assertFalse(method_exists(FamilyController::class, 'update'));
     }
 
     public function testRoutesTargetFeatureSubnamespaces(): void
@@ -96,12 +97,59 @@ final class DashboardControllerRoutingTest extends TestCase
             "'activity', 'Employee\\DashboardController::activity'",
             "'accounts/disable', 'Accounts\\AccountController::disableEmployee'",
             "'list', 'Families\\FamilyController::listFamilies'",
+            "'data', 'Families\\FamilyController::dataTable'",
+            "'view/(:num)', 'Families\\FamilyController::viewFamily/$1'",
+            "'archive/(:num)', 'Families\\FamilyController::archive/$1'",
+            "'restore/(:num)', 'Families\\FamilyController::restore/$1'",
             "'create', 'Lookups\\SectorController::create'",
             "'create', 'Lookups\\ServiceController::create'",
-            "'families', 'Families\\FamilyController::store'",
         ] as $expectedRoute) {
             $this->assertStringContainsString($expectedRoute, $routes);
         }
+
+        foreach ([
+            "'family-entry'",
+            "DashboardController::familyEntry",
+            "'edit/(:num)'",
+            "FamilyController::editFamily",
+            "'families', 'Families\\FamilyController::store'",
+            "'update/(:num)', 'Families\\FamilyController::update/$1'",
+        ] as $removedRoute) {
+            $this->assertStringNotContainsString($removedRoute, $routes);
+        }
+    }
+
+    public function testLegacyFamilyFormFrontendWasRemoved(): void
+    {
+        foreach ([
+            'Views/Family/form.php',
+            'Views/Family/entry.php',
+            'Views/Family/head-fields.php',
+            'Views/Family/member-summary.php',
+            'Views/Family/member-fields.php',
+            'Views/Lookups/picker.php',
+            'Helpers/family_form_helper.php',
+            'Support/FamilyFormViewData.php',
+        ] as $removedAppFile) {
+            $this->assertFileDoesNotExist(APPPATH . $removedAppFile);
+        }
+
+        foreach ([
+            'css/familyform.css',
+            'assets/js/dashboard/family-form.js',
+            'assets/js/dashboard/family-form-ui.js',
+        ] as $removedPublicFile) {
+            $this->assertFileDoesNotExist(FCPATH . $removedPublicFile);
+        }
+
+        $listView = file_get_contents(APPPATH . 'Views/Family/list.php');
+        $modalScript = file_get_contents(FCPATH . 'assets/js/dashboard/manage-family-modal.js');
+
+        $this->assertIsString($listView);
+        $this->assertIsString($modalScript);
+        $this->assertStringNotContainsString('js-open-family-modal', $listView);
+        $this->assertStringNotContainsString('js-open-family-edit-modal', $listView);
+        $this->assertStringContainsString("triggerSelector: '.js-open-family-view-modal'", $modalScript);
     }
 
     /**

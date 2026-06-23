@@ -58,11 +58,15 @@ $serviceClearUrl = static function () use ($listRoute, $status, $perPage): strin
 				<option value="archived" <?= $status === 'archived' ? 'selected' : '' ?>>Archive (<?= esc((string) $archivedServiceCount) ?>)</option>
 			</select>
 			<?php if ($perPage !== 50): ?><input type="hidden" name="per_page" value="<?= esc((string) $perPage, 'attr') ?>"><?php endif; ?>
-			<a class="btn btn-outline-secondary records-search-action" href="<?= esc($serviceClearUrl(), 'attr') ?>"><i class="bi bi-x-lg" aria-hidden="true"></i><span>Clear</span></a>
-			<button class="btn btn-outline-success records-search-action" type="submit"><i class="bi bi-search" aria-hidden="true"></i><span>Search</span></button>
-			<?php if ($canManage): ?>
-			<button class="btn btn-primary records-search-action js-service-modal-open" type="button" data-service-mode="create"><i class="bi bi-plus-lg" aria-hidden="true"></i><span>Add Program</span></button>
-			<?php endif; ?>
+			<div class="btn-toolbar" role="toolbar" aria-label="Service actions">
+				<div class="btn-group" role="group" aria-label="Search and service actions">
+					<a class="btn btn-outline-secondary records-search-action" href="<?= esc($serviceClearUrl(), 'attr') ?>"><span>Clear</span></a>
+					<button class="btn btn-outline-success records-search-action" type="submit"><span>Search</span></button>
+					<?php if ($canManage): ?>
+					<button class="btn btn-primary records-search-action js-service-modal-open" type="button" data-service-mode="create"><span>Add Program</span></button>
+					<?php endif; ?>
+				</div>
+			</div>
 		</form>
 	</div>
 
@@ -110,7 +114,7 @@ $serviceClearUrl = static function () use ($listRoute, $status, $perPage): strin
 						<?php if ($canManage): ?><td class="text-end">
 							<div class="dropdown actions-menu">
 								<button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false" aria-label="Service actions">
-									<i class="bi bi-three-dots" aria-hidden="true"></i>
+									Actions
 								</button>
 								<div class="dropdown-menu dropdown-menu-end">
 									<?php if (! $isArchived): ?>
@@ -122,7 +126,7 @@ $serviceClearUrl = static function () use ($listRoute, $status, $perPage): strin
 											data-service-category="<?= esc((string) ($service['category'] ?? ''), 'attr') ?>"
 											data-service-name="<?= esc((string) ($service['name'] ?? ''), 'attr') ?>"
 											data-service-description="<?= esc((string) ($service['description'] ?? ''), 'attr') ?>">
-											<i class="bi bi-pencil-square" aria-hidden="true"></i>Edit
+											Edit
 										</button>
 										<button
 											class="dropdown-item text-danger js-service-modal-open"
@@ -132,7 +136,7 @@ $serviceClearUrl = static function () use ($listRoute, $status, $perPage): strin
 											data-service-category="<?= esc((string) ($service['category'] ?? ''), 'attr') ?>"
 											data-service-name="<?= esc((string) ($service['name'] ?? ''), 'attr') ?>"
 											data-service-description="<?= esc((string) ($service['description'] ?? ''), 'attr') ?>">
-											<i class="bi bi-archive" aria-hidden="true"></i>Archive
+											Archive
 										</button>
 									<?php else: ?>
 										<button
@@ -141,7 +145,7 @@ $serviceClearUrl = static function () use ($listRoute, $status, $perPage): strin
 											data-service-mode="restore"
 											data-service-id="<?= esc((string) $serviceId) ?>"
 											data-service-name="<?= esc((string) ($service['name'] ?? ''), 'attr') ?>">
-											<i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>Restore
+											Restore
 										</button>
 									<?php endif; ?>
 								</div>

@@ -14,7 +14,6 @@ class ViewLayoutModel
     public function pageTitle(string $activePage): string
     {
         return match ($activePage) {
-            'family-entry' => 'Add Record',
             'family-manage' => 'Manage Records',
             'accounts' => 'Account Management',
             'audit-trails' => 'Audit Trails',

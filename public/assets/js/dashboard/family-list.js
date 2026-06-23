@@ -5,7 +5,7 @@
 // modal markup is unavailable.
 //
 // Connected to:
-//   - View   : Family/list.php - .js-family-record-action-form
+//   - Rows   : FamilyController::dataTable() - .js-family-record-action-form
 //              (data-family-name, data-action-label, data-action-past, data-confirm-message)
 //              Family/action-confirm-modal.php - #familyActionModal
 //   - Backend: POST {admin|employee}/manage-family/archive|restore/:id

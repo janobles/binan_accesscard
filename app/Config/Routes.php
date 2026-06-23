@@ -21,7 +21,6 @@ $routes->group('admin', static function (RouteCollection $routes): void {
     $routes->get('', 'Admin\DashboardController::index');
     $routes->get('dashboard', 'Admin\DashboardController::dashboard');
     $routes->get('accounts', 'Admin\DashboardController::accounts');
-    $routes->get('family-entry', 'Admin\DashboardController::familyEntry');
     $routes->get('manage-records', 'Admin\DashboardController::manageRecords');
     $routes->get('audit-trails', 'Admin\DashboardController::auditTrails');
     $routes->get('sectors', 'Admin\DashboardController::sectors');
@@ -34,11 +33,10 @@ $routes->group('admin', static function (RouteCollection $routes): void {
 
     $routes->get('manage-families', 'Admin\DashboardController::manageRecords');
     $routes->group('manage-family', static function (RouteCollection $routes): void {
-        $routes->get('', 'Admin\DashboardController::familyEntry');
         $routes->get('list', 'Families\FamilyController::listFamilies');
+        $routes->get('create', 'Families\FamilyController::createFamily');
+        $routes->get('data', 'Families\FamilyController::dataTable');
         $routes->get('view/(:num)', 'Families\FamilyController::viewFamily/$1');
-        $routes->get('edit/(:num)', 'Families\FamilyController::editFamily/$1');
-        $routes->post('update/(:num)', 'Families\FamilyController::update/$1');
         $routes->post('archive/(:num)', 'Families\FamilyController::archive/$1');
         $routes->post('restore/(:num)', 'Families\FamilyController::restore/$1');
     });
@@ -72,17 +70,15 @@ $routes->group('admin', static function (RouteCollection $routes): void {
  */
 $routes->group('employee', static function (RouteCollection $routes): void {
     $routes->get('workspace', 'Employee\DashboardController::dashboard');
-    $routes->get('family-entry', 'Employee\DashboardController::familyEntry');
     $routes->get('manage-records', 'Employee\DashboardController::manageRecords');
     $routes->get('activity', 'Employee\DashboardController::activity');
 
     $routes->get('manage-families', 'Employee\DashboardController::manageRecords');
     $routes->group('manage-family', static function (RouteCollection $routes): void {
-        $routes->get('', 'Employee\DashboardController::familyEntry');
         $routes->get('list', 'Families\FamilyController::listFamilies');
+        $routes->get('create', 'Families\FamilyController::createFamily');
+        $routes->get('data', 'Families\FamilyController::dataTable');
         $routes->get('view/(:num)', 'Families\FamilyController::viewFamily/$1');
-        $routes->get('edit/(:num)', 'Families\FamilyController::editFamily/$1');
-        $routes->post('update/(:num)', 'Families\FamilyController::update/$1');
         $routes->post('archive/(:num)', 'Families\FamilyController::archive/$1');
         $routes->post('restore/(:num)', 'Families\FamilyController::restore/$1');
     });
@@ -101,6 +97,8 @@ $routes->group('viewer', static function (RouteCollection $routes): void {
     $routes->get('sectors', 'Viewer\DashboardController::sectors');
     $routes->get('services', 'Viewer\DashboardController::services');
     $routes->group('manage-family', static function (RouteCollection $routes): void {
+        $routes->get('create', 'Families\FamilyController::createFamily');
+        $routes->get('data', 'Families\FamilyController::dataTable');
         $routes->get('view/(:num)', 'Families\FamilyController::viewFamily/$1');
     });
 });
@@ -120,5 +118,3 @@ $routes->post('accounts/reset-password', 'Accounts\AccountController::resetPassw
 // Self-service My Account (any logged-in non-developer).
 $routes->get('account/profile', 'Accounts\ProfileController::myAccount');
 $routes->post('account/profile/update', 'Accounts\ProfileController::update');
-
-$routes->post('families', 'Families\FamilyController::store');

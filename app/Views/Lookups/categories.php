@@ -63,9 +63,13 @@ $categoryClearUrl = static function () use ($listRoute, $status, $perPage): stri
 				<option value="archived" <?= $status === 'archived' ? 'selected' : '' ?>>Archive (<?= esc((string) $archivedCategoryCount) ?>)</option>
 			</select>
 			<?php if ($perPage !== 50): ?><input type="hidden" name="per_page" value="<?= esc((string) $perPage, 'attr') ?>"><?php endif; ?>
-			<a class="btn btn-outline-secondary records-search-action" href="<?= esc($categoryClearUrl(), 'attr') ?>"><i class="bi bi-x-lg" aria-hidden="true"></i><span>Clear</span></a>
-			<button class="btn btn-outline-success records-search-action" type="submit"><i class="bi bi-search" aria-hidden="true"></i><span>Search</span></button>
-			<button class="btn btn-primary records-search-action js-category-modal-open" type="button" data-category-mode="create"><i class="bi bi-plus-lg" aria-hidden="true"></i><span>Add Category</span></button>
+			<div class="btn-toolbar" role="toolbar" aria-label="Category actions">
+				<div class="btn-group" role="group" aria-label="Search and category actions">
+					<a class="btn btn-outline-secondary records-search-action" href="<?= esc($categoryClearUrl(), 'attr') ?>"><span>Clear</span></a>
+					<button class="btn btn-outline-success records-search-action" type="submit"><span>Search</span></button>
+					<button class="btn btn-primary records-search-action js-category-modal-open" type="button" data-category-mode="create"><span>Add Category</span></button>
+				</div>
+			</div>
 		</form>
 	</div>
 
@@ -111,7 +115,7 @@ $categoryClearUrl = static function () use ($listRoute, $status, $perPage): stri
 						<td class="text-end">
 							<div class="dropdown actions-menu">
 								<button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false" aria-label="Category actions">
-									<i class="bi bi-three-dots" aria-hidden="true"></i>
+									Actions
 								</button>
 								<div class="dropdown-menu dropdown-menu-end">
 									<?php if (! $isArchived): ?>
@@ -122,7 +126,7 @@ $categoryClearUrl = static function () use ($listRoute, $status, $perPage): stri
 											data-category-id="<?= esc((string) $categoryId) ?>"
 											data-category-code="<?= esc((string) ($category['code'] ?? ''), 'attr') ?>"
 											data-category-name="<?= esc((string) ($category['name'] ?? ''), 'attr') ?>">
-											<i class="bi bi-pencil-square" aria-hidden="true"></i>Edit
+											Edit
 										</button>
 										<button
 											class="dropdown-item text-danger js-category-modal-open"
@@ -131,7 +135,7 @@ $categoryClearUrl = static function () use ($listRoute, $status, $perPage): stri
 											data-category-id="<?= esc((string) $categoryId) ?>"
 											data-category-code="<?= esc((string) ($category['code'] ?? ''), 'attr') ?>"
 											data-category-name="<?= esc((string) ($category['name'] ?? ''), 'attr') ?>">
-											<i class="bi bi-archive" aria-hidden="true"></i>Archive
+											Archive
 										</button>
 									<?php else: ?>
 										<button
@@ -140,7 +144,7 @@ $categoryClearUrl = static function () use ($listRoute, $status, $perPage): stri
 											data-category-mode="restore"
 											data-category-id="<?= esc((string) $categoryId) ?>"
 											data-category-name="<?= esc((string) ($category['name'] ?? ''), 'attr') ?>">
-											<i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>Restore
+											Restore
 										</button>
 									<?php endif; ?>
 								</div>

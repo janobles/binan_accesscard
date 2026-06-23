@@ -4,7 +4,6 @@ namespace App\Libraries;
 
 use App\Models\Audit\AuditTrailsModel;
 use App\Models\DashboardModel;
-use App\Models\Families\FamilyFormOptionsModel;
 use App\Models\Families\MemberModel;
 use App\Models\SearchModel;
 use App\Models\Lookups\CategoryModel;
@@ -54,7 +53,7 @@ class DashboardPageBuilder
 
     /**
      * Assembles every variable the admin shell and its sub-views need: page title,
-     * role flags/permissions, nav highlighting, account lists, family form options,
+     * role flags/permissions, nav highlighting, account lists, record filters,
      * recent families/audits, member list (on Manage Records), sector/service
      * lists, dashboard stats, search term/filters, and view formatter closures
      * (formatDate/Status/etc.). Also reused to build AJAX partials. Frontend:
@@ -78,7 +77,7 @@ class DashboardPageBuilder
         $sectorModel = new SectorModel();
         $serviceModel = new ServiceModel();
 
-        $familyFormViewData = (new FamilyFormOptionsModel())->getViewData();
+        $sectorOptions = $sectorModel->getAll();
 
         $recentFamilies = $activePage === 'dashboard' && ($searchTerm !== '' || $hasSearchFilters)
             ? $searchModel->families($searchTerm, $searchFilters, 25)
@@ -143,7 +142,6 @@ class DashboardPageBuilder
             'navActive' => [
                 'dashboard'    => $layoutModel->navActive($activePage, 'dashboard'),
                 'accounts'     => $layoutModel->navActive($activePage, 'accounts'),
-                'family-entry' => $layoutModel->navActive($activePage, 'family-entry'),
                 'family-manage' => $layoutModel->navActive($activePage, 'family-manage'),
                 'audit-trails' => $layoutModel->navActive($activePage, 'audit-trails'),
                 'sectors'      => $layoutModel->navActive($activePage, 'sectors'),
@@ -156,7 +154,6 @@ class DashboardPageBuilder
             // (account_level aliased back to `role` by UserModel::getStaffAccounts).
             'employeeAccounts'   => array_values(array_filter($visibleAccounts, static fn ($account) => $account['role'] === 'encoder')),
             'viewerAccounts'     => array_values(array_filter($visibleAccounts, static fn ($account) => $account['role'] === 'viewer')),
-            'familyFormViewData' => $familyFormViewData,
             'recentFamilies'     => $recentFamilies,
             'recentAudits'       => $recentAudits,
             'auditListData'      => $auditListData,
@@ -169,13 +166,12 @@ class DashboardPageBuilder
             'serviceListData'    => $serviceListData,
             'categoryListData'   => $categoryListData,
             'stats'              => $dashboardModel->stats(),
-            'canCreateFamily'    => true,
             'username'           => (string) (session()->get('username') ?? 'Admin'),
             'searchTerm'         => $searchTerm,
             'searchFilters'      => $searchFilters,
             'hasSearchFilters'   => $hasSearchFilters,
             'selectedFilterDate' => (string) ($searchFilters['date'] ?? $searchFilters['date_from'] ?? ''),
-            'sectorOptions'      => $familyFormViewData['sectorOptions'] ?? [],
+            'sectorOptions'      => $sectorOptions,
             'auditActionOptions' => $searchModel->auditActions(),
             'idleTimeoutSeconds' => (new IdleTimeout())->seconds,
             'isDeveloper'        => $isDeveloper,
@@ -376,116 +372,24 @@ class DashboardPageBuilder
         return array_merge($sessionUser, $account);
     }
 
-    /**
-     * Builds the admin Manage Records list: reads the q/status/page/sector/date
-     * query params, runs the paginated family-head search, and merges in the deep
-     * (whole-database) search results. Frontend: the family-list view + its filter
-     * and pagination controls.
-     */
+    /** Builds the Admin DataTables shell and advanced-filter options. */
     private function buildMemberListData(): array
     {
         $keyword = trim((string) $this->request->getGet('q'));
         $status = strtolower(trim((string) $this->request->getGet('status')));
         $status = in_array($status, ['all', 'active', 'archived'], true) ? $status : 'all';
-        $page = max(1, (int) $this->request->getGet('page'));
-        $perPage = $this->recordsPerPage();
-
-        // Manage Records FILTER controls (sector + date). Status (active/archived)
-        // is handled separately above. Passed into MemberModel::searchFamilies().
         $filters = [
             'sectorID' => $this->request->getGet('sectorID'),
             'barangay' => $this->request->getGet('barangay'),
-            'date'     => (string) $this->request->getGet('date'),
         ];
-
-        $memberModel = new MemberModel();
-        $searchKeyword = $keyword === '' ? null : $keyword;
-        $totalFamilies = $memberModel->countSearchFamilies($searchKeyword, $status, $filters);
-        $totalPages = max(1, (int) ceil($totalFamilies / $perPage));
-        $page = min($page, $totalPages);
-        $routeBase = 'admin/manage-family';
-
-        return array_merge([
-            'canArchive'        => true,
-            'canRestoreArchived' => true,
-            'families'          => $memberModel->searchFamilies($searchKeyword, $perPage, ($page - 1) * $perPage, $status, $filters),
-            'fromRecord'        => $totalFamilies === 0 ? 0 : (($page - 1) * $perPage) + 1,
-            'isFullPage'        => true,
-            'keyword'           => $keyword,
-            // Full-page route so both the filter form and deep-search form reload the
-            // whole Manage Records page (not the modal/partial list endpoint).
-            'listRoute'         => 'admin/manage-records',
-            'page'              => $page,
-            'perPage'           => $perPage,
-            'routeBase'         => $routeBase,
-            'status'            => $status,
-            'toRecord'          => min($totalFamilies, $page * $perPage),
-            'totalFamilies'     => $totalFamilies,
-            'totalPages'        => $totalPages,
-            // Filter UI data.
-            'sectorOptions'     => (new SectorModel())->getSectorOptions(),
-            'barangayOptions'   => FamilyProfilingFormV2::barangays(),
-            'filters'           => $filters,
-        ], $this->buildDeepSearchData($status));
-    }
-
-    /**
-     * Builds the SECOND ("search the whole database") results panel for Manage Records.
-     * Only populated when the deep-search box (deep_q) is used; otherwise deepKeyword is
-     * empty and the view hides the panel. Delegates to App\Models\SearchModel::allMembers().
-     */
-    private function buildDeepSearchData(string $status): array
-    {
-        $deepKeyword = trim((string) $this->request->getGet('deep_q'));
-        $scopeAll = strtolower(trim((string) $this->request->getGet('search_scope'))) === 'all';
-
-        // Some links/forms can still submit search_scope=all with the keyword in `q`.
-        // Treat that value as the deep keyword so the whole-database results panel opens.
-        if ($deepKeyword === '' && $scopeAll) {
-            $deepKeyword = trim((string) $this->request->getGet('q'));
-        }
-
-        // Deep search is active when explicitly requested (search_scope=all) or when a
-        // deep keyword is present. An empty keyword with scope=all lists everyone in the
-        // database (filters still narrow it), matching the "show what's in the DB" intent.
-        $deepActive = $scopeAll || $deepKeyword !== '';
-
-        if (! $deepActive) {
-            return [
-                'deepActive'     => false,
-                'deepKeyword'    => '',
-                'deepResults'    => [],
-                'deepPage'       => 1,
-                'deepTotal'      => 0,
-                'deepTotalPages' => 1,
-                'deepFromRecord' => 0,
-                'deepToRecord'   => 0,
-            ];
-        }
-
-        $perPage = $this->recordsPerPage();
-        $page = max(1, (int) $this->request->getGet('deep_page'));
-        $filters = [
-            'status'   => $status,
-            'sectorID' => $this->request->getGet('sectorID'),
-            'barangay' => $this->request->getGet('barangay'),
-            'date'     => (string) $this->request->getGet('date'),
-        ];
-
-        $searchModel = new SearchModel();
-        $total = $searchModel->countAllMembers($deepKeyword, $filters);
-        $totalPages = max(1, (int) ceil($total / $perPage));
-        $page = min($page, $totalPages);
 
         return [
-            'deepActive'     => true,
-            'deepKeyword'    => $deepKeyword,
-            'deepResults'    => $searchModel->allMembers($deepKeyword, $filters, $perPage, ($page - 1) * $perPage),
-            'deepPage'       => $page,
-            'deepTotal'      => $total,
-            'deepTotalPages' => $totalPages,
-            'deepFromRecord' => $total === 0 ? 0 : (($page - 1) * $perPage) + 1,
-            'deepToRecord'   => min($total, $page * $perPage),
+            'keyword' => $keyword,
+            'routeBase' => 'admin/manage-family',
+            'status' => $status,
+            'sectorOptions' => (new SectorModel())->getSectorOptions(),
+            'barangayOptions' => FamilyProfilingFormV2::barangays(),
+            'filters' => $filters,
         ];
     }
 
@@ -509,7 +413,7 @@ class DashboardPageBuilder
         $searchFilters = $this->searchFilters();
         $hasSearchFilters = $this->hasSearchFilters($searchFilters);
         $userId = (int) session()->get('user_id');
-        $familyFormViewData = (new FamilyFormOptionsModel())->getViewData();
+        $sectorOptions = (new SectorModel())->getAll();
         $recordListData = $activePage === 'family-manage'
             ? $this->buildEmployeeRecordListData()
             : [];
@@ -527,12 +431,9 @@ class DashboardPageBuilder
             'pageTitle' => $layoutModel->employeePageTitle($activePage),
             'navActive' => [
                 'dashboard' => $layoutModel->navActive($activePage, 'dashboard'),
-                'family-entry' => $layoutModel->navActive($activePage, 'family-entry'),
                 'family-manage' => $layoutModel->navActive($activePage, 'family-manage'),
                 'activity' => $layoutModel->navActive($activePage, 'activity'),
             ],
-            'canCreateFamily'    => true,
-            'familyFormViewData' => $familyFormViewData,
             'recordListData'     => $recordListData,
             'recentFamilies'     => $recentFamilies,
             'myAudits'           => $myAudits,
@@ -543,7 +444,7 @@ class DashboardPageBuilder
             'auditActionOptions' => $searchModel->auditActions(),
             'idleTimeoutSeconds' => (new IdleTimeout())->seconds,
             'username'           => (string) (session()->get('username') ?? 'Employee'),
-            'sectorOptions'      => $familyFormViewData['sectorOptions'] ?? [],
+            'sectorOptions'      => $sectorOptions,
             'selectedFilterDate' => (string) ($searchFilters['date'] ?? $searchFilters['date_from'] ?? ''),
             'hasSearchFilters'   => $hasSearchFilters,
             'formatDate'         => static function (mixed $value): string {
@@ -651,51 +552,25 @@ class DashboardPageBuilder
         return $this->buildViewerRecordListData();
     }
 
-    /**
-     * Viewer counterpart of buildEmployeeRecordListData(): the same paginated
-     * family list, but strictly read-only — no add, edit, archive, or restore.
-     * Frontend: the viewer Manage Records view (`Family/list`).
-     */
+    /** Builds the read-only Viewer DataTables shell and filter options. */
     private function buildViewerRecordListData(): array
     {
         $keyword = trim((string) $this->request->getGet('q'));
         $status = strtolower(trim((string) $this->request->getGet('status')));
         $status = in_array($status, ['all', 'active', 'archived'], true) ? $status : 'all';
-        $page = max(1, (int) $this->request->getGet('page'));
-        $perPage = $this->recordsPerPage();
-
         $filters = [
             'sectorID' => $this->request->getGet('sectorID'),
             'barangay' => $this->request->getGet('barangay'),
-            'date'     => (string) $this->request->getGet('date'),
         ];
 
-        $memberModel = new MemberModel();
-        $searchKeyword = $keyword === '' ? null : $keyword;
-        $totalFamilies = $memberModel->countSearchFamilies($searchKeyword, $status, $filters);
-        $totalPages = max(1, (int) ceil($totalFamilies / $perPage));
-        $page = min($page, $totalPages);
-
-        return array_merge([
-            'canEdit'            => false,
-            'canArchive'         => false,
-            'canRestoreArchived' => false,
-            'families'           => $memberModel->searchFamilies($searchKeyword, $perPage, ($page - 1) * $perPage, $status, $filters),
-            'fromRecord'         => $totalFamilies === 0 ? 0 : (($page - 1) * $perPage) + 1,
-            'keyword'            => $keyword,
-            'listRoute'          => 'viewer/manage-records',
-            'page'               => $page,
-            'perPage'            => $perPage,
-            'routeBase'          => 'viewer/manage-family',
-            'status'             => $status,
-            'toRecord'           => min($totalFamilies, $page * $perPage),
-            'totalFamilies'      => $totalFamilies,
-            'totalPages'         => $totalPages,
-            // Filter UI data.
-            'sectorOptions'      => (new SectorModel())->getSectorOptions(),
-            'barangayOptions'    => FamilyProfilingFormV2::barangays(),
-            'filters'            => $filters,
-        ], $this->buildDeepSearchData($status));
+        return [
+            'keyword' => $keyword,
+            'routeBase' => 'viewer/manage-family',
+            'status' => $status,
+            'sectorOptions' => (new SectorModel())->getSectorOptions(),
+            'barangayOptions' => FamilyProfilingFormV2::barangays(),
+            'filters' => $filters,
+        ];
     }
 
     /** Collects all supported search/filter query params into one array. */
@@ -735,58 +610,24 @@ class DashboardPageBuilder
         return false;
     }
 
-    /**
-     * Employee counterpart of buildMemberListData(): the paginated family list.
-     * Employees can view and edit records but cannot archive, restore, or delete.
-     * Frontend: the employee Manage Records view.
-     */
+    /** Builds the Employee DataTables shell and advanced-filter options. */
     private function buildEmployeeRecordListData(): array
     {
         $keyword = trim((string) $this->request->getGet('q'));
         $status = strtolower(trim((string) $this->request->getGet('status')));
         $status = in_array($status, ['all', 'active', 'archived'], true) ? $status : 'all';
-        $page = max(1, (int) $this->request->getGet('page'));
-        $perPage = $this->recordsPerPage();
-
-        // Manage Records FILTER controls (sector + date). Status (active/archived)
-        // is handled separately above. Passed into MemberModel::searchFamilies().
         $filters = [
             'sectorID' => $this->request->getGet('sectorID'),
             'barangay' => $this->request->getGet('barangay'),
-            'date'     => (string) $this->request->getGet('date'),
         ];
 
-        $memberModel = new MemberModel();
-        $searchKeyword = $keyword === '' ? null : $keyword;
-        $totalFamilies = $memberModel->countSearchFamilies($searchKeyword, $status, $filters);
-        $totalPages = max(1, (int) ceil($totalFamilies / $perPage));
-        $page = min($page, $totalPages);
-
-        return array_merge([
-            'canRestoreArchived' => false,
-            'families' => $memberModel->searchFamilies($searchKeyword, $perPage, ($page - 1) * $perPage, $status, $filters),
-            'fromRecord' => $totalFamilies === 0 ? 0 : (($page - 1) * $perPage) + 1,
+        return [
             'keyword' => $keyword,
-            'listRoute' => 'employee/manage-records',
-            'page' => $page,
-            'perPage' => $perPage,
             'routeBase' => 'employee/manage-family',
             'status' => $status,
-            'toRecord' => min($totalFamilies, $page * $perPage),
-            'totalFamilies' => $totalFamilies,
-            'totalPages' => $totalPages,
-            // Filter UI data.
             'sectorOptions' => (new SectorModel())->getSectorOptions(),
             'barangayOptions' => FamilyProfilingFormV2::barangays(),
             'filters' => $filters,
-        ], $this->buildDeepSearchData($status));
-    }
-
-    /** Whitelisted page sizes for Manage Records and deep-search pagination. */
-    private function recordsPerPage(): int
-    {
-        $perPage = (int) $this->request->getGet('per_page');
-
-        return in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 50;
+        ];
     }
 }

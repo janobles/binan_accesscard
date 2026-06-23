@@ -10,13 +10,13 @@
     --sb-border: #dce5e2;
     --sb-radius: 0.4rem;
     --sb-shadow: 0 0.35rem 1.15rem rgba(18, 47, 37, 0.08);
-    --ui-font-xs: 0.9rem;
-    --ui-font-sm: 1rem;
-    --ui-font-md: 1rem;
+    --ui-font-xs: 0.72rem;
+    --ui-font-sm: 0.8rem;
+    --ui-font-md: 0.875rem;
     --ui-font-lg: 1rem;
-    --ui-control-height: 2.5rem;
-    --ui-control-padding-x: 0.85rem;
-    --ui-control-padding-y: 0.45rem;
+    --ui-control-height: 2.15rem;
+    --ui-control-padding-x: 0.65rem;
+    --ui-control-padding-y: 0.25rem;
     --dashboard-content-padding: clamp(0.75rem, 1.8vw, 1.5rem);
 }
 
@@ -218,7 +218,24 @@ body {
 }
 
 .topbar .btn-link {
+    display: inline-flex;
+    width: var(--ui-control-height);
+    height: var(--ui-control-height);
+    min-height: var(--ui-control-height);
+    align-items: center;
+    justify-content: center;
+    padding: 0;
     color: #145c3b;
+    font-size: var(--ui-font-lg);
+}
+
+.topbar .btn-link:has(span) {
+    width: auto;
+    padding-right: var(--ui-control-padding-x);
+    padding-left: var(--ui-control-padding-x);
+    font-size: var(--ui-font-sm);
+    font-weight: 700;
+    text-decoration: none;
 }
 
 .topbar-title {
@@ -361,6 +378,103 @@ body {
 .dashboard-content {
     min-width: 0;
     padding: var(--dashboard-content-padding);
+    font-size: var(--ui-font-md);
+}
+
+.dashboard-content .form-control,
+.dashboard-content .form-select,
+.dashboard-content .btn {
+    min-height: var(--ui-control-height);
+    padding: var(--ui-control-padding-y) var(--ui-control-padding-x);
+    font-size: var(--ui-font-sm);
+}
+
+.dashboard-content .form-control-sm,
+.dashboard-content .form-select-sm,
+.dashboard-content .btn-sm {
+    min-height: calc(var(--ui-control-height) - 0.25rem);
+    padding-top: 0.2rem;
+    padding-bottom: 0.2rem;
+    font-size: var(--ui-font-xs);
+}
+
+.dashboard-content .records-search-action,
+.dashboard-content .account-filter-clear,
+.dashboard-content .account-create-trigger,
+.dashboard-content .sector-searchbar-action,
+.dashboard-content .panel-action,
+.dashboard-content [data-records-clear],
+.dashboard-content [data-family-add-record] {
+    display: inline-flex;
+    min-height: var(--ui-control-height);
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    padding-right: var(--ui-control-padding-x);
+    padding-left: var(--ui-control-padding-x);
+    font-size: var(--ui-font-sm);
+    font-weight: 700;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+.dashboard-content .records-search-action > .bi,
+.dashboard-content .account-filter-clear > .bi,
+.dashboard-content .account-create-trigger > .bi,
+.dashboard-content .sector-searchbar-action > .bi,
+.dashboard-content .panel-action > .bi {
+    font-size: 0.95em;
+    line-height: 1;
+}
+
+.dashboard-content .records-search-action.btn-sm,
+.dashboard-content .panel-action.btn-sm,
+.dashboard-content .sector-searchbar-action.btn-sm {
+    min-height: calc(var(--ui-control-height) - 0.25rem);
+    font-size: var(--ui-font-xs);
+}
+
+.dashboard-content .table {
+    font-size: var(--ui-font-sm);
+}
+
+.dashboard-content .table > :not(caption) > * > * {
+    padding: 0.45rem 0.55rem;
+}
+
+.dashboard-content .table th {
+    font-size: var(--ui-font-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.dashboard-content .dropdown-menu,
+.dashboard-content .modal,
+.dashboard-content .card {
+    font-size: var(--ui-font-sm);
+}
+
+.dashboard-content .dt-container {
+    font-size: var(--ui-font-sm);
+}
+
+.dashboard-content .dt-container .dt-input,
+.dashboard-content .dt-container .form-control,
+.dashboard-content .dt-container .form-select {
+    min-height: calc(var(--ui-control-height) - 0.15rem);
+    padding: 0.25rem 0.5rem;
+    font-size: var(--ui-font-sm);
+}
+
+.dashboard-content .dt-container .dt-search label,
+.dashboard-content .dt-container .dt-length label,
+.dashboard-content .dt-container .dt-info,
+.dashboard-content .dt-container .page-link {
+    font-size: var(--ui-font-xs);
+}
+
+.dashboard-content .dt-container .pagination {
+    margin-bottom: 0;
 }
 
 .dashboard-content:has([data-family-list-panel]),
@@ -549,13 +663,13 @@ body {
 
 @media (max-width: 75rem) {
     :root {
-        --ui-font-xs: 0.9rem;
+        --ui-font-xs: 0.68rem;
         --ui-font-sm: 0.76rem;
         --ui-font-md: 0.84rem;
         --ui-font-lg: 0.95rem;
-        --ui-control-height: 2.35rem;
+        --ui-control-height: 2.05rem;
         --ui-control-padding-x: 0.75rem;
-        --ui-control-padding-y: 0.4rem;
+        --ui-control-padding-y: 0.25rem;
     }
 
     .dashboard-content {

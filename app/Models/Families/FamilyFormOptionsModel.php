@@ -68,10 +68,9 @@ class FamilyFormOptionsModel extends Model
     }
 
     /**
-     * Shapes getOptions() into the exact view variables the family form template
-     * expects (sectorOptions, sexOptions, servicesByCategory, etc.). Frontend:
-     * consumed directly by the `Family/form` view. Add-Family path: only active
-     * sectors/services appear (archived items are never offered to new records).
+     * Shapes getOptions() into the variables expected by a family form frontend
+     * (sectorOptions, sexOptions, servicesByCategory, etc.). Only active sectors
+     * and services appear in the create-record option set.
      */
     public function getViewData(): array
     {

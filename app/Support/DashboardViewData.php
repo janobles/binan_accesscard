@@ -27,14 +27,12 @@ class DashboardViewData
         $recentAudits = self::arrayValue($data['recentAudits'] ?? []);
         $adminAccounts = self::arrayValue($data['adminAccounts'] ?? []);
         $employeeAccounts = self::arrayValue($data['employeeAccounts'] ?? []);
-        $familyFormViewData = self::arrayValue($data['familyFormViewData'] ?? []);
         $sectorShortcodeOptions = self::stringList($data['sectorShortcodeOptions'] ?? []);
         $searchTerm = (string) ($data['searchTerm'] ?? '');
         $searchFilters = self::arrayValue($data['searchFilters'] ?? []);
         $auditActionOptions = self::arrayValue($data['auditActionOptions'] ?? []);
-        $sectorOptions = self::arrayValue($familyFormViewData['sectorOptions'] ?? []);
+        $sectorOptions = self::arrayValue($data['sectorOptions'] ?? []);
         $hasSearchFilters = self::hasSearchFilters($searchTerm, $searchFilters);
-        $canCreateFamily = (bool) ($data['canCreateFamily'] ?? false);
         $idleTimeoutSeconds = (int) ($data['idleTimeoutSeconds'] ?? 900);
         $formatDate = self::formatDateCallback();
         $formatTime = self::formatTimeCallback();
@@ -43,10 +41,8 @@ class DashboardViewData
             'activePage',
             'adminAccounts',
             'auditActionOptions',
-            'canCreateFamily',
             'canManageAccounts',
             'employeeAccounts',
-            'familyFormViewData',
             'formatDate',
             'formatTime',
             'hasSearchFilters',
@@ -77,13 +73,11 @@ class DashboardViewData
         $stats = array_merge(self::defaultStats(), self::arrayValue($data['stats'] ?? []));
         $recentFamilies = self::arrayValue($data['recentFamilies'] ?? []);
         $myAudits = self::arrayValue($data['myAudits'] ?? []);
-        $familyFormViewData = self::arrayValue($data['familyFormViewData'] ?? []);
         $searchTerm = (string) ($data['searchTerm'] ?? '');
         $searchFilters = self::arrayValue($data['searchFilters'] ?? []);
         $auditActionOptions = self::arrayValue($data['auditActionOptions'] ?? []);
-        $sectorOptions = self::arrayValue($familyFormViewData['sectorOptions'] ?? []);
+        $sectorOptions = self::arrayValue($data['sectorOptions'] ?? []);
         $hasSearchFilters = self::hasSearchFilters($searchTerm, $searchFilters);
-        $canCreateFamily = (bool) ($data['canCreateFamily'] ?? false);
         $idleTimeoutSeconds = (int) ($data['idleTimeoutSeconds'] ?? 900);
         $formatDate = self::formatDateCallback();
         $formatTime = self::formatTimeCallback();
@@ -91,8 +85,6 @@ class DashboardViewData
         return compact(
             'activePage',
             'auditActionOptions',
-            'canCreateFamily',
-            'familyFormViewData',
             'formatDate',
             'formatTime',
             'hasSearchFilters',
@@ -154,25 +146,7 @@ class DashboardViewData
         );
     }
 
-    /** Prepares variables for the family records list view/partial. */
-    public static function familyList(array $data): array
-    {
-        $families = self::arrayValue($data['families'] ?? []);
-        $keyword = (string) ($data['keyword'] ?? '');
-        $routeBase = (string) ($data['routeBase'] ?? 'admin/manage-family');
-        $formatDate = self::formatDateCallback();
-        $formatTime = self::formatTimeCallback();
-
-        return compact(
-            'families',
-            'formatDate',
-            'formatTime',
-            'keyword',
-            'routeBase'
-        );
-    }
-
-    /** Prepares variables for the single-family detail (view/edit) view. */
+    /** Prepares variables for the single-family detail view. */
     public static function familyDetails(array $data): array
     {
         $head = self::arrayValue($data['head'] ?? []);
@@ -185,22 +159,6 @@ class DashboardViewData
             'members',
             'serviceMap',
             'serviceNameMap'
-        );
-    }
-
-    /** Prepares the combined sector/service selection data for the family form. */
-    public static function sectorAndServices(array $data): array
-    {
-        $serviceGroups = self::arrayValue($data['serviceGroups'] ?? []);
-        $sectorGroups = self::arrayValue($data['sectorGroups'] ?? []);
-        $selectedSectorIds = self::integerList($data['selectedSectorIds'] ?? []);
-        $selectedServiceIds = self::integerList($data['selectedServiceIds'] ?? []);
-
-        return compact(
-            'sectorGroups',
-            'selectedSectorIds',
-            'selectedServiceIds',
-            'serviceGroups'
         );
     }
 

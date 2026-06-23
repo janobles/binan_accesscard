@@ -41,27 +41,11 @@ if (! function_exists('audit_trails_view_data')) {
     }
 }
 
-if (! function_exists('family_list_view_data')) {
-    /** View variables for the family records list. */
-    function family_list_view_data(array $data): array
-    {
-        return DashboardViewData::familyList($data);
-    }
-}
-
 if (! function_exists('family_details_view_data')) {
-    /** View variables for the single-family detail (view/edit) screen. */
+    /** View variables for the single-family detail screen. */
     function family_details_view_data(array $data): array
     {
         return DashboardViewData::familyDetails($data);
-    }
-}
-
-if (! function_exists('sector_and_services_view_data')) {
-    /** View variables for the family form's sector/service selection. */
-    function sector_and_services_view_data(array $data): array
-    {
-        return DashboardViewData::sectorAndServices($data);
     }
 }
 

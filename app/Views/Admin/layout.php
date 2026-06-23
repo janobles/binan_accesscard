@@ -11,6 +11,8 @@
  * The formatDate/formatTime/formatAuditMember/formatAuditUser helpers are
  * provided by the builder (do not redefine them here).
  */
+helper('asset');
+
 // Defensive defaults so the layout still renders if a value is ever missing.
 $user = $user ?? [];
 $username = $user['username'] ?? 'Admin';
@@ -25,7 +27,6 @@ $recentFamilies = $recentFamilies ?? [];
 $recentAudits = $recentAudits ?? [];
 $adminAccounts = $adminAccounts ?? [];
 $employeeAccounts = $employeeAccounts ?? [];
-$familyFormViewData = $familyFormViewData ?? [];
 $recordListData = $recordListData ?? [];
 $categories = $categories ?? [];
 $sectorShortcodeOptions = $sectorShortcodeOptions ?? [];
@@ -41,32 +42,10 @@ $hasSearchFilters = $searchTerm !== '' || array_filter($searchFilters, static fu
 
     return $normalized !== '' && $normalized !== '__all';
 }) !== [];
-$canCreateFamily = $canCreateFamily ?? false;
 $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
 // Developers get the "developer" sidebar accent; plain admins get "admin".
 $sidebarRoleClass = $canManageAccounts ? 'developer' : 'admin';
 $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('admin/dashboard');
-?>
-<?php
-/*
- * SB Admin-style shell: the layout keeps the existing data, routes, modal
- * target, and page switch while using a Bootstrap 5-safe responsive frame.
- */
-$cssVersion = static function (string $relativeCssPath): string {
-    $absolute = FCPATH . ltrim($relativeCssPath, '/');
-    $version  = is_file($absolute) ? (string) filemtime($absolute) : (string) time();
-
-    return base_url($relativeCssPath) . '?v=' . $version;
-};
-$jadeStyles = [
-    'css/sb-admin-adapter.css',
-    'css/managerecord.css',
-    'css/lookupmanagement.css',
-    'css/audittrails.css',
-    'css/accounts.css',
-    'css/familymodal.css',
-    'css/session-timeout.css',
-];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -74,11 +53,8 @@ $jadeStyles = [
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= esc($pageTitle) ?> - Binan Access Card MIS</title>
-    <link href="<?= esc($cssVersion('assets/bootstrap/css/bootstrap.min.css'), 'attr') ?>" rel="stylesheet">
-    <link href="<?= esc($cssVersion('assets/bootstrap-icons/font/bootstrap-icons.min.css'), 'attr') ?>" rel="stylesheet">
-    <?php foreach ($jadeStyles as $stylePath): ?>
-    <link rel="stylesheet" href="<?= esc($cssVersion($stylePath), 'attr') ?>">
-    <?php endforeach; ?>
+    <?= asset_tags('dashboard-core-css') ?>
+    <?= asset_tags('admin-dashboard-css') ?>
 </head>
 <body>
 <div id="wrapper">
@@ -125,7 +101,7 @@ $jadeStyles = [
         <div id="content">
             <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow-sm">
                 <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle me-3" type="button" aria-label="Toggle navigation menu" aria-controls="dashboard-sidebar" aria-expanded="false">
-                    <i class="bi bi-list" aria-hidden="true"></i>
+                    <span>Menu</span>
                 </button>
                 <div class="topbar-title">
                     <div>
@@ -155,7 +131,7 @@ $jadeStyles = [
                     <div class="reset-password-callout__body">
                         <code class="reset-password-callout__value" id="resetPasswordValue"><?= esc((string) ($resetInfo['password'] ?? '')) ?></code>
                         <button type="button" class="btn btn-sm btn-outline-success js-copy-password" data-copy-target="#resetPasswordValue">
-                            <i class="bi bi-clipboard" aria-hidden="true"></i><span>Copy</span>
+                            <span>Copy</span>
                         </button>
                     </div>
                     <p class="reset-password-callout__hint">Share it with the user and ask them to change it in My Account.</p>
@@ -164,10 +140,6 @@ $jadeStyles = [
             <?php if (session()->getFlashdata('error')): ?>
                 <div class="alert alert-danger" data-auto-dismiss-alert><?= esc(session()->getFlashdata('error')) ?></div>
             <?php endif; ?>
-            <?php if (session()->getFlashdata('family_record_saved')): ?>
-                <span id="familyDraftSavedMarker" hidden></span>
-            <?php endif; ?>
-
             <?php /* Main content swaps on $activePage. "dashboard" is inline (stats +
                      recent records/activity); the rest delegate to sub-views below. */ ?>
             <?php if ($activePage === 'dashboard'): ?>
@@ -204,7 +176,7 @@ $jadeStyles = [
                     <section class="overview-panel dashboard-table-panel">
                         <header class="panel-header">
                             <h2>Recent Activity</h2>
-                            <a class="btn btn-sm panel-action" href="<?= site_url('admin/audit-trails') ?>"><i class="bi bi-arrow-right" aria-hidden="true"></i><span>View All</span></a>
+                            <a class="btn btn-sm panel-action" href="<?= site_url('admin/audit-trails') ?>"><span>View All</span></a>
                         </header>
                         <div class="table-responsive">
                             <table class="table overview-table">
@@ -239,16 +211,6 @@ $jadeStyles = [
                     'canEditAccounts' => $canEditAccounts ?? false,
                     'currentRole' => $currentRole,
                 ]) ?>
-            <?php endif; ?>
-
-            <?php if ($activePage === 'family-entry'): ?>
-                <div class="panel mb-3">
-                    <div class="section-title mt-0"><span>Add Record</span></div>
-                    <?= view('Family/entry', array_merge(
-                        $familyFormViewData,
-                        ['canCreateFamily' => $canCreateFamily]
-                    )) ?>
-                </div>
             <?php endif; ?>
 
             <?php if ($activePage === 'family-manage'): ?>
@@ -295,7 +257,7 @@ $jadeStyles = [
 </div>
 
 <?php /* Shared modal target. The *-modal.js loaders fetch ?partial=1 fragments
-         (add/edit record, accounts, sectors, services, audit) into #familyModalBody. */ ?>
+         (record details, accounts, sectors, services, audit) into #familyModalBody. */ ?>
 <div class="modal fade floating-family-modal" id="familyModal" tabindex="-1" aria-label="Record details" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered modal-xl">
         <div class="modal-content">
@@ -335,56 +297,13 @@ $jadeStyles = [
     </div>
 </div>
 
-<script src="<?= base_url('assets/jquery/jquery-3.7.1.min.js') ?>?v=<?= filemtime(FCPATH . 'assets/jquery/jquery-3.7.1.min.js') ?>"></script>
-<script src="<?= base_url('assets/bootstrap/js/bootstrap.bundle.min.js') ?>?v=<?= filemtime(FCPATH . 'assets/bootstrap/js/bootstrap.bundle.min.js') ?>"></script>
-<?php
-$versionedAssetUrl = static function (string $relativePath): ?string {
-    $fullPath = FCPATH . ltrim($relativePath, '/');
-
-    if (! is_file($fullPath)) {
-        return null;
-    }
-
-    $url = base_url($relativePath);
-    $mtime = filemtime($fullPath);
-
-    if ($mtime !== false) {
-        $url .= '?v=' . $mtime;
-    }
-
-    return $url;
-};
-
-$dashboardScripts = [
-    'assets/js/dashboard/view-interactions.js',
-    'assets/js/dashboard/family-form-ui.js',
-    'assets/js/dashboard/family-form.js',
-    'assets/js/dashboard/family-list.js',
-    'assets/js/dashboard/management-forms.js',
-    'assets/js/dashboard/lookup-search.js',
-    'assets/js/dashboard/audit-filters.js',
-    'assets/js/dashboard/dashboard-modal-loader.js',
-    'assets/js/dashboard/manage-family-modal.js',
-    'assets/js/dashboard/account-form-modal.js',
-    'assets/js/dashboard/accounts-modal.js',
-    'assets/js/dashboard/sectors-modal.js',
-    'assets/js/dashboard/services-modal.js',
-    'assets/js/dashboard/categories-modal.js',
-    'assets/js/dashboard/audit-trails-modal.js',
-    'assets/js/dashboard/audit-detail-modal.js',
-];
-
-$sessionTimeoutScript = $versionedAssetUrl('assets/js/session-timeout.js');
-?>
-<?php foreach ($dashboardScripts as $scriptPath): ?>
-    <?php $scriptUrl = $versionedAssetUrl($scriptPath); ?>
-    <?php if ($scriptUrl !== null): ?>
-<script src="<?= esc($scriptUrl, 'attr') ?>"></script>
-    <?php endif; ?>
-<?php endforeach; ?>
-<?php if ($sessionTimeoutScript !== null): ?>
-<script src="<?= esc($sessionTimeoutScript, 'attr') ?>" data-timeout-seconds="<?= esc((string) $idleTimeoutSeconds) ?>" data-logout-url="<?= site_url('logout?timeout=1') ?>" data-keep-alive-url="<?= site_url('session/keep-alive') ?>"></script>
-<?php endif; ?>
+<?= asset_tags('dashboard-vendor-js') ?>
+<?= asset_tags('admin-dashboard-js') ?>
+<?= asset_script_tag('assets/js/session-timeout.js', [
+    'data-timeout-seconds' => (string) $idleTimeoutSeconds,
+    'data-logout-url' => site_url('logout?timeout=1'),
+    'data-keep-alive-url' => site_url('session/keep-alive'),
+]) ?>
 </body>
 </html>
 

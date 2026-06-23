@@ -21,7 +21,7 @@ class SearchModel
 
     /**
      * FIRST (quick) Manage Records search: family HEADS only, matched by name/
-     * contact/relationship and sector. Applies the sector + date filters and
+     * contact/relationship and sector. Applies the sector filters and
      * resolves sector names. Frontend: the quick search box on Manage Records.
      */
     public function families(string $keyword = '', array $filters = [], int $limit = 25): array
@@ -77,10 +77,10 @@ class SearchModel
      * assistance they are tied to. Each row carries its head ("belongs to") name,
      * resolved sector names, and resolved service names.
      *
-     * Called from App\Libraries\DashboardPageBuilder::buildMemberListData() when
-     * the deep search box (deep_q) is used.
+     * Used by the server-side family DataTables endpoint when member-wide search
+     * is selected.
      */
-    public function allMembers(string $keyword = '', array $filters = [], int $limit = 50, int $offset = 0): array
+    public function allMembers(string $keyword = '', array $filters = [], int $limit = 50, int $offset = 0, string $orderKey = 'name', string $orderDirection = 'asc'): array
     {
         if (! $this->db->tableExists('member')) {
             return [];
@@ -89,12 +89,9 @@ class SearchModel
         $limit = max(1, $limit);
         $offset = max(0, $offset);
 
-        $rows = $this->allMembersBuilder($keyword, $filters)
-            ->orderBy('m.lastname', 'ASC')
-            ->orderBy('m.firstname', 'ASC')
-            ->limit($limit, $offset)
-            ->get()
-            ->getResultArray();
+        $builder = $this->allMembersBuilder($keyword, $filters);
+        $this->applyAllMembersOrder($builder, $orderKey, $orderDirection);
+        $rows = $builder->limit($limit, $offset)->get()->getResultArray();
 
         return $this->withServiceNames($this->withSectorNames($rows));
     }
@@ -114,7 +111,7 @@ class SearchModel
     /**
      * Shared query for allMembers()/countAllMembers(): every member (incl. non-heads),
      * left-joined to its head, with keyword across member fields + sector + service,
-     * plus the Manage Records filters (sectorID, date, active/archived status).
+     * plus the Manage Records filters (sectorID, barangay, active/archived status).
      */
     private function allMembersBuilder(string $keyword, array $filters): BaseBuilder
     {
@@ -172,9 +169,28 @@ class SearchModel
             $builder->groupEnd();
         }
 
-        $this->applyDateRange($builder, 'm.dt_created', $filters);
-
         return $builder;
+    }
+
+    /** Applies a whitelisted order to the all-members search query. */
+    private function applyAllMembersOrder(BaseBuilder $builder, string $orderKey, string $orderDirection): void
+    {
+        $direction = strtolower($orderDirection) === 'desc' ? 'DESC' : 'ASC';
+
+        if ($orderKey === 'address') {
+            $builder->orderBy('m.address', $direction);
+            return;
+        }
+
+        if ($orderKey === 'birthday') {
+            $builder->orderBy('m.birthday', $direction);
+            return;
+        }
+
+        $builder
+            ->orderBy('m.lastname', $direction)
+            ->orderBy('m.firstname', $direction)
+            ->orderBy('m.middlename', $direction);
     }
 
     /**

@@ -32,19 +32,6 @@ class DashboardController extends BaseController
     }
 
     /**
-     * GET `employee/family-entry`. Shows the employee family registration form,
-     * or its modal partial for AJAX fetches.
-     */
-    public function familyEntry(): string|RedirectResponse
-    {
-        if ($this->isPartialRequest()) {
-            return $this->renderFamilyFormPartial(['Developer', 'Admin', 'Employee']);
-        }
-
-        return $this->pageBuilder()->renderEmployeePage('family-entry');
-    }
-
-    /**
      * GET `employee/manage-records` (and `manage-families`). Renders the employee
      * records list page, or the list fragment for AJAX search/pagination.
      */

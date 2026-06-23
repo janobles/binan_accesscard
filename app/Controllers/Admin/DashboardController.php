@@ -66,19 +66,6 @@ class DashboardController extends BaseController
     }
 
     /**
-     * GET `admin/family-entry`. Shows the family registration form page, or its
-     * modal partial when fetched via AJAX from the dashboard.
-     */
-    public function familyEntry(): string|RedirectResponse
-    {
-        if ($this->isPartialRequest()) {
-            return $this->renderFamilyFormPartial(['Developer', 'Admin']);
-        }
-
-        return (new DashboardPageBuilder($this->request))->renderAdminPage('family-entry');
-    }
-
-    /**
      * GET `admin/manage-records` (and `manage-families`). Renders the family
      * records list page, or the list fragment for AJAX search/pagination.
      */
@@ -154,12 +141,11 @@ class DashboardController extends BaseController
 
     // ---------------------------------------------------------------------
     // AJAX partial rendering.
-    // The dashboard shell loads some sections (accounts, family form, audit,
+    // The dashboard shell loads some sections (accounts, audit,
     // sectors, services) into a modal/panel via fetch. When ?partial=1 or an
     // XHR header is present we return just the inner view fragment instead of
     // the whole page. Front-end loader: assets/js/dashboard/*-modal.js.
-    // isPartialRequest() and renderFamilyFormPartial() come from
-    // DashboardPartialsTrait.
+    // isPartialRequest() comes from DashboardPartialsTrait.
     // ---------------------------------------------------------------------
 
     /**

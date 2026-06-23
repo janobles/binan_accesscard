@@ -12,6 +12,8 @@
  * read-only family detail modal is served by FamilyController::viewFamily, which
  * permits the Viewer role. The formatDate/formatTime helpers come from the builder.
  */
+helper('asset');
+
 $user = $user ?? [];
 $activePage = $activePage ?? 'dashboard';
 $pageTitle = $pageTitle ?? ($activePage === 'dashboard' ? 'Dashboard' : ucwords(str_replace('-', ' ', $activePage)));
@@ -25,20 +27,6 @@ $sectors = $sectors ?? [];
 $services = $services ?? [];
 $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
 
-$cssVersion = static function (string $relativeCssPath): string {
-    $absolute = FCPATH . ltrim($relativeCssPath, '/');
-    $version  = is_file($absolute) ? (string) filemtime($absolute) : (string) time();
-
-    return base_url($relativeCssPath) . '?v=' . $version;
-};
-$jadeStyles = [
-    'css/sb-admin-adapter.css',
-    'css/managerecord.css',
-    'css/lookupmanagement.css',
-    'css/accounts.css',
-    'css/familymodal.css',
-    'css/session-timeout.css',
-];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -46,11 +34,8 @@ $jadeStyles = [
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= esc($pageTitle) ?> - Binan Access Card MIS</title>
-    <link href="<?= esc($cssVersion('assets/bootstrap/css/bootstrap.min.css'), 'attr') ?>" rel="stylesheet">
-    <link href="<?= esc($cssVersion('assets/bootstrap-icons/font/bootstrap-icons.min.css'), 'attr') ?>" rel="stylesheet">
-    <?php foreach ($jadeStyles as $stylePath): ?>
-    <link rel="stylesheet" href="<?= esc($cssVersion($stylePath), 'attr') ?>">
-    <?php endforeach; ?>
+    <?= asset_tags('dashboard-core-css') ?>
+    <?= asset_tags('viewer-dashboard-css') ?>
 </head>
 <body>
 <div id="wrapper">
@@ -84,7 +69,7 @@ $jadeStyles = [
         <div id="content">
             <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow-sm">
                 <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle me-3" type="button" aria-label="Toggle navigation menu" aria-controls="dashboard-sidebar" aria-expanded="false">
-                    <i class="bi bi-list" aria-hidden="true"></i>
+                    <span>Menu</span>
                 </button>
                 <div class="topbar-title">
                     <div>
@@ -185,14 +170,13 @@ $jadeStyles = [
     </div>
 </div>
 
-<script src="<?= base_url('assets/jquery/jquery-3.7.1.min.js') ?>?v=<?= filemtime(FCPATH . 'assets/jquery/jquery-3.7.1.min.js') ?>"></script>
-<script src="<?= base_url('assets/bootstrap/js/bootstrap.bundle.min.js') ?>?v=<?= filemtime(FCPATH . 'assets/bootstrap/js/bootstrap.bundle.min.js') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/view-interactions.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/view-interactions.js') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/family-list.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-list.js') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/lookup-search.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/lookup-search.js') ?>"></script>
-<script src="<?= base_url('assets/js/session-timeout.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/session-timeout.js') ?>" data-timeout-seconds="<?= esc((string) $idleTimeoutSeconds) ?>" data-logout-url="<?= site_url('logout?timeout=1') ?>" data-home-url="<?= site_url('/') ?>" data-keep-alive-url="<?= site_url('session/keep-alive') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/dashboard-modal-loader.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/dashboard-modal-loader.js') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/manage-family-modal.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/manage-family-modal.js') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/account-form-modal.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/account-form-modal.js') ?>"></script>
+<?= asset_tags('dashboard-vendor-js') ?>
+<?= asset_tags('viewer-dashboard-js') ?>
+<?= asset_script_tag('assets/js/session-timeout.js', [
+    'data-timeout-seconds' => (string) $idleTimeoutSeconds,
+    'data-logout-url' => site_url('logout?timeout=1'),
+    'data-home-url' => site_url('/'),
+    'data-keep-alive-url' => site_url('session/keep-alive'),
+]) ?>
 </body>
 </html>

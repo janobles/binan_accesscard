@@ -1,5 +1,4 @@
-/* Shared Bootstrap modal window used by record, lookup, account, and audit fragments.
-   Family form internals live in familyform.css, which Family/form.php loads with the form. */
+/* Shared Bootstrap modal window used by record, lookup, account, and audit fragments. */
 
 .floating-family-modal {
     --modal-window-gap: clamp(0.5rem, 2vw, 1.5rem);
@@ -36,6 +35,116 @@
     flex: 0 0 auto;
     padding: 0.75rem 1rem;
     border-top-color: #d7e3df;
+}
+
+.family-entry-form {
+    padding: 1.25rem;
+    color: #10251f;
+}
+
+.family-entry-header {
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #d7e3df;
+    margin-bottom: 1rem;
+}
+
+.family-entry-kicker {
+    color: #10251f;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.family-entry-title {
+    color: #000000;
+    font-size: 1.25rem;
+    font-weight: 800;
+}
+
+.family-entry-step-toolbar {
+    margin-bottom: 1rem;
+}
+
+.family-entry-step-toolbar .btn {
+    min-height: 3rem;
+    border-color: #b8d4f3;
+    background: #eef6ff;
+    color: #6a7c8d;
+    font-weight: 800;
+}
+
+.family-entry-step-toolbar .btn.active {
+    border-bottom-width: 0.2rem;
+    border-bottom-color: #0d6efd;
+    background: #e9f4ff;
+    color: #000000;
+}
+
+.family-entry-section {
+    padding: 1rem 0 1.25rem;
+    border-top: 1px solid #d7e3df;
+}
+
+.family-entry-section:first-child {
+    border-top: 0;
+}
+
+.family-entry-section-header {
+    margin-bottom: 1.25rem;
+}
+
+.family-entry-section-header h3 {
+    margin: 0;
+    color: #000000;
+    font-size: 1.15rem;
+    font-weight: 800;
+}
+
+.family-entry-section-body .form-label {
+    color: #000000;
+    font-size: 0.78rem;
+    font-weight: 800;
+}
+
+.family-entry-section-body .form-control,
+.family-entry-section-body .form-select {
+    min-height: 2.45rem;
+    border-color: #b9d5f5;
+    border-radius: 0.35rem;
+    font-size: 0.88rem;
+}
+
+.family-entry-option-panel {
+    max-height: 22rem;
+    overflow: auto;
+    padding: 1rem;
+    border: 1px solid #d7e3df;
+    border-radius: 0.45rem;
+    background: #ffffff;
+}
+
+.family-entry-column-title {
+    margin-bottom: 0.85rem;
+    color: #41546a;
+    font-size: 1rem;
+    font-weight: 800;
+}
+
+.family-entry-actions {
+    justify-content: flex-end;
+    padding-top: 1rem;
+    border-top: 1px solid #d7e3df;
+}
+
+.family-entry-actions .btn-group {
+    min-width: min(26rem, 100%);
+}
+
+.family-entry-actions .btn {
+    min-width: 6.5rem;
+    min-height: 2.45rem;
+    font-size: 0.86rem;
+    font-weight: 800;
 }
 
 .family-draft-dialog-backdrop {

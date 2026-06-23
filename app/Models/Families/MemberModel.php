@@ -62,8 +62,8 @@ class MemberModel extends Model
     }
 
     /**
-     * Confirms every table the family-save flow needs exists. FamilyController::store()
-     * calls this up front and aborts with a clear message if the schema is incomplete.
+     * Confirms every table the family-save flow needs exists. Kept for the future
+     * Bootstrap family form rebuild.
      */
     public function hasRequiredFamilyTables(): bool
     {
@@ -76,8 +76,8 @@ class MemberModel extends Model
         return true;
     }
 
-    // Transaction wrappers used by FamilyController::store() so the head, members,
-    // service links, and audit row all commit together or roll back as one unit.
+    // Transaction wrappers kept for the future family save flow so the head,
+    // members, service links, and audit row all commit together or roll back as one.
 
     /** Opens a managed DB transaction. */
     public function beginTransaction(): void
@@ -182,7 +182,7 @@ class MemberModel extends Model
 
     /**
      * Inserts a head-of-family row, where headID points to its own memberID.
-     * Called by FamilyController::store(); returns the new memberID or false.
+     * Kept for the future family form rebuild; returns the new memberID or false.
      */
     public function createHead(array $data): int|false
     {
@@ -200,8 +200,7 @@ class MemberModel extends Model
 
     /**
      * Inserts a relative under an existing head (validating the head exists).
-     * Called per member by FamilyController::store(); returns the new memberID
-     * or false.
+     * Kept for the future family form rebuild; returns the new memberID or false.
      */
     public function addFamilyMember(int $headId, array $data): int|false
     {
@@ -267,7 +266,7 @@ class MemberModel extends Model
     // FIRST (quick) search bar of the Manage Records tab. Lists family HEADS only.
     // $filters carries the Manage Records filter controls (sectorID + date); see
     // App\Libraries\DashboardPageBuilder::buildMemberListData() which supplies them.
-    public function searchFamilies(?string $keyword = null, int $limit = 50, int $offset = 0, string $visibility = 'all', array $filters = []): array
+    public function searchFamilies(?string $keyword = null, int $limit = 50, int $offset = 0, string $visibility = 'all', array $filters = [], string $orderKey = 'id', string $orderDirection = 'desc'): array
     {
         if (! $this->hasTable()) {
             return [];
@@ -276,16 +275,16 @@ class MemberModel extends Model
         $limit = max(1, $limit);
         $offset = max(0, $offset);
 
-        $builder = $this->familySearchBuilder($keyword, $visibility, $filters)
-            ->orderBy('member.memberID', 'DESC')
-            ->limit($limit, $offset);
+        $builder = $this->familySearchBuilder($keyword, $visibility, $filters);
+        $this->applyFamilyOrder($builder, $orderKey, $orderDirection);
+        $builder->limit($limit, $offset);
 
         return $this->withSectorNames($builder->get()->getResultArray());
     }
 
     /**
-     * Total count for the same query as searchFamilies(), used to drive the Manage
-     * Records pagination controls on the frontend.
+     * Total count for the same query as searchFamilies(), used by server-side
+     * DataTables pagination.
      */
     public function countSearchFamilies(?string $keyword = null, string $visibility = 'all', array $filters = []): int
     {
@@ -297,9 +296,7 @@ class MemberModel extends Model
     }
 
     // Builds the head-only records query. $filters (optional) applies the Manage Records
-    // filter controls: 'sectorID' (exact match inside the JSON array), 'barangay',
-    // and 'date'
-    // (single-day match on member.dt_created). Empty $filters = original behavior unchanged.
+    // filter controls: 'sectorID' (exact match inside the JSON array) and 'barangay'.
     private function familySearchBuilder(?string $keyword = null, string $visibility = 'all', array $filters = [])
     {
         if ($visibility === '1') {
@@ -319,6 +316,32 @@ class MemberModel extends Model
         $this->applyRecordFilters($builder, $filters);
 
         return $builder;
+    }
+
+    /** Applies a whitelisted order to the head-only family query. */
+    private function applyFamilyOrder($builder, string $orderKey, string $orderDirection): void
+    {
+        $direction = strtolower($orderDirection) === 'desc' ? 'DESC' : 'ASC';
+
+        if ($orderKey === 'address' && $this->memberFieldExists('address')) {
+            $builder->orderBy('member.address', $direction);
+            return;
+        }
+
+        if ($orderKey === 'birthday') {
+            $builder->orderBy('member.birthday', $direction);
+            return;
+        }
+
+        if ($orderKey === 'name') {
+            $builder
+                ->orderBy('member.lastname', $direction)
+                ->orderBy('member.firstname', $direction)
+                ->orderBy('member.middlename', $direction);
+            return;
+        }
+
+        $builder->orderBy('member.memberID', $direction);
     }
 
     /**
@@ -392,13 +415,6 @@ class MemberModel extends Model
             $builder->whereIn('member.barangay', $barangays);
         }
 
-        $date = trim((string) ($filters['date'] ?? ''));
-
-        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) === 1) {
-            $builder
-                ->where('member.dt_created >=', $date . ' 00:00:00')
-                ->where('member.dt_created <=', $date . ' 23:59:59');
-        }
     }
 
     private function normalizeFilterList(mixed $value, bool $integers = true): array

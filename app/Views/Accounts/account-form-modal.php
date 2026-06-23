@@ -119,7 +119,6 @@ $value = static function (array $details, string $key, bool $isEdit): string {
                                     formmethod="post"
                                     formnovalidate
                                     onclick="return confirm('Generate a new random password for this account? The current password will stop working.');">
-                                <i class="bi bi-key" aria-hidden="true"></i>
                                 <span>Reset Password</span>
                             </button>
                             <small class="text-muted">Generates a new password for this account.</small>

@@ -18,13 +18,6 @@ $auditActionOptions = $auditActionOptions ?? [];
 $hasSearchFilters = $hasSearchFilters ?? false;
 $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
 
-$cssVersion = static function (string $relativeCssPath): string {
-    $absolute = FCPATH . ltrim($relativeCssPath, '/');
-    $version = is_file($absolute) ? (string) filemtime($absolute) : (string) time();
-
-    return base_url($relativeCssPath) . '?v=' . $version;
-};
-
 $jadeStyles = [
     'css/sb-admin-adapter.css',
     'css/managerecord.css',
@@ -40,10 +33,10 @@ $jadeStyles = [
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= esc($pageTitle) ?> - Binan Access Card MIS</title>
-    <link href="<?= esc($cssVersion('assets/bootstrap/css/bootstrap.min.css'), 'attr') ?>" rel="stylesheet">
-    <link href="<?= esc($cssVersion('assets/bootstrap-icons/font/bootstrap-icons.min.css'), 'attr') ?>" rel="stylesheet">
+    <link href="<?= esc(asset_url('assets/bootstrap/css/bootstrap.min.css'), 'attr') ?>" rel="stylesheet">
+    <link href="<?= esc(asset_url('assets/bootstrap-icons/font/bootstrap-icons.min.css'), 'attr') ?>" rel="stylesheet">
     <?php foreach ($jadeStyles as $stylePath): ?>
-    <link rel="stylesheet" href="<?= esc($cssVersion($stylePath), 'attr') ?>">
+    <link rel="stylesheet" href="<?= esc(asset_url($stylePath), 'attr') ?>">
     <?php endforeach; ?>
 </head>
 <body>
@@ -294,17 +287,17 @@ $jadeStyles = [
 
 <?= view('Family/action-confirm-modal') ?>
 
-<script src="<?= base_url('assets/jquery/jquery-3.7.1.min.js') ?>?v=<?= filemtime(FCPATH . 'assets/jquery/jquery-3.7.1.min.js') ?>"></script>
-<script src="<?= base_url('assets/bootstrap/js/bootstrap.bundle.min.js') ?>?v=<?= filemtime(FCPATH . 'assets/bootstrap/js/bootstrap.bundle.min.js') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/view-interactions.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/view-interactions.js') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/family-form-ui.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form-ui.js') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/family-form.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-form.js') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/family-list.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/family-list.js') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/audit-filters.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/audit-filters.js') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/lookup-search.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/lookup-search.js') ?>"></script>
-<script src="<?= base_url('assets/js/session-timeout.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/session-timeout.js') ?>" data-timeout-seconds="<?= esc((string) $idleTimeoutSeconds) ?>" data-logout-url="<?= site_url('logout?timeout=1') ?>" data-home-url="<?= site_url('/') ?>" data-keep-alive-url="<?= site_url('session/keep-alive') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/dashboard-modal-loader.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/dashboard-modal-loader.js') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/manage-family-modal.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/manage-family-modal.js') ?>"></script>
-<script src="<?= base_url('assets/js/dashboard/account-form-modal.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/dashboard/account-form-modal.js') ?>"></script>
+<script src="<?= esc(asset_url('assets/jquery/jquery-3.7.1.min.js'), 'attr') ?>"></script>
+<script src="<?= esc(asset_url('assets/bootstrap/js/bootstrap.bundle.min.js'), 'attr') ?>"></script>
+<script src="<?= esc(asset_url('assets/js/dashboard/view-interactions.js'), 'attr') ?>"></script>
+<script src="<?= esc(asset_url('assets/js/dashboard/family-form-ui.js'), 'attr') ?>"></script>
+<script src="<?= esc(asset_url('assets/js/dashboard/family-form.js'), 'attr') ?>"></script>
+<script src="<?= esc(asset_url('assets/js/dashboard/family-list.js'), 'attr') ?>"></script>
+<script src="<?= esc(asset_url('assets/js/dashboard/audit-filters.js'), 'attr') ?>"></script>
+<script src="<?= esc(asset_url('assets/js/dashboard/lookup-search.js'), 'attr') ?>"></script>
+<script src="<?= esc(asset_url('assets/js/session-timeout.js'), 'attr') ?>" data-timeout-seconds="<?= esc((string) $idleTimeoutSeconds) ?>" data-logout-url="<?= site_url('logout?timeout=1') ?>" data-home-url="<?= site_url('/') ?>" data-keep-alive-url="<?= site_url('session/keep-alive') ?>"></script>
+<script src="<?= esc(asset_url('assets/js/dashboard/dashboard-modal-loader.js'), 'attr') ?>"></script>
+<script src="<?= esc(asset_url('assets/js/dashboard/manage-family-modal.js'), 'attr') ?>"></script>
+<script src="<?= esc(asset_url('assets/js/dashboard/account-form-modal.js'), 'attr') ?>"></script>
 </body>
 </html>

@@ -4,8 +4,8 @@
  * css/login.css). The POST target, CSRF field, input names, old() repopulation,
  * and login.js (idle-timer reset) are melbranch's and unchanged.
  */
-$bootstrapCss = base_url('assets/bootstrap/css/bootstrap.min.css') . '?v=' . (is_file(FCPATH . 'assets/bootstrap/css/bootstrap.min.css') ? filemtime(FCPATH . 'assets/bootstrap/css/bootstrap.min.css') : time());
-$loginCss = base_url('css/login.css') . '?v=' . (is_file(FCPATH . 'css/login.css') ? filemtime(FCPATH . 'css/login.css') : time());
+$bootstrapCss = asset_url('assets/bootstrap/css/bootstrap.min.css');
+$loginCss = asset_url('css/login.css');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -68,6 +68,6 @@ $loginCss = base_url('css/login.css') . '?v=' . (is_file(FCPATH . 'css/login.css
             </div>
         </section>
     </main>
-    <script src="<?= base_url('assets/js/login.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/login.js') ?>"></script>
+    <script src="<?= esc(asset_url('assets/js/login.js'), 'attr') ?>"></script>
 </body>
 </html>

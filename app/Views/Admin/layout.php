@@ -52,12 +52,6 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
  * SB Admin-style shell: the layout keeps the existing data, routes, modal
  * target, and page switch while using a Bootstrap 5-safe responsive frame.
  */
-$cssVersion = static function (string $relativeCssPath): string {
-    $absolute = FCPATH . ltrim($relativeCssPath, '/');
-    $version  = is_file($absolute) ? (string) filemtime($absolute) : (string) time();
-
-    return base_url($relativeCssPath) . '?v=' . $version;
-};
 $jadeStyles = [
     'css/sb-admin-adapter.css',
     'css/managerecord.css',
@@ -74,10 +68,10 @@ $jadeStyles = [
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= esc($pageTitle) ?> - Binan Access Card MIS</title>
-    <link href="<?= esc($cssVersion('assets/bootstrap/css/bootstrap.min.css'), 'attr') ?>" rel="stylesheet">
-    <link href="<?= esc($cssVersion('assets/bootstrap-icons/font/bootstrap-icons.min.css'), 'attr') ?>" rel="stylesheet">
+    <link href="<?= esc(asset_url('assets/bootstrap/css/bootstrap.min.css'), 'attr') ?>" rel="stylesheet">
+    <link href="<?= esc(asset_url('assets/bootstrap-icons/font/bootstrap-icons.min.css'), 'attr') ?>" rel="stylesheet">
     <?php foreach ($jadeStyles as $stylePath): ?>
-    <link rel="stylesheet" href="<?= esc($cssVersion($stylePath), 'attr') ?>">
+    <link rel="stylesheet" href="<?= esc(asset_url($stylePath), 'attr') ?>">
     <?php endforeach; ?>
 </head>
 <body>
@@ -343,26 +337,9 @@ $jadeStyles = [
     </div>
 </div>
 
-<script src="<?= base_url('assets/jquery/jquery-3.7.1.min.js') ?>?v=<?= filemtime(FCPATH . 'assets/jquery/jquery-3.7.1.min.js') ?>"></script>
-<script src="<?= base_url('assets/bootstrap/js/bootstrap.bundle.min.js') ?>?v=<?= filemtime(FCPATH . 'assets/bootstrap/js/bootstrap.bundle.min.js') ?>"></script>
+<script src="<?= esc(asset_url('assets/jquery/jquery-3.7.1.min.js'), 'attr') ?>"></script>
+<script src="<?= esc(asset_url('assets/bootstrap/js/bootstrap.bundle.min.js'), 'attr') ?>"></script>
 <?php
-$versionedAssetUrl = static function (string $relativePath): ?string {
-    $fullPath = FCPATH . ltrim($relativePath, '/');
-
-    if (! is_file($fullPath)) {
-        return null;
-    }
-
-    $url = base_url($relativePath);
-    $mtime = filemtime($fullPath);
-
-    if ($mtime !== false) {
-        $url .= '?v=' . $mtime;
-    }
-
-    return $url;
-};
-
 $dashboardScripts = [
     'assets/js/dashboard/view-interactions.js',
     'assets/js/dashboard/family-form-ui.js',
@@ -382,17 +359,11 @@ $dashboardScripts = [
     'assets/js/dashboard/audit-detail-modal.js',
 ];
 
-$sessionTimeoutScript = $versionedAssetUrl('assets/js/session-timeout.js');
 ?>
 <?php foreach ($dashboardScripts as $scriptPath): ?>
-    <?php $scriptUrl = $versionedAssetUrl($scriptPath); ?>
-    <?php if ($scriptUrl !== null): ?>
-<script src="<?= esc($scriptUrl, 'attr') ?>"></script>
-    <?php endif; ?>
+<script src="<?= esc(asset_url($scriptPath), 'attr') ?>"></script>
 <?php endforeach; ?>
-<?php if ($sessionTimeoutScript !== null): ?>
-<script src="<?= esc($sessionTimeoutScript, 'attr') ?>" data-timeout-seconds="<?= esc((string) $idleTimeoutSeconds) ?>" data-logout-url="<?= site_url('logout?timeout=1') ?>" data-keep-alive-url="<?= site_url('session/keep-alive') ?>"></script>
-<?php endif; ?>
+<script src="<?= esc(asset_url('assets/js/session-timeout.js'), 'attr') ?>" data-timeout-seconds="<?= esc((string) $idleTimeoutSeconds) ?>" data-logout-url="<?= site_url('logout?timeout=1') ?>" data-keep-alive-url="<?= site_url('session/keep-alive') ?>"></script>
 </body>
 </html>
 

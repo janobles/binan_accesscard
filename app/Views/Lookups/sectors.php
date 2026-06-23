@@ -101,8 +101,8 @@ $sectorClearUrl = static function () use ($listRoute, $status, $perPage): string
 		<table class="table table-sm manage-record-table align-middle">
 			<thead>
 				<tr>
-					<th>Shortcode</th>
 					<th>Name</th>
+					<th>Shortcode</th>
 					<th>Description</th>
 					<th>Status</th>
 					<?php if ($canManage): ?><th class="text-end">Actions</th><?php endif; ?>
@@ -113,8 +113,8 @@ $sectorClearUrl = static function () use ($listRoute, $status, $perPage): string
 					<?php $sectorId = (int) ($sector['sectorID'] ?? 0); ?>
 					<?php $isArchived = trim((string) ($sector['dt_deleted'] ?? '')) !== ''; ?>
 					<tr data-row-archived="<?= $isArchived ? '1' : '0' ?>">
-						<td><span class="badge bg-light text-dark border"><?= esc((string) ($sector['shortcode'] ?? '')) ?></span></td>
 						<td><span class="sector-name"><?= esc((string) ($sector['name'] ?? '')) ?></span></td>
+						<td><span class="badge bg-light text-dark border"><?= esc((string) ($sector['shortcode'] ?? '')) ?></span></td>
 						<td><span class="text-trim d-inline-block"><?= esc((string) ($sector['description'] ?? '')) ?></span></td>
 						<td><span class="sector-status-badge <?= $isArchived ? 'sector-status-archived' : 'sector-status-active' ?>"><?= $isArchived ? 'Archived' : 'Active' ?></span></td>
 						<?php if ($canManage): ?><td class="text-end">

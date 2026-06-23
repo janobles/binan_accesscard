@@ -94,8 +94,8 @@ $categoryClearUrl = static function () use ($listRoute, $status, $perPage): stri
 		<table class="table table-sm manage-record-table align-middle">
 			<thead>
 				<tr>
-					<th>Code</th>
 					<th>Name</th>
+					<th>Code</th>
 					<th class="text-end">Actions</th>
 				</tr>
 			</thead>
@@ -106,8 +106,8 @@ $categoryClearUrl = static function () use ($listRoute, $status, $perPage): stri
 					$isArchived = trim((string) ($category['dt_deleted'] ?? '')) !== '';
 					?>
 					<tr data-row-archived="<?= $isArchived ? '1' : '0' ?>">
-						<td><span class="badge bg-light text-dark border"><?= esc((string) ($category['code'] ?? '')) ?></span></td>
 						<td><span class="sector-name"><?= esc((string) ($category['name'] ?? '')) ?></span></td>
+						<td><span class="badge bg-light text-dark border"><?= esc((string) ($category['code'] ?? '')) ?></span></td>
 						<td class="text-end">
 							<div class="dropdown actions-menu">
 								<button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false" aria-label="Category actions">

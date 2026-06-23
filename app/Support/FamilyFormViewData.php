@@ -26,6 +26,7 @@ class FamilyFormViewData
         $sectorOptions = $data['sectorOptions'] ?? ($formOptions['sectors'] ?? []);
         $sectorCatalog = self::arrayValue($data['sectorCatalog'] ?? []);
         $sectorCategoryLabels = self::arrayValue($data['sectorCategoryLabels'] ?? []);
+        $barangayOptions = $data['barangayOptions'] ?? ($formOptions['barangays'] ?? []);
         $sexOptions = $data['sexOptions'] ?? ($formOptions['sexes'] ?? []);
         $suffixOptions = $data['suffixOptions'] ?? ($formOptions['suffixes'] ?? []);
         $civilOptions = $data['civilOptions'] ?? ($formOptions['civil_statuses'] ?? []);
@@ -55,6 +56,7 @@ class FamilyFormViewData
             'existingMembers' => $existingMembers,
         ];
         $fieldViewData = compact(
+            'barangayOptions',
             'civilOptions',
             'educationOptions',
             'familyRecord',
@@ -70,6 +72,7 @@ class FamilyFormViewData
         );
 
         return compact(
+            'barangayOptions',
             'civilOptions',
             'educationOptions',
             'existingMembers',
@@ -106,6 +109,7 @@ class FamilyFormViewData
             'sexes' => [],
             'suffixes' => [],
             'civil_statuses' => [],
+            'barangays' => [],
             'relationships' => [],
             'education_levels' => [],
             'job_options' => [],

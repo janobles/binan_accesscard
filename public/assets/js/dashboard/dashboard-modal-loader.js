@@ -93,6 +93,7 @@
                 $title.text(title);
             }
 
+            $modalEl.removeClass('is-family-entry-modal');
             $body.html(config.loadingMarkup || '<div class="family-modal-loading" role="status" aria-live="polite"><div class="spinner-border text-primary" aria-hidden="true"></div><span>Loading...</span></div>');
             const modalInstance = getModalInstance($modalEl);
 

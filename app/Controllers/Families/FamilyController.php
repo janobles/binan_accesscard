@@ -116,12 +116,112 @@ class FamilyController extends BaseController
         }
 
         $viewData = (new FamilyFormOptionsModel())->getViewData();
+        $isUpdateMode = strtolower(trim((string) $this->request->getGet('mode'))) === 'update';
+        $headId = max(0, (int) $this->request->getGet('id'));
+
+        if ($isUpdateMode) {
+            $updateData = $this->familyModalUpdateData($headId, (array) ($viewData['barangayOptions'] ?? []));
+
+            if ($updateData === null) {
+                return $this->recordMissing();
+            }
+
+            $viewData = array_merge($viewData, $updateData);
+        }
+
         $viewData['action'] = '#';
-        $viewData['fieldPrefix'] = 'family-add';
+        $viewData['fieldPrefix'] = $isUpdateMode ? 'family-update' : 'family-add';
+        $viewData['modalTitle'] = $isUpdateMode ? 'Update Family Record' : 'New Family Record';
+        $viewData['modalMode'] = $isUpdateMode ? 'update' : 'create';
+        $viewData['submitLabel'] = $isUpdateMode ? 'Update' : 'Save';
         $viewData['saveDisabled'] = true;
-        $viewData['saveDisabledMessage'] = 'Saving is not connected yet. The Add frontend is ready for the Bootstrap rebuild, but the create POST route is still disabled.';
+        $viewData['saveDisabledMessage'] = $isUpdateMode
+            ? 'Saving is not connected yet. The Update frontend is ready for the Bootstrap rebuild, but the update POST route is still disabled.'
+            : 'Saving is not connected yet. The Add frontend is ready for the Bootstrap rebuild, but the create POST route is still disabled.';
 
         return view('Family/family-modal', $viewData);
+    }
+
+    /** Returns the existing family-head values used to prefill the Update modal. */
+    private function familyModalUpdateData(int $headId, array $barangayOptions = []): ?array
+    {
+        if ($headId <= 0) {
+            return null;
+        }
+
+        $rows = (new MemberModel())->getFamilyMembers($headId, 'all');
+        $head = null;
+
+        foreach ($rows as $row) {
+            if ((int) ($row['memberID'] ?? 0) === $headId) {
+                $head = $row;
+                break;
+            }
+        }
+
+        if ($head === null) {
+            return null;
+        }
+
+        $serviceIdsByMember = (new MemberServiceModel())->getServiceIdsByMemberIds([$headId]);
+        [$address, $barangay] = $this->splitAddressBarangayForModal(
+            (string) ($head['address'] ?? ''),
+            (string) ($head['barangay'] ?? ''),
+            $barangayOptions
+        );
+
+        return [
+            'headId' => $headId,
+            'formValues' => [
+                'head_lastname' => (string) ($head['lastname'] ?? ''),
+                'head_firstname' => (string) ($head['firstname'] ?? ''),
+                'head_middlename' => (string) ($head['middlename'] ?? ''),
+                'head_suffix' => (string) ($head['suffix'] ?? ''),
+                'head_birthday' => (string) ($head['birthday'] ?? ''),
+                'head_sex' => (string) ($head['sex'] ?? ''),
+                'head_civilstatus' => (string) ($head['civilstatus'] ?? ''),
+                'head_contactnumber' => (string) ($head['contactnumber'] ?? ''),
+                'head_religion' => (string) ($head['religion'] ?? ''),
+                'head_education' => (string) ($head['education'] ?? ''),
+                'head_job' => (string) ($head['job'] ?? ''),
+                'head_salary' => (string) ($head['Salary'] ?? ''),
+                'head_address' => $address,
+                'head_barangay' => $barangay,
+            ],
+            'selectedSectorIds' => SectorIds::normalize($head['sectorID'] ?? null),
+            'selectedServiceIds' => array_map('strval', $serviceIdsByMember[$headId] ?? []),
+        ];
+    }
+
+    /**
+     * Older records may store barangay as the trailing part of the combined
+     * address. Split it for the Bootstrap modal so the Barangay dropdown is
+     * preselected while the Address field keeps only the street/subdivision text.
+     *
+     * @return array{0: string, 1: string}
+     */
+    private function splitAddressBarangayForModal(string $address, string $barangay, array $barangayOptions): array
+    {
+        $address = trim($address);
+        $barangay = trim($barangay);
+        $matches = array_values(array_filter(array_map('strval', $barangayOptions), static fn (string $option): bool => trim($option) !== ''));
+
+        usort($matches, static fn (string $a, string $b): int => strlen($b) <=> strlen($a));
+
+        foreach ($matches as $option) {
+            $option = trim($option);
+            $suffix = ', ' . $option;
+
+            if ($barangay === '' && str_ends_with(mb_strtolower($address), mb_strtolower($suffix))) {
+                return [trim(mb_substr($address, 0, -mb_strlen($suffix))), $option];
+            }
+
+            if ($barangay !== '' && strcasecmp($barangay, $option) === 0 && str_ends_with(mb_strtolower($address), mb_strtolower($suffix))) {
+                return [trim(mb_substr($address, 0, -mb_strlen($suffix))), $barangay];
+            }
+        }
+
+        return [$address, $barangay];
     }
 
     /**
@@ -399,8 +499,11 @@ class FamilyController extends BaseController
 
         if (! $archived) {
             $viewUrl = site_url($routeBase . '/view/' . $headId . '?partial=1');
+            $updateUrl = site_url($routeBase . '/create?partial=1&mode=update&id=' . $headId);
             $items .= '<button type="button" class="dropdown-item js-open-family-view-modal" data-modal-url="'
                 . esc($viewUrl, 'attr') . '" data-modal-title="View Record">VIEW</button>';
+            $items .= '<button type="button" class="dropdown-item js-open-family-add-modal" data-modal-url="'
+                . esc($updateUrl, 'attr') . '" data-modal-title="Update Family Record">UPDATE</button>';
         }
 
         if ($canArchive) {

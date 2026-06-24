@@ -1,9 +1,9 @@
 /* Shared Bootstrap modal window used by record, lookup, account, and audit fragments. */
 
 .floating-family-modal {
-    --modal-window-gap: clamp(0.5rem, 2vw, 1.5rem);
-    --modal-window-width: min(86rem, calc(100vw - (var(--modal-window-gap) * 2)));
-    --modal-window-height: min(54rem, calc(100dvh - (var(--modal-window-gap) * 2)));
+    --modal-window-gap: clamp(0.5rem, 2vw, 1.25rem);
+    --modal-window-width: min(76rem, calc(100vw - (var(--modal-window-gap) * 2)));
+    --modal-window-height: min(47rem, calc(100dvh - (var(--modal-window-gap) * 2)));
 }
 
 .floating-family-modal .modal-dialog {
@@ -37,114 +37,355 @@
     border-top-color: #d7e3df;
 }
 
+.floating-family-modal.is-family-entry-modal > .modal-dialog > .modal-content > .modal-footer {
+    display: none;
+}
+
+.floating-family-modal.is-family-entry-modal .family-entry-header {
+    display: none;
+}
+
 .family-entry-form {
-    padding: 1.25rem;
-    color: #10251f;
+    display: flex;
+    min-height: 100%;
+    flex-direction: column;
+    color: #001f3f;
+    background: #ffffff;
+}
+
+.family-entry-form form {
+    display: flex;
+    min-height: 0;
+    flex: 1 1 auto;
+    flex-direction: column;
 }
 
 .family-entry-header {
-    padding-bottom: 1rem;
-    border-bottom: 1px solid #d7e3df;
-    margin-bottom: 1rem;
+    flex: 0 0 auto;
+    padding: 0.9rem 1rem 0.7rem;
+    border-bottom: 1px solid #cfe0f5;
 }
 
 .family-entry-kicker {
-    color: #10251f;
-    font-size: 0.72rem;
+    margin: 0 0 0.25rem;
+    color: #000000;
+    font-size: 0.78rem;
     font-weight: 800;
     text-transform: uppercase;
 }
 
 .family-entry-title {
+    margin: 0;
     color: #000000;
-    font-size: 1.25rem;
+    font-size: 1.1rem;
     font-weight: 800;
 }
 
-.family-entry-step-toolbar {
-    margin-bottom: 1rem;
+.family-entry-steps {
+    flex: 0 0 auto;
+    padding: 0.65rem 1rem 0.5rem;
 }
 
-.family-entry-step-toolbar .btn {
-    min-height: 3rem;
-    border-color: #b8d4f3;
-    background: #eef6ff;
-    color: #6a7c8d;
+.family-entry-steps .btn {
+    min-height: 3.35rem;
+    border-color: #b9d7f7;
+    background: #eef7ff;
+    color: #a7b5c4;
+    font-size: 0.84rem;
     font-weight: 800;
 }
 
-.family-entry-step-toolbar .btn.active {
-    border-bottom-width: 0.2rem;
-    border-bottom-color: #0d6efd;
-    background: #e9f4ff;
+.family-entry-steps .btn.active {
+    border-bottom: 0.2rem solid #1976d2;
+    background: #eaf6ff;
     color: #000000;
+}
+
+.family-step-number {
+    display: block;
+    width: 1.35rem;
+    height: 1.35rem;
+    margin: 0 auto 0.2rem;
+    border-radius: 50%;
+    background: #dcecf8;
+    color: #243b53;
+    font-size: 0.72rem;
+    line-height: 1.35rem;
+}
+
+.family-entry-steps .btn.active .family-step-number {
+    background: #168a73;
+    color: #ffffff;
+}
+
+.family-entry-content {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    padding: 0 1rem 0.8rem;
 }
 
 .family-entry-section {
-    padding: 1rem 0 1.25rem;
-    border-top: 1px solid #d7e3df;
+    padding: 0.8rem 0;
+    border-top: 1px solid #cfe0f5;
 }
 
 .family-entry-section:first-child {
     border-top: 0;
 }
 
-.family-entry-section-header {
-    margin-bottom: 1.25rem;
-}
-
-.family-entry-section-header h3 {
-    margin: 0;
+.family-section-title,
+.family-summary-title {
+    margin: 0 0 1rem;
     color: #000000;
-    font-size: 1.15rem;
+    font-size: 1.08rem;
     font-weight: 800;
 }
 
-.family-entry-section-body .form-label {
-    color: #000000;
-    font-size: 0.78rem;
+.family-entry-form .form-label,
+.family-summary-label {
+    display: block;
+    margin-bottom: 0.35rem;
+    color: #294b73;
+    font-size: 0.72rem;
     font-weight: 800;
 }
 
-.family-entry-section-body .form-control,
-.family-entry-section-body .form-select {
+.family-entry-form input:not([type="checkbox"]):not([type="radio"]),
+.family-entry-form select,
+.family-entry-form textarea,
+.family-summary-value,
+.family-summary-list {
+    display: block;
+    width: 100%;
     min-height: 2.45rem;
-    border-color: #b9d5f5;
-    border-radius: 0.35rem;
-    font-size: 0.88rem;
-}
-
-.family-entry-option-panel {
-    max-height: 22rem;
-    overflow: auto;
-    padding: 1rem;
-    border: 1px solid #d7e3df;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #b9d7f7;
     border-radius: 0.45rem;
-    background: #ffffff;
+    background-color: #fbfdff;
+    color: #001f3f;
+    font-size: 0.84rem;
 }
 
-.family-entry-column-title {
-    margin-bottom: 0.85rem;
-    color: #41546a;
-    font-size: 1rem;
+.family-entry-form input:not([type="checkbox"]):not([type="radio"]):focus,
+.family-entry-form select:focus,
+.family-entry-form textarea:focus {
+    border-color: #86b7fe;
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.16);
+}
+
+.family-entry-form .is-invalid {
+    border-color: #dc3545 !important;
+}
+
+.family-field-error {
+    margin-top: 0.28rem;
+    color: #dc3545;
+    font-size: 0.74rem;
+    font-weight: 700;
+}
+
+.family-entry-form select {
+    cursor: pointer;
+}
+
+.family-summary-value,
+.family-summary-list {
+    padding: 0.65rem 0.75rem;
+}
+
+.family-sector-service,
+.family-head-summary {
+    padding: 0.9rem 1rem;
+    border: 1px solid #cfe0f5;
+    border-radius: 0.5rem;
+    background: #fbfdff;
+}
+
+.family-column-title {
+    margin-bottom: 0.7rem;
+    color: #405872;
+    font-size: 0.98rem;
     font-weight: 800;
+}
+
+.family-option-box {
+    height: 15.6rem;
+    overflow: auto;
+    padding: 0.75rem;
+    border: 1px solid #cfe0f5;
+    border-radius: 0.5rem;
+    background: #f8fbff;
+}
+
+.family-option-group {
+    padding-top: 0.65rem;
+    border-top: 1px solid #dae7f5;
+}
+
+.family-option-group:first-child {
+    padding-top: 0;
+    border-top: 0;
+}
+
+.family-option-group + .family-option-group {
+    margin-top: 0.7rem;
+}
+
+.family-option-group-title {
+    margin: 0 0 0.45rem;
+    color: #294b73;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.family-choice {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    min-height: 1.85rem;
+    margin: 0;
+    color: #062c57;
+    font-size: 0.84rem;
+}
+
+.family-choice + .family-choice {
+    margin-top: 0.2rem;
+}
+
+.family-choice input[type="checkbox"] {
+    width: 0.9rem;
+    height: 0.9rem;
+    margin: 0;
+    flex: 0 0 auto;
+    border: 1px solid #d7e3df;
+    border-radius: 0.25rem;
+}
+
+.family-entry-form input[type="checkbox"]:checked {
+    accent-color: #168a73;
 }
 
 .family-entry-actions {
     justify-content: flex-end;
-    padding-top: 1rem;
-    border-top: 1px solid #d7e3df;
+    flex: 0 0 auto;
+    position: sticky;
+    z-index: 5;
+    bottom: 0;
+    padding: 0.65rem 1rem;
+    border-top: 1px solid #cfe0f5;
+    background: #f8fbff;
 }
 
 .family-entry-actions .btn-group {
-    min-width: min(26rem, 100%);
+    gap: 0.6rem;
 }
 
 .family-entry-actions .btn {
-    min-width: 6.5rem;
-    min-height: 2.45rem;
-    font-size: 0.86rem;
+    min-width: 7rem;
+    min-height: 2.35rem;
+    border-radius: 0.35rem !important;
+    font-size: 0.84rem;
     font-weight: 800;
+}
+
+.family-member-toolbar {
+    justify-content: flex-end;
+    padding: 0.75rem 0 0;
+}
+
+.family-member-toolbar .btn {
+    min-width: 7.25rem;
+    min-height: 2.3rem;
+    border-radius: 0.35rem;
+    font-size: 0.84rem;
+    font-weight: 800;
+}
+
+
+.floating-family-modal.is-family-entry-modal {
+    --modal-window-gap: clamp(0.5rem, 1.5vw, 1rem);
+    --modal-window-width: min(64rem, calc(100vw - (var(--modal-window-gap) * 2)));
+    --modal-window-height: min(43rem, calc(100dvh - (var(--modal-window-gap) * 2)));
+}
+
+.floating-family-modal.is-family-entry-modal .modal-header {
+    padding: 0.7rem 0.85rem;
+}
+
+.floating-family-modal.is-family-entry-modal .modal-title {
+    font-size: 1.25rem;
+    font-weight: 800;
+}
+
+.floating-family-modal.is-family-entry-modal .family-entry-steps {
+    padding: 0.65rem;
+}
+
+.floating-family-modal.is-family-entry-modal .family-entry-steps .btn {
+    min-height: 3rem;
+    font-size: 0.82rem;
+}
+
+.floating-family-modal.is-family-entry-modal .family-entry-content {
+    padding: 0 0.65rem 0.65rem;
+}
+
+.floating-family-modal.is-family-entry-modal .family-entry-section {
+    padding: 0.75rem 0;
+}
+
+.floating-family-modal.is-family-entry-modal .family-section-title,
+.floating-family-modal.is-family-entry-modal .family-summary-title {
+    margin-bottom: 0.85rem;
+    font-size: 0.95rem;
+}
+
+.floating-family-modal.is-family-entry-modal .family-entry-form .form-label,
+.floating-family-modal.is-family-entry-modal .family-summary-label {
+    font-size: 0.76rem;
+}
+
+.floating-family-modal.is-family-entry-modal .family-entry-form input:not([type="checkbox"]):not([type="radio"]),
+.floating-family-modal.is-family-entry-modal .family-entry-form select,
+.floating-family-modal.is-family-entry-modal .family-entry-form textarea,
+.floating-family-modal.is-family-entry-modal .family-summary-value,
+.floating-family-modal.is-family-entry-modal .family-summary-list {
+    min-height: 2.25rem;
+    padding: 0.45rem 0.65rem;
+    font-size: 0.82rem;
+}
+
+.floating-family-modal.is-family-entry-modal .family-sector-service,
+.floating-family-modal.is-family-entry-modal .family-head-summary {
+    padding: 0.75rem 0.85rem;
+}
+
+.floating-family-modal.is-family-entry-modal .family-column-title {
+    margin-bottom: 0.65rem;
+    font-size: 0.95rem;
+}
+
+.floating-family-modal.is-family-entry-modal .family-option-box {
+    height: 14.5rem;
+    padding: 0.7rem 0.85rem;
+}
+
+.floating-family-modal.is-family-entry-modal .family-choice {
+    min-height: 1.75rem;
+    font-size: 0.82rem;
+}
+
+.floating-family-modal.is-family-entry-modal .family-entry-actions {
+    padding: 0.65rem 0.85rem;
+}
+
+.floating-family-modal.is-family-entry-modal .family-entry-actions .btn {
+    min-width: 7.25rem;
+    min-height: 2.3rem;
+    font-size: 0.84rem;
 }
 
 .family-draft-dialog-backdrop {

@@ -9,7 +9,9 @@ use App\Models\Audit\AuditTrailsModel;
 use App\Models\Families\FamilyFormOptionsModel;
 use App\Models\Families\MemberModel;
 use App\Models\Families\MemberServiceModel;
+use App\Models\Lookups\SectorModel;
 use App\Models\Lookups\ServiceModel;
+use App\Models\SearchModel;
 use App\Support\FamilyProfilingFormV2;
 use App\Support\FamilyRecordPresenter;
 use CodeIgniter\HTTP\RedirectResponse;
@@ -329,10 +331,10 @@ class FamilyController extends BaseController
     }
 
     /**
-     * GET `{admin|employee}/manage-family/edit/{id}`: returns the family form
-     * prefilled for editing, as a modal fragment. Reuses the same
-     * `Family/form` template as Add Family by passing the head
-     * row, its members, and selected services, with the form pointed at update().
+     * GET `{admin|employee}/manage-family/edit/{id}`: returns the family record
+     * modal prefilled for editing. Delegates to renderFamilyModal() — the same
+     * Bootstrap modal served by createFamily() in update mode — so the legacy
+     * edit route stays functional after the old `Family/form` wizard was retired.
      */
     public function editFamily(int $headId): string|RedirectResponse
     {
@@ -342,55 +344,7 @@ class FamilyController extends BaseController
             return $this->partialGuard($guard, 'You do not have permission to edit family records.');
         }
 
-        $memberModel = new MemberModel();
-        $rows = $memberModel->getFamilyMembers($headId, 'all');
-        [$head, $members] = $this->splitHeadAndMembers($rows, $headId);
-
-        if ($head === null) {
-            return $this->recordMissing();
-        }
-
-        // Address stores "address, barangay" combined; split it so the edit form
-        // can prefill the separate Address and Barangay inputs.
-        $addressParts = $this->splitAddressBarangay($head['address'] ?? '');
-        $head['address'] = $addressParts['address'];
-        $head['barangay'] = $addressParts['barangay'];
-
-        $serviceIdsByMember = (new MemberServiceModel())
-            ->getServiceIdsByMemberIds(array_map(static fn (array $row): int => (int) $row['memberID'], $rows));
-
-        // Gather every sector/service the family currently holds so the edit form can
-        // keep showing (and re-posting) any that have since been archived — otherwise
-        // saving would silently drop those grandfathered benefits.
-        $assignedSectorIds = [];
-        foreach ($rows as $row) {
-            foreach (SectorIds::normalize($row['sectorID'] ?? null) as $sectorId) {
-                $assignedSectorIds[] = (int) $sectorId;
-            }
-        }
-
-        $assignedServiceIds = [];
-        foreach ($serviceIdsByMember as $ids) {
-            foreach ($ids as $id) {
-                $assignedServiceIds[] = (int) $id;
-            }
-        }
-
-        return view('Family/form', array_merge(
-            (new FamilyFormOptionsModel())->getViewDataForEdit(
-                array_values(array_unique($assignedSectorIds)),
-                array_values(array_unique($assignedServiceIds))
-            ),
-            [
-                'familyRecord'      => $head,
-                'existingMembers'   => $this->shapeExistingMembers($members, $serviceIdsByMember),
-                'headServiceIds'    => $serviceIdsByMember[$headId] ?? [],
-                'formAction'        => site_url($this->currentRouteBase() . '/update/' . $headId),
-                'submitButtonLabel' => 'Update Record',
-                'embeddedInModal'   => true,
-                'canCreateFamily'   => true,
-            ]
-        ));
+        return $this->renderFamilyModal('update', $headId);
     }
 
     /**
@@ -1145,6 +1099,422 @@ class FamilyController extends BaseController
         $value = trim((string) preg_replace('/\\s+/u', ' ', (string) $value));
 
         return mb_convert_case($value, MB_CASE_TITLE, 'UTF-8');
+    }
+
+    // ---------------------------------------------------------------------------
+    // Server-side DataTables list (GET {role}/manage-family/data)
+    //
+    // Powers the Manage Records DataTable (assets/js/dashboard/family-datatable.js).
+    // Reuses the existing, untouched search models: MemberModel::searchFamilies()
+    // for the family-heads scope and SearchModel::allMembers() for the whole-database
+    // scope. Both are called with the optional, append-only $orderKey/$orderDirection
+    // arguments for column sorting; everything else is the same query used elsewhere.
+    // ---------------------------------------------------------------------------
+
+    /** Returns the server-side DataTables payload for Manage Records. */
+    public function dataTable()
+    {
+        $draw = max(0, (int) $this->request->getGet('draw'));
+        $guard = $this->requireFamilyViewAccess();
+
+        if ($guard instanceof RedirectResponse) {
+            return $this->response
+                ->setStatusCode(403)
+                ->setJSON($this->dataTablePayload($draw, 0, 0, [], 'You do not have permission to view family records.'));
+        }
+
+        $start = max(0, (int) $this->request->getGet('start'));
+        $requestedLength = (int) $this->request->getGet('length');
+        $length = in_array($requestedLength, [10, 25, 50, 100], true) ? $requestedLength : 25;
+        $scope = strtolower(trim((string) $this->request->getGet('scope'))) === 'all' ? 'all' : 'heads';
+        $keyword = trim((string) $this->request->getGet('q'));
+        $dataTablesSearch = $this->request->getGet('search');
+
+        if ($keyword === '' && is_array($dataTablesSearch)) {
+            $keyword = trim((string) ($dataTablesSearch['value'] ?? ''));
+        }
+
+        $status = strtolower(trim((string) $this->request->getGet('status')));
+        $status = in_array($status, ['all', 'active', 'archived'], true) ? $status : 'all';
+        $filters = [
+            'sectorID' => $this->request->getGet('sectorID'),
+            'barangay' => $this->request->getGet('barangay'),
+        ];
+        [$orderKey, $orderDirection] = $this->dataTableOrder();
+
+        try {
+            if ($scope === 'all') {
+                $searchModel = new SearchModel();
+                $searchFilters = array_merge(['status' => $status], $filters);
+                $total = $searchModel->countAllMembers('', ['status' => 'all']);
+                $filtered = $searchModel->countAllMembers($keyword, $searchFilters);
+                $rows = $searchModel->allMembers($keyword, $searchFilters, $length, $start, $orderKey, $orderDirection);
+            } else {
+                $memberModel = new MemberModel();
+                $searchKeyword = $keyword === '' ? null : $keyword;
+                $total = $memberModel->countSearchFamilies(null, 'all');
+                $filtered = $memberModel->countSearchFamilies($searchKeyword, $status, $filters);
+                $rows = $memberModel->searchFamilies($searchKeyword, $length, $start, $status, $filters, $orderKey, $orderDirection);
+            }
+
+            $sectorShortcodes = $this->dataTableSectorShortcodes();
+            $data = array_map(
+                fn (array $row): array => $this->dataTableRow($row, $scope === 'all', $sectorShortcodes),
+                $rows
+            );
+
+            return $this->response->setJSON($this->dataTablePayload($draw, $total, $filtered, $data));
+        } catch (Throwable $exception) {
+            $this->auditSystemError('loading the family records table', $exception);
+
+            return $this->response
+                ->setStatusCode(500)
+                ->setJSON($this->dataTablePayload($draw, 0, 0, [], 'Unable to load family records.'));
+        }
+    }
+
+    /**
+     * Reads the DataTables order[] request into a [columnKey, direction] pair.
+     * Only the name/address/birthday columns are sortable; everything else falls
+     * back to the name column. The `date` parameter is intentionally NOT consulted.
+     *
+     * @return array{0: string, 1: string}
+     */
+    private function dataTableOrder(): array
+    {
+        $order = $this->request->getGet('order');
+        $firstOrder = is_array($order) && isset($order[0]) && is_array($order[0]) ? $order[0] : [];
+        $column = (int) ($firstOrder['column'] ?? 0);
+        $direction = strtolower((string) ($firstOrder['dir'] ?? 'asc')) === 'desc' ? 'desc' : 'asc';
+        $orderKey = match ($column) {
+            2 => 'address',
+            3 => 'birthday',
+            default => 'name',
+        };
+
+        return [$orderKey, $direction];
+    }
+
+    /** [sectorID => SHORTCODE] map for rendering the DataTable's Sector column. */
+    private function dataTableSectorShortcodes(): array
+    {
+        $map = [];
+
+        foreach ((new SectorModel())->getSectorOptions() as $sector) {
+            $sectorId = (int) ($sector['sectorID'] ?? $sector['id'] ?? 0);
+            $shortcode = trim((string) ($sector['shortcode'] ?? ''));
+
+            if ($sectorId > 0 && $shortcode !== '') {
+                $map[$sectorId] = mb_strtoupper($shortcode);
+            }
+        }
+
+        return $map;
+    }
+
+    /**
+     * Shapes one member row into the DataTables cell map the client expects
+     * (name HTML, sector shortcodes, address, birthday, actions dropdown).
+     *
+     * @param array<int, string> $sectorShortcodes
+     */
+    private function dataTableRow(array $row, bool $allMembersScope, array $sectorShortcodes): array
+    {
+        $memberId = (int) ($row['memberID'] ?? 0);
+        $headId = $allMembersScope ? (int) ($row['headID'] ?? $memberId) : $memberId;
+        $name = $this->dataTableDisplayName($row);
+        $relationship = trim((string) ($row['relationship'] ?? ''));
+        $nameHtml = '<span class="entity-title">' . esc(mb_strtoupper($name)) . '</span>';
+
+        if ($allMembersScope && $relationship !== '') {
+            $nameHtml .= '<small class="text-muted d-block">' . esc(mb_strtoupper($relationship)) . '</small>';
+        }
+
+        $sectors = [];
+
+        foreach (SectorIds::normalize($row['sectorID'] ?? null) as $sectorId) {
+            if (isset($sectorShortcodes[$sectorId])) {
+                $sectors[] = $sectorShortcodes[$sectorId];
+            }
+        }
+
+        $birthday = strtotime((string) ($row['birthday'] ?? ''));
+
+        return [
+            'name' => $nameHtml,
+            'sector' => esc(implode(', ', array_values(array_unique($sectors)))),
+            'address' => esc(mb_strtoupper((string) ($row['address'] ?? ''))),
+            'birthday' => $birthday === false ? '-' : date('Y-m-d', $birthday),
+            'actions' => $this->dataTableActions($row, $headId, $name),
+        ];
+    }
+
+    /** "Surname Suffix, Firstname M." display name for a member row. */
+    private function dataTableDisplayName(array $row): string
+    {
+        $lastName = trim((string) ($row['lastname'] ?? ''));
+        $suffix = trim((string) ($row['suffix'] ?? ''));
+        $firstName = trim((string) ($row['firstname'] ?? ''));
+        $middleName = trim((string) ($row['middlename'] ?? ''));
+        $surname = trim($lastName . ($suffix !== '' ? ' ' . $suffix : ''));
+        $givenName = trim($firstName . ($middleName !== '' ? ' ' . mb_substr($middleName, 0, 1) . '.' : ''));
+
+        return $surname !== '' && $givenName !== '' ? $surname . ', ' . $givenName : trim($surname . ' ' . $givenName);
+    }
+
+    /**
+     * Builds the per-row Actions dropdown HTML for the DataTable. View is shown to
+     * any viewer; Update only to entry-access roles (Developer/Admin/Employee);
+     * Archive/Restore only to Developer/Admin. Empty string hides the menu.
+     */
+    private function dataTableActions(array $row, int $headId, string $displayName): string
+    {
+        if ($headId <= 0) {
+            return '';
+        }
+
+        $role = RoleAccess::normalizeRole((string) session()->get('role'));
+        $canEdit = in_array($role, ['Developer', 'Admin', 'Employee'], true);
+        $canArchive = in_array($role, ['Developer', 'Admin'], true);
+        $archived = trim((string) ($row['dt_deleted'] ?? '')) !== '';
+
+        if ($archived && ! $canArchive) {
+            return '';
+        }
+
+        $routeBase = $this->dataTableRouteBase();
+        $items = '';
+
+        if (! $archived) {
+            $viewUrl = site_url($routeBase . '/view/' . $headId . '?partial=1');
+            $items .= '<button type="button" class="dropdown-item js-open-family-view-modal" data-modal-url="'
+                . esc($viewUrl, 'attr') . '" data-modal-title="View Record">VIEW</button>';
+
+            if ($canEdit) {
+                $updateUrl = site_url($routeBase . '/create?partial=1&mode=update&id=' . $headId);
+                $items .= '<button type="button" class="dropdown-item js-open-family-add-modal" data-modal-url="'
+                    . esc($updateUrl, 'attr') . '" data-modal-title="Update Family Record">UPDATE</button>';
+            }
+        }
+
+        if ($canArchive) {
+            $action = $archived ? 'restore' : 'archive';
+            $label = $archived ? 'Restore' : 'Archive';
+            $past = $archived ? 'restored' : 'archived';
+            $message = $archived
+                ? 'Restore this record to the active list?'
+                : 'Archive this record? This keeps the record in the database, marks it as archived, and hides it from active lists.';
+            $formAction = site_url($routeBase . '/' . $action . '/' . $headId);
+            $items .= '<form class="js-family-record-action-form" method="post" action="' . esc($formAction, 'attr')
+                . '" data-confirm-message="' . esc($message, 'attr') . '" data-action-label="' . esc($label, 'attr')
+                . '" data-action-past="' . esc($past, 'attr') . '" data-family-name="' . esc($displayName, 'attr') . '">'
+                . csrf_field() . '<button type="submit" class="dropdown-item ' . ($archived ? 'text-success' : 'text-danger')
+                . '">' . mb_strtoupper($label) . '</button></form>';
+        }
+
+        if ($items === '') {
+            return '';
+        }
+
+        return '<div class="dropdown actions-menu"><button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button"'
+            . ' data-bs-toggle="dropdown" data-bs-boundary="viewport" data-bs-strategy="fixed" aria-expanded="false"'
+            . ' aria-label="Record actions">Actions</button>'
+            . '<div class="dropdown-menu dropdown-menu-end">' . $items . '</div></div>';
+    }
+
+    /** Role-aware route base for the DataTable action URLs. */
+    private function dataTableRouteBase(): string
+    {
+        if (str_starts_with(uri_string(), 'employee/')) {
+            return 'employee/manage-family';
+        }
+
+        if (str_starts_with(uri_string(), 'viewer/')) {
+            return 'viewer/manage-family';
+        }
+
+        return 'admin/manage-family';
+    }
+
+    /** Standard DataTables JSON envelope (+ optional error message). */
+    private function dataTablePayload(int $draw, int $total, int $filtered, array $data, ?string $error = null): array
+    {
+        $payload = [
+            'draw' => $draw,
+            'recordsTotal' => max(0, $total),
+            'recordsFiltered' => max(0, $filtered),
+            'data' => $data,
+        ];
+
+        if ($error !== null) {
+            $payload['error'] = $error;
+        }
+
+        return $payload;
+    }
+
+    // ---------------------------------------------------------------------------
+    // Bootstrap Add / Update modal (GET {role}/manage-family/create[?mode=update&id=])
+    // ---------------------------------------------------------------------------
+
+    /**
+     * GET `{admin|employee}/manage-family/create`: returns the Bootstrap family
+     * record modal fragment loaded by manage-family-modal.js. `?mode=update&id=`
+     * prefills it for editing; otherwise it is a blank Add form. The form posts to
+     * the existing, untouched store()/update() endpoints.
+     */
+    public function createFamily(): string|RedirectResponse
+    {
+        $guard = $this->requireFamilyEntryAccess();
+
+        if ($guard instanceof RedirectResponse) {
+            return $this->partialGuard($guard, 'You do not have permission to open the family record form.');
+        }
+
+        $isUpdateMode = strtolower(trim((string) $this->request->getGet('mode'))) === 'update';
+        $headId = max(0, (int) $this->request->getGet('id'));
+
+        return $this->renderFamilyModal($isUpdateMode ? 'update' : 'create', $headId);
+    }
+
+    /**
+     * Shared renderer for the Add/Update family modal. In create mode it serves a
+     * blank form pointed at `families` (store). In update mode it prefills the head,
+     * existing members, and selected (incl. grandfathered/archived) sectors/services,
+     * pointed at the role's update/{id} endpoint.
+     */
+    private function renderFamilyModal(string $mode, int $headId): string|RedirectResponse
+    {
+        if ($mode === 'update') {
+            $memberModel = new MemberModel();
+            $rows = $memberModel->getFamilyMembers($headId, 'all');
+            [$head, $members] = $this->splitHeadAndMembers($rows, $headId);
+
+            if ($head === null) {
+                return $this->recordMissing();
+            }
+
+            $serviceIdsByMember = (new MemberServiceModel())
+                ->getServiceIdsByMemberIds(array_map(static fn (array $row): int => (int) $row['memberID'], $rows));
+
+            // Gather assigned sectors/services so archived-but-assigned items stay
+            // visible/checked on the form (grandfathering), matching the old editFamily().
+            $assignedSectorIds = [];
+            foreach ($rows as $row) {
+                foreach (SectorIds::normalize($row['sectorID'] ?? null) as $sectorId) {
+                    $assignedSectorIds[] = (int) $sectorId;
+                }
+            }
+
+            $assignedServiceIds = [];
+            foreach ($serviceIdsByMember as $ids) {
+                foreach ($ids as $id) {
+                    $assignedServiceIds[] = (int) $id;
+                }
+            }
+
+            $viewData = (new FamilyFormOptionsModel())->getViewDataForEdit(
+                array_values(array_unique($assignedSectorIds)),
+                array_values(array_unique($assignedServiceIds))
+            );
+
+            return view('Family/family-modal', array_merge(
+                $viewData,
+                $this->familyModalUpdateData($head, $serviceIdsByMember[$headId] ?? []),
+                [
+                    'action' => site_url($this->currentRouteBase() . '/update/' . $headId),
+                    'fieldPrefix' => 'family-update',
+                    'modalTitle' => 'Update Family Record',
+                    'modalMode' => 'update',
+                    'submitLabel' => 'Update',
+                    'saveDisabled' => false,
+                    'existingMembers' => $this->shapeModalMembers($members, $serviceIdsByMember),
+                ]
+            ));
+        }
+
+        $viewData = (new FamilyFormOptionsModel())->getViewData();
+
+        return view('Family/family-modal', array_merge(
+            $viewData,
+            [
+                'action' => site_url('families'),
+                'fieldPrefix' => 'family-add',
+                'modalTitle' => 'New Family Record',
+                'modalMode' => 'create',
+                'submitLabel' => 'Save',
+                'headId' => 0,
+                'saveDisabled' => false,
+                'existingMembers' => [],
+            ]
+        ));
+    }
+
+    /**
+     * Builds the head prefill block (formValues + selected sector/service IDs) for
+     * the Update modal. Splits the stored "address, barangay" back into the two
+     * separate inputs via splitAddressBarangay().
+     *
+     * @param list<int> $headServiceIds
+     */
+    private function familyModalUpdateData(array $head, array $headServiceIds): array
+    {
+        $headId = (int) ($head['memberID'] ?? 0);
+        $addressParts = $this->splitAddressBarangay($head['address'] ?? '');
+
+        return [
+            'headId' => $headId,
+            'formValues' => [
+                'head_lastname' => (string) ($head['lastname'] ?? ''),
+                'head_firstname' => (string) ($head['firstname'] ?? ''),
+                'head_middlename' => (string) ($head['middlename'] ?? ''),
+                'head_suffix' => (string) ($head['suffix'] ?? ''),
+                'head_birthday' => (string) ($head['birthday'] ?? ''),
+                'head_sex' => (string) ($head['sex'] ?? ''),
+                'head_civilstatus' => (string) ($head['civilstatus'] ?? ''),
+                'head_contactnumber' => (string) ($head['contactnumber'] ?? ''),
+                'head_religion' => (string) ($head['religion'] ?? ''),
+                'head_education' => (string) ($head['education'] ?? ''),
+                'head_job' => (string) ($head['job'] ?? ''),
+                'head_salary' => (string) ($head['Salary'] ?? ''),
+                'head_address' => $addressParts['address'],
+                'head_barangay' => $addressParts['barangay'],
+            ],
+            'selectedSectorIds' => array_map('strval', SectorIds::normalize($head['sectorID'] ?? null)),
+            'selectedServiceIds' => array_map('strval', $headServiceIds),
+        ];
+    }
+
+    /**
+     * Shapes existing family-member rows for the Update modal so they pre-render
+     * (and re-post) — otherwise update()'s member replace would drop them.
+     *
+     * @param array<int, list<int>> $serviceIdsByMember
+     * @return list<array<string, mixed>>
+     */
+    private function shapeModalMembers(array $members, array $serviceIdsByMember): array
+    {
+        return array_map(function (array $member) use ($serviceIdsByMember): array {
+            $memberId = (int) ($member['memberID'] ?? 0);
+
+            return [
+                'lastname' => (string) ($member['lastname'] ?? ''),
+                'firstname' => (string) ($member['firstname'] ?? ''),
+                'middlename' => (string) ($member['middlename'] ?? ''),
+                'suffix' => (string) ($member['suffix'] ?? ''),
+                'birthday' => (string) ($member['birthday'] ?? ''),
+                'sex' => (string) ($member['sex'] ?? ''),
+                'civilstatus' => (string) ($member['civilstatus'] ?? ''),
+                'contactnumber' => (string) ($member['contactnumber'] ?? ''),
+                'religion' => (string) ($member['religion'] ?? ''),
+                'education' => (string) ($member['education'] ?? ''),
+                'job' => (string) ($member['job'] ?? ''),
+                'salary' => (string) ($member['Salary'] ?? ''),
+                'relationship' => (string) ($member['relationship'] ?? ''),
+                'sector_ids' => array_map('strval', SectorIds::normalize($member['sectorID'] ?? null)),
+                'service_ids' => array_map('strval', $serviceIdsByMember[$memberId] ?? []),
+            ];
+        }, $members);
     }
 
 }

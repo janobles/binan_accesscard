@@ -188,7 +188,12 @@ class MemberModel extends Model
     // FIRST (quick) search bar of the Manage Records tab. Lists family HEADS only.
     // $filters carries the Manage Records filter controls (sectorID + date); see
     // App\Libraries\DashboardPageBuilder::buildMemberListData() which supplies them.
-    public function searchFamilies(?string $keyword = null, int $limit = 50, int $offset = 0, string $status = RecordStatus::ALL, array $filters = []): array
+    //
+    // $orderKey/$orderDirection are an OPTIONAL, append-only addition used by the
+    // server-side DataTables endpoint (FamilyController::dataTable) for column
+    // sorting. When $orderKey is null the original ordering (newest first, by
+    // memberID DESC) is preserved, so existing callers are unaffected.
+    public function searchFamilies(?string $keyword = null, int $limit = 50, int $offset = 0, string $status = RecordStatus::ALL, array $filters = [], ?string $orderKey = null, string $orderDirection = 'asc'): array
     {
         if (! $this->hasTable()) {
             return [];
@@ -197,11 +202,40 @@ class MemberModel extends Model
         $limit = max(1, $limit);
         $offset = max(0, $offset);
 
-        $builder = $this->familySearchBuilder($keyword, $status, $filters)
-            ->orderBy('member.memberID', 'DESC')
-            ->limit($limit, $offset);
+        $builder = $this->familySearchBuilder($keyword, $status, $filters);
+        $this->applyMemberOrder($builder, $orderKey, $orderDirection);
+        $builder->limit($limit, $offset);
 
         return $this->withSectorNames($builder->get()->getResultArray());
+    }
+
+    /**
+     * Applies a DataTables column sort to a member query, or the default
+     * newest-first ordering when $orderKey is null/unrecognized. Column keys map
+     * to the visible Manage Records columns: name (lastname, firstname), address,
+     * birthday. Used only by the server-side DataTables path.
+     */
+    private function applyMemberOrder($builder, ?string $orderKey, string $orderDirection): void
+    {
+        $direction = strtolower(trim($orderDirection)) === 'desc' ? 'DESC' : 'ASC';
+
+        switch ($orderKey) {
+            case 'name':
+                $builder->orderBy('member.lastname', $direction)
+                    ->orderBy('member.firstname', $direction);
+                return;
+            case 'address':
+                if ($this->memberFieldExists('address')) {
+                    $builder->orderBy('member.address', $direction);
+                    return;
+                }
+                break;
+            case 'birthday':
+                $builder->orderBy('member.birthday', $direction);
+                return;
+        }
+
+        $builder->orderBy('member.memberID', 'DESC');
     }
 
     /**

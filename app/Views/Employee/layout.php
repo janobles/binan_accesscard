@@ -19,6 +19,7 @@ $hasSearchFilters = $hasSearchFilters ?? false;
 $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
 
 $jadeStyles = [
+    'assets/datatables/css/dataTables.bootstrap5.min.css',
     'css/sb-admin-adapter.css',
     'css/managerecord.css',
     'css/audittrails.css',
@@ -272,6 +273,10 @@ $jadeStyles = [
 <div class="modal fade floating-family-modal" id="familyModal" tabindex="-1" aria-label="Details" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered modal-xl">
         <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="familyModalLabel">Record</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
             <div class="modal-body" id="familyModalBody">
                 <div class="family-modal-loading" role="status" aria-live="polite">
                     <div class="spinner-border text-primary" aria-hidden="true"></div>
@@ -290,6 +295,9 @@ $jadeStyles = [
 <script src="<?= esc(asset_url('assets/jquery/jquery-3.7.1.min.js'), 'attr') ?>"></script>
 <script src="<?= esc(asset_url('assets/bootstrap/js/bootstrap.bundle.min.js'), 'attr') ?>"></script>
 <script src="<?= esc(asset_url('assets/js/dashboard/view-interactions.js'), 'attr') ?>"></script>
+<script src="<?= esc(asset_url('assets/datatables/js/dataTables.min.js'), 'attr') ?>"></script>
+<script src="<?= esc(asset_url('assets/datatables/js/dataTables.bootstrap5.min.js'), 'attr') ?>"></script>
+<script src="<?= esc(asset_url('assets/js/dashboard/family-datatable.js'), 'attr') ?>"></script>
 <script src="<?= esc(asset_url('assets/js/dashboard/family-form-ui.js'), 'attr') ?>"></script>
 <script src="<?= esc(asset_url('assets/js/dashboard/family-form.js'), 'attr') ?>"></script>
 <script src="<?= esc(asset_url('assets/js/dashboard/family-list.js'), 'attr') ?>"></script>

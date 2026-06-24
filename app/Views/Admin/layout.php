@@ -53,6 +53,7 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
  * target, and page switch while using a Bootstrap 5-safe responsive frame.
  */
 $jadeStyles = [
+    'assets/datatables/css/dataTables.bootstrap5.min.css',
     'css/sb-admin-adapter.css',
     'css/managerecord.css',
     'css/lookupmanagement.css',
@@ -297,6 +298,10 @@ $jadeStyles = [
 <div class="modal fade floating-family-modal" id="familyModal" tabindex="-1" aria-label="Record details" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered modal-xl">
         <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="familyModalLabel">Record</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
             <div class="modal-body" id="familyModalBody">
                 <div class="family-modal-loading" role="status" aria-live="polite">
                     <div class="spinner-border text-primary" aria-hidden="true"></div>
@@ -338,6 +343,11 @@ $jadeStyles = [
 <?php
 $dashboardScripts = [
     'assets/js/dashboard/view-interactions.js',
+    'assets/datatables/js/dataTables.min.js',
+    'assets/datatables/js/dataTables.bootstrap5.min.js',
+    'assets/js/dashboard/family-datatable.js',
+    // Legacy Add-Record page (admin/family-entry) still uses the wizard form;
+    // these self-init on a wizard page and no-op on the DataTable list page.
     'assets/js/dashboard/family-form-ui.js',
     'assets/js/dashboard/family-form.js',
     'assets/js/dashboard/family-list.js',

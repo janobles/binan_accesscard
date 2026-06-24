@@ -90,7 +90,12 @@ class SearchModel
      * Called from App\Libraries\DashboardPageBuilder::buildMemberListData() and
      * Employee\WorkspaceModel::recordListData() when the deep search box (deep_q) is used.
      */
-    public function allMembers(string $keyword = '', array $filters = [], int $limit = 50, int $offset = 0): array
+    //
+    // $orderKey/$orderDirection are an OPTIONAL, append-only addition for the
+    // server-side DataTables endpoint (FamilyController::dataTable). When $orderKey
+    // is null the original ordering (lastname, firstname ASC) is preserved, so the
+    // deep-search callers are unaffected.
+    public function allMembers(string $keyword = '', array $filters = [], int $limit = 50, int $offset = 0, ?string $orderKey = null, string $orderDirection = 'asc'): array
     {
         if (! $this->db->tableExists('member')) {
             return [];
@@ -99,14 +104,38 @@ class SearchModel
         $limit = max(1, $limit);
         $offset = max(0, $offset);
 
-        $rows = $this->allMembersBuilder($keyword, $filters)
-            ->orderBy('m.lastname', 'ASC')
-            ->orderBy('m.firstname', 'ASC')
+        $builder = $this->allMembersBuilder($keyword, $filters);
+        $this->applyAllMembersOrder($builder, $orderKey, $orderDirection);
+
+        $rows = $builder
             ->limit($limit, $offset)
             ->get()
             ->getResultArray();
 
         return $this->withServiceNames($this->withSectorNames($rows));
+    }
+
+    /**
+     * Applies a DataTables column sort to the deep-member query, or the default
+     * (lastname, firstname ASC) when $orderKey is null/unrecognized. Mirrors the
+     * column mapping in MemberModel::applyMemberOrder but on the `m.` alias.
+     */
+    private function applyAllMembersOrder(BaseBuilder $builder, ?string $orderKey, string $orderDirection): void
+    {
+        $direction = strtolower(trim($orderDirection)) === 'desc' ? 'DESC' : 'ASC';
+
+        switch ($orderKey) {
+            case 'address':
+                $builder->orderBy('m.address', $direction);
+                return;
+            case 'birthday':
+                $builder->orderBy('m.birthday', $direction);
+                return;
+            case 'name':
+            default:
+                $builder->orderBy('m.lastname', $direction === 'DESC' ? 'DESC' : 'ASC')
+                    ->orderBy('m.firstname', $direction === 'DESC' ? 'DESC' : 'ASC');
+        }
     }
 
     /**

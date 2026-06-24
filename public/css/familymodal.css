@@ -1,3 +1,7 @@
+/* ===========================================================================
+ * Legacy multi-step wizard form styles (Family/form.php). Retained so the
+ * admin/family-entry Add Record page keeps its styling.
+ * ========================================================================= */
 /* Shared Bootstrap modal window used by record, lookup, account, and audit fragments.
    Family form internals live in familyform.css, which Family/form.php loads with the form. */
 
@@ -399,4 +403,798 @@
     .floating-family-modal .modal-footer {
         padding: 0.45rem 0.75rem;
     }
+}
+
+/* ===========================================================================
+ * Jade Bootstrap Add/Update modal styles (Family/family-modal.php).
+ * Loaded after the legacy block so the new modal wins any shared selector.
+ * ========================================================================= */
+/* Shared Bootstrap modal window used by record, lookup, account, and audit fragments. */
+
+.floating-family-modal {
+    --modal-window-gap: clamp(0.5rem, 2vw, 1.25rem);
+    --modal-window-width: min(76rem, calc(100vw - (var(--modal-window-gap) * 2)));
+    --modal-window-height: min(47rem, calc(100dvh - (var(--modal-window-gap) * 2)));
+}
+
+.floating-family-modal .modal-dialog {
+    width: var(--modal-window-width);
+    max-width: var(--modal-window-width);
+    height: var(--modal-window-height);
+    max-height: var(--modal-window-height);
+    margin: var(--modal-window-gap) auto;
+}
+
+.floating-family-modal .modal-content {
+    display: flex;
+    height: 100%;
+    max-height: 100%;
+    overflow: hidden;
+    border: 1px solid #c8d9d4;
+    border-radius: 0.45rem;
+}
+
+.floating-family-modal .modal-body {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    padding: 0;
+}
+
+.floating-family-modal .modal-footer {
+    flex: 0 0 auto;
+    padding: 0.75rem 1rem;
+    border-top-color: #d7e3df;
+}
+
+.floating-family-modal.is-family-entry-modal > .modal-dialog > .modal-content > .modal-footer {
+    display: none;
+}
+
+.floating-family-modal.is-family-entry-modal .family-entry-header {
+    display: none;
+}
+
+.family-entry-form {
+    display: flex;
+    min-height: 100%;
+    flex-direction: column;
+    color: #001f3f;
+    background: #ffffff;
+}
+
+.family-entry-form form {
+    display: flex;
+    min-height: 0;
+    flex: 1 1 auto;
+    flex-direction: column;
+}
+
+.family-entry-header {
+    flex: 0 0 auto;
+    padding: 0.9rem 1rem 0.7rem;
+    border-bottom: 1px solid #cfe0f5;
+}
+
+.family-entry-kicker {
+    margin: 0 0 0.25rem;
+    color: #000000;
+    font-size: 0.78rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.family-entry-title {
+    margin: 0;
+    color: #000000;
+    font-size: 1.1rem;
+    font-weight: 800;
+}
+
+.family-entry-steps {
+    flex: 0 0 auto;
+    padding: 0.65rem 1rem 0.5rem;
+}
+
+.family-entry-steps .btn {
+    min-height: 3.35rem;
+    border-color: #b9d7f7;
+    background: #eef7ff;
+    color: #a7b5c4;
+    font-size: 0.84rem;
+    font-weight: 800;
+}
+
+.family-entry-steps .btn.active {
+    border-bottom: 0.2rem solid #1976d2;
+    background: #eaf6ff;
+    color: #000000;
+}
+
+.family-step-number {
+    display: block;
+    width: 1.35rem;
+    height: 1.35rem;
+    margin: 0 auto 0.2rem;
+    border-radius: 50%;
+    background: #dcecf8;
+    color: #243b53;
+    font-size: 0.72rem;
+    line-height: 1.35rem;
+}
+
+.family-entry-steps .btn.active .family-step-number {
+    background: #168a73;
+    color: #ffffff;
+}
+
+.family-entry-content {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    padding: 0 1rem 0.8rem;
+}
+
+.family-entry-section {
+    padding: 0.8rem 0;
+    border-top: 1px solid #cfe0f5;
+}
+
+.family-entry-section:first-child {
+    border-top: 0;
+}
+
+.family-section-title,
+.family-summary-title {
+    margin: 0 0 1rem;
+    color: #000000;
+    font-size: 1.08rem;
+    font-weight: 800;
+}
+
+.family-entry-form .form-label,
+.family-summary-label {
+    display: block;
+    margin-bottom: 0.35rem;
+    color: #294b73;
+    font-size: 0.72rem;
+    font-weight: 800;
+}
+
+.family-entry-form input:not([type="checkbox"]):not([type="radio"]),
+.family-entry-form select,
+.family-entry-form textarea,
+.family-summary-value,
+.family-summary-list {
+    display: block;
+    width: 100%;
+    min-height: 2.45rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #b9d7f7;
+    border-radius: 0.45rem;
+    background-color: #fbfdff;
+    color: #001f3f;
+    font-size: 0.84rem;
+}
+
+.family-entry-form input:not([type="checkbox"]):not([type="radio"]):focus,
+.family-entry-form select:focus,
+.family-entry-form textarea:focus {
+    border-color: #86b7fe;
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.16);
+}
+
+.family-entry-form .is-invalid {
+    border-color: #dc3545 !important;
+}
+
+.family-field-error {
+    margin-top: 0.28rem;
+    color: #dc3545;
+    font-size: 0.74rem;
+    font-weight: 700;
+}
+
+.family-entry-form select {
+    cursor: pointer;
+}
+
+.family-summary-value,
+.family-summary-list {
+    padding: 0.65rem 0.75rem;
+}
+
+.family-sector-service,
+.family-head-summary {
+    padding: 0.9rem 1rem;
+    border: 1px solid #cfe0f5;
+    border-radius: 0.5rem;
+    background: #fbfdff;
+}
+
+.family-column-title {
+    margin-bottom: 0.7rem;
+    color: #405872;
+    font-size: 0.98rem;
+    font-weight: 800;
+}
+
+.family-option-box {
+    height: 15.6rem;
+    overflow: auto;
+    padding: 0.75rem;
+    border: 1px solid #cfe0f5;
+    border-radius: 0.5rem;
+    background: #f8fbff;
+}
+
+.family-option-group {
+    padding-top: 0.65rem;
+    border-top: 1px solid #dae7f5;
+}
+
+.family-option-group:first-child {
+    padding-top: 0;
+    border-top: 0;
+}
+
+.family-option-group + .family-option-group {
+    margin-top: 0.7rem;
+}
+
+.family-option-group-title {
+    margin: 0 0 0.45rem;
+    color: #294b73;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.family-choice {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    min-height: 1.85rem;
+    margin: 0;
+    color: #062c57;
+    font-size: 0.84rem;
+}
+
+.family-choice + .family-choice {
+    margin-top: 0.2rem;
+}
+
+.family-choice input[type="checkbox"] {
+    width: 0.9rem;
+    height: 0.9rem;
+    margin: 0;
+    flex: 0 0 auto;
+    border: 1px solid #d7e3df;
+    border-radius: 0.25rem;
+}
+
+.family-entry-form input[type="checkbox"]:checked {
+    accent-color: #168a73;
+}
+
+.family-entry-actions {
+    justify-content: flex-end;
+    flex: 0 0 auto;
+    position: sticky;
+    z-index: 5;
+    bottom: 0;
+    padding: 0.65rem 1rem;
+    border-top: 1px solid #cfe0f5;
+    background: #f8fbff;
+}
+
+.family-entry-actions .btn-group {
+    gap: 0.6rem;
+}
+
+.family-entry-actions .btn {
+    min-width: 7rem;
+    min-height: 2.35rem;
+    border-radius: 0.35rem !important;
+    font-size: 0.84rem;
+    font-weight: 800;
+}
+
+.family-member-toolbar {
+    justify-content: flex-end;
+    padding: 0.75rem 0 0;
+}
+
+.family-member-toolbar .btn {
+    min-width: 7.25rem;
+    min-height: 2.3rem;
+    border-radius: 0.35rem;
+    font-size: 0.84rem;
+    font-weight: 800;
+}
+
+
+.floating-family-modal.is-family-entry-modal {
+    --modal-window-gap: clamp(0.5rem, 1.5vw, 1rem);
+    --modal-window-width: min(64rem, calc(100vw - (var(--modal-window-gap) * 2)));
+    --modal-window-height: min(43rem, calc(100dvh - (var(--modal-window-gap) * 2)));
+}
+
+.floating-family-modal.is-family-entry-modal .modal-header {
+    padding: 0.7rem 0.85rem;
+}
+
+.floating-family-modal.is-family-entry-modal .modal-title {
+    font-size: 1.25rem;
+    font-weight: 800;
+}
+
+.floating-family-modal.is-family-entry-modal .family-entry-steps {
+    padding: 0.65rem;
+}
+
+.floating-family-modal.is-family-entry-modal .family-entry-steps .btn {
+    min-height: 3rem;
+    font-size: 0.82rem;
+}
+
+.floating-family-modal.is-family-entry-modal .family-entry-content {
+    padding: 0 0.65rem 0.65rem;
+}
+
+.floating-family-modal.is-family-entry-modal .family-entry-section {
+    padding: 0.75rem 0;
+}
+
+.floating-family-modal.is-family-entry-modal .family-section-title,
+.floating-family-modal.is-family-entry-modal .family-summary-title {
+    margin-bottom: 0.85rem;
+    font-size: 0.95rem;
+}
+
+.floating-family-modal.is-family-entry-modal .family-entry-form .form-label,
+.floating-family-modal.is-family-entry-modal .family-summary-label {
+    font-size: 0.76rem;
+}
+
+.floating-family-modal.is-family-entry-modal .family-entry-form input:not([type="checkbox"]):not([type="radio"]),
+.floating-family-modal.is-family-entry-modal .family-entry-form select,
+.floating-family-modal.is-family-entry-modal .family-entry-form textarea,
+.floating-family-modal.is-family-entry-modal .family-summary-value,
+.floating-family-modal.is-family-entry-modal .family-summary-list {
+    min-height: 2.25rem;
+    padding: 0.45rem 0.65rem;
+    font-size: 0.82rem;
+}
+
+.floating-family-modal.is-family-entry-modal .family-sector-service,
+.floating-family-modal.is-family-entry-modal .family-head-summary {
+    padding: 0.75rem 0.85rem;
+}
+
+.floating-family-modal.is-family-entry-modal .family-column-title {
+    margin-bottom: 0.65rem;
+    font-size: 0.95rem;
+}
+
+.floating-family-modal.is-family-entry-modal .family-option-box {
+    height: 14.5rem;
+    padding: 0.7rem 0.85rem;
+}
+
+.floating-family-modal.is-family-entry-modal .family-choice {
+    min-height: 1.75rem;
+    font-size: 0.82rem;
+}
+
+.floating-family-modal.is-family-entry-modal .family-entry-actions {
+    padding: 0.65rem 0.85rem;
+}
+
+.floating-family-modal.is-family-entry-modal .family-entry-actions .btn {
+    min-width: 7.25rem;
+    min-height: 2.3rem;
+    font-size: 0.84rem;
+}
+
+.family-draft-dialog-backdrop {
+    position: absolute;
+    z-index: 12;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    background: rgba(20, 35, 31, 0.44);
+}
+
+.family-draft-dialog {
+    width: min(28rem, 100%);
+    padding: 1.25rem;
+    border: 1px solid #cfe0db;
+    border-radius: 0.45rem;
+    background: #ffffff;
+    box-shadow: 0 1rem 2.5rem rgba(22, 37, 33, 0.18);
+    color: #263b35;
+}
+
+.family-draft-dialog-icon {
+    display: inline-flex;
+    width: 2.5rem;
+    height: 2.5rem;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.85rem;
+    border-radius: 50%;
+    background: #e7f2ee;
+    color: #157347;
+    font-size: 1.15rem;
+}
+
+.family-draft-dialog-icon.is-warning {
+    background: #fff4db;
+    color: #9a5b00;
+}
+
+.family-draft-dialog h3 {
+    margin: 0;
+    color: #243b35;
+    font-size: 1.05rem;
+    font-weight: 800;
+}
+
+.family-draft-dialog p {
+    margin: 0.45rem 0 0;
+    color: #5f6f69;
+    font-size: 0.95rem;
+}
+
+.family-draft-dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.65rem;
+    margin-top: 1.25rem;
+}
+
+.family-draft-dialog-actions .btn {
+    min-width: 6.5rem;
+}
+
+.family-detail {
+    padding: 1.25rem;
+    color: #263b35;
+}
+
+.family-detail-hero {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    padding: 1rem;
+    border: 1px solid #dce7e3;
+    border-radius: 0.45rem;
+    background: #f6faf8;
+}
+
+.family-detail-hero-main {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    min-width: 0;
+}
+
+.family-avatar {
+    display: inline-flex;
+    width: 3.25rem;
+    height: 3.25rem;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: #157347;
+    color: #ffffff;
+    font-weight: 800;
+    letter-spacing: 0;
+}
+
+.family-avatar.is-sm {
+    width: 2.15rem;
+    height: 2.15rem;
+    font-size: 0.78rem;
+}
+
+.family-detail-kicker,
+.family-detail-date span,
+.family-detail-item span,
+.family-service-label,
+.family-relationship {
+    display: block;
+    color: #65736e;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.family-detail h2 {
+    margin: 0.15rem 0 0;
+    color: #243b35;
+    font-size: clamp(1.35rem, 2vw, 2rem);
+    font-weight: 800;
+    letter-spacing: 0;
+}
+
+.family-detail-date {
+    flex: 0 0 auto;
+    text-align: right;
+}
+
+.family-detail-date strong,
+.family-detail-date small {
+    display: block;
+}
+
+.family-detail-section {
+    margin-top: 1rem;
+    padding: 1rem;
+    border: 1px solid #dce7e3;
+    border-radius: 0.45rem;
+    background: #ffffff;
+}
+
+.family-detail-section-title {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin-bottom: 0.85rem;
+    color: #243b35;
+    font-size: 1rem;
+    font-weight: 800;
+}
+
+.family-detail-count {
+    display: inline-flex;
+    min-width: 1.6rem;
+    height: 1.6rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: #e7f2ee;
+    color: #157347;
+    font-size: 0.78rem;
+    font-weight: 800;
+}
+
+.family-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.family-detail-grid.is-compact {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.family-detail-item {
+    min-width: 0;
+    padding: 0.75rem;
+    border: 1px solid #e1ebe8;
+    border-radius: 0.4rem;
+    background: #f9fbfa;
+}
+
+.family-detail-item strong {
+    display: block;
+    margin-top: 0.25rem;
+    overflow-wrap: anywhere;
+    color: #263b35;
+    font-size: 0.95rem;
+}
+
+.family-detail-list,
+.family-service-list {
+    display: grid;
+    gap: 0.45rem;
+}
+
+.family-chip-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+}
+
+.family-chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.85rem;
+    padding: 0.3rem 0.65rem;
+    border: 1px solid #b8d8cc;
+    border-radius: 999px;
+    background: #eef8f4;
+    color: #145c3d;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.family-chip.is-service {
+    border-color: #c8d8f0;
+    background: #f2f6fd;
+    color: #244f8f;
+}
+
+.family-empty {
+    color: #788983;
+    font-size: 0.9rem;
+}
+
+.family-member-list {
+    display: grid;
+    gap: 0.85rem;
+}
+
+.family-member-item {
+    padding: 0.85rem;
+    border: 1px solid #e1ebe8;
+    border-radius: 0.45rem;
+    background: #fbfdfc;
+}
+
+.family-member-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.family-member-identity {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-width: 0;
+}
+
+.family-member-identity strong {
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 991.98px) {
+    .floating-family-modal {
+        --modal-window-gap: 0.85rem;
+        --modal-window-width: min(43rem, calc(100vw - 1.7rem));
+        --modal-window-height: min(43rem, calc(100dvh - 1.7rem));
+    }
+
+    .floating-family-modal .modal-dialog {
+        margin-top: 0.85rem;
+        margin-bottom: 0.85rem;
+    }
+
+    .floating-family-modal .modal-dialog-centered {
+        min-height: calc(100% - (var(--modal-window-gap) * 2));
+        align-items: center;
+    }
+
+    .floating-family-modal .modal-content {
+        border-radius: 0.4rem;
+    }
+
+    .floating-family-modal .modal-footer {
+        padding: 0.65rem 0.85rem;
+    }
+
+    .floating-family-modal .modal-title {
+        font-size: 1rem;
+    }
+
+    .family-detail-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 767.98px) {
+    .floating-family-modal {
+        --modal-window-gap: 0.55rem;
+        --modal-window-width: calc(100vw - 1.1rem);
+        --modal-window-height: calc(100dvh - 1.1rem);
+    }
+
+    .floating-family-modal .modal-dialog {
+        margin-top: 0.55rem;
+        margin-bottom: 0.55rem;
+    }
+
+    .floating-family-modal .modal-footer {
+        justify-content: flex-end;
+        gap: 0.5rem;
+        padding: 0.6rem;
+    }
+
+    .floating-family-modal .modal-footer .btn {
+        flex: 0 0 auto;
+        min-height: 2.35rem;
+        padding-right: 0.85rem;
+        padding-left: 0.85rem;
+        font-size: 0.82rem;
+    }
+
+    .family-detail {
+        padding: 0.85rem;
+    }
+
+    .family-detail-hero,
+    .family-member-heading {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .family-detail-date {
+        text-align: left;
+    }
+
+    .family-detail-grid,
+    .family-detail-grid.is-compact {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-height: 640px) and (orientation: landscape) {
+    .floating-family-modal {
+        --modal-window-gap: 0.45rem;
+        --modal-window-width: calc(100vw - 0.9rem);
+        --modal-window-height: calc(100dvh - 0.9rem);
+    }
+
+    .floating-family-modal .modal-dialog {
+        margin-top: 0.45rem;
+        margin-bottom: 0.45rem;
+    }
+
+    .floating-family-modal .modal-dialog-centered {
+        min-height: calc(100% - (var(--modal-window-gap) * 2));
+        align-items: center;
+    }
+
+    .floating-family-modal .modal-footer {
+        padding: 0.45rem 0.75rem;
+    }
+}
+
+/* ---------------------------------------------------------------------------
+ * Repeatable family-member capture (Members step) + save toast.
+ * ------------------------------------------------------------------------- */
+.family-members-section { margin-top: 1rem; }
+.family-member-card { border: 1px solid var(--bs-border-color, #dee2e6); border-radius: 0.5rem; padding: 1rem; margin-bottom: 1rem; background: var(--bs-body-bg, #fff); }
+.family-member-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
+.family-member-card-title { font-size: 0.95rem; }
+.family-option-box--sm { max-height: 12rem; }
+.family-toast { position: fixed; top: 1rem; right: 1rem; z-index: 1080; max-width: 22rem; margin: 0; }
+
+/* ---------------------------------------------------------------------------
+ * Restored old-wizard pieces for the new modal: hidden "Other" freetext, the
+ * archived (grandfather) badge, and a subtle archived-row tint.
+ * (.family-form-hidden / .family-choice-badge reused verbatim from familyform.css)
+ * ------------------------------------------------------------------------- */
+.family-form-hidden {
+    display: none !important;
+}
+
+.family-choice-badge {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 7px;
+    border-radius: 10px;
+    background: #fff3cd;
+    color: #8a6d1b;
+    border: 1px solid #f1d98a;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.4;
+    vertical-align: middle;
+}
+
+.family-choice--archived .form-check-label {
+    color: #8a6d1b;
 }

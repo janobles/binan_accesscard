@@ -3,6 +3,11 @@
 namespace App\Models;
 
 use App\Libraries\SectorIds;
+use App\Models\Concerns\NormalizesIds;
+use App\Models\Concerns\RecordStatus;
+use App\Models\Concerns\ResolvesMemberNames;
+use App\Models\Concerns\ResolvesSectorNames;
+use App\Models\Concerns\ResolvesUserNames;
 use CodeIgniter\Database\BaseBuilder;
 use CodeIgniter\Database\BaseConnection;
 
@@ -11,6 +16,11 @@ use CodeIgniter\Database\BaseConnection;
  */
 class SearchModel
 {
+    use NormalizesIds;
+    use ResolvesMemberNames;
+    use ResolvesSectorNames;
+    use ResolvesUserNames;
+
     private BaseConnection $db;
 
     /** Accepts an optional DB connection (defaults to the shared one) for testing. */
@@ -124,9 +134,9 @@ class SearchModel
 
         $status = strtolower(trim((string) ($filters['status'] ?? '')));
 
-        if ($status === 'archived') {
+        if ($status === RecordStatus::ARCHIVED) {
             $builder->where('m.dt_deleted IS NOT NULL', null, false);
-        } elseif ($status !== 'all') {
+        } elseif ($status !== RecordStatus::ALL) {
             $builder->where('m.dt_deleted IS NULL', null, false);
         }
 
@@ -521,41 +531,6 @@ class SearchModel
             && $this->db->tableExists('member');
     }
 
-    /** Adds a readable 'sector_name' to each row from its JSON sectorID value. */
-    private function withSectorNames(array $rows): array
-    {
-        $sectorNames = $this->sectorNameMap();
-
-        foreach ($rows as &$row) {
-            $sectorValue = $row['sector_array_string'] ?? $row['sectorID'] ?? '[]';
-            $row['sectorID'] = $sectorValue;
-            $row['sector_name'] = SectorIds::toNames($sectorValue, $sectorNames);
-        }
-
-        return $rows;
-    }
-
-    /** Builds an [sectorID => name] map used by withSectorNames(). */
-    private function sectorNameMap(): array
-    {
-        if (! $this->db->tableExists('sector')) {
-            return [];
-        }
-
-        $sectors = $this->db->table('sector')
-            ->select('sectorID, name')
-            ->get()
-            ->getResultArray();
-
-        $map = [];
-
-        foreach ($sectors as $sector) {
-            $map[(int) $sector['sectorID']] = (string) $sector['name'];
-        }
-
-        return $map;
-    }
-
     /** Sector IDs whose name/description match the keyword (so search can match sector text). */
     private function sectorIdsForKeyword(string $keyword): array
     {
@@ -689,69 +664,6 @@ class SearchModel
         };
     }
 
-    /** Batch [userID => {username, role}] lookup used by withAuditNames(). */
-    private function userMap(array $userIds): array
-    {
-        $userIds = $this->positiveUniqueIds($userIds);
-
-        if ($userIds === [] || ! $this->db->tableExists('users')) {
-            return [];
-        }
-
-        $users = $this->db->table('users')
-            ->select('userID, username, account_level AS role')
-            ->whereIn('userID', $userIds)
-            ->get()
-            ->getResultArray();
-
-        $map = [];
-
-        foreach ($users as $user) {
-            $map[(int) $user['userID']] = [
-                'username' => (string) $user['username'],
-                'role' => (string) ($user['role'] ?? ''),
-            ];
-        }
-
-        return $map;
-    }
-
-    /** Batch [memberID => {firstname, lastname}] lookup used by withAuditNames(). */
-    private function memberNameMap(array $memberIds): array
-    {
-        $memberIds = $this->positiveUniqueIds($memberIds);
-
-        if ($memberIds === [] || ! $this->db->tableExists('member')) {
-            return [];
-        }
-
-        $members = $this->db->table('member')
-            ->select('memberID, firstname, lastname')
-            ->whereIn('memberID', $memberIds)
-            ->get()
-            ->getResultArray();
-
-        $map = [];
-
-        foreach ($members as $member) {
-            $map[(int) $member['memberID']] = [
-                'firstname' => (string) $member['firstname'],
-                'lastname' => (string) $member['lastname'],
-            ];
-        }
-
-        return $map;
-    }
-
-    /** Joins first/last name into one display string. */
-    private function formatMemberName(array $memberName): string
-    {
-        return trim(implode(' ', array_filter([
-            (string) ($memberName['firstname'] ?? ''),
-            (string) ($memberName['lastname'] ?? ''),
-        ], static fn (string $value): bool => trim($value) !== '')));
-    }
-
     /** User IDs whose username matches the keyword (so audit search matches by operator). */
     private function userIdsForKeyword(string $keyword): array
     {
@@ -789,40 +701,10 @@ class SearchModel
         );
     }
 
-    /** Normalizes an ID list to unique positive ints for batched IN() lookups. */
-    private function positiveUniqueIds(array $ids): array
-    {
-        return array_values(array_unique(array_filter(
-            array_map(static fn (mixed $id): int => (int) $id, $ids),
-            static fn (int $id): bool => $id > 0
-        )));
-    }
-
     /** Trims a search keyword. */
     private function normalizeKeyword(string $keyword): string
     {
         return trim($keyword);
-    }
-
-    private function normalizeFilterList(mixed $value, bool $integers = true): array
-    {
-        $values = is_array($value) ? $value : [$value];
-        $normalized = [];
-
-        foreach ($values as $item) {
-            $item = trim((string) $item);
-
-            if ($item === '' || $item === '__all') {
-                continue;
-            }
-
-            $normalized[] = $integers ? (string) (int) $item : $item;
-        }
-
-        return array_values(array_unique(array_filter(
-            $normalized,
-            static fn (string $item): bool => $item !== '' && $item !== '0'
-        )));
     }
 
     /** Returns the date only if it's a valid Y-m-d, else '' (ignored by filters). */

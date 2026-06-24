@@ -27,7 +27,7 @@ class FamilyFormOptionsModel extends Model
         $servicesModel = new ServiceModel();
 
         return [
-            'sectors' => $sectorModel->getAll(),
+            'sectors' => $sectorModel->getActive(),
             'sexes' => ['Male', 'Female'],
             'suffixes' => FamilyProfilingFormV2::suffixes(),
             'civil_statuses' => FamilyProfilingFormV2::civilStatuses(),
@@ -62,7 +62,7 @@ class FamilyFormOptionsModel extends Model
                 ['value' => '250000', 'label' => 'PHP 150,001 - 250,000'],
                 ['value' => '250001', 'label' => 'Above PHP 250,000'],
             ],
-            'services' => $servicesModel->getAll(),
+            'services' => $servicesModel->getActive(),
             'family_heads' => [],
         ];
     }

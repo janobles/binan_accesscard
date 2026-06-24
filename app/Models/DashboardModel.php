@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Libraries\SectorIds;
+use App\Models\Concerns\ResolvesSectorNames;
 use CodeIgniter\Database\BaseConnection;
 
 /**
@@ -12,6 +12,8 @@ use CodeIgniter\Database\BaseConnection;
  */
 class DashboardModel
 {
+    use ResolvesSectorNames;
+
     private BaseConnection $db;
 
     /** Accepts an optional DB connection (defaults to the shared one) for testing. */
@@ -101,43 +103,5 @@ class DashboardModel
         }
 
         return $builder->countAllResults();
-    }
-
-    /**
-     * DECODE/display path for dashboard lists. Resolves each row's raw JSON
-    * sectorID string into a readable 'sector_name'. See App\Libraries\SectorIds::toNames().
-     */
-    private function withSectorNames(array $rows): array
-    {
-        $sectorNames = $this->sectorNameMap();
-
-        foreach ($rows as &$row) {
-            $sectorValue = $row['sector_array_string'] ?? $row['sectorID'] ?? '[]';
-            $row['sectorID'] = $sectorValue;
-            $row['sector_name'] = SectorIds::toNames($sectorValue, $sectorNames);
-        }
-
-        return $rows;
-    }
-
-    /** Builds an [sectorID => name] map used by withSectorNames(). */
-    private function sectorNameMap(): array
-    {
-        if (! $this->db->tableExists('sector')) {
-            return [];
-        }
-
-        $sectors = $this->db->table('sector')
-            ->select('sectorID, name')
-            ->get()
-            ->getResultArray();
-
-        $map = [];
-
-        foreach ($sectors as $sector) {
-            $map[(int) $sector['sectorID']] = (string) $sector['name'];
-        }
-
-        return $map;
     }
 }

@@ -69,6 +69,10 @@ if (! function_exists('family_modal_prepare')) {
             'submitLabel' => (string) ($data['submitLabel'] ?? 'Save Family Record'),
             'headId' => (int) ($data['headId'] ?? 0),
             'sectorOptions' => (array) ($data['sectorOptions'] ?? []),
+            // Sectors grouped by category (code => rows[]) for the grouped checkbox
+            // headings, mirroring servicesByCategory. Already includes archived-but-
+            // assigned sectors (flagged) in update mode, so it is safe to render from.
+            'sectorCatalog' => (array) ($data['sectorCatalog'] ?? []),
             'suffixOptions' => (array) ($data['suffixOptions'] ?? []),
             'sexOptions' => (array) ($data['sexOptions'] ?? ['Male', 'Female']),
             'civilOptions' => (array) ($data['civilOptions'] ?? []),

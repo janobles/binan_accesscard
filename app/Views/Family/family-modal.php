@@ -25,7 +25,7 @@ $renderMemberRow = static function ($index, array $m = []) use (
     $jobOptions,
     $incomeOptions,
     $relationshipOptions,
-    $sectorOptions,
+    $sectorCatalog,
     $servicesByCategory
 ): string {
     $i = (string) $index;
@@ -105,22 +105,32 @@ $renderMemberRow = static function ($index, array $m = []) use (
             <div class="col-12 col-lg-5">
                 <h5 class="family-column-title">Sectors</h5>
                 <div class="family-option-box family-option-box--sm">
-                    <?php if ($sectorOptions === []): ?>
+                    <?php if ($sectorCatalog === []): ?>
                         <p class="text-muted mb-0">No sectors available.</p>
                     <?php endif; ?>
-                    <?php foreach ($sectorOptions as $sector): ?>
+                    <?php foreach ($sectorCatalog as $sectorGroup): ?>
                         <?php
-                        $sector = (array) $sector;
-                        $sectorId = (string) ($sector['sectorID'] ?? $sector['id'] ?? '');
-                        $label = $sectorLabel($sector);
-                        $isArchived = ! empty($sector['is_archived']);
+                        $sectorGroup = array_values((array) $sectorGroup);
+                        if ($sectorGroup === []) { continue; }
+                        $groupTitle = trim((string) ($sectorGroup[0]['category_label'] ?? ''));
                         ?>
-                        <?php if ($sectorId !== '' && $label !== ''): ?>
-                            <label class="form-check family-choice<?= $isArchived ? ' family-choice--archived' : '' ?>">
-                                <input type="checkbox" name="<?= esc($field('sector_ids') . '[]', 'attr') ?>" value="<?= esc($sectorId, 'attr') ?>" data-label="<?= esc($label, 'attr') ?>"<?= $isArchived ? ' data-archived="1"' : '' ?> <?= in_array($sectorId, $selectedSectors, true) ? 'checked' : '' ?>>
-                                <span class="form-check-label"><?= esc($label) ?><?php if ($isArchived): ?> <span class="family-choice-badge">Archived</span><?php endif; ?></span>
-                            </label>
-                        <?php endif; ?>
+                        <div class="family-option-group">
+                            <?php if ($groupTitle !== ''): ?><p class="family-option-group-title"><?= esc($groupTitle) ?></p><?php endif; ?>
+                            <?php foreach ($sectorGroup as $sector): ?>
+                                <?php
+                                $sector = (array) $sector;
+                                $sectorId = (string) ($sector['sectorID'] ?? $sector['id'] ?? '');
+                                $label = $sectorLabel($sector);
+                                $isArchived = ! empty($sector['is_archived']);
+                                ?>
+                                <?php if ($sectorId !== '' && $label !== ''): ?>
+                                    <label class="form-check family-choice<?= $isArchived ? ' family-choice--archived' : '' ?>">
+                                        <input type="checkbox" name="<?= esc($field('sector_ids') . '[]', 'attr') ?>" value="<?= esc($sectorId, 'attr') ?>" data-label="<?= esc($label, 'attr') ?>"<?= $isArchived ? ' data-archived="1"' : '' ?> <?= in_array($sectorId, $selectedSectors, true) ? 'checked' : '' ?>>
+                                        <span class="form-check-label"><?= esc($label) ?><?php if ($isArchived): ?> <span class="family-choice-badge">Archived</span><?php endif; ?></span>
+                                    </label>
+                                <?php endif; ?>
+                            <?php endforeach; ?>
+                        </div>
                     <?php endforeach; ?>
                 </div>
             </div>
@@ -280,22 +290,32 @@ $renderMemberRow = static function ($index, array $m = []) use (
                         <div class="col-12 col-lg-5">
                             <h4 class="family-column-title">Sectors</h4>
                             <div class="family-option-box">
-                                <?php if ($sectorOptions === []): ?>
+                                <?php if ($sectorCatalog === []): ?>
                                     <p class="text-muted mb-0">No sectors available.</p>
                                 <?php endif; ?>
-                                <?php foreach ($sectorOptions as $sector): ?>
+                                <?php foreach ($sectorCatalog as $sectorGroup): ?>
                                     <?php
-                                    $sector = (array) $sector;
-                                    $sectorId = (string) ($sector['sectorID'] ?? $sector['id'] ?? '');
-                                    $label = $sectorLabel($sector);
-                                    $isArchived = ! empty($sector['is_archived']);
+                                    $sectorGroup = array_values((array) $sectorGroup);
+                                    if ($sectorGroup === []) { continue; }
+                                    $groupTitle = trim((string) ($sectorGroup[0]['category_label'] ?? ''));
                                     ?>
-                                    <?php if ($sectorId !== '' && $label !== ''): ?>
-                                        <label class="form-check family-choice<?= $isArchived ? ' family-choice--archived' : '' ?>">
-                                            <input type="checkbox" name="sector_ids[]" value="<?= esc($sectorId, 'attr') ?>" data-label="<?= esc($label, 'attr') ?>"<?= $isArchived ? ' data-archived="1"' : '' ?> <?= in_array($sectorId, $selectedSectorIds, true) ? 'checked' : '' ?>>
-                                            <span class="form-check-label"><?= esc($label) ?><?php if ($isArchived): ?> <span class="family-choice-badge">Archived</span><?php endif; ?></span>
-                                        </label>
-                                    <?php endif; ?>
+                                    <div class="family-option-group">
+                                        <?php if ($groupTitle !== ''): ?><p class="family-option-group-title"><?= esc($groupTitle) ?></p><?php endif; ?>
+                                        <?php foreach ($sectorGroup as $sector): ?>
+                                            <?php
+                                            $sector = (array) $sector;
+                                            $sectorId = (string) ($sector['sectorID'] ?? $sector['id'] ?? '');
+                                            $label = $sectorLabel($sector);
+                                            $isArchived = ! empty($sector['is_archived']);
+                                            ?>
+                                            <?php if ($sectorId !== '' && $label !== ''): ?>
+                                                <label class="form-check family-choice<?= $isArchived ? ' family-choice--archived' : '' ?>">
+                                                    <input type="checkbox" name="sector_ids[]" value="<?= esc($sectorId, 'attr') ?>" data-label="<?= esc($label, 'attr') ?>"<?= $isArchived ? ' data-archived="1"' : '' ?> <?= in_array($sectorId, $selectedSectorIds, true) ? 'checked' : '' ?>>
+                                                    <span class="form-check-label"><?= esc($label) ?><?php if ($isArchived): ?> <span class="family-choice-badge">Archived</span><?php endif; ?></span>
+                                                </label>
+                                            <?php endif; ?>
+                                        <?php endforeach; ?>
+                                    </div>
                                 <?php endforeach; ?>
                             </div>
                         </div>

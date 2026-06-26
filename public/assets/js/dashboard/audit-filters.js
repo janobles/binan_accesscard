@@ -7,6 +7,33 @@
 //   - Backend: GET admin/audit-trails (Admin\DashboardController::auditTrails)
 //   - view-interactions.js also binds the same behaviour for AJAX-loaded content
 (function (document) {
+    function filterLoadedAuditRows(input) {
+        const panel = input.closest('.audit-trails');
+
+        if (!panel) {
+            return;
+        }
+
+        const query = input.value.trim().toLowerCase();
+        const rows = panel.querySelectorAll('[data-audit-row]');
+        const emptyRow = panel.querySelector('[data-audit-manual-empty]');
+        let visibleRows = 0;
+
+        rows.forEach(function (row) {
+            const matches = query === '' || row.textContent.toLowerCase().includes(query);
+
+            row.classList.toggle('d-none', !matches);
+
+            if (matches) {
+                visibleRows += 1;
+            }
+        });
+
+        if (emptyRow) {
+            emptyRow.classList.toggle('d-none', query === '' || visibleRows > 0);
+        }
+    }
+
     document.addEventListener('change', function (event) {
         const select = event.target;
 
@@ -19,5 +46,15 @@
         if (form instanceof HTMLFormElement) {
             form.submit();
         }
+    });
+
+    document.addEventListener('input', function (event) {
+        const input = event.target;
+
+        if (!(input instanceof HTMLInputElement) || !input.matches('[data-audit-manual-search]')) {
+            return;
+        }
+
+        filterLoadedAuditRows(input);
     });
 })(document);

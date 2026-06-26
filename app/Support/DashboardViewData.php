@@ -35,6 +35,7 @@ class DashboardViewData
         $searchTerm = (string) ($data['searchTerm'] ?? '');
         $searchFilters = self::arrayValue($data['searchFilters'] ?? []);
         $auditActionOptions = self::arrayValue($data['auditActionOptions'] ?? []);
+        $auditListData = self::arrayValue($data['auditListData'] ?? []);
         $sectorOptions = self::arrayValue($familyFormViewData['sectorOptions'] ?? []);
         $hasSearchFilters = self::hasSearchFilters($searchTerm, $searchFilters);
         $canCreateFamily = (bool) ($data['canCreateFamily'] ?? false);
@@ -46,6 +47,7 @@ class DashboardViewData
             'activePage',
             'adminAccounts',
             'auditActionOptions',
+            'auditListData',
             'canCreateFamily',
             'canManageAccounts',
             'employeeAccounts',
@@ -84,6 +86,7 @@ class DashboardViewData
         $searchTerm = (string) ($data['searchTerm'] ?? '');
         $searchFilters = self::arrayValue($data['searchFilters'] ?? []);
         $auditActionOptions = self::arrayValue($data['auditActionOptions'] ?? []);
+        $auditListData = self::arrayValue($data['auditListData'] ?? []);
         $sectorOptions = self::arrayValue($familyFormViewData['sectorOptions'] ?? []);
         $hasSearchFilters = self::hasSearchFilters($searchTerm, $searchFilters);
         $canCreateFamily = (bool) ($data['canCreateFamily'] ?? false);
@@ -94,6 +97,7 @@ class DashboardViewData
         return compact(
             'activePage',
             'auditActionOptions',
+            'auditListData',
             'canCreateFamily',
             'familyFormViewData',
             'formatDate',
@@ -143,11 +147,23 @@ class DashboardViewData
         $searchFilters = self::arrayValue($data['searchFilters'] ?? []);
         $auditActionOptions = self::arrayValue($data['auditActionOptions'] ?? []);
         $hasSearchFilters = self::hasSearchFilters($searchTerm, $searchFilters);
+        $auditPage = max(1, (int) ($data['auditPage'] ?? 1));
+        $auditPerPage = max(1, (int) ($data['auditPerPage'] ?? 50));
+        $auditTotal = max(0, (int) ($data['auditTotal'] ?? count($recentAudits)));
+        $auditTotalPages = max(1, (int) ($data['auditTotalPages'] ?? (int) ceil($auditTotal / $auditPerPage)));
+        $auditFromRecord = max(0, (int) ($data['auditFromRecord'] ?? ($auditTotal === 0 ? 0 : (($auditPage - 1) * $auditPerPage) + 1)));
+        $auditToRecord = max(0, (int) ($data['auditToRecord'] ?? min($auditTotal, $auditPage * $auditPerPage)));
         $formatDate = self::formatDateCallback();
         $formatTime = self::formatTimeCallback();
 
         return compact(
             'auditActionOptions',
+            'auditFromRecord',
+            'auditPage',
+            'auditPerPage',
+            'auditToRecord',
+            'auditTotal',
+            'auditTotalPages',
             'formatDate',
             'formatTime',
             'hasSearchFilters',

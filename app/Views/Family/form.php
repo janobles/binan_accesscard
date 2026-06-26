@@ -8,7 +8,9 @@ use App\Support\FamilyFormViewData;
 extract(FamilyFormViewData::prepare(get_defined_vars()), EXTR_OVERWRITE);
 ?>
 
-<link rel="stylesheet" href="<?= esc(asset_url('css/familyform.css'), 'attr') ?>">
+<?php foreach (asset_styles('family-form') as $stylePath): ?>
+<link rel="stylesheet" href="<?= esc(asset_url($stylePath), 'attr') ?>">
+<?php endforeach; ?>
 
 <div class="family-wizard-shell">
     <div class="family-wizard-card">

@@ -18,15 +18,6 @@ $auditActionOptions = $auditActionOptions ?? [];
 $hasSearchFilters = $hasSearchFilters ?? false;
 $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
 
-$jadeStyles = [
-    'assets/datatables/css/dataTables.bootstrap5.min.css',
-    'css/sb-admin-adapter.css',
-    'css/managerecord.css',
-    'css/audittrails.css',
-    'css/familymodal.css',
-    'css/accounts.css',
-    'css/session-timeout.css',
-];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -34,9 +25,7 @@ $jadeStyles = [
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= esc($pageTitle) ?> - Binan Access Card MIS</title>
-    <link href="<?= esc(asset_url('assets/bootstrap/css/bootstrap.min.css'), 'attr') ?>" rel="stylesheet">
-    <link href="<?= esc(asset_url('assets/bootstrap-icons/font/bootstrap-icons.min.css'), 'attr') ?>" rel="stylesheet">
-    <?php foreach ($jadeStyles as $stylePath): ?>
+    <?php foreach (array_merge(asset_styles('head'), asset_styles('employee')) as $stylePath): ?>
     <link rel="stylesheet" href="<?= esc(asset_url($stylePath), 'attr') ?>">
     <?php endforeach; ?>
 </head>
@@ -45,7 +34,7 @@ $jadeStyles = [
     <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion employee" id="dashboard-sidebar">
         <li class="sidebar-brand-wrap">
             <a class="sidebar-brand d-flex align-items-center justify-content-center" href="<?= site_url('employee/workspace') ?>">
-                <img class="sidebar-brand-icon" src="<?= base_url('assets/image/binan.png') ?>" alt="City of Binan Logo">
+                <img class="sidebar-brand-icon" src="<?= asset_url('assets/image/binan.png') ?>" alt="City of Binan Logo">
                 <span class="sidebar-brand-text mx-2">Bi&ntilde;an Access Card MIS</span>
             </a>
         </li>
@@ -292,20 +281,9 @@ $jadeStyles = [
 
 <?= view('Family/action-confirm-modal') ?>
 
-<script src="<?= esc(asset_url('assets/jquery/jquery-3.7.1.min.js'), 'attr') ?>"></script>
-<script src="<?= esc(asset_url('assets/bootstrap/js/bootstrap.bundle.min.js'), 'attr') ?>"></script>
-<script src="<?= esc(asset_url('assets/js/dashboard/view-interactions.js'), 'attr') ?>"></script>
-<script src="<?= esc(asset_url('assets/datatables/js/dataTables.min.js'), 'attr') ?>"></script>
-<script src="<?= esc(asset_url('assets/datatables/js/dataTables.bootstrap5.min.js'), 'attr') ?>"></script>
-<script src="<?= esc(asset_url('assets/js/dashboard/family-datatable.js'), 'attr') ?>"></script>
-<script src="<?= esc(asset_url('assets/js/dashboard/family-form-ui.js'), 'attr') ?>"></script>
-<script src="<?= esc(asset_url('assets/js/dashboard/family-form.js'), 'attr') ?>"></script>
-<script src="<?= esc(asset_url('assets/js/dashboard/family-list.js'), 'attr') ?>"></script>
-<script src="<?= esc(asset_url('assets/js/dashboard/audit-filters.js'), 'attr') ?>"></script>
-<script src="<?= esc(asset_url('assets/js/dashboard/lookup-search.js'), 'attr') ?>"></script>
+<?php foreach (array_merge(asset_scripts('core'), asset_scripts('employee')) as $scriptPath): ?>
+<script src="<?= esc(asset_url($scriptPath), 'attr') ?>"></script>
+<?php endforeach; ?>
 <script src="<?= esc(asset_url('assets/js/session-timeout.js'), 'attr') ?>" data-timeout-seconds="<?= esc((string) $idleTimeoutSeconds) ?>" data-logout-url="<?= site_url('logout?timeout=1') ?>" data-home-url="<?= site_url('/') ?>" data-keep-alive-url="<?= site_url('session/keep-alive') ?>"></script>
-<script src="<?= esc(asset_url('assets/js/dashboard/dashboard-modal-loader.js'), 'attr') ?>"></script>
-<script src="<?= esc(asset_url('assets/js/dashboard/manage-family-modal.js'), 'attr') ?>"></script>
-<script src="<?= esc(asset_url('assets/js/dashboard/account-form-modal.js'), 'attr') ?>"></script>
 </body>
 </html>

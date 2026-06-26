@@ -52,16 +52,6 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
  * SB Admin-style shell: the layout keeps the existing data, routes, modal
  * target, and page switch while using a Bootstrap 5-safe responsive frame.
  */
-$jadeStyles = [
-    'assets/datatables/css/dataTables.bootstrap5.min.css',
-    'css/sb-admin-adapter.css',
-    'css/managerecord.css',
-    'css/lookupmanagement.css',
-    'css/audittrails.css',
-    'css/accounts.css',
-    'css/familymodal.css',
-    'css/session-timeout.css',
-];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -69,9 +59,7 @@ $jadeStyles = [
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= esc($pageTitle) ?> - Binan Access Card MIS</title>
-    <link href="<?= esc(asset_url('assets/bootstrap/css/bootstrap.min.css'), 'attr') ?>" rel="stylesheet">
-    <link href="<?= esc(asset_url('assets/bootstrap-icons/font/bootstrap-icons.min.css'), 'attr') ?>" rel="stylesheet">
-    <?php foreach ($jadeStyles as $stylePath): ?>
+    <?php foreach (array_merge(asset_styles('head'), asset_styles('admin')) as $stylePath): ?>
     <link rel="stylesheet" href="<?= esc(asset_url($stylePath), 'attr') ?>">
     <?php endforeach; ?>
 </head>
@@ -80,7 +68,7 @@ $jadeStyles = [
     <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion <?= esc($sidebarRoleClass) ?>" id="dashboard-sidebar">
         <li class="sidebar-brand-wrap">
             <a class="sidebar-brand d-flex align-items-center justify-content-center" href="<?= site_url('admin/dashboard') ?>">
-                <img class="sidebar-brand-icon" src="<?= base_url('assets/image/binan.png') ?>" alt="City of Binan Logo">
+                <img class="sidebar-brand-icon" src="<?= asset_url('assets/image/binan.png') ?>" alt="City of Binan Logo">
                 <span class="sidebar-brand-text mx-2">Bi&ntilde;an Access Card MIS</span>
             </a>
         </li>
@@ -338,35 +326,7 @@ $jadeStyles = [
     </div>
 </div>
 
-<script src="<?= esc(asset_url('assets/jquery/jquery-3.7.1.min.js'), 'attr') ?>"></script>
-<script src="<?= esc(asset_url('assets/bootstrap/js/bootstrap.bundle.min.js'), 'attr') ?>"></script>
-<?php
-$dashboardScripts = [
-    'assets/js/dashboard/view-interactions.js',
-    'assets/datatables/js/dataTables.min.js',
-    'assets/datatables/js/dataTables.bootstrap5.min.js',
-    'assets/js/dashboard/family-datatable.js',
-    // Legacy Add-Record page (admin/family-entry) still uses the wizard form;
-    // these self-init on a wizard page and no-op on the DataTable list page.
-    'assets/js/dashboard/family-form-ui.js',
-    'assets/js/dashboard/family-form.js',
-    'assets/js/dashboard/family-list.js',
-    'assets/js/dashboard/management-forms.js',
-    'assets/js/dashboard/lookup-search.js',
-    'assets/js/dashboard/audit-filters.js',
-    'assets/js/dashboard/dashboard-modal-loader.js',
-    'assets/js/dashboard/manage-family-modal.js',
-    'assets/js/dashboard/account-form-modal.js',
-    'assets/js/dashboard/accounts-modal.js',
-    'assets/js/dashboard/sectors-modal.js',
-    'assets/js/dashboard/services-modal.js',
-    'assets/js/dashboard/categories-modal.js',
-    'assets/js/dashboard/audit-trails-modal.js',
-    'assets/js/dashboard/audit-detail-modal.js',
-];
-
-?>
-<?php foreach ($dashboardScripts as $scriptPath): ?>
+<?php foreach (array_merge(asset_scripts('core'), asset_scripts('admin')) as $scriptPath): ?>
 <script src="<?= esc(asset_url($scriptPath), 'attr') ?>"></script>
 <?php endforeach; ?>
 <script src="<?= esc(asset_url('assets/js/session-timeout.js'), 'attr') ?>" data-timeout-seconds="<?= esc((string) $idleTimeoutSeconds) ?>" data-logout-url="<?= site_url('logout?timeout=1') ?>" data-keep-alive-url="<?= site_url('session/keep-alive') ?>"></script>

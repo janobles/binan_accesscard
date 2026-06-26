@@ -1283,43 +1283,23 @@ class FamilyController extends BaseController
         }
 
         $routeBase = $this->dataTableRouteBase();
-        $items = '';
 
-        if (! $archived) {
-            $viewUrl = site_url($routeBase . '/view/' . $headId . '?partial=1');
-            $items .= '<button type="button" class="dropdown-item js-open-family-view-modal" data-modal-url="'
-                . esc($viewUrl, 'attr') . '" data-modal-title="View Record">VIEW</button>';
-
-            if ($canEdit) {
-                $updateUrl = site_url($routeBase . '/create?partial=1&mode=update&id=' . $headId);
-                $items .= '<button type="button" class="dropdown-item js-open-family-add-modal" data-modal-url="'
-                    . esc($updateUrl, 'attr') . '" data-modal-title="Update Family Record">UPDATE</button>';
-            }
-        }
-
-        if ($canArchive) {
-            $action = $archived ? 'restore' : 'archive';
-            $label = $archived ? 'Restore' : 'Archive';
-            $past = $archived ? 'restored' : 'archived';
-            $message = $archived
+        // The trigger markup (modal callers + archive/restore form) lives in the
+        // view; this controller only supplies the permission flags and URLs.
+        return view('Family/row-actions', [
+            'archived'       => $archived,
+            'canEdit'        => $canEdit,
+            'canArchive'     => $canArchive,
+            'displayName'    => $displayName,
+            'viewUrl'        => $archived ? '' : site_url($routeBase . '/view/' . $headId . '?partial=1'),
+            'updateUrl'      => (! $archived && $canEdit) ? site_url($routeBase . '/create?partial=1&mode=update&id=' . $headId) : '',
+            'formAction'     => $canArchive ? site_url($routeBase . '/' . ($archived ? 'restore' : 'archive') . '/' . $headId) : '',
+            'actionLabel'    => $archived ? 'Restore' : 'Archive',
+            'actionPast'     => $archived ? 'restored' : 'archived',
+            'confirmMessage' => $archived
                 ? 'Restore this record to the active list?'
-                : 'Archive this record? This keeps the record in the database, marks it as archived, and hides it from active lists.';
-            $formAction = site_url($routeBase . '/' . $action . '/' . $headId);
-            $items .= '<form class="js-family-record-action-form" method="post" action="' . esc($formAction, 'attr')
-                . '" data-confirm-message="' . esc($message, 'attr') . '" data-action-label="' . esc($label, 'attr')
-                . '" data-action-past="' . esc($past, 'attr') . '" data-family-name="' . esc($displayName, 'attr') . '">'
-                . csrf_field() . '<button type="submit" class="dropdown-item ' . ($archived ? 'text-success' : 'text-danger')
-                . '">' . mb_strtoupper($label) . '</button></form>';
-        }
-
-        if ($items === '') {
-            return '';
-        }
-
-        return '<div class="dropdown actions-menu"><button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button"'
-            . ' data-bs-toggle="dropdown" data-bs-boundary="viewport" data-bs-strategy="fixed" aria-expanded="false"'
-            . ' aria-label="Record actions">Actions</button>'
-            . '<div class="dropdown-menu dropdown-menu-end">' . $items . '</div></div>';
+                : 'Archive this record? This keeps the record in the database, marks it as archived, and hides it from active lists.',
+        ]);
     }
 
     /** Role-aware route base for the DataTable action URLs. */

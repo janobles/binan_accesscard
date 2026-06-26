@@ -1,5 +1,4 @@
 <?php
-helper('family_form');
-extract(family_form_view_data(get_defined_vars()), EXTR_OVERWRITE);
-
+// Family/form prepares its own view data (FamilyFormViewData::prepare()), so this
+// wrapper just forwards whatever the caller passed — no separate prep step here.
 echo view('Family/form', get_defined_vars());

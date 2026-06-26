@@ -1,9 +1,11 @@
 <?php
 use App\Libraries\ViewFormatter;
 
+// $sectorCategoryLabels (code => name) is prepared upstream by
+// FamilyFormOptionsModel::buildViewData() so this partial stays model-free.
 $memberSectorGroups = ViewFormatter::memberSectorGroups(
     $sectorOptions,
-    (new \App\Models\Lookups\SectorModel())->categoryLabelMap()
+    (array) ($sectorCategoryLabels ?? [])
 );
 ?>
 <template id="memberTemplate">

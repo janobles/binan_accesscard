@@ -10,14 +10,9 @@
  * (managerecord.css) plus the shared lookup badge/action styles (lookupmanagement.css).
  */
 helper('dashboard_view');
+// category_management_view_data() also supplies $existingCodes (all codes incl.
+// archived, for the modal's duplicate check) so this view stays model-free.
 extract(category_management_view_data(get_defined_vars()), EXTR_OVERWRITE);
-
-// All codes (incl. archived, across every page) for the modal's duplicate check —
-// sourced from the model, not the current page below, so the check stays complete.
-$existingCodes = array_values(array_unique(array_filter(array_map(
-    static fn (array $c): string => strtoupper(trim((string) ($c['code'] ?? ''))),
-    (new \App\Models\Lookups\CategoryModel())->getAllIncluding()
-))));
 
 // Counts come from the server bundle (whole table), not the current page below.
 $activeCategoryCount   = (int) ($activeCount ?? 0);
@@ -94,8 +89,8 @@ $categoryClearUrl = static function () use ($listRoute, $status, $perPage): stri
 		<table class="table table-sm manage-record-table align-middle">
 			<thead>
 				<tr>
-					<th>Code</th>
 					<th>Name</th>
+					<th>Code</th>
 					<th class="text-end">Actions</th>
 				</tr>
 			</thead>
@@ -106,8 +101,8 @@ $categoryClearUrl = static function () use ($listRoute, $status, $perPage): stri
 					$isArchived = trim((string) ($category['dt_deleted'] ?? '')) !== '';
 					?>
 					<tr data-row-archived="<?= $isArchived ? '1' : '0' ?>">
-						<td><span class="badge bg-light text-dark border"><?= esc((string) ($category['code'] ?? '')) ?></span></td>
 						<td><span class="sector-name"><?= esc((string) ($category['name'] ?? '')) ?></span></td>
+						<td><span class="badge bg-light text-dark border"><?= esc((string) ($category['code'] ?? '')) ?></span></td>
 						<td class="text-end">
 							<div class="dropdown actions-menu">
 								<button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false" aria-label="Category actions">

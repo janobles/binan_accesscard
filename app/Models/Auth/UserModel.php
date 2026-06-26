@@ -2,6 +2,7 @@
 
 namespace App\Models\Auth;
 
+use App\Libraries\DeveloperProfile;
 use CodeIgniter\Model;
 
 /**
@@ -287,10 +288,13 @@ class UserModel extends Model
      */
     private function verifyDeveloperLogin(string $username, string $password): ?array
     {
-        $devUsername = env('developer.username');
-        $devHash = env('developer.passwordHash');
+        // Live credentials come from writable/developer/credentials.json when present,
+        // else the .env developer.* seed (see DeveloperProfile::credentials()).
+        $creds = DeveloperProfile::credentials();
+        $devUsername = $creds['username'];
+        $devHash = $creds['passwordHash'];
 
-        if (! is_string($devUsername) || $devUsername === '' || ! is_string($devHash) || $devHash === '') {
+        if ($devUsername === '' || $devHash === '') {
             return null;
         }
 

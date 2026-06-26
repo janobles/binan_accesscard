@@ -2,18 +2,21 @@
 
 namespace App\Models\Lookups;
 
-use App\Libraries\SectorIds;
+use App\Models\Concerns\LookupModelTrait;
 use CodeIgniter\Database\BaseBuilder;
 use CodeIgniter\Model;
 
 /**
  * Manages the `services` lookup table: admin CRUD/archival (create, update, find,
- * getAll/getAllIncluding, getByCategory, getCategories), plus per-member and
- * per-sector eligibility lookups used by the family form and search. The single
- * model for the `services` table across the admin lookup screens and family flows.
+ * getActive) plus the per-batch eligibility lookups used by the family form and
+ * search. Shared CRUD and management-search behaviour lives in LookupModelTrait.
+ * The single model for the `services` table across the admin lookup screens and
+ * family flows.
  */
 class ServiceModel extends Model
 {
+    use LookupModelTrait;
+
     protected $table = 'services';
     protected $primaryKey = 'serviceID';
     protected $returnType = 'array';
@@ -21,10 +24,17 @@ class ServiceModel extends Model
     protected $useAutoIncrement = false;
     protected $useTimestamps = false;
 
-    /** True if the `services` table exists. */
-    public function hasTable(): bool
+    /** Columns the Services management search box matches. */
+    protected function lookupSearchColumns(): array
     {
-        return $this->db->tableExists($this->table);
+        return ['category', 'name', 'description'];
+    }
+
+    /** Services management list order: by category then ID. */
+    protected function applyLookupOrder(BaseBuilder $builder): void
+    {
+        $builder->orderBy('category', 'ASC')
+            ->orderBy('serviceID', 'ASC');
     }
 
     /**
@@ -43,33 +53,10 @@ class ServiceModel extends Model
     }
 
     /**
-     * Soft-archive a service/program by stamping dt_deleted. The row is hidden,
-     * never deleted.
-     */
-    public function archive(int $id): bool
-    {
-        return $this->db->table($this->table)
-            ->where($this->primaryKey, $id)
-            ->set('dt_deleted', 'NOW()', false)
-            ->update();
-    }
-
-    /**
-     * Restore a soft-archived service/program by clearing dt_deleted.
-     */
-    public function restore(int $id): bool
-    {
-        return $this->db->table($this->table)
-            ->where($this->primaryKey, $id)
-            ->set('dt_deleted', null)
-            ->update();
-    }
-
-    /**
      * Fetch active (non-archived) services from the read-only view (or the base
      * table filtered by dt_deleted). Frontend: the family form's service options.
      */
-    public function getAll(): array
+    public function getActive(): array
     {
         $builder = $this->activeBuilder();
 
@@ -104,175 +91,6 @@ class ServiceModel extends Model
             ->orderBy('serviceID', 'ASC')
             ->get()
             ->getResultArray();
-    }
-
-    /**
-     * Fetch all services, including archived, for the admin lookup management screen.
-     */
-    public function getAllIncluding(): array
-    {
-        if (! $this->db->tableExists($this->table)) {
-            return [];
-        }
-
-        return $this->db->table($this->table)
-            ->orderBy('category', 'ASC')
-            ->orderBy('serviceID', 'ASC')
-            ->get()
-            ->getResultArray();
-    }
-
-    /**
-     * Status-aware, keyword-filtered builder for the Services management list.
-     * Mirrors MemberModel::familySearchBuilder. $status: active|archived|all.
-     * Searches the columns the page advertises: category, name, description.
-     */
-    private function lookupBuilder(?string $keyword, string $status): BaseBuilder
-    {
-        $builder = $this->db->table($this->table);
-
-        if ($this->db->fieldExists('dt_deleted', $this->table)) {
-            if ($status === 'archived') {
-                $builder->where('dt_deleted IS NOT NULL', null, false);
-            } elseif ($status !== 'all') {
-                $builder->where('dt_deleted IS NULL', null, false);
-            }
-        }
-
-        $keyword = trim((string) $keyword);
-
-        if ($keyword !== '') {
-            $builder->groupStart()
-                ->like('category', $keyword)
-                ->orLike('name', $keyword)
-                ->orLike('description', $keyword)
-                ->groupEnd();
-        }
-
-        return $builder;
-    }
-
-    /**
-     * One page of services for the management list: status-filtered, keyword-matched,
-     * active rows first (dt_deleted ASC) then by category/ID. $status: active|archived|all.
-     */
-    public function searchLookup(?string $keyword, string $status = 'active', int $limit = 50, int $offset = 0): array
-    {
-        if (! $this->hasTable()) {
-            return [];
-        }
-
-        $builder = $this->lookupBuilder($keyword, $status);
-
-        if ($this->db->fieldExists('dt_deleted', $this->table)) {
-            $builder->orderBy('dt_deleted', 'ASC');
-        }
-
-        return $builder->orderBy('category', 'ASC')
-            ->orderBy('serviceID', 'ASC')
-            ->limit(max(1, $limit), max(0, $offset))
-            ->get()
-            ->getResultArray();
-    }
-
-    /** Total services matching the keyword/status filter (for pagination). */
-    public function countLookup(?string $keyword, string $status = 'active'): int
-    {
-        if (! $this->hasTable()) {
-            return 0;
-        }
-
-        return $this->lookupBuilder($keyword, $status)->countAllResults();
-    }
-
-    /** Unfiltered active/archived totals for the status dropdown badges. */
-    public function statusCounts(): array
-    {
-        return [
-            'active'   => $this->countLookup(null, 'active'),
-            'archived' => $this->countLookup(null, 'archived'),
-        ];
-    }
-
-    /**
-     * Find a single service row by ID (including archived) for the admin edit/
-     * archive/restore flows. Returns null when the table or row is missing.
-     */
-    public function find($id = null)
-    {
-        if (! $this->db->tableExists($this->table)) {
-            return null;
-        }
-
-        return $this->db->table($this->table)
-            ->where($this->primaryKey, $id)
-            ->get()
-            ->getRowArray();
-    }
-
-    /**
-     * Fetch active services in one category from the view, for category-scoped UI.
-     */
-    public function getByCategory(string $category): array
-    {
-        $builder = $this->activeBuilder();
-
-        if ($builder === null) {
-            return [];
-        }
-
-        return $builder
-            ->where('category', $category)
-            ->orderBy('serviceID', 'ASC')
-            ->get()
-            ->getResultArray();
-    }
-
-    /**
-     * List distinct active service categories for use in UI options.
-     */
-    public function getCategories(): array
-    {
-        $builder = $this->activeBuilder();
-
-        if ($builder === null) {
-            return [];
-        }
-
-        $rows = $builder
-            ->distinct()
-            ->select('category')
-            ->orderBy('category', 'ASC')
-            ->get()
-            ->getResultArray();
-
-        return array_values(array_map(
-            static fn (array $row): string => (string) ($row['category'] ?? ''),
-            $rows
-        ));
-    }
-
-    /**
-     * Create a new service record (admin lookup screen) and return its insert ID.
-     * Lets the DB auto-assign serviceID; the family-form create path instead sets
-     * serviceID explicitly via nextServiceId().
-     */
-    public function create(array $data): int
-    {
-        $this->db->table($this->table)->insert($data);
-
-        return (int) $this->db->insertID();
-    }
-
-    /**
-     * Update a service record by ID (admin lookup screen). Overrides the framework
-     * update() with a builder write scoped to the services table.
-     */
-    public function update($id = null, $row = null): bool
-    {
-        return $this->db->table($this->table)
-            ->where($this->primaryKey, (int) $id)
-            ->update((array) $row);
     }
 
     /**
@@ -331,64 +149,6 @@ class ServiceModel extends Model
     }
 
     /**
-     * Lists services available to a sector: those in that sector's category plus
-     * any 'General' services. Used when building eligibility options.
-     */
-    public function getForSectorName(string $sectorName): array
-    {
-        return $this->groupStart()
-            ->where('category', $sectorName)
-            ->orWhere('category', 'General')
-            ->groupEnd()
-            ->orderBy('name', 'ASC')
-            ->findAll();
-    }
-
-    /**
-     * Resolves the services a specific member is eligible for, based on their
-     * sector(s) plus 'General' services. Frontend: drives the per-member service
-     * checklist in the family form/edit views.
-     */
-    public function getEligibleForMember(int $memberId): array
-    {
-        $member = $this->db->table('member')
-            ->select('sectorID')
-            ->where('member.memberID', $memberId)
-            ->get()
-            ->getRowArray();
-
-        if ($member === null) {
-            return [];
-        }
-
-        $sectorIds = SectorIds::normalize($member['sectorID'] ?? null);
-
-        if ($sectorIds === []) {
-            return [];
-        }
-
-        $sectorNames = array_column(
-            $this->db->table('sector')
-                ->select('name')
-                ->whereIn('sectorID', $sectorIds)
-                ->get()
-                ->getResultArray(),
-            'name'
-        );
-
-        if ($sectorNames === []) {
-            return [];
-        }
-
-        return $this->groupStart()
-            ->whereIn('category', $sectorNames)
-            ->orWhere('category', 'General')
-            ->groupEnd()
-            ->orderBy('name', 'ASC')
-            ->findAll();
-    }
-
-    /**
      * True if an active (non-archived) service with this ID exists. Used by
      * FamilyController::store() to validate selected services before linking them.
      */
@@ -406,36 +166,6 @@ class ServiceModel extends Model
 
         return $builder
             ->countAllResults() > 0;
-    }
-
-    /**
-     * True if every given ID is an existing active service (empty list = true).
-     * Used to validate a batch of selected service IDs.
-     */
-    public function idsExist(array $serviceIds): bool
-    {
-        $serviceIds = $this->naturalIds($serviceIds);
-
-        if ($serviceIds === null) {
-            return false;
-        }
-
-        if ($serviceIds === []) {
-            return true;
-        }
-
-        if (! $this->db->tableExists($this->table)) {
-            return false;
-        }
-
-        $builder = $this->whereIn($this->primaryKey, $serviceIds);
-
-        if ($this->db->fieldExists('dt_deleted', $this->table)) {
-            $builder->where('dt_deleted', null);
-        }
-
-        return $builder
-            ->countAllResults() === count($serviceIds);
     }
 
     /**

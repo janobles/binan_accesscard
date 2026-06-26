@@ -3,11 +3,10 @@
 namespace App\Controllers\Lookups;
 
 use App\Controllers\BaseController;
+use App\Controllers\Concerns\LookupControllerTrait;
 use App\Libraries\RoleAccess;
-use App\Models\Audit\AuditTrailsModel;
 use App\Models\Lookups\ServiceModel;
 use CodeIgniter\HTTP\RedirectResponse;
-use Throwable;
 
 /**
  * Handles the write/mutation actions for the `services` lookup table, posted from
@@ -17,6 +16,8 @@ use Throwable;
  */
 class ServiceController extends BaseController
 {
+    use LookupControllerTrait;
+
     /**
      * POST `admin/services/create`: add a new service/program. Delegates to
      * saveService(). Frontend: the "Add service" modal form.
@@ -202,26 +203,6 @@ class ServiceController extends BaseController
     }
 
     /**
-     * Role guard for archive/restore/delete: returns a redirect for non
-     * Developer/Admin users, or null to proceed.
-     */
-    private function ensureAdminAccess(): ?RedirectResponse
-    {
-        $guard = RoleAccess::requireRole(['Developer', 'Admin']);
-
-        return $guard instanceof RedirectResponse ? $guard : null;
-    }
-
-    /**
-     * Builds a redirect back to an admin path carrying a typed flash message
-     * (e.g. 'success'/'error').
-     */
-    private function redirectAdmin(string $path, string $type, string $message): RedirectResponse
-    {
-        return redirect()->to(site_url($path))->with($type, $message);
-    }
-
-    /**
      * Human-readable service label for audit descriptions, e.g. "Aid (General) #12".
      */
     private function serviceLabel(?array $service, int $serviceId): string
@@ -231,31 +212,5 @@ class ServiceController extends BaseController
         $label = trim($name . ($category !== '' ? ' (' . $category . ')' : ''));
 
         return ($label === '' ? 'service/program' : 'service/program ' . $label) . ' #' . $serviceId;
-    }
-
-    /**
-     * Write a service action to the audit trail. Service actions have no affected
-     * member, so memberID is null (audit_trails.memberID is nullable).
-     */
-    private function audit(string $action, string $description): void
-    {
-        $auditModel = new AuditTrailsModel();
-
-        if (! $auditModel->hasTable()) {
-            return;
-        }
-
-        try {
-            $auditModel->logAction(
-                (int) session()->get('user_id'),
-                null,
-                $action,
-                $description,
-                $this->request->getIPAddress(),
-                $this->request->getUserAgent()->getAgentString()
-            );
-        } catch (Throwable $exception) {
-            log_message('error', 'Audit trail skipped: ' . $exception->getMessage());
-        }
     }
 }

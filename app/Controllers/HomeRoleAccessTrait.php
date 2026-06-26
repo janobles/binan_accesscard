@@ -36,16 +36,7 @@ trait HomeRoleAccessTrait
      */
     private function clearLoginSession(): void
     {
-        session()->remove([
-            'is_logged_in',
-            'user_id',
-            'member_id',
-            'username',
-            'role',
-            'idle_last_activity',
-        ]);
-
-        session()->regenerate(true);
+        RoleAccess::forgetLoginSession(true);
     }
 
     /**

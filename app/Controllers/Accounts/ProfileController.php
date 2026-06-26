@@ -3,6 +3,7 @@
 namespace App\Controllers\Accounts;
 
 use App\Controllers\BaseController;
+use App\Libraries\DeveloperProfile;
 use App\Libraries\RoleAccess;
 use App\Libraries\ViewFormatter;
 use App\Models\Audit\AuditTrailsModel;
@@ -27,10 +28,20 @@ class ProfileController extends BaseController
      */
     public function myAccount(): string|RedirectResponse
     {
-        $guard = $this->requireSelfEditableUser();
+        $guard = $this->requireLoggedIn();
 
         if ($guard instanceof RedirectResponse) {
             return $guard;
+        }
+
+        if ($this->isDeveloper()) {
+            return view('Accounts/account-form-modal', [
+                'mode'        => 'self',
+                'account'     => ['userID' => 0, 'username' => DeveloperProfile::username(), 'role' => 'developer'],
+                'details'     => DeveloperProfile::load(),
+                'roleLabel'   => 'Developer',
+                'isDeveloper' => true,
+            ]);
         }
 
         $userId = (int) session()->get('user_id');
@@ -58,10 +69,14 @@ class ProfileController extends BaseController
      */
     public function update(): RedirectResponse
     {
-        $guard = $this->requireSelfEditableUser();
+        $guard = $this->requireLoggedIn();
 
         if ($guard instanceof RedirectResponse) {
             return $guard;
+        }
+
+        if ($this->isDeveloper()) {
+            return $this->updateDeveloper();
         }
 
         $userId = (int) session()->get('user_id');
@@ -139,22 +154,120 @@ class ProfileController extends BaseController
     }
 
     /**
-     * Guard: requires a logged-in, non-developer session. The Developer lives in
-     * .env with no users row, so it cannot self-edit and is bounced to its
-     * dashboard with an explanation.
+     * Saves the Developer's My Account modal. The Developer has no users row, so
+     * personal details persist to writable/developer/profile.json and an optional
+     * password change rewrites the developer.passwordHash line in .env (see
+     * App\Libraries\DeveloperProfile). Username/account level are read-only.
      */
-    private function requireSelfEditableUser(): ?RedirectResponse
+    private function updateDeveloper(): RedirectResponse
+    {
+        $rules = [
+            'username' => 'required|min_length[4]|max_length[255]|regex_match[/^[A-Za-z0-9._-]+$/]',
+            'last_name' => 'required|max_length[100]',
+            'first_name' => 'required|max_length[100]',
+            'middle_name' => 'required|max_length[100]',
+            'suffix' => 'permit_empty|max_length[20]',
+            'address' => 'required|max_length[255]',
+            'contact_no' => 'required|max_length[50]',
+            'birthday' => 'required|valid_date[Y-m-d]',
+        ];
+        $messages = [
+            'username' => [
+                'regex_match' => 'Username may only contain letters, numbers, and the . _ - characters.',
+            ],
+        ];
+
+        if (! $this->validate($rules, $messages)) {
+            return redirect()->back()->with('error', implode(' ', $this->validator->getErrors()));
+        }
+
+        $username = trim((string) $this->request->getPost('username'));
+        $usernameChanged = $username !== DeveloperProfile::username();
+
+        // Validate the optional password change fully before touching any file.
+        $newPassword = (string) $this->request->getPost('new_password');
+        $changingPassword = $newPassword !== '';
+
+        if ($changingPassword) {
+            $currentPassword = (string) $this->request->getPost('current_password');
+            $confirmPassword = (string) $this->request->getPost('confirm_password');
+
+            if (strlen($newPassword) < 8) {
+                return redirect()->back()->with('error', 'New password must have at least 8 characters.');
+            }
+
+            if ($newPassword !== $confirmPassword) {
+                return redirect()->back()->with('error', 'New password and confirmation do not match.');
+            }
+
+            if (! DeveloperProfile::verifyPassword($currentPassword)) {
+                return redirect()->back()->with('error', 'Your current password is incorrect.');
+            }
+        }
+
+        // Credential writes (.env) happen before the profile JSON so a non-writable
+        // .env aborts cleanly without half-updating the profile.
+        if ($usernameChanged && ! DeveloperProfile::changeUsername($username)) {
+            return redirect()->back()->with('error', 'Your username could not be changed (configuration file is not writable).');
+        }
+
+        if ($changingPassword && ! DeveloperProfile::changePassword($newPassword)) {
+            return redirect()->back()->with('error', 'Your password could not be changed (configuration file is not writable).');
+        }
+
+        if (! DeveloperProfile::save($this->collectProfileDetails())) {
+            return redirect()->back()->with('error', 'Your profile could not be saved.');
+        }
+
+        // Keep the topbar label current; the login credential itself applies next login.
+        if ($usernameChanged) {
+            session()->set('username', $username);
+        }
+
+        $this->audit('PROFILE_UPDATED', 'Updated own developer profile.');
+
+        if ($changingPassword) {
+            $this->audit('PASSWORD_CHANGED', 'Changed own developer password.');
+        }
+
+        $message = ($usernameChanged || $changingPassword)
+            ? 'Your developer profile was updated. Login credential changes take effect on your next login.'
+            : 'Your developer profile was updated successfully.';
+
+        return redirect()->back()->with('success', $message);
+    }
+
+    /** True when the current session is the .env Developer account. */
+    private function isDeveloper(): bool
+    {
+        return RoleAccess::normalizeRole((string) session()->get('role')) === 'Developer';
+    }
+
+    /**
+     * Guard: requires a logged-in session. Both staff and the Developer may reach
+     * their own My Account; the action then branches on the role.
+     */
+    private function requireLoggedIn(): ?RedirectResponse
     {
         if (! session()->get('is_logged_in')) {
             return redirect()->to(site_url('/'))->with('error', 'Please login first.');
         }
 
-        if (RoleAccess::normalizeRole((string) session()->get('role')) === 'Developer') {
-            return redirect()->to(site_url('admin/dashboard'))
-                ->with('error', 'The developer account is managed from configuration and has no editable profile.');
-        }
-
         return null;
+    }
+
+    /** Collects the shared profile fields from POST as an assoc array. */
+    private function collectProfileDetails(): array
+    {
+        return [
+            'last_name'   => trim((string) $this->request->getPost('last_name')),
+            'first_name'  => trim((string) $this->request->getPost('first_name')),
+            'middle_name' => trim((string) $this->request->getPost('middle_name')),
+            'suffix'      => trim((string) $this->request->getPost('suffix')),
+            'address'     => trim((string) $this->request->getPost('address')),
+            'contact_no'  => trim((string) $this->request->getPost('contact_no')),
+            'birthday'    => trim((string) $this->request->getPost('birthday')),
+        ];
     }
 
     /**

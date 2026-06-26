@@ -36,6 +36,8 @@ $routes->group('admin', static function (RouteCollection $routes): void {
     $routes->group('manage-family', static function (RouteCollection $routes): void {
         $routes->get('', 'Admin\DashboardController::familyEntry');
         $routes->get('list', 'Families\FamilyController::listFamilies');
+        $routes->get('data', 'Families\FamilyController::dataTable');
+        $routes->get('create', 'Families\FamilyController::createFamily');
         $routes->get('view/(:num)', 'Families\FamilyController::viewFamily/$1');
         $routes->get('edit/(:num)', 'Families\FamilyController::editFamily/$1');
         $routes->post('update/(:num)', 'Families\FamilyController::update/$1');
@@ -80,6 +82,8 @@ $routes->group('employee', static function (RouteCollection $routes): void {
     $routes->group('manage-family', static function (RouteCollection $routes): void {
         $routes->get('', 'Employee\DashboardController::familyEntry');
         $routes->get('list', 'Families\FamilyController::listFamilies');
+        $routes->get('data', 'Families\FamilyController::dataTable');
+        $routes->get('create', 'Families\FamilyController::createFamily');
         $routes->get('view/(:num)', 'Families\FamilyController::viewFamily/$1');
         $routes->get('edit/(:num)', 'Families\FamilyController::editFamily/$1');
         $routes->post('update/(:num)', 'Families\FamilyController::update/$1');
@@ -101,6 +105,7 @@ $routes->group('viewer', static function (RouteCollection $routes): void {
     $routes->get('sectors', 'Viewer\DashboardController::sectors');
     $routes->get('services', 'Viewer\DashboardController::services');
     $routes->group('manage-family', static function (RouteCollection $routes): void {
+        $routes->get('data', 'Families\FamilyController::dataTable');
         $routes->get('view/(:num)', 'Families\FamilyController::viewFamily/$1');
     });
 });

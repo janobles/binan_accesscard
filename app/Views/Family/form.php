@@ -1,80 +1,14 @@
 <?php
-use App\Libraries\SectorIds;
-use App\Libraries\ViewFormatter;
+use App\Support\FamilyFormViewData;
 
-$defaultFormOptions = [
-    'sectors'              => [],
-    'sexes'                => [],
-    'suffixes'             => [],
-    'civil_statuses'       => [],
-    'barangays'            => [],
-    'relationships'        => [],
-    'education_levels'     => [],
-    'income_ranges'        => [],
-    'services_by_category' => [],
-    'family_heads'         => [],
-];
-
-$formOptions              = array_merge($defaultFormOptions, (array) ($formOptions ?? []));
-$sectorOptions            = $sectorOptions ?? ($formOptions['sectors'] ?? []);
-$sectorCatalog            = (array) ($sectorCatalog ?? []);
-$sexOptions               = $sexOptions ?? ($formOptions['sexes'] ?? []);
-$suffixOptions            = $suffixOptions ?? ($formOptions['suffixes'] ?? []);
-$civilOptions             = $civilOptions ?? ($formOptions['civil_statuses'] ?? []);
-$barangayOptions          = $barangayOptions ?? ($formOptions['barangays'] ?? []);
-$relationshipOptions      = $relationshipOptions ?? ($formOptions['relationships'] ?? []);
-$educationOptions         = $educationOptions ?? ($formOptions['education_levels'] ?? []);
-$incomeOptions            = $incomeOptions ?? ($formOptions['income_ranges'] ?? []);
-$servicesByCategory       = $servicesByCategory ?? ($formOptions['services_by_category'] ?? []);
-$familyHeads              = $familyHeads ?? ($formOptions['family_heads'] ?? []);
-$formAction               = $formAction ?? site_url('families');
-$submitButtonLabel        = $submitButtonLabel ?? 'Save Family Data';
-$embeddedInModal          = (bool) ($embeddedInModal ?? false);
-$familyRecord             = (array) ($familyRecord ?? []);
-$existingMembers          = (array) ($existingMembers ?? []);
-$headServiceIds           = array_values(array_map('intval', (array) ($headServiceIds ?? $familyRecord['service_ids'] ?? [])));
-$isEditMode               = $familyRecord !== [];
-$fieldLabels              = array_merge([
-    'firstname'       => 'First name',
-    'middlename'      => 'Middle name',
-    'lastname'        => 'Last name',
-    'suffix'          => 'Suffix',
-    'birthday'        => 'Birthday',
-    'sex'             => 'Sex',
-    'civilstatus'     => 'Civil status',
-    'contactnumber'   => 'Contact number',
-    'education'       => 'Education',
-    'job'             => 'Job',
-    'salary'          => 'Monthly income',
-    'relationship'    => 'Relationship',
-    'sector_ids'      => 'Sectors',
-    'service_ids'     => 'Services availed',
-], (array) ($fieldLabels ?? []));
-$selectedSectorIds        = SectorIds::normalize($familyRecord['sectorID'] ?? null);
-$selectedSectorCategories = ViewFormatter::selectedSectorCategories($sectorCatalog, $selectedSectorIds);
-$initialFamilyData        = [
-    'selectedSectorIds'        => $selectedSectorIds,
-    'selectedSectorCategories' => $selectedSectorCategories,
-    'headServiceIds'           => $headServiceIds,
-    'existingMembers'          => $existingMembers,
-];
-$fieldViewData            = compact(
-    'barangayOptions',
-    'civilOptions',
-    'educationOptions',
-    'familyRecord',
-    'fieldLabels',
-    'incomeOptions',
-    'jobOptions',
-    'relationshipOptions',
-    'sectorOptions',
-    'servicesByCategory',
-    'sexOptions',
-    'suffixOptions'
-);
+// Single source of truth for every family-form variable (create + edit, embedded or
+// not). All three callers land here — the dashboard family-entry tab (via
+// Family/entry), the add-family modal partial, and the edit controller — so the prep
+// lives in FamilyFormViewData::prepare() instead of being duplicated in this view.
+extract(FamilyFormViewData::prepare(get_defined_vars()), EXTR_OVERWRITE);
 ?>
 
-<link rel="stylesheet" href="<?= base_url('css/familyform.css') ?>?v=<?= filemtime(FCPATH . 'css/familyform.css') ?>">
+<link rel="stylesheet" href="<?= esc(asset_url('css/familyform.css'), 'attr') ?>">
 
 <div class="family-wizard-shell">
     <div class="family-wizard-card">

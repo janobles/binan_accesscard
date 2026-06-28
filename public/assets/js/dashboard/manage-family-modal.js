@@ -368,6 +368,21 @@
         });
     }
 
+    // Shown when the server reports a max_input_vars cutoff (code FORM_TRUNCATED):
+    // nothing was saved, but the draft holds everything. Both buttons just dismiss —
+    // the modal stays open with the data intact either way.
+    function askTruncationNotice(form) {
+        return askModalDialog(form, {
+            title: 'Form too large to send',
+            message: 'There were too many entries to send all at once, so nothing was saved yet. Don\'t worry — all your entries are kept on this computer. Remove a few members and Save again, or close and reopen Add Family to restore everything.',
+            iconClass: 'bi bi-exclamation-triangle',
+            tone: 'warning',
+            cancelLabel: 'Close',
+            confirmLabel: 'Keep editing',
+            confirmClass: 'btn btn-success'
+        });
+    }
+
     // ---- draft persistence (create mode only) ------------------------------
 
     function isCreateForm(root) {
@@ -871,6 +886,20 @@
         // Swap "Other" selects to their typed value so the custom text posts.
         applyOtherValues(form);
 
+        // Record how many member rows we are posting so the server can detect a
+        // submission truncated by PHP's max_input_vars (trailing members dropped).
+        var memberCountField = form.querySelector('[data-members-count]');
+        if (memberCountField) {
+            memberCountField.value = String(form.querySelectorAll('[data-family-member-row]').length);
+        }
+
+        // Persist the exact state we are about to send so nothing is lost even if the
+        // request dies mid-flight (browser/tab crash) before the 400ms auto-save fires.
+        // Create mode only — edit mode keeps no draft (the draft key is global).
+        if (isCreateForm(root)) {
+            saveDraftNow(form);
+        }
+
         var saveButton = root.querySelector('[data-family-save]');
         var originalLabel = saveButton ? saveButton.textContent : '';
 
@@ -913,6 +942,19 @@
             if (saveButton) {
                 saveButton.disabled = false;
                 saveButton.textContent = originalLabel;
+            }
+
+            if (data.code === 'FORM_TRUNCATED') {
+                // Cutoff: the server saved nothing. Guarantee the typed data is in the
+                // draft (create mode) and reassure the worker — their entries are safe
+                // and the resume prompt will rebuild them on reopen. Not a normal error.
+                if (isCreateForm(root)) {
+                    saveDraftNow(form);
+                }
+
+                showFormError(root, data.message || 'The form was too large to send all at once. Nothing was saved, but your entries are kept on this computer.');
+                askTruncationNotice(form);
+                return;
             }
 
             showFormError(root, data.message || 'The family record could not be saved. Please review the form and try again.');

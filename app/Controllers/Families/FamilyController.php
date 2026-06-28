@@ -76,6 +76,23 @@ class FamilyController extends BaseController
             return redirect()->back()->withInput()->with('error', $message);
         }
 
+        if ($this->submissionWasTruncated()) {
+            $message = 'The form was too large and some member data was cut off before it reached the server, so nothing was saved. Please add fewer members at a time (or ask an administrator to raise the server\'s max_input_vars) and try again.';
+
+            if ($this->request->isAJAX()) {
+                return $this->response
+                    ->setStatusCode(422)
+                    ->setJSON([
+                        'status' => 'error',
+                        'message' => $message,
+                        'code' => 'FORM_TRUNCATED',
+                        'csrf' => csrf_hash(),
+                    ]);
+            }
+
+            return redirect()->back()->withInput()->with('error', $message);
+        }
+
         $entryType = $this->entryType();
         $rules = $this->rulesForEntryType($entryType);
 
@@ -370,6 +387,10 @@ class FamilyController extends BaseController
 
         if (! $memberModel->hasRequiredFamilyTables()) {
             return $this->failUpdate('The accesscard database is missing required tables from accesscardV1.4.sql.', 422);
+        }
+
+        if ($this->submissionWasTruncated()) {
+            return $this->failUpdate('The form was too large and some member data was cut off before it reached the server, so nothing was saved. Please edit fewer members at a time (or ask an administrator to raise the server\'s max_input_vars) and try again.', 422, 'FORM_TRUNCATED');
         }
 
         $existingHead = $memberModel->find($headId);
@@ -821,26 +842,37 @@ class FamilyController extends BaseController
         return '<div class="alert alert-warning mb-0">That family record could not be found. It may have been removed.</div>';
     }
 
-    /** JSON error body (with a fresh CSRF hash) used by the AJAX update responses. */
-    private function jsonError(string $message, int $statusCode)
+    /**
+     * JSON error body (with a fresh CSRF hash) used by the AJAX update responses.
+     * Optional $code adds a machine-readable tag (e.g. 'FORM_TRUNCATED') the
+     * frontend can branch on instead of matching the human message text.
+     */
+    private function jsonError(string $message, int $statusCode, ?string $code = null)
     {
+        $body = [
+            'status' => 'error',
+            'message' => $message,
+            'csrf' => csrf_hash(),
+        ];
+
+        if ($code !== null) {
+            $body['code'] = $code;
+        }
+
         return $this->response
             ->setStatusCode($statusCode)
-            ->setJSON([
-                'status' => 'error',
-                'message' => $message,
-                'csrf' => csrf_hash(),
-            ]);
+            ->setJSON($body);
     }
 
     /**
      * Update-failure response: JSON error for AJAX, otherwise a redirect back with
-     * the input preserved and an error flash. Used throughout update().
+     * the input preserved and an error flash. Used throughout update(). Optional
+     * $code is forwarded to the JSON body for the AJAX path.
      */
-    private function failUpdate(string $message, int $statusCode)
+    private function failUpdate(string $message, int $statusCode, ?string $code = null)
     {
         if ($this->request->isAJAX()) {
-            return $this->jsonError($message, $statusCode);
+            return $this->jsonError($message, $statusCode, $code);
         }
 
         return redirect()->back()->withInput()->with('error', $message);
@@ -960,6 +992,31 @@ class FamilyController extends BaseController
         }
 
         return ['address' => $combined, 'barangay' => ''];
+    }
+
+    /**
+     * Detects a POST silently truncated by PHP's max_input_vars. The family form
+     * posts a trailing `_form_end` sentinel (the first field dropped when the limit
+     * is hit, since it is last in the body) and an early `members_meta_count` the
+     * client sets to its live member-row count. If the sentinel is missing, or fewer
+     * member rows arrived than the client promised, the submission was cut short —
+     * the caller must reject it so no partial family record is ever saved.
+     */
+    private function submissionWasTruncated(): bool
+    {
+        if (strtolower((string) $this->request->getMethod()) !== 'post') {
+            return false;
+        }
+
+        if ((string) $this->request->getPost('_form_end') !== '1') {
+            return true;
+        }
+
+        $expected = (int) $this->request->getPost('members_meta_count');
+        $members = $this->request->getPost('members');
+        $received = is_array($members) ? count($members) : 0;
+
+        return $received < $expected;
     }
 
     /**

@@ -182,6 +182,10 @@ $renderMemberRow = static function ($index, array $m = []) use (
         <?php if ($headId > 0): ?>
             <input type="hidden" name="head_id" value="<?= esc((string) $headId, 'attr') ?>">
         <?php endif; ?>
+        <?php /* Truncation guard: manage-family-modal.js sets this to the live member-row
+                 count just before submit. The server compares it against the members it
+                 actually received to catch a POST silently clipped by max_input_vars. */ ?>
+        <input type="hidden" name="members_meta_count" value="0" data-members-count>
 
         <div class="btn-toolbar family-entry-steps" role="toolbar" aria-label="Family record steps">
             <div class="btn-group w-100" role="group" aria-label="Family record steps">
@@ -417,5 +421,10 @@ $renderMemberRow = static function ($index, array $m = []) use (
                 <button class="btn btn-primary" type="submit" data-family-save <?= $saveDisabled ? 'disabled aria-disabled="true"' : '' ?> hidden><?= esc($submitLabel) ?></button>
             </div>
         </footer>
+
+        <?php /* Truncation sentinel — MUST stay the last named field in the form. A POST
+                 clipped by PHP's max_input_vars drops trailing vars first, so if this does
+                 not arrive the server knows member data was cut and refuses to save. */ ?>
+        <input type="hidden" name="_form_end" value="1">
     </form>
 </div>

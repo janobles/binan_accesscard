@@ -30,7 +30,7 @@ class QrCardSettings extends BaseConfig
     public int $controlNumberWidth = 1;
 
     /** Hard upper bound on cards generated in a single batch. */
-    public int $maxQuantity = 24000;
+    public int $maxQuantity = 25000;
 
     /** Filename for a single-chunk batch (served as application/pdf). */
     public string $singlePdfFileName = "binan-qr-cards.pdf";

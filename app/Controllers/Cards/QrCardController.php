@@ -114,7 +114,7 @@ class QrCardController extends BaseController
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound('Unknown control number.');
         }
 
-        $headId = (new MemberModel())->familyHeadIdFor($memberID);
+        $headId = model(MemberModel::class)->familyHeadIdFor($memberID);
         if ($headId === null) {
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound('Unknown control number.');
         }

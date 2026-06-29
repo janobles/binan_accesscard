@@ -373,6 +373,77 @@ class MemberModel extends Model
         return array_values(array_map(static fn (array $row): int => (int) ($row['memberID'] ?? 0), $rows));
     }
 
+    /**
+     * Active heads of family (headID = memberID, not archived) for QR card
+     * generation. Each row: memberID, a display fullname, and barangay.
+     * Optional $filter narrows by 'barangay' (string) and/or 'sectorID' (int).
+     *
+     * @return list<array{memberID:int, fullname:string, barangay:string}>
+     */
+    public function headsForCards(array $filter = []): array
+    {
+        $builder = $this->db->table('member')
+            ->select('memberID, lastname, firstname, middlename, suffix'
+                . ($this->memberFieldExists('barangay') ? ', barangay' : ''))
+            ->where('member.headID = member.memberID', null, false);
+
+        if ($this->db->fieldExists('dt_deleted', 'member')) {
+            $builder->where('member.dt_deleted IS NULL', null, false);
+        }
+
+        if (! empty($filter['barangay']) && $this->memberFieldExists('barangay')) {
+            $builder->where('member.barangay', $filter['barangay']);
+        }
+
+        if (! empty($filter['sectorID'])) {
+            // sectorID is a comma-joined list of ids in storage; match membership.
+            $builder->where('FIND_IN_SET(' . (int) $filter['sectorID'] . ', member.sectorID) >', 0, false);
+        }
+
+        $builder->orderBy('member.memberID', 'asc');
+
+        $rows = $builder->get()->getResultArray();
+
+        return array_map(static function (array $row): array {
+            $name = trim(sprintf(
+                '%s, %s %s %s',
+                $row['lastname'] ?? '',
+                $row['firstname'] ?? '',
+                $row['middlename'] ?? '',
+                $row['suffix'] ?? ''
+            ));
+
+            return [
+                'memberID' => (int) $row['memberID'],
+                'fullname' => preg_replace('/\s+/', ' ', $name),
+                'barangay' => (string) ($row['barangay'] ?? ''),
+            ];
+        }, $rows);
+    }
+
+    /**
+     * Returns the active head row for $memberID, or null when it is not an
+     * active head (headID != memberID, archived, or missing). Drives scan-lookup.
+     */
+    public function findHead(int $memberID): ?array
+    {
+        if ($memberID <= 0) {
+            return null;
+        }
+
+        $builder = $this->db->table('member')
+            ->where('memberID', $memberID)
+            ->where('member.headID = member.memberID', null, false);
+
+        if ($this->db->fieldExists('dt_deleted', 'member')) {
+            $builder->where('member.dt_deleted IS NULL', null, false);
+        }
+
+        $row = $builder->get()->getRowArray();
+
+        return $row ?: null;
+    }
+
     /** Updates the head-of-family row during a family edit submission. */
     public function updateHead(int $headId, array $data): bool
     {

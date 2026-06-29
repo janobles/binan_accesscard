@@ -67,6 +67,13 @@ $routes->group('admin', static function (RouteCollection $routes): void {
         $routes->post('archive/(:num)', 'Lookups\ServiceController::archive/$1');
         $routes->post('restore/(:num)', 'Lookups\ServiceController::restore/$1');
     });
+
+    $routes->group('cards', static function (RouteCollection $routes): void {
+        $routes->get('', 'Admin\DashboardController::cards');
+        $routes->post('generate', 'Cards\QrCardController::batch');
+        $routes->get('card/(:num)', 'Cards\QrCardController::card/$1');
+        $routes->get('lookup/(:any)', 'Cards\QrCardController::lookup/$1');
+    });
 });
 
 /*

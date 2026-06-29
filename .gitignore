@@ -134,3 +134,9 @@ _modules/*
 
 /results/
 /phpunit*.xml
+
+#-------------------------
+# Superpowers (local workflow artifacts)
+#-------------------------
+.superpowers/
+/docs/superpowers/

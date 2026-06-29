@@ -95,6 +95,7 @@ $sectorOptionLabel = static function (array $sector): string {
                         <button class="btn btn-success" type="submit">Search</button>
                         <?php if ($canEdit): ?>
                         <button class="btn btn-primary js-open-family-add-modal" type="button" data-family-add-record data-modal-url="<?= esc(site_url($routeBase . '/create?partial=1'), 'attr') ?>" data-modal-title="New Family Record">Add</button>
+                        <button class="btn btn-outline-primary js-open-family-import-modal" type="button" data-modal-url="<?= esc(site_url($routeBase . '/import'), 'attr') ?>" data-modal-title="Import from Excel" title="Bulk-import families from an Excel file">Import</button>
                         <?php endif; ?>
                     </div>
                 </div>

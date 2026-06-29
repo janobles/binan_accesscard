@@ -91,6 +91,7 @@
         const submit = modal.querySelector('.js-service-modal-submit');
         const category = modal.querySelector('#serviceModalCategory');
         const categoryOther = modal.querySelector('#serviceModalCategoryOther');
+        const shortcode = modal.querySelector('#serviceModalShortcode');
         const name = modal.querySelector('#serviceModalName');
         const description = modal.querySelector('#serviceModalDescription');
         const archiveName = modal.querySelector('.js-service-archive-name');
@@ -134,7 +135,7 @@
             restoreMessage.classList.toggle('d-none', !isRestore);
         }
 
-        [category, name, description].forEach(function (field) {
+        [category, shortcode, name, description].forEach(function (field) {
             if (field) {
                 field.disabled = isAction;
                 field.required = !isAction && field.hasAttribute('required');
@@ -149,6 +150,10 @@
 
         if (!isAction) {
             setCategory(category, categoryOther, mode === 'update' ? trigger.dataset.serviceCategory : '');
+
+            if (shortcode) {
+                shortcode.value = mode === 'update' ? String(trigger.dataset.serviceShortcode || '') : '';
+            }
 
             if (name) {
                 name.value = mode === 'update' ? String(trigger.dataset.serviceName || '') : '';

@@ -20,14 +20,40 @@ class ServiceModel extends Model
     protected $table = 'services';
     protected $primaryKey = 'serviceID';
     protected $returnType = 'array';
-    protected $allowedFields = ['serviceID', 'category', 'name', 'description'];
+    protected $allowedFields = ['serviceID', 'shortcode', 'category', 'name', 'description'];
     protected $useAutoIncrement = false;
     protected $useTimestamps = false;
 
     /** Columns the Services management search box matches. */
     protected function lookupSearchColumns(): array
     {
-        return ['category', 'name', 'description'];
+        return ['shortcode', 'category', 'name', 'description'];
+    }
+
+    /**
+     * True if another active service already uses this shortcode (case-insensitive),
+     * optionally excluding one serviceID (the row being edited). Guards code uniqueness.
+     */
+    public function shortcodeExists(string $shortcode, ?int $exceptServiceId = null): bool
+    {
+        $shortcode = trim($shortcode);
+
+        if ($shortcode === '' || ! $this->db->tableExists($this->table)) {
+            return false;
+        }
+
+        $builder = $this->db->table($this->table)
+            ->where('UPPER(shortcode)', strtoupper($shortcode));
+
+        if ($this->db->fieldExists('dt_deleted', $this->table)) {
+            $builder->where('dt_deleted IS NULL', null, false);
+        }
+
+        if ($exceptServiceId !== null) {
+            $builder->where('serviceID !=', $exceptServiceId);
+        }
+
+        return $builder->countAllResults() > 0;
     }
 
     /** Services management list order: by category then ID. */

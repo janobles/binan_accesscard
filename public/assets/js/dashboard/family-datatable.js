@@ -107,7 +107,9 @@
             scrollX: true,
             pageLength: 25,
             lengthMenu: [10, 25, 50, 100],
-            order: [[0, 'asc']],
+            // No initial column sort -> server returns newest records first, so a
+            // just-added/imported family shows at the top. Header clicks still sort.
+            order: [],
             ajax: {
                 url: tableElement.dataset.ajaxUrl,
                 data: function (request) {
@@ -201,7 +203,7 @@
                 scope = 'heads';
                 updateFilterLabel(sectorFilter);
                 updateFilterLabel(barangayFilter);
-                dataTable.order([[0, 'asc']]);
+                dataTable.order([]);
                 dataTable.ajax.reload(null, true);
             });
         }

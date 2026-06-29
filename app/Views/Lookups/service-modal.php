@@ -15,6 +15,11 @@
                                 <div class="modal-body">
                                         <div class="js-service-form-fields">
                                                 <div class="mb-3">
+                                                        <label class="form-label" for="serviceModalShortcode">Code</label>
+                                                        <input class="form-control text-uppercase" id="serviceModalShortcode" name="shortcode" maxlength="30" placeholder="e.g. FA1, SWPS1, EDA1, 4PS" required>
+                                                        <div class="form-text">Short code used when importing families from Excel. Must be unique.</div>
+                                                </div>
+                                                <div class="mb-3">
                                                         <label class="form-label" for="serviceModalCategory">Category</label>
                                                         <select class="form-select js-management-other-select" id="serviceModalCategory" name="category" data-other-input="#serviceModalCategoryOther" required>
                                                                 <option value="">Select</option>

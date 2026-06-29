@@ -155,14 +155,22 @@ class ServiceController extends BaseController
             $category = trim((string) $this->request->getPost('category_other'));
         }
 
+        $shortcode = strtoupper(trim((string) $this->request->getPost('shortcode')));
+
         $data = [
+            'shortcode' => $shortcode,
             'category' => $category,
             'name' => trim((string) $this->request->getPost('name')),
             'description' => trim((string) $this->request->getPost('description')),
         ];
 
-        if ($data['category'] === '' || $data['name'] === '') {
-            return $this->redirectAdmin('admin/services', 'error', 'Category and name are required.');
+        if ($data['category'] === '' || $data['name'] === '' || $data['shortcode'] === '') {
+            return $this->redirectAdmin('admin/services', 'error', 'Code, category and name are required.');
+        }
+
+        // The code is the unique key the Excel import uses, so it must not clash.
+        if ($model->shortcodeExists($data['shortcode'], $serviceId)) {
+            return $this->redirectAdmin('admin/services', 'error', 'The code "' . $data['shortcode'] . '" is already used by another service.');
         }
 
         $isUpdate = $serviceId !== null;
@@ -209,7 +217,8 @@ class ServiceController extends BaseController
     {
         $name = trim((string) ($service['name'] ?? ''));
         $category = trim((string) ($service['category'] ?? ''));
-        $label = trim($name . ($category !== '' ? ' (' . $category . ')' : ''));
+        $code = trim((string) ($service['shortcode'] ?? ''));
+        $label = trim(($code !== '' ? $code . ' ' : '') . $name . ($category !== '' ? ' (' . $category . ')' : ''));
 
         return ($label === '' ? 'service/program' : 'service/program ' . $label) . ' #' . $serviceId;
     }

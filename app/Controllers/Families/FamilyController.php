@@ -3,6 +3,10 @@
 namespace App\Controllers\Families;
 
 use App\Controllers\BaseController;
+use App\Libraries\FamilyExcelImporter;
+use App\Libraries\FamilyExcelTemplate;
+use App\Libraries\FamilyRecordWriteException;
+use App\Libraries\FamilyRecordWriter;
 use App\Libraries\RoleAccess;
 use App\Libraries\SectorIds;
 use App\Models\Audit\AuditTrailsModel;
@@ -14,7 +18,9 @@ use App\Models\Lookups\ServiceModel;
 use App\Models\SearchModel;
 use App\Support\FamilyProfilingFormV2;
 use App\Support\FamilyRecordPresenter;
+use App\Support\MemberFieldNormalizer;
 use CodeIgniter\HTTP\RedirectResponse;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Throwable;
 
 /**
@@ -129,147 +135,48 @@ class FamilyController extends BaseController
         $userId = (int) session()->get('user_id');
         $successMessage = 'Family record saved successfully.';
 
-        $memberModel->beginTransaction();
-
-        $headId = $memberModel->createHead($this->memberPayload('head_'));
-
-        if ($headId === false) {
-            $memberModel->rollbackTransaction();
-
-            $message = 'Head of family could not be saved. Please check required fields.';
-
-            if ($this->request->isAJAX()) {
-                return $this->response
-                    ->setStatusCode(422)
-                    ->setJSON([
-                        'status' => 'error',
-                        'message' => $message,
-                        'csrf' => csrf_hash(),
-                    ]);
-            }
-
-            return redirect()->back()
-                ->withInput()
-                ->with('error', $message);
-        }
+        // Shape the additional members (skipping the form's empty rows) into the
+        // [payload + serviceIds] entries FamilyRecordWriter expects.
+        $memberPayloads = [];
 
         foreach ($members as $member) {
             if (! is_array($member) || ! $this->hasMemberData($member)) {
                 continue;
             }
 
-            $memberId = $memberModel->addFamilyMember($headId, $this->memberPayloadFromArray($member));
-
-            if ($memberId === false) {
-                $memberModel->rollbackTransaction();
-
-                $message = 'One family member could not be saved.';
-
-                if ($this->request->isAJAX()) {
-                    return $this->response
-                        ->setStatusCode(422)
-                        ->setJSON([
-                            'status' => 'error',
-                            'message' => $message,
-                            'csrf' => csrf_hash(),
-                        ]);
-                }
-
-                return redirect()->back()->withInput()->with('error', $message);
-            }
-
             $memberServiceIds = $member['service_ids'] ?? [];
 
-            if (! is_array($memberServiceIds)) {
-                $memberServiceIds = [];
-            }
-
-            foreach ($memberServiceIds as $memberServiceId) {
-                $memberServiceId = (int) $memberServiceId;
-
-                if ($memberServiceId <= 0 || ! $serviceModel->existsById($memberServiceId)) {
-                    continue;
-                }
-
-                if ($memberServiceModel->assignService($memberId, $memberServiceId) === false) {
-                    $memberModel->rollbackTransaction();
-
-                    $message = 'A selected service could not be assigned to one family member.';
-
-                    if ($this->request->isAJAX()) {
-                        return $this->response
-                            ->setStatusCode(422)
-                            ->setJSON([
-                                'status' => 'error',
-                                'message' => $message,
-                                'csrf' => csrf_hash(),
-                            ]);
-                    }
-
-                    return redirect()->back()->withInput()->with('error', $message);
-                }
-            }
+            $memberPayloads[] = [
+                'payload' => $this->memberPayloadFromArray($member),
+                'serviceIds' => is_array($memberServiceIds) ? array_map('intval', $memberServiceIds) : [],
+            ];
         }
 
-        foreach ($serviceIds as $serviceId) {
-            $serviceId = (int) $serviceId;
+        // One family = one transaction. The persistence itself lives in
+        // FamilyRecordWriter so the Excel importer reuses the exact same write path.
+        $writer = new FamilyRecordWriter($memberModel, $memberServiceModel, $serviceModel, $auditModel);
 
-            if ($serviceId < 0 || ! $serviceModel->existsById($serviceId)) {
-                continue;
-            }
+        $memberModel->beginTransaction();
 
-            if ($memberServiceModel->assignService($headId, $serviceId) === false) {
-                $memberModel->rollbackTransaction();
-
-                $message = 'A selected service could not be assigned to the head of family.';
-
-                if ($this->request->isAJAX()) {
-                    return $this->response
-                        ->setStatusCode(422)
-                        ->setJSON([
-                            'status' => 'error',
-                            'message' => $message,
-                            'csrf' => csrf_hash(),
-                        ]);
-                }
-
-                return redirect()->back()->withInput()->with('error', $message);
-            }
-        }
-
-        if ($auditModel->hasTable()) {
-            $headName = trim(trim((string) $this->request->getPost('head_firstname')) . ' ' . trim((string) $this->request->getPost('head_lastname')));
-            $memberCount = is_array($members) ? count($members) : 0;
-            $serviceCount = is_array($serviceIds) ? count($serviceIds) : 0;
-            // Tracks the creating operator plus client IP and browser agent.
-            $auditModel->logAction(
+        try {
+            $writer->persistFamily(
+                $this->memberPayload('head_'),
+                $memberPayloads,
+                array_map('intval', $serviceIds),
                 $userId,
-                $headId,
-                'FAMILY_CREATED',
-                'Created family profile for ' . $headName . '.',
                 $this->request->getIPAddress(),
-                $this->request->getUserAgent()->getAgentString(),
-                'Head of family: ' . $headName . '; added ' . $memberCount . ' additional member(s); '
-                    . $serviceCount . ' service(s) assigned to the head'
+                $this->request->getUserAgent()->getAgentString()
             );
+        } catch (FamilyRecordWriteException $exception) {
+            $memberModel->rollbackTransaction();
+
+            return $this->storeError($exception->getMessage());
         }
 
         $memberModel->completeTransaction();
 
         if (! $memberModel->transactionStatus()) {
-            $message = 'The family form was not saved.';
-
-            if ($this->request->isAJAX()) {
-                return $this->response
-                    ->setStatusCode(500)
-                    ->setJSON([
-                        'status' => 'error',
-                        'message' => $message,
-                        'csrf' => csrf_hash(),
-                    ]);
-            }
-
-            return redirect()->back()->withInput()->with('error', $message);
+            return $this->storeError('The family form was not saved.', 500);
         }
 
         if ($this->request->isAJAX()) {
@@ -286,6 +193,160 @@ class FamilyController extends BaseController
         return redirect()->back()
             ->with('family_record_saved', '1')
             ->with('success', $successMessage);
+    }
+
+    /**
+     * GET `{admin|employee}/manage-family/template`: streams the blank, fillable
+     * .xlsx template (App\Libraries\FamilyExcelTemplate) workers use to collect
+     * family records offline. Same entry-access guard as the Add form.
+     */
+    public function downloadTemplate()
+    {
+        $guard = $this->requireFamilyEntryAccess();
+
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        $spreadsheet = (new FamilyExcelTemplate())->build();
+
+        ob_start();
+        (new Xlsx($spreadsheet))->save('php://output');
+        $content = (string) ob_get_clean();
+
+        return $this->response
+            ->setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            ->setHeader('Content-Disposition', 'attachment; filename="family-import-template.xlsx"')
+            ->setHeader('Cache-Control', 'max-age=0')
+            ->setBody($content);
+    }
+
+    /**
+     * GET `{admin|employee}/manage-family/import`: returns the Excel import modal
+     * fragment (file upload + results area) loaded by family-import.js into the
+     * shared dashboard modal.
+     */
+    public function importForm(): string|RedirectResponse
+    {
+        $guard = $this->requireFamilyEntryAccess();
+
+        if ($guard instanceof RedirectResponse) {
+            return $this->partialGuard($guard, 'You do not have permission to import family records.');
+        }
+
+        return view('Family/import-modal', [
+            'action'      => site_url($this->currentRouteBase() . '/import'),
+            'templateUrl' => site_url($this->currentRouteBase() . '/template'),
+        ]);
+    }
+
+    /**
+     * POST `{admin|employee}/manage-family/import`: validates and imports a filled
+     * .xlsx of families. Validation is all-or-nothing — if any row is invalid the
+     * row-level errors are returned and nothing is saved. On a clean file every
+     * family is written in ONE transaction via FamilyRecordWriter (the same write
+     * path as the manual Add form), so a mid-file failure rolls back the whole import.
+     * Always responds as JSON (the modal posts over AJAX).
+     */
+    public function import()
+    {
+        $guard = $this->requireFamilyEntryAccess();
+
+        if ($guard instanceof RedirectResponse) {
+            return $this->jsonError('You do not have permission to import family records.', 403);
+        }
+
+        $memberModel        = new MemberModel();
+        $memberServiceModel = new MemberServiceModel();
+        $serviceModel       = new ServiceModel();
+        $auditModel         = new AuditTrailsModel();
+
+        if (! $memberModel->hasRequiredFamilyTables()) {
+            return $this->jsonError('The accesscard database is missing required tables from accesscardV1.4.sql.', 422);
+        }
+
+        $file = $this->request->getFile('import_file');
+
+        if ($file === null || ! $file->isValid()) {
+            return $this->jsonError('Please choose a valid .xlsx file to import.', 422);
+        }
+
+        if (strtolower((string) $file->getClientExtension()) !== 'xlsx') {
+            return $this->jsonError('The file must be an .xlsx workbook saved from the template.', 422);
+        }
+
+        $tempName = 'family-import-' . bin2hex(random_bytes(6)) . '.xlsx';
+
+        try {
+            $file->move(WRITEPATH . 'uploads', $tempName, true);
+        } catch (Throwable $exception) {
+            return $this->jsonError('The uploaded file could not be saved for processing. Please try again.', 500);
+        }
+
+        $tempPath = WRITEPATH . 'uploads' . DIRECTORY_SEPARATOR . $tempName;
+
+        $importer = new FamilyExcelImporter();
+
+        try {
+            $valid = $importer->process($tempPath);
+        } catch (Throwable $exception) {
+            @unlink($tempPath);
+            $this->auditSystemError('importing family records from Excel', $exception);
+
+            return $this->jsonError('The file could not be read. Make sure it is an .xlsx saved from the template.', 422);
+        }
+
+        if (! $valid) {
+            @unlink($tempPath);
+
+            return $this->response->setStatusCode(422)->setJSON([
+                'status'  => 'error',
+                'message' => 'The file was not imported. Please fix the listed rows and try again.',
+                'errors'  => $importer->getErrors(),
+                'csrf'    => csrf_hash(),
+            ]);
+        }
+
+        $userId = (int) session()->get('user_id');
+        $writer = new FamilyRecordWriter($memberModel, $memberServiceModel, $serviceModel, $auditModel);
+
+        // Whole file = one transaction: all-or-nothing across every family.
+        $memberModel->beginTransaction();
+
+        try {
+            foreach ($importer->getFamilies() as $family) {
+                $writer->persistFamily(
+                    $family['headPayload'],
+                    $family['memberPayloads'],
+                    $family['headServiceIds'],
+                    $userId,
+                    $this->request->getIPAddress(),
+                    $this->request->getUserAgent()->getAgentString(),
+                    ' via Excel import'
+                );
+            }
+        } catch (FamilyRecordWriteException $exception) {
+            $memberModel->rollbackTransaction();
+            @unlink($tempPath);
+
+            return $this->jsonError('Import failed while saving: ' . $exception->getMessage() . ' Nothing was imported.', 422);
+        }
+
+        $memberModel->completeTransaction();
+        @unlink($tempPath);
+
+        if (! $memberModel->transactionStatus()) {
+            return $this->jsonError('The import could not be saved. Nothing was imported.', 500);
+        }
+
+        $summary = $importer->getSummary();
+
+        return $this->response->setJSON([
+            'status'  => 'success',
+            'message' => 'Imported ' . $summary['families'] . ' family record(s) and ' . $summary['members'] . ' additional member(s).',
+            'summary' => $summary,
+            'csrf'    => csrf_hash(),
+        ]);
     }
 
     /**
@@ -879,6 +940,20 @@ class FamilyController extends BaseController
     }
 
     /**
+     * Create-failure response for store(): JSON error for AJAX (status defaults to
+     * 422), otherwise a redirect back with input preserved and an error flash.
+     * Mirrors the original per-step error handling that lived inline in store().
+     */
+    private function storeError(string $message, int $statusCode = 422)
+    {
+        if ($this->request->isAJAX()) {
+            return $this->jsonError($message, $statusCode);
+        }
+
+        return redirect()->back()->withInput()->with('error', $message);
+    }
+
+    /**
      * Access guard for family entry: allows Developer/Admin/User, otherwise
      * returns a redirect. store() converts this to a 403 JSON for AJAX requests.
      */
@@ -954,11 +1029,7 @@ class FamilyController extends BaseController
      */
     private function combineAddressBarangay(mixed $address, mixed $barangay): ?string
     {
-        $address = $this->cleanAddress($address);
-        $barangay = $this->cleanAddress($barangay);
-        $combined = trim($address . ($address !== '' && $barangay !== '' ? ', ' : '') . $barangay);
-
-        return $combined === '' ? null : $combined;
+        return MemberFieldNormalizer::combineAddressBarangay($address, $barangay);
     }
 
     /**
@@ -1111,11 +1182,7 @@ class FamilyController extends BaseController
      */
     private function moneyOrNull(mixed $value): ?float
     {
-        if ($value === null || $value === '') {
-            return null;
-        }
-
-        return (float) str_replace(',', '', (string) $value);
+        return MemberFieldNormalizer::moneyOrNull($value);
     }
 
     /**
@@ -1124,9 +1191,7 @@ class FamilyController extends BaseController
      */
     private function nullableText(mixed $value): ?string
     {
-        $value = trim((string) $value);
-
-        return $value === '' ? null : $value;
+        return MemberFieldNormalizer::nullableText($value);
     }
 
     /**
@@ -1138,10 +1203,7 @@ class FamilyController extends BaseController
      */
     private function cleanName(mixed $value): string
     {
-        $value = preg_replace("/[^\\p{L}\\s.'-]/u", '', (string) $value);
-        $value = trim((string) preg_replace('/\\s+/u', ' ', (string) $value));
-
-        return mb_convert_case($value, MB_CASE_TITLE, 'UTF-8');
+        return MemberFieldNormalizer::cleanName($value);
     }
 
     /**
@@ -1152,10 +1214,7 @@ class FamilyController extends BaseController
      */
     private function cleanAddress(mixed $value): string
     {
-        $value = preg_replace("/[^\\p{L}\\p{N}\\s#,.\\-\\/'()&]/u", '', (string) $value);
-        $value = trim((string) preg_replace('/\\s+/u', ' ', (string) $value));
-
-        return mb_convert_case($value, MB_CASE_TITLE, 'UTF-8');
+        return MemberFieldNormalizer::cleanAddress($value);
     }
 
     // ---------------------------------------------------------------------------
@@ -1240,7 +1299,16 @@ class FamilyController extends BaseController
     private function dataTableOrder(): array
     {
         $order = $this->request->getGet('order');
-        $firstOrder = is_array($order) && isset($order[0]) && is_array($order[0]) ? $order[0] : [];
+
+        // No column sort requested (the table's default) -> newest records first, so
+        // a just-added or just-imported family is visible at the top of the list
+        // instead of being sorted by surname into a large dataset. 'newest' is
+        // unrecognized by applyMemberOrder(), which falls back to memberID DESC.
+        if (! is_array($order) || ! isset($order[0]) || ! is_array($order[0])) {
+            return ['newest', 'desc'];
+        }
+
+        $firstOrder = $order[0];
         $column = (int) ($firstOrder['column'] ?? 0);
         $direction = strtolower((string) ($firstOrder['dir'] ?? 'asc')) === 'desc' ? 'desc' : 'asc';
         $orderKey = match ($column) {

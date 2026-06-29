@@ -91,7 +91,8 @@ $serviceClearUrl = static function () use ($listRoute, $status, $perPage): strin
 		<table class="table table-sm manage-record-table align-middle">
 			<thead>
 				<tr>
-					<th>Name</th>
+					<th>Code</th>
+						<th>Name</th>
 					<th>Category</th>
 					<th>Description</th>
 					<th>Status</th>
@@ -103,7 +104,8 @@ $serviceClearUrl = static function () use ($listRoute, $status, $perPage): strin
 					<?php $serviceId = (int) ($service['serviceID'] ?? 0); ?>
 					<?php $isArchived = trim((string) ($service['dt_deleted'] ?? '')) !== ''; ?>
 					<tr data-row-archived="<?= $isArchived ? '1' : '0' ?>">
-						<td><span class="sector-name"><?= esc((string) ($service['name'] ?? '')) ?></span></td>
+						<td><span class="badge bg-primary-subtle text-dark border fw-semibold"><?= esc((string) ($service['shortcode'] ?? '')) ?></span></td>
+							<td><span class="sector-name"><?= esc((string) ($service['name'] ?? '')) ?></span></td>
 						<td><span class="badge bg-light text-dark border"><?= esc((string) ($service['category'] ?? '')) ?></span></td>
 						<td><span class="text-trim d-inline-block"><?= esc((string) ($service['description'] ?? '')) ?></span></td>
 						<td><span class="sector-status-badge <?= $isArchived ? 'sector-status-archived' : 'sector-status-active' ?>"><?= $isArchived ? 'Archived' : 'Active' ?></span></td>
@@ -118,6 +120,7 @@ $serviceClearUrl = static function () use ($listRoute, $status, $perPage): strin
 											class="dropdown-item js-service-modal-open"
 											type="button"
 											data-service-mode="update"
+												data-service-shortcode="<?= esc((string) ($service['shortcode'] ?? ''), 'attr') ?>"
 											data-service-id="<?= esc((string) $serviceId) ?>"
 											data-service-category="<?= esc((string) ($service['category'] ?? ''), 'attr') ?>"
 											data-service-name="<?= esc((string) ($service['name'] ?? ''), 'attr') ?>"
@@ -152,7 +155,7 @@ $serviceClearUrl = static function () use ($listRoute, $status, $perPage): strin
 				<?php endforeach; ?>
 				<?php if ($services === []): ?>
 					<tr>
-						<td colspan="5" class="sector-empty-state"><?= $keyword !== '' ? 'No services match your search.' : 'No service or program records found.' ?></td>
+						<td colspan="6" class="sector-empty-state"><?= $keyword !== '' ? 'No services match your search.' : 'No service or program records found.' ?></td>
 					</tr>
 				<?php endif; ?>
 			</tbody>

@@ -41,7 +41,7 @@ class FamilyProfilingFormV2
     public static function barangays(): array
     {
         return [
-            'Binan (Poblacion)', 'Bungahan', 'Santo Tomas (Calabuso)', 'Canlalay',
+            'Binan', 'Bungahan', 'Santo Tomas (Calabuso)', 'Canlalay',
             'Casile', 'De La Paz', 'Ganado', 'San Francisco (Halang)', 'Langkiwa',
             'Loma', 'Malaban', 'Malamig', 'Mamplasan', 'Platero',
             'Poblacion', 'Santo Nino', 'San Antonio', 'San Jose', 'San Vicente',

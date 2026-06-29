@@ -69,6 +69,10 @@ if (! function_exists('family_modal_prepare')) {
             'submitLabel' => (string) ($data['submitLabel'] ?? 'Save Family Record'),
             'headId' => (int) ($data['headId'] ?? 0),
             'sectorOptions' => (array) ($data['sectorOptions'] ?? []),
+            // Sectors grouped by category (code => rows[]) for the grouped checkbox
+            // headings, mirroring servicesByCategory. Already includes archived-but-
+            // assigned sectors (flagged) in update mode, so it is safe to render from.
+            'sectorCatalog' => (array) ($data['sectorCatalog'] ?? []),
             'suffixOptions' => (array) ($data['suffixOptions'] ?? []),
             'sexOptions' => (array) ($data['sexOptions'] ?? ['Male', 'Female']),
             'civilOptions' => (array) ($data['civilOptions'] ?? []),
@@ -99,66 +103,5 @@ if (! function_exists('family_modal_prepare')) {
                 return $description !== '' && $label !== '' ? $label . ' - ' . $description : $label;
             },
         ];
-    }
-}
-
-if (! function_exists('family_modal_route_base')) {
-    /**
-     * Returns the role-aware Family modal route base used by reusable modal
-     * triggers. Pass a role/context when rendering outside a family route.
-     */
-    function family_modal_route_base(?string $context = null): string
-    {
-        $context = strtolower(trim((string) ($context ?? uri_string())));
-
-        if (str_starts_with($context, 'employee') || str_contains($context, '/employee/')) {
-            return 'employee/manage-family';
-        }
-
-        if (str_starts_with($context, 'viewer') || str_contains($context, '/viewer/')) {
-            return 'viewer/manage-family';
-        }
-
-        return 'admin/manage-family';
-    }
-}
-
-if (! function_exists('family_modal_url')) {
-    /**
-     * Builds the reusable Family modal URL.
-     *
-     * @param array<string, mixed> $params Extra query params, e.g. ['mode' => 'update', 'id' => 12].
-     */
-    function family_modal_url(array $params = [], ?string $context = null): string
-    {
-        $params = array_merge(['partial' => '1'], $params);
-
-        return site_url(family_modal_route_base($context) . '/create?' . http_build_query($params));
-    }
-}
-
-if (! function_exists('family_modal_trigger_attrs')) {
-    /**
-     * Builds escaped HTML attributes for any button/link that should open the
-     * reusable Family modal through manage-family-modal.js.
-     *
-     * @param array<string, mixed> $params Extra URL query params.
-     */
-    function family_modal_trigger_attrs(string $title = 'New Family Record', array $params = [], ?string $context = null): string
-    {
-        return 'data-modal-url="' . esc(family_modal_url($params, $context), 'attr') . '" data-modal-title="' . esc($title, 'attr') . '"';
-    }
-}
-
-if (! function_exists('family_modal_button')) {
-    /**
-     * Renders a reusable button that opens family-modal.php.
-     *
-     * @param array<string, mixed> $params Extra URL query params.
-     */
-    function family_modal_button(string $label = 'Add', string $title = 'New Family Record', array $params = [], string $class = 'btn btn-primary', ?string $context = null): string
-    {
-        return '<button class="' . esc(trim($class . ' js-open-family-add-modal'), 'attr') . '" type="button" '
-            . family_modal_trigger_attrs($title, $params, $context) . '>' . esc($label) . '</button>';
     }
 }

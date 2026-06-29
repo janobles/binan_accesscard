@@ -2,6 +2,9 @@
 
 namespace App\Support;
 
+use App\Models\Lookups\CategoryModel;
+use App\Models\Lookups\SectorModel;
+
 /**
  * Prepares dashboard view variables before templates render markup.
  */
@@ -31,7 +34,8 @@ class DashboardViewData
         $searchTerm = (string) ($data['searchTerm'] ?? '');
         $searchFilters = self::arrayValue($data['searchFilters'] ?? []);
         $auditActionOptions = self::arrayValue($data['auditActionOptions'] ?? []);
-        $sectorOptions = self::arrayValue($data['sectorOptions'] ?? []);
+        $auditListData = self::arrayValue($data['auditListData'] ?? []);
+        $sectorOptions = self::arrayValue($familyFormViewData['sectorOptions'] ?? []);
         $hasSearchFilters = self::hasSearchFilters($searchTerm, $searchFilters);
         $idleTimeoutSeconds = (int) ($data['idleTimeoutSeconds'] ?? 900);
         $formatDate = self::formatDateCallback();
@@ -41,6 +45,8 @@ class DashboardViewData
             'activePage',
             'adminAccounts',
             'auditActionOptions',
+            'auditListData',
+            'canCreateFamily',
             'canManageAccounts',
             'employeeAccounts',
             'formatDate',
@@ -76,7 +82,8 @@ class DashboardViewData
         $searchTerm = (string) ($data['searchTerm'] ?? '');
         $searchFilters = self::arrayValue($data['searchFilters'] ?? []);
         $auditActionOptions = self::arrayValue($data['auditActionOptions'] ?? []);
-        $sectorOptions = self::arrayValue($data['sectorOptions'] ?? []);
+        $auditListData = self::arrayValue($data['auditListData'] ?? []);
+        $sectorOptions = self::arrayValue($familyFormViewData['sectorOptions'] ?? []);
         $hasSearchFilters = self::hasSearchFilters($searchTerm, $searchFilters);
         $idleTimeoutSeconds = (int) ($data['idleTimeoutSeconds'] ?? 900);
         $formatDate = self::formatDateCallback();
@@ -85,6 +92,9 @@ class DashboardViewData
         return compact(
             'activePage',
             'auditActionOptions',
+            'auditListData',
+            'canCreateFamily',
+            'familyFormViewData',
             'formatDate',
             'formatTime',
             'hasSearchFilters',
@@ -132,11 +142,23 @@ class DashboardViewData
         $searchFilters = self::arrayValue($data['searchFilters'] ?? []);
         $auditActionOptions = self::arrayValue($data['auditActionOptions'] ?? []);
         $hasSearchFilters = self::hasSearchFilters($searchTerm, $searchFilters);
+        $auditPage = max(1, (int) ($data['auditPage'] ?? 1));
+        $auditPerPage = max(1, (int) ($data['auditPerPage'] ?? 50));
+        $auditTotal = max(0, (int) ($data['auditTotal'] ?? count($recentAudits)));
+        $auditTotalPages = max(1, (int) ($data['auditTotalPages'] ?? (int) ceil($auditTotal / $auditPerPage)));
+        $auditFromRecord = max(0, (int) ($data['auditFromRecord'] ?? ($auditTotal === 0 ? 0 : (($auditPage - 1) * $auditPerPage) + 1)));
+        $auditToRecord = max(0, (int) ($data['auditToRecord'] ?? min($auditTotal, $auditPage * $auditPerPage)));
         $formatDate = self::formatDateCallback();
         $formatTime = self::formatTimeCallback();
 
         return compact(
             'auditActionOptions',
+            'auditFromRecord',
+            'auditPage',
+            'auditPerPage',
+            'auditToRecord',
+            'auditTotal',
+            'auditTotalPages',
             'formatDate',
             'formatTime',
             'hasSearchFilters',
@@ -170,8 +192,33 @@ class DashboardViewData
         $sectorShortcodeOptions = self::stringList($data['sectorShortcodeOptions'] ?? []);
         $canRestore = (bool) ($data['canRestore'] ?? false);
 
+        // Add-Sector modal data: category dropdown (categoryID => "CODE - Name"), the
+        // next suggested sector code per category, and every existing shortcode for the
+        // inline duplicate check. Fetched here so the sectors view stays model-free.
+        $sectorModel = new SectorModel();
+        $categoryModel = new CategoryModel();
+        $sectorCategoryOptions = [];
+        $sectorNextCodeMap = [];
+
+        foreach ($categoryModel->getActive() as $category) {
+            $categoryId = (int) ($category['categoryID'] ?? 0);
+            $code = (string) ($category['code'] ?? '');
+            $name = (string) ($category['name'] ?? '');
+            $sectorCategoryOptions[$categoryId] = ($name === '' || $name === $code) ? $code : $code . ' - ' . $name;
+            $sectorNextCodeMap[$categoryId] = $categoryModel->nextSectorCodeFor($code);
+        }
+
+        $existingShortcodes = $sectorModel->existingShortcodes();
+
         return array_merge(
-            compact('sectorShortcodeOptions', 'sectors', 'canRestore'),
+            compact(
+                'sectorShortcodeOptions',
+                'sectors',
+                'canRestore',
+                'sectorCategoryOptions',
+                'sectorNextCodeMap',
+                'existingShortcodes'
+            ),
             self::lookupListVars($bundle, 'admin/sectors')
         );
     }
@@ -196,8 +243,15 @@ class DashboardViewData
         $categories = self::arrayValue($bundle['rows'] ?? $data['categories'] ?? []);
         $canRestore = (bool) ($data['canRestore'] ?? false);
 
+        // All codes (incl. archived, across every page) for the modal's duplicate
+        // check — fetched here so the categories view stays model-free.
+        $existingCodes = array_values(array_unique(array_filter(array_map(
+            static fn (array $category): string => strtoupper(trim((string) ($category['code'] ?? ''))),
+            (new CategoryModel())->getAllIncluding()
+        ))));
+
         return array_merge(
-            compact('categories', 'canRestore'),
+            compact('categories', 'canRestore', 'existingCodes'),
             self::lookupListVars($bundle, 'admin/categories')
         );
     }

@@ -34,8 +34,8 @@ $routes->group('admin', static function (RouteCollection $routes): void {
     $routes->get('manage-families', 'Admin\DashboardController::manageRecords');
     $routes->group('manage-family', static function (RouteCollection $routes): void {
         $routes->get('list', 'Families\FamilyController::listFamilies');
-        $routes->get('create', 'Families\FamilyController::createFamily');
         $routes->get('data', 'Families\FamilyController::dataTable');
+        $routes->get('create', 'Families\FamilyController::createFamily');
         $routes->get('view/(:num)', 'Families\FamilyController::viewFamily/$1');
         $routes->post('archive/(:num)', 'Families\FamilyController::archive/$1');
         $routes->post('restore/(:num)', 'Families\FamilyController::restore/$1');
@@ -76,8 +76,8 @@ $routes->group('employee', static function (RouteCollection $routes): void {
     $routes->get('manage-families', 'Employee\DashboardController::manageRecords');
     $routes->group('manage-family', static function (RouteCollection $routes): void {
         $routes->get('list', 'Families\FamilyController::listFamilies');
-        $routes->get('create', 'Families\FamilyController::createFamily');
         $routes->get('data', 'Families\FamilyController::dataTable');
+        $routes->get('create', 'Families\FamilyController::createFamily');
         $routes->get('view/(:num)', 'Families\FamilyController::viewFamily/$1');
         $routes->post('archive/(:num)', 'Families\FamilyController::archive/$1');
         $routes->post('restore/(:num)', 'Families\FamilyController::restore/$1');
@@ -97,7 +97,6 @@ $routes->group('viewer', static function (RouteCollection $routes): void {
     $routes->get('sectors', 'Viewer\DashboardController::sectors');
     $routes->get('services', 'Viewer\DashboardController::services');
     $routes->group('manage-family', static function (RouteCollection $routes): void {
-        $routes->get('create', 'Families\FamilyController::createFamily');
         $routes->get('data', 'Families\FamilyController::dataTable');
         $routes->get('view/(:num)', 'Families\FamilyController::viewFamily/$1');
     });

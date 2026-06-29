@@ -4,8 +4,6 @@
  * css/login.css). The POST target, CSRF field, input names, old() repopulation,
  * and login.js (idle-timer reset) are melbranch's and unchanged.
  */
-$bootstrapCss = base_url('assets/bootstrap/css/bootstrap.min.css') . '?v=' . (is_file(FCPATH . 'assets/bootstrap/css/bootstrap.min.css') ? filemtime(FCPATH . 'assets/bootstrap/css/bootstrap.min.css') : time());
-$loginCss = base_url('css/login.css') . '?v=' . (is_file(FCPATH . 'css/login.css') ? filemtime(FCPATH . 'css/login.css') : time());
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -13,15 +11,16 @@ $loginCss = base_url('css/login.css') . '?v=' . (is_file(FCPATH . 'css/login.css
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login | Binan Access Card Portal</title>
-    <link href="<?= esc($bootstrapCss, 'attr') ?>" rel="stylesheet">
-    <link rel="stylesheet" href="<?= esc($loginCss, 'attr') ?>">
+    <?php foreach (asset_styles('login') as $stylePath): ?>
+    <link rel="stylesheet" href="<?= esc(asset_url($stylePath), 'attr') ?>">
+    <?php endforeach; ?>
 </head>
 <body>
     <main class="login-page">
         <section class="login-card">
             <div class="login-card-body">
                 <div class="login-heading">
-                    <img src="<?= base_url('assets/image/binan.png') ?>" alt="City of Binan Logo" class="login-logo">
+                    <img src="<?= asset_url('assets/image/binan.png') ?>" alt="City of Binan Logo" class="login-logo">
                     <h1>Binan Access Card Portal</h1>
                     <p>Sign in to continue</p>
                 </div>
@@ -68,6 +67,8 @@ $loginCss = base_url('css/login.css') . '?v=' . (is_file(FCPATH . 'css/login.css
             </div>
         </section>
     </main>
-    <script src="<?= base_url('assets/js/login.js') ?>?v=<?= filemtime(FCPATH . 'assets/js/login.js') ?>"></script>
+    <?php foreach (asset_scripts('login') as $scriptPath): ?>
+    <script src="<?= esc(asset_url($scriptPath), 'attr') ?>"></script>
+    <?php endforeach; ?>
 </body>
 </html>

@@ -2,6 +2,15 @@
 
 use PHPUnit\Framework\TestCase;
 
+/**
+ * Guards the server-side DataTables Manage Records list that was ported from the
+ * jade branch: the pinned vendor assets, the five-column view, the role routes,
+ * and the controller's whitelisted (date-less) parameter handling.
+ *
+ * Adapted from jade for this branch's asset loading: layouts here enumerate
+ * asset_url() paths directly (no asset-group helper), so the load-order test
+ * inspects the layout files rather than an asset registry.
+ */
 final class FamilyDataTableTest extends TestCase
 {
     public function testPinnedDataTablesAssetsAreInstalled(): void
@@ -38,32 +47,27 @@ final class FamilyDataTableTest extends TestCase
 
     public function testRoleLayoutsLoadDataTablesBeforeInitializer(): void
     {
-        $helper = (string) file_get_contents(APPPATH . 'Helpers/asset_helper.php');
-        $jqueryPosition = strpos($helper, 'assets/jquery/jquery-3.7.1.min.js');
-        $corePosition = strpos($helper, 'assets/datatables/js/dataTables.min.js');
-        $adapterPosition = strpos($helper, 'assets/datatables/js/dataTables.bootstrap5.min.js');
-        $initializerPosition = strpos($helper, 'assets/js/dashboard/family-datatable.js');
-        $dataTablesCssPosition = strpos($helper, 'assets/datatables/css/dataTables.bootstrap5.min.css');
-        $customCssPosition = strpos($helper, 'css/managerecord.css');
-
-        $this->assertIsInt($jqueryPosition);
-        $this->assertIsInt($corePosition);
-        $this->assertIsInt($adapterPosition);
-        $this->assertIsInt($initializerPosition);
-        $this->assertIsInt($dataTablesCssPosition);
-        $this->assertIsInt($customCssPosition);
-        $this->assertLessThan($corePosition, $jqueryPosition);
-        $this->assertLessThan($adapterPosition, $corePosition);
-        $this->assertLessThan($initializerPosition, $adapterPosition);
-        $this->assertLessThan($customCssPosition, $dataTablesCssPosition);
-
         foreach (['Admin/layout.php', 'Employee/layout.php', 'Viewer/layout.php'] as $layoutPath) {
             $layout = (string) file_get_contents(APPPATH . 'Views/' . $layoutPath);
 
-            $this->assertStringContainsString("helper('asset')", $layout);
-            $this->assertStringContainsString("asset_tags('dashboard-core-css')", $layout);
-            $this->assertStringContainsString("asset_tags('dashboard-vendor-js')", $layout);
-            $this->assertStringContainsString("asset_script_tag('assets/js/session-timeout.js'", $layout);
+            $jqueryPosition = strpos($layout, 'assets/jquery/jquery-3.7.1.min.js');
+            $corePosition = strpos($layout, 'assets/datatables/js/dataTables.min.js');
+            $adapterPosition = strpos($layout, 'assets/datatables/js/dataTables.bootstrap5.min.js');
+            $initializerPosition = strpos($layout, 'assets/js/dashboard/family-datatable.js');
+            $dataTablesCssPosition = strpos($layout, 'assets/datatables/css/dataTables.bootstrap5.min.css');
+            $managerecordCssPosition = strpos($layout, 'css/managerecord.css');
+
+            $this->assertIsInt($jqueryPosition, $layoutPath . ' loads jQuery');
+            $this->assertIsInt($corePosition, $layoutPath . ' loads DataTables core');
+            $this->assertIsInt($adapterPosition, $layoutPath . ' loads DataTables bootstrap5 adapter');
+            $this->assertIsInt($initializerPosition, $layoutPath . ' loads family-datatable.js');
+            $this->assertIsInt($dataTablesCssPosition, $layoutPath . ' loads DataTables css');
+            $this->assertIsInt($managerecordCssPosition, $layoutPath . ' loads managerecord.css');
+
+            $this->assertLessThan($corePosition, $jqueryPosition, $layoutPath . ': jQuery before DataTables core');
+            $this->assertLessThan($adapterPosition, $corePosition, $layoutPath . ': core before adapter');
+            $this->assertLessThan($initializerPosition, $adapterPosition, $layoutPath . ': adapter before initializer');
+            $this->assertLessThan($managerecordCssPosition, $dataTablesCssPosition, $layoutPath . ': DataTables css before managerecord css');
         }
     }
 
@@ -78,7 +82,8 @@ final class FamilyDataTableTest extends TestCase
     {
         $controller = (string) file_get_contents(APPPATH . 'Controllers/Families/FamilyController.php');
         $methodStart = strpos($controller, 'public function dataTable()');
-        $methodEnd = strpos($controller, 'public function viewFamily', $methodStart ?: 0);
+        // dataTable() is followed by its private helper dataTableOrder() in this branch.
+        $methodEnd = $methodStart !== false ? strpos($controller, 'private function dataTableOrder', $methodStart) : false;
         $method = $methodStart !== false && $methodEnd !== false
             ? substr($controller, $methodStart, $methodEnd - $methodStart)
             : '';

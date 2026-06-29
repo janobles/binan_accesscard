@@ -34,15 +34,16 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= esc($pageTitle) ?> - Binan Access Card MIS</title>
-    <?= asset_tags('dashboard-core-css') ?>
-    <?= asset_tags('viewer-dashboard-css') ?>
+    <?php foreach (array_merge(asset_styles('head'), asset_styles('viewer')) as $stylePath): ?>
+    <link rel="stylesheet" href="<?= esc(asset_url($stylePath), 'attr') ?>">
+    <?php endforeach; ?>
 </head>
 <body>
 <div id="wrapper">
     <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion viewer" id="dashboard-sidebar">
         <li class="sidebar-brand-wrap">
             <a class="sidebar-brand d-flex align-items-center justify-content-center" href="<?= site_url('viewer/dashboard') ?>">
-                <img class="sidebar-brand-icon" src="<?= base_url('assets/image/binan.png') ?>" alt="City of Binan Logo">
+                <img class="sidebar-brand-icon" src="<?= asset_url('assets/image/binan.png') ?>" alt="City of Binan Logo">
                 <span class="sidebar-brand-text mx-2">Bi&ntilde;an Access Card MIS<small>Viewer</small></span>
             </a>
         </li>
@@ -158,7 +159,7 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
     <div class="modal-dialog modal-dialog-centered modal-xl">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="familyModalLabel">Details</h5>
+                <h5 class="modal-title" id="familyModalLabel">Record</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body" id="familyModalBody">
@@ -174,13 +175,9 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
     </div>
 </div>
 
-<?= asset_tags('dashboard-vendor-js') ?>
-<?= asset_tags('viewer-dashboard-js') ?>
-<?= asset_script_tag('assets/js/session-timeout.js', [
-    'data-timeout-seconds' => (string) $idleTimeoutSeconds,
-    'data-logout-url' => site_url('logout?timeout=1'),
-    'data-home-url' => site_url('/'),
-    'data-keep-alive-url' => site_url('session/keep-alive'),
-]) ?>
+<?php foreach (array_merge(asset_scripts('core'), asset_scripts('viewer')) as $scriptPath): ?>
+<script src="<?= esc(asset_url($scriptPath), 'attr') ?>"></script>
+<?php endforeach; ?>
+<script src="<?= esc(asset_url('assets/js/session-timeout.js'), 'attr') ?>" data-timeout-seconds="<?= esc((string) $idleTimeoutSeconds) ?>" data-logout-url="<?= site_url('logout?timeout=1') ?>" data-home-url="<?= site_url('/') ?>" data-keep-alive-url="<?= site_url('session/keep-alive') ?>"></script>
 </body>
 </html>

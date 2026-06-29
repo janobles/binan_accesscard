@@ -1,9 +1,43 @@
-// Registers family record modals with the shared dashboard loader.
+// Registers the family record modals (View + Add/Update) with the shared
+// dashboard loader, drives the two-step Bootstrap form (Head -> Members),
+// captures repeatable family members, and submits Add/Update over AJAX to the
+// existing FamilyController::store()/update() endpoints, refreshing the
+// server-side DataTable on success.
+//
+// Restored from the old wizard (family-form.js / family-form-ui.js):
+//   - "Other" freetext selects (reveal + submit-time option swap)
+//   - Contact number digits-only / exactly-11 validation
+//   - Archived (grandfather) badge un-tick warning
+//   - localStorage draft auto-save + restore-on-reopen + keep/discard-on-close
+//
+// Connected to:
+//   - dashboard-modal-loader.js : window.registerDashboardModal()
+//   - family-datatable.js       : window.reloadFamilyDataTable()
+//   - Views  : Family/family-modal.php, Family/view.php, the #familyModal shell
+//   - Backend: POST families (store), POST {role}/manage-family/update/:id
 (function (window, document) {
     'use strict';
 
     if (typeof window.registerDashboardModal !== 'function') {
         return;
+    }
+
+    var DRAFT_KEY = 'binan_family_modal_draft_v1';
+    var saveTimer = null;
+
+    // ---- small DOM helpers -------------------------------------------------
+
+    function setHidden(el, hidden) {
+        if (el) {
+            el.classList.toggle('family-form-hidden', !!hidden);
+        }
+    }
+
+    function escapeHtml(value) {
+        var div = document.createElement('div');
+        div.textContent = String(value || '');
+
+        return div.innerHTML;
     }
 
     function textValue(form, selector) {
@@ -20,12 +54,536 @@
         return String(field.value || '').trim();
     }
 
-    function escapeHtml(value) {
-        var div = document.createElement('div');
-        div.textContent = String(value || '');
+    // ---- "Other" freetext selects (ported from family-form-ui.js) ----------
 
-        return div.innerHTML;
+    function isOtherValue(value) {
+        var normalized = String(value || '').trim().toLowerCase();
+
+        return normalized === 'other' || normalized === 'others' || normalized === '__other__';
     }
+
+    function cleanOtherValue(value) {
+        return String(value || '')
+            .replace(/[^\p{L}\p{N}\s.,'\-/&()]/gu, '')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .toLowerCase()
+            .replace(/(^|[^\p{L}])(\p{L})/gu, function (match, boundary, letter) {
+                return boundary + letter.toUpperCase();
+            });
+    }
+
+    function findOtherInput(select) {
+        if (!select) {
+            return null;
+        }
+
+        var direct = select.dataset.otherInput || '';
+
+        if (direct !== '') {
+            return document.querySelector(direct);
+        }
+
+        var field = select.dataset.otherField || '';
+        var container = select.closest('[class*="col-"]') || select.parentElement;
+
+        return field !== '' && container
+            ? container.querySelector('[data-other-for="' + field + '"]')
+            : null;
+    }
+
+    function selectedFieldValue(select) {
+        var otherInput = findOtherInput(select);
+
+        if (isOtherValue(select.value) && otherInput) {
+            var otherValue = String(otherInput.value || '').trim();
+
+            return otherValue !== '' ? otherValue : select.value;
+        }
+
+        return select.value;
+    }
+
+    function syncOtherControl(select) {
+        var otherInput = findOtherInput(select);
+
+        if (!otherInput) {
+            return;
+        }
+
+        var shouldShow = isOtherValue(select.value);
+
+        setHidden(otherInput, !shouldShow);
+        otherInput.required = shouldShow;
+
+        if (!shouldShow) {
+            otherInput.value = '';
+        }
+    }
+
+    function optionExists(select, value) {
+        return Array.from(select.options).some(function (option) {
+            return option.value === value;
+        });
+    }
+
+    // Sets a select to a stored value: picks the matching option, or selects the
+    // "Other" option and fills the freetext when the value is a custom one.
+    function setSelectValueWithOther(select, value) {
+        var normalized = String(value || '');
+
+        if (normalized === '' || optionExists(select, normalized)) {
+            select.value = normalized;
+            syncOtherControl(select);
+
+            return;
+        }
+
+        var otherOption = Array.from(select.options).find(function (option) {
+            return isOtherValue(option.value);
+        });
+
+        if (otherOption) {
+            otherOption.selected = true;
+            var otherInput = findOtherInput(select);
+
+            if (otherInput) {
+                otherInput.value = normalized;
+            }
+
+            syncOtherControl(select);
+        } else {
+            select.value = '';
+        }
+    }
+
+    function applyOtherValues(root) {
+        Array.from(root.querySelectorAll('.js-other-select')).forEach(function (select) {
+            var otherInput = findOtherInput(select);
+
+            if (!otherInput || !isOtherValue(select.value)) {
+                return;
+            }
+
+            var otherValue = cleanOtherValue(otherInput.value);
+
+            if (otherValue === '') {
+                return;
+            }
+
+            var generated = Array.from(select.options).find(function (option) {
+                return option.dataset.generatedOther === '1';
+            });
+
+            if (!generated) {
+                generated = document.createElement('option');
+                generated.dataset.generatedOther = '1';
+                select.appendChild(generated);
+            }
+
+            generated.value = otherValue;
+            generated.textContent = otherValue;
+            generated.selected = true;
+        });
+    }
+
+    function initOtherSelects(root) {
+        Array.from(root.querySelectorAll('.js-other-select')).forEach(function (select) {
+            var initial = typeof select.dataset.initialValue !== 'undefined' ? select.dataset.initialValue : select.value;
+            setSelectValueWithOther(select, initial);
+        });
+    }
+
+    // ---- field error helper ------------------------------------------------
+
+    function setFieldError(field, message) {
+        if (!field) {
+            return;
+        }
+
+        var wrapper = field.closest('[class*="col-"]') || field.parentElement;
+        var feedback = wrapper ? wrapper.querySelector('[data-family-field-error]') : null;
+
+        field.classList.toggle('is-invalid', message !== '');
+
+        if (!feedback && wrapper && message !== '') {
+            feedback = document.createElement('div');
+            feedback.className = 'family-field-error';
+            feedback.setAttribute('data-family-field-error', '');
+            wrapper.appendChild(feedback);
+        }
+
+        if (feedback) {
+            if (message !== '') {
+                feedback.textContent = message;
+            }
+
+            feedback.hidden = message === '';
+        }
+    }
+
+    // ---- contact number validation (ported) --------------------------------
+
+    function isContactField(el) {
+        return el && (el.name === 'head_contactnumber' || /\[contactnumber\]$/.test(el.name || ''));
+    }
+
+    function enforceContactDigits(el) {
+        el.value = String(el.value || '').replace(/[^0-9]/g, '').slice(0, 11);
+
+        if (el.value === '' || el.value.length === 11) {
+            setFieldError(el, '');
+        }
+    }
+
+    function validateContact(el) {
+        if (!el) {
+            return true;
+        }
+
+        var value = String(el.value || '').trim();
+
+        if (value !== '' && value.length !== 11) {
+            setFieldError(el, 'Contact number must be exactly 11 digits.');
+
+            return false;
+        }
+
+        setFieldError(el, '');
+
+        return true;
+    }
+
+    // ---- confirm dialog (ported from family-form.js) -----------------------
+
+    function askModalDialog(form, options) {
+        return new Promise(function (resolve) {
+            var host = form.closest('#familyModalBody') || form.closest('.modal-content') || form;
+            var overlay = document.createElement('div');
+            var dialog = document.createElement('div');
+            var icon = document.createElement('div');
+            var iconGlyph = document.createElement('i');
+            var copy = document.createElement('div');
+            var title = document.createElement('h3');
+            var message = document.createElement('p');
+            var actions = document.createElement('div');
+            var cancelButton = document.createElement('button');
+            var confirmButton = document.createElement('button');
+
+            overlay.className = 'family-draft-dialog-backdrop';
+            overlay.setAttribute('role', 'presentation');
+            dialog.className = 'family-draft-dialog';
+            dialog.setAttribute('role', 'dialog');
+            dialog.setAttribute('aria-modal', 'true');
+
+            icon.className = 'family-draft-dialog-icon' + (options.tone === 'warning' ? ' is-warning' : '');
+            icon.setAttribute('aria-hidden', 'true');
+            iconGlyph.className = options.iconClass || 'bi bi-question-lg';
+            icon.appendChild(iconGlyph);
+
+            copy.className = 'family-draft-dialog-copy';
+            title.textContent = options.title || 'Confirm action';
+            message.textContent = options.message || '';
+            copy.appendChild(title);
+            copy.appendChild(message);
+
+            actions.className = 'family-draft-dialog-actions';
+            cancelButton.type = 'button';
+            cancelButton.className = 'btn btn-outline-secondary';
+            cancelButton.dataset.dialogAction = 'cancel';
+            cancelButton.textContent = options.cancelLabel || 'Cancel';
+            confirmButton.type = 'button';
+            confirmButton.className = options.confirmClass || 'btn btn-success';
+            confirmButton.dataset.dialogAction = 'confirm';
+            confirmButton.textContent = options.confirmLabel || 'Confirm';
+            actions.appendChild(cancelButton);
+            actions.appendChild(confirmButton);
+
+            dialog.appendChild(icon);
+            dialog.appendChild(copy);
+            dialog.appendChild(actions);
+            overlay.appendChild(dialog);
+
+            var finish = function (confirmed) {
+                overlay.remove();
+                resolve(confirmed);
+            };
+
+            overlay.addEventListener('click', function (event) {
+                if (event.target === overlay) {
+                    finish(false);
+                    return;
+                }
+
+                var button = event.target.closest('[data-dialog-action]');
+
+                if (button) {
+                    finish(button.dataset.dialogAction === 'confirm');
+                }
+            });
+
+            overlay.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape') {
+                    event.preventDefault();
+                    finish(false);
+                }
+            });
+
+            host.appendChild(overlay);
+            confirmButton.focus();
+        });
+    }
+
+    function askRemoveArchivedItem(form, label) {
+        return askModalDialog(form, {
+            title: 'Remove archived item?',
+            message: '"' + label + '" is archived. If you remove it, this person loses the benefit and it can\'t be added back later.',
+            iconClass: 'bi bi-exclamation-triangle',
+            tone: 'warning',
+            cancelLabel: 'Keep',
+            confirmLabel: 'Remove',
+            confirmClass: 'btn btn-danger'
+        });
+    }
+
+    function askRestoreDraft(form, savedAt) {
+        return askModalDialog(form, {
+            title: 'Restore unsaved record?',
+            message: 'You have an unsaved record from ' + formatDraftAge(savedAt) + '. Restore it?',
+            iconClass: 'bi bi-arrow-counterclockwise',
+            cancelLabel: 'Discard',
+            confirmLabel: 'Restore',
+            confirmClass: 'btn btn-success'
+        });
+    }
+
+    function askKeepOrDiscard(form) {
+        return askModalDialog(form, {
+            title: 'Keep your progress?',
+            message: 'You have an unsaved record. Keep it to continue later, or discard it?',
+            iconClass: 'bi bi-save',
+            cancelLabel: 'Discard',
+            confirmLabel: 'Keep',
+            confirmClass: 'btn btn-success'
+        });
+    }
+
+    // Shown when the server reports a max_input_vars cutoff (code FORM_TRUNCATED):
+    // nothing was saved, but the draft holds everything. Both buttons just dismiss —
+    // the modal stays open with the data intact either way.
+    function askTruncationNotice(form) {
+        return askModalDialog(form, {
+            title: 'Form too large to send',
+            message: 'There were too many entries to send all at once, so nothing was saved yet. Don\'t worry — all your entries are kept on this computer. Remove a few members and Save again, or close and reopen Add Family to restore everything.',
+            iconClass: 'bi bi-exclamation-triangle',
+            tone: 'warning',
+            cancelLabel: 'Close',
+            confirmLabel: 'Keep editing',
+            confirmClass: 'btn btn-success'
+        });
+    }
+
+    // ---- draft persistence (create mode only) ------------------------------
+
+    function isCreateForm(root) {
+        var modeInput = root.querySelector('[name="form_mode"]');
+
+        return !modeInput || modeInput.value !== 'update';
+    }
+
+    function readDraft() {
+        try {
+            var raw = window.localStorage.getItem(DRAFT_KEY);
+
+            return raw ? JSON.parse(raw) : null;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function clearDraft() {
+        try {
+            window.localStorage.removeItem(DRAFT_KEY);
+        } catch (error) {
+            /* storage unavailable */
+        }
+    }
+
+    function draftIsEmpty(snapshot) {
+        if (!snapshot || typeof snapshot !== 'object') {
+            return true;
+        }
+
+        var head = snapshot.head || {};
+        var hasHead = Object.keys(head).some(function (key) {
+            return String(head[key] || '').trim() !== '';
+        });
+
+        return !hasHead
+            && (snapshot.members || []).length === 0
+            && (snapshot.sector_ids || []).length === 0
+            && (snapshot.service_ids || []).length === 0;
+    }
+
+    function formatDraftAge(savedAt) {
+        var ts = Number(savedAt) || 0;
+
+        if (ts <= 0) {
+            return 'a moment ago';
+        }
+
+        var mins = Math.floor((Date.now() - ts) / 60000);
+
+        if (mins < 1) { return 'just now'; }
+        if (mins < 60) { return mins + (mins === 1 ? ' minute ago' : ' minutes ago'); }
+
+        var hrs = Math.floor(mins / 60);
+
+        if (hrs < 24) { return hrs + (hrs === 1 ? ' hour ago' : ' hours ago'); }
+
+        var days = Math.floor(hrs / 24);
+
+        return days + (days === 1 ? ' day ago' : ' days ago');
+    }
+
+    function checkedValues(scope, selector) {
+        return Array.from(scope.querySelectorAll(selector + ':checked')).map(function (input) {
+            return input.value;
+        });
+    }
+
+    function snapshotForm(form) {
+        var head = {};
+
+        Array.from(form.querySelectorAll('[name^="head_"]')).forEach(function (field) {
+            head[field.name] = field.classList.contains('js-other-select') ? selectedFieldValue(field) : field.value;
+        });
+
+        var members = Array.from(form.querySelectorAll('[data-family-member-row]')).map(function (row) {
+            var data = { sector_ids: [], service_ids: [] };
+
+            Array.from(row.querySelectorAll('input, select')).forEach(function (field) {
+                var match = /members\[\d+\]\[([a-z_]+)\](\[\])?$/.exec(field.name || '');
+
+                if (!match) {
+                    return;
+                }
+
+                var key = match[1];
+
+                if (key === 'sector_ids' || key === 'service_ids') {
+                    if (field.checked) {
+                        data[key].push(field.value);
+                    }
+
+                    return;
+                }
+
+                data[key] = field.classList.contains('js-other-select') ? selectedFieldValue(field) : field.value;
+            });
+
+            return data;
+        });
+
+        return {
+            v: 1,
+            head: head,
+            sector_ids: checkedValues(form, 'input[name="sector_ids[]"]'),
+            service_ids: checkedValues(form, 'input[name="service_ids[]"]'),
+            members: members,
+            savedAt: Date.now()
+        };
+    }
+
+    function saveDraftNow(form) {
+        try {
+            window.localStorage.setItem(DRAFT_KEY, JSON.stringify(snapshotForm(form)));
+        } catch (error) {
+            /* storage unavailable / quota */
+        }
+    }
+
+    function scheduleSave(root) {
+        var form = root.querySelector('form');
+
+        if (!form || !isCreateForm(root)) {
+            return;
+        }
+
+        window.clearTimeout(saveTimer);
+        saveTimer = window.setTimeout(function () {
+            saveDraftNow(form);
+        }, 400);
+    }
+
+    function checkBoxes(scope, name, values) {
+        var wanted = (values || []).map(String);
+
+        Array.from(scope.querySelectorAll('input[name="' + name + '"]')).forEach(function (box) {
+            box.checked = wanted.indexOf(String(box.value)) !== -1;
+        });
+    }
+
+    function restoreDraftIntoForm(root, snapshot) {
+        var form = root.querySelector('form');
+
+        if (!form || !snapshot) {
+            return;
+        }
+
+        var head = snapshot.head || {};
+
+        Object.keys(head).forEach(function (name) {
+            var field = form.querySelector('[name="' + name + '"]');
+
+            if (!field) {
+                return;
+            }
+
+            if (field.classList.contains('js-other-select')) {
+                setSelectValueWithOther(field, head[name]);
+            } else {
+                field.value = head[name];
+            }
+        });
+
+        checkBoxes(form, 'sector_ids[]', snapshot.sector_ids);
+        checkBoxes(form, 'service_ids[]', snapshot.service_ids);
+
+        clearMemberRows(root);
+
+        (snapshot.members || []).forEach(function (member) {
+            var row = addMemberRow(root);
+
+            if (!row) {
+                return;
+            }
+
+            Object.keys(member).forEach(function (key) {
+                if (key === 'sector_ids' || key === 'service_ids') {
+                    checkBoxes(row, row.dataset.memberFieldPrefix + '[' + key + '][]', member[key]);
+
+                    return;
+                }
+
+                var field = row.querySelector('[name="' + row.dataset.memberFieldPrefix + '[' + key + ']"]');
+
+                if (!field) {
+                    return;
+                }
+
+                if (field.classList.contains('js-other-select')) {
+                    setSelectValueWithOther(field, member[key]);
+                } else {
+                    field.value = member[key];
+                }
+            });
+        });
+
+        renderHeadSummary(root);
+    }
+
+    // ---- summary -----------------------------------------------------------
 
     function checkedLabels(form, selector) {
         return Array.from(form.querySelectorAll(selector + ':checked')).map(function (input) {
@@ -60,6 +618,26 @@
         }).join('') + '</ul>';
     }
 
+    // Resolves a field's display value, returning the "Other" freetext when chosen.
+    function fieldDisplayValue(form, selector) {
+        var field = form.querySelector(selector);
+
+        if (!field) {
+            return '';
+        }
+
+        if (field.tagName === 'SELECT' && field.classList.contains('js-other-select') && isOtherValue(field.value)) {
+            var otherInput = findOtherInput(field);
+            var typed = otherInput ? String(otherInput.value || '').trim() : '';
+
+            if (typed !== '') {
+                return typed;
+            }
+        }
+
+        return textValue(form, selector);
+    }
+
     function renderHeadSummary(container) {
         var form = container.querySelector('form');
 
@@ -77,65 +655,54 @@
         setSummary(container, 'name', fullName);
         setSummary(container, 'birthday', textValue(form, '[data-summary="birthday"]'));
         setSummary(container, 'sex', textValue(form, '[data-summary="sex"]'));
-        setSummary(container, 'civil', textValue(form, '[data-summary="civil"]'));
+        setSummary(container, 'civil', fieldDisplayValue(form, '[data-summary="civil"]'));
         setSummary(container, 'contact', textValue(form, '[data-summary="contact"]'));
-        setSummary(container, 'religion', textValue(form, '[data-summary="religion"]'));
-        setSummary(container, 'education', textValue(form, '[data-summary="education"]'));
-        setSummary(container, 'job', textValue(form, '[data-summary="job"]'));
+        setSummary(container, 'religion', fieldDisplayValue(form, '[data-summary="religion"]'));
+        setSummary(container, 'education', fieldDisplayValue(form, '[data-summary="education"]'));
+        setSummary(container, 'job', fieldDisplayValue(form, '[data-summary="job"]'));
         setSummary(container, 'income', textValue(form, '[data-summary="income"]'));
         setSummary(container, 'address', [textValue(form, '[data-summary="address"]'), textValue(form, '[data-summary="barangay"]')].filter(Boolean).join(', '));
         setSummaryList(container, 'sectors', checkedLabels(form, 'input[name="sector_ids[]"]'));
         setSummaryList(container, 'services', checkedLabels(form, 'input[name="service_ids[]"]'));
     }
 
+    // ---- step navigation + validation --------------------------------------
+
     function validateHeadStep(container) {
         var headTrigger = container.querySelector('[data-family-step-target="head"]');
         var headTarget = headTrigger ? headTrigger.getAttribute('data-family-step-pane') : '';
         var headPane = headTarget ? container.querySelector(headTarget) : null;
         var requiredFields = headPane ? Array.from(headPane.querySelectorAll('[required]')) : [];
-        var firstInvalid = requiredFields.find(function (field) {
-            return String(field.value || '').trim() === '';
-        });
+        var firstInvalid = null;
 
         requiredFields.forEach(function (field) {
-            var isInvalid = String(field.value || '').trim() === '';
-            var wrapper = field.closest('[class*="col-"]') || field.parentElement;
-            var feedback = wrapper ? wrapper.querySelector('[data-family-field-error]') : null;
+            var invalid = String(field.value || '').trim() === '';
 
-            field.classList.toggle('is-invalid', isInvalid);
+            setFieldError(field, invalid ? 'This field is required.' : '');
 
-            if (!feedback && wrapper) {
-                feedback = document.createElement('div');
-                feedback.className = 'family-field-error';
-                feedback.setAttribute('data-family-field-error', '');
-                feedback.textContent = 'This field is required.';
-                wrapper.appendChild(feedback);
-            }
-
-            if (feedback) {
-                feedback.hidden = !isInvalid;
+            if (invalid && !firstInvalid) {
+                firstInvalid = field;
             }
         });
 
-        if (!firstInvalid) {
-            return true;
+        var contact = container.querySelector('[name="head_contactnumber"]');
+
+        if (contact && !validateContact(contact) && !firstInvalid) {
+            firstInvalid = contact;
         }
 
-        firstInvalid.focus();
+        if (firstInvalid) {
+            firstInvalid.focus();
 
-        return false;
+            return false;
+        }
+
+        return true;
     }
 
     function clearFieldError(field) {
-        var wrapper = field.closest('[class*="col-"]') || field.parentElement;
-        var feedback = wrapper ? wrapper.querySelector('[data-family-field-error]') : null;
-
         if (String(field.value || '').trim() !== '') {
-            field.classList.remove('is-invalid');
-
-            if (feedback) {
-                feedback.hidden = true;
-            }
+            setFieldError(field, '');
         }
     }
 
@@ -177,6 +744,232 @@
         }
     }
 
+    // ---- repeatable members ------------------------------------------------
+
+    function addMemberRow(root) {
+        var button = root.querySelector('[data-family-add-member]');
+        var container = root.querySelector('[data-family-members]');
+        var template = root.querySelector('[data-family-member-template]');
+
+        if (!button || !container || !template) {
+            return null;
+        }
+
+        var nextIndex = parseInt(button.dataset.nextIndex || '0', 10) || 0;
+        var markup = (template.innerHTML || '').replace(/__INDEX__/g, String(nextIndex));
+        var holder = document.createElement('div');
+        holder.innerHTML = markup.trim();
+
+        var row = holder.querySelector('[data-family-member-row]');
+
+        if (!row) {
+            return null;
+        }
+
+        row.dataset.memberFieldPrefix = 'members[' + nextIndex + ']';
+        container.appendChild(row);
+        button.dataset.nextIndex = String(nextIndex + 1);
+
+        initOtherSelects(row);
+
+        return row;
+    }
+
+    function clearMemberRows(root) {
+        var container = root.querySelector('[data-family-members]');
+        var button = root.querySelector('[data-family-add-member]');
+
+        if (container) {
+            container.innerHTML = '';
+        }
+
+        if (button) {
+            button.dataset.nextIndex = '0';
+        }
+    }
+
+    // ---- AJAX submit -------------------------------------------------------
+
+    function findCsrfInput(form) {
+        var known = ['entry_type', 'form_mode', 'head_id'];
+
+        return Array.from(form.querySelectorAll('input[type="hidden"]')).find(function (input) {
+            return known.indexOf(input.name) === -1;
+        }) || null;
+    }
+
+    function updateCsrf(form, hash) {
+        if (!hash) {
+            return;
+        }
+
+        var input = findCsrfInput(form);
+
+        if (input) {
+            input.value = hash;
+        }
+    }
+
+    function showFamilyToast(message, isError) {
+        var toast = document.createElement('div');
+        toast.className = 'alert ' + (isError ? 'alert-danger' : 'alert-success') + ' family-toast shadow';
+        toast.setAttribute('role', 'status');
+        toast.textContent = message;
+        document.body.appendChild(toast);
+
+        window.setTimeout(function () {
+            toast.style.transition = 'opacity 200ms ease';
+            toast.style.opacity = '0';
+            window.setTimeout(function () { toast.remove(); }, 220);
+        }, 3200);
+    }
+
+    function showFormError(root, message) {
+        var form = root.querySelector('form');
+
+        if (!form) {
+            return;
+        }
+
+        var alert = form.querySelector('[data-family-form-error]');
+
+        if (!alert) {
+            alert = document.createElement('div');
+            alert.className = 'alert alert-danger';
+            alert.setAttribute('data-family-form-error', '');
+            form.insertBefore(alert, form.firstChild);
+        }
+
+        alert.textContent = message;
+        alert.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function closeFamilyModal() {
+        var modalEl = document.getElementById('familyModal');
+
+        if (modalEl && window.bootstrap && window.bootstrap.Modal) {
+            modalEl.dataset.familyCloseConfirmed = '1';
+            var instance = window.bootstrap.Modal.getInstance(modalEl);
+
+            if (instance) {
+                instance.hide();
+            }
+        }
+    }
+
+    function validateMemberContacts(form) {
+        var firstInvalid = null;
+
+        Array.from(form.querySelectorAll('[name$="[contactnumber]"]')).forEach(function (field) {
+            if (!validateContact(field) && !firstInvalid) {
+                firstInvalid = field;
+            }
+        });
+
+        return firstInvalid;
+    }
+
+    function submitFamilyForm(root, form) {
+        if (!validateHeadStep(root)) {
+            showStep(root, 'head');
+            return;
+        }
+
+        var badContact = validateMemberContacts(form);
+
+        if (badContact) {
+            showStep(root, 'members');
+            badContact.focus();
+            return;
+        }
+
+        // Swap "Other" selects to their typed value so the custom text posts.
+        applyOtherValues(form);
+
+        // Record how many member rows we are posting so the server can detect a
+        // submission truncated by PHP's max_input_vars (trailing members dropped).
+        var memberCountField = form.querySelector('[data-members-count]');
+        if (memberCountField) {
+            memberCountField.value = String(form.querySelectorAll('[data-family-member-row]').length);
+        }
+
+        // Persist the exact state we are about to send so nothing is lost even if the
+        // request dies mid-flight (browser/tab crash) before the 400ms auto-save fires.
+        // Create mode only — edit mode keeps no draft (the draft key is global).
+        if (isCreateForm(root)) {
+            saveDraftNow(form);
+        }
+
+        var saveButton = root.querySelector('[data-family-save]');
+        var originalLabel = saveButton ? saveButton.textContent : '';
+
+        if (saveButton) {
+            saveButton.disabled = true;
+            saveButton.textContent = 'Saving...';
+        }
+
+        window.fetch(form.action, {
+            method: 'POST',
+            body: new FormData(form),
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            credentials: 'same-origin'
+        }).then(function (response) {
+            return response.json().then(function (data) {
+                return { ok: response.ok, data: data };
+            }).catch(function () {
+                return { ok: response.ok, data: {} };
+            });
+        }).then(function (result) {
+            var data = result.data || {};
+
+            updateCsrf(form, data.csrf);
+
+            if (result.ok && data.status === 'success') {
+                if (isCreateForm(root)) {
+                    clearDraft();
+                }
+
+                closeFamilyModal();
+
+                if (typeof window.reloadFamilyDataTable === 'function') {
+                    window.reloadFamilyDataTable();
+                }
+
+                showFamilyToast(data.message || 'Family record saved successfully.', false);
+                return;
+            }
+
+            if (saveButton) {
+                saveButton.disabled = false;
+                saveButton.textContent = originalLabel;
+            }
+
+            if (data.code === 'FORM_TRUNCATED') {
+                // Cutoff: the server saved nothing. Guarantee the typed data is in the
+                // draft (create mode) and reassure the worker — their entries are safe
+                // and the resume prompt will rebuild them on reopen. Not a normal error.
+                if (isCreateForm(root)) {
+                    saveDraftNow(form);
+                }
+
+                showFormError(root, data.message || 'The form was too large to send all at once. Nothing was saved, but your entries are kept on this computer.');
+                askTruncationNotice(form);
+                return;
+            }
+
+            showFormError(root, data.message || 'The family record could not be saved. Please review the form and try again.');
+        }).catch(function () {
+            if (saveButton) {
+                saveButton.disabled = false;
+                saveButton.textContent = originalLabel;
+            }
+
+            showFormError(root, 'A network error occurred. Please try again.');
+        });
+    }
+
+    // ---- per-load initialisation -------------------------------------------
+
     function initFamilyEntryModal(container) {
         var root = container.querySelector('[data-family-entry-form]');
 
@@ -198,6 +991,17 @@
         }
 
         root.dataset.familyEntryReady = '1';
+
+        var formEl = root.querySelector('form');
+
+        // Mark existing member rows (Update mode) with their posting prefix.
+        Array.from(root.querySelectorAll('[data-family-member-row]')).forEach(function (row, index) {
+            if (!row.dataset.memberFieldPrefix) {
+                row.dataset.memberFieldPrefix = 'members[' + index + ']';
+            }
+        });
+
+        initOtherSelects(root);
 
         root.querySelectorAll('[data-family-step-target]').forEach(function (stepTrigger) {
             stepTrigger.addEventListener('click', function (event) {
@@ -224,26 +1028,154 @@
             });
         }
 
-        root.addEventListener('change', function () {
-            renderHeadSummary(root);
-        });
-
+        // Live input: contact strip, Other reveal, required-clear, summary, draft.
         root.addEventListener('input', function (event) {
-            if (event.target && event.target.matches('[required]')) {
-                clearFieldError(event.target);
+            var target = event.target;
+
+            if (isContactField(target)) {
+                enforceContactDigits(target);
+            }
+
+            if (target && target.matches('[required]')) {
+                clearFieldError(target);
             }
 
             renderHeadSummary(root);
+            scheduleSave(root);
         });
 
         root.addEventListener('change', function (event) {
-            if (event.target && event.target.matches('[required]')) {
-                clearFieldError(event.target);
+            var target = event.target;
+
+            if (target && target.matches('.js-other-select')) {
+                syncOtherControl(target);
+            }
+
+            // Archived (grandfather) un-tick warning.
+            if (target && target.matches('input[type="checkbox"][data-archived="1"]') && !target.checked) {
+                askRemoveArchivedItem(formEl || root, target.dataset.label || 'this item').then(function (remove) {
+                    if (!remove) {
+                        target.checked = true;
+                    }
+
+                    renderHeadSummary(root);
+                    scheduleSave(root);
+                });
+            }
+
+            renderHeadSummary(root);
+            scheduleSave(root);
+        });
+
+        // Add / remove repeatable family members.
+        root.addEventListener('click', function (event) {
+            if (event.target.closest('[data-family-add-member]')) {
+                event.preventDefault();
+                addMemberRow(root);
+                scheduleSave(root);
+                return;
+            }
+
+            var removeButton = event.target.closest('[data-family-member-remove]');
+
+            if (removeButton) {
+                event.preventDefault();
+                var row = removeButton.closest('[data-family-member-row]');
+
+                if (row) {
+                    row.remove();
+                    scheduleSave(root);
+                }
             }
         });
 
+        if (formEl) {
+            formEl.addEventListener('reset', function () {
+                window.setTimeout(function () {
+                    clearMemberRows(root);
+                    initOtherSelects(root);
+                    renderHeadSummary(root);
+                    showStep(root, 'head');
+
+                    if (isCreateForm(root)) {
+                        clearDraft();
+                    }
+                }, 0);
+            });
+
+            formEl.addEventListener('submit', function (event) {
+                event.preventDefault();
+                submitFamilyForm(root, formEl);
+            });
+        }
+
         renderHeadSummary(root);
         showStep(root, 'head');
+
+        // Restore-on-reopen prompt (create mode only).
+        if (isCreateForm(root) && formEl) {
+            var draft = readDraft();
+
+            if (!draftIsEmpty(draft)) {
+                askRestoreDraft(formEl, draft.savedAt).then(function (restore) {
+                    if (restore) {
+                        restoreDraftIntoForm(root, draft);
+                    } else {
+                        clearDraft();
+                    }
+                });
+            }
+        }
+    }
+
+    // Intercept modal close: when an Add (create) form has unsaved work, ask the
+    // worker to keep (save draft) or discard before the modal actually hides.
+    function bindCloseGuard() {
+        var modalEl = document.getElementById('familyModal');
+
+        if (!modalEl || modalEl.dataset.familyCloseGuardBound === '1') {
+            return;
+        }
+
+        modalEl.dataset.familyCloseGuardBound = '1';
+
+        modalEl.addEventListener('hide.bs.modal', function (event) {
+            if (modalEl.dataset.familyCloseConfirmed === '1') {
+                delete modalEl.dataset.familyCloseConfirmed;
+                return;
+            }
+
+            var root = modalEl.querySelector('[data-family-entry-form]');
+            var form = root ? root.querySelector('form') : null;
+
+            if (!root || !form || !isCreateForm(root)) {
+                return;
+            }
+
+            var snapshot = snapshotForm(form);
+
+            if (draftIsEmpty(snapshot)) {
+                return;
+            }
+
+            event.preventDefault();
+
+            askKeepOrDiscard(form).then(function (keep) {
+                if (keep) {
+                    saveDraftNow(form);
+                } else {
+                    clearDraft();
+                }
+
+                closeFamilyModal();
+            });
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', bindCloseGuard);
+    } else {
+        bindCloseGuard();
     }
 
     document.addEventListener('click', function (event) {

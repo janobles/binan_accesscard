@@ -3,12 +3,11 @@
 namespace App\Controllers\Lookups;
 
 use App\Controllers\BaseController;
+use App\Controllers\Concerns\LookupControllerTrait;
 use App\Libraries\RoleAccess;
-use App\Models\Audit\AuditTrailsModel;
 use App\Models\Lookups\CategoryModel;
 use App\Models\Lookups\SectorModel;
 use CodeIgniter\HTTP\RedirectResponse;
-use Throwable;
 
 /**
  * Handles the write/mutation actions for the `category` lookup table, posted from
@@ -23,6 +22,8 @@ use Throwable;
  */
 class CategoryController extends BaseController
 {
+    use LookupControllerTrait;
+
     /**
      * POST `admin/categories/create`: add a new category. Delegates to saveCategory().
      */
@@ -180,21 +181,10 @@ class CategoryController extends BaseController
         return $this->redirect('success', $isUpdate ? 'Category updated successfully.' : 'Category added successfully.');
     }
 
-    /**
-     * Role guard for mutations: returns a redirect for non Developer/Admin users,
-     * or null to proceed.
-     */
-    private function ensureAdminAccess(): ?RedirectResponse
-    {
-        $guard = RoleAccess::requireRole(['Developer', 'Admin']);
-
-        return $guard instanceof RedirectResponse ? $guard : null;
-    }
-
     /** Redirect back to the categories page with a typed flash message. */
     private function redirect(string $type, string $message): RedirectResponse
     {
-        return redirect()->to(site_url('admin/categories'))->with($type, $message);
+        return $this->redirectAdmin('admin/categories', $type, $message);
     }
 
     /** Audit-suffix for the linked sectors touched by a cascade, e.g. " and 3 linked sectors". */
@@ -221,31 +211,5 @@ class CategoryController extends BaseController
         $label = trim($code . ($name !== '' ? ' (' . $name . ')' : ''));
 
         return ($label === '' ? 'category' : 'category ' . $label) . ' #' . $categoryId;
-    }
-
-    /**
-     * Write a category action to the audit trail. Category actions have no
-     * affected member, so memberID is null (audit_trails.memberID is nullable).
-     */
-    private function audit(string $action, string $description): void
-    {
-        $auditModel = new AuditTrailsModel();
-
-        if (! $auditModel->hasTable()) {
-            return;
-        }
-
-        try {
-            $auditModel->logAction(
-                (int) session()->get('user_id'),
-                null,
-                $action,
-                $description,
-                $this->request->getIPAddress(),
-                $this->request->getUserAgent()->getAgentString()
-            );
-        } catch (Throwable $exception) {
-            log_message('error', 'Audit trail skipped: ' . $exception->getMessage());
-        }
     }
 }

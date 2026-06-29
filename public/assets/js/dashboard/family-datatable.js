@@ -154,6 +154,15 @@
 
         bindCurrentPageQuickSearch();
 
+        // Exposed so the Add/Update modal can refresh the table after a save.
+        window.reloadFamilyDataTable = function () {
+            try {
+                dataTable.ajax.reload(null, false);
+            } catch (error) {
+                /* table not initialised yet */
+            }
+        };
+
         filterForm.addEventListener('submit', function (event) {
             event.preventDefault();
             scope = 'all';

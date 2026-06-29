@@ -2,43 +2,40 @@
 
 if (! function_exists('asset_url')) {
     /**
-     * Build a cache-busted public asset URL.
+     * Cache-busted URL for any public asset (css, js, jquery, json, images).
+     *
+     * Single source of truth for asset versioning across all views: instead of
+     * each template hand-building `base_url(...) . '?v=' . filemtime(...)`, they
+     * call asset_url('css/foo.css'). Falls back to time() when the file is
+     * missing so a missing asset never breaks the page (it just won't cache).
      */
     function asset_url(string $relativePath): string
     {
-        $relativePath = ltrim($relativePath, '/');
-        $absolutePath = FCPATH . $relativePath;
-        $url = base_url($relativePath);
+        $absolute = FCPATH . ltrim($relativePath, '/');
+        $version  = is_file($absolute) ? (string) filemtime($absolute) : (string) time();
 
-        if (is_file($absolutePath)) {
-            $mtime = filemtime($absolutePath);
-
-            if ($mtime !== false) {
-                $url .= '?v=' . $mtime;
-            }
-        }
-
-        return $url;
+        return base_url($relativePath) . '?v=' . $version;
     }
 }
 
-if (! function_exists('asset_groups')) {
+if (! function_exists('asset_styles')) {
     /**
-     * Named asset groups used by the dashboard layouts.
+     * Stylesheet manifest: the single source of truth for every CSS file the app
+     * loads. Views iterate the returned relative paths and wrap each with
+     * asset_url() for cache-busting. Per-role order is significant (CSS cascade).
      *
-     * Keep dependency order here so views only request the group they need.
-     *
-     * @return array<string, list<string>>
+     * Contexts: head (shared <head> CSS), admin|employee|viewer (dashboard
+     * shells), login, family-form. Unknown context returns [].
      */
-    function asset_groups(): array
+    function asset_styles(string $context): array
     {
-        return [
-            'dashboard-core-css' => [
+        $manifest = [
+            'head' => [
                 'assets/bootstrap/css/bootstrap.min.css',
                 'assets/bootstrap-icons/font/bootstrap-icons.min.css',
+            ],
+            'admin' => [
                 'assets/datatables/css/dataTables.bootstrap5.min.css',
-            ],
-            'admin-dashboard-css' => [
                 'css/sb-admin-adapter.css',
                 'css/managerecord.css',
                 'css/lookupmanagement.css',
@@ -47,7 +44,8 @@ if (! function_exists('asset_groups')) {
                 'css/familymodal.css',
                 'css/session-timeout.css',
             ],
-            'employee-dashboard-css' => [
+            'employee' => [
+                'assets/datatables/css/dataTables.bootstrap5.min.css',
                 'css/sb-admin-adapter.css',
                 'css/managerecord.css',
                 'css/audittrails.css',
@@ -55,7 +53,8 @@ if (! function_exists('asset_groups')) {
                 'css/accounts.css',
                 'css/session-timeout.css',
             ],
-            'viewer-dashboard-css' => [
+            'viewer' => [
+                'assets/datatables/css/dataTables.bootstrap5.min.css',
                 'css/sb-admin-adapter.css',
                 'css/managerecord.css',
                 'css/lookupmanagement.css',
@@ -63,16 +62,48 @@ if (! function_exists('asset_groups')) {
                 'css/familymodal.css',
                 'css/session-timeout.css',
             ],
-            'dashboard-vendor-js' => [
+            'login' => [
+                'assets/bootstrap/css/bootstrap.min.css',
+                'css/login.css',
+            ],
+            'family-form' => [
+                'css/familyform.css',
+            ],
+        ];
+
+        return $manifest[$context] ?? [];
+    }
+}
+
+if (! function_exists('asset_scripts')) {
+    /**
+     * Script manifest: the single source of truth for every JS/jQuery file the
+     * app loads. Views iterate the returned relative paths and wrap each with
+     * asset_url(). Load order is significant (dependencies first).
+     *
+     * `session-timeout.js` is intentionally absent — each layout renders it
+     * inline because its data-* attributes differ per role.
+     *
+     * Contexts: core (jQuery + Bootstrap bundle, shared), admin|employee|viewer
+     * (dashboard shells), login. Unknown context returns [].
+     */
+    function asset_scripts(string $context): array
+    {
+        $manifest = [
+            'core' => [
                 'assets/jquery/jquery-3.7.1.min.js',
                 'assets/bootstrap/js/bootstrap.bundle.min.js',
+            ],
+            'admin' => [
+                'assets/js/dashboard/view-interactions.js',
                 'assets/datatables/js/dataTables.min.js',
                 'assets/datatables/js/dataTables.bootstrap5.min.js',
-            ],
-            'admin-dashboard-js' => [
-                'assets/js/dashboard/view-interactions.js',
-                'assets/js/dashboard/family-list.js',
                 'assets/js/dashboard/family-datatable.js',
+                // Legacy Add-Record page (admin/family-entry) still uses the wizard
+                // form; these self-init on a wizard page and no-op on the list page.
+                'assets/js/dashboard/family-form-ui.js',
+                'assets/js/dashboard/family-form.js',
+                'assets/js/dashboard/family-list.js',
                 'assets/js/dashboard/management-forms.js',
                 'assets/js/dashboard/lookup-search.js',
                 'assets/js/dashboard/audit-filters.js',
@@ -86,104 +117,36 @@ if (! function_exists('asset_groups')) {
                 'assets/js/dashboard/audit-trails-modal.js',
                 'assets/js/dashboard/audit-detail-modal.js',
             ],
-            'employee-dashboard-js' => [
+            'employee' => [
                 'assets/js/dashboard/view-interactions.js',
-                'assets/js/dashboard/family-list.js',
+                'assets/datatables/js/dataTables.min.js',
+                'assets/datatables/js/dataTables.bootstrap5.min.js',
                 'assets/js/dashboard/family-datatable.js',
+                'assets/js/dashboard/family-form-ui.js',
+                'assets/js/dashboard/family-form.js',
+                'assets/js/dashboard/family-list.js',
                 'assets/js/dashboard/audit-filters.js',
                 'assets/js/dashboard/lookup-search.js',
                 'assets/js/dashboard/dashboard-modal-loader.js',
                 'assets/js/dashboard/manage-family-modal.js',
                 'assets/js/dashboard/account-form-modal.js',
             ],
-            'viewer-dashboard-js' => [
+            'viewer' => [
                 'assets/js/dashboard/view-interactions.js',
-                'assets/js/dashboard/family-list.js',
+                'assets/datatables/js/dataTables.min.js',
+                'assets/datatables/js/dataTables.bootstrap5.min.js',
                 'assets/js/dashboard/family-datatable.js',
+                'assets/js/dashboard/family-list.js',
                 'assets/js/dashboard/lookup-search.js',
                 'assets/js/dashboard/dashboard-modal-loader.js',
                 'assets/js/dashboard/manage-family-modal.js',
                 'assets/js/dashboard/account-form-modal.js',
             ],
+            'login' => [
+                'assets/js/login.js',
+            ],
         ];
-    }
-}
 
-if (! function_exists('asset_group')) {
-    /**
-     * @return list<string>
-     */
-    function asset_group(string $groupName): array
-    {
-        $groups = asset_groups();
-
-        return $groups[$groupName] ?? [];
-    }
-}
-
-if (! function_exists('asset_attributes')) {
-    /**
-     * @param array<string, scalar|null> $attributes
-     */
-    function asset_attributes(array $attributes): string
-    {
-        $html = '';
-
-        foreach ($attributes as $name => $value) {
-            if ($value === null) {
-                continue;
-            }
-
-            $html .= ' ' . esc((string) $name, 'attr') . '="' . esc((string) $value, 'attr') . '"';
-        }
-
-        return $html;
-    }
-}
-
-if (! function_exists('asset_link_tag')) {
-    /**
-     * @param array<string, scalar|null> $attributes
-     */
-    function asset_link_tag(string $relativePath, array $attributes = []): string
-    {
-        $attributes = ['rel' => 'stylesheet', 'href' => asset_url($relativePath)] + $attributes;
-
-        return '<link' . asset_attributes($attributes) . '>';
-    }
-}
-
-if (! function_exists('asset_script_tag')) {
-    /**
-     * @param array<string, scalar|null> $attributes
-     */
-    function asset_script_tag(string $relativePath, array $attributes = []): string
-    {
-        $attributes = ['src' => asset_url($relativePath)] + $attributes;
-
-        return '<script' . asset_attributes($attributes) . '></script>';
-    }
-}
-
-if (! function_exists('asset_tags')) {
-    /**
-     * Render every asset in a named group.
-     */
-    function asset_tags(string $groupName): string
-    {
-        $tags = [];
-
-        foreach (asset_group($groupName) as $relativePath) {
-            if (str_ends_with($relativePath, '.css')) {
-                $tags[] = asset_link_tag($relativePath);
-                continue;
-            }
-
-            if (str_ends_with($relativePath, '.js')) {
-                $tags[] = asset_script_tag($relativePath);
-            }
-        }
-
-        return implode(PHP_EOL, $tags);
+        return $manifest[$context] ?? [];
     }
 }

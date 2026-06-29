@@ -95,8 +95,8 @@ $serviceClearUrl = static function () use ($listRoute, $status, $perPage): strin
 		<table class="table table-sm manage-record-table align-middle">
 			<thead>
 				<tr>
-					<th>Category</th>
 					<th>Name</th>
+					<th>Category</th>
 					<th>Description</th>
 					<th>Status</th>
 					<?php if ($canManage): ?><th class="text-end">Actions</th><?php endif; ?>
@@ -107,8 +107,8 @@ $serviceClearUrl = static function () use ($listRoute, $status, $perPage): strin
 					<?php $serviceId = (int) ($service['serviceID'] ?? 0); ?>
 					<?php $isArchived = trim((string) ($service['dt_deleted'] ?? '')) !== ''; ?>
 					<tr data-row-archived="<?= $isArchived ? '1' : '0' ?>">
-						<td><span class="badge bg-light text-dark border"><?= esc((string) ($service['category'] ?? '')) ?></span></td>
 						<td><span class="sector-name"><?= esc((string) ($service['name'] ?? '')) ?></span></td>
+						<td><span class="badge bg-light text-dark border"><?= esc((string) ($service['category'] ?? '')) ?></span></td>
 						<td><span class="text-trim d-inline-block"><?= esc((string) ($service['description'] ?? '')) ?></span></td>
 						<td><span class="sector-status-badge <?= $isArchived ? 'sector-status-archived' : 'sector-status-active' ?>"><?= $isArchived ? 'Archived' : 'Active' ?></span></td>
 						<?php if ($canManage): ?><td class="text-end">

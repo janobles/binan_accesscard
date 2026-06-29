@@ -1,11 +1,14 @@
 <?php
-helper('family_modal');
 $routeBase = (string) ($routeBase ?? 'admin/manage-family');
 $keyword = trim((string) ($keyword ?? ''));
 $status = in_array((string) ($status ?? 'all'), ['all', 'active', 'archived'], true) ? (string) $status : 'all';
 $filters = (array) ($filters ?? []);
 $sectorOptions = (array) ($sectorOptions ?? []);
 $barangayOptions = (array) ($barangayOptions ?? []);
+// Add is hidden for read-only roles (Viewer). Defaults true so admin/employee
+// record lists are unaffected. DataTable row actions are gated server-side in
+// FamilyController::dataTableActions().
+$canEdit = (bool) ($canEdit ?? true);
 $selectedSectorIds = array_map('strval', (array) ($filters['sectorID'] ?? []));
 $selectedBarangays = array_map('strval', (array) ($filters['barangay'] ?? []));
 $sectorOptionLabel = static function (array $sector): string {
@@ -90,7 +93,9 @@ $sectorOptionLabel = static function (array $sector): string {
                     <div class="btn-group w-100 h-100" role="group" aria-label="Search and record actions">
                         <button class="btn btn-danger" type="button" data-records-clear>Clear</button>
                         <button class="btn btn-success" type="submit">Search</button>
-                        <?= family_modal_button('Add', 'New Family Record', [], 'btn btn-primary', $routeBase) ?>
+                        <?php if ($canEdit): ?>
+                        <button class="btn btn-primary js-open-family-add-modal" type="button" data-family-add-record data-modal-url="<?= esc(site_url($routeBase . '/create?partial=1'), 'attr') ?>" data-modal-title="New Family Record">Add</button>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>

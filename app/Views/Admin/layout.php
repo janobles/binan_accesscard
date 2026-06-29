@@ -47,21 +47,28 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
 $sidebarRoleClass = $canManageAccounts ? 'developer' : 'admin';
 $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('admin/dashboard');
 ?>
+<?php
+/*
+ * SB Admin-style shell: the layout keeps the existing data, routes, modal
+ * target, and page switch while using a Bootstrap 5-safe responsive frame.
+ */
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= esc($pageTitle) ?> - Binan Access Card MIS</title>
-    <?= asset_tags('dashboard-core-css') ?>
-    <?= asset_tags('admin-dashboard-css') ?>
+    <?php foreach (array_merge(asset_styles('head'), asset_styles('admin')) as $stylePath): ?>
+    <link rel="stylesheet" href="<?= esc(asset_url($stylePath), 'attr') ?>">
+    <?php endforeach; ?>
 </head>
 <body>
 <div id="wrapper">
     <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion <?= esc($sidebarRoleClass) ?>" id="dashboard-sidebar">
         <li class="sidebar-brand-wrap">
             <a class="sidebar-brand d-flex align-items-center justify-content-center" href="<?= site_url('admin/dashboard') ?>">
-                <img class="sidebar-brand-icon" src="<?= base_url('assets/image/binan.png') ?>" alt="City of Binan Logo">
+                <img class="sidebar-brand-icon" src="<?= asset_url('assets/image/binan.png') ?>" alt="City of Binan Logo">
                 <span class="sidebar-brand-text mx-2">Bi&ntilde;an Access Card MIS</span>
             </a>
         </li>
@@ -109,12 +116,12 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                     </div>
                 </div>
                 <ul class="navbar-nav ms-auto">
-                    <?= view('Partials/topbar-account-menu', [
-                        'user' => $user,
-                        'accountLevelLabel' => (string) ($currentRole ?: 'Admin'),
-                        'accountSettingsUrl' => ($currentRole ?? '') === 'Developer' ? $sidebarUserUrl : site_url('account/profile'),
-                        'accountSettingsMode' => ($currentRole ?? '') === 'Developer' ? 'link' : 'modal',
-                    ]) ?>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link topbar-user js-open-my-account-modal" data-modal-url="<?= site_url('account/profile') ?>" data-modal-title="My Account"><i class="bi bi-person-circle" aria-hidden="true"></i><span><?= esc($username) ?> &middot; <?= ($currentRole ?? '') === 'Developer' ? 'Developer' : 'Administrator' ?></span></a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="<?= site_url('logout') ?>" class="nav-link js-logout-link"><i class="bi bi-box-arrow-right" aria-hidden="true"></i><span>Logout</span></a>
+                    </li>
                 </ul>
             </nav>
 
@@ -262,7 +269,7 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
     <div class="modal-dialog modal-dialog-centered modal-xl">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="familyModalLabel">Details</h5>
+                <h5 class="modal-title" id="familyModalLabel">Record</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body" id="familyModalBody">
@@ -301,13 +308,10 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
     </div>
 </div>
 
-<?= asset_tags('dashboard-vendor-js') ?>
-<?= asset_tags('admin-dashboard-js') ?>
-<?= asset_script_tag('assets/js/session-timeout.js', [
-    'data-timeout-seconds' => (string) $idleTimeoutSeconds,
-    'data-logout-url' => site_url('logout?timeout=1'),
-    'data-keep-alive-url' => site_url('session/keep-alive'),
-]) ?>
+<?php foreach (array_merge(asset_scripts('core'), asset_scripts('admin')) as $scriptPath): ?>
+<script src="<?= esc(asset_url($scriptPath), 'attr') ?>"></script>
+<?php endforeach; ?>
+<script src="<?= esc(asset_url('assets/js/session-timeout.js'), 'attr') ?>" data-timeout-seconds="<?= esc((string) $idleTimeoutSeconds) ?>" data-logout-url="<?= site_url('logout?timeout=1') ?>" data-keep-alive-url="<?= site_url('session/keep-alive') ?>"></script>
 </body>
 </html>
 

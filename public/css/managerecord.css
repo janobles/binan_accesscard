@@ -394,3 +394,47 @@
         padding-left: 0.55rem;
     }
 }
+
+/* ---------------------------------------------------------------------------
+ * Server-side DataTables list filter row (Manage Records). Ported from jade
+ * when the family list was migrated to DataTables. Scoped to #familyDataTableFilters.
+ * ------------------------------------------------------------------------- */
+#familyDataTableFilters .btn-toolbar,
+#familyDataTableFilters .btn-group {
+    height: 100%;
+    min-height: var(--records-search-control-height);
+}
+
+#familyDataTableFilters [data-records-filter],
+#familyDataTableFilters .form-select[name="status"] {
+    min-width: 0;
+}
+
+#familyDataTableFilters [data-records-filter] .dropdown-toggle,
+#familyDataTableFilters .form-select[name="status"] {
+    font-size: var(--ui-font-sm, 0.8rem);
+}
+
+@media (min-width: 75rem) {
+    #familyDataTableFilters .family-keyword-field {
+        flex: 0 0 34%;
+        max-width: 34%;
+    }
+
+    #familyDataTableFilters .family-filter-field {
+        flex: 0 0 13%;
+        max-width: 13%;
+    }
+
+    #familyDataTableFilters .family-action-field {
+        flex: 0 0 27%;
+        max-width: 27%;
+    }
+}
+
+#familyDataTableFilters .btn-group .btn {
+    min-width: 0;
+    flex: 1 1 0;
+    padding-right: 0.75rem;
+    padding-left: 0.75rem;
+    font-size: var(--ui-font-sm, 0.8rem);

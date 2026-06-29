@@ -2,23 +2,41 @@
 
 namespace App\Models\Lookups;
 
+use App\Models\Concerns\LookupModelTrait;
+use CodeIgniter\Database\BaseBuilder;
 use CodeIgniter\Model;
 
 /**
- * Manages the citizen sectors used for categorizing members.
+ * Manages the citizen sectors used for categorizing members. Shared CRUD and
+ * management-search behaviour lives in LookupModelTrait; this class adds the
+ * sector-specific catalog, shortcode and cascade-archival logic.
  */
 class SectorModel extends Model
 {
+    use LookupModelTrait;
+
     protected $table = 'sector';
     protected $primaryKey = 'sectorID';
     protected $returnType = 'array';
     protected $allowedFields = ['shortcode', 'categoryID', 'name', 'description'];
     protected $useTimestamps = false;
 
+    /** Columns the Sector management search box matches. */
+    protected function lookupSearchColumns(): array
+    {
+        return ['shortcode', 'name', 'description'];
+    }
+
+    /** Sector management list order: by ID. */
+    protected function applyLookupOrder(BaseBuilder $builder): void
+    {
+        $builder->orderBy('sectorID', 'ASC');
+    }
+
     /**
      * Fetch active sectors from the read-only view used by lookups and forms.
      */
-    public function getAll(): array
+    public function getActive(): array
     {
         if ($this->db->tableExists('view_sector_active')) {
             return $this->db->table('view_sector_active')
@@ -40,154 +58,6 @@ class SectorModel extends Model
         return $builder->orderBy('sectorID', 'ASC')
             ->get()
             ->getResultArray();
-    }
-
-    /**
-     * Fetch all sectors, including archived records, for admin management.
-     */
-    public function getAllIncluding(): array
-    {
-        if (! $this->hasTable()) {
-            return [];
-        }
-
-        $builder = $this->db->table($this->table);
-
-        if ($this->db->fieldExists('dt_deleted', $this->table)) {
-            $builder->orderBy('dt_deleted', 'ASC');
-        }
-
-        return $builder->orderBy('sectorID', 'ASC')
-            ->get()
-            ->getResultArray();
-    }
-
-    /**
-     * Status-aware, keyword-filtered builder for the Sector management list.
-     * Mirrors MemberModel::familySearchBuilder. $status: active|archived|all.
-     * Searches the same columns the page advertises: shortcode, name, description.
-     */
-    private function lookupBuilder(?string $keyword, string $status)
-    {
-        $builder = $this->db->table($this->table);
-
-        if ($this->db->fieldExists('dt_deleted', $this->table)) {
-            if ($status === 'archived') {
-                $builder->where('dt_deleted IS NOT NULL', null, false);
-            } elseif ($status !== 'all') {
-                $builder->where('dt_deleted IS NULL', null, false);
-            }
-        }
-
-        $keyword = trim((string) $keyword);
-
-        if ($keyword !== '') {
-            $builder->groupStart()
-                ->like('shortcode', $keyword)
-                ->orLike('name', $keyword)
-                ->orLike('description', $keyword)
-                ->groupEnd();
-        }
-
-        return $builder;
-    }
-
-    /**
-     * One page of sectors for the management list: status-filtered, keyword-matched,
-     * active rows first (dt_deleted ASC) then by ID. $status: active|archived|all.
-     */
-    public function searchLookup(?string $keyword, string $status = 'active', int $limit = 50, int $offset = 0): array
-    {
-        if (! $this->hasTable()) {
-            return [];
-        }
-
-        $builder = $this->lookupBuilder($keyword, $status);
-
-        if ($this->db->fieldExists('dt_deleted', $this->table)) {
-            $builder->orderBy('dt_deleted', 'ASC');
-        }
-
-        return $builder->orderBy('sectorID', 'ASC')
-            ->limit(max(1, $limit), max(0, $offset))
-            ->get()
-            ->getResultArray();
-    }
-
-    /** Total sectors matching the keyword/status filter (for pagination). */
-    public function countLookup(?string $keyword, string $status = 'active'): int
-    {
-        if (! $this->hasTable()) {
-            return 0;
-        }
-
-        return $this->lookupBuilder($keyword, $status)->countAllResults();
-    }
-
-    /** Unfiltered active/archived totals for the status dropdown badges. */
-    public function statusCounts(): array
-    {
-        return [
-            'active'   => $this->countLookup(null, 'active'),
-            'archived' => $this->countLookup(null, 'archived'),
-        ];
-    }
-
-    /**
-     * Find a single sector row by ID for edit forms.
-     */
-    public function find($id = null)
-    {
-        if (! $this->hasTable()) {
-            return null;
-        }
-
-        return $this->db->table($this->table)
-            ->where($this->primaryKey, $id)
-            ->get()
-            ->getRowArray();
-    }
-
-    /**
-     * Create a new sector record and return its insert ID.
-     */
-    public function create(array $data): int
-    {
-        $this->db->table($this->table)->insert($data);
-
-        return (int) $this->db->insertID();
-    }
-
-    /**
-     * Update a sector record by ID.
-     */
-    public function update($id = null, $row = null): bool
-    {
-        return $this->db->table($this->table)
-            ->where($this->primaryKey, (int) $id)
-            ->update((array) $row);
-    }
-
-    /**
-     * Soft-archive a sector by setting dt_deleted.
-     */
-    public function archive(int $id): bool
-    {
-        return $this->db->table($this->table)
-            ->where($this->primaryKey, $id)
-            ->set('dt_deleted', 'NOW()', false)
-            ->update();
-    }
-
-    /**
-     * Restore a soft-archived sector by clearing dt_deleted.
-     */
-    public function restore(int $id): bool
-    {
-        return $this->db->table($this->table)
-            ->where($this->primaryKey, $id)
-            ->set('dt_deleted', null)
-            ->update();
     }
 
     /**
@@ -256,34 +126,7 @@ class SectorModel extends Model
      */
     public function shortcodeExists(string $shortcode, ?int $excludeId = null): bool
     {
-        if (! $this->hasTable()) {
-            return false;
-        }
-
-        $builder = $this->db->table($this->table)
-            ->where('shortcode', $shortcode);
-
-        if ($excludeId !== null) {
-            $builder->where($this->primaryKey . ' !=', $excludeId);
-        }
-
-        return $builder->countAllResults() > 0;
-    }
-
-    /** True if the `sector` table exists; callers guard queries with this. */
-    public function hasTable(): bool
-    {
-        return $this->db->tableExists($this->table);
-    }
-
-    /** Counts sectors for dashboard stats. */
-    public function countSectors(): int
-    {
-        if (! $this->hasTable()) {
-            return 0;
-        }
-
-        return $this->countAllResults();
+        return $this->columnValueExists('shortcode', $shortcode, $excludeId);
     }
 
     /** All sectors ordered by shortcode; used to build form dropdowns/catalog. */

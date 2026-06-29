@@ -48,28 +48,6 @@ class ViewFormatter
         return self::formatTimestamp($value, 'h:i A', '');
     }
 
-    /** Display name of the member an audit row concerns, or '-' when none. */
-    public static function formatAuditMember(array $audit): string
-    {
-        $memberName = trim((string) ($audit['member_name'] ?? ''));
-
-        if ($memberName === '') {
-            $memberName = trim((string) ($audit['firstname'] ?? '') . ' ' . (string) ($audit['lastname'] ?? ''));
-        }
-
-        return $memberName === '' ? '-' : $memberName;
-    }
-
-    /** Display label for who performed an audit action, e.g. "maria (Admin)". */
-    public static function formatAuditUser(array $audit): string
-    {
-        $username = trim((string) ($audit['username'] ?? $audit['userID'] ?? ''));
-        $role = trim((string) ($audit['user_role'] ?? ''));
-        $role = RoleAccess::normalizeRole($role) ?? $role;
-
-        return $role === '' ? $username : $username . ' (' . $role . ')';
-    }
-
     /** Interprets an isactive value (enum/numeric/string) as a boolean for display. */
     public static function isActiveStatus(mixed $value): bool
     {
@@ -165,14 +143,6 @@ class ViewFormatter
         return array_values(array_map('intval', $items));
     }
 
-    /** Coerces a value into a list of strings (optionally dropping empty items). */
-    public static function stringList(mixed $value, bool $nonEmptyOnly = false): array
-    {
-        $items = array_values(array_map('strval', (array) $value));
-
-        return $nonEmptyOnly ? array_values(array_filter($items, [self::class, 'hasText'])) : $items;
-    }
-
     /**
      * Given the grouped sector catalog and the IDs a member has, returns which
      * category keys are selected — used to pre-expand the right sector groups in
@@ -206,12 +176,6 @@ class ViewFormatter
         }
 
         return $keys;
-    }
-
-    /** Sector shortcode options with the catch-all "OTHER" removed, for dropdowns. */
-    public static function sectorShortcodeOptions(array $options): array
-    {
-        return array_values(array_filter($options, static fn (string $shortcode): bool => $shortcode !== 'OTHER'));
     }
 
     /** Distinct service category list (seeded with defaults) for category dropdowns. */

@@ -3,13 +3,12 @@
 namespace App\Controllers\Lookups;
 
 use App\Controllers\BaseController;
+use App\Controllers\Concerns\LookupControllerTrait;
 use App\Libraries\RoleAccess;
 use App\Libraries\SectorIds;
-use App\Models\Audit\AuditTrailsModel;
 use App\Models\Lookups\CategoryModel;
 use App\Models\Lookups\SectorModel;
 use CodeIgniter\HTTP\RedirectResponse;
-use Throwable;
 
 /**
  * Handles the write/mutation actions for the `sector` lookup table, posted from
@@ -19,6 +18,8 @@ use Throwable;
  */
 class SectorController extends BaseController
 {
+    use LookupControllerTrait;
+
     /**
      * POST `admin/sectors/create`: add a new sector. Delegates to saveSector().
      * Frontend: the "Add sector" modal form.
@@ -254,26 +255,6 @@ class SectorController extends BaseController
     }
 
     /**
-     * Role guard for archive/restore/delete: returns a redirect for non
-     * Developer/Admin users, or null to proceed.
-     */
-    private function ensureAdminAccess(): ?RedirectResponse
-    {
-        $guard = RoleAccess::requireRole(['Developer', 'Admin']);
-
-        return $guard instanceof RedirectResponse ? $guard : null;
-    }
-
-    /**
-     * Builds a redirect back to an admin path carrying a typed flash message
-     * (e.g. 'success'/'error'); keeps the redirect+flash pattern in one place.
-     */
-    private function redirectAdmin(string $path, string $type, string $message): RedirectResponse
-    {
-        return redirect()->to(site_url($path))->with($type, $message);
-    }
-
-    /**
      * Human-readable sector label for audit descriptions, e.g. "SC1 (Senior Citizen) #5".
      */
     private function sectorLabel(?array $sector, int $sectorId): string
@@ -283,31 +264,5 @@ class SectorController extends BaseController
         $label = trim($shortcode . ($name !== '' ? ' (' . $name . ')' : ''));
 
         return ($label === '' ? 'sector' : 'sector ' . $label) . ' #' . $sectorId;
-    }
-
-    /**
-     * Write a sector action to the audit trail. Sector actions have no affected
-     * member, so memberID is null (audit_trails.memberID is nullable).
-     */
-    private function audit(string $action, string $description): void
-    {
-        $auditModel = new AuditTrailsModel();
-
-        if (! $auditModel->hasTable()) {
-            return;
-        }
-
-        try {
-            $auditModel->logAction(
-                (int) session()->get('user_id'),
-                null,
-                $action,
-                $description,
-                $this->request->getIPAddress(),
-                $this->request->getUserAgent()->getAgentString()
-            );
-        } catch (Throwable $exception) {
-            log_message('error', 'Audit trail skipped: ' . $exception->getMessage());
-        }
     }
 }

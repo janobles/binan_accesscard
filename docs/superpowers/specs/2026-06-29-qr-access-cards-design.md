@@ -58,11 +58,13 @@ Copied from prototype, namespace-adjusted to `App\Libraries\Qr`:
 
 - `batch()` — POST. Accepts filter (all heads / by barangay / by sektor;
   archived excluded). Queries heads, streams PDF or ZIP with
-  `Content-Disposition: attachment`. Writes an `audit_trails` entry (batch card
-  issuance is a family-data event — do not bypass audit).
+  `Content-Disposition: attachment`. Writes **one** `audit_trails` entry per
+  batch (not per head): "Generated N QR cards, filter=X". Printing is not a data
+  mutation, so a single accountability log suffices.
 - `card(int $memberID)` — GET. Single head → one-card PDF (reprint; same QR as
   always).
-- `lookup(string $control)` — GET. `ControlNumber::resolve()` → redirect to the
+- `lookup(string $control)` — GET, behind the `admin` auth gate.
+  `ControlNumber::resolve()` → redirect to the
   existing record page `admin/manage-family/view/{memberID}`. Invalid / non-head
   control → 404 + flash.
 

@@ -5,8 +5,10 @@ namespace App\Controllers\Cards;
 use App\Controllers\BaseController;
 use App\Libraries\Qr\ControlNumber;
 use App\Libraries\Qr\QrCardPdfGenerator;
+use App\Libraries\RoleAccess;
 use App\Models\Audit\AuditTrailsModel;
 use App\Models\Families\MemberModel;
+use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
 
 /**
@@ -24,6 +26,11 @@ class QrCardController extends BaseController
 {
     public function batch(): ResponseInterface
     {
+        $guard = RoleAccess::requireRole(['Developer', 'Admin']);
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
         $filter = [];
         if (($barangay = trim((string) $this->request->getPost('barangay'))) !== '') {
             $filter['barangay'] = $barangay;
@@ -62,6 +69,11 @@ class QrCardController extends BaseController
 
     public function card(int $memberID): ResponseInterface
     {
+        $guard = RoleAccess::requireRole(['Developer', 'Admin']);
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
         $model = model(MemberModel::class);
         $head  = $model->findHead($memberID);
         if ($head === null) {
@@ -87,6 +99,11 @@ class QrCardController extends BaseController
 
     public function lookup(string $control): \CodeIgniter\HTTP\RedirectResponse
     {
+        $guard = RoleAccess::requireRole(['Developer', 'Admin']);
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
         $memberID = ControlNumber::parse($control);
         if ($memberID === null || model(MemberModel::class)->findHead($memberID) === null) {
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound('Unknown control number.');

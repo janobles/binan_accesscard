@@ -11,9 +11,10 @@ use CodeIgniter\Test\FeatureTestTrait;
 /**
  * QrCardController feature tests.
  *
- * Auth gate: IdleTimeoutFilter only fires on an idle authenticated session — it
- * does NOT redirect unauthenticated requests. Unauthenticated requests reach the
- * controller, so no withSession() wrapper is needed here.
+ * Auth gate: RoleAccess::requireRole() checks session('is_logged_in') and
+ * session('role'). Developer role skips the DB row existence check, so tests
+ * use ['is_logged_in' => true, 'role' => 'developer', 'user_id' => 0] to
+ * authenticate without a live DB dependency.
  *
  * PageNotFoundException behaviour: CI4 re-throws PageNotFoundException in any
  * non-production environment instead of returning a 404 response. assertStatus(404)
@@ -27,12 +28,18 @@ final class QrCardControllerTest extends CIUnitTestCase
 {
     use FeatureTestTrait;
 
+    /** Developer session — no DB row check, no live DB needed. */
+    private function devSession(): array
+    {
+        return ['is_logged_in' => true, 'role' => 'developer', 'user_id' => 0];
+    }
+
     public function testLookupWithInvalidControlThrows404(): void
     {
         // ControlNumber::parse('notanumber') returns null → PageNotFoundException.
         // CI4 re-throws PageNotFoundException in non-production environments.
         $this->expectException(PageNotFoundException::class);
-        $this->get('admin/cards/lookup/notanumber');
+        $this->withSession($this->devSession())->get('admin/cards/lookup/notanumber');
     }
 
     public function testGenerateWithNoHeadsReturns400(): void
@@ -42,9 +49,16 @@ final class QrCardControllerTest extends CIUnitTestCase
         $stub->method('headsForCards')->willReturn([]);
         Factories::injectMock('models', MemberModel::class, $stub);
 
-        $result = $this->post('admin/cards/generate', [
+        $result = $this->withSession($this->devSession())->post('admin/cards/generate', [
             'barangay' => '__nonexistent_barangay__',
         ]);
         $result->assertStatus(400);
+    }
+
+    public function testUnauthenticatedGenerateRedirects(): void
+    {
+        // No session — guard should redirect to login.
+        $result = $this->post('admin/cards/generate', []);
+        $result->assertRedirect();
     }
 }

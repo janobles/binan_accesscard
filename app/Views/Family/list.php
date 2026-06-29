@@ -1,4 +1,5 @@
 <?php
+helper('family_modal');
 $routeBase = (string) ($routeBase ?? 'admin/manage-family');
 $keyword = trim((string) ($keyword ?? ''));
 $status = in_array((string) ($status ?? 'all'), ['all', 'active', 'archived'], true) ? (string) $status : 'all';
@@ -89,7 +90,7 @@ $sectorOptionLabel = static function (array $sector): string {
                     <div class="btn-group w-100 h-100" role="group" aria-label="Search and record actions">
                         <button class="btn btn-danger" type="button" data-records-clear>Clear</button>
                         <button class="btn btn-success" type="submit">Search</button>
-                        <button class="btn btn-primary js-open-family-add-modal" type="button" data-family-add-record data-modal-url="<?= esc(site_url($routeBase . '/create?partial=1'), 'attr') ?>" data-modal-title="New Family Record">Add</button>
+                        <?= family_modal_button('Add', 'New Family Record', [], 'btn btn-primary', $routeBase) ?>
                     </div>
                 </div>
             </div>

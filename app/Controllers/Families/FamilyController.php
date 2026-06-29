@@ -496,14 +496,15 @@ class FamilyController extends BaseController
 
         $routeBase = $this->dataTableRouteBase();
         $items = '';
+        helper('family_modal');
 
         if (! $archived) {
             $viewUrl = site_url($routeBase . '/view/' . $headId . '?partial=1');
-            $updateUrl = site_url($routeBase . '/create?partial=1&mode=update&id=' . $headId);
             $items .= '<button type="button" class="dropdown-item js-open-family-view-modal" data-modal-url="'
                 . esc($viewUrl, 'attr') . '" data-modal-title="View Record">VIEW</button>';
-            $items .= '<button type="button" class="dropdown-item js-open-family-add-modal" data-modal-url="'
-                . esc($updateUrl, 'attr') . '" data-modal-title="Update Family Record">UPDATE</button>';
+            $items .= '<button type="button" class="dropdown-item js-open-family-add-modal" '
+                . family_modal_trigger_attrs('Update Family Record', ['mode' => 'update', 'id' => $headId], $routeBase)
+                . '>UPDATE</button>';
         }
 
         if ($canArchive) {

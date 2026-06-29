@@ -149,6 +149,7 @@ class DashboardPageBuilder
                 'sectors'      => $layoutModel->navActive($activePage, 'sectors'),
                 'services'     => $layoutModel->navActive($activePage, 'services'),
                 'categories'   => $layoutModel->navActive($activePage, 'categories'),
+                'cards'        => $layoutModel->navActive($activePage, 'cards'),
             ],
             'adminAccounts'      => array_values(array_filter($visibleAccounts, static fn ($account) => $account['role'] === 'administrator')),
             // 'encoder' is the raw DB enum value for the Employee role (surfaced as

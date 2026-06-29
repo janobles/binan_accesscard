@@ -92,6 +92,9 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
         <li class="nav-item">
             <a class="nav-link <?= esc($navActive['categories'] ?? '') ?>" href="<?= site_url('admin/categories') ?>"><i class="bi bi-tags" aria-hidden="true"></i><span>Manage Categories</span></a>
         </li>
+        <li class="nav-item">
+            <a class="nav-link <?= esc($navActive['cards'] ?? '') ?>" href="<?= site_url('admin/cards') ?>"><i class="bi bi-qr-code" aria-hidden="true"></i><span>QR Cards</span></a>
+        </li>
         <li><hr class="sidebar-divider"></li>
         <li><div class="sidebar-heading">Administration</div></li>
         <?php if ($canManageAccounts): ?>
@@ -275,6 +278,10 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                     'lookupStatus' => $lookupStatus ?? 'active',
                     'canRestore' => $canRestoreLookups ?? false,
                 ]) ?>
+            <?php endif; ?>
+
+            <?php if ($activePage === 'cards'): ?>
+                <?= view('Cards/batch_form') ?>
             <?php endif; ?>
             </main>
         </div>

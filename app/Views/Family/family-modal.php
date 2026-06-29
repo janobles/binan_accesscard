@@ -415,6 +415,11 @@ $renderMemberRow = static function ($index, array $m = []) use (
         <footer class="btn-toolbar family-entry-actions" role="toolbar" aria-label="Family form actions">
             <div class="btn-group" role="group" aria-label="Form actions">
                 <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Close</button>
+                <?php if ($headId > 0): ?>
+                <a class="btn btn-outline-secondary btn-sm"
+                   href="<?= site_url('admin/cards/card/' . $headId) ?>"
+                   target="_blank" rel="noopener">Print QR card</a>
+                <?php endif; ?>
                 <button class="btn btn-danger" type="reset" data-family-clear>Clear</button>
                 <button class="btn btn-secondary" type="button" data-family-prev hidden>Previous</button>
                 <button class="btn btn-success" type="button" data-family-next>Next</button>

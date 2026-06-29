@@ -426,6 +426,33 @@ class MemberModel extends Model
     }
 
     /**
+     * Resolves the family head's id for any active member. For a head this is
+     * its own memberID (headID == memberID); for a non-head member it is their
+     * headID. Returns null when $memberID is not an active member. Drives the QR
+     * scan-lookup so scanning any member's id lands on the family (head) record.
+     */
+    public function familyHeadIdFor(int $memberID): ?int
+    {
+        if ($memberID <= 0) {
+            return null;
+        }
+
+        $builder = $this->db->table('member')->where('memberID', $memberID);
+        if ($this->db->fieldExists('dt_deleted', 'member')) {
+            $builder->where('member.dt_deleted IS NULL', null, false);
+        }
+
+        $row = $builder->get()->getRowArray();
+        if ($row === null) {
+            return null;
+        }
+
+        $headId = (int) ($row['headID'] ?? 0);
+
+        return $headId > 0 ? $headId : null;
+    }
+
+    /**
      * Returns the active head row for $memberID, or null when it is not an
      * active head (headID != memberID, archived, or missing). Drives scan-lookup.
      */

@@ -97,6 +97,11 @@ class QrCardController extends BaseController
         return $this->streamDownload($result);
     }
 
+    /**
+     * Resolves any active member's control number to the family head record.
+     * Scanning a head's own id or any non-head member's id both land on the
+     * family head's view page. Returns 404 for unknown or inactive members.
+     */
     public function lookup(string $control): \CodeIgniter\HTTP\RedirectResponse
     {
         $guard = RoleAccess::requireRole(['Developer', 'Admin']);
@@ -105,11 +110,16 @@ class QrCardController extends BaseController
         }
 
         $memberID = ControlNumber::parse($control);
-        if ($memberID === null || model(MemberModel::class)->findHead($memberID) === null) {
+        if ($memberID === null) {
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound('Unknown control number.');
         }
 
-        return redirect()->to(site_url('admin/manage-family/view/' . $memberID));
+        $headId = (new MemberModel())->familyHeadIdFor($memberID);
+        if ($headId === null) {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound('Unknown control number.');
+        }
+
+        return redirect()->to(site_url('admin/manage-family/view/' . $headId));
     }
 
     private function streamDownload(array $result): ResponseInterface

@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Models\Concerns\ResolvesSectorNames;
+use App\Models\Concerns\ModelQueryHelpers;
 use CodeIgniter\Database\BaseConnection;
 
 /**
@@ -12,7 +12,7 @@ use CodeIgniter\Database\BaseConnection;
  */
 class DashboardModel
 {
-    use ResolvesSectorNames;
+    use ModelQueryHelpers;
 
     private BaseConnection $db;
 
@@ -50,7 +50,7 @@ class DashboardModel
         }
 
         $rows = $this->db->table('member')
-            ->select('memberID, firstname, lastname, contactnumber, relationship, headID, sectorID, dt_created, dt_updated')
+            ->select('memberID, firstname, lastname, contactnumber, relationship, headID, sectorID')
             ->where('memberID = headID', null, false)
             ->where('dt_deleted IS NULL', null, false)
             ->orderBy('memberID', 'DESC')

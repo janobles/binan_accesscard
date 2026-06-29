@@ -3,9 +3,8 @@
 namespace App\Models\Families;
 
 use App\Libraries\SectorIds;
-use App\Models\Concerns\NormalizesIds;
+use App\Models\Concerns\ModelQueryHelpers;
 use App\Models\Concerns\RecordStatus;
-use App\Models\Concerns\ResolvesSectorNames;
 use CodeIgniter\Model;
 
 /**
@@ -13,8 +12,7 @@ use CodeIgniter\Model;
  */
 class MemberModel extends Model
 {
-    use NormalizesIds;
-    use ResolvesSectorNames;
+    use ModelQueryHelpers;
 
     public const VALIDATION_RULES = [
         'sectorID' => 'permit_empty|valid_sector_array',
@@ -186,13 +184,12 @@ class MemberModel extends Model
     }
 
     // FIRST (quick) search bar of the Manage Records tab. Lists family HEADS only.
-    // $filters carries the Manage Records filter controls (sectorID + date); see
+    // $filters carries the Manage Records filter controls (sectorID/barangay); see
     // App\Libraries\DashboardPageBuilder::buildMemberListData() which supplies them.
     //
     // $orderKey/$orderDirection are an OPTIONAL, append-only addition used by the
     // server-side DataTables endpoint (FamilyController::dataTable) for column
-    // sorting. When $orderKey is null the original ordering (newest first, by
-    // memberID DESC) is preserved, so existing callers are unaffected.
+    // sorting. When $orderKey is null, the model defaults to Name ascending.
     public function searchFamilies(?string $keyword = null, int $limit = 50, int $offset = 0, string $status = RecordStatus::ALL, array $filters = [], ?string $orderKey = null, string $orderDirection = 'asc'): array
     {
         if (! $this->hasTable()) {
@@ -211,7 +208,7 @@ class MemberModel extends Model
 
     /**
      * Applies a DataTables column sort to a member query, or the default
-     * newest-first ordering when $orderKey is null/unrecognized. Column keys map
+     * Name-first ordering when $orderKey is null/unrecognized. Column keys map
      * to the visible Manage Records columns: name (lastname, firstname), address,
      * birthday. Used only by the server-side DataTables path.
      */
@@ -221,8 +218,7 @@ class MemberModel extends Model
 
         switch ($orderKey) {
             case 'name':
-                $builder->orderBy('member.lastname', $direction)
-                    ->orderBy('member.firstname', $direction);
+                $this->applyMemberNameOrder($builder, $direction);
                 return;
             case 'address':
                 if ($this->memberFieldExists('address')) {
@@ -235,7 +231,17 @@ class MemberModel extends Model
                 return;
         }
 
-        $builder->orderBy('member.memberID', 'DESC');
+        $this->applyMemberNameOrder($builder, $direction);
+    }
+
+    /** Default Manage Records order: Head/Member name first, then memberID. */
+    private function applyMemberNameOrder($builder, string $direction = 'ASC'): void
+    {
+        $direction = strtoupper($direction) === 'DESC' ? 'DESC' : 'ASC';
+
+        $builder->orderBy('member.lastname', $direction)
+            ->orderBy('member.firstname', $direction)
+            ->orderBy('member.memberID', 'ASC');
     }
 
     /**
@@ -252,9 +258,8 @@ class MemberModel extends Model
     }
 
     // Builds the head-only records query. $filters (optional) applies the Manage Records
-    // filter controls: 'sectorID' (exact match inside the JSON array), 'barangay',
-    // and 'date'
-    // (single-day match on member.dt_created). Empty $filters = original behavior unchanged.
+    // filter controls: 'sectorID' (exact match inside the JSON array) and 'barangay'.
+    // Date/time filtering is intentionally kept out of records; audit trails own it.
     private function familySearchBuilder(?string $keyword = null, string $status = RecordStatus::ALL, array $filters = [])
     {
         if ($status === '1') {
@@ -347,13 +352,6 @@ class MemberModel extends Model
             $builder->whereIn('member.barangay', $barangays);
         }
 
-        $date = trim((string) ($filters['date'] ?? ''));
-
-        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) === 1) {
-            $builder
-                ->where('member.dt_created >=', $date . ' 00:00:00')
-                ->where('member.dt_created <=', $date . ' 23:59:59');
-        }
     }
 
     /**
@@ -458,8 +456,6 @@ class MemberModel extends Model
             'member.Salary',
             'member.contactnumber',
             'member.relationship',
-            'member.dt_created',
-            'member.dt_updated',
             'member.dt_deleted',
             'member.headID',
             'member.sectorID',

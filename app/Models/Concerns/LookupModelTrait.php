@@ -21,6 +21,23 @@ trait LookupModelTrait
     /** Applies the model-specific result ordering to a management-list builder. */
     abstract protected function applyLookupOrder(BaseBuilder $builder): void;
 
+    /**
+     * Shared management-list ordering: every lookup page defaults to the visible
+     * Name column first, then stable tie-breakers supplied by the concrete model.
+     */
+    protected function applyNameFirstOrder(BaseBuilder $builder, array $tieBreakers = []): void
+    {
+        $columns = array_values(array_unique(array_merge(['name'], $tieBreakers)));
+
+        foreach ($columns as $column) {
+            $column = trim((string) $column);
+
+            if ($column !== '') {
+                $builder->orderBy($column, 'ASC');
+            }
+        }
+    }
+
     /** True if the backing table exists; callers guard queries with this. */
     public function hasTable(): bool
     {

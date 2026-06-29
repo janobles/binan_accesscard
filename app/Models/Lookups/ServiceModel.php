@@ -27,14 +27,13 @@ class ServiceModel extends Model
     /** Columns the Services management search box matches. */
     protected function lookupSearchColumns(): array
     {
-        return ['category', 'name', 'description'];
+        return ['name', 'category', 'description'];
     }
 
-    /** Services management list order: by category then ID. */
+    /** Services management list order: Name first, then category/id for stability. */
     protected function applyLookupOrder(BaseBuilder $builder): void
     {
-        $builder->orderBy('category', 'ASC')
-            ->orderBy('serviceID', 'ASC');
+        $this->applyNameFirstOrder($builder, ['category', $this->primaryKey]);
     }
 
     /**

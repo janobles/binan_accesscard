@@ -3,11 +3,8 @@
 namespace App\Models;
 
 use App\Libraries\SectorIds;
-use App\Models\Concerns\NormalizesIds;
+use App\Models\Concerns\ModelQueryHelpers;
 use App\Models\Concerns\RecordStatus;
-use App\Models\Concerns\ResolvesMemberNames;
-use App\Models\Concerns\ResolvesSectorNames;
-use App\Models\Concerns\ResolvesUserNames;
 use CodeIgniter\Database\BaseBuilder;
 use CodeIgniter\Database\BaseConnection;
 
@@ -16,10 +13,7 @@ use CodeIgniter\Database\BaseConnection;
  */
 class SearchModel
 {
-    use NormalizesIds;
-    use ResolvesMemberNames;
-    use ResolvesSectorNames;
-    use ResolvesUserNames;
+    use ModelQueryHelpers;
 
     private BaseConnection $db;
 
@@ -31,7 +25,7 @@ class SearchModel
 
     /**
      * FIRST (quick) Manage Records search: family HEADS only, matched by name/
-     * contact/relationship and sector. Applies the sector + date filters and
+     * contact/relationship and sector. Applies record filters and
      * resolves sector names. Frontend: the quick search box on Manage Records.
      */
     public function families(string $keyword = '', array $filters = [], int $limit = 25): array
@@ -42,7 +36,7 @@ class SearchModel
 
         $limit = max(1, $limit);
         $builder = $this->db->table('member')
-            ->select('memberID, firstname, middlename, lastname, contactnumber, relationship, headID, sectorID, dt_created, dt_updated')
+            ->select('memberID, firstname, middlename, lastname, contactnumber, relationship, headID, sectorID')
             ->where('memberID = headID', null, false)
             ->where('dt_deleted IS NULL', null, false);
 
@@ -67,10 +61,10 @@ class SearchModel
             $builder->groupEnd();
         }
 
-        $this->applyDateRange($builder, 'dt_created', $filters);
-
         $rows = $builder
-            ->orderBy('memberID', 'DESC')
+            ->orderBy('lastname', 'ASC')
+            ->orderBy('firstname', 'ASC')
+            ->orderBy('memberID', 'ASC')
             ->limit($limit)
             ->get()
             ->getResultArray();
@@ -134,7 +128,8 @@ class SearchModel
             case 'name':
             default:
                 $builder->orderBy('m.lastname', $direction === 'DESC' ? 'DESC' : 'ASC')
-                    ->orderBy('m.firstname', $direction === 'DESC' ? 'DESC' : 'ASC');
+                    ->orderBy('m.firstname', $direction === 'DESC' ? 'DESC' : 'ASC')
+                    ->orderBy('m.memberID', 'ASC');
         }
     }
 
@@ -153,12 +148,12 @@ class SearchModel
     /**
      * Shared query for allMembers()/countAllMembers(): every member (incl. non-heads),
      * left-joined to its head, with keyword across member fields + sector + service,
-     * plus the Manage Records filters (sectorID, date, active/archived status).
+     * plus the Manage Records filters (sectorID, barangay, active/archived status).
      */
     private function allMembersBuilder(string $keyword, array $filters): BaseBuilder
     {
         $builder = $this->db->table('member m')
-            ->select('m.memberID, m.firstname, m.middlename, m.lastname, m.suffix, m.birthday, m.contactnumber, m.relationship, m.address, m.headID, m.sectorID, m.dt_created, m.dt_deleted, h.firstname AS head_firstname, h.lastname AS head_lastname, h.suffix AS head_suffix')
+            ->select('m.memberID, m.firstname, m.middlename, m.lastname, m.suffix, m.birthday, m.contactnumber, m.relationship, m.address, m.headID, m.sectorID, m.dt_deleted, h.firstname AS head_firstname, h.lastname AS head_lastname, h.suffix AS head_suffix')
             ->join('member h', 'h.memberID = m.headID', 'left');
 
         $status = strtolower(trim((string) ($filters['status'] ?? '')));
@@ -210,8 +205,6 @@ class SearchModel
             }
             $builder->groupEnd();
         }
-
-        $this->applyDateRange($builder, 'm.dt_created', $filters);
 
         return $builder;
     }
@@ -283,7 +276,7 @@ class SearchModel
         // roles; these queries use the raw enum to match the users.account_level
         // column, aliased back to `role` so downstream callers keep the same key.
         $builder = $this->db->table('users')
-            ->select('userID, username, account_level AS role, isactive, dt_created')
+            ->select('userID, username, account_level AS role, isactive')
             ->whereIn('account_level', ['administrator', 'encoder', 'viewer']);
 
         $keyword = $this->normalizeKeyword($keyword);
@@ -490,8 +483,9 @@ class SearchModel
     }
 
     /**
-     * Applies a date filter to a query: either a single `date` (whole day) or a
-     * `date_from`/`date_to` range. Shared by family, member, and audit searches.
+     * Applies an audit date filter: either a single `date` (whole day) or a
+     * `date_from`/`date_to` range. Records and lookups intentionally do not use
+     * this; date/time filtering belongs to audit trails only.
      */
     private function applyDateRange(BaseBuilder $builder, string $column, array $filters): void
     {

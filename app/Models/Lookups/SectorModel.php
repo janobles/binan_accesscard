@@ -24,13 +24,13 @@ class SectorModel extends Model
     /** Columns the Sector management search box matches. */
     protected function lookupSearchColumns(): array
     {
-        return ['shortcode', 'name', 'description'];
+        return ['name', 'shortcode', 'description'];
     }
 
-    /** Sector management list order: by ID. */
+    /** Sector management list order: Name first, then shortcode/id for stability. */
     protected function applyLookupOrder(BaseBuilder $builder): void
     {
-        $builder->orderBy('sectorID', 'ASC');
+        $this->applyNameFirstOrder($builder, ['shortcode', $this->primaryKey]);
     }
 
     /**

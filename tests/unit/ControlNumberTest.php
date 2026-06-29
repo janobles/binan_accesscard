@@ -7,10 +7,10 @@ use CodeIgniter\Test\CIUnitTestCase;
 
 final class ControlNumberTest extends CIUnitTestCase
 {
-    public function testFormatZeroPadsToWidth(): void
+    public function testFormatProducesBareNumber(): void
     {
-        $this->assertSame('000042', ControlNumber::format(42));
-        $this->assertSame('000001', ControlNumber::format(1));
+        $this->assertSame('42', ControlNumber::format(42));
+        $this->assertSame('1', ControlNumber::format(1));
     }
 
     public function testParseStripsLeadingZeros(): void
@@ -21,7 +21,7 @@ final class ControlNumberTest extends CIUnitTestCase
 
     public function testFormatParseRoundTrip(): void
     {
-        foreach ([1, 7, 42, 999999] as $id) {
+        foreach ([1, 7, 42, 999999, 1000000, 12345678] as $id) {
             $this->assertSame($id, ControlNumber::parse(ControlNumber::format($id)));
         }
     }

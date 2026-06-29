@@ -13,8 +13,8 @@ final class QrCardSettingsTest extends CIUnitTestCase
 
         $this->assertSame('', $settings->qrUrlPrefix);
         $this->assertSame(12, $settings->cellsPerPage);
-        $this->assertSame(6, $settings->controlNumberWidth);
-        $this->assertGreaterThan(0, $settings->cardsPerChunk);
+        $this->assertSame(1, $settings->controlNumberWidth);
+        $this->assertSame(12000, $settings->cardsPerChunk);
         $this->assertStringEndsWith('.pdf', $settings->singlePdfFileName);
     }
 

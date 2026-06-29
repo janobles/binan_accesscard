@@ -14,10 +14,46 @@ trait ModelQueryHelpers
     /** Normalizes an ID list to unique positive ints for batched IN() lookups. */
     private function positiveUniqueIds(array $ids): array
     {
-        return array_values(array_unique(array_filter(
-            array_map(static fn (mixed $id): int => (int) $id, $ids),
-            static fn (int $id): bool => $id > 0
-        )));
+        $normalized = [];
+
+        foreach ($ids as $id) {
+            if (is_array($id)) {
+                continue;
+            }
+
+            $id = (int) $id;
+
+            if ($id > 0) {
+                $normalized[] = $id;
+            }
+        }
+
+        return array_values(array_unique($normalized));
+    }
+
+    /**
+     * Normalizes an ID list to unique natural ints (zero allowed). Returns null
+     * when a caller supplied malformed input that should be rejected, not skipped.
+     */
+    private function naturalUniqueIds(array $ids): ?array
+    {
+        $normalized = [];
+
+        foreach ($ids as $id) {
+            if (is_array($id)) {
+                return null;
+            }
+
+            $id = trim((string) $id);
+
+            if ($id === '' || ! ctype_digit($id)) {
+                return null;
+            }
+
+            $normalized[] = (int) $id;
+        }
+
+        return array_values(array_unique($normalized));
     }
 
     /**

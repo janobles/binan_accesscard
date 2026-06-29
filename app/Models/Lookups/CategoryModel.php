@@ -44,16 +44,7 @@ class CategoryModel extends Model
      */
     public function getAllIncluding(): array
     {
-        if (! $this->hasTable()) {
-            return [];
-        }
-
-        return $this->db->table($this->table)
-            ->orderBy('name', 'ASC')
-            ->orderBy('code', 'ASC')
-            ->orderBy($this->primaryKey, 'ASC')
-            ->get()
-            ->getResultArray();
+        return $this->getAllSortedByName(['code', $this->primaryKey]);
     }
 
     /**

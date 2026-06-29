@@ -391,6 +391,10 @@ class MemberModel extends Model
             $builder->where('member.dt_deleted IS NULL', null, false);
         }
 
+        if (isset($filter['memberID']) && (int) $filter['memberID'] > 0) {
+            $builder->where('member.memberID', (int) $filter['memberID']);
+        }
+
         if (! empty($filter['barangay']) && $this->memberFieldExists('barangay')) {
             $builder->where('member.barangay', $filter['barangay']);
         }

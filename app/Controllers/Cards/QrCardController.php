@@ -68,8 +68,7 @@ class QrCardController extends BaseController
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound('Not an active head of family.');
         }
 
-        $heads  = $model->headsForCards();
-        $single = array_values(array_filter($heads, static fn (array $h): bool => $h['memberID'] === $memberID));
+        $single = $model->headsForCards(['memberID' => $memberID]);
         if ($single === []) {
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound('Head not found.');
         }
@@ -86,7 +85,7 @@ class QrCardController extends BaseController
         return $this->streamDownload($result);
     }
 
-    public function lookup(string $control)
+    public function lookup(string $control): \CodeIgniter\HTTP\RedirectResponse
     {
         $memberID = ControlNumber::parse($control);
         if ($memberID === null || model(MemberModel::class)->findHead($memberID) === null) {

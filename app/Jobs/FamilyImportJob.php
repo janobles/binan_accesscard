@@ -1,0 +1,172 @@
+<?php
+
+namespace App\Jobs;
+
+use App\Libraries\FamilyExcelImporter;
+use App\Libraries\FamilyRecordWriteException;
+use App\Libraries\FamilyRecordWriter;
+use App\Models\Audit\AuditTrailsModel;
+use App\Models\Families\MemberModel;
+use App\Models\Families\MemberServiceModel;
+use App\Models\Lookups\ServiceModel;
+use Config\Database;
+use Throwable;
+
+/**
+ * Background handler for the 'family_import' job type: parses + validates a queued
+ * .xlsx (payload['storedPath']) and writes its families ONE PER TRANSACTION,
+ * checkpointing every $batch families.
+ *
+ * That keeps the import off the web request's timeout/memory limit, never holds a
+ * single huge transaction, allows partial success (a bad family is isolated and the
+ * rest still import), and survives a mid-job crash (the next worker resumes from the
+ * job's checkpoint, re-reading the counters/errors already stored in result_json).
+ */
+class FamilyImportJob implements JobHandlerInterface
+{
+    /** Families per checkpoint flush. */
+    private int $batch = 50;
+
+    public function handle(array $payload, array $job, JobReporter $reporter): JobOutcome
+    {
+        $path = (string) ($payload['storedPath'] ?? '');
+
+        if ($path === '' || ! is_file($path)) {
+            return JobOutcome::failed('The uploaded file is no longer available on the server.');
+        }
+
+        $memberModel = new MemberModel();
+
+        if (! $memberModel->hasRequiredFamilyTables()) {
+            $this->cleanup($path);
+
+            return JobOutcome::failed('The database is missing required tables from accesscardV1.4.sql.');
+        }
+
+        $importer = new FamilyExcelImporter();
+
+        try {
+            $valid = $importer->process($path);
+        } catch (Throwable $e) {
+            $this->cleanup($path);
+
+            return JobOutcome::failed('The file could not be read as an .xlsx saved from the template.');
+        }
+
+        if (! $valid) {
+            $errors = array_values($importer->getErrors());
+            $this->cleanup($path);
+
+            return JobOutcome::failed(
+                'Nothing was imported — ' . count($errors) . ' validation issue(s). Fix the listed rows and re-upload.',
+                ['imported' => 0, 'failed' => 0, 'members' => 0, 'errors' => $errors],
+            );
+        }
+
+        $families = $importer->getFamilies();
+        $total    = count($families);
+        $reporter->setTotal($total);
+
+        // Resume support: continue from the checkpoint, re-loading the running
+        // counters + error list a crashed run already stored on the job.
+        $start  = max(0, (int) ($job['checkpoint'] ?? 0));
+        $prior  = $this->decode($job['result_json'] ?? null);
+        $done   = (int) ($prior['imported'] ?? 0);
+        $failed = (int) ($prior['failed'] ?? 0);
+        $members = (int) ($prior['members'] ?? 0);
+        $errors = (isset($prior['errors']) && is_array($prior['errors'])) ? $prior['errors'] : [];
+
+        $db     = Database::connect();
+        $userId = (int) ($job['userID'] ?? 0);
+        $ip     = $job['ip_address'] ?? null;
+        $ua     = $job['user_agent'] ?? null;
+
+        $writer = new FamilyRecordWriter($memberModel, new MemberServiceModel(), new ServiceModel(), new AuditTrailsModel());
+
+        $snapshot = static fn (): array => [
+            'imported' => $done,
+            'failed'   => $failed,
+            'members'  => $members,
+            'errors'   => array_values($errors),
+        ];
+
+        $reporter->checkpoint($done + $failed, $start, $snapshot());
+
+        for ($i = $start; $i < $total; $i++) {
+            $family = $families[$i];
+
+            // One family = one transaction: a single bad family is isolated and the
+            // rest of the file still imports.
+            $db->transBegin();
+
+            try {
+                $writer->persistFamily(
+                    $family['headPayload'],
+                    $family['memberPayloads'],
+                    $family['headServiceIds'],
+                    $userId,
+                    $ip,
+                    $ua,
+                    ' via Excel import (queued)',
+                );
+
+                if ($db->transStatus() === false) {
+                    throw new FamilyRecordWriteException('The database rejected the family.');
+                }
+
+                $db->transCommit();
+                $done++;
+                $members += count($family['memberPayloads']);
+            } catch (Throwable $e) {
+                $db->transRollback();
+                $failed++;
+                $errors[] = [
+                    'sheetRow' => null,
+                    'familyNo' => (string) ($family['familyNo'] ?? ''),
+                    'message'  => 'Could not save family ' . ($family['familyNo'] ?? '') . ': ' . $e->getMessage(),
+                ];
+            }
+
+            if ((($i - $start + 1) % $this->batch) === 0) {
+                $reporter->checkpoint($done + $failed, $i + 1, $snapshot());
+                // Breathing room for interactive users between chunks.
+                $reporter->pause();
+            }
+        }
+
+        $reporter->checkpoint($done + $failed, $total, $snapshot());
+        $this->cleanup($path);
+
+        if ($failed === 0) {
+            return JobOutcome::done(
+                'Imported ' . $done . ' family record(s) and ' . $members . ' additional member(s).',
+                $snapshot(),
+            );
+        }
+
+        $message = 'Imported ' . $done . ' of ' . $total . ' family record(s); ' . $failed . ' could not be saved.';
+
+        return $done > 0
+            ? JobOutcome::partial($message, $snapshot())
+            : JobOutcome::failed($message, $snapshot());
+    }
+
+    /** @return array<string, mixed> */
+    private function decode(?string $json): array
+    {
+        if ($json === null || $json === '') {
+            return [];
+        }
+
+        $decoded = json_decode($json, true);
+
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    private function cleanup(string $path): void
+    {
+        if ($path !== '' && is_file($path)) {
+            @unlink($path);
+        }
+    }
+}

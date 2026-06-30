@@ -40,6 +40,7 @@ $routes->group('admin', static function (RouteCollection $routes): void {
         $routes->get('template', 'Families\FamilyController::downloadTemplate');
         $routes->get('import', 'Families\FamilyController::importForm');
         $routes->post('import', 'Families\FamilyController::import');
+        $routes->get('import/status/(:num)', 'Families\FamilyController::importStatus/$1');
         $routes->get('create', 'Families\FamilyController::createFamily');
         $routes->get('view/(:num)', 'Families\FamilyController::viewFamily/$1');
         $routes->get('edit/(:num)', 'Families\FamilyController::editFamily/$1');
@@ -89,6 +90,7 @@ $routes->group('employee', static function (RouteCollection $routes): void {
         $routes->get('template', 'Families\FamilyController::downloadTemplate');
         $routes->get('import', 'Families\FamilyController::importForm');
         $routes->post('import', 'Families\FamilyController::import');
+        $routes->get('import/status/(:num)', 'Families\FamilyController::importStatus/$1');
         $routes->get('create', 'Families\FamilyController::createFamily');
         $routes->get('view/(:num)', 'Families\FamilyController::viewFamily/$1');
         $routes->get('edit/(:num)', 'Families\FamilyController::editFamily/$1');

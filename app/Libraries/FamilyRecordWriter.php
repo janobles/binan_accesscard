@@ -13,11 +13,12 @@ use App\Models\Lookups\ServiceModel;
  *
  * This is the single source of truth for the "create a family" write, shared by:
  *   - the manual Add Family form (FamilyController::store), and
- *   - the Excel bulk importer (FamilyController::import via FamilyExcelImporter).
+ *   - the Excel bulk importer, which now runs in the background job worker
+ *     (App\Jobs\FamilyImportJob, via App\Libraries\FamilyExcelImporter).
  *
- * The DB transaction is owned by the CALLER, not this class. That lets the manual
- * form wrap one family per transaction, while the importer wraps the WHOLE file in
- * a single transaction (true all-or-nothing across every family). On any failure
+ * The DB transaction is owned by the CALLER, not this class. Both callers wrap one
+ * family per transaction (the worker does so deliberately, so a huge import never
+ * holds one giant transaction and a single bad family is isolated). On any failure
  * this throws FamilyRecordWriteException; the caller rolls back and reports it.
  */
 class FamilyRecordWriter

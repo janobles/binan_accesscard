@@ -1172,6 +1172,33 @@
 .family-option-box--sm { max-height: 12rem; }
 .family-toast { position: fixed; top: 1rem; right: 1rem; z-index: 1080; max-width: 22rem; margin: 0; }
 
+/* Background-import progress toasts (bottom-right). The modal closes on submit and
+ * each import is tracked as its own small card in this stack, so several imports can
+ * show progress at once while the user keeps working. */
+.family-import-toasts {
+    position: fixed; bottom: 1rem; right: 1rem; z-index: 1085;
+    display: flex; flex-direction: column; gap: .45rem;
+    width: 17rem; max-width: calc(100vw - 2rem);
+}
+.family-import-toast {
+    width: 100%;
+    background: #fff; border: 1px solid #dee2e6; border-left: 4px solid #0d6efd;
+    border-radius: .4rem; padding: .5rem .6rem;
+    box-shadow: 0 .35rem .8rem rgba(0, 0, 0, .15);
+}
+.family-import-toast.fit-success { border-left-color: #198754; }
+.family-import-toast.fit-warning { border-left-color: #fd7e14; }
+.family-import-toast.fit-error   { border-left-color: #dc3545; }
+.family-import-toast .fit-header { display: flex; justify-content: space-between; align-items: center; gap: .4rem; }
+.family-import-toast .fit-title  { font-weight: 600; font-size: .76rem; }
+.family-import-toast .fit-close  { border: 0; background: transparent; font-size: 1rem; line-height: 1; cursor: pointer; color: #6c757d; padding: 0 .1rem; }
+.family-import-toast .fit-close:hover { color: #212529; }
+.family-import-toast .fit-msg    { font-size: .68rem; color: #495057; margin: .25rem 0; }
+.family-import-toast .progress   { height: .8rem; font-size: .6rem; }
+.family-import-toast .fit-errors { margin-top: .4rem; max-height: 8.5rem; overflow: auto; }
+.family-import-toast .fit-errors table { margin-bottom: 0; font-size: .66rem; }
+.family-import-toast.fit-hide    { opacity: 0; transition: opacity .25s ease; }
+
 /* ---------------------------------------------------------------------------
  * Restored old-wizard pieces for the new modal: hidden "Other" freetext, the
  * archived (grandfather) badge, and a subtle archived-row tint.

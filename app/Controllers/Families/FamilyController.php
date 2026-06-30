@@ -3,7 +3,6 @@
 namespace App\Controllers\Families;
 
 use App\Controllers\BaseController;
-use App\Libraries\FamilyExcelImporter;
 use App\Libraries\FamilyExcelTemplate;
 use App\Libraries\FamilyRecordWriteException;
 use App\Libraries\FamilyRecordWriter;
@@ -13,6 +12,7 @@ use App\Models\Audit\AuditTrailsModel;
 use App\Models\Families\FamilyFormOptionsModel;
 use App\Models\Families\MemberModel;
 use App\Models\Families\MemberServiceModel;
+use App\Models\Jobs\JobQueueModel;
 use App\Models\Lookups\SectorModel;
 use App\Models\Lookups\ServiceModel;
 use App\Models\SearchModel;
@@ -241,12 +241,13 @@ class FamilyController extends BaseController
     }
 
     /**
-     * POST `{admin|employee}/manage-family/import`: validates and imports a filled
-     * .xlsx of families. Validation is all-or-nothing — if any row is invalid the
-     * row-level errors are returned and nothing is saved. On a clean file every
-     * family is written in ONE transaction via FamilyRecordWriter (the same write
-     * path as the manual Add form), so a mid-file failure rolls back the whole import.
-     * Always responds as JSON (the modal posts over AJAX).
+     * POST `{admin|employee}/manage-family/import`: QUEUES a filled .xlsx of
+     * families for background import. The file is only validated as an upload here
+     * (a valid .xlsx), moved to writable/uploads, and recorded as a `pending`
+     * job_queue row (type 'family_import'). A scheduled worker (php spark queue:work) parses,
+     * validates, and writes it batched + resumably, so very large files never hit the
+     * web request's timeout or memory limit. The modal polls importStatus() for the
+     * row errors and final summary. Always responds as JSON (the modal posts over AJAX).
      */
     public function import()
     {
@@ -256,10 +257,7 @@ class FamilyController extends BaseController
             return $this->jsonError('You do not have permission to import family records.', 403);
         }
 
-        $memberModel        = new MemberModel();
-        $memberServiceModel = new MemberServiceModel();
-        $serviceModel       = new ServiceModel();
-        $auditModel         = new AuditTrailsModel();
+        $memberModel = new MemberModel();
 
         if (! $memberModel->hasRequiredFamilyTables()) {
             return $this->jsonError('The accesscard database is missing required tables from accesscardV1.4.sql.', 422);
@@ -275,77 +273,111 @@ class FamilyController extends BaseController
             return $this->jsonError('The file must be an .xlsx workbook saved from the template.', 422);
         }
 
-        $tempName = 'family-import-' . bin2hex(random_bytes(6)) . '.xlsx';
+        // Capture the original name before move() (which renames the file on disk).
+        $originalName = (string) ($file->getClientName() ?: 'import.xlsx');
+
+        // Durable name (not a temp the request deletes): the worker owns its lifecycle
+        // and unlinks it once the job is done/failed.
+        $storedName = 'family-import-' . bin2hex(random_bytes(8)) . '.xlsx';
 
         try {
-            $file->move(WRITEPATH . 'uploads', $tempName, true);
+            $file->move(WRITEPATH . 'uploads', $storedName, true);
         } catch (Throwable $exception) {
             return $this->jsonError('The uploaded file could not be saved for processing. Please try again.', 500);
         }
 
-        $tempPath = WRITEPATH . 'uploads' . DIRECTORY_SEPARATOR . $tempName;
+        $storedPath = WRITEPATH . 'uploads' . DIRECTORY_SEPARATOR . $storedName;
 
-        $importer = new FamilyExcelImporter();
+        $jobs = new JobQueueModel();
+        $jobs->ensureTable();
 
         try {
-            $valid = $importer->process($tempPath);
+            $jobId = $jobs->enqueue(
+                'family_import',
+                ['storedPath' => $storedPath, 'originalName' => $originalName],
+                (int) session()->get('user_id'),
+                $this->request->getIPAddress(),
+                $this->request->getUserAgent()->getAgentString()
+            );
         } catch (Throwable $exception) {
-            @unlink($tempPath);
-            $this->auditSystemError('importing family records from Excel', $exception);
+            @unlink($storedPath);
+            $this->auditSystemError('queueing a family Excel import', $exception);
 
-            return $this->jsonError('The file could not be read. Make sure it is an .xlsx saved from the template.', 422);
+            return $this->jsonError('The import could not be queued. Please try again.', 500);
         }
-
-        if (! $valid) {
-            @unlink($tempPath);
-
-            return $this->response->setStatusCode(422)->setJSON([
-                'status'  => 'error',
-                'message' => 'The file was not imported. Please fix the listed rows and try again.',
-                'errors'  => $importer->getErrors(),
-                'csrf'    => csrf_hash(),
-            ]);
-        }
-
-        $userId = (int) session()->get('user_id');
-        $writer = new FamilyRecordWriter($memberModel, $memberServiceModel, $serviceModel, $auditModel);
-
-        // Whole file = one transaction: all-or-nothing across every family.
-        $memberModel->beginTransaction();
-
-        try {
-            foreach ($importer->getFamilies() as $family) {
-                $writer->persistFamily(
-                    $family['headPayload'],
-                    $family['memberPayloads'],
-                    $family['headServiceIds'],
-                    $userId,
-                    $this->request->getIPAddress(),
-                    $this->request->getUserAgent()->getAgentString(),
-                    ' via Excel import'
-                );
-            }
-        } catch (FamilyRecordWriteException $exception) {
-            $memberModel->rollbackTransaction();
-            @unlink($tempPath);
-
-            return $this->jsonError('Import failed while saving: ' . $exception->getMessage() . ' Nothing was imported.', 422);
-        }
-
-        $memberModel->completeTransaction();
-        @unlink($tempPath);
-
-        if (! $memberModel->transactionStatus()) {
-            return $this->jsonError('The import could not be saved. Nothing was imported.', 500);
-        }
-
-        $summary = $importer->getSummary();
 
         return $this->response->setJSON([
-            'status'  => 'success',
-            'message' => 'Imported ' . $summary['families'] . ' family record(s) and ' . $summary['members'] . ' additional member(s).',
-            'summary' => $summary,
-            'csrf'    => csrf_hash(),
+            'status'    => 'queued',
+            'jobID'     => $jobId,
+            'statusUrl' => site_url($this->currentRouteBase() . '/import/status/' . $jobId),
+            'message'   => 'Your file is queued and importing in the background.',
+            'csrf'      => csrf_hash(),
+        ]);
+    }
+
+    /**
+     * GET `{admin|employee}/manage-family/import/status/(:num)`: JSON progress for a
+     * queued import job, polled by family-import.js. Returns the job's status, a human
+     * message, progress counters, and (once finished) any validation/per-family write
+     * errors so the modal can render them exactly as the old synchronous flow did.
+     */
+    public function importStatus(int $jobId)
+    {
+        $guard = $this->requireFamilyEntryAccess();
+
+        if ($guard instanceof RedirectResponse) {
+            return $this->jsonError('You do not have permission to view import status.', 403);
+        }
+
+        $jobs = new JobQueueModel();
+
+        if (! $jobs->hasTable()) {
+            return $this->jsonError('No import is in progress.', 404);
+        }
+
+        $job = $jobs->find($jobId);
+
+        if ($job === null || ($job['type'] ?? '') !== 'family_import') {
+            return $this->jsonError('Import job not found.', 404);
+        }
+
+        $status = (string) $job['status'];
+        $total  = (int) $job['progress_total'];
+        $done   = (int) $job['progress_done'];
+
+        $result = [];
+
+        if (! empty($job['result_json'])) {
+            $decoded = json_decode((string) $job['result_json'], true);
+
+            if (is_array($decoded)) {
+                $result = $decoded;
+            }
+        }
+
+        $errors   = (isset($result['errors']) && is_array($result['errors'])) ? $result['errors'] : [];
+        $imported = (int) ($result['imported'] ?? 0);
+        $failed   = (int) ($result['failed'] ?? 0);
+        $members  = (int) ($result['members'] ?? 0);
+
+        return $this->response->setJSON([
+            'status'   => $status,
+            'finished' => in_array($status, ['done', 'partial', 'failed'], true),
+            'message'  => (string) ($job['message'] ?? ''),
+            'progress' => [
+                'total'     => $total,
+                'processed' => $done,
+                'imported'  => $imported,
+                'failed'    => $failed,
+                'members'   => $members,
+                'percent'   => $total > 0 ? (int) floor($done * 100 / $total) : 0,
+            ],
+            'errors'   => array_slice($errors, 0, 200),
+            'summary'  => [
+                'families' => $imported,
+                'members'  => $members,
+            ],
+            'csrf'     => csrf_hash(),
         ]);
     }
 

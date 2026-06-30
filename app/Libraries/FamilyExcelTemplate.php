@@ -66,7 +66,7 @@ class FamilyExcelTemplate
 
     /** Ordered column headers for the Families sheet (matched case-insensitively). @var list<string> */
     public const COLUMNS = [
-        'QR Number', 'Relationship', 'FirstName', 'MiddleName', 'LastName', 'Suffix',
+        'QR Number', 'Relationship', 'LastName', 'FirstName', 'MiddleName', 'Suffix',
         'Birthday', 'Sex', 'CivilStatus', 'ContactNumber', 'Religion', 'Education',
         'Job', 'MonthlyIncome', 'Address', 'Barangay', 'Sector', 'Services',
     ];
@@ -79,8 +79,8 @@ class FamilyExcelTemplate
 
     /** Per-column entry widths (display only). */
     private const WIDTHS = [
-        'QR Number' => 9, 'Relationship' => 14, 'FirstName' => 16, 'MiddleName' => 14,
-        'LastName' => 16, 'Suffix' => 8, 'Birthday' => 13, 'Sex' => 10, 'CivilStatus' => 20,
+        'QR Number' => 9, 'Relationship' => 14, 'LastName' => 16, 'FirstName' => 16,
+        'MiddleName' => 14, 'Suffix' => 8, 'Birthday' => 13, 'Sex' => 10, 'CivilStatus' => 20,
         'ContactNumber' => 15, 'Religion' => 18, 'Education' => 20, 'Job' => 18,
         'MonthlyIncome' => 20, 'Address' => 26, 'Barangay' => 18, 'Sector' => 20, 'Services' => 22,
     ];
@@ -88,12 +88,14 @@ class FamilyExcelTemplate
     /** Short hover tooltips shown when a cell is selected. */
     private const PROMPTS = [
         'QR Number'      => 'Same number for everyone in one family.',
-        'Relationship'  => 'Use "Head" for the head of family; others: Spouse, Son, Daughter...',
-        'Birthday'      => 'Format: YYYY-MM-DD (e.g. 1980-05-14).',
+        'Relationship'  => 'Use "Head" for the head of family; others: Spouse, Children, Parent...',
+        'Birthday'      => 'Format: MM-DD-YYYY (e.g. 05-14-1980).',
         'ContactNumber' => '11 digits, e.g. 09171234567.',
         'CivilStatus'   => 'Pick a code: S, M, W, H, N.',
         'Education'     => 'Pick a code: E, HS, UG, Voc, CG, PG.',
-        'Sector'        => 'Sector code(s), comma-separated (e.g. SC1, PWD1). See Reference.',
+        'Address'       => 'Head: full house/street address. Members: leave blank — they use the head\'s address.',
+        'Barangay'      => 'Head: pick the barangay. Members: leave blank — they use the head\'s.',
+        'Sector'        => 'Sector code(s), comma-separated (e.g. SC1, PWD1). Type OTHERS for other sectors. See Reference.',
         'Services'      => 'Service code(s), comma-separated (e.g. FA6, 4PS). See Reference.',
     ];
 
@@ -210,6 +212,7 @@ class FamilyExcelTemplate
         $this->applyPromptOnly($sheet, 'A');
         $this->applyPromptOnly($sheet, 'G');
         $this->applyPromptOnly($sheet, 'J');
+        $this->applyPromptOnly($sheet, 'O');
         $this->applyPromptOnly($sheet, 'Q');
         $this->applyPromptOnly($sheet, 'R');
 
@@ -249,14 +252,14 @@ class FamilyExcelTemplate
         $this->writeBanners($sheet);
         $this->writeHeaderRow($sheet);
 
-        $this->writeExampleRow($sheet, 3, ['1', 'Head', 'Juan', 'Santos', 'Dela Cruz', '', '1980-05-14', 'Male', 'M - Married', '09171234567', 'Roman Catholic', 'CG - College Graduate', 'Government Employee', 'PHP 18,001 - 25,000', '123 Rizal St.', 'Binan', 'SC1, PWD1', 'FA6, 4PS']);
-        $this->writeExampleRow($sheet, 4, ['1', 'Spouse', 'Maria', 'Reyes', 'Dela Cruz', '', '1982-09-02', 'Female', 'M - Married', '09170001111', 'Roman Catholic', 'HS - High School', 'Homemaker', 'No regular income', '123 Rizal St.', 'Binan', 'SP1', '']);
-        $this->writeExampleRow($sheet, 5, ['1', 'Son', 'Jose', 'R', 'Dela Cruz', '', '2012-01-10', 'Male', 'S - Single', '', '', 'E - Elementary', 'Student', '', '123 Rizal St.', 'Binan', 'B2', '']);
-        $this->writeExampleRow($sheet, 6, ['2', 'Head', 'Pedro', '', 'Reyes', '', '1975-07-07', 'Male', 'S - Single', '', 'Islam', 'E - Elementary', 'Driver', 'PHP 8,000 - 13,000', '5 Mabini St.', 'Malaban', 'SC1', 'EDA5']);
+        $this->writeExampleRow($sheet, 3, ['1', 'Head', 'Dela Cruz', 'Juan', 'Santos', '', '05-14-1980', 'Male', 'M - Married', '09171234567', 'Roman Catholic', 'CG - College Graduate', 'Government Employee', 'PHP 18,001 - 25,000', '123 Rizal St.', 'Binan', 'SC1, PWD1', 'FA6, 4PS']);
+        $this->writeExampleRow($sheet, 4, ['1', 'Spouse', 'Dela Cruz', 'Maria', 'Reyes', '', '09-02-1982', 'Female', 'M - Married', '09170001111', 'Roman Catholic', 'HS - High School', 'Homemaker', 'No regular income', '', '', 'SP1', '']);
+        $this->writeExampleRow($sheet, 5, ['1', 'Children', 'Dela Cruz', 'Jose', 'R', '', '01-10-2012', 'Male', 'S - Single', '', '', 'E - Elementary', 'Student', '', '', '', 'B2', '']);
+        $this->writeExampleRow($sheet, 6, ['2', 'Head', 'Reyes', 'Pedro', '', '', '07-07-1975', 'Male', 'S - Single', '', 'Islam', 'E - Elementary', 'Driver', 'PHP 8,000 - 13,000', '5 Mabini St.', 'Malaban', 'SC1, OTHERS', 'EDA5']);
 
         $lastColumn = $this->columnLetter(count(self::COLUMNS));
         $noteRow = 8;
-        $sheet->setCellValue('A' . $noteRow, 'Examples only — enter real data on the "' . self::DATA_SHEET . '" sheet. One row per person. Mark each head of family with Relationship = Head. Put as many families as you like in one file: each family gets its own QR number, shared by its members. Sector and Services take CODES separated by commas (see the Reference sheet). " * " marks always-required columns; the Head row also needs Birthday, Sex, Civil Status, Education, Job, Monthly Income, Address and Barangay.');
+        $sheet->setCellValue('A' . $noteRow, 'Examples only — enter real data on the "' . self::DATA_SHEET . '" sheet. One row per person. Name order is Last Name, First Name, Middle Name. Birthday is MM-DD-YYYY. Mark each head of family with Relationship = Head. Put as many families as you like in one file: each family gets its own QR number, shared by its members. Members leave Address and Barangay blank — they automatically use the head\'s address. Sector and Services take CODES separated by commas (type OTHERS for other sectors; see the Reference sheet). " * " marks always-required columns; the Head row also needs Birthday, Sex, Civil Status, Education, Job, Monthly Income, Address and Barangay.');
         $sheet->mergeCells('A' . $noteRow . ':' . $lastColumn . $noteRow);
         $sheet->getStyle('A' . $noteRow)->getAlignment()->setWrapText(true)->setVertical(Alignment::VERTICAL_TOP);
         $sheet->getStyle('A' . $noteRow)->getFont()->setBold(true);
@@ -319,20 +322,21 @@ class FamilyExcelTemplate
     /**
      * Builds the Check-column formula for one row. Blank rows show nothing; otherwise it
      * reports the first problem found, else "OK": missing QR/name, or the wrong number
-     * of Head rows per family (COUNTIFS over the QR + Relationship columns).
+     * of Head rows per family (COUNTIFS over the QR + Relationship columns). Columns:
+     * A = QR Number, C = LastName, D = FirstName.
      */
     private function checkFormula(int $row): string
     {
         $a = '$A' . $row;
         $c = '$C' . $row;
-        $e = '$E' . $row;
+        $d = '$D' . $row;
         $heads = 'COUNTIFS($A$' . self::FIRST_DATA_ROW . ':$A$' . self::LAST_TEMPLATE_ROW . ',' . $a
             . ',$B$' . self::FIRST_DATA_ROW . ':$B$' . self::LAST_TEMPLATE_ROW . ',"Head")';
 
-        return '=IF(AND(' . $a . '="",' . $c . '="",' . $e . '=""),"",'
+        return '=IF(AND(' . $a . '="",' . $c . '="",' . $d . '=""),"",'
             . 'IF(' . $a . '="","Missing QR Number",'
-            . 'IF(' . $c . '="","Missing FirstName",'
-            . 'IF(' . $e . '="","Missing LastName",'
+            . 'IF(' . $c . '="","Missing LastName",'
+            . 'IF(' . $d . '="","Missing FirstName",'
             . 'IF(' . $heads . '=0,"No Head in this family",'
             . 'IF(' . $heads . '>1,"More than one Head",'
             . '"OK"))))))';

@@ -199,7 +199,7 @@ class FamilyExcelImporter
 
     /**
      * Reads one sheet row into [normalizedHeader => trimmed string value]. Birthday is
-     * date-aware so a real Excel date becomes "Y-m-d".
+     * date-aware so a real Excel date becomes "MM-DD-YYYY" (the sheet's display format).
      *
      * @param array<string, string> $columnMap
      * @return array<string, string>
@@ -213,7 +213,7 @@ class FamilyExcelImporter
             $value = $cell->getValue();
 
             if ($key === 'birthday' && $value !== null && $value !== '' && ExcelDate::isDateTime($cell)) {
-                $values[$key] = ExcelDate::excelToDateTimeObject($value)->format('Y-m-d');
+                $values[$key] = ExcelDate::excelToDateTimeObject($value)->format('m-d-Y');
                 continue;
             }
 
@@ -264,8 +264,14 @@ class FamilyExcelImporter
         $memberPayloads = [];
 
         foreach ($members as $memberEntry) {
+            $memberPayload = $this->buildPersonPayload($memberEntry, $familyNo, false, $sectorByCode, $incomeByLabel);
+            // Members share the head's address — auto-fill it so workers never copy-paste
+            // (or mistype) the address on every member row. Any address typed on a member
+            // row is ignored in favor of the head's.
+            $memberPayload['address'] = $headPayload['address'];
+
             $memberPayloads[] = [
-                'payload'    => $this->buildPersonPayload($memberEntry, $familyNo, false, $sectorByCode, $incomeByLabel),
+                'payload'    => $memberPayload,
                 'serviceIds' => $this->mapServices($memberEntry, $familyNo, $serviceByCode),
             ];
         }
@@ -350,29 +356,34 @@ class FamilyExcelImporter
         }
     }
 
-    /** Validates a birthday cell. Required for heads. Returns Y-m-d or null. */
+    /**
+     * Validates a birthday cell. The sheet uses MM-DD-YYYY; legacy YYYY-MM-DD files are
+     * still accepted. Required for heads. Returns the stored Y-m-d value or null.
+     */
     private function validateBirthday(int $row, string $familyNo, string $value, bool $required): ?string
     {
         $value = trim($value);
 
         if ($value === '') {
             if ($required) {
-                $this->addError($row, $familyNo, 'Birthday is required (format YYYY-MM-DD).');
+                $this->addError($row, $familyNo, 'Birthday is required (format MM-DD-YYYY).');
             }
 
             return null;
         }
 
-        $date = \DateTimeImmutable::createFromFormat('Y-m-d', $value);
-        $valid = $date !== false && $date->format('Y-m-d') === $value;
+        // Primary entry format is MM-DD-YYYY; fall back to the legacy YYYY-MM-DD.
+        foreach (['m-d-Y', 'Y-m-d'] as $format) {
+            $date = \DateTimeImmutable::createFromFormat('!' . $format, $value);
 
-        if (! $valid) {
-            $this->addError($row, $familyNo, 'Birthday "' . $value . '" is not a valid date (use YYYY-MM-DD).');
-
-            return null;
+            if ($date !== false && $date->format($format) === $value) {
+                return $date->format('Y-m-d');
+            }
         }
 
-        return $value;
+        $this->addError($row, $familyNo, 'Birthday "' . $value . '" is not a valid date (use MM-DD-YYYY).');
+
+        return null;
     }
 
     /** Validates a sex cell against Male/Female. Required for heads. */
@@ -490,18 +501,33 @@ class FamilyExcelImporter
 
     // -- lookups + helpers -----------------------------------------------------
 
-    /** [UPPER shortcode => sectorID] of active sectors. */
+    /**
+     * [UPPER shortcode => sectorID] of active sectors. The literal codes "OTHERS"/"OTHER"
+     * are aliased to the catch-all "Other" sector (matched by shortcode or name) so a
+     * worker can type "OTHERS" without knowing its real shortcode.
+     */
     private function sectorCodeMap(): array
     {
-        $map = [];
+        $map     = [];
+        $otherId = 0;
 
         foreach ((new SectorModel())->getActive() as $sector) {
             $code = strtoupper(trim((string) ($sector['shortcode'] ?? '')));
+            $name = strtoupper(trim((string) ($sector['name'] ?? '')));
             $id   = (int) ($sector['sectorID'] ?? 0);
 
             if ($code !== '' && $id > 0) {
                 $map[$code] = $id;
             }
+
+            if ($otherId === 0 && $id > 0 && (str_contains($code, 'OTHER') || str_contains($name, 'OTHER'))) {
+                $otherId = $id;
+            }
+        }
+
+        if ($otherId > 0) {
+            $map['OTHERS'] = $otherId;
+            $map['OTHER']  = $otherId;
         }
 
         return $map;

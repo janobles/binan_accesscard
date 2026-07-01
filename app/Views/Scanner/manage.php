@@ -33,6 +33,7 @@
                 <td>
                   <form method="post" action="<?= site_url('scanner/distributions/void/' . $d['aidID']) ?>"
                         onsubmit="return confirm('Void this distribution? This permanently removes the record.');">
+                    <?= csrf_field() ?>
                     <button class="btn btn-sm btn-outline-danger" type="submit">Void</button>
                   </form>
                 </td>
@@ -63,14 +64,17 @@
                 <td>
                   <?php if ($archived): ?>
                     <form method="post" action="<?= site_url('scanner/aid-types/restore/' . $t['aid_type_id']) ?>" class="d-inline">
+                      <?= csrf_field() ?>
                       <button class="btn btn-sm btn-outline-success" type="submit">Restore</button>
                     </form>
                     <form method="post" action="<?= site_url('scanner/aid-types/delete/' . $t['aid_type_id']) ?>" class="d-inline"
                           onsubmit="return confirm('Delete permanently? Only allowed if never used.');">
+                      <?= csrf_field() ?>
                       <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
                     </form>
                   <?php else: ?>
                     <form method="post" action="<?= site_url('scanner/aid-types/archive/' . $t['aid_type_id']) ?>" class="d-inline">
+                      <?= csrf_field() ?>
                       <button class="btn btn-sm btn-outline-secondary" type="submit">Archive</button>
                     </form>
                   <?php endif; ?>
@@ -88,13 +92,14 @@
 <div class="modal fade" id="addAidTypeModal" tabindex="-1">
   <div class="modal-dialog">
     <form class="modal-content" method="post" action="<?= site_url('scanner/aid-types/create') ?>">
+      <?= csrf_field() ?>
       <div class="modal-header">
         <h5 class="modal-title">Add Aid Type</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
         <label for="aidTypeName" class="form-label">Name</label>
-        <input type="text" class="form-control" id="aidTypeName" name="name" required maxlength="255">
+        <input type="text" class="form-control" id="aidTypeName" name="name" required maxlength="100">
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>

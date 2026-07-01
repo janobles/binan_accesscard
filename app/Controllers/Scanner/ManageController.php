@@ -146,7 +146,7 @@ class ManageController extends BaseController
         $this->audit(
             'Voided aid distribution #' . $id,
             (int) ($row['memberID'] ?? 0),
-            'Control #' . (int) ($row['control_no'] ?? 0) . ', aid type ID ' . (int) ($row['aid_type_id'] ?? 0)
+            'Control #' . (int) ($row['control_no'] ?? 0) . ', aid type ID ' . (int) ($row['aid_type_id'] ?? 0) . ', claim date ' . (string) ($row['claim_date'] ?? '')
         );
 
         return redirect()->to('scanner/manage')->with('success', 'Distribution voided.');

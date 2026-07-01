@@ -2,6 +2,7 @@
 
 namespace App\Models\Lookups;
 
+use App\Models\Concerns\ModelQueryHelpers;
 use App\Models\Concerns\LookupModelTrait;
 use CodeIgniter\Database\BaseBuilder;
 use CodeIgniter\Model;
@@ -14,6 +15,7 @@ use CodeIgniter\Model;
 class SectorModel extends Model
 {
     use LookupModelTrait;
+    use ModelQueryHelpers;
 
     protected $table = 'sector';
     protected $primaryKey = 'sectorID';
@@ -24,13 +26,13 @@ class SectorModel extends Model
     /** Columns the Sector management search box matches. */
     protected function lookupSearchColumns(): array
     {
-        return ['shortcode', 'name', 'description'];
+        return ['name', 'shortcode', 'description'];
     }
 
-    /** Sector management list order: by ID. */
+    /** Sector management list order: Name first, then shortcode/id for stability. */
     protected function applyLookupOrder(BaseBuilder $builder): void
     {
-        $builder->orderBy('sectorID', 'ASC');
+        $this->applyNameFirstOrder($builder, ['shortcode', $this->primaryKey]);
     }
 
     /**
@@ -108,7 +110,7 @@ class SectorModel extends Model
      */
     public function getByIdsIncludingArchived(array $ids): array
     {
-        $ids = array_values(array_unique(array_filter(array_map('intval', $ids), static fn (int $id): bool => $id > 0)));
+        $ids = $this->positiveUniqueIds($ids);
 
         if ($ids === [] || ! $this->hasTable()) {
             return [];

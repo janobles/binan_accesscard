@@ -21,6 +21,36 @@ trait LookupModelTrait
     /** Applies the model-specific result ordering to a management-list builder. */
     abstract protected function applyLookupOrder(BaseBuilder $builder): void;
 
+    /**
+     * Shared management-list ordering: every lookup page defaults to the visible
+     * Name column first, then stable tie-breakers supplied by the concrete model.
+     */
+    protected function applyNameFirstOrder(BaseBuilder $builder, array $tieBreakers = []): void
+    {
+        $columns = array_values(array_unique(array_merge(['name'], $tieBreakers)));
+
+        foreach ($columns as $column) {
+            $column = trim((string) $column);
+
+            if ($column !== '') {
+                $builder->orderBy($column, 'ASC');
+            }
+        }
+    }
+
+    /** All rows from this lookup table, sorted by name and optional tie-breakers. */
+    public function getAllSortedByName(array $tieBreakers = []): array
+    {
+        if (! $this->hasTable()) {
+            return [];
+        }
+
+        $builder = $this->db->table($this->table);
+        $this->applyNameFirstOrder($builder, $tieBreakers);
+
+        return $builder->get()->getResultArray();
+    }
+
     /** True if the backing table exists; callers guard queries with this. */
     public function hasTable(): bool
     {
@@ -122,6 +152,16 @@ trait LookupModelTrait
     /** Insert a new row and return its insert ID. */
     public function create(array $data): int
     {
+        if (! $this->hasTable()) {
+            return 0;
+        }
+
+        $data = $this->allowedFieldPayload($data);
+
+        if ($data === []) {
+            return 0;
+        }
+
         $this->db->table($this->table)->insert($data);
 
         return (int) $this->db->insertID();
@@ -130,9 +170,19 @@ trait LookupModelTrait
     /** Update a row by primary key. */
     public function update($id = null, $row = null): bool
     {
+        if (! $this->hasTable()) {
+            return false;
+        }
+
+        $row = $this->allowedFieldPayload((array) $row);
+
+        if ($row === []) {
+            return false;
+        }
+
         return $this->db->table($this->table)
             ->where($this->primaryKey, (int) $id)
-            ->update((array) $row);
+            ->update($row);
     }
 
     /** Soft-archive a row by stamping dt_deleted = NOW(). */
@@ -171,5 +221,17 @@ trait LookupModelTrait
         }
 
         return $builder->countAllResults() > 0;
+    }
+
+    /** Keeps lookup writes constrained to the concrete model's allowed fields. */
+    private function allowedFieldPayload(array $data): array
+    {
+        $allowed = array_flip($this->allowedFields ?? []);
+
+        if ($allowed === []) {
+            return [];
+        }
+
+        return array_intersect_key($data, $allowed);
     }
 }

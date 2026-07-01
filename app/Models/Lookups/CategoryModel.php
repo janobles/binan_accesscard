@@ -30,28 +30,21 @@ class CategoryModel extends Model
     /** Columns the Manage Categories search box matches. */
     protected function lookupSearchColumns(): array
     {
-        return ['code', 'name'];
+        return ['name', 'code'];
     }
 
-    /** Manage Categories list order: by code. */
+    /** Manage Categories list order: Name first, then code/id for stability. */
     protected function applyLookupOrder(BaseBuilder $builder): void
     {
-        $builder->orderBy('code', 'ASC');
+        $this->applyNameFirstOrder($builder, ['code', $this->primaryKey]);
     }
 
     /**
-     * All categories including archived, for the management table, ordered by code.
+     * All categories including archived, ordered by Name first for management use.
      */
     public function getAllIncluding(): array
     {
-        if (! $this->hasTable()) {
-            return [];
-        }
-
-        return $this->db->table($this->table)
-            ->orderBy('code', 'ASC')
-            ->get()
-            ->getResultArray();
+        return $this->getAllSortedByName(['code', $this->primaryKey]);
     }
 
     /**

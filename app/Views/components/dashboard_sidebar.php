@@ -71,12 +71,12 @@ $activeTab = $activeTab ?? '';
             <a class="nav-link <?= esc($navActive['categories'] ?? '') ?>" href="<?= site_url('admin/categories') ?>"><i class="bi bi-tags" aria-hidden="true"></i><span>Manage Categories</span></a>
         </li>
         <li><hr class="sidebar-divider"></li>
-        <li><div class="sidebar-heading">Scanner</div></li>
+        <li><div class="sidebar-heading">QR Code</div></li>
         <li class="nav-item">
-            <a class="nav-link <?= esc($navActive['cards'] ?? '') ?>" href="<?= site_url('admin/cards') ?>"><i class="bi bi-qr-code" aria-hidden="true"></i><span>QR Cards</span></a>
+            <a class="nav-link <?= esc($navActive['cards'] ?? '') ?>" href="<?= site_url('admin/cards') ?>"><i class="bi bi-qr-code" aria-hidden="true"></i><span>Generate</span></a>
         </li>
         <li class="nav-item">
-            <a class="nav-link <?= esc($navActive['scanner'] ?? '') ?>" href="<?= site_url('scanner/scan') ?>"><i class="bi bi-upc-scan" aria-hidden="true"></i><span>Scanner</span></a>
+            <a class="nav-link <?= esc($navActive['scanner'] ?? '') ?>" href="<?= site_url('scanner/scan') ?>"><i class="bi bi-upc-scan" aria-hidden="true"></i><span>Scan</span></a>
         </li>
         <li class="nav-item">
             <a class="nav-link <?= esc($navActive['scanner-manage'] ?? '') ?>" href="<?= site_url('scanner/manage') ?>"><i class="bi bi-clipboard-check" aria-hidden="true"></i><span>Management</span></a>

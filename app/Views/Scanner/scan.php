@@ -105,7 +105,7 @@ async function lookup(control) {
 function renderHistory(rows) {
   $('historyList').innerHTML = rows.length
     ? rows.map(r => `<li class="list-group-item d-flex justify-content-between">
-        <span>${esc(r.aid_type)} - ${esc(r.claimant)}</span><span class="text-muted">${esc(r.claim_date)}</span></li>`).join('')
+        <span><span class="badge bg-light text-dark border me-1">${esc(r.aid_type)}</span>${esc(r.claimant)}</span><span class="text-muted">${esc(r.claim_date)}</span></li>`).join('')
     : '<li class="list-group-item text-muted">No aid received yet.</li>';
 }
 

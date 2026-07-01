@@ -21,4 +21,14 @@ final class AidDistributionModelTest extends CIUnitTestCase
             $this->assertContains($col, $fields->getValue($model));
         }
     }
+
+    public function testAllDistributionsReturnsArray(): void
+    {
+        $this->assertIsArray((new \App\Models\Scanner\AidDistributionModel())->allDistributions());
+    }
+
+    public function testVoidMethodExists(): void
+    {
+        $this->assertTrue(method_exists(new \App\Models\Scanner\AidDistributionModel(), 'void'));
+    }
 }

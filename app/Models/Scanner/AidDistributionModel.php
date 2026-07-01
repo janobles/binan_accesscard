@@ -54,4 +54,40 @@ class AidDistributionModel extends Model
             return [];
         }
     }
+
+    /**
+     * Every distribution, newest first, with aid-type name, claimant name,
+     * family-head name, and the scanning user's username resolved via joins.
+     * Drives the Manage-tab global table.
+     */
+    public function allDistributions(): array
+    {
+        try {
+            return $this->select('aid_distribution.aidID, aid_distribution.claim_date,'
+                    . " aid_type.name AS aid_type,"
+                    . " TRIM(CONCAT(member.firstname, ' ', member.lastname)) AS claimant,"
+                    . " TRIM(CONCAT(head.firstname, ' ', head.lastname)) AS head,"
+                    . " COALESCE(users.username, '') AS scanned_by")
+                ->join('aid_type', 'aid_type.aid_type_id = aid_distribution.aid_type_id', 'left')
+                ->join('member', 'member.memberID = aid_distribution.memberID', 'left')
+                ->join('qr_control', 'qr_control.control_no = aid_distribution.control_no', 'left')
+                ->join('member head', 'head.memberID = qr_control.headID', 'left')
+                ->join('users', 'users.userID = aid_distribution.userID', 'left')
+                ->orderBy('aid_distribution.claim_date', 'DESC')
+                ->orderBy('aid_distribution.aidID', 'DESC')
+                ->findAll();
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
+
+    /** Hard-delete one distribution (void a wrong entry). Audited by the caller. */
+    public function void(int $aidId): bool
+    {
+        if ($aidId <= 0) {
+            return false;
+        }
+
+        return $this->delete($aidId) !== false;
+    }
 }

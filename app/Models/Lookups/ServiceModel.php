@@ -298,6 +298,57 @@ class ServiceModel extends Model
     }
 
     /**
+     * Soft-archive every active service whose category label equals $name (exact
+     * match on services.category, how services store their category), stamping each
+     * with $archivedAt — the parent category/sector's own dt_deleted. Sharing that
+     * exact timestamp is what lets restoreByCategoryArchivedAt() later un-archive only
+     * the services THIS cascade retired, leaving independently-archived ones alone.
+     * Returns the number of services archived.
+     */
+    public function archiveByCategory(string $name, string $archivedAt): int
+    {
+        $name       = trim($name);
+        $archivedAt = trim($archivedAt);
+
+        if ($name === '' || $archivedAt === '' || ! $this->db->tableExists($this->table) || ! $this->db->fieldExists('dt_deleted', $this->table)) {
+            return 0;
+        }
+
+        $this->db->table($this->table)
+            ->where('category', $name)
+            ->where('dt_deleted IS NULL', null, false)
+            ->set('dt_deleted', $archivedAt)
+            ->update();
+
+        return $this->db->affectedRows();
+    }
+
+    /**
+     * Reverse of archiveByCategory(): restore only the services whose category equals
+     * $name AND whose dt_deleted exactly matches $archivedAt (the parent's archive
+     * timestamp). The timestamp match ensures a category/sector restore un-archives
+     * only the programs its own archive cascaded onto — services archived separately
+     * (different timestamp) stay archived. Returns the number of services restored.
+     */
+    public function restoreByCategoryArchivedAt(string $name, string $archivedAt): int
+    {
+        $name       = trim($name);
+        $archivedAt = trim($archivedAt);
+
+        if ($name === '' || $archivedAt === '' || ! $this->db->tableExists($this->table) || ! $this->db->fieldExists('dt_deleted', $this->table)) {
+            return 0;
+        }
+
+        $this->db->table($this->table)
+            ->where('category', $name)
+            ->where('dt_deleted', $archivedAt)
+            ->set('dt_deleted', null)
+            ->update();
+
+        return $this->db->affectedRows();
+    }
+
+    /**
      * Normalizes a list of service IDs to unique non-negative ints, or null if any
      * value is non-numeric/nested — letting callers reject malformed input.
      */

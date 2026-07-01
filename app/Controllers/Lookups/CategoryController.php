@@ -7,6 +7,7 @@ use App\Controllers\Concerns\LookupControllerTrait;
 use App\Libraries\RoleAccess;
 use App\Models\Lookups\CategoryModel;
 use App\Models\Lookups\SectorModel;
+use App\Models\Lookups\ServiceModel;
 use CodeIgniter\HTTP\RedirectResponse;
 
 /**
@@ -17,8 +18,9 @@ use CodeIgniter\HTTP\RedirectResponse;
  * Developer/Admin-only and redirects back to `admin/categories` with a flash message.
  *
  * Every category is editable, archivable, and restorable; categories are never
- * permanently deleted (archive is the only retirement path). A category still used by
- * an active service cannot be archived until those services are reassigned/archived.
+ * permanently deleted (archive is the only retirement path). Archiving a category
+ * cascades onto its linked services (services.category = category name), archiving
+ * them alongside it.
  */
 class CategoryController extends BaseController
 {
@@ -42,9 +44,9 @@ class CategoryController extends BaseController
     }
 
     /**
-     * POST `admin/categories/archive/{id}`: soft-archive a category. Blocked if any
-     * active service still uses it (matched by the category name in services.category),
-     * so archiving never orphans a service's category label from the managed list.
+     * POST `admin/categories/archive/{id}`: soft-archive a category and cascade the
+     * archive onto every active service linked to it (matched by the category name in
+     * services.category), so a category and its programs retire together.
      */
     public function archive(int $categoryId): RedirectResponse
     {
@@ -62,21 +64,28 @@ class CategoryController extends BaseController
 
         $category = $model->find($categoryId);
 
-        if ($category !== null && $model->isUsedByServices((string) ($category['name'] ?? ''))) {
-            return $this->redirect('error', 'This category is used by one or more services and cannot be archived. Reassign or archive those services first.');
+        if ($category === null) {
+            return $this->redirect('error', 'Category not found.');
         }
 
         if (! $model->archive($categoryId)) {
             return $this->redirect('error', 'Unable to archive category.');
         }
 
-        $this->audit('CATEGORY_ARCHIVE', 'Archived ' . $this->categoryLabel($category, $categoryId) . '.');
+        $categoryName     = trim((string) ($category['name'] ?? ''));
+        $archivedAt       = (string) ($model->find($categoryId)['dt_deleted'] ?? '');
+        $archivedServices = ($categoryName !== '' && $archivedAt !== '') ? (new ServiceModel())->archiveByCategory($categoryName, $archivedAt) : 0;
 
-        return $this->redirect('success', 'Category archived successfully.');
+        $this->audit('CATEGORY_ARCHIVE', 'Archived ' . $this->categoryLabel($category, $categoryId) . '.' . $this->cascadeNote($archivedServices));
+
+        return $this->redirect('success', 'Category archived successfully.' . $this->cascadeMessage($archivedServices));
     }
 
     /**
-     * POST `admin/categories/restore/{id}`: un-archive a category and audit it.
+     * POST `admin/categories/restore/{id}`: un-archive a category and cascade the
+     * restore onto the services its archive retired (matched by category name + the
+     * shared archive timestamp), so the pair comes back together. Services archived
+     * separately keep their archived state.
      */
     public function restore(int $categoryId): RedirectResponse
     {
@@ -92,15 +101,19 @@ class CategoryController extends BaseController
             return $this->redirect('error', 'Category table is not available.');
         }
 
-        $category = $model->find($categoryId);
+        $category   = $model->find($categoryId);
+        $archivedAt = (string) ($category['dt_deleted'] ?? '');
 
         if (! $model->restore($categoryId)) {
             return $this->redirect('error', 'Unable to restore category.');
         }
 
-        $this->audit('CATEGORY_RESTORE', 'Restored ' . $this->categoryLabel($category, $categoryId) . '.');
+        $categoryName     = trim((string) ($category['name'] ?? ''));
+        $restoredServices = ($categoryName !== '' && $archivedAt !== '') ? (new ServiceModel())->restoreByCategoryArchivedAt($categoryName, $archivedAt) : 0;
 
-        return $this->redirect('success', 'Category restored successfully.');
+        $this->audit('CATEGORY_RESTORE', 'Restored ' . $this->categoryLabel($category, $categoryId) . '.' . $this->cascadeNote($restoredServices, 'restored'));
+
+        return $this->redirect('success', 'Category restored successfully.' . $this->cascadeMessage($restoredServices, 'restored'));
     }
 
     /**

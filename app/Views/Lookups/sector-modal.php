@@ -30,10 +30,10 @@
 						</div>
 					</div>
 					<div class="alert alert-warning mb-0 d-none js-sector-archive-message">
-						Archive <strong class="js-sector-archive-name">this sector</strong>? This will be blocked if records are already using it.
+						Archive <strong class="js-sector-archive-name">this sector</strong>? Every active service and program filed under it will be archived at the same time. Existing family records keep the sector.
 					</div>
 					<div class="alert alert-info mb-0 d-none js-sector-restore-message">
-						Restore <strong class="js-sector-restore-name">this sector</strong>? It will become active again and available for assignment.
+						Restore <strong class="js-sector-restore-name">this sector</strong>? It becomes active again, and the services and programs that were archived together with it are restored too.
 					</div>
 				</div>
 				<div class="modal-footer">

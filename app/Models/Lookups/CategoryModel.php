@@ -7,12 +7,12 @@ use CodeIgniter\Database\BaseBuilder;
 use CodeIgniter\Model;
 
 /**
- * Manages the sector categories table (`category`). A category groups sectors
- * by a short alpha code (SC, PWD, LGBT, …) and a display name. The standard CSWD
- * categories are seeded from the form, but every category — seeded or custom —
- * is fully managed from the "Manage Categories" admin page (rename, archive,
- * delete). Sectors link here via `sector.categoryID`. Shared CRUD and
- * management-search behaviour lives in LookupModelTrait.
+ * Manages the service categories table (`category`). After the Phase A restructure
+ * a category groups SERVICES by a short alpha code (SC, PWD, SP, B, FA, SWPS, EDA)
+ * and a display name; services link here by the category NAME stored in
+ * `services.category`. Every category is fully managed from the "Manage Categories"
+ * admin page (rename, archive, restore). Shared CRUD and management-search behaviour
+ * lives in LookupModelTrait.
  */
 class CategoryModel extends Model
 {
@@ -23,9 +23,6 @@ class CategoryModel extends Model
     protected $returnType = 'array';
     protected $allowedFields = ['code', 'name'];
     protected $useTimestamps = false;
-
-    /** Single-instance categories whose first code is the bare prefix (no "1"). */
-    private const SINGLE_INSTANCE = ['LGBT', 'OFW', 'IP', 'IDP', 'PDL'];
 
     /** Columns the Manage Categories search box matches. */
     protected function lookupSearchColumns(): array
@@ -95,50 +92,67 @@ class CategoryModel extends Model
     }
 
     /**
-     * Suggested next sector shortcode for a category code, e.g. 'SC' => 'SC10'.
-     * Scans every existing sector shortcode (incl. archived, so numbers are
-     * never reused) sharing this prefix and returns prefix.(max+1). Single-
-     * instance codes (LGBT, OFW, …) return the bare code until one exists.
-     * Replaces the per-prefix logic previously in SectorModel::nextShortcodeMap().
+     * True if any active category matches this code OR name (case-insensitive),
+     * optionally excluding one categoryID. Used to keep sectors and service
+     * categories disjoint: a new sector may not duplicate a standalone category.
      */
-    public function nextSectorCodeFor(string $code): string
+    public function activeCodeOrNameExists(string $code, string $name, ?int $excludeId = null): bool
     {
+        if (! $this->hasTable()) {
+            return false;
+        }
+
         $code = strtoupper(trim($code));
+        $name = strtolower(trim($name));
 
-        if ($code === '') {
-            return '';
+        if ($code === '' && $name === '') {
+            return false;
         }
 
-        $highest = null;
+        $builder = $this->db->table($this->table);
 
-        if ($this->db->tableExists('sector')) {
-            $rows = $this->db->table('sector')->select('shortcode')->get()->getResultArray();
-
-            foreach ($rows as $row) {
-                $shortcode = strtoupper(trim((string) ($row['shortcode'] ?? '')));
-
-                if (preg_match('/^([A-Z]+)(\d*)$/', $shortcode, $matches) !== 1) {
-                    continue;
-                }
-
-                $prefix = ($matches[1] === 'OSCA' || $matches[1] === 'OSWA') ? 'SC' : $matches[1];
-
-                if ($prefix !== $code) {
-                    continue;
-                }
-
-                $number = $matches[2] === '' ? 0 : (int) $matches[2];
-
-                if ($highest === null || $number > $highest) {
-                    $highest = $number;
-                }
-            }
+        if ($this->db->fieldExists('dt_deleted', $this->table)) {
+            $builder->where('dt_deleted IS NULL', null, false);
         }
 
-        if ($highest === null && in_array($code, self::SINGLE_INSTANCE, true)) {
-            return $code;
+        if ($excludeId !== null) {
+            $builder->where($this->primaryKey . ' !=', $excludeId);
         }
 
-        return $code . (($highest ?? 0) + 1);
+        $builder->groupStart();
+
+        if ($code !== '') {
+            $builder->where('UPPER(code)', $code);
+        }
+
+        if ($name !== '') {
+            $builder->orWhere('LOWER(name)', $name);
+        }
+
+        $builder->groupEnd();
+
+        return $builder->countAllResults() > 0;
+    }
+
+    /**
+     * True if any active service uses this category (by its name). Guards
+     * archiving/deleting a service category still in use. Categories are matched to
+     * services by the category NAME stored in `services.category`.
+     */
+    public function isUsedByServices(string $name): bool
+    {
+        $name = trim($name);
+
+        if ($name === '' || ! $this->db->tableExists('services')) {
+            return false;
+        }
+
+        $builder = $this->db->table('services')->where('category', $name);
+
+        if ($this->db->fieldExists('dt_deleted', 'services')) {
+            $builder->where('dt_deleted IS NULL', null, false);
+        }
+
+        return $builder->countAllResults() > 0;
     }
 }

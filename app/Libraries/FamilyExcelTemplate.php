@@ -95,8 +95,8 @@ class FamilyExcelTemplate
         'Education'     => 'Pick a code: E, HS, UG, Voc, CG, PG.',
         'Address'       => 'Head: full house/street address. Members: leave blank — they use the head\'s address.',
         'Barangay'      => 'Head: pick the barangay. Members: leave blank — they use the head\'s.',
-        'Sector'        => 'Sector code(s), comma-separated (e.g. SC1, PWD1). Type OTHERS for other sectors. See Reference.',
-        'Services'      => 'Service code(s), comma-separated (e.g. FA6, 4PS). See Reference.',
+        'Sector'        => 'WHO they are. Sector code(s), comma-separated: SC, PWD, SP, B, LGBT, OFW, IP, IDP, PDL. Use OTHER if none apply. See Reference.',
+        'Services'      => 'Programs RECEIVED. Service code(s), comma-separated (e.g. SC1, FA6, 4PS, EDA5). See Reference.',
     ];
 
     /** Group banners over the header (start, end, label, fill RGB). @var list<array{0:int,1:int,2:string,3:string}> */
@@ -105,7 +105,8 @@ class FamilyExcelTemplate
         [3, 6, 'NAME', 'DDEBF7'],
         [7, 14, 'PERSONAL DETAILS', 'E2EFDA'],
         [15, 16, 'ADDRESS', 'FCE4D6'],
-        [17, 18, 'BENEFITS — codes (see Reference)', 'E4DFEC'],
+        [17, 17, 'SECTOR (who) — codes', 'E4DFEC'],
+        [18, 18, 'SERVICES (programs) — codes', 'E4DFEC'],
     ];
 
     /** Builds the populated template workbook ready to stream/save. */
@@ -252,14 +253,14 @@ class FamilyExcelTemplate
         $this->writeBanners($sheet);
         $this->writeHeaderRow($sheet);
 
-        $this->writeExampleRow($sheet, 3, ['1', 'Head', 'Dela Cruz', 'Juan', 'Santos', '', '05-14-1980', 'Male', 'M - Married', '09171234567', 'Roman Catholic', 'CG - College Graduate', 'Government Employee', 'PHP 18,001 - 25,000', '123 Rizal St.', 'Binan', 'SC1, PWD1', 'FA6, 4PS']);
-        $this->writeExampleRow($sheet, 4, ['1', 'Spouse', 'Dela Cruz', 'Maria', 'Reyes', '', '09-02-1982', 'Female', 'M - Married', '09170001111', 'Roman Catholic', 'HS - High School', 'Homemaker', 'No regular income', '', '', 'SP1', '']);
-        $this->writeExampleRow($sheet, 5, ['1', 'Children', 'Dela Cruz', 'Jose', 'R', '', '01-10-2012', 'Male', 'S - Single', '', '', 'E - Elementary', 'Student', '', '', '', 'B2', '']);
-        $this->writeExampleRow($sheet, 6, ['2', 'Head', 'Reyes', 'Pedro', '', '', '07-07-1975', 'Male', 'S - Single', '', 'Islam', 'E - Elementary', 'Driver', 'PHP 8,000 - 13,000', '5 Mabini St.', 'Malaban', 'SC1, OTHERS', 'EDA5']);
+        $this->writeExampleRow($sheet, 3, ['1', 'Head', 'Dela Cruz', 'Juan', 'Santos', '', '05-14-1958', 'Male', 'M - Married', '09171234567', 'Roman Catholic', 'CG - College Graduate', 'Retired', 'PHP 8,000 - 13,000', '123 Rizal St.', 'Poblacion', 'SC', 'SC1, SC2, FA6']);
+        $this->writeExampleRow($sheet, 4, ['1', 'Spouse', 'Dela Cruz', 'Maria', 'Reyes', '', '09-02-1962', 'Female', 'M - Married', '09170001111', 'Roman Catholic', 'HS - High School', 'Homemaker', 'No regular income', '', '', 'SP', 'SP1']);
+        $this->writeExampleRow($sheet, 5, ['1', 'Children', 'Dela Cruz', 'Jose', 'R', '', '01-10-2014', 'Male', 'S - Single', '', '', 'E - Elementary', 'Student', '', '', '', 'B', 'B2, B3']);
+        $this->writeExampleRow($sheet, 6, ['2', 'Head', 'Reyes', 'Pedro', '', '', '07-07-1990', 'Male', 'S - Single', '09181234567', 'Islam', 'UG - Undergraduate', 'Driver', 'PHP 13,001 - 18,000', '5 Mabini St.', 'Malaban', 'PWD, IP', 'PWD1, EDA5, 4PS']);
 
         $lastColumn = $this->columnLetter(count(self::COLUMNS));
         $noteRow = 8;
-        $sheet->setCellValue('A' . $noteRow, 'Examples only — enter real data on the "' . self::DATA_SHEET . '" sheet. One row per person. Name order is Last Name, First Name, Middle Name. Birthday is MM-DD-YYYY. Mark each head of family with Relationship = Head. Put as many families as you like in one file: each family gets its own QR number, shared by its members. Members leave Address and Barangay blank — they automatically use the head\'s address. Sector and Services take CODES separated by commas (type OTHERS for other sectors; see the Reference sheet). " * " marks always-required columns; the Head row also needs Birthday, Sex, Civil Status, Education, Job, Monthly Income, Address and Barangay.');
+        $sheet->setCellValue('A' . $noteRow, 'Examples only — enter real data on the "' . self::DATA_SHEET . '" sheet. One row per person. Name order is Last Name, First Name, Middle Name. Birthday is MM-DD-YYYY. Mark each head of family with Relationship = Head. Put as many families as you like in one file: each family gets its own QR number, shared by its members. Members leave Address and Barangay blank — they automatically use the head\'s address. SECTOR = WHO the person is (SC, PWD, SP, B, LGBT, OFW, IP, IDP, PDL, or OTHER) and SERVICES = the programs they RECEIVED (e.g. SC1, FA6, EDA5, 4PS) — both take CODES separated by commas; see the Reference sheet. " * " marks always-required columns; the Head row also needs Birthday, Sex, Civil Status, Education, Job, Monthly Income, Address and Barangay.');
         $sheet->mergeCells('A' . $noteRow . ':' . $lastColumn . $noteRow);
         $sheet->getStyle('A' . $noteRow)->getAlignment()->setWrapText(true)->setVertical(Alignment::VERTICAL_TOP);
         $sheet->getStyle('A' . $noteRow)->getFont()->setBold(true);

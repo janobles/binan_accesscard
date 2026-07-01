@@ -11,14 +11,14 @@ use CodeIgniter\HTTP\RedirectResponse;
 
 /**
  * Handles the write/mutation actions for the `category` lookup table, posted from
- * the admin "Manage Categories" page. Read/listing is done by
- * Admin\DashboardController::categories; every action here is Developer/Admin-only
- * and redirects back to `admin/categories` with a flash message.
+ * the admin "Manage Categories" page. After the Phase A restructure a category is a
+ * SERVICE category (services link to it by the name stored in `services.category`).
+ * Read/listing is done by Admin\DashboardController::categories; every action here is
+ * Developer/Admin-only and redirects back to `admin/categories` with a flash message.
  *
  * Every category is editable, archivable, and restorable; categories are never
- * permanently deleted (archive is the only retirement path). Archiving a category
- * cascades to its active sectors (they are retired together but existing records keep
- * them); restoring the category brings back exactly that cascaded batch.
+ * permanently deleted (archive is the only retirement path). A category still used by
+ * an active service cannot be archived until those services are reassigned/archived.
  */
 class CategoryController extends BaseController
 {
@@ -42,10 +42,9 @@ class CategoryController extends BaseController
     }
 
     /**
-     * POST `admin/categories/archive/{id}`: soft-archive a category and cascade-archive
-     * its still-active sectors. The sectors are stamped with the same dt_deleted as the
-     * category so restore() can bring back exactly this batch. Existing records keep
-     * any cascaded sector (the family edit form preserves archived-but-assigned sectors).
+     * POST `admin/categories/archive/{id}`: soft-archive a category. Blocked if any
+     * active service still uses it (matched by the category name in services.category),
+     * so archiving never orphans a service's category label from the managed list.
      */
     public function archive(int $categoryId): RedirectResponse
     {
@@ -63,27 +62,21 @@ class CategoryController extends BaseController
 
         $category = $model->find($categoryId);
 
+        if ($category !== null && $model->isUsedByServices((string) ($category['name'] ?? ''))) {
+            return $this->redirect('error', 'This category is used by one or more services and cannot be archived. Reassign or archive those services first.');
+        }
+
         if (! $model->archive($categoryId)) {
             return $this->redirect('error', 'Unable to archive category.');
         }
 
-        // Cascade: archive the category's active sectors with the category's own
-        // dt_deleted timestamp, so restore() can match this exact batch.
-        $archivedAt = (string) ($model->find($categoryId)['dt_deleted'] ?? '');
-        $sectorCount = $archivedAt === '' ? 0 : (new SectorModel())->archiveByCategory($categoryId, $archivedAt);
+        $this->audit('CATEGORY_ARCHIVE', 'Archived ' . $this->categoryLabel($category, $categoryId) . '.');
 
-        $this->audit(
-            'CATEGORY_ARCHIVE',
-            'Archived ' . $this->categoryLabel($category, $categoryId) . $this->sectorSuffix($sectorCount) . '.'
-        );
-
-        return $this->redirect('success', 'Category archived successfully.' . $this->cascadeMessage($sectorCount, 'archived'));
+        return $this->redirect('success', 'Category archived successfully.');
     }
 
     /**
-     * POST `admin/categories/restore/{id}`: un-archive a category and restore the
-     * sectors that were cascade-archived with it (those whose dt_deleted matches the
-     * category's archive timestamp). Sectors archived independently stay archived.
+     * POST `admin/categories/restore/{id}`: un-archive a category and audit it.
      */
     public function restore(int $categoryId): RedirectResponse
     {
@@ -100,22 +93,15 @@ class CategoryController extends BaseController
         }
 
         $category = $model->find($categoryId);
-        $archivedAt = (string) ($category['dt_deleted'] ?? '');
 
         if (! $model->restore($categoryId)) {
             return $this->redirect('error', 'Unable to restore category.');
         }
 
-        $sectorCount = $archivedAt === '' ? 0 : (new SectorModel())->restoreByCategoryArchivedAt($categoryId, $archivedAt);
+        $this->audit('CATEGORY_RESTORE', 'Restored ' . $this->categoryLabel($category, $categoryId) . '.');
 
-        $this->audit(
-            'CATEGORY_RESTORE',
-            'Restored ' . $this->categoryLabel($category, $categoryId) . $this->sectorSuffix($sectorCount) . '.'
-        );
-
-        return $this->redirect('success', 'Category restored successfully.' . $this->cascadeMessage($sectorCount, 'restored'));
+        return $this->redirect('success', 'Category restored successfully.');
     }
-
 
     /**
      * Shared create/update logic. Validates the code (letters only) and name,
@@ -158,6 +144,12 @@ class CategoryController extends BaseController
             return $this->redirect('error', 'Duplicate code "' . $code . '". Please enter another code.');
         }
 
+        // A sector already acts as its own service category, so a category may not
+        // duplicate one — keep the two lists disjoint (Phase B).
+        if ((new SectorModel())->activeCodeOrNameExists($code, $name)) {
+            return $this->redirect('error', 'A sector already uses this code or name. A sector acts as its own service category — assign programs to it in Sector Management instead of adding a duplicate category here.');
+        }
+
         $data = [
             'code' => $code,
             'name' => $name,
@@ -185,22 +177,6 @@ class CategoryController extends BaseController
     private function redirect(string $type, string $message): RedirectResponse
     {
         return $this->redirectAdmin('admin/categories', $type, $message);
-    }
-
-    /** Audit-suffix for the linked sectors touched by a cascade, e.g. " and 3 linked sectors". */
-    private function sectorSuffix(int $count): string
-    {
-        return $count > 0 ? ' and ' . $count . ' linked sector' . ($count === 1 ? '' : 's') : '';
-    }
-
-    /** Flash-message tail for the cascade, e.g. " 3 linked sectors archived too.". */
-    private function cascadeMessage(int $count, string $verb): string
-    {
-        if ($count <= 0) {
-            return '';
-        }
-
-        return ' ' . $count . ' linked sector' . ($count === 1 ? '' : 's') . ' ' . $verb . ' too.';
     }
 
     /** Human-readable category label for audit descriptions, e.g. "category SC (Senior Citizen) #3". */

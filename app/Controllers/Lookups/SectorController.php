@@ -123,6 +123,12 @@ class SectorController extends BaseController
 
         $sector = $model->find($sectorId);
 
+        // A sector doubles as a service category; block deleting one that still backs a
+        // service's category label (archive stays allowed — it only retires new picks).
+        if ($sector !== null && $model->usedAsServiceCategory((string) ($sector['name'] ?? ''))) {
+            return $this->redirectAdmin('admin/sectors', 'error', 'This sector is used as a service category by one or more services and cannot be deleted. Reassign or archive those services first.');
+        }
+
         if (! $model->delete($sectorId)) {
             return $this->redirectAdmin('admin/sectors', 'error', 'Unable to delete sector.');
         }
@@ -133,9 +139,9 @@ class SectorController extends BaseController
     }
 
     /**
-     * Shared create/update logic for sectors. Resolves the shortcode (including
-     * the "__other__" custom option), validates required fields, blocks duplicate
-     * codes (excluding the row being edited), saves via SectorModel, and audits.
+     * Shared create/update logic for sectors. Sectors are flat classifications
+     * (no category), so this validates the code + name, blocks duplicate codes
+     * (excluding the row being edited), saves via SectorModel, and audits.
      * $sectorId null = create, otherwise update.
      */
     private function saveSector(?int $sectorId = null): RedirectResponse
@@ -152,51 +158,8 @@ class SectorController extends BaseController
             return $this->redirectAdmin('admin/sectors', 'error', 'Sector table is not available.');
         }
 
-        // The category dropdown posts a categoryID linking the sector to the
-        // `category` table. The special "__other__" value means the user typed a
-        // new custom category inline (created/reused here before the sector saves).
-        $categoryModel = new CategoryModel();
-        $categoryRaw = trim((string) $this->request->getPost('categoryID'));
-
-        if ($categoryRaw === '__other__') {
-            $newCode = strtoupper(trim((string) $this->request->getPost('new_category_code')));
-            $newName = trim((string) $this->request->getPost('new_category_name'));
-
-            if ($newCode === '' || preg_match('/^[A-Z]+$/', $newCode) !== 1) {
-                return $this->redirectAdmin('admin/sectors', 'error', 'Custom category code must be letters only (e.g. NEW).');
-            }
-
-            if ($newName === '') {
-                return $this->redirectAdmin('admin/sectors', 'error', 'Custom category name is required.');
-            }
-
-            // Reuse an existing category with the same code, otherwise create one.
-            $category = $categoryModel->findByCode($newCode);
-
-            if ($category === null) {
-                $categoryId = $categoryModel->create([
-                    'code' => $newCode,
-                    'name' => $newName,
-                ]);
-                $category = $categoryModel->find($categoryId);
-                $this->audit('CATEGORY_CREATE', 'Created category ' . $newCode . ' (' . $newName . ') from the Add Sector form.');
-            } else {
-                $categoryId = (int) ($category['categoryID'] ?? 0);
-            }
-        } else {
-            $categoryId = (int) $categoryRaw;
-            $category = $categoryModel->find($categoryId);
-
-            if ($categoryId <= 0 || $category === null) {
-                return $this->redirectAdmin('admin/sectors', 'error', 'Please select a category.');
-            }
-        }
-
-        $shortcode = trim((string) $this->request->getPost('shortcode'));
-
         $data = [
-            'shortcode' => strtoupper($shortcode),
-            'categoryID' => $categoryId,
+            'shortcode' => strtoupper(trim((string) $this->request->getPost('shortcode'))),
             'name' => trim((string) $this->request->getPost('name')),
             'description' => trim((string) $this->request->getPost('description')),
         ];
@@ -204,10 +167,6 @@ class SectorController extends BaseController
         if ($data['shortcode'] === '' && $sectorId !== null) {
             $existingSector = $model->find($sectorId);
             $data['shortcode'] = strtoupper(trim((string) ($existingSector['shortcode'] ?? '')));
-        }
-
-        if ($data['shortcode'] === '' && str_contains(strtoupper($data['name']), 'REGISTERED OSCA')) {
-            $data['shortcode'] = 'OSCA1';
         }
 
         if ($data['shortcode'] === '' || $data['name'] === '') {
@@ -220,6 +179,12 @@ class SectorController extends BaseController
             return $this->redirectAdmin('admin/sectors', 'error', 'Duplicate code "' . $data['shortcode'] . '". Please enter another code.');
         }
 
+        // Keep sectors and standalone service categories disjoint (Phase B): a sector
+        // may not duplicate a Manage-Categories entry (FA/SWPS/EDA).
+        if ((new CategoryModel())->activeCodeOrNameExists($data['shortcode'], $data['name'])) {
+            return $this->redirectAdmin('admin/sectors', 'error', 'A service category already uses this code or name. Manage it under Manage Categories, or choose a different sector code/name.');
+        }
+
         $isUpdate = $sectorId !== null;
 
         if (! $model->saveSectorRecord($data, $sectorId)) {
@@ -228,8 +193,7 @@ class SectorController extends BaseController
 
         $this->audit(
             $isUpdate ? 'SECTOR_UPDATE' : 'SECTOR_CREATE',
-            ($isUpdate ? 'Updated' : 'Created') . ' sector ' . $data['shortcode'] . ' (' . $data['name'] . ')'
-                . ' under category ' . (string) ($category['code'] ?? '') . '.'
+            ($isUpdate ? 'Updated' : 'Created') . ' sector ' . $data['shortcode'] . ' (' . $data['name'] . ').'
         );
 
         $message = $isUpdate ? 'Sector updated successfully.' : 'Sector added successfully.';

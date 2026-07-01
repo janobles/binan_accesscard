@@ -27,6 +27,43 @@
 })(window);
 
 (function (window, document) {
+    function parseJson(value, fallback) {
+        try {
+            const parsed = JSON.parse(value || '');
+
+            return parsed === null ? fallback : parsed;
+        } catch (error) {
+            return fallback;
+        }
+    }
+
+    // Auto-fills the Code from the selected category's next suggested code
+    // (data-next-code-map is keyed by category NAME, e.g. "Bata (Children)" => "B4").
+    // Only while ADDING — never renumbers an existing service on edit. Picking the
+    // blank/"Others" option clears the code so a custom category code can be typed.
+    function autofillServiceCode(select, modal) {
+        const form = modal ? modal.querySelector('form') : null;
+        const code = modal ? modal.querySelector('#serviceModalShortcode') : null;
+
+        if (!form || !code || String(form.dataset.serviceMode || 'create') !== 'create') {
+            return;
+        }
+
+        const value = String(select.value || '');
+
+        if (value === '' || value === '__other__') {
+            code.value = '';
+
+            return;
+        }
+
+        const map = parseJson(form.dataset.nextCodeMap, {});
+
+        if (Object.prototype.hasOwnProperty.call(map, value)) {
+            code.value = String(map[value] || '');
+        }
+    }
+
     function syncOtherSelect(select, root) {
         if (!select) {
             return;
@@ -103,6 +140,7 @@
 
         form.reset();
         form.action = form.dataset.createAction || '';
+        form.dataset.serviceMode = mode;
 
         if (mode === 'update') {
             form.action = (form.dataset.updateAction || '').replace(/\/$/, '') + '/' + serviceId;
@@ -187,7 +225,9 @@
 
     document.addEventListener('change', function (event) {
         if (event.target.matches('#serviceModalCategory')) {
-            syncOtherSelect(event.target, document.getElementById('serviceActionModal'));
+            const modal = document.getElementById('serviceActionModal');
+            syncOtherSelect(event.target, modal);
+            autofillServiceCode(event.target, modal);
         }
     });
 })(window, document);

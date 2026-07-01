@@ -6,7 +6,8 @@
                                 data-create-action="<?= site_url('admin/services/create') ?>"
                                 data-update-action="<?= site_url('admin/services/update') ?>"
                                 data-archive-action="<?= site_url('admin/services/archive') ?>"
-                                data-restore-action="<?= site_url('admin/services/restore') ?>">
+                                data-restore-action="<?= site_url('admin/services/restore') ?>"
+                                data-next-code-map="<?= esc(json_encode((object) ($serviceNextCodeMap ?? [])), 'attr') ?>">
                                 <?= csrf_field() ?>
                                 <div class="modal-header">
                                         <h5 class="modal-title" id="serviceActionModalLabel">Service or Program</h5>

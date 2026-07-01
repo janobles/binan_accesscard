@@ -64,6 +64,39 @@ class ServiceModel extends Model
     }
 
     /**
+     * Suggested next service shortcode for a code prefix, e.g. 'B' => 'B4' when
+     * B1..B3 already exist, or 'EDA' => 'EDA10'. Scans every existing service
+     * shortcode (INCLUDING archived, so numbers are never reused) that is exactly
+     * this prefix followed by digits, and returns prefix.(max+1). A prefix with no
+     * numbered services yet returns prefix.'1'. Drives the Add-Program modal's
+     * category-driven code auto-fill (public/assets/js/dashboard/services-modal.js);
+     * the prefix comes from the selected sector's shortcode or category's code, so it
+     * stays correct as workers add new sectors/categories/services.
+     */
+    public function nextCodeForPrefix(string $prefix): string
+    {
+        $prefix = strtoupper(trim($prefix));
+
+        if ($prefix === '' || ! $this->db->tableExists($this->table)) {
+            return '';
+        }
+
+        $highest = 0;
+
+        foreach ($this->db->table($this->table)->select('shortcode')->get()->getResultArray() as $row) {
+            $code = strtoupper(trim((string) ($row['shortcode'] ?? '')));
+
+            if (preg_match('/^([A-Z]+)(\d+)$/', $code, $matches) !== 1 || $matches[1] !== $prefix) {
+                continue;
+            }
+
+            $highest = max($highest, (int) $matches[2]);
+        }
+
+        return $prefix . ($highest + 1);
+    }
+
+    /**
      * Returns the next service ID (max + 1). serviceID is not auto-increment here,
      * so create flows assign it explicitly.
      */

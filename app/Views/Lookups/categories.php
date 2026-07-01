@@ -1,13 +1,14 @@
 <?php
 /*
- * "Manage Categories" management page. Lists the sector categories from the
- * `category` table and lets an admin add/rename/archive/restore/delete them via
+ * "Manage Categories" management page. Lists the standalone SERVICE categories from
+ * the `category` table (FA/SWPS/EDA — the ones with no matching sector; a sector acts
+ * as its own service category) and lets an admin add/rename/archive/restore them via
  * the shared #categoryActionModal (see category-modal.php + categories-modal.js).
  *
- * Every category is fully editable, archivable, and deletable; the only
- * server-side guard (in Lookups\CategoryController) blocks archiving/deleting a
- * category still linked to sectors. Reuses the Manage Records .records-* layout
- * (managerecord.css) plus the shared lookup badge/action styles (lookupmanagement.css).
+ * Server-side guards (Lookups\CategoryController): a category may not duplicate a sector
+ * (code or name), and one still used by an active service cannot be archived. Reuses the
+ * Manage Records .records-* layout (managerecord.css) plus the shared lookup badge/action
+ * styles (lookupmanagement.css).
  */
 helper('dashboard_view');
 // category_management_view_data() also supplies $existingCodes (all codes incl.

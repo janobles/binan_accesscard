@@ -7,6 +7,7 @@ namespace App\Support;
  */
 class FamilyProfilingFormV2
 {
+    /** The sectors (a person's classification) — code => display name. */
     public const SECTOR_CATEGORIES = [
         'SC' => 'Senior Citizen',
         'PWD' => 'Person with Disability',
@@ -17,11 +18,15 @@ class FamilyProfilingFormV2
         'IP' => 'Indigenous People',
         'IDP' => 'Internally Displaced Person',
         'PDL' => 'Persons Deprived of Liberty',
-        'SBS' => 'Small Business Sector',
         'OTHER' => 'Other Sectors',
     ];
 
+    /** The service categories (programs a person received are grouped by these). */
     public const SERVICE_CATEGORIES = [
+        'Senior Citizen',
+        'Person with Disability',
+        'Solo Parent',
+        'Bata (Children)',
         'Financial Assistance Programs',
         'Social Welfare Programs and Services',
         'Emergency / Disaster Assistance Programs',

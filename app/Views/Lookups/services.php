@@ -1,12 +1,10 @@
 <?php
 helper('dashboard_view');
+// service_management_view_data() supplies $serviceCategoryOptions (managed category
+// names from the Manage Categories page + any categories already on services) for the
+// Add-Program modal dropdown, so this view stays model-free.
 extract(service_management_view_data(get_defined_vars()), EXTR_OVERWRITE);
-$defaultServiceCategoryOptions = \App\Support\FamilyProfilingFormV2::SERVICE_CATEGORIES;
-$serviceCategoryOptions = array_values(array_unique(array_filter(array_map(
-    static fn (array $service): string => trim((string) ($service['category'] ?? '')),
-    $services
-))));
-$serviceCategoryOptions = array_values(array_unique(array_merge($defaultServiceCategoryOptions, $serviceCategoryOptions)));
+$serviceCategoryOptions = $serviceCategoryOptions ?? [];
 
 // Counts come from the server bundle (whole table), not the current page below.
 $activeServiceCount   = (int) ($activeCount ?? 0);
@@ -179,5 +177,6 @@ $serviceClearUrl = static function () use ($listRoute, $status, $perPage): strin
 <?php if ($canManage): ?>
 <?= view('Lookups/service-modal', [
 	'serviceCategoryOptions' => $serviceCategoryOptions,
+	'serviceNextCodeMap' => $serviceNextCodeMap ?? [],
 ]) ?>
 <?php endif; ?>

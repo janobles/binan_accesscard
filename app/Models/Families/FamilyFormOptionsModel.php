@@ -133,9 +133,9 @@ class FamilyFormOptionsModel extends Model
             'formOptions' => $options,
             'sectorOptions' => $sectorOptions,
             'sectorCatalog' => $sectorModel->getSectorCatalog($sectorOptions),
-            // Code => name map for the grouped sector headings; fetched here so the
-            // member-fields partial never has to touch a model itself.
-            'sectorCategoryLabels' => $sectorModel->categoryLabelMap(),
+            // Sectors are flat classifications now, so there are no per-category
+            // headings; kept as an empty map for the member-fields partial's signature.
+            'sectorCategoryLabels' => [],
             // Text dropdowns are alphabetized for the form ("Other/Others" pinned last).
             // Suffix (Jr, Sr, I-V) and income brackets (numeric low->high) keep their order.
             'sexOptions' => $this->sortLabelOptions($options['sexes'] ?? []),

@@ -1,6 +1,30 @@
 <?php
 helper('family_modal');
-extract(family_modal_prepare(get_defined_vars()), EXTR_OVERWRITE);
+
+/** @var string $action */
+/** @var string $fieldPrefix */
+/** @var string $modalTitle */
+/** @var string $modalMode */
+/** @var string $submitLabel */
+/** @var int $headId */
+/** @var bool $saveDisabled */
+/** @var array $suffixOptions */
+/** @var array $sexOptions */
+/** @var array $civilOptions */
+/** @var array $barangayOptions */
+/** @var array $relationshipOptions */
+/** @var array $educationOptions */
+/** @var array $jobOptions */
+/** @var array $religionOptions */
+/** @var array $incomeOptions */
+/** @var array $sectorCatalog */
+/** @var array $servicesByCategory */
+/** @var array $selectedSectorIds */
+/** @var array $selectedServiceIds */
+/** @var callable $oldValue */
+/** @var callable $selectOptions */
+/** @var callable $sectorLabel */
+/** @var callable $serviceLabel */
 
 // Members already on the record (Update mode); empty for a new record. Rendered
 // server-side so an edit re-posts them — FamilyController::update() rebuilds the

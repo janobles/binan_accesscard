@@ -77,7 +77,7 @@ class DashboardPageBuilder
         $sectorModel = new SectorModel();
         $serviceModel = new ServiceModel();
 
-        $sectorOptions = $sectorModel->getAll();
+        $sectorOptions = $sectorModel->getActive();
 
         $recentFamilies = $activePage === 'dashboard' && ($searchTerm !== '' || $hasSearchFilters)
             ? $searchModel->families($searchTerm, $searchFilters, 25)
@@ -413,7 +413,7 @@ class DashboardPageBuilder
         $searchFilters = $this->searchFilters();
         $hasSearchFilters = $this->hasSearchFilters($searchFilters);
         $userId = (int) session()->get('user_id');
-        $sectorOptions = (new SectorModel())->getAll();
+        $sectorOptions = (new SectorModel())->getActive();
         $recordListData = $activePage === 'family-manage'
             ? $this->buildEmployeeRecordListData()
             : [];

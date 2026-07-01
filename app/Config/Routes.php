@@ -37,6 +37,7 @@ $routes->group('admin', static function (RouteCollection $routes): void {
         $routes->get('data', 'Families\FamilyController::dataTable');
         $routes->get('create', 'Families\FamilyController::createFamily');
         $routes->get('view/(:num)', 'Families\FamilyController::viewFamily/$1');
+        $routes->post('update/(:num)', 'Families\FamilyController::update/$1');
         $routes->post('archive/(:num)', 'Families\FamilyController::archive/$1');
         $routes->post('restore/(:num)', 'Families\FamilyController::restore/$1');
     });
@@ -79,6 +80,7 @@ $routes->group('employee', static function (RouteCollection $routes): void {
         $routes->get('data', 'Families\FamilyController::dataTable');
         $routes->get('create', 'Families\FamilyController::createFamily');
         $routes->get('view/(:num)', 'Families\FamilyController::viewFamily/$1');
+        $routes->post('update/(:num)', 'Families\FamilyController::update/$1');
         $routes->post('archive/(:num)', 'Families\FamilyController::archive/$1');
         $routes->post('restore/(:num)', 'Families\FamilyController::restore/$1');
     });
@@ -105,6 +107,7 @@ $routes->group('viewer', static function (RouteCollection $routes): void {
 /*
  * Shared submissions
  */
+$routes->post('families', 'Families\FamilyController::store');
 $routes->post('developer/accounts', 'Accounts\AccountController::create');
 $routes->post('developer/accounts/status', 'Accounts\AccountController::updateStatus');
 

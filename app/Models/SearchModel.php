@@ -214,27 +214,6 @@ class SearchModel
         return $builder;
     }
 
-    /** Applies a whitelisted order to the all-members search query. */
-    private function applyAllMembersOrder(BaseBuilder $builder, string $orderKey, string $orderDirection): void
-    {
-        $direction = strtolower($orderDirection) === 'desc' ? 'DESC' : 'ASC';
-
-        if ($orderKey === 'address') {
-            $builder->orderBy('m.address', $direction);
-            return;
-        }
-
-        if ($orderKey === 'birthday') {
-            $builder->orderBy('m.birthday', $direction);
-            return;
-        }
-
-        $builder
-            ->orderBy('m.lastname', $direction)
-            ->orderBy('m.firstname', $direction)
-            ->orderBy('m.middlename', $direction);
-    }
-
     /**
      * Adds a member keyword clause to a query. Each whitespace token must match one
      * of the name columns (AND across tokens, OR across firstname/middlename/lastname),

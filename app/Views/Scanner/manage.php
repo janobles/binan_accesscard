@@ -23,6 +23,12 @@
         </div>
       </div>
 
+      <div class="table-meta">
+        <div class="records-table-controls">
+          <span class="text-muted small" id="distCount"></span>
+        </div>
+      </div>
+
       <div class="table-responsive">
         <table class="table table-sm manage-record-table align-middle w-100" id="distTable">
           <thead>
@@ -151,14 +157,26 @@
 <?= $this->section('scripts') ?>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  if (window.jQuery && jQuery.fn.DataTable) {
-    // Table only (no default search/length UI) — external search box mirrors the Lookups layout.
-    const dt = jQuery('#distTable').DataTable({ dom: 'rtip', order: [[0, 'desc']] });
-    const box = document.getElementById('distSearch');
-    if (box) {
-      box.addEventListener('input', () => dt.search(box.value).draw());
-    }
-  }
+  // Lightweight client-side filter + live count (small read-only log; no server paging).
+  const table = document.getElementById('distTable');
+  const box   = document.getElementById('distSearch');
+  const count = document.getElementById('distCount');
+  if (!table) return;
+  const rows = Array.from(table.tBodies[0].rows).filter(r => !r.querySelector('.sector-empty-state'));
+
+  const render = () => {
+    const q = (box.value || '').trim().toLowerCase();
+    let shown = 0;
+    rows.forEach(r => {
+      const match = q === '' || r.textContent.toLowerCase().includes(q);
+      r.hidden = !match;
+      if (match) shown++;
+    });
+    if (count) count.textContent = 'Showing ' + shown + ' of ' + rows.length + ' distribution' + (rows.length === 1 ? '' : 's');
+  };
+
+  if (box) box.addEventListener('input', render);
+  render();
 });
 </script>
 <?= $this->endSection() ?>

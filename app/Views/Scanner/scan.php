@@ -1,7 +1,7 @@
 <?= $this->extend('Scanner/layout') ?>
 <?= $this->section('content') ?>
 
-<div class="card shadow-sm mb-3">
+<div class="card border-0 shadow-sm rounded-3 mb-3">
   <div class="card-body">
     <label for="controlInput" class="form-label fw-bold">Scan or enter QR control number</label>
     <div class="input-group">
@@ -18,24 +18,26 @@
 </div>
 
 <div id="familyPanel" hidden>
-  <div class="card shadow-sm mb-3">
-    <div class="card-header fw-bold">Family Head</div>
-    <div class="card-body" id="headBody"></div>
+  <div class="card border-0 shadow-sm rounded-3 mb-3">
+    <div class="card-body">
+      <div class="fw-bold mb-2">Family Head</div>
+      <div id="headBody"></div>
+    </div>
   </div>
 
-  <div class="card shadow-sm mb-3">
-    <div class="card-header fw-bold">Members</div>
+  <div class="card border-0 shadow-sm rounded-3 mb-3">
+    <div class="fw-bold px-3 pt-3 pb-2">Members</div>
     <ul class="list-group list-group-flush" id="membersList"></ul>
   </div>
 
-  <div class="card shadow-sm mb-3">
-    <div class="card-header fw-bold">Aid History</div>
+  <div class="card border-0 shadow-sm rounded-3 mb-3">
+    <div class="fw-bold px-3 pt-3 pb-2">Aid History</div>
     <ul class="list-group list-group-flush" id="historyList"></ul>
   </div>
 
-  <div class="card shadow-sm mb-3" id="logPanel">
-    <div class="card-header fw-bold">Log Distribution</div>
+  <div class="card border-0 shadow-sm rounded-3 mb-3" id="logPanel">
     <div class="card-body">
+      <div class="fw-bold mb-2">Log Distribution</div>
       <div id="logAlert" class="alert alert-success mb-3" hidden></div>
       <form id="logForm">
         <input type="hidden" id="control_no" name="control_no">

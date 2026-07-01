@@ -1,22 +1,39 @@
-<div class="container py-4" id="qr-cards-page">
-    <h3 class="mb-3">QR Access Cards</h3>
-    <p class="text-muted">Generate printable QR cards for registered heads of family. Leave filters blank to print all active heads.</p>
+<?php
+// Self-contained (the layout includes this with no data). Barangay + sector
+// pickers come from the canonical sources so the filter values always match
+// what headsForCards() compares against — a free-text barangay silently matched
+// nothing when it differed from the stored value.
+$barangayList  = \App\Support\FamilyProfilingFormV2::barangays();
+$sectorOptions = (new \App\Models\Lookups\SectorModel())->getSectorOptions();
+?>
+<div class="sector-management records-scroll-panel" id="qr-cards-page">
+    <div class="records-search-panel">
+        <form id="qr-cards-form" class="records-search-row" autocomplete="off">
+            <?= csrf_field() ?>
+            <select class="form-select" id="qr-barangay" name="barangay" aria-label="Barangay">
+                <option value="">All barangays</option>
+                <?php foreach ($barangayList as $barangay): ?>
+                    <option value="<?= esc($barangay, 'attr') ?>"><?= esc($barangay) ?></option>
+                <?php endforeach; ?>
+            </select>
+            <select class="form-select" id="qr-sector" name="sectorID" aria-label="Sector">
+                <option value="">All sectors</option>
+                <?php foreach ($sectorOptions as $sector): ?>
+                    <option value="<?= esc((string) ($sector['sectorID'] ?? ''), 'attr') ?>">
+                        <?= esc((string) ($sector['name'] ?? '')) ?><?= ! empty($sector['shortcode']) ? ' (' . esc((string) $sector['shortcode']) . ')' : '' ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+            <button type="submit" class="btn btn-primary records-search-action" id="qr-generate-btn"><i class="bi bi-printer" aria-hidden="true"></i><span>Generate cards</span></button>
+        </form>
+    </div>
 
-    <form id="qr-cards-form" class="row g-3" autocomplete="off">
-        <?= csrf_field() ?>
-        <div class="col-md-4">
-            <label class="form-label" for="qr-barangay">Barangay (optional)</label>
-            <input type="text" class="form-control" id="qr-barangay" name="barangay">
+    <div class="table-meta">
+        <div class="records-table-controls">
+            <span class="text-muted small">Generate printable QR cards for registered heads of family. Leave the filters on "All" to print every active head.</span>
+            <span id="qr-status" class="text-muted small"></span>
         </div>
-        <div class="col-md-4">
-            <label class="form-label" for="qr-sector">Sector ID (optional)</label>
-            <input type="number" min="1" class="form-control" id="qr-sector" name="sectorID">
-        </div>
-        <div class="col-12">
-            <button type="submit" class="btn btn-primary" id="qr-generate-btn">Generate cards</button>
-            <span id="qr-status" class="ms-2 text-muted"></span>
-        </div>
-    </form>
+    </div>
 </div>
 
 <script>

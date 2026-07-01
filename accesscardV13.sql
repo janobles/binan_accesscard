@@ -7131,7 +7131,7 @@ CREATE TABLE `users` (
   `username` varchar(255) NOT NULL,
   `full_description` varchar(255) DEFAULT NULL,
   `password` text NOT NULL,
-  `account_level` enum('administrator','encoder','viewer') NOT NULL DEFAULT 'encoder',
+  `account_level` enum('administrator','encoder','viewer','scanner') NOT NULL DEFAULT 'encoder',
   `isactive` enum('Enable','Disabled') DEFAULT NULL,
   `dt_created` timestamp NOT NULL DEFAULT current_timestamp(),
   `dt_updated` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()

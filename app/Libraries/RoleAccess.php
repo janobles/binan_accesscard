@@ -29,6 +29,7 @@ class RoleAccess
             'admin', 'administrator'       => 'Admin',
             'user', 'encoder', 'employee'  => 'Employee',
             'viewer'                       => 'Viewer',
+            'scanner'                      => 'Scanner',
             default                        => null,
         };
     }
@@ -159,6 +160,10 @@ class RoleAccess
         // Viewer has a read-only dashboard (Viewer\DashboardController).
         if ($normalizedRole === 'Viewer') {
             return redirect()->to(site_url('viewer/dashboard'));
+        }
+
+        if ($normalizedRole === 'Scanner') {
+            return redirect()->to(site_url('scanner/scan'));
         }
 
         session()->destroy();

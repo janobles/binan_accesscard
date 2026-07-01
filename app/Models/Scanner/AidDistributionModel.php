@@ -63,7 +63,7 @@ class AidDistributionModel extends Model
     public function allDistributions(): array
     {
         try {
-            return $this->select('aid_distribution.aidID, aid_distribution.claim_date,'
+            return $this->select('aid_distribution.aidID, aid_distribution.control_no, aid_distribution.claim_date,'
                     . " aid_type.name AS aid_type,"
                     . " TRIM(CONCAT(member.firstname, ' ', member.lastname)) AS claimant,"
                     . " TRIM(CONCAT(head.firstname, ' ', head.lastname)) AS head,"

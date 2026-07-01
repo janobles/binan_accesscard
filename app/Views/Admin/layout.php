@@ -95,6 +95,9 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
         <li class="nav-item">
             <a class="nav-link <?= esc($navActive['cards'] ?? '') ?>" href="<?= site_url('admin/cards') ?>"><i class="bi bi-qr-code" aria-hidden="true"></i><span>QR Cards</span></a>
         </li>
+        <li class="nav-item">
+            <a class="nav-link <?= esc($navActive['scanner'] ?? '') ?>" href="<?= site_url('scanner/scan') ?>"><i class="bi bi-upc-scan" aria-hidden="true"></i><span>Scanner</span></a>
+        </li>
         <li><hr class="sidebar-divider"></li>
         <li><div class="sidebar-heading">Administration</div></li>
         <?php if ($canManageAccounts): ?>

@@ -61,7 +61,10 @@ async function lookup(control) {
     `<div class="fw-bold">${esc(h.firstname)} ${esc(h.lastname)}</div>` +
     `<div class="text-muted small">${esc(h.address)}</div>`;
   $('membersList').innerHTML = data.members
-    .map(m => `<li class="list-group-item">${esc(m.firstname)} ${esc(m.lastname)} (${esc(m.relationship || 'Member')})</li>`).join('');
+    .map(m => `<li class="list-group-item">
+        <div>${esc(m.firstname)} ${esc(m.lastname)} <span class="text-muted">(${esc(m.relationship || 'Member')})</span></div>
+        <div class="small text-muted">${esc(m.sex || '—')} · ${esc(m.birthday || '—')}</div>
+      </li>`).join('');
   renderHistory(data.history);
   $('logDistLink').href = `${BASE}/scanner/manage?control_no=${encodeURIComponent(data.control_no)}`;
   $('familyPanel').hidden = false;

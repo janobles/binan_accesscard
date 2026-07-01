@@ -486,7 +486,7 @@ class MemberModel extends Model
         }
 
         $builder = $this->db->table('member')
-            ->select('memberID, firstname, lastname, relationship')
+            ->select('memberID, firstname, lastname, relationship, birthday, sex')
             ->where('headID', $headId);
 
         if ($this->db->fieldExists('dt_deleted', 'member')) {

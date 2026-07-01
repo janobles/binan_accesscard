@@ -19,7 +19,7 @@ use CodeIgniter\HTTP\ResponseInterface;
  * Renders inside the dashboard shell (Scanner/layout) with a scanner-only sidebar.
  *
  * - scan():   GET  scanner/scan          -> read-only lookup (family + history).
- * - manage(): GET  scanner/manage        -> Manage Distributions tab (log form).
+ * - manage(): moved to Scanner\ManageController::index().
  * - lookup(): GET  scanner/lookup/{num}  -> JSON {head, members, history}.
  * - logAid(): POST scanner/log           -> insert + audit, returns refreshed history.
  */
@@ -40,30 +40,6 @@ class ScanController extends BaseController
             'pageTitle' => 'Scan',
             'username'  => session('username') ?? 'Scanner',
             'aidTypes'  => model(AidTypeModel::class)->active(),
-            'currentRole' => $role,
-            'canManageAccounts' => $canManage,
-            'sidebarRoleClass' => $canManage ? 'developer' : 'admin',
-            'sidebarUserUrl' => site_url('admin/dashboard'),
-            'navActive' => ['scanner' => 'active'],
-        ]);
-    }
-
-    public function manage(): ResponseInterface|string
-    {
-        $guard = RoleAccess::requireRole(['Scanner', 'Admin', 'Developer']);
-        if ($guard instanceof RedirectResponse) {
-            return $guard;
-        }
-
-        $role = RoleAccess::normalizeRole((string) session()->get('role'));
-        $canManage = in_array($role, ['Developer', 'Admin'], true);
-
-        return view('Scanner/manage', [
-            'activeTab'       => 'manage',
-            'pageTitle'       => 'Manage Distributions',
-            'username'        => session('username') ?? 'Scanner',
-            'aidTypes'        => model(AidTypeModel::class)->active(),
-            'prefillControl'  => ($c = (int) $this->request->getGet('control_no')) > 0 ? $c : null,
             'currentRole' => $role,
             'canManageAccounts' => $canManage,
             'sidebarRoleClass' => $canManage ? 'developer' : 'admin',

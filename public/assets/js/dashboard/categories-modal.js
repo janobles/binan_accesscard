@@ -67,6 +67,7 @@
         const submit = modal.querySelector('.js-category-modal-submit');
         const code = modal.querySelector('#categoryModalCode');
         const name = modal.querySelector('#categoryModalName');
+        const description = modal.querySelector('#categoryModalDescription');
         const archiveName = modal.querySelector('.js-category-archive-name');
         const restoreName = modal.querySelector('.js-category-restore-name');
         const categoryId = String(trigger.dataset.categoryId || '').trim();
@@ -115,7 +116,7 @@
             restoreMessage.classList.toggle('d-none', !isRestore);
         }
 
-        [code, name].forEach(function (field) {
+        [code, name, description].forEach(function (field) {
             if (field) {
                 field.disabled = isAction;
                 field.required = !isAction && field.hasAttribute('required');
@@ -129,6 +130,10 @@
 
             if (name) {
                 name.value = mode === 'update' ? String(trigger.dataset.categoryName || '') : '';
+            }
+
+            if (description) {
+                description.value = mode === 'update' ? String(trigger.dataset.categoryDescription || '') : '';
             }
 
             validateCode(modal);

@@ -85,14 +85,14 @@ $sectorClearUrl = static function () use ($listRoute, $status, $perPage): string
 	</div>
 
 	<div class="table-responsive">
-		<table class="table table-sm manage-record-table align-middle">
+		<table class="table table-sm manage-record-table align-middle lookup-management-table lookup-management-table--sectors">
 			<thead>
 				<tr>
-					<th>Name</th>
-					<th>Shortcode</th>
-					<th>Description</th>
-					<th>Status</th>
-					<?php if ($canManage): ?><th class="text-end">Actions</th><?php endif; ?>
+					<th class="lookup-col-name">Name</th>
+					<th class="lookup-col-code">Shortcode</th>
+					<th class="lookup-col-description">Description</th>
+					<th class="lookup-col-status">Status</th>
+					<?php if ($canManage): ?><th class="lookup-col-actions text-end">Actions</th><?php endif; ?>
 				</tr>
 			</thead>
 			<tbody>

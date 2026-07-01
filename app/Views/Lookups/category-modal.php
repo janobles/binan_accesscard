@@ -24,6 +24,10 @@
 							<label class="form-label" for="categoryModalName">Name</label>
 							<input class="form-control" id="categoryModalName" name="name" maxlength="150" required>
 						</div>
+						<div class="mt-3 mb-0">
+							<label class="form-label" for="categoryModalDescription">Description</label>
+							<textarea class="form-control" id="categoryModalDescription" name="description" rows="3" maxlength="255"></textarea>
+						</div>
 					</div>
 					<div class="alert alert-warning mb-0 d-none js-category-archive-message">
 						Archive <strong class="js-category-archive-name">this category</strong>? This will be blocked if any sectors still use it.

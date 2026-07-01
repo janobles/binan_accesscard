@@ -124,6 +124,7 @@ class CategoryController extends BaseController
 
         $code = strtoupper(trim((string) $this->request->getPost('code')));
         $name = trim((string) $this->request->getPost('name'));
+        $description = trim((string) $this->request->getPost('description'));
 
         $isUpdate = $categoryId !== null;
         $existing = $isUpdate ? $model->find($categoryId) : null;
@@ -154,6 +155,10 @@ class CategoryController extends BaseController
             'code' => $code,
             'name' => $name,
         ];
+
+        if ($model->supportsDescription()) {
+            $data['description'] = $description;
+        }
 
         if ($isUpdate) {
             $saved = $model->update($categoryId, $data) !== false;

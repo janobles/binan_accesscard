@@ -21,19 +21,24 @@ class CategoryModel extends Model
     protected $table = 'category';
     protected $primaryKey = 'categoryID';
     protected $returnType = 'array';
-    protected $allowedFields = ['code', 'name'];
+    protected $allowedFields = ['code', 'name', 'description'];
     protected $useTimestamps = false;
 
     /** Columns the Manage Categories search box matches. */
     protected function lookupSearchColumns(): array
     {
-        return ['code', 'name'];
+        return ['code', 'name', 'description'];
     }
 
     /** Manage Categories list order: by code. */
     protected function applyLookupOrder(BaseBuilder $builder): void
     {
         $builder->orderBy('code', 'ASC');
+    }
+
+    public function supportsDescription(): bool
+    {
+        return $this->hasTable() && $this->db->fieldExists('description', $this->table);
     }
 
     /**

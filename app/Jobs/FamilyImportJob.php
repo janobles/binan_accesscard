@@ -73,6 +73,7 @@ class FamilyImportJob implements JobHandlerInterface
         $prior  = $this->decode($job['result_json'] ?? null);
         $done   = (int) ($prior['imported'] ?? 0);
         $failed = (int) ($prior['failed'] ?? 0);
+        $skipped = (int) ($prior['skipped'] ?? 0);
         $members = (int) ($prior['members'] ?? 0);
         $errors = (isset($prior['errors']) && is_array($prior['errors'])) ? $prior['errors'] : [];
 
@@ -83,17 +84,47 @@ class FamilyImportJob implements JobHandlerInterface
 
         $writer = new FamilyRecordWriter($memberModel, new MemberServiceModel(), new ServiceModel(), new AuditTrailsModel());
 
-        $snapshot = static fn (): array => [
-            'imported' => $done,
-            'failed'   => $failed,
-            'members'  => $members,
-            'errors'   => array_values($errors),
-        ];
+        // By-reference capture so each checkpoint reads the LIVE counters/errors as
+        // the loop mutates them (an arrow fn would freeze them at their start values).
+        $snapshot = function () use (&$done, &$failed, &$skipped, &$members, &$errors): array {
+            return [
+                'imported' => $done,
+                'failed'   => $failed,
+                'skipped'  => $skipped,
+                'members'  => $members,
+                'errors'   => array_values($errors),
+            ];
+        };
 
-        $reporter->checkpoint($done + $failed, $start, $snapshot());
+        $reporter->checkpoint($done + $failed + $skipped, $start, $snapshot());
 
         for ($i = $start; $i < $total; $i++) {
             $family = $families[$i];
+            $head   = $family['headPayload'] ?? [];
+
+            // Skip families that already exist rather than inserting a duplicate. A
+            // committed family from earlier in THIS run is on file too, so this also
+            // catches duplicates that appear twice within the same upload.
+            if ($memberModel->activeHeadExists(
+                (string) ($head['firstname'] ?? ''),
+                (string) ($head['lastname'] ?? ''),
+                $head['birthday'] ?? null,
+            )) {
+                $skipped++;
+                $headName = trim(((string) ($head['firstname'] ?? '')) . ' ' . ((string) ($head['lastname'] ?? '')));
+                $errors[] = [
+                    'sheetRow' => null,
+                    'familyNo' => (string) ($family['familyNo'] ?? ''),
+                    'message'  => 'Skipped — a family for ' . ($headName !== '' ? $headName : 'this head') . ' already exists.',
+                ];
+
+                if ((($i - $start + 1) % $this->batch) === 0) {
+                    $reporter->checkpoint($done + $failed + $skipped, $i + 1, $snapshot());
+                    $reporter->pause();
+                }
+
+                continue;
+            }
 
             // One family = one transaction: a single bad family is isolated and the
             // rest of the file still imports.
@@ -128,23 +159,25 @@ class FamilyImportJob implements JobHandlerInterface
             }
 
             if ((($i - $start + 1) % $this->batch) === 0) {
-                $reporter->checkpoint($done + $failed, $i + 1, $snapshot());
+                $reporter->checkpoint($done + $failed + $skipped, $i + 1, $snapshot());
                 // Breathing room for interactive users between chunks.
                 $reporter->pause();
             }
         }
 
-        $reporter->checkpoint($done + $failed, $total, $snapshot());
+        $reporter->checkpoint($done + $failed + $skipped, $total, $snapshot());
         $this->cleanup($path);
+
+        $skipNote = $skipped > 0 ? ' Skipped ' . $skipped . ' already on file.' : '';
 
         if ($failed === 0) {
             return JobOutcome::done(
-                'Imported ' . $done . ' family record(s) and ' . $members . ' additional member(s).',
+                'Imported ' . $done . ' family record(s) and ' . $members . ' additional member(s).' . $skipNote,
                 $snapshot(),
             );
         }
 
-        $message = 'Imported ' . $done . ' of ' . $total . ' family record(s); ' . $failed . ' could not be saved.';
+        $message = 'Imported ' . $done . ' of ' . $total . ' family record(s); ' . $failed . ' could not be saved.' . $skipNote;
 
         return $done > 0
             ? JobOutcome::partial($message, $snapshot())

@@ -178,7 +178,7 @@
         }).join('');
 
         return '<table class="table table-sm table-bordered">' +
-            '<thead><tr><th>Where</th><th>Problem</th></tr></thead><tbody>' + rows + '</tbody></table>';
+            '<thead><tr><th>Where</th><th>Details</th></tr></thead><tbody>' + rows + '</tbody></table>';
     }
 
     function renderProgress(toast, data) {
@@ -196,8 +196,18 @@
         if (data.status === 'pending') {
             label = 'Queued - waiting for the worker...';
         } else if (progress.total > 0) {
+            var extra = [];
+
+            if (progress.failed) {
+                extra.push(progress.failed + ' failed');
+            }
+
+            if (progress.skipped) {
+                extra.push(progress.skipped + ' skipped');
+            }
+
             label = 'Imported ' + progress.imported + ' of ' + progress.total + ' families' +
-                (progress.failed ? ' (' + progress.failed + ' failed)' : '') + '...';
+                (extra.length ? ' (' + extra.join(', ') + ')' : '') + '...';
         } else {
             label = 'Reading and validating...';
         }
@@ -219,12 +229,24 @@
         toast.querySelector('.fit-msg').textContent = data.message || '';
 
         if (data.status === 'done') {
+            var skipped = (data.progress && data.progress.skipped) || 0;
+
             setToastState(toast, 'success');
-            toast.querySelector('.fit-title').textContent = 'Import complete';
+            toast.querySelector('.fit-title').textContent = skipped ? 'Import complete (some skipped)' : 'Import complete';
             bar.classList.add('bg-success');
-            closeBtn.hidden = true;
-            // Auto-dismiss success after a few seconds.
-            window.setTimeout(function () { removeToast(toast); }, 6000);
+
+            // Nothing was skipped: clean success, auto-dismiss. When families were
+            // skipped, keep the toast open with the list so the user can see which
+            // records already existed.
+            if (!skipped) {
+                closeBtn.hidden = true;
+                window.setTimeout(function () { removeToast(toast); }, 6000);
+
+                return;
+            }
+
+            toast.querySelector('.fit-errors').innerHTML = errorTable(data.errors);
+            closeBtn.hidden = false;
 
             return;
         }

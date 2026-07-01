@@ -142,6 +142,40 @@ class MemberModel extends Model
     }
 
     /**
+     * True when an ACTIVE head-of-family with the same name + birthday is already
+     * on file. The Excel importer calls this to SKIP families that already exist
+     * rather than inserting a duplicate. Comparison is case-insensitive on the
+     * (already Title-cased) first/last name and exact on the stored Y-m-d birthday.
+     *
+     * Only live heads block a re-import: an archived (retired) family is treated as
+     * gone, so re-importing it re-creates the record — matching the archive
+     * grandfather semantics used elsewhere.
+     */
+    public function activeHeadExists(string $firstname, string $lastname, ?string $birthday): bool
+    {
+        if (! $this->hasTable()) {
+            return false;
+        }
+
+        $builder = $this->db->table($this->table)
+            ->where('member.memberID = member.headID', null, false)
+            ->where('LOWER(member.firstname) = ' . $this->db->escape(mb_strtolower(trim($firstname))), null, false)
+            ->where('LOWER(member.lastname) = ' . $this->db->escape(mb_strtolower(trim($lastname))), null, false);
+
+        if ($birthday !== null && trim($birthday) !== '') {
+            $builder->where('member.birthday', $birthday);
+        } else {
+            $builder->where('member.birthday IS NULL', null, false);
+        }
+
+        if ($this->db->fieldExists('dt_deleted', $this->table)) {
+            $builder->where('member.dt_deleted IS NULL', null, false);
+        }
+
+        return $builder->countAllResults() > 0;
+    }
+
+    /**
      * Inserts a relative under an existing head (validating the head exists).
      * Called per member by FamilyController::store(); returns the new memberID
      * or false.

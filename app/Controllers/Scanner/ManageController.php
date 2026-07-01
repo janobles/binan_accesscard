@@ -38,7 +38,7 @@ class ManageController extends BaseController
             'canManageAccounts' => $canManage,
             'sidebarRoleClass'  => $canManage ? 'developer' : 'admin',
             'sidebarUserUrl'    => site_url('admin/dashboard'),
-            'navActive'         => ['scanner' => 'active'],
+            'navActive'         => ['scanner-manage' => 'active'],
         ]);
     }
 

@@ -27,4 +27,36 @@ class AidTypeModel extends Model
             return [];
         }
     }
+
+    /** Active + archived, active first then alphabetical, for the management table. */
+    public function all(): array
+    {
+        try {
+            return $this->orderBy('dt_deleted IS NULL', 'DESC', false)
+                ->orderBy('name', 'ASC')
+                ->findAll();
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
+
+    /** Insert a new aid type; returns the new id (0 on failure). */
+    public function create(string $name): int
+    {
+        $this->insert(['name' => $name, 'dt_deleted' => null]);
+
+        return (int) $this->getInsertID();
+    }
+
+    /** Soft-archive: stamp dt_deleted so it drops out of active(). */
+    public function archive(int $id): bool
+    {
+        return $this->update($id, ['dt_deleted' => date('Y-m-d H:i:s')]) !== false;
+    }
+
+    /** Un-archive: clear dt_deleted. */
+    public function restore(int $id): bool
+    {
+        return $this->update($id, ['dt_deleted' => null]) !== false;
+    }
 }

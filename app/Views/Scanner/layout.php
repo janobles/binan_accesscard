@@ -9,6 +9,12 @@ $activeTab           = $activeTab ?? 'scan';
 $username            = $username ?? 'Scanner';
 $pageTitle           = $pageTitle ?? 'Scan';
 $idleTimeoutSeconds  = $idleTimeoutSeconds ?? 900;
+$currentRole         = $currentRole ?? (string) (session()->get('role') ?? '');
+$isScannerRole       = $currentRole === 'Scanner';
+$canManageAccounts   = $canManageAccounts ?? false;
+$sidebarRoleClass    = $sidebarRoleClass ?? ($canManageAccounts ? 'developer' : 'admin');
+$sidebarUserUrl      = $sidebarUserUrl ?? site_url('admin/dashboard');
+$navActive           = $navActive ?? ['scanner' => 'active'];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -22,25 +28,14 @@ $idleTimeoutSeconds  = $idleTimeoutSeconds ?? 900;
 </head>
 <body>
 <div id="wrapper">
-    <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion scanner" id="dashboard-sidebar">
-        <li class="sidebar-brand-wrap">
-            <a class="sidebar-brand d-flex align-items-center justify-content-center" href="<?= site_url('scanner/scan') ?>">
-                <img class="sidebar-brand-icon" src="<?= asset_url('assets/image/binan.png') ?>" alt="City of Binan Logo">
-                <span class="sidebar-brand-text mx-2">Bi&ntilde;an Access Card MIS</span>
-            </a>
-        </li>
-        <li><hr class="sidebar-divider my-0"></li>
-        <li class="nav-item">
-            <a class="nav-link <?= $activeTab === 'scan' ? 'active' : '' ?>" href="<?= site_url('scanner/scan') ?>"><i class="bi bi-upc-scan" aria-hidden="true"></i><span>Scan</span></a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link <?= $activeTab === 'manage' ? 'active' : '' ?>" href="<?= site_url('scanner/manage') ?>"><i class="bi bi-clipboard-check" aria-hidden="true"></i><span>Manage Distributions</span></a>
-        </li>
-        <li><hr class="sidebar-divider d-none d-md-block"></li>
-        <li class="text-center d-none d-md-inline">
-            <button class="rounded-circle border-0" id="sidebarToggle" type="button" aria-label="Collapse sidebar" aria-controls="dashboard-sidebar" aria-expanded="true"></button>
-        </li>
-    </ul>
+    <?= view('components/dashboard_sidebar', [
+        'sidebarScannerOnly' => $isScannerRole,
+        'activeTab' => $activeTab,
+        'navActive' => $navActive,
+        'canManageAccounts' => $canManageAccounts,
+        'sidebarRoleClass' => $sidebarRoleClass,
+        'sidebarUserUrl' => $sidebarUserUrl,
+    ]) ?>
 
     <div id="content-wrapper" class="d-flex flex-column">
         <div id="content">
@@ -77,7 +72,7 @@ $idleTimeoutSeconds  = $idleTimeoutSeconds ?? 900;
     </div>
 </div>
 
-<?php foreach (asset_scripts('core') as $scriptPath): ?>
+<?php foreach (array_merge(asset_scripts('core'), asset_scripts('admin')) as $scriptPath): ?>
 <script src="<?= esc(asset_url($scriptPath), 'attr') ?>"></script>
 <?php endforeach; ?>
 <script src="<?= esc(base_url('vendor/html5-qrcode/html5-qrcode.min.js'), 'attr') ?>"></script>

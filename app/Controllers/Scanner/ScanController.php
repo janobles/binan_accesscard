@@ -32,10 +32,18 @@ class ScanController extends BaseController
             return $guard;
         }
 
+        $role = RoleAccess::normalizeRole((string) session()->get('role'));
+        $canManage = in_array($role, ['Developer', 'Admin'], true);
+
         return view('Scanner/scan', [
             'activeTab' => 'scan',
             'pageTitle' => 'Scan',
             'username'  => session('username') ?? 'Scanner',
+            'currentRole' => $role,
+            'canManageAccounts' => $canManage,
+            'sidebarRoleClass' => $canManage ? 'developer' : 'admin',
+            'sidebarUserUrl' => site_url('admin/dashboard'),
+            'navActive' => ['scanner' => 'active'],
         ]);
     }
 
@@ -46,12 +54,20 @@ class ScanController extends BaseController
             return $guard;
         }
 
+        $role = RoleAccess::normalizeRole((string) session()->get('role'));
+        $canManage = in_array($role, ['Developer', 'Admin'], true);
+
         return view('Scanner/manage', [
             'activeTab'       => 'manage',
             'pageTitle'       => 'Manage Distributions',
             'username'        => session('username') ?? 'Scanner',
             'aidTypes'        => model(AidTypeModel::class)->active(),
             'prefillControl'  => ($c = (int) $this->request->getGet('control_no')) > 0 ? $c : null,
+            'currentRole' => $role,
+            'canManageAccounts' => $canManage,
+            'sidebarRoleClass' => $canManage ? 'developer' : 'admin',
+            'sidebarUserUrl' => site_url('admin/dashboard'),
+            'navActive' => ['scanner' => 'active'],
         ]);
     }
 

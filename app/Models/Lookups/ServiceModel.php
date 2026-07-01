@@ -27,7 +27,58 @@ class ServiceModel extends Model
     /** Columns the Services management search box matches. */
     protected function lookupSearchColumns(): array
     {
-        return ['shortcode', 'category', 'name', 'description'];
+        return array_values(array_filter([$this->codeColumn(), 'category', 'name', 'description']));
+    }
+
+    /**
+     * Some installed databases still use `code` for the service/program code.
+     * The application exposes it as `shortcode` so views/controllers stay stable.
+     */
+    protected function normalizeLookupRows(array $rows): array
+    {
+        $codeColumn = $this->codeColumn();
+
+        return array_map(static function (array $row) use ($codeColumn): array {
+            if ($codeColumn !== null && ! array_key_exists('shortcode', $row) && array_key_exists($codeColumn, $row)) {
+                $row['shortcode'] = $row[$codeColumn];
+            }
+
+            return $row;
+        }, $rows);
+    }
+
+    /** Maps write payloads to the actual database columns in the current schema. */
+    public function dataForCurrentSchema(array $data): array
+    {
+        $codeColumn = $this->codeColumn();
+
+        if ($codeColumn !== null && $codeColumn !== 'shortcode' && array_key_exists('shortcode', $data)) {
+            $data[$codeColumn] = $data['shortcode'];
+            unset($data['shortcode']);
+        }
+
+        if ($codeColumn === null) {
+            unset($data['shortcode']);
+        }
+
+        return array_filter(
+            $data,
+            fn (string $column): bool => $this->db->fieldExists($column, $this->table),
+            ARRAY_FILTER_USE_KEY
+        );
+    }
+
+    private function codeColumn(): ?string
+    {
+        if ($this->db->fieldExists('shortcode', $this->table)) {
+            return 'shortcode';
+        }
+
+        if ($this->db->fieldExists('code', $this->table)) {
+            return 'code';
+        }
+
+        return null;
     }
 
     /**
@@ -42,8 +93,14 @@ class ServiceModel extends Model
             return false;
         }
 
+        $codeColumn = $this->codeColumn();
+
+        if ($codeColumn === null) {
+            return false;
+        }
+
         $builder = $this->db->table($this->table)
-            ->where('UPPER(shortcode)', strtoupper($shortcode));
+            ->where('UPPER(' . $codeColumn . ')', strtoupper($shortcode));
 
         if ($this->db->fieldExists('dt_deleted', $this->table)) {
             $builder->where('dt_deleted IS NULL', null, false);
@@ -83,8 +140,17 @@ class ServiceModel extends Model
 
         $highest = 0;
 
-        foreach ($this->db->table($this->table)->select('shortcode')->get()->getResultArray() as $row) {
+        $codeColumn = $this->codeColumn();
+
+        if ($codeColumn === null) {
+            return '';
+        }
+
+        foreach ($this->db->table($this->table)->select($codeColumn)->get()->getResultArray() as $row) {
             $code = strtoupper(trim((string) ($row['shortcode'] ?? '')));
+            if ($code === '') {
+                $code = strtoupper(trim((string) ($row[$codeColumn] ?? '')));
+            }
 
             if (preg_match('/^([A-Z]+)(\d+)$/', $code, $matches) !== 1 || $matches[1] !== $prefix) {
                 continue;
@@ -123,11 +189,13 @@ class ServiceModel extends Model
             return [];
         }
 
-        return $builder
+        $rows = $builder
             ->orderBy('category', 'ASC')
             ->orderBy('serviceID', 'ASC')
             ->get()
             ->getResultArray();
+
+        return $this->normalizeLookupRows($rows);
     }
 
     /**
@@ -144,12 +212,14 @@ class ServiceModel extends Model
             return [];
         }
 
-        return $this->db->table($this->table)
+        $rows = $this->db->table($this->table)
             ->whereIn($this->primaryKey, $ids)
             ->orderBy('category', 'ASC')
             ->orderBy('serviceID', 'ASC')
             ->get()
             ->getResultArray();
+
+        return $this->normalizeLookupRows($rows);
     }
 
     /**

@@ -176,10 +176,10 @@ class ServiceController extends BaseController
         $isUpdate = $serviceId !== null;
 
         if ($isUpdate) {
-            $model->update($serviceId, $data);
+            $model->update($serviceId, $model->dataForCurrentSchema($data));
         } else {
             $data['serviceID'] = $model->nextServiceId();
-            $model->insert($data);
+            $model->insert($model->dataForCurrentSchema($data));
             $serviceId = (int) $data['serviceID'];
         }
 

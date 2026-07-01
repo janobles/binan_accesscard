@@ -475,6 +475,31 @@ class MemberModel extends Model
         return $row ?: null;
     }
 
+    /**
+     * All active members of a family (head + relatives), head first. Drives the
+     * scan claimant dropdown. Returns [] for a non-positive id.
+     */
+    public function familyMembers(int $headId): array
+    {
+        if ($headId <= 0) {
+            return [];
+        }
+
+        $builder = $this->db->table('member')
+            ->select('memberID, firstname, lastname, relationship')
+            ->where('headID', $headId);
+
+        if ($this->db->fieldExists('dt_deleted', 'member')) {
+            $builder->where('member.dt_deleted IS NULL', null, false);
+        }
+
+        // Head (memberID == headId) sorts first, then the rest by memberID.
+        $builder->orderBy('CASE WHEN memberID = ' . $headId . ' THEN 0 ELSE 1 END', 'ASC', false)
+            ->orderBy('memberID', 'ASC');
+
+        return $builder->get()->getResultArray();
+    }
+
     /** Updates the head-of-family row during a family edit submission. */
     public function updateHead(int $headId, array $data): bool
     {

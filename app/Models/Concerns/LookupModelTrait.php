@@ -21,6 +21,12 @@ trait LookupModelTrait
     /** Applies the model-specific result ordering to a management-list builder. */
     abstract protected function applyLookupOrder(BaseBuilder $builder): void;
 
+    /** Allows a model to normalize rows after lookup queries. */
+    protected function normalizeLookupRows(array $rows): array
+    {
+        return $rows;
+    }
+
     /** True if the backing table exists; callers guard queries with this. */
     public function hasTable(): bool
     {
@@ -46,9 +52,18 @@ trait LookupModelTrait
         $keyword = trim((string) $keyword);
 
         if ($keyword !== '') {
+            $searchColumns = array_values(array_filter(
+                $this->lookupSearchColumns(),
+                fn (string $column): bool => $this->db->fieldExists($column, $this->table)
+            ));
+
+            if ($searchColumns === []) {
+                return $builder;
+            }
+
             $builder->groupStart();
 
-            foreach (array_values($this->lookupSearchColumns()) as $index => $column) {
+            foreach ($searchColumns as $index => $column) {
                 if ($index === 0) {
                     $builder->like($column, $keyword);
                 } else {
@@ -81,10 +96,12 @@ trait LookupModelTrait
 
         $this->applyLookupOrder($builder);
 
-        return $builder
+        $rows = $builder
             ->limit(max(1, $limit), max(0, $offset))
             ->get()
             ->getResultArray();
+
+        return $this->normalizeLookupRows($rows);
     }
 
     /** Total rows matching the keyword/status filter (for pagination). */
@@ -113,10 +130,16 @@ trait LookupModelTrait
             return null;
         }
 
-        return $this->db->table($this->table)
+        $row = $this->db->table($this->table)
             ->where($this->primaryKey, $id)
             ->get()
             ->getRowArray();
+
+        if ($row === null) {
+            return null;
+        }
+
+        return $this->normalizeLookupRows([$row])[0] ?? $row;
     }
 
     /** Insert a new row and return its insert ID. */

@@ -55,7 +55,7 @@ $sectorClearUrl = static function () use ($listRoute, $status, $perPage): string
 				<option value="all" <?= $status === 'all' ? 'selected' : '' ?>>All (<?= esc((string) $allSectorCount) ?>)</option>
 			</select>
 			<?php if ($perPage !== 50): ?><input type="hidden" name="per_page" value="<?= esc((string) $perPage, 'attr') ?>"><?php endif; ?>
-			<a class="btn btn-outline-secondary records-search-action" href="<?= esc($sectorClearUrl(), 'attr') ?>"><i class="bi bi-x-lg" aria-hidden="true"></i><span>Clear</span></a>
+			<a class="btn btn-danger records-search-action" href="<?= esc($sectorClearUrl(), 'attr') ?>"><i class="bi bi-x-lg" aria-hidden="true"></i><span>Clear</span></a>
 			<button class="btn btn-outline-success records-search-action" type="submit"><i class="bi bi-search" aria-hidden="true"></i><span>Search All</span></button>
 			<?php if ($canManage): ?>
 			<button class="btn btn-primary records-search-action js-sector-modal-open" type="button" data-sector-mode="create"><i class="bi bi-plus-lg" aria-hidden="true"></i><span>Add Sector</span></button>

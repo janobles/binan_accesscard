@@ -358,6 +358,7 @@ class FamilyController extends BaseController
         $errors   = (isset($result['errors']) && is_array($result['errors'])) ? $result['errors'] : [];
         $imported = (int) ($result['imported'] ?? 0);
         $failed   = (int) ($result['failed'] ?? 0);
+        $skipped  = (int) ($result['skipped'] ?? 0);
         $members  = (int) ($result['members'] ?? 0);
 
         return $this->response->setJSON([
@@ -369,6 +370,7 @@ class FamilyController extends BaseController
                 'processed' => $done,
                 'imported'  => $imported,
                 'failed'    => $failed,
+                'skipped'   => $skipped,
                 'members'   => $members,
                 'percent'   => $total > 0 ? (int) floor($done * 100 / $total) : 0,
             ],

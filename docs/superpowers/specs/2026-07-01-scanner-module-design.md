@@ -216,3 +216,34 @@ document **what was added, what was modified, and what is new** — every new fi
 every touched existing file (Routes, RoleAccess, dump, sidebar/layout), the seeded
 data, the vendored library, and the test coverage — matching the detail level of the
 2026-06-29 QR-cards summary.
+
+---
+
+## Design Amendment (2026-07-01, post-e2e review)
+
+After manual e2e testing, the user reversed two earlier decisions:
+
+1. **No standalone mobile-first shell.** The bespoke `Scanner/layout.php` mobile
+   shell (navbar + nav-pills) is a consistency violation. The Scanner module must
+   render inside the **dashboard shell** — reusing the same SB-Admin frame as
+   `Admin/layout.php` (`#wrapper` sidebar `navbar-nav bg-gradient-primary` +
+   `#content-wrapper` topbar + `main.dashboard-content`, same `asset_styles`/
+   `asset_scripts` helpers). Only the *content* of the scan tab is simplified for
+   scan use. Scanner-role users get a **scanner-only sidebar** (Scan, Manage
+   Distributions) and can never reach admin tabs — the role isolation is a
+   security boundary.
+
+2. **Scan is read-only; logging is a separate tab.** The scan tab resolves a QR
+   to family head + members + chronological aid history — **read-only, no log
+   form**. Logging an aid distribution moves to its own sidebar tab, the
+   relabeled former "Aid Types" stub → **"Manage Distributions"**. That tab
+   captures QR (prefillable from the scan view via `?control_no=`), claimant,
+   date, and aid type, and POSTs to `scanner/log` (unchanged). Aid-type CRUD and
+   Reports/History remain deferred stubs.
+
+Backend deltas: `ScanController::manage()` (GET `scanner/manage`) renders the log
+screen; `scan()` renders read-only (drops the inline `$aidTypes`); `lookup()` and
+`logAid()` JSON endpoints are unchanged. Views: `Scanner/layout.php` rebuilt as a
+dashboard shell; `Scanner/scan.php` stripped to read-only + a "Log distribution"
+link; new `Scanner/manage.php` for logging. The vendored `html5-qrcode` and the
+control_no↔head model layer are unchanged.

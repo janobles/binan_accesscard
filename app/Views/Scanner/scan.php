@@ -24,36 +24,18 @@
   </div>
 
   <div class="card shadow-sm mb-3">
+    <div class="card-header fw-bold">Members</div>
+    <ul class="list-group list-group-flush" id="membersList"></ul>
+  </div>
+
+  <div class="card shadow-sm mb-3">
     <div class="card-header fw-bold">Aid History</div>
     <ul class="list-group list-group-flush" id="historyList"></ul>
   </div>
 
-  <div class="card shadow-sm mb-3">
-    <div class="card-header fw-bold">Log Aid Distribution</div>
-    <div class="card-body">
-      <form id="logForm">
-        <input type="hidden" name="control_no" id="logControl">
-        <div class="mb-2">
-          <label class="form-label">Date</label>
-          <input type="date" class="form-control" name="claim_date" id="claimDate" required>
-        </div>
-        <div class="mb-2">
-          <label class="form-label">Aid type</label>
-          <select class="form-select" name="aid_type_id" required>
-            <?php foreach ($aidTypes as $t): ?>
-              <option value="<?= esc($t['aid_type_id'], 'attr') ?>"><?= esc($t['name']) ?></option>
-            <?php endforeach; ?>
-          </select>
-        </div>
-        <div class="mb-2">
-          <label class="form-label">Claimed by</label>
-          <select class="form-select" name="memberID" id="claimantSelect" required></select>
-        </div>
-        <button type="submit" class="btn btn-success w-100">Log distribution</button>
-        <div id="logAlert" class="alert mt-2 mb-0" hidden></div>
-      </form>
-    </div>
-  </div>
+  <a id="logDistLink" class="btn btn-success w-100 mb-3" href="#">
+    <i class="bi bi-clipboard-plus me-1" aria-hidden="true"></i> Log distribution for this QR
+  </a>
 </div>
 <?= $this->endSection() ?>
 
@@ -62,7 +44,6 @@
 const BASE = '<?= rtrim(base_url(), '/') ?>';
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-$('claimDate').value = new Date().toISOString().slice(0, 10);
 
 async function lookup(control) {
   $('lookupAlert').hidden = true;
@@ -79,10 +60,10 @@ async function lookup(control) {
   $('headBody').innerHTML =
     `<div class="fw-bold">${esc(h.firstname)} ${esc(h.lastname)}</div>` +
     `<div class="text-muted small">${esc(h.address)}</div>`;
-  $('claimantSelect').innerHTML = data.members
-    .map(m => `<option value="${esc(m.memberID)}">${esc(m.firstname)} ${esc(m.lastname)} (${esc(m.relationship || 'Member')})</option>`).join('');
+  $('membersList').innerHTML = data.members
+    .map(m => `<li class="list-group-item">${esc(m.firstname)} ${esc(m.lastname)} (${esc(m.relationship || 'Member')})</li>`).join('');
   renderHistory(data.history);
-  $('logControl').value = data.control_no;
+  $('logDistLink').href = `${BASE}/scanner/manage?control_no=${encodeURIComponent(data.control_no)}`;
   $('familyPanel').hidden = false;
 }
 
@@ -99,22 +80,6 @@ $('lookupBtn').addEventListener('click', () => {
 });
 $('controlInput').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') { e.preventDefault(); $('lookupBtn').click(); }
-});
-
-$('logForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const res = await fetch(`${BASE}/scanner/log`, { method: 'POST', body: new FormData(e.target) });
-  const data = await res.json().catch(() => ({}));
-  const alert = $('logAlert');
-  if (res.ok && data.ok) {
-    renderHistory(data.history);
-    alert.className = 'alert alert-success mt-2 mb-0';
-    alert.textContent = 'Aid logged.';
-  } else {
-    alert.className = 'alert alert-danger mt-2 mb-0';
-    alert.textContent = data.errors ? Object.values(data.errors).join(' ') : (data.error || 'Failed to log.');
-  }
-  alert.hidden = false;
 });
 
 let scanner;

@@ -7,7 +7,6 @@ use App\Libraries\RoleAccess;
 use App\Models\Audit\AuditTrailsModel;
 use App\Models\Families\MemberModel;
 use App\Models\Scanner\AidDistributionModel;
-use App\Models\Scanner\AidTypeModel;
 use App\Models\Scanner\QrControlModel;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
@@ -30,7 +29,9 @@ class ScanController extends BaseController
         }
 
         return view('Scanner/scan', [
-            'aidTypes' => model(AidTypeModel::class)->active(),
+            'activeTab' => 'scan',
+            'pageTitle' => 'Scan',
+            'username'  => session('username') ?? 'Scanner',
         ]);
     }
 

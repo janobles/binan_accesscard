@@ -133,26 +133,4 @@ class CategoryModel extends Model
 
         return $builder->countAllResults() > 0;
     }
-
-    /**
-     * True if any active service uses this category (by its name). Guards
-     * archiving/deleting a service category still in use. Categories are matched to
-     * services by the category NAME stored in `services.category`.
-     */
-    public function isUsedByServices(string $name): bool
-    {
-        $name = trim($name);
-
-        if ($name === '' || ! $this->db->tableExists('services')) {
-            return false;
-        }
-
-        $builder = $this->db->table('services')->where('category', $name);
-
-        if ($this->db->fieldExists('dt_deleted', 'services')) {
-            $builder->where('dt_deleted IS NULL', null, false);
-        }
-
-        return $builder->countAllResults() > 0;
-    }
 }

@@ -8,6 +8,7 @@ use App\Libraries\RoleAccess;
 use App\Libraries\SectorIds;
 use App\Models\Lookups\CategoryModel;
 use App\Models\Lookups\SectorModel;
+use App\Models\Lookups\ServiceModel;
 use CodeIgniter\HTTP\RedirectResponse;
 
 /**
@@ -39,11 +40,13 @@ class SectorController extends BaseController
     }
 
     /**
-     * POST `admin/sectors/archive/{id}`: soft-archive a sector (hide, keep data).
-     * Allowed even when the sector is still assigned to members: archiving only
-     * retires it from new selections; existing records keep the sector (the family
-     * edit form preserves archived-but-assigned sectors). Permanent delete is still
-     * guarded. Audits the action.
+     * POST `admin/sectors/archive/{id}`: soft-archive a sector (hide, keep data) and
+     * cascade the archive onto every active service that uses the sector as its
+     * category (services.category = sector name), so a sector and the programs filed
+     * under it retire together. Still allowed when the sector is assigned to members:
+     * archiving only retires it from new selections; existing records keep the sector
+     * (the family edit form preserves archived-but-assigned sectors). Permanent delete
+     * is still guarded. Audits the action.
      */
     public function archive(int $sectorId): RedirectResponse
     {
@@ -65,14 +68,21 @@ class SectorController extends BaseController
             return $this->redirectAdmin('admin/sectors', 'error', 'Unable to archive sector.');
         }
 
-        $this->audit('SECTOR_ARCHIVE', 'Archived ' . $this->sectorLabel($sector, $sectorId) . '.');
+        $sectorName       = trim((string) ($sector['name'] ?? ''));
+        $archivedAt       = (string) ($model->find($sectorId)['dt_deleted'] ?? '');
+        $archivedServices = ($sectorName !== '' && $archivedAt !== '') ? (new ServiceModel())->archiveByCategory($sectorName, $archivedAt) : 0;
 
-        return $this->redirectAdmin('admin/sectors', 'success', 'Sector archived successfully.');
+        $this->audit('SECTOR_ARCHIVE', 'Archived ' . $this->sectorLabel($sector, $sectorId) . '.' . $this->cascadeNote($archivedServices));
+
+        return $this->redirectAdmin('admin/sectors', 'success', 'Sector archived successfully.' . $this->cascadeMessage($archivedServices));
     }
 
     /**
-     * POST `admin/sectors/restore/{id}`: un-archive a previously archived sector
-     * and audit it. Frontend: the "restore" control on the archived sectors view.
+     * POST `admin/sectors/restore/{id}`: un-archive a previously archived sector and
+     * cascade the restore onto the services its archive retired (matched by the sector
+     * name + the shared archive timestamp), so the pair comes back together. Services
+     * archived separately keep their archived state. Frontend: the "restore" control on
+     * the archived sectors view.
      */
     public function restore(int $sectorId): RedirectResponse
     {
@@ -88,15 +98,19 @@ class SectorController extends BaseController
             return $this->redirectAdmin('admin/sectors?status=archived', 'error', 'Sector table is not available.');
         }
 
-        $sector = $model->find($sectorId);
+        $sector     = $model->find($sectorId);
+        $archivedAt = (string) ($sector['dt_deleted'] ?? '');
 
         if (! $model->restore($sectorId)) {
             return $this->redirectAdmin('admin/sectors?status=archived', 'error', 'Unable to restore sector.');
         }
 
-        $this->audit('SECTOR_RESTORE', 'Restored ' . $this->sectorLabel($sector, $sectorId) . '.');
+        $sectorName       = trim((string) ($sector['name'] ?? ''));
+        $restoredServices = ($sectorName !== '' && $archivedAt !== '') ? (new ServiceModel())->restoreByCategoryArchivedAt($sectorName, $archivedAt) : 0;
 
-        return $this->redirectAdmin('admin/sectors', 'success', 'Sector restored successfully.');
+        $this->audit('SECTOR_RESTORE', 'Restored ' . $this->sectorLabel($sector, $sectorId) . '.' . $this->cascadeNote($restoredServices, 'restored'));
+
+        return $this->redirectAdmin('admin/sectors', 'success', 'Sector restored successfully.' . $this->cascadeMessage($restoredServices, 'restored'));
     }
 
     /**

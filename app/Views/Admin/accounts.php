@@ -4,6 +4,7 @@ use App\Libraries\ViewFormatter;
 $adminAccounts = $adminAccounts ?? [];
 $employeeAccounts = $employeeAccounts ?? [];
 $viewerAccounts = $viewerAccounts ?? [];
+$scannerAccounts = $scannerAccounts ?? [];
 $canCreateAccounts = (bool) ($canCreateAccounts ?? false);
 $canEditAccounts = (bool) ($canEditAccounts ?? false);
 $currentRole = (string) ($currentRole ?? '');
@@ -11,7 +12,7 @@ $isDeveloper = $currentRole === 'Developer';
 $isAdmin = $currentRole === 'Admin';
 $currentUserId = (int) session()->get('user_id');
 // Admins and developers both manage every non-developer account now.
-$accounts = array_merge($adminAccounts, $employeeAccounts, $viewerAccounts);
+$accounts = array_merge($adminAccounts, $employeeAccounts, $viewerAccounts, $scannerAccounts);
 ?>
 
 <div class="accounts-page" data-account-management>
@@ -26,6 +27,7 @@ $accounts = array_merge($adminAccounts, $employeeAccounts, $viewerAccounts);
                 <option value="administrator">Administrator</option>
                 <option value="encoder">Encoder</option>
                 <option value="viewer">Viewer</option>
+                <option value="scanner">Scanner</option>
             </select>
             <select class="form-select" data-account-status-filter aria-label="Filter by account status">
                 <option value="">Select Status</option>
@@ -65,9 +67,9 @@ $accounts = array_merge($adminAccounts, $employeeAccounts, $viewerAccounts);
                         $statusLabel = $isActive ? 'Active' : 'Inactive';
                         $statusClass = $isActive ? 'is-active' : 'is-disabled';
                         $statusFilter = $isActive ? 'active' : 'inactive';
-                        $canEditRow = $canEditAccounts && in_array($rawRole, ['administrator', 'encoder', 'viewer'], true);
-                        $canDeveloperToggle = $isDeveloper && in_array($rawRole, ['administrator', 'encoder', 'viewer'], true);
-                        $canAdminToggle = $isAdmin && in_array($rawRole, ['encoder', 'viewer'], true);
+                        $canEditRow = $canEditAccounts && in_array($rawRole, ['administrator', 'encoder', 'viewer', 'scanner'], true);
+                        $canDeveloperToggle = $isDeveloper && in_array($rawRole, ['administrator', 'encoder', 'viewer', 'scanner'], true);
+                        $canAdminToggle = $isAdmin && in_array($rawRole, ['encoder', 'viewer', 'scanner'], true);
                         $hasRowActions = $canEditRow || $canDeveloperToggle || $canAdminToggle;
                         ?>
                         <tr data-account-row data-account-username="<?= esc(mb_strtolower((string) ($account['username'] ?? '')), 'attr') ?>" data-account-role="<?= esc(mb_strtolower($rawRole), 'attr') ?>" data-account-status="<?= esc($statusFilter, 'attr') ?>">

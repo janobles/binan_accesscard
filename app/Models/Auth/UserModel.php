@@ -95,7 +95,7 @@ class UserModel extends Model
         }
 
         return $this->select('userID, username, account_level AS role, isactive, dt_created')
-            ->whereIn('account_level', ['administrator', 'encoder', 'viewer'])
+            ->whereIn('account_level', ['administrator', 'encoder', 'viewer', 'scanner'])
             ->orderBy('account_level', 'ASC')
             ->orderBy('username', 'ASC')
             ->findAll();

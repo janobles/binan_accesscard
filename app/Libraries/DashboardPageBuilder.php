@@ -157,6 +157,7 @@ class DashboardPageBuilder
             // (account_level aliased back to `role` by UserModel::getStaffAccounts).
             'employeeAccounts'   => array_values(array_filter($visibleAccounts, static fn ($account) => $account['role'] === 'encoder')),
             'viewerAccounts'     => array_values(array_filter($visibleAccounts, static fn ($account) => $account['role'] === 'viewer')),
+            'scannerAccounts'    => array_values(array_filter($visibleAccounts, static fn ($account) => $account['role'] === 'scanner')),
             'familyFormViewData' => $familyFormViewData,
             'recentFamilies'     => $recentFamilies,
             'recentAudits'       => $recentAudits,

@@ -16,7 +16,10 @@ use CodeIgniter\HTTP\ResponseInterface;
  * Scanner module: resolve a paper QR control number to a family, show its aid
  * history, and log a new aid distribution. Scanner/Admin/Developer only.
  *
- * - scan():   GET  scanner/scan          -> the mobile-first scan page.
+ * Renders inside the dashboard shell (Scanner/layout) with a scanner-only sidebar.
+ *
+ * - scan():   GET  scanner/scan          -> read-only lookup (family + history).
+ * - manage(): GET  scanner/manage        -> Manage Distributions tab (log form).
  * - lookup(): GET  scanner/lookup/{num}  -> JSON {head, members, history}.
  * - logAid(): POST scanner/log           -> insert + audit, returns refreshed history.
  */

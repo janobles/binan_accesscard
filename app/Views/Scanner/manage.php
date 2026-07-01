@@ -20,9 +20,9 @@
     <div class="tab-content">
       <!-- All distributions -->
       <div class="tab-pane fade show active" id="tab-dist" role="tabpanel">
-        <?php /* Toolbar: search + aid-type filter + clear, mirroring the Lookups pages. */ ?>
+        <?php /* Same two-band layout as the Lookups pages (Sector/Service/Category). */ ?>
         <div class="records-search-panel">
-          <div class="records-search-row">
+          <div class="records-search-row records-lookup-search">
             <input class="form-control" type="search" id="distSearch" placeholder="Search the distributions log" aria-label="Search the distributions log" autocomplete="off">
             <select class="form-select records-status-select" id="distAidFilter" aria-label="Filter by aid type">
               <option value="">All aid types</option>
@@ -30,13 +30,27 @@
                 <option value="<?= esc($t['name'], 'attr') ?>"><?= esc($t['name']) ?></option>
               <?php endforeach; ?>
             </select>
-            <button class="btn btn-outline-danger records-search-action" type="button" id="distClear"><i class="bi bi-x-lg" aria-hidden="true"></i><span>Clear</span></button>
+            <button class="btn btn-outline-secondary records-search-action" type="button" id="distClear"><i class="bi bi-x-lg" aria-hidden="true"></i><span>Clear</span></button>
           </div>
         </div>
 
         <div class="table-meta">
           <div class="records-table-controls">
-            <span class="text-muted small" id="distCount"></span>
+            <div class="records-page-size-form">
+              <label for="distPerPage">Show</label>
+              <select class="form-select form-select-sm" id="distPerPage">
+                <option value="10">10</option>
+                <option value="25">25</option>
+                <option value="50" selected>50</option>
+                <option value="100">100</option>
+                <option value="0">All</option>
+              </select>
+              <span>entries</span>
+            </div>
+            <div class="records-table-search-form">
+              <label for="distLocalSearch">Search:</label>
+              <input class="form-control form-control-sm" type="search" id="distLocalSearch" placeholder="Type to filter..." autocomplete="off">
+            </div>
           </div>
         </div>
 
@@ -83,6 +97,10 @@
               <?php endif; ?>
             </tbody>
           </table>
+        </div>
+
+        <div class="lookup-list-footer d-flex flex-wrap justify-content-between align-items-center gap-2">
+          <span class="text-muted small" id="distCount"></span>
         </div>
       </div>
 
@@ -168,32 +186,43 @@
 <?= $this->section('scripts') ?>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  // Client-side filter (search text + aid-type) with live count. Small read-only log; no server paging.
-  const table  = document.getElementById('distTable');
-  const box    = document.getElementById('distSearch');
-  const filter = document.getElementById('distAidFilter');
-  const clear  = document.getElementById('distClear');
-  const count  = document.getElementById('distCount');
+  // Client-side filtering to mirror the Lookups pages (search + aid-type + local filter + page size).
+  const table   = document.getElementById('distTable');
+  const search  = document.getElementById('distSearch');
+  const filter  = document.getElementById('distAidFilter');
+  const clear   = document.getElementById('distClear');
+  const perPage = document.getElementById('distPerPage');
+  const local   = document.getElementById('distLocalSearch');
+  const count   = document.getElementById('distCount');
   if (!table) return;
   const rows = Array.from(table.tBodies[0].rows).filter(r => !r.querySelector('.sector-empty-state'));
 
   const render = () => {
-    const q    = (box.value || '').trim().toLowerCase();
-    const aid  = filter.value || '';
+    const q     = (search.value || '').trim().toLowerCase();
+    const q2    = (local.value || '').trim().toLowerCase();
+    const aid   = filter.value || '';
+    const limit = parseInt(perPage.value, 10) || 0; // 0 = all
+    let matched = 0;
     let shown = 0;
     rows.forEach(r => {
-      const matchText = q === '' || r.textContent.toLowerCase().includes(q);
-      const matchAid  = aid === '' || (r.getAttribute('data-aidtype') || '') === aid;
-      const show = matchText && matchAid;
-      r.hidden = !show;
-      if (show) shown++;
+      const text = r.textContent.toLowerCase();
+      const ok = (q === '' || text.includes(q))
+              && (q2 === '' || text.includes(q2))
+              && (aid === '' || (r.getAttribute('data-aidtype') || '') === aid);
+      let visible = ok;
+      if (ok) {
+        matched++;
+        if (limit > 0 && matched > limit) visible = false;
+      }
+      r.hidden = !visible;
+      if (visible) shown++;
     });
     if (count) count.textContent = 'Showing ' + shown + ' of ' + rows.length + ' distribution' + (rows.length === 1 ? '' : 's');
   };
 
-  if (box)    box.addEventListener('input', render);
-  if (filter) filter.addEventListener('change', render);
-  if (clear)  clear.addEventListener('click', () => { box.value = ''; filter.value = ''; render(); });
+  [search, filter, local, perPage].forEach(el => el && el.addEventListener('input', render));
+  if (perPage) perPage.addEventListener('change', render);
+  if (clear) clear.addEventListener('click', () => { search.value = ''; local.value = ''; filter.value = ''; perPage.value = '50'; render(); });
   render();
 });
 </script>

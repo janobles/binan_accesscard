@@ -30,12 +30,12 @@ $activeTab = $activeTab ?? '';
             </a>
         </li>
         <li><hr class="sidebar-divider my-0"></li>
-        <li><div class="sidebar-heading">SCANNER</div></li>
+        <li><div class="sidebar-heading">QR Code</div></li>
         <li class="nav-item">
             <a class="nav-link <?= $activeTab === 'scan' ? 'active' : '' ?>" href="<?= site_url('scanner/scan') ?>"><i class="bi bi-upc-scan" aria-hidden="true"></i><span>Scan</span></a>
         </li>
         <li class="nav-item">
-            <a class="nav-link <?= $activeTab === 'manage' ? 'active' : '' ?>" href="<?= site_url('scanner/manage') ?>"><i class="bi bi-clipboard-check" aria-hidden="true"></i><span>Manage Distributions</span></a>
+            <a class="nav-link <?= $activeTab === 'manage' ? 'active' : '' ?>" href="<?= site_url('scanner/manage') ?>"><i class="bi bi-clipboard-check" aria-hidden="true"></i><span>Management</span></a>
         </li>
         <li><hr class="sidebar-divider d-none d-md-block"></li>
         <li class="text-center d-none d-md-inline">

@@ -39,6 +39,7 @@ class ScanController extends BaseController
             'activeTab' => 'scan',
             'pageTitle' => 'Scan',
             'username'  => session('username') ?? 'Scanner',
+            'aidTypes'  => model(AidTypeModel::class)->active(),
             'currentRole' => $role,
             'canManageAccounts' => $canManage,
             'sidebarRoleClass' => $canManage ? 'developer' : 'admin',

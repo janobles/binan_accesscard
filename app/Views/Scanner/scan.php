@@ -33,9 +33,36 @@
     <ul class="list-group list-group-flush" id="historyList"></ul>
   </div>
 
-  <a id="logDistLink" class="btn btn-success w-100 mb-3" href="#">
-    <i class="bi bi-clipboard-plus me-1" aria-hidden="true"></i> Log distribution for this QR
-  </a>
+  <div class="card shadow-sm mb-3" id="logPanel">
+    <div class="card-header fw-bold">Log Distribution</div>
+    <div class="card-body">
+      <div id="logAlert" class="alert alert-success mb-3" hidden></div>
+      <form id="logForm">
+        <input type="hidden" id="control_no" name="control_no">
+        <div class="mb-3">
+          <label for="claim_date" class="form-label">Date</label>
+          <input type="date" class="form-control" id="claim_date" name="claim_date" required>
+        </div>
+        <div class="mb-3">
+          <label for="aid_type_id" class="form-label">Aid Type</label>
+          <select class="form-select" id="aid_type_id" name="aid_type_id" required>
+            <option value="">-- Select aid type --</option>
+            <?php foreach ($aidTypes as $type): ?>
+              <option value="<?= esc($type['aid_type_id']) ?>"><?= esc($type['name']) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label for="memberID" class="form-label">Claimant</label>
+          <select class="form-select" id="memberID" name="memberID" required>
+            <option value="">-- Select claimant --</option>
+          </select>
+        </div>
+        <div id="fieldErrors" class="text-danger small mb-3"></div>
+        <button class="btn btn-success w-100" id="submitBtn" type="submit">Log Distribution</button>
+      </form>
+    </div>
+  </div>
 </div>
 <?= $this->endSection() ?>
 
@@ -66,7 +93,12 @@ async function lookup(control) {
         <div class="small text-muted">${esc(m.sex || '—')} · ${esc(m.birthday || '—')}</div>
       </li>`).join('');
   renderHistory(data.history);
-  $('logDistLink').href = `${BASE}/scanner/manage?control_no=${encodeURIComponent(data.control_no)}`;
+  $('memberID').innerHTML = '<option value="">-- Select claimant --</option>' +
+    data.members.map(m => `<option value="${esc(m.memberID)}">${esc(m.firstname)} ${esc(m.lastname)} (${esc(m.relationship || 'Member')})</option>`).join('');
+  $('control_no').value = data.control_no;
+  if (!$('claim_date').value) {
+    $('claim_date').value = new Date().toISOString().slice(0, 10);
+  }
   $('familyPanel').hidden = false;
 }
 
@@ -83,6 +115,28 @@ $('lookupBtn').addEventListener('click', () => {
 });
 $('controlInput').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') { e.preventDefault(); $('lookupBtn').click(); }
+});
+
+$('logForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  $('logAlert').hidden = true;
+  $('fieldErrors').innerHTML = '';
+  $('submitBtn').disabled = true;
+  const fd = new FormData($('logForm'));
+  try {
+    const res = await fetch(`${BASE}/scanner/log`, { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!res.ok) {
+      const errs = data.errors || {};
+      $('fieldErrors').innerHTML = Object.values(errs).map(m => `<div>${esc(m)}</div>`).join('');
+      return;
+    }
+    $('logAlert').textContent = 'Distribution logged successfully.';
+    $('logAlert').hidden = false;
+    renderHistory(data.history);
+  } finally {
+    $('submitBtn').disabled = false;
+  }
 });
 
 let scanner;

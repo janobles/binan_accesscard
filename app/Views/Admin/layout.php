@@ -226,6 +226,7 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                     'adminAccounts' => $adminAccounts,
                     'employeeAccounts' => $employeeAccounts,
                     'viewerAccounts' => $viewerAccounts ?? [],
+                    'scannerAccounts' => $scannerAccounts ?? [],
                     'searchTerm' => $searchTerm,
                     'searchFilters' => $searchFilters,
                     'canCreateAccounts' => $canCreateAccounts,

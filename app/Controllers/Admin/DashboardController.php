@@ -205,6 +205,7 @@ class DashboardController extends BaseController
             'adminAccounts' => $viewData['adminAccounts'] ?? [],
             'employeeAccounts' => $viewData['employeeAccounts'] ?? [],
             'viewerAccounts' => $viewData['viewerAccounts'] ?? [],
+            'scannerAccounts' => $viewData['scannerAccounts'] ?? [],
             'searchTerm' => $viewData['searchTerm'] ?? '',
             'searchFilters' => $viewData['searchFilters'] ?? [],
             'canCreateAccounts' => $viewData['canCreateAccounts'] ?? false,

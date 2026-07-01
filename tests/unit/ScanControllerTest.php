@@ -13,6 +13,7 @@ final class ScanControllerTest extends CIUnitTestCase
         $routes->loadRoutes();
         $map = $routes->getRoutes('GET');
         $this->assertArrayHasKey('scanner/scan', $map);
+        $this->assertArrayHasKey('scanner/manage', $map);
     }
 
     public function testGuardRolesIncludeScanner(): void

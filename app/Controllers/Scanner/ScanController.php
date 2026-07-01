@@ -7,6 +7,7 @@ use App\Libraries\RoleAccess;
 use App\Models\Audit\AuditTrailsModel;
 use App\Models\Families\MemberModel;
 use App\Models\Scanner\AidDistributionModel;
+use App\Models\Scanner\AidTypeModel;
 use App\Models\Scanner\QrControlModel;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
@@ -32,6 +33,22 @@ class ScanController extends BaseController
             'activeTab' => 'scan',
             'pageTitle' => 'Scan',
             'username'  => session('username') ?? 'Scanner',
+        ]);
+    }
+
+    public function manage(): ResponseInterface|string
+    {
+        $guard = RoleAccess::requireRole(['Scanner', 'Admin', 'Developer']);
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        return view('Scanner/manage', [
+            'activeTab'       => 'manage',
+            'pageTitle'       => 'Manage Distributions',
+            'username'        => session('username') ?? 'Scanner',
+            'aidTypes'        => model(AidTypeModel::class)->active(),
+            'prefillControl'  => ($c = (int) $this->request->getGet('control_no')) > 0 ? $c : null,
         ]);
     }
 

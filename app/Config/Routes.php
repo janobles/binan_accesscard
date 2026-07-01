@@ -123,6 +123,7 @@ $routes->group('viewer', static function (RouteCollection $routes): void {
  */
 $routes->group('scanner', static function (RouteCollection $routes): void {
     $routes->get('scan', 'Scanner\ScanController::scan');
+    $routes->get('manage', 'Scanner\ScanController::manage');
     $routes->get('lookup/(:num)', 'Scanner\ScanController::lookup/$1');
     $routes->post('log', 'Scanner\ScanController::logAid');
 });

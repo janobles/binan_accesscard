@@ -61,6 +61,7 @@
 <script>
 const BASE = '<?= rtrim(base_url(), '/') ?>';
 const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 $('claimDate').value = new Date().toISOString().slice(0, 10);
 
 async function lookup(control) {
@@ -76,10 +77,10 @@ async function lookup(control) {
   const data = await res.json();
   const h = data.head;
   $('headBody').innerHTML =
-    `<div class="fw-bold">${h.firstname ?? ''} ${h.lastname ?? ''}</div>` +
-    `<div class="text-muted small">${h.address ?? ''}</div>`;
+    `<div class="fw-bold">${esc(h.firstname)} ${esc(h.lastname)}</div>` +
+    `<div class="text-muted small">${esc(h.address)}</div>`;
   $('claimantSelect').innerHTML = data.members
-    .map(m => `<option value="${m.memberID}">${m.firstname} ${m.lastname} (${m.relationship || 'Member'})</option>`).join('');
+    .map(m => `<option value="${esc(m.memberID)}">${esc(m.firstname)} ${esc(m.lastname)} (${esc(m.relationship || 'Member')})</option>`).join('');
   renderHistory(data.history);
   $('logControl').value = data.control_no;
   $('familyPanel').hidden = false;
@@ -88,7 +89,7 @@ async function lookup(control) {
 function renderHistory(rows) {
   $('historyList').innerHTML = rows.length
     ? rows.map(r => `<li class="list-group-item d-flex justify-content-between">
-        <span>${r.aid_type ?? ''} - ${r.claimant ?? ''}</span><span class="text-muted">${r.claim_date}</span></li>`).join('')
+        <span>${esc(r.aid_type)} - ${esc(r.claimant)}</span><span class="text-muted">${esc(r.claim_date)}</span></li>`).join('')
     : '<li class="list-group-item text-muted">No aid received yet.</li>';
 }
 

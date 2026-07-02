@@ -34,7 +34,7 @@ $accounts = array_merge($adminAccounts, $employeeAccounts, $viewerAccounts, $sca
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
             </select>
-            <button class="btn btn-outline-secondary account-filter-clear" type="button" data-account-clear-filters>
+            <button class="btn btn-danger account-filter-clear" type="button" data-account-clear-filters>
                 <i class="bi bi-x-lg" aria-hidden="true"></i>
                 <span>Clear</span>
             </button>

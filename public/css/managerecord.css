@@ -210,7 +210,9 @@
 }
 
 .records-search-action.btn-outline-secondary,
-.records-search-action[data-records-clear] {
+.records-search-action.btn-danger,
+.records-search-action[data-records-clear],
+[data-records-clear] {
     --bs-btn-color: #ffffff;
     --bs-btn-border-color: var(--records-clear-color);
     --bs-btn-bg: var(--records-clear-color);
@@ -228,8 +230,12 @@
 
 .records-search-action.btn-outline-secondary:hover,
 .records-search-action.btn-outline-secondary:focus,
+.records-search-action.btn-danger:hover,
+.records-search-action.btn-danger:focus,
 .records-search-action[data-records-clear]:hover,
-.records-search-action[data-records-clear]:focus {
+.records-search-action[data-records-clear]:focus,
+[data-records-clear]:hover,
+[data-records-clear]:focus {
     color: #ffffff;
     border-color: var(--records-clear-hover);
     background-color: var(--records-clear-hover);

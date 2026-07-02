@@ -69,6 +69,9 @@ if (! function_exists('asset_styles')) {
             'family-form' => [
                 'css/familyform.css',
             ],
+            'scanner' => [
+                'css/scanner-reports.css',
+            ],
         ];
 
         return $manifest[$context] ?? [];
@@ -144,6 +147,10 @@ if (! function_exists('asset_scripts')) {
             ],
             'login' => [
                 'assets/js/login.js',
+            ],
+            'scanner' => [
+                'vendor/chart.js/chart.umd.min.js',
+                'assets/js/dashboard/scanner-reports.js',
             ],
         ];
 

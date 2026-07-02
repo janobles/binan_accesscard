@@ -1,0 +1,16 @@
+/* Reports tab: chart-card sizing only. Reuses shared panel styling; does not
+   restyle shared classes. */
+.reports-chart-card {
+    padding: 1rem;
+    height: 100%;
+}
+.reports-chart-card h6 {
+    margin-bottom: .75rem;
+    font-weight: 600;
+}
+.reports-chart-card canvas {
+    max-width: 100%;
+}
+.stat-card-row .stat-card {
+    flex: 1 1 12rem;
+}

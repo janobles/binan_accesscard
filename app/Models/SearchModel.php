@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Libraries\SectorIds;
+use App\Models\Concerns\MemberQueryFilters;
 use App\Models\Concerns\NormalizesIds;
 use App\Models\Concerns\RecordStatus;
 use App\Models\Concerns\ResolvesMemberNames;
@@ -16,6 +16,7 @@ use CodeIgniter\Database\BaseConnection;
  */
 class SearchModel
 {
+    use MemberQueryFilters;
     use NormalizesIds;
     use ResolvesMemberNames;
     use ResolvesSectorNames;
@@ -52,20 +53,8 @@ class SearchModel
             $this->applyMemberKeyword($builder, $keyword, '', ['sectorID'], 'sectorID');
         }
 
-        $sectorIds = $this->normalizeFilterList($filters['sectorID'] ?? []);
-
-        if ($sectorIds !== []) {
-            $builder->groupStart();
-            foreach ($sectorIds as $index => $sectorId) {
-                if ($index === 0) {
-                    $builder->where(SectorIds::containsCondition((int) $sectorId, 'sectorID'), null, false);
-                    continue;
-                }
-
-                $builder->orWhere(SectorIds::containsCondition((int) $sectorId, 'sectorID'), null, false);
-            }
-            $builder->groupEnd();
-        }
+        $this->applySectorIdFilter($builder, $filters['sectorID'] ?? [], 'sectorID');
+        $this->applyBarangayFilter($builder, $filters['barangay'] ?? [], 'address', 'barangay');
 
         $this->applyDateRange($builder, 'dt_created', $filters);
 
@@ -178,94 +167,12 @@ class SearchModel
             $this->applyMemberKeyword($builder, $keyword, 'm.', ['address', 'religion', 'job'], 'm.sectorID', $serviceMemberIds);
         }
 
-        $sectorIds = $this->normalizeFilterList($filters['sectorID'] ?? []);
-
-        if ($sectorIds !== []) {
-            $builder->groupStart();
-            foreach ($sectorIds as $index => $sectorId) {
-                if ($index === 0) {
-                    $builder->where(SectorIds::containsCondition((int) $sectorId, 'm.sectorID'), null, false);
-                    continue;
-                }
-
-                $builder->orWhere(SectorIds::containsCondition((int) $sectorId, 'm.sectorID'), null, false);
-            }
-            $builder->groupEnd();
-        }
-
-        $barangays = $this->normalizeFilterList($filters['barangay'] ?? [], false);
-
-        if ($barangays !== []) {
-            // No barangay column exists; barangay is stored as the trailing part
-            // of the combined `address` value ("address, barangay" or just
-            // "barangay"). Mirror splitAddressBarangay(): exact match or a
-            // ", barangay" suffix. OR across the selected barangays.
-            $builder->groupStart();
-            foreach ($barangays as $index => $barangay) {
-                $open = $index === 0 ? 'groupStart' : 'orGroupStart';
-                $builder->{$open}()
-                    ->where('m.address', $barangay)
-                    ->orLike('m.address', ', ' . $barangay, 'before')
-                    ->groupEnd();
-            }
-            $builder->groupEnd();
-        }
+        $this->applySectorIdFilter($builder, $filters['sectorID'] ?? [], 'm.sectorID');
+        $this->applyBarangayFilter($builder, $filters['barangay'] ?? [], 'm.address', 'm.barangay');
 
         $this->applyDateRange($builder, 'm.dt_created', $filters);
 
         return $builder;
-    }
-
-    /**
-     * Adds a member keyword clause to a query. Each whitespace token must match one
-     * of the name columns (AND across tokens, OR across firstname/middlename/lastname),
-     * so a full "Firstname Lastname" matches even though the words live in different
-     * columns. The whole keyword is still matched against the non-name fields
-     * (contact/relationship + $likeColumns + sector + assigned services) as an OR
-     * branch, so single-word and non-name searches behave as before. $prefix is the
-     * table alias prefix ('' or 'm.'); $sectorColumn is the sectorID column to test.
-     */
-    private function applyMemberKeyword(BaseBuilder $builder, string $keyword, string $prefix, array $likeColumns, string $sectorColumn, array $serviceMemberIds = []): void
-    {
-        $tokens = preg_split('/\s+/', $keyword, -1, PREG_SPLIT_NO_EMPTY) ?: [$keyword];
-
-        $builder->groupStart();
-
-        // Name tokens, AND-ed together.
-        $builder->groupStart();
-        foreach ($tokens as $token) {
-            $builder->groupStart()
-                ->like($prefix . 'firstname', $token)
-                ->orLike($prefix . 'middlename', $token)
-                ->orLike($prefix . 'lastname', $token)
-                ->orLike($prefix . 'suffix', $token)
-                ->groupEnd();
-        }
-        $builder->groupEnd();
-
-        // Whole-keyword matches on the non-name fields, OR-ed with the name match.
-        $builder->orGroupStart()
-            ->like($prefix . 'contactnumber', $keyword)
-            ->orLike($prefix . 'relationship', $keyword);
-
-        foreach ($likeColumns as $field) {
-            if ($this->db->fieldExists($field, 'member')) {
-                $builder->orLike($prefix . $field, $keyword);
-            }
-        }
-
-        // Match by sector name -> sector IDs -> JSON array contains the ID.
-        foreach ($this->sectorIdsForKeyword($keyword) as $sectorId) {
-            $builder->orWhere(SectorIds::containsCondition($sectorId, $sectorColumn), null, false);
-        }
-
-        if ($serviceMemberIds !== []) {
-            $builder->orWhereIn($prefix . 'memberID', $serviceMemberIds);
-        }
-
-        $builder->groupEnd();
-
-        $builder->groupEnd();
     }
 
     /**
@@ -490,34 +397,6 @@ class SearchModel
     }
 
     /**
-     * Applies a date filter to a query: either a single `date` (whole day) or a
-     * `date_from`/`date_to` range. Shared by family, member, and audit searches.
-     */
-    private function applyDateRange(BaseBuilder $builder, string $column, array $filters): void
-    {
-        $date = $this->normalizeDate((string) ($filters['date'] ?? ''));
-
-        if ($date !== '') {
-            $builder
-                ->where($column . ' >=', $date . ' 00:00:00')
-                ->where($column . ' <=', $date . ' 23:59:59');
-
-            return;
-        }
-
-        $dateFrom = $this->normalizeDate((string) ($filters['date_from'] ?? ''));
-        $dateTo = $this->normalizeDate((string) ($filters['date_to'] ?? ''));
-
-        if ($dateFrom !== '') {
-            $builder->where($column . ' >=', $dateFrom . ' 00:00:00');
-        }
-
-        if ($dateTo !== '') {
-            $builder->where($column . ' <=', $dateTo . ' 23:59:59');
-        }
-    }
-
-    /**
      * Filters accounts by active/disabled, tolerating both the Enable/Disabled
      * enum and legacy numeric isactive values.
      */
@@ -558,24 +437,6 @@ class SearchModel
         return $this->db->tableExists('audit_trails')
             && $this->db->tableExists('users')
             && $this->db->tableExists('member');
-    }
-
-    /** Sector IDs whose name/description match the keyword (so search can match sector text). */
-    private function sectorIdsForKeyword(string $keyword): array
-    {
-        if (! $this->db->tableExists('sector')) {
-            return [];
-        }
-
-        return array_map(
-            static fn (array $sector): int => (int) $sector['sectorID'],
-            $this->db->table('sector')
-                ->select('sectorID')
-                ->like('name', $keyword)
-                ->orLike('description', $keyword)
-                ->get()
-                ->getResultArray()
-        );
     }
 
     // Service/program IDs whose name or category matches the keyword (for deep search).
@@ -736,11 +597,4 @@ class SearchModel
         return trim($keyword);
     }
 
-    /** Returns the date only if it's a valid Y-m-d, else '' (ignored by filters). */
-    private function normalizeDate(string $date): string
-    {
-        $date = trim($date);
-
-        return preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) === 1 ? $date : '';
-    }
 }

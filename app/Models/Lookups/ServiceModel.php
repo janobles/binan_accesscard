@@ -3,6 +3,7 @@
 namespace App\Models\Lookups;
 
 use App\Models\Concerns\LookupModelTrait;
+use App\Models\Concerns\NormalizesIds;
 use CodeIgniter\Database\BaseBuilder;
 use CodeIgniter\Model;
 
@@ -16,6 +17,7 @@ use CodeIgniter\Model;
 class ServiceModel extends Model
 {
     use LookupModelTrait;
+    use NormalizesIds;
 
     protected $table = 'services';
     protected $primaryKey = 'serviceID';
@@ -206,7 +208,7 @@ class ServiceModel extends Model
      */
     public function getByIdsIncludingArchived(array $ids): array
     {
-        $ids = array_values(array_unique(array_filter(array_map('intval', $ids), static fn (int $id): bool => $id > 0)));
+        $ids = $this->positiveUniqueIds($ids);
 
         if ($ids === [] || ! $this->db->tableExists($this->table)) {
             return [];
@@ -252,7 +254,7 @@ class ServiceModel extends Model
      */
     public function getNameMapByIds(array $serviceIds): array
     {
-        $serviceIds = $this->naturalIds($serviceIds) ?? [];
+        $serviceIds = $this->naturalUniqueIds($serviceIds) ?? [];
 
         if ($serviceIds === []) {
             return [];
@@ -348,28 +350,4 @@ class ServiceModel extends Model
         return $this->db->affectedRows();
     }
 
-    /**
-     * Normalizes a list of service IDs to unique non-negative ints, or null if any
-     * value is non-numeric/nested — letting callers reject malformed input.
-     */
-    private function naturalIds(array $serviceIds): ?array
-    {
-        $normalizedIds = [];
-
-        foreach ($serviceIds as $serviceId) {
-            if (is_array($serviceId)) {
-                return null;
-            }
-
-            $serviceId = trim((string) $serviceId);
-
-            if ($serviceId === '' || ! ctype_digit($serviceId)) {
-                return null;
-            }
-
-            $normalizedIds[] = (int) $serviceId;
-        }
-
-        return array_values(array_unique($normalizedIds));
-    }
 }

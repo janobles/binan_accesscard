@@ -59,8 +59,8 @@ $categoryClearUrl = static function () use ($listRoute, $status, $perPage): stri
 				<option value="all" <?= $status === 'all' ? 'selected' : '' ?>>All (<?= esc((string) $allCategoryCount) ?>)</option>
 			</select>
 			<?php if ($perPage !== 50): ?><input type="hidden" name="per_page" value="<?= esc((string) $perPage, 'attr') ?>"><?php endif; ?>
-			<a class="btn btn-outline-secondary records-search-action" href="<?= esc($categoryClearUrl(), 'attr') ?>"><span>Clear</span></a>
 			<button class="btn btn-outline-success records-search-action" type="submit"><span>Search</span></button>
+			<a class="btn btn-outline-secondary records-search-action" href="<?= esc($categoryClearUrl(), 'attr') ?>"><span>Clear</span></a>
 			<button class="btn btn-primary records-search-action js-category-modal-open" type="button" data-category-mode="create"><span>Add Category</span></button>
 		</form>
 	</div>

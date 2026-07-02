@@ -80,6 +80,22 @@ if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
 
+# schtasks-created tasks inherit Windows' laptop power-gating: "don't start on
+# battery" + "stop when unplugged". On a laptop that silently prevents the
+# every-minute drain whenever it's on battery (jobs sit `pending` -> the UI hangs
+# on "waiting for worker"). Clear both and let missed ticks catch up so the worker
+# runs regardless of power state.
+try {
+    $task = Get-ScheduledTask -TaskName $TaskName -ErrorAction Stop
+    $task.Settings.DisallowStartIfOnBatteries = $false
+    $task.Settings.StopIfGoingOnBatteries     = $false
+    $task.Settings.StartWhenAvailable         = $true
+    Set-ScheduledTask -TaskName $TaskName -Settings $task.Settings | Out-Null
+    Write-Host 'Cleared battery power-gating (worker runs on battery too).'
+} catch {
+    Write-Warning "Task created, but could not clear battery power-gating: $($_.Exception.Message)"
+}
+
 if ($At -ne '') { $when = "nightly at $At" } else { $when = "every $EveryMinutes minute(s)" }
 
 Write-Host ("Installed '" + $TaskName + "' - fires " + $when + " (Throttle=" + $Throttle + "ms, Drainers=" + $Drainers + ", MaxSeconds=" + $MaxSeconds + ").")

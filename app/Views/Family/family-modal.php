@@ -210,7 +210,7 @@ $renderMemberRow = static function ($index, array $m = []) use (
                                             <?php
                                             $sector = (array) $sector;
                                             $sectorId = (string) ($sector['sectorID'] ?? $sector['id'] ?? '');
-                                            $label = $sectorLabel($sector);1:41 PM
+                                            $label = $sectorLabel($sector);
                                             
                                             
                                             

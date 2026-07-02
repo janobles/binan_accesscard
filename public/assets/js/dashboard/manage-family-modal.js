@@ -48,6 +48,10 @@
         }
 
         if (field.tagName === 'SELECT') {
+            if (String(field.value || '').trim() === '') {
+                return '';
+            }
+
             return field.options[field.selectedIndex] ? field.options[field.selectedIndex].text.trim() : '';
         }
 

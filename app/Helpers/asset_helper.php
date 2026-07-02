@@ -25,7 +25,7 @@ if (! function_exists('asset_styles')) {
      * asset_url() for cache-busting. Per-role order is significant (CSS cascade).
      *
      * Contexts: head (shared <head> CSS), admin|employee|viewer (dashboard
-     * shells), login, family-form. Unknown context returns [].
+     * shells), login. Unknown context returns [].
      */
     function asset_styles(string $context): array
     {
@@ -66,9 +66,6 @@ if (! function_exists('asset_styles')) {
                 'assets/bootstrap/css/bootstrap.min.css',
                 'css/login.css',
             ],
-            'family-form' => [
-                'css/familyform.css',
-            ],
         ];
 
         return $manifest[$context] ?? [];
@@ -99,10 +96,6 @@ if (! function_exists('asset_scripts')) {
                 'assets/datatables/js/dataTables.min.js',
                 'assets/datatables/js/dataTables.bootstrap5.min.js',
                 'assets/js/dashboard/family-datatable.js',
-                // Legacy Add-Record page (admin/family-entry) still uses the wizard
-                // form; these self-init on a wizard page and no-op on the list page.
-                'assets/js/dashboard/family-form-ui.js',
-                'assets/js/dashboard/family-form.js',
                 'assets/js/dashboard/family-list.js',
                 'assets/js/dashboard/management-forms.js',
                 'assets/js/dashboard/lookup-search.js',
@@ -123,8 +116,6 @@ if (! function_exists('asset_scripts')) {
                 'assets/datatables/js/dataTables.min.js',
                 'assets/datatables/js/dataTables.bootstrap5.min.js',
                 'assets/js/dashboard/family-datatable.js',
-                'assets/js/dashboard/family-form-ui.js',
-                'assets/js/dashboard/family-form.js',
                 'assets/js/dashboard/family-list.js',
                 'assets/js/dashboard/audit-filters.js',
                 'assets/js/dashboard/lookup-search.js',

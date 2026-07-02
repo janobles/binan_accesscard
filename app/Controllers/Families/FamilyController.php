@@ -187,9 +187,7 @@ class FamilyController extends BaseController
             ]);
         }
 
-        // family_record_saved signals the manage-records page to clear the
-        // client-side "Add Record" draft (see family-form.js). Set on a new
-        // record save only — never on edit/update.
+        // Set on a new record save only, never on edit/update.
         return redirect()->back()
             ->with('family_record_saved', '1')
             ->with('success', $successMessage);
@@ -444,9 +442,8 @@ class FamilyController extends BaseController
 
     /**
      * GET `{admin|employee}/manage-family/edit/{id}`: returns the family record
-     * modal prefilled for editing. Delegates to renderFamilyModal() — the same
-     * Bootstrap modal served by createFamily() in update mode — so the legacy
-     * edit route stays functional after the old `Family/form` wizard was retired.
+     * modal prefilled for editing. Delegates to renderFamilyModal(), the same
+     * Bootstrap modal served by createFamily() in update mode.
      */
     public function editFamily(int $headId): string|RedirectResponse
     {

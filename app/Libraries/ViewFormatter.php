@@ -195,9 +195,9 @@ class ViewFormatter
     /**
      * Returns the member-row sectors as a single "Sectors" group. Sectors are flat
      * classifications after the Phase A restructure (SC, PWD, SP, B, LGBT, OFW, IP,
-     * IDP, PDL, OTHER), so there is no per-category grouping; the grouped shape is
-     * kept because member-fields.php iterates [{label, sectors}]. $categoryLabels is
-     * accepted for signature stability but no longer used. Empty input yields [].
+     * IDP, PDL, OTHER), so there is no per-category grouping. The grouped shape is
+     * kept for callers that render [{label, sectors}]. $categoryLabels is accepted
+     * for signature stability but no longer used. Empty input yields [].
      */
     public static function memberSectorGroups(array $sectorOptions, array $categoryLabels = []): array
     {

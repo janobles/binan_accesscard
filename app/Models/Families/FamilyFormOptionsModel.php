@@ -66,10 +66,10 @@ class FamilyFormOptionsModel extends Model
     }
 
     /**
-     * Shapes getOptions() into the exact view variables the family form template
-     * expects (sectorOptions, sexOptions, servicesByCategory, etc.). Frontend:
-     * consumed directly by the `Family/form` view. Add-Family path: only active
-     * sectors/services appear (archived items are never offered to new records).
+     * Shapes getOptions() into the exact variables the family modal expects
+     * (sectorOptions, sexOptions, servicesByCategory, etc.). Add-Family path:
+     * only active sectors/services appear (archived items are never offered to
+     * new records).
      */
     public function getViewData(): array
     {
@@ -119,7 +119,7 @@ class FamilyFormOptionsModel extends Model
     }
 
     /**
-     * Builds the family-form view variables from a (possibly augmented) options array.
+     * Builds the family modal view variables from a (possibly augmented) options array.
      * Shared by getViewData() and getViewDataForEdit().
      */
     private function buildViewData(array $options): array
@@ -133,8 +133,7 @@ class FamilyFormOptionsModel extends Model
             'formOptions' => $options,
             'sectorOptions' => $sectorOptions,
             'sectorCatalog' => $sectorModel->getSectorCatalog($sectorOptions),
-            // Sectors are flat classifications now, so there are no per-category
-            // headings; kept as an empty map for the member-fields partial's signature.
+            // Sectors are flat classifications now, so there are no per-category headings.
             'sectorCategoryLabels' => [],
             // Text dropdowns are alphabetized for the form ("Other/Others" pinned last).
             // Suffix (Jr, Sr, I-V) and income brackets (numeric low->high) keep their order.

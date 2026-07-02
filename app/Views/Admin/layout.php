@@ -25,7 +25,6 @@ $recentFamilies = $recentFamilies ?? [];
 $recentAudits = $recentAudits ?? [];
 $adminAccounts = $adminAccounts ?? [];
 $employeeAccounts = $employeeAccounts ?? [];
-$familyFormViewData = $familyFormViewData ?? [];
 $recordListData = $recordListData ?? [];
 $categories = $categories ?? [];
 $sectorShortcodeOptions = $sectorShortcodeOptions ?? [];
@@ -265,16 +264,6 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                     'canEditAccounts' => $canEditAccounts ?? false,
                     'currentRole' => $currentRole,
                 ]) ?>
-            <?php endif; ?>
-
-            <?php if ($activePage === 'family-entry'): ?>
-                <div class="panel mb-3">
-                    <div class="section-title mt-0"><span>Add Record</span></div>
-                    <?= view('Family/entry', array_merge(
-                        $familyFormViewData,
-                        ['canCreateFamily' => $canCreateFamily]
-                    )) ?>
-                </div>
             <?php endif; ?>
 
             <?php if ($activePage === 'family-manage'): ?>

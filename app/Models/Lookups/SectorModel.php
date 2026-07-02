@@ -3,6 +3,7 @@
 namespace App\Models\Lookups;
 
 use App\Models\Concerns\LookupModelTrait;
+use App\Models\Concerns\NormalizesIds;
 use CodeIgniter\Database\BaseBuilder;
 use CodeIgniter\Model;
 
@@ -16,6 +17,7 @@ use CodeIgniter\Model;
 class SectorModel extends Model
 {
     use LookupModelTrait;
+    use NormalizesIds;
 
     protected $table = 'sector';
     protected $primaryKey = 'sectorID';
@@ -70,7 +72,7 @@ class SectorModel extends Model
      */
     public function getByIdsIncludingArchived(array $ids): array
     {
-        $ids = array_values(array_unique(array_filter(array_map('intval', $ids), static fn (int $id): bool => $id > 0)));
+        $ids = $this->positiveUniqueIds($ids);
 
         if ($ids === [] || ! $this->hasTable()) {
             return [];

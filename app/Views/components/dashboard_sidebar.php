@@ -37,6 +37,9 @@ $activeTab = $activeTab ?? '';
         <li class="nav-item">
             <a class="nav-link <?= $activeTab === 'manage' ? 'active' : '' ?>" href="<?= site_url('scanner/manage') ?>"><i class="bi bi-clipboard-check" aria-hidden="true"></i><span>Management</span></a>
         </li>
+        <li class="nav-item">
+            <a class="nav-link <?= $activeTab === 'reports' ? 'active' : '' ?>" href="<?= site_url('scanner/reports') ?>"><i class="bi bi-bar-chart-line" aria-hidden="true"></i><span>Reports</span></a>
+        </li>
         <li><hr class="sidebar-divider d-none d-md-block"></li>
         <li class="text-center d-none d-md-inline">
             <button class="rounded-circle border-0" id="sidebarToggle" type="button" aria-label="Collapse sidebar" aria-controls="dashboard-sidebar" aria-expanded="true"></button>

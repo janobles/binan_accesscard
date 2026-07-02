@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\Lookups\CategoryModel;
 use App\Models\Lookups\SectorModel;
+use App\Models\Lookups\ServiceModel;
 
 /**
  * Prepares dashboard view variables before templates render markup.
@@ -231,22 +232,9 @@ class DashboardViewData
         $sectorShortcodeOptions = self::stringList($data['sectorShortcodeOptions'] ?? []);
         $canRestore = (bool) ($data['canRestore'] ?? false);
 
-        // Add-Sector modal data: category dropdown (categoryID => "CODE - Name"), the
-        // next suggested sector code per category, and every existing shortcode for the
-        // inline duplicate check. Fetched here so the sectors view stays model-free.
+        // Add-Sector modal data: sectors are flat classifications (no category), so
+        // the modal only needs every existing shortcode for the inline duplicate check.
         $sectorModel = new SectorModel();
-        $categoryModel = new CategoryModel();
-        $sectorCategoryOptions = [];
-        $sectorNextCodeMap = [];
-
-        foreach ($categoryModel->getActive() as $category) {
-            $categoryId = (int) ($category['categoryID'] ?? 0);
-            $code = (string) ($category['code'] ?? '');
-            $name = (string) ($category['name'] ?? '');
-            $sectorCategoryOptions[$categoryId] = ($name === '' || $name === $code) ? $code : $code . ' - ' . $name;
-            $sectorNextCodeMap[$categoryId] = $categoryModel->nextSectorCodeFor($code);
-        }
-
         $existingShortcodes = $sectorModel->existingShortcodes();
 
         return array_merge(
@@ -254,8 +242,6 @@ class DashboardViewData
                 'sectorShortcodeOptions',
                 'sectors',
                 'canRestore',
-                'sectorCategoryOptions',
-                'sectorNextCodeMap',
                 'existingShortcodes'
             ),
             self::lookupListVars($bundle, 'admin/sectors')
@@ -269,8 +255,41 @@ class DashboardViewData
         $services = self::arrayValue($bundle['rows'] ?? $data['services'] ?? []);
         $canRestore = (bool) ($data['canRestore'] ?? false);
 
+        // Add-Program modal category dropdown: a service category can be a SECTOR
+        // (a sector doubles as the category for its own programs) OR a standalone
+        // Manage-Categories row (FA/SWPS/EDA). Union active sector names + managed
+        // category names + any category strings already on services (so legacy/archived
+        // labels still render). Fetched here so the view stays model-free.
+        $activeSectors    = (new SectorModel())->getActive();
+        $activeCategories = (new CategoryModel())->getActive();
+        $serviceModel     = new ServiceModel();
+
+        $sectorCategories  = array_map(static fn (array $s): string => trim((string) ($s['name'] ?? '')), $activeSectors);
+        $managedCategories = array_map(static fn (array $c): string => trim((string) ($c['name'] ?? '')), $activeCategories);
+        $usedCategories    = array_map(static fn (array $s): string => trim((string) ($s['category'] ?? '')), $services);
+        $serviceCategoryOptions = array_values(array_unique(array_filter(array_merge($sectorCategories, $managedCategories, $usedCategories))));
+
+        // category NAME => suggested next service code. The code prefix is the sector's
+        // shortcode (Bata (Children) => B => next B4) or the category's code (EDA => EDA10),
+        // recomputed from the live tables so it stays correct as sectors/services grow.
+        $serviceNextCodeMap = [];
+        foreach ($activeSectors as $sector) {
+            $name   = trim((string) ($sector['name'] ?? ''));
+            $prefix = strtoupper(trim((string) ($sector['shortcode'] ?? '')));
+            if ($name !== '' && $prefix !== '') {
+                $serviceNextCodeMap[$name] = $serviceModel->nextCodeForPrefix($prefix);
+            }
+        }
+        foreach ($activeCategories as $category) {
+            $name   = trim((string) ($category['name'] ?? ''));
+            $prefix = strtoupper(trim((string) ($category['code'] ?? '')));
+            if ($name !== '' && $prefix !== '') {
+                $serviceNextCodeMap[$name] = $serviceModel->nextCodeForPrefix($prefix);
+            }
+        }
+
         return array_merge(
-            compact('services', 'canRestore'),
+            compact('services', 'canRestore', 'serviceCategoryOptions', 'serviceNextCodeMap'),
             self::lookupListVars($bundle, 'admin/services')
         );
     }

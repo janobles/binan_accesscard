@@ -24,12 +24,16 @@
 							<label class="form-label" for="categoryModalName">Name</label>
 							<input class="form-control" id="categoryModalName" name="name" maxlength="150" required>
 						</div>
+						<div class="mt-3 mb-0">
+							<label class="form-label" for="categoryModalDescription">Description</label>
+							<textarea class="form-control" id="categoryModalDescription" name="description" rows="3" maxlength="255"></textarea>
+						</div>
 					</div>
 					<div class="alert alert-warning mb-0 d-none js-category-archive-message">
-						Archive <strong class="js-category-archive-name">this category</strong>? This will be blocked if any sectors still use it.
+						Archive <strong class="js-category-archive-name">this category</strong>? Every active service and program filed under it will be archived at the same time.
 					</div>
 					<div class="alert alert-info mb-0 d-none js-category-restore-message">
-						Restore <strong class="js-category-restore-name">this category</strong>? It will become active again and available for sectors.
+						Restore <strong class="js-category-restore-name">this category</strong>? It becomes active again, and the services and programs that were archived together with it are restored too.
 					</div>
 				</div>
 				<div class="modal-footer">

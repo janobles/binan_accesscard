@@ -85,11 +85,21 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                     </div>
                 </div>
                 <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a href="#" class="nav-link topbar-user js-open-my-account-modal" data-modal-url="<?= site_url('account/profile') ?>" data-modal-title="My Account"><i class="bi bi-person-circle" aria-hidden="true"></i><span><?= esc($username) ?> &middot; <?= ($currentRole ?? '') === 'Developer' ? 'Developer' : 'Administrator' ?></span></a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="<?= site_url('logout') ?>" class="nav-link js-logout-link"><i class="bi bi-box-arrow-right" aria-hidden="true"></i><span>Logout</span></a>
+                    <li class="nav-item topbar-divider d-none d-sm-block"></li>
+                    <li class="nav-item dropdown no-arrow">
+                        <a class="nav-link dropdown-toggle topbar-user" href="#" id="adminUserDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <span class="me-2 d-none d-lg-inline text-gray-600 small"><?= esc($username) ?> &middot; <?= ($currentRole ?? '') === 'Developer' ? 'Developer' : 'Administrator' ?></span>
+                            <i class="bi bi-person-circle topbar-user-icon" aria-hidden="true"></i>
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-end shadow animated--grow-in" aria-labelledby="adminUserDropdown">
+                            <button type="button" class="dropdown-item js-open-my-account-modal" data-modal-url="<?= site_url('account/profile') ?>" data-modal-title="My Account">
+                                <i class="bi bi-person me-2 text-gray-400" aria-hidden="true"></i> My Account
+                            </button>
+                            <div class="dropdown-divider"></div>
+                            <a href="<?= site_url('logout') ?>" class="dropdown-item js-logout-link">
+                                <i class="bi bi-box-arrow-right me-2 text-gray-400" aria-hidden="true"></i> Logout
+                            </a>
+                        </div>
                     </li>
                 </ul>
             </nav>
@@ -125,10 +135,38 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
             <?php if ($activePage === 'dashboard'): ?>
                 <div class="dashboard-overview" data-dashboard-overview>
                     <section class="overview-stats" aria-label="Dashboard statistics">
-                        <article class="stat-card"><p>Total Records</p><strong><?= esc((string) ($stats['families'] ?? 0)) ?></strong></article>
-                        <article class="stat-card"><p>Registered Members</p><strong><?= esc((string) ($stats['members'] ?? 0)) ?></strong></article>
-                        <article class="stat-card"><p>Active Sectors</p><strong><?= esc((string) ($stats['sectors'] ?? 0)) ?></strong></article>
-                        <article class="stat-card"><p>Services and Programs</p><strong><?= esc((string) ($stats['assistance'] ?? 0)) ?></strong></article>
+                        <article class="stat-card stat-card--records card shadow-sm h-100 py-2">
+                            <div class="card-body">
+                                <div class="stat-card-content">
+                                    <div><p>Total Records</p><strong><?= esc((string) ($stats['families'] ?? 0)) ?></strong></div>
+                                    <i class="bi bi-folder2-open stat-card-icon" aria-hidden="true"></i>
+                                </div>
+                            </div>
+                        </article>
+                        <article class="stat-card stat-card--members card shadow-sm h-100 py-2">
+                            <div class="card-body">
+                                <div class="stat-card-content">
+                                    <div><p>Registered Members</p><strong><?= esc((string) ($stats['members'] ?? 0)) ?></strong></div>
+                                    <i class="bi bi-people stat-card-icon" aria-hidden="true"></i>
+                                </div>
+                            </div>
+                        </article>
+                        <article class="stat-card stat-card--sectors card shadow-sm h-100 py-2">
+                            <div class="card-body">
+                                <div class="stat-card-content">
+                                    <div><p>Active Sectors</p><strong><?= esc((string) ($stats['sectors'] ?? 0)) ?></strong></div>
+                                    <i class="bi bi-diagram-3 stat-card-icon" aria-hidden="true"></i>
+                                </div>
+                            </div>
+                        </article>
+                        <article class="stat-card stat-card--services card shadow-sm h-100 py-2">
+                            <div class="card-body">
+                                <div class="stat-card-content">
+                                    <div><p>Services and Programs</p><strong><?= esc((string) ($stats['assistance'] ?? 0)) ?></strong></div>
+                                    <i class="bi bi-grid stat-card-icon" aria-hidden="true"></i>
+                                </div>
+                            </div>
+                        </article>
                     </section>
 
                     <section class="overview-panel dashboard-table-panel">

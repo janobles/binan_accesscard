@@ -1,12 +1,10 @@
 <?php
 helper('dashboard_view');
+// service_management_view_data() supplies $serviceCategoryOptions (managed category
+// names from the Manage Categories page + any categories already on services) for the
+// Add-Program modal dropdown, so this view stays model-free.
 extract(service_management_view_data(get_defined_vars()), EXTR_OVERWRITE);
-$defaultServiceCategoryOptions = \App\Support\FamilyProfilingFormV2::SERVICE_CATEGORIES;
-$serviceCategoryOptions = array_values(array_unique(array_filter(array_map(
-    static fn (array $service): string => trim((string) ($service['category'] ?? '')),
-    $services
-))));
-$serviceCategoryOptions = array_values(array_unique(array_merge($defaultServiceCategoryOptions, $serviceCategoryOptions)));
+$serviceCategoryOptions = $serviceCategoryOptions ?? [];
 
 // Counts come from the server bundle (whole table), not the current page below.
 $activeServiceCount   = (int) ($activeCount ?? 0);
@@ -88,14 +86,15 @@ $serviceClearUrl = static function () use ($listRoute, $status, $perPage): strin
 	</div>
 
 	<div class="table-responsive">
-		<table class="table table-sm manage-record-table align-middle">
+		<table class="table table-sm manage-record-table align-middle lookup-management-table lookup-management-table--services">
 			<thead>
 				<tr>
-					<th>Name</th>
-					<th>Category</th>
-					<th>Description</th>
-					<th>Status</th>
-					<?php if ($canManage): ?><th class="text-end">Actions</th><?php endif; ?>
+					<th class="lookup-col-name">Name</th>
+					<th class="lookup-col-code">Code</th>
+					<th class="lookup-col-category">Category</th>
+					<th class="lookup-col-description">Description</th>
+					<th class="lookup-col-status">Status</th>
+					<?php if ($canManage): ?><th class="lookup-col-actions text-end">Actions</th><?php endif; ?>
 				</tr>
 			</thead>
 			<tbody>
@@ -104,6 +103,7 @@ $serviceClearUrl = static function () use ($listRoute, $status, $perPage): strin
 					<?php $isArchived = trim((string) ($service['dt_deleted'] ?? '')) !== ''; ?>
 					<tr data-row-archived="<?= $isArchived ? '1' : '0' ?>">
 						<td><span class="sector-name"><?= esc((string) ($service['name'] ?? '')) ?></span></td>
+						<td><span class="badge bg-primary-subtle text-dark border fw-semibold"><?= esc((string) ($service['shortcode'] ?? '')) ?></span></td>
 						<td><span class="badge bg-light text-dark border"><?= esc((string) ($service['category'] ?? '')) ?></span></td>
 						<td><span class="text-trim d-inline-block"><?= esc((string) ($service['description'] ?? '')) ?></span></td>
 						<td><span class="sector-status-badge <?= $isArchived ? 'sector-status-archived' : 'sector-status-active' ?>"><?= $isArchived ? 'Archived' : 'Active' ?></span></td>
@@ -118,6 +118,7 @@ $serviceClearUrl = static function () use ($listRoute, $status, $perPage): strin
 											class="dropdown-item js-service-modal-open"
 											type="button"
 											data-service-mode="update"
+											data-service-shortcode="<?= esc((string) ($service['shortcode'] ?? ''), 'attr') ?>"
 											data-service-id="<?= esc((string) $serviceId) ?>"
 											data-service-category="<?= esc((string) ($service['category'] ?? ''), 'attr') ?>"
 											data-service-name="<?= esc((string) ($service['name'] ?? ''), 'attr') ?>"
@@ -152,7 +153,7 @@ $serviceClearUrl = static function () use ($listRoute, $status, $perPage): strin
 				<?php endforeach; ?>
 				<?php if ($services === []): ?>
 					<tr>
-						<td colspan="5" class="sector-empty-state"><?= $keyword !== '' ? 'No services match your search.' : 'No service or program records found.' ?></td>
+						<td colspan="6" class="sector-empty-state"><?= $keyword !== '' ? 'No services match your search.' : 'No service or program records found.' ?></td>
 					</tr>
 				<?php endif; ?>
 			</tbody>
@@ -176,5 +177,6 @@ $serviceClearUrl = static function () use ($listRoute, $status, $perPage): strin
 <?php if ($canManage): ?>
 <?= view('Lookups/service-modal', [
 	'serviceCategoryOptions' => $serviceCategoryOptions,
+	'serviceNextCodeMap' => $serviceNextCodeMap ?? [],
 ]) ?>
 <?php endif; ?>

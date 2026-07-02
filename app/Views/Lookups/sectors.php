@@ -1,8 +1,8 @@
 <?php
 helper('dashboard_view');
 // sector_management_view_data() also supplies the Add-Sector modal data
-// ($sectorCategoryOptions, $sectorNextCodeMap, $existingShortcodes) so this view
-// never instantiates a model itself.
+// ($existingShortcodes, for the inline duplicate check) so this view never
+// instantiates a model itself. Sectors are flat classifications — no category.
 extract(sector_management_view_data(get_defined_vars()), EXTR_OVERWRITE);
 
 // Counts come from the server bundle (whole table), not the current page below.
@@ -85,14 +85,14 @@ $sectorClearUrl = static function () use ($listRoute, $status, $perPage): string
 	</div>
 
 	<div class="table-responsive">
-		<table class="table table-sm manage-record-table align-middle">
+		<table class="table table-sm manage-record-table align-middle lookup-management-table lookup-management-table--sectors">
 			<thead>
 				<tr>
-					<th>Name</th>
-					<th>Shortcode</th>
-					<th>Description</th>
-					<th>Status</th>
-					<?php if ($canManage): ?><th class="text-end">Actions</th><?php endif; ?>
+					<th class="lookup-col-name">Name</th>
+					<th class="lookup-col-code">Shortcode</th>
+					<th class="lookup-col-description">Description</th>
+					<th class="lookup-col-status">Status</th>
+					<?php if ($canManage): ?><th class="lookup-col-actions text-end">Actions</th><?php endif; ?>
 				</tr>
 			</thead>
 			<tbody>
@@ -116,7 +116,6 @@ $sectorClearUrl = static function () use ($listRoute, $status, $perPage): string
 											type="button"
 											data-sector-mode="update"
 											data-sector-id="<?= esc((string) $sectorId) ?>"
-											data-sector-category-id="<?= esc((string) ($sector['categoryID'] ?? ''), 'attr') ?>"
 											data-sector-shortcode="<?= esc((string) ($sector['shortcode'] ?? ''), 'attr') ?>"
 											data-sector-name="<?= esc((string) ($sector['name'] ?? ''), 'attr') ?>"
 											data-sector-description="<?= esc((string) ($sector['description'] ?? ''), 'attr') ?>">
@@ -173,8 +172,6 @@ $sectorClearUrl = static function () use ($listRoute, $status, $perPage): string
 
 <?php if ($canManage): ?>
 <?= view('Lookups/sector-modal', [
-	'sectorCategoryOptions' => $sectorCategoryOptions,
-	'sectorNextCodeMap' => $sectorNextCodeMap,
 	'existingShortcodes' => $existingShortcodes,
 ]) ?>
 <?php endif; ?>

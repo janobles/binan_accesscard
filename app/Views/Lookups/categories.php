@@ -1,13 +1,14 @@
 <?php
 /*
- * "Manage Categories" management page. Lists the sector categories from the
- * `category` table and lets an admin add/rename/archive/restore/delete them via
+ * "Manage Categories" management page. Lists the standalone SERVICE categories from
+ * the `category` table (FA/SWPS/EDA — the ones with no matching sector; a sector acts
+ * as its own service category) and lets an admin add/rename/archive/restore them via
  * the shared #categoryActionModal (see category-modal.php + categories-modal.js).
  *
- * Every category is fully editable, archivable, and deletable; the only
- * server-side guard (in Lookups\CategoryController) blocks archiving/deleting a
- * category still linked to sectors. Reuses the Manage Records .records-* layout
- * (managerecord.css) plus the shared lookup badge/action styles (lookupmanagement.css).
+ * Server-side guards (Lookups\CategoryController): a category may not duplicate a sector
+ * (code or name), and one still used by an active service cannot be archived. Reuses the
+ * Manage Records .records-* layout (managerecord.css) plus the shared lookup badge/action
+ * styles (lookupmanagement.css).
  */
 helper('dashboard_view');
 // category_management_view_data() also supplies $existingCodes (all codes incl.
@@ -86,12 +87,13 @@ $categoryClearUrl = static function () use ($listRoute, $status, $perPage): stri
 	</div>
 
 	<div class="table-responsive">
-		<table class="table table-sm manage-record-table align-middle">
+		<table class="table table-sm manage-record-table align-middle lookup-management-table lookup-management-table--categories">
 			<thead>
 				<tr>
-					<th>Name</th>
-					<th>Code</th>
-					<th class="text-end">Actions</th>
+					<th class="lookup-col-name">Name</th>
+					<th class="lookup-col-code">Code</th>
+					<th class="lookup-col-description">Description</th>
+					<th class="lookup-col-actions text-end">Actions</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -103,6 +105,7 @@ $categoryClearUrl = static function () use ($listRoute, $status, $perPage): stri
 					<tr data-row-archived="<?= $isArchived ? '1' : '0' ?>">
 						<td><span class="sector-name"><?= esc((string) ($category['name'] ?? '')) ?></span></td>
 						<td><span class="badge bg-light text-dark border"><?= esc((string) ($category['code'] ?? '')) ?></span></td>
+						<td><span class="text-trim d-inline-block"><?= esc((string) ($category['description'] ?? '')) ?></span></td>
 						<td class="text-end">
 							<div class="dropdown actions-menu">
 								<button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false" aria-label="Category actions">
@@ -116,7 +119,8 @@ $categoryClearUrl = static function () use ($listRoute, $status, $perPage): stri
 											data-category-mode="update"
 											data-category-id="<?= esc((string) $categoryId) ?>"
 											data-category-code="<?= esc((string) ($category['code'] ?? ''), 'attr') ?>"
-											data-category-name="<?= esc((string) ($category['name'] ?? ''), 'attr') ?>">
+											data-category-name="<?= esc((string) ($category['name'] ?? ''), 'attr') ?>"
+											data-category-description="<?= esc((string) ($category['description'] ?? ''), 'attr') ?>">
 											<i class="bi bi-pencil-square" aria-hidden="true"></i>Edit
 										</button>
 										<button
@@ -125,7 +129,8 @@ $categoryClearUrl = static function () use ($listRoute, $status, $perPage): stri
 											data-category-mode="archive"
 											data-category-id="<?= esc((string) $categoryId) ?>"
 											data-category-code="<?= esc((string) ($category['code'] ?? ''), 'attr') ?>"
-											data-category-name="<?= esc((string) ($category['name'] ?? ''), 'attr') ?>">
+											data-category-name="<?= esc((string) ($category['name'] ?? ''), 'attr') ?>"
+											data-category-description="<?= esc((string) ($category['description'] ?? ''), 'attr') ?>">
 											<i class="bi bi-archive" aria-hidden="true"></i>Archive
 										</button>
 									<?php else: ?>
@@ -145,7 +150,7 @@ $categoryClearUrl = static function () use ($listRoute, $status, $perPage): stri
 				<?php endforeach; ?>
 				<?php if ($categories === []): ?>
 					<tr>
-						<td colspan="3" class="sector-empty-state"><?= $keyword !== '' ? 'No categories match your search.' : 'No category records found.' ?></td>
+						<td colspan="4" class="sector-empty-state"><?= $keyword !== '' ? 'No categories match your search.' : 'No category records found.' ?></td>
 					</tr>
 				<?php endif; ?>
 			</tbody>

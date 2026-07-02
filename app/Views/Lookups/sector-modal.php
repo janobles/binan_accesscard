@@ -7,7 +7,6 @@
 				data-update-action="<?= site_url('admin/sectors/update') ?>"
 				data-archive-action="<?= site_url('admin/sectors/archive') ?>"
 				data-restore-action="<?= site_url('admin/sectors/restore') ?>"
-				data-next-code-map="<?= esc(json_encode((object) ($sectorNextCodeMap ?? [])), 'attr') ?>"
 				data-existing-codes="<?= esc(json_encode(array_values($existingShortcodes ?? [])), 'attr') ?>">
 				<?= csrf_field() ?>
 				<div class="modal-header">
@@ -17,25 +16,8 @@
 				<div class="modal-body">
 					<div class="js-sector-form-fields">
 						<div class="mb-3">
-							<label class="form-label" for="sectorModalCategory">Category</label>
-							<select class="form-select" id="sectorModalCategory" name="categoryID" required>
-								<option value="">Select category</option>
-								<option value="__other__">+ Add custom category&hellip;</option>
-								<?php foreach (($sectorCategoryOptions ?? []) as $categoryId => $label): ?>
-									<option value="<?= esc((string) $categoryId) ?>"><?= esc((string) $label) ?></option>
-								<?php endforeach; ?>
-							</select>
-						</div>
-						<div class="mb-3 d-none js-sector-custom-category">
-							<label class="form-label" for="sectorModalNewCategoryCode">New category code</label>
-							<input class="form-control text-uppercase" id="sectorModalNewCategoryCode" name="new_category_code" placeholder="e.g. NEW" pattern="[A-Za-z]+" title="Letters only" maxlength="30">
-							<label class="form-label mt-2" for="sectorModalNewCategoryName">New category name</label>
-							<input class="form-control" id="sectorModalNewCategoryName" name="new_category_name" placeholder="e.g. New Families" maxlength="150">
-							<small class="text-muted">A new category will be created and this sector added under it.</small>
-						</div>
-						<div class="mb-3">
 							<label class="form-label" for="sectorModalShortcode">Code</label>
-							<input class="form-control" id="sectorModalShortcode" name="shortcode" placeholder="Pick a category to auto-fill" required>
+							<input class="form-control text-uppercase" id="sectorModalShortcode" name="shortcode" placeholder="e.g. SC, PWD, OTHER" required>
 							<div class="invalid-feedback d-block d-none js-sector-code-error">Duplicate code - please enter another code.</div>
 						</div>
 						<div class="mb-3">
@@ -48,10 +30,10 @@
 						</div>
 					</div>
 					<div class="alert alert-warning mb-0 d-none js-sector-archive-message">
-						Archive <strong class="js-sector-archive-name">this sector</strong>? This will be blocked if records are already using it.
+						Archive <strong class="js-sector-archive-name">this sector</strong>? Every active service and program filed under it will be archived at the same time. Existing family records keep the sector.
 					</div>
 					<div class="alert alert-info mb-0 d-none js-sector-restore-message">
-						Restore <strong class="js-sector-restore-name">this sector</strong>? It will become active again and available for assignment.
+						Restore <strong class="js-sector-restore-name">this sector</strong>? It becomes active again, and the services and programs that were archived together with it are restored too.
 					</div>
 				</div>
 				<div class="modal-footer">

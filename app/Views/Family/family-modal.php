@@ -125,7 +125,7 @@ $renderMemberRow = static function ($index, array $m = []) use (
                                 ?>
                                 <?php if ($sectorId !== '' && $label !== ''): ?>
                                     <label class="form-check family-choice<?= $isArchived ? ' family-choice--archived' : '' ?>">
-                                        <input type="checkbox" name="<?= esc($field('sector_ids') . '[]', 'attr') ?>" value="<?= esc($sectorId, 'attr') ?>" data-label="<?= esc($label, 'attr') ?>"<?= $isArchived ? ' data-archived="1"' : '' ?> <?= in_array($sectorId, $selectedSectors, true) ? 'checked' : '' ?>>
+                                        <input type="checkbox" name="<?= esc($field('sector_ids') . '[]', 'attr') ?>" value="<?= esc($sectorId, 'attr') ?>" data-label="<?= esc($label, 'attr') ?>" data-sector-name="<?= esc((string) ($sector['name'] ?? ''), 'attr') ?>"<?= $isArchived ? ' data-archived="1"' : '' ?> <?= in_array($sectorId, $selectedSectors, true) ? 'checked' : '' ?>>
                                         <span class="form-check-label"><?= esc($label) ?><?php if ($isArchived): ?> <span class="family-choice-badge">Archived</span><?php endif; ?></span>
                                     </label>
                                 <?php endif; ?>
@@ -137,11 +137,19 @@ $renderMemberRow = static function ($index, array $m = []) use (
             <div class="col-12 col-lg-7">
                 <h5 class="family-column-title">Services and Programs Available</h5>
                 <div class="family-option-box family-option-box--sm">
+                    <div class="family-suggested" data-family-suggested hidden aria-live="polite">
+                        <p class="family-suggested-title">&#11088; Suggested for this person</p>
+                        <p class="family-suggested-reason" data-family-suggested-reason></p>
+                        <div data-family-suggested-groups></div>
+                        <p class="family-suggested-empty" data-family-suggested-empty hidden>
+                            No specific programs are listed for this sector yet. All programs below are still available.
+                        </p>
+                    </div>
                     <?php if ($servicesByCategory === []): ?>
                         <p class="text-muted mb-0">No services available.</p>
                     <?php endif; ?>
                     <?php foreach ($servicesByCategory as $category => $services): ?>
-                        <div class="family-option-group">
+                        <div class="family-option-group" data-service-category="<?= esc((string) $category, 'attr') ?>">
                             <p class="family-option-group-title"><?= esc((string) $category) ?></p>
                             <?php foreach ((array) $services as $service): ?>
                                 <?php
@@ -314,7 +322,7 @@ $renderMemberRow = static function ($index, array $m = []) use (
                                             ?>
                                             <?php if ($sectorId !== '' && $label !== ''): ?>
                                                 <label class="form-check family-choice<?= $isArchived ? ' family-choice--archived' : '' ?>">
-                                                    <input type="checkbox" name="sector_ids[]" value="<?= esc($sectorId, 'attr') ?>" data-label="<?= esc($label, 'attr') ?>"<?= $isArchived ? ' data-archived="1"' : '' ?> <?= in_array($sectorId, $selectedSectorIds, true) ? 'checked' : '' ?>>
+                                                    <input type="checkbox" name="sector_ids[]" value="<?= esc($sectorId, 'attr') ?>" data-label="<?= esc($label, 'attr') ?>" data-sector-name="<?= esc((string) ($sector['name'] ?? ''), 'attr') ?>"<?= $isArchived ? ' data-archived="1"' : '' ?> <?= in_array($sectorId, $selectedSectorIds, true) ? 'checked' : '' ?>>
                                                     <span class="form-check-label"><?= esc($label) ?><?php if ($isArchived): ?> <span class="family-choice-badge">Archived</span><?php endif; ?></span>
                                                 </label>
                                             <?php endif; ?>
@@ -326,11 +334,19 @@ $renderMemberRow = static function ($index, array $m = []) use (
                         <div class="col-12 col-lg-7">
                             <h4 class="family-column-title">Services and Programs Available</h4>
                             <div class="family-option-box">
+                                <div class="family-suggested" data-family-suggested hidden aria-live="polite">
+                                    <p class="family-suggested-title">&#11088; Suggested for this person</p>
+                                    <p class="family-suggested-reason" data-family-suggested-reason></p>
+                                    <div data-family-suggested-groups></div>
+                                    <p class="family-suggested-empty" data-family-suggested-empty hidden>
+                                        No specific programs are listed for this sector yet. All programs below are still available.
+                                    </p>
+                                </div>
                                 <?php if ($servicesByCategory === []): ?>
                                     <p class="text-muted mb-0">No services available.</p>
                                 <?php endif; ?>
                                 <?php foreach ($servicesByCategory as $category => $services): ?>
-                                    <div class="family-option-group">
+                                    <div class="family-option-group" data-service-category="<?= esc((string) $category, 'attr') ?>">
                                         <p class="family-option-group-title"><?= esc((string) $category) ?></p>
                                         <?php foreach ((array) $services as $service): ?>
                                             <?php

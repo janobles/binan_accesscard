@@ -712,6 +712,58 @@
     accent-color: #168a73;
 }
 
+.family-suggested {
+    padding: 0.65rem 0.75rem;
+    margin-bottom: 0.8rem;
+    border: 2px solid #e2b93b;
+    border-radius: 0.5rem;
+    background: #fff8e6;
+}
+
+.family-suggested-title {
+    margin: 0 0 0.2rem;
+    color: #6b4d00;
+    font-size: 1rem;
+    font-weight: 800;
+}
+
+.family-suggested-reason,
+.family-suggested-empty {
+    margin: 0 0 0.45rem;
+    color: #5a4a12;
+    font-size: 0.9rem;
+}
+
+.family-suggested-empty {
+    margin-bottom: 0;
+}
+
+.family-suggested .family-option-group {
+    padding-top: 0.35rem;
+    border-top: 0;
+}
+
+.family-suggested .family-choice {
+    font-size: 0.95rem;
+}
+
+/* The always-present callout replaces the first group as :first-child. */
+.family-suggested + .family-option-group {
+    padding-top: 0;
+    border-top: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .family-suggested.is-updated {
+        animation: family-suggested-pulse 0.6s ease;
+    }
+
+    @keyframes family-suggested-pulse {
+        0% { background: #ffe9a8; }
+        100% { background: #fff8e6; }
+    }
+}
+
 .family-entry-actions {
     justify-content: flex-end;
     flex: 0 0 auto;

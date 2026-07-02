@@ -3,6 +3,7 @@
 namespace App\Models\Families;
 
 use App\Libraries\SectorIds;
+use App\Models\Concerns\MemberQueryFilters;
 use App\Models\Concerns\NormalizesIds;
 use App\Models\Concerns\RecordStatus;
 use App\Models\Concerns\ResolvesSectorNames;
@@ -13,6 +14,7 @@ use CodeIgniter\Model;
  */
 class MemberModel extends Model
 {
+    use MemberQueryFilters;
     use NormalizesIds;
     use ResolvesSectorNames;
 
@@ -302,7 +304,7 @@ class MemberModel extends Model
             ->where('member.memberID = member.headID', null, false);
 
         if ($keyword !== null && trim($keyword) !== '') {
-            $this->applyMemberKeyword($builder, trim($keyword));
+            $this->applyMemberKeyword($builder, trim($keyword), 'member.', ['religion', 'address', 'barangay'], 'member.sectorID');
         }
 
         $this->applyRecordFilters($builder, $filters);
@@ -310,84 +312,13 @@ class MemberModel extends Model
         return $builder;
     }
 
-    /**
-     * Adds the Manage Records keyword clause to a member query. Each whitespace
-     * token must match one of the name columns (AND across tokens, OR across
-     * firstname/middlename/lastname), so a full "Firstname Lastname" matches even
-     * though the words live in different columns. The whole keyword is still matched
-     * against the non-name fields (contact/relationship/religion/address/sector) as
-     * an OR branch, so single-word and non-name searches behave as before.
-     */
-    private function applyMemberKeyword($builder, string $keyword): void
-    {
-        $tokens = preg_split('/\s+/', $keyword, -1, PREG_SPLIT_NO_EMPTY) ?: [$keyword];
-
-        $builder->groupStart();
-
-        // Name tokens, AND-ed together.
-        $builder->groupStart();
-        foreach ($tokens as $token) {
-            $builder->groupStart()
-                ->like('member.firstname', $token)
-                ->orLike('member.middlename', $token)
-                ->orLike('member.lastname', $token)
-                ->orLike('member.suffix', $token)
-                ->groupEnd();
-        }
-        $builder->groupEnd();
-
-        // Whole-keyword matches on the non-name fields, OR-ed with the name match.
-        $builder->orGroupStart()
-            ->like('member.contactnumber', $keyword)
-            ->orLike('member.relationship', $keyword);
-
-        foreach (['religion', 'address', 'barangay'] as $field) {
-            if ($this->memberFieldExists($field)) {
-                $builder->orLike('member.' . $field, $keyword);
-            }
-        }
-
-        foreach ($this->sectorIdsForKeyword($keyword) as $sectorId) {
-            $builder->orWhere(SectorIds::containsCondition($sectorId, 'member.sectorID'), null, false);
-        }
-
-        $builder->groupEnd();
-
-        $builder->groupEnd();
-    }
-
     // Applies the Manage Records filter controls to a member query builder.
     // Connects to: family-list.php filter form -> DashboardPageBuilder -> here.
     private function applyRecordFilters($builder, array $filters): void
     {
-        $sectorIds = $this->normalizeFilterList($filters['sectorID'] ?? []);
-
-        if ($sectorIds !== []) {
-            $builder->groupStart();
-            foreach ($sectorIds as $index => $sectorId) {
-                if ($index === 0) {
-                    $builder->where(SectorIds::containsCondition((int) $sectorId, 'member.sectorID'), null, false);
-                    continue;
-                }
-
-                $builder->orWhere(SectorIds::containsCondition((int) $sectorId, 'member.sectorID'), null, false);
-            }
-            $builder->groupEnd();
-        }
-
-        $barangays = $this->normalizeFilterList($filters['barangay'] ?? [], false);
-
-        if ($barangays !== [] && $this->memberFieldExists('barangay')) {
-            $builder->whereIn('member.barangay', $barangays);
-        }
-
-        $date = trim((string) ($filters['date'] ?? ''));
-
-        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) === 1) {
-            $builder
-                ->where('member.dt_created >=', $date . ' 00:00:00')
-                ->where('member.dt_created <=', $date . ' 23:59:59');
-        }
+        $this->applySectorIdFilter($builder, $filters['sectorID'] ?? [], 'member.sectorID');
+        $this->applyBarangayFilter($builder, $filters['barangay'] ?? [], 'member.address', 'member.barangay');
+        $this->applyDateRange($builder, 'member.dt_created', $filters);
     }
 
     /**
@@ -678,27 +609,6 @@ class MemberModel extends Model
         }
 
         return $builder;
-    }
-
-    /**
-     * Finds sector IDs whose name/description match a search keyword, so the
-     * Manage Records search can also match members by their sector text.
-     */
-    private function sectorIdsForKeyword(string $keyword): array
-    {
-        if (! $this->db->tableExists('sector')) {
-            return [];
-        }
-
-        return array_map(
-            static fn (array $sector): int => (int) $sector['sectorID'],
-            $this->db->table('sector')
-                ->select('sectorID')
-                ->like('name', $keyword)
-                ->orLike('description', $keyword)
-                ->get()
-                ->getResultArray()
-        );
     }
 
     /**

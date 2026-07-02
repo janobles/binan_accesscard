@@ -219,13 +219,6 @@
     text-align: left;
 }
 
-.lookup-management-table .actions-menu .dropdown-toggle {
-    width: 2.35rem;
-    height: 2.2rem;
-    justify-content: center;
-    padding-inline: 0;
-}
-
 .sector-actions {
     width: 2.65rem;
     min-height: 2.4rem;

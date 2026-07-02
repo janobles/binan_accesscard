@@ -48,6 +48,10 @@
         }
 
         if (field.tagName === 'SELECT') {
+            if (String(field.value || '').trim() === '') {
+                return '';
+            }
+
             return field.options[field.selectedIndex] ? field.options[field.selectedIndex].text.trim() : '';
         }
 
@@ -581,6 +585,7 @@
         });
 
         renderHeadSummary(root);
+        refreshAllSuggestions(root);
     }
 
     // ---- summary -----------------------------------------------------------
@@ -664,6 +669,149 @@
         setSummary(container, 'address', [textValue(form, '[data-summary="address"]'), textValue(form, '[data-summary="barangay"]')].filter(Boolean).join(', '));
         setSummaryList(container, 'sectors', checkedLabels(form, 'input[name="sector_ids[]"]'));
         setSummaryList(container, 'services', checkedLabels(form, 'input[name="service_ids[]"]'));
+    }
+
+    // ---- sector-linked program suggestions ----------------------------------
+    // A service group is "linked" to a sector when its category name matches the
+    // sector's name (same convention the server uses for archive cascades).
+    // Checked sectors float their linked groups into the "Suggested" callout;
+    // nothing is ever hidden — groups only relocate.
+
+    var SECTOR_INPUT_SELECTOR = 'input[name="sector_ids[]"], input[name$="[sector_ids][]"]';
+
+    function normName(value) {
+        return String(value || '').trim().toLowerCase();
+    }
+
+    function stampGroupOrder(box) {
+        box.querySelectorAll('.family-option-group[data-service-category]').forEach(function (group, index) {
+            if (!group.dataset.suggestOrder) {
+                group.dataset.suggestOrder = String(index + 1);
+            }
+        });
+    }
+
+    // Reinsert a group at its original slot among the non-suggested groups.
+    function returnGroupHome(box, suggestedContainer, group) {
+        var order = parseInt(group.dataset.suggestOrder || '0', 10);
+        var next = Array.from(box.querySelectorAll('.family-option-group[data-service-category]')).find(function (other) {
+            return other !== group
+                && !suggestedContainer.contains(other)
+                && parseInt(other.dataset.suggestOrder || '0', 10) > order;
+        });
+
+        if (next) {
+            box.insertBefore(group, next);
+        } else {
+            box.appendChild(group);
+        }
+    }
+
+    // scopeEl: a member row, or the modal root (head section).
+    function refreshSuggestions(scopeEl) {
+        if (!scopeEl || !scopeEl.querySelectorAll) {
+            return;
+        }
+
+        var row = scopeEl.matches && scopeEl.matches('[data-family-member-row]') ? scopeEl : null;
+        var container = row
+            ? row.querySelector('[data-family-suggested]')
+            : Array.from(scopeEl.querySelectorAll('[data-family-suggested]')).find(function (el) {
+                return !el.closest('[data-family-member-row]');
+            });
+
+        if (!container) {
+            return;
+        }
+
+        var box = container.closest('.family-option-box');
+        var holder = container.querySelector('[data-family-suggested-groups]');
+        var reasonEl = container.querySelector('[data-family-suggested-reason]');
+
+        if (!box || !holder) {
+            return;
+        }
+
+        stampGroupOrder(box);
+
+        var searchRoot = row || scopeEl;
+        var sectorSelector = row ? 'input[name$="[sector_ids][]"]:checked' : 'input[name="sector_ids[]"]:checked';
+        var checkedNames = [];
+        var checkedKeys = {};
+
+        searchRoot.querySelectorAll(sectorSelector).forEach(function (input) {
+            var name = String(input.dataset.sectorName || '').trim();
+            var key = normName(name);
+
+            if (name === '' || checkedKeys[key]) {
+                return;
+            }
+
+            checkedKeys[key] = true;
+            checkedNames.push(name);
+        });
+
+        var groups = Array.from(box.querySelectorAll('.family-option-group[data-service-category]'));
+        var matched = [];
+        var groupKeys = {};
+
+        groups.forEach(function (group) {
+            groupKeys[normName(group.dataset.serviceCategory)] = true;
+
+            if (checkedKeys[normName(group.dataset.serviceCategory)]) {
+                matched.push(group);
+            } else if (container.contains(group)) {
+                returnGroupHome(box, container, group);
+            }
+        });
+
+        var beforeKeys = Array.from(holder.children).map(function (group) {
+            return normName(group.dataset.serviceCategory);
+        }).join('|');
+
+        matched.sort(function (a, b) {
+            return parseInt(a.dataset.suggestOrder || '0', 10) - parseInt(b.dataset.suggestOrder || '0', 10);
+        }).forEach(function (group) {
+            holder.appendChild(group);
+        });
+
+        var afterKeys = Array.from(holder.children).map(function (group) {
+            return normName(group.dataset.serviceCategory);
+        }).join('|');
+
+        container.hidden = matched.length === 0;
+
+        if (reasonEl) {
+            var matchingNames = checkedNames.filter(function (name) {
+                return groupKeys[normName(name)];
+            });
+
+            reasonEl.textContent = matchingNames.length
+                ? 'Showing: ' + matchingNames.join(', ') + '. All other programs are still shown below.'
+                : '';
+        }
+
+        // Gentle pulse + scroll to top when the suggested set actually changed.
+        if (!container.hidden && beforeKeys !== afterKeys) {
+            var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+            if (!reduceMotion) {
+                container.classList.remove('is-updated');
+                void container.offsetWidth;
+                container.classList.add('is-updated');
+                window.setTimeout(function () {
+                    container.classList.remove('is-updated');
+                }, 700);
+                box.scrollTop = 0;
+            }
+        }
+    }
+
+    function refreshAllSuggestions(root) {
+        refreshSuggestions(root);
+        root.querySelectorAll('[data-family-member-row]').forEach(function (row) {
+            refreshSuggestions(row);
+        });
     }
 
     // ---- step navigation + validation --------------------------------------
@@ -771,6 +919,7 @@
         button.dataset.nextIndex = String(nextIndex + 1);
 
         initOtherSelects(row);
+        refreshSuggestions(row);
 
         return row;
     }
@@ -1058,9 +1207,18 @@
                         target.checked = true;
                     }
 
+                    // "Keep" re-checks asynchronously, after the sync refresh below already ran.
+                    if (target.matches(SECTOR_INPUT_SELECTOR)) {
+                        refreshSuggestions(target.closest('[data-family-member-row]') || root);
+                    }
+
                     renderHeadSummary(root);
                     scheduleSave(root);
                 });
+            }
+
+            if (target && target.matches(SECTOR_INPUT_SELECTOR)) {
+                refreshSuggestions(target.closest('[data-family-member-row]') || root);
             }
 
             renderHeadSummary(root);
@@ -1095,6 +1253,7 @@
                     clearMemberRows(root);
                     initOtherSelects(root);
                     renderHeadSummary(root);
+                    refreshAllSuggestions(root);
                     showStep(root, 'head');
 
                     if (isCreateForm(root)) {
@@ -1110,6 +1269,7 @@
         }
 
         renderHeadSummary(root);
+        refreshAllSuggestions(root);
         showStep(root, 'head');
 
         // Restore-on-reopen prompt (create mode only).

@@ -25,6 +25,7 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= esc($pageTitle) ?> - Binan Access Card MIS</title>
+    
     <?php foreach (array_merge(asset_styles('head'), asset_styles('employee')) as $stylePath): ?>
     <link rel="stylesheet" href="<?= esc(asset_url($stylePath), 'attr') ?>">
     <?php endforeach; ?>
@@ -235,8 +236,8 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
                                     <?php endforeach; ?>
                                 </select>
                                 <?php if ($perPage !== 50): ?><input type="hidden" name="per_page" value="<?= esc((string) $perPage, 'attr') ?>"><?php endif; ?>
-                                <a class="btn btn-outline-secondary records-search-action" href="<?= esc($auditClearUrl(), 'attr') ?>"><i class="bi bi-x-lg" aria-hidden="true"></i><span>Clear</span></a>
-                                <button class="btn btn-primary records-search-action" type="submit"><i class="bi bi-search" aria-hidden="true"></i><span>Search</span></button>
+                                <a class="btn btn-outline-secondary records-search-action" href="<?= esc($auditClearUrl(), 'attr') ?>"><span>Clear</span></a>
+                                <button class="btn btn-primary records-search-action" type="submit"><span>Search</span></button>
                             </form>
                         </div>
 

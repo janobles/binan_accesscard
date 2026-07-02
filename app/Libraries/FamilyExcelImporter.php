@@ -191,6 +191,14 @@ class FamilyExcelImporter
                 continue;
             }
 
+            // Must be digits only: it becomes the paper QR control number via an
+            // (int) cast downstream, so "5A"/"5B" would both collapse to 5 and one
+            // family's QR would silently overwrite the other's.
+            if (! ctype_digit($familyNo)) {
+                $this->addError($row, $familyNo, 'QR Number "' . $familyNo . '" must contain digits only.');
+                continue;
+            }
+
             $grouped[$familyNo][] = ['row' => $row, 'data' => $values];
         }
 

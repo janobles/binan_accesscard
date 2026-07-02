@@ -128,7 +128,14 @@ class QueueWork extends BaseCommand
             return;
         }
 
-        $handler = new $handlers[$type]();
+        try {
+            $handler = new $handlers[$type]();
+        } catch (Throwable $e) {
+            $model->finish($jobId, 'failed', 'Handler for "' . $type . '" could not be constructed: ' . $e->getMessage());
+            CLI::error('  handler construction failed: ' . $e->getMessage());
+
+            return;
+        }
 
         if (! $handler instanceof JobHandlerInterface) {
             $model->finish($jobId, 'failed', 'Handler for "' . $type . '" is not a JobHandlerInterface.');

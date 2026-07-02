@@ -19,6 +19,16 @@ class AidDistributionModel extends Model
     /** Inserts one distribution row and returns its aidID. */
     public function logAid(array $data): int
     {
+        // Guard against a malformed handout: control number, claimant, and aid
+        // type must all be positive ids and a claim date must be present.
+        if ((int) ($data['control_no'] ?? 0) <= 0
+            || (int) ($data['memberID'] ?? 0) <= 0
+            || (int) ($data['aid_type_id'] ?? 0) <= 0
+            || empty($data['claim_date'])
+        ) {
+            return 0;
+        }
+
         $this->insert([
             'control_no'  => (int) $data['control_no'],
             'memberID'    => (int) $data['memberID'],

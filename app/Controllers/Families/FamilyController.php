@@ -167,10 +167,17 @@ class FamilyController extends BaseController
                 $this->request->getIPAddress(),
                 $this->request->getUserAgent()->getAgentString()
             );
-        } catch (FamilyRecordWriteException $exception) {
+        } catch (Throwable $exception) {
             $memberModel->rollbackTransaction();
 
-            return $this->storeError($exception->getMessage());
+            // persistFamily can also throw beyond FamilyRecordWriteException (QR
+            // assignment, audit, or an unexpected DB error). Catch them all so the
+            // transaction is always rolled back and the request fails gracefully.
+            return $this->storeError(
+                $exception instanceof FamilyRecordWriteException
+                    ? $exception->getMessage()
+                    : 'The family record was not saved.'
+            );
         }
 
         $memberModel->completeTransaction();
@@ -287,9 +294,10 @@ class FamilyController extends BaseController
         $storedPath = WRITEPATH . 'uploads' . DIRECTORY_SEPARATOR . $storedName;
 
         $jobs = new JobQueueModel();
-        $jobs->ensureTable();
 
         try {
+            $jobs->ensureTable();
+
             $jobId = $jobs->enqueue(
                 'family_import',
                 ['storedPath' => $storedPath, 'originalName' => $originalName],

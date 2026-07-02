@@ -8,9 +8,29 @@
 
 **Tech Stack:** CodeIgniter 4, PHP 8.2+, chart.js (vendored UMD), dompdf (installed), phpoffice/phpspreadsheet (arrives with merge), Bootstrap 5 + SB-Admin adapter, Bootstrap Icons, PHPUnit.
 
+## Implementation summary (status)
+
+**Status: COMPLETE.** All of §A/§B (Reports tab, chart.js visualizations, PDF
+export) and §C (Excel family-import merge from `Mel-import-branch`) shipped on
+`feat/qr-access-cards`. Full suite green: **72 tests, 4 skipped**.
+
+Delivered as planned:
+- `AidStatsModel`, `ReportsController` (+ routes), `Scanner/reports.php` view,
+  vendored chart.js + scanner asset context, sidebar Reports link, and the
+  dompdf `ReportsPdfGenerator` one-page export.
+- Excel family import merged in (`a4ddb26`), bringing `phpoffice/phpspreadsheet`,
+  the `job_queue` table/schema, `JobQueueModel`, and reusable family-modal work.
+
+Deviations from the plan:
+- **Queue worker:** the merge shipped a full generic background worker
+  `app/Commands/QueueWork.php` (`php spark queue:work`) instead of the plan's
+  placeholder `DrainJobQueue`/`jobs:drain`. The placeholder was never created.
+- **Schema dump:** source of truth advanced to `accesscardV14.sql`
+  (schema + reference seed only; no family/QR data baked in).
+
 ## Global Constraints
 
-- **No migrations.** Schema source of truth = `accesscardV13.sql`. New tables (e.g. `job_queue`) load as SQL dumps, never as CI4 migrations.
+- **No migrations.** Schema source of truth = `accesscardV14.sql`. New tables (e.g. `job_queue`) load as SQL dumps, never as CI4 migrations.
 - **Every family mutation writes `audit_trails`** via `Audit\AuditTrailsModel`. Reports/export are read-only (no audit); import MUST audit.
 - **Controllers decide, libraries/models build.** All querying lives in models/libraries.
 - **PHP 8.2+**, strict existing namespace/style conventions.
@@ -18,7 +38,7 @@
 - **Assets load through the manifest** `app/Helpers/asset_helper.php` — no hardcoded `<script>`/`<link>` in layouts.
 - **Role guard** literal `['Scanner', 'Admin', 'Developer']` inline per-action (test-pinned convention).
 - **No-DB test posture:** model methods try/catch → safe empty shape; tests are contract/route/grep, no live-DB round-trips.
-- **Run `vendor/bin/phpunit` before and after each task.** Baseline: 55 tests, 4 skipped.
+- **Run `vendor/bin/phpunit` before and after each task.** Baseline: 55 tests, 4 skipped. (Final suite after implementation + Mel import merge: 72 tests, 4 skipped, all green.)
 
 ---
 
@@ -1074,7 +1094,7 @@ git commit -m "feat(scanner): PDF summary export via dompdf"
 - [ ] **Step 6: Full suite checkpoint (end of §A/§B)**
 
 Run: `vendor/bin/phpunit`
-Expected: all green, 4 skipped, count = baseline 55 + new tests. Fix any regression before §C.
+Expected: all green, 4 skipped, count = baseline 55 + new tests. Fix any regression before §C. (Actual final: 72 tests.)
 
 ---
 
@@ -1171,6 +1191,14 @@ drain so an import completes without PowerShell.
   `app/Libraries/FamilyExcelImporter.php` and `FamilyRecordWriter.php`). If it
   does not, wire it through the same audit call `FamilyController` uses — this is
   a non-negotiable.
+> **Superseded at implementation:** the Mel-import merge shipped a full generic
+> background worker, `app/Commands/QueueWork.php` (`php spark queue:work`), which
+> drains `job_queue` and resumes crashed `processing` jobs via the handler
+> registered in `Config\Queue`. Use `php spark queue:work` for the in-process
+> drain instead of the placeholder `jobs:drain` command below. The
+> `DrainJobQueue`/`jobs:drain` code was NOT created — it is retained here only as
+> the original design intent.
+
 - Add a spark command to drain the queue in-process. Create
   `app/Commands/DrainJobQueue.php`:
 
@@ -1218,16 +1246,14 @@ php spark serve
 ```
 
 - Log in as Admin, open the family import modal, upload `family-import-template_filled_500.xlsx`.
-- Drain: `php spark jobs:drain`.
+- Drain: `php spark queue:work` (shipped worker; `jobs:drain` was superseded).
 - Verify imported members exist and are audited. Mind the known dump-v13 5x
   duplication caveat when checking counts (dedupe by `memberID <= 500`).
 
 - [ ] **Step 9: Commit the dev drain command**
 
-```bash
-git add app/Commands/DrainJobQueue.php
-git commit -m "feat(jobs): in-process queue drain command for macOS dev import"
-```
+Superseded — no separate commit. The generic `QueueWork` worker arrived with the
+Mel-import merge (`php spark queue:work`); no `DrainJobQueue` was added.
 
 - [ ] **Step 10: Final full-suite checkpoint**
 

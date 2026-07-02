@@ -49,7 +49,7 @@ class ReportsController extends BaseController
         ]);
     }
 
-    /** GET scanner/reports/pdf — one-page summary (body added in Task 6). */
+    /** GET scanner/reports/pdf — one-page summary of the current date window. */
     public function pdf(): ResponseInterface
     {
         $guard = RoleAccess::requireRole(['Scanner', 'Admin', 'Developer']);
@@ -57,7 +57,23 @@ class ReportsController extends BaseController
             return $guard;
         }
 
-        return $this->response->setBody('PDF export pending.');
+        [$from, $to] = $this->normalizeDates();
+        $stats       = model(AidStatsModel::class);
+
+        $bytes = (new \App\Libraries\Scanner\ReportsPdfGenerator())->generate(
+            $stats->receivedVsNot($from, $to),
+            $stats->byBarangay($from, $to),
+            $stats->byAidType($from, $to),
+            $from,
+            $to
+        );
+
+        $name = 'aid-report-' . ($from ?: 'start') . '_' . ($to ?: 'today') . '.pdf';
+
+        return $this->response
+            ->setHeader('Content-Type', 'application/pdf')
+            ->setHeader('Content-Disposition', 'attachment; filename="' . $name . '"')
+            ->setBody($bytes);
     }
 
     /**

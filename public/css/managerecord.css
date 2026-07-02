@@ -33,6 +33,24 @@
     gap: 0.4rem;
 }
 
+.actions-menu-toggle {
+    display: inline-flex;
+    width: 2.35rem;
+    min-width: 2.35rem;
+    height: 2.2rem;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.actions-menu-toggle i {
+    line-height: 1;
+}
+
+.actions-menu-toggle::after {
+    display: none !important;
+}
+
 .records-scroll-panel {
     display: flex;
     height: 100%;
@@ -295,6 +313,11 @@
     line-height: 1.5;
 }
 
+.records-scroll-panel .table-responsive > .dt-container {
+    font-size: 1rem;
+    line-height: 1.5;
+}
+
 .records-scroll-panel > .d-flex.justify-content-end {
     flex: 0 0 auto;
 }
@@ -475,4 +498,32 @@
     color: #212529;
     border-color: #ffca2c;
     background-color: #ffca2c;
+}
+
+div.dt-container div.dt-paging {
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+div.dt-container div.dt-paging ul.pagination {
+    flex-wrap: nowrap !important;
+    justify-content: flex-end;
+}
+
+div.dt-container div.dt-paging .page-item {
+    flex: 0 0 auto;
+}
+
+div.dt-container div.dt-paging .page-link {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.6rem;
+    min-height: 2.5rem;
+    padding-right: 0.65rem;
+    padding-left: 0.65rem;
+    white-space: nowrap !important;
+    overflow-wrap: normal;
+    word-break: normal;
+    line-height: 1.2;
 }

@@ -113,10 +113,8 @@ if (! function_exists('family_modal_prepare')) {
             'serviceLabel' => static function (array $service): string {
                 $code = trim((string) ($service['code'] ?? $service['shortcode'] ?? ''));
                 $name = trim((string) ($service['service_name'] ?? $service['name'] ?? $service['label'] ?? ''));
-                $description = trim((string) ($service['description'] ?? ''));
-                $label = $code !== '' && $name !== '' ? mb_strtoupper($code, 'UTF-8') . ' - ' . $name : ($code !== '' ? mb_strtoupper($code, 'UTF-8') : $name);
 
-                return $description !== '' && $label !== '' ? $label . ' - ' . $description : $label;
+                return $code !== '' && $name !== '' ? mb_strtoupper($code, 'UTF-8') . ' - ' . $name : ($code !== '' ? mb_strtoupper($code, 'UTF-8') : $name);
             },
         ];
     }

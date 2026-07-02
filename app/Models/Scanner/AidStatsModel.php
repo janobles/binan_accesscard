@@ -41,6 +41,8 @@ class AidStatsModel extends Model
     {
         try {
             $total = (int) $this->db->table('qr_control')
+                ->select('headID')
+                ->distinct()
                 ->countAllResults();
 
             $b = $this->db->table('qr_control')

@@ -56,8 +56,8 @@ $serviceClearUrl = static function () use ($listRoute, $status, $perPage): strin
 				<option value="all" <?= $status === 'all' ? 'selected' : '' ?>>All (<?= esc((string) $allServiceCount) ?>)</option>
 			</select>
 			<?php if ($perPage !== 50): ?><input type="hidden" name="per_page" value="<?= esc((string) $perPage, 'attr') ?>"><?php endif; ?>
-			<a class="btn btn-outline-secondary records-search-action" href="<?= esc($serviceClearUrl(), 'attr') ?>"><span>Clear</span></a>
 			<button class="btn btn-outline-success records-search-action" type="submit"><span>Search</span></button>
+			<a class="btn btn-outline-secondary records-search-action" href="<?= esc($serviceClearUrl(), 'attr') ?>"><span>Clear</span></a>
 			<?php if ($canManage): ?>
 			<button class="btn btn-primary records-search-action js-service-modal-open" type="button" data-service-mode="create"><span>Add Program</span></button>
 			<?php endif; ?>

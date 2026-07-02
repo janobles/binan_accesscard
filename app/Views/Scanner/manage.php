@@ -7,19 +7,17 @@
   <div class="alert alert-danger"><?= esc(session('error')) ?></div>
 <?php endif; ?>
 
-<div class="card border-0 shadow-sm rounded-3">
-  <?php /* Tabs live in the card header — one container, switcher on top. */ ?>
-  <div class="card-header bg-white pb-0">
-    <ul class="nav nav-tabs card-header-tabs" role="tablist">
-      <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-dist" type="button" role="tab">All Distributions</button></li>
-      <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-types" type="button" role="tab">Aid Types</button></li>
-    </ul>
-  </div>
+<?php /* Tabs sit on top of the panels; each pane is a Sector-Management-style
+         .sector-management card so spacing/padding matches the Lookups pages. */ ?>
+<ul class="nav nav-tabs manage-tabs mb-0" role="tablist">
+  <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-dist" type="button" role="tab">All Distributions</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-types" type="button" role="tab">Aid Types</button></li>
+</ul>
 
-  <div class="card-body">
-    <div class="tab-content">
-      <!-- All distributions -->
-      <div class="tab-pane fade show active" id="tab-dist" role="tabpanel">
+<div class="tab-content">
+  <!-- All distributions -->
+  <div class="tab-pane fade show active" id="tab-dist" role="tabpanel">
+    <div class="sector-management records-scroll-panel">
         <?php /* Same two-band layout as the Lookups pages (Sector/Service/Category). */ ?>
         <div class="records-search-panel">
           <div class="records-search-row records-lookup-search">
@@ -102,10 +100,12 @@
         <div class="lookup-list-footer d-flex flex-wrap justify-content-between align-items-center gap-2">
           <span class="text-muted small" id="distCount"></span>
         </div>
-      </div>
+    </div>
+  </div>
 
-      <!-- Aid types CRUD -->
-      <div class="tab-pane fade" id="tab-types" role="tabpanel">
+  <!-- Aid types CRUD -->
+  <div class="tab-pane fade" id="tab-types" role="tabpanel">
+    <div class="sector-management records-scroll-panel">
         <div class="records-search-panel">
           <div class="records-search-row justify-content-end">
             <button class="btn btn-primary records-search-action" type="button" data-bs-toggle="modal" data-bs-target="#addAidTypeModal"><i class="bi bi-plus-lg" aria-hidden="true"></i><span>Add Aid Type</span></button>
@@ -156,7 +156,6 @@
             </tbody>
           </table>
         </div>
-      </div>
     </div>
   </div>
 </div>

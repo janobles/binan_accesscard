@@ -69,6 +69,51 @@
     grid-template-columns: minmax(22rem, 22rem) minmax(9rem, 14rem) minmax(9rem, 13rem) minmax(7.5rem, 10rem) repeat(3, minmax(6.25rem, 8.5rem));
 }
 
+/* Scanner Manage: folder tabs sit on top of the .sector-management panel and
+   merge into it (active tab shares the panel's border/background). */
+.manage-tabs {
+    border-bottom: none;
+    padding-left: 0.35rem;
+    gap: 0.2rem;
+}
+
+.manage-tabs .nav-link {
+    border: 1px solid transparent;
+    border-bottom: none;
+    border-top-left-radius: 0.35rem;
+    border-top-right-radius: 0.35rem;
+    color: #4b5a55;
+    font-size: 0.9rem;
+    padding: 0.5rem 1rem;
+}
+
+.manage-tabs .nav-link:hover {
+    color: #145c3d;
+    border-color: transparent;
+}
+
+.manage-tabs .nav-link.active {
+    color: #145c3d;
+    font-weight: 600;
+    background: #ffffff;
+    border-color: #dce5e2;
+    /* Overlap the panel's top border so the tab reads as part of the card. */
+    margin-bottom: -1px;
+}
+
+.manage-tabs + .tab-content .sector-management {
+    border-top-left-radius: 0;
+}
+
+/* QR card generator: two filter selects side by side, action spans both. */
+#qr-cards-page .records-search-row {
+    grid-template-columns: 1fr 1fr;
+}
+
+#qr-cards-page .records-search-action {
+    grid-column: 1 / -1;
+}
+
 .records-search-row .form-control,
 .records-search-row .form-select,
 .records-search-row .btn {

@@ -16,7 +16,7 @@ final class ReportsViewTest extends CIUnitTestCase
 
     public function testUsesHouseStyleClasses(): void
     {
-        foreach (['stat-card', 'sector-management', 'records-search-panel', 'nav nav-tabs manage-tabs'] as $cls) {
+        foreach (['stat-card', 'reports-toolbar', 'reports-stats', 'reports-chart-card'] as $cls) {
             $this->assertStringContainsString($cls, $this->html, "missing house class: {$cls}");
         }
     }

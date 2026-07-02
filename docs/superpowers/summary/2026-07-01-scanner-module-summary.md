@@ -88,6 +88,38 @@ connection — no new DB-dependent test debt was introduced.
   filter is commented out in `app/Config/Filters.php`. Flagged for awareness,
   consistent with how the QR-access-cards feature flagged the same issue.
 
+## Post-summary revisions (same day, after this doc was first written)
+
+The scan/role work continued past the initial write-up; these landed on the
+branch afterward and supersede the relevant rows above:
+
+- **Sidebar extracted to a shared partial** — `app/Views/components/dashboard_sidebar.php`
+  now renders a **role-aware** sidebar: Admin/Developer keep the full nav, the
+  `Scanner` role gets a scoped nav. `Admin/layout.php`, `Scanner/layout.php`,
+  and the sidebar heading were adjusted (commits `1752042`, `0a240f5`,
+  `872530c`). This replaces the earlier "Admin nav" row's inline sidebar link.
+- **Asset loading centralized** — layouts no longer hand-list `<script>`/`<link>`
+  paths. `app/Helpers/asset_helper.php` is the single manifest; each layout
+  renders `array_merge(asset_scripts('core'), asset_scripts($role))` and
+  `array_merge(asset_styles('head'), asset_styles($role))`. Load order
+  (jQuery → DataTables core → adapter → `family-datatable.js`; DataTables CSS →
+  `managerecord.css`) now lives in the manifest, not the layout text.
+- **Manage Distributions tab** — `6a3d8ba` added an aid-logging tab to the
+  scanner dashboard.
+
+## Tests (post-revision status)
+
+Full suite: **46 tests, 0 failures, 0 errors, 4 skipped** (`vendor/bin/phpunit`).
+
+- `FamilyDataTableTest::testRoleLayoutsLoadDataTablesBeforeInitializer` was
+  updated to inspect the `asset_helper.php` manifest ordering (and confirm each
+  layout still wires the merged helper calls) instead of grepping literal asset
+  paths out of the layout files — the paths moved into the manifest during the
+  asset-loading refactor above.
+- `ExampleDatabaseTest` (stock CI4 scaffold) now **skips cleanly** when
+  `Config\Migrations` is absent (this project has no migrations) instead of
+  erroring on machines that have the sqlite3 driver installed.
+
 ## Deferred (later spec)
 
 - Aid distribution **reports** generation.

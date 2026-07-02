@@ -84,6 +84,9 @@ $activeTab = $activeTab ?? '';
         <li class="nav-item">
             <a class="nav-link <?= esc($navActive['scanner-manage'] ?? '') ?>" href="<?= site_url('scanner/manage') ?>"><i class="bi bi-clipboard-check" aria-hidden="true"></i><span>Management</span></a>
         </li>
+        <li class="nav-item">
+            <a class="nav-link <?= esc($navActive['scanner-reports'] ?? '') ?>" href="<?= site_url('scanner/reports') ?>"><i class="bi bi-bar-chart-line" aria-hidden="true"></i><span>Reports</span></a>
+        </li>
         <li><hr class="sidebar-divider"></li>
         <li><div class="sidebar-heading">Administration</div></li>
         <?php if ($canManageAccounts): ?>

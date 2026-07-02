@@ -40,19 +40,30 @@
 
     var barangay = ctx('chartBarangay');
     if (barangay && Array.isArray(data.barangay)) {
+        // Sort by coverage desc so the barangays that matter sit on top, and grow
+        // the canvas height with the number of bars so labels never overlap.
+        var rows = data.barangay.slice().sort(function (a, b) {
+            return (b.coverage - a.coverage) || (b.total - a.total);
+        });
         new Chart(barangay, {
             type: 'bar',
             data: {
-                labels: data.barangay.map(function (b) { return b.barangay; }),
+                labels: rows.map(function (b) { return b.barangay; }),
                 datasets: [{
                     label: 'Coverage %',
-                    data: data.barangay.map(function (b) { return b.coverage; }),
-                    backgroundColor: '#4e73df'
+                    data: rows.map(function (b) { return b.coverage; }),
+                    backgroundColor: '#4e73df',
+                    borderRadius: 3,
+                    barThickness: 12
                 }]
             },
             options: {
                 indexAxis: 'y',
-                scales: { x: { beginAtZero: true, max: 100 } },
+                maintainAspectRatio: false,
+                scales: {
+                    x: { beginAtZero: true, max: 100, ticks: { stepSize: 20 }, grid: { color: '#eef1f4' } },
+                    y: { ticks: { autoSkip: false, font: { size: 11 } }, grid: { display: false } }
+                },
                 plugins: { legend: { display: false } }
             }
         });
@@ -67,11 +78,13 @@
                 datasets: [{
                     label: 'Handouts',
                     data: data.aidType.map(function (a) { return a.count; }),
-                    backgroundColor: '#f6c23e'
+                    backgroundColor: '#f6c23e',
+                    borderRadius: 3,
+                    maxBarThickness: 90
                 }]
             },
             options: {
-                scales: { y: { beginAtZero: true } },
+                scales: { y: { beginAtZero: true, ticks: { precision: 0, stepSize: 1 } } },
                 plugins: { legend: { display: false } }
             }
         });

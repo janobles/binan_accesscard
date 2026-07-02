@@ -61,6 +61,21 @@ if (! function_exists('family_modal_prepare')) {
             return $html;
         };
 
+        $personFields = [
+            ['name' => 'lastname', 'label' => 'Last Name', 'type' => 'text', 'idSuffix' => 'Lastname', 'summary' => 'name-last', 'required' => true],
+            ['name' => 'firstname', 'label' => 'First Name', 'type' => 'text', 'idSuffix' => 'Firstname', 'summary' => 'name-first', 'required' => true],
+            ['name' => 'middlename', 'label' => 'Middle Name', 'type' => 'text', 'idSuffix' => 'Middlename', 'summary' => 'name-middle'],
+            ['name' => 'suffix', 'label' => 'Suffix', 'type' => 'select', 'options' => 'suffixOptions', 'idSuffix' => 'Suffix', 'summary' => 'name-suffix'],
+            ['name' => 'birthday', 'label' => 'Date of birth', 'type' => 'date', 'idSuffix' => 'Birthday', 'summary' => 'birthday', 'required' => true],
+            ['name' => 'sex', 'label' => 'Sex', 'type' => 'select', 'options' => 'sexOptions', 'idSuffix' => 'Sex', 'summary' => 'sex', 'required' => true],
+            ['name' => 'civilstatus', 'label' => 'Civil status', 'type' => 'select', 'options' => 'civilOptions', 'other' => true, 'idSuffix' => 'CivilStatus', 'summary' => 'civil', 'required' => true],
+            ['name' => 'contactnumber', 'label' => 'Contact number', 'type' => 'tel', 'maxlength' => '30', 'idSuffix' => 'Contact', 'summary' => 'contact'],
+            ['name' => 'religion', 'label' => 'Religion', 'type' => 'select', 'options' => 'religionOptions', 'other' => true, 'idSuffix' => 'Religion', 'summary' => 'religion'],
+            ['name' => 'education', 'label' => 'Education', 'type' => 'select', 'options' => 'educationOptions', 'other' => true, 'idSuffix' => 'Education', 'summary' => 'education', 'required' => true],
+            ['name' => 'job', 'label' => 'Job', 'type' => 'select', 'options' => 'jobOptions', 'other' => true, 'idSuffix' => 'Job', 'summary' => 'job', 'required' => true],
+            ['name' => 'salary', 'label' => 'Monthly income', 'type' => 'select', 'options' => 'incomeOptions', 'idSuffix' => 'Salary', 'summary' => 'income', 'required' => true],
+        ];
+
         return [
             'action' => (string) ($data['action'] ?? site_url('families')),
             'fieldPrefix' => (string) ($data['fieldPrefix'] ?? 'family-add'),
@@ -86,6 +101,7 @@ if (! function_exists('family_modal_prepare')) {
             'saveDisabled' => (bool) ($data['saveDisabled'] ?? false),
             'selectedSectorIds' => $oldArray('sector_ids', $defaultSectorIds),
             'selectedServiceIds' => $oldArray('service_ids', $defaultServiceIds),
+            'personFields' => $personFields,
             'oldValue' => static fn (string $key, string $default = ''): string => (string) old($key, (string) ($formValues[$key] ?? $default)),
             'selectOptions' => $selectOptions,
             'sectorLabel' => static function (array $sector): string {

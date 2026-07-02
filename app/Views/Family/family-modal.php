@@ -7,6 +7,64 @@ extract(family_modal_prepare(get_defined_vars()), EXTR_OVERWRITE);
 // member list from the submission, so omitting them would drop existing members.
 $existingMembers = (array) ($existingMembers ?? []);
 
+$renderPersonFields = static function (array $config) use (
+    $personFields,
+    $selectOptions,
+    $suffixOptions,
+    $sexOptions,
+    $civilOptions,
+    $religionOptions,
+    $educationOptions,
+    $jobOptions,
+    $incomeOptions
+): string {
+    $field = $config['field'];
+    $val = $config['value'];
+    $idPrefix = (string) ($config['idPrefix'] ?? '');
+    $withSummary = ! empty($config['summary']);
+    $withRequired = ! empty($config['required']);
+    $optionsByKey = compact(
+        'suffixOptions',
+        'sexOptions',
+        'civilOptions',
+        'religionOptions',
+        'educationOptions',
+        'jobOptions',
+        'incomeOptions'
+    );
+
+    ob_start();
+    foreach ($personFields as $personField):
+        $personField = (array) $personField;
+        $name = (string) ($personField['name'] ?? '');
+        $label = (string) ($personField['label'] ?? '');
+        $type = (string) ($personField['type'] ?? 'text');
+        $hasOther = ! empty($personField['other']);
+        $optionKey = (string) ($personField['options'] ?? '');
+        $options = $optionKey !== '' ? (array) ($optionsByKey[$optionKey] ?? []) : [];
+        $id = $idPrefix !== '' ? $idPrefix . (string) ($personField['idSuffix'] ?? ucfirst($name)) : '';
+        $summary = $withSummary ? (string) ($personField['summary'] ?? '') : '';
+        $required = $withRequired && ! empty($personField['required']);
+        $otherKey = $hasOther ? preg_replace('/[^A-Za-z0-9_-]+/', '_', $field($name)) : '';
+        ?>
+        <?php if ($name !== '' && $label !== ''): ?>
+            <div class="col-12 col-md-6 col-xl-3">
+                <label class="form-label"<?= $id !== '' ? ' for="' . esc($id, 'attr') . '"' : '' ?>><?= esc($label) ?></label>
+                <?php if ($type === 'select'): ?>
+                    <select class="form-select<?= $hasOther ? ' js-other-select' : '' ?>"<?= $id !== '' ? ' id="' . esc($id, 'attr') . '"' : '' ?> name="<?= esc($field($name), 'attr') ?>"<?= $summary !== '' ? ' data-summary="' . esc($summary, 'attr') . '"' : '' ?><?= $required ? ' required' : '' ?><?= $hasOther ? ' data-other-field="' . esc((string) $otherKey, 'attr') . '" data-initial-value="' . esc($val($name), 'attr') . '"' : '' ?>><?= $selectOptions($options, $val($name), 'Select') ?></select>
+                    <?php if ($hasOther): ?>
+                        <input class="form-control mt-2 js-other-input family-form-hidden" data-other-for="<?= esc((string) $otherKey, 'attr') ?>" placeholder="Enter <?= esc(strtolower($label), 'attr') ?>"<?= $idPrefix !== '' ? ' aria-label="Other ' . esc(strtolower($label), 'attr') . '"' : '' ?>>
+                    <?php endif; ?>
+                <?php else: ?>
+                    <input class="form-control"<?= $id !== '' ? ' id="' . esc($id, 'attr') . '"' : '' ?> name="<?= esc($field($name), 'attr') ?>" type="<?= esc($type, 'attr') ?>" value="<?= esc($val($name), 'attr') ?>"<?= $summary !== '' ? ' data-summary="' . esc($summary, 'attr') . '"' : '' ?><?= $required ? ' required' : '' ?><?= isset($personField['maxlength']) ? ' maxlength="' . esc((string) $personField['maxlength'], 'attr') . '"' : '' ?>>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
+    <?php endforeach;
+
+    return (string) ob_get_clean();
+};
+
 /**
  * Renders one repeatable family-member row. $index is an int for a pre-filled
  * existing member, or the literal '__INDEX__' placeholder in the <template>;
@@ -14,16 +72,10 @@ $existingMembers = (array) ($existingMembers ?? []);
  * Field names post as members[$index][...] to match FamilyController::store()/update().
  */
 $renderMemberRow = static function ($index, array $m = []) use (
+    $renderPersonFields,
     $selectOptions,
     $sectorLabel,
     $serviceLabel,
-    $suffixOptions,
-    $sexOptions,
-    $civilOptions,
-    $religionOptions,
-    $educationOptions,
-    $jobOptions,
-    $incomeOptions,
     $relationshipOptions,
     $sectorCatalog,
     $servicesByCategory
@@ -42,58 +94,10 @@ $renderMemberRow = static function ($index, array $m = []) use (
             <button type="button" class="btn btn-sm btn-outline-danger" data-family-member-remove>Remove</button>
         </div>
         <div class="row g-3">
-            <div class="col-12 col-md-6 col-xl-3">
-                <label class="form-label">Last Name</label>
-                <input class="form-control" type="text" name="<?= esc($field('lastname'), 'attr') ?>" value="<?= esc($val('lastname'), 'attr') ?>">
-            </div>
-            <div class="col-12 col-md-6 col-xl-3">
-                <label class="form-label">First Name</label>
-                <input class="form-control" type="text" name="<?= esc($field('firstname'), 'attr') ?>" value="<?= esc($val('firstname'), 'attr') ?>">
-            </div>
-            <div class="col-12 col-md-6 col-xl-3">
-                <label class="form-label">Middle Name</label>
-                <input class="form-control" type="text" name="<?= esc($field('middlename'), 'attr') ?>" value="<?= esc($val('middlename'), 'attr') ?>">
-            </div>
-            <div class="col-12 col-md-6 col-xl-3">
-                <label class="form-label">Suffix</label>
-                <select class="form-select" name="<?= esc($field('suffix'), 'attr') ?>"><?= $selectOptions($suffixOptions, $val('suffix'), 'Select') ?></select>
-            </div>
-            <div class="col-12 col-md-6 col-xl-3">
-                <label class="form-label">Date of birth</label>
-                <input class="form-control" type="date" name="<?= esc($field('birthday'), 'attr') ?>" value="<?= esc($val('birthday'), 'attr') ?>">
-            </div>
-            <div class="col-12 col-md-6 col-xl-3">
-                <label class="form-label">Sex</label>
-                <select class="form-select" name="<?= esc($field('sex'), 'attr') ?>"><?= $selectOptions($sexOptions, $val('sex'), 'Select') ?></select>
-            </div>
-            <div class="col-12 col-md-6 col-xl-3">
-                <label class="form-label">Civil status</label>
-                <select class="form-select js-other-select" data-other-field="civilstatus" data-initial-value="<?= esc($val('civilstatus'), 'attr') ?>" name="<?= esc($field('civilstatus'), 'attr') ?>"><?= $selectOptions($civilOptions, $val('civilstatus'), 'Select') ?></select>
-                <input class="form-control mt-2 js-other-input family-form-hidden" data-other-for="civilstatus" placeholder="Enter civil status">
-            </div>
-            <div class="col-12 col-md-6 col-xl-3">
-                <label class="form-label">Contact number</label>
-                <input class="form-control" type="tel" name="<?= esc($field('contactnumber'), 'attr') ?>" value="<?= esc($val('contactnumber'), 'attr') ?>" maxlength="30">
-            </div>
-            <div class="col-12 col-md-6 col-xl-3">
-                <label class="form-label">Religion</label>
-                <select class="form-select js-other-select" data-other-field="religion" data-initial-value="<?= esc($val('religion'), 'attr') ?>" name="<?= esc($field('religion'), 'attr') ?>"><?= $selectOptions($religionOptions, $val('religion'), 'Select') ?></select>
-                <input class="form-control mt-2 js-other-input family-form-hidden" data-other-for="religion" placeholder="Enter religion">
-            </div>
-            <div class="col-12 col-md-6 col-xl-3">
-                <label class="form-label">Education</label>
-                <select class="form-select js-other-select" data-other-field="education" data-initial-value="<?= esc($val('education'), 'attr') ?>" name="<?= esc($field('education'), 'attr') ?>"><?= $selectOptions($educationOptions, $val('education'), 'Select') ?></select>
-                <input class="form-control mt-2 js-other-input family-form-hidden" data-other-for="education" placeholder="Enter education">
-            </div>
-            <div class="col-12 col-md-6 col-xl-3">
-                <label class="form-label">Job</label>
-                <select class="form-select js-other-select" data-other-field="job" data-initial-value="<?= esc($val('job'), 'attr') ?>" name="<?= esc($field('job'), 'attr') ?>"><?= $selectOptions($jobOptions, $val('job'), 'Select') ?></select>
-                <input class="form-control mt-2 js-other-input family-form-hidden" data-other-for="job" placeholder="Enter job">
-            </div>
-            <div class="col-12 col-md-6 col-xl-3">
-                <label class="form-label">Monthly income</label>
-                <select class="form-select" name="<?= esc($field('salary'), 'attr') ?>"><?= $selectOptions($incomeOptions, $val('salary'), 'Select') ?></select>
-            </div>
+            <?= $renderPersonFields([
+                'field' => $field,
+                'value' => $val,
+            ]) ?>
             <div class="col-12 col-md-6 col-xl-3">
                 <label class="form-label">Relationship</label>
                 <select class="form-select js-other-select" data-other-field="relationship" data-initial-value="<?= esc($val('relationship'), 'attr') ?>" name="<?= esc($field('relationship'), 'attr') ?>"><?= $selectOptions($relationshipOptions, $val('relationship'), 'Select') ?></select>
@@ -206,74 +210,13 @@ $renderMemberRow = static function ($index, array $m = []) use (
                     <h3 class="family-section-title">Personal Information</h3>
 
                     <div class="row g-3">
-                        <div class="col-12 col-md-6 col-xl-3">
-                            <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>HeadLastname">Last Name</label>
-                            <input id="<?= esc($fieldPrefix, 'attr') ?>HeadLastname" name="head_lastname" type="text" value="<?= esc($oldValue('head_lastname'), 'attr') ?>" data-summary="name-last" required>
-                        </div>
-                        <div class="col-12 col-md-6 col-xl-3">
-                            <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>HeadFirstname">First Name</label>
-                            <input id="<?= esc($fieldPrefix, 'attr') ?>HeadFirstname" name="head_firstname" type="text" value="<?= esc($oldValue('head_firstname'), 'attr') ?>" data-summary="name-first" required>
-                        </div>
-                        <div class="col-12 col-md-6 col-xl-3">
-                            <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>HeadMiddlename">Middle Name</label>
-                            <input id="<?= esc($fieldPrefix, 'attr') ?>HeadMiddlename" name="head_middlename" type="text" value="<?= esc($oldValue('head_middlename'), 'attr') ?>" data-summary="name-middle">
-                        </div>
-                        <div class="col-12 col-md-6 col-xl-3">
-                            <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>HeadSuffix">Suffix</label>
-                            <select id="<?= esc($fieldPrefix, 'attr') ?>HeadSuffix" name="head_suffix" data-summary="name-suffix">
-                                <?= $selectOptions($suffixOptions, $oldValue('head_suffix'), 'Select') ?>
-                            </select>
-                        </div>
-
-                        <div class="col-12 col-md-6 col-xl-3">
-                            <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>HeadBirthday">Date of birth</label>
-                            <input id="<?= esc($fieldPrefix, 'attr') ?>HeadBirthday" name="head_birthday" type="date" value="<?= esc($oldValue('head_birthday'), 'attr') ?>" data-summary="birthday" required>
-                        </div>
-                        <div class="col-12 col-md-6 col-xl-3">
-                            <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>HeadSex">Sex</label>
-                            <select id="<?= esc($fieldPrefix, 'attr') ?>HeadSex" name="head_sex" data-summary="sex" required>
-                                <?= $selectOptions($sexOptions, $oldValue('head_sex'), 'Select') ?>
-                            </select>
-                        </div>
-                        <div class="col-12 col-md-6 col-xl-3">
-                            <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>HeadCivilStatus">Civil status</label>
-                            <select id="<?= esc($fieldPrefix, 'attr') ?>HeadCivilStatus" name="head_civilstatus" class="js-other-select" data-other-field="head_civilstatus" data-initial-value="<?= esc($oldValue('head_civilstatus'), 'attr') ?>" data-summary="civil" required>
-                                <?= $selectOptions($civilOptions, $oldValue('head_civilstatus'), 'Select') ?>
-                            </select>
-                            <input class="form-control mt-2 js-other-input family-form-hidden" data-other-for="head_civilstatus" placeholder="Enter civil status" aria-label="Other civil status">
-                        </div>
-                        <div class="col-12 col-md-6 col-xl-3">
-                            <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>HeadContact">Contact number</label>
-                            <input id="<?= esc($fieldPrefix, 'attr') ?>HeadContact" name="head_contactnumber" type="tel" value="<?= esc($oldValue('head_contactnumber'), 'attr') ?>" data-summary="contact" maxlength="30">
-                        </div>
-
-                        <div class="col-12 col-md-6 col-xl-3">
-                            <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>HeadReligion">Religion</label>
-                            <select id="<?= esc($fieldPrefix, 'attr') ?>HeadReligion" name="head_religion" class="js-other-select" data-other-field="head_religion" data-initial-value="<?= esc($oldValue('head_religion'), 'attr') ?>" data-summary="religion">
-                                <?= $selectOptions($religionOptions, $oldValue('head_religion'), 'Select') ?>
-                            </select>
-                            <input class="form-control mt-2 js-other-input family-form-hidden" data-other-for="head_religion" placeholder="Enter religion" aria-label="Other religion">
-                        </div>
-                        <div class="col-12 col-md-6 col-xl-3">
-                            <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>HeadEducation">Education</label>
-                            <select id="<?= esc($fieldPrefix, 'attr') ?>HeadEducation" name="head_education" class="js-other-select" data-other-field="head_education" data-initial-value="<?= esc($oldValue('head_education'), 'attr') ?>" data-summary="education" required>
-                                <?= $selectOptions($educationOptions, $oldValue('head_education'), 'Select') ?>
-                            </select>
-                            <input class="form-control mt-2 js-other-input family-form-hidden" data-other-for="head_education" placeholder="Enter education" aria-label="Other education">
-                        </div>
-                        <div class="col-12 col-md-6 col-xl-3">
-                            <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>HeadJob">Job</label>
-                            <select id="<?= esc($fieldPrefix, 'attr') ?>HeadJob" name="head_job" class="js-other-select" data-other-field="head_job" data-initial-value="<?= esc($oldValue('head_job'), 'attr') ?>" data-summary="job" required>
-                                <?= $selectOptions($jobOptions, $oldValue('head_job'), 'Select') ?>
-                            </select>
-                            <input class="form-control mt-2 js-other-input family-form-hidden" data-other-for="head_job" placeholder="Enter job" aria-label="Other job">
-                        </div>
-                        <div class="col-12 col-md-6 col-xl-3">
-                            <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>HeadSalary">Monthly income</label>
-                            <select id="<?= esc($fieldPrefix, 'attr') ?>HeadSalary" name="head_salary" data-summary="income" required>
-                                <?= $selectOptions($incomeOptions, $oldValue('head_salary'), 'Select') ?>
-                            </select>
-                        </div>
+                        <?= $renderPersonFields([
+                            'field' => static fn (string $name): string => 'head_' . $name,
+                            'value' => static fn (string $name): string => $oldValue('head_' . $name),
+                            'idPrefix' => $fieldPrefix . 'Head',
+                            'summary' => true,
+                            'required' => true,
+                        ]) ?>
 
                         <div class="col-12 col-xl-9">
                             <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>HeadAddress">Address</label>

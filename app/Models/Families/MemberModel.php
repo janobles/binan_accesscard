@@ -416,9 +416,12 @@ class MemberModel extends Model
      */
     public function headsForCards(array $filter = []): array
     {
+        $hasBarangayColumn = $this->memberFieldExists('barangay');
+
         $builder = $this->db->table('member')
-            ->select('memberID, lastname, firstname, middlename, suffix'
-                . ($this->memberFieldExists('barangay') ? ', barangay' : ''))
+            ->select('member.memberID, member.lastname, member.firstname, member.middlename, member.suffix, member.address, qc.control_no'
+                . ($hasBarangayColumn ? ', member.barangay' : ''))
+            ->join('qr_control qc', 'qc.headID = member.memberID', 'left')
             ->where('member.headID = member.memberID', null, false);
 
         if ($this->db->fieldExists('dt_deleted', 'member')) {
@@ -429,20 +432,35 @@ class MemberModel extends Model
             $builder->where('member.memberID', (int) $filter['memberID']);
         }
 
-        if (! empty($filter['barangay']) && $this->memberFieldExists('barangay')) {
-            $builder->where('member.barangay', $filter['barangay']);
+        if (! empty($filter['barangay'])) {
+            if ($hasBarangayColumn) {
+                $builder->where('member.barangay', $filter['barangay']);
+            } else {
+                // Barangay lives at the tail of the combined address ("address, barangay").
+                $builder->groupStart()
+                    ->like('member.address', ', ' . $filter['barangay'], 'before')
+                    ->orWhere('member.address', $filter['barangay'])
+                    ->groupEnd();
+            }
         }
 
         if (! empty($filter['sectorID'])) {
-            // sectorID is a comma-joined list of ids in storage; match membership.
-            $builder->where('FIND_IN_SET(' . (int) $filter['sectorID'] . ', member.sectorID) >', 0, false);
+            // sectorID is stored as a JSON array ('[1,2,3]'); match membership.
+            $builder->where(SectorIds::containsCondition((int) $filter['sectorID'], 'member.sectorID'), null, false);
         }
 
-        $builder->orderBy('member.memberID', 'asc');
+        $builder->orderBy('qc.control_no IS NULL', 'asc', false)
+            ->orderBy('qc.control_no', 'asc')
+            ->orderBy('member.memberID', 'asc');
 
         $rows = $builder->get()->getResultArray();
 
-        return array_map(static function (array $row): array {
+        // Barangay is stored at the tail of the combined address; match it against the
+        // canonical list (longest first) so it prints on the QR card.
+        $barangays = \App\Support\FamilyProfilingFormV2::barangays();
+        usort($barangays, static fn (string $a, string $b): int => mb_strlen($b) <=> mb_strlen($a));
+
+        return array_map(static function (array $row) use ($barangays): array {
             $name = trim(sprintf(
                 '%s, %s %s %s',
                 $row['lastname'] ?? '',
@@ -451,10 +469,23 @@ class MemberModel extends Model
                 $row['suffix'] ?? ''
             ));
 
+            $barangay = trim((string) ($row['barangay'] ?? ''));
+
+            if ($barangay === '') {
+                $address = trim((string) ($row['address'] ?? ''));
+                foreach ($barangays as $candidate) {
+                    if (str_ends_with($address, ', ' . $candidate) || strcasecmp($address, $candidate) === 0) {
+                        $barangay = $candidate;
+                        break;
+                    }
+                }
+            }
+
             return [
-                'memberID' => (int) $row['memberID'],
-                'fullname' => preg_replace('/\s+/', ' ', $name),
-                'barangay' => (string) ($row['barangay'] ?? ''),
+                'memberID'  => (int) $row['memberID'],
+                'controlNo' => isset($row['control_no']) ? (int) $row['control_no'] : (int) $row['memberID'],
+                'fullname'  => preg_replace('/\s+/', ' ', $name),
+                'barangay'  => $barangay,
             ];
         }, $rows);
     }

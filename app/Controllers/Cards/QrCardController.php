@@ -8,6 +8,7 @@ use App\Libraries\Qr\QrCardPdfGenerator;
 use App\Libraries\RoleAccess;
 use App\Models\Audit\AuditTrailsModel;
 use App\Models\Families\MemberModel;
+use App\Models\Scanner\QrControlModel;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
 
@@ -109,12 +110,14 @@ class QrCardController extends BaseController
             return $guard;
         }
 
-        $memberID = ControlNumber::parse($control);
-        if ($memberID === null) {
+        $controlNo = ControlNumber::parse($control);
+        if ($controlNo === null) {
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound('Unknown control number.');
         }
 
-        $headId = model(MemberModel::class)->familyHeadIdFor($memberID);
+        // The printed control number maps to a head via qr_control (same source the
+        // scanner uses), so a scanned card always resolves to the right family.
+        $headId = model(QrControlModel::class)->headForControl($controlNo);
         if ($headId === null) {
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound('Unknown control number.');
         }

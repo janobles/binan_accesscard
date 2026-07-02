@@ -9,10 +9,17 @@
                     <?php else: ?>
                         <div class="cell">
                             <div class="header">CITY OF BIÑAN</div>
-                            <img class="qr" src="<?= $cell['qrDataUri'] ?>" alt="QR">
-                            <div class="control"><?= esc($cell['controlNumber']) ?></div>
-                            <div class="name"><?= esc($cell['fullname']) ?></div>
-                            <div class="barangay"><?= esc($cell['barangay']) ?></div>
+                            <div class="field-row">
+                                <span class="field-label">Barangay:</span>
+                                <span class="field-line"><?= esc($cell['barangay']) ?></span>
+                            </div>
+                            <div class="field-row">
+                                <span class="field-label">Name:</span>
+                                <span class="field-line"><?= esc($cell['fullname']) ?></span>
+                            </div>
+                            <div class="qr-wrap"><img class="qr" src="<?= $cell['qrDataUri'] ?>" alt="QR"></div>
+                            <div class="control-label">Control No.:</div>
+                            <div class="control-number"><?= esc($cell['controlNumber']) ?></div>
                         </div>
                     <?php endif; ?>
                 <?php endforeach; ?>

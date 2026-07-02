@@ -121,3 +121,93 @@ if (! function_exists('family_modal_prepare')) {
         ];
     }
 }
+
+if (! function_exists('family_modal_render_person_fields')) {
+    /**
+     * Renders the shared personal fields used by both the head and member forms.
+     *
+     * @param array<string, mixed> $config
+     */
+    function family_modal_render_person_fields(array $config): string
+    {
+        $personFields = (array) ($config['personFields'] ?? []);
+        $selectOptions = $config['selectOptions'];
+        $field = $config['field'];
+        $val = $config['value'];
+        $idPrefix = (string) ($config['idPrefix'] ?? '');
+        $withSummary = ! empty($config['summary']);
+        $withRequired = ! empty($config['required']);
+        $optionsByKey = (array) ($config['optionsByKey'] ?? []);
+        $attrs = static function (array $attributes): string {
+            $html = '';
+
+            foreach ($attributes as $name => $value) {
+                if ($value === false || $value === null || $value === '') {
+                    continue;
+                }
+
+                $html .= $value === true
+                    ? ' ' . $name
+                    : ' ' . $name . '="' . esc((string) $value, 'attr') . '"';
+            }
+
+            return $html;
+        };
+
+        ob_start();
+        foreach ($personFields as $personField):
+            $personField = (array) $personField;
+            $name = (string) ($personField['name'] ?? '');
+            $label = (string) ($personField['label'] ?? '');
+
+            if ($name === '' || $label === '' || ($personField['show'] ?? true) === false) {
+                continue;
+            }
+
+            $type = (string) ($personField['type'] ?? 'text');
+            $hasOther = ! empty($personField['other']);
+            $optionKey = (string) ($personField['options'] ?? '');
+            $options = $optionKey !== '' ? (array) ($optionsByKey[$optionKey] ?? []) : [];
+            $id = $idPrefix !== '' ? $idPrefix . (string) ($personField['idSuffix'] ?? ucfirst($name)) : '';
+            $summary = $withSummary ? (string) ($personField['summary'] ?? '') : '';
+            $required = $withRequired && ! empty($personField['required']);
+            $otherKey = $hasOther ? preg_replace('/[^A-Za-z0-9_-]+/', '_', $field($name)) : '';
+            ?>
+            <div class="col-12 col-md-6 col-xl-3">
+                <label class="form-label"<?= $attrs(['for' => $id]) ?>><?= esc($label) ?></label>
+                <?php if ($type === 'select'): ?>
+                    <select<?= $attrs([
+                        'class' => 'form-select' . ($hasOther ? ' js-other-select' : ''),
+                        'id' => $id,
+                        'name' => $field($name),
+                        'data-summary' => $summary,
+                        'required' => $required,
+                        'data-other-field' => $hasOther ? $otherKey : '',
+                        'data-initial-value' => $hasOther ? $val($name) : '',
+                    ]) ?>><?= $selectOptions($options, $val($name), 'Select') ?></select>
+                    <?php if ($hasOther): ?>
+                        <input<?= $attrs([
+                            'class' => 'form-control mt-2 js-other-input family-form-hidden',
+                            'data-other-for' => $otherKey,
+                            'placeholder' => 'Enter ' . strtolower($label),
+                            'aria-label' => $idPrefix !== '' ? 'Other ' . strtolower($label) : '',
+                        ]) ?>>
+                    <?php endif; ?>
+                <?php else: ?>
+                    <input<?= $attrs([
+                        'class' => 'form-control',
+                        'id' => $id,
+                        'name' => $field($name),
+                        'type' => $type,
+                        'value' => $val($name),
+                        'data-summary' => $summary,
+                        'required' => $required,
+                        'maxlength' => $personField['maxlength'] ?? '',
+                    ]) ?>>
+                <?php endif; ?>
+            </div>
+        <?php endforeach;
+
+        return (string) ob_get_clean();
+    }
+}

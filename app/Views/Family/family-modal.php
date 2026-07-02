@@ -6,64 +6,15 @@ extract(family_modal_prepare(get_defined_vars()), EXTR_OVERWRITE);
 // server-side so an edit re-posts them — FamilyController::update() rebuilds the
 // member list from the submission, so omitting them would drop existing members.
 $existingMembers = (array) ($existingMembers ?? []);
-
-$renderPersonFields = static function (array $config) use (
-    $personFields,
-    $selectOptions,
-    $suffixOptions,
-    $sexOptions,
-    $civilOptions,
-    $religionOptions,
-    $educationOptions,
-    $jobOptions,
-    $incomeOptions
-): string {
-    $field = $config['field'];
-    $val = $config['value'];
-    $idPrefix = (string) ($config['idPrefix'] ?? '');
-    $withSummary = ! empty($config['summary']);
-    $withRequired = ! empty($config['required']);
-    $optionsByKey = compact(
-        'suffixOptions',
-        'sexOptions',
-        'civilOptions',
-        'religionOptions',
-        'educationOptions',
-        'jobOptions',
-        'incomeOptions'
-    );
-
-    ob_start();
-    foreach ($personFields as $personField):
-        $personField = (array) $personField;
-        $name = (string) ($personField['name'] ?? '');
-        $label = (string) ($personField['label'] ?? '');
-        $type = (string) ($personField['type'] ?? 'text');
-        $hasOther = ! empty($personField['other']);
-        $optionKey = (string) ($personField['options'] ?? '');
-        $options = $optionKey !== '' ? (array) ($optionsByKey[$optionKey] ?? []) : [];
-        $id = $idPrefix !== '' ? $idPrefix . (string) ($personField['idSuffix'] ?? ucfirst($name)) : '';
-        $summary = $withSummary ? (string) ($personField['summary'] ?? '') : '';
-        $required = $withRequired && ! empty($personField['required']);
-        $otherKey = $hasOther ? preg_replace('/[^A-Za-z0-9_-]+/', '_', $field($name)) : '';
-        ?>
-        <?php if ($name !== '' && $label !== ''): ?>
-            <div class="col-12 col-md-6 col-xl-3">
-                <label class="form-label"<?= $id !== '' ? ' for="' . esc($id, 'attr') . '"' : '' ?>><?= esc($label) ?></label>
-                <?php if ($type === 'select'): ?>
-                    <select class="form-select<?= $hasOther ? ' js-other-select' : '' ?>"<?= $id !== '' ? ' id="' . esc($id, 'attr') . '"' : '' ?> name="<?= esc($field($name), 'attr') ?>"<?= $summary !== '' ? ' data-summary="' . esc($summary, 'attr') . '"' : '' ?><?= $required ? ' required' : '' ?><?= $hasOther ? ' data-other-field="' . esc((string) $otherKey, 'attr') . '" data-initial-value="' . esc($val($name), 'attr') . '"' : '' ?>><?= $selectOptions($options, $val($name), 'Select') ?></select>
-                    <?php if ($hasOther): ?>
-                        <input class="form-control mt-2 js-other-input family-form-hidden" data-other-for="<?= esc((string) $otherKey, 'attr') ?>" placeholder="Enter <?= esc(strtolower($label), 'attr') ?>"<?= $idPrefix !== '' ? ' aria-label="Other ' . esc(strtolower($label), 'attr') . '"' : '' ?>>
-                    <?php endif; ?>
-                <?php else: ?>
-                    <input class="form-control"<?= $id !== '' ? ' id="' . esc($id, 'attr') . '"' : '' ?> name="<?= esc($field($name), 'attr') ?>" type="<?= esc($type, 'attr') ?>" value="<?= esc($val($name), 'attr') ?>"<?= $summary !== '' ? ' data-summary="' . esc($summary, 'attr') . '"' : '' ?><?= $required ? ' required' : '' ?><?= isset($personField['maxlength']) ? ' maxlength="' . esc((string) $personField['maxlength'], 'attr') . '"' : '' ?>>
-                <?php endif; ?>
-            </div>
-        <?php endif; ?>
-    <?php endforeach;
-
-    return (string) ob_get_clean();
-};
+$personFieldOptions = compact(
+    'suffixOptions',
+    'sexOptions',
+    'civilOptions',
+    'religionOptions',
+    'educationOptions',
+    'jobOptions',
+    'incomeOptions'
+);
 
 /**
  * Renders one repeatable family-member row. $index is an int for a pre-filled
@@ -72,7 +23,8 @@ $renderPersonFields = static function (array $config) use (
  * Field names post as members[$index][...] to match FamilyController::store()/update().
  */
 $renderMemberRow = static function ($index, array $m = []) use (
-    $renderPersonFields,
+    $personFields,
+    $personFieldOptions,
     $selectOptions,
     $sectorLabel,
     $serviceLabel,
@@ -94,7 +46,10 @@ $renderMemberRow = static function ($index, array $m = []) use (
             <button type="button" class="btn btn-sm btn-outline-danger" data-family-member-remove>Remove</button>
         </div>
         <div class="row g-3">
-            <?= $renderPersonFields([
+            <?= family_modal_render_person_fields([
+                'personFields' => $personFields,
+                'optionsByKey' => $personFieldOptions,
+                'selectOptions' => $selectOptions,
                 'field' => $field,
                 'value' => $val,
             ]) ?>
@@ -210,7 +165,10 @@ $renderMemberRow = static function ($index, array $m = []) use (
                     <h3 class="family-section-title">Personal Information</h3>
 
                     <div class="row g-3">
-                        <?= $renderPersonFields([
+                        <?= family_modal_render_person_fields([
+                            'personFields' => $personFields,
+                            'optionsByKey' => $personFieldOptions,
+                            'selectOptions' => $selectOptions,
                             'field' => static fn (string $name): string => 'head_' . $name,
                             'value' => static fn (string $name): string => $oldValue('head_' . $name),
                             'idPrefix' => $fieldPrefix . 'Head',
@@ -252,7 +210,11 @@ $renderMemberRow = static function ($index, array $m = []) use (
                                             <?php
                                             $sector = (array) $sector;
                                             $sectorId = (string) ($sector['sectorID'] ?? $sector['id'] ?? '');
-                                            $label = $sectorLabel($sector);
+                                            $label = $sectorLabel($sector);1:41 PM
+                                            
+                                            
+                                            
+                                            
                                             $isArchived = ! empty($sector['is_archived']);
                                             ?>
                                             <?php if ($sectorId !== '' && $label !== ''): ?>

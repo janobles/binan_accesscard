@@ -100,9 +100,6 @@ $renderMemberRow = static function ($index, array $m = []) use (
                         <p class="family-suggested-title">&#11088; Suggested for this person</p>
                         <p class="family-suggested-reason" data-family-suggested-reason></p>
                         <div data-family-suggested-groups></div>
-                        <p class="family-suggested-empty" data-family-suggested-empty hidden>
-                            No specific programs are listed for this sector yet. All programs below are still available.
-                        </p>
                     </div>
                     <?php if ($servicesByCategory === []): ?>
                         <p class="text-muted mb-0">No services available.</p>
@@ -243,9 +240,6 @@ $renderMemberRow = static function ($index, array $m = []) use (
                                     <p class="family-suggested-title">&#11088; Suggested for this person</p>
                                     <p class="family-suggested-reason" data-family-suggested-reason></p>
                                     <div data-family-suggested-groups></div>
-                                    <p class="family-suggested-empty" data-family-suggested-empty hidden>
-                                        No specific programs are listed for this sector yet. All programs below are still available.
-                                    </p>
                                 </div>
                                 <?php if ($servicesByCategory === []): ?>
                                     <p class="text-muted mb-0">No services available.</p>

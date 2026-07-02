@@ -727,7 +727,6 @@
         var box = container.closest('.family-option-box');
         var holder = container.querySelector('[data-family-suggested-groups]');
         var reasonEl = container.querySelector('[data-family-suggested-reason]');
-        var emptyEl = container.querySelector('[data-family-suggested-empty]');
 
         if (!box || !holder) {
             return;
@@ -780,11 +779,7 @@
             return normName(group.dataset.serviceCategory);
         }).join('|');
 
-        container.hidden = checkedNames.length === 0;
-
-        if (emptyEl) {
-            emptyEl.hidden = !(checkedNames.length > 0 && matched.length === 0);
-        }
+        container.hidden = matched.length === 0;
 
         if (reasonEl) {
             var matchingNames = checkedNames.filter(function (name) {
@@ -792,7 +787,7 @@
             });
 
             reasonEl.textContent = matchingNames.length
-                ? 'Because you checked: ' + matchingNames.join(', ') + '. All other programs are still shown below — nothing is hidden.'
+                ? 'Showing: ' + matchingNames.join(', ') + '. All other programs are still shown below.'
                 : '';
         }
 

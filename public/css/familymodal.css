@@ -727,15 +727,10 @@
     font-weight: 800;
 }
 
-.family-suggested-reason,
-.family-suggested-empty {
+.family-suggested-reason {
     margin: 0 0 0.45rem;
     color: #5a4a12;
     font-size: 0.9rem;
-}
-
-.family-suggested-empty {
-    margin-bottom: 0;
 }
 
 .family-suggested .family-option-group {

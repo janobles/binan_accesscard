@@ -1,11 +1,7 @@
 <?= $this->extend('Scanner/layout') ?>
 <?= $this->section('content') ?>
 
-<?php if (session('success')): ?>
-  <div class="alert alert-success"><?= esc(session('success')) ?></div>
-<?php elseif (session('error')): ?>
-  <div class="alert alert-danger"><?= esc(session('error')) ?></div>
-<?php endif; ?>
+<?php /* Flash banners rendered by Scanner/layout.php; don't duplicate here. */ ?>
 
 <?php /* Tabs sit on top of the panels; each pane is a Sector-Management-style
          .sector-management card so spacing/padding matches the Lookups pages. */ ?>

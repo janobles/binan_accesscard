@@ -1,0 +1,122 @@
+# CLAUDE.md
+
+Biñan Access Card — CodeIgniter 4 app for family/member access-card records,
+assistance services, and audit trails (City of Biñan CSWD).
+
+## Core Behavioral Guidelines
+
+Bias toward caution over speed. For trivial tasks, use judgment.
+
+**1. Think before coding.** State assumptions. If multiple interpretations exist,
+present them — don't pick silently. If a simpler approach exists, say so. If
+unclear, stop and ask.
+
+**2. Simplicity first.** Minimum code that solves the problem. No speculative
+features, no abstractions for single-use code, no error handling for impossible
+scenarios. If 200 lines could be 50, rewrite.
+
+**3. Surgical changes.** Touch only what you must. Don't refactor working code or
+"improve" adjacent formatting. Match existing style. Remove orphans YOUR change
+created; leave pre-existing dead code (mention it, don't delete).
+
+**4. Goal-driven execution.** Turn tasks into verifiable goals ("fix bug" → "write
+a failing test, then make it pass"). State a brief plan for multi-step work and
+verify each step.
+
+## Non-Negotiables
+
+- **No migrations.** DB schema source of truth is the SQL dump (`accesscardV3.0.sql`).
+  Never add migrations or alter schema in code. Seeds (`app/Database/Seeds/`) add
+  test login accounts ONLY — never tables/columns.
+- **Match the SQL dump.** Column names, allowed enum values, and role names must
+  match the dump exactly. Employee accounts store as `User` role.
+- **Every family mutation writes an audit trail** (`audit_trails` via
+  `Audit/AuditTrailsModel`). Don't bypass it.
+- **Controllers decide, libraries build.** Dashboard controllers route pages;
+  view-data assembly lives in `Libraries/DashboardPageBuilder.php`. Keep it that way.
+- **PHP 8.2+.** Respect existing strict-type / namespace conventions.
+
+## Commands
+
+```bash
+php spark routes        # confirm every route resolves to a controller
+php spark serve         # dev server (or use XAMPP at app.baseURL)
+vendor/bin/phpunit      # full test suite
+composer test           # alias for phpunit
+```
+
+DB: MySQL `accesscard` @ localhost:3306, user `root` (see `.env`).
+
+### CodeRabbit review (`--agent`)
+
+CodeRabbit is the primary code reviewer for this repo (Copilot silently fails on
+large diffs — see below). Config lives in `.coderabbit.yaml` (committed).
+
+```bash
+coderabbit auth status                              # confirm signed in first
+coderabbit review --base <base-branch> --agent      # structured findings for agents
+coderabbit review --base <base-branch> --plain      # human-readable
+coderabbit review findings                          # re-print the last review
+```
+
+Review workflow (before merging a feature branch):
+
+1. Run `coderabbit review --base <target> --agent` and **wait** for it to finish
+   (large diffs take a few minutes; run it in the background and wait on it).
+2. Triage every finding — **do not blind-apply.** Follow the
+   `superpowers:receiving-code-review` posture: verify each against the code and
+   this file's non-negotiables. Skip findings that contradict a documented design
+   decision (note them as won't-fix with the reason).
+3. Fix the in-scope, genuine bugs; re-run `vendor/bin/phpunit`.
+4. Park the rest (pre-existing / out-of-scope) in a GitHub issue for later, citing
+   the PR # and branch as a receipt.
+
+Notes:
+- `coderabbit auth login` needs an interactive terminal (OAuth). If a shell reports
+  "Non-interactive environment", ask the user to run it in a real terminal, or pass
+  `--api-key`.
+- **Copilot** rejects PRs over ~20,000 changed lines with no inline comments — don't
+  wait on it for big branches; rely on CodeRabbit.
+
+## Tests (`tests/`)
+
+- `unit/DashboardControllerRoutingTest` — guards the feature-subnamespace routing.
+- `unit/FamilyDataTableTest`, `SectorIdsTest`, `ViewFormatterTest`, `HealthTest`.
+- `database/ExampleDatabaseTest` + `session/` — skipped without `sqlite3` ext.
+
+Run phpunit before and after changes. Smoke-test key flows: login, role redirect,
+family create/update, audit log creation.
+
+## Architecture
+
+Default CI4 layout; controllers + models grouped into **feature subnamespaces**
+(Auth, Accounts, Families, Lookups, Audit, Admin, Employee, Viewer). Routes in
+`app/Config/Routes.php` target namespaces directly.
+
+**Controllers** (`app/Controllers/`)
+- `Auth/AuthController` — login, logout, session keep-alive.
+- `Admin/DashboardController` — admin shell page dispatch (dashboard, accounts,
+  family-entry, manage-records, audit-trails, sectors, services, categories).
+- `Accounts/AccountController` — staff account create + enable/disable.
+- `Families/FamilyController` — family CRUD; writes `member`, `member_services`,
+  `audit_trails`.
+- `Lookups/SectorController`, `ServiceController`, `CategoryController` —
+  create/update/archive/restore/delete for lookup tables.
+- `BaseController`, `HomeRoleAccessTrait`, `Concerns/` — cross-cutting base/traits.
+
+**Models** (`app/Models/`)
+- `Auth/UserModel` — login, password hashing, account creation.
+- `Families/` — `MemberModel`, `MemberServiceModel`, `FamilyFormOptionsModel`.
+- `Audit/AuditTrailsModel` — audit inserts + list queries.
+- `Lookups/` — `SectorModel`, `ServiceModel` (also member/sector eligibility).
+- `DashboardModel`, `SearchModel`, `ViewLayoutModel` — shared cross-feature queries.
+
+**Libraries** (`app/Libraries/`)
+- `DashboardPageBuilder` — assembles all dashboard view data (start debugging here).
+- `SessionAuditLogger`, `RoleAccess`, `SectorIds` — auth/audit/domain helpers.
+
+**Views** (`app/Views/`) — `Admin/layout.php` and `Employee/layout.php` shells swap
+in per-page views; `Family/`, `Lookups/`, `Auth/login.php`, shared partials in
+`components/`.
+
+See `PROJECT_STRUCTURE.md` for the full file map.

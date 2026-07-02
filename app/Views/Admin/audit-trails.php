@@ -80,8 +80,8 @@ $formatAuditUser = static function (array $audit): string {
                 <?php endforeach; ?>
             </select>
             <?php if ($perPage !== 50): ?><input type="hidden" name="per_page" value="<?= esc((string) $perPage, 'attr') ?>"><?php endif; ?>
-            <a class="btn btn-outline-secondary records-search-action" href="<?= esc($auditClearUrl(), 'attr') ?>"><i class="bi bi-x-lg" aria-hidden="true"></i><span>Clear</span></a>
-            <button class="btn btn-outline-success records-search-action" type="submit"><i class="bi bi-search" aria-hidden="true"></i><span>Search All</span></button>
+            <button class="btn btn-outline-success records-search-action" type="submit"><span>Search All</span></button>
+            <a class="btn btn-outline-secondary records-search-action" href="<?= esc($auditClearUrl(), 'attr') ?>"><span>Clear</span></a>
         </form>
     </div>
 

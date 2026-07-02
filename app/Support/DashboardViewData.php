@@ -31,13 +31,12 @@ class DashboardViewData
         $recentAudits = self::arrayValue($data['recentAudits'] ?? []);
         $adminAccounts = self::arrayValue($data['adminAccounts'] ?? []);
         $employeeAccounts = self::arrayValue($data['employeeAccounts'] ?? []);
-        $familyFormViewData = self::arrayValue($data['familyFormViewData'] ?? []);
         $sectorShortcodeOptions = self::stringList($data['sectorShortcodeOptions'] ?? []);
         $searchTerm = (string) ($data['searchTerm'] ?? '');
         $searchFilters = self::arrayValue($data['searchFilters'] ?? []);
         $auditActionOptions = self::arrayValue($data['auditActionOptions'] ?? []);
         $auditListData = self::arrayValue($data['auditListData'] ?? []);
-        $sectorOptions = self::arrayValue($familyFormViewData['sectorOptions'] ?? []);
+        $sectorOptions = self::arrayValue($data['sectorOptions'] ?? []);
         $hasSearchFilters = self::hasSearchFilters($searchTerm, $searchFilters);
         $canCreateFamily = (bool) ($data['canCreateFamily'] ?? false);
         $idleTimeoutSeconds = (int) ($data['idleTimeoutSeconds'] ?? 900);
@@ -52,7 +51,6 @@ class DashboardViewData
             'canCreateFamily',
             'canManageAccounts',
             'employeeAccounts',
-            'familyFormViewData',
             'formatDate',
             'formatTime',
             'hasSearchFilters',
@@ -83,12 +81,11 @@ class DashboardViewData
         $stats = array_merge(self::defaultStats(), self::arrayValue($data['stats'] ?? []));
         $recentFamilies = self::arrayValue($data['recentFamilies'] ?? []);
         $myAudits = self::arrayValue($data['myAudits'] ?? []);
-        $familyFormViewData = self::arrayValue($data['familyFormViewData'] ?? []);
         $searchTerm = (string) ($data['searchTerm'] ?? '');
         $searchFilters = self::arrayValue($data['searchFilters'] ?? []);
         $auditActionOptions = self::arrayValue($data['auditActionOptions'] ?? []);
         $auditListData = self::arrayValue($data['auditListData'] ?? []);
-        $sectorOptions = self::arrayValue($familyFormViewData['sectorOptions'] ?? []);
+        $sectorOptions = self::arrayValue($data['sectorOptions'] ?? []);
         $hasSearchFilters = self::hasSearchFilters($searchTerm, $searchFilters);
         $canCreateFamily = (bool) ($data['canCreateFamily'] ?? false);
         $idleTimeoutSeconds = (int) ($data['idleTimeoutSeconds'] ?? 900);
@@ -100,7 +97,6 @@ class DashboardViewData
             'auditActionOptions',
             'auditListData',
             'canCreateFamily',
-            'familyFormViewData',
             'formatDate',
             'formatTime',
             'hasSearchFilters',

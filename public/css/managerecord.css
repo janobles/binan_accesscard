@@ -416,6 +416,10 @@
     min-height: var(--records-search-control-height);
 }
 
+#familyDataTableFilters .btn-group {
+    gap: 0.45rem;
+}
+
 #familyDataTableFilters [data-records-filter],
 #familyDataTableFilters .form-select[name="status"] {
     min-width: 0;
@@ -449,3 +453,26 @@
     padding-right: 0.75rem;
     padding-left: 0.75rem;
     font-size: var(--ui-font-sm, 0.8rem);
+    border-radius: 0.35rem;
+}
+
+#familyDataTableFilters .btn-group > .btn:not(:last-child):not(.dropdown-toggle),
+#familyDataTableFilters .btn-group > .btn.dropdown-toggle-split:first-child,
+#familyDataTableFilters .btn-group > .btn-group:not(:last-child) > .btn,
+#familyDataTableFilters .btn-group > .btn:nth-child(n + 3),
+#familyDataTableFilters .btn-group > :not(.btn-check) + .btn {
+    border-radius: 0.35rem;
+}
+
+#familyDataTableFilters .js-open-family-import-modal {
+    color: #212529;
+    border-color: #ffc107;
+    background-color: #ffc107;
+}
+
+#familyDataTableFilters .js-open-family-import-modal:hover,
+#familyDataTableFilters .js-open-family-import-modal:focus {
+    color: #212529;
+    border-color: #ffca2c;
+    background-color: #ffca2c;
+}

@@ -4,7 +4,7 @@
 // existing FamilyController::store()/update() endpoints, refreshing the
 // server-side DataTable on success.
 //
-// Restored from the old wizard (family-form.js / family-form-ui.js):
+// Modal behavior:
 //   - "Other" freetext selects (reveal + submit-time option swap)
 //   - Contact number digits-only / exactly-11 validation
 //   - Archived (grandfather) badge un-tick warning
@@ -54,7 +54,7 @@
         return String(field.value || '').trim();
     }
 
-    // ---- "Other" freetext selects (ported from family-form-ui.js) ----------
+    // ---- "Other" freetext selects -----------------------------------------
 
     function isOtherValue(value) {
         var normalized = String(value || '').trim().toLowerCase();
@@ -254,7 +254,7 @@
         return true;
     }
 
-    // ---- confirm dialog (ported from family-form.js) -----------------------
+    // ---- confirm dialog ----------------------------------------------------
 
     function askModalDialog(form, options) {
         return new Promise(function (resolve) {

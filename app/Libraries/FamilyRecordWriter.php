@@ -6,6 +6,7 @@ use App\Models\Audit\AuditTrailsModel;
 use App\Models\Families\MemberModel;
 use App\Models\Families\MemberServiceModel;
 use App\Models\Lookups\ServiceModel;
+use App\Models\Scanner\QrControlModel;
 
 /**
  * Persists one family (head + members + service assignments) and writes the
@@ -28,7 +29,9 @@ class FamilyRecordWriter
         private MemberServiceModel $memberServiceModel,
         private ServiceModel $serviceModel,
         private AuditTrailsModel $auditModel,
+        private ?QrControlModel $qrControlModel = null,
     ) {
+        $this->qrControlModel ??= new QrControlModel();
     }
 
     /**
@@ -39,6 +42,7 @@ class FamilyRecordWriter
      * @param int[]                                          $headServiceIds Service IDs to assign to the head.
      * @param int                                            $operatorUserId users.userID of the operator (for the audit row).
      * @param string                                         $auditSuffix    Optional note appended to the audit full_description (e.g. " via Excel import").
+     * @param int|null                                       $controlNo      Paper QR control number for the head (from the import's "QR Number" column); null for manual entry.
      *
      * @return int The new head member ID.
      *
@@ -52,6 +56,7 @@ class FamilyRecordWriter
         ?string $ipAddress = null,
         ?string $userAgent = null,
         string $auditSuffix = '',
+        ?int $controlNo = null,
     ): int {
         $headPayload['relationship'] = 'Head';
 
@@ -59,6 +64,10 @@ class FamilyRecordWriter
 
         if ($headId === false) {
             throw new FamilyRecordWriteException('Head of family could not be saved. Please check required fields.');
+        }
+
+        if ($controlNo !== null && $controlNo > 0) {
+            $this->qrControlModel->assign($controlNo, $headId);
         }
 
         foreach ($memberPayloads as $entry) {

@@ -139,6 +139,7 @@ class FamilyImportJob implements JobHandlerInterface
                     $ip,
                     $ua,
                     ' via Excel import (queued)',
+                    (int) ($family['familyNo'] ?? 0),
                 );
 
                 if ($db->transStatus() === false) {

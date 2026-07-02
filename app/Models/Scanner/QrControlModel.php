@@ -15,6 +15,21 @@ class QrControlModel extends Model
     protected $returnType    = 'array';
     protected $allowedFields = ['control_no', 'headID'];
     protected $useTimestamps = false;
+    // control_no is the paper QR number supplied by the import, not auto-generated.
+    protected $useAutoIncrement = false;
+
+    /**
+     * Maps a paper QR control number to a head. Throws on a duplicate control_no
+     * (the family transaction rolls back and the row is reported as failed).
+     */
+    public function assign(int $controlNo, int $headID): void
+    {
+        if ($controlNo <= 0 || $headID <= 0) {
+            return;
+        }
+
+        $this->insert(['control_no' => $controlNo, 'headID' => $headID]);
+    }
 
     /** Returns the mapped headID for a control number, or null when unmapped. */
     public function headForControl(int $controlNo): ?int

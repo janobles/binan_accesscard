@@ -42,6 +42,42 @@
     border-top-color: #d7e3df;
 }
 
+.floating-family-modal .modal-dialog:has([data-family-import]) {
+    width: min(34rem, calc(100vw - 2rem));
+    max-width: min(34rem, calc(100vw - 2rem));
+    height: auto;
+    max-height: calc(100dvh - 2rem);
+}
+
+.floating-family-modal .modal-dialog:has([data-family-import]) .modal-content {
+    height: auto;
+    max-height: calc(100dvh - 2rem);
+}
+
+.floating-family-modal .modal-dialog:has([data-family-import]) .modal-header {
+    padding: 0.75rem 1rem;
+}
+
+.floating-family-modal .modal-dialog:has([data-family-import]) .modal-title {
+    font-size: 1rem;
+}
+
+.floating-family-modal .modal-body:has([data-family-import]) {
+    padding: 1rem;
+}
+
+.floating-family-modal .modal-body:has([data-family-import]) + .modal-footer {
+    display: none;
+}
+
+[data-family-import] {
+    font-size: 0.9rem;
+}
+
+[data-family-import] p {
+    margin-bottom: 0.75rem;
+}
+
 .family-draft-dialog-backdrop {
     position: absolute;
     z-index: 12;

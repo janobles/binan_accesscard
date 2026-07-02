@@ -91,11 +91,11 @@ $sectorOptionLabel = static function (array $sector): string {
             <div class="col-12 col-sm-6 col-xl-3 family-action-field">
                 <div class="btn-toolbar h-100" role="toolbar" aria-label="Manage Records actions">
                     <div class="btn-group w-100 h-100" role="group" aria-label="Search and record actions">
-                        <button class="btn btn-danger" type="button" data-records-clear>Clear</button>
-                        <button class="btn btn-success" type="submit">Search</button>
+                        <button class="btn btn-outline-success records-search-action" type="submit">Search</button>
+                        <button class="btn btn-outline-secondary records-search-action" type="button" data-records-clear>Clear</button>
                         <?php if ($canEdit): ?>
-                        <button class="btn btn-primary js-open-family-add-modal" type="button" data-family-add-record data-modal-url="<?= esc(site_url($routeBase . '/create?partial=1'), 'attr') ?>" data-modal-title="New Family Record">Add</button>
-                        <button class="btn btn-outline-primary js-open-family-import-modal" type="button" data-modal-url="<?= esc(site_url($routeBase . '/import'), 'attr') ?>" data-modal-title="Import from Excel" title="Bulk-import families from an Excel file">Import</button>
+                        <button class="btn btn-primary records-search-action js-open-family-add-modal" type="button" data-family-add-record data-modal-url="<?= esc(site_url($routeBase . '/create?partial=1'), 'attr') ?>" data-modal-title="New Family Record">Add</button>
+                        <button class="btn btn-outline-primary records-search-action js-open-family-import-modal" type="button" data-modal-url="<?= esc(site_url($routeBase . '/import'), 'attr') ?>" data-modal-title="Import from Excel" title="Bulk-import families from an Excel file">Import</button>
                         <?php endif; ?>
                     </div>
                 </div>

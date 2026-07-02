@@ -97,7 +97,7 @@ $renderMemberRow = static function ($index, array $m = []) use (
                 <h5 class="family-column-title">Services and Programs Available</h5>
                 <div class="family-option-box family-option-box--sm">
                     <div class="family-suggested" data-family-suggested hidden aria-live="polite">
-                        <p class="family-suggested-title">&#11088; Suggested for this person</p>
+                        <p class="family-suggested-title">Suggested for this person</p>
                         <p class="family-suggested-reason" data-family-suggested-reason></p>
                         <div data-family-suggested-groups></div>
                     </div>
@@ -237,7 +237,7 @@ $renderMemberRow = static function ($index, array $m = []) use (
                             <h4 class="family-column-title">Services and Programs Available</h4>
                             <div class="family-option-box">
                                 <div class="family-suggested" data-family-suggested hidden aria-live="polite">
-                                    <p class="family-suggested-title">&#11088; Suggested for this person</p>
+                                    <p class="family-suggested-title">Suggested for this person</p>
                                     <p class="family-suggested-reason" data-family-suggested-reason></p>
                                     <div data-family-suggested-groups></div>
                                 </div>

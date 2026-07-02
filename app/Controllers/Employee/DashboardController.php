@@ -12,8 +12,7 @@ use CodeIgniter\HTTP\RedirectResponse;
  * Handles the employee workspace pages (the `employee/*` routes); the sibling
  * Admin\DashboardController owns the admin-only `admin/*` pages. Page rendering is
  * delegated to App\Libraries\DashboardPageBuilder::renderEmployeePage(); this
- * controller only decides which tab to show and serves the AJAX fragments (shared
- * helpers come from App\Controllers\Concerns\DashboardPartialsTrait).
+ * controller only decides which tab to show and serves the AJAX fragments.
  *
  * The Employee role is stored in the DB as the legacy enum value 'User' but is
  * referred to as 'Employee' throughout the app (see RoleAccess::normalizeRole).
@@ -32,16 +31,12 @@ class DashboardController extends BaseController
     }
 
     /**
-     * GET `employee/family-entry`. Shows the employee family registration form,
-     * or its modal partial for AJAX fetches.
+     * GET `employee/family-entry`. Legacy URL; the add/edit experience now lives
+     * in the Manage Records modal.
      */
-    public function familyEntry(): string|RedirectResponse
+    public function familyEntry(): RedirectResponse
     {
-        if ($this->isPartialRequest()) {
-            return $this->renderFamilyFormPartial(['Developer', 'Admin', 'Employee']);
-        }
-
-        return $this->pageBuilder()->renderEmployeePage('family-entry');
+        return redirect()->to(site_url('employee/manage-records'));
     }
 
     /**

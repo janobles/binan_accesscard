@@ -25,7 +25,6 @@ $recentFamilies = $recentFamilies ?? [];
 $recentAudits = $recentAudits ?? [];
 $adminAccounts = $adminAccounts ?? [];
 $employeeAccounts = $employeeAccounts ?? [];
-$familyFormViewData = $familyFormViewData ?? [];
 $recordListData = $recordListData ?? [];
 $categories = $categories ?? [];
 $sectorShortcodeOptions = $sectorShortcodeOptions ?? [];
@@ -59,6 +58,7 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= esc($pageTitle) ?> - Binan Access Card MIS</title>
+    <link rel="icon" type="image/png" href="<?= asset_url('assets/image/binan.png') ?>">
     <?php foreach (array_merge(asset_styles('head'), asset_styles('admin')) as $stylePath): ?>
     <link rel="stylesheet" href="<?= esc(asset_url($stylePath), 'attr') ?>">
     <?php endforeach; ?>
@@ -88,7 +88,7 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                     <li class="nav-item topbar-divider d-none d-sm-block"></li>
                     <li class="nav-item dropdown no-arrow">
                         <a class="nav-link dropdown-toggle topbar-user" href="#" id="adminUserDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <span class="me-2 d-none d-lg-inline text-gray-600 small"><?= esc($username) ?> &middot; <?= ($currentRole ?? '') === 'Developer' ? 'Developer' : 'Administrator' ?></span>
+                            <span class="me-2 d-none d-lg-inline text-gray-600 small"><?= esc($username) ?></span>
                             <i class="bi bi-person-circle topbar-user-icon" aria-hidden="true"></i>
                         </a>
                         <div class="dropdown-menu dropdown-menu-end shadow animated--grow-in" aria-labelledby="adminUserDropdown">
@@ -230,16 +230,6 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                     'canEditAccounts' => $canEditAccounts ?? false,
                     'currentRole' => $currentRole,
                 ]) ?>
-            <?php endif; ?>
-
-            <?php if ($activePage === 'family-entry'): ?>
-                <div class="panel mb-3">
-                    <div class="section-title mt-0"><span>Add Record</span></div>
-                    <?= view('Family/entry', array_merge(
-                        $familyFormViewData,
-                        ['canCreateFamily' => $canCreateFamily]
-                    )) ?>
-                </div>
             <?php endif; ?>
 
             <?php if ($activePage === 'family-manage'): ?>

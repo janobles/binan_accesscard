@@ -63,3 +63,27 @@ php spark queue:work --throttle=250         # or call the engine directly
 3. Enqueue work: `(new \App\Models\Jobs\JobQueueModel())->enqueue('<type>', $payload, ...)`.
 
 The worker dispatches by `type` automatically — no worker changes needed.
+
+## Troubleshooting: import stuck on "queued - waiting for worker"
+
+A `job_queue` row stays `pending` because nothing is draining it. Check, in order:
+
+1. **Is MySQL running?** The worker aborts if it can't connect (see the log). Start it in XAMPP Control Panel.
+2. **On a laptop / on battery?** Windows gates scheduled tasks with "don't start on
+   battery". `install-cron-worker.ps1` now clears this, but a task created before that
+   fix (or re-created another way) will silently skip every fire while unplugged.
+   Confirm + fix (elevated):
+   ```powershell
+   (Get-ScheduledTaskInfo BinanQueueWorker).NumberOfMissedRuns   # >0 = being skipped
+   $t = Get-ScheduledTask BinanQueueWorker
+   $t.Settings.DisallowStartIfOnBatteries = $false
+   $t.Settings.StopIfGoingOnBatteries     = $false
+   $t.Settings.StartWhenAvailable         = $true
+   Set-ScheduledTask BinanQueueWorker -Settings $t.Settings
+   ```
+   > Note: a non-elevated `Get-ScheduledTask BinanQueueWorker` returns "not found"
+   > even when the task exists — it runs as SYSTEM. Use `schtasks /query /tn
+   > BinanQueueWorker`: "Access is denied" means it exists; "cannot find the file"
+   > means it doesn't.
+3. **Machine was asleep/off?** Every-minute ticks don't run then; they resume on wake
+   (with `StartWhenAvailable`). Drain the backlog now with `.\scripts\queue-worker.ps1`.

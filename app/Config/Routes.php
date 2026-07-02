@@ -34,7 +34,7 @@ $routes->group('admin', static function (RouteCollection $routes): void {
 
     $routes->get('manage-families', 'Admin\DashboardController::manageRecords');
     $routes->group('manage-family', static function (RouteCollection $routes): void {
-        $routes->get('', 'Admin\DashboardController::familyEntry');
+        $routes->get('', 'Admin\DashboardController::manageRecords');
         $routes->get('list', 'Families\FamilyController::listFamilies');
         $routes->get('data', 'Families\FamilyController::dataTable');
         $routes->get('template', 'Families\FamilyController::downloadTemplate');
@@ -91,7 +91,7 @@ $routes->group('employee', static function (RouteCollection $routes): void {
 
     $routes->get('manage-families', 'Employee\DashboardController::manageRecords');
     $routes->group('manage-family', static function (RouteCollection $routes): void {
-        $routes->get('', 'Employee\DashboardController::familyEntry');
+        $routes->get('', 'Employee\DashboardController::manageRecords');
         $routes->get('list', 'Families\FamilyController::listFamilies');
         $routes->get('data', 'Families\FamilyController::dataTable');
         $routes->get('template', 'Families\FamilyController::downloadTemplate');

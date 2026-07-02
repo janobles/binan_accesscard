@@ -1,9 +1,6 @@
 /* ===========================================================================
- * Legacy multi-step wizard form styles (Family/form.php). Retained so the
- * admin/family-entry Add Record page keeps its styling.
+ * Bootstrap record/detail modal, Add/Update Family modal, and action-dialog styles.
  * ========================================================================= */
-/* Shared Bootstrap modal window used by record, lookup, account, and audit fragments.
-   Family form internals live in familyform.css, which Family/form.php loads with the form. */
 
 .floating-family-modal {
     --modal-window-gap: clamp(0.5rem, 2vw, 1.5rem);
@@ -40,6 +37,42 @@
     flex: 0 0 auto;
     padding: 0.75rem 1rem;
     border-top-color: #d7e3df;
+}
+
+.floating-family-modal .modal-dialog:has([data-family-import]) {
+    width: min(34rem, calc(100vw - 2rem));
+    max-width: min(34rem, calc(100vw - 2rem));
+    height: auto;
+    max-height: calc(100dvh - 2rem);
+}
+
+.floating-family-modal .modal-dialog:has([data-family-import]) .modal-content {
+    height: auto;
+    max-height: calc(100dvh - 2rem);
+}
+
+.floating-family-modal .modal-dialog:has([data-family-import]) .modal-header {
+    padding: 0.75rem 1rem;
+}
+
+.floating-family-modal .modal-dialog:has([data-family-import]) .modal-title {
+    font-size: 1rem;
+}
+
+.floating-family-modal .modal-body:has([data-family-import]) {
+    padding: 1rem;
+}
+
+.floating-family-modal .modal-body:has([data-family-import]) + .modal-footer {
+    display: none;
+}
+
+[data-family-import] {
+    font-size: 0.9rem;
+}
+
+[data-family-import] p {
+    margin-bottom: 0.75rem;
 }
 
 .family-draft-dialog-backdrop {
@@ -1200,9 +1233,8 @@
 .family-import-toast.fit-hide    { opacity: 0; transition: opacity .25s ease; }
 
 /* ---------------------------------------------------------------------------
- * Restored old-wizard pieces for the new modal: hidden "Other" freetext, the
- * archived (grandfather) badge, and a subtle archived-row tint.
- * (.family-form-hidden / .family-choice-badge reused verbatim from familyform.css)
+ * Shared modal utilities: hidden "Other" freetext, archived badge, and
+ * archived-row tint.
  * ------------------------------------------------------------------------- */
 .family-form-hidden {
     display: none !important;

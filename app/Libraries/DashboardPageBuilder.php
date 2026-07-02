@@ -4,7 +4,6 @@ namespace App\Libraries;
 
 use App\Models\Audit\AuditTrailsModel;
 use App\Models\DashboardModel;
-use App\Models\Families\FamilyFormOptionsModel;
 use App\Models\Families\MemberModel;
 use App\Models\SearchModel;
 use App\Models\Lookups\CategoryModel;
@@ -54,8 +53,8 @@ class DashboardPageBuilder
 
     /**
      * Assembles every variable the admin shell and its sub-views need: page title,
-     * role flags/permissions, nav highlighting, account lists, family form options,
-     * recent families/audits, member list (on Manage Records), sector/service
+     * role flags/permissions, nav highlighting, account lists, recent
+     * families/audits, member list (on Manage Records), sector/service
      * lists, dashboard stats, search term/filters, and view formatter closures
      * (formatDate/Status/etc.). Also reused to build AJAX partials. Frontend:
      * consumed directly by `Admin/*` views.
@@ -78,7 +77,7 @@ class DashboardPageBuilder
         $sectorModel = new SectorModel();
         $serviceModel = new ServiceModel();
 
-        $familyFormViewData = (new FamilyFormOptionsModel())->getViewData();
+        $sectorOptions = $sectorModel->getSectorOptions();
 
         $recentFamilies = $activePage === 'dashboard' && ($searchTerm !== '' || $hasSearchFilters)
             ? $searchModel->families($searchTerm, $searchFilters, 25)
@@ -143,7 +142,6 @@ class DashboardPageBuilder
             'navActive' => [
                 'dashboard'    => $layoutModel->navActive($activePage, 'dashboard'),
                 'accounts'     => $layoutModel->navActive($activePage, 'accounts'),
-                'family-entry' => $layoutModel->navActive($activePage, 'family-entry'),
                 'family-manage' => $layoutModel->navActive($activePage, 'family-manage'),
                 'audit-trails' => $layoutModel->navActive($activePage, 'audit-trails'),
                 'sectors'      => $layoutModel->navActive($activePage, 'sectors'),
@@ -158,7 +156,6 @@ class DashboardPageBuilder
             'employeeAccounts'   => array_values(array_filter($visibleAccounts, static fn ($account) => $account['role'] === 'encoder')),
             'viewerAccounts'     => array_values(array_filter($visibleAccounts, static fn ($account) => $account['role'] === 'viewer')),
             'scannerAccounts'    => array_values(array_filter($visibleAccounts, static fn ($account) => $account['role'] === 'scanner')),
-            'familyFormViewData' => $familyFormViewData,
             'recentFamilies'     => $recentFamilies,
             'recentAudits'       => $recentAudits,
             'auditListData'      => $auditListData,
@@ -177,7 +174,7 @@ class DashboardPageBuilder
             'searchFilters'      => $searchFilters,
             'hasSearchFilters'   => $hasSearchFilters,
             'selectedFilterDate' => (string) ($searchFilters['date'] ?? $searchFilters['date_from'] ?? ''),
-            'sectorOptions'      => $familyFormViewData['sectorOptions'] ?? [],
+            'sectorOptions'      => $sectorOptions,
             'auditActionOptions' => $searchModel->auditActions(),
             'idleTimeoutSeconds' => (new IdleTimeout())->seconds,
             'isDeveloper'        => $isDeveloper,
@@ -492,7 +489,7 @@ class DashboardPageBuilder
         $searchFilters = $this->searchFilters();
         $hasSearchFilters = $this->hasSearchFilters($searchFilters);
         $userId = (int) session()->get('user_id');
-        $familyFormViewData = (new FamilyFormOptionsModel())->getViewData();
+        $sectorOptions = (new SectorModel())->getSectorOptions();
         $recordListData = $activePage === 'family-manage'
             ? $this->buildEmployeeRecordListData()
             : [];
@@ -510,12 +507,10 @@ class DashboardPageBuilder
             'pageTitle' => $layoutModel->employeePageTitle($activePage),
             'navActive' => [
                 'dashboard' => $layoutModel->navActive($activePage, 'dashboard'),
-                'family-entry' => $layoutModel->navActive($activePage, 'family-entry'),
                 'family-manage' => $layoutModel->navActive($activePage, 'family-manage'),
                 'activity' => $layoutModel->navActive($activePage, 'activity'),
             ],
             'canCreateFamily'    => true,
-            'familyFormViewData' => $familyFormViewData,
             'recordListData'     => $recordListData,
             'recentFamilies'     => $recentFamilies,
             'myAudits'           => $myAudits,
@@ -526,7 +521,7 @@ class DashboardPageBuilder
             'auditActionOptions' => $searchModel->auditActions(),
             'idleTimeoutSeconds' => (new IdleTimeout())->seconds,
             'username'           => (string) (session()->get('username') ?? 'Employee'),
-            'sectorOptions'      => $familyFormViewData['sectorOptions'] ?? [],
+            'sectorOptions'      => $sectorOptions,
             'selectedFilterDate' => (string) ($searchFilters['date'] ?? $searchFilters['date_from'] ?? ''),
             'hasSearchFilters'   => $hasSearchFilters,
             'formatDate'         => static function (mixed $value): string {

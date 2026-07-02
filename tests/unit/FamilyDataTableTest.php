@@ -7,9 +7,11 @@ use PHPUnit\Framework\TestCase;
  * jade branch: the pinned vendor assets, the five-column view, the role routes,
  * and the controller's whitelisted (date-less) parameter handling.
  *
- * Adapted from jade for this branch's asset loading: layouts here enumerate
- * asset_url() paths directly (no asset-group helper), so the load-order test
- * inspects the layout files rather than an asset registry.
+ * Asset loading was later centralized into app/Helpers/asset_helper.php: each
+ * layout renders array_merge(asset_scripts('core'), asset_scripts($role)) and
+ * array_merge(asset_styles('head'), asset_styles($role)) instead of hand-listing
+ * paths. The load-order test therefore inspects the manifest ordering and
+ * confirms each layout still wires the merged helper calls.
  */
 final class FamilyDataTableTest extends TestCase
 {
@@ -41,33 +43,58 @@ final class FamilyDataTableTest extends TestCase
         $this->assertStringContainsString("request.search.value = ''", $script);
         $this->assertStringContainsString("topStart: 'pageLength'", $script);
         $this->assertStringContainsString("topEnd: 'search'", $script);
-        $this->assertStringContainsString("order: [[0, 'asc']]", $script);
+        // Import feature: no initial column sort so the server's newest-first
+        // order (a just-imported family) shows at the top; header clicks still sort.
+        $this->assertStringContainsString('order: []', $script);
         $this->assertStringNotContainsString('request.date', $script);
     }
 
     public function testRoleLayoutsLoadDataTablesBeforeInitializer(): void
     {
-        foreach (['Admin/layout.php', 'Employee/layout.php', 'Viewer/layout.php'] as $layoutPath) {
+        require_once APPPATH . 'Helpers/asset_helper.php';
+
+        $layoutFiles = [
+            'admin'    => 'Admin/layout.php',
+            'employee' => 'Employee/layout.php',
+            'viewer'   => 'Viewer/layout.php',
+        ];
+
+        foreach ($layoutFiles as $role => $layoutPath) {
+            // The layout must still render the merged manifest for this role;
+            // if a refactor drops these calls the assets never load at all.
             $layout = (string) file_get_contents(APPPATH . 'Views/' . $layoutPath);
+            $this->assertStringContainsString(
+                "array_merge(asset_scripts('core'), asset_scripts('" . $role . "'))",
+                $layout,
+                $layoutPath . ' renders merged core + role scripts'
+            );
+            $this->assertStringContainsString(
+                "array_merge(asset_styles('head'), asset_styles('" . $role . "'))",
+                $layout,
+                $layoutPath . ' renders merged head + role styles'
+            );
 
-            $jqueryPosition = strpos($layout, 'assets/jquery/jquery-3.7.1.min.js');
-            $corePosition = strpos($layout, 'assets/datatables/js/dataTables.min.js');
-            $adapterPosition = strpos($layout, 'assets/datatables/js/dataTables.bootstrap5.min.js');
-            $initializerPosition = strpos($layout, 'assets/js/dashboard/family-datatable.js');
-            $dataTablesCssPosition = strpos($layout, 'assets/datatables/css/dataTables.bootstrap5.min.css');
-            $managerecordCssPosition = strpos($layout, 'css/managerecord.css');
+            $scripts = array_merge(asset_scripts('core'), asset_scripts($role));
+            $styles  = array_merge(asset_styles('head'), asset_styles($role));
 
-            $this->assertIsInt($jqueryPosition, $layoutPath . ' loads jQuery');
-            $this->assertIsInt($corePosition, $layoutPath . ' loads DataTables core');
-            $this->assertIsInt($adapterPosition, $layoutPath . ' loads DataTables bootstrap5 adapter');
-            $this->assertIsInt($initializerPosition, $layoutPath . ' loads family-datatable.js');
-            $this->assertIsInt($dataTablesCssPosition, $layoutPath . ' loads DataTables css');
-            $this->assertIsInt($managerecordCssPosition, $layoutPath . ' loads managerecord.css');
+            $jqueryPosition          = array_search('assets/jquery/jquery-3.7.1.min.js', $scripts, true);
+            $corePosition            = array_search('assets/datatables/js/dataTables.min.js', $scripts, true);
+            $adapterPosition         = array_search('assets/datatables/js/dataTables.bootstrap5.min.js', $scripts, true);
+            $initializerPosition     = array_search('assets/js/dashboard/family-datatable.js', $scripts, true);
+            $dataTablesCssPosition   = array_search('assets/datatables/css/dataTables.bootstrap5.min.css', $styles, true);
+            $managerecordCssPosition = array_search('css/managerecord.css', $styles, true);
 
-            $this->assertLessThan($corePosition, $jqueryPosition, $layoutPath . ': jQuery before DataTables core');
-            $this->assertLessThan($adapterPosition, $corePosition, $layoutPath . ': core before adapter');
-            $this->assertLessThan($initializerPosition, $adapterPosition, $layoutPath . ': adapter before initializer');
-            $this->assertLessThan($managerecordCssPosition, $dataTablesCssPosition, $layoutPath . ': DataTables css before managerecord css');
+            $this->assertIsInt($jqueryPosition, $role . ' loads jQuery');
+            $this->assertIsInt($corePosition, $role . ' loads DataTables core');
+            $this->assertIsInt($adapterPosition, $role . ' loads DataTables bootstrap5 adapter');
+            $this->assertIsInt($initializerPosition, $role . ' loads family-datatable.js');
+            $this->assertIsInt($dataTablesCssPosition, $role . ' loads DataTables css');
+            $this->assertIsInt($managerecordCssPosition, $role . ' loads managerecord.css');
+
+            $this->assertLessThan($corePosition, $jqueryPosition, $role . ': jQuery before DataTables core');
+            $this->assertLessThan($adapterPosition, $corePosition, $role . ': core before adapter');
+            $this->assertLessThan($initializerPosition, $adapterPosition, $role . ': adapter before initializer');
+            $this->assertLessThan($managerecordCssPosition, $dataTablesCssPosition, $role . ': DataTables css before managerecord css');
         }
     }
 

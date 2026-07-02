@@ -65,9 +65,13 @@ class AidStatsModel extends Model
     public function byBarangay(?string $from = null, ?string $to = null): array
     {
         try {
+            $barangayExpr = $this->db->fieldExists('barangay', 'member')
+                ? "COALESCE(NULLIF(TRIM(member.barangay), ''), 'Unspecified')"
+                : "COALESCE(NULLIF(TRIM(SUBSTRING_INDEX(member.address, ',', -1)), ''), 'Unspecified')";
+
             // Total families per barangay (head's barangay).
             $totals = $this->db->table('qr_control')
-                ->select("COALESCE(NULLIF(TRIM(member.barangay), ''), 'Unspecified') AS barangay,"
+                ->select($barangayExpr . ' AS barangay,'
                     . ' COUNT(DISTINCT qr_control.headID) AS total')
                 ->join('member', 'member.memberID = qr_control.headID', 'left')
                 ->groupBy('barangay')
@@ -75,7 +79,7 @@ class AidStatsModel extends Model
 
             // Received families per barangay, within the date window.
             $rb = $this->db->table('qr_control')
-                ->select("COALESCE(NULLIF(TRIM(member.barangay), ''), 'Unspecified') AS barangay,"
+                ->select($barangayExpr . ' AS barangay,'
                     . ' COUNT(DISTINCT qr_control.headID) AS received')
                 ->join('member', 'member.memberID = qr_control.headID', 'left')
                 ->join('aid_distribution', 'aid_distribution.control_no = qr_control.control_no');

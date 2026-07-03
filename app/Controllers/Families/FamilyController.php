@@ -3,16 +3,24 @@
 namespace App\Controllers\Families;
 
 use App\Controllers\BaseController;
+use App\Libraries\FamilyExcelTemplate;
+use App\Libraries\FamilyRecordWriteException;
+use App\Libraries\FamilyRecordWriter;
 use App\Libraries\RoleAccess;
 use App\Libraries\SectorIds;
 use App\Models\Audit\AuditTrailsModel;
 use App\Models\Families\FamilyFormOptionsModel;
 use App\Models\Families\MemberModel;
 use App\Models\Families\MemberServiceModel;
+use App\Models\Jobs\JobQueueModel;
+use App\Models\Lookups\SectorModel;
 use App\Models\Lookups\ServiceModel;
+use App\Models\SearchModel;
 use App\Support\FamilyProfilingFormV2;
 use App\Support\FamilyRecordPresenter;
+use App\Support\MemberFieldNormalizer;
 use CodeIgniter\HTTP\RedirectResponse;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Throwable;
 
 /**
@@ -74,6 +82,23 @@ class FamilyController extends BaseController
             return redirect()->back()->withInput()->with('error', $message);
         }
 
+        if ($this->submissionWasTruncated()) {
+            $message = 'The form was too large and some member data was cut off before it reached the server, so nothing was saved. Please add fewer members at a time (or ask an administrator to raise the server\'s max_input_vars) and try again.';
+
+            if ($this->request->isAJAX()) {
+                return $this->response
+                    ->setStatusCode(422)
+                    ->setJSON([
+                        'status' => 'error',
+                        'message' => $message,
+                        'code' => 'FORM_TRUNCATED',
+                        'csrf' => csrf_hash(),
+                    ]);
+            }
+
+            return redirect()->back()->withInput()->with('error', $message);
+        }
+
         $entryType = $this->entryType();
         $rules = $this->rulesForEntryType($entryType);
 
@@ -110,147 +135,55 @@ class FamilyController extends BaseController
         $userId = (int) session()->get('user_id');
         $successMessage = 'Family record saved successfully.';
 
-        $memberModel->beginTransaction();
-
-        $headId = $memberModel->createHead($this->memberPayload('head_'));
-
-        if ($headId === false) {
-            $memberModel->rollbackTransaction();
-
-            $message = 'Head of family could not be saved. Please check required fields.';
-
-            if ($this->request->isAJAX()) {
-                return $this->response
-                    ->setStatusCode(422)
-                    ->setJSON([
-                        'status' => 'error',
-                        'message' => $message,
-                        'csrf' => csrf_hash(),
-                    ]);
-            }
-
-            return redirect()->back()
-                ->withInput()
-                ->with('error', $message);
-        }
+        // Shape the additional members (skipping the form's empty rows) into the
+        // [payload + serviceIds] entries FamilyRecordWriter expects.
+        $memberPayloads = [];
 
         foreach ($members as $member) {
             if (! is_array($member) || ! $this->hasMemberData($member)) {
                 continue;
             }
 
-            $memberId = $memberModel->addFamilyMember($headId, $this->memberPayloadFromArray($member));
-
-            if ($memberId === false) {
-                $memberModel->rollbackTransaction();
-
-                $message = 'One family member could not be saved.';
-
-                if ($this->request->isAJAX()) {
-                    return $this->response
-                        ->setStatusCode(422)
-                        ->setJSON([
-                            'status' => 'error',
-                            'message' => $message,
-                            'csrf' => csrf_hash(),
-                        ]);
-                }
-
-                return redirect()->back()->withInput()->with('error', $message);
-            }
-
             $memberServiceIds = $member['service_ids'] ?? [];
 
-            if (! is_array($memberServiceIds)) {
-                $memberServiceIds = [];
-            }
-
-            foreach ($memberServiceIds as $memberServiceId) {
-                $memberServiceId = (int) $memberServiceId;
-
-                if ($memberServiceId <= 0 || ! $serviceModel->existsById($memberServiceId)) {
-                    continue;
-                }
-
-                if ($memberServiceModel->assignService($memberId, $memberServiceId) === false) {
-                    $memberModel->rollbackTransaction();
-
-                    $message = 'A selected service could not be assigned to one family member.';
-
-                    if ($this->request->isAJAX()) {
-                        return $this->response
-                            ->setStatusCode(422)
-                            ->setJSON([
-                                'status' => 'error',
-                                'message' => $message,
-                                'csrf' => csrf_hash(),
-                            ]);
-                    }
-
-                    return redirect()->back()->withInput()->with('error', $message);
-                }
-            }
+            $memberPayloads[] = [
+                'payload' => $this->memberPayloadFromArray($member),
+                'serviceIds' => is_array($memberServiceIds) ? array_map('intval', $memberServiceIds) : [],
+            ];
         }
 
-        foreach ($serviceIds as $serviceId) {
-            $serviceId = (int) $serviceId;
+        // One family = one transaction. The persistence itself lives in
+        // FamilyRecordWriter so the Excel importer reuses the exact same write path.
+        $writer = new FamilyRecordWriter($memberModel, $memberServiceModel, $serviceModel, $auditModel);
 
-            if ($serviceId < 0 || ! $serviceModel->existsById($serviceId)) {
-                continue;
-            }
+        $memberModel->beginTransaction();
 
-            if ($memberServiceModel->assignService($headId, $serviceId) === false) {
-                $memberModel->rollbackTransaction();
-
-                $message = 'A selected service could not be assigned to the head of family.';
-
-                if ($this->request->isAJAX()) {
-                    return $this->response
-                        ->setStatusCode(422)
-                        ->setJSON([
-                            'status' => 'error',
-                            'message' => $message,
-                            'csrf' => csrf_hash(),
-                        ]);
-                }
-
-                return redirect()->back()->withInput()->with('error', $message);
-            }
-        }
-
-        if ($auditModel->hasTable()) {
-            $headName = trim(trim((string) $this->request->getPost('head_firstname')) . ' ' . trim((string) $this->request->getPost('head_lastname')));
-            $memberCount = is_array($members) ? count($members) : 0;
-            $serviceCount = is_array($serviceIds) ? count($serviceIds) : 0;
-            // Tracks the creating operator plus client IP and browser agent.
-            $auditModel->logAction(
+        try {
+            $writer->persistFamily(
+                $this->memberPayload('head_'),
+                $memberPayloads,
+                array_map('intval', $serviceIds),
                 $userId,
-                $headId,
-                'FAMILY_CREATED',
-                'Created family profile for ' . $headName . '.',
                 $this->request->getIPAddress(),
-                $this->request->getUserAgent()->getAgentString(),
-                'Head of family: ' . $headName . '; added ' . $memberCount . ' additional member(s); '
-                    . $serviceCount . ' service(s) assigned to the head'
+                $this->request->getUserAgent()->getAgentString()
+            );
+        } catch (Throwable $exception) {
+            $memberModel->rollbackTransaction();
+
+            // persistFamily can also throw beyond FamilyRecordWriteException (QR
+            // assignment, audit, or an unexpected DB error). Catch them all so the
+            // transaction is always rolled back and the request fails gracefully.
+            return $this->storeError(
+                $exception instanceof FamilyRecordWriteException
+                    ? $exception->getMessage()
+                    : 'The family record was not saved.'
             );
         }
 
         $memberModel->completeTransaction();
 
         if (! $memberModel->transactionStatus()) {
-            $message = 'The family form was not saved.';
-
-            if ($this->request->isAJAX()) {
-                return $this->response
-                    ->setStatusCode(500)
-                    ->setJSON([
-                        'status' => 'error',
-                        'message' => $message,
-                        'csrf' => csrf_hash(),
-                    ]);
-            }
-
-            return redirect()->back()->withInput()->with('error', $message);
+            return $this->storeError('The family form was not saved.', 500);
         }
 
         if ($this->request->isAJAX()) {
@@ -261,12 +194,199 @@ class FamilyController extends BaseController
             ]);
         }
 
-        // family_record_saved signals the manage-records page to clear the
-        // client-side "Add Record" draft (see family-form.js). Set on a new
-        // record save only — never on edit/update.
+        // Set on a new record save only, never on edit/update.
         return redirect()->back()
             ->with('family_record_saved', '1')
             ->with('success', $successMessage);
+    }
+
+    /**
+     * GET `{admin|employee}/manage-family/template`: streams the blank, fillable
+     * .xlsx template (App\Libraries\FamilyExcelTemplate) workers use to collect
+     * family records offline. Same entry-access guard as the Add form.
+     */
+    public function downloadTemplate()
+    {
+        $guard = $this->requireFamilyEntryAccess();
+
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        $spreadsheet = (new FamilyExcelTemplate())->build();
+
+        ob_start();
+        (new Xlsx($spreadsheet))->save('php://output');
+        $content = (string) ob_get_clean();
+
+        return $this->response
+            ->setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            ->setHeader('Content-Disposition', 'attachment; filename="family-import-template.xlsx"')
+            ->setHeader('Cache-Control', 'max-age=0')
+            ->setBody($content);
+    }
+
+    /**
+     * GET `{admin|employee}/manage-family/import`: returns the Excel import modal
+     * fragment (file upload + results area) loaded by family-import.js into the
+     * shared dashboard modal.
+     */
+    public function importForm(): string|RedirectResponse
+    {
+        $guard = $this->requireFamilyEntryAccess();
+
+        if ($guard instanceof RedirectResponse) {
+            return $this->partialGuard($guard, 'You do not have permission to import family records.');
+        }
+
+        return view('Family/import-modal', [
+            'action'      => site_url($this->currentRouteBase() . '/import'),
+            'templateUrl' => site_url($this->currentRouteBase() . '/template'),
+        ]);
+    }
+
+    /**
+     * POST `{admin|employee}/manage-family/import`: QUEUES a filled .xlsx of
+     * families for background import. The file is only validated as an upload here
+     * (a valid .xlsx), moved to writable/uploads, and recorded as a `pending`
+     * job_queue row (type 'family_import'). A scheduled worker (php spark queue:work) parses,
+     * validates, and writes it batched + resumably, so very large files never hit the
+     * web request's timeout or memory limit. The modal polls importStatus() for the
+     * row errors and final summary. Always responds as JSON (the modal posts over AJAX).
+     */
+    public function import()
+    {
+        $guard = $this->requireFamilyEntryAccess();
+
+        if ($guard instanceof RedirectResponse) {
+            return $this->jsonError('You do not have permission to import family records.', 403);
+        }
+
+        $memberModel = new MemberModel();
+
+        if (! $memberModel->hasRequiredFamilyTables()) {
+            return $this->jsonError('The accesscard database is missing required tables from accesscardV1.4.sql.', 422);
+        }
+
+        $file = $this->request->getFile('import_file');
+
+        if ($file === null || ! $file->isValid()) {
+            return $this->jsonError('Please choose a valid .xlsx file to import.', 422);
+        }
+
+        if (strtolower((string) $file->getClientExtension()) !== 'xlsx') {
+            return $this->jsonError('The file must be an .xlsx workbook saved from the template.', 422);
+        }
+
+        // Capture the original name before move() (which renames the file on disk).
+        $originalName = (string) ($file->getClientName() ?: 'import.xlsx');
+
+        // Durable name (not a temp the request deletes): the worker owns its lifecycle
+        // and unlinks it once the job is done/failed.
+        $storedName = 'family-import-' . bin2hex(random_bytes(8)) . '.xlsx';
+
+        try {
+            $file->move(WRITEPATH . 'uploads', $storedName, true);
+        } catch (Throwable $exception) {
+            return $this->jsonError('The uploaded file could not be saved for processing. Please try again.', 500);
+        }
+
+        $storedPath = WRITEPATH . 'uploads' . DIRECTORY_SEPARATOR . $storedName;
+
+        $jobs = new JobQueueModel();
+
+        try {
+            $jobs->ensureTable();
+
+            $jobId = $jobs->enqueue(
+                'family_import',
+                ['storedPath' => $storedPath, 'originalName' => $originalName],
+                (int) session()->get('user_id'),
+                $this->request->getIPAddress(),
+                $this->request->getUserAgent()->getAgentString()
+            );
+        } catch (Throwable $exception) {
+            @unlink($storedPath);
+            $this->auditSystemError('queueing a family Excel import', $exception);
+
+            return $this->jsonError('The import could not be queued. Please try again.', 500);
+        }
+
+        return $this->response->setJSON([
+            'status'    => 'queued',
+            'jobID'     => $jobId,
+            'statusUrl' => site_url($this->currentRouteBase() . '/import/status/' . $jobId),
+            'message'   => 'Your file is queued and importing in the background.',
+            'csrf'      => csrf_hash(),
+        ]);
+    }
+
+    /**
+     * GET `{admin|employee}/manage-family/import/status/(:num)`: JSON progress for a
+     * queued import job, polled by family-import.js. Returns the job's status, a human
+     * message, progress counters, and (once finished) any validation/per-family write
+     * errors so the modal can render them exactly as the old synchronous flow did.
+     */
+    public function importStatus(int $jobId)
+    {
+        $guard = $this->requireFamilyEntryAccess();
+
+        if ($guard instanceof RedirectResponse) {
+            return $this->jsonError('You do not have permission to view import status.', 403);
+        }
+
+        $jobs = new JobQueueModel();
+
+        if (! $jobs->hasTable()) {
+            return $this->jsonError('No import is in progress.', 404);
+        }
+
+        $job = $jobs->find($jobId);
+
+        if ($job === null || ($job['type'] ?? '') !== 'family_import') {
+            return $this->jsonError('Import job not found.', 404);
+        }
+
+        $status = (string) $job['status'];
+        $total  = (int) $job['progress_total'];
+        $done   = (int) $job['progress_done'];
+
+        $result = [];
+
+        if (! empty($job['result_json'])) {
+            $decoded = json_decode((string) $job['result_json'], true);
+
+            if (is_array($decoded)) {
+                $result = $decoded;
+            }
+        }
+
+        $errors   = (isset($result['errors']) && is_array($result['errors'])) ? $result['errors'] : [];
+        $imported = (int) ($result['imported'] ?? 0);
+        $failed   = (int) ($result['failed'] ?? 0);
+        $skipped  = (int) ($result['skipped'] ?? 0);
+        $members  = (int) ($result['members'] ?? 0);
+
+        return $this->response->setJSON([
+            'status'   => $status,
+            'finished' => in_array($status, ['done', 'partial', 'failed'], true),
+            'message'  => (string) ($job['message'] ?? ''),
+            'progress' => [
+                'total'     => $total,
+                'processed' => $done,
+                'imported'  => $imported,
+                'failed'    => $failed,
+                'skipped'   => $skipped,
+                'members'   => $members,
+                'percent'   => $total > 0 ? (int) floor($done * 100 / $total) : 0,
+            ],
+            'errors'   => array_slice($errors, 0, 200),
+            'summary'  => [
+                'families' => $imported,
+                'members'  => $members,
+            ],
+            'csrf'     => csrf_hash(),
+        ]);
     }
 
     /**
@@ -329,10 +449,9 @@ class FamilyController extends BaseController
     }
 
     /**
-     * GET `{admin|employee}/manage-family/edit/{id}`: returns the family form
-     * prefilled for editing, as a modal fragment. Reuses the same
-     * `Family/form` template as Add Family by passing the head
-     * row, its members, and selected services, with the form pointed at update().
+     * GET `{admin|employee}/manage-family/edit/{id}`: returns the family record
+     * modal prefilled for editing. Delegates to renderFamilyModal(), the same
+     * Bootstrap modal served by createFamily() in update mode.
      */
     public function editFamily(int $headId): string|RedirectResponse
     {
@@ -342,55 +461,7 @@ class FamilyController extends BaseController
             return $this->partialGuard($guard, 'You do not have permission to edit family records.');
         }
 
-        $memberModel = new MemberModel();
-        $rows = $memberModel->getFamilyMembers($headId, 'all');
-        [$head, $members] = $this->splitHeadAndMembers($rows, $headId);
-
-        if ($head === null) {
-            return $this->recordMissing();
-        }
-
-        // Address stores "address, barangay" combined; split it so the edit form
-        // can prefill the separate Address and Barangay inputs.
-        $addressParts = $this->splitAddressBarangay($head['address'] ?? '');
-        $head['address'] = $addressParts['address'];
-        $head['barangay'] = $addressParts['barangay'];
-
-        $serviceIdsByMember = (new MemberServiceModel())
-            ->getServiceIdsByMemberIds(array_map(static fn (array $row): int => (int) $row['memberID'], $rows));
-
-        // Gather every sector/service the family currently holds so the edit form can
-        // keep showing (and re-posting) any that have since been archived — otherwise
-        // saving would silently drop those grandfathered benefits.
-        $assignedSectorIds = [];
-        foreach ($rows as $row) {
-            foreach (SectorIds::normalize($row['sectorID'] ?? null) as $sectorId) {
-                $assignedSectorIds[] = (int) $sectorId;
-            }
-        }
-
-        $assignedServiceIds = [];
-        foreach ($serviceIdsByMember as $ids) {
-            foreach ($ids as $id) {
-                $assignedServiceIds[] = (int) $id;
-            }
-        }
-
-        return view('Family/form', array_merge(
-            (new FamilyFormOptionsModel())->getViewDataForEdit(
-                array_values(array_unique($assignedSectorIds)),
-                array_values(array_unique($assignedServiceIds))
-            ),
-            [
-                'familyRecord'      => $head,
-                'existingMembers'   => $this->shapeExistingMembers($members, $serviceIdsByMember),
-                'headServiceIds'    => $serviceIdsByMember[$headId] ?? [],
-                'formAction'        => site_url($this->currentRouteBase() . '/update/' . $headId),
-                'submitButtonLabel' => 'Update Record',
-                'embeddedInModal'   => true,
-                'canCreateFamily'   => true,
-            ]
-        ));
+        return $this->renderFamilyModal('update', $headId);
     }
 
     /**
@@ -416,6 +487,10 @@ class FamilyController extends BaseController
 
         if (! $memberModel->hasRequiredFamilyTables()) {
             return $this->failUpdate('The accesscard database is missing required tables from accesscardV1.4.sql.', 422);
+        }
+
+        if ($this->submissionWasTruncated()) {
+            return $this->failUpdate('The form was too large and some member data was cut off before it reached the server, so nothing was saved. Please edit fewer members at a time (or ask an administrator to raise the server\'s max_input_vars) and try again.', 422, 'FORM_TRUNCATED');
         }
 
         $existingHead = $memberModel->find($headId);
@@ -867,23 +942,48 @@ class FamilyController extends BaseController
         return '<div class="alert alert-warning mb-0">That family record could not be found. It may have been removed.</div>';
     }
 
-    /** JSON error body (with a fresh CSRF hash) used by the AJAX update responses. */
-    private function jsonError(string $message, int $statusCode)
+    /**
+     * JSON error body (with a fresh CSRF hash) used by the AJAX update responses.
+     * Optional $code adds a machine-readable tag (e.g. 'FORM_TRUNCATED') the
+     * frontend can branch on instead of matching the human message text.
+     */
+    private function jsonError(string $message, int $statusCode, ?string $code = null)
     {
+        $body = [
+            'status' => 'error',
+            'message' => $message,
+            'csrf' => csrf_hash(),
+        ];
+
+        if ($code !== null) {
+            $body['code'] = $code;
+        }
+
         return $this->response
             ->setStatusCode($statusCode)
-            ->setJSON([
-                'status' => 'error',
-                'message' => $message,
-                'csrf' => csrf_hash(),
-            ]);
+            ->setJSON($body);
     }
 
     /**
      * Update-failure response: JSON error for AJAX, otherwise a redirect back with
-     * the input preserved and an error flash. Used throughout update().
+     * the input preserved and an error flash. Used throughout update(). Optional
+     * $code is forwarded to the JSON body for the AJAX path.
      */
-    private function failUpdate(string $message, int $statusCode)
+    private function failUpdate(string $message, int $statusCode, ?string $code = null)
+    {
+        if ($this->request->isAJAX()) {
+            return $this->jsonError($message, $statusCode, $code);
+        }
+
+        return redirect()->back()->withInput()->with('error', $message);
+    }
+
+    /**
+     * Create-failure response for store(): JSON error for AJAX (status defaults to
+     * 422), otherwise a redirect back with input preserved and an error flash.
+     * Mirrors the original per-step error handling that lived inline in store().
+     */
+    private function storeError(string $message, int $statusCode = 422)
     {
         if ($this->request->isAJAX()) {
             return $this->jsonError($message, $statusCode);
@@ -968,11 +1068,7 @@ class FamilyController extends BaseController
      */
     private function combineAddressBarangay(mixed $address, mixed $barangay): ?string
     {
-        $address = $this->cleanAddress($address);
-        $barangay = $this->cleanAddress($barangay);
-        $combined = trim($address . ($address !== '' && $barangay !== '' ? ', ' : '') . $barangay);
-
-        return $combined === '' ? null : $combined;
+        return MemberFieldNormalizer::combineAddressBarangay($address, $barangay);
     }
 
     /**
@@ -1006,6 +1102,31 @@ class FamilyController extends BaseController
         }
 
         return ['address' => $combined, 'barangay' => ''];
+    }
+
+    /**
+     * Detects a POST silently truncated by PHP's max_input_vars. The family form
+     * posts a trailing `_form_end` sentinel (the first field dropped when the limit
+     * is hit, since it is last in the body) and an early `members_meta_count` the
+     * client sets to its live member-row count. If the sentinel is missing, or fewer
+     * member rows arrived than the client promised, the submission was cut short —
+     * the caller must reject it so no partial family record is ever saved.
+     */
+    private function submissionWasTruncated(): bool
+    {
+        if (strtolower((string) $this->request->getMethod()) !== 'post') {
+            return false;
+        }
+
+        if ((string) $this->request->getPost('_form_end') !== '1') {
+            return true;
+        }
+
+        $expected = (int) $this->request->getPost('members_meta_count');
+        $members = $this->request->getPost('members');
+        $received = is_array($members) ? count($members) : 0;
+
+        return $received < $expected;
     }
 
     /**
@@ -1100,11 +1221,7 @@ class FamilyController extends BaseController
      */
     private function moneyOrNull(mixed $value): ?float
     {
-        if ($value === null || $value === '') {
-            return null;
-        }
-
-        return (float) str_replace(',', '', (string) $value);
+        return MemberFieldNormalizer::moneyOrNull($value);
     }
 
     /**
@@ -1113,9 +1230,7 @@ class FamilyController extends BaseController
      */
     private function nullableText(mixed $value): ?string
     {
-        $value = trim((string) $value);
-
-        return $value === '' ? null : $value;
+        return MemberFieldNormalizer::nullableText($value);
     }
 
     /**
@@ -1127,10 +1242,7 @@ class FamilyController extends BaseController
      */
     private function cleanName(mixed $value): string
     {
-        $value = preg_replace("/[^\\p{L}\\s.'-]/u", '', (string) $value);
-        $value = trim((string) preg_replace('/\\s+/u', ' ', (string) $value));
-
-        return mb_convert_case($value, MB_CASE_TITLE, 'UTF-8');
+        return MemberFieldNormalizer::cleanName($value);
     }
 
     /**
@@ -1141,10 +1253,412 @@ class FamilyController extends BaseController
      */
     private function cleanAddress(mixed $value): string
     {
-        $value = preg_replace("/[^\\p{L}\\p{N}\\s#,.\\-\\/'()&]/u", '', (string) $value);
-        $value = trim((string) preg_replace('/\\s+/u', ' ', (string) $value));
+        return MemberFieldNormalizer::cleanAddress($value);
+    }
 
-        return mb_convert_case($value, MB_CASE_TITLE, 'UTF-8');
+    // ---------------------------------------------------------------------------
+    // Server-side DataTables list (GET {role}/manage-family/data)
+    //
+    // Powers the Manage Records DataTable (assets/js/dashboard/family-datatable.js).
+    // Reuses the existing, untouched search models: MemberModel::searchFamilies()
+    // for the family-heads scope and SearchModel::allMembers() for the whole-database
+    // scope. Both are called with the optional, append-only $orderKey/$orderDirection
+    // arguments for column sorting; everything else is the same query used elsewhere.
+    // ---------------------------------------------------------------------------
+
+    /** Returns the server-side DataTables payload for Manage Records. */
+    public function dataTable()
+    {
+        $draw = max(0, (int) $this->request->getGet('draw'));
+        $guard = $this->requireFamilyViewAccess();
+
+        if ($guard instanceof RedirectResponse) {
+            return $this->response
+                ->setStatusCode(403)
+                ->setJSON($this->dataTablePayload($draw, 0, 0, [], 'You do not have permission to view family records.'));
+        }
+
+        $start = max(0, (int) $this->request->getGet('start'));
+        $requestedLength = (int) $this->request->getGet('length');
+        $length = in_array($requestedLength, [10, 25, 50, 100], true) ? $requestedLength : 25;
+        $scope = strtolower(trim((string) $this->request->getGet('scope'))) === 'all' ? 'all' : 'heads';
+        $keyword = trim((string) $this->request->getGet('q'));
+        $dataTablesSearch = $this->request->getGet('search');
+
+        if ($keyword === '' && is_array($dataTablesSearch)) {
+            $keyword = trim((string) ($dataTablesSearch['value'] ?? ''));
+        }
+
+        $status = strtolower(trim((string) $this->request->getGet('status')));
+        $status = in_array($status, ['all', 'active', 'archived'], true) ? $status : 'all';
+        $filters = [
+            'sectorID' => $this->request->getGet('sectorID'),
+            'barangay' => $this->request->getGet('barangay'),
+        ];
+        [$orderKey, $orderDirection] = $this->dataTableOrder();
+
+        try {
+            if ($scope === 'all') {
+                $searchModel = new SearchModel();
+                $searchFilters = array_merge(['status' => $status], $filters);
+                $total = $searchModel->countAllMembers('', ['status' => 'all']);
+                $filtered = $searchModel->countAllMembers($keyword, $searchFilters);
+                $rows = $searchModel->allMembers($keyword, $searchFilters, $length, $start, $orderKey, $orderDirection);
+            } else {
+                $memberModel = new MemberModel();
+                $searchKeyword = $keyword === '' ? null : $keyword;
+                $total = $memberModel->countSearchFamilies(null, 'all');
+                $filtered = $memberModel->countSearchFamilies($searchKeyword, $status, $filters);
+                $rows = $memberModel->searchFamilies($searchKeyword, $length, $start, $status, $filters, $orderKey, $orderDirection);
+            }
+
+            $sectorShortcodes = $this->dataTableSectorShortcodes();
+            $data = array_map(
+                fn (array $row): array => $this->dataTableRow($row, $scope === 'all', $sectorShortcodes),
+                $rows
+            );
+
+            return $this->response->setJSON($this->dataTablePayload($draw, $total, $filtered, $data));
+        } catch (Throwable $exception) {
+            $this->auditSystemError('loading the family records table', $exception);
+
+            return $this->response
+                ->setStatusCode(500)
+                ->setJSON($this->dataTablePayload($draw, 0, 0, [], 'Unable to load family records.'));
+        }
+    }
+
+    /**
+     * Reads the DataTables order[] request into a [columnKey, direction] pair.
+     * Only the name/address/birthday columns are sortable; everything else falls
+     * back to the name column. The `date` parameter is intentionally NOT consulted.
+     *
+     * @return array{0: string, 1: string}
+     */
+    private function dataTableOrder(): array
+    {
+        $order = $this->request->getGet('order');
+
+        // No column sort requested (the table's default) -> newest records first, so
+        // a just-added or just-imported family is visible at the top of the list
+        // instead of being sorted by surname into a large dataset. 'newest' is
+        // unrecognized by applyMemberOrder(), which falls back to memberID DESC.
+        if (! is_array($order) || ! isset($order[0]) || ! is_array($order[0])) {
+            return ['newest', 'desc'];
+        }
+
+        $firstOrder = $order[0];
+        $column = (int) ($firstOrder['column'] ?? 0);
+        $direction = strtolower((string) ($firstOrder['dir'] ?? 'asc')) === 'desc' ? 'desc' : 'asc';
+        $orderKey = match ($column) {
+            2 => 'address',
+            3 => 'birthday',
+            default => 'name',
+        };
+
+        return [$orderKey, $direction];
+    }
+
+    /** [sectorID => SHORTCODE] map for rendering the DataTable's Sector column. */
+    private function dataTableSectorShortcodes(): array
+    {
+        $map = [];
+
+        foreach ((new SectorModel())->getSectorOptions() as $sector) {
+            $sectorId = (int) ($sector['sectorID'] ?? $sector['id'] ?? 0);
+            $shortcode = trim((string) ($sector['shortcode'] ?? ''));
+
+            if ($sectorId > 0 && $shortcode !== '') {
+                $map[$sectorId] = mb_strtoupper($shortcode);
+            }
+        }
+
+        return $map;
+    }
+
+    /**
+     * Shapes one member row into the DataTables cell map the client expects
+     * (name HTML, sector shortcodes, address, birthday, actions dropdown).
+     *
+     * @param array<int, string> $sectorShortcodes
+     */
+    private function dataTableRow(array $row, bool $allMembersScope, array $sectorShortcodes): array
+    {
+        $memberId = (int) ($row['memberID'] ?? 0);
+        $headId = $allMembersScope ? (int) ($row['headID'] ?? $memberId) : $memberId;
+        $name = $this->dataTableDisplayName($row);
+        $relationship = trim((string) ($row['relationship'] ?? ''));
+        $nameHtml = '<span class="entity-title">' . esc(mb_strtoupper($name)) . '</span>';
+
+        if ($allMembersScope && $relationship !== '') {
+            $nameHtml .= '<small class="text-muted d-block">' . esc(mb_strtoupper($relationship)) . '</small>';
+        }
+
+        $sectors = [];
+
+        foreach (SectorIds::normalize($row['sectorID'] ?? null) as $sectorId) {
+            if (isset($sectorShortcodes[$sectorId])) {
+                $sectors[] = $sectorShortcodes[$sectorId];
+            }
+        }
+
+        $birthday = strtotime((string) ($row['birthday'] ?? ''));
+
+        return [
+            'name' => $nameHtml,
+            'sector' => esc(implode(', ', array_values(array_unique($sectors)))),
+            'address' => esc(mb_strtoupper((string) ($row['address'] ?? ''))),
+            'birthday' => $birthday === false ? '-' : date('Y-m-d', $birthday),
+            'actions' => $this->dataTableActions($row, $headId, $name),
+        ];
+    }
+
+    /** "Surname Suffix, Firstname M." display name for a member row. */
+    private function dataTableDisplayName(array $row): string
+    {
+        $lastName = trim((string) ($row['lastname'] ?? ''));
+        $suffix = trim((string) ($row['suffix'] ?? ''));
+        $firstName = trim((string) ($row['firstname'] ?? ''));
+        $middleName = trim((string) ($row['middlename'] ?? ''));
+        $surname = trim($lastName . ($suffix !== '' ? ' ' . $suffix : ''));
+        $givenName = trim($firstName . ($middleName !== '' ? ' ' . mb_substr($middleName, 0, 1) . '.' : ''));
+
+        return $surname !== '' && $givenName !== '' ? $surname . ', ' . $givenName : trim($surname . ' ' . $givenName);
+    }
+
+    /**
+     * Builds the per-row Actions dropdown HTML for the DataTable. View is shown to
+     * any viewer; Update only to entry-access roles (Developer/Admin/Employee);
+     * Archive/Restore only to Developer/Admin. Empty string hides the menu.
+     */
+    private function dataTableActions(array $row, int $headId, string $displayName): string
+    {
+        if ($headId <= 0) {
+            return '';
+        }
+
+        $role = RoleAccess::normalizeRole((string) session()->get('role'));
+        $canEdit = in_array($role, ['Developer', 'Admin', 'Employee'], true);
+        $canArchive = in_array($role, ['Developer', 'Admin'], true);
+        $archived = trim((string) ($row['dt_deleted'] ?? '')) !== '';
+
+        if ($archived && ! $canArchive) {
+            return '';
+        }
+
+        $routeBase = $this->dataTableRouteBase();
+
+        // The trigger markup (modal callers + archive/restore form) lives in the
+        // view; this controller only supplies the permission flags and URLs.
+        return view('Family/row-actions', [
+            'archived'       => $archived,
+            'canEdit'        => $canEdit,
+            'canArchive'     => $canArchive,
+            'displayName'    => $displayName,
+            'viewUrl'        => $archived ? '' : site_url($routeBase . '/view/' . $headId . '?partial=1'),
+            'updateUrl'      => (! $archived && $canEdit) ? site_url($routeBase . '/create?partial=1&mode=update&id=' . $headId) : '',
+            'formAction'     => $canArchive ? site_url($routeBase . '/' . ($archived ? 'restore' : 'archive') . '/' . $headId) : '',
+            'actionLabel'    => $archived ? 'Restore' : 'Archive',
+            'actionPast'     => $archived ? 'restored' : 'archived',
+            'confirmMessage' => $archived
+                ? 'Restore this record to the active list?'
+                : 'Archive this record? This keeps the record in the database, marks it as archived, and hides it from active lists.',
+        ]);
+    }
+
+    /** Role-aware route base for the DataTable action URLs. */
+    private function dataTableRouteBase(): string
+    {
+        if (str_starts_with(uri_string(), 'employee/')) {
+            return 'employee/manage-family';
+        }
+
+        if (str_starts_with(uri_string(), 'viewer/')) {
+            return 'viewer/manage-family';
+        }
+
+        return 'admin/manage-family';
+    }
+
+    /** Standard DataTables JSON envelope (+ optional error message). */
+    private function dataTablePayload(int $draw, int $total, int $filtered, array $data, ?string $error = null): array
+    {
+        $payload = [
+            'draw' => $draw,
+            'recordsTotal' => max(0, $total),
+            'recordsFiltered' => max(0, $filtered),
+            'data' => $data,
+        ];
+
+        if ($error !== null) {
+            $payload['error'] = $error;
+        }
+
+        return $payload;
+    }
+
+    // ---------------------------------------------------------------------------
+    // Bootstrap Add / Update modal (GET {role}/manage-family/create[?mode=update&id=])
+    // ---------------------------------------------------------------------------
+
+    /**
+     * GET `{admin|employee}/manage-family/create`: returns the Bootstrap family
+     * record modal fragment loaded by manage-family-modal.js. `?mode=update&id=`
+     * prefills it for editing; otherwise it is a blank Add form. The form posts to
+     * the existing, untouched store()/update() endpoints.
+     */
+    public function createFamily(): string|RedirectResponse
+    {
+        $guard = $this->requireFamilyEntryAccess();
+
+        if ($guard instanceof RedirectResponse) {
+            return $this->partialGuard($guard, 'You do not have permission to open the family record form.');
+        }
+
+        $isUpdateMode = strtolower(trim((string) $this->request->getGet('mode'))) === 'update';
+        $headId = max(0, (int) $this->request->getGet('id'));
+
+        return $this->renderFamilyModal($isUpdateMode ? 'update' : 'create', $headId);
+    }
+
+    /**
+     * Shared renderer for the Add/Update family modal. In create mode it serves a
+     * blank form pointed at `families` (store). In update mode it prefills the head,
+     * existing members, and selected (incl. grandfathered/archived) sectors/services,
+     * pointed at the role's update/{id} endpoint.
+     */
+    private function renderFamilyModal(string $mode, int $headId): string|RedirectResponse
+    {
+        if ($mode === 'update') {
+            $memberModel = new MemberModel();
+            $rows = $memberModel->getFamilyMembers($headId, 'all');
+            [$head, $members] = $this->splitHeadAndMembers($rows, $headId);
+
+            if ($head === null) {
+                return $this->recordMissing();
+            }
+
+            $serviceIdsByMember = (new MemberServiceModel())
+                ->getServiceIdsByMemberIds(array_map(static fn (array $row): int => (int) $row['memberID'], $rows));
+
+            // Gather assigned sectors/services so archived-but-assigned items stay
+            // visible/checked on the form (grandfathering), matching the old editFamily().
+            $assignedSectorIds = [];
+            foreach ($rows as $row) {
+                foreach (SectorIds::normalize($row['sectorID'] ?? null) as $sectorId) {
+                    $assignedSectorIds[] = (int) $sectorId;
+                }
+            }
+
+            $assignedServiceIds = [];
+            foreach ($serviceIdsByMember as $ids) {
+                foreach ($ids as $id) {
+                    $assignedServiceIds[] = (int) $id;
+                }
+            }
+
+            $viewData = (new FamilyFormOptionsModel())->getViewDataForEdit(
+                array_values(array_unique($assignedSectorIds)),
+                array_values(array_unique($assignedServiceIds))
+            );
+
+            return view('Family/family-modal', array_merge(
+                $viewData,
+                $this->familyModalUpdateData($head, $serviceIdsByMember[$headId] ?? []),
+                [
+                    'action' => site_url($this->currentRouteBase() . '/update/' . $headId),
+                    'fieldPrefix' => 'family-update',
+                    'modalTitle' => 'Update Family Record',
+                    'modalMode' => 'update',
+                    'submitLabel' => 'Update',
+                    'saveDisabled' => false,
+                    'existingMembers' => $this->shapeModalMembers($members, $serviceIdsByMember),
+                ]
+            ));
+        }
+
+        $viewData = (new FamilyFormOptionsModel())->getViewData();
+
+        return view('Family/family-modal', array_merge(
+            $viewData,
+            [
+                'action' => site_url('families'),
+                'fieldPrefix' => 'family-add',
+                'modalTitle' => 'New Family Record',
+                'modalMode' => 'create',
+                'submitLabel' => 'Save',
+                'headId' => 0,
+                'saveDisabled' => false,
+                'existingMembers' => [],
+            ]
+        ));
+    }
+
+    /**
+     * Builds the head prefill block (formValues + selected sector/service IDs) for
+     * the Update modal. Splits the stored "address, barangay" back into the two
+     * separate inputs via splitAddressBarangay().
+     *
+     * @param list<int> $headServiceIds
+     */
+    private function familyModalUpdateData(array $head, array $headServiceIds): array
+    {
+        $headId = (int) ($head['memberID'] ?? 0);
+        $addressParts = $this->splitAddressBarangay($head['address'] ?? '');
+
+        return [
+            'headId' => $headId,
+            'formValues' => [
+                'head_lastname' => (string) ($head['lastname'] ?? ''),
+                'head_firstname' => (string) ($head['firstname'] ?? ''),
+                'head_middlename' => (string) ($head['middlename'] ?? ''),
+                'head_suffix' => (string) ($head['suffix'] ?? ''),
+                'head_birthday' => (string) ($head['birthday'] ?? ''),
+                'head_sex' => (string) ($head['sex'] ?? ''),
+                'head_civilstatus' => (string) ($head['civilstatus'] ?? ''),
+                'head_contactnumber' => (string) ($head['contactnumber'] ?? ''),
+                'head_religion' => (string) ($head['religion'] ?? ''),
+                'head_education' => (string) ($head['education'] ?? ''),
+                'head_job' => (string) ($head['job'] ?? ''),
+                'head_salary' => (string) ($head['Salary'] ?? ''),
+                'head_address' => $addressParts['address'],
+                'head_barangay' => $addressParts['barangay'],
+            ],
+            'selectedSectorIds' => array_map('strval', SectorIds::normalize($head['sectorID'] ?? null)),
+            'selectedServiceIds' => array_map('strval', $headServiceIds),
+        ];
+    }
+
+    /**
+     * Shapes existing family-member rows for the Update modal so they pre-render
+     * (and re-post) — otherwise update()'s member replace would drop them.
+     *
+     * @param array<int, list<int>> $serviceIdsByMember
+     * @return list<array<string, mixed>>
+     */
+    private function shapeModalMembers(array $members, array $serviceIdsByMember): array
+    {
+        return array_map(function (array $member) use ($serviceIdsByMember): array {
+            $memberId = (int) ($member['memberID'] ?? 0);
+
+            return [
+                'lastname' => (string) ($member['lastname'] ?? ''),
+                'firstname' => (string) ($member['firstname'] ?? ''),
+                'middlename' => (string) ($member['middlename'] ?? ''),
+                'suffix' => (string) ($member['suffix'] ?? ''),
+                'birthday' => (string) ($member['birthday'] ?? ''),
+                'sex' => (string) ($member['sex'] ?? ''),
+                'civilstatus' => (string) ($member['civilstatus'] ?? ''),
+                'contactnumber' => (string) ($member['contactnumber'] ?? ''),
+                'religion' => (string) ($member['religion'] ?? ''),
+                'education' => (string) ($member['education'] ?? ''),
+                'job' => (string) ($member['job'] ?? ''),
+                'salary' => (string) ($member['Salary'] ?? ''),
+                'relationship' => (string) ($member['relationship'] ?? ''),
+                'sector_ids' => array_map('strval', SectorIds::normalize($member['sectorID'] ?? null)),
+                'service_ids' => array_map('strval', $serviceIdsByMember[$memberId] ?? []),
+            ];
+        }, $members);
     }
 
 }

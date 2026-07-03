@@ -20,7 +20,16 @@ $isSelf = (bool) ($isSelf ?? false);
 // (read-only), but username/account level/reset password stay editable.
 $personalLocked = (bool) ($personalLocked ?? false);
 $lockAttr = $personalLocked ? ' disabled' : '';
+// Developer self-profile: username + account level are .env-managed (read-only).
+$isDeveloper = (bool) ($isDeveloper ?? false);
 $roleLabel = (string) ($roleLabel ?? $role);
+$isRoleReadOnly = $isDeveloper || ($isEdit && $isSelf) || $isSelfProfile;
+$displayRoleLabel = $roleLabel !== '' ? $roleLabel : match ($role) {
+    'administrator' => 'Administrator',
+    'encoder' => 'Encoder',
+    'viewer' => 'Viewer',
+    default => $role,
+};
 $fieldPrefix = $isEdit ? 'edit-account' : ($isSelfProfile ? 'my-account' : 'account');
 $title = $isEdit ? 'Edit Account' : ($isSelfProfile ? 'My Account' : 'Create Account');
 $subtitle = $isEdit ? "Update this account's profile details and access level." : ($isSelfProfile ? 'Update your profile details and password.' : 'Add a new system user and assign an access level.');
@@ -99,17 +108,22 @@ $value = static function (array $details, string $key, bool $isEdit): string {
                     <?php endif; ?>
                     <div class="account-field">
                         <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>-role">Account Level</label>
-                        <select class="form-select" id="<?= esc($fieldPrefix, 'attr') ?>-role" name="role" required <?= ($isEdit && $isSelf) || $isSelfProfile ? 'disabled' : '' ?>>
+                        <?php if ($isRoleReadOnly): ?>
+                            <input class="form-control account-role-readonly" id="<?= esc($fieldPrefix, 'attr') ?>-role" type="text" value="<?= esc($displayRoleLabel, 'attr') ?>" disabled>
+                            <small class="text-muted"><?= $isSelfProfile || $isDeveloper ? '' : 'You cannot change your own account level.' ?></small>
+                            <?php if (! $isDeveloper): ?>
+                                <input type="hidden" name="role" value="<?= esc($role, 'attr') ?>">
+                            <?php endif; ?>
+                        <?php else: ?>
+                        <select class="form-select" id="<?= esc($fieldPrefix, 'attr') ?>-role" name="role" required>
                             <?php if (! $isEdit && ! $isSelfProfile): ?>
                                 <option value="">Choose account level</option>
                             <?php endif; ?>
                             <option value="administrator" <?= $role === 'administrator' ? 'selected' : '' ?>>Administrator</option>
                             <option value="encoder" <?= $role === 'encoder' ? 'selected' : '' ?>>Encoder</option>
                             <option value="viewer" <?= $role === 'viewer' ? 'selected' : '' ?>>Viewer</option>
+                            <option value="scanner" <?= $role === 'scanner' ? 'selected' : '' ?>>Scanner</option>
                         </select>
-                        <?php if (($isEdit && $isSelf) || $isSelfProfile): ?>
-                            <small class="text-muted"><?= $isSelfProfile ? 'Your account level is read-only.' : 'You cannot change your own account level.' ?></small>
-                            <input type="hidden" name="role" value="<?= esc($role, 'attr') ?>">
                         <?php endif; ?>
                     </div>
                     <?php if ($isEdit && ! $isSelf): ?>

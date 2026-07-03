@@ -1,276 +1,1004 @@
-// Two responsibilities:
-//   1. Registers Add / View / Edit family record modals with dashboard-modal-loader.js.
-//      Clicks on .js-open-family-modal, .js-open-family-view-modal, and
-//      .js-open-family-edit-modal fetch the correct partial via AJAX into #familyModal.
-//      After loading, calls window.initFamilyForm() to wire up the multi-step wizard.
-//   2. Makes the records list panel (data-family-list-panel) update in-place via fetch:
-//      search/filter form submits, pagination link clicks, and browser back/forward all
-//      replace only the panel HTML without a full page reload.
-//      (The archive/restore confirmation dialog lives in family-list.js.)
+// Registers the family record modals (View + Add/Update) with the shared
+// dashboard loader, drives the two-step Bootstrap form (Head -> Members),
+// captures repeatable family members, and submits Add/Update over AJAX to the
+// existing FamilyController::store()/update() endpoints, refreshing the
+// server-side DataTable on success.
+//
+// Modal behavior:
+//   - "Other" freetext selects (reveal + submit-time option swap)
+//   - Contact number digits-only / exactly-11 validation
+//   - Archived (grandfather) badge un-tick warning
+//   - localStorage draft auto-save + restore-on-reopen + keep/discard-on-close
 //
 // Connected to:
 //   - dashboard-modal-loader.js : window.registerDashboardModal()
-//   - family-form.js            : window.initFamilyForm() (initialises the wizard)
-//   - Backend : GET  {admin|employee}/manage-family/view/:id  (FamilyController::viewFamily)
-//               GET  {admin|employee}/manage-family/edit/:id  (FamilyController::editFamily)
-//               GET  {admin|employee}/manage-records?partial=1 (list fragment)
-//               POST {admin|employee}/manage-family/archive|restore/:id
-//   - Views : Family/list.php, form.php, view.php
-//   - Both admin (admin/manage-records) and employee (employee/manage-records) pages use this
-// Registers record management screens with the shared dashboard modal loader.
-(function (window) {
+//   - family-datatable.js       : window.reloadFamilyDataTable()
+//   - Views  : Family/family-modal.php, Family/view.php, the #familyModal shell
+//   - Backend: POST families (store), POST {role}/manage-family/update/:id
+(function (window, document) {
+    'use strict';
+
     if (typeof window.registerDashboardModal !== 'function') {
         return;
     }
 
-    window.registerDashboardModal({
-        namespace: 'family',
-        triggerSelector: '.js-open-family-modal, .js-open-family-view-modal, .js-open-family-edit-modal',
-        defaultTitle: 'Record',
-        loadingMarkup: '<div class="family-modal-loading" role="status" aria-live="polite"><div class="spinner-border text-primary" aria-hidden="true"></div><span>Loading record form...</span></div>',
-        errorMarkup: '<div class="alert alert-danger mb-0">Unable to load the record form. Please try again.</div>',
-        onLoaded: function (container) {
-            if (typeof window.initFamilyForm === 'function') {
-                window.initFamilyForm(container);
-            }
+    var DRAFT_KEY = 'binan_family_modal_draft_v1';
+    var saveTimer = null;
+
+    // ---- small DOM helpers -------------------------------------------------
+
+    function setHidden(el, hidden) {
+        if (el) {
+            el.classList.toggle('family-form-hidden', !!hidden);
         }
-    });
-})(window);
-
-(function (window, document) {
-    function panelFor(target) {
-        return target ? target.closest('[data-family-list-panel]') : null;
     }
 
-    function urlWithPartial(url) {
-        const nextUrl = new URL(url, window.location.href);
+    function escapeHtml(value) {
+        var div = document.createElement('div');
+        div.textContent = String(value || '');
 
-        nextUrl.searchParams.set('partial', '1');
-
-        return nextUrl;
+        return div.innerHTML;
     }
 
-    function setPanelLoading(panel, loading) {
-        panel.classList.toggle('is-loading', loading);
-        panel.querySelectorAll('button, input, select, a').forEach(function (control) {
-            if (control.tagName === 'A') {
-                control.classList.toggle('disabled', loading);
-                control.setAttribute('aria-disabled', loading ? 'true' : 'false');
-                return;
+    function textValue(form, selector) {
+        var field = form.querySelector(selector);
+
+        if (!field) {
+            return '';
+        }
+
+        if (field.tagName === 'SELECT') {
+            if (String(field.value || '').trim() === '') {
+                return '';
             }
 
-            control.disabled = loading;
-        });
+            return field.options[field.selectedIndex] ? field.options[field.selectedIndex].text.trim() : '';
+        }
+
+        return String(field.value || '').trim();
     }
 
-    function replacePanel(panel, html) {
-        const template = document.createElement('template');
-        template.innerHTML = html.trim();
-        const replacement = template.content.querySelector('[data-family-list-panel]');
+    // ---- "Other" freetext selects -----------------------------------------
 
-        if (!replacement) {
-            window.location.reload();
+    function isOtherValue(value) {
+        var normalized = String(value || '').trim().toLowerCase();
+
+        return normalized === 'other' || normalized === 'others' || normalized === '__other__';
+    }
+
+    function cleanOtherValue(value) {
+        return String(value || '')
+            .replace(/[^\p{L}\p{N}\s.,'\-/&()]/gu, '')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .toLowerCase()
+            .replace(/(^|[^\p{L}])(\p{L})/gu, function (match, boundary, letter) {
+                return boundary + letter.toUpperCase();
+            });
+    }
+
+    function findOtherInput(select) {
+        if (!select) {
             return null;
         }
 
-        panel.replaceWith(replacement);
-        updateAllFilterDropdowns(replacement);
-        updateSearchAllState(replacement);
+        var direct = select.dataset.otherInput || '';
 
-        // Re-apply Popper's fixed positioning to the freshly injected row action
-        // menus, otherwise they revert to absolute positioning and get clipped by
-        // the .table-responsive overflow when the new panel has few rows.
-        if (typeof window.initFamilyListActionDropdowns === 'function') {
-            window.initFamilyListActionDropdowns(replacement);
+        if (direct !== '') {
+            return document.querySelector(direct);
         }
 
-        document.querySelectorAll('.modal-backdrop').forEach(function (backdrop) {
-            backdrop.remove();
-        });
-        document.body.classList.remove('modal-open');
-        document.body.style.removeProperty('overflow');
-        document.body.style.removeProperty('padding-right');
+        var field = select.dataset.otherField || '';
+        var container = select.closest('[class*="col-"]') || select.parentElement;
 
-        return replacement;
+        return field !== '' && container
+            ? container.querySelector('[data-other-for="' + field + '"]')
+            : null;
     }
 
-    function scrollPanelIntoView(panel) {
-        if (!panel) {
+    function selectedFieldValue(select) {
+        var otherInput = findOtherInput(select);
+
+        if (isOtherValue(select.value) && otherInput) {
+            var otherValue = String(otherInput.value || '').trim();
+
+            return otherValue !== '' ? otherValue : select.value;
+        }
+
+        return select.value;
+    }
+
+    function syncOtherControl(select) {
+        var otherInput = findOtherInput(select);
+
+        if (!otherInput) {
             return;
         }
 
-        const top = Math.max(0, window.scrollY + panel.getBoundingClientRect().top - 16);
+        var shouldShow = isOtherValue(select.value);
 
-        window.scrollTo({
-            top: top,
-            behavior: 'auto'
+        setHidden(otherInput, !shouldShow);
+        otherInput.required = shouldShow;
+
+        if (!shouldShow) {
+            otherInput.value = '';
+        }
+    }
+
+    function optionExists(select, value) {
+        return Array.from(select.options).some(function (option) {
+            return option.value === value;
         });
     }
 
-    function selectedValues(container) {
-        if (!container) {
-            return [];
-        }
+    // Sets a select to a stored value: picks the matching option, or selects the
+    // "Other" option and fills the freetext when the value is a custom one.
+    function setSelectValueWithOther(select, value) {
+        var normalized = String(value || '');
 
-        return Array.from(container.querySelectorAll('input[type="checkbox"]:checked') || [])
-            .map(function (input) { return input.value; })
-            .filter(function (value) { return value !== '' && value !== '__all'; });
-    }
+        if (normalized === '' || optionExists(select, normalized)) {
+            select.value = normalized;
+            syncOtherControl(select);
 
-    function updateFilterDropdown(dropdown) {
-        if (!dropdown) {
             return;
         }
 
-        const label = dropdown.querySelector('[data-records-filter-label]');
-        dropdown.querySelectorAll('.records-check-option').forEach(function (option) {
-            const input = option.querySelector('input[type="checkbox"]');
-
-            option.classList.toggle('is-selected', !!(input && input.checked));
+        var otherOption = Array.from(select.options).find(function (option) {
+            return isOtherValue(option.value);
         });
 
-        const checked = Array.from(dropdown.querySelectorAll('input[type="checkbox"]:checked'));
-        const selected = checked.filter(function (input) { return input.value !== '__all'; });
-        const allChecked = checked.some(function (input) { return input.value === '__all'; });
-        const isBarangay = dropdown.dataset.recordsFilter === 'barangay';
+        if (otherOption) {
+            otherOption.selected = true;
+            var otherInput = findOtherInput(select);
 
-        if (!label) {
-            return;
-        }
+            if (otherInput) {
+                otherInput.value = normalized;
+            }
 
-        if (allChecked) {
-            label.textContent = isBarangay ? 'All barangays' : 'All sectors';
-        } else if (selected.length === 0) {
-            label.textContent = isBarangay ? '-Select barangay-' : '-Select sector-';
-        } else if (selected.length === 1) {
-            const optionLabel = selected[0].closest('label');
-            label.textContent = optionLabel ? optionLabel.textContent.trim() : selected[0].value;
+            syncOtherControl(select);
         } else {
-            label.textContent = selected.length + ' selected';
+            select.value = '';
         }
     }
 
-    function updateAllFilterDropdowns(root) {
-        (root || document).querySelectorAll('[data-records-filter]').forEach(updateFilterDropdown);
+    function applyOtherValues(root) {
+        Array.from(root.querySelectorAll('.js-other-select')).forEach(function (select) {
+            var otherInput = findOtherInput(select);
+
+            if (!otherInput || !isOtherValue(select.value)) {
+                return;
+            }
+
+            var otherValue = cleanOtherValue(otherInput.value);
+
+            if (otherValue === '') {
+                return;
+            }
+
+            var generated = Array.from(select.options).find(function (option) {
+                return option.dataset.generatedOther === '1';
+            });
+
+            if (!generated) {
+                generated = document.createElement('option');
+                generated.dataset.generatedOther = '1';
+                select.appendChild(generated);
+            }
+
+            generated.value = otherValue;
+            generated.textContent = otherValue;
+            generated.selected = true;
+        });
     }
 
-    function hasDatabaseSearchCriteria(panel) {
-        if (!panel) {
+    function initOtherSelects(root) {
+        Array.from(root.querySelectorAll('.js-other-select')).forEach(function (select) {
+            var initial = typeof select.dataset.initialValue !== 'undefined' ? select.dataset.initialValue : select.value;
+            setSelectValueWithOther(select, initial);
+        });
+    }
+
+    // ---- field error helper ------------------------------------------------
+
+    function setFieldError(field, message) {
+        if (!field) {
+            return;
+        }
+
+        var wrapper = field.closest('[class*="col-"]') || field.parentElement;
+        var feedback = wrapper ? wrapper.querySelector('[data-family-field-error]') : null;
+
+        field.classList.toggle('is-invalid', message !== '');
+
+        if (!feedback && wrapper && message !== '') {
+            feedback = document.createElement('div');
+            feedback.className = 'family-field-error';
+            feedback.setAttribute('data-family-field-error', '');
+            wrapper.appendChild(feedback);
+        }
+
+        if (feedback) {
+            if (message !== '') {
+                feedback.textContent = message;
+            }
+
+            feedback.hidden = message === '';
+        }
+    }
+
+    // ---- contact number validation (ported) --------------------------------
+
+    function isContactField(el) {
+        return el && (el.name === 'head_contactnumber' || /\[contactnumber\]$/.test(el.name || ''));
+    }
+
+    function enforceContactDigits(el) {
+        el.value = String(el.value || '').replace(/[^0-9]/g, '').slice(0, 11);
+
+        if (el.value === '' || el.value.length === 11) {
+            setFieldError(el, '');
+        }
+    }
+
+    function validateContact(el) {
+        if (!el) {
+            return true;
+        }
+
+        var value = String(el.value || '').trim();
+
+        if (value !== '' && value.length !== 11) {
+            setFieldError(el, 'Contact number must be exactly 11 digits.');
+
             return false;
         }
 
-        const keywordInput = panel.querySelector('[data-records-database-keyword]');
-        const keyword = keywordInput ? keywordInput.value.trim() : '';
-        const hasSector = selectedValues(panel.querySelector('[data-records-filter="sector"]')).length > 0;
-        const hasBarangay = selectedValues(panel.querySelector('[data-records-filter="barangay"]')).length > 0;
+        setFieldError(el, '');
 
-        return keyword !== '' || hasSector || hasBarangay;
+        return true;
     }
 
-    function updateSearchAllState(panel) {
-        if (!panel) {
-            return;
-        }
+    // ---- confirm dialog ----------------------------------------------------
 
-        const button = panel.querySelector('[data-search-mode="all"]');
+    function askModalDialog(form, options) {
+        return new Promise(function (resolve) {
+            var host = form.closest('#familyModalBody') || form.closest('.modal-content') || form;
+            var overlay = document.createElement('div');
+            var dialog = document.createElement('div');
+            var icon = document.createElement('div');
+            var iconGlyph = document.createElement('i');
+            var copy = document.createElement('div');
+            var title = document.createElement('h3');
+            var message = document.createElement('p');
+            var actions = document.createElement('div');
+            var cancelButton = document.createElement('button');
+            var confirmButton = document.createElement('button');
 
-        if (!button) {
-            return;
-        }
+            overlay.className = 'family-draft-dialog-backdrop';
+            overlay.setAttribute('role', 'presentation');
+            dialog.className = 'family-draft-dialog';
+            dialog.setAttribute('role', 'dialog');
+            dialog.setAttribute('aria-modal', 'true');
 
-        const enabled = hasDatabaseSearchCriteria(panel);
-        button.disabled = false;
-        button.setAttribute('aria-disabled', 'false');
-        button.classList.toggle('has-search-criteria', enabled);
-    }
+            icon.className = 'family-draft-dialog-icon' + (options.tone === 'warning' ? ' is-warning' : '');
+            icon.setAttribute('aria-hidden', 'true');
+            iconGlyph.className = options.iconClass || 'bi bi-question-lg';
+            icon.appendChild(iconGlyph);
 
-    function hideTableRows(panel) {
-        if (!panel) {
-            return;
-        }
+            copy.className = 'family-draft-dialog-copy';
+            title.textContent = options.title || 'Confirm action';
+            message.textContent = options.message || '';
+            copy.appendChild(title);
+            copy.appendChild(message);
 
-        panel.querySelectorAll('[data-record-row]').forEach(function (row) {
-            row.style.display = 'none';
+            actions.className = 'family-draft-dialog-actions';
+            cancelButton.type = 'button';
+            cancelButton.className = 'btn btn-outline-secondary';
+            cancelButton.dataset.dialogAction = 'cancel';
+            cancelButton.textContent = options.cancelLabel || 'Cancel';
+            confirmButton.type = 'button';
+            confirmButton.className = options.confirmClass || 'btn btn-success';
+            confirmButton.dataset.dialogAction = 'confirm';
+            confirmButton.textContent = options.confirmLabel || 'Confirm';
+            actions.appendChild(cancelButton);
+            actions.appendChild(confirmButton);
+
+            dialog.appendChild(icon);
+            dialog.appendChild(copy);
+            dialog.appendChild(actions);
+            overlay.appendChild(dialog);
+
+            var finish = function (confirmed) {
+                overlay.remove();
+                resolve(confirmed);
+            };
+
+            overlay.addEventListener('click', function (event) {
+                if (event.target === overlay) {
+                    finish(false);
+                    return;
+                }
+
+                var button = event.target.closest('[data-dialog-action]');
+
+                if (button) {
+                    finish(button.dataset.dialogAction === 'confirm');
+                }
+            });
+
+            overlay.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape') {
+                    event.preventDefault();
+                    finish(false);
+                }
+            });
+
+            host.appendChild(overlay);
+            confirmButton.focus();
         });
     }
 
-    function filterTableRows(panel, keyword, sectorIds) {
-        // Split into tokens so a full name ("Juan Cruz") matches even though the
-        // tokens live in different parts of the name; every token must be present.
-        var tokens = keyword ? keyword.split(/\s+/).filter(Boolean) : [];
-        var selectedIds = (Array.isArray(sectorIds) ? sectorIds : [sectorIds])
-            .map(Number)
-            .filter(function (id) { return id > 0; });
-        panel.querySelectorAll('[data-record-row]').forEach(function (row) {
-            // Prefer the full name (incl. middle name) for matching; fall back to the
-            // visible name cell when the attribute isn't present.
-            var name = (row.dataset.recordFullname
-                || (row.querySelector('[data-record-name]') ? row.querySelector('[data-record-name]').textContent : '')
-            ).toLowerCase().trim();
-            var rowText = row.textContent ? row.textContent.toLowerCase().trim() : '';
-            var searchableText = (name + ' ' + rowText).trim();
-            var rawIds = row.dataset.sectorIds || '[]';
-            var ids = [];
-            try { ids = JSON.parse(rawIds); } catch (_) {}
-            if (!Array.isArray(ids)) { ids = ids ? [ids] : []; }
-            var nameOk = tokens.every(function (token) { return searchableText.indexOf(token) !== -1; });
-            var numericIds = ids.map(Number);
-            var secOk  = selectedIds.length === 0 || selectedIds.some(function (sectorId) {
-                return numericIds.indexOf(sectorId) !== -1;
-            });
-            row.style.display = (nameOk && secOk) ? '' : 'none';
+    function askRemoveArchivedItem(form, label) {
+        return askModalDialog(form, {
+            title: 'Remove archived item?',
+            message: '"' + label + '" is archived. If you remove it, this person loses the benefit and it can\'t be added back later.',
+            iconClass: 'bi bi-exclamation-triangle',
+            tone: 'warning',
+            cancelLabel: 'Keep',
+            confirmLabel: 'Remove',
+            confirmClass: 'btn btn-danger'
         });
     }
 
-    function keywordInputFor(panel) {
-        return panel ? panel.querySelector('[data-records-table-keyword]') : null;
+    function askRestoreDraft(form, savedAt) {
+        return askModalDialog(form, {
+            title: 'Restore unsaved record?',
+            message: 'You have an unsaved record from ' + formatDraftAge(savedAt) + '. Restore it?',
+            iconClass: 'bi bi-arrow-counterclockwise',
+            cancelLabel: 'Discard',
+            confirmLabel: 'Restore',
+            confirmClass: 'btn btn-success'
+        });
     }
 
-    function keywordValueFor(panel) {
-        const input = keywordInputFor(panel);
-
-        return input ? input.value : '';
+    function askKeepOrDiscard(form) {
+        return askModalDialog(form, {
+            title: 'Keep your progress?',
+            message: 'You have an unsaved record. Keep it to continue later, or discard it?',
+            iconClass: 'bi bi-save',
+            cancelLabel: 'Discard',
+            confirmLabel: 'Keep',
+            confirmClass: 'btn btn-success'
+        });
     }
 
-    function loadFamilyList(panel, fullUrl, pushHistory) {
-        const partialUrl = urlWithPartial(fullUrl);
+    // Shown when the server reports a max_input_vars cutoff (code FORM_TRUNCATED):
+    // nothing was saved, but the draft holds everything. Both buttons just dismiss —
+    // the modal stays open with the data intact either way.
+    function askTruncationNotice(form) {
+        return askModalDialog(form, {
+            title: 'Form too large to send',
+            message: 'There were too many entries to send all at once, so nothing was saved yet. Don\'t worry — all your entries are kept on this computer. Remove a few members and Save again, or close and reopen Add Family to restore everything.',
+            iconClass: 'bi bi-exclamation-triangle',
+            tone: 'warning',
+            cancelLabel: 'Close',
+            confirmLabel: 'Keep editing',
+            confirmClass: 'btn btn-success'
+        });
+    }
 
-        setPanelLoading(panel, true);
+    // ---- draft persistence (create mode only) ------------------------------
 
-        return window.fetch(partialUrl.toString(), {
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            },
-            credentials: 'same-origin'
-        })
-            .then(function (response) {
-                if (!response.ok) {
-                    throw new Error('Unable to load records.');
+    function isCreateForm(root) {
+        var modeInput = root.querySelector('[name="form_mode"]');
+
+        return !modeInput || modeInput.value !== 'update';
+    }
+
+    function readDraft() {
+        try {
+            var raw = window.localStorage.getItem(DRAFT_KEY);
+
+            return raw ? JSON.parse(raw) : null;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function clearDraft() {
+        try {
+            window.localStorage.removeItem(DRAFT_KEY);
+        } catch (error) {
+            /* storage unavailable */
+        }
+    }
+
+    function draftIsEmpty(snapshot) {
+        if (!snapshot || typeof snapshot !== 'object') {
+            return true;
+        }
+
+        var head = snapshot.head || {};
+        var hasHead = Object.keys(head).some(function (key) {
+            return String(head[key] || '').trim() !== '';
+        });
+
+        return !hasHead
+            && (snapshot.members || []).length === 0
+            && (snapshot.sector_ids || []).length === 0
+            && (snapshot.service_ids || []).length === 0;
+    }
+
+    function formatDraftAge(savedAt) {
+        var ts = Number(savedAt) || 0;
+
+        if (ts <= 0) {
+            return 'a moment ago';
+        }
+
+        var mins = Math.floor((Date.now() - ts) / 60000);
+
+        if (mins < 1) { return 'just now'; }
+        if (mins < 60) { return mins + (mins === 1 ? ' minute ago' : ' minutes ago'); }
+
+        var hrs = Math.floor(mins / 60);
+
+        if (hrs < 24) { return hrs + (hrs === 1 ? ' hour ago' : ' hours ago'); }
+
+        var days = Math.floor(hrs / 24);
+
+        return days + (days === 1 ? ' day ago' : ' days ago');
+    }
+
+    function checkedValues(scope, selector) {
+        return Array.from(scope.querySelectorAll(selector + ':checked')).map(function (input) {
+            return input.value;
+        });
+    }
+
+    function snapshotForm(form) {
+        var head = {};
+
+        Array.from(form.querySelectorAll('[name^="head_"]')).forEach(function (field) {
+            head[field.name] = field.classList.contains('js-other-select') ? selectedFieldValue(field) : field.value;
+        });
+
+        var members = Array.from(form.querySelectorAll('[data-family-member-row]')).map(function (row) {
+            var data = { sector_ids: [], service_ids: [] };
+
+            Array.from(row.querySelectorAll('input, select')).forEach(function (field) {
+                var match = /members\[\d+\]\[([a-z_]+)\](\[\])?$/.exec(field.name || '');
+
+                if (!match) {
+                    return;
                 }
 
-                return response.text();
-            })
-            .then(function (html) {
-                const nextPanel = replacePanel(panel, html);
+                var key = match[1];
 
-                if (pushHistory && nextPanel) {
-                    window.history.pushState({ familyList: true }, '', fullUrl);
+                if (key === 'sector_ids' || key === 'service_ids') {
+                    if (field.checked) {
+                        data[key].push(field.value);
+                    }
+
+                    return;
                 }
 
-                scrollPanelIntoView(nextPanel);
-
-                return nextPanel;
-            })
-            .catch(function () {
-                window.location.href = fullUrl;
+                data[key] = field.classList.contains('js-other-select') ? selectedFieldValue(field) : field.value;
             });
+
+            return data;
+        });
+
+        return {
+            v: 1,
+            head: head,
+            sector_ids: checkedValues(form, 'input[name="sector_ids[]"]'),
+            service_ids: checkedValues(form, 'input[name="service_ids[]"]'),
+            members: members,
+            savedAt: Date.now()
+        };
     }
 
-    function closeModalFor(element) {
-        const modal = element.closest('.modal');
+    function saveDraftNow(form) {
+        try {
+            window.localStorage.setItem(DRAFT_KEY, JSON.stringify(snapshotForm(form)));
+        } catch (error) {
+            /* storage unavailable / quota */
+        }
+    }
 
-        if (modal && window.bootstrap) {
-            const instance = window.bootstrap.Modal.getInstance(modal);
+    function scheduleSave(root) {
+        var form = root.querySelector('form');
+
+        if (!form || !isCreateForm(root)) {
+            return;
+        }
+
+        window.clearTimeout(saveTimer);
+        saveTimer = window.setTimeout(function () {
+            saveDraftNow(form);
+        }, 400);
+    }
+
+    function checkBoxes(scope, name, values) {
+        var wanted = (values || []).map(String);
+
+        Array.from(scope.querySelectorAll('input[name="' + name + '"]')).forEach(function (box) {
+            box.checked = wanted.indexOf(String(box.value)) !== -1;
+        });
+    }
+
+    function restoreDraftIntoForm(root, snapshot) {
+        var form = root.querySelector('form');
+
+        if (!form || !snapshot) {
+            return;
+        }
+
+        var head = snapshot.head || {};
+
+        Object.keys(head).forEach(function (name) {
+            var field = form.querySelector('[name="' + name + '"]');
+
+            if (!field) {
+                return;
+            }
+
+            if (field.classList.contains('js-other-select')) {
+                setSelectValueWithOther(field, head[name]);
+            } else {
+                field.value = head[name];
+            }
+        });
+
+        checkBoxes(form, 'sector_ids[]', snapshot.sector_ids);
+        checkBoxes(form, 'service_ids[]', snapshot.service_ids);
+
+        clearMemberRows(root);
+
+        (snapshot.members || []).forEach(function (member) {
+            var row = addMemberRow(root);
+
+            if (!row) {
+                return;
+            }
+
+            Object.keys(member).forEach(function (key) {
+                if (key === 'sector_ids' || key === 'service_ids') {
+                    checkBoxes(row, row.dataset.memberFieldPrefix + '[' + key + '][]', member[key]);
+
+                    return;
+                }
+
+                var field = row.querySelector('[name="' + row.dataset.memberFieldPrefix + '[' + key + ']"]');
+
+                if (!field) {
+                    return;
+                }
+
+                if (field.classList.contains('js-other-select')) {
+                    setSelectValueWithOther(field, member[key]);
+                } else {
+                    field.value = member[key];
+                }
+            });
+        });
+
+        renderHeadSummary(root);
+        refreshAllSuggestions(root);
+    }
+
+    // ---- summary -----------------------------------------------------------
+
+    function checkedLabels(form, selector) {
+        return Array.from(form.querySelectorAll(selector + ':checked')).map(function (input) {
+            var label = input.closest('label');
+
+            return input.dataset.label || (label ? label.textContent.trim() : '') || input.value;
+        }).filter(Boolean);
+    }
+
+    function setSummary(container, key, value) {
+        var target = container.querySelector('[data-head-summary="' + key + '"]');
+
+        if (target) {
+            target.textContent = value || '-';
+        }
+    }
+
+    function setSummaryList(container, key, labels) {
+        var target = container.querySelector('[data-head-summary="' + key + '"]');
+
+        if (!target) {
+            return;
+        }
+
+        if (!labels.length) {
+            target.textContent = '-';
+            return;
+        }
+
+        target.innerHTML = '<ul class="mb-0">' + labels.map(function (label) {
+            return '<li>' + escapeHtml(label) + '</li>';
+        }).join('') + '</ul>';
+    }
+
+    // Resolves a field's display value, returning the "Other" freetext when chosen.
+    function fieldDisplayValue(form, selector) {
+        var field = form.querySelector(selector);
+
+        if (!field) {
+            return '';
+        }
+
+        if (field.tagName === 'SELECT' && field.classList.contains('js-other-select') && isOtherValue(field.value)) {
+            var otherInput = findOtherInput(field);
+            var typed = otherInput ? String(otherInput.value || '').trim() : '';
+
+            if (typed !== '') {
+                return typed;
+            }
+        }
+
+        return textValue(form, selector);
+    }
+
+    function renderHeadSummary(container) {
+        var form = container.querySelector('form');
+
+        if (!form) {
+            return;
+        }
+
+        var fullName = [
+            textValue(form, '[data-summary="name-first"]'),
+            textValue(form, '[data-summary="name-middle"]'),
+            textValue(form, '[data-summary="name-last"]'),
+            textValue(form, '[data-summary="name-suffix"]')
+        ].filter(Boolean).join(' ');
+
+        setSummary(container, 'name', fullName);
+        setSummary(container, 'birthday', textValue(form, '[data-summary="birthday"]'));
+        setSummary(container, 'sex', textValue(form, '[data-summary="sex"]'));
+        setSummary(container, 'civil', fieldDisplayValue(form, '[data-summary="civil"]'));
+        setSummary(container, 'contact', textValue(form, '[data-summary="contact"]'));
+        setSummary(container, 'religion', fieldDisplayValue(form, '[data-summary="religion"]'));
+        setSummary(container, 'education', fieldDisplayValue(form, '[data-summary="education"]'));
+        setSummary(container, 'job', fieldDisplayValue(form, '[data-summary="job"]'));
+        setSummary(container, 'income', textValue(form, '[data-summary="income"]'));
+        setSummary(container, 'address', [textValue(form, '[data-summary="address"]'), textValue(form, '[data-summary="barangay"]')].filter(Boolean).join(', '));
+        setSummaryList(container, 'sectors', checkedLabels(form, 'input[name="sector_ids[]"]'));
+        setSummaryList(container, 'services', checkedLabels(form, 'input[name="service_ids[]"]'));
+    }
+
+    // ---- sector-linked program suggestions ----------------------------------
+    // A service group is "linked" to a sector when its category name matches the
+    // sector's name (same convention the server uses for archive cascades).
+    // Checked sectors float their linked groups into the "Suggested" callout;
+    // nothing is ever hidden — groups only relocate.
+
+    var SECTOR_INPUT_SELECTOR = 'input[name="sector_ids[]"], input[name$="[sector_ids][]"]';
+
+    function normName(value) {
+        return String(value || '').trim().toLowerCase();
+    }
+
+    function stampGroupOrder(box) {
+        box.querySelectorAll('.family-option-group[data-service-category]').forEach(function (group, index) {
+            if (!group.dataset.suggestOrder) {
+                group.dataset.suggestOrder = String(index + 1);
+            }
+        });
+    }
+
+    // Reinsert a group at its original slot among the non-suggested groups.
+    function returnGroupHome(box, suggestedContainer, group) {
+        var order = parseInt(group.dataset.suggestOrder || '0', 10);
+        var next = Array.from(box.querySelectorAll('.family-option-group[data-service-category]')).find(function (other) {
+            return other !== group
+                && !suggestedContainer.contains(other)
+                && parseInt(other.dataset.suggestOrder || '0', 10) > order;
+        });
+
+        if (next) {
+            box.insertBefore(group, next);
+        } else {
+            box.appendChild(group);
+        }
+    }
+
+    // scopeEl: a member row, or the modal root (head section).
+    function refreshSuggestions(scopeEl) {
+        if (!scopeEl || !scopeEl.querySelectorAll) {
+            return;
+        }
+
+        var row = scopeEl.matches && scopeEl.matches('[data-family-member-row]') ? scopeEl : null;
+        var container = row
+            ? row.querySelector('[data-family-suggested]')
+            : Array.from(scopeEl.querySelectorAll('[data-family-suggested]')).find(function (el) {
+                return !el.closest('[data-family-member-row]');
+            });
+
+        if (!container) {
+            return;
+        }
+
+        var box = container.closest('.family-option-box');
+        var holder = container.querySelector('[data-family-suggested-groups]');
+        var reasonEl = container.querySelector('[data-family-suggested-reason]');
+
+        if (!box || !holder) {
+            return;
+        }
+
+        stampGroupOrder(box);
+
+        var searchRoot = row || scopeEl;
+        var sectorSelector = row ? 'input[name$="[sector_ids][]"]:checked' : 'input[name="sector_ids[]"]:checked';
+        var checkedNames = [];
+        var checkedKeys = {};
+
+        searchRoot.querySelectorAll(sectorSelector).forEach(function (input) {
+            var name = String(input.dataset.sectorName || '').trim();
+            var key = normName(name);
+
+            if (name === '' || checkedKeys[key]) {
+                return;
+            }
+
+            checkedKeys[key] = true;
+            checkedNames.push(name);
+        });
+
+        var groups = Array.from(box.querySelectorAll('.family-option-group[data-service-category]'));
+        var matched = [];
+        var groupKeys = {};
+
+        groups.forEach(function (group) {
+            groupKeys[normName(group.dataset.serviceCategory)] = true;
+
+            if (checkedKeys[normName(group.dataset.serviceCategory)]) {
+                matched.push(group);
+            } else if (container.contains(group)) {
+                returnGroupHome(box, container, group);
+            }
+        });
+
+        var beforeKeys = Array.from(holder.children).map(function (group) {
+            return normName(group.dataset.serviceCategory);
+        }).join('|');
+
+        matched.sort(function (a, b) {
+            return parseInt(a.dataset.suggestOrder || '0', 10) - parseInt(b.dataset.suggestOrder || '0', 10);
+        }).forEach(function (group) {
+            holder.appendChild(group);
+        });
+
+        var afterKeys = Array.from(holder.children).map(function (group) {
+            return normName(group.dataset.serviceCategory);
+        }).join('|');
+
+        container.hidden = matched.length === 0;
+
+        if (reasonEl) {
+            var matchingNames = checkedNames.filter(function (name) {
+                return groupKeys[normName(name)];
+            });
+
+            reasonEl.textContent = matchingNames.length
+                ? 'Showing: ' + matchingNames.join(', ') + '. All other programs are still shown below.'
+                : '';
+        }
+
+        // Gentle pulse + scroll to top when the suggested set actually changed.
+        if (!container.hidden && beforeKeys !== afterKeys) {
+            var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+            if (!reduceMotion) {
+                container.classList.remove('is-updated');
+                void container.offsetWidth;
+                container.classList.add('is-updated');
+                window.setTimeout(function () {
+                    container.classList.remove('is-updated');
+                }, 700);
+                box.scrollTop = 0;
+            }
+        }
+    }
+
+    function refreshAllSuggestions(root) {
+        refreshSuggestions(root);
+        root.querySelectorAll('[data-family-member-row]').forEach(function (row) {
+            refreshSuggestions(row);
+        });
+    }
+
+    // ---- step navigation + validation --------------------------------------
+
+    function validateHeadStep(container) {
+        var headTrigger = container.querySelector('[data-family-step-target="head"]');
+        var headTarget = headTrigger ? headTrigger.getAttribute('data-family-step-pane') : '';
+        var headPane = headTarget ? container.querySelector(headTarget) : null;
+        var requiredFields = headPane ? Array.from(headPane.querySelectorAll('[required]')) : [];
+        var firstInvalid = null;
+
+        requiredFields.forEach(function (field) {
+            var invalid = String(field.value || '').trim() === '';
+
+            setFieldError(field, invalid ? 'This field is required.' : '');
+
+            if (invalid && !firstInvalid) {
+                firstInvalid = field;
+            }
+        });
+
+        var contact = container.querySelector('[name="head_contactnumber"]');
+
+        if (contact && !validateContact(contact) && !firstInvalid) {
+            firstInvalid = contact;
+        }
+
+        if (firstInvalid) {
+            firstInvalid.focus();
+
+            return false;
+        }
+
+        return true;
+    }
+
+    function clearFieldError(field) {
+        if (String(field.value || '').trim() !== '') {
+            setFieldError(field, '');
+        }
+    }
+
+    function showStep(container, step) {
+        if (step === 'members' && !validateHeadStep(container)) {
+            return;
+        }
+
+        var trigger = container.querySelector('[data-family-step-target="' + step + '"]');
+        var stepTriggers = container.querySelectorAll('[data-family-step-target]');
+        var panes = container.querySelectorAll('.tab-pane');
+        var targetSelector = trigger ? trigger.getAttribute('data-family-step-pane') : '';
+
+        stepTriggers.forEach(function (button) {
+            var isActive = button === trigger;
+
+            button.classList.toggle('active', isActive);
+            button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        });
+
+        panes.forEach(function (pane) {
+            var isActive = targetSelector && pane.matches(targetSelector);
+
+            pane.classList.toggle('active', isActive);
+            pane.classList.toggle('show', isActive);
+        });
+
+        var isMembers = step === 'members';
+        var prev = container.querySelector('[data-family-prev]');
+        var next = container.querySelector('[data-family-next]');
+        var save = container.querySelector('[data-family-save]');
+
+        if (prev) prev.hidden = !isMembers;
+        if (next) next.hidden = isMembers;
+        if (save) save.hidden = !isMembers;
+
+        if (isMembers) {
+            renderHeadSummary(container);
+        }
+    }
+
+    // ---- repeatable members ------------------------------------------------
+
+    function addMemberRow(root) {
+        var button = root.querySelector('[data-family-add-member]');
+        var container = root.querySelector('[data-family-members]');
+        var template = root.querySelector('[data-family-member-template]');
+
+        if (!button || !container || !template) {
+            return null;
+        }
+
+        var nextIndex = parseInt(button.dataset.nextIndex || '0', 10) || 0;
+        var markup = (template.innerHTML || '').replace(/__INDEX__/g, String(nextIndex));
+        var holder = document.createElement('div');
+        holder.innerHTML = markup.trim();
+
+        var row = holder.querySelector('[data-family-member-row]');
+
+        if (!row) {
+            return null;
+        }
+
+        row.dataset.memberFieldPrefix = 'members[' + nextIndex + ']';
+        container.appendChild(row);
+        button.dataset.nextIndex = String(nextIndex + 1);
+
+        initOtherSelects(row);
+        refreshSuggestions(row);
+
+        return row;
+    }
+
+    function clearMemberRows(root) {
+        var container = root.querySelector('[data-family-members]');
+        var button = root.querySelector('[data-family-add-member]');
+
+        if (container) {
+            container.innerHTML = '';
+        }
+
+        if (button) {
+            button.dataset.nextIndex = '0';
+        }
+    }
+
+    // ---- AJAX submit -------------------------------------------------------
+
+    function findCsrfInput(form) {
+        var known = ['entry_type', 'form_mode', 'head_id'];
+
+        return Array.from(form.querySelectorAll('input[type="hidden"]')).find(function (input) {
+            return known.indexOf(input.name) === -1;
+        }) || null;
+    }
+
+    function updateCsrf(form, hash) {
+        if (!hash) {
+            return;
+        }
+
+        var input = findCsrfInput(form);
+
+        if (input) {
+            input.value = hash;
+        }
+    }
+
+    function showFamilyToast(message, isError) {
+        var toast = document.createElement('div');
+        toast.className = 'alert ' + (isError ? 'alert-danger' : 'alert-success') + ' family-toast shadow';
+        toast.setAttribute('role', 'status');
+        toast.textContent = message;
+        document.body.appendChild(toast);
+
+        window.setTimeout(function () {
+            toast.style.transition = 'opacity 200ms ease';
+            toast.style.opacity = '0';
+            window.setTimeout(function () { toast.remove(); }, 220);
+        }, 3200);
+    }
+
+    function showFormError(root, message) {
+        var form = root.querySelector('form');
+
+        if (!form) {
+            return;
+        }
+
+        var alert = form.querySelector('[data-family-form-error]');
+
+        if (!alert) {
+            alert = document.createElement('div');
+            alert.className = 'alert alert-danger';
+            alert.setAttribute('data-family-form-error', '');
+            form.insertBefore(alert, form.firstChild);
+        }
+
+        alert.textContent = message;
+        alert.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function closeFamilyModal() {
+        var modalEl = document.getElementById('familyModal');
+
+        if (modalEl && window.bootstrap && window.bootstrap.Modal) {
+            modalEl.dataset.familyCloseConfirmed = '1';
+            var instance = window.bootstrap.Modal.getInstance(modalEl);
 
             if (instance) {
                 instance.hide();
@@ -278,264 +1006,383 @@
         }
     }
 
-    document.addEventListener('submit', function (event) {
-        const form = event.target.closest('[data-family-list-panel] form[method="get"]');
+    function validateMemberContacts(form) {
+        var firstInvalid = null;
 
-        if (!form) {
-            return;
-        }
-
-        const panel = panelFor(form);
-
-        if (!panel) {
-            return;
-        }
-
-        event.preventDefault();
-
-        if (form.dataset.recordsSearch === 'table') {
-            const keyword = keywordValueFor(panel).toLowerCase().trim();
-            const sectorSelect = panel.querySelector('[data-records-filter="sector"]');
-
-            filterTableRows(panel, keyword, selectedValues(sectorSelect));
-            return;
-        }
-
-        // "Search" button — filter current rows in-browser without a server round-trip.
-        if (!window.fetch || !window.history) {
-            form.submit();
-            return;
-        }
-
-        closeModalFor(form);
-
-        if (event.submitter && event.submitter.dataset.searchMode === 'all' && !hasDatabaseSearchCriteria(panel)) {
-            updateSearchAllState(panel);
-            hideTableRows(panel);
-            return;
-        }
-
-        const actionUrl = (event.submitter && event.submitter.getAttribute('formaction')) || form.action;
-        const fullUrl = new URL(actionUrl, window.location.href);
-        const formData = new FormData(form);
-
-        fullUrl.search = '';
-        formData.forEach(function (value, key) {
-            if (key === 'status') {
-                return;
-            }
-
-            if (String(value).trim() !== '') {
-                fullUrl.searchParams.append(key, value);
+        Array.from(form.querySelectorAll('[name$="[contactnumber]"]')).forEach(function (field) {
+            if (!validateContact(field) && !firstInvalid) {
+                firstInvalid = field;
             }
         });
 
-        // "Search All" runs the whole-database (deep) search, including non-head
-        // family members. The submitter's name/value isn't in FormData, so flag the
-        // deep scope here; DashboardPageBuilder reads search_scope to build the panel.
-        if (event.submitter && event.submitter.dataset.searchMode === 'all') {
-            fullUrl.searchParams.set('search_scope', 'all');
-        }
+        return firstInvalid;
+    }
 
-        loadFamilyList(panel, fullUrl.toString(), true);
-    });
-
-    // Live search: filter rows on every keystroke in the manual keyword field.
-    document.addEventListener('input', function (event) {
-        const input = event.target;
-        if (input && input.matches('[data-records-database-keyword]')) {
-            updateSearchAllState(input.closest('[data-family-list-panel]'));
+    function submitFamilyForm(root, form) {
+        if (!validateHeadStep(root)) {
+            showStep(root, 'head');
             return;
         }
 
-        if (!input || !input.matches('[data-records-table-keyword]')) {
-            return;
-        }
-        const panel = input.closest('[data-family-list-panel]');
-        if (!panel) {
-            return;
-        }
-        const keyword  = input.value.toLowerCase().trim();
+        var badContact = validateMemberContacts(form);
 
-        const sel = panel.querySelector('[data-records-filter="sector"]');
-        filterTableRows(panel, keyword, selectedValues(sel));
-    });
-
-    document.addEventListener('change', function (event) {
-        const select = event.target;
-        if (!select || !['status', 'per_page', 'sectorID[]', 'barangay[]'].includes(select.name)) {
+        if (badContact) {
+            showStep(root, 'members');
+            badContact.focus();
             return;
         }
 
-        const panel = select.closest('[data-family-list-panel]');
-        const form = select.closest('form[method="get"]');
+        // Swap "Other" selects to their typed value so the custom text posts.
+        applyOtherValues(form);
 
-        if (!panel || !form) {
+        // Record how many member rows we are posting so the server can detect a
+        // submission truncated by PHP's max_input_vars (trailing members dropped).
+        var memberCountField = form.querySelector('[data-members-count]');
+        if (memberCountField) {
+            memberCountField.value = String(form.querySelectorAll('[data-family-member-row]').length);
+        }
+
+        // Persist the exact state we are about to send so nothing is lost even if the
+        // request dies mid-flight (browser/tab crash) before the 400ms auto-save fires.
+        // Create mode only — edit mode keeps no draft (the draft key is global).
+        if (isCreateForm(root)) {
+            saveDraftNow(form);
+        }
+
+        var saveButton = root.querySelector('[data-family-save]');
+        var originalLabel = saveButton ? saveButton.textContent : '';
+
+        if (saveButton) {
+            saveButton.disabled = true;
+            saveButton.textContent = 'Saving...';
+        }
+
+        window.fetch(form.action, {
+            method: 'POST',
+            body: new FormData(form),
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            credentials: 'same-origin'
+        }).then(function (response) {
+            return response.json().then(function (data) {
+                return { ok: response.ok, data: data };
+            }).catch(function () {
+                return { ok: response.ok, data: {} };
+            });
+        }).then(function (result) {
+            var data = result.data || {};
+
+            updateCsrf(form, data.csrf);
+
+            if (result.ok && data.status === 'success') {
+                if (isCreateForm(root)) {
+                    clearDraft();
+                }
+
+                closeFamilyModal();
+
+                if (typeof window.reloadFamilyDataTable === 'function') {
+                    window.reloadFamilyDataTable();
+                }
+
+                showFamilyToast(data.message || 'Family record saved successfully.', false);
+                return;
+            }
+
+            if (saveButton) {
+                saveButton.disabled = false;
+                saveButton.textContent = originalLabel;
+            }
+
+            if (data.code === 'FORM_TRUNCATED') {
+                // Cutoff: the server saved nothing. Guarantee the typed data is in the
+                // draft (create mode) and reassure the worker — their entries are safe
+                // and the resume prompt will rebuild them on reopen. Not a normal error.
+                if (isCreateForm(root)) {
+                    saveDraftNow(form);
+                }
+
+                showFormError(root, data.message || 'The form was too large to send all at once. Nothing was saved, but your entries are kept on this computer.');
+                askTruncationNotice(form);
+                return;
+            }
+
+            showFormError(root, data.message || 'The family record could not be saved. Please review the form and try again.');
+        }).catch(function () {
+            if (saveButton) {
+                saveButton.disabled = false;
+                saveButton.textContent = originalLabel;
+            }
+
+            showFormError(root, 'A network error occurred. Please try again.');
+        });
+    }
+
+    // ---- per-load initialisation -------------------------------------------
+
+    function initFamilyEntryModal(container) {
+        var root = container.querySelector('[data-family-entry-form]');
+
+        if (!root || root.dataset.familyEntryReady === '1') {
             return;
         }
 
-        if (select.type === 'checkbox') {
-            const dropdown = select.closest('[data-records-filter]');
-            const allInput = dropdown ? dropdown.querySelector('[data-filter-all]') : null;
+        var modal = root.closest('#familyModal');
 
-            if (select.dataset.filterAll !== undefined && select.checked && dropdown) {
-                dropdown.querySelectorAll('input[type="checkbox"]').forEach(function (input) {
-                    input.checked = input === select;
+        if (modal) {
+            modal.classList.add('is-family-entry-modal');
+        }
+
+        var title = modal ? modal.querySelector('#familyModalLabel') : null;
+        var entryTitle = root.querySelector('.family-entry-title');
+
+        if (title && entryTitle) {
+            title.textContent = entryTitle.textContent.trim() || 'New Family Record';
+        }
+
+        root.dataset.familyEntryReady = '1';
+
+        var formEl = root.querySelector('form');
+
+        // Mark existing member rows (Update mode) with their posting prefix.
+        Array.from(root.querySelectorAll('[data-family-member-row]')).forEach(function (row, index) {
+            if (!row.dataset.memberFieldPrefix) {
+                row.dataset.memberFieldPrefix = 'members[' + index + ']';
+            }
+        });
+
+        initOtherSelects(root);
+
+        root.querySelectorAll('[data-family-step-target]').forEach(function (stepTrigger) {
+            stepTrigger.addEventListener('click', function (event) {
+                event.preventDefault();
+                showStep(root, stepTrigger.dataset.familyStepTarget === 'members' ? 'members' : 'head');
+            });
+        });
+
+        var nextButton = root.querySelector('[data-family-next]');
+
+        if (nextButton) {
+            nextButton.addEventListener('click', function (event) {
+                event.preventDefault();
+                showStep(root, 'members');
+            });
+        }
+
+        var previousButton = root.querySelector('[data-family-prev]');
+
+        if (previousButton) {
+            previousButton.addEventListener('click', function (event) {
+                event.preventDefault();
+                showStep(root, 'head');
+            });
+        }
+
+        // Live input: contact strip, Other reveal, required-clear, summary, draft.
+        root.addEventListener('input', function (event) {
+            var target = event.target;
+
+            if (isContactField(target)) {
+                enforceContactDigits(target);
+            }
+
+            if (target && target.matches('[required]')) {
+                clearFieldError(target);
+            }
+
+            renderHeadSummary(root);
+            scheduleSave(root);
+        });
+
+        root.addEventListener('change', function (event) {
+            var target = event.target;
+
+            if (target && target.matches('.js-other-select')) {
+                syncOtherControl(target);
+            }
+
+            // Archived (grandfather) un-tick warning.
+            if (target && target.matches('input[type="checkbox"][data-archived="1"]') && !target.checked) {
+                askRemoveArchivedItem(formEl || root, target.dataset.label || 'this item').then(function (remove) {
+                    if (!remove) {
+                        target.checked = true;
+                    }
+
+                    // "Keep" re-checks asynchronously, after the sync refresh below already ran.
+                    if (target.matches(SECTOR_INPUT_SELECTOR)) {
+                        refreshSuggestions(target.closest('[data-family-member-row]') || root);
+                    }
+
+                    renderHeadSummary(root);
+                    scheduleSave(root);
                 });
-            } else if (select.checked && allInput) {
-                allInput.checked = false;
             }
 
-            updateFilterDropdown(dropdown);
-            updateSearchAllState(panel);
-
-            if (select.name === 'sectorID[]' || select.name === 'barangay[]') {
-                return;
-            }
-        }
-
-        if (select.name === 'status') {
-            updateSearchAllState(panel);
-
-            if (!window.fetch || !window.history) {
-                form.submit();
-                return;
+            if (target && target.matches(SECTOR_INPUT_SELECTOR)) {
+                refreshSuggestions(target.closest('[data-family-member-row]') || root);
             }
 
-            const statusUrl = new URL(form.action, window.location.href);
-            const perPageInput = form.querySelector('input[name="per_page"]');
+            renderHeadSummary(root);
+            scheduleSave(root);
+        });
 
-            statusUrl.search = '';
-
-            if (select.value !== '') {
-                statusUrl.searchParams.set('status', select.value);
-            }
-
-            if (perPageInput && perPageInput.value !== '') {
-                statusUrl.searchParams.set('per_page', perPageInput.value);
-            }
-
-            loadFamilyList(panel, statusUrl.toString(), true);
-            return;
-        }
-
-        if (!window.fetch || !window.history) {
-            form.submit();
-            return;
-        }
-
-        const fullUrl = new URL(form.action, window.location.href);
-        const formData = new FormData(form);
-        fullUrl.search = '';
-
-        formData.forEach(function (value, key) {
-            if (key === 'status') {
+        // Add / remove repeatable family members.
+        root.addEventListener('click', function (event) {
+            if (event.target.closest('[data-family-add-member]')) {
+                event.preventDefault();
+                addMemberRow(root);
+                scheduleSave(root);
                 return;
             }
 
-            if (String(value).trim() !== '') {
-                fullUrl.searchParams.append(key, value);
+            var removeButton = event.target.closest('[data-family-member-remove]');
+
+            if (removeButton) {
+                event.preventDefault();
+                var row = removeButton.closest('[data-family-member-row]');
+
+                if (row) {
+                    row.remove();
+                    scheduleSave(root);
+                }
             }
         });
 
-        loadFamilyList(panel, fullUrl.toString(), true);
-    });
+        if (formEl) {
+            formEl.addEventListener('reset', function () {
+                window.setTimeout(function () {
+                    clearMemberRows(root);
+                    initOtherSelects(root);
+                    renderHeadSummary(root);
+                    refreshAllSuggestions(root);
+                    showStep(root, 'head');
 
-    document.addEventListener('click', function (event) {
-        const clearButton = event.target.closest('[data-records-clear]');
-        if (!clearButton) {
+                    if (isCreateForm(root)) {
+                        clearDraft();
+                    }
+                }, 0);
+            });
+
+            formEl.addEventListener('submit', function (event) {
+                event.preventDefault();
+                submitFamilyForm(root, formEl);
+            });
+        }
+
+        renderHeadSummary(root);
+        refreshAllSuggestions(root);
+        showStep(root, 'head');
+
+        // Restore-on-reopen prompt (create mode only).
+        if (isCreateForm(root) && formEl) {
+            var draft = readDraft();
+
+            if (!draftIsEmpty(draft)) {
+                askRestoreDraft(formEl, draft.savedAt).then(function (restore) {
+                    if (restore) {
+                        restoreDraftIntoForm(root, draft);
+                    } else {
+                        clearDraft();
+                    }
+                });
+            }
+        }
+    }
+
+    // Intercept modal close: when an Add (create) form has unsaved work, ask the
+    // worker to keep (save draft) or discard before the modal actually hides.
+    function bindCloseGuard() {
+        var modalEl = document.getElementById('familyModal');
+
+        if (!modalEl || modalEl.dataset.familyCloseGuardBound === '1') {
             return;
         }
 
-        const panel = panelFor(clearButton);
-        const form = clearButton.closest('[data-records-search="database"]');
-        const quickInput = keywordInputFor(panel);
-        const databaseInput = panel ? panel.querySelector('[data-records-database-keyword]') : null;
-        const sectorSelect = form && form.querySelector('[data-records-filter="sector"]');
-        const barangaySelect = form && form.querySelector('[data-records-filter="barangay"]');
+        modalEl.dataset.familyCloseGuardBound = '1';
 
-        if (!panel || !form) {
-            return;
-        }
-
-        if (quickInput) {
-            quickInput.value = '';
-        }
-        if (databaseInput) {
-            databaseInput.value = '';
-        }
-        if (sectorSelect) {
-            sectorSelect.querySelectorAll('input[type="checkbox"]').forEach(function (input) {
-                input.checked = false;
-            });
-            updateFilterDropdown(sectorSelect);
-        }
-        if (barangaySelect) {
-            barangaySelect.querySelectorAll('input[type="checkbox"]').forEach(function (input) {
-                input.checked = false;
-            });
-            updateFilterDropdown(barangaySelect);
-        }
-        updateSearchAllState(panel);
-
-        if (window.fetch && window.history) {
-            const clearUrl = new URL(form.action, window.location.href);
-            const statusSelect = form.querySelector('select[name="status"]');
-            const perPageInput = form.querySelector('input[name="per_page"]');
-
-            clearUrl.search = '';
-
-            if (statusSelect && statusSelect.value !== '') {
-                clearUrl.searchParams.set('status', statusSelect.value);
+        modalEl.addEventListener('hide.bs.modal', function (event) {
+            if (modalEl.dataset.familyCloseConfirmed === '1') {
+                delete modalEl.dataset.familyCloseConfirmed;
+                return;
             }
 
-            if (perPageInput && perPageInput.value !== '') {
-                clearUrl.searchParams.set('per_page', perPageInput.value);
+            var root = modalEl.querySelector('[data-family-entry-form]');
+            var form = root ? root.querySelector('form') : null;
+
+            if (!root || !form || !isCreateForm(root)) {
+                return;
             }
 
-            loadFamilyList(panel, clearUrl.toString(), true);
-            return;
-        }
+            var snapshot = snapshotForm(form);
 
-        filterTableRows(panel, '', []);
-        if (databaseInput) {
-            databaseInput.focus();
-        }
-    });
+            if (draftIsEmpty(snapshot)) {
+                return;
+            }
+
+            event.preventDefault();
+
+            askKeepOrDiscard(form).then(function (keep) {
+                if (keep) {
+                    saveDraftNow(form);
+                } else {
+                    clearDraft();
+                }
+
+                closeFamilyModal();
+            });
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', bindCloseGuard);
+    } else {
+        bindCloseGuard();
+    }
 
     document.addEventListener('click', function (event) {
-        const link = event.target.closest('[data-family-list-panel] a[href]');
+        var nextButton = event.target.closest('[data-family-next]');
+        var previousButton = event.target.closest('[data-family-prev]');
+        var stepTrigger = event.target.closest('[data-family-step-target]');
+        var control = nextButton || previousButton || stepTrigger;
 
-        if (!link || link.classList.contains('disabled')) {
+        if (!control) {
             return;
         }
 
-        const panel = panelFor(link);
+        var root = control.closest('[data-family-entry-form]');
 
-        if (!panel || !window.fetch || !window.history) {
-            return;
-        }
-
-        const href = link.getAttribute('href') || '';
-
-        if (href === '' || href.startsWith('#')) {
+        if (!root) {
             return;
         }
 
         event.preventDefault();
-        loadFamilyList(panel, new URL(href, window.location.href).toString(), true);
-    });
 
-    window.addEventListener('popstate', function () {
-        const panel = document.querySelector('[data-family-list-panel]');
-
-        if (!panel || !window.fetch) {
+        if (nextButton) {
+            showStep(root, 'members');
             return;
         }
 
-        loadFamilyList(panel, window.location.href, false);
+        if (previousButton) {
+            showStep(root, 'head');
+            return;
+        }
+
+        showStep(root, stepTrigger.dataset.familyStepTarget === 'members' ? 'members' : 'head');
     });
 
-    updateAllFilterDropdowns(document);
-    document.querySelectorAll('[data-family-list-panel]').forEach(updateSearchAllState);
+    window.registerDashboardModal({
+        namespace: 'family',
+        triggerSelector: '.js-open-family-view-modal',
+        defaultTitle: 'View Record',
+        loadingMarkup: '<div class="family-modal-loading" role="status" aria-live="polite"><div class="spinner-border text-primary" aria-hidden="true"></div><span>Loading record...</span></div>',
+        errorMarkup: '<div class="alert alert-danger mb-0">Unable to load the record. Please try again.</div>'
+    });
+
+    window.registerDashboardModal({
+        namespace: 'familyAdd',
+        triggerSelector: '.js-open-family-add-modal',
+        defaultTitle: 'New Family Record',
+        loadingMarkup: '<div class="family-modal-loading" role="status" aria-live="polite"><div class="spinner-border text-primary" aria-hidden="true"></div><span>Loading form...</span></div>',
+        errorMarkup: '<div class="alert alert-danger mb-0">Unable to load the form. Please try again.</div>',
+        onLoaded: initFamilyEntryModal
+    });
 })(window, document);

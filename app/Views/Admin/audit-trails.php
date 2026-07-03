@@ -80,7 +80,7 @@ $formatAuditUser = static function (array $audit): string {
                 <?php endforeach; ?>
             </select>
             <?php if ($perPage !== 50): ?><input type="hidden" name="per_page" value="<?= esc((string) $perPage, 'attr') ?>"><?php endif; ?>
-            <a class="btn btn-outline-secondary records-search-action" href="<?= esc($auditClearUrl(), 'attr') ?>"><i class="bi bi-x-lg" aria-hidden="true"></i><span>Clear</span></a>
+            <a class="btn btn-danger records-search-action" href="<?= esc($auditClearUrl(), 'attr') ?>"><i class="bi bi-x-lg" aria-hidden="true"></i><span>Clear</span></a>
             <button class="btn btn-outline-success records-search-action" type="submit"><i class="bi bi-search" aria-hidden="true"></i><span>Search All</span></button>
         </form>
     </div>
@@ -107,11 +107,11 @@ $formatAuditUser = static function (array $audit): string {
         <table class="table audit-trails-table align-middle">
             <thead>
                 <tr>
-                    <th scope="col">Date/Time</th>
+                    <th scope="col">User</th>
                     <th scope="col">Action</th>
                     <th scope="col">Description</th>
                     <th scope="col">User Agent</th>
-                    <th scope="col">User</th>
+                    <th scope="col">Date/Time</th>
                 </tr>
             </thead>
             <tbody>
@@ -124,11 +124,11 @@ $formatAuditUser = static function (array $audit): string {
                              reads data-full and surfaces the narrative in that modal. */ ?>
                     <tr class="audit-row js-audit-detail" tabindex="0" role="button" aria-label="View audit log details"
                         data-full="<?= esc((string) ($audit['full_description'] ?? ''), 'attr') ?>">
-                        <td class="audit-when"><?= $auditTs ? esc(date('M j, Y h:i A', $auditTs)) : '—' ?></td>
+                        <td class="audit-user"><?= esc($formatAuditUser($audit)) ?></td>
                         <td><span class="audit-action-pill"><?= esc((string) ($audit['user_action'] ?? '')) ?></span></td>
                         <td class="audit-desc"><?= esc((string) ($audit['description'] ?? '')) ?></td>
                         <td class="audit-ua"><?= $auditUa === '' ? '—' : esc($auditUa) ?></td>
-                        <td class="audit-user"><?= esc($formatAuditUser($audit)) ?></td>
+                        <td class="audit-when"><?= $auditTs ? esc(date('M j, Y h:i A', $auditTs)) : '—' ?></td>
                     </tr>
                 <?php endforeach; ?>
                 <?php if ($recentAudits === []): ?> 

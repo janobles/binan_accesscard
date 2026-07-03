@@ -29,6 +29,7 @@ class RoleAccess
             'admin', 'administrator'       => 'Admin',
             'user', 'encoder', 'employee'  => 'Employee',
             'viewer'                       => 'Viewer',
+            'scanner'                      => 'Scanner',
             default                        => null,
         };
     }
@@ -45,6 +46,34 @@ class RoleAccess
         $normalizedRole = self::normalizeRole($role);
 
         return $normalizedRole === 'Employee' ? 'Encoder' : $normalizedRole;
+    }
+
+    /**
+     * The auth session keys set at login. Centralized so every clear path (the
+     * idle-timeout filter and the controllers' logout/invalid-session handling)
+     * removes exactly the same set — no drift between copies.
+     */
+    public const SESSION_KEYS = [
+        'is_logged_in',
+        'user_id',
+        'member_id',
+        'username',
+        'role',
+        'idle_last_activity',
+    ];
+
+    /**
+     * Removes the auth session keys (SESSION_KEYS). Pass $regenerate = true to also
+     * rotate the session ID — the controller-side clear regenerates; the idle filter
+     * clears without regenerating.
+     */
+    public static function forgetLoginSession(bool $regenerate = false): void
+    {
+        session()->remove(self::SESSION_KEYS);
+
+        if ($regenerate) {
+            session()->regenerate(true);
+        }
     }
 
     /** True if the session's user_id still maps to a real `users` row (post-DB-change safety). */
@@ -131,6 +160,10 @@ class RoleAccess
         // Viewer has a read-only dashboard (Viewer\DashboardController).
         if ($normalizedRole === 'Viewer') {
             return redirect()->to(site_url('viewer/dashboard'));
+        }
+
+        if ($normalizedRole === 'Scanner') {
+            return redirect()->to(site_url('scanner/scan'));
         }
 
         session()->destroy();

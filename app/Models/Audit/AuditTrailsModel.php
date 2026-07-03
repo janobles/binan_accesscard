@@ -2,6 +2,7 @@
 
 namespace App\Models\Audit;
 
+use App\Models\Concerns\ModelQueryHelpers;
 use CodeIgniter\Model;
 
 /**
@@ -17,6 +18,8 @@ use CodeIgniter\Model;
  */
 class AuditTrailsModel extends Model
 {
+    use ModelQueryHelpers;
+
     protected $table = 'audit_trails';
     protected $primaryKey = 'auditID';
     protected $returnType = 'array';
@@ -338,60 +341,6 @@ class AuditTrailsModel extends Model
         return $rows;
     }
 
-    /** Batch [userID => {username, role}] lookup used by withNames(). */
-    private function userMap(array $userIds): array
-    {
-        $userIds = $this->positiveUniqueIds($userIds);
-
-        if ($userIds === [] || ! $this->db->tableExists('users')) {
-            return [];
-        }
-
-        $users = $this->db->table('users')
-            ->select('userID, username, account_level AS role')
-            ->whereIn('userID', $userIds)
-            ->get()
-            ->getResultArray();
-
-        $map = [];
-
-        foreach ($users as $user) {
-            $map[(int) $user['userID']] = [
-                'username' => (string) $user['username'],
-                'role' => (string) ($user['role'] ?? ''),
-            ];
-        }
-
-        return $map;
-    }
-
-    /** Batch [memberID => {firstname, lastname}] lookup used by withNames(). */
-    private function memberNameMap(array $memberIds): array
-    {
-        $memberIds = $this->positiveUniqueIds($memberIds);
-
-        if ($memberIds === [] || ! $this->db->tableExists('member')) {
-            return [];
-        }
-
-        $members = $this->db->table('member')
-            ->select('memberID, firstname, lastname')
-            ->whereIn('memberID', $memberIds)
-            ->get()
-            ->getResultArray();
-
-        $map = [];
-
-        foreach ($members as $member) {
-            $map[(int) $member['memberID']] = [
-                'firstname' => (string) $member['firstname'],
-                'lastname' => (string) $member['lastname'],
-            ];
-        }
-
-        return $map;
-    }
-
     /** True if a member row with this ID exists; gates the memberID foreign key. */
     private function memberExists(int $memberId): bool
     {
@@ -404,21 +353,4 @@ class AuditTrailsModel extends Model
             ->countAllResults() > 0;
     }
 
-    /** Joins first/last name into a single display string for the audit view. */
-    private function formatMemberName(array $memberName): string
-    {
-        return trim(implode(' ', array_filter([
-            (string) ($memberName['firstname'] ?? ''),
-            (string) ($memberName['lastname'] ?? ''),
-        ], static fn (string $value): bool => trim($value) !== '')));
-    }
-
-    /** Normalizes an ID list to unique positive ints for batched IN() lookups. */
-    private function positiveUniqueIds(array $ids): array
-    {
-        return array_values(array_unique(array_filter(
-            array_map(static fn (mixed $id): int => (int) $id, $ids),
-            static fn (int $id): bool => $id > 0
-        )));
-    }
 }

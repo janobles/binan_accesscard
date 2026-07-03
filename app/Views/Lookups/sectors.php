@@ -1,28 +1,15 @@
 <?php
 helper('dashboard_view');
+// sector_management_view_data() also supplies the Add-Sector modal data
+// ($existingShortcodes, for the inline duplicate check) so this view never
+// instantiates a model itself. Sectors are flat classifications — no category.
 extract(sector_management_view_data(get_defined_vars()), EXTR_OVERWRITE);
-
-// Add Sector modal data: category dropdown (categoryID => "CODE - Name") from the
-// `category` table, the next suggested sector code per category, and every existing
-// code for the inline duplicate check.
-$sectorModel = new \App\Models\Lookups\SectorModel();
-$categoryModel = new \App\Models\Lookups\CategoryModel();
-$sectorCategoryOptions = [];
-$sectorNextCodeMap = [];
-foreach ($categoryModel->getActive() as $category) {
-    $categoryId = (int) ($category['categoryID'] ?? 0);
-    $code = (string) ($category['code'] ?? '');
-    $name = (string) ($category['name'] ?? '');
-    $sectorCategoryOptions[$categoryId] = ($name === '' || $name === $code) ? $code : $code . ' - ' . $name;
-    $sectorNextCodeMap[$categoryId] = $categoryModel->nextSectorCodeFor($code);
-}
-$existingShortcodes = $sectorModel->existingShortcodes();
 
 // Counts come from the server bundle (whole table), not the current page below.
 $activeSectorCount   = (int) ($activeCount ?? 0);
 $archivedSectorCount = (int) ($archivedCount ?? 0);
 $allSectorCount      = $activeSectorCount + $archivedSectorCount;
-$status              = (string) ($status ?? 'all');
+$status              = (string) ($status ?? 'active');
 $keyword             = (string) ($keyword ?? '');
 $listRoute           = (string) ($listRoute ?? 'admin/sectors');
 $perPage             = (int) ($perPage ?? 50);
@@ -35,7 +22,7 @@ $canManage           = (bool) ($canManage ?? true);
 $sectorPageUrl = static function (int $targetPage) use ($listRoute, $keyword, $status, $perPage): string {
     $params = array_filter([
         'q'        => $keyword,
-        'status'   => $status === 'all' ? '' : $status,
+        'status'   => $status === 'active' ? '' : $status,
         'per_page' => $perPage !== 50 ? (string) $perPage : '',
         'page'     => $targetPage > 1 ? (string) $targetPage : '',
     ], static fn ($value): bool => $value !== '');
@@ -46,7 +33,7 @@ $sectorPageUrl = static function (int $targetPage) use ($listRoute, $keyword, $s
 // "Clear" drops the keyword (and resets to page 1) but keeps status + page size.
 $sectorClearUrl = static function () use ($listRoute, $status, $perPage): string {
     $params = array_filter([
-        'status'   => $status === 'all' ? '' : $status,
+        'status'   => $status === 'active' ? '' : $status,
         'per_page' => $perPage !== 50 ? (string) $perPage : '',
     ], static fn ($value): bool => $value !== '');
 
@@ -63,15 +50,15 @@ $sectorClearUrl = static function () use ($listRoute, $status, $perPage): string
 		<form class="records-search-row records-lookup-search" method="get" action="<?= esc(site_url($listRoute), 'attr') ?>" role="search" aria-label="Search the sector database">
 			<input class="form-control" type="search" name="q" value="<?= esc($keyword, 'attr') ?>" placeholder="Search the whole sector database" aria-label="Search the sector database" autocomplete="off">
 			<select class="form-select records-status-select" id="sector-status-select" name="status" data-lookup-status-select aria-label="Sector view">
-				<option value="all" <?= $status === 'all' ? 'selected' : '' ?>>Select Status</option>
 				<option value="active" <?= $status === 'active' ? 'selected' : '' ?>>Active (<?= esc((string) $activeSectorCount) ?>)</option>
 				<option value="archived" <?= $status === 'archived' ? 'selected' : '' ?>>Archive (<?= esc((string) $archivedSectorCount) ?>)</option>
+				<option value="all" <?= $status === 'all' ? 'selected' : '' ?>>All (<?= esc((string) $allSectorCount) ?>)</option>
 			</select>
 			<?php if ($perPage !== 50): ?><input type="hidden" name="per_page" value="<?= esc((string) $perPage, 'attr') ?>"><?php endif; ?>
-			<a class="btn btn-outline-secondary records-search-action" href="<?= esc($sectorClearUrl(), 'attr') ?>"><i class="bi bi-x-lg" aria-hidden="true"></i><span>Clear</span></a>
-			<button class="btn btn-outline-success records-search-action" type="submit"><i class="bi bi-search" aria-hidden="true"></i><span>Search</span></button>
+			<a class="btn btn-danger records-search-action" href="<?= esc($sectorClearUrl(), 'attr') ?>"><i class="bi bi-x-lg" aria-hidden="true"></i><span>Clear</span></a>
+			<button class="btn btn-outline-success records-search-action" type="submit"><i class="bi bi-search" aria-hidden="true"></i><span>Search All</span></button>
 			<?php if ($canManage): ?>
-			<button class="btn btn-primary records-search-action js-sector-modal-open" type="button" data-sector-mode="create"><i class="bi bi-plus-lg" aria-hidden="true"></i><span>Add Sector</span></button>
+			<button class="btn btn-primary records-search-action js-sector-modal-open" type="button" data-sector-mode="create"><span>Add Sector</span></button>
 			<?php endif; ?>
 		</form>
 	</div>
@@ -81,7 +68,7 @@ $sectorClearUrl = static function () use ($listRoute, $status, $perPage): string
 		<div class="records-table-controls">
 			<form class="records-page-size-form" method="get" action="<?= esc(site_url($listRoute), 'attr') ?>">
 				<?php if ($keyword !== ''): ?><input type="hidden" name="q" value="<?= esc($keyword, 'attr') ?>"><?php endif; ?>
-				<?php if ($status !== 'all'): ?><input type="hidden" name="status" value="<?= esc($status, 'attr') ?>"><?php endif; ?>
+				<?php if ($status !== 'active'): ?><input type="hidden" name="status" value="<?= esc($status, 'attr') ?>"><?php endif; ?>
 				<label for="sectorPerPage">Show</label>
 				<select class="form-select form-select-sm" id="sectorPerPage" name="per_page" onchange="this.form.submit()">
 					<?php foreach ($perPageOptions as $option): ?>
@@ -98,14 +85,14 @@ $sectorClearUrl = static function () use ($listRoute, $status, $perPage): string
 	</div>
 
 	<div class="table-responsive">
-		<table class="table table-sm manage-record-table align-middle">
+		<table class="table table-sm manage-record-table align-middle lookup-management-table lookup-management-table--sectors">
 			<thead>
 				<tr>
-					<th>Shortcode</th>
-					<th>Name</th>
-					<th>Description</th>
-					<th>Status</th>
-					<?php if ($canManage): ?><th class="text-end">Actions</th><?php endif; ?>
+					<th class="lookup-col-name">Name</th>
+					<th class="lookup-col-code">Shortcode</th>
+					<th class="lookup-col-description">Description</th>
+					<th class="lookup-col-status">Status</th>
+					<?php if ($canManage): ?><th class="lookup-col-actions text-end">Actions</th><?php endif; ?>
 				</tr>
 			</thead>
 			<tbody>
@@ -113,13 +100,13 @@ $sectorClearUrl = static function () use ($listRoute, $status, $perPage): string
 					<?php $sectorId = (int) ($sector['sectorID'] ?? 0); ?>
 					<?php $isArchived = trim((string) ($sector['dt_deleted'] ?? '')) !== ''; ?>
 					<tr data-row-archived="<?= $isArchived ? '1' : '0' ?>">
-						<td><span class="badge bg-light text-dark border"><?= esc((string) ($sector['shortcode'] ?? '')) ?></span></td>
 						<td><span class="sector-name"><?= esc((string) ($sector['name'] ?? '')) ?></span></td>
+						<td><span class="badge bg-light text-dark border"><?= esc((string) ($sector['shortcode'] ?? '')) ?></span></td>
 						<td><span class="text-trim d-inline-block"><?= esc((string) ($sector['description'] ?? '')) ?></span></td>
 						<td><span class="sector-status-badge <?= $isArchived ? 'sector-status-archived' : 'sector-status-active' ?>"><?= $isArchived ? 'Archived' : 'Active' ?></span></td>
 						<?php if ($canManage): ?><td class="text-end">
 							<div class="dropdown actions-menu">
-								<button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false" aria-label="Sector actions">
+								<button class="btn btn-outline-secondary btn-sm actions-menu-toggle" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false" aria-label="Sector actions">
 									<i class="bi bi-three-dots" aria-hidden="true"></i>
 								</button>
 								<div class="dropdown-menu dropdown-menu-end">
@@ -129,7 +116,6 @@ $sectorClearUrl = static function () use ($listRoute, $status, $perPage): string
 											type="button"
 											data-sector-mode="update"
 											data-sector-id="<?= esc((string) $sectorId) ?>"
-											data-sector-category-id="<?= esc((string) ($sector['categoryID'] ?? ''), 'attr') ?>"
 											data-sector-shortcode="<?= esc((string) ($sector['shortcode'] ?? ''), 'attr') ?>"
 											data-sector-name="<?= esc((string) ($sector['name'] ?? ''), 'attr') ?>"
 											data-sector-description="<?= esc((string) ($sector['description'] ?? ''), 'attr') ?>">
@@ -186,8 +172,6 @@ $sectorClearUrl = static function () use ($listRoute, $status, $perPage): string
 
 <?php if ($canManage): ?>
 <?= view('Lookups/sector-modal', [
-	'sectorCategoryOptions' => $sectorCategoryOptions,
-	'sectorNextCodeMap' => $sectorNextCodeMap,
 	'existingShortcodes' => $existingShortcodes,
 ]) ?>
 <?php endif; ?>

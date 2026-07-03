@@ -2,6 +2,7 @@
 
 namespace App\Models\Auth;
 
+use App\Libraries\DeveloperProfile;
 use CodeIgniter\Model;
 
 /**
@@ -94,7 +95,7 @@ class UserModel extends Model
         }
 
         return $this->select('userID, username, account_level AS role, isactive, dt_created')
-            ->whereIn('account_level', ['administrator', 'encoder', 'viewer'])
+            ->whereIn('account_level', ['administrator', 'encoder', 'viewer', 'scanner'])
             ->orderBy('account_level', 'ASC')
             ->orderBy('username', 'ASC')
             ->findAll();
@@ -223,7 +224,7 @@ class UserModel extends Model
 
         $account = $this->select('userID, account_level AS role')->find($userId);
 
-        if ($account === null || ! in_array((string) ($account['role'] ?? ''), ['administrator', 'encoder', 'viewer'], true)) {
+        if ($account === null || ! in_array((string) ($account['role'] ?? ''), ['administrator', 'encoder', 'viewer', 'scanner'], true)) {
             return false;
         }
 
@@ -287,10 +288,13 @@ class UserModel extends Model
      */
     private function verifyDeveloperLogin(string $username, string $password): ?array
     {
-        $devUsername = env('developer.username');
-        $devHash = env('developer.passwordHash');
+        // Live credentials come from writable/developer/credentials.json when present,
+        // else the .env developer.* seed (see DeveloperProfile::credentials()).
+        $creds = DeveloperProfile::credentials();
+        $devUsername = $creds['username'];
+        $devHash = $creds['passwordHash'];
 
-        if (! is_string($devUsername) || $devUsername === '' || ! is_string($devHash) || $devHash === '') {
+        if ($devUsername === '' || $devHash === '') {
             return null;
         }
 

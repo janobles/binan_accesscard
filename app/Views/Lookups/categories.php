@@ -1,29 +1,25 @@
 <?php
 /*
- * "Manage Categories" management page. Lists the sector categories from the
- * `category` table and lets an admin add/rename/archive/restore/delete them via
+ * "Manage Categories" management page. Lists the standalone SERVICE categories from
+ * the `category` table (FA/SWPS/EDA — the ones with no matching sector; a sector acts
+ * as its own service category) and lets an admin add/rename/archive/restore them via
  * the shared #categoryActionModal (see category-modal.php + categories-modal.js).
  *
- * Every category is fully editable, archivable, and deletable; the only
- * server-side guard (in Lookups\CategoryController) blocks archiving/deleting a
- * category still linked to sectors. Reuses the Manage Records .records-* layout
- * (managerecord.css) plus the shared lookup badge/action styles (lookupmanagement.css).
+ * Server-side guards (Lookups\CategoryController): a category may not duplicate a sector
+ * (code or name), and one still used by an active service cannot be archived. Reuses the
+ * Manage Records .records-* layout (managerecord.css) plus the shared lookup badge/action
+ * styles (lookupmanagement.css).
  */
 helper('dashboard_view');
+// category_management_view_data() also supplies $existingCodes (all codes incl.
+// archived, for the modal's duplicate check) so this view stays model-free.
 extract(category_management_view_data(get_defined_vars()), EXTR_OVERWRITE);
-
-// All codes (incl. archived, across every page) for the modal's duplicate check —
-// sourced from the model, not the current page below, so the check stays complete.
-$existingCodes = array_values(array_unique(array_filter(array_map(
-    static fn (array $c): string => strtoupper(trim((string) ($c['code'] ?? ''))),
-    (new \App\Models\Lookups\CategoryModel())->getAllIncluding()
-))));
 
 // Counts come from the server bundle (whole table), not the current page below.
 $activeCategoryCount   = (int) ($activeCount ?? 0);
 $archivedCategoryCount = (int) ($archivedCount ?? 0);
 $allCategoryCount      = $activeCategoryCount + $archivedCategoryCount;
-$status                = (string) ($status ?? 'all');
+$status                = (string) ($status ?? 'active');
 $keyword               = (string) ($keyword ?? '');
 $listRoute             = (string) ($listRoute ?? 'admin/categories');
 $perPage               = (int) ($perPage ?? 50);
@@ -33,7 +29,7 @@ $perPageOptions        = ($perPageOptions ?? []) ?: [10, 25, 50, 100];
 $categoryPageUrl = static function (int $targetPage) use ($listRoute, $keyword, $status, $perPage): string {
     $params = array_filter([
         'q'        => $keyword,
-        'status'   => $status === 'all' ? '' : $status,
+        'status'   => $status === 'active' ? '' : $status,
         'per_page' => $perPage !== 50 ? (string) $perPage : '',
         'page'     => $targetPage > 1 ? (string) $targetPage : '',
     ], static fn ($value): bool => $value !== '');
@@ -44,7 +40,7 @@ $categoryPageUrl = static function (int $targetPage) use ($listRoute, $keyword, 
 // "Clear" drops the keyword (and resets to page 1) but keeps status + page size.
 $categoryClearUrl = static function () use ($listRoute, $status, $perPage): string {
     $params = array_filter([
-        'status'   => $status === 'all' ? '' : $status,
+        'status'   => $status === 'active' ? '' : $status,
         'per_page' => $perPage !== 50 ? (string) $perPage : '',
     ], static fn ($value): bool => $value !== '');
 
@@ -58,13 +54,13 @@ $categoryClearUrl = static function () use ($listRoute, $status, $perPage): stri
 		<form class="records-search-row records-lookup-search" method="get" action="<?= esc(site_url($listRoute), 'attr') ?>" role="search" aria-label="Search the category database">
 			<input class="form-control" type="search" name="q" value="<?= esc($keyword, 'attr') ?>" placeholder="Search the whole category database" aria-label="Search the category database" autocomplete="off">
 			<select class="form-select records-status-select" id="category-status-select" name="status" data-lookup-status-select aria-label="Category view">
-				<option value="all" <?= $status === 'all' ? 'selected' : '' ?>>Select Status</option>
 				<option value="active" <?= $status === 'active' ? 'selected' : '' ?>>Active (<?= esc((string) $activeCategoryCount) ?>)</option>
 				<option value="archived" <?= $status === 'archived' ? 'selected' : '' ?>>Archive (<?= esc((string) $archivedCategoryCount) ?>)</option>
+				<option value="all" <?= $status === 'all' ? 'selected' : '' ?>>All (<?= esc((string) $allCategoryCount) ?>)</option>
 			</select>
 			<?php if ($perPage !== 50): ?><input type="hidden" name="per_page" value="<?= esc((string) $perPage, 'attr') ?>"><?php endif; ?>
-			<a class="btn btn-outline-secondary records-search-action" href="<?= esc($categoryClearUrl(), 'attr') ?>"><i class="bi bi-x-lg" aria-hidden="true"></i><span>Clear</span></a>
-			<button class="btn btn-outline-success records-search-action" type="submit"><i class="bi bi-search" aria-hidden="true"></i><span>Search</span></button>
+			<a class="btn btn-danger records-search-action" href="<?= esc($categoryClearUrl(), 'attr') ?>"><i class="bi bi-x-lg" aria-hidden="true"></i><span>Clear</span></a>
+			<button class="btn btn-outline-success records-search-action" type="submit"><i class="bi bi-search" aria-hidden="true"></i><span>Search All</span></button>
 			<button class="btn btn-primary records-search-action js-category-modal-open" type="button" data-category-mode="create"><i class="bi bi-plus-lg" aria-hidden="true"></i><span>Add Category</span></button>
 		</form>
 	</div>
@@ -74,7 +70,7 @@ $categoryClearUrl = static function () use ($listRoute, $status, $perPage): stri
 		<div class="records-table-controls">
 			<form class="records-page-size-form" method="get" action="<?= esc(site_url($listRoute), 'attr') ?>">
 				<?php if ($keyword !== ''): ?><input type="hidden" name="q" value="<?= esc($keyword, 'attr') ?>"><?php endif; ?>
-				<?php if ($status !== 'all'): ?><input type="hidden" name="status" value="<?= esc($status, 'attr') ?>"><?php endif; ?>
+				<?php if ($status !== 'active'): ?><input type="hidden" name="status" value="<?= esc($status, 'attr') ?>"><?php endif; ?>
 				<label for="categoryPerPage">Show</label>
 				<select class="form-select form-select-sm" id="categoryPerPage" name="per_page" onchange="this.form.submit()">
 					<?php foreach ($perPageOptions as $option): ?>
@@ -91,12 +87,13 @@ $categoryClearUrl = static function () use ($listRoute, $status, $perPage): stri
 	</div>
 
 	<div class="table-responsive">
-		<table class="table table-sm manage-record-table align-middle">
+		<table class="table table-sm manage-record-table align-middle lookup-management-table lookup-management-table--categories">
 			<thead>
 				<tr>
-					<th>Code</th>
-					<th>Name</th>
-					<th class="text-end">Actions</th>
+					<th class="lookup-col-name">Name</th>
+					<th class="lookup-col-code">Code</th>
+					<th class="lookup-col-description">Description</th>
+					<th class="lookup-col-actions text-end">Actions</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -106,11 +103,12 @@ $categoryClearUrl = static function () use ($listRoute, $status, $perPage): stri
 					$isArchived = trim((string) ($category['dt_deleted'] ?? '')) !== '';
 					?>
 					<tr data-row-archived="<?= $isArchived ? '1' : '0' ?>">
-						<td><span class="badge bg-light text-dark border"><?= esc((string) ($category['code'] ?? '')) ?></span></td>
 						<td><span class="sector-name"><?= esc((string) ($category['name'] ?? '')) ?></span></td>
+						<td><span class="badge bg-light text-dark border"><?= esc((string) ($category['code'] ?? '')) ?></span></td>
+						<td><span class="text-trim d-inline-block"><?= esc((string) ($category['description'] ?? '')) ?></span></td>
 						<td class="text-end">
 							<div class="dropdown actions-menu">
-								<button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false" aria-label="Category actions">
+								<button class="btn btn-outline-secondary btn-sm actions-menu-toggle" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false" aria-label="Category actions">
 									<i class="bi bi-three-dots" aria-hidden="true"></i>
 								</button>
 								<div class="dropdown-menu dropdown-menu-end">
@@ -121,7 +119,8 @@ $categoryClearUrl = static function () use ($listRoute, $status, $perPage): stri
 											data-category-mode="update"
 											data-category-id="<?= esc((string) $categoryId) ?>"
 											data-category-code="<?= esc((string) ($category['code'] ?? ''), 'attr') ?>"
-											data-category-name="<?= esc((string) ($category['name'] ?? ''), 'attr') ?>">
+											data-category-name="<?= esc((string) ($category['name'] ?? ''), 'attr') ?>"
+											data-category-description="<?= esc((string) ($category['description'] ?? ''), 'attr') ?>">
 											<i class="bi bi-pencil-square" aria-hidden="true"></i>Edit
 										</button>
 										<button
@@ -130,7 +129,8 @@ $categoryClearUrl = static function () use ($listRoute, $status, $perPage): stri
 											data-category-mode="archive"
 											data-category-id="<?= esc((string) $categoryId) ?>"
 											data-category-code="<?= esc((string) ($category['code'] ?? ''), 'attr') ?>"
-											data-category-name="<?= esc((string) ($category['name'] ?? ''), 'attr') ?>">
+											data-category-name="<?= esc((string) ($category['name'] ?? ''), 'attr') ?>"
+											data-category-description="<?= esc((string) ($category['description'] ?? ''), 'attr') ?>">
 											<i class="bi bi-archive" aria-hidden="true"></i>Archive
 										</button>
 									<?php else: ?>
@@ -150,7 +150,7 @@ $categoryClearUrl = static function () use ($listRoute, $status, $perPage): stri
 				<?php endforeach; ?>
 				<?php if ($categories === []): ?>
 					<tr>
-						<td colspan="3" class="sector-empty-state"><?= $keyword !== '' ? 'No categories match your search.' : 'No category records found.' ?></td>
+						<td colspan="4" class="sector-empty-state"><?= $keyword !== '' ? 'No categories match your search.' : 'No category records found.' ?></td>
 					</tr>
 				<?php endif; ?>
 			</tbody>

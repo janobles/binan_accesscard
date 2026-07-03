@@ -176,6 +176,14 @@
     font-size: 0.9rem;
 }
 
+.accounts-page .account-role-readonly:disabled {
+    --bs-secondary-bg: #fff;
+    background-color: #fff !important;
+    color: #23322e !important;
+    opacity: 1;
+    -webkit-text-fill-color: #23322e;
+}
+
 .account-create-actions {
     display: flex;
     justify-content: flex-end;

@@ -19,8 +19,7 @@ use CodeIgniter\HTTP\RedirectResponse;
  * and returns the rendered HTML. Authentication and session lifecycle live in
  * App\Controllers\Auth\AuthController (the controller the auth routes target);
  * the `normalizeRole` helper used by the account partial comes from
- * App\Controllers\HomeRoleAccessTrait. The shared AJAX-partial helpers come from
- * App\Controllers\Concerns\DashboardPartialsTrait.
+ * App\Controllers\HomeRoleAccessTrait.
  */
 class DashboardController extends BaseController
 {
@@ -66,16 +65,12 @@ class DashboardController extends BaseController
     }
 
     /**
-     * GET `admin/family-entry`. Shows the family registration form page, or its
-     * modal partial when fetched via AJAX from the dashboard.
+     * GET `admin/family-entry`. Legacy URL; the add/edit experience now lives in
+     * the Manage Records modal.
      */
-    public function familyEntry(): string|RedirectResponse
+    public function familyEntry(): RedirectResponse
     {
-        if ($this->isPartialRequest()) {
-            return $this->renderFamilyFormPartial(['Developer', 'Admin']);
-        }
-
-        return (new DashboardPageBuilder($this->request))->renderAdminPage('family-entry');
+        return redirect()->to(site_url('admin/manage-records'));
     }
 
     /**
@@ -144,6 +139,15 @@ class DashboardController extends BaseController
     }
 
     /**
+     * GET `admin/cards`. Renders the QR access-card batch page in the admin
+     * shell. Generation/lookup are handled by Cards\QrCardController.
+     */
+    public function cards(): string|RedirectResponse
+    {
+        return (new DashboardPageBuilder($this->request))->renderAdminPage('cards');
+    }
+
+    /**
      * GET `admin/manage-members`. Reuses the family-manage page (member-centric
      * view of the same records). Frontend: full-page load of the admin shell.
      */
@@ -158,8 +162,7 @@ class DashboardController extends BaseController
     // sectors, services) into a modal/panel via fetch. When ?partial=1 or an
     // XHR header is present we return just the inner view fragment instead of
     // the whole page. Front-end loader: assets/js/dashboard/*-modal.js.
-    // isPartialRequest() and renderFamilyFormPartial() come from
-    // DashboardPartialsTrait.
+    // isPartialRequest() comes from DashboardPartialsTrait.
     // ---------------------------------------------------------------------
 
     /**
@@ -196,6 +199,7 @@ class DashboardController extends BaseController
             'adminAccounts' => $viewData['adminAccounts'] ?? [],
             'employeeAccounts' => $viewData['employeeAccounts'] ?? [],
             'viewerAccounts' => $viewData['viewerAccounts'] ?? [],
+            'scannerAccounts' => $viewData['scannerAccounts'] ?? [],
             'searchTerm' => $viewData['searchTerm'] ?? '',
             'searchFilters' => $viewData['searchFilters'] ?? [],
             'canCreateAccounts' => $viewData['canCreateAccounts'] ?? false,

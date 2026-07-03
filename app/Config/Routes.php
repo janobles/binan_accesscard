@@ -34,8 +34,14 @@ $routes->group('admin', static function (RouteCollection $routes): void {
 
     $routes->get('manage-families', 'Admin\DashboardController::manageRecords');
     $routes->group('manage-family', static function (RouteCollection $routes): void {
-        $routes->get('', 'Admin\DashboardController::familyEntry');
+        $routes->get('', 'Admin\DashboardController::manageRecords');
         $routes->get('list', 'Families\FamilyController::listFamilies');
+        $routes->get('data', 'Families\FamilyController::dataTable');
+        $routes->get('template', 'Families\FamilyController::downloadTemplate');
+        $routes->get('import', 'Families\FamilyController::importForm');
+        $routes->post('import', 'Families\FamilyController::import');
+        $routes->get('import/status/(:num)', 'Families\FamilyController::importStatus/$1');
+        $routes->get('create', 'Families\FamilyController::createFamily');
         $routes->get('view/(:num)', 'Families\FamilyController::viewFamily/$1');
         $routes->get('edit/(:num)', 'Families\FamilyController::editFamily/$1');
         $routes->post('update/(:num)', 'Families\FamilyController::update/$1');
@@ -65,6 +71,13 @@ $routes->group('admin', static function (RouteCollection $routes): void {
         $routes->post('archive/(:num)', 'Lookups\ServiceController::archive/$1');
         $routes->post('restore/(:num)', 'Lookups\ServiceController::restore/$1');
     });
+
+    $routes->group('cards', static function (RouteCollection $routes): void {
+        $routes->get('', 'Admin\DashboardController::cards');
+        $routes->post('generate', 'Cards\QrCardController::batch');
+        $routes->get('card/(:num)', 'Cards\QrCardController::card/$1');
+        $routes->get('lookup/(:any)', 'Cards\QrCardController::lookup/$1');
+    });
 });
 
 /*
@@ -78,8 +91,14 @@ $routes->group('employee', static function (RouteCollection $routes): void {
 
     $routes->get('manage-families', 'Employee\DashboardController::manageRecords');
     $routes->group('manage-family', static function (RouteCollection $routes): void {
-        $routes->get('', 'Employee\DashboardController::familyEntry');
+        $routes->get('', 'Employee\DashboardController::manageRecords');
         $routes->get('list', 'Families\FamilyController::listFamilies');
+        $routes->get('data', 'Families\FamilyController::dataTable');
+        $routes->get('template', 'Families\FamilyController::downloadTemplate');
+        $routes->get('import', 'Families\FamilyController::importForm');
+        $routes->post('import', 'Families\FamilyController::import');
+        $routes->get('import/status/(:num)', 'Families\FamilyController::importStatus/$1');
+        $routes->get('create', 'Families\FamilyController::createFamily');
         $routes->get('view/(:num)', 'Families\FamilyController::viewFamily/$1');
         $routes->get('edit/(:num)', 'Families\FamilyController::editFamily/$1');
         $routes->post('update/(:num)', 'Families\FamilyController::update/$1');
@@ -101,8 +120,28 @@ $routes->group('viewer', static function (RouteCollection $routes): void {
     $routes->get('sectors', 'Viewer\DashboardController::sectors');
     $routes->get('services', 'Viewer\DashboardController::services');
     $routes->group('manage-family', static function (RouteCollection $routes): void {
+        $routes->get('data', 'Families\FamilyController::dataTable');
         $routes->get('view/(:num)', 'Families\FamilyController::viewFamily/$1');
     });
+});
+
+/**
+ * Scanner module (aid distribution). Scanner/Admin/Developer only — each action
+ * calls RoleAccess::requireRole() internally (mirrors the Cards controller).
+ */
+$routes->group('scanner', static function (RouteCollection $routes): void {
+    $routes->get('scan', 'Scanner\ScanController::scan');
+    $routes->get('lookup/(:num)', 'Scanner\ScanController::lookup/$1');
+    $routes->post('log', 'Scanner\ScanController::logAid');
+
+    $routes->get('manage', 'Scanner\ManageController::index');
+    $routes->post('aid-types/create', 'Scanner\ManageController::createAidType');
+    $routes->post('aid-types/archive/(:num)', 'Scanner\ManageController::archiveAidType/$1');
+    $routes->post('aid-types/restore/(:num)', 'Scanner\ManageController::restoreAidType/$1');
+    $routes->post('aid-types/delete/(:num)', 'Scanner\ManageController::deleteAidType/$1');
+    $routes->post('distributions/void/(:num)', 'Scanner\ManageController::voidDistribution/$1');
+    $routes->get('reports', 'Scanner\ReportsController::index');
+    $routes->get('reports/pdf', 'Scanner\ReportsController::pdf');
 });
 
 /*

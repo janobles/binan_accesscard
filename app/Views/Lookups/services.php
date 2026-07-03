@@ -1,18 +1,16 @@
 <?php
 helper('dashboard_view');
+// service_management_view_data() supplies $serviceCategoryOptions (managed category
+// names from the Manage Categories page + any categories already on services) for the
+// Add-Program modal dropdown, so this view stays model-free.
 extract(service_management_view_data(get_defined_vars()), EXTR_OVERWRITE);
-$defaultServiceCategoryOptions = \App\Support\FamilyProfilingFormV2::SERVICE_CATEGORIES;
-$serviceCategoryOptions = array_values(array_unique(array_filter(array_map(
-    static fn (array $service): string => trim((string) ($service['category'] ?? '')),
-    $services
-))));
-$serviceCategoryOptions = array_values(array_unique(array_merge($defaultServiceCategoryOptions, $serviceCategoryOptions)));
+$serviceCategoryOptions = $serviceCategoryOptions ?? [];
 
 // Counts come from the server bundle (whole table), not the current page below.
 $activeServiceCount   = (int) ($activeCount ?? 0);
 $archivedServiceCount = (int) ($archivedCount ?? 0);
 $allServiceCount      = $activeServiceCount + $archivedServiceCount;
-$status               = (string) ($status ?? 'all');
+$status               = (string) ($status ?? 'active');
 $keyword              = (string) ($keyword ?? '');
 $listRoute            = (string) ($listRoute ?? 'admin/services');
 $perPage              = (int) ($perPage ?? 50);
@@ -25,7 +23,7 @@ $canManage            = (bool) ($canManage ?? true);
 $servicePageUrl = static function (int $targetPage) use ($listRoute, $keyword, $status, $perPage): string {
     $params = array_filter([
         'q'        => $keyword,
-        'status'   => $status === 'all' ? '' : $status,
+        'status'   => $status === 'active' ? '' : $status,
         'per_page' => $perPage !== 50 ? (string) $perPage : '',
         'page'     => $targetPage > 1 ? (string) $targetPage : '',
     ], static fn ($value): bool => $value !== '');
@@ -36,7 +34,7 @@ $servicePageUrl = static function (int $targetPage) use ($listRoute, $keyword, $
 // "Clear" drops the keyword (and resets to page 1) but keeps status + page size.
 $serviceClearUrl = static function () use ($listRoute, $status, $perPage): string {
     $params = array_filter([
-        'status'   => $status === 'all' ? '' : $status,
+        'status'   => $status === 'active' ? '' : $status,
         'per_page' => $perPage !== 50 ? (string) $perPage : '',
     ], static fn ($value): bool => $value !== '');
 
@@ -53,15 +51,15 @@ $serviceClearUrl = static function () use ($listRoute, $status, $perPage): strin
 		<form class="records-search-row records-lookup-search" method="get" action="<?= esc(site_url($listRoute), 'attr') ?>" role="search" aria-label="Search the services database">
 			<input class="form-control" type="search" name="q" value="<?= esc($keyword, 'attr') ?>" placeholder="Search the whole services database" aria-label="Search the services database" autocomplete="off">
 			<select class="form-select records-status-select" id="service-status-select" name="status" data-lookup-status-select aria-label="Service view">
-				<option value="all" <?= $status === 'all' ? 'selected' : '' ?>>Select Status</option>
 				<option value="active" <?= $status === 'active' ? 'selected' : '' ?>>Active (<?= esc((string) $activeServiceCount) ?>)</option>
 				<option value="archived" <?= $status === 'archived' ? 'selected' : '' ?>>Archive (<?= esc((string) $archivedServiceCount) ?>)</option>
+				<option value="all" <?= $status === 'all' ? 'selected' : '' ?>>All (<?= esc((string) $allServiceCount) ?>)</option>
 			</select>
 			<?php if ($perPage !== 50): ?><input type="hidden" name="per_page" value="<?= esc((string) $perPage, 'attr') ?>"><?php endif; ?>
-			<a class="btn btn-outline-secondary records-search-action" href="<?= esc($serviceClearUrl(), 'attr') ?>"><i class="bi bi-x-lg" aria-hidden="true"></i><span>Clear</span></a>
-			<button class="btn btn-outline-success records-search-action" type="submit"><i class="bi bi-search" aria-hidden="true"></i><span>Search</span></button>
+			<a class="btn btn-danger records-search-action" href="<?= esc($serviceClearUrl(), 'attr') ?>"><i class="bi bi-x-lg" aria-hidden="true"></i><span>Clear</span></a>
+			<button class="btn btn-outline-success records-search-action" type="submit"><i class="bi bi-search" aria-hidden="true"></i><span>Search All</span></button>
 			<?php if ($canManage): ?>
-			<button class="btn btn-primary records-search-action js-service-modal-open" type="button" data-service-mode="create"><i class="bi bi-plus-lg" aria-hidden="true"></i><span>Add Program</span></button>
+			<button class="btn btn-primary records-search-action js-service-modal-open" type="button" data-service-mode="create"><span>Add Program</span></button>
 			<?php endif; ?>
 		</form>
 	</div>
@@ -71,7 +69,7 @@ $serviceClearUrl = static function () use ($listRoute, $status, $perPage): strin
 		<div class="records-table-controls">
 			<form class="records-page-size-form" method="get" action="<?= esc(site_url($listRoute), 'attr') ?>">
 				<?php if ($keyword !== ''): ?><input type="hidden" name="q" value="<?= esc($keyword, 'attr') ?>"><?php endif; ?>
-				<?php if ($status !== 'all'): ?><input type="hidden" name="status" value="<?= esc($status, 'attr') ?>"><?php endif; ?>
+				<?php if ($status !== 'active'): ?><input type="hidden" name="status" value="<?= esc($status, 'attr') ?>"><?php endif; ?>
 				<label for="servicePerPage">Show</label>
 				<select class="form-select form-select-sm" id="servicePerPage" name="per_page" onchange="this.form.submit()">
 					<?php foreach ($perPageOptions as $option): ?>
@@ -88,14 +86,15 @@ $serviceClearUrl = static function () use ($listRoute, $status, $perPage): strin
 	</div>
 
 	<div class="table-responsive">
-		<table class="table table-sm manage-record-table align-middle">
+		<table class="table table-sm manage-record-table align-middle lookup-management-table lookup-management-table--services">
 			<thead>
 				<tr>
-					<th>Category</th>
-					<th>Name</th>
-					<th>Description</th>
-					<th>Status</th>
-					<?php if ($canManage): ?><th class="text-end">Actions</th><?php endif; ?>
+					<th class="lookup-col-name">Name</th>
+					<th class="lookup-col-code">Code</th>
+					<th class="lookup-col-category">Category</th>
+					<th class="lookup-col-description">Description</th>
+					<th class="lookup-col-status">Status</th>
+					<?php if ($canManage): ?><th class="lookup-col-actions text-end">Actions</th><?php endif; ?>
 				</tr>
 			</thead>
 			<tbody>
@@ -103,13 +102,14 @@ $serviceClearUrl = static function () use ($listRoute, $status, $perPage): strin
 					<?php $serviceId = (int) ($service['serviceID'] ?? 0); ?>
 					<?php $isArchived = trim((string) ($service['dt_deleted'] ?? '')) !== ''; ?>
 					<tr data-row-archived="<?= $isArchived ? '1' : '0' ?>">
-						<td><span class="badge bg-light text-dark border"><?= esc((string) ($service['category'] ?? '')) ?></span></td>
 						<td><span class="sector-name"><?= esc((string) ($service['name'] ?? '')) ?></span></td>
+						<td><span class="badge bg-primary-subtle text-dark border fw-semibold"><?= esc((string) ($service['shortcode'] ?? '')) ?></span></td>
+						<td><span class="badge bg-light text-dark border"><?= esc((string) ($service['category'] ?? '')) ?></span></td>
 						<td><span class="text-trim d-inline-block"><?= esc((string) ($service['description'] ?? '')) ?></span></td>
 						<td><span class="sector-status-badge <?= $isArchived ? 'sector-status-archived' : 'sector-status-active' ?>"><?= $isArchived ? 'Archived' : 'Active' ?></span></td>
 						<?php if ($canManage): ?><td class="text-end">
 							<div class="dropdown actions-menu">
-								<button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false" aria-label="Service actions">
+								<button class="btn btn-outline-secondary btn-sm actions-menu-toggle" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false" aria-label="Service actions">
 									<i class="bi bi-three-dots" aria-hidden="true"></i>
 								</button>
 								<div class="dropdown-menu dropdown-menu-end">
@@ -118,6 +118,7 @@ $serviceClearUrl = static function () use ($listRoute, $status, $perPage): strin
 											class="dropdown-item js-service-modal-open"
 											type="button"
 											data-service-mode="update"
+											data-service-shortcode="<?= esc((string) ($service['shortcode'] ?? ''), 'attr') ?>"
 											data-service-id="<?= esc((string) $serviceId) ?>"
 											data-service-category="<?= esc((string) ($service['category'] ?? ''), 'attr') ?>"
 											data-service-name="<?= esc((string) ($service['name'] ?? ''), 'attr') ?>"
@@ -152,7 +153,7 @@ $serviceClearUrl = static function () use ($listRoute, $status, $perPage): strin
 				<?php endforeach; ?>
 				<?php if ($services === []): ?>
 					<tr>
-						<td colspan="5" class="sector-empty-state"><?= $keyword !== '' ? 'No services match your search.' : 'No service or program records found.' ?></td>
+						<td colspan="6" class="sector-empty-state"><?= $keyword !== '' ? 'No services match your search.' : 'No service or program records found.' ?></td>
 					</tr>
 				<?php endif; ?>
 			</tbody>
@@ -176,5 +177,6 @@ $serviceClearUrl = static function () use ($listRoute, $status, $perPage): strin
 <?php if ($canManage): ?>
 <?= view('Lookups/service-modal', [
 	'serviceCategoryOptions' => $serviceCategoryOptions,
+	'serviceNextCodeMap' => $serviceNextCodeMap ?? [],
 ]) ?>
 <?php endif; ?>

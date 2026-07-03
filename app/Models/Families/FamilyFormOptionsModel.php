@@ -27,22 +27,20 @@ class FamilyFormOptionsModel extends Model
         $servicesModel = new ServiceModel();
 
         return [
-            'sectors' => $sectorModel->getAll(),
+            'sectors' => $sectorModel->getActive(),
             'sexes' => ['Male', 'Female'],
             'suffixes' => FamilyProfilingFormV2::suffixes(),
             'civil_statuses' => FamilyProfilingFormV2::civilStatuses(),
             'barangays' => FamilyProfilingFormV2::barangays(),
             'relationships' => [
                 'Spouse',
-                'Son',
-                'Daughter',
+                'Children',
                 'Parent',
                 'Sibling',
                 'Grandparent',
                 'Grandchild',
                 'In-law',
                 'Relative',
-                'Household Helper',
                 'Other',
             ],
             'education_levels' => FamilyProfilingFormV2::educationLevels(),
@@ -62,16 +60,16 @@ class FamilyFormOptionsModel extends Model
                 ['value' => '250000', 'label' => 'PHP 150,001 - 250,000'],
                 ['value' => '250001', 'label' => 'Above PHP 250,000'],
             ],
-            'services' => $servicesModel->getAll(),
+            'services' => $servicesModel->getActive(),
             'family_heads' => [],
         ];
     }
 
     /**
-     * Shapes getOptions() into the exact view variables the family form template
-     * expects (sectorOptions, sexOptions, servicesByCategory, etc.). Frontend:
-     * consumed directly by the `Family/form` view. Add-Family path: only active
-     * sectors/services appear (archived items are never offered to new records).
+     * Shapes getOptions() into the exact variables the family modal expects
+     * (sectorOptions, sexOptions, servicesByCategory, etc.). Add-Family path:
+     * only active sectors/services appear (archived items are never offered to
+     * new records).
      */
     public function getViewData(): array
     {
@@ -121,7 +119,7 @@ class FamilyFormOptionsModel extends Model
     }
 
     /**
-     * Builds the family-form view variables from a (possibly augmented) options array.
+     * Builds the family modal view variables from a (possibly augmented) options array.
      * Shared by getViewData() and getViewDataForEdit().
      */
     private function buildViewData(array $options): array
@@ -135,6 +133,8 @@ class FamilyFormOptionsModel extends Model
             'formOptions' => $options,
             'sectorOptions' => $sectorOptions,
             'sectorCatalog' => $sectorModel->getSectorCatalog($sectorOptions),
+            // Sectors are flat classifications now, so there are no per-category headings.
+            'sectorCategoryLabels' => [],
             // Text dropdowns are alphabetized for the form ("Other/Others" pinned last).
             // Suffix (Jr, Sr, I-V) and income brackets (numeric low->high) keep their order.
             'sexOptions' => $this->sortLabelOptions($options['sexes'] ?? []),

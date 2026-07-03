@@ -2,8 +2,6 @@
 
 namespace App\Libraries;
 
-use App\Support\FamilyProfilingFormV2;
-
 /**
  * Shared presentation formatting and normalization for view templates.
  */
@@ -46,28 +44,6 @@ class ViewFormatter
     public static function formatTime(mixed $value): string
     {
         return self::formatTimestamp($value, 'h:i A', '');
-    }
-
-    /** Display name of the member an audit row concerns, or '-' when none. */
-    public static function formatAuditMember(array $audit): string
-    {
-        $memberName = trim((string) ($audit['member_name'] ?? ''));
-
-        if ($memberName === '') {
-            $memberName = trim((string) ($audit['firstname'] ?? '') . ' ' . (string) ($audit['lastname'] ?? ''));
-        }
-
-        return $memberName === '' ? '-' : $memberName;
-    }
-
-    /** Display label for who performed an audit action, e.g. "maria (Admin)". */
-    public static function formatAuditUser(array $audit): string
-    {
-        $username = trim((string) ($audit['username'] ?? $audit['userID'] ?? ''));
-        $role = trim((string) ($audit['user_role'] ?? ''));
-        $role = RoleAccess::normalizeRole($role) ?? $role;
-
-        return $role === '' ? $username : $username . ' (' . $role . ')';
     }
 
     /** Interprets an isactive value (enum/numeric/string) as a boolean for display. */
@@ -165,14 +141,6 @@ class ViewFormatter
         return array_values(array_map('intval', $items));
     }
 
-    /** Coerces a value into a list of strings (optionally dropping empty items). */
-    public static function stringList(mixed $value, bool $nonEmptyOnly = false): array
-    {
-        $items = array_values(array_map('strval', (array) $value));
-
-        return $nonEmptyOnly ? array_values(array_filter($items, [self::class, 'hasText'])) : $items;
-    }
-
     /**
      * Given the grouped sector catalog and the IDs a member has, returns which
      * category keys are selected — used to pre-expand the right sector groups in
@@ -208,12 +176,6 @@ class ViewFormatter
         return $keys;
     }
 
-    /** Sector shortcode options with the catch-all "OTHER" removed, for dropdowns. */
-    public static function sectorShortcodeOptions(array $options): array
-    {
-        return array_values(array_filter($options, static fn (string $shortcode): bool => $shortcode !== 'OTHER'));
-    }
-
     /** Distinct service category list (seeded with defaults) for category dropdowns. */
     public static function serviceCategoryOptions(array $services, array $defaults = []): array
     {
@@ -231,59 +193,28 @@ class ViewFormatter
     }
 
     /**
-     * Groups sectors by their shortcode's leading alpha prefix (SC/PWD/SP/B/
-     * LGBT/…; OSCA/OSWA fold into SC), labelling each group from
-     * FamilyProfilingFormV2::SECTOR_CATEGORIES or the raw prefix for custom
-     * codes — so there is no catch-all "Others" bucket. Official prefixes lead
-     * in form order, custom prefixes follow alphabetically; empty groups drop.
-     * Pass $categoryLabels (prefix => name, from SectorModel::categoryLabelMap)
-     * to show custom category names; it overrides the built-in form labels.
-     * Frontend: builds the grouped sector checkboxes for member rows.
+     * Returns the member-row sectors as a single "Sectors" group. Sectors are flat
+     * classifications after the Phase A restructure (SC, PWD, SP, B, LGBT, OFW, IP,
+     * IDP, PDL, OTHER), so there is no per-category grouping. The grouped shape is
+     * kept for callers that render [{label, sectors}]. $categoryLabels is accepted
+     * for signature stability but no longer used. Empty input yields [].
      */
     public static function memberSectorGroups(array $sectorOptions, array $categoryLabels = []): array
     {
-        $groups = [];
+        $sectors = [];
 
         foreach ($sectorOptions as $sector) {
-            $shortcode = strtoupper(trim((string) ($sector['shortcode'] ?? '')));
+            $shortcode = trim((string) ($sector['shortcode'] ?? ''));
+            $name = trim((string) ($sector['name'] ?? ''));
 
-            if ($shortcode === '') {
+            if ($shortcode === '' && $name === '') {
                 continue;
             }
 
-            $prefix = preg_match('/^([A-Z]+)/', $shortcode, $matches) === 1 ? $matches[1] : $shortcode;
-
-            if ($prefix === 'OSCA' || $prefix === 'OSWA') {
-                $prefix = 'SC';
-            }
-
-            if (! isset($groups[$prefix])) {
-                $groups[$prefix] = [
-                    'label' => $categoryLabels[$prefix] ?? FamilyProfilingFormV2::SECTOR_CATEGORIES[$prefix] ?? $prefix,
-                    'sectors' => [],
-                ];
-            }
-
-            $groups[$prefix]['sectors'][] = $sector;
+            $sectors[] = $sector;
         }
 
-        // Official prefixes first (form order), then custom prefixes alphabetically.
-        $ordered = [];
-
-        foreach (array_keys(FamilyProfilingFormV2::SECTOR_CATEGORIES) as $prefix) {
-            if ($prefix === 'OTHER') {
-                continue;
-            }
-
-            if (isset($groups[$prefix])) {
-                $ordered[$prefix] = $groups[$prefix];
-                unset($groups[$prefix]);
-            }
-        }
-
-        ksort($groups);
-
-        return $ordered + $groups;
+        return $sectors === [] ? [] : [['label' => 'Sectors', 'sectors' => $sectors]];
     }
 
     /** Compact, safe string form of any value for debug output in views. */

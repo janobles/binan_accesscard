@@ -3,6 +3,10 @@
 namespace App\Models\Families;
 
 use App\Libraries\SectorIds;
+use App\Models\Concerns\MemberQueryFilters;
+use App\Models\Concerns\NormalizesIds;
+use App\Models\Concerns\RecordStatus;
+use App\Models\Concerns\ResolvesSectorNames;
 use CodeIgniter\Model;
 
 /**
@@ -10,6 +14,10 @@ use CodeIgniter\Model;
  */
 class MemberModel extends Model
 {
+    use MemberQueryFilters;
+    use NormalizesIds;
+    use ResolvesSectorNames;
+
     public const VALIDATION_RULES = [
         'sectorID' => 'permit_empty|valid_sector_array',
         'firstname' => 'required|max_length[100]',
@@ -104,50 +112,6 @@ class MemberModel extends Model
     }
 
     /**
-     * Returns the most recent family heads for the dashboard "recent families"
-     * panel, newest first, with sector IDs resolved to names. Frontend: dashboard
-     * overview via DashboardPageBuilder.
-     */
-    public function getRecentFamilies(int $limit = 10): array
-    {
-        if (! $this->hasTable()) {
-            return [];
-        }
-
-        $rows = $this->memberDashboardBuilder()
-            ->where('member.memberID = member.headID', null, false)
-            ->orderBy('member.memberID', 'DESC')
-            ->limit($limit)
-            ->get()
-            ->getResultArray();
-
-        return $this->withSectorNames($rows);
-    }
-
-    /** Counts active family heads (headID = memberID) for dashboard stats. */
-    public function countHeads(): int
-    {
-        if (! $this->hasTable()) {
-            return 0;
-        }
-
-        return $this->where('headID = memberID')
-            ->where('dt_deleted IS NULL', null, false)
-            ->countAllResults();
-    }
-
-    /** Counts all active members (heads + relatives) for dashboard stats. */
-    public function countMembers(): int
-    {
-        if (! $this->hasTable()) {
-            return 0;
-        }
-
-        return $this->where('dt_deleted IS NULL', null, false)
-            ->countAllResults();
-    }
-
-    /**
      * ENCODE hook. Registered as beforeInsert/beforeUpdate, this runs right
      * before a row is written and converts the sectorID array into its JSON
     * storage string ('[1,2,3]'). See App\Libraries\SectorIds::toStorage().
@@ -159,25 +123,6 @@ class MemberModel extends Model
         }
 
         return $data;
-    }
-
-    /**
-     * Returns per-person validation rules (without the sector rule, which is
-     * validated at the form level). When $requireHeadDetails is true it tightens
-     * middlename/birthday/sex to required, as the head of family needs them.
-     */
-    public static function personValidationRules(bool $requireHeadDetails = false): array
-    {
-        $rules = self::VALIDATION_RULES;
-        unset($rules['sectorID']);
-
-        if ($requireHeadDetails) {
-            $rules['middlename'] = 'required|max_length[50]';
-            $rules['birthday'] = 'required|valid_date[Y-m-d]';
-            $rules['sex'] = 'required|in_list[Male,Female]';
-        }
-
-        return $rules;
     }
 
     /**
@@ -196,6 +141,40 @@ class MemberModel extends Model
         }
 
         return (int) $data['memberID'];
+    }
+
+    /**
+     * True when an ACTIVE head-of-family with the same name + birthday is already
+     * on file. The Excel importer calls this to SKIP families that already exist
+     * rather than inserting a duplicate. Comparison is case-insensitive on the
+     * (already Title-cased) first/last name and exact on the stored Y-m-d birthday.
+     *
+     * Only live heads block a re-import: an archived (retired) family is treated as
+     * gone, so re-importing it re-creates the record — matching the archive
+     * grandfather semantics used elsewhere.
+     */
+    public function activeHeadExists(string $firstname, string $lastname, ?string $birthday): bool
+    {
+        if (! $this->hasTable()) {
+            return false;
+        }
+
+        $builder = $this->db->table($this->table)
+            ->where('member.memberID = member.headID', null, false)
+            ->where('LOWER(member.firstname) = ' . $this->db->escape(mb_strtolower(trim($firstname))), null, false)
+            ->where('LOWER(member.lastname) = ' . $this->db->escape(mb_strtolower(trim($lastname))), null, false);
+
+        if ($birthday !== null && trim($birthday) !== '') {
+            $builder->where('member.birthday', $birthday);
+        } else {
+            $builder->where('member.birthday IS NULL', null, false);
+        }
+
+        if ($this->db->fieldExists('dt_deleted', $this->table)) {
+            $builder->where('member.dt_deleted IS NULL', null, false);
+        }
+
+        return $builder->countAllResults() > 0;
     }
 
     /**
@@ -224,16 +203,16 @@ class MemberModel extends Model
 
     /**
      * Returns all members of one family (by head ID) with sector names resolved.
-     * $visibility filters active/archived/all. Frontend: the family view/edit
+     * $status filters active/archived/all. Frontend: the family view/edit
      * screens via DashboardPageBuilder.
      */
-    public function getFamilyMembers(int $headId, string $visibility = 'active'): array
+    public function getFamilyMembers(int $headId, string $status = RecordStatus::ACTIVE): array
     {
         if (! $this->hasTable()) {
             return [];
         }
 
-        $rows = $this->memberDashboardBuilder($visibility)
+        $rows = $this->memberDashboardBuilder($status)
             ->where('member.headID', $headId)
             ->orderBy('member.memberID', 'ASC')
             ->get()
@@ -242,32 +221,15 @@ class MemberModel extends Model
         return $this->withSectorNames($rows);
     }
 
-    /**
-     * Fetches a single member (joined with head name) with sector IDs resolved to
-     * names, or null if not found. Used by the family view/edit detail screens.
-     */
-    public function findWithSector(int $memberId): ?array
-    {
-        if (! $this->hasTable()) {
-            return null;
-        }
-
-        $member = $this->memberDashboardBuilder()
-            ->where('member.memberID', $memberId)
-            ->get()
-            ->getRowArray();
-
-        if ($member === null) {
-            return null;
-        }
-
-        return $this->withSectorNames([$member])[0] ?? null;
-    }
-
     // FIRST (quick) search bar of the Manage Records tab. Lists family HEADS only.
     // $filters carries the Manage Records filter controls (sectorID + date); see
     // App\Libraries\DashboardPageBuilder::buildMemberListData() which supplies them.
-    public function searchFamilies(?string $keyword = null, int $limit = 50, int $offset = 0, string $visibility = 'all', array $filters = []): array
+    //
+    // $orderKey/$orderDirection are an OPTIONAL, append-only addition used by the
+    // server-side DataTables endpoint (FamilyController::dataTable) for column
+    // sorting. When $orderKey is null the original ordering (newest first, by
+    // memberID DESC) is preserved, so existing callers are unaffected.
+    public function searchFamilies(?string $keyword = null, int $limit = 50, int $offset = 0, string $status = RecordStatus::ALL, array $filters = [], ?string $orderKey = null, string $orderDirection = 'asc'): array
     {
         if (! $this->hasTable()) {
             return [];
@@ -276,44 +238,73 @@ class MemberModel extends Model
         $limit = max(1, $limit);
         $offset = max(0, $offset);
 
-        $builder = $this->familySearchBuilder($keyword, $visibility, $filters)
-            ->orderBy('member.memberID', 'DESC')
-            ->limit($limit, $offset);
+        $builder = $this->familySearchBuilder($keyword, $status, $filters);
+        $this->applyMemberOrder($builder, $orderKey, $orderDirection);
+        $builder->limit($limit, $offset);
 
         return $this->withSectorNames($builder->get()->getResultArray());
+    }
+
+    /**
+     * Applies a DataTables column sort to a member query, or the default
+     * newest-first ordering when $orderKey is null/unrecognized. Column keys map
+     * to the visible Manage Records columns: name (lastname, firstname), address,
+     * birthday. Used only by the server-side DataTables path.
+     */
+    private function applyMemberOrder($builder, ?string $orderKey, string $orderDirection): void
+    {
+        $direction = strtolower(trim($orderDirection)) === 'desc' ? 'DESC' : 'ASC';
+
+        switch ($orderKey) {
+            case 'name':
+                $builder->orderBy('member.lastname', $direction)
+                    ->orderBy('member.firstname', $direction);
+                return;
+            case 'address':
+                if ($this->memberFieldExists('address')) {
+                    $builder->orderBy('member.address', $direction);
+                    return;
+                }
+                break;
+            case 'birthday':
+                $builder->orderBy('member.birthday', $direction);
+                return;
+        }
+
+        $builder->orderBy('member.memberID', 'DESC');
     }
 
     /**
      * Total count for the same query as searchFamilies(), used to drive the Manage
      * Records pagination controls on the frontend.
      */
-    public function countSearchFamilies(?string $keyword = null, string $visibility = 'all', array $filters = []): int
+    public function countSearchFamilies(?string $keyword = null, string $status = RecordStatus::ALL, array $filters = []): int
     {
         if (! $this->hasTable()) {
             return 0;
         }
 
-        return $this->familySearchBuilder($keyword, $visibility, $filters)->countAllResults();
+        return $this->familySearchBuilder($keyword, $status, $filters)->countAllResults();
     }
 
     // Builds the head-only records query. $filters (optional) applies the Manage Records
     // filter controls: 'sectorID' (exact match inside the JSON array), 'barangay',
     // and 'date'
     // (single-day match on member.dt_created). Empty $filters = original behavior unchanged.
-    private function familySearchBuilder(?string $keyword = null, string $visibility = 'all', array $filters = [])
+    private function familySearchBuilder(?string $keyword = null, string $status = RecordStatus::ALL, array $filters = [])
     {
-        if ($visibility === '1') {
-            $visibility = 'archived';
-        } elseif ($visibility === '') {
-            $visibility = 'active';
+        if ($status === '1') {
+            $status = RecordStatus::ARCHIVED;
+        } elseif ($status === '') {
+            $status = RecordStatus::ACTIVE;
         }
 
-        $visibility = in_array($visibility, ['active', 'archived', 'all'], true) ? $visibility : 'all';
-        $builder = $this->memberDashboardBuilder($visibility)
+        $status = in_array($status, [RecordStatus::ACTIVE, RecordStatus::ARCHIVED, RecordStatus::ALL], true) ? $status : RecordStatus::ALL;
+        $builder = $this->memberDashboardBuilder($status)
             ->where('member.memberID = member.headID', null, false);
 
         if ($keyword !== null && trim($keyword) !== '') {
-            $this->applyMemberKeyword($builder, trim($keyword));
+            $this->applyMemberKeyword($builder, trim($keyword), 'member.', ['religion', 'address', 'barangay'], 'member.sectorID');
         }
 
         $this->applyRecordFilters($builder, $filters);
@@ -321,105 +312,13 @@ class MemberModel extends Model
         return $builder;
     }
 
-    /**
-     * Adds the Manage Records keyword clause to a member query. Each whitespace
-     * token must match one of the name columns (AND across tokens, OR across
-     * firstname/middlename/lastname), so a full "Firstname Lastname" matches even
-     * though the words live in different columns. The whole keyword is still matched
-     * against the non-name fields (contact/relationship/religion/address/sector) as
-     * an OR branch, so single-word and non-name searches behave as before.
-     */
-    private function applyMemberKeyword($builder, string $keyword): void
-    {
-        $tokens = preg_split('/\s+/', $keyword, -1, PREG_SPLIT_NO_EMPTY) ?: [$keyword];
-
-        $builder->groupStart();
-
-        // Name tokens, AND-ed together.
-        $builder->groupStart();
-        foreach ($tokens as $token) {
-            $builder->groupStart()
-                ->like('member.firstname', $token)
-                ->orLike('member.middlename', $token)
-                ->orLike('member.lastname', $token)
-                ->orLike('member.suffix', $token)
-                ->groupEnd();
-        }
-        $builder->groupEnd();
-
-        // Whole-keyword matches on the non-name fields, OR-ed with the name match.
-        $builder->orGroupStart()
-            ->like('member.contactnumber', $keyword)
-            ->orLike('member.relationship', $keyword);
-
-        foreach (['religion', 'address', 'barangay'] as $field) {
-            if ($this->memberFieldExists($field)) {
-                $builder->orLike('member.' . $field, $keyword);
-            }
-        }
-
-        foreach ($this->sectorIdsForKeyword($keyword) as $sectorId) {
-            $builder->orWhere(SectorIds::containsCondition($sectorId, 'member.sectorID'), null, false);
-        }
-
-        $builder->groupEnd();
-
-        $builder->groupEnd();
-    }
-
     // Applies the Manage Records filter controls to a member query builder.
     // Connects to: family-list.php filter form -> DashboardPageBuilder -> here.
     private function applyRecordFilters($builder, array $filters): void
     {
-        $sectorIds = $this->normalizeFilterList($filters['sectorID'] ?? []);
-
-        if ($sectorIds !== []) {
-            $builder->groupStart();
-            foreach ($sectorIds as $index => $sectorId) {
-                if ($index === 0) {
-                    $builder->where(SectorIds::containsCondition((int) $sectorId, 'member.sectorID'), null, false);
-                    continue;
-                }
-
-                $builder->orWhere(SectorIds::containsCondition((int) $sectorId, 'member.sectorID'), null, false);
-            }
-            $builder->groupEnd();
-        }
-
-        $barangays = $this->normalizeFilterList($filters['barangay'] ?? [], false);
-
-        if ($barangays !== [] && $this->memberFieldExists('barangay')) {
-            $builder->whereIn('member.barangay', $barangays);
-        }
-
-        $date = trim((string) ($filters['date'] ?? ''));
-
-        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) === 1) {
-            $builder
-                ->where('member.dt_created >=', $date . ' 00:00:00')
-                ->where('member.dt_created <=', $date . ' 23:59:59');
-        }
-    }
-
-    private function normalizeFilterList(mixed $value, bool $integers = true): array
-    {
-        $values = is_array($value) ? $value : [$value];
-        $normalized = [];
-
-        foreach ($values as $item) {
-            $item = trim((string) $item);
-
-            if ($item === '' || $item === '__all') {
-                continue;
-            }
-
-            $normalized[] = $integers ? (string) (int) $item : $item;
-        }
-
-        return array_values(array_unique(array_filter(
-            $normalized,
-            static fn (string $item): bool => $item !== '' && $item !== '0'
-        )));
+        $this->applySectorIdFilter($builder, $filters['sectorID'] ?? [], 'member.sectorID');
+        $this->applyBarangayFilter($builder, $filters['barangay'] ?? [], 'member.address', 'member.barangay');
+        $this->applyDateRange($builder, 'member.dt_created', $filters);
     }
 
     /**
@@ -437,6 +336,164 @@ class MemberModel extends Model
             ->findAll();
 
         return array_values(array_map(static fn (array $row): int => (int) ($row['memberID'] ?? 0), $rows));
+    }
+
+    /**
+     * Active heads of family (headID = memberID, not archived) for QR card
+     * generation. Each row: memberID, a display fullname, and barangay.
+     * Optional $filter narrows by 'barangay' (string) and/or 'sectorID' (int).
+     *
+     * @return list<array{memberID:int, fullname:string, barangay:string}>
+     */
+    public function headsForCards(array $filter = []): array
+    {
+        $hasBarangayColumn = $this->memberFieldExists('barangay');
+
+        $builder = $this->db->table('member')
+            ->select('member.memberID, member.lastname, member.firstname, member.middlename, member.suffix, member.address, qc.control_no'
+                . ($hasBarangayColumn ? ', member.barangay' : ''))
+            ->join('qr_control qc', 'qc.headID = member.memberID', 'left')
+            ->where('member.headID = member.memberID', null, false);
+
+        if ($this->db->fieldExists('dt_deleted', 'member')) {
+            $builder->where('member.dt_deleted IS NULL', null, false);
+        }
+
+        if (isset($filter['memberID']) && (int) $filter['memberID'] > 0) {
+            $builder->where('member.memberID', (int) $filter['memberID']);
+        }
+
+        if (! empty($filter['barangay'])) {
+            if ($hasBarangayColumn) {
+                $builder->where('member.barangay', $filter['barangay']);
+            } else {
+                // Barangay lives at the tail of the combined address ("address, barangay").
+                $builder->groupStart()
+                    ->like('member.address', ', ' . $filter['barangay'], 'before')
+                    ->orWhere('member.address', $filter['barangay'])
+                    ->groupEnd();
+            }
+        }
+
+        if (! empty($filter['sectorID'])) {
+            // sectorID is stored as a JSON array ('[1,2,3]'); match membership.
+            $builder->where(SectorIds::containsCondition((int) $filter['sectorID'], 'member.sectorID'), null, false);
+        }
+
+        $builder->orderBy('qc.control_no IS NULL', 'asc', false)
+            ->orderBy('qc.control_no', 'asc')
+            ->orderBy('member.memberID', 'asc');
+
+        $rows = $builder->get()->getResultArray();
+
+        // Barangay is stored at the tail of the combined address; match it against the
+        // canonical list (longest first) so it prints on the QR card.
+        $barangays = \App\Support\FamilyProfilingFormV2::barangays();
+        usort($barangays, static fn (string $a, string $b): int => mb_strlen($b) <=> mb_strlen($a));
+
+        return array_map(static function (array $row) use ($barangays): array {
+            $name = trim(sprintf(
+                '%s, %s %s %s',
+                $row['lastname'] ?? '',
+                $row['firstname'] ?? '',
+                $row['middlename'] ?? '',
+                $row['suffix'] ?? ''
+            ));
+
+            $barangay = trim((string) ($row['barangay'] ?? ''));
+
+            if ($barangay === '') {
+                $address = trim((string) ($row['address'] ?? ''));
+                foreach ($barangays as $candidate) {
+                    if (str_ends_with($address, ', ' . $candidate) || strcasecmp($address, $candidate) === 0) {
+                        $barangay = $candidate;
+                        break;
+                    }
+                }
+            }
+
+            return [
+                'memberID'  => (int) $row['memberID'],
+                'controlNo' => isset($row['control_no']) ? (int) $row['control_no'] : (int) $row['memberID'],
+                'fullname'  => preg_replace('/\s+/', ' ', $name),
+                'barangay'  => $barangay,
+            ];
+        }, $rows);
+    }
+
+    /**
+     * Resolves the family head's id for any active member. For a head this is
+     * its own memberID (headID == memberID); for a non-head member it is their
+     * headID. Returns null when $memberID is not an active member. Drives the QR
+     * scan-lookup so scanning any member's id lands on the family (head) record.
+     */
+    public function familyHeadIdFor(int $memberID): ?int
+    {
+        if ($memberID <= 0) {
+            return null;
+        }
+
+        $builder = $this->db->table('member')->where('memberID', $memberID);
+        if ($this->db->fieldExists('dt_deleted', 'member')) {
+            $builder->where('member.dt_deleted IS NULL', null, false);
+        }
+
+        $row = $builder->get()->getRowArray();
+        if ($row === null) {
+            return null;
+        }
+
+        $headId = (int) ($row['headID'] ?? 0);
+
+        return $headId > 0 ? $headId : null;
+    }
+
+    /**
+     * Returns the active head row for $memberID, or null when it is not an
+     * active head (headID != memberID, archived, or missing). Drives scan-lookup.
+     */
+    public function findHead(int $memberID): ?array
+    {
+        if ($memberID <= 0) {
+            return null;
+        }
+
+        $builder = $this->db->table('member')
+            ->where('memberID', $memberID)
+            ->where('member.headID = member.memberID', null, false);
+
+        if ($this->db->fieldExists('dt_deleted', 'member')) {
+            $builder->where('member.dt_deleted IS NULL', null, false);
+        }
+
+        $row = $builder->get()->getRowArray();
+
+        return $row ?: null;
+    }
+
+    /**
+     * All active members of a family (head + relatives), head first. Drives the
+     * scan claimant dropdown. Returns [] for a non-positive id.
+     */
+    public function familyMembers(int $headId): array
+    {
+        if ($headId <= 0) {
+            return [];
+        }
+
+        $builder = $this->db->table('member')
+            ->select('memberID, firstname, lastname, relationship, birthday, sex')
+            ->where('headID', $headId);
+
+        if ($this->db->fieldExists('dt_deleted', 'member')) {
+            $builder->where('member.dt_deleted IS NULL', null, false);
+        }
+
+        // Head (memberID == headId) sorts first, then the rest by memberID.
+        $builder->orderBy('CASE WHEN memberID = ' . $headId . ' THEN 0 ELSE 1 END', 'ASC', false)
+            ->orderBy('memberID', 'ASC');
+
+        return $builder->get()->getResultArray();
     }
 
     /** Updates the head-of-family row during a family edit submission. */
@@ -505,10 +562,10 @@ class MemberModel extends Model
 
     /**
      * Central query builder for member listings: selects the display columns,
-     * left-joins the head's name, and applies the active/archived/all visibility
-     * filter. Shared by the recent, search, family, and detail queries.
+     * left-joins the head's name, and applies the active/archived/all status
+     * filter. Shared by the search, family, and detail queries.
      */
-    private function memberDashboardBuilder(string $visibility = 'active')
+    private function memberDashboardBuilder(string $status = RecordStatus::ACTIVE)
     {
         $select = [
             'member.memberID',
@@ -544,74 +601,14 @@ class MemberModel extends Model
             ->join('member head', 'head.memberID = member.headID', 'left');
 
         if ($this->db->fieldExists('dt_deleted', 'member')) {
-            if ($visibility === 'archived') {
+            if ($status === RecordStatus::ARCHIVED) {
                 $builder->where('member.dt_deleted IS NOT NULL', null, false);
-            } elseif ($visibility !== 'all') {
+            } elseif ($status !== RecordStatus::ALL) {
                 $builder->where('member.dt_deleted IS NULL', null, false);
             }
         }
 
         return $builder;
-    }
-
-    /**
-     * DECODE/display path. For each member row, takes the raw JSON sectorID
-     * string and adds a 'sector_name' field with the IDs resolved to names.
-    * See App\Libraries\SectorIds::toNames().
-     */
-    private function withSectorNames(array $rows): array
-    {
-        $sectorNames = $this->sectorNameMap();
-
-        foreach ($rows as &$row) {
-            $sectorValue = $row['sector_array_string'] ?? $row['sectorID'] ?? '[]';
-            $row['sectorID'] = $sectorValue;
-            $row['sector_name'] = SectorIds::toNames($sectorValue, $sectorNames);
-        }
-
-        return $rows;
-    }
-
-    /** Builds an [sectorID => name] map used to resolve sector names for display. */
-    private function sectorNameMap(): array
-    {
-        if (! $this->db->tableExists('sector')) {
-            return [];
-        }
-
-        $sectors = $this->db->table('sector')
-            ->select('sectorID, name')
-            ->get()
-            ->getResultArray();
-
-        $map = [];
-
-        foreach ($sectors as $sector) {
-            $map[(int) $sector['sectorID']] = (string) $sector['name'];
-        }
-
-        return $map;
-    }
-
-    /**
-     * Finds sector IDs whose name/description match a search keyword, so the
-     * Manage Records search can also match members by their sector text.
-     */
-    private function sectorIdsForKeyword(string $keyword): array
-    {
-        if (! $this->db->tableExists('sector')) {
-            return [];
-        }
-
-        return array_map(
-            static fn (array $sector): int => (int) $sector['sectorID'],
-            $this->db->table('sector')
-                ->select('sectorID')
-                ->like('name', $keyword)
-                ->orLike('description', $keyword)
-                ->get()
-                ->getResultArray()
-        );
     }
 
     /**

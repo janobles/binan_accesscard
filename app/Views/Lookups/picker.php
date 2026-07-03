@@ -64,8 +64,7 @@ $selectedServiceIds = ViewFormatter::integerList($selectedServiceIds ?? [], true
                             <?php
                             $serviceId = (string) ($service['serviceID'] ?? '');
                             $name = trim((string) ($service['name'] ?? ''));
-                            $description = trim((string) ($service['description'] ?? ''));
-                            $serviceLabel = $description === '' ? $name : $name . ' - ' . $description;
+                            $serviceLabel = $name;
                             $isArchived = ! empty($service['is_archived']);
                             ?>
                             <label class="family-choice-row<?= $isArchived ? ' family-choice-row--archived' : '' ?>">

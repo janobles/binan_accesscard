@@ -3,11 +3,10 @@
 namespace App\Controllers\Lookups;
 
 use App\Controllers\BaseController;
+use App\Controllers\Concerns\LookupControllerTrait;
 use App\Libraries\RoleAccess;
-use App\Models\Audit\AuditTrailsModel;
 use App\Models\Lookups\ServiceModel;
 use CodeIgniter\HTTP\RedirectResponse;
-use Throwable;
 
 /**
  * Handles the write/mutation actions for the `services` lookup table, posted from
@@ -17,6 +16,8 @@ use Throwable;
  */
 class ServiceController extends BaseController
 {
+    use LookupControllerTrait;
+
     /**
      * POST `admin/services/create`: add a new service/program. Delegates to
      * saveService(). Frontend: the "Add service" modal form.
@@ -154,23 +155,31 @@ class ServiceController extends BaseController
             $category = trim((string) $this->request->getPost('category_other'));
         }
 
+        $shortcode = strtoupper(trim((string) $this->request->getPost('shortcode')));
+
         $data = [
+            'shortcode' => $shortcode,
             'category' => $category,
             'name' => trim((string) $this->request->getPost('name')),
             'description' => trim((string) $this->request->getPost('description')),
         ];
 
-        if ($data['category'] === '' || $data['name'] === '') {
-            return $this->redirectAdmin('admin/services', 'error', 'Category and name are required.');
+        if ($data['category'] === '' || $data['name'] === '' || $data['shortcode'] === '') {
+            return $this->redirectAdmin('admin/services', 'error', 'Code, category and name are required.');
+        }
+
+        // The code is the unique key the Excel import uses, so it must not clash.
+        if ($model->shortcodeExists($data['shortcode'], $serviceId)) {
+            return $this->redirectAdmin('admin/services', 'error', 'The code "' . $data['shortcode'] . '" is already used by another service.');
         }
 
         $isUpdate = $serviceId !== null;
 
         if ($isUpdate) {
-            $model->update($serviceId, $data);
+            $model->update($serviceId, $model->dataForCurrentSchema($data));
         } else {
             $data['serviceID'] = $model->nextServiceId();
-            $model->insert($data);
+            $model->insert($model->dataForCurrentSchema($data));
             $serviceId = (int) $data['serviceID'];
         }
 
@@ -202,60 +211,15 @@ class ServiceController extends BaseController
     }
 
     /**
-     * Role guard for archive/restore/delete: returns a redirect for non
-     * Developer/Admin users, or null to proceed.
-     */
-    private function ensureAdminAccess(): ?RedirectResponse
-    {
-        $guard = RoleAccess::requireRole(['Developer', 'Admin']);
-
-        return $guard instanceof RedirectResponse ? $guard : null;
-    }
-
-    /**
-     * Builds a redirect back to an admin path carrying a typed flash message
-     * (e.g. 'success'/'error').
-     */
-    private function redirectAdmin(string $path, string $type, string $message): RedirectResponse
-    {
-        return redirect()->to(site_url($path))->with($type, $message);
-    }
-
-    /**
      * Human-readable service label for audit descriptions, e.g. "Aid (General) #12".
      */
     private function serviceLabel(?array $service, int $serviceId): string
     {
         $name = trim((string) ($service['name'] ?? ''));
         $category = trim((string) ($service['category'] ?? ''));
-        $label = trim($name . ($category !== '' ? ' (' . $category . ')' : ''));
+        $code = trim((string) ($service['shortcode'] ?? ''));
+        $label = trim(($code !== '' ? $code . ' ' : '') . $name . ($category !== '' ? ' (' . $category . ')' : ''));
 
         return ($label === '' ? 'service/program' : 'service/program ' . $label) . ' #' . $serviceId;
-    }
-
-    /**
-     * Write a service action to the audit trail. Service actions have no affected
-     * member, so memberID is null (audit_trails.memberID is nullable).
-     */
-    private function audit(string $action, string $description): void
-    {
-        $auditModel = new AuditTrailsModel();
-
-        if (! $auditModel->hasTable()) {
-            return;
-        }
-
-        try {
-            $auditModel->logAction(
-                (int) session()->get('user_id'),
-                null,
-                $action,
-                $description,
-                $this->request->getIPAddress(),
-                $this->request->getUserAgent()->getAgentString()
-            );
-        } catch (Throwable $exception) {
-            log_message('error', 'Audit trail skipped: ' . $exception->getMessage());
-        }
     }
 }

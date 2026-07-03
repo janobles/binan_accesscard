@@ -34,6 +34,24 @@
     gap: 0.4rem;
 }
 
+.actions-menu-toggle {
+    display: inline-flex;
+    width: 2.35rem;
+    min-width: 2.35rem;
+    height: 2.2rem;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.actions-menu-toggle i {
+    line-height: 1;
+}
+
+.actions-menu-toggle::after {
+    display: none !important;
+}
+
 .records-scroll-panel {
     display: flex;
     height: 100%;
@@ -68,6 +86,51 @@
 
 .records-quick-search {
     grid-template-columns: minmax(min(100%, 13rem), 1.7fr) repeat(3, minmax(min(100%, 7rem), 0.95fr)) repeat(3, minmax(min(100%, 5.5rem), 0.75fr));
+}
+
+/* Scanner Manage: folder tabs sit on top of the .sector-management panel and
+   merge into it (active tab shares the panel's border/background). */
+.manage-tabs {
+    border-bottom: none;
+    padding-left: 0.35rem;
+    gap: 0.2rem;
+}
+
+.manage-tabs .nav-link {
+    border: 1px solid transparent;
+    border-bottom: none;
+    border-top-left-radius: 0.35rem;
+    border-top-right-radius: 0.35rem;
+    color: #4b5a55;
+    font-size: 0.9rem;
+    padding: 0.5rem 1rem;
+}
+
+.manage-tabs .nav-link:hover {
+    color: #145c3d;
+    border-color: transparent;
+}
+
+.manage-tabs .nav-link.active {
+    color: #145c3d;
+    font-weight: 600;
+    background: #ffffff;
+    border-color: #dce5e2;
+    /* Overlap the panel's top border so the tab reads as part of the card. */
+    margin-bottom: -1px;
+}
+
+.manage-tabs + .tab-content .sector-management {
+    border-top-left-radius: 0;
+}
+
+/* QR card generator: two filter selects side by side, action spans both. */
+#qr-cards-page .records-search-row {
+    grid-template-columns: 1fr 1fr;
+}
+
+#qr-cards-page .records-search-action {
+    grid-column: 1 / -1;
 }
 
 .records-search-row .form-control,
@@ -153,7 +216,9 @@
 }
 
 .records-search-action.btn-outline-secondary,
-.records-search-action[data-records-clear] {
+.records-search-action.btn-danger,
+.records-search-action[data-records-clear],
+[data-records-clear] {
     --bs-btn-color: #ffffff;
     --bs-btn-border-color: var(--records-clear-color);
     --bs-btn-bg: var(--records-clear-color);
@@ -171,8 +236,12 @@
 
 .records-search-action.btn-outline-secondary:hover,
 .records-search-action.btn-outline-secondary:focus,
+.records-search-action.btn-danger:hover,
+.records-search-action.btn-danger:focus,
 .records-search-action[data-records-clear]:hover,
-.records-search-action[data-records-clear]:focus {
+.records-search-action[data-records-clear]:focus,
+[data-records-clear]:hover,
+[data-records-clear]:focus {
     color: #ffffff;
     border-color: var(--records-clear-hover);
     background-color: var(--records-clear-hover);
@@ -297,6 +366,11 @@
 }
 
 .records-scroll-panel .table-responsive > .table {
+    font-size: 1rem;
+    line-height: 1.5;
+}
+
+.records-scroll-panel .table-responsive > .dt-container {
     font-size: 1rem;
     line-height: 1.5;
 }
@@ -465,4 +539,103 @@
         padding-right: 0.55rem;
         padding-left: 0.55rem;
     }
+}
+
+/* ---------------------------------------------------------------------------
+ * Server-side DataTables list filter row (Manage Records). Ported from jade
+ * when the family list was migrated to DataTables. Scoped to #familyDataTableFilters.
+ * ------------------------------------------------------------------------- */
+#familyDataTableFilters .btn-toolbar,
+#familyDataTableFilters .btn-group {
+    height: 100%;
+    min-height: var(--records-search-control-height);
+}
+
+#familyDataTableFilters .btn-group {
+    gap: 0.45rem;
+}
+
+#familyDataTableFilters [data-records-filter],
+#familyDataTableFilters .form-select[name="status"] {
+    min-width: 0;
+}
+
+#familyDataTableFilters [data-records-filter] .dropdown-toggle,
+#familyDataTableFilters .form-select[name="status"] {
+    font-size: var(--ui-font-sm, 0.8rem);
+}
+
+@media (min-width: 75rem) {
+    #familyDataTableFilters .family-keyword-field {
+        flex: 0 0 34%;
+        max-width: 34%;
+    }
+
+    #familyDataTableFilters .family-filter-field {
+        flex: 0 0 13%;
+        max-width: 13%;
+    }
+
+    #familyDataTableFilters .family-action-field {
+        flex: 0 0 27%;
+        max-width: 27%;
+    }
+}
+
+#familyDataTableFilters .btn-group .btn {
+    min-width: 0;
+    flex: 1 1 0;
+    padding-right: 0.75rem;
+    padding-left: 0.75rem;
+    font-size: var(--ui-font-sm, 0.8rem);
+    border-radius: 0.35rem;
+}
+
+#familyDataTableFilters .btn-group > .btn:not(:last-child):not(.dropdown-toggle),
+#familyDataTableFilters .btn-group > .btn.dropdown-toggle-split:first-child,
+#familyDataTableFilters .btn-group > .btn-group:not(:last-child) > .btn,
+#familyDataTableFilters .btn-group > .btn:nth-child(n + 3),
+#familyDataTableFilters .btn-group > :not(.btn-check) + .btn {
+    border-radius: 0.35rem;
+}
+
+#familyDataTableFilters .js-open-family-import-modal {
+    color: #212529;
+    border-color: #ffc107;
+    background-color: #ffc107;
+}
+
+#familyDataTableFilters .js-open-family-import-modal:hover,
+#familyDataTableFilters .js-open-family-import-modal:focus {
+    color: #212529;
+    border-color: #ffca2c;
+    background-color: #ffca2c;
+}
+
+div.dt-container div.dt-paging {
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+div.dt-container div.dt-paging ul.pagination {
+    flex-wrap: nowrap !important;
+    justify-content: flex-end;
+}
+
+div.dt-container div.dt-paging .page-item {
+    flex: 0 0 auto;
+}
+
+div.dt-container div.dt-paging .page-link {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.6rem;
+    min-height: 2.5rem;
+    padding-right: 0.65rem;
+    padding-left: 0.65rem;
+    white-space: nowrap !important;
+    overflow-wrap: normal;
+    word-break: normal;
+    line-height: 1.2;
 }

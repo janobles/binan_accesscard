@@ -94,6 +94,17 @@ class SectorModel extends Model
     }
 
     /**
+     * Check for an existing name (case-insensitive), excluding one ID when
+     * editing. Shortcodes are already guarded by shortcodeExists(); this closes
+     * the gap where two sectors could share a name under different codes, which
+     * would break cascade matching that relies on exact names.
+     */
+    public function nameExists(string $name, ?int $excludeId = null): bool
+    {
+        return $this->columnValueExists('LOWER(name)', strtolower(trim($name)), $excludeId);
+    }
+
+    /**
      * True if any active sector matches this code (shortcode) OR name (case-insensitive).
      * Used to keep sectors and service categories disjoint: a Manage-Categories entry may
      * not duplicate a sector (a sector already acts as its own service category).

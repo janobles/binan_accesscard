@@ -119,7 +119,7 @@
             '<button type="button" class="fit-close" aria-label="Dismiss" hidden>&times;</button>' +
             '</div>' +
             '<div class="fit-msg"></div>' +
-            '<div class="progress" role="progressbar">' +
+            '<div class="progress" role="progressbar" aria-label="Import progress" aria-valuemin="0" aria-valuemax="100">' +
             '<div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 100%;"></div>' +
             '</div>' +
             '<div class="fit-errors"></div>';

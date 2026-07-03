@@ -188,7 +188,11 @@ class RestructureSectorsServices extends BaseCommand
 
         // 5. Rebuild category as the standalone service categories only (sector-backed
         //    categories SC/PWD/SP/B are represented by their sectors — Phase B).
-        $db->table('category')->truncate();
+        // DELETE, not TRUNCATE: TRUNCATE implicit-commits in MySQL even inside a
+        // transaction, so a later failure couldn't roll it back. Neither table's
+        // rows are referenced by hardcoded id elsewhere (only by shortcode/code/
+        // name, read back below), so losing the auto-increment reset is harmless.
+        $db->query('DELETE FROM `category`');
         $categoryRows = [];
         foreach (self::STANDALONE_CATEGORIES as $code => $name) {
             $categoryRows[] = ['code' => $code, 'name' => $name];
@@ -196,7 +200,7 @@ class RestructureSectorsServices extends BaseCommand
         $db->table('category')->insertBatch($categoryRows);
 
         // 6. Rebuild sector as the 10 classifications, then read back their new IDs.
-        $db->table('sector')->truncate();
+        $db->query('DELETE FROM `sector`');
         $sectorRows = [];
         foreach (self::SECTORS as $code => $name) {
             $sectorRows[] = ['shortcode' => $code, 'name' => $name, 'description' => ''];
@@ -332,26 +336,25 @@ class RestructureSectorsServices extends BaseCommand
         $path = $dir . DIRECTORY_SEPARATOR . 'restructure-' . date('Ymd-His') . '.sql';
         $err  = $path . '.err';
 
-        $candidates = ['C:\\xampp\\mysql\\bin\\mysqldump.exe', 'mysqldump'];
-        $dump       = 'mysqldump';
-        foreach ($candidates as $candidate) {
-            if ($candidate === 'mysqldump' || is_file($candidate)) {
-                $dump = $candidate;
-                break;
-            }
-        }
-
         $host = (string) ($config['hostname'] ?? 'localhost');
         $port = (string) ($config['port'] ?? 3306);
         $user = (string) ($config['username'] ?? 'root');
         $pass = (string) ($config['password'] ?? '');
         $name = (string) ($config['database'] ?? '');
 
-        $cmd = escapeshellarg($dump)
+        // Credentials go in a --defaults-extra-file, not a -p CLI arg, so the
+        // password never appears in the process list while mysqldump runs.
+        $credsFile = $this->writeMysqlCredsFile($user, $pass);
+        if ($credsFile === null) {
+            CLI::error('Failed to create a temp credentials file for mysqldump.');
+
+            return null;
+        }
+
+        $cmd = 'mysqldump'
+            . ' --defaults-extra-file=' . escapeshellarg($credsFile)
             . ' -h ' . escapeshellarg($host)
             . ' -P ' . escapeshellarg($port)
-            . ' -u ' . escapeshellarg($user)
-            . ($pass !== '' ? ' -p' . escapeshellarg($pass) : '')
             . ' ' . escapeshellarg($name)
             . ' sector services category member member_services'
             . ' > ' . escapeshellarg($path)
@@ -360,6 +363,7 @@ class RestructureSectorsServices extends BaseCommand
         $output = [];
         $code   = 0;
         exec($cmd, $output, $code);
+        unlink($credsFile);
 
         if ($code !== 0 || ! is_file($path) || filesize($path) === 0) {
             CLI::error('mysqldump exit code ' . $code . '. See ' . $err);
@@ -368,6 +372,29 @@ class RestructureSectorsServices extends BaseCommand
         }
 
         @unlink($err);
+
+        return $path;
+    }
+
+    /**
+     * Writes a --defaults-extra-file for mysqldump so the DB password never
+     * appears as a CLI argument (visible in the process list while it runs).
+     * Returns the temp file path, or null on failure. Caller must unlink it.
+     */
+    private function writeMysqlCredsFile(string $user, string $pass): ?string
+    {
+        $path = tempnam(sys_get_temp_dir(), 'binan-mysqldump-');
+        if ($path === false) {
+            return null;
+        }
+
+        $written = file_put_contents($path, "[client]\nuser={$user}\npassword={$pass}\n");
+        if ($written === false) {
+            @unlink($path);
+
+            return null;
+        }
+        @chmod($path, 0600);
 
         return $path;
     }

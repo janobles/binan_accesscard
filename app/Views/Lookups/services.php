@@ -178,5 +178,6 @@ $serviceClearUrl = static function () use ($listRoute, $status, $perPage): strin
 <?= view('Lookups/service-modal', [
 	'serviceCategoryOptions' => $serviceCategoryOptions,
 	'serviceNextCodeMap' => $serviceNextCodeMap ?? [],
+	'existingShortcodes' => $existingShortcodes ?? [],
 ]) ?>
 <?php endif; ?>

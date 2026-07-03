@@ -7,7 +7,8 @@
                                 data-update-action="<?= site_url('admin/services/update') ?>"
                                 data-archive-action="<?= site_url('admin/services/archive') ?>"
                                 data-restore-action="<?= site_url('admin/services/restore') ?>"
-                                data-next-code-map="<?= esc(json_encode((object) ($serviceNextCodeMap ?? [])), 'attr') ?>">
+                                data-next-code-map="<?= esc(json_encode((object) ($serviceNextCodeMap ?? [])), 'attr') ?>"
+                                data-existing-codes="<?= esc(json_encode(array_values($existingShortcodes ?? [])), 'attr') ?>">
                                 <?= csrf_field() ?>
                                 <div class="modal-header">
                                         <h5 class="modal-title" id="serviceActionModalLabel">Service or Program</h5>
@@ -19,6 +20,7 @@
                                                         <label class="form-label" for="serviceModalShortcode">Code</label>
                                                         <input class="form-control text-uppercase" id="serviceModalShortcode" name="shortcode" maxlength="30" placeholder="e.g. FA1, SWPS1, EDA1, 4PS" required>
                                                         <div class="form-text">Short code used when importing families from Excel. Must be unique.</div>
+                                                        <div class="invalid-feedback d-block d-none js-service-code-error">Duplicate code - please enter another code.</div>
                                                 </div>
                                                 <div class="mb-3">
                                                         <label class="form-label" for="serviceModalCategory">Category</label>

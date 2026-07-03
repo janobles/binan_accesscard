@@ -115,6 +115,34 @@ class ServiceModel extends Model
         return $builder->countAllResults() > 0;
     }
 
+    /**
+     * All current, active service shortcodes, uppercased and trimmed. Used by
+     * the modal's client-side duplicate check (see services-modal.js). Only
+     * active rows, matching shortcodeExists()'s dt_deleted filter, so the
+     * client list matches exactly what the server will actually reject.
+     */
+    public function existingShortcodes(): array
+    {
+        $codeColumn = $this->codeColumn();
+
+        if ($codeColumn === null || ! $this->hasTable()) {
+            return [];
+        }
+
+        $builder = $this->db->table($this->table)->select($codeColumn);
+
+        if ($this->db->fieldExists('dt_deleted', $this->table)) {
+            $builder->where('dt_deleted IS NULL', null, false);
+        }
+
+        $rows = $builder->get()->getResultArray();
+
+        return array_values(array_unique(array_filter(array_map(
+            static fn (array $row): string => strtoupper(trim((string) ($row[$codeColumn] ?? ''))),
+            $rows
+        ))));
+    }
+
     /** Services management list order: by category then ID. */
     protected function applyLookupOrder(BaseBuilder $builder): void
     {

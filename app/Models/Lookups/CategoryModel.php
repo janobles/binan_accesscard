@@ -97,6 +97,17 @@ class CategoryModel extends Model
     }
 
     /**
+     * Check for an existing name (case-insensitive), excluding one ID when
+     * editing. Codes are already guarded by codeExists(); this closes the gap
+     * where two categories could share a name under different codes, which
+     * would break cascade matching that relies on exact names.
+     */
+    public function nameExists(string $name, ?int $excludeId = null): bool
+    {
+        return $this->columnValueExists('LOWER(name)', strtolower(trim($name)), $excludeId);
+    }
+
+    /**
      * True if any active category matches this code OR name (case-insensitive),
      * optionally excluding one categoryID. Used to keep sectors and service
      * categories disjoint: a new sector may not duplicate a standalone category.

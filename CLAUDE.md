@@ -81,6 +81,20 @@ Notes:
 - **Copilot** rejects PRs over ~20,000 changed lines with no inline comments — don't
   wait on it for big branches; rely on CodeRabbit.
 
+### GitHub issue format
+
+- Title states the actual current scope.
+- One scope line near the top: `**Scope:** PR # · branch · base · tool`.
+- One checkbox style throughout: `- [ ] 🔴 Critical: \`path:line\` — description.`
+  (🔴 Critical, 🟠 Major, 🟡 Minor, ⚪ Cleanup, 🔵 UX/needs-decision — emoji + word,
+  colon, then `path:line`, then em dash before the description). Fixed items `[x]`
+  + `*(Fixed: ...)*`.
+- Reference-only material (already-fixed, won't-fix) in a collapsed
+  `<details><summary>...</summary>` block.
+- Check for an existing issue on the topic before opening a new one; fold in via a
+  body edit instead of duplicating. Prefer editing the body over adding comments.
+- Close with `gh issue close`, not a comment saying "closing".
+
 ## Tests (`tests/`)
 
 - `unit/DashboardControllerRoutingTest` — guards the feature-subnamespace routing.

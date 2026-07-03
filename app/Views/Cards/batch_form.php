@@ -53,6 +53,13 @@ $sectorOptions = (new \App\Models\Lookups\SectorModel())->getSectorOptions();
                 body: new FormData(form),
                 headers: { 'X-Requested-With': 'XMLHttpRequest' },
             });
+            // The server rotates the CSRF token on every request; refresh the
+            // hidden field from the response header so a second submit works.
+            const freshToken = resp.headers.get('X-CSRF-TOKEN');
+            if (freshToken) {
+                const csrfInput = form.querySelector('input[type="hidden"]');
+                if (csrfInput) { csrfInput.value = freshToken; }
+            }
             if (!resp.ok) {
                 const text = await resp.text();
                 let message = 'Generation failed.';

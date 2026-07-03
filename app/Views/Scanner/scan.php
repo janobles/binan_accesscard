@@ -76,7 +76,15 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&
 
 async function lookup(control) {
   $('lookupAlert').hidden = true;
-  const res = await fetch(`${BASE}/scanner/lookup/${encodeURIComponent(control)}`);
+  let res;
+  try {
+    res = await fetch(`${BASE}/scanner/lookup/${encodeURIComponent(control)}`);
+  } catch (err) {
+    $('lookupAlert').textContent = 'Network error. Please check your connection and try again.';
+    $('lookupAlert').hidden = false;
+    $('familyPanel').hidden = true;
+    return;
+  }
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     $('lookupAlert').textContent = err.error || 'Lookup failed.';
@@ -99,7 +107,9 @@ async function lookup(control) {
     data.members.map(m => `<option value="${esc(m.memberID)}">${esc(m.firstname)} ${esc(m.lastname)} (${esc(m.relationship || 'Member')})</option>`).join('');
   $('control_no').value = data.control_no;
   if (!$('claim_date').value) {
-    $('claim_date').value = new Date().toISOString().slice(0, 10);
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    $('claim_date').value = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
   }
   $('familyPanel').hidden = false;
 }
@@ -136,6 +146,8 @@ $('logForm').addEventListener('submit', async (e) => {
     $('logAlert').textContent = 'Distribution logged successfully.';
     $('logAlert').hidden = false;
     renderHistory(data.history);
+  } catch (err) {
+    $('fieldErrors').innerHTML = '<div>Network error. Please check your connection and try again.</div>';
   } finally {
     $('submitBtn').disabled = false;
   }
@@ -151,7 +163,11 @@ $('cameraBtn').addEventListener('click', () => {
       scanner.stop().then(() => { reader.hidden = true; });
       $('controlInput').value = text.trim();
       lookup(text.trim());
-    }, () => {});
+    }, () => {}).catch(() => {
+      reader.hidden = true;
+      $('lookupAlert').textContent = 'Camera unavailable. Check permissions or use manual entry.';
+      $('lookupAlert').hidden = false;
+    });
 });
 </script>
 <?= $this->endSection() ?>

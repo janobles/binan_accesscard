@@ -69,7 +69,9 @@ $accounts = array_merge($adminAccounts, $employeeAccounts, $viewerAccounts, $sca
                         $statusFilter = $isActive ? 'active' : 'inactive';
                         $canEditRow = $canEditAccounts && in_array($rawRole, ['administrator', 'encoder', 'viewer', 'scanner'], true);
                         $canDeveloperToggle = $isDeveloper && in_array($rawRole, ['administrator', 'encoder', 'viewer', 'scanner'], true);
-                        $canAdminToggle = $isAdmin && in_array($rawRole, ['encoder', 'viewer', 'scanner'], true);
+                        // Backend enableAccount/disableAccount only accept encoder/viewer;
+                        // scanner toggling is Developer-only (see canDeveloperToggle above).
+                        $canAdminToggle = $isAdmin && in_array($rawRole, ['encoder', 'viewer'], true);
                         $hasRowActions = $canEditRow || $canDeveloperToggle || $canAdminToggle;
                         ?>
                         <tr data-account-row data-account-username="<?= esc(mb_strtolower((string) ($account['username'] ?? '')), 'attr') ?>" data-account-role="<?= esc(mb_strtolower($rawRole), 'attr') ?>" data-account-status="<?= esc($statusFilter, 'attr') ?>">

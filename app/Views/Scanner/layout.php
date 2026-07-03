@@ -12,7 +12,7 @@ $idleTimeoutSeconds  = $idleTimeoutSeconds ?? 900;
 $currentRole         = $currentRole ?? (string) (session()->get('role') ?? '');
 $isScannerRole       = $currentRole === 'Scanner';
 $canManageAccounts   = $canManageAccounts ?? false;
-$sidebarRoleClass    = $sidebarRoleClass ?? ($canManageAccounts ? 'developer' : 'admin');
+$sidebarRoleClass    = $sidebarRoleClass ?? ($canManageAccounts ? 'developer' : ($isScannerRole ? 'scanner' : 'admin'));
 $sidebarUserUrl      = $sidebarUserUrl ?? site_url('admin/dashboard');
 $navActive           = $navActive ?? ['scanner' => 'active'];
 ?>

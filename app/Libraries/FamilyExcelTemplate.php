@@ -195,7 +195,9 @@ class FamilyExcelTemplate
         $firstRow = self::FIRST_DATA_ROW;
         $lastRow = self::LAST_TEMPLATE_ROW;
 
-        // Birthday + contact number as text so dates and leading-zero phones survive.
+        // QR Number, Birthday + contact number as text so long/leading-zero
+        // numbers and dates survive Excel round-trip.
+        $sheet->getStyle('A' . $firstRow . ':A' . $lastRow)->getNumberFormat()->setFormatCode('@');
         $sheet->getStyle('G' . $firstRow . ':G' . $lastRow)->getNumberFormat()->setFormatCode('@');
         $sheet->getStyle('J' . $firstRow . ':J' . $lastRow)->getNumberFormat()->setFormatCode('@');
 

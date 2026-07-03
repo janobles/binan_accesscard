@@ -43,7 +43,7 @@ class ReportsController extends BaseController
             'byAidType'         => $byAidType,
             'currentRole'       => $role,
             'canManageAccounts' => $canManage,
-            'sidebarRoleClass'  => $canManage ? 'developer' : 'admin',
+            'sidebarRoleClass'  => strtolower($role),
             'sidebarUserUrl'    => site_url('admin/dashboard'),
             'navActive'         => ['scanner-reports' => 'active'],
         ]);

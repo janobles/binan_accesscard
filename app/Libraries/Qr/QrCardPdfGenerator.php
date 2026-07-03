@@ -57,13 +57,18 @@ final class QrCardPdfGenerator
             if ($zip->open($zipPath, \ZipArchive::OVERWRITE) !== true) {
                 throw new \RuntimeException('ZipArchive::open() failed.');
             }
-            foreach ($chunks as $chunk) {
-                $chunkFirst = ControlNumber::format($chunk[0]['controlNo'] ?? $chunk[0]['memberID']);
-                $chunkLast  = ControlNumber::format($chunk[count($chunk) - 1]['controlNo'] ?? $chunk[count($chunk) - 1]['memberID']);
-                $entryName  = sprintf($settings->chunkPdfNamePattern, $chunkFirst, $chunkLast);
-                $zip->addFromString($entryName, $this->renderChunkPdf($chunk));
+            try {
+                foreach ($chunks as $chunk) {
+                    $chunkFirst = ControlNumber::format($chunk[0]['controlNo'] ?? $chunk[0]['memberID']);
+                    $chunkLast  = ControlNumber::format($chunk[count($chunk) - 1]['controlNo'] ?? $chunk[count($chunk) - 1]['memberID']);
+                    $entryName  = sprintf($settings->chunkPdfNamePattern, $chunkFirst, $chunkLast);
+                    $zip->addFromString($entryName, $this->renderChunkPdf($chunk));
+                }
+            } finally {
+                // Always close the archive handle, even if a chunk fails to render,
+                // so the temp file below isn't left with an open ZipArchive on it.
+                $zip->close();
             }
-            $zip->close();
 
             $zipBytes = file_get_contents($zipPath);
             if ($zipBytes === false) {

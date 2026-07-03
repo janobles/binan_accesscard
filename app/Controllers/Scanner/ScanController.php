@@ -42,7 +42,7 @@ class ScanController extends BaseController
             'aidTypes'  => model(AidTypeModel::class)->active(),
             'currentRole' => $role,
             'canManageAccounts' => $canManage,
-            'sidebarRoleClass' => $canManage ? 'developer' : 'admin',
+            'sidebarRoleClass' => strtolower($role),
             'sidebarUserUrl' => site_url('admin/dashboard'),
             'navActive' => ['scanner' => 'active'],
         ]);
@@ -109,7 +109,14 @@ class ScanController extends BaseController
         }
 
         $userId = (int) (session('user_id') ?? 0);
-        $aidId  = model(AidDistributionModel::class)->logAid([
+
+        // The insert and its audit row must land together: without a shared
+        // transaction, a handout could get logged with no audit trail (or an
+        // audit row could survive a rolled-back handout).
+        $db = db_connect();
+        $db->transStart();
+
+        $aidId = model(AidDistributionModel::class)->logAid([
             'control_no'  => $controlNo,
             'memberID'    => $memberId,
             'aid_type_id' => (int) $this->request->getPost('aid_type_id'),
@@ -117,11 +124,7 @@ class ScanController extends BaseController
             'userID'      => $userId,
         ]);
 
-        if ($aidId <= 0) {
-            return $this->response->setStatusCode(500)->setJSON(['errors' => ['general' => 'Failed to log the aid distribution.']]);
-        }
-
-        (new AuditTrailsModel())->logAction(
+        $audited = $aidId > 0 && (new AuditTrailsModel())->logAction(
             $userId,
             $memberId,
             'Logged aid distribution',
@@ -130,6 +133,18 @@ class ScanController extends BaseController
             (string) $this->request->getUserAgent(),
             'Aid type ID ' . (int) $this->request->getPost('aid_type_id') . ' on ' . $this->request->getPost('claim_date')
         );
+
+        if (! $audited) {
+            $db->transRollback();
+
+            return $this->response->setStatusCode(500)->setJSON(['errors' => ['general' => 'Failed to log the aid distribution.']]);
+        }
+
+        $db->transComplete();
+
+        if ($db->transStatus() === false) {
+            return $this->response->setStatusCode(500)->setJSON(['errors' => ['general' => 'Failed to log the aid distribution.']]);
+        }
 
         return $this->response->setJSON([
             'ok'      => true,

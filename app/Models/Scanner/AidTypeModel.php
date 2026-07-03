@@ -40,9 +40,14 @@ class AidTypeModel extends Model
         }
     }
 
-    /** Insert a new aid type; returns the new id (0 on failure). */
+    /** Insert a new aid type; returns the new id (0 on failure or a blank name). */
     public function create(string $name): int
     {
+        $name = trim($name);
+        if ($name === '') {
+            return 0;
+        }
+
         if ($this->insert(['name' => $name, 'dt_deleted' => null]) === false) {
             return 0;
         }

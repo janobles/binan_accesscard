@@ -400,22 +400,25 @@
             }).then(function (result) {
                 var data = result.data || {};
 
-                updateCsrfForm(form, data.csrf);
-
                 if (submit) {
                     submit.disabled = false;
                     submit.textContent = originalLabel;
                 }
 
                 // Queued: reset the form, close the modal, hand off to its own toast.
+                // form.reset() must run BEFORE updateCsrfForm(), since reset() would
+                // otherwise wipe the just-refreshed token back to its page-load value.
                 if (result.ok && data.status === 'queued' && data.statusUrl) {
                     results.innerHTML = '';
                     form.reset();
+                    updateCsrfForm(form, data.csrf);
                     closeImportModal();
                     startTracking(data.statusUrl);
 
                     return;
                 }
+
+                updateCsrfForm(form, data.csrf);
 
                 // Upload rejected before queuing (bad file, permission, etc.) - keep
                 // the modal open so the user can fix and retry.

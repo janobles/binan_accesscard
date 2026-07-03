@@ -36,7 +36,7 @@ class ManageController extends BaseController
             'distributions'     => model(AidDistributionModel::class)->allDistributions(),
             'currentRole'       => $role,
             'canManageAccounts' => $canManage,
-            'sidebarRoleClass'  => $canManage ? 'developer' : 'admin',
+            'sidebarRoleClass'  => strtolower($role),
             'sidebarUserUrl'    => site_url('admin/dashboard'),
             'navActive'         => ['scanner-manage' => 'active'],
         ]);

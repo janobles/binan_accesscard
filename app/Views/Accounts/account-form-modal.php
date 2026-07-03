@@ -28,6 +28,7 @@ $displayRoleLabel = $roleLabel !== '' ? $roleLabel : match ($role) {
     'administrator' => 'Administrator',
     'encoder' => 'Encoder',
     'viewer' => 'Viewer',
+    'scanner' => 'Scanner',
     default => $role,
 };
 $fieldPrefix = $isEdit ? 'edit-account' : ($isSelfProfile ? 'my-account' : 'account');

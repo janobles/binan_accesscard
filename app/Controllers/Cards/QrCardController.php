@@ -44,14 +44,14 @@ class QrCardController extends BaseController
         $settings = config('QrCardSettings');
 
         if ($heads === []) {
-            return $this->response->setStatusCode(400)
-                ->setJSON(['error' => 'No heads of family match the selected filter.']);
+            return $this->withFreshCsrf($this->response->setStatusCode(400)
+                ->setJSON(['error' => 'No heads of family match the selected filter.']));
         }
 
         if (count($heads) > $settings->maxQuantity) {
-            return $this->response->setStatusCode(400)
+            return $this->withFreshCsrf($this->response->setStatusCode(400)
                 ->setJSON(['error' => 'The selection covers ' . count($heads)
-                    . ' cards, exceeding the maximum of ' . $settings->maxQuantity . ' per batch.']);
+                    . ' cards, exceeding the maximum of ' . $settings->maxQuantity . ' per batch.']));
         }
 
         try {
@@ -59,8 +59,8 @@ class QrCardController extends BaseController
         } catch (\Throwable $error) {
             log_message('error', 'QR card generation failed: {message}', ['message' => $error->getMessage()]);
 
-            return $this->response->setStatusCode(500)
-                ->setJSON(['error' => 'Generation failed. Please try again, or contact support.']);
+            return $this->withFreshCsrf($this->response->setStatusCode(500)
+                ->setJSON(['error' => 'Generation failed. Please try again, or contact support.']));
         }
 
         $this->recordBatchAudit(count($heads), $filter);
@@ -94,6 +94,8 @@ class QrCardController extends BaseController
             return $this->response->setStatusCode(500)
                 ->setJSON(['error' => 'Generation failed. Please try again.']);
         }
+
+        $this->recordReprintAudit($memberID);
 
         return $this->streamDownload($result);
     }
@@ -129,10 +131,21 @@ class QrCardController extends BaseController
     {
         $contentType = $result['type'] === 'zip' ? 'application/zip' : 'application/pdf';
 
-        return $this->response->setStatusCode(200)
+        return $this->withFreshCsrf($this->response->setStatusCode(200)
             ->setHeader('Content-Type', $contentType)
             ->setHeader('Content-Disposition', 'attachment; filename="' . $result['filename'] . '"')
-            ->setBody($result['bytes']);
+            ->setBody($result['bytes']));
+    }
+
+    /**
+     * batch() streams a binary PDF/ZIP, so the rotated CSRF token can't ride in a
+     * JSON body (the pattern used elsewhere, e.g. FamilyController). Carrying it
+     * as a response header lets the batch form's JS refresh its hidden field
+     * after every request, success or failure, so a second submit doesn't 403.
+     */
+    private function withFreshCsrf(ResponseInterface $response): ResponseInterface
+    {
+        return $response->setHeader('X-CSRF-TOKEN', csrf_hash());
     }
 
     private function recordBatchAudit(int $cardCount, array $filter): void
@@ -143,6 +156,18 @@ class QrCardController extends BaseController
             null, // batch issuance is not tied to a single member
             'Generated QR cards',
             sprintf('Generated %d QR access card(s) for %s.', $cardCount, $scope),
+            $this->request->getIPAddress(),
+            $this->request->getUserAgent()->getAgentString()
+        );
+    }
+
+    private function recordReprintAudit(int $memberID): void
+    {
+        (new AuditTrailsModel())->logAction(
+            (int) session()->get('user_id'),
+            $memberID,
+            'Reprinted QR card',
+            sprintf('Reprinted QR access card for head #%d.', $memberID),
             $this->request->getIPAddress(),
             $this->request->getUserAgent()->getAgentString()
         );

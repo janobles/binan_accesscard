@@ -4,9 +4,8 @@
  * Uses the same dashboard frame as Admin, limited to Dashboard, Manage Records,
  * and My Activity.
  */
-$username = $user['username'] ?? 'Employee';
 $activePage = $activePage ?? 'dashboard';
-$pageTitle = $pageTitle ?? ($activePage === 'dashboard' ? 'Workspace' : ucwords(str_replace('-', ' ', $activePage)));
+$pageTitle = $pageTitle ?? ($activePage === 'dashboard' ? 'Dashboard' : ucwords(str_replace('-', ' ', $activePage)));
 $navActive = $navActive ?? [];
 $stats = $stats ?? ['families' => 0, 'members' => 0, 'sectors' => 0, 'assistance' => 0];
 $recentFamilies = $recentFamilies ?? [];
@@ -53,10 +52,6 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
         <li class="nav-item">
             <a class="nav-link <?= esc($navActive['activity'] ?? '') ?>" href="<?= site_url('employee/activity') ?>"><i class="bi bi-clock-history" aria-hidden="true"></i><span>My Activity</span></a>
         </li>
-        <li><hr class="sidebar-divider d-none d-md-block"></li>
-        <li class="text-center d-none d-md-inline">
-            <button class="rounded-circle border-0" id="sidebarToggle" type="button" aria-label="Collapse sidebar" aria-controls="dashboard-sidebar" aria-expanded="true"></button>
-        </li>
     </ul>
 
     <div id="content-wrapper" class="d-flex flex-column">
@@ -92,10 +87,10 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
 
             <main class="container-fluid dashboard-content">
                 <?php if (session()->getFlashdata('success')): ?>
-                    <div class="alert alert-success"><?= esc(session()->getFlashdata('success')) ?></div>
+                    <div class="alert alert-success" data-auto-dismiss-alert><?= esc(session()->getFlashdata('success')) ?></div>
                 <?php endif; ?>
                 <?php if (session()->getFlashdata('error')): ?>
-                    <div class="alert alert-danger"><?= esc(session()->getFlashdata('error')) ?></div>
+                    <div class="alert alert-danger" data-auto-dismiss-alert><?= esc(session()->getFlashdata('error')) ?></div>
                 <?php endif; ?>
                 <?php if (session()->getFlashdata('family_record_saved')): ?>
                     <span id="familyDraftSavedMarker" hidden></span>
@@ -148,8 +143,8 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
                                     <tbody>
                                         <?php foreach ($recentFamilies as $family): ?>
                                             <tr>
-                                                <td><span class="entity-title"><?= esc(($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? '')) ?></span></td>
-                                                <td><?= esc((string) ($family['sector_name'] ?? '')) ?></td>
+                                                <td><span class="entity-title"><?= esc(mb_strtoupper(trim(($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? '')), 'UTF-8')) ?></span></td>
+                                                <td><?= view('Partials/sector-label-list', ['sectorLabel' => mb_strtoupper((string) ($family['sector_name'] ?? ''), 'UTF-8')]) ?></td>
                                             </tr>
                                         <?php endforeach; ?>
                                         <?php if ($recentFamilies === []): ?>

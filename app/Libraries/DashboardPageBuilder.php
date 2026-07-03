@@ -129,7 +129,7 @@ class DashboardPageBuilder
         };
 
         return [
-            'user' => session()->get(),
+            'user' => $this->currentSessionUser(),
             'activePage' => $activePage,
             'pageTitle' => $layoutModel->pageTitle($activePage),
             'modeLabel' => $layoutModel->adminModeLabel($isDeveloper),
@@ -280,7 +280,7 @@ class DashboardPageBuilder
     {
         $keyword = trim((string) $this->request->getGet('q'));
         $status  = strtolower(trim((string) $this->request->getGet('status')));
-        $status  = in_array($status, ['active', 'archived', 'all'], true) ? $status : 'active';
+        $status  = in_array($status, ['active', 'archived', 'all'], true) ? $status : 'all';
         $page    = max(1, (int) $this->request->getGet('page'));
         $perPageOptions = [10, 25, 50, 100];
         $perPage = (int) $this->request->getGet('per_page');
@@ -356,6 +356,25 @@ class DashboardPageBuilder
         ];
     }
 
+    /** Session user plus stored profile details for topbar/account menus. */
+    private function currentSessionUser(): array
+    {
+        $sessionUser = session()->get();
+        $userId = (int) ($sessionUser['user_id'] ?? 0);
+
+        if ($userId <= 0) {
+            return $sessionUser;
+        }
+
+        $account = (new UserModel())->getAccountById($userId);
+
+        if ($account === null) {
+            return $sessionUser;
+        }
+
+        return array_merge($sessionUser, $account);
+    }
+
     /**
      * Builds the admin Manage Records list: reads the q/status/page/sector/date
      * query params, runs the paginated family-head search, and merges in the deep
@@ -366,7 +385,7 @@ class DashboardPageBuilder
     {
         $keyword = trim((string) $this->request->getGet('q'));
         $status = strtolower(trim((string) $this->request->getGet('status')));
-        $status = in_array($status, ['all', 'active', 'archived'], true) ? $status : 'active';
+        $status = in_array($status, ['all', 'active', 'archived'], true) ? $status : 'all';
         $page = max(1, (int) $this->request->getGet('page'));
         $perPage = $this->recordsPerPage();
 
@@ -502,7 +521,7 @@ class DashboardPageBuilder
         $myAudits = $auditListData['rows'] ?? (new AuditTrailsModel())->getByUser($userId, 10);
 
         return view('Employee/layout', [
-            'user' => session()->get(),
+            'user' => $this->currentSessionUser(),
             'activePage' => $activePage,
             'pageTitle' => $layoutModel->employeePageTitle($activePage),
             'navActive' => [
@@ -589,7 +608,7 @@ class DashboardPageBuilder
             : [];
 
         return view('Viewer/layout', [
-            'user' => session()->get(),
+            'user' => $this->currentSessionUser(),
             'activePage' => $activePage,
             'pageTitle' => $layoutModel->pageTitle($activePage),
             'navActive' => [
@@ -638,7 +657,7 @@ class DashboardPageBuilder
     {
         $keyword = trim((string) $this->request->getGet('q'));
         $status = strtolower(trim((string) $this->request->getGet('status')));
-        $status = in_array($status, ['all', 'active', 'archived'], true) ? $status : 'active';
+        $status = in_array($status, ['all', 'active', 'archived'], true) ? $status : 'all';
         $page = max(1, (int) $this->request->getGet('page'));
         $perPage = $this->recordsPerPage();
 
@@ -722,7 +741,7 @@ class DashboardPageBuilder
     {
         $keyword = trim((string) $this->request->getGet('q'));
         $status = strtolower(trim((string) $this->request->getGet('status')));
-        $status = in_array($status, ['all', 'active', 'archived'], true) ? $status : 'active';
+        $status = in_array($status, ['all', 'active', 'archived'], true) ? $status : 'all';
         $page = max(1, (int) $this->request->getGet('page'));
         $perPage = $this->recordsPerPage();
 

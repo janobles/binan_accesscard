@@ -13,7 +13,6 @@
  * permits the Viewer role. The formatDate/formatTime helpers come from the builder.
  */
 $user = $user ?? [];
-$username = $user['username'] ?? 'Viewer';
 $activePage = $activePage ?? 'dashboard';
 $pageTitle = $pageTitle ?? ($activePage === 'dashboard' ? 'Dashboard' : ucwords(str_replace('-', ' ', $activePage)));
 $navActive = $navActive ?? [];
@@ -63,10 +62,6 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
         <li class="nav-item">
             <a class="nav-link <?= esc($navActive['services'] ?? '') ?>" href="<?= site_url('viewer/services') ?>"><i class="bi bi-grid" aria-hidden="true"></i><span>Services and Programs</span></a>
         </li>
-        <li><hr class="sidebar-divider d-none d-md-block"></li>
-        <li class="text-center d-none d-md-inline">
-            <button class="rounded-circle border-0" id="sidebarToggle" type="button" aria-label="Collapse sidebar" aria-controls="dashboard-sidebar" aria-expanded="true"></button>
-        </li>
     </ul>
 
     <div id="content-wrapper" class="d-flex flex-column">
@@ -102,10 +97,10 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
 
             <main class="container-fluid dashboard-content">
             <?php if (session()->getFlashdata('success')): ?>
-                <div class="alert alert-success"><?= esc(session()->getFlashdata('success')) ?></div>
+                <div class="alert alert-success" data-auto-dismiss-alert><?= esc(session()->getFlashdata('success')) ?></div>
             <?php endif; ?>
             <?php if (session()->getFlashdata('error')): ?>
-                <div class="alert alert-danger"><?= esc(session()->getFlashdata('error')) ?></div>
+                <div class="alert alert-danger" data-auto-dismiss-alert><?= esc(session()->getFlashdata('error')) ?></div>
             <?php endif; ?>
 
             <?php /* Main content swaps on $activePage: read-only overview, the shared
@@ -157,8 +152,8 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
                                 <tbody>
                                     <?php foreach ($recentFamilies as $family): ?>
                                         <tr>
-                                            <td><span class="entity-title"><?= esc(($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? '')) ?></span></td>
-                                            <td><?= esc((string) ($family['sector_name'] ?? '')) ?></td>
+                                            <td><span class="entity-title"><?= esc(mb_strtoupper(trim(($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? '')), 'UTF-8')) ?></span></td>
+                                            <td><?= view('Partials/sector-label-list', ['sectorLabel' => mb_strtoupper((string) ($family['sector_name'] ?? ''), 'UTF-8')]) ?></td>
                                         </tr>
                                     <?php endforeach; ?>
                                     <?php if ($recentFamilies === []): ?>

@@ -24,11 +24,11 @@ class ViewLayoutModel
         };
     }
 
-    /** Employee-shell variant of pageTitle (dashboard reads as "Workspace"). */
+    /** Employee-shell variant of pageTitle. */
     public function employeePageTitle(string $activePage): string
     {
         if ($activePage === 'dashboard') {
-            return 'Workspace';
+            return 'Dashboard';
         }
 
         return $this->pageTitle($activePage);

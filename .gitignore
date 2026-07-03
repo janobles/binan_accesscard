@@ -67,6 +67,18 @@ Vagrantfile
 /writable/developer/*
 !/writable/developer/index.html
 
+# dompdf runtime font-metrics cache (auto-generated) — keep only the dir guard
+/writable/fonts/*
+!/writable/fonts/index.html
+
+#-------------------------
+# Local scratch / junk
+#-------------------------
+todos.txt
+*.tuxedo-lock
+# Windows drive-letter dir created when session.savePath uses a C:/ path on *nix
+/public/C:/
+
 php_errors.log
 
 #-------------------------

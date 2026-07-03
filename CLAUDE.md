@@ -72,6 +72,9 @@ Review workflow (before merging a feature branch):
    the PR # and branch as a receipt.
 
 Notes:
+- CodeRabbit GitHub App is NOT installed on this repo. Reviews run via the local
+  CLI (`coderabbit review --agent`); triage off its output, not the PR page.
+  `.coderabbit.yaml` still applies (CLI reads it). Retry on `TRPCClientError` — transient.
 - `coderabbit auth login` needs an interactive terminal (OAuth). If a shell reports
   "Non-interactive environment", ask the user to run it in a real terminal, or pass
   `--api-key`.

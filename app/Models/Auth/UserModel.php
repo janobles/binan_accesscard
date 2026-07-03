@@ -224,7 +224,7 @@ class UserModel extends Model
 
         $account = $this->select('userID, account_level AS role')->find($userId);
 
-        if ($account === null || ! in_array((string) ($account['role'] ?? ''), ['administrator', 'encoder', 'viewer'], true)) {
+        if ($account === null || ! in_array((string) ($account['role'] ?? ''), ['administrator', 'encoder', 'viewer', 'scanner'], true)) {
             return false;
         }
 

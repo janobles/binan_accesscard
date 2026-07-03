@@ -43,7 +43,9 @@ class AidTypeModel extends Model
     /** Insert a new aid type; returns the new id (0 on failure). */
     public function create(string $name): int
     {
-        $this->insert(['name' => $name, 'dt_deleted' => null]);
+        if ($this->insert(['name' => $name, 'dt_deleted' => null]) === false) {
+            return 0;
+        }
 
         return (int) $this->getInsertID();
     }

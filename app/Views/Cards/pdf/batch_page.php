@@ -17,7 +17,7 @@
                                 <span class="field-label">Name:</span>
                                 <span class="field-line"><?= esc($cell['fullname']) ?></span>
                             </div>
-                            <div class="qr-wrap"><img class="qr" src="<?= $cell['qrDataUri'] ?>" alt="QR"></div>
+                            <div class="qr-wrap"><img class="qr" src="<?= esc($cell['qrDataUri'], 'attr') ?>" alt="QR"></div>
                             <div class="control-label">Control No.:</div>
                             <div class="control-number"><?= esc($cell['controlNumber']) ?></div>
                         </div>

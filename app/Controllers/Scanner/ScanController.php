@@ -109,13 +109,17 @@ class ScanController extends BaseController
         }
 
         $userId = (int) (session('user_id') ?? 0);
-        model(AidDistributionModel::class)->logAid([
+        $aidId  = model(AidDistributionModel::class)->logAid([
             'control_no'  => $controlNo,
             'memberID'    => $memberId,
             'aid_type_id' => (int) $this->request->getPost('aid_type_id'),
             'claim_date'  => $this->request->getPost('claim_date'),
             'userID'      => $userId,
         ]);
+
+        if ($aidId <= 0) {
+            return $this->response->setStatusCode(500)->setJSON(['errors' => ['general' => 'Failed to log the aid distribution.']]);
+        }
 
         (new AuditTrailsModel())->logAction(
             $userId,

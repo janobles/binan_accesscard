@@ -52,6 +52,7 @@ class AidDistributionModel extends Model
 
         try {
             return $this->select('aid_distribution.aidID, aid_distribution.claim_date,'
+                    . ' aid_distribution.aid_type_id,'
                     . " aid_type.name AS aid_type,"
                     . " TRIM(CONCAT(member.firstname, ' ', member.lastname)) AS claimant")
                 ->join('aid_type', 'aid_type.aid_type_id = aid_distribution.aid_type_id', 'left')

@@ -66,9 +66,6 @@ if (! function_exists('asset_styles')) {
                 'assets/bootstrap/css/bootstrap.min.css',
                 'css/login.css',
             ],
-            'family-form' => [
-                'css/familyform.css',
-            ],
             'scanner' => [
                 'css/scanner-reports.css',
             ],

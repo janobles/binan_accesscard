@@ -173,6 +173,12 @@ class FamilyController extends BaseController
             // persistFamily can also throw beyond FamilyRecordWriteException (QR
             // assignment, audit, or an unexpected DB error). Catch them all so the
             // transaction is always rolled back and the request fails gracefully.
+            if (! $exception instanceof FamilyRecordWriteException) {
+                // Unexpected failure — record it like import()/changeFamilyState()
+                // do, so silent write failures surface on the audit page.
+                $this->auditSystemError('saving a family record', $exception);
+            }
+
             return $this->storeError(
                 $exception instanceof FamilyRecordWriteException
                     ? $exception->getMessage()

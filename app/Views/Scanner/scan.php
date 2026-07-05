@@ -85,6 +85,8 @@ const BASE = '<?= rtrim(base_url(), '/') ?>';
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
+let lastHistory = [];
+
 async function lookup(control) {
   if (!$('sessionAidType').value) {
     $('aidTypeHint').hidden = false;
@@ -125,7 +127,8 @@ async function lookup(control) {
   $('memberID').value = String(data.head.memberID);
   $('control_no').value = data.control_no;
   $('aid_type_id').value = $('sessionAidType').value;
-  evaluateDuplicate(data.history);
+  lastHistory = data.history;
+  evaluateDuplicate(lastHistory);
   if (!$('claim_date').value) { $('claim_date').value = todayStr(); }
   $('familyPanel').hidden = false;
 }
@@ -165,6 +168,12 @@ $('lookupBtn').addEventListener('click', () => {
 $('controlInput').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') { e.preventDefault(); $('lookupBtn').click(); }
 });
+$('sessionAidType').addEventListener('change', () => {
+  if (!$('familyPanel').hidden) {
+    $('aid_type_id').value = $('sessionAidType').value;
+    evaluateDuplicate(lastHistory);
+  }
+});
 
 $('logForm').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -185,6 +194,7 @@ $('logForm').addEventListener('submit', async (e) => {
     $('familyPanel').hidden = true;
     $('controlInput').value = '';
     $('controlInput').focus();
+    $('claim_date').value = todayStr();
     setTimeout(() => {
       $('lookupAlert').hidden = true;
       $('lookupAlert').className = 'alert alert-warning mt-2 mb-0';

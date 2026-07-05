@@ -274,7 +274,12 @@ class FamilyController extends BaseController
             return $this->jsonError('Please choose a valid .xlsx file to import.', 422);
         }
 
-        if (strtolower((string) $file->getClientExtension()) !== 'xlsx') {
+        // guessExtension() derives the extension server-side from the file's MIME
+        // type, so a renamed .exe/.php can't pass as .xlsx (getClientExtension is
+        // attacker-controlled). xlsx is a zip container, so allow the zip guess too.
+        $guessedExtension = strtolower((string) $file->guessExtension());
+
+        if (! in_array($guessedExtension, ['xlsx', 'zip'], true)) {
             return $this->jsonError('The file must be an .xlsx workbook saved from the template.', 422);
         }
 

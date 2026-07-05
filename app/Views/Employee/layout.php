@@ -67,21 +67,7 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
                 </div>
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item topbar-divider d-none d-sm-block"></li>
-                    <li class="nav-item dropdown no-arrow">
-                        <a class="nav-link dropdown-toggle topbar-user" href="#" id="employeeUserDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <span class="me-2 d-none d-lg-inline text-gray-600 small"><?= esc($username) ?> &middot; Encoder</span>
-                            <i class="bi bi-person-circle topbar-user-icon" aria-hidden="true"></i>
-                        </a>
-                        <div class="dropdown-menu dropdown-menu-end shadow animated--grow-in" aria-labelledby="employeeUserDropdown">
-                            <button type="button" class="dropdown-item js-open-my-account-modal" data-modal-url="<?= site_url('account/profile') ?>" data-modal-title="My Account">
-                                <i class="bi bi-person me-2 text-gray-400" aria-hidden="true"></i> My Account
-                            </button>
-                            <div class="dropdown-divider"></div>
-                            <a href="<?= site_url('logout') ?>" class="dropdown-item js-logout-link">
-                                <i class="bi bi-box-arrow-right me-2 text-gray-400" aria-hidden="true"></i> Logout
-                            </a>
-                        </div>
-                    </li>
+                    <?= view('Partials/topbar-account-menu', ['user' => $user, 'username' => $username, 'accountLevelLabel' => $accountLevelLabel]) ?>
                 </ul>
             </nav>
 

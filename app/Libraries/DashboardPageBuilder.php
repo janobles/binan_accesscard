@@ -170,6 +170,7 @@ class DashboardPageBuilder
             'stats'              => $dashboardModel->stats(),
             'canCreateFamily'    => true,
             'username'           => (string) (session()->get('username') ?? 'Admin'),
+            'accountLevelLabel'  => RoleAccess::normalizeRole((string) (session()->get('role') ?? '')) ?? 'Account',
             'searchTerm'         => $searchTerm,
             'searchFilters'      => $searchFilters,
             'hasSearchFilters'   => $hasSearchFilters,
@@ -540,6 +541,7 @@ class DashboardPageBuilder
             'auditActionOptions' => $searchModel->auditActions(),
             'idleTimeoutSeconds' => (new IdleTimeout())->seconds,
             'username'           => (string) (session()->get('username') ?? 'Employee'),
+            'accountLevelLabel'  => RoleAccess::normalizeRole((string) (session()->get('role') ?? '')) ?? 'Account',
             'sectorOptions'      => $sectorOptions,
             'selectedFilterDate' => (string) ($searchFilters['date'] ?? $searchFilters['date_from'] ?? ''),
             'hasSearchFilters'   => $hasSearchFilters,
@@ -629,6 +631,7 @@ class DashboardPageBuilder
             'hasSearchFilters'   => $hasSearchFilters,
             'idleTimeoutSeconds' => (new IdleTimeout())->seconds,
             'username'           => (string) (session()->get('username') ?? 'Viewer'),
+            'accountLevelLabel'  => RoleAccess::normalizeRole((string) (session()->get('role') ?? '')) ?? 'Account',
             'formatDate'         => static function (mixed $value): string {
                 $timestamp = strtotime((string) $value);
 

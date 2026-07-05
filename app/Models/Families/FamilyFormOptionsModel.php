@@ -34,7 +34,7 @@ class FamilyFormOptionsModel extends Model
             'barangays' => FamilyProfilingFormV2::barangays(),
             'relationships' => [
                 'Spouse',
-                'Children',
+                'Child',
                 'Parent',
                 'Sibling',
                 'Grandparent',

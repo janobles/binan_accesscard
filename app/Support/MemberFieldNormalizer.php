@@ -16,6 +16,44 @@ namespace App\Support;
 class MemberFieldNormalizer
 {
     /**
+     * Placeholder words a worker types into a cell to mean "no data" instead of
+     * leaving it blank. Matched case-insensitively and with all whitespace removed,
+     * so the set is stored space-free ("no data" -> "nodata"). Treated as an empty
+     * cell everywhere: never stored, and required fields still flag as missing.
+     *
+     * @var list<string>
+     */
+    private const NO_DATA_TOKENS = [
+        'none', 'n/a', 'na', 'nil', 'null', 'blank', 'empty',
+        'nodata', 'notapplicable', 'notavailable', 'unknown', 'unk',
+    ];
+
+    /**
+     * True when a cell is a no-data placeholder (case-insensitive, spacing ignored),
+     * e.g. "None", "  N/A  ", "no data", "N / A". Numbers (incl. 0) are never matched,
+     * so a real income of 0 survives.
+     */
+    public static function isNoData(mixed $value): bool
+    {
+        // Lowercase + strip ALL whitespace so "No Data"/"N / A"/" NONE " normalize.
+        $key = strtolower((string) preg_replace('/\s+/u', '', trim((string) $value)));
+
+        return $key !== '' && in_array($key, self::NO_DATA_TOKENS, true);
+    }
+
+    /**
+     * Returns '' when the value is a no-data placeholder, otherwise the trimmed
+     * value. Apply at cell-read time so downstream blank/required checks see an
+     * empty string for placeholders.
+     */
+    public static function blankIfNoData(mixed $value): string
+    {
+        $trimmed = trim((string) $value);
+
+        return self::isNoData($trimmed) ? '' : $trimmed;
+    }
+
+    /**
      * Cleans a person-name field: keeps only letters (incl. ñ/Ñ and accents),
      * spaces and the - ' . punctuation real names use, collapses repeated
      * whitespace, then applies Title Case. Workers may type freely; the stored

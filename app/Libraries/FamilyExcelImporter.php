@@ -217,7 +217,9 @@ class FamilyExcelImporter
                 continue;
             }
 
-            $values[$key] = trim((string) $value);
+            // Placeholder words ("none", "n/a", "blank", …) are treated as an empty
+            // cell, so they never store as data and required fields still flag missing.
+            $values[$key] = MemberFieldNormalizer::blankIfNoData($value);
         }
 
         return $values;
@@ -608,7 +610,12 @@ class FamilyExcelImporter
 
         $tokens = array_map('trim', explode(',', $value));
 
-        return array_values(array_filter($tokens, static fn (string $t): bool => $t !== ''));
+        // Drop blanks and no-data placeholders ("SR1, none" -> just SR1) so a
+        // placeholder among codes doesn't trip the "Unknown code" error.
+        return array_values(array_filter(
+            $tokens,
+            static fn (string $t): bool => $t !== '' && ! MemberFieldNormalizer::isNoData($t)
+        ));
     }
 
     /** @param array<string, string> $values */

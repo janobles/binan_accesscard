@@ -55,7 +55,6 @@
   <div class="card border-0 shadow-sm rounded-3 mb-3" id="logPanel">
     <div class="card-body">
       <div class="fw-bold mb-2">Log Distribution</div>
-      <div id="logAlert" class="alert alert-success mb-3" hidden></div>
       <form id="logForm">
         <input type="hidden" id="control_no" name="control_no">
         <input type="hidden" id="aid_type_id" name="aid_type_id">
@@ -169,7 +168,6 @@ $('controlInput').addEventListener('keydown', (e) => {
 
 $('logForm').addEventListener('submit', async (e) => {
   e.preventDefault();
-  $('logAlert').hidden = true;
   $('fieldErrors').innerHTML = '';
   $('submitBtn').disabled = true;
   const fd = new FormData($('logForm'));

@@ -306,9 +306,13 @@ class FamilyController extends BaseController
 
         $jobs = new JobQueueModel();
 
-        try {
-            $jobs->ensureTable();
+        if (! $jobs->hasTable()) {
+            @unlink($storedPath);
 
+            return $this->jsonError('The background job queue is unavailable (missing job_queue table from accesscardV14.sql).', 422);
+        }
+
+        try {
             $jobId = $jobs->enqueue(
                 'family_import',
                 ['storedPath' => $storedPath, 'originalName' => $originalName],

@@ -153,7 +153,7 @@ $serviceClearUrl = static function () use ($listRoute, $status, $perPage): strin
 				<?php endforeach; ?>
 				<?php if ($services === []): ?>
 					<tr>
-						<td colspan="6" class="sector-empty-state"><?= $keyword !== '' ? 'No services match your search.' : 'No service or program records found.' ?></td>
+						<td colspan="<?= $canManage ? 6 : 5 ?>" class="sector-empty-state"><?= $keyword !== '' ? 'No services match your search.' : 'No service or program records found.' ?></td>
 					</tr>
 				<?php endif; ?>
 			</tbody>

@@ -3,6 +3,23 @@
 
 <div class="card border-0 shadow-sm rounded-3 mb-3">
   <div class="card-body">
+    <label for="sessionAidType" class="form-label fw-bold">
+      <i class="bi bi-box-seam me-1" aria-hidden="true"></i> Aid type to distribute
+    </label>
+    <select class="form-select form-select-lg mb-1" id="sessionAidType">
+      <option value="">-- Choose aid type before scanning --</option>
+      <?php foreach ($aidTypes as $type): ?>
+        <option value="<?= esc($type['aid_type_id']) ?>"><?= esc($type['name']) ?></option>
+      <?php endforeach; ?>
+    </select>
+    <div id="aidTypeHint" class="small text-danger" hidden>
+      Choose an aid type first, then scan.
+    </div>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm rounded-3 mb-3">
+  <div class="card-body">
     <label for="controlInput" class="form-label fw-bold">Scan or enter QR control number</label>
     <div class="input-group">
       <input type="text" inputmode="numeric" autocomplete="off" class="form-control form-control-lg"
@@ -41,18 +58,11 @@
       <div id="logAlert" class="alert alert-success mb-3" hidden></div>
       <form id="logForm">
         <input type="hidden" id="control_no" name="control_no">
+        <input type="hidden" id="aid_type_id" name="aid_type_id">
+        <div id="dupAlert" class="alert alert-warning" hidden></div>
         <div class="mb-3">
           <label for="claim_date" class="form-label">Date</label>
           <input type="date" class="form-control" id="claim_date" name="claim_date" required>
-        </div>
-        <div class="mb-3">
-          <label for="aid_type_id" class="form-label">Aid Type</label>
-          <select class="form-select" id="aid_type_id" name="aid_type_id" required>
-            <option value="">-- Select aid type --</option>
-            <?php foreach ($aidTypes as $type): ?>
-              <option value="<?= esc($type['aid_type_id']) ?>"><?= esc($type['name']) ?></option>
-            <?php endforeach; ?>
-          </select>
         </div>
         <div class="mb-3">
           <label for="memberID" class="form-label">Claimant</label>
@@ -61,7 +71,9 @@
           </select>
         </div>
         <div id="fieldErrors" class="text-danger small mb-3"></div>
-        <button class="btn btn-success w-100" id="submitBtn" type="submit">Log Distribution</button>
+        <button class="btn btn-success w-100" id="submitBtn" type="submit">
+          <i class="bi bi-check-lg me-1" aria-hidden="true"></i> Confirm
+        </button>
       </form>
     </div>
   </div>
@@ -75,6 +87,12 @@ const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 async function lookup(control) {
+  if (!$('sessionAidType').value) {
+    $('aidTypeHint').hidden = false;
+    $('sessionAidType').focus();
+    return;
+  }
+  $('aidTypeHint').hidden = true;
   $('lookupAlert').hidden = true;
   let res;
   try {
@@ -105,13 +123,33 @@ async function lookup(control) {
   renderHistory(data.history);
   $('memberID').innerHTML = '<option value="">-- Select claimant --</option>' +
     data.members.map(m => `<option value="${esc(m.memberID)}">${esc(m.firstname)} ${esc(m.lastname)} (${esc(m.relationship || 'Member')})</option>`).join('');
+  $('memberID').value = String(data.head.memberID);
   $('control_no').value = data.control_no;
-  if (!$('claim_date').value) {
-    const now = new Date();
-    const pad = (n) => String(n).padStart(2, '0');
-    $('claim_date').value = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-  }
+  $('aid_type_id').value = $('sessionAidType').value;
+  evaluateDuplicate(data.history);
+  if (!$('claim_date').value) { $('claim_date').value = todayStr(); }
   $('familyPanel').hidden = false;
+}
+
+function todayStr() {
+  const now = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+}
+
+function evaluateDuplicate(history) {
+  const aidId = $('sessionAidType').value;
+  const aidName = $('sessionAidType').selectedOptions[0]?.text || 'this aid';
+  const dupe = (history || []).some(r =>
+    String(r.aid_type_id) === String(aidId) && String(r.claim_date) === todayStr());
+  if (dupe) {
+    $('dupAlert').textContent = `Already claimed ${aidName} today. Confirm again only if this is correct.`;
+    $('dupAlert').hidden = false;
+    $('submitBtn').className = 'btn btn-warning w-100';
+  } else {
+    $('dupAlert').hidden = true;
+    $('submitBtn').className = 'btn btn-success w-100';
+  }
 }
 
 function renderHistory(rows) {
@@ -143,9 +181,16 @@ $('logForm').addEventListener('submit', async (e) => {
       $('fieldErrors').innerHTML = Object.values(errs).map(m => `<div>${esc(m)}</div>`).join('');
       return;
     }
-    $('logAlert').textContent = 'Distribution logged successfully.';
-    $('logAlert').hidden = false;
-    renderHistory(data.history);
+    $('lookupAlert').className = 'alert alert-success mt-2 mb-0';
+    $('lookupAlert').textContent = 'Distribution logged successfully.';
+    $('lookupAlert').hidden = false;
+    $('familyPanel').hidden = true;
+    $('controlInput').value = '';
+    $('controlInput').focus();
+    setTimeout(() => {
+      $('lookupAlert').hidden = true;
+      $('lookupAlert').className = 'alert alert-warning mt-2 mb-0';
+    }, 2500);
   } catch (err) {
     $('fieldErrors').innerHTML = '<div>Network error. Please check your connection and try again.</div>';
   } finally {

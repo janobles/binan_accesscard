@@ -178,8 +178,11 @@ class ServiceController extends BaseController
         if ($isUpdate) {
             $saved = $model->update($serviceId, $model->dataForCurrentSchema($data)) !== false;
         } else {
+            $db = \Config\Database::connect();
+            $db->transStart();
             $data['serviceID'] = $model->nextServiceId();
             $saved = $model->insert($model->dataForCurrentSchema($data)) !== false;
+            $db->transComplete();
             $serviceId = (int) $data['serviceID'];
         }
 

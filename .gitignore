@@ -148,7 +148,6 @@ _modules/*
 /phpunit*.xml
 
 #-------------------------
-# Superpowers (local workflow artifacts)
+# Superpowers (local scratch; specs/plans/summaries are tracked under docs/)
 #-------------------------
 .superpowers/
-/docs/superpowers/

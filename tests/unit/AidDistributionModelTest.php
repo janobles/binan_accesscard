@@ -31,4 +31,10 @@ final class AidDistributionModelTest extends CIUnitTestCase
     {
         $this->assertTrue(method_exists(new \App\Models\Scanner\AidDistributionModel(), 'void'));
     }
+
+    public function testHasClaimsRejectsNonPositiveControl(): void
+    {
+        $this->assertFalse((new AidDistributionModel())->hasClaims(0));
+        $this->assertFalse((new AidDistributionModel())->hasClaims(-1));
+    }
 }

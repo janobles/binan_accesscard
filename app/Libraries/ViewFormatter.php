@@ -121,7 +121,6 @@ class ViewFormatter
         return $fields;
     }
 
-    /** Splits an array or comma string into a trimmed, non-empty list of strings. */
     /**
      * Middle name → initials with periods, one per whitespace-separated word,
      * for compact name display: "Torres" → "T.", "Dela Cruz" → "D. C.", "" → "".
@@ -139,6 +138,7 @@ class ViewFormatter
         return implode(' ', $parts);
     }
 
+    /** Splits an array or comma string into a trimmed, non-empty list of strings. */
     public static function splitList(mixed $value): array
     {
         $items = is_array($value) ? $value : explode(',', (string) $value);

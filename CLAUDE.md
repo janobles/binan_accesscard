@@ -97,43 +97,24 @@ Notes:
 
 ## Tests (`tests/`)
 
-- `unit/DashboardControllerRoutingTest` — guards the feature-subnamespace routing.
-- `unit/FamilyDataTableTest`, `SectorIdsTest`, `ViewFormatterTest`, `HealthTest`.
-- `database/ExampleDatabaseTest` + `session/` — skipped without `sqlite3` ext.
+Run `vendor/bin/phpunit` before and after changes (DB/session tests skip
+without `sqlite3` ext). Smoke-test key flows: login, role redirect, family
+create/update, audit log creation.
 
-Run phpunit before and after changes. Smoke-test key flows: login, role redirect,
-family create/update, audit log creation.
+## Retrieval (before editing app code)
 
-## Architecture
+Before editing `app/Controllers|Models|Views|Libraries` or routes, use the
+`binan-conventions` skill (`.claude/skills/binan-conventions/SKILL.md`) —
+decision table + grep index over `docs/knowledge/`:
 
-Default CI4 layout; controllers + models grouped into **feature subnamespaces**
-(Auth, Accounts, Families, Lookups, Audit, Admin, Employee, Viewer). Routes in
-`app/Config/Routes.php` target namespaces directly.
+- Framework API (CI4 / Bootstrap 5) → Context7 MCP (`.mcp.json`); CI4 library
+  serves LATEST docs — cross-check pins in `docs/knowledge/sources.md`.
+- Repo conventions (MVC boundaries, audit trail, routing, models, views) →
+  `docs/knowledge/binan-conventions/`
+- UI / SBAdmin styling → `docs/knowledge/sbadmin/` (target theme: SB Admin 1)
+- PHP idioms → `docs/knowledge/php-practices/`
+- Known mess → `docs/knowledge/violations.md` (canonical punch-list; tick
+  items you fix, append verified new ones)
 
-**Controllers** (`app/Controllers/`)
-- `Auth/AuthController` — login, logout, session keep-alive.
-- `Admin/DashboardController` — admin shell page dispatch (dashboard, accounts,
-  family-entry, manage-records, audit-trails, sectors, services, categories).
-- `Accounts/AccountController` — staff account create + enable/disable.
-- `Families/FamilyController` — family CRUD; writes `member`, `member_services`,
-  `audit_trails`.
-- `Lookups/SectorController`, `ServiceController`, `CategoryController` —
-  create/update/archive/restore/delete for lookup tables.
-- `BaseController`, `HomeRoleAccessTrait`, `Concerns/` — cross-cutting base/traits.
-
-**Models** (`app/Models/`)
-- `Auth/UserModel` — login, password hashing, account creation.
-- `Families/` — `MemberModel`, `MemberServiceModel`, `FamilyFormOptionsModel`.
-- `Audit/AuditTrailsModel` — audit inserts + list queries.
-- `Lookups/` — `SectorModel`, `ServiceModel` (also member/sector eligibility).
-- `DashboardModel`, `SearchModel`, `ViewLayoutModel` — shared cross-feature queries.
-
-**Libraries** (`app/Libraries/`)
-- `DashboardPageBuilder` — assembles all dashboard view data (start debugging here).
-- `SessionAuditLogger`, `RoleAccess`, `SectorIds` — auth/audit/domain helpers.
-
-**Views** (`app/Views/`) — `Admin/layout.php` and `Employee/layout.php` shells swap
-in per-page views; `Family/`, `Lookups/`, `Auth/login.php`, shared partials in
-`components/`.
-
-See `PROJECT_STRUCTURE.md` for the full file map.
+`DashboardPageBuilder` assembles all dashboard view data — start debugging
+there. Full file map: `PROJECT_STRUCTURE.md`.

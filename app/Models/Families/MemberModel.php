@@ -355,6 +355,11 @@ class MemberModel extends Model
             ->join('qr_control qc', 'qc.headID = member.memberID', 'left')
             ->where('member.headID = member.memberID', null, false);
 
+        // qr_control is the single source of truth for control numbers: a head with
+        // no mapping cannot be scanned, so it is excluded from card generation
+        // rather than printed with a memberID that the scanner would reject.
+        $builder->where('qc.control_no IS NOT NULL', null, false);
+
         if ($this->db->fieldExists('dt_deleted', 'member')) {
             $builder->where('member.dt_deleted IS NULL', null, false);
         }
@@ -414,7 +419,7 @@ class MemberModel extends Model
 
             return [
                 'memberID'  => (int) $row['memberID'],
-                'controlNo' => isset($row['control_no']) ? (int) $row['control_no'] : (int) $row['memberID'],
+                'controlNo' => (int) $row['control_no'],
                 'fullname'  => preg_replace('/\s+/', ' ', $name),
                 'barangay'  => $barangay,
             ];

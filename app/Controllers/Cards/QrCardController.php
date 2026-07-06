@@ -20,8 +20,10 @@ use CodeIgniter\HTTP\ResponseInterface;
  * - card():   GET  admin/cards/card/{id} -> single-head card (reprint).
  * - lookup(): GET  admin/cards/lookup/{control} -> redirect to the head record.
  *
- * The control number is derived from memberID (see ControlNumber), so there is
- * one card per head and no stored code. Batch generation writes ONE audit row.
+ * The control number is the head's paper QR number, stored in qr_control (the
+ * same source the scanner reads), so a printed card always resolves on scan.
+ * Heads without a qr_control mapping are excluded from generation. Batch
+ * generation writes ONE audit row.
  */
 class QrCardController extends BaseController
 {

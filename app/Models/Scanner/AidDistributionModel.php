@@ -40,6 +40,16 @@ class AidDistributionModel extends Model
         return (int) $this->getInsertID();
     }
 
+    /** True when at least one aid claim has been recorded under this control number. */
+    public function hasClaims(int $controlNo): bool
+    {
+        if ($controlNo <= 0) {
+            return false;
+        }
+
+        return $this->where('control_no', $controlNo)->countAllResults() > 0;
+    }
+
     /**
      * Chronological (newest-first) aid history for a control number, with the
      * aid-type name and the claimant's full name resolved via joins.

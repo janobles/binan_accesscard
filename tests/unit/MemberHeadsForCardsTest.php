@@ -42,4 +42,25 @@ final class MemberHeadsForCardsTest extends CIUnitTestCase
         // memberID 0 can never be a head (ids are positive).
         $this->assertNull($model->findHead(0));
     }
+
+    public function testHeadsForCardsControlNoEqualsMappedControl(): void
+    {
+        $model = $this->modelOrSkip();
+        $heads = $model->headsForCards();
+        if ($heads === []) {
+            $this->markTestSkipped('No mapped heads seeded to assert against.');
+        }
+
+        foreach ($heads as $head) {
+            $this->assertArrayHasKey('controlNo', $head);
+            $this->assertIsInt($head['controlNo']);
+            // Every returned head must resolve back through qr_control — i.e. its
+            // controlNo is a real mapping, never a memberID fallback.
+            $this->assertSame(
+                $head['memberID'],
+                (new \App\Models\Scanner\QrControlModel())->headForControl($head['controlNo']),
+                'controlNo ' . $head['controlNo'] . ' must map back to its head via qr_control'
+            );
+        }
+    }
 }

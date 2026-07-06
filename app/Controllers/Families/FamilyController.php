@@ -135,6 +135,12 @@ class FamilyController extends BaseController
         $userId = (int) session()->get('user_id');
         $successMessage = 'Family record saved successfully.';
 
+        $controlNo = (int) $this->request->getPost('qr_control_no');
+
+        if (model(\App\Models\Scanner\QrControlModel::class)->takenByOtherHead($controlNo, 0)) {
+            return $this->storeError('QR Number ' . $controlNo . ' is already assigned to another family.');
+        }
+
         // Shape the additional members (skipping the form's empty rows) into the
         // [payload + serviceIds] entries FamilyRecordWriter expects.
         $memberPayloads = [];
@@ -165,7 +171,9 @@ class FamilyController extends BaseController
                 array_map('intval', $serviceIds),
                 $userId,
                 $this->request->getIPAddress(),
-                $this->request->getUserAgent()->getAgentString()
+                $this->request->getUserAgent()->getAgentString(),
+                '',
+                $controlNo
             );
         } catch (Throwable $exception) {
             $memberModel->rollbackTransaction();
@@ -527,6 +535,24 @@ class FamilyController extends BaseController
 
         $userId = (int) session()->get('user_id');
 
+        $qrModel        = model(\App\Models\Scanner\QrControlModel::class);
+        $currentControl = $qrModel->controlForHead($headId);
+        $locked         = $currentControl !== null
+            && model(\App\Models\Scanner\AidDistributionModel::class)->hasClaims($currentControl);
+
+        // Locked heads keep their number: ignore any submitted change (defense in
+        // depth in case the readonly field was tampered with).
+        $controlNo = $locked ? (int) $currentControl : (int) $this->request->getPost('qr_control_no');
+
+        if (! $locked) {
+            if ($controlNo <= 0) {
+                return $this->failUpdate('QR Number is required.', 422);
+            }
+            if ($qrModel->takenByOtherHead($controlNo, $headId)) {
+                return $this->failUpdate('QR Number ' . $controlNo . ' is already assigned to another family.', 422);
+            }
+        }
+
         $memberModel->beginTransaction();
 
         // Snapshot the family's current service IDs before clearing, so archived-but-
@@ -543,6 +569,16 @@ class FamilyController extends BaseController
             $memberModel->rollbackTransaction();
 
             return $this->failUpdate('Head of family could not be updated. Please check required fields.', 422);
+        }
+
+        if (! $locked) {
+            try {
+                $qrModel->upsertForHead($controlNo, $headId);
+            } catch (\Throwable $e) {
+                $memberModel->rollbackTransaction();
+
+                return $this->failUpdate($e->getMessage(), 422);
+            }
         }
 
         $memberModel->deleteFamilyMembersExceptHead($headId);
@@ -1188,6 +1224,7 @@ class FamilyController extends BaseController
             'head_salary' => 'required',
             'head_address' => 'required|max_length[255]',
             'head_barangay' => 'required|max_length[100]',
+            'qr_control_no' => 'required|is_natural_no_zero',
         ];
     }
 
@@ -1553,6 +1590,10 @@ class FamilyController extends BaseController
                 return $this->recordMissing();
             }
 
+            $currentControl = model(\App\Models\Scanner\QrControlModel::class)->controlForHead($headId);
+            $qrLocked = $currentControl !== null
+                && model(\App\Models\Scanner\AidDistributionModel::class)->hasClaims($currentControl);
+
             $serviceIdsByMember = (new MemberServiceModel())
                 ->getServiceIdsByMemberIds(array_map(static fn (array $row): int => (int) $row['memberID'], $rows));
 
@@ -1587,6 +1628,7 @@ class FamilyController extends BaseController
                     'modalMode' => 'update',
                     'submitLabel' => 'Update',
                     'saveDisabled' => false,
+                    'qrLocked' => $qrLocked,
                     'existingMembers' => $this->shapeModalMembers($members, $serviceIdsByMember),
                 ]
             ));
@@ -1604,6 +1646,7 @@ class FamilyController extends BaseController
                 'submitLabel' => 'Save',
                 'headId' => 0,
                 'saveDisabled' => false,
+                'qrLocked' => false,
                 'existingMembers' => [],
             ]
         ));
@@ -1638,6 +1681,7 @@ class FamilyController extends BaseController
                 'head_salary' => (string) ($head['Salary'] ?? ''),
                 'head_address' => $addressParts['address'],
                 'head_barangay' => $addressParts['barangay'],
+                'qr_control_no' => (string) (model(\App\Models\Scanner\QrControlModel::class)->controlForHead($headId) ?? ''),
             ],
             'selectedSectorIds' => array_map('strval', SectorIds::normalize($head['sectorID'] ?? null)),
             'selectedServiceIds' => array_map('strval', $headServiceIds),

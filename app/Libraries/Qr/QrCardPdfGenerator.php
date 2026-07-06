@@ -11,7 +11,8 @@ use Dompdf\Options;
  *
  * Unlike the cswd-qr prototype's range-based generator, this takes an explicit
  * list of heads (memberID gaps from deletions make a contiguous range wrong).
- * Each head's control number is derived via ControlNumber::format($memberID).
+ * Each head's control number is its mapped qr_control.control_no, formatted via
+ * ControlNumber::format().
  */
 final class QrCardPdfGenerator
 {
@@ -30,8 +31,8 @@ final class QrCardPdfGenerator
 
         $settings   = config('QrCardSettings');
         $chunks     = array_values(array_chunk($heads, $settings->cardsPerChunk));
-        $firstNo    = ControlNumber::format($heads[0]['controlNo'] ?? $heads[0]['memberID']);
-        $lastNo     = ControlNumber::format($heads[count($heads) - 1]['controlNo'] ?? $heads[count($heads) - 1]['memberID']);
+        $firstNo    = ControlNumber::format($heads[0]['controlNo']);
+        $lastNo     = ControlNumber::format($heads[count($heads) - 1]['controlNo']);
 
         if (count($chunks) === 1) {
             return [
@@ -59,8 +60,8 @@ final class QrCardPdfGenerator
             }
             try {
                 foreach ($chunks as $chunk) {
-                    $chunkFirst = ControlNumber::format($chunk[0]['controlNo'] ?? $chunk[0]['memberID']);
-                    $chunkLast  = ControlNumber::format($chunk[count($chunk) - 1]['controlNo'] ?? $chunk[count($chunk) - 1]['memberID']);
+                    $chunkFirst = ControlNumber::format($chunk[0]['controlNo']);
+                    $chunkLast  = ControlNumber::format($chunk[count($chunk) - 1]['controlNo']);
                     $entryName  = sprintf($settings->chunkPdfNamePattern, $chunkFirst, $chunkLast);
                     $zip->addFromString($entryName, $this->renderChunkPdf($chunk));
                 }
@@ -116,7 +117,7 @@ final class QrCardPdfGenerator
             $pageNumber++;
             $cells = [];
             foreach ($pageHeads as $head) {
-                $control = ControlNumber::format($head['controlNo'] ?? $head['memberID']);
+                $control = ControlNumber::format($head['controlNo']);
                 $cells[] = [
                     'controlNumber' => $control,
                     'fullname'      => $head['fullname'],

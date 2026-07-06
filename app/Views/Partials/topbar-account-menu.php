@@ -20,7 +20,7 @@ $topbarFullName = $topbarFullName !== '' ? $topbarFullName : $username;
     </button>
     <div class="dropdown-menu dropdown-menu-end topbar-account-menu">
         <div class="topbar-account-summary">
-            <img class="topbar-account-avatar" src="<?= base_url('assets/image/default-profile.svg') ?>" alt="Profile picture">
+            <img class="topbar-account-avatar" src="<?= esc(base_url('assets/image/default-profile.svg'), 'attr') ?>" alt="Profile picture">
             <strong><?= esc(mb_strtoupper($topbarFullName, 'UTF-8')) ?></strong>
             <small><?= esc($accountLevelLabel) ?></small>
         </div>

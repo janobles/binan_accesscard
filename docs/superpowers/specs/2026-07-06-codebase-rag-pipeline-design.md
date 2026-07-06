@@ -66,9 +66,15 @@ A **grep index** in SKILL.md maps keywords → file so retrieval is one Grep, no
 ### 1. `.mcp.json` (Context7)
 
 Project-scoped, committed. Uses `${CONTEXT7_API_KEY}` env expansion — no secret in git. Key
-lives in the developer's shell env (`~/.zshrc`). Context7 supplies live, version-specific docs
-for CodeIgniter4 4.7 and Bootstrap 5, removing the need to hand-curate framework cheatsheets.
-Keyless mode works (rate-limited) as a fallback.
+lives in the developer's shell env (`~/.zshrc`). Context7 supplies live docs for CodeIgniter4
+and Bootstrap 5, removing the need to hand-curate framework cheatsheets. Keyless mode works
+(rate-limited) as a fallback.
+
+**Version caveat:** Context7 serves *latest* docs, not the repo's pinned version
+(`/codeigniter4/userguide` has no version-pinned ID). Fine while latest = 4.7.x (repo pins
+v4.7.3), but if the repo lags a future major, live docs mislead. `sources.md` records this
+caveat; SKILL.md instructs agents to cross-check Context7 answers against the pins in
+`sources.md`.
 
 ### 2. `docs/knowledge/binan-conventions/*.md`
 
@@ -117,6 +123,11 @@ redundant helpers. Format matches CLAUDE.md's issue convention:
 Maintenance: every cleanup PR checks items off (`[x]` + `*(Fixed: ...)*`); any new violation
 spotted mid-task is appended immediately.
 
+**Single punch-list rule:** `violations.md` is the canonical punch-list for code-mess items —
+GitHub issues stay for QA/feature work, not code-mess tracking (avoids two drifting lists).
+Issue #7 (deferred CodeRabbit findings) is already closed; the audit pass mines its body for
+any still-unfixed items and seeds them into `violations.md`.
+
 ### 6. `docs/knowledge/sources.md`
 
 Version pins pulled from `composer.lock` (CI4, Bootstrap, PHP) + canonical doc URLs. The
@@ -124,9 +135,13 @@ freshness anchor: on a dependency bump, the affected cheatsheets are refreshed.
 
 ### 7. `.claude/skills/binan-conventions/SKILL.md`
 
-The router. Contains the decision table, the grep index (keyword → file), and the trigger
-(edits under `app/Controllers|Models|Views|Libraries`). Instructs the agent to retrieve before
+The router. Contains the decision table, the grep index (keyword → file), and the retrieval
+protocol (including the Context7 version cross-check). Instructs the agent to retrieve before
 editing.
+
+**Trigger wording:** skills fire on description matching, not path watching. The description
+must name concrete actions — "editing controllers, models, views, or libraries; adding routes;
+styling pages; writing queries" — not just "edits under `app/`".
 
 ### 8. `CLAUDE.md` (slimmed)
 
@@ -136,15 +151,22 @@ always-loaded token cost every session while keeping a single source of truth fo
 
 ### 9. `AGENTS.md` (new, repo root)
 
-Thin stub so non-Claude agents inherit the pipeline:
+Thin stub so non-Claude agents inherit the pipeline. External agents (Cursor/Codex) read
+AGENTS.md but do not execute Claude skills — so the stub **inlines the decision table**
+(~5 lines) rather than only pointing at SKILL.md, otherwise retrieval never happens:
 
 ```
 Read CLAUDE.md for rules and non-negotiables.
-Retrieval: docs/knowledge/ + .claude/skills/binan-conventions/SKILL.md.
-Framework API (CI4 4.7 / Bootstrap 5): Context7 MCP (.mcp.json).
+Before editing app/ code, retrieve:
+  framework API (CI4 / Bootstrap 5)  -> Context7 MCP (.mcp.json); cross-check docs/knowledge/sources.md pins
+  repo conventions ("how does THIS repo do X") -> docs/knowledge/binan-conventions/
+  UI markup / SBAdmin styling        -> docs/knowledge/sbadmin/
+  PHP idioms                         -> docs/knowledge/php-practices/
+  known mess at this path            -> docs/knowledge/violations.md
+Grep index: .claude/skills/binan-conventions/SKILL.md
 ```
 
-No rule duplication — it redirects to CLAUDE.md to avoid drift.
+No *rule* duplication — rules stay in CLAUDE.md; only the routing table is mirrored.
 
 ## Data flow
 
@@ -165,7 +187,9 @@ No rule duplication — it redirects to CLAUDE.md to avoid drift.
 ## Testing / verification
 
 Tooling-and-docs change, no runtime surface. Verification is behavioral:
-- `.mcp.json` resolves → `claude mcp list` shows `context7 ✔ Connected`.
+- `.mcp.json` resolves → `claude mcp list` shows `context7 ✔ Connected`. (Verified 2026-07-06:
+  CI4 resolve+query works via `/codeigniter4/userguide`.)
+- Bootstrap 5 resolves and answers on Context7 (one resolve + query, same as CI4 check).
 - Every convention doc's `path:line` cite resolves to real code (grep check).
 - SKILL.md grep index keywords each hit an existing file.
 - CLAUDE.md slimming preserves all non-negotiables (diff review; no rule lost, only relocated).
@@ -175,7 +199,7 @@ Tooling-and-docs change, no runtime surface. Verification is behavioral:
 
 1. `.mcp.json` + Context7 connect (done: config written; key + verify pending restart).
 2. Scaffold `docs/knowledge/` skeleton + `sources.md` from `composer.lock`.
-3. Audit pass → seed `violations.md`.
+3. Audit pass → seed `violations.md`; mine closed issue #7 for still-unfixed items.
 4. Author `binan-conventions/*.md` from canonical code (grep + cite).
 5. Author `sbadmin/*.md` + `php-practices/*.md`.
 6. Write `.claude/skills/binan-conventions/SKILL.md` (decision table + grep index).

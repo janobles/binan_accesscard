@@ -450,8 +450,10 @@ class FamilyExcelImporter
     }
 
     /**
-     * Maps a row's comma-separated sector codes to IDs, recording an error for any
-     * unknown code.
+     * Maps a row's comma-separated sector codes to IDs. Sector mirrors the form's
+     * "Others" dropdown: an unrecognized code is filed under the "Other Sectors"
+     * catch-all rather than aborting the import, so a worker's free-text sector never
+     * blocks the whole batch. If no Other sector exists, the unknown token is skipped.
      *
      * @param array{row: int, data: array<string, string>} $entry
      * @param array<string, int> $sectorByCode
@@ -459,7 +461,8 @@ class FamilyExcelImporter
      */
     private function mapSectors(array $entry, string $familyNo, array $sectorByCode): array
     {
-        $ids = [];
+        $ids     = [];
+        $otherId = $sectorByCode['OTHER'] ?? null;
 
         foreach ($this->splitList((string) ($entry['data']['sector'] ?? '')) as $token) {
             $code = strtoupper($token);
@@ -469,7 +472,10 @@ class FamilyExcelImporter
                 continue;
             }
 
-            $this->addError($entry['row'], $familyNo, 'Unknown sector code "' . $token . '" (see the Reference sheet).');
+            // Unrecognized sector text -> "Other Sectors" (or skip if there is none).
+            if ($otherId !== null) {
+                $ids[] = $otherId;
+            }
         }
 
         return array_values(array_unique($ids));

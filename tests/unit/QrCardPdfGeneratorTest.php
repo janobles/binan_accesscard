@@ -11,7 +11,7 @@ final class QrCardPdfGeneratorTest extends CIUnitTestCase
     {
         $heads = [];
         for ($i = 1; $i <= $count; $i++) {
-            $heads[] = ['memberID' => $i, 'fullname' => "Doe, Person {$i}", 'barangay' => 'Canlalay'];
+            $heads[] = ['memberID' => $i, 'controlNo' => $i, 'fullname' => "Doe, Person {$i}", 'barangay' => 'Canlalay'];
         }
 
         return $heads;

@@ -94,9 +94,10 @@ Every rule cites a real `path:line` so it is verifiable and self-policing.
 Documents the reality found: **Bootstrap 5 + a homegrown adapter** (`public/css/sb-admin-adapter.css`),
 not a stock vendored theme. Captures the intended UI target as an open decision:
 
-> **Open item:** SB Admin 2 is pinned to Bootstrap 4.6 (stale vs. this repo's Bootstrap 5).
-> SB Admin 1 (startbootstrap-sb-admin v7+) is Bootstrap 5-based and leaner. Target theme TBD
-> by JP; this doc records the choice once made and the adapter conventions in the meantime.
+**Target theme decided: SB Admin 1** (startbootstrap-sb-admin v7+, Bootstrap 5-based) — chosen
+for customizability and alignment with the repo's Bootstrap 5 base. SB Admin 2 rejected (pinned
+to Bootstrap 4.6, fights the BS5 base). The cheatsheet documents SB Admin 1 conventions + the
+migration target for existing non-conforming views.
 
 ### 4. `docs/knowledge/php-practices/*.md`
 
@@ -184,5 +185,5 @@ Tooling-and-docs change, no runtime surface. Verification is behavioral:
 
 ## Open items
 
-- UI target theme (SB Admin 1 vs 2) — JP to decide; recorded in `sbadmin/`.
+- ~~UI target theme (SB Admin 1 vs 2)~~ — **Decided: SB Admin 1.**
 - Context7 API key rotation (prior key exposed in session transcript).

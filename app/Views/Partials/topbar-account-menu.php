@@ -8,7 +8,7 @@ $accountSettingsMode = (string) ($accountSettingsMode ?? 'modal');
 $topbarDetails = \App\Libraries\ViewFormatter::parseFullDescription((string) ($user['full_description'] ?? ''));
 $topbarFullName = trim(implode(' ', array_filter([
     $topbarDetails['first_name'] ?? '',
-    $topbarDetails['middle_name'] ?? '',
+    \App\Libraries\ViewFormatter::middleInitial((string) ($topbarDetails['middle_name'] ?? '')),
     $topbarDetails['last_name'] ?? '',
     $topbarDetails['suffix'] ?? '',
 ])));

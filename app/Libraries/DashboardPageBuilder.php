@@ -170,7 +170,7 @@ class DashboardPageBuilder
             'stats'              => $dashboardModel->stats(),
             'canCreateFamily'    => true,
             'username'           => (string) (session()->get('username') ?? 'Admin'),
-            'accountLevelLabel'  => RoleAccess::auditRoleLabel((string) (session()->get('role') ?? '')) ?? 'Account',
+            'accountLevelLabel'  => SessionAccount::levelLabel(),
             'searchTerm'         => $searchTerm,
             'searchFilters'      => $searchFilters,
             'hasSearchFilters'   => $hasSearchFilters,
@@ -360,58 +360,7 @@ class DashboardPageBuilder
     /** Session user plus stored profile details for topbar/account menus. */
     private function currentSessionUser(): array
     {
-        $sessionUser = session()->get();
-        $userId = (int) ($sessionUser['user_id'] ?? 0);
-
-        if ($userId <= 0) {
-            // The Developer is file-backed (no users row, synthetic userID 0), so
-            // getAccountById() below can't supply its name. Pull it from
-            // DeveloperProfile so the topbar account menu shows the real name
-            // instead of falling back to the username.
-            if (RoleAccess::normalizeRole((string) ($sessionUser['role'] ?? '')) === 'Developer') {
-                $sessionUser['full_description'] = $this->packDeveloperFullDescription(DeveloperProfile::load());
-            }
-
-            return $sessionUser;
-        }
-
-        $account = (new UserModel())->getAccountById($userId);
-
-        if ($account === null) {
-            return $sessionUser;
-        }
-
-        return array_merge($sessionUser, $account);
-    }
-
-    /**
-     * Packs DeveloperProfile personal details into the same `LN:..; FN:..` string
-     * shape `full_description` uses for staff, so ViewFormatter::parseFullDescription
-     * (and the topbar partial) reads the Developer's real name the same way.
-     *
-     * @param array<string,string> $details
-     */
-    private function packDeveloperFullDescription(array $details): string
-    {
-        $segments = [
-            'LN'   => trim((string) ($details['last_name'] ?? '')),
-            'FN'   => trim((string) ($details['first_name'] ?? '')),
-            'MN'   => trim((string) ($details['middle_name'] ?? '')),
-            'SF'   => trim((string) ($details['suffix'] ?? '')),
-            'ADDR' => trim((string) ($details['address'] ?? '')),
-            'CN'   => trim((string) ($details['contact_no'] ?? '')),
-            'BD'   => trim((string) ($details['birthday'] ?? '')),
-        ];
-
-        $parts = [];
-
-        foreach ($segments as $label => $value) {
-            if ($value !== '') {
-                $parts[] = $label . ':' . $value;
-            }
-        }
-
-        return implode('; ', $parts);
+        return SessionAccount::user();
     }
 
     /**
@@ -579,7 +528,7 @@ class DashboardPageBuilder
             'auditActionOptions' => $searchModel->auditActions(),
             'idleTimeoutSeconds' => (new IdleTimeout())->seconds,
             'username'           => (string) (session()->get('username') ?? 'Employee'),
-            'accountLevelLabel'  => RoleAccess::auditRoleLabel((string) (session()->get('role') ?? '')) ?? 'Account',
+            'accountLevelLabel'  => SessionAccount::levelLabel(),
             'sectorOptions'      => $sectorOptions,
             'selectedFilterDate' => (string) ($searchFilters['date'] ?? $searchFilters['date_from'] ?? ''),
             'hasSearchFilters'   => $hasSearchFilters,
@@ -669,7 +618,7 @@ class DashboardPageBuilder
             'hasSearchFilters'   => $hasSearchFilters,
             'idleTimeoutSeconds' => (new IdleTimeout())->seconds,
             'username'           => (string) (session()->get('username') ?? 'Viewer'),
-            'accountLevelLabel'  => RoleAccess::auditRoleLabel((string) (session()->get('role') ?? '')) ?? 'Account',
+            'accountLevelLabel'  => SessionAccount::levelLabel(),
             'formatDate'         => static function (mixed $value): string {
                 $timestamp = strtotime((string) $value);
 

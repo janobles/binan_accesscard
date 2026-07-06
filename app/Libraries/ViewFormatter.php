@@ -122,6 +122,23 @@ class ViewFormatter
     }
 
     /** Splits an array or comma string into a trimmed, non-empty list of strings. */
+    /**
+     * Middle name → initials with periods, one per whitespace-separated word,
+     * for compact name display: "Torres" → "T.", "Dela Cruz" → "D. C.", "" → "".
+     */
+    public static function middleInitial(string $middle): string
+    {
+        $parts = [];
+
+        foreach (preg_split('/\s+/', trim($middle)) ?: [] as $word) {
+            if ($word !== '') {
+                $parts[] = mb_strtoupper(mb_substr($word, 0, 1), 'UTF-8') . '.';
+            }
+        }
+
+        return implode(' ', $parts);
+    }
+
     public static function splitList(mixed $value): array
     {
         $items = is_array($value) ? $value : explode(',', (string) $value);

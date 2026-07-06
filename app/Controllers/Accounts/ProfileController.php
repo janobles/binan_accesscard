@@ -160,8 +160,8 @@ class ProfileController extends BaseController
      * username change and/or password change persist to
      * writable/developer/credentials.json (seeded from the .env developer.* keys
      * on first use; .env itself is never written) — see App\Libraries\DeveloperProfile.
-     * Account level is fixed (Developer); username here is user-editable, unlike
-     * for regular staff.
+     * Account level is fixed (Developer); the username remains user-editable in
+     * this flow.
      */
     private function updateDeveloper(): RedirectResponse
     {

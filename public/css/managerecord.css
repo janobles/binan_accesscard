@@ -52,6 +52,10 @@
     display: none !important;
 }
 
+.actions-menu .dropdown-menu {
+    z-index: 1080;
+}
+
 .records-scroll-panel {
     display: flex;
     height: 100%;

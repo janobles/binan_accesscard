@@ -24,6 +24,13 @@ final class QrControlModelTest extends CIUnitTestCase
         $this->assertFalse((new QrControlModel())->takenByOtherHead(0, 5));
     }
 
+    public function testControlsForHeadsReturnsEmptyMapWithoutValidIds(): void
+    {
+        $model = new QrControlModel();
+        $this->assertSame([], $model->controlsForHeads([]));
+        $this->assertSame([], $model->controlsForHeads([0, -1]));
+    }
+
     public function testUpsertForHeadRejectsNonPositiveArgs(): void
     {
         $model = new QrControlModel();

@@ -1365,8 +1365,12 @@ class FamilyController extends BaseController
             }
 
             $sectorShortcodes = $this->dataTableSectorShortcodes();
+            $headIdKey = $scope === 'all' ? 'headID' : 'memberID';
+            $controlNumbers = model(\App\Models\Scanner\QrControlModel::class)->controlsForHeads(
+                array_map(static fn (array $row): int => (int) ($row[$headIdKey] ?? 0), $rows)
+            );
             $data = array_map(
-                fn (array $row): array => $this->dataTableRow($row, $scope === 'all', $sectorShortcodes),
+                fn (array $row): array => $this->dataTableRow($row, $scope === 'all', $sectorShortcodes, $controlNumbers),
                 $rows
             );
 
@@ -1402,9 +1406,12 @@ class FamilyController extends BaseController
         $firstOrder = $order[0];
         $column = (int) ($firstOrder['column'] ?? 0);
         $direction = strtolower((string) ($firstOrder['dir'] ?? 'asc')) === 'desc' ? 'desc' : 'asc';
+        // Column order: 0=QR, 1=name, 2=sector, 3=address, 4=birthday, 5=actions.
+        // QR/sector/actions are non-orderable, so only address/birthday map here;
+        // everything else (incl. the name column) falls back to the name sort.
         $orderKey = match ($column) {
-            2 => 'address',
-            3 => 'birthday',
+            3 => 'address',
+            4 => 'birthday',
             default => 'name',
         };
 
@@ -1433,8 +1440,9 @@ class FamilyController extends BaseController
      * (name HTML, sector shortcodes, address, birthday, actions dropdown).
      *
      * @param array<int, string> $sectorShortcodes
+     * @param array<int, int>    $controlNumbers   [headID => qr_control.control_no]
      */
-    private function dataTableRow(array $row, bool $allMembersScope, array $sectorShortcodes): array
+    private function dataTableRow(array $row, bool $allMembersScope, array $sectorShortcodes, array $controlNumbers = []): array
     {
         $memberId = (int) ($row['memberID'] ?? 0);
         $headId = $allMembersScope ? (int) ($row['headID'] ?? $memberId) : $memberId;
@@ -1445,6 +1453,8 @@ class FamilyController extends BaseController
         if ($allMembersScope && $relationship !== '') {
             $nameHtml .= '<small class="text-muted d-block">' . esc(mb_strtoupper($relationship)) . '</small>';
         }
+
+        $controlNo = (int) ($controlNumbers[$headId] ?? 0);
 
         $sectors = [];
 
@@ -1457,12 +1467,29 @@ class FamilyController extends BaseController
         $birthday = strtotime((string) ($row['birthday'] ?? ''));
 
         return [
+            'qr' => $this->dataTableQrCell($controlNo),
             'name' => $nameHtml,
             'sector' => esc(implode(', ', array_values(array_unique($sectors)))),
             'address' => esc(mb_strtoupper((string) ($row['address'] ?? ''))),
             'birthday' => $birthday === false ? '-' : date('Y-m-d', $birthday),
             'actions' => $this->dataTableActions($row, $headId, $name),
         ];
+    }
+
+    /**
+     * QR NO. cell: a bordered badge (matching the app's other badges) with a QR
+     * glyph and the zero-padded control number, or a muted dash when the family has
+     * no QR mapping yet.
+     */
+    private function dataTableQrCell(int $controlNo): string
+    {
+        if ($controlNo <= 0) {
+            return '<span class="text-muted">&mdash;</span>';
+        }
+
+        return '<span class="badge bg-light text-dark border text-nowrap">'
+            . '<i class="bi bi-qr-code me-1" aria-hidden="true"></i>#'
+            . esc(\App\Libraries\Qr\ControlNumber::format($controlNo)) . '</span>';
     }
 
     /** "Surname Suffix, Firstname M." display name for a member row. */

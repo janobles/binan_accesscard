@@ -55,6 +55,33 @@ class QrControlModel extends Model
         return $row === null ? null : (int) $row['control_no'];
     }
 
+    /**
+     * Batch lookup: the control numbers mapped to a set of heads, in one query.
+     *
+     * @param int[] $headIds
+     *
+     * @return array<int, int> [headID => control_no]; heads without a mapping are absent.
+     */
+    public function controlsForHeads(array $headIds): array
+    {
+        $headIds = array_values(array_unique(array_filter(
+            array_map('intval', $headIds),
+            static fn (int $id): bool => $id > 0,
+        )));
+
+        if ($headIds === []) {
+            return [];
+        }
+
+        $map = [];
+
+        foreach ($this->whereIn('headID', $headIds)->findAll() as $row) {
+            $map[(int) $row['headID']] = (int) $row['control_no'];
+        }
+
+        return $map;
+    }
+
     /** True when $controlNo is already assigned to a head other than $headId. */
     public function takenByOtherHead(int $controlNo, int $headId): bool
     {

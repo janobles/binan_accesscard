@@ -9,6 +9,7 @@ use App\Models\Audit\AuditTrailsModel;
 use App\Models\Families\MemberModel;
 use App\Models\Families\MemberServiceModel;
 use App\Models\Lookups\ServiceModel;
+use App\Models\Scanner\QrControlModel;
 use Config\Database;
 use Throwable;
 
@@ -83,6 +84,7 @@ class FamilyImportJob implements JobHandlerInterface
         $ua     = $job['user_agent'] ?? null;
 
         $writer = new FamilyRecordWriter($memberModel, new MemberServiceModel(), new ServiceModel(), new AuditTrailsModel());
+        $qrControlModel = new QrControlModel();
 
         // By-reference capture so each checkpoint reads the LIVE counters/errors as
         // the loop mutates them (an arrow fn would freeze them at their start values).
@@ -126,6 +128,26 @@ class FamilyImportJob implements JobHandlerInterface
                 continue;
             }
 
+            // A QR number already mapped to another family fails fast with a clear
+            // message; the qr_control primary key stays as the race-safe backstop.
+            $controlNo = (int) ($family['familyNo'] ?? 0);
+
+            if ($controlNo > 0 && $qrControlModel->takenByOtherHead($controlNo, 0)) {
+                $failed++;
+                $errors[] = [
+                    'sheetRow' => null,
+                    'familyNo' => (string) ($family['familyNo'] ?? ''),
+                    'message'  => 'QR Number ' . $controlNo . ' is already assigned to another family.',
+                ];
+
+                if ((($i - $start + 1) % $this->batch) === 0) {
+                    $reporter->checkpoint($done + $failed + $skipped, $i + 1, $snapshot());
+                    $reporter->pause();
+                }
+
+                continue;
+            }
+
             // One family = one transaction: a single bad family is isolated and the
             // rest of the file still imports.
             $db->transBegin();
@@ -139,7 +161,7 @@ class FamilyImportJob implements JobHandlerInterface
                     $ip,
                     $ua,
                     ' via Excel import (queued)',
-                    (int) ($family['familyNo'] ?? 0),
+                    $controlNo,
                 );
 
                 if ($db->transStatus() === false) {

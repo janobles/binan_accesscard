@@ -110,6 +110,7 @@ $sectorOptionLabel = static function (array $sector): string {
             >
                 <thead class="table-light">
                 <tr>
+                    <th class="fw-semibold small">QR NO.</th>
                     <th class="fw-semibold small">HEAD/MEMBER NAME</th>
                     <th class="fw-semibold small">SECTOR</th>
                     <th class="fw-semibold small">ADDRESS</th>

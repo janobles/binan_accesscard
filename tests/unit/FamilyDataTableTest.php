@@ -28,13 +28,16 @@ final class FamilyDataTableTest extends TestCase
         $this->assertStringContainsString('DataTables Bootstrap 5 integration', (string) file_get_contents($adapter));
     }
 
-    public function testFamilyListUsesFiveColumnServerSideTableWithoutDateColumn(): void
+    public function testFamilyListUsesSixColumnServerSideTableWithoutDateColumn(): void
     {
         $view = (string) file_get_contents(APPPATH . 'Views/Family/list.php');
         $script = (string) file_get_contents(FCPATH . 'assets/js/dashboard/family-datatable.js');
 
         $this->assertStringContainsString('id="familyRecordsTable"', $view);
-        $this->assertSame(5, preg_match_all('/<th(?:\s|>)/', $view));
+        // QR NO. + HEAD/MEMBER NAME + SECTOR + ADDRESS + BIRTHDAY + ACTIONS.
+        $this->assertSame(6, preg_match_all('/<th(?:\s|>)/', $view));
+        $this->assertStringContainsString('>QR NO.<', $view);
+        $this->assertStringContainsString("{ data: 'qr', name: 'qr', orderable: false", $script);
         $this->assertStringNotContainsString('>DATE<', $view);
         $this->assertStringNotContainsString('name="date"', $view);
         $this->assertStringContainsString('serverSide: true', $script);
@@ -103,6 +106,20 @@ final class FamilyDataTableTest extends TestCase
         $routes = (string) file_get_contents(APPPATH . 'Config/Routes.php');
 
         $this->assertSame(3, substr_count($routes, "'data', 'Families\\FamilyController::dataTable'"));
+    }
+
+    public function testQrColumnRendersControlNumberBadge(): void
+    {
+        $controller = (string) file_get_contents(APPPATH . 'Controllers/Families/FamilyController.php');
+
+        // dataTable() batch-loads the heads' control numbers in one query...
+        $this->assertStringContainsString('controlsForHeads(', $controller);
+        // ...the row exposes a dedicated 'qr' cell built by dataTableQrCell()...
+        $this->assertStringContainsString("'qr' => \$this->dataTableQrCell(\$controlNo)", $controller);
+        // ...which renders a bordered QR badge with the padded number, dash when unmapped.
+        $this->assertStringContainsString('bi bi-qr-code', $controller);
+        $this->assertStringContainsString('ControlNumber::format($controlNo)', $controller);
+        $this->assertStringContainsString('&mdash;', $controller);
     }
 
     public function testControllerUsesWhitelistedDataTablesParametersWithoutDateFilter(): void

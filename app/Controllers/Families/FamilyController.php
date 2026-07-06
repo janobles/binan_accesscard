@@ -135,6 +135,12 @@ class FamilyController extends BaseController
         $userId = (int) session()->get('user_id');
         $successMessage = 'Family record saved successfully.';
 
+        $controlNo = (int) $this->request->getPost('qr_control_no');
+
+        if (model(\App\Models\Scanner\QrControlModel::class)->takenByOtherHead($controlNo, 0)) {
+            return $this->storeError('QR Number ' . $controlNo . ' is already assigned to another family.');
+        }
+
         // Shape the additional members (skipping the form's empty rows) into the
         // [payload + serviceIds] entries FamilyRecordWriter expects.
         $memberPayloads = [];
@@ -165,7 +171,9 @@ class FamilyController extends BaseController
                 array_map('intval', $serviceIds),
                 $userId,
                 $this->request->getIPAddress(),
-                $this->request->getUserAgent()->getAgentString()
+                $this->request->getUserAgent()->getAgentString(),
+                '',
+                $controlNo
             );
         } catch (Throwable $exception) {
             $memberModel->rollbackTransaction();
@@ -1188,6 +1196,7 @@ class FamilyController extends BaseController
             'head_salary' => 'required',
             'head_address' => 'required|max_length[255]',
             'head_barangay' => 'required|max_length[100]',
+            'qr_control_no' => 'required|is_natural_no_zero',
         ];
     }
 

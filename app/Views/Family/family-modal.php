@@ -191,6 +191,17 @@ $renderMemberRow = static function ($index, array $m = []) use (
                                 <?= $selectOptions($barangayOptions, $oldValue('head_barangay'), 'Barangay') ?>
                             </select>
                         </div>
+                        <?php $qrLocked = ! empty($qrLocked ?? false); ?>
+                        <div class="col-12 col-xl-3">
+                            <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>HeadQr">QR Number</label>
+                            <input id="<?= esc($fieldPrefix, 'attr') ?>HeadQr" name="qr_control_no" type="text"
+                                inputmode="numeric" pattern="[0-9]*"
+                                value="<?= esc($oldValue('qr_control_no'), 'attr') ?>"
+                                <?= $qrLocked ? 'readonly' : 'required' ?>>
+                            <?php if ($qrLocked): ?>
+                                <small class="text-muted">Locked: aid already recorded under this number.</small>
+                            <?php endif; ?>
+                        </div>
                     </div>
                 </section>
 

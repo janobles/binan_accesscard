@@ -49,12 +49,7 @@ $navActive           = $navActive ?? ['scanner' => 'active'];
                     </div>
                 </div>
                 <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a href="#" class="nav-link topbar-user"><i class="bi bi-person-circle" aria-hidden="true"></i><span><?= esc($username) ?> &middot; Scanner</span></a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="<?= site_url('logout') ?>" class="nav-link js-logout-link"><i class="bi bi-box-arrow-right" aria-hidden="true"></i><span>Logout</span></a>
-                    </li>
+                    <?= view('Partials/topbar-account-menu', ['user' => $user, 'username' => $username, 'accountLevelLabel' => $accountLevelLabel]) ?>
                 </ul>
             </nav>
 

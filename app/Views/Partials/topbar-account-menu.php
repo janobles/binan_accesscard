@@ -8,7 +8,7 @@ $accountSettingsMode = (string) ($accountSettingsMode ?? 'modal');
 $topbarDetails = \App\Libraries\ViewFormatter::parseFullDescription((string) ($user['full_description'] ?? ''));
 $topbarFullName = trim(implode(' ', array_filter([
     $topbarDetails['first_name'] ?? '',
-    $topbarDetails['middle_name'] ?? '',
+    \App\Libraries\ViewFormatter::middleInitial((string) ($topbarDetails['middle_name'] ?? '')),
     $topbarDetails['last_name'] ?? '',
     $topbarDetails['suffix'] ?? '',
 ])));
@@ -20,7 +20,7 @@ $topbarFullName = $topbarFullName !== '' ? $topbarFullName : $username;
     </button>
     <div class="dropdown-menu dropdown-menu-end topbar-account-menu">
         <div class="topbar-account-summary">
-            <img class="topbar-account-avatar" src="<?= base_url('assets/image/default-profile.svg') ?>" alt="Profile picture">
+            <img class="topbar-account-avatar" src="<?= esc(base_url('assets/image/default-profile.svg'), 'attr') ?>" alt="Profile picture">
             <strong><?= esc(mb_strtoupper($topbarFullName, 'UTF-8')) ?></strong>
             <small><?= esc($accountLevelLabel) ?></small>
         </div>

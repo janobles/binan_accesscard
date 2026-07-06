@@ -12,11 +12,12 @@ use CodeIgniter\HTTP\RedirectResponse;
 use Throwable;
 
 /**
- * Self-service "My Account" for logged-in Admin / Encoder / Viewer staff: edit
- * own profile details and change own password (the modal opened from the topbar
- * username). The Developer authenticates from .env and has no users row, so it
- * has no editable profile here. Account management of OTHER users lives in
- * Accounts\AccountController.
+ * Self-service "My Account" for the logged-in user (the modal opened from the
+ * topbar username): edit own personal details and change own password. Admin /
+ * Encoder / Viewer staff have a `users` row and save through UserModel; the
+ * Developer has no `users` row and instead saves through DeveloperProfile
+ * (file-backed profile + credentials, seeded from .env but never writing back to
+ * it). Account management of OTHER users lives in Accounts\AccountController.
  */
 class ProfileController extends BaseController
 {
@@ -155,9 +156,12 @@ class ProfileController extends BaseController
 
     /**
      * Saves the Developer's My Account modal. The Developer has no users row, so
-     * personal details persist to writable/developer/profile.json and an optional
-     * password change rewrites the developer.passwordHash line in .env (see
-     * App\Libraries\DeveloperProfile). Username/account level are read-only.
+     * personal details persist to writable/developer/profile.json, and an optional
+     * username change and/or password change persist to
+     * writable/developer/credentials.json (seeded from the .env developer.* keys
+     * on first use; .env itself is never written) — see App\Libraries\DeveloperProfile.
+     * Account level is fixed (Developer); the username remains user-editable in
+     * this flow.
      */
     private function updateDeveloper(): RedirectResponse
     {

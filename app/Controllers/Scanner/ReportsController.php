@@ -4,6 +4,7 @@ namespace App\Controllers\Scanner;
 
 use App\Controllers\BaseController;
 use App\Libraries\RoleAccess;
+use App\Libraries\SessionAccount;
 use App\Models\Scanner\AidStatsModel;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
@@ -36,6 +37,8 @@ class ReportsController extends BaseController
             'activeTab'         => 'reports',
             'pageTitle'         => 'Reports',
             'username'          => session('username') ?? 'Scanner',
+            'user'              => SessionAccount::user(),
+            'accountLevelLabel' => SessionAccount::levelLabel(),
             'from'              => $from,
             'to'                => $to,
             'summary'           => $summary,

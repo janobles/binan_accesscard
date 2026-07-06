@@ -202,7 +202,14 @@ class ServiceModel extends Model
             return 1;
         }
 
-        $row = $this->selectMax($this->primaryKey, 'max_id')->first();
+        // serviceID is not AUTO_INCREMENT, so two concurrent creates could read the
+        // same MAX and collide. Take a FOR UPDATE lock inside the caller's
+        // transaction so allocation serializes. Requires the caller to have an open
+        // transaction and to insert before committing (see ServiceController).
+        $db  = $this->db;
+        $sql = 'SELECT MAX(' . $db->protectIdentifiers($this->primaryKey) . ') AS max_id FROM '
+            . $db->protectIdentifiers($this->table) . ' FOR UPDATE';
+        $row = $db->query($sql)->getRowArray();
 
         return ((int) ($row['max_id'] ?? 0)) + 1;
     }

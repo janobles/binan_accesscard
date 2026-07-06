@@ -170,6 +170,7 @@ class DashboardPageBuilder
             'stats'              => $dashboardModel->stats(),
             'canCreateFamily'    => true,
             'username'           => (string) (session()->get('username') ?? 'Admin'),
+            'accountLevelLabel'  => SessionAccount::levelLabel(),
             'searchTerm'         => $searchTerm,
             'searchFilters'      => $searchFilters,
             'hasSearchFilters'   => $hasSearchFilters,
@@ -359,20 +360,7 @@ class DashboardPageBuilder
     /** Session user plus stored profile details for topbar/account menus. */
     private function currentSessionUser(): array
     {
-        $sessionUser = session()->get();
-        $userId = (int) ($sessionUser['user_id'] ?? 0);
-
-        if ($userId <= 0) {
-            return $sessionUser;
-        }
-
-        $account = (new UserModel())->getAccountById($userId);
-
-        if ($account === null) {
-            return $sessionUser;
-        }
-
-        return array_merge($sessionUser, $account);
+        return SessionAccount::user();
     }
 
     /**
@@ -540,6 +528,7 @@ class DashboardPageBuilder
             'auditActionOptions' => $searchModel->auditActions(),
             'idleTimeoutSeconds' => (new IdleTimeout())->seconds,
             'username'           => (string) (session()->get('username') ?? 'Employee'),
+            'accountLevelLabel'  => SessionAccount::levelLabel(),
             'sectorOptions'      => $sectorOptions,
             'selectedFilterDate' => (string) ($searchFilters['date'] ?? $searchFilters['date_from'] ?? ''),
             'hasSearchFilters'   => $hasSearchFilters,
@@ -629,6 +618,7 @@ class DashboardPageBuilder
             'hasSearchFilters'   => $hasSearchFilters,
             'idleTimeoutSeconds' => (new IdleTimeout())->seconds,
             'username'           => (string) (session()->get('username') ?? 'Viewer'),
+            'accountLevelLabel'  => SessionAccount::levelLabel(),
             'formatDate'         => static function (mixed $value): string {
                 $timestamp = strtotime((string) $value);
 

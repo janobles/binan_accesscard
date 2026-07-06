@@ -4,6 +4,7 @@ namespace App\Controllers\Scanner;
 
 use App\Controllers\BaseController;
 use App\Libraries\RoleAccess;
+use App\Libraries\SessionAccount;
 use App\Models\Audit\AuditTrailsModel;
 use App\Models\Families\MemberModel;
 use App\Models\Scanner\AidDistributionModel;
@@ -39,6 +40,8 @@ class ScanController extends BaseController
             'activeTab' => 'scan',
             'pageTitle' => 'Scan',
             'username'  => session('username') ?? 'Scanner',
+            'user'      => SessionAccount::user(),
+            'accountLevelLabel' => SessionAccount::levelLabel(),
             'aidTypes'  => model(AidTypeModel::class)->active(),
             'currentRole' => $role,
             'canManageAccounts' => $canManage,

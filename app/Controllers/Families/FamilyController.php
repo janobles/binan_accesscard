@@ -173,6 +173,12 @@ class FamilyController extends BaseController
             // persistFamily can also throw beyond FamilyRecordWriteException (QR
             // assignment, audit, or an unexpected DB error). Catch them all so the
             // transaction is always rolled back and the request fails gracefully.
+            if (! $exception instanceof FamilyRecordWriteException) {
+                // Unexpected failure — record it like import()/changeFamilyState()
+                // do, so silent write failures surface on the audit page.
+                $this->auditSystemError('saving a family record', $exception);
+            }
+
             return $this->storeError(
                 $exception instanceof FamilyRecordWriteException
                     ? $exception->getMessage()
@@ -274,7 +280,12 @@ class FamilyController extends BaseController
             return $this->jsonError('Please choose a valid .xlsx file to import.', 422);
         }
 
-        if (strtolower((string) $file->getClientExtension()) !== 'xlsx') {
+        // guessExtension() derives the extension server-side from the file's MIME
+        // type, so a renamed .exe/.php can't pass as .xlsx (getClientExtension is
+        // attacker-controlled). xlsx is a zip container, so allow the zip guess too.
+        $guessedExtension = strtolower((string) $file->guessExtension());
+
+        if (! in_array($guessedExtension, ['xlsx', 'zip'], true)) {
             return $this->jsonError('The file must be an .xlsx workbook saved from the template.', 422);
         }
 
@@ -295,9 +306,13 @@ class FamilyController extends BaseController
 
         $jobs = new JobQueueModel();
 
-        try {
-            $jobs->ensureTable();
+        if (! $jobs->hasTable()) {
+            @unlink($storedPath);
 
+            return $this->jsonError('The background job queue is unavailable (missing job_queue table from accesscardV14.sql).', 422);
+        }
+
+        try {
             $jobId = $jobs->enqueue(
                 'family_import',
                 ['storedPath' => $storedPath, 'originalName' => $originalName],

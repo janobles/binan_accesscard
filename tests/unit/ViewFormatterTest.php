@@ -27,6 +27,15 @@ final class ViewFormatterTest extends TestCase
         $this->assertSame(['SC', 'PWD'], ViewFormatter::splitList('SC, PWD'));
     }
 
+    public function testMiddleInitialAbbreviatesPerWord(): void
+    {
+        $this->assertSame('T.', ViewFormatter::middleInitial('Torres'));
+        $this->assertSame('D. C.', ViewFormatter::middleInitial('Dela Cruz'));
+        $this->assertSame('D. C.', ViewFormatter::middleInitial('  dela   cruz  '));
+        $this->assertSame('', ViewFormatter::middleInitial(''));
+        $this->assertSame('', ViewFormatter::middleInitial('   '));
+    }
+
     public function testSectorAndServiceHelpersNormalizeViewData(): void
     {
         $catalog = [

@@ -61,3 +61,27 @@ Canonical: views compose Bootstrap 5 classes (`card`, `table`, `btn`,
 **Why:** the SB Admin 1 migration (`docs/knowledge/sbadmin/target-theme.md`)
 retiles the shells; views that stick to Bootstrap + adapter classes migrate
 for free, inline styles have to be hunted down.
+
+## Rule 5: Components Bootstrap does NOT ship — build from utilities, not fake classes
+
+Bootstrap 5.3 has **no stepper/wizard and no empty-state component**. When a
+page needs one:
+
+- **Empty state:** compose utilities — centered `py-5` block, big muted
+  bootstrap-icon (`display-3 text-secondary`), bold title, `text-muted small`
+  hint. Canonical: `app/Views/Scanner/scan.php:39` (`#emptyState`, which also
+  doubles as the lookup-error surface by swapping icon/text).
+- **Stepper:** prefer NOT building one. Numbered field labels
+  ("1. Aid type…", "2. Scan…") plus an attention state on the pending field
+  read just as well without a custom component
+  (`app/Views/Scanner/scan.php:8`, `.scan-attn` / `.scan-muted` in
+  `public/css/scanner-scan.css:4`).
+- Page-specific classes live in that page's CSS file (Rule 3) and build on
+  Bootstrap CSS variables (`--bs-primary`, `--bs-success-bg-subtle`, …) so
+  theming survives the SB Admin migration.
+
+**Reviewer false positive to ignore:** `h-100` is a plain Bootstrap sizing
+utility used by the house style (`app/Views/Scanner/reports.php:53`), NOT an
+SB-Admin-Pro demo class. The Pro-only markers this repo bans are
+`border-left-*` and `text-xs text-uppercase`
+(`tests/unit/ReportsViewTest.php:31`).

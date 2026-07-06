@@ -68,6 +68,7 @@ if (! function_exists('asset_styles')) {
             ],
             'scanner' => [
                 'css/scanner-reports.css',
+                'css/scanner-scan.css',
             ],
         ];
 

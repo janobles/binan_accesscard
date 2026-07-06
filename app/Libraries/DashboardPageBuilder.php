@@ -364,6 +364,14 @@ class DashboardPageBuilder
         $userId = (int) ($sessionUser['user_id'] ?? 0);
 
         if ($userId <= 0) {
+            // The Developer is file-backed (no users row, synthetic userID 0), so
+            // getAccountById() below can't supply its name. Pull it from
+            // DeveloperProfile so the topbar account menu shows the real name
+            // instead of falling back to the username.
+            if (RoleAccess::normalizeRole((string) ($sessionUser['role'] ?? '')) === 'Developer') {
+                $sessionUser['full_description'] = $this->packDeveloperFullDescription(DeveloperProfile::load());
+            }
+
             return $sessionUser;
         }
 
@@ -374,6 +382,36 @@ class DashboardPageBuilder
         }
 
         return array_merge($sessionUser, $account);
+    }
+
+    /**
+     * Packs DeveloperProfile personal details into the same `LN:..; FN:..` string
+     * shape `full_description` uses for staff, so ViewFormatter::parseFullDescription
+     * (and the topbar partial) reads the Developer's real name the same way.
+     *
+     * @param array<string,string> $details
+     */
+    private function packDeveloperFullDescription(array $details): string
+    {
+        $segments = [
+            'LN'   => trim((string) ($details['last_name'] ?? '')),
+            'FN'   => trim((string) ($details['first_name'] ?? '')),
+            'MN'   => trim((string) ($details['middle_name'] ?? '')),
+            'SF'   => trim((string) ($details['suffix'] ?? '')),
+            'ADDR' => trim((string) ($details['address'] ?? '')),
+            'CN'   => trim((string) ($details['contact_no'] ?? '')),
+            'BD'   => trim((string) ($details['birthday'] ?? '')),
+        ];
+
+        $parts = [];
+
+        foreach ($segments as $label => $value) {
+            if ($value !== '') {
+                $parts[] = $label . ':' . $value;
+            }
+        }
+
+        return implode('; ', $parts);
     }
 
     /**

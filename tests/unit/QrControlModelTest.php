@@ -32,4 +32,32 @@ final class QrControlModelTest extends CIUnitTestCase
         $model->upsertForHead(5, 0);
         $this->assertTrue(true);
     }
+
+    public function testUpsertForHeadThrowsWhenControlTakenByAnotherHead(): void
+    {
+        $model = new QrControlModel();
+
+        if (! $model->db->tableExists('qr_control')) {
+            $this->markTestSkipped('qr_control table not available in this environment.');
+        }
+
+        // Use a control number far outside the seeded/demo range and clean up
+        // afterwards so this test doesn't depend on or pollute fixture data.
+        $controlNo = 999999;
+        $ownerHead = 999991;
+        $otherHead = 999992;
+
+        $model->where('control_no', $controlNo)->delete();
+        $model->where('headID', $ownerHead)->delete();
+        $model->where('headID', $otherHead)->delete();
+
+        $model->insert(['control_no' => $controlNo, 'headID' => $ownerHead]);
+
+        try {
+            $this->expectException(\RuntimeException::class);
+            $model->upsertForHead($controlNo, $otherHead);
+        } finally {
+            $model->where('control_no', $controlNo)->delete();
+        }
+    }
 }

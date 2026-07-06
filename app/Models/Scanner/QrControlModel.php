@@ -87,11 +87,18 @@ class QrControlModel extends Model
         }
 
         // control_no is the primary key, so a "move" is delete-then-insert of the
-        // head's row (there is at most one row per head).
+        // head's row (there is at most one row per head). Wrap both in a
+        // transaction so a failed insert rolls back the delete (nests safely inside
+        // an outer transaction the caller may already hold).
+        $this->db->transStart();
         if ($existing !== null) {
             $this->where('headID', $headId)->delete();
         }
-
         $this->insert(['control_no' => $controlNo, 'headID' => $headId]);
+        $this->db->transComplete();
+
+        if ($this->db->transStatus() === false) {
+            throw new \RuntimeException('QR Number ' . $controlNo . ' could not be assigned.');
+        }
     }
 }

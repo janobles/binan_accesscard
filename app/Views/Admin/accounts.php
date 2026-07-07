@@ -16,7 +16,7 @@ $accounts = array_merge($adminAccounts, $employeeAccounts, $viewerAccounts, $sca
 
 <div class="accounts-page" data-account-management>
     <?= view('components/card', [
-        'icon' => 'people',
+        'icon' => 'people-fill',
         'title' => 'Account Management',
         'cardClass' => 'account-card',
         'attrs' => 'aria-labelledby="accounts-title"',

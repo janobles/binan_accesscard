@@ -116,25 +116,25 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                         <?= view('components/stat_card', [
                             'label' => 'Total Records',
                             'value' => (string) ($stats['families'] ?? 0),
-                            'icon' => 'folder2-open',
+                            'icon' => 'folder-fill',
                             'variant' => 'stat-card--records',
                         ]) ?>
                         <?= view('components/stat_card', [
                             'label' => 'Registered Members',
                             'value' => (string) ($stats['members'] ?? 0),
-                            'icon' => 'people',
+                            'icon' => 'people-fill',
                             'variant' => 'stat-card--members',
                         ]) ?>
                         <?= view('components/stat_card', [
                             'label' => 'Active Sectors',
                             'value' => (string) ($stats['sectors'] ?? 0),
-                            'icon' => 'diagram-3',
+                            'icon' => 'diagram-3-fill',
                             'variant' => 'stat-card--sectors',
                         ]) ?>
                         <?= view('components/stat_card', [
                             'label' => 'Services and Programs',
                             'value' => (string) ($stats['assistance'] ?? 0),
-                            'icon' => 'grid',
+                            'icon' => 'grid-fill',
                             'variant' => 'stat-card--services',
                         ]) ?>
                     </section>

@@ -11,7 +11,7 @@
         </div>
 
         <div class="table-responsive">
-          <table class="table table-sm manage-record-table align-middle w-100">
+          <table class="table manage-record-table align-middle w-100">
             <thead>
               <tr><th>Name</th><th>Status</th><th class="text-end">Actions</th></tr>
             </thead>

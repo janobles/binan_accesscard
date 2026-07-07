@@ -44,7 +44,7 @@
 	</div>
 
 	<div class="table-responsive">
-		<table class="table table-sm manage-record-table align-middle lookup-management-table lookup-management-table--services">
+		<table class="table manage-record-table align-middle lookup-management-table lookup-management-table--services">
 			<thead>
 				<tr>
 					<th class="lookup-col-name">Name</th>

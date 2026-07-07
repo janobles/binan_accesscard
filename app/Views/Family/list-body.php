@@ -85,7 +85,7 @@
 
 <div class="table-responsive flex-grow-1 overflow-auto">
     <table
-        class="table table-sm table-hover align-middle w-100 small"
+        class="table table-hover align-middle w-100"
         id="familyRecordsTable"
         data-ajax-url="<?= esc(site_url($routeBase . '/data'), 'attr') ?>"
     >

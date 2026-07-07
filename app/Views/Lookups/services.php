@@ -57,7 +57,7 @@ $serviceFooter = ($totalRows ?? 0) > 0 ? view('components/table_footer', [
 ]) : null;
 ?>
 <?= view('components/card', [
-    'icon' => 'grid',
+    'icon' => 'grid-fill',
     'title' => 'Services and Programs',
     'cardClass' => 'sector-management records-scroll-panel',
     'attrs' => 'data-service-management-root',

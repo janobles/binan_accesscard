@@ -56,7 +56,7 @@ $sectorFooter = ($totalRows ?? 0) > 0 ? view('components/table_footer', [
 ]) : null;
 ?>
 <?= view('components/card', [
-    'icon' => 'diagram-3',
+    'icon' => 'diagram-3-fill',
     'title' => 'Sector Management',
     'cardClass' => 'sector-management records-scroll-panel',
     'attrs' => 'data-sector-management-root',

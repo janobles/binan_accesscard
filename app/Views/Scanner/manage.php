@@ -14,7 +14,7 @@
   <!-- All distributions -->
   <div class="tab-pane fade show active" id="tab-dist" role="tabpanel">
     <?= view('components/card', [
-        'icon' => 'clipboard-check',
+        'icon' => 'clipboard-check-fill',
         'title' => 'All Distributions',
         'cardClass' => 'sector-management records-scroll-panel',
         'bodyView' => 'Scanner/manage-distributions-body',
@@ -26,7 +26,7 @@
   <!-- Aid types CRUD -->
   <div class="tab-pane fade" id="tab-types" role="tabpanel">
     <?= view('components/card', [
-        'icon' => 'tags',
+        'icon' => 'tags-fill',
         'title' => 'Aid Types',
         'cardClass' => 'sector-management records-scroll-panel',
         'bodyView' => 'Scanner/manage-aidtypes-body',

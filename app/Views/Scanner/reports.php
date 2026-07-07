@@ -59,7 +59,7 @@
   <?= view('components/stat_card', [
       'label' => 'Received aid',
       'value' => (string) $summary["received"],
-      'icon' => 'check2-circle',
+      'icon' => 'check-circle-fill',
       'variant' => 'stat-card--members',
   ]) ?>
   <?= view('components/stat_card', [
@@ -71,7 +71,7 @@
   <?= view('components/stat_card', [
       'label' => 'Coverage',
       'value' => ((string) $summary["coverage"]) . '%',
-      'icon' => 'pie-chart',
+      'icon' => 'pie-chart-fill',
       'variant' => 'stat-card--services',
   ]) ?>
 </section>
@@ -80,7 +80,7 @@
 <div class="row g-3 reports-charts">
   <div class="col-lg-4">
     <?= view('components/card', [
-        'icon' => 'pie-chart',
+        'icon' => 'pie-chart-fill',
         'title' => 'Families that received aid vs still waiting',
         'bodyHtml' => '<canvas id="chartReceived" height="220"></canvas>',
         'footer' => $rangeLabel,
@@ -89,7 +89,7 @@
   </div>
   <div class="col-lg-8">
     <?= view('components/card', [
-        'icon' => 'bar-chart',
+        'icon' => 'bar-chart-fill',
         'title' => 'Coverage by barangay (percent)',
         'bodyHtml' => '<div class="reports-barangay-chart"><canvas id="chartBarangay"></canvas></div>',
         'footer' => $rangeLabel,
@@ -98,7 +98,7 @@
   </div>
   <div class="col-lg-12">
     <?= view('components/card', [
-        'icon' => 'bar-chart-line',
+        'icon' => 'bar-chart-fill',
         'title' => 'Number of handouts by aid type',
         'bodyHtml' => '<canvas id="chartAidType" height="180"></canvas>',
         'footer' => $rangeLabel,
@@ -125,7 +125,7 @@ foreach ($byBarangay as $b) {
     'columns' => ['Barangay', 'Families', 'Received', 'Coverage'],
     'rows' => $barangayRows,
     'emptyMessage' => 'No data for this range.',
-    'tableClass' => 'table table-sm manage-record-table align-middle w-100 mb-0',
+    'tableClass' => 'table manage-record-table align-middle w-100 mb-0',
     'cardClass' => 'reports-fallback',
     'footer' => $rangeLabel,
 ]) ?>

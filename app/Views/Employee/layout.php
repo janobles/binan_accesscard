@@ -44,7 +44,7 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
                     <div class="sb-sidenav-menu-heading">Core</div>
                     <a class="nav-link <?= esc($navActive['dashboard'] ?? '') ?>" href="<?= site_url('employee/workspace') ?>"><div class="sb-nav-link-icon"><i class="bi bi-speedometer2" aria-hidden="true"></i></div>Dashboard</a>
                     <div class="sb-sidenav-menu-heading">Records</div>
-                    <a class="nav-link <?= esc($navActive['family-manage'] ?? '') ?>" href="<?= site_url('employee/manage-records') ?>"><div class="sb-nav-link-icon"><i class="bi bi-people" aria-hidden="true"></i></div>Manage Records</a>
+                    <a class="nav-link <?= esc($navActive['family-manage'] ?? '') ?>" href="<?= site_url('employee/manage-records') ?>"><div class="sb-nav-link-icon"><i class="bi bi-people-fill" aria-hidden="true"></i></div>Manage Records</a>
                     <div class="sb-sidenav-menu-heading">Activity</div>
                     <a class="nav-link <?= esc($navActive['activity'] ?? '') ?>" href="<?= site_url('employee/activity') ?>"><div class="sb-nav-link-icon"><i class="bi bi-clock-history" aria-hidden="true"></i></div>My Activity</a>
                 </div>
@@ -70,25 +70,25 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
                             <?= view('components/stat_card', [
                                 'label' => 'Total Records',
                                 'value' => (string) ($stats['families'] ?? 0),
-                                'icon' => 'folder2-open',
+                                'icon' => 'folder-fill',
                                 'variant' => 'stat-card--records',
                             ]) ?>
                             <?= view('components/stat_card', [
                                 'label' => 'Registered Members',
                                 'value' => (string) ($stats['members'] ?? 0),
-                                'icon' => 'people',
+                                'icon' => 'people-fill',
                                 'variant' => 'stat-card--members',
                             ]) ?>
                             <?= view('components/stat_card', [
                                 'label' => 'Active Sectors',
                                 'value' => (string) ($stats['sectors'] ?? 0),
-                                'icon' => 'diagram-3',
+                                'icon' => 'diagram-3-fill',
                                 'variant' => 'stat-card--sectors',
                             ]) ?>
                             <?= view('components/stat_card', [
                                 'label' => 'Services and Programs',
                                 'value' => (string) ($stats['assistance'] ?? 0),
-                                'icon' => 'grid',
+                                'icon' => 'grid-fill',
                                 'variant' => 'stat-card--services',
                             ]) ?>
                         </section>
@@ -116,7 +116,7 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
                             'columns' => ['Name (Head)', 'Sector'],
                             'rows' => $recentFamilyRows,
                             'emptyMessage' => 'No records yet.',
-                            'tableClass' => 'table table-sm overview-table mb-0',
+                            'tableClass' => 'table overview-table mb-0',
                             'cardClass' => 'dashboard-table-panel',
                         ]) ?>
 
@@ -126,7 +126,7 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
                             'columns' => ['Action', 'Member', 'Description'],
                             'rows' => $myAuditRows,
                             'emptyMessage' => 'No activity yet.',
-                            'tableClass' => 'table table-sm overview-table mb-0',
+                            'tableClass' => 'table overview-table mb-0',
                             'cardClass' => 'dashboard-table-panel',
                         ]) ?>
                     </div>

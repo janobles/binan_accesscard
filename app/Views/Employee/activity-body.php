@@ -43,7 +43,7 @@
                         </div>
 
                         <div class="table-responsive">
-                            <table class="table table-sm">
+                            <table class="table align-middle">
                                 <thead><tr><th>Action</th><th>Member</th><th>Description</th></tr></thead>
                                 <tbody>
                                     <?php foreach ($myAudits as $audit): ?>

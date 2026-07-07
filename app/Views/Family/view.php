@@ -73,7 +73,7 @@ $displayUpper = static fn (mixed $value): string => mb_strtoupper((string) $valu
 
     <section class="family-detail-section">
         <div class="family-detail-section-title">
-            <i class="bi bi-people" aria-hidden="true"></i><?= esc($displayUpper('Family Members')) ?>
+            <i class="bi bi-people-fill" aria-hidden="true"></i><?= esc($displayUpper('Family Members')) ?>
             <span class="family-detail-count"><?= count($memberViews) ?></span>
         </div>
         <?php if ($memberViews === []): ?>

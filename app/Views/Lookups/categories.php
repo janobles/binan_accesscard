@@ -60,7 +60,7 @@ $categoryFooter = ($totalRows ?? 0) > 0 ? view('components/table_footer', [
 ]) : null;
 ?>
 <?= view('components/card', [
-    'icon' => 'tags',
+    'icon' => 'tags-fill',
     'title' => 'Manage Categories',
     'cardClass' => 'sector-management records-scroll-panel',
     'attrs' => 'data-category-management-root',

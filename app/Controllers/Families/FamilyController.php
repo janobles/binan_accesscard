@@ -3,6 +3,7 @@
 namespace App\Controllers\Families;
 
 use App\Controllers\BaseController;
+use App\Libraries\FamilyModalDataBuilder;
 use App\Libraries\FamilyRecordWriteException;
 use App\Libraries\FamilyRecordWriter;
 use App\Libraries\RoleAccess;
@@ -250,8 +251,9 @@ class FamilyController extends BaseController
 
         $serviceIdsByMember = (new MemberServiceModel())
             ->getServiceIdsByMemberIds(array_map(static fn (array $row): int => (int) $row['memberID'], $rows));
-        $serviceNames = $this->serviceNameMap($serviceIdsByMember);
-        $incomeLabels = $this->incomeLabelMap();
+        $modalData = new FamilyModalDataBuilder();
+        $serviceNames = $modalData->serviceNameMap($serviceIdsByMember);
+        $incomeLabels = $modalData->incomeLabelMap();
 
         $namesFor = static fn (int $memberId): array => array_values(array_filter(array_map(
             static fn (int $id): string => $serviceNames[$id] ?? '',
@@ -645,42 +647,6 @@ class FamilyController extends BaseController
         return array_values(array_unique($ids));
     }
 
-    /** Resolves [serviceID => name] across every service assigned to the family. */
-    private function serviceNameMap(array $serviceIdsByMember): array
-    {
-        $allServiceIds = [];
-
-        foreach ($serviceIdsByMember as $ids) {
-            foreach ($ids as $id) {
-                $allServiceIds[] = (int) $id;
-            }
-        }
-
-        if ($allServiceIds === []) {
-            return [];
-        }
-
-        return (new ServiceModel())->getNameMapByIds(array_values(array_unique($allServiceIds)));
-    }
-
-    /** Builds an [income bracket value => label] map for the family detail view. */
-    private function incomeLabelMap(): array
-    {
-        $map = [];
-
-        foreach ((new FamilyFormOptionsModel())->getOptions()['income_ranges'] ?? [] as $range) {
-            $value = (string) ($range['value'] ?? '');
-
-            if ($value === '') {
-                continue;
-            }
-
-            $map[$value] = (string) ($range['label'] ?? $value);
-        }
-
-        return $map;
-    }
-
     /** First + last name of a family head, for audit descriptions ('record' if missing). */
     private function familyHeadName(MemberModel $model, int $headId): string
     {
@@ -997,9 +963,11 @@ class FamilyController extends BaseController
                 array_values(array_unique($assignedServiceIds))
             );
 
+            $modalData = new FamilyModalDataBuilder();
+
             return view('Family/family-modal', array_merge(
                 $viewData,
-                $this->familyModalUpdateData($head, $serviceIdsByMember[$headId] ?? []),
+                $modalData->updateData($head, $serviceIdsByMember[$headId] ?? []),
                 [
                     'action' => site_url($this->currentRouteBase() . '/update/' . $headId),
                     'fieldPrefix' => 'family-update',
@@ -1008,7 +976,7 @@ class FamilyController extends BaseController
                     'submitLabel' => 'Update',
                     'saveDisabled' => false,
                     'qrLocked' => $qrLocked,
-                    'existingMembers' => $this->shapeModalMembers($members, $serviceIdsByMember),
+                    'existingMembers' => $modalData->shapeMembers($members, $serviceIdsByMember),
                 ]
             ));
         }
@@ -1029,74 +997,6 @@ class FamilyController extends BaseController
                 'existingMembers' => [],
             ]
         ));
-    }
-
-    /**
-     * Builds the head prefill block (formValues + selected sector/service IDs) for
-     * the Update modal. Splits the stored "address, barangay" back into the two
-     * separate inputs via splitAddressBarangay().
-     *
-     * @param list<int> $headServiceIds
-     */
-    private function familyModalUpdateData(array $head, array $headServiceIds): array
-    {
-        $headId = (int) ($head['memberID'] ?? 0);
-        $addressParts = $this->splitAddressBarangay($head['address'] ?? '');
-
-        return [
-            'headId' => $headId,
-            'formValues' => [
-                'head_lastname' => (string) ($head['lastname'] ?? ''),
-                'head_firstname' => (string) ($head['firstname'] ?? ''),
-                'head_middlename' => (string) ($head['middlename'] ?? ''),
-                'head_suffix' => (string) ($head['suffix'] ?? ''),
-                'head_birthday' => (string) ($head['birthday'] ?? ''),
-                'head_sex' => (string) ($head['sex'] ?? ''),
-                'head_civilstatus' => (string) ($head['civilstatus'] ?? ''),
-                'head_contactnumber' => (string) ($head['contactnumber'] ?? ''),
-                'head_religion' => (string) ($head['religion'] ?? ''),
-                'head_education' => (string) ($head['education'] ?? ''),
-                'head_job' => (string) ($head['job'] ?? ''),
-                'head_salary' => (string) ($head['Salary'] ?? ''),
-                'head_address' => $addressParts['address'],
-                'head_barangay' => $addressParts['barangay'],
-                'qr_control_no' => (string) (model(\App\Models\Scanner\QrControlModel::class)->controlForHead($headId) ?? ''),
-            ],
-            'selectedSectorIds' => array_map('strval', SectorIds::normalize($head['sectorID'] ?? null)),
-            'selectedServiceIds' => array_map('strval', $headServiceIds),
-        ];
-    }
-
-    /**
-     * Shapes existing family-member rows for the Update modal so they pre-render
-     * (and re-post) — otherwise update()'s member replace would drop them.
-     *
-     * @param array<int, list<int>> $serviceIdsByMember
-     * @return list<array<string, mixed>>
-     */
-    private function shapeModalMembers(array $members, array $serviceIdsByMember): array
-    {
-        return array_map(function (array $member) use ($serviceIdsByMember): array {
-            $memberId = (int) ($member['memberID'] ?? 0);
-
-            return [
-                'lastname' => (string) ($member['lastname'] ?? ''),
-                'firstname' => (string) ($member['firstname'] ?? ''),
-                'middlename' => (string) ($member['middlename'] ?? ''),
-                'suffix' => (string) ($member['suffix'] ?? ''),
-                'birthday' => (string) ($member['birthday'] ?? ''),
-                'sex' => (string) ($member['sex'] ?? ''),
-                'civilstatus' => (string) ($member['civilstatus'] ?? ''),
-                'contactnumber' => (string) ($member['contactnumber'] ?? ''),
-                'religion' => (string) ($member['religion'] ?? ''),
-                'education' => (string) ($member['education'] ?? ''),
-                'job' => (string) ($member['job'] ?? ''),
-                'salary' => (string) ($member['Salary'] ?? ''),
-                'relationship' => (string) ($member['relationship'] ?? ''),
-                'sector_ids' => array_map('strval', SectorIds::normalize($member['sectorID'] ?? null)),
-                'service_ids' => array_map('strval', $serviceIdsByMember[$memberId] ?? []),
-            ];
-        }, $members);
     }
 
 }

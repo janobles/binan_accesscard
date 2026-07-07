@@ -12,21 +12,28 @@ unchecked item was already moved to issue #9 (UX decision, not code mess).
 
 ## Findings
 
-- [ ] 🟠 Major: `app/Controllers/Families/FamilyController.php:1` — 1723-line
+- [x] 🟠 Major: `app/Controllers/Families/FamilyController.php:1` — 1723-line
   controller mixes family CRUD, Excel import, QR control-number handling, and
   modal partial rendering. Candidates for extraction into libraries per the
   controllers-decide/libraries-build boundary (see
   `binan-conventions/mvc-boundaries.md`).
-- [ ] 🟡 Minor: `app/Views/Family/list.php:47` — inline `style="max-height: 14rem;"`
+  *(Fixed: split into FamilyController (~1000 lines, CRUD) +
+  FamilyImportController + FamilyDataTableController + FamilyRequestContext
+  trait, with FamilyDataTablePresenter and FamilyModalDataBuilder libraries —
+  a8edb59, b11cbe7, 6f8562c, f9d7df7, refactor/mvc-cleanup)*
+- [x] 🟡 Minor: `app/Views/Family/list.php:47` — inline `style="max-height: 14rem;"`
   on dropdown menu (also line 69). Move to a page-CSS rule in
   `public/css/managerecord.css` or a utility class.
-- [ ] 🟡 Minor: `app/Views/Accounts/account-form-modal.php:44` — inline
+  *(Fixed: `.family-filter-field .dropdown-menu` rule in managerecord.css — 05556ae)*
+- [x] 🟡 Minor: `app/Views/Accounts/account-form-modal.php:44` — inline
   `style="border:0;background:transparent;padding:0 0 0.5rem;"` on header;
   belongs in `public/css/accounts.css` next to the other
   `.account-card-header` rules.
-- [ ] ⚪ Cleanup: `app/Controllers/Families/FamilyController.php:824` —
+  *(Fixed: `.edit-account-modal > .account-card-header` rule in accounts.css — 05556ae)*
+- [x] ⚪ Cleanup: `app/Controllers/Families/FamilyController.php:824` —
   `shapeExistingMembers()` is defined but never called anywhere in the repo
   (verified by grep). Dead code; remove.
+  *(Fixed: removed; splitAddressBarangay also moved to MemberFieldNormalizer — 65173fd)*
 - [x] 🔵 Needs-decision: `app/Libraries/DashboardPageBuilder.php:1` — CLAUDE.md
   says "respect existing strict-type conventions" but **zero** files under
   `app/` declare `declare(strict_types=1)` (typed signatures are used, the

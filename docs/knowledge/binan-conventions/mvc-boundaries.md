@@ -17,12 +17,17 @@ return (new DashboardPageBuilder($this->request))->renderAdminPage('dashboard');
 Every admin/employee/viewer page route follows this exact shape (`:64`, `:86`,
 `:99`, and the Employee/Viewer dashboard controllers).
 
-**Anti-pattern seen in repo:** `app/Controllers/Families/FamilyController.php:1`
-has grown to 1,700+ lines mixing CRUD decisions with Excel import, QR
-handling, and modal payload assembly — see the 🟠 entry in
-`docs/knowledge/violations.md`. New logic of that kind belongs in a library
-(compare `app/Libraries/FamilyRecordWriter.php:1`, which extracts the
-member/service/audit write sequence).
+**Worked example:** the Families feature was split along this boundary
+(2026-07, `refactor/mvc-cleanup`). Decisions live in three controllers —
+`app/Controllers/Families/FamilyController.php:1` (CRUD),
+`app/Controllers/Families/FamilyImportController.php:1` (Excel import),
+`app/Controllers/Families/FamilyDataTableController.php:1` (DataTables
+endpoint) — sharing guards via the
+`app/Controllers/Families/FamilyRequestContext.php:1` trait. Building lives
+in libraries: `app/Libraries/FamilyDataTablePresenter.php:1` (row/envelope
+shaping), `app/Libraries/FamilyModalDataBuilder.php:1` (modal view data),
+`app/Libraries/FamilyRecordWriter.php:1` (member/service/audit write
+sequence). New logic of either kind goes to the matching side.
 
 **Why:** one place to debug view data (CLAUDE.md: "start debugging here"),
 and page dispatch stays readable.

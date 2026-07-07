@@ -21,7 +21,8 @@ unchecked item was already moved to issue #9 (UX decision, not code mess).
   FamilyImportController + FamilyDataTableController + FamilyRequestContext
   trait, with FamilyDataTablePresenter and FamilyModalDataBuilder libraries —
   a8edb59, b11cbe7, 6f8562c, f9d7df7, refactor/mvc-cleanup)*
-- [x] 🟡 Minor: `app/Views/Family/list.php:47` — inline `style="max-height: 14rem;"`
+- [x] 🟡 Minor: `app/Views/Family/list.php` (filter dropdowns; markup since moved
+  to `app/Views/Family/list-body.php`) — inline `style="max-height: 14rem;"`
   on dropdown menu (also line 69). Move to a page-CSS rule in
   `public/css/managerecord.css` or a utility class.
   *(Fixed: `.family-filter-field .dropdown-menu` rule in managerecord.css — 05556ae)*

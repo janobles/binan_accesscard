@@ -31,6 +31,21 @@ Standalone `<html>` is correct ONLY for the shells themselves,
 Repeated markup across two views = extract a partial, render with
 `view('Partials/...', [...])`.
 
+**Card/table panels use the props-only components** (SB Admin 1 card
+anatomy: card-header icon+title > card-body > optional card-footer):
+
+- `app/Views/components/card.php:1` — generic shell; body content comes
+  from a named view (`bodyView` + `bodyData`) or `bodyHtml`. JS scope
+  hooks (e.g. `data-*-management-root`) pass through `attrs`.
+- `app/Views/components/data_table.php:1` — columns/rows table card;
+  cell values are RAW HTML, caller esc()'s every dynamic part.
+- `app/Views/components/table_footer.php:1` — shared "Showing X–Y of Z"
+  + Previous/Next pagination row, passed as `card`'s `footer`.
+
+Canonical consumers: `app/Views/Family/list.php:26` (card + body
+partial), `app/Views/Scanner/reports.php:88` (chart cards + data_table).
+New panels MUST use these components, not hand-rolled card markup.
+
 ## Rule 3: CSS loads via `asset_styles()` — Bootstrap first, adapter, then page CSS
 
 Canonical chain — `app/Views/Admin/layout.php:62`:
@@ -41,26 +56,25 @@ Canonical chain — `app/Views/Admin/layout.php:62`:
 ```
 
 with the lists defined in `app/Helpers/asset_helper.php:34`: vendored
-Bootstrap → bootstrap-icons → DataTables (bootstrap5 build) →
-`css/sb-admin-adapter.css` → per-page CSS (`public/css/<page>.css`, e.g.
-`accounts.css`, `managerecord.css`). New page styles go in a page CSS file
-registered there — never a new `<link>` hand-added to a shell.
+SB Admin 1 theme (`assets/sb-admin/css/styles.css`, Bootstrap compiled in)
+→ bootstrap-icons → DataTables (bootstrap5 build) → per-page CSS
+(`public/css/<page>.css`, e.g. `accounts.css`, `managerecord.css`). New
+page styles go in a page CSS file registered there — never a new `<link>`
+hand-added to a shell.
 
 ## Rule 4: Style with Bootstrap utilities/components, not inline styles
 
 Canonical: views compose Bootstrap 5 classes (`card`, `table`, `btn`,
-`dropdown`, spacing/flex utilities) plus the adapter's SB-Admin classes
-(`docs/knowledge/sbadmin/adapter.md`).
+`dropdown`, spacing/flex utilities) plus SB Admin 1's `sb-*` shell classes
+(`docs/knowledge/sbadmin/target-theme.md`).
 
-**Anti-pattern seen in repo:** inline `style="..."` attributes —
-`app/Views/Family/list.php:47` and
-`app/Views/Accounts/account-form-modal.php:44` (tracked in
-`docs/knowledge/violations.md`). Exceptions: PDF views
+**Anti-pattern:** inline `style="..."` attributes (past offenders tracked
+and fixed in `docs/knowledge/violations.md`). Exceptions: PDF views
 (`app/Views/Scanner/pdf/report.php:1`) and framework error pages.
 
-**Why:** the SB Admin 1 migration (`docs/knowledge/sbadmin/target-theme.md`)
-retiles the shells; views that stick to Bootstrap + adapter classes migrate
-for free, inline styles have to be hunted down.
+**Why:** theme changes retile the shells and components; views that stick
+to Bootstrap + component classes migrate for free, inline styles have to
+be hunted down.
 
 ## Rule 5: Components Bootstrap does NOT ship — build from utilities, not fake classes
 

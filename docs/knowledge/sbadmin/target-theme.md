@@ -61,10 +61,12 @@ Content patterns:
 Keep the `--sb-*` token approach when porting — map SB Admin 1's SCSS
 variables onto the existing tokens rather than scattering colors.
 
-## Migration targets (current non-conformers)
+## Status
 
-Views that deviate from Bootstrap/adapter conventions migrate hardest —
-tracked in `docs/knowledge/violations.md` (inline styles in
-`app/Views/Family/list.php:47`,
-`app/Views/Accounts/account-form-modal.php:44`). Fix those before or during
-the retile; conforming views migrate via shell + stylesheet changes only.
+The swap SHIPPED on branch `feature/sbadmin1-theme-swap`: shells use
+`body.sb-nav-fixed` + `#layoutSidenav` (`app/Views/Admin/layout.php:66`),
+the adapter is deleted (`adapter.md`), and panels render through the
+card/data_table components
+(`docs/knowledge/binan-conventions/views-bootstrap.md`). The inline-style
+non-conformers previously listed here were fixed — see
+`docs/knowledge/violations.md`.

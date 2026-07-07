@@ -30,7 +30,7 @@ final class FamilyDataTableTest extends TestCase
 
     public function testFamilyListUsesSixColumnServerSideTableWithoutDateColumn(): void
     {
-        $view = (string) file_get_contents(APPPATH . 'Views/Family/list.php');
+        $view = (string) file_get_contents(APPPATH . 'Views/Family/list-body.php');
         $script = (string) file_get_contents(FCPATH . 'assets/js/dashboard/family-datatable.js');
 
         $this->assertStringContainsString('id="familyRecordsTable"', $view);

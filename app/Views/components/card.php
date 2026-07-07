@@ -17,6 +17,8 @@
  * - $headerActions string|null  raw HTML rendered right-aligned in the header
  *                               (caller-escaped), e.g. a small "View All" link
  * - $id         string|null  id attribute on the card element
+ * - $attrs      string       extra raw attributes on the card element
+ *                            (caller-escaped), e.g. ' data-audit-management-root'
  * - $cardClass  string       extra classes on the card element
  * - $bodyClass  string       extra classes on card-body
  */
@@ -28,10 +30,11 @@ $bodyData = $bodyData ?? [];
 $bodyHtml = $bodyHtml ?? null;
 $headerActions = $headerActions ?? null;
 $id = $id ?? null;
+$attrs = $attrs ?? '';
 $cardClass = $cardClass ?? '';
 $bodyClass = $bodyClass ?? '';
 ?>
-<div class="card mb-4<?= $cardClass !== '' ? ' ' . esc($cardClass, 'attr') : '' ?>"<?= $id !== null ? ' id="' . esc($id, 'attr') . '"' : '' ?>>
+<div class="card mb-4<?= $cardClass !== '' ? ' ' . esc($cardClass, 'attr') : '' ?>"<?= $id !== null ? ' id="' . esc($id, 'attr') . '"' : '' ?><?= $attrs !== '' ? ' ' . trim($attrs) : '' ?>>
     <div class="card-header<?= $headerActions !== null ? ' d-flex justify-content-between align-items-center' : '' ?>">
         <span><?php if ($icon !== null): ?><i class="bi bi-<?= esc($icon, 'attr') ?> me-1" aria-hidden="true"></i><?php endif; ?><?= esc($title) ?></span>
         <?php if ($headerActions !== null): ?><span><?= $headerActions ?></span><?php endif; ?>

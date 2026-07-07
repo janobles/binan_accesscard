@@ -3,7 +3,9 @@
 namespace App\Controllers\Families;
 
 use App\Libraries\RoleAccess;
+use App\Models\Audit\AuditTrailsModel;
 use CodeIgniter\HTTP\RedirectResponse;
+use Throwable;
 
 /**
  * Request-context helpers shared by the Families controllers: admin/employee
@@ -68,6 +70,34 @@ trait FamilyRequestContext
         return $this->response
             ->setStatusCode($statusCode)
             ->setJSON($body);
+    }
+
+    /**
+     * Records a SYSTEM_ERROR audit row for an unexpected failure during a family
+     * action, so it surfaces on the audit page (visible to admins). Best-effort —
+     * a failure here must never mask the original error.
+     */
+    private function auditSystemError(string $context, Throwable $exception): void
+    {
+        try {
+            $auditModel = new AuditTrailsModel();
+
+            if (! $auditModel->hasTable()) {
+                return;
+            }
+
+            $auditModel->logAction(
+                (int) session()->get('user_id'),
+                null,
+                'SYSTEM_ERROR',
+                'System error during ' . $context . '.',
+                $this->request->getIPAddress(),
+                $this->request->getUserAgent()->getAgentString(),
+                $exception->getMessage()
+            );
+        } catch (Throwable $ignored) {
+            log_message('error', 'Audit SYSTEM_ERROR skipped: ' . $ignored->getMessage());
+        }
     }
 
     /**

@@ -47,7 +47,6 @@ body {
     border-top: 0.3rem solid var(--login-green);
     border-radius: 0.5rem;
     background: var(--login-surface);
-    box-shadow: 0 0.75rem 2rem rgba(36, 49, 45, 0.12);
 }
 
 .login-card-body {

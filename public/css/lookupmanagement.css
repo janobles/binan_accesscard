@@ -248,7 +248,6 @@
     border: 1px solid #dce5e2;
     border-radius: 0.55rem;
     background: #ffffff;
-    box-shadow: 0 0.65rem 1.35rem rgba(12, 33, 26, 0.12);
     text-align: left;
 }
 
@@ -333,7 +332,6 @@
     border: 1px solid #c9dad5;
     border-radius: 0.35rem;
     background: #ffffff;
-    box-shadow: 0 1.25rem 3rem rgba(12, 33, 26, 0.22);
 }
 
 .sector-service-modal-window:focus {

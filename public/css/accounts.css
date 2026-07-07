@@ -6,7 +6,6 @@
     border: 1px solid #d4e0dc;
     border-radius: 0.45rem;
     background: #f8fbfa;
-    box-shadow: 0 1rem 2.5rem rgba(16, 37, 31, 0.08);
 }
 
 .floating-family-modal:has(.edit-account-modal) {
@@ -411,7 +410,6 @@
     border-left: 0.28rem solid #168465;
     border-radius: 0.5rem;
     background: #f1faf6;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 .reset-password-callout__head {

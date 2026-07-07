@@ -113,7 +113,7 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
             <?php if ($activePage === 'dashboard'): ?>
                 <div class="dashboard-overview" data-dashboard-overview>
                     <section class="overview-stats" aria-label="Dashboard statistics">
-                        <article class="stat-card stat-card--records card shadow-sm h-100 py-2">
+                        <article class="stat-card stat-card--records card h-100 py-2">
                             <div class="card-body">
                                 <div class="stat-card-content">
                                     <div><p>Total Records</p><strong><?= esc((string) ($stats['families'] ?? 0)) ?></strong></div>
@@ -121,7 +121,7 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                                 </div>
                             </div>
                         </article>
-                        <article class="stat-card stat-card--members card shadow-sm h-100 py-2">
+                        <article class="stat-card stat-card--members card h-100 py-2">
                             <div class="card-body">
                                 <div class="stat-card-content">
                                     <div><p>Registered Members</p><strong><?= esc((string) ($stats['members'] ?? 0)) ?></strong></div>
@@ -129,7 +129,7 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                                 </div>
                             </div>
                         </article>
-                        <article class="stat-card stat-card--sectors card shadow-sm h-100 py-2">
+                        <article class="stat-card stat-card--sectors card h-100 py-2">
                             <div class="card-body">
                                 <div class="stat-card-content">
                                     <div><p>Active Sectors</p><strong><?= esc((string) ($stats['sectors'] ?? 0)) ?></strong></div>
@@ -137,7 +137,7 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                                 </div>
                             </div>
                         </article>
-                        <article class="stat-card stat-card--services card shadow-sm h-100 py-2">
+                        <article class="stat-card stat-card--services card h-100 py-2">
                             <div class="card-body">
                                 <div class="stat-card-content">
                                     <div><p>Services and Programs</p><strong><?= esc((string) ($stats['assistance'] ?? 0)) ?></strong></div>

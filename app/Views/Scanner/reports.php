@@ -50,7 +50,7 @@
 
 <!-- KPI tiles: same house style as the admin dashboard stat cards -->
 <section class="reports-stats" aria-label="Report statistics">
-  <article class="stat-card stat-card--records card shadow-sm h-100 py-2">
+  <article class="stat-card stat-card--records card h-100 py-2">
     <div class="card-body"><div class="stat-card-content">
       <div><p>Families with a QR</p><strong><?= esc(
           (string) $summary["total"],
@@ -58,7 +58,7 @@
       <i class="bi bi-qr-code stat-card-icon" aria-hidden="true"></i>
     </div></div>
   </article>
-  <article class="stat-card stat-card--members card shadow-sm h-100 py-2">
+  <article class="stat-card stat-card--members card h-100 py-2">
     <div class="card-body"><div class="stat-card-content">
       <div><p>Received aid</p><strong><?= esc(
           (string) $summary["received"],
@@ -66,7 +66,7 @@
       <i class="bi bi-check2-circle stat-card-icon" aria-hidden="true"></i>
     </div></div>
   </article>
-  <article class="stat-card stat-card--sectors card shadow-sm h-100 py-2">
+  <article class="stat-card stat-card--sectors card h-100 py-2">
     <div class="card-body"><div class="stat-card-content">
       <div><p>Still waiting</p><strong><?= esc(
           (string) $summary["notReceived"],
@@ -74,7 +74,7 @@
       <i class="bi bi-hourglass-split stat-card-icon" aria-hidden="true"></i>
     </div></div>
   </article>
-  <article class="stat-card stat-card--services card shadow-sm h-100 py-2">
+  <article class="stat-card stat-card--services card h-100 py-2">
     <div class="card-body"><div class="stat-card-content">
       <div><p>Coverage</p><strong><?= esc(
           (string) $summary["coverage"],
@@ -87,19 +87,19 @@
 <!-- Charts: each in its own card, sitting directly on the page background -->
 <div class="row g-3 reports-charts">
   <div class="col-lg-4">
-    <div class="reports-chart-card card shadow-sm">
+    <div class="reports-chart-card card">
       <h6>Families that received aid vs still waiting</h6>
       <canvas id="chartReceived" height="220"></canvas>
     </div>
   </div>
   <div class="col-lg-8">
-    <div class="reports-chart-card card shadow-sm">
+    <div class="reports-chart-card card">
       <h6>Coverage by barangay (percent)</h6>
       <div class="reports-barangay-chart"><canvas id="chartBarangay"></canvas></div>
     </div>
   </div>
   <div class="col-lg-12">
-    <div class="reports-chart-card card shadow-sm">
+    <div class="reports-chart-card card">
       <h6>Number of handouts by aid type</h6>
       <canvas id="chartAidType" height="180"></canvas>
     </div>
@@ -107,7 +107,7 @@
 </div>
 
 <!-- No-JS / print fallback summary table -->
-<div class="reports-fallback card shadow-sm mt-3">
+<div class="reports-fallback card mt-3">
   <table class="table table-sm manage-record-table align-middle w-100 mb-0">
     <thead><tr><th>Barangay</th><th>Families</th><th>Received</th><th>Coverage</th></tr></thead>
     <tbody>

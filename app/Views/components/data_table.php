@@ -16,6 +16,8 @@
  * - $rows         array        list of rows; each row = list of raw-HTML cell strings,
  *                              or ['cells' => [...], 'attrs' => ' data-id="1"'] for row attributes
  * - $emptyMessage string       shown as a single full-width row when $rows === []
+ * - $headerActions string|null raw HTML rendered right-aligned in the header
+ *                              (caller-escaped), e.g. a small "View All" link
  * - $tableId      string|null  id attribute on the <table> (JS/DataTables hook)
  * - $tableClass   string       full class list for the <table>
  * - $id           string|null  id attribute on the card element
@@ -27,14 +29,16 @@ $footer = $footer ?? null;
 $columns = $columns ?? [];
 $rows = $rows ?? [];
 $emptyMessage = $emptyMessage ?? 'No records found.';
+$headerActions = $headerActions ?? null;
 $tableId = $tableId ?? null;
 $tableClass = $tableClass ?? 'table mb-0';
 $id = $id ?? null;
 $cardClass = $cardClass ?? '';
 ?>
 <div class="card mb-4<?= $cardClass !== '' ? ' ' . esc($cardClass, 'attr') : '' ?>"<?= $id !== null ? ' id="' . esc($id, 'attr') . '"' : '' ?>>
-    <div class="card-header">
-        <?php if ($icon !== null): ?><i class="bi bi-<?= esc($icon, 'attr') ?> me-1" aria-hidden="true"></i><?php endif; ?><?= esc($title) ?>
+    <div class="card-header<?= $headerActions !== null ? ' d-flex justify-content-between align-items-center' : '' ?>">
+        <span><?php if ($icon !== null): ?><i class="bi bi-<?= esc($icon, 'attr') ?> me-1" aria-hidden="true"></i><?php endif; ?><?= esc($title) ?></span>
+        <?php if ($headerActions !== null): ?><span><?= $headerActions ?></span><?php endif; ?>
     </div>
     <div class="card-body">
         <div class="table-responsive">

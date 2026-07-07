@@ -147,52 +147,44 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                         </article>
                     </section>
 
-                    <section class="overview-panel dashboard-table-panel">
-                        <header class="panel-header">
-                            <h2>Recent Records</h2>
-                        </header>
-                        <div class="table-responsive">
-                            <table class="table overview-table">
-                                <thead><tr><th scope="col">Name (Head)</th><th scope="col">Sector</th></tr></thead>
-                                <tbody>
-                                    <?php foreach ($recentFamilies as $family): ?>
-                                        <tr>
-                                            <td><?= esc(trim(($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? ''))) ?></td>
-                                            <td><?= esc((string) ($family['sector_name'] ?? '-')) ?></td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                    <?php if ($recentFamilies === []): ?>
-                                        <tr><td colspan="2" class="empty-state">No records yet.</td></tr>
-                                    <?php endif; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    </section>
+                    <?php
+                    $recentFamilyRows = [];
+                    foreach ($recentFamilies as $family) {
+                        $recentFamilyRows[] = [
+                            esc(trim(($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? ''))),
+                            esc((string) ($family['sector_name'] ?? '-')),
+                        ];
+                    }
+                    $recentAuditRows = [];
+                    foreach ($recentAudits as $audit) {
+                        $recentAuditRows[] = [
+                            esc($formatAuditUser($audit)),
+                            esc($formatAuditMember($audit)),
+                            '<span class="badge bg-light text-dark border">' . esc((string) ($audit['user_action'] ?? '')) . '</span>',
+                            esc((string) ($audit['description'] ?? '')),
+                        ];
+                    }
+                    ?>
+                    <?= view('components/data_table', [
+                        'icon' => 'table',
+                        'title' => 'Recent Records',
+                        'columns' => ['Name (Head)', 'Sector'],
+                        'rows' => $recentFamilyRows,
+                        'emptyMessage' => 'No records yet.',
+                        'tableClass' => 'table overview-table mb-0',
+                        'cardClass' => 'dashboard-table-panel',
+                    ]) ?>
 
-                    <section class="overview-panel dashboard-table-panel">
-                        <header class="panel-header">
-                            <h2>Recent Activity</h2>
-                            <a class="btn btn-sm panel-action" href="<?= site_url('admin/audit-trails') ?>"><i class="bi bi-arrow-right" aria-hidden="true"></i><span>View All</span></a>
-                        </header>
-                        <div class="table-responsive">
-                            <table class="table overview-table">
-                                <thead><tr><th scope="col">User</th><th scope="col">Member</th><th scope="col">Action</th><th scope="col">Description</th></tr></thead>
-                                <tbody>
-                                    <?php foreach ($recentAudits as $audit): ?>
-                                        <tr>
-                                            <td><?= esc($formatAuditUser($audit)) ?></td>
-                                            <td><?= esc($formatAuditMember($audit)) ?></td>
-                                            <td><span class="badge bg-light text-dark border"><?= esc((string) ($audit['user_action'] ?? '')) ?></span></td>
-                                            <td><?= esc((string) ($audit['description'] ?? '')) ?></td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                    <?php if ($recentAudits === []): ?>
-                                        <tr><td colspan="4" class="empty-state">No activity yet.</td></tr>
-                                    <?php endif; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    </section>
+                    <?= view('components/data_table', [
+                        'icon' => 'clock-history',
+                        'title' => 'Recent Activity',
+                        'headerActions' => '<a class="btn btn-sm panel-action" href="' . site_url('admin/audit-trails') . '"><i class="bi bi-arrow-right" aria-hidden="true"></i><span>View All</span></a>',
+                        'columns' => ['User', 'Member', 'Action', 'Description'],
+                        'rows' => $recentAuditRows,
+                        'emptyMessage' => 'No activity yet.',
+                        'tableClass' => 'table overview-table mb-0',
+                        'cardClass' => 'dashboard-table-panel',
+                    ]) ?>
                 </div>
             <?php endif; ?>
 

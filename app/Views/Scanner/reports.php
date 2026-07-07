@@ -84,49 +84,59 @@
   </article>
 </section>
 
-<!-- Charts: each in its own card, sitting directly on the page background -->
+<!-- Charts: each in the standard card anatomy (components/card) -->
 <div class="row g-3 reports-charts">
   <div class="col-lg-4">
-    <div class="reports-chart-card card">
-      <h6>Families that received aid vs still waiting</h6>
-      <canvas id="chartReceived" height="220"></canvas>
-    </div>
+    <?= view('components/card', [
+        'icon' => 'pie-chart',
+        'title' => 'Families that received aid vs still waiting',
+        'bodyHtml' => '<canvas id="chartReceived" height="220"></canvas>',
+        'footer' => $rangeLabel,
+        'cardClass' => 'reports-chart-card h-100',
+    ]) ?>
   </div>
   <div class="col-lg-8">
-    <div class="reports-chart-card card">
-      <h6>Coverage by barangay (percent)</h6>
-      <div class="reports-barangay-chart"><canvas id="chartBarangay"></canvas></div>
-    </div>
+    <?= view('components/card', [
+        'icon' => 'bar-chart',
+        'title' => 'Coverage by barangay (percent)',
+        'bodyHtml' => '<div class="reports-barangay-chart"><canvas id="chartBarangay"></canvas></div>',
+        'footer' => $rangeLabel,
+        'cardClass' => 'reports-chart-card h-100',
+    ]) ?>
   </div>
   <div class="col-lg-12">
-    <div class="reports-chart-card card">
-      <h6>Number of handouts by aid type</h6>
-      <canvas id="chartAidType" height="180"></canvas>
-    </div>
+    <?= view('components/card', [
+        'icon' => 'bar-chart-line',
+        'title' => 'Number of handouts by aid type',
+        'bodyHtml' => '<canvas id="chartAidType" height="180"></canvas>',
+        'footer' => $rangeLabel,
+        'cardClass' => 'reports-chart-card',
+    ]) ?>
   </div>
 </div>
 
-<!-- No-JS / print fallback summary table -->
-<div class="reports-fallback card mt-3">
-  <table class="table table-sm manage-record-table align-middle w-100 mb-0">
-    <thead><tr><th>Barangay</th><th>Families</th><th>Received</th><th>Coverage</th></tr></thead>
-    <tbody>
-      <?php foreach ($byBarangay as $b): ?>
-        <tr>
-          <td><?= esc($b["barangay"]) ?></td>
-          <td><?= esc((string) $b["total"]) ?></td>
-          <td><?= esc((string) $b["received"]) ?></td>
-          <td><span class="badge bg-light text-dark border"><?= esc(
-              (string) $b["coverage"],
-          ) ?>%</span></td>
-        </tr>
-      <?php endforeach; ?>
-      <?php if ($byBarangay === []): ?>
-        <tr><td colspan="4" class="text-center text-muted">No data for this range.</td></tr>
-      <?php endif; ?>
-    </tbody>
-  </table>
-</div>
+<!-- No-JS / print fallback summary table (components/data_table) -->
+<?php
+$barangayRows = [];
+foreach ($byBarangay as $b) {
+    $barangayRows[] = [
+        esc($b["barangay"]),
+        esc((string) $b["total"]),
+        esc((string) $b["received"]),
+        '<span class="badge bg-light text-dark border">' . esc((string) $b["coverage"]) . '%</span>',
+    ];
+}
+?>
+<?= view('components/data_table', [
+    'icon' => 'table',
+    'title' => 'Coverage by barangay',
+    'columns' => ['Barangay', 'Families', 'Received', 'Coverage'],
+    'rows' => $barangayRows,
+    'emptyMessage' => 'No data for this range.',
+    'tableClass' => 'table table-sm manage-record-table align-middle w-100 mb-0',
+    'cardClass' => 'reports-fallback',
+    'footer' => $rangeLabel,
+]) ?>
 
 <script id="reportsData" type="application/json"><?= json_encode(
     [

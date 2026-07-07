@@ -76,17 +76,7 @@
     }
 }
 
-/* Chart cards. */
-.reports-chart-card {
-    padding: 1rem;
-    height: 100%;
-}
-
-.reports-chart-card h6 {
-    margin-bottom: 0.75rem;
-    font-weight: 600;
-}
-
+/* Chart cards (header/body/footer come from components/card). */
 .reports-chart-card canvas {
     max-width: 100%;
 }

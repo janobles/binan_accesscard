@@ -108,27 +108,24 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
                         </article>
                     </section>
 
-                    <div class="panel dashboard-table-panel">
-                        <div class="section-title mt-0">
-                            <span>Recently Added Records</span>
-                        </div>
-                        <div class="table-responsive">
-                            <table class="table table-sm overview-table">
-                                <thead><tr><th>Name (Head)</th><th>Sector</th></tr></thead>
-                                <tbody>
-                                    <?php foreach ($recentFamilies as $family): ?>
-                                        <tr>
-                                            <td><span class="entity-title"><?= esc(mb_strtoupper(trim(($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? '')), 'UTF-8')) ?></span></td>
-                                            <td><?= view('Partials/sector-label-list', ['sectorLabel' => mb_strtoupper((string) ($family['sector_name'] ?? ''), 'UTF-8')]) ?></td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                    <?php if ($recentFamilies === []): ?>
-                                        <tr><td colspan="2" class="text-center text-muted">No records yet.</td></tr>
-                                    <?php endif; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+                    <?php
+                    $recentFamilyRows = [];
+                    foreach ($recentFamilies as $family) {
+                        $recentFamilyRows[] = [
+                            '<span class="entity-title">' . esc(mb_strtoupper(trim(($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? '')), 'UTF-8')) . '</span>',
+                            view('Partials/sector-label-list', ['sectorLabel' => mb_strtoupper((string) ($family['sector_name'] ?? ''), 'UTF-8')]),
+                        ];
+                    }
+                    ?>
+                    <?= view('components/data_table', [
+                        'icon' => 'table',
+                        'title' => 'Recently Added Records',
+                        'columns' => ['Name (Head)', 'Sector'],
+                        'rows' => $recentFamilyRows,
+                        'emptyMessage' => 'No records yet.',
+                        'tableClass' => 'table table-sm overview-table mb-0',
+                        'cardClass' => 'dashboard-table-panel',
+                    ]) ?>
                 </div>
             <?php endif; ?>
 

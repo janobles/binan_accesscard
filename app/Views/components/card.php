@@ -14,6 +14,8 @@
  * - $bodyData   array        data passed to $bodyView
  * - $bodyHtml   string|null  pre-rendered body HTML (alternative to $bodyView);
  *                            caller esc()'s any dynamic parts
+ * - $headerActions string|null  raw HTML rendered right-aligned in the header
+ *                               (caller-escaped), e.g. a small "View All" link
  * - $id         string|null  id attribute on the card element
  * - $cardClass  string       extra classes on the card element
  * - $bodyClass  string       extra classes on card-body
@@ -24,13 +26,15 @@ $footer = $footer ?? null;
 $bodyView = $bodyView ?? null;
 $bodyData = $bodyData ?? [];
 $bodyHtml = $bodyHtml ?? null;
+$headerActions = $headerActions ?? null;
 $id = $id ?? null;
 $cardClass = $cardClass ?? '';
 $bodyClass = $bodyClass ?? '';
 ?>
 <div class="card mb-4<?= $cardClass !== '' ? ' ' . esc($cardClass, 'attr') : '' ?>"<?= $id !== null ? ' id="' . esc($id, 'attr') . '"' : '' ?>>
-    <div class="card-header">
-        <?php if ($icon !== null): ?><i class="bi bi-<?= esc($icon, 'attr') ?> me-1" aria-hidden="true"></i><?php endif; ?><?= esc($title) ?>
+    <div class="card-header<?= $headerActions !== null ? ' d-flex justify-content-between align-items-center' : '' ?>">
+        <span><?php if ($icon !== null): ?><i class="bi bi-<?= esc($icon, 'attr') ?> me-1" aria-hidden="true"></i><?php endif; ?><?= esc($title) ?></span>
+        <?php if ($headerActions !== null): ?><span><?= $headerActions ?></span><?php endif; ?>
     </div>
     <div class="card-body<?= $bodyClass !== '' ? ' ' . esc($bodyClass, 'attr') : '' ?>">
         <?php if ($bodyView !== null): ?>

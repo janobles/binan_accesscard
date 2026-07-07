@@ -43,8 +43,7 @@
     white-space: nowrap;
 }
 
-
-/* KPI tile grid + stat-card styles live in binan-theme.css. */
+/* KPI tile grid + stat-card styles live in theme.css. */
 
 /* Chart cards (header/body/footer come from components/card). */
 .reports-chart-card canvas {

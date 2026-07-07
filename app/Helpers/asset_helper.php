@@ -33,7 +33,7 @@ if (! function_exists('asset_styles')) {
             'head' => [
                 'assets/sb-admin/css/styles.css',
                 'assets/bootstrap-icons/font/bootstrap-icons.min.css',
-                'css/binan-theme.css',
+                'css/theme.css',
             ],
             'admin' => [
                 'assets/datatables/css/dataTables.bootstrap5.min.css',

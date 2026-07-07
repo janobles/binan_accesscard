@@ -40,7 +40,7 @@ use App\Libraries\ViewFormatter;
                         <th scope="col">Username</th>
                         <th scope="col">Role</th>
                         <th scope="col">Status</th>
-                        <th scope="col">Action</th>
+                        <th scope="col" class="text-end">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -65,12 +65,12 @@ use App\Libraries\ViewFormatter;
                             <td><strong><?= esc((string) ($account['username'] ?? '')) ?></strong></td>
                             <td><?= esc($roleLabel) ?></td>
                             <td><span class="account-status-badge <?= esc($statusClass) ?>"><?= esc($statusLabel) ?></span></td>
-                            <td>
+                            <td class="text-end">
                                 <div class="account-actions">
                                     <?php if ($hasRowActions): ?>
                                         <div class="dropdown">
-                                            <button class="btn btn-sm btn-outline-secondary account-action-toggle dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false">
-                                                Actions
+                                            <button class="btn btn-sm btn-outline-secondary account-action-toggle" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false" aria-label="Account actions">
+                                                <i class="bi bi-three-dots" aria-hidden="true"></i>
                                             </button>
                                             <div class="dropdown-menu account-action-menu">
                                                 <?php if ($canEditRow): ?>

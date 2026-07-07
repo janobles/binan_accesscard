@@ -1,7 +1,7 @@
 <?php
 /**
  * KPI stat tile (dashboard overview + scanner reports).
- * Grid/typography rules live in public/css/binan-theme.css
+ * Grid/typography rules live in public/css/theme.css
  * (.overview-stats / .reports-stats / .stat-card*).
  *
  * Variables:

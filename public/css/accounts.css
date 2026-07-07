@@ -289,8 +289,8 @@
     font-weight: 700;
 }
 
-.account-action-toggle {
-    min-width: 7rem;
+.account-table .account-action-toggle {
+    min-width: 0;
 }
 
 .account-action-menu {

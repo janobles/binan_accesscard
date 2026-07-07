@@ -86,13 +86,32 @@
     border-right: 0;
 }
 
+/* Canonical data-table header: grayed row + uppercase labels, matching the
+   Manage Records table. Wins specificity (0,2,2) over every per-table th rule
+   (.manage-record-table/.audit-trails-table/.account-table/.reports-fallback),
+   so all card tables render one header style. Those per-table rules keep only
+   their unique layout props (sticky, min-width); their visual props are now
+   redundant overrides. */
 .card .table thead th {
     border-bottom: 1px solid var(--bs-border-color);
-    background-color: var(--bs-tertiary-bg);
+    background-color: #f4f7f7;
+    color: #53635e;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
 }
 
 .card .table > :not(caption) > * > * {
     padding: 0.5rem 0.75rem;
+}
+
+/* scrollX DataTables clones the header into .dt-scroll-head as a separate table
+   from the .dt-scroll-body table. Both draw a 1px border at the seam, stacking
+   into a 2px line. Keep the header th's border; drop the body table's top border
+   so the seam reads as a single 1px, matching the non-DataTable tables. */
+.card div.dt-scroll-body > table {
+    border-top: 0;
 }
 
 /* Stat cards (dashboard + reports KPI tiles). */

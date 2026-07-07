@@ -13,7 +13,6 @@ use App\Models\Families\MemberModel;
 use App\Models\Families\MemberServiceModel;
 use App\Models\Lookups\SectorModel;
 use App\Models\Lookups\ServiceModel;
-use App\Support\FamilyProfilingFormV2;
 use App\Support\FamilyRecordPresenter;
 use App\Support\MemberFieldNormalizer;
 use CodeIgniter\HTTP\RedirectResponse;
@@ -586,39 +585,6 @@ class FamilyController extends BaseController
     }
 
     /**
-     * Maps family-member rows into the per-member array the family form's member
-     * template expects (data-name keys), including each member's selected service
-     * and sector IDs so the edit form pre-checks them.
-     *
-     * @param array<int, list<int>> $serviceIdsByMember
-     * @return list<array<string, mixed>>
-     */
-    private function shapeExistingMembers(array $members, array $serviceIdsByMember): array
-    {
-        return array_map(function (array $member) use ($serviceIdsByMember): array {
-            $memberId = (int) ($member['memberID'] ?? 0);
-
-            return [
-                'firstname'     => (string) ($member['firstname'] ?? ''),
-                'middlename'    => (string) ($member['middlename'] ?? ''),
-                'lastname'      => (string) ($member['lastname'] ?? ''),
-                'suffix'        => (string) ($member['suffix'] ?? ''),
-                'birthday'      => (string) ($member['birthday'] ?? ''),
-                'sex'           => (string) ($member['sex'] ?? ''),
-                'civilstatus'   => (string) ($member['civilstatus'] ?? ''),
-                'contactnumber' => (string) ($member['contactnumber'] ?? ''),
-                'religion'      => (string) ($member['religion'] ?? ''),
-                'education'     => (string) ($member['education'] ?? ''),
-                'job'           => (string) ($member['job'] ?? ''),
-                'salary'        => (string) ($member['Salary'] ?? ''),
-                'relationship'  => (string) ($member['relationship'] ?? ''),
-                'sector_ids'    => SectorIds::normalize($member['sectorID'] ?? null),
-                'service_ids'   => $serviceIdsByMember[$memberId] ?? [],
-            ];
-        }, $members);
-    }
-
-    /**
      * Validates and links a set of selected service IDs to one member inside the
      * update transaction. A service is accepted when it is an active service, OR it
      * is in $grandfatheredServiceIds — the set the family already held before this
@@ -806,27 +772,7 @@ class FamilyController extends BaseController
      */
     private function splitAddressBarangay(mixed $combined): array
     {
-        $combined = trim((string) $combined);
-        $barangays = FamilyProfilingFormV2::barangays();
-        usort($barangays, static fn (string $a, string $b): int => mb_strlen($b) <=> mb_strlen($a));
-
-        foreach ($barangays as $barangay) {
-            $suffix = ', ' . $barangay;
-
-            if (mb_strlen($combined) >= mb_strlen($suffix)
-                && strcasecmp(mb_substr($combined, -mb_strlen($suffix)), $suffix) === 0) {
-                return [
-                    'address' => rtrim(mb_substr($combined, 0, mb_strlen($combined) - mb_strlen($suffix))),
-                    'barangay' => $barangay,
-                ];
-            }
-
-            if (strcasecmp($combined, $barangay) === 0) {
-                return ['address' => '', 'barangay' => $barangay];
-            }
-        }
-
-        return ['address' => $combined, 'barangay' => ''];
+        return MemberFieldNormalizer::splitAddressBarangay($combined);
     }
 
     /**

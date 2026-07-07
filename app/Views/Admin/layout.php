@@ -113,38 +113,30 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
             <?php if ($activePage === 'dashboard'): ?>
                 <div class="dashboard-overview" data-dashboard-overview>
                     <section class="overview-stats" aria-label="Dashboard statistics">
-                        <article class="stat-card stat-card--records card h-100 py-2">
-                            <div class="card-body">
-                                <div class="stat-card-content">
-                                    <div><p>Total Records</p><strong><?= esc((string) ($stats['families'] ?? 0)) ?></strong></div>
-                                    <i class="bi bi-folder2-open stat-card-icon" aria-hidden="true"></i>
-                                </div>
-                            </div>
-                        </article>
-                        <article class="stat-card stat-card--members card h-100 py-2">
-                            <div class="card-body">
-                                <div class="stat-card-content">
-                                    <div><p>Registered Members</p><strong><?= esc((string) ($stats['members'] ?? 0)) ?></strong></div>
-                                    <i class="bi bi-people stat-card-icon" aria-hidden="true"></i>
-                                </div>
-                            </div>
-                        </article>
-                        <article class="stat-card stat-card--sectors card h-100 py-2">
-                            <div class="card-body">
-                                <div class="stat-card-content">
-                                    <div><p>Active Sectors</p><strong><?= esc((string) ($stats['sectors'] ?? 0)) ?></strong></div>
-                                    <i class="bi bi-diagram-3 stat-card-icon" aria-hidden="true"></i>
-                                </div>
-                            </div>
-                        </article>
-                        <article class="stat-card stat-card--services card h-100 py-2">
-                            <div class="card-body">
-                                <div class="stat-card-content">
-                                    <div><p>Services and Programs</p><strong><?= esc((string) ($stats['assistance'] ?? 0)) ?></strong></div>
-                                    <i class="bi bi-grid stat-card-icon" aria-hidden="true"></i>
-                                </div>
-                            </div>
-                        </article>
+                        <?= view('components/stat_card', [
+                            'label' => 'Total Records',
+                            'value' => (string) ($stats['families'] ?? 0),
+                            'icon' => 'folder2-open',
+                            'variant' => 'stat-card--records',
+                        ]) ?>
+                        <?= view('components/stat_card', [
+                            'label' => 'Registered Members',
+                            'value' => (string) ($stats['members'] ?? 0),
+                            'icon' => 'people',
+                            'variant' => 'stat-card--members',
+                        ]) ?>
+                        <?= view('components/stat_card', [
+                            'label' => 'Active Sectors',
+                            'value' => (string) ($stats['sectors'] ?? 0),
+                            'icon' => 'diagram-3',
+                            'variant' => 'stat-card--sectors',
+                        ]) ?>
+                        <?= view('components/stat_card', [
+                            'label' => 'Services and Programs',
+                            'value' => (string) ($stats['assistance'] ?? 0),
+                            'icon' => 'grid',
+                            'variant' => 'stat-card--services',
+                        ]) ?>
                     </section>
 
                     <?php
@@ -250,25 +242,17 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
 
 <?php /* Shared modal target. The *-modal.js loaders fetch ?partial=1 fragments
          (add/edit record, accounts, sectors, services, audit) into #familyModalBody. */ ?>
-<div class="modal fade floating-family-modal" id="familyModal" tabindex="-1" aria-label="Record details" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
-    <div class="modal-dialog modal-dialog-centered modal-xl">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="familyModalLabel">Record</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body" id="familyModalBody">
-                <div class="family-modal-loading" role="status" aria-live="polite">
-                    <div class="spinner-border text-primary" aria-hidden="true"></div>
-                    <span>Loading...</span>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary family-modal-close" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
+<?= view('components/modal', [
+    'id' => 'familyModal',
+    'modalClass' => 'floating-family-modal',
+    'attrs' => 'aria-label="Record details" data-bs-backdrop="static" data-bs-keyboard="false"',
+    'size' => 'modal-xl',
+    'title' => 'Record',
+    'titleId' => 'familyModalLabel',
+    'bodyId' => 'familyModalBody',
+    'bodyHtml' => '<div class="family-modal-loading" role="status" aria-live="polite"><div class="spinner-border text-primary" aria-hidden="true"></div><span>Loading...</span></div>',
+    'footerHtml' => '<button type="button" class="btn btn-outline-secondary family-modal-close" data-bs-dismiss="modal">Close</button>',
+]) ?>
 
 <?= view('Family/action-confirm-modal') ?>
 
@@ -276,22 +260,16 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
 
 <?php /* Per-row audit detail modal, populated client-side by audit-detail-modal.js
          from the clicked row's data-* attributes (no AJAX). */ ?>
-<div class="modal fade audit-detail-modal" id="auditDetailModal" tabindex="-1" aria-labelledby="auditDetailTitle" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="auditDetailTitle">Audit Entry Details</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p class="audit-detail-full" id="auditDetailFull">—</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
+<?= view('components/modal', [
+    'id' => 'auditDetailModal',
+    'modalClass' => 'audit-detail-modal',
+    'attrs' => 'aria-labelledby="auditDetailTitle"',
+    'size' => 'modal-lg',
+    'title' => 'Audit Entry Details',
+    'titleId' => 'auditDetailTitle',
+    'bodyHtml' => '<p class="audit-detail-full" id="auditDetailFull">&mdash;</p>',
+    'footerHtml' => '<button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>',
+]) ?>
 
 <?php foreach (array_merge(asset_scripts('core'), asset_scripts('admin')) as $scriptPath): ?>
 <script src="<?= esc(asset_url($scriptPath), 'attr') ?>"></script>

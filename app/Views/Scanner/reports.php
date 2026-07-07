@@ -50,38 +50,30 @@
 
 <!-- KPI tiles: same house style as the admin dashboard stat cards -->
 <section class="reports-stats" aria-label="Report statistics">
-  <article class="stat-card stat-card--records card h-100 py-2">
-    <div class="card-body"><div class="stat-card-content">
-      <div><p>Families with a QR</p><strong><?= esc(
-          (string) $summary["total"],
-      ) ?></strong></div>
-      <i class="bi bi-qr-code stat-card-icon" aria-hidden="true"></i>
-    </div></div>
-  </article>
-  <article class="stat-card stat-card--members card h-100 py-2">
-    <div class="card-body"><div class="stat-card-content">
-      <div><p>Received aid</p><strong><?= esc(
-          (string) $summary["received"],
-      ) ?></strong></div>
-      <i class="bi bi-check2-circle stat-card-icon" aria-hidden="true"></i>
-    </div></div>
-  </article>
-  <article class="stat-card stat-card--sectors card h-100 py-2">
-    <div class="card-body"><div class="stat-card-content">
-      <div><p>Still waiting</p><strong><?= esc(
-          (string) $summary["notReceived"],
-      ) ?></strong></div>
-      <i class="bi bi-hourglass-split stat-card-icon" aria-hidden="true"></i>
-    </div></div>
-  </article>
-  <article class="stat-card stat-card--services card h-100 py-2">
-    <div class="card-body"><div class="stat-card-content">
-      <div><p>Coverage</p><strong><?= esc(
-          (string) $summary["coverage"],
-      ) ?>%</strong></div>
-      <i class="bi bi-pie-chart stat-card-icon" aria-hidden="true"></i>
-    </div></div>
-  </article>
+  <?= view('components/stat_card', [
+      'label' => 'Families with a QR',
+      'value' => (string) $summary["total"],
+      'icon' => 'qr-code',
+      'variant' => 'stat-card--records',
+  ]) ?>
+  <?= view('components/stat_card', [
+      'label' => 'Received aid',
+      'value' => (string) $summary["received"],
+      'icon' => 'check2-circle',
+      'variant' => 'stat-card--members',
+  ]) ?>
+  <?= view('components/stat_card', [
+      'label' => 'Still waiting',
+      'value' => (string) $summary["notReceived"],
+      'icon' => 'hourglass-split',
+      'variant' => 'stat-card--sectors',
+  ]) ?>
+  <?= view('components/stat_card', [
+      'label' => 'Coverage',
+      'value' => ((string) $summary["coverage"]) . '%',
+      'icon' => 'pie-chart',
+      'variant' => 'stat-card--services',
+  ]) ?>
 </section>
 
 <!-- Charts: each in the standard card anatomy (components/card) -->

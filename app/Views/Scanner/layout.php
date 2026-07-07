@@ -63,25 +63,17 @@ $navActive           = $navActive ?? ['scanner' => 'active'];
          "Account Settings" (account-form-modal.js) fetches its fragment into
          #familyModalBody; without this container registerDashboardModal() bails
          and the trigger never binds. */ ?>
-<div class="modal fade floating-family-modal" id="familyModal" tabindex="-1" aria-label="Account settings" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
-    <div class="modal-dialog modal-dialog-centered modal-xl">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="familyModalLabel">My Account</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body" id="familyModalBody">
-                <div class="family-modal-loading" role="status" aria-live="polite">
-                    <div class="spinner-border text-primary" aria-hidden="true"></div>
-                    <span>Loading...</span>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary family-modal-close" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
+<?= view('components/modal', [
+    'id' => 'familyModal',
+    'modalClass' => 'floating-family-modal',
+    'attrs' => 'aria-label="Account settings" data-bs-backdrop="static" data-bs-keyboard="false"',
+    'size' => 'modal-xl',
+    'title' => 'My Account',
+    'titleId' => 'familyModalLabel',
+    'bodyId' => 'familyModalBody',
+    'bodyHtml' => '<div class="family-modal-loading" role="status" aria-live="polite"><div class="spinner-border text-primary" aria-hidden="true"></div><span>Loading...</span></div>',
+    'footerHtml' => '<button type="button" class="btn btn-outline-secondary family-modal-close" data-bs-dismiss="modal">Close</button>',
+]) ?>
 
 <?php foreach (array_merge(asset_scripts('core'), asset_scripts('admin'), asset_scripts('scanner')) as $scriptPath): ?>
 <script src="<?= esc(asset_url($scriptPath), 'attr') ?>"></script>

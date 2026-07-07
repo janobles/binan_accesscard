@@ -277,6 +277,29 @@ class SectorModel extends Model
     }
 
     /**
+     * [sectorID => SHORTCODE] map of active sectors, e.g. for the Manage
+     * Records DataTable's Sector column. Rows without an id or shortcode are
+     * skipped; shortcodes are uppercased.
+     *
+     * @return array<int, string>
+     */
+    public function shortcodeMap(): array
+    {
+        $map = [];
+
+        foreach ($this->getSectorOptions() as $sector) {
+            $sectorId = (int) ($sector['sectorID'] ?? $sector['id'] ?? 0);
+            $shortcode = trim((string) ($sector['shortcode'] ?? ''));
+
+            if ($sectorId > 0 && $shortcode !== '') {
+                $map[$sectorId] = mb_strtoupper($shortcode);
+            }
+        }
+
+        return $map;
+    }
+
+    /**
      * True if any `member` row references this sector ID (sectorID stores a JSON
      * array, matched via SectorIds::containsCondition). Guards archive/delete.
      */

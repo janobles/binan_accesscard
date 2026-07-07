@@ -75,7 +75,7 @@ class FamilyDataTableController extends BaseController
                 $rows = $memberModel->searchFamilies($searchKeyword, $length, $start, $status, $filters, $orderKey, $orderDirection);
             }
 
-            $sectorShortcodes = $this->dataTableSectorShortcodes();
+            $sectorShortcodes = (new SectorModel())->shortcodeMap();
             $headIdKey = $scope === 'all' ? 'headID' : 'memberID';
             $controlNumbers = model(\App\Models\Scanner\QrControlModel::class)->controlsForHeads(
                 array_map(static fn (array $row): int => (int) ($row[$headIdKey] ?? 0), $rows)
@@ -127,23 +127,6 @@ class FamilyDataTableController extends BaseController
         };
 
         return [$orderKey, $direction];
-    }
-
-    /** [sectorID => SHORTCODE] map for rendering the DataTable's Sector column. */
-    private function dataTableSectorShortcodes(): array
-    {
-        $map = [];
-
-        foreach ((new SectorModel())->getSectorOptions() as $sector) {
-            $sectorId = (int) ($sector['sectorID'] ?? $sector['id'] ?? 0);
-            $shortcode = trim((string) ($sector['shortcode'] ?? ''));
-
-            if ($sectorId > 0 && $shortcode !== '') {
-                $map[$sectorId] = mb_strtoupper($shortcode);
-            }
-        }
-
-        return $map;
     }
 
     /** Role-aware route base for the DataTable action URLs. */

@@ -65,7 +65,7 @@ class FamilyController extends BaseController
         $auditModel = new AuditTrailsModel();
 
         if (! $memberModel->hasRequiredFamilyTables()) {
-            $message = 'The accesscard database is missing required tables from accesscardV1.4.sql.';
+            $message = 'The accesscard database is missing required tables from accesscardV14.sql.';
 
             if ($this->request->isAJAX()) {
                 return $this->response
@@ -310,7 +310,7 @@ class FamilyController extends BaseController
         $auditModel = new AuditTrailsModel();
 
         if (! $memberModel->hasRequiredFamilyTables()) {
-            return $this->failUpdate('The accesscard database is missing required tables from accesscardV1.4.sql.', 422);
+            return $this->failUpdate('The accesscard database is missing required tables from accesscardV14.sql.', 422);
         }
 
         if ($this->submissionWasTruncated()) {

@@ -85,7 +85,7 @@ class FamilyImportController extends BaseController
         $memberModel = new MemberModel();
 
         if (! $memberModel->hasRequiredFamilyTables()) {
-            return $this->jsonError('The accesscard database is missing required tables from accesscardV1.4.sql.', 422);
+            return $this->jsonError('The accesscard database is missing required tables from accesscardV14.sql.', 422);
         }
 
         $file = $this->request->getFile('import_file');

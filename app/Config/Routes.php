@@ -11,6 +11,7 @@ use CodeIgniter\Router\RouteCollection;
  */
 $routes->get('/', 'Auth\AuthController::index');
 $routes->match(['GET', 'POST'], 'login', 'Auth\AuthController::login');
+$routes->post('login/confirm', 'Auth\AuthController::confirmLogin');
 $routes->get('logout', 'Auth\AuthController::logout');
 $routes->get('session/keep-alive', 'Auth\AuthController::keepAlive');
 

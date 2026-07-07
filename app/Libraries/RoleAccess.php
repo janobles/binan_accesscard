@@ -59,6 +59,7 @@ class RoleAccess
         'member_id',
         'username',
         'role',
+        'auth_token',
         'idle_last_activity',
     ];
 

@@ -71,6 +71,10 @@ Vagrantfile
 /writable/fonts/*
 !/writable/fonts/index.html
 
+# Single-session registry (runtime active-login tokens) — never commit
+/writable/active_sessions/*
+!/writable/active_sessions/index.html
+
 #-------------------------
 # Local scratch / junk
 #-------------------------

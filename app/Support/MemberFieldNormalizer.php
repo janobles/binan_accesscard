@@ -80,4 +80,37 @@ class MemberFieldNormalizer
 
         return $combined === '' ? null : $combined;
     }
+
+    /**
+     * Inverse of combineAddressBarangay(): splits a stored address back into its
+     * address + barangay parts so the edit form can prefill both inputs. Matches the
+     * trailing barangay against the canonical list (longest match first so
+     * "Binan (Poblacion)" wins over "Poblacion").
+     *
+     * @return array{address: string, barangay: string}
+     */
+    public static function splitAddressBarangay(mixed $combined): array
+    {
+        $combined = trim((string) $combined);
+        $barangays = FamilyProfilingFormV2::barangays();
+        usort($barangays, static fn (string $a, string $b): int => mb_strlen($b) <=> mb_strlen($a));
+
+        foreach ($barangays as $barangay) {
+            $suffix = ', ' . $barangay;
+
+            if (mb_strlen($combined) >= mb_strlen($suffix)
+                && strcasecmp(mb_substr($combined, -mb_strlen($suffix)), $suffix) === 0) {
+                return [
+                    'address' => rtrim(mb_substr($combined, 0, mb_strlen($combined) - mb_strlen($suffix))),
+                    'barangay' => $barangay,
+                ];
+            }
+
+            if (strcasecmp($combined, $barangay) === 0) {
+                return ['address' => '', 'barangay' => $barangay];
+            }
+        }
+
+        return ['address' => $combined, 'barangay' => ''];
+    }
 }

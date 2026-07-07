@@ -20,6 +20,13 @@ Lookups, Audit, Admin, Employee) is self-contained and easy to navigate. Routes 
   enable/disable. Employee accounts are stored as `User` role to match the SQL dump.
 - `Families/FamilyController.php` — validates and saves head/member records to
   `member`, selected services to `member_services`, and audit logs to `audit_trails`.
+- `Families/FamilyImportController.php` — Excel template download and queued
+  bulk import (form, submission, status polling).
+- `Families/FamilyDataTableController.php` — server-side DataTables endpoint for
+  Manage Records; row/envelope shaping delegated to `FamilyDataTablePresenter`.
+- `Families/FamilyRequestContext.php` — trait with the shared access guards,
+  admin/employee route detection, and JSON/modal error helpers for the three
+  Families controllers.
 - `Lookups/SectorController.php`, `Lookups/ServiceController.php` — create/update/
   archive/restore/delete mutations for the `sector` and `services` lookup tables.
   These back the live `admin/sectors` and `admin/services` management screens.
@@ -44,6 +51,10 @@ Lookups, Audit, Admin, Employee) is self-contained and easy to navigate. Routes 
 
 - `DashboardPageBuilder.php` — assembles all dashboard view data; the main entry
   point when debugging what a page renders.
+- `FamilyDataTablePresenter.php` — shapes Manage Records rows into the
+  DataTables cell map and JSON envelope.
+- `FamilyModalDataBuilder.php` — assembles the family Add/Update modal and
+  detail-fragment view data (head prefill, member rows, label maps).
 - `SessionAuditLogger.php`, `RoleAccess.php`, `SectorIds.php` — auth/audit and
   domain helpers used across slices.
 

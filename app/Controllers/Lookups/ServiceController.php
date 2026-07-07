@@ -114,7 +114,7 @@ class ServiceController extends BaseController
             return $this->redirectAdmin('admin/services', 'error', 'Services table is not available.');
         }
 
-        if ($this->serviceIsUsed($serviceId)) {
+        if ($model->isInUse($serviceId)) {
             return $this->redirectAdmin('admin/services', 'error', 'This service or program is already used by one or more records and cannot be deleted.');
         }
 
@@ -178,13 +178,12 @@ class ServiceController extends BaseController
         if ($isUpdate) {
             $saved = $model->update($serviceId, $model->dataForCurrentSchema($data)) !== false;
         } else {
-            $db = \Config\Database::connect();
-            $db->transStart();
-            $data['serviceID'] = $model->nextServiceId();
-            $inserted = $model->insert($model->dataForCurrentSchema($data)) !== false;
-            $db->transComplete();
-            $saved = $inserted && $db->transStatus() !== false;
-            $serviceId = (int) $data['serviceID'];
+            $newId = $model->insertWithNextId($data);
+            $saved = $newId !== false;
+
+            if ($saved) {
+                $serviceId = $newId;
+            }
         }
 
         if (! $saved) {
@@ -199,23 +198,6 @@ class ServiceController extends BaseController
         $message = $isUpdate ? 'Service updated successfully.' : 'Service added successfully.';
 
         return $this->redirectAdmin('admin/services', 'success', $message);
-    }
-
-    /**
-     * True if any `member_services` row links to this service ID. Guards
-     * archive/delete so in-use services cannot be removed.
-     */
-    private function serviceIsUsed(int $serviceId): bool
-    {
-        $db = db_connect();
-
-        if (! $db->tableExists('member_services')) {
-            return false;
-        }
-
-        return $db->table('member_services')
-            ->where('serviceID', $serviceId)
-            ->countAllResults() > 0;
     }
 
     /**

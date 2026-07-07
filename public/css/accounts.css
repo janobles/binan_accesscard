@@ -49,6 +49,14 @@
     padding: 0.7rem 0.85rem;
 }
 
+/* Modal header renders flat (was an inline style on the partial). Placed
+   after the padded card-header rule above so it wins the tie. */
+.edit-account-modal > .account-card-header {
+    border: 0;
+    background: transparent;
+    padding: 0 0 0.5rem;
+}
+
 .edit-account-modal .account-card h2 {
     font-size: 0.95rem;
 }

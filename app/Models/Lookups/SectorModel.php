@@ -2,6 +2,7 @@
 
 namespace App\Models\Lookups;
 
+use App\Libraries\SectorIds;
 use App\Models\Concerns\LookupModelTrait;
 use App\Models\Concerns\NormalizesIds;
 use CodeIgniter\Database\BaseBuilder;
@@ -273,5 +274,43 @@ class SectorModel extends Model
         }
 
         return '';
+    }
+
+    /**
+     * [sectorID => SHORTCODE] map of active sectors, e.g. for the Manage
+     * Records DataTable's Sector column. Rows without an id or shortcode are
+     * skipped; shortcodes are uppercased.
+     *
+     * @return array<int, string>
+     */
+    public function shortcodeMap(): array
+    {
+        $map = [];
+
+        foreach ($this->getSectorOptions() as $sector) {
+            $sectorId = (int) ($sector['sectorID'] ?? $sector['id'] ?? 0);
+            $shortcode = trim((string) ($sector['shortcode'] ?? ''));
+
+            if ($sectorId > 0 && $shortcode !== '') {
+                $map[$sectorId] = mb_strtoupper($shortcode);
+            }
+        }
+
+        return $map;
+    }
+
+    /**
+     * True if any `member` row references this sector ID (sectorID stores a JSON
+     * array, matched via SectorIds::containsCondition). Guards archive/delete.
+     */
+    public function isInUse(int $sectorId): bool
+    {
+        if (! $this->db->tableExists('member')) {
+            return false;
+        }
+
+        return $this->db->table('member')
+            ->where(SectorIds::containsCondition($sectorId, 'sectorID'), null, false)
+            ->countAllResults() > 0;
     }
 }

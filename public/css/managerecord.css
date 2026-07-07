@@ -569,6 +569,10 @@
     font-size: var(--ui-font-sm, 0.8rem);
 }
 
+.family-filter-field .dropdown-menu {
+    max-height: 14rem;
+}
+
 @media (min-width: 75rem) {
     #familyDataTableFilters .family-keyword-field {
         flex: 0 0 34%;

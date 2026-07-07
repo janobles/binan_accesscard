@@ -41,7 +41,7 @@ class FamilyImportJob implements JobHandlerInterface
         if (! $memberModel->hasRequiredFamilyTables()) {
             $this->cleanup($path);
 
-            return JobOutcome::failed('The database is missing required tables from accesscardV1.4.sql.');
+            return JobOutcome::failed('The database is missing required tables from accesscardV14.sql.');
         }
 
         $importer = new FamilyExcelImporter();

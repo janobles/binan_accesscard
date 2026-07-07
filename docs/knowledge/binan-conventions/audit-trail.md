@@ -20,7 +20,7 @@ public function logAction(
 ): bool
 ```
 
-Canonical call — family update, `app/Controllers/Families/FamilyController.php:616`:
+Canonical call — family update, `app/Controllers/Families/FamilyController.php:418`:
 
 ```php
 $auditModel->logAction(
@@ -37,7 +37,7 @@ $auditModel->logAction(
 
 Pattern notes:
 - Guard with `$auditModel->hasTable()` first
-  (`app/Controllers/Families/FamilyController.php:612`).
+  (`app/Controllers/Families/FamilyController.php:413`).
 - Action names are SCREAMING_SNAKE domain events: `FAMILY_CREATED`,
   `FAMILY_UPDATED`, archive/restore variants.
 - Pass IP + user agent from the request; `logAction()` composes the
@@ -49,7 +49,8 @@ Pattern notes:
 **Anti-pattern:** inserting into `audit_trails` directly with the query
 builder, or skipping the audit call on an "internal" mutation path. Silent
 write failures must surface on the audit page — see the error-audit fallback
-`auditSystemError` (`app/Controllers/Families/FamilyController.php:187`).
+`auditSystemError` (`app/Controllers/Families/FamilyRequestContext.php:80`,
+a trait shared by the three Families controllers).
 
 **Why:** CSWD requires a per-mutation trail; the audit page is the product's
 accountability surface, not debug logging.
@@ -58,7 +59,7 @@ accountability surface, not debug logging.
 
 When a mutation spans member + services + audit,
 `app/Libraries/FamilyRecordWriter.php:1` owns the sequence — constructed with
-the audit model (`app/Controllers/Families/FamilyController.php:163`):
+the audit model (`app/Controllers/Families/FamilyController.php:161`):
 
 ```php
 $writer = new FamilyRecordWriter($memberModel, $memberServiceModel, $serviceModel, $auditModel);

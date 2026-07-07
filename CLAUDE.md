@@ -34,7 +34,9 @@ verify each step.
   `Audit/AuditTrailsModel`). Don't bypass it.
 - **Controllers decide, libraries build.** Dashboard controllers route pages;
   view-data assembly lives in `Libraries/DashboardPageBuilder.php`. Keep it that way.
-- **PHP 8.2+.** Respect existing strict-type / namespace conventions.
+- **PHP 8.2+.** Typed signatures everywhere; no `declare(strict_types=1)`
+  (matches CI4 appstarter — see `docs/knowledge/php-practices/idioms.md`).
+  Respect existing namespace conventions.
 
 ## Commands
 

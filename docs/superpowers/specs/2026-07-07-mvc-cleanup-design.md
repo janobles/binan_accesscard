@@ -43,16 +43,18 @@ Target layout (URLs unchanged; `Routes.php` retargets only):
 | `Libraries/FamilyDataTablePresenter.php` | 250 | Row shaping, QR cell, actions HTML, payload envelope (absorbs the `dataTable*` private helpers). |
 | `Libraries/FamilyModalDataBuilder.php` | 200 | Modal view-data assembly (absorbs `renderFamilyModal` data prep, `familyModalUpdateData`, `shapeModalMembers`, service-name and income-label maps). |
 
-- Request-shaping helpers (`memberPayload`, `memberPayloadFromArray`,
-  `cleanName`, `cleanAddress`, `moneyOrNull`, `nullableText`,
-  address split/combine, `rulesForEntryType`, `entryType`,
-  `submissionWasTruncated`) move to a new `Libraries/FamilyRequestShaper`
-  or into the existing `FamilyRecordWriter` — decided during implementation
-  by where they are consumed. No third home.
+- Stateless request-shaping helpers (`memberPayloadFromArray`, `cleanName`,
+  `cleanAddress`, `moneyOrNull`, `nullableText`, address split/combine,
+  `rulesForEntryType`) move to a new `Libraries/FamilyRequestShaper`
+  (decided at planning: FamilyRecordWriter stays write-only). Request-bound
+  helpers (`memberPayload`, `entryType`, `submissionWasTruncated`,
+  `splitHeadAndMembers`) stay in the controller and delegate.
+- `renderFamilyModal()` stays in FamilyController (it decides guards and
+  calls `view()`); only its data assembly moves to `FamilyModalDataBuilder`.
 - Shared guards/context helpers (`requireFamilyEntryAccess`,
   `requireFamilyViewAccess`, `isEmployeeContext`, `currentRouteBase`,
-  `partialGuard`, `recordMissing`, JSON error helpers) → a trait or small
-  base controller inside `Controllers/Families/`, since all three
+  `partialGuard`, `recordMissing`, JSON error helpers) → new trait
+  `Controllers/Families/FamilyRequestContext`, since all three
   controllers need them. Behavior must be byte-identical — employee vs
   admin route context (`currentRouteBase`) is the sensitive path.
 
@@ -72,11 +74,12 @@ Target layout (URLs unchanged; `Routes.php` retargets only):
 1. Lookup query moves (ServiceModel / SectorModel).
 2. Inline styles → page CSS.
 3. strict_types convention reword (docs only).
-4. Import extraction (`FamilyImportController`).
-5. dataTable extraction (`FamilyDataTableController` + presenter library).
-6. Modal extraction (`FamilyModalDataBuilder`).
-7. Request-shaper/writer consolidation + delete `shapeExistingMembers()`.
-8. Documentation sweep (see RAG section) + violations.md ticks with commit refs.
+4. `FamilyRequestContext` trait extraction.
+5. Import extraction (`FamilyImportController`).
+6. dataTable extraction (`FamilyDataTableController` + presenter library).
+7. Modal extraction (`FamilyModalDataBuilder`).
+8. `FamilyRequestShaper` extraction + delete `shapeExistingMembers()`.
+9. Documentation sweep (see RAG section) + violations.md ticks with commit refs.
 
 Each commit: `vendor/bin/phpunit` green (≥ baseline) + `php spark routes` clean.
 

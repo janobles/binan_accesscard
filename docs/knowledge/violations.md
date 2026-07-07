@@ -27,12 +27,13 @@ unchecked item was already moved to issue #9 (UX decision, not code mess).
 - [ ] ⚪ Cleanup: `app/Controllers/Families/FamilyController.php:824` —
   `shapeExistingMembers()` is defined but never called anywhere in the repo
   (verified by grep). Dead code; remove.
-- [ ] 🔵 Needs-decision: `app/Libraries/DashboardPageBuilder.php:1` — CLAUDE.md
+- [x] 🔵 Needs-decision: `app/Libraries/DashboardPageBuilder.php:1` — CLAUDE.md
   says "respect existing strict-type conventions" but **zero** files under
   `app/` declare `declare(strict_types=1)` (typed signatures are used, the
   declare is not). Decide: adopt the declare repo-wide (one mechanical PR) or
   reword the convention to "typed signatures, no strict_types declare".
   `php-practices/idioms.md` documents current reality.
+  *(Fixed: reworded CLAUDE.md convention to typed-signatures-only, refactor/mvc-cleanup)*
 
 Exempt (checked, not violations): `app/Views/errors/html/*` (framework error
 pages, standalone by design), `app/Views/Scanner/pdf/report.php` (PDF

@@ -2,6 +2,7 @@
 
 namespace App\Models\Lookups;
 
+use App\Libraries\SectorIds;
 use App\Models\Concerns\LookupModelTrait;
 use App\Models\Concerns\NormalizesIds;
 use CodeIgniter\Database\BaseBuilder;
@@ -273,5 +274,20 @@ class SectorModel extends Model
         }
 
         return '';
+    }
+
+    /**
+     * True if any `member` row references this sector ID (sectorID stores a JSON
+     * array, matched via SectorIds::containsCondition). Guards archive/delete.
+     */
+    public function isInUse(int $sectorId): bool
+    {
+        if (! $this->db->tableExists('member')) {
+            return false;
+        }
+
+        return $this->db->table('member')
+            ->where(SectorIds::containsCondition($sectorId, 'sectorID'), null, false)
+            ->countAllResults() > 0;
     }
 }

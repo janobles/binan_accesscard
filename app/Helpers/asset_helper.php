@@ -31,12 +31,11 @@ if (! function_exists('asset_styles')) {
     {
         $manifest = [
             'head' => [
-                'assets/bootstrap/css/bootstrap.min.css',
+                'assets/sb-admin/css/styles.css',
                 'assets/bootstrap-icons/font/bootstrap-icons.min.css',
             ],
             'admin' => [
                 'assets/datatables/css/dataTables.bootstrap5.min.css',
-                'css/sb-admin-adapter.css',
                 'css/managerecord.css',
                 'css/lookupmanagement.css',
                 'css/audittrails.css',
@@ -46,7 +45,6 @@ if (! function_exists('asset_styles')) {
             ],
             'employee' => [
                 'assets/datatables/css/dataTables.bootstrap5.min.css',
-                'css/sb-admin-adapter.css',
                 'css/managerecord.css',
                 'css/audittrails.css',
                 'css/familymodal.css',
@@ -55,7 +53,6 @@ if (! function_exists('asset_styles')) {
             ],
             'viewer' => [
                 'assets/datatables/css/dataTables.bootstrap5.min.css',
-                'css/sb-admin-adapter.css',
                 'css/managerecord.css',
                 'css/lookupmanagement.css',
                 'css/accounts.css',
@@ -94,6 +91,7 @@ if (! function_exists('asset_scripts')) {
             'core' => [
                 'assets/jquery/jquery-3.7.1.min.js',
                 'assets/bootstrap/js/bootstrap.bundle.min.js',
+                'assets/sb-admin/js/scripts.js',
             ],
             'admin' => [
                 'assets/js/dashboard/view-interactions.js',

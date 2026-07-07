@@ -139,6 +139,15 @@ class DashboardController extends BaseController
     }
 
     /**
+     * GET `admin/cards`. Renders the QR access-card batch page in the admin
+     * shell. Generation/lookup are handled by Cards\QrCardController.
+     */
+    public function cards(): string|RedirectResponse
+    {
+        return (new DashboardPageBuilder($this->request))->renderAdminPage('cards');
+    }
+
+    /**
      * GET `admin/manage-members`. Reuses the family-manage page (member-centric
      * view of the same records). Frontend: full-page load of the admin shell.
      */
@@ -190,6 +199,7 @@ class DashboardController extends BaseController
             'adminAccounts' => $viewData['adminAccounts'] ?? [],
             'employeeAccounts' => $viewData['employeeAccounts'] ?? [],
             'viewerAccounts' => $viewData['viewerAccounts'] ?? [],
+            'scannerAccounts' => $viewData['scannerAccounts'] ?? [],
             'searchTerm' => $viewData['searchTerm'] ?? '',
             'searchFilters' => $viewData['searchFilters'] ?? [],
             'canCreateAccounts' => $viewData['canCreateAccounts'] ?? false,

@@ -284,8 +284,12 @@ class DashboardViewData
             }
         }
 
+        // Add-Program modal duplicate-code check (mirrors sectorManagement()'s
+        // existingShortcodes wiring for the sector modal).
+        $existingShortcodes = $serviceModel->existingShortcodes();
+
         return array_merge(
-            compact('services', 'canRestore', 'serviceCategoryOptions', 'serviceNextCodeMap'),
+            compact('services', 'canRestore', 'serviceCategoryOptions', 'serviceNextCodeMap', 'existingShortcodes'),
             self::lookupListVars($bundle, 'admin/services')
         );
     }

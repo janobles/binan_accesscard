@@ -158,6 +158,10 @@ class CategoryController extends BaseController
             return $this->redirect('error', 'Duplicate code "' . $code . '". Please enter another code.');
         }
 
+        if ($model->nameExists($name, $categoryId)) {
+            return $this->redirect('error', 'Duplicate name "' . $name . '". Please enter another name.');
+        }
+
         // A sector already acts as its own service category, so a category may not
         // duplicate one — keep the two lists disjoint (Phase B).
         if ((new SectorModel())->activeCodeOrNameExists($code, $name)) {

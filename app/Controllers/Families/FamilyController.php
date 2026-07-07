@@ -135,6 +135,12 @@ class FamilyController extends BaseController
         $userId = (int) session()->get('user_id');
         $successMessage = 'Family record saved successfully.';
 
+        $controlNo = (int) $this->request->getPost('qr_control_no');
+
+        if (model(\App\Models\Scanner\QrControlModel::class)->takenByOtherHead($controlNo, 0)) {
+            return $this->storeError('QR Number ' . $controlNo . ' is already assigned to another family.');
+        }
+
         // Shape the additional members (skipping the form's empty rows) into the
         // [payload + serviceIds] entries FamilyRecordWriter expects.
         $memberPayloads = [];
@@ -165,12 +171,27 @@ class FamilyController extends BaseController
                 array_map('intval', $serviceIds),
                 $userId,
                 $this->request->getIPAddress(),
-                $this->request->getUserAgent()->getAgentString()
+                $this->request->getUserAgent()->getAgentString(),
+                '',
+                $controlNo
             );
-        } catch (FamilyRecordWriteException $exception) {
+        } catch (Throwable $exception) {
             $memberModel->rollbackTransaction();
 
-            return $this->storeError($exception->getMessage());
+            // persistFamily can also throw beyond FamilyRecordWriteException (QR
+            // assignment, audit, or an unexpected DB error). Catch them all so the
+            // transaction is always rolled back and the request fails gracefully.
+            if (! $exception instanceof FamilyRecordWriteException) {
+                // Unexpected failure — record it like import()/changeFamilyState()
+                // do, so silent write failures surface on the audit page.
+                $this->auditSystemError('saving a family record', $exception);
+            }
+
+            return $this->storeError(
+                $exception instanceof FamilyRecordWriteException
+                    ? $exception->getMessage()
+                    : 'The family record was not saved.'
+            );
         }
 
         $memberModel->completeTransaction();
@@ -267,7 +288,12 @@ class FamilyController extends BaseController
             return $this->jsonError('Please choose a valid .xlsx file to import.', 422);
         }
 
-        if (strtolower((string) $file->getClientExtension()) !== 'xlsx') {
+        // guessExtension() derives the extension server-side from the file's MIME
+        // type, so a renamed .exe/.php can't pass as .xlsx (getClientExtension is
+        // attacker-controlled). xlsx is a zip container, so allow the zip guess too.
+        $guessedExtension = strtolower((string) $file->guessExtension());
+
+        if (! in_array($guessedExtension, ['xlsx', 'zip'], true)) {
             return $this->jsonError('The file must be an .xlsx workbook saved from the template.', 422);
         }
 
@@ -287,7 +313,12 @@ class FamilyController extends BaseController
         $storedPath = WRITEPATH . 'uploads' . DIRECTORY_SEPARATOR . $storedName;
 
         $jobs = new JobQueueModel();
-        $jobs->ensureTable();
+
+        if (! $jobs->hasTable()) {
+            @unlink($storedPath);
+
+            return $this->jsonError('The background job queue is unavailable (missing job_queue table from accesscardV14.sql).', 422);
+        }
 
         try {
             $jobId = $jobs->enqueue(
@@ -504,6 +535,24 @@ class FamilyController extends BaseController
 
         $userId = (int) session()->get('user_id');
 
+        $qrModel        = model(\App\Models\Scanner\QrControlModel::class);
+        $currentControl = $qrModel->controlForHead($headId);
+        $locked         = $currentControl !== null
+            && model(\App\Models\Scanner\AidDistributionModel::class)->hasClaims($currentControl);
+
+        // Locked heads keep their number: ignore any submitted change (defense in
+        // depth in case the readonly field was tampered with).
+        $controlNo = $locked ? (int) $currentControl : (int) $this->request->getPost('qr_control_no');
+
+        if (! $locked) {
+            if ($controlNo <= 0) {
+                return $this->failUpdate('QR Number is required.', 422);
+            }
+            if ($qrModel->takenByOtherHead($controlNo, $headId)) {
+                return $this->failUpdate('QR Number ' . $controlNo . ' is already assigned to another family.', 422);
+            }
+        }
+
         $memberModel->beginTransaction();
 
         // Snapshot the family's current service IDs before clearing, so archived-but-
@@ -520,6 +569,16 @@ class FamilyController extends BaseController
             $memberModel->rollbackTransaction();
 
             return $this->failUpdate('Head of family could not be updated. Please check required fields.', 422);
+        }
+
+        if (! $locked) {
+            try {
+                $qrModel->upsertForHead($controlNo, $headId);
+            } catch (\Throwable $e) {
+                $memberModel->rollbackTransaction();
+
+                return $this->failUpdate($e->getMessage(), 422);
+            }
         }
 
         $memberModel->deleteFamilyMembersExceptHead($headId);
@@ -1165,6 +1224,7 @@ class FamilyController extends BaseController
             'head_salary' => 'required',
             'head_address' => 'required|max_length[255]',
             'head_barangay' => 'required|max_length[100]',
+            'qr_control_no' => 'required|is_natural_no_zero',
         ];
     }
 
@@ -1305,8 +1365,12 @@ class FamilyController extends BaseController
             }
 
             $sectorShortcodes = $this->dataTableSectorShortcodes();
+            $headIdKey = $scope === 'all' ? 'headID' : 'memberID';
+            $controlNumbers = model(\App\Models\Scanner\QrControlModel::class)->controlsForHeads(
+                array_map(static fn (array $row): int => (int) ($row[$headIdKey] ?? 0), $rows)
+            );
             $data = array_map(
-                fn (array $row): array => $this->dataTableRow($row, $scope === 'all', $sectorShortcodes),
+                fn (array $row): array => $this->dataTableRow($row, $scope === 'all', $sectorShortcodes, $controlNumbers),
                 $rows
             );
 
@@ -1342,9 +1406,12 @@ class FamilyController extends BaseController
         $firstOrder = $order[0];
         $column = (int) ($firstOrder['column'] ?? 0);
         $direction = strtolower((string) ($firstOrder['dir'] ?? 'asc')) === 'desc' ? 'desc' : 'asc';
+        // Column order: 0=QR, 1=name, 2=sector, 3=address, 4=birthday, 5=actions.
+        // QR/sector/actions are non-orderable, so only address/birthday map here;
+        // everything else (incl. the name column) falls back to the name sort.
         $orderKey = match ($column) {
-            2 => 'address',
-            3 => 'birthday',
+            3 => 'address',
+            4 => 'birthday',
             default => 'name',
         };
 
@@ -1373,8 +1440,9 @@ class FamilyController extends BaseController
      * (name HTML, sector shortcodes, address, birthday, actions dropdown).
      *
      * @param array<int, string> $sectorShortcodes
+     * @param array<int, int>    $controlNumbers   [headID => qr_control.control_no]
      */
-    private function dataTableRow(array $row, bool $allMembersScope, array $sectorShortcodes): array
+    private function dataTableRow(array $row, bool $allMembersScope, array $sectorShortcodes, array $controlNumbers = []): array
     {
         $memberId = (int) ($row['memberID'] ?? 0);
         $headId = $allMembersScope ? (int) ($row['headID'] ?? $memberId) : $memberId;
@@ -1385,6 +1453,8 @@ class FamilyController extends BaseController
         if ($allMembersScope && $relationship !== '') {
             $nameHtml .= '<small class="text-muted d-block">' . esc(mb_strtoupper($relationship)) . '</small>';
         }
+
+        $controlNo = (int) ($controlNumbers[$headId] ?? 0);
 
         $sectors = [];
 
@@ -1397,12 +1467,29 @@ class FamilyController extends BaseController
         $birthday = strtotime((string) ($row['birthday'] ?? ''));
 
         return [
+            'qr' => $this->dataTableQrCell($controlNo),
             'name' => $nameHtml,
             'sector' => esc(implode(', ', array_values(array_unique($sectors)))),
             'address' => esc(mb_strtoupper((string) ($row['address'] ?? ''))),
             'birthday' => $birthday === false ? '-' : date('Y-m-d', $birthday),
             'actions' => $this->dataTableActions($row, $headId, $name),
         ];
+    }
+
+    /**
+     * QR NO. cell: a bordered badge (matching the app's other badges) with a QR
+     * glyph and the zero-padded control number, or a muted dash when the family has
+     * no QR mapping yet.
+     */
+    private function dataTableQrCell(int $controlNo): string
+    {
+        if ($controlNo <= 0) {
+            return '<span class="text-muted">&mdash;</span>';
+        }
+
+        return '<span class="badge bg-light text-dark border text-nowrap">'
+            . '<i class="bi bi-qr-code me-1" aria-hidden="true"></i>#'
+            . esc(\App\Libraries\Qr\ControlNumber::format($controlNo)) . '</span>';
     }
 
     /** "Surname Suffix, Firstname M." display name for a member row. */
@@ -1530,6 +1617,10 @@ class FamilyController extends BaseController
                 return $this->recordMissing();
             }
 
+            $currentControl = model(\App\Models\Scanner\QrControlModel::class)->controlForHead($headId);
+            $qrLocked = $currentControl !== null
+                && model(\App\Models\Scanner\AidDistributionModel::class)->hasClaims($currentControl);
+
             $serviceIdsByMember = (new MemberServiceModel())
                 ->getServiceIdsByMemberIds(array_map(static fn (array $row): int => (int) $row['memberID'], $rows));
 
@@ -1564,6 +1655,7 @@ class FamilyController extends BaseController
                     'modalMode' => 'update',
                     'submitLabel' => 'Update',
                     'saveDisabled' => false,
+                    'qrLocked' => $qrLocked,
                     'existingMembers' => $this->shapeModalMembers($members, $serviceIdsByMember),
                 ]
             ));
@@ -1581,6 +1673,7 @@ class FamilyController extends BaseController
                 'submitLabel' => 'Save',
                 'headId' => 0,
                 'saveDisabled' => false,
+                'qrLocked' => false,
                 'existingMembers' => [],
             ]
         ));
@@ -1615,6 +1708,7 @@ class FamilyController extends BaseController
                 'head_salary' => (string) ($head['Salary'] ?? ''),
                 'head_address' => $addressParts['address'],
                 'head_barangay' => $addressParts['barangay'],
+                'qr_control_no' => (string) (model(\App\Models\Scanner\QrControlModel::class)->controlForHead($headId) ?? ''),
             ],
             'selectedSectorIds' => array_map('strval', SectorIds::normalize($head['sectorID'] ?? null)),
             'selectedServiceIds' => array_map('strval', $headServiceIds),

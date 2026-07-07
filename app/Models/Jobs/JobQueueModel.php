@@ -17,9 +17,9 @@ use Config\Database;
  *
  * Status lifecycle: pending → processing → done | partial | failed.
  *
- * No CI4 migrations exist in this project (schema ships as accesscardV1.4.sql),
- * so ensureTable() creates the table on demand; sql/job_queue.sql holds the
- * canonical DDL for the schema dump.
+ * No CI4 migrations exist in this project — the `job_queue` table ships in the
+ * schema dump (accesscardV14.sql); sql/job_queue.sql holds the standalone DDL for
+ * reference. Callers guard on hasTable() rather than creating it at runtime.
  */
 class JobQueueModel
 {
@@ -37,41 +37,6 @@ class JobQueueModel
     public function hasTable(): bool
     {
         return $this->db->tableExists('job_queue');
-    }
-
-    /** Creates `job_queue` if missing. Idempotent. */
-    public function ensureTable(): void
-    {
-        if ($this->hasTable()) {
-            return;
-        }
-
-        $this->db->query(
-            'CREATE TABLE IF NOT EXISTS `job_queue` (
-                `jobID` INT NOT NULL AUTO_INCREMENT,
-                `type` VARCHAR(64) NOT NULL,
-                `payload` LONGTEXT NULL,
-                `status` ENUM(\'pending\',\'processing\',\'done\',\'partial\',\'failed\') NOT NULL DEFAULT \'pending\',
-                `progress_total` INT NOT NULL DEFAULT 0,
-                `progress_done` INT NOT NULL DEFAULT 0,
-                `checkpoint` INT NOT NULL DEFAULT 0,
-                `result_json` LONGTEXT NULL,
-                `message` VARCHAR(500) NULL,
-                `userID` INT NULL,
-                `ip_address` VARCHAR(45) NULL,
-                `user_agent` VARCHAR(255) NULL,
-                `attempts` INT NOT NULL DEFAULT 0,
-                `max_attempts` INT NOT NULL DEFAULT 1,
-                `available_at` DATETIME NULL,
-                `locked_at` DATETIME NULL,
-                `locked_by` VARCHAR(64) NULL,
-                `dt_created` DATETIME NOT NULL,
-                `dt_started` DATETIME NULL,
-                `dt_finished` DATETIME NULL,
-                PRIMARY KEY (`jobID`),
-                KEY `idx_claim` (`status`, `available_at`)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4'
-        );
     }
 
     /**

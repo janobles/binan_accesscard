@@ -14,6 +14,21 @@ final class ExampleDatabaseTest extends CIUnitTestCase
 
     protected $seed = ExampleSeeder::class;
 
+    /**
+     * This project has no migrations (schema source of truth is the SQL dump),
+     * so Config\Migrations is intentionally absent. DatabaseTestTrait needs it
+     * to migrate the throwaway test schema, so skip cleanly rather than error
+     * when a sqlite3 driver is present but the migrations config is not.
+     */
+    protected function setUp(): void
+    {
+        if (! class_exists(\Config\Migrations::class)) {
+            $this->markTestSkipped('No Config\Migrations (project uses the SQL dump, not migrations).');
+        }
+
+        parent::setUp();
+    }
+
     public function testModelFindAll(): void
     {
         $model = new ExampleModel();

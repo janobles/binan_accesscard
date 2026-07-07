@@ -193,6 +193,10 @@ class SectorController extends BaseController
             return $this->redirectAdmin('admin/sectors', 'error', 'Duplicate code "' . $data['shortcode'] . '". Please enter another code.');
         }
 
+        if ($model->nameExists($data['name'], $sectorId)) {
+            return $this->redirectAdmin('admin/sectors', 'error', 'Duplicate name "' . $data['name'] . '". Please enter another name.');
+        }
+
         // Keep sectors and standalone service categories disjoint (Phase B): a sector
         // may not duplicate a Manage-Categories entry (FA/SWPS/EDA).
         if ((new CategoryModel())->activeCodeOrNameExists($data['shortcode'], $data['name'])) {

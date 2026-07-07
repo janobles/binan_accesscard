@@ -19,8 +19,9 @@ Set-ExecutionPolicy -Scope Process Bypass -Force
 ```
 
 This registers **BinanQueueWorker** as a Windows Scheduled Task that fires every
-minute, drains the queue, and exits. It runs as **SYSTEM** (highest privileges) so it
-works even when no one is logged in.
+minute, drains the queue, and exits. It runs under a dedicated least-privilege service account (not SYSTEM),
+which only requires read/write access to `writable/` and `writable/uploads/`, plus network access to MySQL.
+This follows the principle of least privilege since the worker parses untrusted uploaded files.
 
 ### Tuning options
 
@@ -82,7 +83,7 @@ A `job_queue` row stays `pending` because nothing is draining it. Check, in orde
    Set-ScheduledTask BinanQueueWorker -Settings $t.Settings
    ```
    > Note: a non-elevated `Get-ScheduledTask BinanQueueWorker` returns "not found"
-   > even when the task exists — it runs as SYSTEM. Use `schtasks /query /tn
+   > even when the task exists — it runs under a service account. Use `schtasks /query /tn
    > BinanQueueWorker`: "Access is denied" means it exists; "cannot find the file"
    > means it doesn't.
 3. **Machine was asleep/off?** Every-minute ticks don't run then; they resume on wake

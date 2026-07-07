@@ -5,6 +5,7 @@
     --records-search-hover: #0f5132;
     --records-add-color: #0d6efd;
     --records-add-hover: #0b5ed7;
+    --records-search-control-height: clamp(2.25rem, 3.1vw, 2.65rem);
 }
 
 .manage-records {
@@ -51,6 +52,10 @@
     display: none !important;
 }
 
+.actions-menu .dropdown-menu {
+    z-index: 1080;
+}
+
 .records-scroll-panel {
     display: flex;
     height: 100%;
@@ -79,19 +84,68 @@
 .records-search-row {
     display: grid;
     align-items: center;
-    gap: 0.75rem;
+    gap: clamp(0.45rem, 1vw, 0.75rem);
     margin: 0;
 }
 
 .records-quick-search {
-    grid-template-columns: minmax(22rem, 22rem) minmax(9rem, 14rem) minmax(9rem, 13rem) minmax(7.5rem, 10rem) repeat(3, minmax(6.25rem, 8.5rem));
+    grid-template-columns: minmax(min(100%, 13rem), 1.7fr) repeat(3, minmax(min(100%, 7rem), 0.95fr)) repeat(3, minmax(min(100%, 5.5rem), 0.75fr));
+}
+
+/* Scanner Manage: folder tabs sit on top of the .sector-management panel and
+   merge into it (active tab shares the panel's border/background). */
+.manage-tabs {
+    border-bottom: none;
+    padding-left: 0.35rem;
+    gap: 0.2rem;
+}
+
+.manage-tabs .nav-link {
+    border: 1px solid transparent;
+    border-bottom: none;
+    border-top-left-radius: 0.35rem;
+    border-top-right-radius: 0.35rem;
+    color: #4b5a55;
+    font-size: 0.9rem;
+    padding: 0.5rem 1rem;
+}
+
+.manage-tabs .nav-link:hover {
+    color: #145c3d;
+    border-color: transparent;
+}
+
+.manage-tabs .nav-link.active {
+    color: #145c3d;
+    font-weight: 600;
+    background: #ffffff;
+    border-color: #dce5e2;
+    /* Overlap the panel's top border so the tab reads as part of the card. */
+    margin-bottom: -1px;
+}
+
+.manage-tabs + .tab-content .sector-management {
+    border-top-left-radius: 0;
+}
+
+/* QR card generator: two filter selects side by side, action spans both. */
+#qr-cards-page .records-search-row {
+    grid-template-columns: 1fr 1fr;
+}
+
+#qr-cards-page .records-search-action {
+    grid-column: 1 / -1;
 }
 
 .records-search-row .form-control,
 .records-search-row .form-select,
 .records-search-row .btn {
-    min-height: 2.65rem;
-    font-size: 0.9rem;
+    height: var(--records-search-control-height);
+    min-height: var(--records-search-control-height);
+    padding-top: 0.48rem;
+    padding-bottom: 0.48rem;
+    font-size: clamp(0.76rem, 1.1vw, 0.84rem);
+    line-height: 1.25;
 }
 
 .records-search-row .form-control,
@@ -161,11 +215,14 @@
     justify-content: center;
     gap: 0.4rem;
     width: 100%;
+    min-width: 0;
     white-space: nowrap;
 }
 
 .records-search-action.btn-outline-secondary,
-.records-search-action[data-records-clear] {
+.records-search-action.btn-danger,
+.records-search-action[data-records-clear],
+[data-records-clear] {
     --bs-btn-color: #ffffff;
     --bs-btn-border-color: var(--records-clear-color);
     --bs-btn-bg: var(--records-clear-color);
@@ -183,8 +240,12 @@
 
 .records-search-action.btn-outline-secondary:hover,
 .records-search-action.btn-outline-secondary:focus,
+.records-search-action.btn-danger:hover,
+.records-search-action.btn-danger:focus,
 .records-search-action[data-records-clear]:hover,
-.records-search-action[data-records-clear]:focus {
+.records-search-action[data-records-clear]:focus,
+[data-records-clear]:hover,
+[data-records-clear]:focus {
     color: #ffffff;
     border-color: var(--records-clear-hover);
     background-color: var(--records-clear-hover);
@@ -294,7 +355,7 @@
 }
 
 .manage-record-table {
-    min-width: 44rem;
+    min-width: clamp(36rem, 58vw, 44rem);
     margin: 0;
     table-layout: auto;
 }
@@ -352,17 +413,49 @@
 
 @media (max-width: 74rem) {
     .records-quick-search {
-        grid-template-columns: repeat(3, minmax(10rem, 1fr));
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+
+    .records-quick-search > .form-control:first-child {
+        grid-column: 1 / -1;
+    }
+
+    .records-quick-search > .records-multiselect,
+    .records-quick-search > .records-status-select {
+        grid-column: span 2;
     }
 
     .records-quick-search .records-search-action {
+        grid-column: span 2;
         min-width: 0;
+    }
+}
+
+@media (min-width: 74.01rem) and (max-width: 82rem) {
+    .records-search-row {
+        gap: 0.5rem;
+    }
+
+    .records-quick-search {
+        grid-template-columns: minmax(10.5rem, 1.35fr) repeat(3, minmax(6.5rem, 0.85fr)) repeat(3, minmax(5rem, 0.7fr));
+    }
+
+    .records-search-row .form-control,
+    .records-search-row .form-select,
+    .records-search-row .btn {
+        font-size: 0.78rem;
+    }
+
+    .records-search-action {
+        gap: 0.3rem;
+        padding-right: 0.55rem;
+        padding-left: 0.55rem;
     }
 }
 
 @media (max-width: 62rem) {
     .manage-record-table {
-        min-width: 42rem;
+        min-width: 38rem;
     }
 
     .manage-record-table th,
@@ -373,17 +466,31 @@
     }
 
     .records-quick-search {
-        grid-template-columns: repeat(2, minmax(9rem, 1fr));
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+
+    .records-quick-search > .form-control:first-child {
+        grid-column: span 6;
+    }
+
+    .records-quick-search > .records-multiselect,
+    .records-quick-search > .records-status-select {
+        grid-column: span 2;
     }
 
     .records-quick-search .records-search-action {
+        grid-column: span 2;
         min-width: 0;
     }
 }
 
 @media (max-width: 40rem) {
+    :root {
+        --records-search-control-height: 2.15rem;
+    }
+
     .manage-record-table {
-        min-width: 40rem;
+        min-width: 34rem;
     }
 
     .manage-record-table th,
@@ -399,9 +506,18 @@
     }
 
     .records-quick-search {
-        grid-template-columns: repeat(2, minmax(8rem, 1fr));
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 0.5rem;
-        overflow-x: auto;
+    }
+
+    .records-quick-search > .form-control:first-child {
+        grid-column: 1 / -1;
+    }
+
+    .records-quick-search > .records-multiselect,
+    .records-quick-search > .records-status-select,
+    .records-quick-search .records-search-action {
+        grid-column: span 1;
     }
 
     .table-meta,

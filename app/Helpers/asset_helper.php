@@ -66,6 +66,10 @@ if (! function_exists('asset_styles')) {
                 'assets/bootstrap/css/bootstrap.min.css',
                 'css/login.css',
             ],
+            'scanner' => [
+                'css/scanner-reports.css',
+                'css/scanner-scan.css',
+            ],
         ];
 
         return $manifest[$context] ?? [];
@@ -137,6 +141,10 @@ if (! function_exists('asset_scripts')) {
             ],
             'login' => [
                 'assets/js/login.js',
+            ],
+            'scanner' => [
+                'vendor/chart.js/chart.umd.min.js',
+                'assets/js/dashboard/scanner-reports.js',
             ],
         ];
 

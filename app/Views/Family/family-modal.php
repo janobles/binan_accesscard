@@ -191,6 +191,17 @@ $renderMemberRow = static function ($index, array $m = []) use (
                                 <?= $selectOptions($barangayOptions, $oldValue('head_barangay'), 'Barangay') ?>
                             </select>
                         </div>
+                        <?php $qrLocked = ! empty($qrLocked ?? false); ?>
+                        <div class="col-12 col-xl-3">
+                            <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>HeadQr">QR Number</label>
+                            <input id="<?= esc($fieldPrefix, 'attr') ?>HeadQr" name="qr_control_no" type="text"
+                                inputmode="numeric" pattern="[0-9]*"
+                                value="<?= esc($oldValue('qr_control_no'), 'attr') ?>"
+                                <?= $qrLocked ? 'readonly' : 'required' ?>>
+                            <?php if ($qrLocked): ?>
+                                <small class="text-muted">Locked: aid already recorded under this number.</small>
+                            <?php endif; ?>
+                        </div>
                     </div>
                 </section>
 
@@ -330,6 +341,11 @@ $renderMemberRow = static function ($index, array $m = []) use (
         <footer class="btn-toolbar family-entry-actions" role="toolbar" aria-label="Family form actions">
             <div class="btn-group" role="group" aria-label="Form actions">
                 <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Close</button>
+                <?php if ($headId > 0): ?>
+                <a class="btn btn-outline-secondary btn-sm"
+                   href="<?= site_url('admin/cards/card/' . $headId) ?>"
+                   target="_blank" rel="noopener">Print QR card</a>
+                <?php endif; ?>
                 <button class="btn btn-danger" type="reset" data-family-clear>Clear</button>
                 <button class="btn btn-secondary" type="button" data-family-prev hidden>Previous</button>
                 <button class="btn btn-success" type="button" data-family-next>Next</button>

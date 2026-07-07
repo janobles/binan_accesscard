@@ -71,6 +71,13 @@ $routes->group('admin', static function (RouteCollection $routes): void {
         $routes->post('archive/(:num)', 'Lookups\ServiceController::archive/$1');
         $routes->post('restore/(:num)', 'Lookups\ServiceController::restore/$1');
     });
+
+    $routes->group('cards', static function (RouteCollection $routes): void {
+        $routes->get('', 'Admin\DashboardController::cards');
+        $routes->post('generate', 'Cards\QrCardController::batch');
+        $routes->get('card/(:num)', 'Cards\QrCardController::card/$1');
+        $routes->get('lookup/(:any)', 'Cards\QrCardController::lookup/$1');
+    });
 });
 
 /*
@@ -116,6 +123,25 @@ $routes->group('viewer', static function (RouteCollection $routes): void {
         $routes->get('data', 'Families\FamilyController::dataTable');
         $routes->get('view/(:num)', 'Families\FamilyController::viewFamily/$1');
     });
+});
+
+/**
+ * Scanner module (aid distribution). Scanner/Admin/Developer only — each action
+ * calls RoleAccess::requireRole() internally (mirrors the Cards controller).
+ */
+$routes->group('scanner', static function (RouteCollection $routes): void {
+    $routes->get('scan', 'Scanner\ScanController::scan');
+    $routes->get('lookup/(:num)', 'Scanner\ScanController::lookup/$1');
+    $routes->post('log', 'Scanner\ScanController::logAid');
+
+    $routes->get('manage', 'Scanner\ManageController::index');
+    $routes->post('aid-types/create', 'Scanner\ManageController::createAidType');
+    $routes->post('aid-types/archive/(:num)', 'Scanner\ManageController::archiveAidType/$1');
+    $routes->post('aid-types/restore/(:num)', 'Scanner\ManageController::restoreAidType/$1');
+    $routes->post('aid-types/delete/(:num)', 'Scanner\ManageController::deleteAidType/$1');
+    $routes->post('distributions/void/(:num)', 'Scanner\ManageController::voidDistribution/$1');
+    $routes->get('reports', 'Scanner\ReportsController::index');
+    $routes->get('reports/pdf', 'Scanner\ReportsController::pdf');
 });
 
 /*

@@ -56,8 +56,8 @@ $serviceClearUrl = static function () use ($listRoute, $status, $perPage): strin
 				<option value="all" <?= $status === 'all' ? 'selected' : '' ?>>All (<?= esc((string) $allServiceCount) ?>)</option>
 			</select>
 			<?php if ($perPage !== 50): ?><input type="hidden" name="per_page" value="<?= esc((string) $perPage, 'attr') ?>"><?php endif; ?>
-			<button class="btn btn-outline-success records-search-action" type="submit"><span>Search</span></button>
-			<a class="btn btn-outline-secondary records-search-action" href="<?= esc($serviceClearUrl(), 'attr') ?>"><span>Clear</span></a>
+			<a class="btn btn-danger records-search-action" href="<?= esc($serviceClearUrl(), 'attr') ?>"><i class="bi bi-x-lg" aria-hidden="true"></i><span>Clear</span></a>
+			<button class="btn btn-outline-success records-search-action" type="submit"><i class="bi bi-search" aria-hidden="true"></i><span>Search All</span></button>
 			<?php if ($canManage): ?>
 			<button class="btn btn-primary records-search-action js-service-modal-open" type="button" data-service-mode="create"><span>Add Program</span></button>
 			<?php endif; ?>
@@ -153,7 +153,7 @@ $serviceClearUrl = static function () use ($listRoute, $status, $perPage): strin
 				<?php endforeach; ?>
 				<?php if ($services === []): ?>
 					<tr>
-						<td colspan="6" class="sector-empty-state"><?= $keyword !== '' ? 'No services match your search.' : 'No service or program records found.' ?></td>
+						<td colspan="<?= $canManage ? 6 : 5 ?>" class="sector-empty-state"><?= $keyword !== '' ? 'No services match your search.' : 'No service or program records found.' ?></td>
 					</tr>
 				<?php endif; ?>
 			</tbody>
@@ -178,5 +178,6 @@ $serviceClearUrl = static function () use ($listRoute, $status, $perPage): strin
 <?= view('Lookups/service-modal', [
 	'serviceCategoryOptions' => $serviceCategoryOptions,
 	'serviceNextCodeMap' => $serviceNextCodeMap ?? [],
+	'existingShortcodes' => $existingShortcodes ?? [],
 ]) ?>
 <?php endif; ?>

@@ -80,8 +80,8 @@ $formatAuditUser = static function (array $audit): string {
                 <?php endforeach; ?>
             </select>
             <?php if ($perPage !== 50): ?><input type="hidden" name="per_page" value="<?= esc((string) $perPage, 'attr') ?>"><?php endif; ?>
-            <button class="btn btn-outline-success records-search-action" type="submit"><span>Search All</span></button>
-            <a class="btn btn-outline-secondary records-search-action" href="<?= esc($auditClearUrl(), 'attr') ?>"><span>Clear</span></a>
+            <a class="btn btn-danger records-search-action" href="<?= esc($auditClearUrl(), 'attr') ?>"><i class="bi bi-x-lg" aria-hidden="true"></i><span>Clear</span></a>
+            <button class="btn btn-outline-success records-search-action" type="submit"><i class="bi bi-search" aria-hidden="true"></i><span>Search All</span></button>
         </form>
     </div>
 
@@ -131,7 +131,7 @@ $formatAuditUser = static function (array $audit): string {
                         <td class="audit-when"><?= $auditTs ? esc(date('M j, Y h:i A', $auditTs)) : '—' ?></td>
                     </tr>
                 <?php endforeach; ?>
-                <?php if ($recentAudits === []): ?>
+                <?php if ($recentAudits === []): ?> 
                     <tr><td colspan="5" class="audit-trails-empty audit-empty-state"><?= $hasSearchFilters ? 'No matching audit logs found.' : 'No audit logs yet.' ?></td></tr>
                 <?php endif; ?>
             </tbody>

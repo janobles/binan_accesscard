@@ -4,9 +4,8 @@
  * Uses the same dashboard frame as Admin, limited to Dashboard, Manage Records,
  * and My Activity.
  */
-$username = $user['username'] ?? 'Employee';
 $activePage = $activePage ?? 'dashboard';
-$pageTitle = $pageTitle ?? ($activePage === 'dashboard' ? 'Workspace' : ucwords(str_replace('-', ' ', $activePage)));
+$pageTitle = $pageTitle ?? ($activePage === 'dashboard' ? 'Dashboard' : ucwords(str_replace('-', ' ', $activePage)));
 $navActive = $navActive ?? [];
 $stats = $stats ?? ['families' => 0, 'members' => 0, 'sectors' => 0, 'assistance' => 0];
 $recentFamilies = $recentFamilies ?? [];
@@ -35,7 +34,7 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
     <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion employee" id="dashboard-sidebar">
         <li class="sidebar-brand-wrap">
             <a class="sidebar-brand d-flex align-items-center justify-content-center" href="<?= site_url('employee/workspace') ?>">
-                <img class="sidebar-brand-icon" src="<?= asset_url('assets/image/binan.png') ?>" alt="City of Binan Logo">
+                <img class="sidebar-brand-icon" src="<?= esc(asset_url('assets/image/binan.png'), 'attr') ?>" alt="City of Binan Logo">
                 <span class="sidebar-brand-text mx-2">Bi&ntilde;an Access Card MIS</span>
             </a>
         </li>
@@ -53,10 +52,6 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
         <li class="nav-item">
             <a class="nav-link <?= esc($navActive['activity'] ?? '') ?>" href="<?= site_url('employee/activity') ?>"><i class="bi bi-clock-history" aria-hidden="true"></i><span>My Activity</span></a>
         </li>
-        <li><hr class="sidebar-divider d-none d-md-block"></li>
-        <li class="text-center d-none d-md-inline">
-            <button class="rounded-circle border-0" id="sidebarToggle" type="button" aria-label="Collapse sidebar" aria-controls="dashboard-sidebar" aria-expanded="true"></button>
-        </li>
     </ul>
 
     <div id="content-wrapper" class="d-flex flex-column">
@@ -72,30 +67,16 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
                 </div>
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item topbar-divider d-none d-sm-block"></li>
-                    <li class="nav-item dropdown no-arrow">
-                        <a class="nav-link dropdown-toggle topbar-user" href="#" id="employeeUserDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <span class="me-2 d-none d-lg-inline text-gray-600 small"><?= esc($username) ?> &middot; Encoder</span>
-                            <i class="bi bi-person-circle topbar-user-icon" aria-hidden="true"></i>
-                        </a>
-                        <div class="dropdown-menu dropdown-menu-end shadow animated--grow-in" aria-labelledby="employeeUserDropdown">
-                            <button type="button" class="dropdown-item js-open-my-account-modal" data-modal-url="<?= site_url('account/profile') ?>" data-modal-title="My Account">
-                                <i class="bi bi-person me-2 text-gray-400" aria-hidden="true"></i> My Account
-                            </button>
-                            <div class="dropdown-divider"></div>
-                            <a href="<?= site_url('logout') ?>" class="dropdown-item js-logout-link">
-                                <i class="bi bi-box-arrow-right me-2 text-gray-400" aria-hidden="true"></i> Logout
-                            </a>
-                        </div>
-                    </li>
+                    <?= view('Partials/topbar-account-menu', ['user' => $user, 'username' => $username, 'accountLevelLabel' => $accountLevelLabel]) ?>
                 </ul>
             </nav>
 
             <main class="container-fluid dashboard-content">
                 <?php if (session()->getFlashdata('success')): ?>
-                    <div class="alert alert-success"><?= esc(session()->getFlashdata('success')) ?></div>
+                    <div class="alert alert-success" data-auto-dismiss-alert><?= esc(session()->getFlashdata('success')) ?></div>
                 <?php endif; ?>
                 <?php if (session()->getFlashdata('error')): ?>
-                    <div class="alert alert-danger"><?= esc(session()->getFlashdata('error')) ?></div>
+                    <div class="alert alert-danger" data-auto-dismiss-alert><?= esc(session()->getFlashdata('error')) ?></div>
                 <?php endif; ?>
                 <?php if (session()->getFlashdata('family_record_saved')): ?>
                     <span id="familyDraftSavedMarker" hidden></span>
@@ -148,8 +129,8 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
                                     <tbody>
                                         <?php foreach ($recentFamilies as $family): ?>
                                             <tr>
-                                                <td><span class="entity-title"><?= esc(($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? '')) ?></span></td>
-                                                <td><?= esc((string) ($family['sector_name'] ?? '')) ?></td>
+                                                <td><span class="entity-title"><?= esc(mb_strtoupper(trim(($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? '')), 'UTF-8')) ?></span></td>
+                                                <td><?= view('Partials/sector-label-list', ['sectorLabel' => mb_strtoupper((string) ($family['sector_name'] ?? ''), 'UTF-8')]) ?></td>
                                             </tr>
                                         <?php endforeach; ?>
                                         <?php if ($recentFamilies === []): ?>
@@ -236,8 +217,8 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
                                     <?php endforeach; ?>
                                 </select>
                                 <?php if ($perPage !== 50): ?><input type="hidden" name="per_page" value="<?= esc((string) $perPage, 'attr') ?>"><?php endif; ?>
-                                <a class="btn btn-outline-secondary records-search-action" href="<?= esc($auditClearUrl(), 'attr') ?>"><span>Clear</span></a>
-                                <button class="btn btn-primary records-search-action" type="submit"><span>Search</span></button>
+                                <a class="btn btn-danger records-search-action" href="<?= esc($auditClearUrl(), 'attr') ?>"><i class="bi bi-x-lg" aria-hidden="true"></i><span>Clear</span></a>
+                                <button class="btn btn-primary records-search-action" type="submit"><i class="bi bi-search" aria-hidden="true"></i><span>Search</span></button>
                             </form>
                         </div>
 

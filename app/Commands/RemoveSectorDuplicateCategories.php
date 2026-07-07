@@ -118,19 +118,25 @@ class RemoveSectorDuplicateCategories extends BaseCommand
         $path = $dir . DIRECTORY_SEPARATOR . 'dedupe-categories-' . date('Ymd-His') . '.sql';
         $err  = $path . '.err';
 
-        $dump = is_file('C:\\xampp\\mysql\\bin\\mysqldump.exe') ? 'C:\\xampp\\mysql\\bin\\mysqldump.exe' : 'mysqldump';
-
         $host = (string) ($config['hostname'] ?? 'localhost');
         $port = (string) ($config['port'] ?? 3306);
         $user = (string) ($config['username'] ?? 'root');
         $pass = (string) ($config['password'] ?? '');
         $name = (string) ($config['database'] ?? '');
 
-        $cmd = escapeshellarg($dump)
+        // Credentials go in a --defaults-extra-file, not a -p CLI arg, so the
+        // password never appears in the process list while mysqldump runs.
+        $credsFile = $this->writeMysqlCredsFile($user, $pass);
+        if ($credsFile === null) {
+            CLI::error('Failed to create a temp credentials file for mysqldump.');
+
+            return null;
+        }
+
+        $cmd = 'mysqldump'
+            . ' --defaults-extra-file=' . escapeshellarg($credsFile)
             . ' -h ' . escapeshellarg($host)
             . ' -P ' . escapeshellarg($port)
-            . ' -u ' . escapeshellarg($user)
-            . ($pass !== '' ? ' -p' . escapeshellarg($pass) : '')
             . ' ' . escapeshellarg($name)
             . ' category services sector'
             . ' > ' . escapeshellarg($path)
@@ -139,6 +145,7 @@ class RemoveSectorDuplicateCategories extends BaseCommand
         $output = [];
         $code   = 0;
         exec($cmd, $output, $code);
+        unlink($credsFile);
 
         if ($code !== 0 || ! is_file($path) || filesize($path) === 0) {
             CLI::error('mysqldump exit code ' . $code . '. See ' . $err);
@@ -147,6 +154,29 @@ class RemoveSectorDuplicateCategories extends BaseCommand
         }
 
         @unlink($err);
+
+        return $path;
+    }
+
+    /**
+     * Writes a --defaults-extra-file for mysqldump so the DB password never
+     * appears as a CLI argument (visible in the process list while it runs).
+     * Returns the temp file path, or null on failure. Caller must unlink it.
+     */
+    private function writeMysqlCredsFile(string $user, string $pass): ?string
+    {
+        $path = tempnam(sys_get_temp_dir(), 'binan-mysqldump-');
+        if ($path === false) {
+            return null;
+        }
+
+        $written = file_put_contents($path, "[client]\nuser={$user}\npassword={$pass}\n");
+        if ($written === false) {
+            @unlink($path);
+
+            return null;
+        }
+        @chmod($path, 0600);
 
         return $path;
     }

@@ -1,0 +1,143 @@
+/* Reports page: toolbar, KPI tiles, chart cards. Cards sit directly on the page
+   background (no outer container) and reuse the admin dashboard stat-card style. */
+
+/* Toolbar: date filter on the left, actions on the right — flex, not grid, so
+   From/To/Apply keep their natural widths instead of stretching. */
+.reports-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.reports-filter {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.reports-filter .form-control {
+    width: auto;
+    min-height: 2.65rem;
+}
+
+.reports-filter .form-label {
+    font-weight: 600;
+    color: #4b5a55;
+}
+
+.reports-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.reports-toolbar .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-height: 2.65rem;
+    white-space: nowrap;
+}
+
+.reports-download-btn {
+    color: #ffffff;
+    background-color: #2f80ed;
+    border-color: #2f80ed;
+}
+
+.reports-download-btn:hover,
+.reports-download-btn:focus {
+    color: #ffffff;
+    background-color: #2168c9;
+    border-color: #2168c9;
+}
+
+/* KPI tiles: same responsive grid as the admin dashboard overview. */
+.reports-stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+@media (max-width: 62rem) {
+    .reports-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 34rem) {
+    .reports-stats {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Chart cards. */
+.reports-chart-card {
+    padding: 1rem;
+    height: 100%;
+}
+
+.reports-chart-card h6 {
+    margin-bottom: 0.75rem;
+    font-weight: 600;
+}
+
+.reports-chart-card canvas {
+    max-width: 100%;
+}
+
+/* Fixed-height, scrollable box for the barangay bar chart so it stays compact and
+   never enters the Chart.js responsive-resize growth loop. */
+.reports-barangay-chart {
+    position: relative;
+    height: 380px;
+    overflow-y: auto;
+}
+
+/* Barangay summary table: clean, striped, hover-highlighted. */
+.reports-fallback {
+    overflow: hidden;
+}
+
+.reports-fallback .table {
+    margin: 0;
+}
+
+.reports-fallback thead th {
+    background: #f7f9f8;
+    color: #64716d;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    border-bottom: 2px solid #e2e9e7;
+    padding: 0.75rem 1rem;
+}
+
+.reports-fallback tbody td {
+    padding: 0.65rem 1rem;
+    border-top: 1px solid #eef1f4;
+    vertical-align: middle;
+}
+
+.reports-fallback tbody tr:nth-child(even) {
+    background: #fafbfc;
+}
+
+.reports-fallback tbody tr:hover {
+    background: #eef6f2;
+}
+
+.reports-fallback td:first-child {
+    font-weight: 600;
+    color: #244138;
+}
+
+.reports-fallback .badge {
+    font-weight: 600;
+}

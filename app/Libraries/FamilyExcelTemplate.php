@@ -195,7 +195,9 @@ class FamilyExcelTemplate
         $firstRow = self::FIRST_DATA_ROW;
         $lastRow = self::LAST_TEMPLATE_ROW;
 
-        // Birthday + contact number as text so dates and leading-zero phones survive.
+        // QR Number, Birthday + contact number as text so long/leading-zero
+        // numbers and dates survive Excel round-trip.
+        $sheet->getStyle('A' . $firstRow . ':A' . $lastRow)->getNumberFormat()->setFormatCode('@');
         $sheet->getStyle('G' . $firstRow . ':G' . $lastRow)->getNumberFormat()->setFormatCode('@');
         $sheet->getStyle('J' . $firstRow . ':J' . $lastRow)->getNumberFormat()->setFormatCode('@');
 
@@ -255,7 +257,7 @@ class FamilyExcelTemplate
 
         $this->writeExampleRow($sheet, 3, ['1', 'Head', 'Dela Cruz', 'Juan', 'Santos', '', '05-14-1958', 'Male', 'M - Married', '09171234567', 'Roman Catholic', 'CG - College Graduate', 'Retired', 'PHP 8,000 - 13,000', '123 Rizal St.', 'Poblacion', 'SC', 'SC1, SC2, FA6']);
         $this->writeExampleRow($sheet, 4, ['1', 'Spouse', 'Dela Cruz', 'Maria', 'Reyes', '', '09-02-1962', 'Female', 'M - Married', '09170001111', 'Roman Catholic', 'HS - High School', 'Homemaker', 'No regular income', '', '', 'SP', 'SP1']);
-        $this->writeExampleRow($sheet, 5, ['1', 'Children', 'Dela Cruz', 'Jose', 'R', '', '01-10-2014', 'Male', 'S - Single', '', '', 'E - Elementary', 'Student', '', '', '', 'B', 'B2, B3']);
+        $this->writeExampleRow($sheet, 5, ['1', 'Child', 'Dela Cruz', 'Jose', 'R', '', '01-10-2014', 'Male', 'S - Single', '', '', 'E - Elementary', 'Student', '', '', '', 'B', 'B2, B3']);
         $this->writeExampleRow($sheet, 6, ['2', 'Head', 'Reyes', 'Pedro', '', '', '07-07-1990', 'Male', 'S - Single', '09181234567', 'Islam', 'UG - Undergraduate', 'Driver', 'PHP 13,001 - 18,000', '5 Mabini St.', 'Malaban', 'PWD, IP', 'PWD1, EDA5, 4PS']);
 
         $lastColumn = $this->columnLetter(count(self::COLUMNS));

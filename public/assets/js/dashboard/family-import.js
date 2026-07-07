@@ -119,7 +119,7 @@
             '<button type="button" class="fit-close" aria-label="Dismiss" hidden>&times;</button>' +
             '</div>' +
             '<div class="fit-msg"></div>' +
-            '<div class="progress" role="progressbar">' +
+            '<div class="progress" role="progressbar" aria-label="Import progress" aria-valuemin="0" aria-valuemax="100">' +
             '<div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 100%;"></div>' +
             '</div>' +
             '<div class="fit-errors"></div>';
@@ -400,22 +400,25 @@
             }).then(function (result) {
                 var data = result.data || {};
 
-                updateCsrfForm(form, data.csrf);
-
                 if (submit) {
                     submit.disabled = false;
                     submit.textContent = originalLabel;
                 }
 
                 // Queued: reset the form, close the modal, hand off to its own toast.
+                // form.reset() must run BEFORE updateCsrfForm(), since reset() would
+                // otherwise wipe the just-refreshed token back to its page-load value.
                 if (result.ok && data.status === 'queued' && data.statusUrl) {
                     results.innerHTML = '';
                     form.reset();
+                    updateCsrfForm(form, data.csrf);
                     closeImportModal();
                     startTracking(data.statusUrl);
 
                     return;
                 }
+
+                updateCsrfForm(form, data.csrf);
 
                 // Upload rejected before queuing (bad file, permission, etc.) - keep
                 // the modal open so the user can fix and retry.

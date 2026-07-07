@@ -3,8 +3,9 @@
 //      so clicking .js-open-services-modal loads it via AJAX.
 //   2. Services admin page (#serviceActionModal): handles create / update / archive /
 //      restore in a single shared modal. Syncs the "Other (custom)" category freetext
-//      input when the category select switches to/from __other__. Third IIFE manages
-//      the Active / Archived row toggle on the lookups page.
+//      input when the category select switches to/from __other__. Submission is
+//      blocked when the typed shortcode already exists (data-existing-codes).
+//      Third IIFE manages the Active / Archived row toggle on the lookups page.
 //
 // Connected to:
 //   - dashboard-modal-loader.js : window.registerDashboardModal()
@@ -12,6 +13,7 @@
 //               (Lookups\ServiceController, via the modal's data-*-action attributes)
 //   - Views   : Views/Lookups/service-modal.php — #serviceActionModal, .js-service-modal-open
 //               buttons carry data-service-mode, data-service-id, data-service-name, etc.
+//   - Data    : PHP embeds data-existing-codes on the <form>
 (function (window) {
     if (typeof window.registerDashboardModal !== 'function') {
         return;
@@ -61,6 +63,37 @@
 
         if (Object.prototype.hasOwnProperty.call(map, value)) {
             code.value = String(map[value] || '');
+        }
+    }
+
+    // Inline duplicate check: compares the typed code against existing codes,
+    // excluding the service's own code while editing. Toggles the error message
+    // and the submit button accordingly. Mirrors sectors-modal.js's validateCode.
+    function validateCode(modal) {
+        const form = modal.querySelector('form');
+        const codeInput = modal.querySelector('#serviceModalShortcode');
+        const errorEl = modal.querySelector('.js-service-code-error');
+        const submit = modal.querySelector('.js-service-modal-submit');
+
+        if (!form || !codeInput || codeInput.disabled) {
+            return;
+        }
+
+        const existing = parseJson(form.dataset.existingCodes, []).map(function (code) {
+            return String(code || '').toUpperCase();
+        });
+        const ownCode = String(form.dataset.currentCode || '').toUpperCase();
+        const value = String(codeInput.value || '').trim().toUpperCase();
+        const isDuplicate = value !== '' && value !== ownCode && existing.indexOf(value) !== -1;
+
+        if (errorEl) {
+            errorEl.classList.toggle('d-none', !isDuplicate);
+        }
+
+        codeInput.classList.toggle('is-invalid', isDuplicate);
+
+        if (submit) {
+            submit.disabled = isDuplicate;
         }
     }
 
@@ -137,10 +170,12 @@
         const isArchive = mode === 'archive';
         const isRestore = mode === 'restore';
         const isAction = isArchive || isRestore;
+        const existingCode = mode === 'update' ? String(trigger.dataset.serviceShortcode || '') : '';
 
         form.reset();
         form.action = form.dataset.createAction || '';
         form.dataset.serviceMode = mode;
+        form.dataset.currentCode = existingCode;
 
         if (mode === 'update') {
             form.action = (form.dataset.updateAction || '').replace(/\/$/, '') + '/' + serviceId;
@@ -159,6 +194,7 @@
             submit.classList.toggle('btn-danger', isArchive);
             submit.classList.toggle('btn-success', isRestore);
             submit.classList.toggle('btn-primary', !isAction);
+            submit.disabled = false;
         }
 
         if (fields) {
@@ -200,6 +236,8 @@
             if (description) {
                 description.value = mode === 'update' ? String(trigger.dataset.serviceDescription || '') : '';
             }
+
+            validateCode(modal);
         }
 
         if (archiveName) {
@@ -228,6 +266,14 @@
             const modal = document.getElementById('serviceActionModal');
             syncOtherSelect(event.target, modal);
             autofillServiceCode(event.target, modal);
+            validateCode(modal);
+        }
+    });
+
+    // Live duplicate feedback as the user edits the Code field.
+    document.addEventListener('input', function (event) {
+        if (event.target.matches('#serviceModalShortcode')) {
+            validateCode(document.getElementById('serviceActionModal'));
         }
     });
 })(window, document);

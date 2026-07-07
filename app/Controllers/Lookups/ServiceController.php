@@ -176,11 +176,19 @@ class ServiceController extends BaseController
         $isUpdate = $serviceId !== null;
 
         if ($isUpdate) {
-            $model->update($serviceId, $model->dataForCurrentSchema($data));
+            $saved = $model->update($serviceId, $model->dataForCurrentSchema($data)) !== false;
         } else {
+            $db = \Config\Database::connect();
+            $db->transStart();
             $data['serviceID'] = $model->nextServiceId();
-            $model->insert($model->dataForCurrentSchema($data));
+            $inserted = $model->insert($model->dataForCurrentSchema($data)) !== false;
+            $db->transComplete();
+            $saved = $inserted && $db->transStatus() !== false;
             $serviceId = (int) $data['serviceID'];
+        }
+
+        if (! $saved) {
+            return $this->redirectAdmin('admin/services', 'error', 'Unable to save service.');
         }
 
         $this->audit(

@@ -28,6 +28,7 @@ $displayRoleLabel = $roleLabel !== '' ? $roleLabel : match ($role) {
     'administrator' => 'Administrator',
     'encoder' => 'Encoder',
     'viewer' => 'Viewer',
+    'scanner' => 'Scanner',
     default => $role,
 };
 $fieldPrefix = $isEdit ? 'edit-account' : ($isSelfProfile ? 'my-account' : 'account');
@@ -122,6 +123,7 @@ $value = static function (array $details, string $key, bool $isEdit): string {
                             <option value="administrator" <?= $role === 'administrator' ? 'selected' : '' ?>>Administrator</option>
                             <option value="encoder" <?= $role === 'encoder' ? 'selected' : '' ?>>Encoder</option>
                             <option value="viewer" <?= $role === 'viewer' ? 'selected' : '' ?>>Viewer</option>
+                            <option value="scanner" <?= $role === 'scanner' ? 'selected' : '' ?>>Scanner</option>
                         </select>
                         <?php endif; ?>
                     </div>

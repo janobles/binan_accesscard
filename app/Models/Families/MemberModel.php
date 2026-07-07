@@ -338,6 +338,169 @@ class MemberModel extends Model
         return array_values(array_map(static fn (array $row): int => (int) ($row['memberID'] ?? 0), $rows));
     }
 
+    /**
+     * Active heads of family (headID = memberID, not archived) for QR card
+     * generation. Each row: memberID, a display fullname, and barangay.
+     * Optional $filter narrows by 'barangay' (string) and/or 'sectorID' (int).
+     *
+     * @return list<array{memberID:int, fullname:string, barangay:string}>
+     */
+    public function headsForCards(array $filter = []): array
+    {
+        $hasBarangayColumn = $this->memberFieldExists('barangay');
+
+        $builder = $this->db->table('member')
+            ->select('member.memberID, member.lastname, member.firstname, member.middlename, member.suffix, member.address, qc.control_no'
+                . ($hasBarangayColumn ? ', member.barangay' : ''))
+            ->join('qr_control qc', 'qc.headID = member.memberID', 'left')
+            ->where('member.headID = member.memberID', null, false);
+
+        // qr_control is the single source of truth for control numbers: a head with
+        // no mapping cannot be scanned, so it is excluded from card generation
+        // rather than printed with a memberID that the scanner would reject.
+        $builder->where('qc.control_no IS NOT NULL', null, false);
+
+        if ($this->db->fieldExists('dt_deleted', 'member')) {
+            $builder->where('member.dt_deleted IS NULL', null, false);
+        }
+
+        if (isset($filter['memberID']) && (int) $filter['memberID'] > 0) {
+            $builder->where('member.memberID', (int) $filter['memberID']);
+        }
+
+        if (! empty($filter['barangay'])) {
+            if ($hasBarangayColumn) {
+                $builder->where('member.barangay', $filter['barangay']);
+            } else {
+                // Barangay lives at the tail of the combined address ("address, barangay").
+                $builder->groupStart()
+                    ->like('member.address', ', ' . $filter['barangay'], 'before')
+                    ->orWhere('member.address', $filter['barangay'])
+                    ->groupEnd();
+            }
+        }
+
+        if (! empty($filter['sectorID'])) {
+            // sectorID is stored as a JSON array ('[1,2,3]'); match membership.
+            $builder->where(SectorIds::containsCondition((int) $filter['sectorID'], 'member.sectorID'), null, false);
+        }
+
+        $builder->orderBy('qc.control_no IS NULL', 'asc', false)
+            ->orderBy('qc.control_no', 'asc')
+            ->orderBy('member.memberID', 'asc');
+
+        $rows = $builder->get()->getResultArray();
+
+        // Barangay is stored at the tail of the combined address; match it against the
+        // canonical list (longest first) so it prints on the QR card.
+        $barangays = \App\Support\FamilyProfilingFormV2::barangays();
+        usort($barangays, static fn (string $a, string $b): int => mb_strlen($b) <=> mb_strlen($a));
+
+        return array_map(static function (array $row) use ($barangays): array {
+            $name = trim(sprintf(
+                '%s, %s %s %s',
+                $row['lastname'] ?? '',
+                $row['firstname'] ?? '',
+                $row['middlename'] ?? '',
+                $row['suffix'] ?? ''
+            ));
+
+            $barangay = trim((string) ($row['barangay'] ?? ''));
+
+            if ($barangay === '') {
+                $address = trim((string) ($row['address'] ?? ''));
+                foreach ($barangays as $candidate) {
+                    if (str_ends_with($address, ', ' . $candidate) || strcasecmp($address, $candidate) === 0) {
+                        $barangay = $candidate;
+                        break;
+                    }
+                }
+            }
+
+            return [
+                'memberID'  => (int) $row['memberID'],
+                'controlNo' => (int) $row['control_no'],
+                'fullname'  => preg_replace('/\s+/', ' ', $name),
+                'barangay'  => $barangay,
+            ];
+        }, $rows);
+    }
+
+    /**
+     * Resolves the family head's id for any active member. For a head this is
+     * its own memberID (headID == memberID); for a non-head member it is their
+     * headID. Returns null when $memberID is not an active member. Drives the QR
+     * scan-lookup so scanning any member's id lands on the family (head) record.
+     */
+    public function familyHeadIdFor(int $memberID): ?int
+    {
+        if ($memberID <= 0) {
+            return null;
+        }
+
+        $builder = $this->db->table('member')->where('memberID', $memberID);
+        if ($this->db->fieldExists('dt_deleted', 'member')) {
+            $builder->where('member.dt_deleted IS NULL', null, false);
+        }
+
+        $row = $builder->get()->getRowArray();
+        if ($row === null) {
+            return null;
+        }
+
+        $headId = (int) ($row['headID'] ?? 0);
+
+        return $headId > 0 ? $headId : null;
+    }
+
+    /**
+     * Returns the active head row for $memberID, or null when it is not an
+     * active head (headID != memberID, archived, or missing). Drives scan-lookup.
+     */
+    public function findHead(int $memberID): ?array
+    {
+        if ($memberID <= 0) {
+            return null;
+        }
+
+        $builder = $this->db->table('member')
+            ->where('memberID', $memberID)
+            ->where('member.headID = member.memberID', null, false);
+
+        if ($this->db->fieldExists('dt_deleted', 'member')) {
+            $builder->where('member.dt_deleted IS NULL', null, false);
+        }
+
+        $row = $builder->get()->getRowArray();
+
+        return $row ?: null;
+    }
+
+    /**
+     * All active members of a family (head + relatives), head first. Drives the
+     * scan claimant dropdown. Returns [] for a non-positive id.
+     */
+    public function familyMembers(int $headId): array
+    {
+        if ($headId <= 0) {
+            return [];
+        }
+
+        $builder = $this->db->table('member')
+            ->select('memberID, firstname, lastname, relationship, birthday, sex')
+            ->where('headID', $headId);
+
+        if ($this->db->fieldExists('dt_deleted', 'member')) {
+            $builder->where('member.dt_deleted IS NULL', null, false);
+        }
+
+        // Head (memberID == headId) sorts first, then the rest by memberID.
+        $builder->orderBy('CASE WHEN memberID = ' . $headId . ' THEN 0 ELSE 1 END', 'ASC', false)
+            ->orderBy('memberID', 'ASC');
+
+        return $builder->get()->getResultArray();
+    }
+
     /** Updates the head-of-family row during a family edit submission. */
     public function updateHead(int $headId, array $data): bool
     {

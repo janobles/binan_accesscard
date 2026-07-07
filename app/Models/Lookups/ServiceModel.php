@@ -115,6 +115,34 @@ class ServiceModel extends Model
         return $builder->countAllResults() > 0;
     }
 
+    /**
+     * All current, active service shortcodes, uppercased and trimmed. Used by
+     * the modal's client-side duplicate check (see services-modal.js). Only
+     * active rows, matching shortcodeExists()'s dt_deleted filter, so the
+     * client list matches exactly what the server will actually reject.
+     */
+    public function existingShortcodes(): array
+    {
+        $codeColumn = $this->codeColumn();
+
+        if ($codeColumn === null || ! $this->hasTable()) {
+            return [];
+        }
+
+        $builder = $this->db->table($this->table)->select($codeColumn);
+
+        if ($this->db->fieldExists('dt_deleted', $this->table)) {
+            $builder->where('dt_deleted IS NULL', null, false);
+        }
+
+        $rows = $builder->get()->getResultArray();
+
+        return array_values(array_unique(array_filter(array_map(
+            static fn (array $row): string => strtoupper(trim((string) ($row[$codeColumn] ?? ''))),
+            $rows
+        ))));
+    }
+
     /** Services management list order: by category then ID. */
     protected function applyLookupOrder(BaseBuilder $builder): void
     {
@@ -174,7 +202,14 @@ class ServiceModel extends Model
             return 1;
         }
 
-        $row = $this->selectMax($this->primaryKey, 'max_id')->first();
+        // serviceID is not AUTO_INCREMENT, so two concurrent creates could read the
+        // same MAX and collide. Take a FOR UPDATE lock inside the caller's
+        // transaction so allocation serializes. Requires the caller to have an open
+        // transaction and to insert before committing (see ServiceController).
+        $db  = $this->db;
+        $sql = 'SELECT MAX(' . $db->protectIdentifiers($this->primaryKey) . ') AS max_id FROM '
+            . $db->protectIdentifiers($this->table) . ' FOR UPDATE';
+        $row = $db->query($sql)->getRowArray();
 
         return ((int) ($row['max_id'] ?? 0)) + 1;
     }

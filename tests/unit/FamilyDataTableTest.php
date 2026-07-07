@@ -105,26 +105,27 @@ final class FamilyDataTableTest extends TestCase
     {
         $routes = (string) file_get_contents(APPPATH . 'Config/Routes.php');
 
-        $this->assertSame(3, substr_count($routes, "'data', 'Families\\FamilyController::dataTable'"));
+        $this->assertSame(3, substr_count($routes, "'data', 'Families\\FamilyDataTableController::dataTable'"));
     }
 
     public function testQrColumnRendersControlNumberBadge(): void
     {
-        $controller = (string) file_get_contents(APPPATH . 'Controllers/Families/FamilyController.php');
+        $controller = (string) file_get_contents(APPPATH . 'Controllers/Families/FamilyDataTableController.php');
+        $presenter  = (string) file_get_contents(APPPATH . 'Libraries/FamilyDataTablePresenter.php');
 
         // dataTable() batch-loads the heads' control numbers in one query...
         $this->assertStringContainsString('controlsForHeads(', $controller);
-        // ...the row exposes a dedicated 'qr' cell built by dataTableQrCell()...
-        $this->assertStringContainsString("'qr' => \$this->dataTableQrCell(\$controlNo)", $controller);
+        // ...the row exposes a dedicated 'qr' cell built by the presenter's qrCell()...
+        $this->assertStringContainsString("'qr' => \$this->qrCell(\$controlNo)", $presenter);
         // ...which renders a bordered QR badge with the padded number, dash when unmapped.
-        $this->assertStringContainsString('bi bi-qr-code', $controller);
-        $this->assertStringContainsString('ControlNumber::format($controlNo)', $controller);
-        $this->assertStringContainsString('&mdash;', $controller);
+        $this->assertStringContainsString('bi bi-qr-code', $presenter);
+        $this->assertStringContainsString('ControlNumber::format($controlNo)', $presenter);
+        $this->assertStringContainsString('&mdash;', $presenter);
     }
 
     public function testControllerUsesWhitelistedDataTablesParametersWithoutDateFilter(): void
     {
-        $controller = (string) file_get_contents(APPPATH . 'Controllers/Families/FamilyController.php');
+        $controller = (string) file_get_contents(APPPATH . 'Controllers/Families/FamilyDataTableController.php');
         $methodStart = strpos($controller, 'public function dataTable()');
         // dataTable() is followed by its private helper dataTableOrder() in this branch.
         $methodEnd = $methodStart !== false ? strpos($controller, 'private function dataTableOrder', $methodStart) : false;

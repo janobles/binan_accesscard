@@ -19,6 +19,9 @@ final class FamilyRoutesTest extends CIUnitTestCase
             ['admin/manage-family/import', $getRoutes, 'FamilyImportController::importForm'],
             ['admin/manage-family/template', $getRoutes, 'FamilyImportController::downloadTemplate'],
             ['employee/manage-family/import', $postRoutes, 'FamilyImportController::import'],
+            ['admin/manage-family/data', $getRoutes, 'FamilyDataTableController::dataTable'],
+            ['employee/manage-family/data', $getRoutes, 'FamilyDataTableController::dataTable'],
+            ['viewer/manage-family/data', $getRoutes, 'FamilyDataTableController::dataTable'],
             ['admin/manage-family/view/([0-9]+)', $getRoutes, 'FamilyController::viewFamily'],
             ['families', $postRoutes, 'FamilyController::store'],
         ];

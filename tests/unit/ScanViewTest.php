@@ -28,11 +28,18 @@ final class ScanViewTest extends CIUnitTestCase
 
     public function testAidTypeFixedByServer(): void
     {
-        // Aid type is chosen on the setting page; the scan page carries it as a
-        // server-filled hidden input and constant — no in-page dropdown.
+        // Aid type comes from the active batch; the scan page carries it as
+        // server-filled JS constants — no in-page dropdown, and it is never
+        // posted (logAid derives it server-side from the batch).
         $this->assertStringNotContainsString('sessionAidType', $this->html);
         $this->assertStringContainsString('AID_TYPE_NAME', $this->html);
-        $this->assertStringContainsString('id="aid_type_id" name="aid_type_id" value=', $this->html);
+        $this->assertStringContainsString('AID_TYPE_ID', $this->html);
+        $this->assertStringNotContainsString('name="aid_type_id"', $this->html);
+    }
+
+    public function testNoActiveBatchEmptyState(): void
+    {
+        $this->assertStringContainsString('No active distribution batch', $this->html);
     }
 
     public function testTwoColumnResponsiveGrid(): void

@@ -31,7 +31,6 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
   <div class="d-flex align-items-center gap-3 text-white">
     <?php if ($aidType !== null): ?>
       <span class="badge bg-info text-dark"><?= esc($aidType['name']) ?></span>
-      <a class="link-light small" href="<?= site_url('scanner/setting') ?>">Change type</a>
     <?php endif; ?>
     <span class="badge bg-success fs-6" title="Families you served this batch">
       You: <span id="myBatchCount"><?= $myBatchCount ?></span> families

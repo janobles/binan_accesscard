@@ -33,8 +33,11 @@ final class ReportsControllerTest extends CIUnitTestCase
 
     public function testRoutesResolve(): void
     {
-        $routes = file_get_contents(APPPATH . 'Config/Routes.php');
-        $this->assertStringContainsString("ReportsController::index", $routes);
-        $this->assertStringContainsString("ReportsController::pdf", $routes);
+        // ReportsController's own routes were dropped from the `scanner` group
+        // in the kiosk/admin split (Task 5) — the kiosk group is now scan-only.
+        // ReportsController itself is untouched pending its removal/re-homing
+        // under `admin/*` in a later task.
+        $this->assertStringContainsString('public function index(', $this->src);
+        $this->assertStringContainsString('public function pdf(', $this->src);
     }
 }

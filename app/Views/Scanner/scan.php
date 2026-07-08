@@ -1,6 +1,12 @@
 <?= $this->extend('Scanner/kiosk-layout') ?>
 <?= $this->section('content') ?>
 
+<?php if ($activeBatch === null): ?>
+<div class="alert alert-warning" role="alert">
+  No active distribution batch. Ask an administrator to start one.
+</div>
+<?php else: ?>
+
 <div class="card border-0 rounded-3 mb-3">
   <div class="card-body">
     <div class="row g-3 align-items-end">
@@ -47,7 +53,6 @@
           <div class="fw-bold mb-2">Log Distribution</div>
           <form id="logForm">
             <input type="hidden" id="control_no" name="control_no">
-            <input type="hidden" id="aid_type_id" name="aid_type_id" value="<?= esc($aidType['aid_type_id'], 'attr') ?>">
             <div id="dupAlert" class="alert alert-warning" hidden></div>
             <div class="mb-3">
               <label for="claim_date" class="form-label">Date</label>
@@ -84,12 +89,15 @@
     </div>
   </div>
 </div>
+<?php endif; ?>
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
+<?php if ($activeBatch !== null): ?>
 <script>
 const BASE = '<?= rtrim(base_url(), '/') ?>';
 const AID_TYPE_NAME = <?= json_encode((string) $aidType['name'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+const AID_TYPE_ID = <?= (int) $aidType['aid_type_id'] ?>;
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
@@ -171,7 +179,7 @@ function todayStr() {
 }
 
 function evaluateDuplicate(history) {
-  const aidId = $('aid_type_id').value;
+  const aidId = AID_TYPE_ID;
   const aidName = AID_TYPE_NAME;
   const dupe = (history || []).some(r =>
     String(r.aid_type_id) === String(aidId) && String(r.claim_date) === todayStr());
@@ -240,7 +248,7 @@ $('logForm').addEventListener('submit', async (e) => {
     }
     const aidName = AID_TYPE_NAME;
     const claimant = $('memberID').selectedOptions[0]?.text || '';
-    lastLoggedAidId = $('aid_type_id').value;
+    lastLoggedAidId = AID_TYPE_ID;
     showReceipt(`${aidName} → ${claimant} (Family #${$('control_no').value}), ${fd.get('claim_date')}`);
     lastHistory = data.history;
     renderHistory(data.history);
@@ -284,4 +292,5 @@ $('cameraBtn').addEventListener('click', () => {
     });
 });
 </script>
+<?php endif; ?>
 <?= $this->endSection() ?>

@@ -2,20 +2,17 @@
 
 namespace Tests\Unit;
 
-use Config\Services;
 use CodeIgniter\Test\CIUnitTestCase;
 
 final class ManageControllerTest extends CIUnitTestCase
 {
     public function testManageRoutesResolve(): void
     {
-        $routes = Services::routes();
-        $routes->loadRoutes();
-        $get  = $routes->getRoutes('GET');
-        $post = $routes->getRoutes('POST');
-        $this->assertArrayHasKey('scanner/manage', $get);
-        $this->assertArrayHasKey('scanner/aid-types/create', $post);
-        $this->assertArrayHasKey('scanner/distributions/void/([0-9]+)', $post);
+        // ManageController's own routes were dropped from the `scanner` group
+        // in the kiosk/admin split (Task 5) — the kiosk group is now scan-only.
+        // ManageController itself is untouched pending its removal/re-homing
+        // under `admin/*` in a later task; assert the controller still exists.
+        $this->assertFileExists(APPPATH . 'Controllers/Scanner/ManageController.php');
     }
 
     public function testEveryActionGuardsScannerRole(): void
@@ -29,11 +26,11 @@ final class ManageControllerTest extends CIUnitTestCase
 
     public function testBatchRoutesResolve(): void
     {
-        $routes = Services::routes();
-        $routes->loadRoutes();
-        $post = $routes->getRoutes('POST');
-        $this->assertArrayHasKey('scanner/batches/open', $post);
-        $this->assertArrayHasKey('scanner/batches/close/([0-9]+)', $post);
+        // Same as testManageRoutesResolve: batch routes were dropped from the
+        // `scanner` group in Task 5's kiosk/admin split.
+        $src = file_get_contents(APPPATH . 'Controllers/Scanner/ManageController.php');
+        $this->assertStringContainsString('public function openBatch(', $src);
+        $this->assertStringContainsString('public function closeBatch(', $src);
     }
 
     public function testBatchActionsGuardAdminOnly(): void

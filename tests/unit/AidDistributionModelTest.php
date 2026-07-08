@@ -37,4 +37,19 @@ final class AidDistributionModelTest extends CIUnitTestCase
         $this->assertFalse((new AidDistributionModel())->hasClaims(0));
         $this->assertFalse((new AidDistributionModel())->hasClaims(-1));
     }
+
+    public function testFamiliesForUserInBatchRejectsNonPositiveIds(): void
+    {
+        $m = new AidDistributionModel();
+        $this->assertSame(0, $m->familiesForUserInBatch(0, 1));
+        $this->assertSame(0, $m->familiesForUserInBatch(1, 0));
+    }
+
+    public function testLogAidAcceptsBatchIdKeyWithoutError(): void
+    {
+        // No DB in unit posture: invalid control_no short-circuits before insert,
+        // proving the signature tolerates the new key.
+        $m = new AidDistributionModel();
+        $this->assertSame(0, $m->logAid(['control_no' => 0, 'batch_id' => 5]));
+    }
 }

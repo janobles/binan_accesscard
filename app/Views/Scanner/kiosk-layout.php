@@ -1,0 +1,56 @@
+<?php
+/**
+ * Kiosk shell for the scan flow (setting + scan pages): full-viewport, no
+ * sidebar/topbar. Deliberately minimal for time-and-motion — one slim header
+ * bar (batch · aid type · live personal counter · change-type · logout) and
+ * the page content. Reports and Manage stay in Scanner/layout (dashboard shell).
+ */
+$pageTitle          = $pageTitle ?? 'Scan';
+$username           = $username ?? 'Scanner';
+$activeBatch        = $activeBatch ?? null;
+$aidType            = $aidType ?? null;
+$myBatchCount       = (int) ($myBatchCount ?? 0);
+$idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?= esc($pageTitle) ?> - Binan Access Card MIS</title>
+    <?php foreach (array_merge(asset_styles('head'), asset_styles('admin'), asset_styles('scanner')) as $stylePath): ?>
+    <link rel="stylesheet" href="<?= esc(asset_url($stylePath), 'attr') ?>">
+    <?php endforeach; ?>
+</head>
+<body>
+<nav class="navbar navbar-dark bg-dark px-3">
+  <span class="navbar-brand mb-0 h1">
+    <i class="bi bi-qr-code-scan me-1" aria-hidden="true"></i>
+    <?= $activeBatch !== null ? esc($activeBatch['name']) : 'No active batch' ?>
+  </span>
+  <div class="d-flex align-items-center gap-3 text-white">
+    <?php if ($aidType !== null): ?>
+      <span class="badge bg-info text-dark"><?= esc($aidType['name']) ?></span>
+      <a class="link-light small" href="<?= site_url('scanner/setting') ?>">Change type</a>
+    <?php endif; ?>
+    <span class="badge bg-success fs-6" title="Families you served this batch">
+      You: <span id="myBatchCount"><?= $myBatchCount ?></span> families
+    </span>
+    <span class="small"><?= esc($username) ?></span>
+    <a class="btn btn-outline-light btn-sm" href="<?= site_url('logout') ?>">Logout</a>
+  </div>
+</nav>
+<main class="container-fluid px-4 py-3">
+  <?php if (session()->getFlashdata('error')): ?>
+    <div class="alert alert-danger"><?= esc(session()->getFlashdata('error')) ?></div>
+  <?php endif; ?>
+  <?= $this->renderSection('content') ?>
+</main>
+<?php foreach (array_merge(asset_scripts('core'), asset_scripts('scanner')) as $scriptPath): ?>
+<script src="<?= esc(asset_url($scriptPath), 'attr') ?>"></script>
+<?php endforeach; ?>
+<script src="<?= esc(base_url('vendor/html5-qrcode/html5-qrcode.min.js'), 'attr') ?>"></script>
+<script src="<?= esc(asset_url('assets/js/session-timeout.js'), 'attr') ?>" data-timeout-seconds="<?= esc((string) $idleTimeoutSeconds) ?>" data-logout-url="<?= site_url('logout?timeout=1') ?>" data-keep-alive-url="<?= site_url('session/keep-alive') ?>"></script>
+<?= $this->renderSection('scripts') ?>
+</body>
+</html>

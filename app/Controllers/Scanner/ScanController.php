@@ -9,6 +9,7 @@ use App\Models\Audit\AuditTrailsModel;
 use App\Models\Families\MemberModel;
 use App\Models\Scanner\AidDistributionModel;
 use App\Models\Scanner\AidTypeModel;
+use App\Models\Scanner\DistributionBatchModel;
 use App\Models\Scanner\QrControlModel;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
@@ -17,15 +18,42 @@ use CodeIgniter\HTTP\ResponseInterface;
  * Scanner module: resolve a paper QR control number to a family, show its aid
  * history, and log a new aid distribution. Scanner/Admin/Developer only.
  *
- * Renders inside the dashboard shell (Scanner/layout) with a scanner-only sidebar.
+ * The scan flow (setting + scan) renders in the kiosk shell (Scanner/kiosk-layout):
+ * no sidebar/topbar, one slim header with the live personal counter.
  *
- * - scan():   GET  scanner/scan          -> read-only lookup (family + history).
- * - manage(): moved to Scanner\ManageController::index().
- * - lookup(): GET  scanner/lookup/{num}  -> JSON {head, members, history}.
- * - logAid(): POST scanner/log           -> insert + audit, returns refreshed history.
+ * - setting(): GET  scanner/setting       -> pick the aid type for this session.
+ * - scan():    GET  scanner/scan?aid_type -> lookup UI; redirects to setting when
+ *                                            the aid type is invalid or no batch is open.
+ * - lookup():  GET  scanner/lookup/{num}  -> JSON {head, members, history}.
+ * - logAid():  POST scanner/log           -> insert + audit; 409 when no open batch;
+ *                                            returns refreshed history + myBatchCount.
  */
 class ScanController extends BaseController
 {
+    /** GET scanner/setting — pick the aid type for this scanning session. */
+    public function setting(): ResponseInterface|string
+    {
+        $guard = RoleAccess::requireRole(['Scanner', 'Admin', 'Developer']);
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        $activeBatch = model(DistributionBatchModel::class)->activeBatch();
+        $userId      = (int) (session('user_id') ?? 0);
+
+        return view('Scanner/setting', [
+            'pageTitle'    => 'Distribution Setting',
+            'username'     => session('username') ?? 'Scanner',
+            'user'         => SessionAccount::user(),
+            'accountLevelLabel' => SessionAccount::levelLabel(),
+            'activeBatch'  => $activeBatch,
+            'aidTypes'     => model(AidTypeModel::class)->active(),
+            'myBatchCount' => $activeBatch !== null
+                ? model(AidDistributionModel::class)->familiesForUserInBatch($userId, (int) $activeBatch['batch_id'])
+                : 0,
+        ]);
+    }
+
     public function scan(): ResponseInterface|string
     {
         $guard = RoleAccess::requireRole(['Scanner', 'Admin', 'Developer']);
@@ -33,21 +61,33 @@ class ScanController extends BaseController
             return $guard;
         }
 
-        $role = RoleAccess::normalizeRole((string) session()->get('role'));
-        $canManage = in_array($role, ['Developer', 'Admin'], true);
+        $activeBatch = model(DistributionBatchModel::class)->activeBatch();
+        if ($activeBatch === null) {
+            return redirect()->to('scanner/setting');
+        }
+
+        $aidTypeId = (int) $this->request->getGet('aid_type');
+        $aidType   = null;
+        foreach (model(AidTypeModel::class)->active() as $t) {
+            if ((int) $t['aid_type_id'] === $aidTypeId) {
+                $aidType = $t;
+                break;
+            }
+        }
+        if ($aidType === null) {
+            return redirect()->to('scanner/setting');
+        }
+
+        $userId = (int) (session('user_id') ?? 0);
 
         return view('Scanner/scan', [
-            'activeTab' => 'scan',
-            'pageTitle' => 'Scan',
-            'username'  => session('username') ?? 'Scanner',
-            'user'      => SessionAccount::user(),
+            'pageTitle'    => 'Scan',
+            'username'     => session('username') ?? 'Scanner',
+            'user'         => SessionAccount::user(),
             'accountLevelLabel' => SessionAccount::levelLabel(),
-            'aidTypes'  => model(AidTypeModel::class)->active(),
-            'currentRole' => $role,
-            'canManageAccounts' => $canManage,
-            'sidebarRoleClass' => strtolower($role),
-            'sidebarUserUrl' => site_url('admin/dashboard'),
-            'navActive' => ['scanner' => 'active'],
+            'activeBatch'  => $activeBatch,
+            'aidType'      => $aidType,
+            'myBatchCount' => model(AidDistributionModel::class)->familiesForUserInBatch($userId, (int) $activeBatch['batch_id']),
         ]);
     }
 
@@ -111,6 +151,12 @@ class ScanController extends BaseController
             return $this->response->setStatusCode(422)->setJSON(['errors' => ['memberID' => 'Claimant is not part of this family.']]);
         }
 
+        $activeBatch = model(DistributionBatchModel::class)->activeBatch();
+        if ($activeBatch === null) {
+            return $this->response->setStatusCode(409)
+                ->setJSON(['errors' => ['general' => 'No active distribution batch. Ask an administrator to open one.']]);
+        }
+
         $userId = (int) (session('user_id') ?? 0);
 
         // The insert and its audit row must land together: without a shared
@@ -125,6 +171,7 @@ class ScanController extends BaseController
             'aid_type_id' => (int) $this->request->getPost('aid_type_id'),
             'claim_date'  => $this->request->getPost('claim_date'),
             'userID'      => $userId,
+            'batch_id'    => (int) $activeBatch['batch_id'],
         ]);
 
         $audited = $aidId > 0 && (new AuditTrailsModel())->logAction(
@@ -150,8 +197,9 @@ class ScanController extends BaseController
         }
 
         return $this->response->setJSON([
-            'ok'      => true,
-            'history' => model(AidDistributionModel::class)->historyFor($controlNo),
+            'ok'           => true,
+            'history'      => model(AidDistributionModel::class)->historyFor($controlNo),
+            'myBatchCount' => model(AidDistributionModel::class)->familiesForUserInBatch($userId, (int) $activeBatch['batch_id']),
         ]);
     }
 }

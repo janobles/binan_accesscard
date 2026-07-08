@@ -131,12 +131,20 @@ Batch dropdown switches to any past batch. No cross-batch aggregate.
   physically unlikely (one family stands at one kiosk). Optional soft guard:
   reject a second claim for the same `control_no` in the same batch.
 
-## Operational rule (must document)
+## Operational rule (largely self-enforced)
 
 **One Scanner account per kiosk device.** Per-kiosk metrics are keyed on the
-distinct `userID` written to each `aid_distribution` row. Sharing one Scanner
-login across devices merges their stats. Note the Developer account still logs
-`userID` NULL (existing behavior) — it is excluded from per-kiosk attribution.
+distinct `userID` written to each `aid_distribution` row. This is already
+enforced in practice: `ActiveSessionRegistry` allows only one active session per
+account and evicts the prior one on a new login — so a shared Scanner account
+cannot run two kiosks at once (kiosk B's login kicks kiosk A off). Per-kiosk
+accounts are therefore the natural setup, not a new guard to build. Document it
+as a deployment expectation. The Developer account still logs `userID` NULL
+(existing behavior) and is excluded from per-kiosk attribution.
+
+The single-session **auth UX** ("already signed in elsewhere — sign the other
+out to continue?", OWASP posture of that flow) is a **separate concern, out of
+scope here** — this spec neither depends on nor changes it.
 
 ## Theme
 

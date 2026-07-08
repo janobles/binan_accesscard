@@ -155,3 +155,5 @@ _modules/*
 # Superpowers (local scratch; specs/plans/summaries are tracked under docs/)
 #-------------------------
 .superpowers/
+
+sessions.json

@@ -74,10 +74,17 @@ class ScanController extends BaseController
             $batchId = $active !== null ? (int) $active['batch_id'] : (int) ($batches[0]['batch_id'] ?? 0);
         }
 
-        $userId = (int) (session('user_id') ?? 0);
-        $stats  = model(AidStatsModel::class);
+        $userId    = (int) (session('user_id') ?? 0);
+        $batchRow  = null;
+        foreach ($batches as $b) {
+            if ((int) $b['batch_id'] === $batchId) {
+                $batchRow = $b;
+                break;
+            }
+        }
+        $snapshot = $this->kioskSnapshot($batchId, $userId, $batchRow);
 
-        return view('Scanner/performance', [
+        return view('Scanner/performance', array_merge([
             'pageTitle'    => 'My Performance',
             'username'     => session('username') ?? 'Scanner',
             'user'         => SessionAccount::user(),
@@ -85,8 +92,46 @@ class ScanController extends BaseController
             'activeBatch'  => $active,
             'batches'      => $batches,
             'batchId'      => $batchId,
-            'mine'         => $batchId > 0 ? ($stats->perScanner($batchId, $userId)[0] ?? ['families' => 0, 'handouts' => 0]) : ['families' => 0, 'handouts' => 0],
-        ]);
+        ], $snapshot));
+    }
+
+    /**
+     * One kiosk's live figures for a batch: totals, a time-bucketed throughput
+     * timeline, and derived pace (families/hour, busiest window). Shared by the
+     * performance page and the polling endpoint so both stay in sync.
+     *
+     * @return array{mine:array{families:int,handouts:int},timeline:list<array{label:string,families:int,handouts:int}>,pace:array{perHour:int,busiest:string}}
+     */
+    private function kioskSnapshot(int $batchId, int $userId, ?array $batchRow): array
+    {
+        $stats    = model(AidStatsModel::class);
+        $mineRow  = $batchId > 0 ? ($stats->perScanner($batchId, $userId)[0] ?? null) : null;
+        $mine     = ['families' => (int) ($mineRow['families'] ?? 0), 'handouts' => (int) ($mineRow['handouts'] ?? 0)];
+        $timeline = $batchId > 0 ? $stats->timelineForUserInBatch($batchId, $userId) : [];
+
+        // Pace uses the batch's active span (open batch → now, else its close time).
+        $perHour = 0;
+        if ($mine['families'] > 0 && $batchRow !== null && ! empty($batchRow['started_at'])) {
+            $start   = strtotime((string) $batchRow['started_at']);
+            $end     = ! empty($batchRow['closed_at']) ? strtotime((string) $batchRow['closed_at']) : time();
+            $hours   = max(0.05, ($end - $start) / 3600);
+            $perHour = (int) round($mine['families'] / $hours);
+        }
+
+        $busiest = '';
+        $peak    = -1;
+        foreach ($timeline as $bucket) {
+            if ($bucket['families'] > $peak) {
+                $peak    = $bucket['families'];
+                $busiest = $bucket['label'];
+            }
+        }
+
+        return [
+            'mine'     => $mine,
+            'timeline' => $timeline,
+            'pace'     => ['perHour' => $perHour, 'busiest' => $busiest],
+        ];
     }
 
     /** GET scanner/stats — JSON own-performance snapshot for kiosk polling. */
@@ -103,14 +148,15 @@ class ScanController extends BaseController
             return $this->response->setJSON(['batch' => null, 'families' => 0, 'handouts' => 0]);
         }
 
-        $batchId = (int) $activeBatch['batch_id'];
-        $rows    = model(AidStatsModel::class)->perScanner($batchId, $userId);
-        $mine    = $rows[0] ?? ['families' => 0, 'handouts' => 0];
+        $batchId  = (int) $activeBatch['batch_id'];
+        $snapshot = $this->kioskSnapshot($batchId, $userId, $activeBatch);
 
         return $this->response->setJSON([
             'batch'    => ['id' => $batchId, 'name' => (string) $activeBatch['name'], 'aid_type' => (string) ($activeBatch['aid_type_name'] ?? '')],
-            'families' => (int) ($mine['families'] ?? 0),
-            'handouts' => (int) ($mine['handouts'] ?? 0),
+            'families' => $snapshot['mine']['families'],
+            'handouts' => $snapshot['mine']['handouts'],
+            'timeline' => $snapshot['timeline'],
+            'pace'     => $snapshot['pace'],
             'updated'  => date('c'),
         ]);
     }

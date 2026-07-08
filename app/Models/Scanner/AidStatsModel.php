@@ -164,4 +164,41 @@ class AidStatsModel extends Model
             return [];
         }
     }
+
+    /**
+     * One kiosk's handouts bucketed into fixed time windows within a batch, for
+     * the throughput-over-time chart. Buckets align to $bucketMinutes boundaries;
+     * each row is a bucket that actually had activity, ordered oldest first.
+     *
+     * @return list<array{label:string,families:int,handouts:int}>
+     */
+    public function timelineForUserInBatch(int $batchId, int $userId, int $bucketMinutes = 15): array
+    {
+        if ($batchId <= 0 || $userId <= 0) {
+            return [];
+        }
+
+        $seconds = max(60, $bucketMinutes * 60);
+
+        try {
+            $rows = $this->db->table('aid_distribution')
+                ->select('FLOOR(UNIX_TIMESTAMP(dt_created) / ' . $seconds . ') AS bucket,'
+                    . ' MIN(dt_created) AS ts,'
+                    . ' COUNT(DISTINCT control_no) AS families,'
+                    . ' COUNT(aidID) AS handouts')
+                ->where('batch_id', $batchId)
+                ->where('userID', $userId)
+                ->groupBy('bucket')
+                ->orderBy('bucket', 'ASC')
+                ->get()->getResultArray();
+
+            return array_map(static fn ($r) => [
+                'label'    => date('g:i A', strtotime((string) $r['ts'])),
+                'families' => (int) $r['families'],
+                'handouts' => (int) $r['handouts'],
+            ], $rows);
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
 }

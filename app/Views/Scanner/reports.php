@@ -6,19 +6,29 @@
 <?= $this->extend("Scanner/layout") ?>
 <?= $this->section("content") ?>
 
- <?php $rangeLabel =
-     $from || $to
+ <?php $rangeLabel = ($batchName ?? null) !== null
+     ? "Showing batch: " . esc($batchName)
+     : ($from || $to
          ? "Showing " .
              ($from ? esc($from) : "the beginning") .
              " to " .
              ($to ? esc($to) : "today")
-         : "Showing all dates"; ?>
+         : "Showing all dates"); ?>
 
 <!-- Date range + PDF export -->
 <div class="reports-toolbar">
   <form class="reports-filter" method="get" action="<?= site_url(
       "scanner/reports",
   ) ?>">
+    <label for="batchPick" class="form-label mb-0">Batch</label>
+    <select class="form-select" id="batchPick" name="batch" onchange="this.form.submit()">
+      <option value="">All dates (use range)</option>
+      <?php foreach ($batches as $b): ?>
+        <option value="<?= esc($b['batch_id'], 'attr') ?>" <?= ((int) ($batchId ?? 0)) === (int) $b['batch_id'] ? 'selected' : '' ?>>
+          <?= esc($b['name']) ?><?= $b['closed_at'] === null ? ' (open)' : '' ?>
+        </option>
+      <?php endforeach; ?>
+    </select>
     <label for="fromDate" class="form-label mb-0">From</label>
     <input class="form-control" type="date" id="fromDate" name="from" value="<?= esc(
         $from ?? "",
@@ -38,12 +48,14 @@
     <a class="btn btn-primary reports-download-btn" href="<?= site_url(
         "scanner/reports/pdf",
     ) .
-        ($from || $to
-            ? "?from=" .
-                esc($from ?? "", "url") .
-                "&to=" .
-                esc($to ?? "", "url")
-            : "") ?>"><i class="bi bi-file-earmark-arrow-down" aria-hidden="true"></i><span>Download Report</span></a>
+        (($batchId ?? null) !== null
+            ? "?batch=" . (int) $batchId
+            : ($from || $to
+                ? "?from=" .
+                    esc($from ?? "", "url") .
+                    "&to=" .
+                    esc($to ?? "", "url")
+                : "")) ?>"><i class="bi bi-file-earmark-arrow-down" aria-hidden="true"></i><span>Download Report</span></a>
   </div>
 </div>
 <p class="text-muted small mb-3"><?= $rangeLabel ?></p>
@@ -75,6 +87,31 @@
       'variant' => 'stat-card--services',
   ]) ?>
 </section>
+
+<!-- Per-scanner performance: only meaningful within one batch. Rows are
+     filtered server-side (Scanner role receives only its own row). -->
+<?php if (($batchId ?? null) !== null): ?>
+<?php
+$scannerRows = [];
+foreach ($perScanner as $p) {
+    $scannerRows[] = [
+        esc($p["scanner"]),
+        esc((string) $p["families"]),
+        esc((string) $p["handouts"]),
+    ];
+}
+?>
+<?= view('components/data_table', [
+    'icon' => 'person-badge',
+    'title' => ($isScannerRole ?? false) ? 'My performance this batch' : 'Scanner performance this batch',
+    'columns' => ['Scanner', 'Families served', 'Handouts logged'],
+    'rows' => $scannerRows,
+    'emptyMessage' => 'No scans in this batch yet.',
+    'tableClass' => 'table manage-record-table align-middle w-100 mb-0',
+    'cardClass' => 'reports-fallback',
+    'footer' => $rangeLabel,
+]) ?>
+<?php endif; ?>
 
 <!-- Charts: each in the standard card anatomy (components/card) -->
 <div class="row g-3 reports-charts">

@@ -32,4 +32,19 @@ final class AidStatsModelTest extends CIUnitTestCase
         $this->assertIsArray($m->byBarangay(null, null));
         $this->assertIsArray($m->byAidType(null, null));
     }
+
+    public function testMethodsAcceptBatchIdWithoutError(): void
+    {
+        $m = new AidStatsModel();
+        $this->assertIsArray($m->receivedVsNot(null, null, 3));
+        $this->assertIsArray($m->byBarangay(null, null, 3));
+        $this->assertIsArray($m->byAidType(null, null, 3));
+    }
+
+    public function testPerScannerReturnsArrayAndRejectsBadBatch(): void
+    {
+        $m = new AidStatsModel();
+        $this->assertIsArray($m->perScanner(1));
+        $this->assertSame([], $m->perScanner(0));
+    }
 }

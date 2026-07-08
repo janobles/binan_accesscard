@@ -13,7 +13,7 @@ class AidDistributionModel extends Model
     protected $table         = 'aid_distribution';
     protected $primaryKey    = 'aidID';
     protected $returnType    = 'array';
-    protected $allowedFields = ['control_no', 'memberID', 'aid_type_id', 'claim_date', 'userID'];
+    protected $allowedFields = ['control_no', 'memberID', 'aid_type_id', 'claim_date', 'userID', 'batch_id'];
     protected $useTimestamps = false;
 
     /** Inserts one distribution row and returns its aidID. */
@@ -35,6 +35,7 @@ class AidDistributionModel extends Model
             'aid_type_id' => (int) $data['aid_type_id'],
             'claim_date'  => $data['claim_date'],
             'userID'      => isset($data['userID']) && (int) $data['userID'] > 0 ? (int) $data['userID'] : null,
+            'batch_id'    => isset($data['batch_id']) && (int) $data['batch_id'] > 0 ? (int) $data['batch_id'] : null,
         ]);
 
         return (int) $this->getInsertID();
@@ -99,6 +100,24 @@ class AidDistributionModel extends Model
                 ->findAll();
         } catch (\Throwable $e) {
             return [];
+        }
+    }
+
+    /** Distinct families (control numbers) this user has served within a batch. */
+    public function familiesForUserInBatch(int $userId, int $batchId): int
+    {
+        if ($userId <= 0 || $batchId <= 0) {
+            return 0;
+        }
+
+        try {
+            return (int) ($this->builder()
+                ->select('COUNT(DISTINCT control_no) AS n')
+                ->where('userID', $userId)
+                ->where('batch_id', $batchId)
+                ->get()->getRowArray()['n'] ?? 0);
+        } catch (\Throwable $e) {
+            return 0;
         }
     }
 

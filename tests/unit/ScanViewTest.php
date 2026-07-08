@@ -26,12 +26,13 @@ final class ScanViewTest extends CIUnitTestCase
         $this->assertStringNotContainsString('style="', $this->html);
     }
 
-    public function testAidTypeEmphasisStates(): void
+    public function testAidTypeFixedByServer(): void
     {
-        // Numbered labels + attention classes guide the eye without a stepper.
-        foreach (['1. Aid type', '2. Scan or enter', 'syncAidEmphasis(', 'scan-attn', 'scan-muted'] as $needle) {
-            $this->assertStringContainsString($needle, $this->html, "missing: {$needle}");
-        }
+        // Aid type is chosen on the setting page; the scan page carries it as a
+        // server-filled hidden input and constant — no in-page dropdown.
+        $this->assertStringNotContainsString('sessionAidType', $this->html);
+        $this->assertStringContainsString('AID_TYPE_NAME', $this->html);
+        $this->assertStringContainsString('id="aid_type_id" name="aid_type_id" value=', $this->html);
     }
 
     public function testTwoColumnResponsiveGrid(): void

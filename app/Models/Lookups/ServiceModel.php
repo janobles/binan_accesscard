@@ -385,4 +385,32 @@ class ServiceModel extends Model
         return $this->db->affectedRows();
     }
 
+    /**
+     * Inserts a service inside a transaction, assigning the next serviceID.
+     * Returns the new serviceID or false on failure.
+     */
+    public function insertWithNextId(array $data): int|false
+    {
+        $this->db->transStart();
+        $data['serviceID'] = $this->nextServiceId();
+        $inserted = $this->insert($this->dataForCurrentSchema($data)) !== false;
+        $this->db->transComplete();
+
+        return ($inserted && $this->db->transStatus() !== false) ? (int) $data['serviceID'] : false;
+    }
+
+    /**
+     * True if any `member_services` row links to this service ID. Guards
+     * archive/delete so in-use services cannot be removed.
+     */
+    public function isInUse(int $serviceId): bool
+    {
+        if (! $this->db->tableExists('member_services')) {
+            return false;
+        }
+
+        return $this->db->table('member_services')
+            ->where('serviceID', $serviceId)
+            ->countAllResults() > 0;
+    }
 }

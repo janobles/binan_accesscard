@@ -44,7 +44,7 @@ $sectorOptionLabel = static function (array $sector): string {
                     <button class="btn btn-outline-secondary dropdown-toggle w-100 h-100 text-start d-flex align-items-center justify-content-between" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
                         <span class="text-truncate" data-records-filter-label>-Select sector-</span>
                     </button>
-                    <div class="dropdown-menu w-100 p-1 overflow-auto small" style="max-height: 14rem;">
+                    <div class="dropdown-menu w-100 p-1 overflow-auto small">
                         <?php foreach ($sectorOptions as $sector): ?>
                             <?php
                             $sectorId = (string) ($sector['sectorID'] ?? $sector['id'] ?? '');
@@ -66,7 +66,7 @@ $sectorOptionLabel = static function (array $sector): string {
                     <button class="btn btn-outline-secondary dropdown-toggle w-100 h-100 text-start d-flex align-items-center justify-content-between" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
                         <span class="text-truncate" data-records-filter-label>-Select barangay-</span>
                     </button>
-                    <div class="dropdown-menu w-100 p-1 overflow-auto small" style="max-height: 14rem;">
+                    <div class="dropdown-menu w-100 p-1 overflow-auto small">
                         <?php foreach ($barangayOptions as $barangay): ?>
                             <?php $barangayName = trim((string) $barangay); ?>
                             <?php if ($barangayName !== ''): ?>

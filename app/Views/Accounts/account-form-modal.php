@@ -41,7 +41,7 @@ $value = static function (array $details, string $key, bool $isEdit): string {
 };
 ?>
 <div class="accounts-page edit-account-modal">
-    <header class="account-card-header" style="border:0;background:transparent;padding:0 0 0.5rem;">
+    <header class="account-card-header">
         <div>
             <h2><?= esc($title) ?></h2>
             <p class="text-muted mb-0"><?= esc($subtitle) ?></p>

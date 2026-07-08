@@ -5,7 +5,6 @@ namespace App\Controllers\Lookups;
 use App\Controllers\BaseController;
 use App\Controllers\Concerns\LookupControllerTrait;
 use App\Libraries\RoleAccess;
-use App\Libraries\SectorIds;
 use App\Models\Lookups\CategoryModel;
 use App\Models\Lookups\SectorModel;
 use App\Models\Lookups\ServiceModel;
@@ -131,7 +130,7 @@ class SectorController extends BaseController
             return $this->redirectAdmin('admin/sectors', 'error', 'Sector table is not available.');
         }
 
-        if ($this->sectorIsUsed($sectorId)) {
+        if ($model->isInUse($sectorId)) {
             return $this->redirectAdmin('admin/sectors', 'error', 'This sector is already used by one or more records and cannot be deleted.');
         }
 
@@ -217,23 +216,6 @@ class SectorController extends BaseController
         $message = $isUpdate ? 'Sector updated successfully.' : 'Sector added successfully.';
 
         return $this->redirectAdmin('admin/sectors', 'success', $message);
-    }
-
-    /**
-     * True if any `member` row references this sector ID (sectorID stores a JSON
-     * array, matched via SectorIds::containsCondition). Guards archive/delete.
-     */
-    private function sectorIsUsed(int $sectorId): bool
-    {
-        $db = db_connect();
-
-        if (! $db->tableExists('member')) {
-            return false;
-        }
-
-        return $db->table('member')
-            ->where(SectorIds::containsCondition($sectorId, 'sectorID'), null, false)
-            ->countAllResults() > 0;
     }
 
     /**

@@ -110,7 +110,7 @@ final class FamilyDataTableTest extends TestCase
         $this->assertSame(3, substr_count($routes, "'data', 'Families\\FamilyDataTableController::dataTable'"));
     }
 
-    public function testQrColumnRendersControlNumberBadge(): void
+    public function testQrColumnRendersPlainControlNumberText(): void
     {
         $controller = (string) file_get_contents(APPPATH . 'Controllers/Families/FamilyDataTableController.php');
         $presenter  = (string) file_get_contents(APPPATH . 'Libraries/FamilyDataTablePresenter.php');
@@ -119,10 +119,10 @@ final class FamilyDataTableTest extends TestCase
         $this->assertStringContainsString('controlsForHeads(', $controller);
         // ...the row exposes a dedicated 'qr' cell built by the presenter's qrCell()...
         $this->assertStringContainsString("'qr' => \$this->qrCell(\$controlNo)", $presenter);
-        // ...which renders a modest Bootstrap badge with the padded number, dash when unmapped.
-        $this->assertStringContainsString('badge bg-light text-dark border fw-semibold fs-6 text-nowrap', $presenter);
+        // ...which renders escaped plain text that inherits the row typography.
+        $this->assertStringContainsString('return esc(ControlNumber::format($controlNo));', $presenter);
+        $this->assertStringNotContainsString('badge bg-light text-dark border fw-semibold fs-6 text-nowrap', $presenter);
         $this->assertStringNotContainsString(" . '#'", $presenter);
-        $this->assertStringContainsString('ControlNumber::format($controlNo)', $presenter);
         $this->assertStringContainsString('&mdash;', $presenter);
     }
 

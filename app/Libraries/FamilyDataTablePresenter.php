@@ -77,18 +77,14 @@ class FamilyDataTablePresenter
         return $payload;
     }
 
-    /**
-     * QR NO. cell: a modest Bootstrap badge with the zero-padded control number,
-     * or a muted dash when the family has no QR mapping yet.
-     */
+    /** QR NO. cell: plain row text, or a muted dash when no mapping exists. */
     private function qrCell(int $controlNo): string
     {
         if ($controlNo <= 0) {
             return '<span class="text-muted">&mdash;</span>';
         }
 
-        return '<span class="badge bg-light text-dark border fw-semibold fs-6 text-nowrap">'
-            . esc(ControlNumber::format($controlNo)) . '</span>';
+        return esc(ControlNumber::format($controlNo));
     }
 
     /** "Surname Suffix, Firstname M." display name for a member row. */

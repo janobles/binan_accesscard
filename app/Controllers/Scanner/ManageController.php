@@ -8,6 +8,7 @@ use App\Libraries\SessionAccount;
 use App\Models\Audit\AuditTrailsModel;
 use App\Models\Scanner\AidDistributionModel;
 use App\Models\Scanner\AidTypeModel;
+use App\Models\Scanner\DistributionBatchModel;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
 
@@ -37,6 +38,8 @@ class ManageController extends BaseController
             'accountLevelLabel' => SessionAccount::levelLabel(),
             'aidTypes'          => model(AidTypeModel::class)->all(),
             'distributions'     => model(AidDistributionModel::class)->allDistributions(),
+            'batches'           => model(DistributionBatchModel::class)->allBatches(),
+            'activeBatch'       => model(DistributionBatchModel::class)->activeBatch(),
             'currentRole'       => $role,
             'canManageAccounts' => $canManage,
             'sidebarRoleClass'  => strtolower($role),
@@ -153,6 +156,47 @@ class ManageController extends BaseController
         );
 
         return redirect()->to('scanner/manage')->with('success', 'Distribution voided.');
+    }
+
+    /** POST scanner/batches/open — Admin/Developer only. */
+    public function openBatch(): RedirectResponse
+    {
+        $guard = RoleAccess::requireRole(['Admin', 'Developer']);
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        $name = trim((string) $this->request->getPost('name'));
+        if ($name === '') {
+            return redirect()->to('scanner/manage')->with('error', 'Batch name is required.');
+        }
+
+        $id = model(DistributionBatchModel::class)->open($name, (int) (session('user_id') ?? 0));
+        if ($id <= 0) {
+            return redirect()->to('scanner/manage')->with('error', 'Unable to open batch. Close the active batch first.');
+        }
+
+        $this->audit('Opened distribution batch "' . $name . '" #' . $id);
+
+        return redirect()->to('scanner/manage')->with('success', 'Batch opened. Scanning is now live.');
+    }
+
+    /** POST scanner/batches/close/{id} — Admin/Developer only. Manual reset. */
+    public function closeBatch(int $id): RedirectResponse
+    {
+        $guard = RoleAccess::requireRole(['Admin', 'Developer']);
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        $batch = model(DistributionBatchModel::class)->find($id);
+        if (! model(DistributionBatchModel::class)->close($id)) {
+            return redirect()->to('scanner/manage')->with('error', 'Unable to close batch.');
+        }
+
+        $this->audit('Closed distribution batch "' . (string) ($batch['name'] ?? '') . '" #' . $id);
+
+        return redirect()->to('scanner/manage')->with('success', 'Batch closed. Statistics reset for the next batch.');
     }
 
     /** Write an audit_trails row for the acting scanner. */

@@ -1,23 +1,11 @@
-<?= $this->extend('Scanner/layout') ?>
+<?= $this->extend('Scanner/kiosk-layout') ?>
 <?= $this->section('content') ?>
 
 <div class="card border-0 rounded-3 mb-3">
   <div class="card-body">
     <div class="row g-3 align-items-end">
-      <div class="col-md-4">
-        <label for="sessionAidType" class="form-label fw-bold">1. Aid type to distribute</label>
-        <select class="form-select form-select-lg" id="sessionAidType">
-          <option value="">Choose aid type&hellip;</option>
-          <?php foreach ($aidTypes as $type): ?>
-            <option value="<?= esc($type['aid_type_id']) ?>"><?= esc($type['name']) ?></option>
-          <?php endforeach; ?>
-        </select>
-        <div id="aidTypeHint" class="small text-danger mt-1" hidden>
-          Choose an aid type first, then scan.
-        </div>
-      </div>
-      <div class="col-md-8">
-        <label for="controlInput" class="form-label fw-bold">2. Scan or enter QR control number</label>
+      <div class="col-12">
+        <label for="controlInput" class="form-label fw-bold">Scan or enter QR control number</label>
         <div class="input-group input-group-lg">
           <input type="text" inputmode="numeric" autocomplete="off" class="form-control"
                  id="controlInput" placeholder="e.g. 42" autofocus>
@@ -59,7 +47,7 @@
           <div class="fw-bold mb-2">Log Distribution</div>
           <form id="logForm">
             <input type="hidden" id="control_no" name="control_no">
-            <input type="hidden" id="aid_type_id" name="aid_type_id">
+            <input type="hidden" id="aid_type_id" name="aid_type_id" value="<?= esc($aidType['aid_type_id'], 'attr') ?>">
             <div id="dupAlert" class="alert alert-warning" hidden></div>
             <div class="mb-3">
               <label for="claim_date" class="form-label">Date</label>
@@ -101,19 +89,12 @@
 <?= $this->section('scripts') ?>
 <script>
 const BASE = '<?= rtrim(base_url(), '/') ?>';
+const AID_TYPE_NAME = <?= json_encode((string) $aidType['name'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 let lastHistory = [];
 let lastLoggedAidId = null;
-
-// Draw the eye to the aid type until one is chosen; the scan input takes
-// over once the session is set up.
-function syncAidEmphasis() {
-  const unset = !$('sessionAidType').value;
-  $('sessionAidType').classList.toggle('scan-attn', unset);
-  $('controlInput').classList.toggle('scan-muted', unset);
-}
 
 // Empty-state zone doubles as the error surface: idle prompt by default,
 // warning icon + message when a lookup fails.
@@ -132,17 +113,11 @@ function showEmpty(error) {
 }
 
 async function lookup(control) {
-  if (!$('sessionAidType').value) {
-    $('aidTypeHint').hidden = false;
-    $('sessionAidType').focus();
-    return;
-  }
   // Auto-clear: hardware scanners type code + Enter but never clear the
   // field; clearing here keeps consecutive scans from concatenating.
   $('controlInput').value = '';
   $('controlInput').focus();
   $('controlInput').classList.remove('is-invalid');
-  $('aidTypeHint').hidden = true;
   $('receiptPanel').hidden = true;
   $('familyColumn').classList.remove('scan-dimmed');
   $('logPanel').hidden = false;
@@ -173,7 +148,6 @@ async function lookup(control) {
     data.members.map(m => `<option value="${esc(m.memberID)}">${esc(m.firstname)} ${esc(m.lastname)} (${esc(m.relationship || 'Member')})</option>`).join('');
   $('memberID').value = String(data.head.memberID);
   $('control_no').value = data.control_no;
-  $('aid_type_id').value = $('sessionAidType').value;
   lastHistory = data.history;
   evaluateDuplicate(lastHistory);
   if (!$('claim_date').value) { $('claim_date').value = todayStr(); }
@@ -197,8 +171,8 @@ function todayStr() {
 }
 
 function evaluateDuplicate(history) {
-  const aidId = $('sessionAidType').value;
-  const aidName = $('sessionAidType').selectedOptions[0]?.text || 'this aid';
+  const aidId = $('aid_type_id').value;
+  const aidName = AID_TYPE_NAME;
   const dupe = (history || []).some(r =>
     String(r.aid_type_id) === String(aidId) && String(r.claim_date) === todayStr());
   if (dupe) {
@@ -241,14 +215,6 @@ $('controlInput').addEventListener('keydown', (e) => {
     $('logForm').requestSubmit();
   }
 });
-$('sessionAidType').addEventListener('change', () => {
-  if (!$('familyPanel').hidden) {
-    $('aid_type_id').value = $('sessionAidType').value;
-    evaluateDuplicate(lastHistory);
-  }
-  syncAidEmphasis();
-});
-
 // Focus guard: a stray click must never break the gun flow. Any printable
 // key typed outside a form control re-arms the scan input.
 window.addEventListener('keydown', (e) => {
@@ -272,12 +238,15 @@ $('logForm').addEventListener('submit', async (e) => {
       $('fieldErrors').innerHTML = Object.values(errs).map(m => `<div>${esc(m)}</div>`).join('');
       return;
     }
-    const aidName = $('sessionAidType').selectedOptions[0]?.text || 'Aid';
+    const aidName = AID_TYPE_NAME;
     const claimant = $('memberID').selectedOptions[0]?.text || '';
     lastLoggedAidId = $('aid_type_id').value;
     showReceipt(`${aidName} → ${claimant} (Family #${$('control_no').value}), ${fd.get('claim_date')}`);
     lastHistory = data.history;
     renderHistory(data.history);
+    if (typeof data.myBatchCount === 'number') {
+      document.getElementById('myBatchCount').textContent = String(data.myBatchCount);
+    }
     lastLoggedAidId = null;
     $('controlInput').value = '';
     $('controlInput').focus();
@@ -314,7 +283,5 @@ $('cameraBtn').addEventListener('click', () => {
       showEmpty('Camera unavailable. Check permissions or use manual entry.');
     });
 });
-
-syncAidEmphasis();
 </script>
 <?= $this->endSection() ?>

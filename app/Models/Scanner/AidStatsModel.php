@@ -6,8 +6,9 @@ use CodeIgniter\Model;
 
 /**
  * Read-only aid-distribution statistics for the Reports tab. Every method is
- * scoped to an optional [from, to] claim_date window and returns a safe empty
- * shape on any DB error, matching the scanner module's no-DB test posture.
+ * scoped to an optional [from, to] claim_date window and/or a distribution
+ * batch, and returns a safe empty shape on any DB error, matching the scanner
+ * module's no-DB test posture.
  * "Received" is defined at the family (head) level: a family counts as having
  * received aid when any scan under its control_no produced a distribution row.
  */
@@ -18,9 +19,12 @@ class AidStatsModel extends Model
     protected $returnType    = 'array';
     protected $useTimestamps = false;
 
-    /** Applies the optional date window to aid_distribution.claim_date. */
-    private function applyRange($builder, ?string $from, ?string $to)
+    /** Applies the optional date window and/or batch scope to aid_distribution. */
+    private function applyScope($builder, ?string $from, ?string $to, ?int $batchId)
     {
+        if ($batchId !== null && $batchId > 0) {
+            $builder->where('aid_distribution.batch_id', $batchId);
+        }
         if ($from !== null && $from !== '') {
             $builder->where('aid_distribution.claim_date >=', $from . ' 00:00:00');
         }
@@ -37,7 +41,7 @@ class AidStatsModel extends Model
     }
 
     /** Family-level received vs not-yet counts + coverage percent. */
-    public function receivedVsNot(?string $from = null, ?string $to = null): array
+    public function receivedVsNot(?string $from = null, ?string $to = null, ?int $batchId = null): array
     {
         try {
             $total = (int) $this->db->table('qr_control')
@@ -49,7 +53,7 @@ class AidStatsModel extends Model
                 ->select('qr_control.headID')
                 ->join('aid_distribution', 'aid_distribution.control_no = qr_control.control_no')
                 ->groupBy('qr_control.headID');
-            $this->applyRange($b, $from, $to);
+            $this->applyScope($b, $from, $to, $batchId);
             $received = count($b->get()->getResultArray());
 
             return [
@@ -64,7 +68,7 @@ class AidStatsModel extends Model
     }
 
     /** Per-barangay family totals + received + coverage. */
-    public function byBarangay(?string $from = null, ?string $to = null): array
+    public function byBarangay(?string $from = null, ?string $to = null, ?int $batchId = null): array
     {
         try {
             $barangayExpr = $this->db->fieldExists('barangay', 'member')
@@ -85,7 +89,7 @@ class AidStatsModel extends Model
                     . ' COUNT(DISTINCT qr_control.headID) AS received')
                 ->join('member', 'member.memberID = qr_control.headID', 'left')
                 ->join('aid_distribution', 'aid_distribution.control_no = qr_control.control_no');
-            $this->applyRange($rb, $from, $to);
+            $this->applyScope($rb, $from, $to, $batchId);
             $recv = [];
             foreach ($rb->groupBy('barangay')->get()->getResultArray() as $r) {
                 $recv[$r['barangay']] = (int) $r['received'];
@@ -110,13 +114,13 @@ class AidStatsModel extends Model
     }
 
     /** Handout counts per aid type, within the date window, busiest first. */
-    public function byAidType(?string $from = null, ?string $to = null): array
+    public function byAidType(?string $from = null, ?string $to = null, ?int $batchId = null): array
     {
         try {
             $b = $this->db->table('aid_type')
                 ->select('aid_type.name AS aid_type, COUNT(aid_distribution.aidID) AS count')
                 ->join('aid_distribution', 'aid_distribution.aid_type_id = aid_type.aid_type_id', 'left');
-            $this->applyRange($b, $from, $to);
+            $this->applyScope($b, $from, $to, $batchId);
             $rows = $b->groupBy('aid_type.aid_type_id')
                 ->orderBy('count', 'DESC')
                 ->orderBy('aid_type.name', 'ASC')
@@ -126,6 +130,43 @@ class AidStatsModel extends Model
                 'aid_type' => (string) $r['aid_type'],
                 'count'    => (int) $r['count'],
             ], $rows);
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
+
+    /**
+     * Per-scanner performance within one batch: handouts logged and distinct
+     * families (control numbers) served, most families first. $onlyUserId
+     * narrows to a single user for the scanner-role reports view.
+     */
+    public function perScanner(int $batchId, ?int $onlyUserId = null): array
+    {
+        if ($batchId <= 0) {
+            return [];
+        }
+
+        try {
+            $b = $this->db->table('aid_distribution')
+                ->select('aid_distribution.userID,'
+                    . " COALESCE(users.username, 'Unknown') AS scanner,"
+                    . ' COUNT(aid_distribution.aidID) AS handouts,'
+                    . ' COUNT(DISTINCT aid_distribution.control_no) AS families')
+                ->join('users', 'users.userID = aid_distribution.userID', 'left')
+                ->where('aid_distribution.batch_id', $batchId)
+                ->groupBy('aid_distribution.userID')
+                ->orderBy('families', 'DESC')
+                ->orderBy('scanner', 'ASC');
+            if ($onlyUserId !== null) {
+                $b->where('aid_distribution.userID', $onlyUserId);
+            }
+
+            return array_map(static fn ($r) => [
+                'userID'   => (int) $r['userID'],
+                'scanner'  => (string) $r['scanner'],
+                'handouts' => (int) $r['handouts'],
+                'families' => (int) $r['families'],
+            ], $b->get()->getResultArray());
         } catch (\Throwable $e) {
             return [];
         }

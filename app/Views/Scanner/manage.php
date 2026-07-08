@@ -8,6 +8,7 @@
 <ul class="nav nav-tabs manage-tabs mb-0" role="tablist">
   <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-dist" type="button" role="tab">All Distributions</button></li>
   <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-types" type="button" role="tab">Aid Types</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-batches" type="button" role="tab">Batches</button></li>
 </ul>
 
 <div class="tab-content">
@@ -31,6 +32,17 @@
         'cardClass' => 'sector-management records-scroll-panel',
         'bodyView' => 'Scanner/manage-aidtypes-body',
         'bodyData' => ['aidTypes' => $aidTypes],
+    ]) ?>
+  </div>
+
+  <!-- Distribution batches -->
+  <div class="tab-pane fade" id="tab-batches" role="tabpanel">
+    <?= view('components/card', [
+        'icon' => 'collection',
+        'title' => 'Distribution Batches',
+        'cardClass' => 'sector-management records-scroll-panel',
+        'bodyView' => 'Scanner/manage-batches-body',
+        'bodyData' => ['batches' => $batches, 'activeBatch' => $activeBatch, 'currentRole' => $currentRole],
     ]) ?>
   </div>
 </div>

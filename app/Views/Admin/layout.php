@@ -77,7 +77,6 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
             'canManageAccounts' => $canManageAccounts,
             'sidebarRoleClass' => $sidebarRoleClass,
             'sidebarUserUrl' => $sidebarUserUrl,
-            'sidebarScannerOnly' => false,
         ]) ?>
     </div>
     <div id="layoutSidenav_content">

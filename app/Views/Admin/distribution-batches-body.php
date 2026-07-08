@@ -2,7 +2,7 @@
 /**
  * Distribution Batches pane: active-batch banner + open/close controls + past
  * list. Ported from Scanner/manage-batches-body.php for the admin distribution
- * hub (routes moved from scanner/batches/* to admin/batches/*). Opening a
+ * hub (routes moved off the old scanner shell to admin/batches/*). Opening a
  * batch now requires choosing an aid type ($activeAidTypes); each batch row
  * shows its bound aid type. Lifecycle buttons render only for Admin/Developer.
  * Rendered inside components/card by Admin/layout.php's distribution block.

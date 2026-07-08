@@ -2,7 +2,7 @@
 /**
  * Distributions log body: client-side filter toolbar + distributions table.
  * Ported from Scanner/manage-distributions-body.php for the admin
- * distribution hub (void action moved from scanner/distributions/void/*
+ * distribution hub (void action moved off the old scanner shell
  * to admin/distributions/void/*). Rendered inside components/card by
  * Admin/layout.php's distribution block (vars: distributions, aidTypes). Filtering/paging
  * handled by the inline script in Admin/layout.php's distribution block.

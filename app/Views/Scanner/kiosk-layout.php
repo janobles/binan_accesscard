@@ -3,7 +3,7 @@
  * Kiosk shell for the scan flow (setting + scan pages): full-viewport, no
  * sidebar/topbar. Deliberately minimal for time-and-motion — one slim header
  * bar (batch · aid type · live personal counter · change-type · logout) and
- * the page content. Reports and Manage stay in Scanner/layout (dashboard shell).
+ * the page content. Reports and stats stay in the admin dashboard shell.
  */
 $pageTitle          = $pageTitle ?? 'Scan';
 $username           = $username ?? 'Scanner';
@@ -23,7 +23,7 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
     <?php endforeach; ?>
 </head>
 <body>
-<nav class="navbar navbar-dark bg-dark px-3">
+<nav class="navbar navbar-dark px-3" style="background-color: var(--binan-green);">
   <span class="navbar-brand mb-0 h1">
     <i class="bi bi-qr-code-scan me-1" aria-hidden="true"></i>
     <?= $activeBatch !== null ? esc($activeBatch['name']) : 'No active batch' ?>

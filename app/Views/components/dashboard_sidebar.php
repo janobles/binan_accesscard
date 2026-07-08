@@ -2,41 +2,24 @@
 /**
  * Shared dashboard sidebar (SB Admin 1 sb-sidenav), role-aware.
  *
- * Admin/Developer get the FULL admin nav (all sections). Scanner-role users
- * get an isolated two-tab sidebar (Scan + Manage Distributions) — this
- * isolation is a security boundary, not just a UI preference.
+ * Admin/Developer get the FULL admin nav (all sections). Kiosk pages render
+ * via Scanner/kiosk-layout (no sidebar) and never use this component.
  *
  * Layouts must render this inside #layoutSidenav_nav. The brand link lives in
  * the topnav partial (Partials/dashboard-topnav), not here.
  *
  * Variables (all defaulted defensively):
- * - $sidebarScannerOnly bool   true => render scanner-only variant
  * - $navActive          array  active-state map for full admin nav
  * - $canManageAccounts  bool   shows Account Management link
  * - $sidebarRoleClass   string 'developer' | 'admin' | 'scanner'
  * - $sidebarUserUrl     string accepted for backward compatibility (brand
  *                              moved to the topnav; unused here)
- * - $activeTab           string 'scan' | 'manage' (scanner-only variant)
  */
-$sidebarScannerOnly = $sidebarScannerOnly ?? false;
 $navActive = $navActive ?? [];
 $canManageAccounts = $canManageAccounts ?? false;
-$sidebarRoleClass = $sidebarRoleClass ?? ($sidebarScannerOnly ? 'scanner' : 'admin');
+$sidebarRoleClass = $sidebarRoleClass ?? 'admin';
 $sidebarUserUrl = $sidebarUserUrl ?? site_url('admin/dashboard');
-$activeTab = $activeTab ?? '';
 ?>
-<?php if ($sidebarScannerOnly): ?>
-    <nav class="sb-sidenav accordion sb-sidenav-dark <?= esc($sidebarRoleClass) ?>" id="dashboard-sidebar">
-        <div class="sb-sidenav-menu">
-            <div class="nav">
-                <div class="sb-sidenav-menu-heading">QR Code</div>
-                <a class="nav-link <?= $activeTab === 'scan' ? 'active' : '' ?>" href="<?= site_url('scanner/scan') ?>"><div class="sb-nav-link-icon"><i class="bi bi-upc-scan" aria-hidden="true"></i></div>Scan</a>
-                <a class="nav-link <?= $activeTab === 'manage' ? 'active' : '' ?>" href="<?= site_url('scanner/manage') ?>"><div class="sb-nav-link-icon"><i class="bi bi-clipboard-check-fill" aria-hidden="true"></i></div>Management</a>
-                <a class="nav-link <?= $activeTab === 'reports' ? 'active' : '' ?>" href="<?= site_url('scanner/reports') ?>"><div class="sb-nav-link-icon"><i class="bi bi-bar-chart-fill" aria-hidden="true"></i></div>Reports</a>
-            </div>
-        </div>
-    </nav>
-<?php else: ?>
     <nav class="sb-sidenav accordion sb-sidenav-dark <?= esc($sidebarRoleClass) ?>" id="dashboard-sidebar">
         <div class="sb-sidenav-menu">
             <div class="nav">
@@ -50,9 +33,8 @@ $activeTab = $activeTab ?? '';
                 <a class="nav-link <?= esc($navActive['categories'] ?? '') ?>" href="<?= site_url('admin/categories') ?>"><div class="sb-nav-link-icon"><i class="bi bi-tags-fill" aria-hidden="true"></i></div>Manage Categories</a>
                 <div class="sb-sidenav-menu-heading">QR Code</div>
                 <a class="nav-link <?= esc($navActive['cards'] ?? '') ?>" href="<?= site_url('admin/cards') ?>"><div class="sb-nav-link-icon"><i class="bi bi-qr-code" aria-hidden="true"></i></div>Generate</a>
-                <a class="nav-link <?= esc($navActive['scanner'] ?? '') ?>" href="<?= site_url('scanner/scan') ?>"><div class="sb-nav-link-icon"><i class="bi bi-upc-scan" aria-hidden="true"></i></div>Scan</a>
-                <a class="nav-link <?= esc($navActive['scanner-manage'] ?? '') ?>" href="<?= site_url('scanner/manage') ?>"><div class="sb-nav-link-icon"><i class="bi bi-clipboard-check-fill" aria-hidden="true"></i></div>Management</a>
-                <a class="nav-link <?= esc($navActive['scanner-reports'] ?? '') ?>" href="<?= site_url('scanner/reports') ?>"><div class="sb-nav-link-icon"><i class="bi bi-bar-chart-fill" aria-hidden="true"></i></div>Reports</a>
+                <a class="nav-link <?= esc($navActive['distribution'] ?? '') ?>" href="<?= site_url('admin/distribution') ?>"><div class="sb-nav-link-icon"><i class="bi bi-clipboard-check-fill" aria-hidden="true"></i></div>Distribution</a>
+                <a class="nav-link <?= esc($navActive['reports'] ?? '') ?>" href="<?= site_url('admin/reports') ?>"><div class="sb-nav-link-icon"><i class="bi bi-bar-chart-fill" aria-hidden="true"></i></div>Reports</a>
                 <div class="sb-sidenav-menu-heading">Administration</div>
                 <?php if ($canManageAccounts): ?>
                 <a class="nav-link <?= esc($navActive['accounts'] ?? '') ?>" href="<?= site_url('admin/accounts') ?>"><div class="sb-nav-link-icon"><i class="bi bi-person-fill-gear" aria-hidden="true"></i></div>Account Management</a>
@@ -61,4 +43,3 @@ $activeTab = $activeTab ?? '';
             </div>
         </div>
     </nav>
-<?php endif; ?>

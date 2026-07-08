@@ -46,6 +46,29 @@ class ReportsController extends BaseController
         return (new \App\Libraries\DashboardPageBuilder($this->request))->renderAdminPage('reports');
     }
 
+    /** GET admin/reports/stats — JSON snapshot for the live poll (no reload). */
+    public function stats(): ResponseInterface
+    {
+        $g = RoleAccess::requireRole(['Admin', 'Developer']);
+        if ($g instanceof RedirectResponse) {
+            return $this->response->setStatusCode(403)->setJSON(['error' => 'Forbidden.']);
+        }
+
+        $batchModel        = model(DistributionBatchModel::class);
+        $batches           = $batchModel->allBatches();
+        [$batchId]         = $this->resolveBatch($batches, $batchModel->activeBatch());
+        $scope             = $batchId > 0 ? $batchId : null;
+        $stats             = model(AidStatsModel::class);
+
+        return $this->response->setJSON([
+            'received'   => $stats->receivedVsNot($scope),
+            'barangay'   => $stats->byBarangay($scope),
+            'aidType'    => $stats->byAidType($scope),
+            'perScanner' => $batchId > 0 ? $stats->perScanner($batchId) : [],
+            'updated'    => date('c'),
+        ]);
+    }
+
     /** GET admin/reports/pdf — streams the same report as a downloadable PDF. */
     public function pdf(): ResponseInterface
     {

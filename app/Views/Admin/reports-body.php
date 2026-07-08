@@ -151,50 +151,47 @@ foreach ($reportsByBarangay as $b) {
 ) ?></script>
 
 <script src="<?= esc(asset_url('vendor/chart.js/chart.umd.min.js'), 'attr') ?>"></script>
+<script src="<?= esc(asset_url('assets/js/dashboard/scanner-reports.js'), 'attr') ?>"></script>
 <script>
 (function () {
-  var dataEl = document.getElementById('reportsData');
-  var data = dataEl ? JSON.parse(dataEl.textContent) : { received: {}, barangay: [], aidType: [] };
+  // Live poll: fetch fresh stats for the selected batch and repaint charts +
+  // KPI tiles in place (no page reload, so the batch selector and scroll stay put).
+  var statsUrl = '<?= site_url('admin/reports/stats') ?>';
+  var batchId = <?= (int) ($reportsBatchId ?? 0) ?>;
+  if (batchId > 0) { statsUrl += '?batch=' + batchId; }
 
-  var receivedEl = document.getElementById('chartReceived');
-  if (receivedEl && window.Chart) {
-    new Chart(receivedEl, {
-      type: 'doughnut',
-      data: {
-        labels: ['Received', 'Still waiting'],
-        datasets: [{ data: [data.received.received || 0, data.received.notReceived || 0] }],
-      },
-    });
+  function setTile(variant, value) {
+    var el = document.querySelector('.' + variant + ' strong');
+    if (el) { el.textContent = value; }
   }
 
-  var barangayEl = document.getElementById('chartBarangay');
-  if (barangayEl && window.Chart) {
-    new Chart(barangayEl, {
-      type: 'bar',
-      data: {
-        labels: data.barangay.map(function (b) { return b.barangay; }),
-        datasets: [{ label: 'Coverage %', data: data.barangay.map(function (b) { return b.coverage; }) }],
-      },
-      options: { scales: { y: { beginAtZero: true, max: 100 } } },
-    });
+  function apply(d) {
+    if (d.received) {
+      setTile('stat-card--records', d.received.total);
+      setTile('stat-card--members', d.received.received);
+      setTile('stat-card--sectors', d.received.notReceived);
+      setTile('stat-card--services', d.received.coverage + '%');
+    }
+    if (window.ReportsCharts) { window.ReportsCharts.update(d); }
+    var stamp = document.getElementById('lastUpdated');
+    if (stamp) { stamp.textContent = new Date().toLocaleTimeString(); }
   }
 
-  var aidTypeEl = document.getElementById('chartAidType');
-  if (aidTypeEl && window.Chart) {
-    new Chart(aidTypeEl, {
-      type: 'bar',
-      data: {
-        labels: data.aidType.map(function (a) { return a.aid_type; }),
-        datasets: [{ label: 'Handouts', data: data.aidType.map(function (a) { return a.count; }) }],
-      },
-    });
+  function poll() {
+    fetch(statsUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) { if (d) { apply(d); } })
+      .catch(function () {});
   }
 
   var btn = document.getElementById('refreshNow');
-  if (btn) { btn.addEventListener('click', function () { location.reload(); }); }
-  var lastUpdated = document.getElementById('lastUpdated');
-  if (lastUpdated) { lastUpdated.textContent = new Date().toLocaleTimeString(); }
-  // Manual refresh only — a background full-page reload would wipe the batch
-  // selection and scroll position while an admin is reading the report.
+  if (btn) { btn.addEventListener('click', poll); }
+  var stamp = document.getElementById('lastUpdated');
+  if (stamp) { stamp.textContent = new Date().toLocaleTimeString(); }
+
+  // Only poll while the tab is visible; browsers throttle hidden-tab timers anyway.
+  setInterval(function () {
+    if (document.visibilityState === 'visible') { poll(); }
+  }, 5000);
 })();
 </script>

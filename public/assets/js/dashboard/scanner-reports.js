@@ -1,5 +1,6 @@
-/* Builds the three Reports-tab charts from the #reportsData JSON block.
-   No-ops when chart.js or the canvases are absent (e.g. Scan/Manage pages). */
+/* Builds the three Reports charts from the #reportsData JSON block and exposes
+   window.ReportsCharts.update(data) so a poller can repaint them live without a
+   page reload. No-ops when chart.js or the canvases are absent. */
 (function () {
     'use strict';
 
@@ -23,7 +24,7 @@
         return c ? c.getContext('2d') : null;
     }
 
-    // Chart colors come from theme.css CSS variables so the palette stays in one
+    // Chart colors come from theme.css CSS variables so the palette lives in one
     // place; fall back to the SB Admin 1 hex if a var is missing.
     function cssVar(name, fallback) {
         var v = getComputedStyle(document.documentElement).getPropertyValue(name);
@@ -38,30 +39,42 @@
     var trackColor = cssVar('--chart-track', '#dddfeb');
     var gridColor = cssVar('--chart-grid', '#eaecf4');
 
+    // Whole-number axis: never show fractional ticks for handout/family counts.
+    var countScale = {
+        beginAtZero: true,
+        ticks: { precision: 0, stepSize: 1 },
+        grid: { color: gridColor }
+    };
+
+    var charts = {};
+
     var received = ctx('chartReceived');
     if (received && data.received) {
-        new Chart(received, {
-            type: 'doughnut',
+        charts.received = new Chart(received, {
+            type: 'pie',
             data: {
                 labels: ['Received aid', 'Still waiting'],
                 datasets: [{
                     data: [data.received.received || 0, data.received.notReceived || 0],
                     backgroundColor: [palette[0], trackColor],
-                    borderWidth: 0
+                    borderColor: '#fff',
+                    borderWidth: 1
                 }]
             },
             options: { plugins: { legend: { position: 'bottom' } } }
         });
     }
 
-    var barangay = ctx('chartBarangay');
-    if (barangay && Array.isArray(data.barangay)) {
-        // Sort by coverage desc so the barangays that matter sit on top, and grow
-        // the canvas height with the number of bars so labels never overlap.
-        var rows = data.barangay.slice().sort(function (a, b) {
+    function sortedBarangay(rows) {
+        return (rows || []).slice().sort(function (a, b) {
             return (b.coverage - a.coverage) || (b.total - a.total);
         });
-        new Chart(barangay, {
+    }
+
+    var barangay = ctx('chartBarangay');
+    if (barangay && Array.isArray(data.barangay)) {
+        var rows = sortedBarangay(data.barangay);
+        charts.barangay = new Chart(barangay, {
             type: 'bar',
             data: {
                 labels: rows.map(function (b) { return b.barangay; }),
@@ -87,7 +100,7 @@
 
     var aidType = ctx('chartAidType');
     if (aidType && Array.isArray(data.aidType)) {
-        new Chart(aidType, {
+        charts.aidType = new Chart(aidType, {
             type: 'bar',
             data: {
                 labels: data.aidType.map(function (a) { return a.aid_type; }),
@@ -95,17 +108,38 @@
                     label: 'Handouts',
                     data: data.aidType.map(function (a) { return a.count; }),
                     backgroundColor: data.aidType.map(function (a, i) { return palette[i % palette.length]; }),
-                    borderRadius: 3,
-                    maxBarThickness: 90
+                    borderRadius: 4,
+                    maxBarThickness: 64,
+                    categoryPercentage: 0.6
                 }]
             },
             options: {
-                scales: {
-                    y: { beginAtZero: true, ticks: { precision: 0, stepSize: 1 }, grid: { color: gridColor } },
-                    x: { grid: { display: false } }
-                },
+                scales: { y: countScale, x: { grid: { display: false } } },
                 plugins: { legend: { display: false } }
             }
         });
     }
+
+    // Live update: repaint datasets in place from a fresh stats payload.
+    window.ReportsCharts = {
+        update: function (fresh) {
+            if (!fresh) { return; }
+            if (charts.received && fresh.received) {
+                charts.received.data.datasets[0].data = [fresh.received.received || 0, fresh.received.notReceived || 0];
+                charts.received.update();
+            }
+            if (charts.barangay && Array.isArray(fresh.barangay)) {
+                var r = sortedBarangay(fresh.barangay);
+                charts.barangay.data.labels = r.map(function (b) { return b.barangay; });
+                charts.barangay.data.datasets[0].data = r.map(function (b) { return b.coverage; });
+                charts.barangay.update();
+            }
+            if (charts.aidType && Array.isArray(fresh.aidType)) {
+                charts.aidType.data.labels = fresh.aidType.map(function (a) { return a.aid_type; });
+                charts.aidType.data.datasets[0].data = fresh.aidType.map(function (a) { return a.count; });
+                charts.aidType.data.datasets[0].backgroundColor = fresh.aidType.map(function (a, i) { return palette[i % palette.length]; });
+                charts.aidType.update();
+            }
+        }
+    };
 })();

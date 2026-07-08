@@ -16,15 +16,17 @@ class DistributionBatchModel extends Model
     protected $table         = 'distribution_batch';
     protected $primaryKey    = 'batch_id';
     protected $returnType    = 'array';
-    protected $allowedFields = ['name', 'closed_at', 'created_by'];
+    protected $allowedFields = ['name', 'aid_type_id', 'closed_at', 'created_by'];
     protected $useTimestamps = false;
 
     /** The single open batch, or null when none (or on DB error). */
     public function activeBatch(): ?array
     {
         try {
-            $row = $this->where('closed_at', null)
-                ->orderBy('batch_id', 'DESC')
+            $row = $this->select('distribution_batch.*, aid_type.name AS aid_type_name')
+                ->join('aid_type', 'aid_type.aid_type_id = distribution_batch.aid_type_id', 'left')
+                ->where('distribution_batch.closed_at', null)
+                ->orderBy('distribution_batch.batch_id', 'DESC')
                 ->first();
 
             return is_array($row) ? $row : null;
@@ -33,18 +35,19 @@ class DistributionBatchModel extends Model
         }
     }
 
-    /** Opens a batch; refuses when the name is blank or a batch is already open. */
-    public function open(string $name, int $userId): int
+    /** Opens a batch; refuses when name blank, aid type missing, or a batch is open. */
+    public function open(string $name, int $aidTypeId, int $userId): int
     {
         $name = trim($name);
-        if ($name === '' || $this->activeBatch() !== null) {
+        if ($name === '' || $aidTypeId <= 0 || $this->activeBatch() !== null) {
             return 0;
         }
 
         try {
             if ($this->insert([
-                'name'       => $name,
-                'created_by' => $userId > 0 ? $userId : null,
+                'name'        => $name,
+                'aid_type_id' => $aidTypeId,
+                'created_by'  => $userId > 0 ? $userId : null,
             ]) === false) {
                 return 0;
             }
@@ -78,7 +81,10 @@ class DistributionBatchModel extends Model
     public function allBatches(): array
     {
         try {
-            return $this->orderBy('batch_id', 'DESC')->findAll();
+            return $this->select('distribution_batch.*, aid_type.name AS aid_type_name')
+                ->join('aid_type', 'aid_type.aid_type_id = distribution_batch.aid_type_id', 'left')
+                ->orderBy('distribution_batch.batch_id', 'DESC')
+                ->findAll();
         } catch (\Throwable $e) {
             return [];
         }

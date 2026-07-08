@@ -141,6 +141,8 @@ $routes->group('scanner', static function (RouteCollection $routes): void {
     $routes->post('aid-types/restore/(:num)', 'Scanner\ManageController::restoreAidType/$1');
     $routes->post('aid-types/delete/(:num)', 'Scanner\ManageController::deleteAidType/$1');
     $routes->post('distributions/void/(:num)', 'Scanner\ManageController::voidDistribution/$1');
+    $routes->post('batches/open', 'Scanner\ManageController::openBatch');
+    $routes->post('batches/close/(:num)', 'Scanner\ManageController::closeBatch/$1');
     $routes->get('reports', 'Scanner\ReportsController::index');
     $routes->get('reports/pdf', 'Scanner\ReportsController::pdf');
 });

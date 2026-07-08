@@ -1,9 +1,11 @@
 <?php
 /* Server-side PDF body (dompdf, no JS). Same numbers as the Reports tab; the
    barangay coverage is drawn as CSS bars in lieu of a chart. */
-$window = ($from || $to)
-    ? ($from ?: 'start') . ' to ' . ($to ?: 'today')
-    : 'All dates';
+$window = ($batchName ?? null) !== null
+    ? 'Batch: ' . $batchName
+    : (($from || $to)
+        ? ($from ?: 'start') . ' to ' . ($to ?: 'today')
+        : 'All dates');
 ?>
 <?= $this->include('Scanner/pdf/_styles') ?>
 <h1>Aid Distribution Report</h1>
@@ -35,6 +37,22 @@ $window = ($from || $to)
   <?php endif; ?>
   </tbody>
 </table>
+
+<?php if (($perScanner ?? []) !== []): ?>
+<h2>Scanner performance</h2>
+<table class="data">
+  <thead><tr><th>Scanner</th><th>Families served</th><th>Handouts logged</th></tr></thead>
+  <tbody>
+  <?php foreach ($perScanner as $p): ?>
+    <tr>
+      <td><?= esc($p['scanner']) ?></td>
+      <td><?= esc((string) $p['families']) ?></td>
+      <td><?= esc((string) $p['handouts']) ?></td>
+    </tr>
+  <?php endforeach; ?>
+  </tbody>
+</table>
+<?php endif; ?>
 
 <h2>Handouts by aid type</h2>
 <table class="data">

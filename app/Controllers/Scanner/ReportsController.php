@@ -81,17 +81,32 @@ class ReportsController extends BaseController
         }
 
         [$from, $to] = $this->normalizeDates();
-        $stats       = model(AidStatsModel::class);
+
+        [$batchId, $batch] = $this->resolveBatch(model(DistributionBatchModel::class)->allBatches());
+        if ($batch !== null) {
+            [$from, $to] = [null, null];
+        }
+
+        $role          = RoleAccess::normalizeRole((string) session()->get('role'));
+        $isScannerRole = $role === 'Scanner';
+
+        $stats = model(AidStatsModel::class);
+        $scope = $batchId > 0 ? $batchId : null;
+        // Per-scanner table is an Admin/Developer view; scanners get the
+        // batch totals only.
+        $perScanner = ($batchId > 0 && ! $isScannerRole) ? $stats->perScanner($batchId) : [];
 
         $bytes = (new \App\Libraries\Scanner\ReportsPdfGenerator())->generate(
-            $stats->receivedVsNot($from, $to),
-            $stats->byBarangay($from, $to),
-            $stats->byAidType($from, $to),
+            $stats->receivedVsNot($from, $to, $scope),
+            $stats->byBarangay($from, $to, $scope),
+            $stats->byAidType($from, $to, $scope),
             $from,
-            $to
+            $to,
+            $perScanner,
+            $batch['name'] ?? null
         );
 
-        $name = 'aid-report-' . ($from ?: 'start') . '_' . ($to ?: 'today') . '.pdf';
+        $name = 'aid-report-' . ($batchId > 0 ? 'batch' . $batchId : (($from ?: 'start') . '_' . ($to ?: 'today'))) . '.pdf';
 
         return $this->response
             ->setHeader('Content-Type', 'application/pdf')

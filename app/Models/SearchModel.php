@@ -32,8 +32,8 @@ class SearchModel
 
     /**
      * FIRST (quick) Manage Records search: family HEADS only, matched by name/
-     * contact/relationship and sector. Applies the sector + date filters and
-     * resolves sector names. Frontend: the quick search box on Manage Records.
+     * contact/relationship, sector, or exact QR number. Applies the sector + date
+     * filters and resolves sector names. Frontend: the Manage Records search box.
      */
     public function families(string $keyword = '', array $filters = [], int $limit = 25): array
     {
@@ -50,7 +50,15 @@ class SearchModel
         $keyword = $this->normalizeKeyword($keyword);
 
         if ($keyword !== '') {
-            $this->applyMemberKeyword($builder, $keyword, '', ['sectorID'], 'sectorID');
+            $this->applyMemberKeyword(
+                $builder,
+                $keyword,
+                '',
+                ['sectorID'],
+                'sectorID',
+                [],
+                $this->headIdsForQrKeyword($keyword)
+            );
         }
 
         $this->applySectorIdFilter($builder, $filters['sectorID'] ?? [], 'sectorID');
@@ -72,9 +80,9 @@ class SearchModel
      *
      * Unlike families() this is NOT limited to family heads -- it searches every
      * member (heads AND non-head family members). The keyword also matches sector
-     * names and service/program names, so a person can be found by the sector or
-     * assistance they are tied to. Each row carries its head ("belongs to") name,
-     * resolved sector names, and resolved service names.
+     * names, service/program names, and exact QR numbers. A QR match returns the
+     * members under that family head. Each row carries its head ("belongs to")
+     * name, resolved sector names, and resolved service names.
      *
      * Called from App\Libraries\DashboardPageBuilder::buildMemberListData() and
      * Employee\WorkspaceModel::recordListData() when the deep search box (deep_q) is used.
@@ -167,7 +175,15 @@ class SearchModel
             // Match by service/program name -> the members assigned that service.
             $serviceMemberIds = $this->memberIdsForServiceKeyword($keyword);
 
-            $this->applyMemberKeyword($builder, $keyword, 'm.', ['address', 'religion', 'job'], 'm.sectorID', $serviceMemberIds);
+            $this->applyMemberKeyword(
+                $builder,
+                $keyword,
+                'm.',
+                ['address', 'religion', 'job'],
+                'm.sectorID',
+                $serviceMemberIds,
+                $this->headIdsForQrKeyword($keyword)
+            );
         }
 
         $this->applySectorIdFilter($builder, $filters['sectorID'] ?? [], 'm.sectorID');

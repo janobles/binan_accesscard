@@ -221,7 +221,8 @@ class MemberModel extends Model
         return $this->withSectorNames($rows);
     }
 
-    // FIRST (quick) search bar of the Manage Records tab. Lists family HEADS only.
+    // FIRST (quick) search bar of the Manage Records tab. Lists family HEADS only;
+    // an exact QR number also resolves to its mapped head.
     // $filters carries the Manage Records filter controls (sectorID + date); see
     // App\Libraries\DashboardPageBuilder::buildMemberListData() which supplies them.
     //
@@ -304,7 +305,16 @@ class MemberModel extends Model
             ->where('member.memberID = member.headID', null, false);
 
         if ($keyword !== null && trim($keyword) !== '') {
-            $this->applyMemberKeyword($builder, trim($keyword), 'member.', ['religion', 'address', 'barangay'], 'member.sectorID');
+            $keyword = trim($keyword);
+            $this->applyMemberKeyword(
+                $builder,
+                $keyword,
+                'member.',
+                ['religion', 'address', 'barangay'],
+                'member.sectorID',
+                [],
+                $this->headIdsForQrKeyword($keyword)
+            );
         }
 
         $this->applyRecordFilters($builder, $filters);

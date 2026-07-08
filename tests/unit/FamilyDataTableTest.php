@@ -151,4 +151,22 @@ final class FamilyDataTableTest extends TestCase
         $this->assertStringContainsString("case 'newest':", $searchModel);
         $this->assertStringContainsString("orderBy('m.memberID', 'DESC')", $searchModel);
     }
+
+    public function testDatabaseSearchIncludesExactQrNumberMatches(): void
+    {
+        $filters = (string) file_get_contents(APPPATH . 'Models/Concerns/MemberQueryFilters.php');
+        $memberModel = (string) file_get_contents(APPPATH . 'Models/Families/MemberModel.php');
+        $searchModel = (string) file_get_contents(APPPATH . 'Models/SearchModel.php');
+
+        $this->assertStringContainsString('ControlNumber::parse(trim($keyword))', $filters);
+        $this->assertStringContainsString("->where('control_no', \$controlNo)", $filters);
+        $qrGuard = strpos($filters, 'if ($qrHeadIds !== [])');
+        $generalSearch = strpos($filters, "\$tokens = preg_split");
+        $this->assertNotFalse($qrGuard);
+        $this->assertNotFalse($generalSearch);
+        $this->assertLessThan($generalSearch, $qrGuard);
+        $this->assertStringContainsString("whereIn(\$prefix . 'headID', \$qrHeadIds)", $filters);
+        $this->assertStringContainsString('$this->headIdsForQrKeyword($keyword)', $memberModel);
+        $this->assertSame(2, substr_count($searchModel, '$this->headIdsForQrKeyword($keyword)'));
+    }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Models\Concerns;
 
+use App\Libraries\Qr\ControlNumber;
 use App\Libraries\SectorIds;
 use CodeIgniter\Database\BaseBuilder;
 
@@ -18,6 +19,7 @@ trait MemberQueryFilters
      * - the whole keyword may also match contact/relationship/extra fields
      * - sector names are resolved to sector IDs and matched inside sectorID JSON
      * - optional service matches are used by deep search
+     * - an exact QR match takes precedence and includes only that family
      */
     private function applyMemberKeyword(
         BaseBuilder $builder,
@@ -25,8 +27,15 @@ trait MemberQueryFilters
         string $prefix,
         array $likeColumns,
         string $sectorColumn,
-        array $serviceMemberIds = []
+        array $serviceMemberIds = [],
+        array $qrHeadIds = []
     ): void {
+        if ($qrHeadIds !== []) {
+            $builder->whereIn($prefix . 'headID', $qrHeadIds);
+
+            return;
+        }
+
         $tokens = preg_split('/\s+/', $keyword, -1, PREG_SPLIT_NO_EMPTY) ?: [$keyword];
         $nameColumns = $this->existingMemberColumns(['firstname', 'middlename', 'lastname', 'suffix']);
 
@@ -87,6 +96,25 @@ trait MemberQueryFilters
 
         $builder->groupEnd();
         $builder->groupEnd();
+    }
+
+    /** Resolves an exact, digits-only QR number to its family head. */
+    private function headIdsForQrKeyword(string $keyword): array
+    {
+        $controlNo = ControlNumber::parse(trim($keyword));
+
+        if ($controlNo === null || ! $this->db->tableExists('qr_control')) {
+            return [];
+        }
+
+        return array_map(
+            static fn (array $row): int => (int) $row['headID'],
+            $this->db->table('qr_control')
+                ->select('headID')
+                ->where('control_no', $controlNo)
+                ->get()
+                ->getResultArray()
+        );
     }
 
     /** Adds the shared sectorID filter for member queries. */

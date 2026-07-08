@@ -36,52 +36,32 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
     <link rel="stylesheet" href="<?= esc(asset_url($stylePath), 'attr') ?>">
     <?php endforeach; ?>
 </head>
-<body>
-<div id="wrapper">
-    <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion viewer" id="dashboard-sidebar">
-        <li class="sidebar-brand-wrap">
-            <a class="sidebar-brand d-flex align-items-center justify-content-center" href="<?= site_url('viewer/dashboard') ?>">
-                <img class="sidebar-brand-icon" src="<?= esc(asset_url('assets/image/binan.png'), 'attr') ?>" alt="City of Binan Logo">
-                <span class="sidebar-brand-text mx-2">Bi&ntilde;an Access Card MIS<small>Viewer</small></span>
-            </a>
-        </li>
-        <li><hr class="sidebar-divider my-0"></li>
-        <li class="nav-item">
-            <a class="nav-link <?= esc($navActive['dashboard'] ?? '') ?>" href="<?= site_url('viewer/dashboard') ?>"><i class="bi bi-speedometer2" aria-hidden="true"></i><span>Dashboard</span></a>
-        </li>
-        <li><hr class="sidebar-divider"></li>
-        <li><div class="sidebar-heading">Records</div></li>
-        <li class="nav-item">
-            <a class="nav-link <?= esc($navActive['family-manage'] ?? '') ?>" href="<?= site_url('viewer/manage-records') ?>"><i class="bi bi-people" aria-hidden="true"></i><span>Manage Records</span></a>
-        </li>
-        <li><hr class="sidebar-divider"></li>
-        <li><div class="sidebar-heading">Reference Data</div></li>
-        <li class="nav-item">
-            <a class="nav-link <?= esc($navActive['sectors'] ?? '') ?>" href="<?= site_url('viewer/sectors') ?>"><i class="bi bi-diagram-3" aria-hidden="true"></i><span>Sectors</span></a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link <?= esc($navActive['services'] ?? '') ?>" href="<?= site_url('viewer/services') ?>"><i class="bi bi-grid" aria-hidden="true"></i><span>Services and Programs</span></a>
-        </li>
-    </ul>
-
-    <div id="content-wrapper" class="d-flex flex-column">
-        <div id="content">
-            <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow-sm">
-                <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle me-3" type="button" aria-label="Toggle navigation menu" aria-controls="dashboard-sidebar" aria-expanded="false">
-                    <i class="bi bi-list" aria-hidden="true"></i>
-                </button>
-                <div class="topbar-title">
-                    <div>
-                        <h1 id="dashboard-page-title"><?= esc($pageTitle) ?></h1>
-                    </div>
+<body class="sb-nav-fixed">
+<?= view('Partials/dashboard-topnav', [
+    'brandUrl' => site_url('viewer/dashboard'),
+    'user' => $user,
+    'username' => $username,
+    'accountLevelLabel' => $accountLevelLabel,
+]) ?>
+<div id="layoutSidenav">
+    <div id="layoutSidenav_nav">
+        <nav class="sb-sidenav accordion sb-sidenav-dark viewer" id="dashboard-sidebar">
+            <div class="sb-sidenav-menu">
+                <div class="nav">
+                    <div class="sb-sidenav-menu-heading">Core</div>
+                    <a class="nav-link <?= esc($navActive['dashboard'] ?? '') ?>" href="<?= site_url('viewer/dashboard') ?>"><div class="sb-nav-link-icon"><i class="bi bi-speedometer2" aria-hidden="true"></i></div>Dashboard</a>
+                    <div class="sb-sidenav-menu-heading">Records</div>
+                    <a class="nav-link <?= esc($navActive['family-manage'] ?? '') ?>" href="<?= site_url('viewer/manage-records') ?>"><div class="sb-nav-link-icon"><i class="bi bi-people-fill" aria-hidden="true"></i></div>Manage Records</a>
+                    <div class="sb-sidenav-menu-heading">Reference Data</div>
+                    <a class="nav-link <?= esc($navActive['sectors'] ?? '') ?>" href="<?= site_url('viewer/sectors') ?>"><div class="sb-nav-link-icon"><i class="bi bi-diagram-3-fill" aria-hidden="true"></i></div>Sectors</a>
+                    <a class="nav-link <?= esc($navActive['services'] ?? '') ?>" href="<?= site_url('viewer/services') ?>"><div class="sb-nav-link-icon"><i class="bi bi-grid-fill" aria-hidden="true"></i></div>Services and Programs</a>
                 </div>
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item topbar-divider d-none d-sm-block"></li>
-                    <?= view('Partials/topbar-account-menu', ['user' => $user, 'username' => $username, 'accountLevelLabel' => $accountLevelLabel]) ?>
-                </ul>
-            </nav>
-
-            <main class="container-fluid dashboard-content">
+            </div>
+        </nav>
+    </div>
+    <div id="layoutSidenav_content">
+            <main class="container-fluid px-4 dashboard-content">
+            <h1 class="mt-4" id="dashboard-page-title"><?= esc($pageTitle) ?></h1>
             <?php if (session()->getFlashdata('success')): ?>
                 <div class="alert alert-success" data-auto-dismiss-alert><?= esc(session()->getFlashdata('success')) ?></div>
             <?php endif; ?>
@@ -94,61 +74,50 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
             <?php if ($activePage === 'dashboard'): ?>
                 <div class="dashboard-overview" data-dashboard-overview>
                     <section class="overview-stats" aria-label="Dashboard statistics">
-                        <article class="stat-card stat-card--records card shadow-sm h-100 py-2">
-                            <div class="card-body">
-                                <div class="stat-card-content">
-                                    <div><p>Total Records</p><strong><?= esc((string) ($stats['families'] ?? 0)) ?></strong></div>
-                                    <i class="bi bi-folder2-open stat-card-icon" aria-hidden="true"></i>
-                                </div>
-                            </div>
-                        </article>
-                        <article class="stat-card stat-card--members card shadow-sm h-100 py-2">
-                            <div class="card-body">
-                                <div class="stat-card-content">
-                                    <div><p>Registered Members</p><strong><?= esc((string) ($stats['members'] ?? 0)) ?></strong></div>
-                                    <i class="bi bi-people stat-card-icon" aria-hidden="true"></i>
-                                </div>
-                            </div>
-                        </article>
-                        <article class="stat-card stat-card--sectors card shadow-sm h-100 py-2">
-                            <div class="card-body">
-                                <div class="stat-card-content">
-                                    <div><p>Active Sectors</p><strong><?= esc((string) ($stats['sectors'] ?? 0)) ?></strong></div>
-                                    <i class="bi bi-diagram-3 stat-card-icon" aria-hidden="true"></i>
-                                </div>
-                            </div>
-                        </article>
-                        <article class="stat-card stat-card--services card shadow-sm h-100 py-2">
-                            <div class="card-body">
-                                <div class="stat-card-content">
-                                    <div><p>Services and Programs</p><strong><?= esc((string) ($stats['assistance'] ?? 0)) ?></strong></div>
-                                    <i class="bi bi-grid stat-card-icon" aria-hidden="true"></i>
-                                </div>
-                            </div>
-                        </article>
+                        <?= view('components/stat_card', [
+                            'label' => 'Total Records',
+                            'value' => (string) ($stats['families'] ?? 0),
+                            'icon' => 'folder-fill',
+                            'variant' => 'stat-card--records',
+                        ]) ?>
+                        <?= view('components/stat_card', [
+                            'label' => 'Registered Members',
+                            'value' => (string) ($stats['members'] ?? 0),
+                            'icon' => 'people-fill',
+                            'variant' => 'stat-card--members',
+                        ]) ?>
+                        <?= view('components/stat_card', [
+                            'label' => 'Active Sectors',
+                            'value' => (string) ($stats['sectors'] ?? 0),
+                            'icon' => 'diagram-3-fill',
+                            'variant' => 'stat-card--sectors',
+                        ]) ?>
+                        <?= view('components/stat_card', [
+                            'label' => 'Services and Programs',
+                            'value' => (string) ($stats['assistance'] ?? 0),
+                            'icon' => 'grid-fill',
+                            'variant' => 'stat-card--services',
+                        ]) ?>
                     </section>
 
-                    <div class="panel dashboard-table-panel">
-                        <div class="section-title mt-0">
-                            <span>Recently Added Records</span>
-                        </div>
-                        <div class="table-responsive">
-                            <table class="table table-sm overview-table">
-                                <thead><tr><th>Name (Head)</th><th>Sector</th></tr></thead>
-                                <tbody>
-                                    <?php foreach ($recentFamilies as $family): ?>
-                                        <tr>
-                                            <td><span class="entity-title"><?= esc(mb_strtoupper(trim(($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? '')), 'UTF-8')) ?></span></td>
-                                            <td><?= view('Partials/sector-label-list', ['sectorLabel' => mb_strtoupper((string) ($family['sector_name'] ?? ''), 'UTF-8')]) ?></td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                    <?php if ($recentFamilies === []): ?>
-                                        <tr><td colspan="2" class="text-center text-muted">No records yet.</td></tr>
-                                    <?php endif; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+                    <?php
+                    $recentFamilyRows = [];
+                    foreach ($recentFamilies as $family) {
+                        $recentFamilyRows[] = [
+                            '<span class="entity-title">' . esc(mb_strtoupper(trim(($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? '')), 'UTF-8')) . '</span>',
+                            view('Partials/sector-label-list', ['sectorLabel' => mb_strtoupper((string) ($family['sector_name'] ?? ''), 'UTF-8')]),
+                        ];
+                    }
+                    ?>
+                    <?= view('components/data_table', [
+                        'icon' => 'table',
+                        'title' => 'Recently Added Records',
+                        'columns' => ['Name (Head)', 'Sector'],
+                        'rows' => $recentFamilyRows,
+                        'emptyMessage' => 'No records yet.',
+                        'tableClass' => 'table overview-table mb-0',
+                        'cardClass' => 'dashboard-table-panel',
+                    ]) ?>
                 </div>
             <?php endif; ?>
 
@@ -172,31 +141,22 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
                 ]) ?>
             <?php endif; ?>
             </main>
-        </div>
     </div>
 </div>
 
 <?php /* Shared modal target for the read-only "View Record" fragment loaded by
          assets/js/dashboard/manage-family-modal.js (?partial=1 fetch). */ ?>
-<div class="modal fade floating-family-modal" id="familyModal" tabindex="-1" aria-label="Record details" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
-    <div class="modal-dialog modal-dialog-centered modal-xl">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="familyModalLabel">Record</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body" id="familyModalBody">
-                <div class="family-modal-loading" role="status" aria-live="polite">
-                    <div class="spinner-border text-primary" aria-hidden="true"></div>
-                    <span>Loading...</span>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary family-modal-close" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
+<?= view('components/modal', [
+    'id' => 'familyModal',
+    'modalClass' => 'floating-family-modal',
+    'attrs' => 'aria-label="Record details" data-bs-backdrop="static" data-bs-keyboard="false"',
+    'size' => 'modal-xl',
+    'title' => 'Record',
+    'titleId' => 'familyModalLabel',
+    'bodyId' => 'familyModalBody',
+    'bodyHtml' => '<div class="family-modal-loading" role="status" aria-live="polite"><div class="spinner-border text-primary" aria-hidden="true"></div><span>Loading...</span></div>',
+    'footerHtml' => '<button type="button" class="btn btn-outline-secondary family-modal-close" data-bs-dismiss="modal">Close</button>',
+]) ?>
 
 <?php foreach (array_merge(asset_scripts('core'), asset_scripts('viewer')) as $scriptPath): ?>
 <script src="<?= esc(asset_url($scriptPath), 'attr') ?>"></script>

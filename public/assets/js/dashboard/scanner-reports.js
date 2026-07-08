@@ -31,7 +31,8 @@
                 labels: ['Received aid', 'Still waiting'],
                 datasets: [{
                     data: [data.received.received || 0, data.received.notReceived || 0],
-                    backgroundColor: ['#1cc88a', '#e74a3b']
+                    backgroundColor: ['#145c3b', '#dce5e2'],
+                    borderWidth: 0
                 }]
             },
             options: { plugins: { legend: { position: 'bottom' } } }
@@ -52,7 +53,7 @@
                 datasets: [{
                     label: 'Coverage %',
                     data: rows.map(function (b) { return b.coverage; }),
-                    backgroundColor: '#4e73df',
+                    backgroundColor: '#145c3b',
                     borderRadius: 3,
                     barThickness: 12
                 }]
@@ -78,7 +79,7 @@
                 datasets: [{
                     label: 'Handouts',
                     data: data.aidType.map(function (a) { return a.count; }),
-                    backgroundColor: '#f6c23e',
+                    backgroundColor: '#145c3b',
                     borderRadius: 3,
                     maxBarThickness: 90
                 }]

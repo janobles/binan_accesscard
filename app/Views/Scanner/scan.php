@@ -1,7 +1,7 @@
 <?= $this->extend('Scanner/layout') ?>
 <?= $this->section('content') ?>
 
-<div class="card border-0 shadow-sm rounded-3 mb-3">
+<div class="card border-0 rounded-3 mb-3">
   <div class="card-body">
     <div class="row g-3 align-items-end">
       <div class="col-md-4">
@@ -41,20 +41,20 @@
 <div id="familyPanel" hidden>
   <div class="row g-3">
     <div class="col-lg-7" id="familyColumn">
-      <div class="card border-0 shadow-sm rounded-3 mb-3">
+      <div class="card border-0 rounded-3 mb-3">
         <div class="card-body">
           <div class="fw-bold mb-2">Family Head</div>
           <div id="headBody"></div>
         </div>
       </div>
-      <div class="card border-0 shadow-sm rounded-3 mb-3">
+      <div class="card border-0 rounded-3 mb-3">
         <div class="fw-bold px-3 pt-3 pb-2">Members</div>
         <ul class="list-group list-group-flush" id="membersList"></ul>
       </div>
     </div>
 
     <div class="col-lg-5">
-      <div class="card border-0 shadow-sm rounded-3 mb-3" id="logPanel">
+      <div class="card border-0 rounded-3 mb-3" id="logPanel">
         <div class="card-body">
           <div class="fw-bold mb-2">Log Distribution</div>
           <form id="logForm">
@@ -79,7 +79,7 @@
         </div>
       </div>
 
-      <div class="card border-0 shadow-sm rounded-3 scan-receipt mb-3" id="receiptPanel" hidden>
+      <div class="card border-0 rounded-3 scan-receipt mb-3" id="receiptPanel" hidden>
         <div class="card-body">
           <div class="fw-bold text-success mb-1">
             <i class="bi bi-check-circle-fill me-1" aria-hidden="true"></i> Logged
@@ -89,7 +89,7 @@
         </div>
       </div>
 
-      <div class="card border-0 shadow-sm rounded-3 mb-3">
+      <div class="card border-0 rounded-3 mb-3">
         <div class="fw-bold px-3 pt-3 pb-2">Aid History</div>
         <ul class="list-group list-group-flush" id="historyList"></ul>
       </div>

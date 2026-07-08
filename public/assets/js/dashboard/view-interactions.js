@@ -18,81 +18,6 @@
     function accountStatusModalEl() {
         return document.getElementById('accountStatusModal');
     }
-    function bindDashboardSidebar() {
-        const sidebar = document.getElementById('dashboard-sidebar');
-        const toggles = document.querySelectorAll('#sidebarToggle, #sidebarToggleTop');
-
-        if (!sidebar || toggles.length === 0 || sidebar.dataset.sidebarToggleBound === '1') {
-            return;
-        }
-
-        sidebar.dataset.sidebarToggleBound = '1';
-
-        const isMobile = function () {
-            return window.matchMedia('(max-width: 48rem)').matches;
-        };
-
-        const setExpandedState = function () {
-            const expanded = isMobile() ? sidebar.classList.contains('toggled') : !sidebar.classList.contains('toggled');
-
-            toggles.forEach(function (toggle) {
-                toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-            });
-        };
-
-        const closeMobileSidebar = function () {
-            if (!isMobile()) {
-                return;
-            }
-
-            sidebar.classList.remove('toggled');
-            document.body.classList.remove('sidebar-toggled');
-            setExpandedState();
-        };
-
-        toggles.forEach(function (toggle) {
-            toggle.addEventListener('click', function (event) {
-                event.stopPropagation();
-                sidebar.classList.toggle('toggled');
-                document.body.classList.toggle('sidebar-toggled');
-                setExpandedState();
-            });
-        });
-
-        document.addEventListener('click', function (event) {
-            if (
-                isMobile()
-                && sidebar.classList.contains('toggled')
-                && !sidebar.contains(event.target)
-                && !event.target.closest('#sidebarToggle, #sidebarToggleTop')
-            ) {
-                closeMobileSidebar();
-            }
-        });
-
-        document.addEventListener('keydown', function (event) {
-            if (event.key === 'Escape') {
-                closeMobileSidebar();
-            }
-        });
-
-        sidebar.querySelectorAll('a[href]').forEach(function (link) {
-            link.addEventListener('click', function () {
-                closeMobileSidebar();
-            });
-        });
-
-        window.addEventListener('resize', function () {
-            if (!isMobile()) {
-                document.body.classList.remove('sidebar-toggled');
-            }
-
-            setExpandedState();
-        });
-
-        setExpandedState();
-    }
-
     function bindAuditFilters(root) {
         root.querySelectorAll('.js-audit-action-filter').forEach(function (select) {
             if (select.dataset.auditFilterBound === '1') {
@@ -224,7 +149,6 @@
     window.initViewInteractions = initViewInteractions;
 
     document.addEventListener('DOMContentLoaded', function () {
-        bindDashboardSidebar();
         initViewInteractions(document);
     });
 })(window, document);

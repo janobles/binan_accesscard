@@ -370,12 +370,12 @@
 }
 
 .records-scroll-panel .table-responsive > .table {
-    font-size: 1rem;
+    font-size: 0.875rem;
     line-height: 1.5;
 }
 
 .records-scroll-panel .table-responsive > .dt-container {
-    font-size: 1rem;
+    font-size: 0.875rem;
     line-height: 1.5;
 }
 

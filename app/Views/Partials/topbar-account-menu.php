@@ -25,9 +25,9 @@ $topbarFullName = $topbarFullName !== '' ? $topbarFullName : $username;
             <small><?= esc($accountLevelLabel) ?></small>
         </div>
         <?php if ($accountSettingsMode === 'link'): ?>
-            <a href="<?= esc($accountSettingsUrl, 'attr') ?>" class="dropdown-item"><i class="bi bi-gear" aria-hidden="true"></i><span>Account Settings</span></a>
+            <a href="<?= esc($accountSettingsUrl, 'attr') ?>" class="dropdown-item"><i class="bi bi-gear-fill" aria-hidden="true"></i><span>Account Settings</span></a>
         <?php else: ?>
-            <button type="button" class="dropdown-item js-open-my-account-modal" data-modal-url="<?= esc($accountSettingsUrl, 'attr') ?>" data-modal-title="My Account"><i class="bi bi-gear" aria-hidden="true"></i><span>Account Settings</span></button>
+            <button type="button" class="dropdown-item js-open-my-account-modal" data-modal-url="<?= esc($accountSettingsUrl, 'attr') ?>" data-modal-title="My Account"><i class="bi bi-gear-fill" aria-hidden="true"></i><span>Account Settings</span></button>
         <?php endif; ?>
         <a href="<?= site_url('logout') ?>" class="dropdown-item js-logout-link"><i class="bi bi-box-arrow-right" aria-hidden="true"></i><span>Sign Out</span></a>
     </div>

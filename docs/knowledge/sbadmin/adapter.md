@@ -1,51 +1,23 @@
-# SB Admin Adapter (current reality)
+# SB Admin Adapter (RETIRED)
 
-The UI is **Bootstrap 5.3.3 + a homegrown adapter stylesheet** —
-`public/css/sb-admin-adapter.css:1` — NOT a vendored SB Admin theme. The
-adapter recreates the SB Admin shell (sidebar + topbar + content frame) on
-top of stock Bootstrap. Target migration: `target-theme.md`.
+The homegrown adapter stylesheet (`public/css/sb-admin-adapter.css`) was
+**deleted** in the SB Admin 1 theme swap
+(spec `docs/superpowers/specs/2026-07-07-sbadmin1-theme-swap-design.md`,
+branch `feature/sbadmin1-theme-swap`). The shells now load the genuine
+vendored theme `public/assets/sb-admin/css/styles.css:1` plus upstream
+`public/assets/sb-admin/js/scripts.js:1` (sidebar toggle).
 
-## What the adapter provides — use these, don't hand-roll
+What replaced each adapter concern:
 
-Theme tokens (override here, not per-view) —
-`public/css/sb-admin-adapter.css:1`:
+- Shell frame / sidebar / topnav classes → upstream SB Admin 1 markup
+  (`docs/knowledge/sbadmin/target-theme.md`).
+- Card/panel chrome → the props-only components
+  `app/Views/components/card.php:1`, `app/Views/components/data_table.php:1`,
+  `app/Views/components/table_footer.php:1`
+  (see `docs/knowledge/binan-conventions/views-bootstrap.md`).
+- Theme tokens (`--sb-*`/`--ui-*`) → gone; current baseline is pure upstream
+  defaults. A future Biñan re-skin should reintroduce tokens on top of
+  SB Admin 1's SCSS variables, not resurrect the adapter.
 
-```css
-:root {
-    --sb-sidebar-width: clamp(11.5rem, 17vw, 14rem);
-    --sb-sidebar-bg: #145c3b;          /* Biñan green */
-    --sb-content-bg: #f4f7f6;
-    --sb-radius: 0.4rem;
-    --ui-control-height: 2.5rem;
-    ...
-}
-```
-
-Shell frame (IDs the layouts depend on):
-- `#wrapper` (`public/css/sb-admin-adapter.css:37`) — flex page frame.
-- `#content-wrapper` (`:42`), `#content` (`:50`) — main column.
-- `#sidebarToggle` (`:162`) — collapse control.
-
-Sidebar component (SB Admin class names):
-- `.sidebar`, `.sidebar-brand`, `.sidebar-brand-icon`, `.sidebar-brand-text`,
-  `.sidebar-divider`, `.sidebar-heading`
-  (`public/css/sb-admin-adapter.css:55`–`:114`).
-- Nav states: `.sidebar .nav-link`, `:hover/:focus/.active`
-  (`public/css/sb-admin-adapter.css:127`).
-- `.bg-gradient-primary` (`:67`) — SB Admin's sidebar gradient class, mapped
-  to the Biñan green.
-
-Consumers: `app/Views/components/dashboard_sidebar.php:1` and the role
-layout shells; loaded via `asset_styles()`
-(`app/Helpers/asset_helper.php:39`).
-
-## Rules
-
-1. New chrome styling goes into the adapter (or a page CSS file), themed via
-   the `--sb-*` / `--ui-*` variables — never hardcoded colors in views.
-2. Keep SB Admin's class vocabulary (`.sidebar`, `.sidebar-brand`,
-   `.bg-gradient-primary`, ...) so the eventual theme swap
-   (`target-theme.md`) is a stylesheet change, not a markup rewrite.
-3. Don't duplicate what Bootstrap 5.3 already ships — the adapter covers only
-   the shell and theme tokens; components (cards, tables, buttons, modals)
-   are stock Bootstrap (`docs/knowledge/binan-conventions/views-bootstrap.md`).
+Do not reference `sb-admin-adapter.css`, `.sidebar-brand*`,
+`.bg-gradient-primary`, or `#wrapper`/`#content-wrapper` in new work.

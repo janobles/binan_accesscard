@@ -92,7 +92,6 @@
     border: 1px solid #cfe0db;
     border-radius: 0.45rem;
     background: #ffffff;
-    box-shadow: 0 1rem 2.5rem rgba(22, 37, 33, 0.18);
     color: #263b35;
 }
 
@@ -896,7 +895,6 @@
     border: 1px solid #cfe0db;
     border-radius: 0.45rem;
     background: #ffffff;
-    box-shadow: 0 1rem 2.5rem rgba(22, 37, 33, 0.18);
     color: #263b35;
 }
 
@@ -1264,7 +1262,6 @@
     width: 100%;
     background: #fff; border: 1px solid #dee2e6; border-left: 4px solid #0d6efd;
     border-radius: .4rem; padding: .5rem .6rem;
-    box-shadow: 0 .35rem .8rem rgba(0, 0, 0, .15);
 }
 .family-import-toast.fit-success { border-left-color: #198754; }
 .family-import-toast.fit-warning { border-left-color: #fd7e14; }

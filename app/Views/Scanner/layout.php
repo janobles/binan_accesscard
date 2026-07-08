@@ -26,34 +26,27 @@ $navActive           = $navActive ?? ['scanner' => 'active'];
     <link rel="stylesheet" href="<?= esc(asset_url($stylePath), 'attr') ?>">
     <?php endforeach; ?>
 </head>
-<body>
-<div id="wrapper">
-    <?= view('components/dashboard_sidebar', [
-        'sidebarScannerOnly' => $isScannerRole,
-        'activeTab' => $activeTab,
-        'navActive' => $navActive,
-        'canManageAccounts' => $canManageAccounts,
-        'sidebarRoleClass' => $sidebarRoleClass,
-        'sidebarUserUrl' => $sidebarUserUrl,
-    ]) ?>
-
-    <div id="content-wrapper" class="d-flex flex-column">
-        <div id="content">
-            <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow-sm">
-                <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle me-3" type="button" aria-label="Toggle navigation menu" aria-controls="dashboard-sidebar" aria-expanded="false">
-                    <i class="bi bi-list" aria-hidden="true"></i>
-                </button>
-                <div class="topbar-title">
-                    <div>
-                        <h1 id="dashboard-page-title"><?= esc($pageTitle) ?></h1>
-                    </div>
-                </div>
-                <ul class="navbar-nav ms-auto">
-                    <?= view('Partials/topbar-account-menu', ['user' => $user, 'username' => $username, 'accountLevelLabel' => $accountLevelLabel]) ?>
-                </ul>
-            </nav>
-
-            <main class="container-fluid dashboard-content">
+<body class="sb-nav-fixed">
+<?= view('Partials/dashboard-topnav', [
+    'brandUrl' => site_url('scanner/scan'),
+    'user' => $user,
+    'username' => $username,
+    'accountLevelLabel' => $accountLevelLabel,
+]) ?>
+<div id="layoutSidenav">
+    <div id="layoutSidenav_nav">
+        <?= view('components/dashboard_sidebar', [
+            'sidebarScannerOnly' => $isScannerRole,
+            'activeTab' => $activeTab,
+            'navActive' => $navActive,
+            'canManageAccounts' => $canManageAccounts,
+            'sidebarRoleClass' => $sidebarRoleClass,
+            'sidebarUserUrl' => $sidebarUserUrl,
+        ]) ?>
+    </div>
+    <div id="layoutSidenav_content">
+            <main class="container-fluid px-4 dashboard-content">
+            <h1 class="mt-4" id="dashboard-page-title"><?= esc($pageTitle) ?></h1>
             <?php if (session()->getFlashdata('success')): ?>
                 <div class="alert alert-success"><?= esc(session()->getFlashdata('success')) ?></div>
             <?php endif; ?>
@@ -63,7 +56,6 @@ $navActive           = $navActive ?? ['scanner' => 'active'];
 
             <?= $this->renderSection('content') ?>
             </main>
-        </div>
     </div>
 </div>
 
@@ -71,25 +63,17 @@ $navActive           = $navActive ?? ['scanner' => 'active'];
          "Account Settings" (account-form-modal.js) fetches its fragment into
          #familyModalBody; without this container registerDashboardModal() bails
          and the trigger never binds. */ ?>
-<div class="modal fade floating-family-modal" id="familyModal" tabindex="-1" aria-label="Account settings" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
-    <div class="modal-dialog modal-dialog-centered modal-xl">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="familyModalLabel">My Account</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body" id="familyModalBody">
-                <div class="family-modal-loading" role="status" aria-live="polite">
-                    <div class="spinner-border text-primary" aria-hidden="true"></div>
-                    <span>Loading...</span>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary family-modal-close" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
+<?= view('components/modal', [
+    'id' => 'familyModal',
+    'modalClass' => 'floating-family-modal',
+    'attrs' => 'aria-label="Account settings" data-bs-backdrop="static" data-bs-keyboard="false"',
+    'size' => 'modal-xl',
+    'title' => 'My Account',
+    'titleId' => 'familyModalLabel',
+    'bodyId' => 'familyModalBody',
+    'bodyHtml' => '<div class="family-modal-loading" role="status" aria-live="polite"><div class="spinner-border text-primary" aria-hidden="true"></div><span>Loading...</span></div>',
+    'footerHtml' => '<button type="button" class="btn btn-outline-secondary family-modal-close" data-bs-dismiss="modal">Close</button>',
+]) ?>
 
 <?php foreach (array_merge(asset_scripts('core'), asset_scripts('admin'), asset_scripts('scanner')) as $scriptPath): ?>
 <script src="<?= esc(asset_url($scriptPath), 'attr') ?>"></script>

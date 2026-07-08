@@ -1,0 +1,224 @@
+/* Biñan green skin + house component rules layered over the vendored
+   SB Admin 1 theme (assets/sb-admin/css/styles.css). Loaded via the `head`
+   manifest context (asset_helper.php) so every dashboard shell gets it.
+   Scope: theme tokens, shell colors, card tables, pagination, stat cards,
+   topbar account menu. Page-specific rules stay in their page CSS files. */
+
+:root {
+    --binan-green: #145c3b;
+    --binan-green-deep: #0f4a30;
+    --binan-green-soft: rgba(20, 92, 59, 0.12);
+    --bs-primary: #145c3b;
+    --bs-primary-rgb: 20, 92, 59;
+    --bs-link-color: #145c3b;
+    --bs-link-color-rgb: 20, 92, 59;
+    --bs-link-hover-color: #0f4a30;
+    --bs-link-hover-color-rgb: 15, 74, 48;
+}
+
+/* Shell: green topnav + sidenav (SB Admin 1 dark variants re-tinted). */
+.sb-topnav.bg-dark {
+    background-color: var(--binan-green-deep) !important;
+}
+
+.sb-sidenav-dark {
+    background-color: var(--binan-green);
+}
+
+.sb-sidenav-dark .nav-link.active {
+    color: #fff;
+}
+
+.sb-sidenav-dark .nav-link.active .sb-nav-link-icon {
+    color: #fff;
+}
+
+/* Primary controls follow the green. */
+.btn-primary {
+    --bs-btn-bg: var(--binan-green);
+    --bs-btn-border-color: var(--binan-green);
+    --bs-btn-hover-bg: var(--binan-green-deep);
+    --bs-btn-hover-border-color: var(--binan-green-deep);
+    --bs-btn-active-bg: var(--binan-green-deep);
+    --bs-btn-active-border-color: var(--binan-green-deep);
+    --bs-btn-disabled-bg: var(--binan-green);
+    --bs-btn-disabled-border-color: var(--binan-green);
+}
+
+.btn-outline-primary {
+    --bs-btn-color: var(--binan-green);
+    --bs-btn-border-color: var(--binan-green);
+    --bs-btn-hover-bg: var(--binan-green);
+    --bs-btn-hover-border-color: var(--binan-green);
+    --bs-btn-active-bg: var(--binan-green-deep);
+    --bs-btn-active-border-color: var(--binan-green-deep);
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--binan-green);
+    box-shadow: 0 0 0 0.2rem rgba(20, 92, 59, 0.16);
+}
+
+/* Compact pagination, green active page (SB Admin 1 demo density). */
+.pagination {
+    --bs-pagination-padding-x: 0.6rem;
+    --bs-pagination-padding-y: 0.25rem;
+    --bs-pagination-font-size: 0.875rem;
+    --bs-pagination-color: var(--binan-green);
+    --bs-pagination-active-bg: var(--binan-green);
+    --bs-pagination-active-border-color: var(--binan-green);
+    --bs-pagination-hover-color: var(--binan-green-deep);
+    margin-bottom: 0;
+}
+
+/* Card tables, SB Admin 1 demo anatomy: compact type, border around the
+   table, row borders only (no column borders). */
+.card .table {
+    font-size: 0.875rem;
+    margin-bottom: 0;
+    border: 1px solid var(--bs-border-color);
+}
+
+.card .table th,
+.card .table td {
+    border-left: 0;
+    border-right: 0;
+}
+
+/* Canonical data-table header: grayed row + uppercase labels, matching the
+   Manage Records table. Wins specificity (0,2,2) over every per-table th rule
+   (.manage-record-table/.audit-trails-table/.account-table/.reports-fallback),
+   so all card tables render one header style. Those per-table rules keep only
+   their unique layout props (sticky, min-width); their visual props are now
+   redundant overrides. */
+.card .table thead th {
+    border-bottom: 1px solid var(--bs-border-color);
+    background-color: #f4f7f7;
+    color: #53635e;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.card .table > :not(caption) > * > * {
+    padding: 0.5rem 0.75rem;
+}
+
+/* scrollX DataTables clones the header into .dt-scroll-head as a separate table
+   from the .dt-scroll-body table. Both draw a 1px border at the seam, stacking
+   into a 2px line. Keep the header th's border; drop the body table's top border
+   so the seam reads as a single 1px, matching the non-DataTable tables. */
+.card div.dt-scroll-body > table {
+    border-top: 0;
+}
+
+/* Stat cards (dashboard + reports KPI tiles). */
+.overview-stats,
+.reports-stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+@media (max-width: 62rem) {
+    .overview-stats,
+    .reports-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 34rem) {
+    .overview-stats,
+    .reports-stats {
+        grid-template-columns: 1fr;
+    }
+}
+
+.stat-card {
+    margin-bottom: 0;
+}
+
+.stat-card-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.stat-card-content p {
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--binan-green);
+}
+
+.stat-card-content strong {
+    font-size: 1.5rem;
+    color: var(--bs-emphasis-color);
+}
+
+.stat-card-icon {
+    font-size: 2rem;
+    color: var(--binan-green-soft);
+    color: rgba(20, 92, 59, 0.3);
+}
+
+/* Topbar account dropdown. */
+.topbar-account-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: rgba(255, 255, 255, 0.85);
+    background: transparent;
+    border: 0;
+}
+
+.topbar-account-toggle:hover,
+.topbar-account-toggle:focus {
+    color: #fff;
+}
+
+.topbar-account-menu {
+    min-width: 15rem;
+    padding: 0.75rem;
+}
+
+.topbar-account-summary {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.15rem;
+    text-align: center;
+    padding-bottom: 0.75rem;
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid var(--bs-border-color);
+}
+
+.topbar-account-avatar {
+    width: 3.5rem;
+    height: 3.5rem;
+    border-radius: 50%;
+    margin-bottom: 0.35rem;
+}
+
+.topbar-account-summary strong {
+    font-size: 0.875rem;
+}
+
+.topbar-account-summary small {
+    color: var(--bs-secondary-color);
+}
+
+.topbar-account-menu .dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-radius: 0.25rem;
+    padding: 0.4rem 0.6rem;
+    font-size: 0.875rem;
+}

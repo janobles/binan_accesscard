@@ -50,83 +50,85 @@
 
 <!-- KPI tiles: same house style as the admin dashboard stat cards -->
 <section class="reports-stats" aria-label="Report statistics">
-  <article class="stat-card stat-card--records card shadow-sm h-100 py-2">
-    <div class="card-body"><div class="stat-card-content">
-      <div><p>Families with a QR</p><strong><?= esc(
-          (string) $summary["total"],
-      ) ?></strong></div>
-      <i class="bi bi-qr-code stat-card-icon" aria-hidden="true"></i>
-    </div></div>
-  </article>
-  <article class="stat-card stat-card--members card shadow-sm h-100 py-2">
-    <div class="card-body"><div class="stat-card-content">
-      <div><p>Received aid</p><strong><?= esc(
-          (string) $summary["received"],
-      ) ?></strong></div>
-      <i class="bi bi-check2-circle stat-card-icon" aria-hidden="true"></i>
-    </div></div>
-  </article>
-  <article class="stat-card stat-card--sectors card shadow-sm h-100 py-2">
-    <div class="card-body"><div class="stat-card-content">
-      <div><p>Still waiting</p><strong><?= esc(
-          (string) $summary["notReceived"],
-      ) ?></strong></div>
-      <i class="bi bi-hourglass-split stat-card-icon" aria-hidden="true"></i>
-    </div></div>
-  </article>
-  <article class="stat-card stat-card--services card shadow-sm h-100 py-2">
-    <div class="card-body"><div class="stat-card-content">
-      <div><p>Coverage</p><strong><?= esc(
-          (string) $summary["coverage"],
-      ) ?>%</strong></div>
-      <i class="bi bi-pie-chart stat-card-icon" aria-hidden="true"></i>
-    </div></div>
-  </article>
+  <?= view('components/stat_card', [
+      'label' => 'Families with a QR',
+      'value' => (string) $summary["total"],
+      'icon' => 'qr-code',
+      'variant' => 'stat-card--records',
+  ]) ?>
+  <?= view('components/stat_card', [
+      'label' => 'Received aid',
+      'value' => (string) $summary["received"],
+      'icon' => 'check-circle-fill',
+      'variant' => 'stat-card--members',
+  ]) ?>
+  <?= view('components/stat_card', [
+      'label' => 'Still waiting',
+      'value' => (string) $summary["notReceived"],
+      'icon' => 'hourglass-split',
+      'variant' => 'stat-card--sectors',
+  ]) ?>
+  <?= view('components/stat_card', [
+      'label' => 'Coverage',
+      'value' => ((string) $summary["coverage"]) . '%',
+      'icon' => 'pie-chart-fill',
+      'variant' => 'stat-card--services',
+  ]) ?>
 </section>
 
-<!-- Charts: each in its own card, sitting directly on the page background -->
+<!-- Charts: each in the standard card anatomy (components/card) -->
 <div class="row g-3 reports-charts">
   <div class="col-lg-4">
-    <div class="reports-chart-card card shadow-sm">
-      <h6>Families that received aid vs still waiting</h6>
-      <canvas id="chartReceived" height="220"></canvas>
-    </div>
+    <?= view('components/card', [
+        'icon' => 'pie-chart-fill',
+        'title' => 'Families that received aid vs still waiting',
+        'bodyHtml' => '<canvas id="chartReceived" height="220"></canvas>',
+        'footer' => $rangeLabel,
+        'cardClass' => 'reports-chart-card h-100',
+    ]) ?>
   </div>
   <div class="col-lg-8">
-    <div class="reports-chart-card card shadow-sm">
-      <h6>Coverage by barangay (percent)</h6>
-      <div class="reports-barangay-chart"><canvas id="chartBarangay"></canvas></div>
-    </div>
+    <?= view('components/card', [
+        'icon' => 'bar-chart-fill',
+        'title' => 'Coverage by barangay (percent)',
+        'bodyHtml' => '<div class="reports-barangay-chart"><canvas id="chartBarangay"></canvas></div>',
+        'footer' => $rangeLabel,
+        'cardClass' => 'reports-chart-card h-100',
+    ]) ?>
   </div>
   <div class="col-lg-12">
-    <div class="reports-chart-card card shadow-sm">
-      <h6>Number of handouts by aid type</h6>
-      <canvas id="chartAidType" height="180"></canvas>
-    </div>
+    <?= view('components/card', [
+        'icon' => 'bar-chart-fill',
+        'title' => 'Number of handouts by aid type',
+        'bodyHtml' => '<canvas id="chartAidType" height="180"></canvas>',
+        'footer' => $rangeLabel,
+        'cardClass' => 'reports-chart-card',
+    ]) ?>
   </div>
 </div>
 
-<!-- No-JS / print fallback summary table -->
-<div class="reports-fallback card shadow-sm mt-3">
-  <table class="table table-sm manage-record-table align-middle w-100 mb-0">
-    <thead><tr><th>Barangay</th><th>Families</th><th>Received</th><th>Coverage</th></tr></thead>
-    <tbody>
-      <?php foreach ($byBarangay as $b): ?>
-        <tr>
-          <td><?= esc($b["barangay"]) ?></td>
-          <td><?= esc((string) $b["total"]) ?></td>
-          <td><?= esc((string) $b["received"]) ?></td>
-          <td><span class="badge bg-light text-dark border"><?= esc(
-              (string) $b["coverage"],
-          ) ?>%</span></td>
-        </tr>
-      <?php endforeach; ?>
-      <?php if ($byBarangay === []): ?>
-        <tr><td colspan="4" class="text-center text-muted">No data for this range.</td></tr>
-      <?php endif; ?>
-    </tbody>
-  </table>
-</div>
+<!-- No-JS / print fallback summary table (components/data_table) -->
+<?php
+$barangayRows = [];
+foreach ($byBarangay as $b) {
+    $barangayRows[] = [
+        esc($b["barangay"]),
+        esc((string) $b["total"]),
+        esc((string) $b["received"]),
+        '<span class="badge bg-light text-dark border">' . esc((string) $b["coverage"]) . '%</span>',
+    ];
+}
+?>
+<?= view('components/data_table', [
+    'icon' => 'table',
+    'title' => 'Coverage by barangay',
+    'columns' => ['Barangay', 'Families', 'Received', 'Coverage'],
+    'rows' => $barangayRows,
+    'emptyMessage' => 'No data for this range.',
+    'tableClass' => 'table manage-record-table align-middle w-100 mb-0',
+    'cardClass' => 'reports-fallback',
+    'footer' => $rangeLabel,
+]) ?>
 
 <script id="reportsData" type="application/json"><?= json_encode(
     [

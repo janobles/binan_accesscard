@@ -43,50 +43,9 @@
     white-space: nowrap;
 }
 
-.reports-download-btn {
-    color: #ffffff;
-    background-color: #2f80ed;
-    border-color: #2f80ed;
-}
+/* KPI tile grid + stat-card styles live in theme.css. */
 
-.reports-download-btn:hover,
-.reports-download-btn:focus {
-    color: #ffffff;
-    background-color: #2168c9;
-    border-color: #2168c9;
-}
-
-/* KPI tiles: same responsive grid as the admin dashboard overview. */
-.reports-stats {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 1rem;
-    margin-bottom: 1rem;
-}
-
-@media (max-width: 62rem) {
-    .reports-stats {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-}
-
-@media (max-width: 34rem) {
-    .reports-stats {
-        grid-template-columns: 1fr;
-    }
-}
-
-/* Chart cards. */
-.reports-chart-card {
-    padding: 1rem;
-    height: 100%;
-}
-
-.reports-chart-card h6 {
-    margin-bottom: 0.75rem;
-    font-weight: 600;
-}
-
+/* Chart cards (header/body/footer come from components/card). */
 .reports-chart-card canvas {
     max-width: 100%;
 }

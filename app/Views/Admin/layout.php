@@ -63,34 +63,26 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
     <link rel="stylesheet" href="<?= esc(asset_url($stylePath), 'attr') ?>">
     <?php endforeach; ?>
 </head>
-<body>
-<div id="wrapper">
-    <?= view('components/dashboard_sidebar', [
-        'navActive' => $navActive,
-        'canManageAccounts' => $canManageAccounts,
-        'sidebarRoleClass' => $sidebarRoleClass,
-        'sidebarUserUrl' => $sidebarUserUrl,
-        'sidebarScannerOnly' => false,
-    ]) ?>
-
-    <div id="content-wrapper" class="d-flex flex-column">
-        <div id="content">
-            <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow-sm">
-                <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle me-3" type="button" aria-label="Toggle navigation menu" aria-controls="dashboard-sidebar" aria-expanded="false">
-                    <i class="bi bi-list" aria-hidden="true"></i>
-                </button>
-                <div class="topbar-title">
-                    <div>
-                        <h1 id="dashboard-page-title"><?= esc($pageTitle) ?></h1>
-                    </div>
-                </div>
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item topbar-divider d-none d-sm-block"></li>
-                    <?= view('Partials/topbar-account-menu', ['user' => $user, 'username' => $username, 'accountLevelLabel' => $accountLevelLabel]) ?>
-                </ul>
-            </nav>
-
-            <main class="container-fluid dashboard-content">
+<body class="sb-nav-fixed">
+<?= view('Partials/dashboard-topnav', [
+    'brandUrl' => $sidebarUserUrl,
+    'user' => $user,
+    'username' => $username,
+    'accountLevelLabel' => $accountLevelLabel,
+]) ?>
+<div id="layoutSidenav">
+    <div id="layoutSidenav_nav">
+        <?= view('components/dashboard_sidebar', [
+            'navActive' => $navActive,
+            'canManageAccounts' => $canManageAccounts,
+            'sidebarRoleClass' => $sidebarRoleClass,
+            'sidebarUserUrl' => $sidebarUserUrl,
+            'sidebarScannerOnly' => false,
+        ]) ?>
+    </div>
+    <div id="layoutSidenav_content">
+            <main class="container-fluid px-4 dashboard-content">
+            <h1 class="mt-4" id="dashboard-page-title"><?= esc($pageTitle) ?></h1>
             <?php if (session()->getFlashdata('success')): ?>
                 <div class="alert alert-success" data-auto-dismiss-alert><?= esc(session()->getFlashdata('success')) ?></div>
             <?php endif; ?>
@@ -121,86 +113,70 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
             <?php if ($activePage === 'dashboard'): ?>
                 <div class="dashboard-overview" data-dashboard-overview>
                     <section class="overview-stats" aria-label="Dashboard statistics">
-                        <article class="stat-card stat-card--records card shadow-sm h-100 py-2">
-                            <div class="card-body">
-                                <div class="stat-card-content">
-                                    <div><p>Total Records</p><strong><?= esc((string) ($stats['families'] ?? 0)) ?></strong></div>
-                                    <i class="bi bi-folder2-open stat-card-icon" aria-hidden="true"></i>
-                                </div>
-                            </div>
-                        </article>
-                        <article class="stat-card stat-card--members card shadow-sm h-100 py-2">
-                            <div class="card-body">
-                                <div class="stat-card-content">
-                                    <div><p>Registered Members</p><strong><?= esc((string) ($stats['members'] ?? 0)) ?></strong></div>
-                                    <i class="bi bi-people stat-card-icon" aria-hidden="true"></i>
-                                </div>
-                            </div>
-                        </article>
-                        <article class="stat-card stat-card--sectors card shadow-sm h-100 py-2">
-                            <div class="card-body">
-                                <div class="stat-card-content">
-                                    <div><p>Active Sectors</p><strong><?= esc((string) ($stats['sectors'] ?? 0)) ?></strong></div>
-                                    <i class="bi bi-diagram-3 stat-card-icon" aria-hidden="true"></i>
-                                </div>
-                            </div>
-                        </article>
-                        <article class="stat-card stat-card--services card shadow-sm h-100 py-2">
-                            <div class="card-body">
-                                <div class="stat-card-content">
-                                    <div><p>Services and Programs</p><strong><?= esc((string) ($stats['assistance'] ?? 0)) ?></strong></div>
-                                    <i class="bi bi-grid stat-card-icon" aria-hidden="true"></i>
-                                </div>
-                            </div>
-                        </article>
+                        <?= view('components/stat_card', [
+                            'label' => 'Total Records',
+                            'value' => (string) ($stats['families'] ?? 0),
+                            'icon' => 'folder-fill',
+                            'variant' => 'stat-card--records',
+                        ]) ?>
+                        <?= view('components/stat_card', [
+                            'label' => 'Registered Members',
+                            'value' => (string) ($stats['members'] ?? 0),
+                            'icon' => 'people-fill',
+                            'variant' => 'stat-card--members',
+                        ]) ?>
+                        <?= view('components/stat_card', [
+                            'label' => 'Active Sectors',
+                            'value' => (string) ($stats['sectors'] ?? 0),
+                            'icon' => 'diagram-3-fill',
+                            'variant' => 'stat-card--sectors',
+                        ]) ?>
+                        <?= view('components/stat_card', [
+                            'label' => 'Services and Programs',
+                            'value' => (string) ($stats['assistance'] ?? 0),
+                            'icon' => 'grid-fill',
+                            'variant' => 'stat-card--services',
+                        ]) ?>
                     </section>
 
-                    <section class="overview-panel dashboard-table-panel">
-                        <header class="panel-header">
-                            <h2>Recent Records</h2>
-                        </header>
-                        <div class="table-responsive">
-                            <table class="table overview-table">
-                                <thead><tr><th scope="col">Name (Head)</th><th scope="col">Sector</th></tr></thead>
-                                <tbody>
-                                    <?php foreach ($recentFamilies as $family): ?>
-                                        <tr>
-                                            <td><?= esc(trim(($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? ''))) ?></td>
-                                            <td><?= esc((string) ($family['sector_name'] ?? '-')) ?></td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                    <?php if ($recentFamilies === []): ?>
-                                        <tr><td colspan="2" class="empty-state">No records yet.</td></tr>
-                                    <?php endif; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    </section>
+                    <?php
+                    $recentFamilyRows = [];
+                    foreach ($recentFamilies as $family) {
+                        $recentFamilyRows[] = [
+                            esc(trim(($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? ''))),
+                            esc((string) ($family['sector_name'] ?? '-')),
+                        ];
+                    }
+                    $recentAuditRows = [];
+                    foreach ($recentAudits as $audit) {
+                        $recentAuditRows[] = [
+                            esc($formatAuditUser($audit)),
+                            esc($formatAuditMember($audit)),
+                            '<span class="badge bg-light text-dark border">' . esc((string) ($audit['user_action'] ?? '')) . '</span>',
+                            esc((string) ($audit['description'] ?? '')),
+                        ];
+                    }
+                    ?>
+                    <?= view('components/data_table', [
+                        'icon' => 'table',
+                        'title' => 'Recent Records',
+                        'columns' => ['Name (Head)', 'Sector'],
+                        'rows' => $recentFamilyRows,
+                        'emptyMessage' => 'No records yet.',
+                        'tableClass' => 'table overview-table mb-0',
+                        'cardClass' => 'dashboard-table-panel',
+                    ]) ?>
 
-                    <section class="overview-panel dashboard-table-panel">
-                        <header class="panel-header">
-                            <h2>Recent Activity</h2>
-                            <a class="btn btn-sm panel-action" href="<?= site_url('admin/audit-trails') ?>"><i class="bi bi-arrow-right" aria-hidden="true"></i><span>View All</span></a>
-                        </header>
-                        <div class="table-responsive">
-                            <table class="table overview-table">
-                                <thead><tr><th scope="col">User</th><th scope="col">Member</th><th scope="col">Action</th><th scope="col">Description</th></tr></thead>
-                                <tbody>
-                                    <?php foreach ($recentAudits as $audit): ?>
-                                        <tr>
-                                            <td><?= esc($formatAuditUser($audit)) ?></td>
-                                            <td><?= esc($formatAuditMember($audit)) ?></td>
-                                            <td><span class="badge bg-light text-dark border"><?= esc((string) ($audit['user_action'] ?? '')) ?></span></td>
-                                            <td><?= esc((string) ($audit['description'] ?? '')) ?></td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                    <?php if ($recentAudits === []): ?>
-                                        <tr><td colspan="4" class="empty-state">No activity yet.</td></tr>
-                                    <?php endif; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    </section>
+                    <?= view('components/data_table', [
+                        'icon' => 'clock-history',
+                        'title' => 'Recent Activity',
+                        'headerActions' => '<a class="btn btn-sm panel-action" href="' . site_url('admin/audit-trails') . '"><i class="bi bi-arrow-right" aria-hidden="true"></i><span>View All</span></a>',
+                        'columns' => ['User', 'Member', 'Action', 'Description'],
+                        'rows' => $recentAuditRows,
+                        'emptyMessage' => 'No activity yet.',
+                        'tableClass' => 'table overview-table mb-0',
+                        'cardClass' => 'dashboard-table-panel',
+                    ]) ?>
                 </div>
             <?php endif; ?>
 
@@ -261,31 +237,22 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                 <?= view('Cards/batch_form') ?>
             <?php endif; ?>
             </main>
-        </div>
     </div>
 </div>
 
 <?php /* Shared modal target. The *-modal.js loaders fetch ?partial=1 fragments
          (add/edit record, accounts, sectors, services, audit) into #familyModalBody. */ ?>
-<div class="modal fade floating-family-modal" id="familyModal" tabindex="-1" aria-label="Record details" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
-    <div class="modal-dialog modal-dialog-centered modal-xl">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="familyModalLabel">Record</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body" id="familyModalBody">
-                <div class="family-modal-loading" role="status" aria-live="polite">
-                    <div class="spinner-border text-primary" aria-hidden="true"></div>
-                    <span>Loading...</span>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary family-modal-close" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
+<?= view('components/modal', [
+    'id' => 'familyModal',
+    'modalClass' => 'floating-family-modal',
+    'attrs' => 'aria-label="Record details" data-bs-backdrop="static" data-bs-keyboard="false"',
+    'size' => 'modal-xl',
+    'title' => 'Record',
+    'titleId' => 'familyModalLabel',
+    'bodyId' => 'familyModalBody',
+    'bodyHtml' => '<div class="family-modal-loading" role="status" aria-live="polite"><div class="spinner-border text-primary" aria-hidden="true"></div><span>Loading...</span></div>',
+    'footerHtml' => '<button type="button" class="btn btn-outline-secondary family-modal-close" data-bs-dismiss="modal">Close</button>',
+]) ?>
 
 <?= view('Family/action-confirm-modal') ?>
 
@@ -293,22 +260,16 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
 
 <?php /* Per-row audit detail modal, populated client-side by audit-detail-modal.js
          from the clicked row's data-* attributes (no AJAX). */ ?>
-<div class="modal fade audit-detail-modal" id="auditDetailModal" tabindex="-1" aria-labelledby="auditDetailTitle" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="auditDetailTitle">Audit Entry Details</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p class="audit-detail-full" id="auditDetailFull">—</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
+<?= view('components/modal', [
+    'id' => 'auditDetailModal',
+    'modalClass' => 'audit-detail-modal',
+    'attrs' => 'aria-labelledby="auditDetailTitle"',
+    'size' => 'modal-lg',
+    'title' => 'Audit Entry Details',
+    'titleId' => 'auditDetailTitle',
+    'bodyHtml' => '<p class="audit-detail-full" id="auditDetailFull">&mdash;</p>',
+    'footerHtml' => '<button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>',
+]) ?>
 
 <?php foreach (array_merge(asset_scripts('core'), asset_scripts('admin')) as $scriptPath): ?>
 <script src="<?= esc(asset_url($scriptPath), 'attr') ?>"></script>

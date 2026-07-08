@@ -131,6 +131,7 @@ $routes->group('viewer', static function (RouteCollection $routes): void {
  * calls RoleAccess::requireRole() internally (mirrors the Cards controller).
  */
 $routes->group('scanner', static function (RouteCollection $routes): void {
+    $routes->get('setting', 'Scanner\ScanController::setting');
     $routes->get('scan', 'Scanner\ScanController::scan');
     $routes->get('lookup/(:num)', 'Scanner\ScanController::lookup/$1');
     $routes->post('log', 'Scanner\ScanController::logAid');

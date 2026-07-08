@@ -11,7 +11,7 @@
 .floating-family-modal:has(.edit-account-modal) {
     --modal-window-gap: clamp(0.5rem, 1.5vw, 1rem);
     --modal-window-width: min(64rem, calc(100vw - (var(--modal-window-gap) * 2)));
-    --modal-window-height: min(43rem, calc(100dvh - (var(--modal-window-gap) * 2)));
+    --modal-window-height: auto;
 }
 
 .floating-family-modal:has(.edit-account-modal) .modal-footer {
@@ -19,15 +19,14 @@
 }
 
 .edit-account-modal {
-    grid-template-rows: auto minmax(0, 1fr);
     gap: 0.55rem;
-    min-height: 100%;
+    max-height: min(43rem, calc(100dvh - (var(--modal-window-gap, 1rem) * 2)));
     padding: 0.65rem;
 }
 
 .edit-account-modal form {
     display: grid;
-    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-rows: minmax(0, auto) auto;
     min-height: 0;
 }
 
@@ -36,24 +35,8 @@
     overflow: auto;
 }
 
-.edit-account-modal > .account-card-header h2 {
-    font-size: 1.25rem;
-}
-
-.edit-account-modal > .account-card-header p {
-    font-size: 0.86rem;
-}
-
 .edit-account-modal .account-card-header {
     padding: 0.7rem 0.85rem;
-}
-
-/* Modal header renders flat (was an inline style on the partial). Placed
-   after the padded card-header rule above so it wins the tie. */
-.edit-account-modal > .account-card-header {
-    border: 0;
-    background: transparent;
-    padding: 0 0 0.5rem;
 }
 
 .edit-account-modal .account-card h2 {
@@ -67,10 +50,6 @@
 
 .edit-account-modal .account-field-group {
     gap: 0.55rem;
-}
-
-.edit-account-modal .account-field-group + .account-field-group {
-    padding-left: 0.85rem;
 }
 
 .edit-account-modal .form-label {
@@ -161,6 +140,42 @@
     border-left: 1px solid #e2e9e7;
 }
 
+.account-create-grid--stacked {
+    grid-template-columns: 1fr;
+}
+
+.account-create-grid--stacked .account-field-group + .account-field-group {
+    padding-top: 1rem;
+    padding-left: 0;
+    border-top: 1px solid #e2e9e7;
+    border-left: 0;
+}
+
+.account-field-group-title {
+    margin: 0;
+    color: #42524d;
+    font-size: 0.78rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.account-fields-row {
+    display: grid;
+    gap: 0.85rem;
+    min-width: 0;
+}
+
+.account-fields-row--credentials {
+    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+}
+
+.account-fields-row--requirements {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.account-field--wide {
+    grid-column: span 2;
+}
 .account-field {
     display: grid;
     gap: 0.35rem;
@@ -369,6 +384,14 @@
         padding-left: 0;
         border-top: 1px solid #e2e9e7;
         border-left: 0;
+    }
+
+    .account-fields-row--requirements {
+        grid-template-columns: 1fr;
+    }
+
+    .account-field--wide {
+        grid-column: auto;
     }
 
     .accounts-page .form-control,

@@ -115,9 +115,14 @@ class DistributionController extends BaseController
         if ($aidTypeId <= 0) {
             return redirect()->to('admin/distribution')->with('error', 'Choose an aid type for this batch.');
         }
-        $id = model(DistributionBatchModel::class)->open($name, $aidTypeId, (int) (session('user_id') ?? 0));
+        $batchModel = model(DistributionBatchModel::class);
+        $id         = $batchModel->open($name, $aidTypeId, (int) (session('user_id') ?? 0));
         if ($id <= 0) {
-            return redirect()->to('admin/distribution')->with('error', 'Unable to open batch. Close the active batch first.');
+            $message = $batchModel->activeBatch() !== null
+                ? 'A batch is already open. Close the active batch before opening a new one.'
+                : 'Unable to open batch. Please try again or contact an administrator.';
+
+            return redirect()->to('admin/distribution')->with('error', $message);
         }
         $this->audit('Opened distribution batch "' . $name . '" #' . $id . ' (aid type ID ' . $aidTypeId . ')');
         return redirect()->to('admin/distribution')->with('success', 'Batch opened. Scanning is now live.');

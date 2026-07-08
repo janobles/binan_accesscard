@@ -194,6 +194,7 @@ foreach ($reportsByBarangay as $b) {
   if (btn) { btn.addEventListener('click', function () { location.reload(); }); }
   var lastUpdated = document.getElementById('lastUpdated');
   if (lastUpdated) { lastUpdated.textContent = new Date().toLocaleTimeString(); }
-  setTimeout(function () { location.reload(); }, 5000);
+  // Manual refresh only — a background full-page reload would wipe the batch
+  // selection and scroll position while an admin is reading the report.
 })();
 </script>

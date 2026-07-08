@@ -59,7 +59,15 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= esc($pageTitle) ?> - Binan Access Card MIS</title>
     <link rel="icon" type="image/png" href="<?= asset_url('assets/image/binan.png') ?>">
-    <?php foreach (array_merge(asset_styles('head'), asset_styles('admin')) as $stylePath): ?>
+    <?php
+    // The reports page reuses the scanner reports styles (KPI tiles, chart cards,
+    // barangay chart) that live in the scanner asset group.
+    $layoutStyles = array_merge(asset_styles('head'), asset_styles('admin'));
+    if (($activePage ?? '') === 'reports') {
+        $layoutStyles = array_merge($layoutStyles, asset_styles('scanner'));
+    }
+    ?>
+    <?php foreach ($layoutStyles as $stylePath): ?>
     <link rel="stylesheet" href="<?= esc(asset_url($stylePath), 'attr') ?>">
     <?php endforeach; ?>
 </head>

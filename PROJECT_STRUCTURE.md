@@ -30,6 +30,22 @@ Lookups, Audit, Admin, Employee) is self-contained and easy to navigate. Routes 
 - `Lookups/SectorController.php`, `Lookups/ServiceController.php` — create/update/
   archive/restore/delete mutations for the `sector` and `services` lookup tables.
   These back the live `admin/sectors` and `admin/services` management screens.
+- `Admin/DistributionController.php` — Admin/Developer-only aid-type CRUD, batch
+  open/close (aid type is chosen when a batch is opened), and distribution void.
+  Serves `admin/distribution` (+ `admin/aid-types/*`, `admin/batches/*`,
+  `admin/distributions/void/(:num)`), rendered via
+  `DashboardPageBuilder::renderAdminPage()` in the shared `Admin/layout.php` shell.
+- `Admin/ReportsController.php` — overall distribution reports (combined totals +
+  per-kiosk drilldown + PDF export), batch-scoped only (no date-range filter).
+  Serves `admin/reports` and `admin/reports/pdf`, same admin shell.
+- `Scanner/ScanController.php` — kiosk-only scan flow: `scanner/scan` (log a
+  handout against the currently open batch's aid type — the kiosk no longer
+  picks an aid type), `scanner/performance` (self-scoped stats page),
+  `scanner/stats` (JSON poll, 5s), `scanner/lookup/(:num)`, `scanner/log`. Rendered
+  in the green kiosk shell (`Scanner/kiosk-layout.php`), not the admin/dashboard
+  shell. The former `Scanner\ManageController` and `Scanner\ReportsController`
+  (and `scanner/manage`, `scanner/reports`, `scanner/setting` routes) are removed —
+  that surface moved to `Admin\DistributionController`/`Admin\ReportsController`.
 - `BaseController.php`, `HomeRoleAccessTrait.php`, `Concerns/` — cross-cutting base
   class and shared traits.
 
@@ -46,6 +62,11 @@ Lookups, Audit, Admin, Employee) is self-contained and easy to navigate. Routes 
   per-member/sector eligibility lookups (the single model for `services`).
 - `DashboardModel.php`, `SearchModel.php`, `ViewLayoutModel.php` — shared
   cross-feature query/data-assembly helpers (kept in the root namespace).
+- `Scanner/AidTypeModel.php`, `Scanner/DistributionBatchModel.php`,
+  `Scanner/AidDistributionModel.php`, `Scanner/AidStatsModel.php`,
+  `Scanner/QrControlModel.php` — aid types, the single-open-batch invariant
+  (`distribution_batch.aid_type_id` binds an aid type to the batch at open),
+  handout logging, and batch-scoped/per-kiosk performance stats.
 
 ### Shared libraries (`app/Libraries/`)
 
@@ -66,7 +87,16 @@ Lookups, Audit, Admin, Employee) is self-contained and easy to navigate. Routes 
 - `app/Views/Admin/layout.php`  
   Developer/Admin shell; swaps in `accounts.php`, `audit-trails.php`, and the
   `Family/` and `Lookups/` views by active page. The sector and service lookup
-  screens live in `Lookups/sectors.php` and `Lookups/services.php`.
+  screens live in `Lookups/sectors.php` and `Lookups/services.php`. Also owns
+  distribution control (`distribution-aidtypes-body.php`,
+  `distribution-batches-body.php`, `distribution-distributions-body.php`) and
+  `reports-body.php` for `admin/distribution` and `admin/reports`.
+
+- `app/Views/Scanner/kiosk-layout.php`  
+  Green-themed, full-viewport kiosk shell (no admin sidebar/topbar) used only by
+  `scan.php` and `performance.php`. The old scanner dashboard shell
+  (`Scanner/layout.php`) and its back-office views (`manage.php`, `reports.php`,
+  `setting.php`) are deleted — that surface now lives in the admin shell above.
 
 - `app/Views/Employee/layout.php`  
   Employee workspace shell.

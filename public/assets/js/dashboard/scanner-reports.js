@@ -36,7 +36,6 @@
         cssVar('--chart-color-3', '#f6c23e'),
         cssVar('--chart-color-4', '#1cc88a')
     ];
-    var trackColor = cssVar('--chart-track', '#dddfeb');
     var gridColor = cssVar('--chart-grid', '#eaecf4');
 
     // Whole-number axis: never show fractional ticks for handout/family counts.
@@ -56,7 +55,7 @@
                 labels: ['Received aid', 'Still waiting'],
                 datasets: [{
                     data: [data.received.received || 0, data.received.notReceived || 0],
-                    backgroundColor: [palette[0], trackColor],
+                    backgroundColor: [palette[3], palette[1]],
                     borderColor: '#fff',
                     borderWidth: 1
                 }]
@@ -107,7 +106,7 @@
                 datasets: [{
                     label: 'Handouts',
                     data: data.aidType.map(function (a) { return a.count; }),
-                    backgroundColor: data.aidType.map(function (a, i) { return palette[i % palette.length]; }),
+                    backgroundColor: palette[2],
                     borderRadius: 4,
                     maxBarThickness: 64,
                     categoryPercentage: 0.6
@@ -137,7 +136,6 @@
             if (charts.aidType && Array.isArray(fresh.aidType)) {
                 charts.aidType.data.labels = fresh.aidType.map(function (a) { return a.aid_type; });
                 charts.aidType.data.datasets[0].data = fresh.aidType.map(function (a) { return a.count; });
-                charts.aidType.data.datasets[0].backgroundColor = fresh.aidType.map(function (a, i) { return palette[i % palette.length]; });
                 charts.aidType.update();
             }
         }

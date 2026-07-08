@@ -89,7 +89,7 @@ class FamilyDataTablePresenter
         }
 
         return '<span class="badge bg-light text-dark border text-nowrap">'
-            . '<i class="bi bi-qr-code me-1" aria-hidden="true"></i>#'
+            . '#'
             . esc(ControlNumber::format($controlNo)) . '</span>';
     }
 

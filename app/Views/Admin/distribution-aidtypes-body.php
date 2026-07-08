@@ -3,7 +3,7 @@
  * Aid types CRUD body: Add button + aid-type table. Ported from
  * Scanner/manage-aidtypes-body.php for the admin distribution hub
  * (routes moved from scanner/aid-types/* to admin/aid-types/*).
- * Rendered inside components/card by Admin/distribution.php (vars: aidTypes).
+ * Rendered inside components/card by Admin/layout.php's distribution block (vars: aidTypes).
  */
 ?>
 <div class="records-search-panel">

@@ -5,7 +5,7 @@
  * hub (routes moved from scanner/batches/* to admin/batches/*). Opening a
  * batch now requires choosing an aid type ($activeAidTypes); each batch row
  * shows its bound aid type. Lifecycle buttons render only for Admin/Developer.
- * Rendered inside components/card by Admin/distribution.php.
+ * Rendered inside components/card by Admin/layout.php's distribution block.
  */
 $canManageBatches = in_array($currentRole ?? '', ['Admin', 'Developer'], true);
 $activeAidTypes   = $activeAidTypes ?? [];

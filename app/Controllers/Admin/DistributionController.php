@@ -4,7 +4,6 @@ namespace App\Controllers\Admin;
 
 use App\Controllers\BaseController;
 use App\Libraries\RoleAccess;
-use App\Libraries\SessionAccount;
 use App\Models\Audit\AuditTrailsModel;
 use App\Models\Scanner\AidDistributionModel;
 use App\Models\Scanner\AidTypeModel;
@@ -25,28 +24,12 @@ class DistributionController extends BaseController
         return $g instanceof RedirectResponse ? $g : null;
     }
 
-    /** GET admin/distribution — aid types + batches hub. */
+    /** GET admin/distribution — aid types + batches hub, rendered in the admin shell. */
     public function index(): ResponseInterface|string
     {
         if ($g = $this->guard()) { return $g; }
 
-        $role = RoleAccess::normalizeRole((string) session()->get('role'));
-
-        return view('Admin/distribution', [
-            'pageTitle'         => 'Distribution',
-            'username'          => session('username') ?? 'Admin',
-            'user'              => SessionAccount::user(),
-            'accountLevelLabel' => SessionAccount::levelLabel(),
-            'aidTypes'          => model(AidTypeModel::class)->all(),
-            'activeAidTypes'    => model(AidTypeModel::class)->active(),
-            'distributions'     => model(AidDistributionModel::class)->allDistributions(),
-            'batches'           => model(DistributionBatchModel::class)->allBatches(),
-            'activeBatch'       => model(DistributionBatchModel::class)->activeBatch(),
-            'currentRole'       => $role,
-            'canManageAccounts' => true,
-            'sidebarRoleClass'  => strtolower((string) $role),
-            'navActive'         => ['distribution' => 'active'],
-        ]);
+        return (new \App\Libraries\DashboardPageBuilder($this->request))->renderAdminPage('distribution');
     }
 
     public function createAidType(): RedirectResponse

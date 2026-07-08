@@ -4,8 +4,8 @@
  * Ported from Scanner/manage-distributions-body.php for the admin
  * distribution hub (void action moved from scanner/distributions/void/*
  * to admin/distributions/void/*). Rendered inside components/card by
- * Admin/distribution.php (vars: distributions, aidTypes). Filtering/paging
- * handled by the inline script in Admin/distribution.php.
+ * Admin/layout.php's distribution block (vars: distributions, aidTypes). Filtering/paging
+ * handled by the inline script in Admin/layout.php's distribution block.
  */
 ?>
 <div class="records-search-panel">

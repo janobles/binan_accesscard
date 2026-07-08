@@ -10,6 +10,9 @@ use App\Models\Lookups\CategoryModel;
 use App\Models\Lookups\SectorModel;
 use App\Models\Lookups\ServiceModel;
 use App\Models\Auth\UserModel;
+use App\Models\Scanner\AidDistributionModel;
+use App\Models\Scanner\AidTypeModel;
+use App\Models\Scanner\DistributionBatchModel;
 use App\Support\FamilyProfilingFormV2;
 use App\Libraries\RoleAccess;
 use App\Models\ViewLayoutModel;
@@ -106,6 +109,12 @@ class DashboardPageBuilder
             ? $this->buildLookupListData(new CategoryModel(), 'admin/categories', 'categoryID')
             : [];
 
+        // Aid-type/batch/distribution data for the Distribution hub, gated so
+        // other pages don't run these queries.
+        $isDistribution = $activePage === 'distribution';
+        $aidTypeModel   = model(AidTypeModel::class);
+        $batchModel     = model(DistributionBatchModel::class);
+
         // Hide the logged-in user's own account from their Account Management list;
         // other admins/developers still see it. The Developer logs in from .env
         // (userID 0, no users row), so nothing is hidden for it.
@@ -148,6 +157,7 @@ class DashboardPageBuilder
                 'services'     => $layoutModel->navActive($activePage, 'services'),
                 'categories'   => $layoutModel->navActive($activePage, 'categories'),
                 'cards'        => $layoutModel->navActive($activePage, 'cards'),
+                'distribution' => $layoutModel->navActive($activePage, 'distribution'),
             ],
             'adminAccounts'      => array_values(array_filter($visibleAccounts, static fn ($account) => $account['role'] === 'administrator')),
             // 'encoder' is the raw DB enum value for the Employee role (surfaced as
@@ -167,6 +177,11 @@ class DashboardPageBuilder
             'sectorListData'     => $sectorListData,
             'serviceListData'    => $serviceListData,
             'categoryListData'   => $categoryListData,
+            'aidTypes'           => $isDistribution ? $aidTypeModel->all() : [],
+            'activeAidTypes'     => $isDistribution ? $aidTypeModel->active() : [],
+            'batches'            => $isDistribution ? $batchModel->allBatches() : [],
+            'activeBatch'        => $isDistribution ? $batchModel->activeBatch() : null,
+            'distributions'      => $isDistribution ? model(AidDistributionModel::class)->allDistributions() : [],
             'stats'              => $dashboardModel->stats(),
             'canCreateFamily'    => true,
             'username'           => (string) (session()->get('username') ?? 'Admin'),

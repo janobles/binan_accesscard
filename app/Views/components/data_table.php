@@ -2,7 +2,8 @@
 /**
  * SB Admin 1 data-table card — a table inside the standard card anatomy
  * (card-header icon+title > card-body table > optional card-footer),
- * matching the upstream SB Admin "DataTable Example" panel.
+ * matching the upstream SB Admin "DataTable Example" panel. Composes
+ * components/card for that anatomy so there's one card shell in the codebase.
  *
  * Deterministic, props-only component. Cell values are RAW HTML: the caller
  * esc()'s every dynamic part when building rows (this is what lets rows carry
@@ -34,43 +35,46 @@ $tableId = $tableId ?? null;
 $tableClass = $tableClass ?? 'table mb-0';
 $id = $id ?? null;
 $cardClass = $cardClass ?? '';
+
+ob_start();
 ?>
-<div class="card mb-4<?= $cardClass !== '' ? ' ' . esc($cardClass, 'attr') : '' ?>"<?= $id !== null ? ' id="' . esc($id, 'attr') . '"' : '' ?>>
-    <div class="card-header<?= $headerActions !== null ? ' d-flex justify-content-between align-items-center' : '' ?>">
-        <span><?php if ($icon !== null): ?><i class="bi bi-<?= esc($icon, 'attr') ?> me-1" aria-hidden="true"></i><?php endif; ?><?= esc($title) ?></span>
-        <?php if ($headerActions !== null): ?><span><?= $headerActions ?></span><?php endif; ?>
-    </div>
-    <div class="card-body">
-        <div class="table-responsive">
-            <table<?= $tableId !== null ? ' id="' . esc($tableId, 'attr') . '"' : '' ?> class="<?= esc($tableClass, 'attr') ?>">
-                <thead>
-                    <tr>
-                        <?php foreach ($columns as $column): ?>
-                            <?php if (is_array($column)): ?>
-                        <th scope="col"<?= isset($column['class']) ? ' class="' . esc($column['class'], 'attr') . '"' : '' ?>><?= esc($column['label'] ?? '') ?></th>
-                            <?php else: ?>
-                        <th scope="col"><?= esc($column) ?></th>
-                            <?php endif; ?>
-                        <?php endforeach; ?>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($rows as $row): ?>
-                        <?php $cells = is_array($row) && isset($row['cells']) ? $row['cells'] : $row; ?>
-                    <tr<?= is_array($row) && isset($row['attrs']) ? ' ' . $row['attrs'] : '' ?>>
-                        <?php foreach ($cells as $cell): ?>
-                        <td><?= $cell ?></td>
-                        <?php endforeach; ?>
-                    </tr>
-                    <?php endforeach; ?>
-                    <?php if ($rows === []): ?>
-                    <tr><td colspan="<?= count($columns) ?>" class="text-center text-muted"><?= esc($emptyMessage) ?></td></tr>
+<div class="table-responsive">
+    <table<?= $tableId !== null ? ' id="' . esc($tableId, 'attr') . '"' : '' ?> class="<?= esc($tableClass, 'attr') ?>">
+        <thead>
+            <tr>
+                <?php foreach ($columns as $column): ?>
+                    <?php if (is_array($column)): ?>
+                <th scope="col"<?= isset($column['class']) ? ' class="' . esc($column['class'], 'attr') . '"' : '' ?>><?= esc($column['label'] ?? '') ?></th>
+                    <?php else: ?>
+                <th scope="col"><?= esc($column) ?></th>
                     <?php endif; ?>
-                </tbody>
-            </table>
-        </div>
-    </div>
-    <?php if ($footer !== null): ?>
-    <div class="card-footer small text-muted"><?= $footer ?></div>
-    <?php endif; ?>
+                <?php endforeach; ?>
+            </tr>
+        </thead>
+        <tbody>
+            <?php foreach ($rows as $row): ?>
+                <?php $cells = is_array($row) && isset($row['cells']) ? $row['cells'] : $row; ?>
+            <tr<?= is_array($row) && isset($row['attrs']) ? ' ' . $row['attrs'] : '' ?>>
+                <?php foreach ($cells as $cell): ?>
+                <td><?= $cell ?></td>
+                <?php endforeach; ?>
+            </tr>
+            <?php endforeach; ?>
+            <?php if ($rows === []): ?>
+            <tr><td colspan="<?= count($columns) ?>" class="text-center text-muted"><?= esc($emptyMessage) ?></td></tr>
+            <?php endif; ?>
+        </tbody>
+    </table>
 </div>
+<?php
+$tableHtml = ob_get_clean();
+
+echo view('components/card', [
+    'title' => $title,
+    'icon' => $icon,
+    'footer' => $footer,
+    'headerActions' => $headerActions,
+    'bodyHtml' => $tableHtml,
+    'id' => $id,
+    'cardClass' => $cardClass,
+]);

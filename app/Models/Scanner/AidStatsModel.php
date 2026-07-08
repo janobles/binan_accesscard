@@ -6,9 +6,8 @@ use CodeIgniter\Model;
 
 /**
  * Read-only aid-distribution statistics for the Reports tab. Every method is
- * scoped to an optional [from, to] claim_date window and/or a distribution
- * batch, and returns a safe empty shape on any DB error, matching the scanner
- * module's no-DB test posture.
+ * scoped to an optional distribution batch only, and returns a safe empty shape
+ * on any DB error, matching the scanner module's no-DB test posture.
  * "Received" is defined at the family (head) level: a family counts as having
  * received aid when any scan under its control_no produced a distribution row.
  */
@@ -19,17 +18,11 @@ class AidStatsModel extends Model
     protected $returnType    = 'array';
     protected $useTimestamps = false;
 
-    /** Applies the optional date window and/or batch scope to aid_distribution. */
-    private function applyScope($builder, ?string $from, ?string $to, ?int $batchId)
+    /** Applies the optional batch scope to aid_distribution. */
+    private function applyScope($builder, ?int $batchId)
     {
         if ($batchId !== null && $batchId > 0) {
             $builder->where('aid_distribution.batch_id', $batchId);
-        }
-        if ($from !== null && $from !== '') {
-            $builder->where('aid_distribution.claim_date >=', $from . ' 00:00:00');
-        }
-        if ($to !== null && $to !== '') {
-            $builder->where('aid_distribution.claim_date <=', $to . ' 23:59:59');
         }
 
         return $builder;
@@ -41,7 +34,7 @@ class AidStatsModel extends Model
     }
 
     /** Family-level received vs not-yet counts + coverage percent. */
-    public function receivedVsNot(?string $from = null, ?string $to = null, ?int $batchId = null): array
+    public function receivedVsNot(?int $batchId = null): array
     {
         try {
             $total = (int) $this->db->table('qr_control')
@@ -53,7 +46,7 @@ class AidStatsModel extends Model
                 ->select('qr_control.headID')
                 ->join('aid_distribution', 'aid_distribution.control_no = qr_control.control_no')
                 ->groupBy('qr_control.headID');
-            $this->applyScope($b, $from, $to, $batchId);
+            $this->applyScope($b, $batchId);
             $received = count($b->get()->getResultArray());
 
             return [
@@ -68,7 +61,7 @@ class AidStatsModel extends Model
     }
 
     /** Per-barangay family totals + received + coverage. */
-    public function byBarangay(?string $from = null, ?string $to = null, ?int $batchId = null): array
+    public function byBarangay(?int $batchId = null): array
     {
         try {
             $barangayExpr = $this->db->fieldExists('barangay', 'member')
@@ -83,13 +76,13 @@ class AidStatsModel extends Model
                 ->groupBy('barangay')
                 ->get()->getResultArray();
 
-            // Received families per barangay, within the date window.
+            // Received families per barangay, within the batch scope.
             $rb = $this->db->table('qr_control')
                 ->select($barangayExpr . ' AS barangay,'
                     . ' COUNT(DISTINCT qr_control.headID) AS received')
                 ->join('member', 'member.memberID = qr_control.headID', 'left')
                 ->join('aid_distribution', 'aid_distribution.control_no = qr_control.control_no');
-            $this->applyScope($rb, $from, $to, $batchId);
+            $this->applyScope($rb, $batchId);
             $recv = [];
             foreach ($rb->groupBy('barangay')->get()->getResultArray() as $r) {
                 $recv[$r['barangay']] = (int) $r['received'];
@@ -113,14 +106,14 @@ class AidStatsModel extends Model
         }
     }
 
-    /** Handout counts per aid type, within the date window, busiest first. */
-    public function byAidType(?string $from = null, ?string $to = null, ?int $batchId = null): array
+    /** Handout counts per aid type, within the batch scope, busiest first. */
+    public function byAidType(?int $batchId = null): array
     {
         try {
             $b = $this->db->table('aid_type')
                 ->select('aid_type.name AS aid_type, COUNT(aid_distribution.aidID) AS count')
                 ->join('aid_distribution', 'aid_distribution.aid_type_id = aid_type.aid_type_id', 'left');
-            $this->applyScope($b, $from, $to, $batchId);
+            $this->applyScope($b, $batchId);
             $rows = $b->groupBy('aid_type.aid_type_id')
                 ->orderBy('count', 'DESC')
                 ->orderBy('aid_type.name', 'ASC')

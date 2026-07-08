@@ -20,6 +20,15 @@
 .sb-topnav.bg-dark {
     background-color: var(--binan-green-deep) !important;
 }
+.sb-topnav #sidebarToggle {
+    color: rgba(255, 255, 255, 0.85);
+    text-decoration: none;
+}
+
+.sb-topnav #sidebarToggle:hover,
+.sb-topnav #sidebarToggle:focus {
+    color: #fff;
+}
 
 .sb-sidenav-dark {
     background-color: var(--binan-green);

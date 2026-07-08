@@ -113,6 +113,7 @@
                 }]
             },
             options: {
+                maintainAspectRatio: false,
                 scales: { y: countScale, x: { grid: { display: false } } },
                 plugins: { legend: { display: false } }
             }

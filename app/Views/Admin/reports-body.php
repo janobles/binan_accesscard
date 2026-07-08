@@ -111,7 +111,7 @@ foreach ($reportsPerScanner as $p) {
     <?= view('components/card', [
         'icon' => 'bar-chart-fill',
         'title' => 'Number of handouts by aid type',
-        'bodyHtml' => '<canvas id="chartAidType" height="180"></canvas>',
+        'bodyHtml' => '<div style="position:relative;height:260px"><canvas id="chartAidType"></canvas></div>',
         'footer' => $rangeLabel,
         'cardClass' => 'reports-chart-card',
     ]) ?>

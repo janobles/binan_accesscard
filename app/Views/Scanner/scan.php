@@ -252,8 +252,9 @@ $('logForm').addEventListener('submit', async (e) => {
     showReceipt(`${aidName} → ${claimant} (Family #${$('control_no').value}), ${fd.get('claim_date')}`);
     lastHistory = data.history;
     renderHistory(data.history);
-    if (typeof data.myBatchCount === 'number') {
-      document.getElementById('myBatchCount').textContent = String(data.myBatchCount);
+    var countEl = document.getElementById('myBatchCount');
+    if (countEl && typeof data.myBatchCount === 'number') {
+      countEl.textContent = String(data.myBatchCount);
     }
     lastLoggedAidId = null;
     $('controlInput').value = '';

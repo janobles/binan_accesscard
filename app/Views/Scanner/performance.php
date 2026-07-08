@@ -41,15 +41,6 @@
   </div>
 </div>
 
-<div class="card border-0 rounded-3 mb-3">
-  <div class="card-body">
-    <div class="fw-bold mb-2">Handouts by aid type (this batch)</div>
-    <div style="position:relative;height:240px"><canvas id="chartAidType"></canvas></div>
-  </div>
-</div>
-
-<script type="application/json" id="reportsData"><?= json_encode(['aidType' => $byAidType], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?></script>
-
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>

@@ -86,7 +86,6 @@ class ScanController extends BaseController
             'batches'      => $batches,
             'batchId'      => $batchId,
             'mine'         => $batchId > 0 ? ($stats->perScanner($batchId, $userId)[0] ?? ['families' => 0, 'handouts' => 0]) : ['families' => 0, 'handouts' => 0],
-            'byAidType'    => $batchId > 0 ? $stats->byAidType($batchId) : [],
         ]);
     }
 

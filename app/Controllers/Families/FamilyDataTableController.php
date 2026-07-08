@@ -116,7 +116,15 @@ class FamilyDataTableController extends BaseController
 
         $firstOrder = $order[0];
         $column = (int) ($firstOrder['column'] ?? 0);
-        $direction = strtolower((string) ($firstOrder['dir'] ?? 'asc')) === 'desc' ? 'desc' : 'asc';
+        $requestedDirection = strtolower((string) ($firstOrder['dir'] ?? ''));
+
+        // DataTables sends an empty direction on the third header click. Restore
+        // the table's last-added-first order instead of coercing that state to ASC.
+        if ($requestedDirection === '') {
+            return ['newest', 'desc'];
+        }
+
+        $direction = $requestedDirection === 'desc' ? 'desc' : 'asc';
         // Column order: 0=QR, 1=name, 2=sector, 3=address, 4=birthday, 5=actions.
         // QR/sector/actions are non-orderable, so only address/birthday map here;
         // everything else (incl. the name column) falls back to the name sort.

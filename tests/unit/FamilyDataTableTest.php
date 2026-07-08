@@ -50,6 +50,7 @@ final class FamilyDataTableTest extends TestCase
         // Import feature: no initial column sort so the server's newest-first
         // order (a just-imported family) shows at the top; header clicks still sort.
         $this->assertStringContainsString('order: []', $script);
+        $this->assertSame(3, substr_count($script, "orderSequence: ['asc', 'desc', '']"));
         $this->assertStringNotContainsString('request.date', $script);
     }
 
@@ -141,5 +142,13 @@ final class FamilyDataTableTest extends TestCase
         $this->assertStringContainsString("'barangay'", $method);
         $this->assertStringContainsString("getGet('search')", $method);
         $this->assertStringNotContainsString("getGet('date')", $method);
+
+        $orderMethod = $methodEnd !== false ? substr($controller, $methodEnd) : '';
+        $this->assertStringContainsString("if (\$requestedDirection === '')", $orderMethod);
+        $this->assertStringContainsString("return ['newest', 'desc'];", $orderMethod);
+
+        $searchModel = (string) file_get_contents(APPPATH . 'Models/SearchModel.php');
+        $this->assertStringContainsString("case 'newest':", $searchModel);
+        $this->assertStringContainsString("orderBy('m.memberID', 'DESC')", $searchModel);
     }
 }

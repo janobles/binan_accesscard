@@ -127,10 +127,10 @@
             },
             columns: [
                 { data: 'qr', name: 'qr', orderable: false, className: 'text-center text-nowrap' },
-                { data: 'name', name: 'name' },
+                { data: 'name', name: 'name', orderSequence: ['asc', 'desc', ''] },
                 { data: 'sector', name: 'sector', orderable: false },
-                { data: 'address', name: 'address' },
-                { data: 'birthday', name: 'birthday' },
+                { data: 'address', name: 'address', orderSequence: ['asc', 'desc', ''] },
+                { data: 'birthday', name: 'birthday', orderSequence: ['asc', 'desc', ''] },
                 { data: 'actions', name: 'actions', orderable: false, searchable: false, className: 'text-end' }
             ],
             layout: {

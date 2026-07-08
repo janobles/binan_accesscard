@@ -105,15 +105,18 @@ class SearchModel
     }
 
     /**
-     * Applies a DataTables column sort to the deep-member query, or the default
-     * (lastname, firstname ASC) when $orderKey is null/unrecognized. Mirrors the
-     * column mapping in MemberModel::applyMemberOrder but on the `m.` alias.
+     * Applies a DataTables column sort to the deep-member query. The `newest`
+     * key restores last-added-first order; null/unrecognized keys preserve the
+     * original (lastname, firstname ASC) behavior for non-DataTables callers.
      */
     private function applyAllMembersOrder(BaseBuilder $builder, ?string $orderKey, string $orderDirection): void
     {
         $direction = strtolower(trim($orderDirection)) === 'desc' ? 'DESC' : 'ASC';
 
         switch ($orderKey) {
+            case 'newest':
+                $builder->orderBy('m.memberID', 'DESC');
+                return;
             case 'address':
                 $builder->orderBy('m.address', $direction);
                 return;

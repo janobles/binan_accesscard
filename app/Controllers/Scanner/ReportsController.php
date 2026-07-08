@@ -6,6 +6,7 @@ use App\Controllers\BaseController;
 use App\Libraries\RoleAccess;
 use App\Libraries\SessionAccount;
 use App\Models\Scanner\AidStatsModel;
+use App\Models\Scanner\DistributionBatchModel;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
 
@@ -25,13 +26,27 @@ class ReportsController extends BaseController
         }
 
         [$from, $to] = $this->normalizeDates();
-        $stats       = model(AidStatsModel::class);
-        $summary     = $stats->receivedVsNot($from, $to);
-        $byBarangay  = $stats->byBarangay($from, $to);
-        $byAidType   = $stats->byAidType($from, $to);
 
-        $role      = RoleAccess::normalizeRole((string) session()->get('role'));
-        $canManage = in_array($role, ['Developer', 'Admin'], true);
+        $batches           = model(DistributionBatchModel::class)->allBatches();
+        [$batchId, $batch] = $this->resolveBatch($batches);
+        // Batch scope and date scope are alternative filters: a chosen batch
+        // wins and the date window is cleared to keep the label truthful.
+        if ($batch !== null) {
+            [$from, $to] = [null, null];
+        }
+
+        $role          = RoleAccess::normalizeRole((string) session()->get('role'));
+        $isScannerRole = $role === 'Scanner';
+        $canManage     = in_array($role, ['Developer', 'Admin'], true);
+
+        $stats      = model(AidStatsModel::class);
+        $scope      = $batchId > 0 ? $batchId : null;
+        $summary    = $stats->receivedVsNot($from, $to, $scope);
+        $byBarangay = $stats->byBarangay($from, $to, $scope);
+        $byAidType  = $stats->byAidType($from, $to, $scope);
+        $perScanner = $batchId > 0
+            ? $stats->perScanner($batchId, $isScannerRole ? (int) (session('user_id') ?? 0) : null)
+            : [];
 
         return view('Scanner/reports', [
             'activeTab'         => 'reports',
@@ -44,6 +59,11 @@ class ReportsController extends BaseController
             'summary'           => $summary,
             'byBarangay'        => $byBarangay,
             'byAidType'         => $byAidType,
+            'batches'           => $batches,
+            'batchId'           => $batchId > 0 ? $batchId : null,
+            'batchName'         => $batch['name'] ?? null,
+            'perScanner'        => $perScanner,
+            'isScannerRole'     => $isScannerRole,
             'currentRole'       => $role,
             'canManageAccounts' => $canManage,
             'sidebarRoleClass'  => strtolower($role),
@@ -77,6 +97,24 @@ class ReportsController extends BaseController
             ->setHeader('Content-Type', 'application/pdf')
             ->setHeader('Content-Disposition', 'attachment; filename="' . $name . '"')
             ->setBody($bytes);
+    }
+
+    /**
+     * Resolves the ?batch query param against the known batches.
+     *
+     * @param array $batches rows from DistributionBatchModel::allBatches()
+     * @return array{0:int,1:?array} [batchId (0 = none), batch row or null]
+     */
+    private function resolveBatch(array $batches): array
+    {
+        $batchId = (int) $this->request->getGet('batch');
+        foreach ($batches as $b) {
+            if ((int) $b['batch_id'] === $batchId) {
+                return [$batchId, $b];
+            }
+        }
+
+        return [0, null];
     }
 
     /**

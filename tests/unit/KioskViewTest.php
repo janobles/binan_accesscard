@@ -21,4 +21,12 @@ final class KioskViewTest extends CIUnitTestCase
         $this->assertStringContainsString("extend('Scanner/kiosk-layout')", $src);
         $this->assertStringContainsString('scanner/scan', $src);
     }
+
+    public function testScanViewUsesKioskLayoutWithoutAidDropdown(): void
+    {
+        $src = file_get_contents(APPPATH . 'Views/Scanner/scan.php');
+        $this->assertStringContainsString("extend('Scanner/kiosk-layout')", $src);
+        $this->assertStringNotContainsString('sessionAidType', $src);
+        $this->assertStringContainsString('myBatchCount', $src);
+    }
 }

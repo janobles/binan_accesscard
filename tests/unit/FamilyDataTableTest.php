@@ -36,8 +36,9 @@ final class FamilyDataTableTest extends TestCase
         $this->assertStringContainsString('id="familyRecordsTable"', $view);
         // QR NO. + HEAD/MEMBER NAME + SECTOR + ADDRESS + BIRTHDAY + ACTIONS.
         $this->assertSame(6, preg_match_all('/<th(?:\s|>)/', $view));
-        $this->assertStringContainsString('>QR NO.<', $view);
+        $this->assertStringContainsString('<th class="fw-semibold small text-center">QR NO.</th>', $view);
         $this->assertStringContainsString("{ data: 'qr', name: 'qr', orderable: false", $script);
+        $this->assertStringContainsString("className: 'text-center text-nowrap'", $script);
         $this->assertStringNotContainsString('>DATE<', $view);
         $this->assertStringNotContainsString('name="date"', $view);
         $this->assertStringContainsString('serverSide: true', $script);
@@ -117,8 +118,9 @@ final class FamilyDataTableTest extends TestCase
         $this->assertStringContainsString('controlsForHeads(', $controller);
         // ...the row exposes a dedicated 'qr' cell built by the presenter's qrCell()...
         $this->assertStringContainsString("'qr' => \$this->qrCell(\$controlNo)", $presenter);
-        // ...which renders a bordered QR badge with the padded number, dash when unmapped.
-        $this->assertStringContainsString('bi bi-qr-code', $presenter);
+        // ...which renders a modest Bootstrap badge with the padded number, dash when unmapped.
+        $this->assertStringContainsString('badge bg-light text-dark border fw-semibold fs-6 text-nowrap', $presenter);
+        $this->assertStringNotContainsString(" . '#'", $presenter);
         $this->assertStringContainsString('ControlNumber::format($controlNo)', $presenter);
         $this->assertStringContainsString('&mdash;', $presenter);
     }

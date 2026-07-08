@@ -126,7 +126,7 @@
                 }
             },
             columns: [
-                { data: 'qr', name: 'qr', orderable: false, className: 'text-nowrap' },
+                { data: 'qr', name: 'qr', orderable: false, className: 'text-center text-nowrap' },
                 { data: 'name', name: 'name' },
                 { data: 'sector', name: 'sector', orderable: false },
                 { data: 'address', name: 'address' },

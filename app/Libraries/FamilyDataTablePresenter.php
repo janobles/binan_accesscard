@@ -78,9 +78,8 @@ class FamilyDataTablePresenter
     }
 
     /**
-     * QR NO. cell: a bordered badge (matching the app's other badges) with a QR
-     * glyph and the zero-padded control number, or a muted dash when the family has
-     * no QR mapping yet.
+     * QR NO. cell: a modest Bootstrap badge with the zero-padded control number,
+     * or a muted dash when the family has no QR mapping yet.
      */
     private function qrCell(int $controlNo): string
     {
@@ -88,8 +87,7 @@ class FamilyDataTablePresenter
             return '<span class="text-muted">&mdash;</span>';
         }
 
-        return '<span class="badge bg-light text-dark border text-nowrap">'
-            . '#'
+        return '<span class="badge bg-light text-dark border fw-semibold fs-6 text-nowrap">'
             . esc(ControlNumber::format($controlNo)) . '</span>';
     }
 

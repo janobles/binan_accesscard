@@ -8,6 +8,13 @@
  * - $page int, $totalPages int
  * - $prevUrl string, $nextUrl string  (already-built page URLs)
  */
+$fromRecord = $fromRecord ?? 0;
+$toRecord = $toRecord ?? 0;
+$totalRows = $totalRows ?? 0;
+$page = $page ?? 1;
+$totalPages = $totalPages ?? 1;
+$prevUrl = $prevUrl ?? '#';
+$nextUrl = $nextUrl ?? '#';
 ?>
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
     <span>Showing <?= esc((string) $fromRecord) ?>&ndash;<?= esc((string) $toRecord) ?> of <?= esc((string) $totalRows) ?></span>

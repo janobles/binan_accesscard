@@ -28,17 +28,17 @@
                       </button>
                       <div class="dropdown-menu dropdown-menu-end">
                         <?php if ($archived): ?>
-                          <form method="post" action="<?= site_url('scanner/aid-types/restore/' . $t['aid_type_id']) ?>">
+                          <form method="post" action="<?= esc(site_url('scanner/aid-types/restore/' . $t['aid_type_id']), 'attr') ?>">
                             <?= csrf_field() ?>
                             <button class="dropdown-item text-success" type="submit"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>Restore</button>
                           </form>
-                          <form method="post" action="<?= site_url('scanner/aid-types/delete/' . $t['aid_type_id']) ?>"
+                          <form method="post" action="<?= esc(site_url('scanner/aid-types/delete/' . $t['aid_type_id']), 'attr') ?>"
                                 onsubmit="return confirm('Delete permanently? Only allowed if never used.');">
                             <?= csrf_field() ?>
                             <button class="dropdown-item text-danger" type="submit"><i class="bi bi-trash" aria-hidden="true"></i>Delete</button>
                           </form>
                         <?php else: ?>
-                          <form method="post" action="<?= site_url('scanner/aid-types/archive/' . $t['aid_type_id']) ?>">
+                          <form method="post" action="<?= esc(site_url('scanner/aid-types/archive/' . $t['aid_type_id']), 'attr') ?>">
                             <?= csrf_field() ?>
                             <button class="dropdown-item" type="submit"><i class="bi bi-archive" aria-hidden="true"></i>Archive</button>
                           </form>

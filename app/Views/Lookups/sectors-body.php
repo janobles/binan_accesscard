@@ -108,7 +108,7 @@
 				<?php endforeach; ?>
 				<?php if ($sectors === []): ?>
 					<tr>
-						<td colspan="5" class="sector-empty-state"><?= $keyword !== '' ? 'No sectors match your search.' : 'No sector records found.' ?></td>
+						<td colspan="<?= $canManage ? 5 : 4 ?>" class="sector-empty-state"><?= $keyword !== '' ? 'No sectors match your search.' : 'No sector records found.' ?></td>
 					</tr>
 				<?php endif; ?>
 			</tbody>

@@ -44,7 +44,7 @@
 <div class="card border-0 rounded-3 mb-3">
   <div class="card-body">
     <div class="fw-bold mb-2">Handouts by aid type (this batch)</div>
-    <canvas id="chartAidType" height="180"></canvas>
+    <div style="position:relative;height:240px"><canvas id="chartAidType"></canvas></div>
   </div>
 </div>
 

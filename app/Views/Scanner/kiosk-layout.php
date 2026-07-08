@@ -29,6 +29,10 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
     <?= $activeBatch !== null ? esc($activeBatch['name']) : 'No active batch' ?>
   </span>
   <div class="d-flex align-items-center gap-3 text-white">
+    <div class="btn-group btn-group-sm" role="group" aria-label="Kiosk navigation">
+      <a class="btn <?= url_is('scanner/scan') ? 'btn-light' : 'btn-outline-light' ?>" href="<?= site_url('scanner/scan') ?>"><i class="bi bi-upc-scan me-1" aria-hidden="true"></i>Scan</a>
+      <a class="btn <?= url_is('scanner/performance') ? 'btn-light' : 'btn-outline-light' ?>" href="<?= site_url('scanner/performance') ?>"><i class="bi bi-graph-up me-1" aria-hidden="true"></i>Performance</a>
+    </div>
     <?php if ($aidType !== null): ?>
       <span class="badge bg-info text-dark"><?= esc($aidType['name']) ?></span>
     <?php endif; ?>

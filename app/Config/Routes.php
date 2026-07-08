@@ -95,6 +95,8 @@ $routes->group('admin', static function (RouteCollection $routes): void {
         $routes->post('close/(:num)', 'Admin\DistributionController::closeBatch/$1');
     });
     $routes->post('distributions/void/(:num)', 'Admin\DistributionController::voidDistribution/$1');
+    $routes->get('reports', 'Admin\ReportsController::index');
+    $routes->get('reports/pdf', 'Admin\ReportsController::pdf');
 });
 
 /*

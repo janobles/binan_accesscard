@@ -11,6 +11,7 @@ use App\Models\Lookups\SectorModel;
 use App\Models\Lookups\ServiceModel;
 use App\Models\Auth\UserModel;
 use App\Models\Scanner\AidDistributionModel;
+use App\Models\Scanner\AidStatsModel;
 use App\Models\Scanner\AidTypeModel;
 use App\Models\Scanner\DistributionBatchModel;
 use App\Support\FamilyProfilingFormV2;
@@ -115,6 +116,20 @@ class DashboardPageBuilder
         $aidTypeModel   = model(AidTypeModel::class);
         $batchModel     = model(DistributionBatchModel::class);
 
+        // Overall reports (combined totals + per-kiosk table), batch-scoped only
+        // (no date filter). Gated so other pages don't run these queries.
+        $reportsData = $activePage === 'reports'
+            ? $this->buildReportsData($batchModel)
+            : [
+                'reportsBatches'    => [],
+                'reportsBatchId'    => null,
+                'reportsBatchName'  => null,
+                'reportsSummary'    => ['total' => 0, 'received' => 0, 'notReceived' => 0, 'coverage' => 0],
+                'reportsByBarangay' => [],
+                'reportsByAidType'  => [],
+                'reportsPerScanner' => [],
+            ];
+
         // Hide the logged-in user's own account from their Account Management list;
         // other admins/developers still see it. The Developer logs in from .env
         // (userID 0, no users row), so nothing is hidden for it.
@@ -158,6 +173,7 @@ class DashboardPageBuilder
                 'categories'   => $layoutModel->navActive($activePage, 'categories'),
                 'cards'        => $layoutModel->navActive($activePage, 'cards'),
                 'distribution' => $layoutModel->navActive($activePage, 'distribution'),
+                'reports'      => $layoutModel->navActive($activePage, 'reports'),
             ],
             'adminAccounts'      => array_values(array_filter($visibleAccounts, static fn ($account) => $account['role'] === 'administrator')),
             // 'encoder' is the raw DB enum value for the Employee role (surfaced as
@@ -182,6 +198,13 @@ class DashboardPageBuilder
             'batches'            => $isDistribution ? $batchModel->allBatches() : [],
             'activeBatch'        => $isDistribution ? $batchModel->activeBatch() : null,
             'distributions'      => $isDistribution ? model(AidDistributionModel::class)->allDistributions() : [],
+            'reportsBatches'     => $reportsData['reportsBatches'],
+            'reportsBatchId'     => $reportsData['reportsBatchId'],
+            'reportsBatchName'   => $reportsData['reportsBatchName'],
+            'reportsSummary'     => $reportsData['reportsSummary'],
+            'reportsByBarangay'  => $reportsData['reportsByBarangay'],
+            'reportsByAidType'   => $reportsData['reportsByAidType'],
+            'reportsPerScanner'  => $reportsData['reportsPerScanner'],
             'stats'              => $dashboardModel->stats(),
             'canCreateFamily'    => true,
             'username'           => (string) (session()->get('username') ?? 'Admin'),
@@ -369,6 +392,47 @@ class DashboardPageBuilder
             'fromRecord'    => $total === 0 ? 0 : $offset + 1,
             'toRecord'      => min($total, $page * $perPage),
             'listRoute'     => $listRoute,
+        ];
+    }
+
+    /**
+     * Batch-scoped data for the admin overall Reports page: combined totals,
+     * per-barangay/aid-type breakdowns, and the per-kiosk table (all scanners,
+     * no self-scoping — admin sees every kiosk). The scoping batch defaults to
+     * the active batch, else the most recent batch, and honors ?batch= when it
+     * matches a known batch (mirrors Admin\ReportsController::resolveBatch()).
+     */
+    private function buildReportsData(DistributionBatchModel $batchModel): array
+    {
+        $batches = $batchModel->allBatches();
+        $active  = $batchModel->activeBatch();
+
+        $batchId = (int) $this->request->getGet('batch');
+        $batch   = null;
+        if ($batchId <= 0) {
+            $batchId = $active !== null ? (int) $active['batch_id'] : (int) ($batches[0]['batch_id'] ?? 0);
+        }
+        foreach ($batches as $b) {
+            if ((int) $b['batch_id'] === $batchId) {
+                $batch = $b;
+                break;
+            }
+        }
+        if ($batch === null) {
+            $batchId = 0;
+        }
+
+        $scope = $batchId > 0 ? $batchId : null;
+        $stats = model(AidStatsModel::class);
+
+        return [
+            'reportsBatches'    => $batches,
+            'reportsBatchId'    => $batchId > 0 ? $batchId : null,
+            'reportsBatchName'  => $batch['name'] ?? null,
+            'reportsSummary'    => $stats->receivedVsNot($scope),
+            'reportsByBarangay' => $stats->byBarangay($scope),
+            'reportsByAidType'  => $stats->byAidType($scope),
+            'reportsPerScanner' => $batchId > 0 ? $stats->perScanner($batchId) : [],
         ];
     }
 

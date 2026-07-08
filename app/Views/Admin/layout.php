@@ -344,6 +344,10 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                 });
                 </script>
             <?php endif; ?>
+
+            <?php if ($activePage === 'reports'): ?>
+                <?= view('Admin/reports-body') ?>
+            <?php endif; ?>
             </main>
     </div>
 </div>

@@ -7,8 +7,8 @@ vendored at `public/assets/bootstrap/css/bootstrap.min.css:1` — pins in
 ## Rule 1: Pages plug into a role layout shell — never standalone `<html>`
 
 Shells: `app/Views/Admin/layout.php:68`, `Employee/layout.php`,
-`Viewer/layout.php`, `Scanner/layout.php`. Each shell owns `<html>`, head
-assets, sidebar, topbar, and swaps the per-page view in by `$activePage`:
+`Viewer/layout.php`. Each shell owns `<html>`, head assets, sidebar, topbar,
+and swaps the per-page view in by `$activePage`:
 
 ```php
 <?= view('Family/list', $recordListData) ?>
@@ -43,7 +43,7 @@ anatomy: card-header icon+title > card-body > optional card-footer):
   + Previous/Next pagination row, passed as `card`'s `footer`.
 
 Canonical consumers: `app/Views/Family/list.php:26` (card + body
-partial), `app/Views/Scanner/reports.php:88` (chart cards + data_table).
+partial), `app/Views/Admin/reports-body.php:79` (chart cards + data_table).
 New panels MUST use these components, not hand-rolled card markup.
 
 ## Rule 3: CSS loads via `asset_styles()` — Bootstrap first, adapter, then page CSS
@@ -95,7 +95,7 @@ page needs one:
   theming survives the SB Admin migration.
 
 **Reviewer false positive to ignore:** `h-100` is a plain Bootstrap sizing
-utility used by the house style (`app/Views/Scanner/reports.php:53`), NOT an
-SB-Admin-Pro demo class. The Pro-only markers this repo bans are
+utility used by the house style (`app/Views/Admin/reports-body.php:98`), NOT
+an SB-Admin-Pro demo class. The Pro-only markers this repo bans are
 `border-left-*` and `text-xs text-uppercase`
 (`tests/unit/ReportsViewTest.php:31`).

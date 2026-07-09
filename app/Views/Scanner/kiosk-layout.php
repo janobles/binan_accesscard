@@ -3,7 +3,7 @@
  * Kiosk shell for the scan flow (setting + scan pages): full-viewport, no
  * sidebar/topbar. Deliberately minimal for time-and-motion — one slim header
  * bar (batch · aid type · live personal counter · change-type · logout) and
- * the page content. Reports and Manage stay in Scanner/layout (dashboard shell).
+ * the page content. Reports and stats stay in the admin dashboard shell.
  */
 $pageTitle          = $pageTitle ?? 'Scan';
 $username           = $username ?? 'Scanner';
@@ -23,19 +23,19 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
     <?php endforeach; ?>
 </head>
 <body>
-<nav class="navbar navbar-dark bg-dark px-3">
-  <span class="navbar-brand mb-0 h1">
-    <i class="bi bi-qr-code-scan me-1" aria-hidden="true"></i>
-    <?= $activeBatch !== null ? esc($activeBatch['name']) : 'No active batch' ?>
+<nav class="navbar navbar-dark px-3" style="background-color: var(--binan-green);">
+  <span class="navbar-brand mb-0 h1 d-flex align-items-center gap-2">
+    <i class="bi bi-qr-code-scan" aria-hidden="true"></i>
+    <span><?= $activeBatch !== null ? esc($activeBatch['name']) : 'No active batch' ?></span>
+    <?php if ($aidType !== null): ?>
+      <span class="badge bg-info text-dark fs-6"><?= esc($aidType['name']) ?></span>
+    <?php endif; ?>
   </span>
   <div class="d-flex align-items-center gap-3 text-white">
-    <?php if ($aidType !== null): ?>
-      <span class="badge bg-info text-dark"><?= esc($aidType['name']) ?></span>
-      <a class="link-light small" href="<?= site_url('scanner/setting') ?>">Change type</a>
-    <?php endif; ?>
-    <span class="badge bg-success fs-6" title="Families you served this batch">
-      You: <span id="myBatchCount"><?= $myBatchCount ?></span> families
-    </span>
+    <div class="btn-group btn-group-sm" role="group" aria-label="Kiosk navigation">
+      <a class="btn <?= url_is('scanner/scan') ? 'btn-light' : 'btn-outline-light' ?>" href="<?= site_url('scanner/scan') ?>"><i class="bi bi-upc-scan me-1" aria-hidden="true"></i>Scan</a>
+      <a class="btn <?= url_is('scanner/performance') ? 'btn-light' : 'btn-outline-light' ?>" href="<?= site_url('scanner/performance') ?>"><i class="bi bi-graph-up me-1" aria-hidden="true"></i>Performance</a>
+    </div>
     <span class="small"><?= esc($username) ?></span>
     <a class="btn btn-outline-light btn-sm" href="<?= site_url('logout') ?>">Logout</a>
   </div>

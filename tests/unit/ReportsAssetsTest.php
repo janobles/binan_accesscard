@@ -21,13 +21,6 @@ final class ReportsAssetsTest extends CIUnitTestCase
         $this->assertContains('css/scanner-reports.css', asset_styles('scanner'));
     }
 
-    public function testLayoutMergesScannerContext(): void
-    {
-        $layout = file_get_contents(APPPATH . 'Views/Scanner/layout.php');
-        $this->assertStringContainsString("asset_scripts('scanner')", $layout);
-        $this->assertStringContainsString("asset_styles('scanner')", $layout);
-    }
-
     public function testChartJsVendored(): void
     {
         $this->assertFileExists(FCPATH . 'vendor/chart.js/chart.umd.min.js');

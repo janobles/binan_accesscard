@@ -13,7 +13,8 @@ final class ScanControllerTest extends CIUnitTestCase
         $routes->loadRoutes();
         $map = $routes->getRoutes('GET');
         $this->assertArrayHasKey('scanner/scan', $map);
-        $this->assertArrayHasKey('scanner/manage', $map);
+        $this->assertArrayHasKey('scanner/performance', $map);
+        $this->assertArrayHasKey('scanner/stats', $map);
     }
 
     public function testGuardRolesIncludeScanner(): void
@@ -25,9 +26,7 @@ final class ScanControllerTest extends CIUnitTestCase
     public function testScanViewLogsInline(): void
     {
         $src = file_get_contents(APPPATH . 'Views/Scanner/scan.php');
-        // Logging happens in the Scan tab now: a log form posting to scanner/log,
-        // not a redirect link to scanner/manage.
+        // Logging happens in the Scan tab now: a log form posting to scanner/log.
         $this->assertStringContainsString('scanner/log', $src);
-        $this->assertStringNotContainsString('scanner/manage?control_no=', $src);
     }
 }

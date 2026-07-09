@@ -1,8 +1,11 @@
 <?php
 /**
  * Distributions log body: client-side filter toolbar + distributions table.
- * Rendered inside components/card by Scanner/manage.php (vars: distributions,
- * aidTypes). Filtering/paging handled by the inline script in manage.php.
+ * Ported from Scanner/manage-distributions-body.php for the admin
+ * distribution hub (void action moved off the old scanner shell
+ * to admin/distributions/void/*). Rendered inside components/card by
+ * Admin/layout.php's distribution block (vars: distributions, aidTypes). Filtering/paging
+ * handled by the inline script in Admin/layout.php's distribution block.
  */
 ?>
 <div class="records-search-panel">
@@ -66,7 +69,7 @@
                         <i class="bi bi-three-dots" aria-hidden="true"></i>
                       </button>
                       <div class="dropdown-menu dropdown-menu-end">
-                        <form method="post" action="<?= esc(site_url('scanner/distributions/void/' . $d['aidID']), 'attr') ?>"
+                        <form method="post" action="<?= esc(site_url('admin/distributions/void/' . $d['aidID']), 'attr') ?>"
                               onsubmit="return confirm('Void this distribution? This permanently removes the record.');">
                           <?= csrf_field() ?>
                           <button class="dropdown-item text-danger" type="submit"><i class="bi bi-x-circle" aria-hidden="true"></i>Void</button>

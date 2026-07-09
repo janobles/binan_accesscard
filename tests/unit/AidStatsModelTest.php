@@ -18,7 +18,7 @@ final class AidStatsModelTest extends CIUnitTestCase
 
     public function testByBarangayReturnsArray(): void
     {
-        $this->assertIsArray((new AidStatsModel())->byBarangay('2026-01-01', '2026-01-31'));
+        $this->assertIsArray((new AidStatsModel())->byBarangay());
     }
 
     public function testByAidTypeReturnsArray(): void
@@ -26,19 +26,19 @@ final class AidStatsModelTest extends CIUnitTestCase
         $this->assertIsArray((new AidStatsModel())->byAidType());
     }
 
-    public function testMethodsAcceptNullRangeWithoutError(): void
+    public function testMethodsAcceptNullBatchIdWithoutError(): void
     {
         $m = new AidStatsModel();
-        $this->assertIsArray($m->byBarangay(null, null));
-        $this->assertIsArray($m->byAidType(null, null));
+        $this->assertIsArray($m->byBarangay(null));
+        $this->assertIsArray($m->byAidType(null));
     }
 
     public function testMethodsAcceptBatchIdWithoutError(): void
     {
         $m = new AidStatsModel();
-        $this->assertIsArray($m->receivedVsNot(null, null, 3));
-        $this->assertIsArray($m->byBarangay(null, null, 3));
-        $this->assertIsArray($m->byAidType(null, null, 3));
+        $this->assertIsArray($m->receivedVsNot(3));
+        $this->assertIsArray($m->byBarangay(3));
+        $this->assertIsArray($m->byAidType(3));
     }
 
     public function testPerScannerReturnsArrayAndRejectsBadBatch(): void

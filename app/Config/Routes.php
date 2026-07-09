@@ -79,6 +79,22 @@ $routes->group('admin', static function (RouteCollection $routes): void {
         $routes->get('card/(:num)', 'Cards\QrCardController::card/$1');
         $routes->get('lookup/(:any)', 'Cards\QrCardController::lookup/$1');
     });
+
+    $routes->get('distribution', 'Admin\DistributionController::index');
+    $routes->group('aid-types', static function (RouteCollection $routes): void {
+        $routes->post('create', 'Admin\DistributionController::createAidType');
+        $routes->post('archive/(:num)', 'Admin\DistributionController::archiveAidType/$1');
+        $routes->post('restore/(:num)', 'Admin\DistributionController::restoreAidType/$1');
+        $routes->post('delete/(:num)', 'Admin\DistributionController::deleteAidType/$1');
+    });
+    $routes->group('batches', static function (RouteCollection $routes): void {
+        $routes->post('open', 'Admin\DistributionController::openBatch');
+        $routes->post('close/(:num)', 'Admin\DistributionController::closeBatch/$1');
+    });
+    $routes->post('distributions/void/(:num)', 'Admin\DistributionController::voidDistribution/$1');
+    $routes->get('reports', 'Admin\ReportsController::index');
+    $routes->get('reports/stats', 'Admin\ReportsController::stats');
+    $routes->get('reports/pdf', 'Admin\ReportsController::pdf');
 });
 
 /*
@@ -131,21 +147,11 @@ $routes->group('viewer', static function (RouteCollection $routes): void {
  * calls RoleAccess::requireRole() internally (mirrors the Cards controller).
  */
 $routes->group('scanner', static function (RouteCollection $routes): void {
-    $routes->get('setting', 'Scanner\ScanController::setting');
     $routes->get('scan', 'Scanner\ScanController::scan');
+    $routes->get('performance', 'Scanner\ScanController::performance');
+    $routes->get('stats', 'Scanner\ScanController::stats');
     $routes->get('lookup/(:num)', 'Scanner\ScanController::lookup/$1');
     $routes->post('log', 'Scanner\ScanController::logAid');
-
-    $routes->get('manage', 'Scanner\ManageController::index');
-    $routes->post('aid-types/create', 'Scanner\ManageController::createAidType');
-    $routes->post('aid-types/archive/(:num)', 'Scanner\ManageController::archiveAidType/$1');
-    $routes->post('aid-types/restore/(:num)', 'Scanner\ManageController::restoreAidType/$1');
-    $routes->post('aid-types/delete/(:num)', 'Scanner\ManageController::deleteAidType/$1');
-    $routes->post('distributions/void/(:num)', 'Scanner\ManageController::voidDistribution/$1');
-    $routes->post('batches/open', 'Scanner\ManageController::openBatch');
-    $routes->post('batches/close/(:num)', 'Scanner\ManageController::closeBatch/$1');
-    $routes->get('reports', 'Scanner\ReportsController::index');
-    $routes->get('reports/pdf', 'Scanner\ReportsController::pdf');
 });
 
 /*

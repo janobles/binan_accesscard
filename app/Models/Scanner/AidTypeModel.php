@@ -66,4 +66,33 @@ class AidTypeModel extends Model
     {
         return $this->update($id, ['dt_deleted' => null]) !== false;
     }
+
+    /**
+     * Delete an aid type only when no distribution references it, checking and
+     * deleting in one transaction to close the check-then-delete race.
+     *
+     * @return int 0 = deleted, -1 = delete failed, >0 = still referenced (count)
+     */
+    public function deleteIfUnused(int $id): int
+    {
+        try {
+            $this->db->transStart();
+
+            $used = $this->db->table('aid_distribution')
+                ->where('aid_type_id', $id)
+                ->countAllResults();
+            if ($used > 0) {
+                $this->db->transComplete();
+
+                return $used;
+            }
+
+            $ok = $this->delete($id) !== false;
+            $this->db->transComplete();
+
+            return ($this->db->transStatus() && $ok) ? 0 : -1;
+        } catch (\Throwable $e) {
+            return -1;
+        }
+    }
 }

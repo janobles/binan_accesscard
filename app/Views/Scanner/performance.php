@@ -22,40 +22,33 @@
   </div>
 </div>
 
-<div class="row g-3 mb-3">
-  <div class="col-6 col-lg-3">
-    <div class="card border-0 rounded-3 h-100">
-      <div class="card-body text-center">
-        <div class="text-muted small">Families served</div>
-        <div class="display-5 fw-bold" id="statFamilies"><?= (int) ($mine['families'] ?? 0) ?></div>
-      </div>
-    </div>
-  </div>
-  <div class="col-6 col-lg-3">
-    <div class="card border-0 rounded-3 h-100">
-      <div class="card-body text-center">
-        <div class="text-muted small">Handouts logged</div>
-        <div class="display-5 fw-bold" id="statHandouts"><?= (int) ($mine['handouts'] ?? 0) ?></div>
-      </div>
-    </div>
-  </div>
-  <div class="col-6 col-lg-3">
-    <div class="card border-0 rounded-3 h-100">
-      <div class="card-body text-center">
-        <div class="text-muted small">Families / hour</div>
-        <div class="display-5 fw-bold" id="statPerHour"><?= (int) ($pace['perHour'] ?? 0) ?></div>
-      </div>
-    </div>
-  </div>
-  <div class="col-6 col-lg-3">
-    <div class="card border-0 rounded-3 h-100">
-      <div class="card-body text-center">
-        <div class="text-muted small">Busiest window</div>
-        <div class="h3 fw-bold mb-0 mt-2" id="statBusiest"><?= esc(($pace['busiest'] ?? '') !== '' ? $pace['busiest'] : '—') ?></div>
-      </div>
-    </div>
-  </div>
-</div>
+<!-- KPI tiles: house stat-card component (same as the admin reports page). -->
+<section class="reports-stats mb-3" aria-label="Kiosk performance">
+  <?= view('components/stat_card', [
+      'label' => 'Families served',
+      'value' => (string) (int) ($mine['families'] ?? 0),
+      'icon' => 'people-fill',
+      'variant' => 'stat-card--records',
+  ]) ?>
+  <?= view('components/stat_card', [
+      'label' => 'Handouts logged',
+      'value' => (string) (int) ($mine['handouts'] ?? 0),
+      'icon' => 'box-seam',
+      'variant' => 'stat-card--members',
+  ]) ?>
+  <?= view('components/stat_card', [
+      'label' => 'Families / hour',
+      'value' => (string) (int) ($pace['perHour'] ?? 0),
+      'icon' => 'speedometer2',
+      'variant' => 'stat-card--sectors',
+  ]) ?>
+  <?= view('components/stat_card', [
+      'label' => 'Busiest window',
+      'value' => ($pace['busiest'] ?? '') !== '' ? $pace['busiest'] : '—',
+      'icon' => 'clock-history',
+      'variant' => 'stat-card--services',
+  ]) ?>
+</section>
 
 <div class="card border-0 rounded-3 mb-3">
   <div class="card-body">
@@ -118,12 +111,17 @@
     });
   }
 
+  function setTile(variant, value) {
+    var el = document.querySelector('.' + variant + ' strong');
+    if (el) { el.textContent = value; }
+  }
+
   function paint(d) {
-    document.getElementById('statFamilies').textContent = d.families;
-    document.getElementById('statHandouts').textContent = d.handouts;
+    setTile('stat-card--records', d.families);
+    setTile('stat-card--members', d.handouts);
     if (d.pace) {
-      document.getElementById('statPerHour').textContent = d.pace.perHour;
-      document.getElementById('statBusiest').textContent = d.pace.busiest || '—';
+      setTile('stat-card--sectors', d.pace.perHour);
+      setTile('stat-card--services', d.pace.busiest || '—');
     }
     if (Array.isArray(d.timeline)) { draw(d.timeline); }
     document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString();

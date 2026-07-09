@@ -80,9 +80,6 @@ $routes->group('admin', static function (RouteCollection $routes): void {
         $routes->get('lookup/(:any)', 'Cards\QrCardController::lookup/$1');
     });
 
-    $routes->group('distribution', static function (RouteCollection $routes): void {
-        $routes->get('', 'Admin\DistributionController::index');
-    });
     $routes->get('distribution', 'Admin\DistributionController::index');
     $routes->group('aid-types', static function (RouteCollection $routes): void {
         $routes->post('create', 'Admin\DistributionController::createAidType');

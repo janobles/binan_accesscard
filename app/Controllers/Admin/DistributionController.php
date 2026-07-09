@@ -72,13 +72,13 @@ class DistributionController extends BaseController
     public function deleteAidType(int $id): RedirectResponse
     {
         if ($g = $this->guard()) { return $g; }
-        $used = model(AidDistributionModel::class)->where('aid_type_id', $id)->countAllResults();
-        if ($used > 0) {
+        $type   = model(AidTypeModel::class)->find($id);
+        $result = model(AidTypeModel::class)->deleteIfUnused($id);
+        if ($result > 0) {
             return redirect()->to('admin/distribution')
-                ->with('error', 'Cannot delete: aid type is used by ' . $used . ' distribution(s). Archive it instead.');
+                ->with('error', 'Cannot delete: aid type is used by ' . $result . ' distribution(s). Archive it instead.');
         }
-        $type = model(AidTypeModel::class)->find($id);
-        if (! model(AidTypeModel::class)->delete($id)) {
+        if ($result < 0) {
             return redirect()->to('admin/distribution')->with('error', 'Unable to delete aid type.');
         }
         $this->audit('Deleted aid type "' . (string) ($type['name'] ?? '') . '" #' . $id);
@@ -98,7 +98,7 @@ class DistributionController extends BaseController
         $this->audit(
             'Voided aid distribution #' . $id,
             (int) ($row['memberID'] ?? 0),
-            'Control #' . (int) ($row['control_no'] ?? 0) . ', aid type ID ' . (int) ($row['aid_type_id'] ?? 0) . ', claim date ' . (string) ($row['claim_date'] ?? '')
+            'Control #' . (string) ($row['control_no'] ?? '') . ', aid type ID ' . (int) ($row['aid_type_id'] ?? 0) . ', claim date ' . (string) ($row['claim_date'] ?? '')
         );
         return redirect()->to('admin/distribution')->with('success', 'Distribution voided.');
     }

@@ -4,7 +4,9 @@
  * Scanner/manage-aidtypes-body.php for the admin distribution hub
  * (routes moved off the old scanner shell to admin/aid-types/*).
  * Rendered inside components/card by Admin/layout.php's distribution block (vars: aidTypes).
+ * Lifecycle buttons render only for Admin/Developer (mirrors distribution-batches-body).
  */
+$canManageAidTypes = in_array($currentRole ?? '', ['Admin', 'Developer'], true);
 ?>
 <div class="records-search-panel">
           <div class="records-search-row justify-content-end">
@@ -29,6 +31,7 @@
                         <i class="bi bi-three-dots" aria-hidden="true"></i>
                       </button>
                       <div class="dropdown-menu dropdown-menu-end">
+                        <?php if ($canManageAidTypes): ?>
                         <?php if ($archived): ?>
                           <form method="post" action="<?= esc(site_url('admin/aid-types/restore/' . $t['aid_type_id']), 'attr') ?>">
                             <?= csrf_field() ?>
@@ -44,6 +47,7 @@
                             <?= csrf_field() ?>
                             <button class="dropdown-item" type="submit"><i class="bi bi-archive" aria-hidden="true"></i>Archive</button>
                           </form>
+                        <?php endif; ?>
                         <?php endif; ?>
                       </div>
                     </div>

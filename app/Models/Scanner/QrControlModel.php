@@ -82,6 +82,36 @@ class QrControlModel extends Model
         return $map;
     }
 
+    /**
+     * Batch existence check: of the given control numbers, which are already assigned.
+     * One query per 1000 ids (kept small so a 10k-family import can't build a monster
+     * IN clause). Used by the import review to flag families already in the system.
+     *
+     * @param int[] $controlNos
+     * @return int[] the subset already present, as ints
+     */
+    public function existingControlNos(array $controlNos): array
+    {
+        $ids = array_values(array_unique(array_filter(
+            array_map('intval', $controlNos),
+            static fn (int $n): bool => $n > 0,
+        )));
+
+        if ($ids === []) {
+            return [];
+        }
+
+        $found = [];
+
+        foreach (array_chunk($ids, 1000) as $chunk) {
+            foreach ($this->whereIn('control_no', $chunk)->findAll() as $row) {
+                $found[] = (int) $row['control_no'];
+            }
+        }
+
+        return $found;
+    }
+
     /** True when $controlNo is already assigned to a head other than $headId. */
     public function takenByOtherHead(int $controlNo, int $headId): bool
     {

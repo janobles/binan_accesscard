@@ -178,6 +178,67 @@ class MemberModel extends Model
     }
 
     /**
+     * Bulk [headID => "First Last"] for a set of head IDs. Used by the importer to name
+     * the existing family a batch is adding members to.
+     *
+     * @param int[] $headIds
+     * @return array<int, string>
+     */
+    public function namesForHeads(array $headIds): array
+    {
+        $headIds = array_values(array_unique(array_filter(
+            array_map('intval', $headIds),
+            static fn (int $id): bool => $id > 0,
+        )));
+
+        if (! $this->hasTable() || $headIds === []) {
+            return [];
+        }
+
+        $rows = $this->db->table($this->table)
+            ->select('memberID, firstname, lastname')
+            ->where('member.memberID = member.headID', null, false)
+            ->whereIn('memberID', $headIds)
+            ->get()
+            ->getResultArray();
+
+        $map = [];
+
+        foreach ($rows as $row) {
+            $map[(int) $row['memberID']] = trim(((string) $row['firstname']) . ' ' . ((string) $row['lastname']));
+        }
+
+        return $map;
+    }
+
+    /**
+     * True when an ACTIVE member with this name + birthday already sits under the head.
+     * Guards the "add member to existing family" import path against inserting the same
+     * person twice.
+     */
+    public function memberExistsUnderHead(int $headId, string $firstname, string $lastname, ?string $birthday): bool
+    {
+        if (! $this->hasTable() || $headId <= 0) {
+            return false;
+        }
+
+        $builder = $this->db->table($this->table)
+            ->where('member.headID', $headId)
+            ->where('LOWER(member.firstname) = ' . $this->db->escape(mb_strtolower(trim($firstname))), null, false)
+            ->where('LOWER(member.lastname) = ' . $this->db->escape(mb_strtolower(trim($lastname))), null, false);
+
+        if ($birthday !== null && trim($birthday) !== '') {
+            $builder->where('member.birthday', $birthday);
+        }
+
+        if ($this->db->fieldExists('dt_deleted', $this->table)) {
+            $builder->where('member.dt_deleted IS NULL', null, false);
+        }
+
+        return $builder->countAllResults() > 0;
+    }
+
+    /**
      * Inserts a relative under an existing head (validating the head exists).
      * Called per member by FamilyController::store(); returns the new memberID
      * or false.

@@ -1,0 +1,45 @@
+/* Import Review screen (Views/Family/import-review.php + import-review.js). */
+
+.import-review-actionbar {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    background: #fff;
+    padding: 0.75rem 1rem;
+    border-top: 1px solid #dee2e6;
+    box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.import-review-table td,
+.import-review-table th {
+    vertical-align: middle;
+}
+
+.import-review-fix {
+    min-width: 12rem;
+    max-width: 22rem;
+}
+
+.import-review-group .card-header small {
+    max-width: 60%;
+    text-align: right;
+}
+
+.import-review-family {
+    background: rgba(0, 0, 0, 0.015);
+}
+
+.import-review-addr {
+    max-width: 15rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.import-review-notes {
+    padding-left: 1.1rem;
+}
+
+.import-review-notes li {
+    padding: 0.15rem 0;
+}

@@ -169,12 +169,29 @@ class QueueWork extends BaseCommand
             return;
         }
 
-        $model->finish(
-            $jobId,
-            $outcome->status,
-            $outcome->message,
-            $outcome->result !== null ? json_encode($outcome->result) : null,
-        );
+        // finish() runs OUTSIDE the handle() try/catch above. If storing the result
+        // throws (classically: an oversized result_json past MySQL's max_allowed_packet),
+        // an unguarded throw here leaves the job stuck 'processing' — re-claimed and
+        // re-run every STALE_MINUTES forever. Guard it: fall back to a resultless 'failed'
+        // so the job reaches a terminal state instead of looping.
+        try {
+            $model->finish(
+                $jobId,
+                $outcome->status,
+                $outcome->message,
+                $outcome->result !== null ? json_encode($outcome->result) : null,
+            );
+        } catch (Throwable $e) {
+            CLI::error('  could not store job result: ' . $e->getMessage());
+
+            try {
+                $model->finish($jobId, 'failed', 'The job finished but its result could not be saved: ' . $e->getMessage());
+            } catch (Throwable $inner) {
+                log_message('error', 'queue: could not mark job ' . $jobId . ' failed: ' . $inner->getMessage());
+            }
+
+            return;
+        }
 
         CLI::write('  ' . $outcome->status . ': ' . $outcome->message, $outcome->status === 'done' ? 'green' : 'yellow');
     }

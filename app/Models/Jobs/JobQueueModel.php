@@ -142,6 +142,16 @@ class JobQueueModel
         $this->db->table('job_queue')->where('jobID', $jobId)->update($data);
     }
 
+    /**
+     * Overwrites only a finished job's result_json (no status/progress change). Used by
+     * the import-review screen to persist the operator's inline edits onto the staged
+     * job. Safe because a terminal 'done' row is never re-claimed by the worker.
+     */
+    public function saveResult(int $jobId, string $resultJson): void
+    {
+        $this->db->table('job_queue')->where('jobID', $jobId)->update(['result_json' => $resultJson]);
+    }
+
     /** Marks a job terminal (done|partial|failed) with a summary + optional result. */
     public function finish(int $jobId, string $status, string $message, ?string $resultJson = null): void
     {

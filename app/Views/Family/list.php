@@ -23,6 +23,7 @@ $sectorOptionLabel = static function (array $sector): string {
 };
 ?>
 
+<<<<<<< HEAD
 <div class="card h-100 overflow-hidden small" data-family-list-panel>
     <div class="card-body d-flex flex-column overflow-hidden p-3">
         <form class="row g-2 align-items-stretch mb-2" id="familyDataTableFilters" aria-label="Database records search">
@@ -121,3 +122,23 @@ $sectorOptionLabel = static function (array $sector): string {
         </div>
     </div>
 </div>
+=======
+<?= view('components/card', [
+    'icon' => 'table',
+    'title' => 'Family Records',
+    'cardClass' => 'overflow-hidden',
+    'bodyClass' => 'd-flex flex-column overflow-hidden p-3',
+    'bodyView' => 'Family/list-body',
+    'bodyData' => [
+        'routeBase' => $routeBase,
+        'keyword' => $keyword,
+        'status' => $status,
+        'sectorOptions' => $sectorOptions,
+        'barangayOptions' => $barangayOptions,
+        'selectedSectorIds' => $selectedSectorIds,
+        'selectedBarangays' => $selectedBarangays,
+        'sectorOptionLabel' => $sectorOptionLabel,
+        'canEdit' => $canEdit,
+    ],
+]) ?>
+>>>>>>> 37b227b891c97c89790df56f4936d5278dde408a

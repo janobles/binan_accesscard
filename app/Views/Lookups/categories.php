@@ -1,13 +1,14 @@
 <?php
 /*
- * "Manage Categories" management page. Lists the sector categories from the
- * `category` table and lets an admin add/rename/archive/restore/delete them via
+ * "Manage Categories" management page. Lists the standalone SERVICE categories from
+ * the `category` table (FA/SWPS/EDA — the ones with no matching sector; a sector acts
+ * as its own service category) and lets an admin add/rename/archive/restore them via
  * the shared #categoryActionModal (see category-modal.php + categories-modal.js).
  *
- * Every category is fully editable, archivable, and deletable; the only
- * server-side guard (in Lookups\CategoryController) blocks archiving/deleting a
- * category still linked to sectors. Reuses the Manage Records .records-* layout
- * (managerecord.css) plus the shared lookup badge/action styles (lookupmanagement.css).
+ * Server-side guards (Lookups\CategoryController): a category may not duplicate a sector
+ * (code or name), and one still used by an active service cannot be archived. Reuses the
+ * Manage Records .records-* layout (managerecord.css) plus the shared lookup badge/action
+ * styles (lookupmanagement.css).
  */
 helper('dashboard_view');
 // category_management_view_data() also supplies $existingCodes (all codes incl.
@@ -18,7 +19,7 @@ extract(category_management_view_data(get_defined_vars()), EXTR_OVERWRITE);
 $activeCategoryCount   = (int) ($activeCount ?? 0);
 $archivedCategoryCount = (int) ($archivedCount ?? 0);
 $allCategoryCount      = $activeCategoryCount + $archivedCategoryCount;
-$status                = (string) ($status ?? 'all');
+$status                = (string) ($status ?? 'active');
 $keyword               = (string) ($keyword ?? '');
 $listRoute             = (string) ($listRoute ?? 'admin/categories');
 $perPage               = (int) ($perPage ?? 50);
@@ -28,7 +29,7 @@ $perPageOptions        = ($perPageOptions ?? []) ?: [10, 25, 50, 100];
 $categoryPageUrl = static function (int $targetPage) use ($listRoute, $keyword, $status, $perPage): string {
     $params = array_filter([
         'q'        => $keyword,
-        'status'   => $status === 'all' ? '' : $status,
+        'status'   => $status === 'active' ? '' : $status,
         'per_page' => $perPage !== 50 ? (string) $perPage : '',
         'page'     => $targetPage > 1 ? (string) $targetPage : '',
     ], static fn ($value): bool => $value !== '');
@@ -39,7 +40,7 @@ $categoryPageUrl = static function (int $targetPage) use ($listRoute, $keyword, 
 // "Clear" drops the keyword (and resets to page 1) but keeps status + page size.
 $categoryClearUrl = static function () use ($listRoute, $status, $perPage): string {
     $params = array_filter([
-        'status'   => $status === 'all' ? '' : $status,
+        'status'   => $status === 'active' ? '' : $status,
         'per_page' => $perPage !== 50 ? (string) $perPage : '',
     ], static fn ($value): bool => $value !== '');
 
@@ -47,6 +48,7 @@ $categoryClearUrl = static function () use ($listRoute, $status, $perPage): stri
 };
 ?>
 
+<<<<<<< HEAD
 <div class="sector-management records-scroll-panel" data-category-management-root>
 	<?php /* Database search across the whole category table (server-side GET) + status + Add. */ ?>
 	<div class="records-search-panel">
@@ -169,6 +171,28 @@ $categoryClearUrl = static function () use ($listRoute, $status, $perPage): stri
 		</div>
 	<?php endif; ?>
 </div>
+=======
+<?php
+$categoryFooter = ($totalRows ?? 0) > 0 ? view('components/table_footer', [
+    'fromRecord' => $fromRecord,
+    'toRecord' => $toRecord,
+    'totalRows' => $totalRows,
+    'page' => $page,
+    'totalPages' => $totalPages,
+    'prevUrl' => $categoryPageUrl(max(1, $page - 1)),
+    'nextUrl' => $categoryPageUrl(min($totalPages, $page + 1)),
+]) : null;
+?>
+<?= view('components/card', [
+    'icon' => 'tags-fill',
+    'title' => 'Manage Categories',
+    'cardClass' => 'sector-management records-scroll-panel',
+    'attrs' => 'data-category-management-root',
+    'bodyView' => 'Lookups/categories-body',
+    'bodyData' => get_defined_vars(),
+    'footer' => $categoryFooter,
+]) ?>
+>>>>>>> 37b227b891c97c89790df56f4936d5278dde408a
 
 <?= view('Lookups/category-modal', [
 	'existingCodes' => $existingCodes,

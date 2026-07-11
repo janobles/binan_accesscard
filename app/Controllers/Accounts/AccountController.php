@@ -62,7 +62,7 @@ class AccountController extends BaseController
             'contact_no' => 'required|max_length[50]',
             'birthday' => 'required|valid_date[Y-m-d]',
             // The form posts the DB enum value for account_level directly.
-            'role' => 'required|in_list[administrator,encoder,viewer]',
+            'role' => 'required|in_list[administrator,encoder,viewer,scanner]',
         ];
         $messages = [
             'username' => [
@@ -78,7 +78,7 @@ class AccountController extends BaseController
                 'valid_date' => 'Birthday must be a valid date.',
             ],
             'role' => [
-                'in_list' => 'Account level must be Administrator, Encoder, or Viewer.',
+                'in_list' => 'Account level must be Administrator, Encoder, Viewer, or Scanner.',
             ],
         ];
 
@@ -140,7 +140,7 @@ class AccountController extends BaseController
             return '<div class="alert alert-danger mb-0">Account not found.</div>';
         }
 
-        if (! in_array((string) ($account['role'] ?? ''), ['administrator', 'encoder', 'viewer'], true)) {
+        if (! in_array((string) ($account['role'] ?? ''), ['administrator', 'encoder', 'viewer', 'scanner'], true)) {
             return '<div class="alert alert-danger mb-0">This account cannot be edited.</div>';
         }
 
@@ -188,7 +188,7 @@ class AccountController extends BaseController
 
         $currentRole = (string) ($account['role'] ?? '');
 
-        if (! in_array($currentRole, ['administrator', 'encoder', 'viewer'], true)) {
+        if (! in_array($currentRole, ['administrator', 'encoder', 'viewer', 'scanner'], true)) {
             return redirect()->to(site_url('admin/accounts'))->with('error', 'This account cannot be edited.');
         }
 
@@ -200,14 +200,14 @@ class AccountController extends BaseController
 
         $rules = [
             'username' => 'required|min_length[4]|max_length[255]|is_unique[users.username,userID,' . $userId . ']',
-            'role' => 'required|in_list[administrator,encoder,viewer]',
+            'role' => 'required|in_list[administrator,encoder,viewer,scanner]',
         ];
         $messages = [
             'username' => [
                 'is_unique' => 'Username is already taken. Choose a different one.',
             ],
             'role' => [
-                'in_list' => 'Account level must be Administrator, Encoder, or Viewer.',
+                'in_list' => 'Account level must be Administrator, Encoder, Viewer, or Scanner.',
             ],
         ];
 
@@ -318,7 +318,7 @@ class AccountController extends BaseController
             return redirect()->to(site_url('admin/accounts'))->with('error', 'Account not found.');
         }
 
-        if (! in_array((string) ($account['role'] ?? ''), ['administrator', 'encoder', 'viewer'], true)) {
+        if (! in_array((string) ($account['role'] ?? ''), ['administrator', 'encoder', 'viewer', 'scanner'], true)) {
             return redirect()->to(site_url('admin/accounts'))->with('error', 'This account password cannot be reset.');
         }
 
@@ -376,8 +376,8 @@ class AccountController extends BaseController
 
         $role = (string) ($user['role'] ?? '');
 
-        if (! in_array($role, ['administrator', 'encoder', 'viewer'], true)) {
-            return redirect()->back()->with('error', 'Only admin, employee, or viewer accounts can be updated.');
+        if (! in_array($role, ['administrator', 'encoder', 'viewer', 'scanner'], true)) {
+            return redirect()->back()->with('error', 'Only admin, employee, viewer, or scanner accounts can be updated.');
         }
 
         $enabled = $status === 'Enable';
@@ -592,6 +592,7 @@ class AccountController extends BaseController
             'admin', 'administrator' => 'Admin',
             'user', 'encoder', 'employee' => 'Employee',
             'viewer' => 'Viewer',
+            'scanner' => 'Scanner',
             default => null,
         };
     }

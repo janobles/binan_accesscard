@@ -3,6 +3,7 @@
 namespace App\Models\Lookups;
 
 use App\Models\Concerns\LookupModelTrait;
+use App\Models\Concerns\NormalizesIds;
 use CodeIgniter\Database\BaseBuilder;
 use CodeIgniter\Model;
 
@@ -16,18 +17,130 @@ use CodeIgniter\Model;
 class ServiceModel extends Model
 {
     use LookupModelTrait;
+    use NormalizesIds;
 
     protected $table = 'services';
     protected $primaryKey = 'serviceID';
     protected $returnType = 'array';
-    protected $allowedFields = ['serviceID', 'category', 'name', 'description'];
+    protected $allowedFields = ['serviceID', 'shortcode', 'category', 'name', 'description'];
     protected $useAutoIncrement = false;
     protected $useTimestamps = false;
 
     /** Columns the Services management search box matches. */
     protected function lookupSearchColumns(): array
     {
-        return ['category', 'name', 'description'];
+        return array_values(array_filter([$this->codeColumn(), 'category', 'name', 'description']));
+    }
+
+    /**
+     * Some installed databases still use `code` for the service/program code.
+     * The application exposes it as `shortcode` so views/controllers stay stable.
+     */
+    protected function normalizeLookupRows(array $rows): array
+    {
+        $codeColumn = $this->codeColumn();
+
+        return array_map(static function (array $row) use ($codeColumn): array {
+            if ($codeColumn !== null && ! array_key_exists('shortcode', $row) && array_key_exists($codeColumn, $row)) {
+                $row['shortcode'] = $row[$codeColumn];
+            }
+
+            return $row;
+        }, $rows);
+    }
+
+    /** Maps write payloads to the actual database columns in the current schema. */
+    public function dataForCurrentSchema(array $data): array
+    {
+        $codeColumn = $this->codeColumn();
+
+        if ($codeColumn !== null && $codeColumn !== 'shortcode' && array_key_exists('shortcode', $data)) {
+            $data[$codeColumn] = $data['shortcode'];
+            unset($data['shortcode']);
+        }
+
+        if ($codeColumn === null) {
+            unset($data['shortcode']);
+        }
+
+        return array_filter(
+            $data,
+            fn (string $column): bool => $this->db->fieldExists($column, $this->table),
+            ARRAY_FILTER_USE_KEY
+        );
+    }
+
+    private function codeColumn(): ?string
+    {
+        if ($this->db->fieldExists('shortcode', $this->table)) {
+            return 'shortcode';
+        }
+
+        if ($this->db->fieldExists('code', $this->table)) {
+            return 'code';
+        }
+
+        return null;
+    }
+
+    /**
+     * True if another active service already uses this shortcode (case-insensitive),
+     * optionally excluding one serviceID (the row being edited). Guards code uniqueness.
+     */
+    public function shortcodeExists(string $shortcode, ?int $exceptServiceId = null): bool
+    {
+        $shortcode = trim($shortcode);
+
+        if ($shortcode === '' || ! $this->db->tableExists($this->table)) {
+            return false;
+        }
+
+        $codeColumn = $this->codeColumn();
+
+        if ($codeColumn === null) {
+            return false;
+        }
+
+        $builder = $this->db->table($this->table)
+            ->where('UPPER(' . $codeColumn . ')', strtoupper($shortcode));
+
+        if ($this->db->fieldExists('dt_deleted', $this->table)) {
+            $builder->where('dt_deleted IS NULL', null, false);
+        }
+
+        if ($exceptServiceId !== null) {
+            $builder->where('serviceID !=', $exceptServiceId);
+        }
+
+        return $builder->countAllResults() > 0;
+    }
+
+    /**
+     * All current, active service shortcodes, uppercased and trimmed. Used by
+     * the modal's client-side duplicate check (see services-modal.js). Only
+     * active rows, matching shortcodeExists()'s dt_deleted filter, so the
+     * client list matches exactly what the server will actually reject.
+     */
+    public function existingShortcodes(): array
+    {
+        $codeColumn = $this->codeColumn();
+
+        if ($codeColumn === null || ! $this->hasTable()) {
+            return [];
+        }
+
+        $builder = $this->db->table($this->table)->select($codeColumn);
+
+        if ($this->db->fieldExists('dt_deleted', $this->table)) {
+            $builder->where('dt_deleted IS NULL', null, false);
+        }
+
+        $rows = $builder->get()->getResultArray();
+
+        return array_values(array_unique(array_filter(array_map(
+            static fn (array $row): string => strtoupper(trim((string) ($row[$codeColumn] ?? ''))),
+            $rows
+        ))));
     }
 
     /** Services management list order: by category then ID. */
@@ -35,6 +148,48 @@ class ServiceModel extends Model
     {
         $builder->orderBy('category', 'ASC')
             ->orderBy('serviceID', 'ASC');
+    }
+
+    /**
+     * Suggested next service shortcode for a code prefix, e.g. 'B' => 'B4' when
+     * B1..B3 already exist, or 'EDA' => 'EDA10'. Scans every existing service
+     * shortcode (INCLUDING archived, so numbers are never reused) that is exactly
+     * this prefix followed by digits, and returns prefix.(max+1). A prefix with no
+     * numbered services yet returns prefix.'1'. Drives the Add-Program modal's
+     * category-driven code auto-fill (public/assets/js/dashboard/services-modal.js);
+     * the prefix comes from the selected sector's shortcode or category's code, so it
+     * stays correct as workers add new sectors/categories/services.
+     */
+    public function nextCodeForPrefix(string $prefix): string
+    {
+        $prefix = strtoupper(trim($prefix));
+
+        if ($prefix === '' || ! $this->db->tableExists($this->table)) {
+            return '';
+        }
+
+        $highest = 0;
+
+        $codeColumn = $this->codeColumn();
+
+        if ($codeColumn === null) {
+            return '';
+        }
+
+        foreach ($this->db->table($this->table)->select($codeColumn)->get()->getResultArray() as $row) {
+            $code = strtoupper(trim((string) ($row['shortcode'] ?? '')));
+            if ($code === '') {
+                $code = strtoupper(trim((string) ($row[$codeColumn] ?? '')));
+            }
+
+            if (preg_match('/^([A-Z]+)(\d+)$/', $code, $matches) !== 1 || $matches[1] !== $prefix) {
+                continue;
+            }
+
+            $highest = max($highest, (int) $matches[2]);
+        }
+
+        return $prefix . ($highest + 1);
     }
 
     /**
@@ -47,7 +202,14 @@ class ServiceModel extends Model
             return 1;
         }
 
-        $row = $this->selectMax($this->primaryKey, 'max_id')->first();
+        // serviceID is not AUTO_INCREMENT, so two concurrent creates could read the
+        // same MAX and collide. Take a FOR UPDATE lock inside the caller's
+        // transaction so allocation serializes. Requires the caller to have an open
+        // transaction and to insert before committing (see ServiceController).
+        $db  = $this->db;
+        $sql = 'SELECT MAX(' . $db->protectIdentifiers($this->primaryKey) . ') AS max_id FROM '
+            . $db->protectIdentifiers($this->table) . ' FOR UPDATE';
+        $row = $db->query($sql)->getRowArray();
 
         return ((int) ($row['max_id'] ?? 0)) + 1;
     }
@@ -64,11 +226,13 @@ class ServiceModel extends Model
             return [];
         }
 
-        return $builder
+        $rows = $builder
             ->orderBy('category', 'ASC')
             ->orderBy('serviceID', 'ASC')
             ->get()
             ->getResultArray();
+
+        return $this->normalizeLookupRows($rows);
     }
 
     /**
@@ -79,18 +243,20 @@ class ServiceModel extends Model
      */
     public function getByIdsIncludingArchived(array $ids): array
     {
-        $ids = array_values(array_unique(array_filter(array_map('intval', $ids), static fn (int $id): bool => $id > 0)));
+        $ids = $this->positiveUniqueIds($ids);
 
         if ($ids === [] || ! $this->db->tableExists($this->table)) {
             return [];
         }
 
-        return $this->db->table($this->table)
+        $rows = $this->db->table($this->table)
             ->whereIn($this->primaryKey, $ids)
             ->orderBy('category', 'ASC')
             ->orderBy('serviceID', 'ASC')
             ->get()
             ->getResultArray();
+
+        return $this->normalizeLookupRows($rows);
     }
 
     /**
@@ -123,7 +289,7 @@ class ServiceModel extends Model
      */
     public function getNameMapByIds(array $serviceIds): array
     {
-        $serviceIds = $this->naturalIds($serviceIds) ?? [];
+        $serviceIds = $this->naturalUniqueIds($serviceIds) ?? [];
 
         if ($serviceIds === []) {
             return [];
@@ -169,27 +335,82 @@ class ServiceModel extends Model
     }
 
     /**
-     * Normalizes a list of service IDs to unique non-negative ints, or null if any
-     * value is non-numeric/nested — letting callers reject malformed input.
+     * Soft-archive every active service whose category label equals $name (exact
+     * match on services.category, how services store their category), stamping each
+     * with $archivedAt — the parent category/sector's own dt_deleted. Sharing that
+     * exact timestamp is what lets restoreByCategoryArchivedAt() later un-archive only
+     * the services THIS cascade retired, leaving independently-archived ones alone.
+     * Returns the number of services archived.
      */
-    private function naturalIds(array $serviceIds): ?array
+    public function archiveByCategory(string $name, string $archivedAt): int
     {
-        $normalizedIds = [];
+        $name       = trim($name);
+        $archivedAt = trim($archivedAt);
 
-        foreach ($serviceIds as $serviceId) {
-            if (is_array($serviceId)) {
-                return null;
-            }
-
-            $serviceId = trim((string) $serviceId);
-
-            if ($serviceId === '' || ! ctype_digit($serviceId)) {
-                return null;
-            }
-
-            $normalizedIds[] = (int) $serviceId;
+        if ($name === '' || $archivedAt === '' || ! $this->db->tableExists($this->table) || ! $this->db->fieldExists('dt_deleted', $this->table)) {
+            return 0;
         }
 
-        return array_values(array_unique($normalizedIds));
+        $this->db->table($this->table)
+            ->where('category', $name)
+            ->where('dt_deleted IS NULL', null, false)
+            ->set('dt_deleted', $archivedAt)
+            ->update();
+
+        return $this->db->affectedRows();
+    }
+
+    /**
+     * Reverse of archiveByCategory(): restore only the services whose category equals
+     * $name AND whose dt_deleted exactly matches $archivedAt (the parent's archive
+     * timestamp). The timestamp match ensures a category/sector restore un-archives
+     * only the programs its own archive cascaded onto — services archived separately
+     * (different timestamp) stay archived. Returns the number of services restored.
+     */
+    public function restoreByCategoryArchivedAt(string $name, string $archivedAt): int
+    {
+        $name       = trim($name);
+        $archivedAt = trim($archivedAt);
+
+        if ($name === '' || $archivedAt === '' || ! $this->db->tableExists($this->table) || ! $this->db->fieldExists('dt_deleted', $this->table)) {
+            return 0;
+        }
+
+        $this->db->table($this->table)
+            ->where('category', $name)
+            ->where('dt_deleted', $archivedAt)
+            ->set('dt_deleted', null)
+            ->update();
+
+        return $this->db->affectedRows();
+    }
+
+    /**
+     * Inserts a service inside a transaction, assigning the next serviceID.
+     * Returns the new serviceID or false on failure.
+     */
+    public function insertWithNextId(array $data): int|false
+    {
+        $this->db->transStart();
+        $data['serviceID'] = $this->nextServiceId();
+        $inserted = $this->insert($this->dataForCurrentSchema($data)) !== false;
+        $this->db->transComplete();
+
+        return ($inserted && $this->db->transStatus() !== false) ? (int) $data['serviceID'] : false;
+    }
+
+    /**
+     * True if any `member_services` row links to this service ID. Guards
+     * archive/delete so in-use services cannot be removed.
+     */
+    public function isInUse(int $serviceId): bool
+    {
+        if (! $this->db->tableExists('member_services')) {
+            return false;
+        }
+
+        return $this->db->table('member_services')
+            ->where('serviceID', $serviceId)
+            ->countAllResults() > 0;
     }
 }

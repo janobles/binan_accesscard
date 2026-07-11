@@ -13,7 +13,7 @@ feature lives and the shared libraries that cross-cut them.
 
 The database source of truth is the SQL dump (no app migrations are used).
 
-## Verifying the backend
+## Verifying the backend 
 
 - `php spark routes` — confirm every route resolves to a controller namespace.
 - `vendor/bin/phpunit` — run the backend test suite. The `Workspace Controller

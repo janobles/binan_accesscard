@@ -1,0 +1,40 @@
+/* Scanner scan workstation page. Loaded via asset_styles('scanner'). */
+
+/* Aid type not chosen yet: pull the eye to the select, mute the scan input */
+.scan-attn {
+    border-color: var(--bs-primary, #0d6efd);
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+.scan-muted {
+    background-color: var(--bs-secondary-bg, #e9ecef);
+}
+
+/* Camera fallback: keep the preview a compact, centered viewfinder instead
+   of a full-width video that pushes the page into scrolling */
+#reader {
+    max-width: 24rem;
+    margin-inline: auto;
+}
+#reader video {
+    width: 100%;
+    border-radius: 0.5rem;
+}
+
+/* Post-log success receipt */
+.scan-receipt {
+    border-left: 0.25rem solid var(--bs-success, #198754);
+}
+
+/* Family panel dimmed after a successful log, until next scan */
+.scan-dimmed {
+    opacity: 0.6;
+}
+
+/* Brief highlight of the newly logged history row */
+.scan-history-flash {
+    animation: scanHistoryFlash 1.6s ease-out 1;
+}
+@keyframes scanHistoryFlash {
+    from { background-color: var(--bs-success-bg-subtle, #d1e7dd); }
+    to   { background-color: transparent; }
+}

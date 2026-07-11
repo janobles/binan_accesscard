@@ -19,8 +19,7 @@ use CodeIgniter\HTTP\RedirectResponse;
  * and returns the rendered HTML. Authentication and session lifecycle live in
  * App\Controllers\Auth\AuthController (the controller the auth routes target);
  * the `normalizeRole` helper used by the account partial comes from
- * App\Controllers\HomeRoleAccessTrait. The shared AJAX-partial helpers come from
- * App\Controllers\Concerns\DashboardPartialsTrait.
+ * App\Controllers\HomeRoleAccessTrait.
  */
 class DashboardController extends BaseController
 {
@@ -66,6 +65,18 @@ class DashboardController extends BaseController
     }
 
     /**
+<<<<<<< HEAD
+=======
+     * GET `admin/family-entry`. Legacy URL; the add/edit experience now lives in
+     * the Manage Records modal.
+     */
+    public function familyEntry(): RedirectResponse
+    {
+        return redirect()->to(site_url('admin/manage-records'));
+    }
+
+    /**
+>>>>>>> 37b227b891c97c89790df56f4936d5278dde408a
      * GET `admin/manage-records` (and `manage-families`). Renders the family
      * records list page, or the list fragment for AJAX search/pagination.
      */
@@ -131,6 +142,15 @@ class DashboardController extends BaseController
     }
 
     /**
+     * GET `admin/cards`. Renders the QR access-card batch page in the admin
+     * shell. Generation/lookup are handled by Cards\QrCardController.
+     */
+    public function cards(): string|RedirectResponse
+    {
+        return (new DashboardPageBuilder($this->request))->renderAdminPage('cards');
+    }
+
+    /**
      * GET `admin/manage-members`. Reuses the family-manage page (member-centric
      * view of the same records). Frontend: full-page load of the admin shell.
      */
@@ -182,6 +202,7 @@ class DashboardController extends BaseController
             'adminAccounts' => $viewData['adminAccounts'] ?? [],
             'employeeAccounts' => $viewData['employeeAccounts'] ?? [],
             'viewerAccounts' => $viewData['viewerAccounts'] ?? [],
+            'scannerAccounts' => $viewData['scannerAccounts'] ?? [],
             'searchTerm' => $viewData['searchTerm'] ?? '',
             'searchFilters' => $viewData['searchFilters'] ?? [],
             'canCreateAccounts' => $viewData['canCreateAccounts'] ?? false,

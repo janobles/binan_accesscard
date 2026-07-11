@@ -26,10 +26,12 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= esc($pageTitle) ?> - Binan Access Card MIS</title>
+    
     <?php foreach (array_merge(asset_styles('head'), asset_styles('employee')) as $stylePath): ?>
     <link rel="stylesheet" href="<?= esc(asset_url($stylePath), 'attr') ?>">
     <?php endforeach; ?>
 </head>
+<<<<<<< HEAD
 <body>
 <div id="wrapper">
     <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion employee" id="dashboard-sidebar">
@@ -65,17 +67,33 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
                     <div>
                         <h1 id="dashboard-page-title"><?= esc($pageTitle) ?></h1>
                     </div>
+=======
+<body class="sb-nav-fixed">
+<?= view('Partials/dashboard-topnav', [
+    'brandUrl' => site_url('employee/workspace'),
+    'user' => $user,
+    'username' => $username,
+    'accountLevelLabel' => $accountLevelLabel,
+]) ?>
+<div id="layoutSidenav">
+    <div id="layoutSidenav_nav">
+        <nav class="sb-sidenav accordion sb-sidenav-dark employee" id="dashboard-sidebar">
+            <div class="sb-sidenav-menu">
+                <div class="nav">
+                    <div class="sb-sidenav-menu-heading">Core</div>
+                    <a class="nav-link <?= esc($navActive['dashboard'] ?? '') ?>" href="<?= site_url('employee/workspace') ?>"><div class="sb-nav-link-icon"><i class="bi bi-speedometer2" aria-hidden="true"></i></div>Dashboard</a>
+                    <div class="sb-sidenav-menu-heading">Records</div>
+                    <a class="nav-link <?= esc($navActive['family-manage'] ?? '') ?>" href="<?= site_url('employee/manage-records') ?>"><div class="sb-nav-link-icon"><i class="bi bi-people-fill" aria-hidden="true"></i></div>Manage Records</a>
+                    <div class="sb-sidenav-menu-heading">Activity</div>
+                    <a class="nav-link <?= esc($navActive['activity'] ?? '') ?>" href="<?= site_url('employee/activity') ?>"><div class="sb-nav-link-icon"><i class="bi bi-clock-history" aria-hidden="true"></i></div>My Activity</a>
+>>>>>>> 37b227b891c97c89790df56f4936d5278dde408a
                 </div>
-                <ul class="navbar-nav ms-auto">
-                    <?= view('Partials/topbar-account-menu', [
-                        'user' => $user,
-                        'accountLevelLabel' => 'Encoder',
-                        'accountSettingsUrl' => site_url('account/profile'),
-                    ]) ?>
-                </ul>
-            </nav>
-
-            <main class="container-fluid dashboard-content">
+            </div>
+        </nav>
+    </div>
+    <div id="layoutSidenav_content">
+            <main class="container-fluid px-4 dashboard-content">
+                <h1 class="mt-4" id="dashboard-page-title"><?= esc($pageTitle) ?></h1>
                 <?php if (session()->getFlashdata('success')): ?>
                     <div class="alert alert-success" data-auto-dismiss-alert><?= esc(session()->getFlashdata('success')) ?></div>
                 <?php endif; ?>
@@ -85,56 +103,68 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
                 <?php if ($activePage === 'dashboard'): ?>
                     <div class="dashboard-overview" data-dashboard-overview>
                         <section class="overview-stats" aria-label="Dashboard statistics">
-                            <article class="stat-card"><p>Total Records</p><strong><?= esc((string) ($stats['families'] ?? 0)) ?></strong></article>
-                            <article class="stat-card"><p>Registered Members</p><strong><?= esc((string) ($stats['members'] ?? 0)) ?></strong></article>
-                            <article class="stat-card"><p>Active Sectors</p><strong><?= esc((string) ($stats['sectors'] ?? 0)) ?></strong></article>
-                            <article class="stat-card"><p>Services and Programs</p><strong><?= esc((string) ($stats['assistance'] ?? 0)) ?></strong></article>
+                            <?= view('components/stat_card', [
+                                'label' => 'Total Records',
+                                'value' => (string) ($stats['families'] ?? 0),
+                                'icon' => 'folder-fill',
+                                'variant' => 'stat-card--records',
+                            ]) ?>
+                            <?= view('components/stat_card', [
+                                'label' => 'Registered Members',
+                                'value' => (string) ($stats['members'] ?? 0),
+                                'icon' => 'people-fill',
+                                'variant' => 'stat-card--members',
+                            ]) ?>
+                            <?= view('components/stat_card', [
+                                'label' => 'Active Sectors',
+                                'value' => (string) ($stats['sectors'] ?? 0),
+                                'icon' => 'diagram-3-fill',
+                                'variant' => 'stat-card--sectors',
+                            ]) ?>
+                            <?= view('components/stat_card', [
+                                'label' => 'Services and Programs',
+                                'value' => (string) ($stats['assistance'] ?? 0),
+                                'icon' => 'grid-fill',
+                                'variant' => 'stat-card--services',
+                            ]) ?>
                         </section>
 
-                        <div class="panel dashboard-table-panel">
-                            <div class="section-title mt-0">
-                                <span>Recently Added Records</span>
-                            </div>
-                            <div class="table-responsive">
-                                <table class="table table-sm overview-table">
-                                    <thead><tr><th>Name (Head)</th><th>Sector</th></tr></thead>
-                                    <tbody>
-                                        <?php foreach ($recentFamilies as $family): ?>
-                                            <tr>
-                                                <td><span class="entity-title"><?= esc(mb_strtoupper(trim(($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? '')), 'UTF-8')) ?></span></td>
-                                                <td><?= view('Partials/sector-label-list', ['sectorLabel' => mb_strtoupper((string) ($family['sector_name'] ?? ''), 'UTF-8')]) ?></td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                        <?php if ($recentFamilies === []): ?>
-                                            <tr><td colspan="2" class="text-center text-muted">No records yet.</td></tr>
-                                        <?php endif; ?>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
+                        <?php
+                        $recentFamilyRows = [];
+                        foreach ($recentFamilies as $family) {
+                            $recentFamilyRows[] = [
+                                '<span class="entity-title">' . esc(mb_strtoupper(trim(($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? '')), 'UTF-8')) . '</span>',
+                                view('Partials/sector-label-list', ['sectorLabel' => mb_strtoupper((string) ($family['sector_name'] ?? ''), 'UTF-8')]),
+                            ];
+                        }
+                        $myAuditRows = [];
+                        foreach ($myAudits as $audit) {
+                            $myAuditRows[] = [
+                                '<span class="status-pill is-muted">' . esc((string) ($audit['user_action'] ?? '')) . '</span>',
+                                esc(isset($formatAuditMember) ? $formatAuditMember($audit) : ''),
+                                esc((string) ($audit['description'] ?? '')),
+                            ];
+                        }
+                        ?>
+                        <?= view('components/data_table', [
+                            'icon' => 'table',
+                            'title' => 'Recently Added Records',
+                            'columns' => ['Name (Head)', 'Sector'],
+                            'rows' => $recentFamilyRows,
+                            'emptyMessage' => 'No records yet.',
+                            'tableClass' => 'table overview-table mb-0',
+                            'cardClass' => 'dashboard-table-panel',
+                        ]) ?>
 
-                        <div class="panel dashboard-table-panel">
-                            <div class="section-title mt-0">
-                                <span>Recent Activity</span>
-                            </div>
-                            <div class="table-responsive">
-                                <table class="table table-sm overview-table">
-                                    <thead><tr><th>Action</th><th>Member</th><th>Description</th></tr></thead>
-                                    <tbody>
-                                        <?php foreach ($myAudits as $audit): ?>
-                                            <tr>
-                                                <td><span class="status-pill is-muted"><?= esc((string) ($audit['user_action'] ?? '')) ?></span></td>
-                                                <td><?= esc(isset($formatAuditMember) ? $formatAuditMember($audit) : '') ?></td>
-                                                <td><?= esc((string) ($audit['description'] ?? '')) ?></td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                        <?php if ($myAudits === []): ?>
-                                            <tr><td colspan="3" class="text-center text-muted">No activity yet.</td></tr>
-                                        <?php endif; ?>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
+                        <?= view('components/data_table', [
+                            'icon' => 'clock-history',
+                            'title' => 'Recent Activity',
+                            'columns' => ['Action', 'Member', 'Description'],
+                            'rows' => $myAuditRows,
+                            'emptyMessage' => 'No activity yet.',
+                            'tableClass' => 'table overview-table mb-0',
+                            'cardClass' => 'dashboard-table-panel',
+                        ]) ?>
                     </div>
                 <?php endif; ?>
 
@@ -175,6 +205,7 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
                         return site_url($listRoute) . ($params === [] ? '' : '?' . http_build_query($params));
                     };
                     ?>
+<<<<<<< HEAD
                     <div class="panel" data-audit-management-root>
                         <div class="section-title mt-0"><span>My Recent Activity</span></div>
 
@@ -249,31 +280,54 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
                             </div>
                         <?php endif; ?>
                     </div>
+=======
+                    <?php
+                    $activityFooter = $totalRows > 0 ? view('components/table_footer', [
+                        'fromRecord' => $fromRecord,
+                        'toRecord' => $toRecord,
+                        'totalRows' => $totalRows,
+                        'page' => $page,
+                        'totalPages' => $totalPages,
+                        'prevUrl' => $auditPageUrl(max(1, $page - 1)),
+                        'nextUrl' => $auditPageUrl(min($totalPages, $page + 1)),
+                    ]) : null;
+                    ?>
+                    <?= view('components/card', [
+                        'icon' => 'clock-history',
+                        'title' => 'My Recent Activity',
+                        'attrs' => 'data-audit-management-root',
+                        'bodyView' => 'Employee/activity-body',
+                        'bodyData' => [
+                            'listRoute' => $listRoute,
+                            'searchTerm' => $searchTerm,
+                            'auditAction' => $auditAction,
+                            'auditActionOptions' => $auditActionOptions,
+                            'perPage' => $perPage,
+                            'perPageOptions' => $perPageOptions,
+                            'myAudits' => $myAudits,
+                            'hasSearchFilters' => $hasSearchFilters,
+                            'formatAuditMember' => $formatAuditMember ?? null,
+                            'auditClearUrl' => $auditClearUrl,
+                        ],
+                        'footer' => $activityFooter,
+                    ]) ?>
+>>>>>>> 37b227b891c97c89790df56f4936d5278dde408a
                 <?php endif; ?>
             </main>
-        </div>
     </div>
 </div>
 
-<div class="modal fade floating-family-modal" id="familyModal" tabindex="-1" aria-label="Details" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
-    <div class="modal-dialog modal-dialog-centered modal-xl">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="familyModalLabel">Record</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body" id="familyModalBody">
-                <div class="family-modal-loading" role="status" aria-live="polite">
-                    <div class="spinner-border text-primary" aria-hidden="true"></div>
-                    <span>Loading...</span>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary family-modal-close" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
+<?= view('components/modal', [
+    'id' => 'familyModal',
+    'modalClass' => 'floating-family-modal',
+    'attrs' => 'aria-label="Details" data-bs-backdrop="static" data-bs-keyboard="false"',
+    'size' => 'modal-xl',
+    'title' => 'Record',
+    'titleId' => 'familyModalLabel',
+    'bodyId' => 'familyModalBody',
+    'bodyHtml' => '<div class="family-modal-loading" role="status" aria-live="polite"><div class="spinner-border text-primary" aria-hidden="true"></div><span>Loading...</span></div>',
+    'footerHtml' => '<button type="button" class="btn btn-outline-secondary family-modal-close" data-bs-dismiss="modal">Close</button>',
+]) ?>
 
 <?= view('Family/action-confirm-modal') ?>
 

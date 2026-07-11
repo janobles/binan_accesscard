@@ -2,8 +2,6 @@
 
 namespace App\Libraries;
 
-use App\Support\FamilyProfilingFormV2;
-
 /**
  * Shared presentation formatting and normalization for view templates.
  */
@@ -123,6 +121,23 @@ class ViewFormatter
         return $fields;
     }
 
+    /**
+     * Middle name → initials with periods, one per whitespace-separated word,
+     * for compact name display: "Torres" → "T.", "Dela Cruz" → "D. C.", "" → "".
+     */
+    public static function middleInitial(string $middle): string
+    {
+        $parts = [];
+
+        foreach (preg_split('/\s+/', trim($middle)) ?: [] as $word) {
+            if ($word !== '') {
+                $parts[] = mb_strtoupper(mb_substr($word, 0, 1), 'UTF-8') . '.';
+            }
+        }
+
+        return implode(' ', $parts);
+    }
+
     /** Splits an array or comma string into a trimmed, non-empty list of strings. */
     public static function splitList(mixed $value): array
     {
@@ -195,59 +210,28 @@ class ViewFormatter
     }
 
     /**
-     * Groups sectors by their shortcode's leading alpha prefix (SC/PWD/SP/B/
-     * LGBT/…; OSCA/OSWA fold into SC), labelling each group from
-     * FamilyProfilingFormV2::SECTOR_CATEGORIES or the raw prefix for custom
-     * codes — so there is no catch-all "Others" bucket. Official prefixes lead
-     * in form order, custom prefixes follow alphabetically; empty groups drop.
-     * Pass $categoryLabels (prefix => name, from SectorModel::categoryLabelMap)
-     * to show custom category names; it overrides the built-in form labels.
-     * Frontend: builds the grouped sector checkboxes for member rows.
+     * Returns the member-row sectors as a single "Sectors" group. Sectors are flat
+     * classifications after the Phase A restructure (SC, PWD, SP, B, LGBT, OFW, IP,
+     * IDP, PDL, OTHER), so there is no per-category grouping. The grouped shape is
+     * kept for callers that render [{label, sectors}]. $categoryLabels is accepted
+     * for signature stability but no longer used. Empty input yields [].
      */
     public static function memberSectorGroups(array $sectorOptions, array $categoryLabels = []): array
     {
-        $groups = [];
+        $sectors = [];
 
         foreach ($sectorOptions as $sector) {
-            $shortcode = strtoupper(trim((string) ($sector['shortcode'] ?? '')));
+            $shortcode = trim((string) ($sector['shortcode'] ?? ''));
+            $name = trim((string) ($sector['name'] ?? ''));
 
-            if ($shortcode === '') {
+            if ($shortcode === '' && $name === '') {
                 continue;
             }
 
-            $prefix = preg_match('/^([A-Z]+)/', $shortcode, $matches) === 1 ? $matches[1] : $shortcode;
-
-            if ($prefix === 'OSCA' || $prefix === 'OSWA') {
-                $prefix = 'SC';
-            }
-
-            if (! isset($groups[$prefix])) {
-                $groups[$prefix] = [
-                    'label' => $categoryLabels[$prefix] ?? FamilyProfilingFormV2::SECTOR_CATEGORIES[$prefix] ?? $prefix,
-                    'sectors' => [],
-                ];
-            }
-
-            $groups[$prefix]['sectors'][] = $sector;
+            $sectors[] = $sector;
         }
 
-        // Official prefixes first (form order), then custom prefixes alphabetically.
-        $ordered = [];
-
-        foreach (array_keys(FamilyProfilingFormV2::SECTOR_CATEGORIES) as $prefix) {
-            if ($prefix === 'OTHER') {
-                continue;
-            }
-
-            if (isset($groups[$prefix])) {
-                $ordered[$prefix] = $groups[$prefix];
-                unset($groups[$prefix]);
-            }
-        }
-
-        ksort($groups);
-
-        return $ordered + $groups;
+        return $sectors === [] ? [] : [['label' => 'Sectors', 'sectors' => $sectors]];
     }
 
     /** Compact, safe string form of any value for debug output in views. */

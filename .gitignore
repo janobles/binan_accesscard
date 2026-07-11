@@ -67,6 +67,22 @@ Vagrantfile
 /writable/developer/*
 !/writable/developer/index.html
 
+# dompdf runtime font-metrics cache (auto-generated) — keep only the dir guard
+/writable/fonts/*
+!/writable/fonts/index.html
+
+# Single-session registry (runtime active-login tokens) — never commit
+/writable/active_sessions/*
+!/writable/active_sessions/index.html
+
+#-------------------------
+# Local scratch / junk
+#-------------------------
+todos.txt
+*.tuxedo-lock
+# Windows drive-letter dir created when session.savePath uses a C:/ path on *nix
+/public/C:/
+
 php_errors.log
 
 #-------------------------
@@ -134,3 +150,10 @@ _modules/*
 
 /results/
 /phpunit*.xml
+
+#-------------------------
+# Superpowers (local scratch; specs/plans/summaries are tracked under docs/)
+#-------------------------
+.superpowers/
+
+sessions.json

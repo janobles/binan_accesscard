@@ -38,6 +38,35 @@ trait LookupControllerTrait
     }
 
     /**
+     * Trailing audit sentence describing how many linked services a category/sector
+     * archive/restore cascaded onto, or '' when none. Keeps the audit rows honest
+     * about the side effect. $verb is 'archived' or 'restored'. See
+     * ServiceModel::archiveByCategory() / restoreByCategoryArchivedAt().
+     */
+    private function cascadeNote(int $count, string $verb = 'archived'): string
+    {
+        if ($count < 1) {
+            return '';
+        }
+
+        return ' Cascade-' . $verb . ' ' . $count . ' linked service' . ($count === 1 ? '' : 's') . '.';
+    }
+
+    /**
+     * Trailing flash-message sentence telling the admin how many linked services were
+     * archived/restored alongside the category/sector, or '' when none. $verb is
+     * 'archived' or 'restored'.
+     */
+    private function cascadeMessage(int $count, string $verb = 'archived'): string
+    {
+        if ($count < 1) {
+            return '';
+        }
+
+        return ' ' . $count . ' linked service' . ($count === 1 ? '' : 's') . ' also ' . $verb . '.';
+    }
+
+    /**
      * Write a lookup action to the audit trail. Lookup actions have no affected
      * member, so memberID is null (audit_trails.memberID is nullable).
      */

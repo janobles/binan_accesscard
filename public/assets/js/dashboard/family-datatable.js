@@ -107,7 +107,9 @@
             scrollX: true,
             pageLength: 25,
             lengthMenu: [10, 25, 50, 100],
-            order: [[0, 'asc']],
+            // No initial column sort -> server returns newest records first, so a
+            // just-added/imported family shows at the top. Header clicks still sort.
+            order: [],
             ajax: {
                 url: tableElement.dataset.ajaxUrl,
                 data: function (request) {
@@ -124,10 +126,11 @@
                 }
             },
             columns: [
-                { data: 'name', name: 'name' },
+                { data: 'qr', name: 'qr', orderable: false, className: 'text-center text-nowrap' },
+                { data: 'name', name: 'name', orderSequence: ['asc', 'desc', ''] },
                 { data: 'sector', name: 'sector', orderable: false },
-                { data: 'address', name: 'address' },
-                { data: 'birthday', name: 'birthday' },
+                { data: 'address', name: 'address', orderSequence: ['asc', 'desc', ''] },
+                { data: 'birthday', name: 'birthday', orderSequence: ['asc', 'desc', ''] },
                 { data: 'actions', name: 'actions', orderable: false, searchable: false, className: 'text-end' }
             ],
             layout: {
@@ -201,7 +204,7 @@
                 scope = 'heads';
                 updateFilterLabel(sectorFilter);
                 updateFilterLabel(barangayFilter);
-                dataTable.order([[0, 'asc']]);
+                dataTable.order([]);
                 dataTable.ajax.reload(null, true);
             });
         }

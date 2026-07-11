@@ -114,7 +114,7 @@ class ServiceController extends BaseController
             return $this->redirectAdmin('admin/services', 'error', 'Services table is not available.');
         }
 
-        if ($this->serviceIsUsed($serviceId)) {
+        if ($model->isInUse($serviceId)) {
             return $this->redirectAdmin('admin/services', 'error', 'This service or program is already used by one or more records and cannot be deleted.');
         }
 
@@ -155,24 +155,39 @@ class ServiceController extends BaseController
             $category = trim((string) $this->request->getPost('category_other'));
         }
 
+        $shortcode = strtoupper(trim((string) $this->request->getPost('shortcode')));
+
         $data = [
+            'shortcode' => $shortcode,
             'category' => $category,
             'name' => trim((string) $this->request->getPost('name')),
             'description' => trim((string) $this->request->getPost('description')),
         ];
 
-        if ($data['category'] === '' || $data['name'] === '') {
-            return $this->redirectAdmin('admin/services', 'error', 'Category and name are required.');
+        if ($data['category'] === '' || $data['name'] === '' || $data['shortcode'] === '') {
+            return $this->redirectAdmin('admin/services', 'error', 'Code, category and name are required.');
+        }
+
+        // The code is the unique key the Excel import uses, so it must not clash.
+        if ($model->shortcodeExists($data['shortcode'], $serviceId)) {
+            return $this->redirectAdmin('admin/services', 'error', 'The code "' . $data['shortcode'] . '" is already used by another service.');
         }
 
         $isUpdate = $serviceId !== null;
 
         if ($isUpdate) {
-            $model->update($serviceId, $data);
+            $saved = $model->update($serviceId, $model->dataForCurrentSchema($data)) !== false;
         } else {
-            $data['serviceID'] = $model->nextServiceId();
-            $model->insert($data);
-            $serviceId = (int) $data['serviceID'];
+            $newId = $model->insertWithNextId($data);
+            $saved = $newId !== false;
+
+            if ($saved) {
+                $serviceId = $newId;
+            }
+        }
+
+        if (! $saved) {
+            return $this->redirectAdmin('admin/services', 'error', 'Unable to save service.');
         }
 
         $this->audit(
@@ -186,30 +201,14 @@ class ServiceController extends BaseController
     }
 
     /**
-     * True if any `member_services` row links to this service ID. Guards
-     * archive/delete so in-use services cannot be removed.
-     */
-    private function serviceIsUsed(int $serviceId): bool
-    {
-        $db = db_connect();
-
-        if (! $db->tableExists('member_services')) {
-            return false;
-        }
-
-        return $db->table('member_services')
-            ->where('serviceID', $serviceId)
-            ->countAllResults() > 0;
-    }
-
-    /**
      * Human-readable service label for audit descriptions, e.g. "Aid (General) #12".
      */
     private function serviceLabel(?array $service, int $serviceId): string
     {
         $name = trim((string) ($service['name'] ?? ''));
         $category = trim((string) ($service['category'] ?? ''));
-        $label = trim($name . ($category !== '' ? ' (' . $category . ')' : ''));
+        $code = trim((string) ($service['shortcode'] ?? ''));
+        $label = trim(($code !== '' ? $code . ' ' : '') . $name . ($category !== '' ? ' (' . $category . ')' : ''));
 
         return ($label === '' ? 'service/program' : 'service/program ' . $label) . ' #' . $serviceId;
     }

@@ -2,9 +2,7 @@
 
 namespace App\Models\Audit;
 
-use App\Models\Concerns\NormalizesIds;
-use App\Models\Concerns\ResolvesMemberNames;
-use App\Models\Concerns\ResolvesUserNames;
+use App\Models\Concerns\ModelQueryHelpers;
 use CodeIgniter\Model;
 
 /**
@@ -20,9 +18,7 @@ use CodeIgniter\Model;
  */
 class AuditTrailsModel extends Model
 {
-    use NormalizesIds;
-    use ResolvesMemberNames;
-    use ResolvesUserNames;
+    use ModelQueryHelpers;
 
     protected $table = 'audit_trails';
     protected $primaryKey = 'auditID';

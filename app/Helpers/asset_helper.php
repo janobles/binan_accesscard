@@ -25,18 +25,18 @@ if (! function_exists('asset_styles')) {
      * asset_url() for cache-busting. Per-role order is significant (CSS cascade).
      *
      * Contexts: head (shared <head> CSS), admin|employee|viewer (dashboard
-     * shells), login, family-form. Unknown context returns [].
+     * shells), login. Unknown context returns [].
      */
     function asset_styles(string $context): array
     {
         $manifest = [
             'head' => [
-                'assets/bootstrap/css/bootstrap.min.css',
+                'assets/sb-admin/css/styles.css',
                 'assets/bootstrap-icons/font/bootstrap-icons.min.css',
+                'css/theme.css',
             ],
             'admin' => [
                 'assets/datatables/css/dataTables.bootstrap5.min.css',
-                'css/sb-admin-adapter.css',
                 'css/managerecord.css',
                 'css/lookupmanagement.css',
                 'css/audittrails.css',
@@ -46,7 +46,6 @@ if (! function_exists('asset_styles')) {
             ],
             'employee' => [
                 'assets/datatables/css/dataTables.bootstrap5.min.css',
-                'css/sb-admin-adapter.css',
                 'css/managerecord.css',
                 'css/audittrails.css',
                 'css/familymodal.css',
@@ -55,7 +54,6 @@ if (! function_exists('asset_styles')) {
             ],
             'viewer' => [
                 'assets/datatables/css/dataTables.bootstrap5.min.css',
-                'css/sb-admin-adapter.css',
                 'css/managerecord.css',
                 'css/lookupmanagement.css',
                 'css/accounts.css',
@@ -66,8 +64,9 @@ if (! function_exists('asset_styles')) {
                 'assets/bootstrap/css/bootstrap.min.css',
                 'css/login.css',
             ],
-            'family-form' => [
-                'css/familyform.css',
+            'scanner' => [
+                'css/scanner-reports.css',
+                'css/scanner-scan.css',
             ],
         ];
 
@@ -93,22 +92,20 @@ if (! function_exists('asset_scripts')) {
             'core' => [
                 'assets/jquery/jquery-3.7.1.min.js',
                 'assets/bootstrap/js/bootstrap.bundle.min.js',
+                'assets/sb-admin/js/scripts.js',
             ],
             'admin' => [
                 'assets/js/dashboard/view-interactions.js',
                 'assets/datatables/js/dataTables.min.js',
                 'assets/datatables/js/dataTables.bootstrap5.min.js',
                 'assets/js/dashboard/family-datatable.js',
-                // Legacy Add-Record page (admin/family-entry) still uses the wizard
-                // form; these self-init on a wizard page and no-op on the list page.
-                'assets/js/dashboard/family-form-ui.js',
-                'assets/js/dashboard/family-form.js',
                 'assets/js/dashboard/family-list.js',
                 'assets/js/dashboard/management-forms.js',
                 'assets/js/dashboard/lookup-search.js',
                 'assets/js/dashboard/audit-filters.js',
                 'assets/js/dashboard/dashboard-modal-loader.js',
                 'assets/js/dashboard/manage-family-modal.js',
+                'assets/js/dashboard/family-import.js',
                 'assets/js/dashboard/account-form-modal.js',
                 'assets/js/dashboard/accounts-modal.js',
                 'assets/js/dashboard/sectors-modal.js',
@@ -122,13 +119,12 @@ if (! function_exists('asset_scripts')) {
                 'assets/datatables/js/dataTables.min.js',
                 'assets/datatables/js/dataTables.bootstrap5.min.js',
                 'assets/js/dashboard/family-datatable.js',
-                'assets/js/dashboard/family-form-ui.js',
-                'assets/js/dashboard/family-form.js',
                 'assets/js/dashboard/family-list.js',
                 'assets/js/dashboard/audit-filters.js',
                 'assets/js/dashboard/lookup-search.js',
                 'assets/js/dashboard/dashboard-modal-loader.js',
                 'assets/js/dashboard/manage-family-modal.js',
+                'assets/js/dashboard/family-import.js',
                 'assets/js/dashboard/account-form-modal.js',
             ],
             'viewer' => [
@@ -144,6 +140,10 @@ if (! function_exists('asset_scripts')) {
             ],
             'login' => [
                 'assets/js/login.js',
+            ],
+            'scanner' => [
+                'vendor/chart.js/chart.umd.min.js',
+                'assets/js/dashboard/scanner-reports.js',
             ],
         ];
 

@@ -63,6 +63,7 @@ $formatAuditUser = static function (array $audit): string {
          .js-audit-filter-form + .js-audit-action-filter (audit-filters.js auto-submit). Bar 2 =
          page-size + client-side local "Search:" filter via data-lookup-search (lookup-search.js,
          scoped by data-audit-management-root). */ ?>
+<<<<<<< HEAD
 <section class="overview-panel audit-trails" aria-label="Audit trails" data-audit-management-root>
     <header class="panel-header">
         <h2>Audit Trails</h2>
@@ -155,3 +156,36 @@ $formatAuditUser = static function (array $audit): string {
         </div>
     <?php endif; ?>
 </section>
+=======
+<?php
+$auditFooter = $totalRows > 0 ? view('components/table_footer', [
+    'fromRecord' => $fromRecord,
+    'toRecord' => $toRecord,
+    'totalRows' => $totalRows,
+    'page' => $page,
+    'totalPages' => $totalPages,
+    'prevUrl' => $auditPageUrl(max(1, $page - 1)),
+    'nextUrl' => $auditPageUrl(min($totalPages, $page + 1)),
+]) : null;
+?>
+<?= view('components/card', [
+    'icon' => 'clock-history',
+    'title' => 'Audit Trails',
+    'attrs' => 'aria-label="Audit trails" data-audit-management-root',
+    'cardClass' => 'audit-trails',
+    'bodyView' => 'Admin/audit-trails-body',
+    'bodyData' => [
+        'listRoute' => $listRoute,
+        'searchTerm' => $searchTerm,
+        'auditAction' => $auditAction,
+        'auditActionOptions' => $auditActionOptions,
+        'perPage' => $perPage,
+        'perPageOptions' => $perPageOptions,
+        'recentAudits' => $recentAudits,
+        'hasSearchFilters' => $hasSearchFilters,
+        'formatAuditUser' => $formatAuditUser,
+        'auditClearUrl' => $auditClearUrl,
+    ],
+    'footer' => $auditFooter,
+]) ?>
+>>>>>>> 37b227b891c97c89790df56f4936d5278dde408a

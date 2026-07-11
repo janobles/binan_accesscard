@@ -3,8 +3,9 @@
 //      so clicking .js-open-services-modal loads it via AJAX.
 //   2. Services admin page (#serviceActionModal): handles create / update / archive /
 //      restore in a single shared modal. Syncs the "Other (custom)" category freetext
-//      input when the category select switches to/from __other__. Third IIFE manages
-//      the Active / Archived row toggle on the lookups page.
+//      input when the category select switches to/from __other__. Submission is
+//      blocked when the typed shortcode already exists (data-existing-codes).
+//      Third IIFE manages the Active / Archived row toggle on the lookups page.
 //
 // Connected to:
 //   - dashboard-modal-loader.js : window.registerDashboardModal()
@@ -12,6 +13,7 @@
 //               (Lookups\ServiceController, via the modal's data-*-action attributes)
 //   - Views   : Views/Lookups/service-modal.php — #serviceActionModal, .js-service-modal-open
 //               buttons carry data-service-mode, data-service-id, data-service-name, etc.
+//   - Data    : PHP embeds data-existing-codes on the <form>
 (function (window) {
     if (typeof window.registerDashboardModal !== 'function') {
         return;
@@ -27,6 +29,74 @@
 })(window);
 
 (function (window, document) {
+    function parseJson(value, fallback) {
+        try {
+            const parsed = JSON.parse(value || '');
+
+            return parsed === null ? fallback : parsed;
+        } catch (error) {
+            return fallback;
+        }
+    }
+
+    // Auto-fills the Code from the selected category's next suggested code
+    // (data-next-code-map is keyed by category NAME, e.g. "Bata (Children)" => "B4").
+    // Only while ADDING — never renumbers an existing service on edit. Picking the
+    // blank/"Others" option clears the code so a custom category code can be typed.
+    function autofillServiceCode(select, modal) {
+        const form = modal ? modal.querySelector('form') : null;
+        const code = modal ? modal.querySelector('#serviceModalShortcode') : null;
+
+        if (!form || !code || String(form.dataset.serviceMode || 'create') !== 'create') {
+            return;
+        }
+
+        const value = String(select.value || '');
+
+        if (value === '' || value === '__other__') {
+            code.value = '';
+
+            return;
+        }
+
+        const map = parseJson(form.dataset.nextCodeMap, {});
+
+        if (Object.prototype.hasOwnProperty.call(map, value)) {
+            code.value = String(map[value] || '');
+        }
+    }
+
+    // Inline duplicate check: compares the typed code against existing codes,
+    // excluding the service's own code while editing. Toggles the error message
+    // and the submit button accordingly. Mirrors sectors-modal.js's validateCode.
+    function validateCode(modal) {
+        const form = modal.querySelector('form');
+        const codeInput = modal.querySelector('#serviceModalShortcode');
+        const errorEl = modal.querySelector('.js-service-code-error');
+        const submit = modal.querySelector('.js-service-modal-submit');
+
+        if (!form || !codeInput || codeInput.disabled) {
+            return;
+        }
+
+        const existing = parseJson(form.dataset.existingCodes, []).map(function (code) {
+            return String(code || '').toUpperCase();
+        });
+        const ownCode = String(form.dataset.currentCode || '').toUpperCase();
+        const value = String(codeInput.value || '').trim().toUpperCase();
+        const isDuplicate = value !== '' && value !== ownCode && existing.indexOf(value) !== -1;
+
+        if (errorEl) {
+            errorEl.classList.toggle('d-none', !isDuplicate);
+        }
+
+        codeInput.classList.toggle('is-invalid', isDuplicate);
+
+        if (submit) {
+            submit.disabled = isDuplicate;
+        }
+    }
+
     function syncOtherSelect(select, root) {
         if (!select) {
             return;
@@ -91,6 +161,7 @@
         const submit = modal.querySelector('.js-service-modal-submit');
         const category = modal.querySelector('#serviceModalCategory');
         const categoryOther = modal.querySelector('#serviceModalCategoryOther');
+        const shortcode = modal.querySelector('#serviceModalShortcode');
         const name = modal.querySelector('#serviceModalName');
         const description = modal.querySelector('#serviceModalDescription');
         const archiveName = modal.querySelector('.js-service-archive-name');
@@ -99,9 +170,12 @@
         const isArchive = mode === 'archive';
         const isRestore = mode === 'restore';
         const isAction = isArchive || isRestore;
+        const existingCode = mode === 'update' ? String(trigger.dataset.serviceShortcode || '') : '';
 
         form.reset();
         form.action = form.dataset.createAction || '';
+        form.dataset.serviceMode = mode;
+        form.dataset.currentCode = existingCode;
 
         if (mode === 'update') {
             form.action = (form.dataset.updateAction || '').replace(/\/$/, '') + '/' + serviceId;
@@ -120,6 +194,7 @@
             submit.classList.toggle('btn-danger', isArchive);
             submit.classList.toggle('btn-success', isRestore);
             submit.classList.toggle('btn-primary', !isAction);
+            submit.disabled = false;
         }
 
         if (fields) {
@@ -134,7 +209,7 @@
             restoreMessage.classList.toggle('d-none', !isRestore);
         }
 
-        [category, name, description].forEach(function (field) {
+        [category, shortcode, name, description].forEach(function (field) {
             if (field) {
                 field.disabled = isAction;
                 field.required = !isAction && field.hasAttribute('required');
@@ -150,6 +225,10 @@
         if (!isAction) {
             setCategory(category, categoryOther, mode === 'update' ? trigger.dataset.serviceCategory : '');
 
+            if (shortcode) {
+                shortcode.value = mode === 'update' ? String(trigger.dataset.serviceShortcode || '') : '';
+            }
+
             if (name) {
                 name.value = mode === 'update' ? String(trigger.dataset.serviceName || '') : '';
             }
@@ -157,6 +236,8 @@
             if (description) {
                 description.value = mode === 'update' ? String(trigger.dataset.serviceDescription || '') : '';
             }
+
+            validateCode(modal);
         }
 
         if (archiveName) {
@@ -182,7 +263,17 @@
 
     document.addEventListener('change', function (event) {
         if (event.target.matches('#serviceModalCategory')) {
-            syncOtherSelect(event.target, document.getElementById('serviceActionModal'));
+            const modal = document.getElementById('serviceActionModal');
+            syncOtherSelect(event.target, modal);
+            autofillServiceCode(event.target, modal);
+            validateCode(modal);
+        }
+    });
+
+    // Live duplicate feedback as the user edits the Code field.
+    document.addEventListener('input', function (event) {
+        if (event.target.matches('#serviceModalShortcode')) {
+            validateCode(document.getElementById('serviceActionModal'));
         }
     });
 })(window, document);

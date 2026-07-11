@@ -59,10 +59,20 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= esc($pageTitle) ?> - Binan Access Card MIS</title>
-    <?php foreach (array_merge(asset_styles('head'), asset_styles('admin')) as $stylePath): ?>
+    <link rel="icon" type="image/png" href="<?= asset_url('assets/image/binan.png') ?>">
+    <?php
+    // The reports page reuses the scanner reports styles (KPI tiles, chart cards,
+    // barangay chart) that live in the scanner asset group.
+    $layoutStyles = array_merge(asset_styles('head'), asset_styles('admin'));
+    if (($activePage ?? '') === 'reports') {
+        $layoutStyles = array_merge($layoutStyles, asset_styles('scanner'));
+    }
+    ?>
+    <?php foreach ($layoutStyles as $stylePath): ?>
     <link rel="stylesheet" href="<?= esc(asset_url($stylePath), 'attr') ?>">
     <?php endforeach; ?>
 </head>
+<<<<<<< HEAD
 <body>
 <div id="wrapper">
     <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion <?= esc($sidebarRoleClass) ?>" id="dashboard-sidebar">
@@ -126,6 +136,27 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
             </nav>
 
             <main class="container-fluid dashboard-content">
+=======
+<body class="sb-nav-fixed">
+<?= view('Partials/dashboard-topnav', [
+    'brandUrl' => $sidebarUserUrl,
+    'user' => $user,
+    'username' => $username,
+    'accountLevelLabel' => $accountLevelLabel,
+]) ?>
+<div id="layoutSidenav">
+    <div id="layoutSidenav_nav">
+        <?= view('components/dashboard_sidebar', [
+            'navActive' => $navActive,
+            'canManageAccounts' => $canManageAccounts,
+            'sidebarRoleClass' => $sidebarRoleClass,
+            'sidebarUserUrl' => $sidebarUserUrl,
+        ]) ?>
+    </div>
+    <div id="layoutSidenav_content">
+            <main class="container-fluid px-4 dashboard-content">
+            <h1 class="mt-4" id="dashboard-page-title"><?= esc($pageTitle) ?></h1>
+>>>>>>> 37b227b891c97c89790df56f4936d5278dde408a
             <?php if (session()->getFlashdata('success')): ?>
                 <div class="alert alert-success" data-auto-dismiss-alert><?= esc(session()->getFlashdata('success')) ?></div>
             <?php endif; ?>
@@ -152,34 +183,61 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
             <?php if ($activePage === 'dashboard'): ?>
                 <div class="dashboard-overview" data-dashboard-overview>
                     <section class="overview-stats" aria-label="Dashboard statistics">
-                        <article class="stat-card"><p>Total Records</p><strong><?= esc((string) ($stats['families'] ?? 0)) ?></strong></article>
-                        <article class="stat-card"><p>Registered Members</p><strong><?= esc((string) ($stats['members'] ?? 0)) ?></strong></article>
-                        <article class="stat-card"><p>Active Sectors</p><strong><?= esc((string) ($stats['sectors'] ?? 0)) ?></strong></article>
-                        <article class="stat-card"><p>Services and Programs</p><strong><?= esc((string) ($stats['assistance'] ?? 0)) ?></strong></article>
+                        <?= view('components/stat_card', [
+                            'label' => 'Total Records',
+                            'value' => (string) ($stats['families'] ?? 0),
+                            'icon' => 'folder-fill',
+                            'variant' => 'stat-card--records',
+                        ]) ?>
+                        <?= view('components/stat_card', [
+                            'label' => 'Registered Members',
+                            'value' => (string) ($stats['members'] ?? 0),
+                            'icon' => 'people-fill',
+                            'variant' => 'stat-card--members',
+                        ]) ?>
+                        <?= view('components/stat_card', [
+                            'label' => 'Active Sectors',
+                            'value' => (string) ($stats['sectors'] ?? 0),
+                            'icon' => 'diagram-3-fill',
+                            'variant' => 'stat-card--sectors',
+                        ]) ?>
+                        <?= view('components/stat_card', [
+                            'label' => 'Services and Programs',
+                            'value' => (string) ($stats['assistance'] ?? 0),
+                            'icon' => 'grid-fill',
+                            'variant' => 'stat-card--services',
+                        ]) ?>
                     </section>
 
-                    <section class="overview-panel dashboard-table-panel">
-                        <header class="panel-header">
-                            <h2>Recent Records</h2>
-                        </header>
-                        <div class="table-responsive">
-                            <table class="table overview-table">
-                                <thead><tr><th scope="col">Name (Head)</th><th scope="col">Sector</th></tr></thead>
-                                <tbody>
-                                    <?php foreach ($recentFamilies as $family): ?>
-                                        <tr>
-                                            <td><?= esc(trim(($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? ''))) ?></td>
-                                            <td><?= esc((string) ($family['sector_name'] ?? '-')) ?></td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                    <?php if ($recentFamilies === []): ?>
-                                        <tr><td colspan="2" class="empty-state">No records yet.</td></tr>
-                                    <?php endif; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    </section>
+                    <?php
+                    $recentFamilyRows = [];
+                    foreach ($recentFamilies as $family) {
+                        $recentFamilyRows[] = [
+                            esc(trim(($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? ''))),
+                            esc((string) ($family['sector_name'] ?? '-')),
+                        ];
+                    }
+                    $recentAuditRows = [];
+                    foreach ($recentAudits as $audit) {
+                        $recentAuditRows[] = [
+                            esc($formatAuditUser($audit)),
+                            esc($formatAuditMember($audit)),
+                            '<span class="badge bg-light text-dark border">' . esc((string) ($audit['user_action'] ?? '')) . '</span>',
+                            esc((string) ($audit['description'] ?? '')),
+                        ];
+                    }
+                    ?>
+                    <?= view('components/data_table', [
+                        'icon' => 'table',
+                        'title' => 'Recent Records',
+                        'columns' => ['Name (Head)', 'Sector'],
+                        'rows' => $recentFamilyRows,
+                        'emptyMessage' => 'No records yet.',
+                        'tableClass' => 'table overview-table mb-0',
+                        'cardClass' => 'dashboard-table-panel',
+                    ]) ?>
 
+<<<<<<< HEAD
                     <section class="overview-panel dashboard-table-panel">
                         <header class="panel-header">
                             <h2>Recent Activity</h2>
@@ -204,6 +262,18 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                             </table>
                         </div>
                     </section>
+=======
+                    <?= view('components/data_table', [
+                        'icon' => 'clock-history',
+                        'title' => 'Recent Activity',
+                        'headerActions' => '<a class="btn btn-sm panel-action" href="' . site_url('admin/audit-trails') . '"><i class="bi bi-arrow-right" aria-hidden="true"></i><span>View All</span></a>',
+                        'columns' => ['User', 'Member', 'Action', 'Description'],
+                        'rows' => $recentAuditRows,
+                        'emptyMessage' => 'No activity yet.',
+                        'tableClass' => 'table overview-table mb-0',
+                        'cardClass' => 'dashboard-table-panel',
+                    ]) ?>
+>>>>>>> 37b227b891c97c89790df56f4936d5278dde408a
                 </div>
             <?php endif; ?>
 
@@ -212,6 +282,7 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                     'adminAccounts' => $adminAccounts,
                     'employeeAccounts' => $employeeAccounts,
                     'viewerAccounts' => $viewerAccounts ?? [],
+                    'scannerAccounts' => $scannerAccounts ?? [],
                     'searchTerm' => $searchTerm,
                     'searchFilters' => $searchFilters,
                     'canCreateAccounts' => $canCreateAccounts,
@@ -258,12 +329,128 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                     'canRestore' => $canRestoreLookups ?? false,
                 ]) ?>
             <?php endif; ?>
+
+            <?php if ($activePage === 'cards'): ?>
+                <?= view('Cards/batch_form') ?>
+            <?php endif; ?>
+
+            <?php if ($activePage === 'distribution'): ?>
+                <ul class="nav nav-tabs manage-tabs mb-0" role="tablist">
+                  <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-types" type="button" role="tab">Aid Types</button></li>
+                  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-batches" type="button" role="tab">Batches</button></li>
+                  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-dist" type="button" role="tab">All Distributions</button></li>
+                </ul>
+
+                <div class="tab-content">
+                  <div class="tab-pane fade show active" id="tab-types" role="tabpanel">
+                    <?= view('components/card', [
+                        'icon' => 'tags-fill',
+                        'title' => 'Aid Types',
+                        'cardClass' => 'sector-management records-scroll-panel',
+                        'bodyView' => 'Admin/distribution-aidtypes-body',
+                        'bodyData' => ['aidTypes' => $aidTypes],
+                    ]) ?>
+                  </div>
+
+                  <div class="tab-pane fade" id="tab-batches" role="tabpanel">
+                    <?= view('components/card', [
+                        'icon' => 'collection',
+                        'title' => 'Distribution Batches',
+                        'cardClass' => 'sector-management records-scroll-panel',
+                        'bodyView' => 'Admin/distribution-batches-body',
+                        'bodyData' => [
+                            'batches' => $batches,
+                            'activeBatch' => $activeBatch,
+                            'activeAidTypes' => $activeAidTypes,
+                            'currentRole' => $currentRole,
+                        ],
+                    ]) ?>
+                  </div>
+
+                  <div class="tab-pane fade" id="tab-dist" role="tabpanel">
+                    <?= view('components/card', [
+                        'icon' => 'clipboard-check-fill',
+                        'title' => 'All Distributions',
+                        'cardClass' => 'sector-management records-scroll-panel',
+                        'bodyView' => 'Admin/distribution-distributions-body',
+                        'bodyData' => ['distributions' => $distributions, 'aidTypes' => $aidTypes],
+                        'footer' => '<span id="distCount"></span>',
+                    ]) ?>
+                  </div>
+                </div>
+
+                <div class="modal fade" id="addAidTypeModal" tabindex="-1">
+                  <div class="modal-dialog">
+                    <form class="modal-content" method="post" action="<?= site_url('admin/aid-types/create') ?>">
+                      <?= csrf_field() ?>
+                      <div class="modal-header">
+                        <h5 class="modal-title">Add Aid Type</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                      </div>
+                      <div class="modal-body">
+                        <label for="aidTypeName" class="form-label">Name</label>
+                        <input type="text" class="form-control" id="aidTypeName" name="name" required maxlength="100">
+                      </div>
+                      <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Add</button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+
+                <script>
+                document.addEventListener('DOMContentLoaded', () => {
+                  const table   = document.getElementById('distTable');
+                  const search  = document.getElementById('distSearch');
+                  const filter  = document.getElementById('distAidFilter');
+                  const clear   = document.getElementById('distClear');
+                  const perPage = document.getElementById('distPerPage');
+                  const local   = document.getElementById('distLocalSearch');
+                  const count   = document.getElementById('distCount');
+                  if (!table) return;
+                  const rows = Array.from(table.tBodies[0].rows).filter(r => !r.querySelector('.sector-empty-state'));
+
+                  const render = () => {
+                    const q     = (search.value || '').trim().toLowerCase();
+                    const q2    = (local.value || '').trim().toLowerCase();
+                    const aid   = filter.value || '';
+                    const limit = parseInt(perPage.value, 10) || 0;
+                    let matched = 0;
+                    let shown = 0;
+                    rows.forEach(r => {
+                      const text = r.textContent.toLowerCase();
+                      const ok = (q === '' || text.includes(q))
+                              && (q2 === '' || text.includes(q2))
+                              && (aid === '' || (r.getAttribute('data-aidtype') || '') === aid);
+                      let visible = ok;
+                      if (ok) {
+                        matched++;
+                        if (limit > 0 && matched > limit) visible = false;
+                      }
+                      r.hidden = !visible;
+                      if (visible) shown++;
+                    });
+                    if (count) count.textContent = 'Showing ' + shown + ' of ' + rows.length + ' distribution' + (rows.length === 1 ? '' : 's');
+                  };
+
+                  [search, filter, local, perPage].forEach(el => el && el.addEventListener('input', render));
+                  if (perPage) perPage.addEventListener('change', render);
+                  if (clear) clear.addEventListener('click', () => { search.value = ''; local.value = ''; filter.value = ''; perPage.value = '50'; render(); });
+                  render();
+                });
+                </script>
+            <?php endif; ?>
+
+            <?php if ($activePage === 'reports'): ?>
+                <?= view('Admin/reports-body') ?>
+            <?php endif; ?>
             </main>
-        </div>
     </div>
 </div>
 
 <?php /* Shared modal target. The *-modal.js loaders fetch ?partial=1 fragments
+<<<<<<< HEAD
          (record details, accounts, sectors, services, audit) into #familyModalBody. */ ?>
 <div class="modal fade floating-family-modal" id="familyModal" tabindex="-1" aria-label="Record details" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered modal-xl">
@@ -284,6 +471,20 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
         </div>
     </div>
 </div>
+=======
+         (add/edit record, accounts, sectors, services, audit) into #familyModalBody. */ ?>
+<?= view('components/modal', [
+    'id' => 'familyModal',
+    'modalClass' => 'floating-family-modal',
+    'attrs' => 'aria-label="Record details" data-bs-backdrop="static" data-bs-keyboard="false"',
+    'size' => 'modal-xl',
+    'title' => 'Record',
+    'titleId' => 'familyModalLabel',
+    'bodyId' => 'familyModalBody',
+    'bodyHtml' => '<div class="family-modal-loading" role="status" aria-live="polite"><div class="spinner-border text-primary" aria-hidden="true"></div><span>Loading...</span></div>',
+    'footerHtml' => '<button type="button" class="btn btn-outline-secondary family-modal-close" data-bs-dismiss="modal">Close</button>',
+]) ?>
+>>>>>>> 37b227b891c97c89790df56f4936d5278dde408a
 
 <?= view('Family/action-confirm-modal') ?>
 
@@ -291,22 +492,16 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
 
 <?php /* Per-row audit detail modal, populated client-side by audit-detail-modal.js
          from the clicked row's data-* attributes (no AJAX). */ ?>
-<div class="modal fade audit-detail-modal" id="auditDetailModal" tabindex="-1" aria-labelledby="auditDetailTitle" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="auditDetailTitle">Audit Entry Details</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p class="audit-detail-full" id="auditDetailFull">—</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
+<?= view('components/modal', [
+    'id' => 'auditDetailModal',
+    'modalClass' => 'audit-detail-modal',
+    'attrs' => 'aria-labelledby="auditDetailTitle"',
+    'size' => 'modal-lg',
+    'title' => 'Audit Entry Details',
+    'titleId' => 'auditDetailTitle',
+    'bodyHtml' => '<p class="audit-detail-full" id="auditDetailFull">&mdash;</p>',
+    'footerHtml' => '<button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>',
+]) ?>
 
 <?php foreach (array_merge(asset_scripts('core'), asset_scripts('admin')) as $scriptPath): ?>
 <script src="<?= esc(asset_url($scriptPath), 'attr') ?>"></script>

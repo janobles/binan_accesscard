@@ -1,18 +1,16 @@
 <?php
 helper('dashboard_view');
+// service_management_view_data() supplies $serviceCategoryOptions (managed category
+// names from the Manage Categories page + any categories already on services) for the
+// Add-Program modal dropdown, so this view stays model-free.
 extract(service_management_view_data(get_defined_vars()), EXTR_OVERWRITE);
-$defaultServiceCategoryOptions = \App\Support\FamilyProfilingFormV2::SERVICE_CATEGORIES;
-$serviceCategoryOptions = array_values(array_unique(array_filter(array_map(
-    static fn (array $service): string => trim((string) ($service['category'] ?? '')),
-    $services
-))));
-$serviceCategoryOptions = array_values(array_unique(array_merge($defaultServiceCategoryOptions, $serviceCategoryOptions)));
+$serviceCategoryOptions = $serviceCategoryOptions ?? [];
 
 // Counts come from the server bundle (whole table), not the current page below.
 $activeServiceCount   = (int) ($activeCount ?? 0);
 $archivedServiceCount = (int) ($archivedCount ?? 0);
 $allServiceCount      = $activeServiceCount + $archivedServiceCount;
-$status               = (string) ($status ?? 'all');
+$status               = (string) ($status ?? 'active');
 $keyword              = (string) ($keyword ?? '');
 $listRoute            = (string) ($listRoute ?? 'admin/services');
 $perPage              = (int) ($perPage ?? 50);
@@ -25,7 +23,7 @@ $canManage            = (bool) ($canManage ?? true);
 $servicePageUrl = static function (int $targetPage) use ($listRoute, $keyword, $status, $perPage): string {
     $params = array_filter([
         'q'        => $keyword,
-        'status'   => $status === 'all' ? '' : $status,
+        'status'   => $status === 'active' ? '' : $status,
         'per_page' => $perPage !== 50 ? (string) $perPage : '',
         'page'     => $targetPage > 1 ? (string) $targetPage : '',
     ], static fn ($value): bool => $value !== '');
@@ -36,7 +34,7 @@ $servicePageUrl = static function (int $targetPage) use ($listRoute, $keyword, $
 // "Clear" drops the keyword (and resets to page 1) but keeps status + page size.
 $serviceClearUrl = static function () use ($listRoute, $status, $perPage): string {
     $params = array_filter([
-        'status'   => $status === 'all' ? '' : $status,
+        'status'   => $status === 'active' ? '' : $status,
         'per_page' => $perPage !== 50 ? (string) $perPage : '',
     ], static fn ($value): bool => $value !== '');
 
@@ -47,6 +45,7 @@ $serviceClearUrl = static function () use ($listRoute, $status, $perPage): strin
 <?php /* Reuses the Manage Records .records-* layout (managerecord.css). All melbranch hooks preserved:
          data-service-management-root, #service-status-select (data-lookup-status-select),
          data-lookup-search local filter, .js-service-modal-open + data-service-* attributes, the service-modal include. */ ?>
+<<<<<<< HEAD
 <div class="sector-management records-scroll-panel" data-service-management-root>
 	<?php /* Database search across the whole services table (server-side GET) + status + Add. */ ?>
 	<div class="records-search-panel">
@@ -176,9 +175,33 @@ $serviceClearUrl = static function () use ($listRoute, $status, $perPage): strin
 		</div>
 	<?php endif; ?>
 </div>
+=======
+<?php
+$serviceFooter = ($totalRows ?? 0) > 0 ? view('components/table_footer', [
+    'fromRecord' => $fromRecord,
+    'toRecord' => $toRecord,
+    'totalRows' => $totalRows,
+    'page' => $page,
+    'totalPages' => $totalPages,
+    'prevUrl' => $servicePageUrl(max(1, $page - 1)),
+    'nextUrl' => $servicePageUrl(min($totalPages, $page + 1)),
+]) : null;
+?>
+<?= view('components/card', [
+    'icon' => 'grid-fill',
+    'title' => 'Services and Programs',
+    'cardClass' => 'sector-management records-scroll-panel',
+    'attrs' => 'data-service-management-root',
+    'bodyView' => 'Lookups/services-body',
+    'bodyData' => get_defined_vars(),
+    'footer' => $serviceFooter,
+]) ?>
+>>>>>>> 37b227b891c97c89790df56f4936d5278dde408a
 
 <?php if ($canManage): ?>
 <?= view('Lookups/service-modal', [
 	'serviceCategoryOptions' => $serviceCategoryOptions,
+	'serviceNextCodeMap' => $serviceNextCodeMap ?? [],
+	'existingShortcodes' => $existingShortcodes ?? [],
 ]) ?>
 <?php endif; ?>

@@ -34,15 +34,13 @@ class FamilyFormOptionsModel extends Model
             'barangays' => FamilyProfilingFormV2::barangays(),
             'relationships' => [
                 'Spouse',
-                'Son',
-                'Daughter',
+                'Child',
                 'Parent',
                 'Sibling',
                 'Grandparent',
                 'Grandchild',
                 'In-law',
                 'Relative',
-                'Household Helper',
                 'Other',
             ],
             'education_levels' => FamilyProfilingFormV2::educationLevels(),
@@ -68,9 +66,16 @@ class FamilyFormOptionsModel extends Model
     }
 
     /**
+<<<<<<< HEAD
      * Shapes getOptions() into the variables expected by a family form frontend
      * (sectorOptions, sexOptions, servicesByCategory, etc.). Only active sectors
      * and services appear in the create-record option set.
+=======
+     * Shapes getOptions() into the exact variables the family modal expects
+     * (sectorOptions, sexOptions, servicesByCategory, etc.). Add-Family path:
+     * only active sectors/services appear (archived items are never offered to
+     * new records).
+>>>>>>> 37b227b891c97c89790df56f4936d5278dde408a
      */
     public function getViewData(): array
     {
@@ -120,7 +125,7 @@ class FamilyFormOptionsModel extends Model
     }
 
     /**
-     * Builds the family-form view variables from a (possibly augmented) options array.
+     * Builds the family modal view variables from a (possibly augmented) options array.
      * Shared by getViewData() and getViewDataForEdit().
      */
     private function buildViewData(array $options): array
@@ -134,9 +139,8 @@ class FamilyFormOptionsModel extends Model
             'formOptions' => $options,
             'sectorOptions' => $sectorOptions,
             'sectorCatalog' => $sectorModel->getSectorCatalog($sectorOptions),
-            // Code => name map for the grouped sector headings; fetched here so the
-            // member-fields partial never has to touch a model itself.
-            'sectorCategoryLabels' => $sectorModel->categoryLabelMap(),
+            // Sectors are flat classifications now, so there are no per-category headings.
+            'sectorCategoryLabels' => [],
             // Text dropdowns are alphabetized for the form ("Other/Others" pinned last).
             // Suffix (Jr, Sr, I-V) and income brackets (numeric low->high) keep their order.
             'sexOptions' => $this->sortLabelOptions($options['sexes'] ?? []),

@@ -162,6 +162,63 @@
     font-weight: 700;
 }
 
+.lookup-management-table {
+    min-width: 52rem;
+    margin: 0;
+    table-layout: fixed;
+}
+
+.lookup-management-table th,
+.lookup-management-table td {
+    vertical-align: middle;
+}
+
+.lookup-management-table .lookup-col-name {
+    width: 24%;
+}
+
+.lookup-management-table .lookup-col-code {
+    width: 8.5rem;
+}
+
+.lookup-management-table .lookup-col-category {
+    width: 18%;
+}
+
+.lookup-management-table .lookup-col-description {
+    width: auto;
+}
+
+.lookup-management-table .lookup-col-status {
+    width: 7.25rem;
+}
+
+.lookup-management-table .lookup-col-actions {
+    width: 5.5rem;
+}
+
+.lookup-management-table--categories {
+    min-width: 42rem;
+}
+
+.lookup-management-table--categories .lookup-col-name {
+    width: 30%;
+}
+
+.lookup-management-table--categories .lookup-col-code {
+    width: 8.5rem;
+}
+
+.lookup-management-table--categories .lookup-col-actions {
+    width: 5.5rem;
+}
+
+.lookup-management-table .badge {
+    max-width: 100%;
+    white-space: normal;
+    text-align: left;
+}
+
 .sector-actions {
     width: 2.65rem;
     min-height: 2.4rem;
@@ -191,7 +248,6 @@
     border: 1px solid #dce5e2;
     border-radius: 0.55rem;
     background: #ffffff;
-    box-shadow: 0 0.65rem 1.35rem rgba(12, 33, 26, 0.12);
     text-align: left;
 }
 
@@ -276,7 +332,6 @@
     border: 1px solid #c9dad5;
     border-radius: 0.35rem;
     background: #ffffff;
-    box-shadow: 0 1.25rem 3rem rgba(12, 33, 26, 0.22);
 }
 
 .sector-service-modal-window:focus {
@@ -454,6 +509,26 @@
         padding: 0.5rem 0.45rem;
         font-size: 0.68rem;
         line-height: 1.22;
+    }
+
+    .lookup-management-table {
+        min-width: 46rem;
+    }
+
+    .lookup-management-table--categories {
+        min-width: 38rem;
+    }
+
+    .lookup-management-table .lookup-col-code {
+        width: 6.5rem;
+    }
+
+    .lookup-management-table .lookup-col-status {
+        width: 5.75rem;
+    }
+
+    .lookup-management-table .lookup-col-actions {
+        width: 4rem;
     }
 
     .sector-status-badge {

@@ -2,6 +2,7 @@
 
 namespace App\Models\Families;
 
+use App\Models\Concerns\NormalizesIds;
 use CodeIgniter\Model;
 
 /**
@@ -9,6 +10,8 @@ use CodeIgniter\Model;
  */
 class MemberServiceModel extends Model
 {
+    use NormalizesIds;
+
     protected $table = 'member_services';
     protected $primaryKey = 'ID';
     protected $returnType = 'array';
@@ -46,7 +49,7 @@ class MemberServiceModel extends Model
      */
     public function getServiceIdsByMemberIds(array $memberIds): array
     {
-        $memberIds = array_values(array_filter(array_map(static fn ($id): int => (int) $id, $memberIds), static fn (int $id): bool => $id > 0));
+        $memberIds = $this->positiveUniqueIds($memberIds);
 
         if ($memberIds === []) {
             return [];
@@ -79,7 +82,7 @@ class MemberServiceModel extends Model
      */
     public function deleteByMemberIds(array $memberIds): bool
     {
-        $memberIds = array_values(array_filter(array_map(static fn ($id): int => (int) $id, $memberIds), static fn (int $id): bool => $id > 0));
+        $memberIds = $this->positiveUniqueIds($memberIds);
 
         if ($memberIds === []) {
             return true;

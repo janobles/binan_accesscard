@@ -3,6 +3,7 @@
 namespace Config;
 
 use App\Filters\IdleTimeoutFilter;
+use App\Filters\SingleSessionFilter;
 use CodeIgniter\Config\Filters as BaseFilters;
 use CodeIgniter\Filters\Cors;
 use CodeIgniter\Filters\CSRF;
@@ -36,6 +37,7 @@ class Filters extends BaseFilters
         'pagecache'     => PageCache::class,
         'performance'   => PerformanceMetrics::class,
         'idleTimeout'   => IdleTimeoutFilter::class,
+        'singleSession' => SingleSessionFilter::class,
     ];
 
     /**
@@ -111,6 +113,20 @@ class Filters extends BaseFilters
      */
     public array $filters = [
         'idleTimeout' => [
+            'before' => [
+                'admin',
+                'admin/*',
+                'employee/*',
+                'viewer',
+                'viewer/*',
+                'developer/*',
+                'session/keep-alive',
+                'families',
+            ],
+        ],
+        // Runs after idleTimeout (idle sessions are cleared first): logs out any
+        // session displaced by a confirmed login elsewhere. Same protected routes.
+        'singleSession' => [
             'before' => [
                 'admin',
                 'admin/*',

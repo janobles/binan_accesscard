@@ -3,6 +3,9 @@
 namespace App\Controllers\Families;
 
 use App\Controllers\BaseController;
+use App\Libraries\FamilyModalDataBuilder;
+use App\Libraries\FamilyRecordWriteException;
+use App\Libraries\FamilyRecordWriter;
 use App\Libraries\RoleAccess;
 use App\Libraries\SectorIds;
 use App\Models\Audit\AuditTrailsModel;
@@ -11,9 +14,8 @@ use App\Models\Families\MemberModel;
 use App\Models\Families\MemberServiceModel;
 use App\Models\Lookups\SectorModel;
 use App\Models\Lookups\ServiceModel;
-use App\Models\SearchModel;
-use App\Support\FamilyProfilingFormV2;
 use App\Support\FamilyRecordPresenter;
+use App\Support\MemberFieldNormalizer;
 use CodeIgniter\HTTP\RedirectResponse;
 use Throwable;
 
@@ -26,6 +28,8 @@ use Throwable;
  */
 class FamilyController extends BaseController
 {
+    use FamilyRequestContext;
+
     /**
      * GET `{admin|employee}/manage-family/list`: legacy convenience entrypoint.
      * The real list is rendered by the role dashboard's `manage-records` page.
@@ -61,7 +65,7 @@ class FamilyController extends BaseController
         $auditModel = new AuditTrailsModel();
 
         if (! $memberModel->hasRequiredFamilyTables()) {
-            $message = 'The accesscard database is missing required tables from accesscardV1.4.sql.';
+            $message = 'The accesscard database is missing required tables from accesscardV14.sql.';
 
             if ($this->request->isAJAX()) {
                 return $this->response
@@ -120,8 +124,9 @@ class FamilyController extends BaseController
         $members = is_array($members) ? $members : [];
         $userId = (int) session()->get('user_id');
 
-        $memberModel->beginTransaction();
+        $controlNo = (int) $this->request->getPost('qr_control_no');
 
+<<<<<<< HEAD
         $headId = $memberModel->createHead($this->memberPayload('head_'));
 
         if ($headId === false) {
@@ -134,13 +139,22 @@ class FamilyController extends BaseController
             $memberModel->rollbackTransaction();
 
             return $this->failUpdate('A selected service could not be assigned to the head of family.', 422);
+=======
+        if (model(\App\Models\Scanner\QrControlModel::class)->takenByOtherHead($controlNo, 0)) {
+            return $this->storeError('QR Number ' . $controlNo . ' is already assigned to another family.');
+>>>>>>> 37b227b891c97c89790df56f4936d5278dde408a
         }
+
+        // Shape the additional members (skipping the form's empty rows) into the
+        // [payload + serviceIds] entries FamilyRecordWriter expects.
+        $memberPayloads = [];
 
         foreach ($members as $member) {
             if (! is_array($member) || ! $this->hasMemberData($member)) {
                 continue;
             }
 
+<<<<<<< HEAD
             $memberId = $memberModel->addFamilyMember($headId, $this->memberPayloadFromArray($member));
 
             if ($memberId === false) {
@@ -159,21 +173,65 @@ class FamilyController extends BaseController
         if ($auditModel->hasTable()) {
             $headName = trim(trim((string) $this->request->getPost('head_firstname')) . ' ' . trim((string) $this->request->getPost('head_lastname')));
             $auditModel->logAction(
+=======
+            $memberServiceIds = $member['service_ids'] ?? [];
+
+            $memberPayloads[] = [
+                'payload' => $this->memberPayloadFromArray($member),
+                'serviceIds' => is_array($memberServiceIds) ? array_map('intval', $memberServiceIds) : [],
+            ];
+        }
+
+        // One family = one transaction. The persistence itself lives in
+        // FamilyRecordWriter so the Excel importer reuses the exact same write path.
+        $writer = new FamilyRecordWriter($memberModel, $memberServiceModel, $serviceModel, $auditModel);
+
+        $memberModel->beginTransaction();
+
+        try {
+            $writer->persistFamily(
+                $this->memberPayload('head_'),
+                $memberPayloads,
+                array_map('intval', $serviceIds),
+>>>>>>> 37b227b891c97c89790df56f4936d5278dde408a
                 $userId,
-                $headId,
-                'FAMILY_CREATED',
-                'Created family profile for ' . $headName . '.',
                 $this->request->getIPAddress(),
                 $this->request->getUserAgent()->getAgentString(),
+<<<<<<< HEAD
                 'Head of family: ' . $headName . '; ' . count($members) . ' submitted member row(s); '
                     . count($serviceIds) . ' service(s) on the head'
+=======
+                '',
+                $controlNo
+            );
+        } catch (Throwable $exception) {
+            $memberModel->rollbackTransaction();
+
+            // persistFamily can also throw beyond FamilyRecordWriteException (QR
+            // assignment, audit, or an unexpected DB error). Catch them all so the
+            // transaction is always rolled back and the request fails gracefully.
+            if (! $exception instanceof FamilyRecordWriteException) {
+                // Unexpected failure — record it like import()/changeFamilyState()
+                // do, so silent write failures surface on the audit page.
+                $this->auditSystemError('saving a family record', $exception);
+            }
+
+            return $this->storeError(
+                $exception instanceof FamilyRecordWriteException
+                    ? $exception->getMessage()
+                    : 'The family record was not saved.'
+>>>>>>> 37b227b891c97c89790df56f4936d5278dde408a
             );
         }
 
         $memberModel->completeTransaction();
 
         if (! $memberModel->transactionStatus()) {
+<<<<<<< HEAD
             return $this->failUpdate('The family record was not saved.', 500);
+=======
+            return $this->storeError('The family form was not saved.', 500);
+>>>>>>> 37b227b891c97c89790df56f4936d5278dde408a
         }
 
         $successMessage = 'Family record saved successfully.';
@@ -186,7 +244,13 @@ class FamilyController extends BaseController
             ]);
         }
 
+<<<<<<< HEAD
         return redirect()->to(site_url($this->isEmployeeContext() ? 'employee/manage-records' : 'admin/manage-records'))
+=======
+        // Set on a new record save only, never on edit/update.
+        return redirect()->back()
+            ->with('family_record_saved', '1')
+>>>>>>> 37b227b891c97c89790df56f4936d5278dde408a
             ->with('success', $successMessage);
     }
 
@@ -212,8 +276,9 @@ class FamilyController extends BaseController
 
         $serviceIdsByMember = (new MemberServiceModel())
             ->getServiceIdsByMemberIds(array_map(static fn (array $row): int => (int) $row['memberID'], $rows));
-        $serviceNames = $this->serviceNameMap($serviceIdsByMember);
-        $incomeLabels = $this->incomeLabelMap();
+        $modalData = new FamilyModalDataBuilder();
+        $serviceNames = $modalData->serviceNameMap($serviceIdsByMember);
+        $incomeLabels = $modalData->incomeLabelMap();
 
         $namesFor = static fn (int $memberId): array => array_values(array_filter(array_map(
             static fn (int $id): string => $serviceNames[$id] ?? '',
@@ -234,9 +299,8 @@ class FamilyController extends BaseController
 
     /**
      * GET `{admin|employee}/manage-family/edit/{id}`: returns the family record
-     * modal prefilled for editing. Delegates to renderFamilyModal() — the same
-     * Bootstrap modal served by createFamily() in update mode — so the legacy
-     * edit route stays functional after the old `Family/form` wizard was retired.
+     * modal prefilled for editing. Delegates to renderFamilyModal(), the same
+     * Bootstrap modal served by createFamily() in update mode.
      */
     public function editFamily(int $headId): string|RedirectResponse
     {
@@ -271,7 +335,7 @@ class FamilyController extends BaseController
         $auditModel = new AuditTrailsModel();
 
         if (! $memberModel->hasRequiredFamilyTables()) {
-            return $this->failUpdate('The accesscard database is missing required tables from accesscardV1.4.sql.', 422);
+            return $this->failUpdate('The accesscard database is missing required tables from accesscardV14.sql.', 422);
         }
 
         if ($this->submissionWasTruncated()) {
@@ -297,6 +361,24 @@ class FamilyController extends BaseController
 
         $userId = (int) session()->get('user_id');
 
+        $qrModel        = model(\App\Models\Scanner\QrControlModel::class);
+        $currentControl = $qrModel->controlForHead($headId);
+        $locked         = $currentControl !== null
+            && model(\App\Models\Scanner\AidDistributionModel::class)->hasClaims($currentControl);
+
+        // Locked heads keep their number: ignore any submitted change (defense in
+        // depth in case the readonly field was tampered with).
+        $controlNo = $locked ? (int) $currentControl : (int) $this->request->getPost('qr_control_no');
+
+        if (! $locked) {
+            if ($controlNo <= 0) {
+                return $this->failUpdate('QR Number is required.', 422);
+            }
+            if ($qrModel->takenByOtherHead($controlNo, $headId)) {
+                return $this->failUpdate('QR Number ' . $controlNo . ' is already assigned to another family.', 422);
+            }
+        }
+
         $memberModel->beginTransaction();
 
         // Snapshot the family's current service IDs before clearing, so archived-but-
@@ -313,6 +395,16 @@ class FamilyController extends BaseController
             $memberModel->rollbackTransaction();
 
             return $this->failUpdate('Head of family could not be updated. Please check required fields.', 422);
+        }
+
+        if (! $locked) {
+            try {
+                $qrModel->upsertForHead($controlNo, $headId);
+            } catch (\Throwable $e) {
+                $memberModel->rollbackTransaction();
+
+                return $this->failUpdate($e->getMessage(), 422);
+            }
         }
 
         $memberModel->deleteFamilyMembersExceptHead($headId);
@@ -464,6 +556,7 @@ class FamilyController extends BaseController
     }
 
     /**
+<<<<<<< HEAD
      * Records a SYSTEM_ERROR audit row for unexpected family-table failures.
      */
     private function auditSystemError(string $context, Throwable $exception): void
@@ -492,6 +585,13 @@ class FamilyController extends BaseController
     /**
      * Builds a redirect URL from Referer while removing obsolete deep-search
      * parameters. Falls back to the role's Manage Records page.
+=======
+     * Builds a redirect URL from the HTTP Referer but strips the deep-search
+     * parameters (`search_scope`, `deep_q`, `deep_page`) so that archiving or
+     * restoring a record never lands back on the database-search results panel.
+     * Falls back to the clean manage-records page when the Referer is absent or
+     * points to a different host.
+>>>>>>> 37b227b891c97c89790df56f4936d5278dde408a
      */
     private function listUrlWithoutDeepSearch(): string
     {
@@ -535,6 +635,7 @@ class FamilyController extends BaseController
         return [$head, $members];
     }
 
+<<<<<<< HEAD
     /** Resolves [serviceID => name] across every service assigned to the family. */
     private function serviceNameMap(array $serviceIdsByMember): array
     {
@@ -572,6 +673,70 @@ class FamilyController extends BaseController
     }
 
     /** First + last name of a family head, for audit descriptions. */
+=======
+    /**
+     * Validates and links a set of selected service IDs to one member inside the
+     * update transaction. A service is accepted when it is an active service, OR it
+     * is in $grandfatheredServiceIds — the set the family already held before this
+     * edit — so archived-but-assigned services are preserved rather than dropped.
+     * Other invalid/non-existent services are skipped; returns false only when a
+     * valid service fails to link (so the caller can roll back).
+     *
+     * @param list<int> $grandfatheredServiceIds
+     */
+    private function assignServices(MemberServiceModel $memberServiceModel, ServiceModel $serviceModel, int $memberId, mixed $serviceIds, array $grandfatheredServiceIds = []): bool
+    {
+        if (! is_array($serviceIds)) {
+            return true;
+        }
+
+        $grandfathered = array_flip(array_map('intval', $grandfatheredServiceIds));
+
+        foreach ($serviceIds as $serviceId) {
+            $serviceId = (int) $serviceId;
+
+            if ($serviceId < 0) {
+                continue;
+            }
+
+            if (! isset($grandfathered[$serviceId]) && ! $serviceModel->existsById($serviceId)) {
+                continue;
+            }
+
+            if ($memberServiceModel->assignService($memberId, $serviceId) === false) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Flat list of distinct service IDs currently assigned across the given members.
+     * Used to grandfather archived-but-assigned services through an update re-save.
+     *
+     * @param list<int> $memberIds
+     * @return list<int>
+     */
+    private function collectAssignedServiceIds(MemberServiceModel $memberServiceModel, array $memberIds): array
+    {
+        if ($memberIds === []) {
+            return [];
+        }
+
+        $ids = [];
+
+        foreach ($memberServiceModel->getServiceIdsByMemberIds($memberIds) as $serviceIds) {
+            foreach ($serviceIds as $serviceId) {
+                $ids[] = (int) $serviceId;
+            }
+        }
+
+        return array_values(array_unique($ids));
+    }
+
+    /** First + last name of a family head, for audit descriptions ('record' if missing). */
+>>>>>>> 37b227b891c97c89790df56f4936d5278dde408a
     private function familyHeadName(MemberModel $model, int $headId): string
     {
         $head = $model->find($headId);
@@ -585,6 +750,7 @@ class FamilyController extends BaseController
         return $name === '' ? 'record' : $name;
     }
 
+<<<<<<< HEAD
     /** True when the current request is under the `employee/` route group. */
     private function isEmployeeContext(): bool
     {
@@ -632,6 +798,8 @@ class FamilyController extends BaseController
             ->setJSON($body);
     }
 
+=======
+>>>>>>> 37b227b891c97c89790df56f4936d5278dde408a
     /**
      * Update-failure response: JSON error for AJAX, otherwise a redirect back with
      * the input preserved and an error flash. Used throughout update(). Optional
@@ -647,43 +815,17 @@ class FamilyController extends BaseController
     }
 
     /**
-     * Access guard for family entry: allows Developer/Admin/User, otherwise
-     * returns a redirect. store() converts this to a 403 JSON for AJAX requests.
+     * Create-failure response for store(): JSON error for AJAX (status defaults to
+     * 422), otherwise a redirect back with input preserved and an error flash.
+     * Mirrors the original per-step error handling that lived inline in store().
      */
-    private function requireFamilyEntryAccess(): ?RedirectResponse
+    private function storeError(string $message, int $statusCode = 422)
     {
-        if (! session()->get('is_logged_in')) {
-            return redirect()->to(site_url('/'))->with('error', 'Please login first.');
+        if ($this->request->isAJAX()) {
+            return $this->jsonError($message, $statusCode);
         }
 
-        $role = RoleAccess::normalizeRole((string) session()->get('role'));
-
-        if (in_array($role, ['Developer', 'Admin', 'Employee'], true)) {
-            return null;
-        }
-
-        return redirect()->back()->with('error', 'You do not have permission to add family records.');
-    }
-
-    /**
-     * Access guard for the READ-ONLY family detail fragment (viewFamily). Same as
-     * requireFamilyEntryAccess but also permits the Viewer role — viewers may look
-     * at a record but never reach the edit/update/archive/restore actions, which
-     * keep the stricter requireFamilyEntryAccess guard.
-     */
-    private function requireFamilyViewAccess(): ?RedirectResponse
-    {
-        if (! session()->get('is_logged_in')) {
-            return redirect()->to(site_url('/'))->with('error', 'Please login first.');
-        }
-
-        $role = RoleAccess::normalizeRole((string) session()->get('role'));
-
-        if (in_array($role, ['Developer', 'Admin', 'Employee', 'Viewer'], true)) {
-            return null;
-        }
-
-        return redirect()->back()->with('error', 'You do not have permission to view family records.');
+        return redirect()->back()->withInput()->with('error', $message);
     }
 
     /**
@@ -722,11 +864,7 @@ class FamilyController extends BaseController
      */
     private function combineAddressBarangay(mixed $address, mixed $barangay): ?string
     {
-        $address = $this->cleanAddress($address);
-        $barangay = $this->cleanAddress($barangay);
-        $combined = trim($address . ($address !== '' && $barangay !== '' ? ', ' : '') . $barangay);
-
-        return $combined === '' ? null : $combined;
+        return MemberFieldNormalizer::combineAddressBarangay($address, $barangay);
     }
 
     /**
@@ -739,27 +877,7 @@ class FamilyController extends BaseController
      */
     private function splitAddressBarangay(mixed $combined): array
     {
-        $combined = trim((string) $combined);
-        $barangays = FamilyProfilingFormV2::barangays();
-        usort($barangays, static fn (string $a, string $b): int => mb_strlen($b) <=> mb_strlen($a));
-
-        foreach ($barangays as $barangay) {
-            $suffix = ', ' . $barangay;
-
-            if (mb_strlen($combined) >= mb_strlen($suffix)
-                && strcasecmp(mb_substr($combined, -mb_strlen($suffix)), $suffix) === 0) {
-                return [
-                    'address' => rtrim(mb_substr($combined, 0, mb_strlen($combined) - mb_strlen($suffix))),
-                    'barangay' => $barangay,
-                ];
-            }
-
-            if (strcasecmp($combined, $barangay) === 0) {
-                return ['address' => '', 'barangay' => $barangay];
-            }
-        }
-
-        return ['address' => $combined, 'barangay' => ''];
+        return MemberFieldNormalizer::splitAddressBarangay($combined);
     }
 
     /**
@@ -831,6 +949,7 @@ class FamilyController extends BaseController
             'head_salary' => 'required',
             'head_address' => 'required|max_length[255]',
             'head_barangay' => 'required|max_length[100]',
+            'qr_control_no' => 'required|is_natural_no_zero',
         ];
     }
 
@@ -946,11 +1065,7 @@ class FamilyController extends BaseController
      */
     private function moneyOrNull(mixed $value): ?float
     {
-        if ($value === null || $value === '') {
-            return null;
-        }
-
-        return (float) str_replace(',', '', (string) $value);
+        return MemberFieldNormalizer::moneyOrNull($value);
     }
 
     /**
@@ -959,9 +1074,7 @@ class FamilyController extends BaseController
      */
     private function nullableText(mixed $value): ?string
     {
-        $value = trim((string) $value);
-
-        return $value === '' ? null : $value;
+        return MemberFieldNormalizer::nullableText($value);
     }
 
     /**
@@ -973,10 +1086,7 @@ class FamilyController extends BaseController
      */
     private function cleanName(mixed $value): string
     {
-        $value = preg_replace("/[^\\p{L}\\s.'-]/u", '', (string) $value);
-        $value = trim((string) preg_replace('/\\s+/u', ' ', (string) $value));
-
-        return mb_convert_case($value, MB_CASE_TITLE, 'UTF-8');
+        return MemberFieldNormalizer::cleanName($value);
     }
 
     /**
@@ -987,6 +1097,7 @@ class FamilyController extends BaseController
      */
     private function cleanAddress(mixed $value): string
     {
+<<<<<<< HEAD
         $value = preg_replace("/[^\\p{L}\\p{N}\\s#,.\\-\\/'()&]/u", '', (string) $value);
         $value = trim((string) preg_replace('/\\s+/u', ' ', (string) $value));
 
@@ -1223,6 +1334,9 @@ class FamilyController extends BaseController
         }
 
         return $payload;
+=======
+        return MemberFieldNormalizer::cleanAddress($value);
+>>>>>>> 37b227b891c97c89790df56f4936d5278dde408a
     }
 
     // ---------------------------------------------------------------------------
@@ -1266,6 +1380,10 @@ class FamilyController extends BaseController
                 return $this->recordMissing();
             }
 
+            $currentControl = model(\App\Models\Scanner\QrControlModel::class)->controlForHead($headId);
+            $qrLocked = $currentControl !== null
+                && model(\App\Models\Scanner\AidDistributionModel::class)->hasClaims($currentControl);
+
             $serviceIdsByMember = (new MemberServiceModel())
                 ->getServiceIdsByMemberIds(array_map(static fn (array $row): int => (int) $row['memberID'], $rows));
 
@@ -1290,9 +1408,11 @@ class FamilyController extends BaseController
                 array_values(array_unique($assignedServiceIds))
             );
 
+            $modalData = new FamilyModalDataBuilder();
+
             return view('Family/family-modal', array_merge(
                 $viewData,
-                $this->familyModalUpdateData($head, $serviceIdsByMember[$headId] ?? []),
+                $modalData->updateData($head, $serviceIdsByMember[$headId] ?? []),
                 [
                     'action' => site_url($this->dataTableRouteBase() . '/update/' . $headId),
                     'fieldPrefix' => 'family-update',
@@ -1300,7 +1420,8 @@ class FamilyController extends BaseController
                     'modalMode' => 'update',
                     'submitLabel' => 'Update',
                     'saveDisabled' => false,
-                    'existingMembers' => $this->shapeModalMembers($members, $serviceIdsByMember),
+                    'qrLocked' => $qrLocked,
+                    'existingMembers' => $modalData->shapeMembers($members, $serviceIdsByMember),
                 ]
             ));
         }
@@ -1317,76 +1438,10 @@ class FamilyController extends BaseController
                 'submitLabel' => 'Save',
                 'headId' => 0,
                 'saveDisabled' => false,
+                'qrLocked' => false,
                 'existingMembers' => [],
             ]
         ));
-    }
-
-    /**
-     * Builds the head prefill block (formValues + selected sector/service IDs) for
-     * the Update modal. Splits the stored "address, barangay" back into the two
-     * separate inputs via splitAddressBarangay().
-     *
-     * @param list<int> $headServiceIds
-     */
-    private function familyModalUpdateData(array $head, array $headServiceIds): array
-    {
-        $headId = (int) ($head['memberID'] ?? 0);
-        $addressParts = $this->splitAddressBarangay($head['address'] ?? '');
-
-        return [
-            'headId' => $headId,
-            'formValues' => [
-                'head_lastname' => (string) ($head['lastname'] ?? ''),
-                'head_firstname' => (string) ($head['firstname'] ?? ''),
-                'head_middlename' => (string) ($head['middlename'] ?? ''),
-                'head_suffix' => (string) ($head['suffix'] ?? ''),
-                'head_birthday' => (string) ($head['birthday'] ?? ''),
-                'head_sex' => (string) ($head['sex'] ?? ''),
-                'head_civilstatus' => (string) ($head['civilstatus'] ?? ''),
-                'head_contactnumber' => (string) ($head['contactnumber'] ?? ''),
-                'head_religion' => (string) ($head['religion'] ?? ''),
-                'head_education' => (string) ($head['education'] ?? ''),
-                'head_job' => (string) ($head['job'] ?? ''),
-                'head_salary' => (string) ($head['Salary'] ?? ''),
-                'head_address' => $addressParts['address'],
-                'head_barangay' => $addressParts['barangay'],
-            ],
-            'selectedSectorIds' => array_map('strval', SectorIds::normalize($head['sectorID'] ?? null)),
-            'selectedServiceIds' => array_map('strval', $headServiceIds),
-        ];
-    }
-
-    /**
-     * Shapes existing family-member rows for the Update modal so they pre-render
-     * (and re-post) — otherwise update()'s member replace would drop them.
-     *
-     * @param array<int, list<int>> $serviceIdsByMember
-     * @return list<array<string, mixed>>
-     */
-    private function shapeModalMembers(array $members, array $serviceIdsByMember): array
-    {
-        return array_map(function (array $member) use ($serviceIdsByMember): array {
-            $memberId = (int) ($member['memberID'] ?? 0);
-
-            return [
-                'lastname' => (string) ($member['lastname'] ?? ''),
-                'firstname' => (string) ($member['firstname'] ?? ''),
-                'middlename' => (string) ($member['middlename'] ?? ''),
-                'suffix' => (string) ($member['suffix'] ?? ''),
-                'birthday' => (string) ($member['birthday'] ?? ''),
-                'sex' => (string) ($member['sex'] ?? ''),
-                'civilstatus' => (string) ($member['civilstatus'] ?? ''),
-                'contactnumber' => (string) ($member['contactnumber'] ?? ''),
-                'religion' => (string) ($member['religion'] ?? ''),
-                'education' => (string) ($member['education'] ?? ''),
-                'job' => (string) ($member['job'] ?? ''),
-                'salary' => (string) ($member['Salary'] ?? ''),
-                'relationship' => (string) ($member['relationship'] ?? ''),
-                'sector_ids' => array_map('strval', SectorIds::normalize($member['sectorID'] ?? null)),
-                'service_ids' => array_map('strval', $serviceIdsByMember[$memberId] ?? []),
-            ];
-        }, $members);
     }
 
 }

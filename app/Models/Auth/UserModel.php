@@ -95,7 +95,7 @@ class UserModel extends Model
         }
 
         return $this->select('userID, username, account_level AS role, isactive, dt_created')
-            ->whereIn('account_level', ['administrator', 'encoder', 'viewer'])
+            ->whereIn('account_level', ['administrator', 'encoder', 'viewer', 'scanner'])
             ->orderBy('account_level', 'ASC')
             ->orderBy('username', 'ASC')
             ->findAll();
@@ -224,7 +224,7 @@ class UserModel extends Model
 
         $account = $this->select('userID, account_level AS role')->find($userId);
 
-        if ($account === null || ! in_array((string) ($account['role'] ?? ''), ['administrator', 'encoder', 'viewer'], true)) {
+        if ($account === null || ! in_array((string) ($account['role'] ?? ''), ['administrator', 'encoder', 'viewer', 'scanner'], true)) {
             return false;
         }
 

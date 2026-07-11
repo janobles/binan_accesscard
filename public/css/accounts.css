@@ -6,13 +6,12 @@
     border: 1px solid #d4e0dc;
     border-radius: 0.45rem;
     background: #f8fbfa;
-    box-shadow: 0 1rem 2.5rem rgba(16, 37, 31, 0.08);
 }
 
 .floating-family-modal:has(.edit-account-modal) {
     --modal-window-gap: clamp(0.5rem, 1.5vw, 1rem);
     --modal-window-width: min(64rem, calc(100vw - (var(--modal-window-gap) * 2)));
-    --modal-window-height: min(43rem, calc(100dvh - (var(--modal-window-gap) * 2)));
+    --modal-window-height: auto;
 }
 
 .floating-family-modal:has(.edit-account-modal) .modal-footer {
@@ -20,29 +19,20 @@
 }
 
 .edit-account-modal {
-    grid-template-rows: auto minmax(0, 1fr);
     gap: 0.55rem;
-    min-height: 100%;
+    max-height: min(43rem, calc(100dvh - (var(--modal-window-gap, 1rem) * 2)));
     padding: 0.65rem;
 }
 
 .edit-account-modal form {
     display: grid;
-    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-rows: minmax(0, auto) auto;
     min-height: 0;
 }
 
 .edit-account-modal .account-card {
     min-height: 0;
     overflow: auto;
-}
-
-.edit-account-modal > .account-card-header h2 {
-    font-size: 1.25rem;
-}
-
-.edit-account-modal > .account-card-header p {
-    font-size: 0.86rem;
 }
 
 .edit-account-modal .account-card-header {
@@ -60,10 +50,6 @@
 
 .edit-account-modal .account-field-group {
     gap: 0.55rem;
-}
-
-.edit-account-modal .account-field-group + .account-field-group {
-    padding-left: 0.85rem;
 }
 
 .edit-account-modal .form-label {
@@ -154,6 +140,42 @@
     border-left: 1px solid #e2e9e7;
 }
 
+.account-create-grid--stacked {
+    grid-template-columns: 1fr;
+}
+
+.account-create-grid--stacked .account-field-group + .account-field-group {
+    padding-top: 1rem;
+    padding-left: 0;
+    border-top: 1px solid #e2e9e7;
+    border-left: 0;
+}
+
+.account-field-group-title {
+    margin: 0;
+    color: #42524d;
+    font-size: 0.78rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.account-fields-row {
+    display: grid;
+    gap: 0.85rem;
+    min-width: 0;
+}
+
+.account-fields-row--credentials {
+    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+}
+
+.account-fields-row--requirements {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.account-field--wide {
+    grid-column: span 2;
+}
 .account-field {
     display: grid;
     gap: 0.35rem;
@@ -174,6 +196,14 @@
     border-radius: 0.35rem;
     color: #23322e;
     font-size: 0.9rem;
+}
+
+.accounts-page .account-role-readonly:disabled {
+    --bs-secondary-bg: #fff;
+    background-color: #fff !important;
+    color: #23322e !important;
+    opacity: 1;
+    -webkit-text-fill-color: #23322e;
 }
 
 .account-create-actions {
@@ -288,8 +318,8 @@
     font-weight: 700;
 }
 
-.account-action-toggle {
-    min-width: 7rem;
+.account-table .account-action-toggle {
+    min-width: 0;
 }
 
 .account-action-menu {
@@ -370,6 +400,14 @@
         border-left: 0;
     }
 
+    .account-fields-row--requirements {
+        grid-template-columns: 1fr;
+    }
+
+    .account-field--wide {
+        grid-column: auto;
+    }
+
     .accounts-page .form-control,
     .accounts-page .form-select,
     .account-create-actions .btn {
@@ -409,7 +447,6 @@
     border-left: 0.28rem solid #168465;
     border-radius: 0.5rem;
     background: #f1faf6;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 .reset-password-callout__head {

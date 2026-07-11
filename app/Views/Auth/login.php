@@ -11,6 +11,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login | Binan Access Card Portal</title>
+    <link rel="icon" type="image/png" href="<?= esc(asset_url('assets/image/binan.png'), 'attr') ?>">
     <?php foreach (asset_styles('login') as $stylePath): ?>
     <link rel="stylesheet" href="<?= esc(asset_url($stylePath), 'attr') ?>">
     <?php endforeach; ?>
@@ -20,7 +21,7 @@
         <section class="login-card">
             <div class="login-card-body">
                 <div class="login-heading">
-                    <img src="<?= asset_url('assets/image/binan.png') ?>" alt="City of Binan Logo" class="login-logo">
+                    <img src="<?= esc(asset_url('assets/image/binan.png'), 'attr') ?>" alt="City of Binan Logo" class="login-logo">
                     <h1>Binan Access Card Portal</h1>
                     <p>Sign in to continue</p>
                 </div>

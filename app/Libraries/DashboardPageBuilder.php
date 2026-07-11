@@ -10,6 +10,10 @@ use App\Models\Lookups\CategoryModel;
 use App\Models\Lookups\SectorModel;
 use App\Models\Lookups\ServiceModel;
 use App\Models\Auth\UserModel;
+use App\Models\Scanner\AidDistributionModel;
+use App\Models\Scanner\AidStatsModel;
+use App\Models\Scanner\AidTypeModel;
+use App\Models\Scanner\DistributionBatchModel;
 use App\Support\FamilyProfilingFormV2;
 use App\Libraries\RoleAccess;
 use App\Models\ViewLayoutModel;
@@ -53,8 +57,13 @@ class DashboardPageBuilder
 
     /**
      * Assembles every variable the admin shell and its sub-views need: page title,
+<<<<<<< HEAD
      * role flags/permissions, nav highlighting, account lists, record filters,
      * recent families/audits, member list (on Manage Records), sector/service
+=======
+     * role flags/permissions, nav highlighting, account lists, recent
+     * families/audits, member list (on Manage Records), sector/service
+>>>>>>> 37b227b891c97c89790df56f4936d5278dde408a
      * lists, dashboard stats, search term/filters, and view formatter closures
      * (formatDate/Status/etc.). Also reused to build AJAX partials. Frontend:
      * consumed directly by `Admin/*` views.
@@ -77,7 +86,11 @@ class DashboardPageBuilder
         $sectorModel = new SectorModel();
         $serviceModel = new ServiceModel();
 
+<<<<<<< HEAD
         $sectorOptions = $sectorModel->getActive();
+=======
+        $sectorOptions = $sectorModel->getSectorOptions();
+>>>>>>> 37b227b891c97c89790df56f4936d5278dde408a
 
         $recentFamilies = $activePage === 'dashboard' && ($searchTerm !== '' || $hasSearchFilters)
             ? $searchModel->families($searchTerm, $searchFilters, 25)
@@ -105,6 +118,26 @@ class DashboardPageBuilder
         $categoryListData = $activePage === 'categories'
             ? $this->buildLookupListData(new CategoryModel(), 'admin/categories', 'categoryID')
             : [];
+
+        // Aid-type/batch/distribution data for the Distribution hub, gated so
+        // other pages don't run these queries.
+        $isDistribution = $activePage === 'distribution';
+        $aidTypeModel   = model(AidTypeModel::class);
+        $batchModel     = model(DistributionBatchModel::class);
+
+        // Overall reports (combined totals + per-kiosk table), batch-scoped only
+        // (no date filter). Gated so other pages don't run these queries.
+        $reportsData = $activePage === 'reports'
+            ? $this->buildReportsData($batchModel)
+            : [
+                'reportsBatches'    => [],
+                'reportsBatchId'    => null,
+                'reportsBatchName'  => null,
+                'reportsSummary'    => ['total' => 0, 'received' => 0, 'notReceived' => 0, 'coverage' => 0],
+                'reportsByBarangay' => [],
+                'reportsByAidType'  => [],
+                'reportsPerScanner' => [],
+            ];
 
         // Hide the logged-in user's own account from their Account Management list;
         // other admins/developers still see it. The Developer logs in from .env
@@ -147,6 +180,9 @@ class DashboardPageBuilder
                 'sectors'      => $layoutModel->navActive($activePage, 'sectors'),
                 'services'     => $layoutModel->navActive($activePage, 'services'),
                 'categories'   => $layoutModel->navActive($activePage, 'categories'),
+                'cards'        => $layoutModel->navActive($activePage, 'cards'),
+                'distribution' => $layoutModel->navActive($activePage, 'distribution'),
+                'reports'      => $layoutModel->navActive($activePage, 'reports'),
             ],
             'adminAccounts'      => array_values(array_filter($visibleAccounts, static fn ($account) => $account['role'] === 'administrator')),
             // 'encoder' is the raw DB enum value for the Employee role (surfaced as
@@ -154,6 +190,10 @@ class DashboardPageBuilder
             // (account_level aliased back to `role` by UserModel::getStaffAccounts).
             'employeeAccounts'   => array_values(array_filter($visibleAccounts, static fn ($account) => $account['role'] === 'encoder')),
             'viewerAccounts'     => array_values(array_filter($visibleAccounts, static fn ($account) => $account['role'] === 'viewer')),
+<<<<<<< HEAD
+=======
+            'scannerAccounts'    => array_values(array_filter($visibleAccounts, static fn ($account) => $account['role'] === 'scanner')),
+>>>>>>> 37b227b891c97c89790df56f4936d5278dde408a
             'recentFamilies'     => $recentFamilies,
             'recentAudits'       => $recentAudits,
             'auditListData'      => $auditListData,
@@ -165,8 +205,21 @@ class DashboardPageBuilder
             'sectorListData'     => $sectorListData,
             'serviceListData'    => $serviceListData,
             'categoryListData'   => $categoryListData,
+            'aidTypes'           => $isDistribution ? $aidTypeModel->all() : [],
+            'activeAidTypes'     => $isDistribution ? $aidTypeModel->active() : [],
+            'batches'            => $isDistribution ? $batchModel->allBatches() : [],
+            'activeBatch'        => $isDistribution ? $batchModel->activeBatch() : null,
+            'distributions'      => $isDistribution ? model(AidDistributionModel::class)->allDistributions() : [],
+            'reportsBatches'     => $reportsData['reportsBatches'],
+            'reportsBatchId'     => $reportsData['reportsBatchId'],
+            'reportsBatchName'   => $reportsData['reportsBatchName'],
+            'reportsSummary'     => $reportsData['reportsSummary'],
+            'reportsByBarangay'  => $reportsData['reportsByBarangay'],
+            'reportsByAidType'   => $reportsData['reportsByAidType'],
+            'reportsPerScanner'  => $reportsData['reportsPerScanner'],
             'stats'              => $dashboardModel->stats(),
             'username'           => (string) (session()->get('username') ?? 'Admin'),
+            'accountLevelLabel'  => SessionAccount::levelLabel(),
             'searchTerm'         => $searchTerm,
             'searchFilters'      => $searchFilters,
             'hasSearchFilters'   => $hasSearchFilters,
@@ -353,23 +406,51 @@ class DashboardPageBuilder
         ];
     }
 
+    /**
+     * Batch-scoped data for the admin overall Reports page: combined totals,
+     * per-barangay/aid-type breakdowns, and the per-kiosk table (all scanners,
+     * no self-scoping — admin sees every kiosk). The scoping batch defaults to
+     * the active batch, else the most recent batch, and honors ?batch= when it
+     * matches a known batch (mirrors Admin\ReportsController::resolveBatch()).
+     */
+    private function buildReportsData(DistributionBatchModel $batchModel): array
+    {
+        $batches = $batchModel->allBatches();
+        $active  = $batchModel->activeBatch();
+
+        $batchId = (int) $this->request->getGet('batch');
+        $batch   = null;
+        if ($batchId <= 0) {
+            $batchId = $active !== null ? (int) $active['batch_id'] : (int) ($batches[0]['batch_id'] ?? 0);
+        }
+        foreach ($batches as $b) {
+            if ((int) $b['batch_id'] === $batchId) {
+                $batch = $b;
+                break;
+            }
+        }
+        if ($batch === null) {
+            $batchId = 0;
+        }
+
+        $scope = $batchId > 0 ? $batchId : null;
+        $stats = model(AidStatsModel::class);
+
+        return [
+            'reportsBatches'    => $batches,
+            'reportsBatchId'    => $batchId > 0 ? $batchId : null,
+            'reportsBatchName'  => $batch['name'] ?? null,
+            'reportsSummary'    => $stats->receivedVsNot($scope),
+            'reportsByBarangay' => $stats->byBarangay($scope),
+            'reportsByAidType'  => $stats->byAidType($scope),
+            'reportsPerScanner' => $batchId > 0 ? $stats->perScanner($batchId) : [],
+        ];
+    }
+
     /** Session user plus stored profile details for topbar/account menus. */
     private function currentSessionUser(): array
     {
-        $sessionUser = session()->get();
-        $userId = (int) ($sessionUser['user_id'] ?? 0);
-
-        if ($userId <= 0) {
-            return $sessionUser;
-        }
-
-        $account = (new UserModel())->getAccountById($userId);
-
-        if ($account === null) {
-            return $sessionUser;
-        }
-
-        return array_merge($sessionUser, $account);
+        return SessionAccount::user();
     }
 
     /** Builds the Admin DataTables shell and advanced-filter options. */
@@ -413,7 +494,11 @@ class DashboardPageBuilder
         $searchFilters = $this->searchFilters();
         $hasSearchFilters = $this->hasSearchFilters($searchFilters);
         $userId = (int) session()->get('user_id');
+<<<<<<< HEAD
         $sectorOptions = (new SectorModel())->getActive();
+=======
+        $sectorOptions = (new SectorModel())->getSectorOptions();
+>>>>>>> 37b227b891c97c89790df56f4936d5278dde408a
         $recordListData = $activePage === 'family-manage'
             ? $this->buildEmployeeRecordListData()
             : [];
@@ -434,6 +519,10 @@ class DashboardPageBuilder
                 'family-manage' => $layoutModel->navActive($activePage, 'family-manage'),
                 'activity' => $layoutModel->navActive($activePage, 'activity'),
             ],
+<<<<<<< HEAD
+=======
+            'canCreateFamily'    => true,
+>>>>>>> 37b227b891c97c89790df56f4936d5278dde408a
             'recordListData'     => $recordListData,
             'recentFamilies'     => $recentFamilies,
             'myAudits'           => $myAudits,
@@ -444,6 +533,10 @@ class DashboardPageBuilder
             'auditActionOptions' => $searchModel->auditActions(),
             'idleTimeoutSeconds' => (new IdleTimeout())->seconds,
             'username'           => (string) (session()->get('username') ?? 'Employee'),
+<<<<<<< HEAD
+=======
+            'accountLevelLabel'  => SessionAccount::levelLabel(),
+>>>>>>> 37b227b891c97c89790df56f4936d5278dde408a
             'sectorOptions'      => $sectorOptions,
             'selectedFilterDate' => (string) ($searchFilters['date'] ?? $searchFilters['date_from'] ?? ''),
             'hasSearchFilters'   => $hasSearchFilters,
@@ -533,6 +626,7 @@ class DashboardPageBuilder
             'hasSearchFilters'   => $hasSearchFilters,
             'idleTimeoutSeconds' => (new IdleTimeout())->seconds,
             'username'           => (string) (session()->get('username') ?? 'Viewer'),
+            'accountLevelLabel'  => SessionAccount::levelLabel(),
             'formatDate'         => static function (mixed $value): string {
                 $timestamp = strtotime((string) $value);
 

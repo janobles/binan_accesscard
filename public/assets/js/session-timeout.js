@@ -66,9 +66,22 @@
             },
         })
             .then(function (response) {
-                if (response.status === 401) {
-                    logout();
+                if (response.status !== 401) {
+                    return;
                 }
+
+                // A superseded session (logged in elsewhere) sends an explicit
+                // redirect so we land on login with the correct reason. Anything
+                // else (idle timeout) falls back to the default timeout logout.
+                response.json().then(function (data) {
+                    if (data && data.redirect) {
+                        redirectAway(data.redirect);
+                    } else {
+                        logout();
+                    }
+                }).catch(function () {
+                    logout();
+                });
             })
             .catch(function () {});
     }
@@ -85,6 +98,19 @@
         isLoggingOut = true;
         localStorage.removeItem(storageKey);
         window.location.href = logoutUrl;
+    }
+
+    // Navigate to a server-supplied URL (e.g. a displaced session redirected to
+    // login) instead of the default timeout logout. Clearing the shared key pulls
+    // sibling tabs along via the storage event.
+    function redirectAway(url) {
+        if (isLoggingOut) {
+            return;
+        }
+
+        isLoggingOut = true;
+        localStorage.removeItem(storageKey);
+        window.location.href = url;
     }
 
     function clearActivity() {

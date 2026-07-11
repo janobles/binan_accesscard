@@ -11,6 +11,7 @@ use CodeIgniter\Router\RouteCollection;
  */
 $routes->get('/', 'Auth\AuthController::index');
 $routes->match(['GET', 'POST'], 'login', 'Auth\AuthController::login');
+$routes->post('login/confirm', 'Auth\AuthController::confirmLogin');
 $routes->get('logout', 'Auth\AuthController::logout');
 $routes->get('session/keep-alive', 'Auth\AuthController::keepAlive');
 
@@ -33,8 +34,16 @@ $routes->group('admin', static function (RouteCollection $routes): void {
 
     $routes->get('manage-families', 'Admin\DashboardController::manageRecords');
     $routes->group('manage-family', static function (RouteCollection $routes): void {
+<<<<<<< HEAD
+=======
+        $routes->get('', 'Admin\DashboardController::manageRecords');
+>>>>>>> 37b227b891c97c89790df56f4936d5278dde408a
         $routes->get('list', 'Families\FamilyController::listFamilies');
-        $routes->get('data', 'Families\FamilyController::dataTable');
+        $routes->get('data', 'Families\FamilyDataTableController::dataTable');
+        $routes->get('template', 'Families\FamilyImportController::downloadTemplate');
+        $routes->get('import', 'Families\FamilyImportController::importForm');
+        $routes->post('import', 'Families\FamilyImportController::import');
+        $routes->get('import/status/(:num)', 'Families\FamilyImportController::importStatus/$1');
         $routes->get('create', 'Families\FamilyController::createFamily');
         $routes->get('view/(:num)', 'Families\FamilyController::viewFamily/$1');
         $routes->post('update/(:num)', 'Families\FamilyController::update/$1');
@@ -64,6 +73,29 @@ $routes->group('admin', static function (RouteCollection $routes): void {
         $routes->post('archive/(:num)', 'Lookups\ServiceController::archive/$1');
         $routes->post('restore/(:num)', 'Lookups\ServiceController::restore/$1');
     });
+
+    $routes->group('cards', static function (RouteCollection $routes): void {
+        $routes->get('', 'Admin\DashboardController::cards');
+        $routes->post('generate', 'Cards\QrCardController::batch');
+        $routes->get('card/(:num)', 'Cards\QrCardController::card/$1');
+        $routes->get('lookup/(:any)', 'Cards\QrCardController::lookup/$1');
+    });
+
+    $routes->get('distribution', 'Admin\DistributionController::index');
+    $routes->group('aid-types', static function (RouteCollection $routes): void {
+        $routes->post('create', 'Admin\DistributionController::createAidType');
+        $routes->post('archive/(:num)', 'Admin\DistributionController::archiveAidType/$1');
+        $routes->post('restore/(:num)', 'Admin\DistributionController::restoreAidType/$1');
+        $routes->post('delete/(:num)', 'Admin\DistributionController::deleteAidType/$1');
+    });
+    $routes->group('batches', static function (RouteCollection $routes): void {
+        $routes->post('open', 'Admin\DistributionController::openBatch');
+        $routes->post('close/(:num)', 'Admin\DistributionController::closeBatch/$1');
+    });
+    $routes->post('distributions/void/(:num)', 'Admin\DistributionController::voidDistribution/$1');
+    $routes->get('reports', 'Admin\ReportsController::index');
+    $routes->get('reports/stats', 'Admin\ReportsController::stats');
+    $routes->get('reports/pdf', 'Admin\ReportsController::pdf');
 });
 
 /*
@@ -76,8 +108,16 @@ $routes->group('employee', static function (RouteCollection $routes): void {
 
     $routes->get('manage-families', 'Employee\DashboardController::manageRecords');
     $routes->group('manage-family', static function (RouteCollection $routes): void {
+<<<<<<< HEAD
+=======
+        $routes->get('', 'Employee\DashboardController::manageRecords');
+>>>>>>> 37b227b891c97c89790df56f4936d5278dde408a
         $routes->get('list', 'Families\FamilyController::listFamilies');
-        $routes->get('data', 'Families\FamilyController::dataTable');
+        $routes->get('data', 'Families\FamilyDataTableController::dataTable');
+        $routes->get('template', 'Families\FamilyImportController::downloadTemplate');
+        $routes->get('import', 'Families\FamilyImportController::importForm');
+        $routes->post('import', 'Families\FamilyImportController::import');
+        $routes->get('import/status/(:num)', 'Families\FamilyImportController::importStatus/$1');
         $routes->get('create', 'Families\FamilyController::createFamily');
         $routes->get('view/(:num)', 'Families\FamilyController::viewFamily/$1');
         $routes->post('update/(:num)', 'Families\FamilyController::update/$1');
@@ -99,9 +139,21 @@ $routes->group('viewer', static function (RouteCollection $routes): void {
     $routes->get('sectors', 'Viewer\DashboardController::sectors');
     $routes->get('services', 'Viewer\DashboardController::services');
     $routes->group('manage-family', static function (RouteCollection $routes): void {
-        $routes->get('data', 'Families\FamilyController::dataTable');
+        $routes->get('data', 'Families\FamilyDataTableController::dataTable');
         $routes->get('view/(:num)', 'Families\FamilyController::viewFamily/$1');
     });
+});
+
+/**
+ * Scanner module (aid distribution). Scanner/Admin/Developer only — each action
+ * calls RoleAccess::requireRole() internally (mirrors the Cards controller).
+ */
+$routes->group('scanner', static function (RouteCollection $routes): void {
+    $routes->get('scan', 'Scanner\ScanController::scan');
+    $routes->get('performance', 'Scanner\ScanController::performance');
+    $routes->get('stats', 'Scanner\ScanController::stats');
+    $routes->get('lookup/(:num)', 'Scanner\ScanController::lookup/$1');
+    $routes->post('log', 'Scanner\ScanController::logAid');
 });
 
 /*

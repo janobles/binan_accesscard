@@ -687,9 +687,28 @@ div.dt-container div.dt-search input {
     margin-left: 0;
 }
 
+/* The controls row is a Bootstrap .row: kill its gutter margins/paddings so
+   the quick search lines up with the table edge, and center both cells
+   vertically so the input-group and "Show N entries" sit on one line. */
 div.dt-container .dt-layout-row {
     margin-left: 0;
     margin-right: 0;
+    align-items: center;
+}
+
+div.dt-container .dt-layout-cell {
+    padding-left: 0;
+    padding-right: 0;
+}
+
+div.dt-container div.dt-search {
+    display: flex;
+    align-items: center;
+}
+
+div.dt-container div.dt-search .input-group {
+    width: min(18rem, 42vw);
+    flex-wrap: nowrap;
 }
 
 /* On small screens the in-card controls stack like the toolbar does: quick
@@ -697,7 +716,8 @@ div.dt-container .dt-layout-row {
    DataTables default centered layout. */
 @media (max-width: 991.98px) {
     div.dt-container div.dt-search,
-    div.dt-container div.dt-search input {
+    div.dt-container div.dt-search input,
+    div.dt-container div.dt-search .input-group {
         width: 100%;
     }
 

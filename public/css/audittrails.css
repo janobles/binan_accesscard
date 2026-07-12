@@ -1,9 +1,7 @@
+/* Border/radius come from the stock .card (Manage Records standard). */
 .audit-trails {
     margin-top: 0;
     overflow: hidden;
-    border: 1px solid #dce5e2;
-    border-radius: 0.35rem;
-    background: #ffffff;
 }
 
 .audit-filter-bar {

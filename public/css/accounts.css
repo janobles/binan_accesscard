@@ -75,25 +75,23 @@
     font-size: 0.84rem;
 }
 
+/* The management page wrapper is chromeless (Manage Records standard: the
+   toolbar sits on the page, only the card is a box); the bordered
+   .accounts-page look above is kept for the create/edit modal views. */
 .accounts-page[data-account-management] {
+    display: block;
+    overflow: visible;
     gap: 0;
     padding: 0;
-    border: 1px solid #dce5e2;
-    border-radius: 0.35rem;
-    background: #ffffff;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
     box-shadow: none;
 }
 
-.accounts-page[data-account-management] .account-card {
-    border: 0;
-    border-radius: 0;
-}
-
+/* Border/radius come from the stock .card (Manage Records standard). */
 .account-card {
     overflow: hidden;
-    border: 1px solid #dce5e2;
-    border-radius: 0.45rem;
-    background: #ffffff;
 }
 
 .account-card-header {
@@ -228,21 +226,22 @@
     margin: 0;
 }
 
+/* Typography mirrors .manage-record-table (managerecord.css). */
 .account-table th {
     padding: 0.8rem 1rem;
     border-bottom-color: #cedbd7;
     background: #f4f7f7;
     color: #53635e;
-    font-size: 0.74rem;
-    font-weight: 800;
+    font-size: 0.7rem;
+    font-weight: 700;
     text-transform: uppercase;
 }
 
 .account-table td {
-    padding: 0.9rem 1rem;
+    padding: 0.85rem 1rem;
     border-bottom-color: #e4ece9;
     color: #34443f;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
 }
 
 .account-table form {

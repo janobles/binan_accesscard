@@ -1,11 +1,9 @@
 /* Shared lookup-management styles for Sector and Services pages.
    The markup still uses sector-* classes for compatibility with existing views/JS. */
 
+/* Border/radius come from the stock .card (Manage Records standard). */
 .sector-management {
     overflow: hidden;
-    border: 1px solid #dce5e2;
-    border-radius: 0.35rem;
-    background: #ffffff;
 }
 
 .sector-toolbar {

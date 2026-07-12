@@ -73,7 +73,25 @@
             quickSearchInput = dataTablesSearchInput.cloneNode(true);
             quickSearchInput.value = quickSearchTerm;
             quickSearchInput.placeholder = 'Search this page...';
-            dataTablesSearchInput.parentNode.replaceChild(quickSearchInput, dataTablesSearchInput);
+
+            // Same input-group + integrated search-icon button as the other
+            // tabs' controls rows (ui-design-system.md Rule 6).
+            var quickSearchGroup = document.createElement('div');
+            quickSearchGroup.className = 'input-group input-group-sm';
+            quickSearchGroup.appendChild(quickSearchInput);
+
+            var quickSearchButton = document.createElement('button');
+            quickSearchButton.type = 'button';
+            quickSearchButton.className = 'btn btn-primary';
+            quickSearchButton.setAttribute('aria-label', 'Search this page');
+            quickSearchButton.innerHTML = '<i class="bi bi-search" aria-hidden="true"></i>';
+            quickSearchButton.addEventListener('click', function () {
+                quickSearchTerm = quickSearchInput.value;
+                applyCurrentPageQuickSearch();
+            });
+            quickSearchGroup.appendChild(quickSearchButton);
+
+            dataTablesSearchInput.parentNode.replaceChild(quickSearchGroup, dataTablesSearchInput);
 
             quickSearchInput.addEventListener('input', function () {
                 quickSearchTerm = quickSearchInput.value;

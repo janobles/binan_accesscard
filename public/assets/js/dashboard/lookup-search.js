@@ -1,17 +1,13 @@
 // Client-side "local" quick filter for the Sector / Services / Categories lookup
 // lists — the controls-row "Search:" box. It filters only the rows the server already
 // rendered on this page by hiding non-matching rows (inline display:none); it does NOT
-// hit the database. The top [method=get] database-search form and the status dropdown
-// are server-driven (whole-table search + pagination).
-//
-// This file also wires the status dropdown ([data-lookup-status-select]): changing
-// it reloads the page with ?status=active|archived|all (preserving the database `q`,
-// resetting to page 1). That replaced the old client-side Active/Archived row toggle.
+// hit the database. The top [method=get] database-search form and the status filter
+// (Filters dropdown panel, wired by records-filter-panel.js) are server-driven
+// (whole-table search + pagination).
 //
 // Connected to: Lookups/sectors.php + services.php + categories.php
 //   - [data-lookup-search]         the local-filter <form>
 //   - [data-lookup-search-input]   the local-filter <input>
-//   - [data-lookup-status-select]  the Active/Archive/All status <select>
 //   - [data-lookup-search-all]     optional button that clears the keyword filter
 //   - the nearest [data-sector-management-root] / [data-service-management-root] / [data-category-management-root]
 // Exposes window.initLookupSearch(root) so AJAX-loaded fragments can re-bind.
@@ -36,24 +32,6 @@
         return Array.prototype.filter.call(table.tBodies[0].rows, function (row) {
             return !row.querySelector('.sector-empty-state, .service-empty-state, .audit-empty-state');
         });
-    }
-
-    // Status dropdown ([data-lookup-status-select]) is server-driven: reload with the
-    // chosen status, preserving the database `q`, and reset to page 1.
-    function navigateStatus(value) {
-        const status = value === 'archived' || value === 'all' ? value : 'active';
-        const params = new URLSearchParams(window.location.search);
-
-        if (status === 'active') {
-            params.delete('status');
-        } else {
-            params.set('status', status);
-        }
-
-        params.delete('page');
-
-        const query = params.toString();
-        window.location.href = window.location.pathname + (query ? '?' + query : '');
     }
 
     // Mirrors Manage Records' table filter (manage-family-modal.js filterTableRows):
@@ -104,18 +82,6 @@
 
                     applyFilter(form);
                 });
-            });
-        });
-
-        // Status dropdown lives in Bar 1; reload the page on change (server-driven).
-        root.querySelectorAll('[data-lookup-status-select]').forEach(function (select) {
-            if (select.dataset.lookupStatusBound === '1') {
-                return;
-            }
-
-            select.dataset.lookupStatusBound = '1';
-            select.addEventListener('change', function () {
-                navigateStatus(select.value);
             });
         });
     }

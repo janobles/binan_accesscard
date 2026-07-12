@@ -1,38 +1,13 @@
 <?php
 /**
- * Account management body: filter toolbar + accounts table.
- * Rendered inside components/card by Admin/accounts.php — see that file for
- * the variable contract (accounts, canCreateAccounts, canEditAccounts,
+ * Account management body: accounts table (the filter toolbar lives in
+ * Admin/accounts.php). Rendered inside components/card by Admin/accounts.php —
+ * see that file for the variable contract (accounts, canEditAccounts,
  * isDeveloper, isAdmin).
  */
 use App\Libraries\ViewFormatter;
 ?>
-        <div class="account-list-toolbar" role="search" aria-label="Filter accounts">
-            <input class="form-control" type="search" data-account-search placeholder="Search username..." autocomplete="off" aria-label="Search accounts by username">
-            <select class="form-select" data-account-level-filter aria-label="Filter by account level">
-                <option value="">Select Level</option>
-                <option value="administrator">Administrator</option>
-                <option value="encoder">Encoder</option>
-                <option value="viewer">Viewer</option>
-                <option value="scanner">Scanner</option>
-            </select>
-            <select class="form-select" data-account-status-filter aria-label="Filter by account status">
-                <option value="">Select Status</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-            </select>
-            <button class="btn btn-danger account-filter-clear" type="button" data-account-clear-filters>
-                <i class="bi bi-x-lg" aria-hidden="true"></i>
-                <span>Clear</span>
-            </button>
-            <?php if ($canCreateAccounts): ?>
-                <button class="btn btn-success account-create-trigger js-open-account-create-modal" type="button" data-modal-url="<?= site_url('accounts/create') ?>" data-modal-title="Create Account">
-                    <i class="bi bi-plus-lg" aria-hidden="true"></i>
-                    <span>Create Account</span>
-                </button>
-            <?php endif; ?>
-        </div>
-
+        <?php /* Filter toolbar lives in accounts.php, above this card (Manage Records standard). */ ?>
         <div class="table-responsive">
             <table class="table account-table align-middle">
                 <thead>
@@ -62,7 +37,7 @@ use App\Libraries\ViewFormatter;
                         $hasRowActions = $canEditRow || $canDeveloperToggle || $canAdminToggle;
                         ?>
                         <tr data-account-row data-account-username="<?= esc(mb_strtolower((string) ($account['username'] ?? '')), 'attr') ?>" data-account-role="<?= esc(mb_strtolower($rawRole), 'attr') ?>" data-account-status="<?= esc($statusFilter, 'attr') ?>">
-                            <td><strong><?= esc((string) ($account['username'] ?? '')) ?></strong></td>
+                            <td><?= esc((string) ($account['username'] ?? '')) ?></td>
                             <td><?= esc($roleLabel) ?></td>
                             <td><span class="account-status-badge <?= esc($statusClass) ?>"><?= esc($statusLabel) ?></span></td>
                             <td class="text-end">

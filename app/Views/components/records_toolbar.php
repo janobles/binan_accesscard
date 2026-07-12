@@ -37,8 +37,8 @@ $canEdit = (bool) ($canEdit ?? true);
             type="search"
             name="q"
             value="<?= esc($keyword, 'attr') ?>"
-            aria-label="Search entire database"
-            placeholder="Search entire database (incl. members)..."
+            aria-label="Search all family records"
+            placeholder="Search all family records..."
             autocomplete="off"
             data-records-database-keyword
         >
@@ -49,7 +49,7 @@ $canEdit = (bool) ($canEdit ?? true);
             <button class="<?= btn('filter') ?> dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
                 <i class="bi bi-funnel" aria-hidden="true"></i> Filters
             </button>
-            <div class="dropdown-menu dropdown-menu-end records-filter-panel p-3">
+            <div class="dropdown-menu dropdown-menu-end records-filter-panel records-filter-panel--wide p-3">
                 <input class="form-control form-control-sm mb-2" type="search" placeholder="Search filters..." aria-label="Search filter options" data-records-narrow>
                 <div class="row g-3">
                     <div class="col-12 col-md-4" data-records-filter="sector">

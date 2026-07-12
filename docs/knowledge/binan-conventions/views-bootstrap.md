@@ -97,5 +97,5 @@ page needs one:
 **Reviewer false positive to ignore:** `h-100` is a plain Bootstrap sizing
 utility used by the house style (`app/Views/Admin/reports-body.php:98`), NOT
 an SB-Admin-Pro demo class. The Pro-only markers this repo bans are
-`border-left-*` and `text-xs text-uppercase`
-(`tests/unit/ReportsViewTest.php:31`).
+`border-left-*` and `text-xs text-uppercase` (the ReportsViewTest that
+asserted this was retired with the old scanner shell, commit 9cd705e).

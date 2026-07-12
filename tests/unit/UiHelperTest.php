@@ -20,9 +20,9 @@ final class UiHelperTest extends CIUnitTestCase
 
     public function testKnownRolesReturnDocumentedClasses(): void
     {
-        $this->assertSame('btn btn-success', btn('search'));
+        $this->assertSame('btn btn-primary', btn('search'));
         $this->assertSame('btn btn-danger', btn('clear'));
-        $this->assertSame('btn btn-primary', btn('add'));
+        $this->assertSame('btn btn-success', btn('add'));
         $this->assertSame('btn btn-warning', btn('import'));
         $this->assertSame('btn btn-outline-secondary', btn('filter'));
     }

@@ -1,6 +1,5 @@
 // Re-initialisable shared interaction bindings that work inside AJAX-loaded modal
 // content (they cannot rely on DOMContentLoaded which fires only once):
-//   - Audit filters: auto-submit .js-audit-filter-form when the action select changes
 //   - Account status forms: a styled #accountStatusModal (Accounts/status-confirm-modal.php)
 //     confirms enable/disable before .js-account-status-form submits, falling back
 //     to window.confirm when Bootstrap or the modal markup is unavailable.
@@ -18,23 +17,6 @@
     function accountStatusModalEl() {
         return document.getElementById('accountStatusModal');
     }
-    function bindAuditFilters(root) {
-        root.querySelectorAll('.js-audit-action-filter').forEach(function (select) {
-            if (select.dataset.auditFilterBound === '1') {
-                return;
-            }
-
-            select.dataset.auditFilterBound = '1';
-            select.addEventListener('change', function () {
-                const form = select.closest('.js-audit-filter-form');
-
-                if (form) {
-                    form.submit();
-                }
-            });
-        });
-    }
-
     function bindAutoDismissAlerts(root) {
         root.querySelectorAll('[data-auto-dismiss-alert]').forEach(function (alert) {
             if (alert.dataset.autoDismissBound === '1') {
@@ -141,7 +123,6 @@
     function initViewInteractions(rootElement) {
         const root = rootElement instanceof HTMLElement ? rootElement : document;
 
-        bindAuditFilters(root);
         bindAutoDismissAlerts(root);
         bindAccountStatusForms(root);
     }

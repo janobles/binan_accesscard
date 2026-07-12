@@ -9,7 +9,7 @@ $hasSearchFilters   = $searchTerm !== '' || array_filter($searchFilters, static 
 // Pagination + page-size bundle (from DashboardPageBuilder::buildAuditListData).
 $listRoute      = (string) ($auditListData['listRoute'] ?? 'admin/audit-trails');
 $auditAction    = trim((string) ($searchFilters['action'] ?? ''));
-$perPage        = (int) ($auditListData['perPage'] ?? 50);
+$perPage        = (int) ($auditListData['perPage'] ?? 25);
 $perPageOptions = ($auditListData['perPageOptions'] ?? []) ?: [10, 25, 50, 100];
 $page           = (int) ($auditListData['page'] ?? 1);
 $totalPages     = (int) ($auditListData['totalPages'] ?? 1);
@@ -22,19 +22,17 @@ $auditPageUrl = static function (int $targetPage) use ($listRoute, $searchTerm, 
     $params = array_filter([
         'q'        => $searchTerm,
         'action'   => $auditAction,
-        'per_page' => $perPage !== 50 ? (string) $perPage : '',
+        'per_page' => $perPage !== 25 ? (string) $perPage : '',
         'page'     => $targetPage > 1 ? (string) $targetPage : '',
     ], static fn ($value): bool => $value !== '');
 
     return site_url($listRoute) . ($params === [] ? '' : '?' . http_build_query($params));
 };
 
-// "Clear" drops the keyword (resets to page 1) but keeps the action filter + page size.
-$auditClearUrl = static function () use ($listRoute, $auditAction, $perPage): string {
-    $params = array_filter([
-        'action'   => $auditAction,
-        'per_page' => $perPage !== 50 ? (string) $perPage : '',
-    ], static fn ($value): bool => $value !== '');
+// "Clear" resets the whole toolbar (keyword + action filter, back to page 1)
+// per the one-role-per-control rule; only the page size survives.
+$auditClearUrl = static function () use ($listRoute, $perPage): string {
+    $params = $perPage !== 25 ? ['per_page' => (string) $perPage] : [];
 
     return site_url($listRoute) . ($params === [] ? '' : '?' . http_build_query($params));
 };
@@ -58,11 +56,33 @@ $formatAuditUser = static function (array $audit): string {
 };
 ?>
 
-<?php /* Jade-style audit panel reusing the Lookups dual-search layout (records-* classes,
-         managerecord.css). Bar 1 = database search (server GET) keeping the melbranch hooks
-         .js-audit-filter-form + .js-audit-action-filter (audit-filters.js auto-submit). Bar 2 =
+<?php /* Toolbar above the card, Manage Records standard (components/records_toolbar_server +
+         records-filter-panel.js live-apply + pills). Bar 2 inside the card =
          page-size + client-side local "Search:" filter via data-lookup-search (lookup-search.js,
          scoped by data-audit-management-root). */ ?>
+<?php
+$auditActionRadios = [['value' => '', 'label' => 'All actions', 'checked' => $auditAction === '', 'default' => true]];
+foreach ($auditActionOptions as $action) {
+    $action = trim((string) $action);
+    $auditActionRadios[] = ['value' => $action, 'label' => $action, 'pill' => $action, 'checked' => $auditAction === $action];
+}
+?>
+<?= view('components/records_toolbar_server', [
+    'formAction' => site_url($listRoute),
+    'formAria' => 'Search all audit logs',
+    'searchPlaceholder' => 'Search all audit logs...',
+    'keyword' => $searchTerm,
+    'clearUrl' => $auditClearUrl(),
+    'pillsId' => 'auditFilterPills',
+    'narrow' => true,
+    'hiddenHtml' => $perPage !== 25 ? '<input type="hidden" name="per_page" value="' . esc((string) $perPage, 'attr') . '">' : '',
+    'radioGroups' => [[
+        'name' => 'action',
+        'label' => 'Action',
+        'scroll' => true,
+        'options' => $auditActionRadios,
+    ]],
+]) ?>
 <?php
 $auditFooter = $totalRows > 0 ? view('components/table_footer', [
     'fromRecord' => $fromRecord,

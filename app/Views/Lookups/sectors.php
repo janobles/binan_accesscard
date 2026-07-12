@@ -12,7 +12,7 @@ $allSectorCount      = $activeSectorCount + $archivedSectorCount;
 $status              = (string) ($status ?? 'active');
 $keyword             = (string) ($keyword ?? '');
 $listRoute           = (string) ($listRoute ?? 'admin/sectors');
-$perPage             = (int) ($perPage ?? 50);
+$perPage             = (int) ($perPage ?? 25);
 $perPageOptions      = ($perPageOptions ?? []) ?: [10, 25, 50, 100];
 // Read-only roles (Viewer) see the list without Add / Edit / Archive / Restore.
 // Defaults true so the admin/developer sector page is unaffected.
@@ -23,27 +23,45 @@ $sectorPageUrl = static function (int $targetPage) use ($listRoute, $keyword, $s
     $params = array_filter([
         'q'        => $keyword,
         'status'   => $status === 'active' ? '' : $status,
-        'per_page' => $perPage !== 50 ? (string) $perPage : '',
+        'per_page' => $perPage !== 25 ? (string) $perPage : '',
         'page'     => $targetPage > 1 ? (string) $targetPage : '',
     ], static fn ($value): bool => $value !== '');
 
     return site_url($listRoute) . ($params === [] ? '' : '?' . http_build_query($params));
 };
 
-// "Clear" drops the keyword (and resets to page 1) but keeps status + page size.
-$sectorClearUrl = static function () use ($listRoute, $status, $perPage): string {
-    $params = array_filter([
-        'status'   => $status === 'active' ? '' : $status,
-        'per_page' => $perPage !== 50 ? (string) $perPage : '',
-    ], static fn ($value): bool => $value !== '');
+// "Clear" resets the whole toolbar (keyword + status filter, back to page 1)
+// per the one-role-per-control rule; only the page size survives.
+$sectorClearUrl = static function () use ($listRoute, $perPage): string {
+    $params = $perPage !== 25 ? ['per_page' => (string) $perPage] : [];
 
     return site_url($listRoute) . ($params === [] ? '' : '?' . http_build_query($params));
 };
 ?>
 
-<?php /* Reuses the Manage Records .records-* layout (managerecord.css). All melbranch hooks preserved:
-         data-sector-management-root, #sector-status-select (data-lookup-status-select),
-         data-lookup-search local filter, .js-sector-modal-open + data-sector-* attributes, the sector-modal include. */ ?>
+<?php /* Toolbar above the card, Manage Records standard (components/records_toolbar_server +
+         records-filter-panel.js live-apply + pills). Melbranch hooks preserved:
+         data-sector-management-root, data-lookup-search local filter, .js-sector-modal-open +
+         data-sector-* attributes, the sector-modal include. */ ?>
+<?= view('components/records_toolbar_server', [
+    'formAction' => site_url($listRoute),
+    'formAria' => 'Search all sectors',
+    'searchPlaceholder' => 'Search all sectors...',
+    'keyword' => $keyword,
+    'clearUrl' => $sectorClearUrl(),
+    'pillsId' => 'sectorFilterPills',
+    'hiddenHtml' => $perPage !== 25 ? '<input type="hidden" name="per_page" value="' . esc((string) $perPage, 'attr') . '">' : '',
+    'actionsHtml' => $canManage ? '<button class="' . btn('add') . ' flex-fill js-sector-modal-open" type="button" data-sector-mode="create">Add Sector</button>' : '',
+    'radioGroups' => [[
+        'name' => 'status',
+        'label' => 'Status',
+        'options' => [
+            ['value' => 'active', 'label' => "Active ({$activeSectorCount})", 'checked' => $status === 'active', 'default' => true],
+            ['value' => 'archived', 'label' => "Archived ({$archivedSectorCount})", 'pill' => 'Archived', 'checked' => $status === 'archived'],
+            ['value' => 'all', 'label' => "All ({$allSectorCount})", 'checked' => $status === 'all'],
+        ],
+    ]],
+]) ?>
 <?php
 $sectorFooter = ($totalRows ?? 0) > 0 ? view('components/table_footer', [
     'fromRecord' => $fromRecord,
@@ -58,7 +76,7 @@ $sectorFooter = ($totalRows ?? 0) > 0 ? view('components/table_footer', [
 <?= view('components/card', [
     'icon' => 'diagram-3-fill',
     'title' => 'Sector Management',
-    'cardClass' => 'sector-management records-scroll-panel',
+    'cardClass' => 'sector-management',
     'attrs' => 'data-sector-management-root',
     'bodyView' => 'Lookups/sectors-body',
     'bodyData' => get_defined_vars(),

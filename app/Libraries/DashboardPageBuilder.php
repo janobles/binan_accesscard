@@ -305,7 +305,7 @@ class DashboardPageBuilder
     /**
      * Builds a paginated lookup-management list (Sectors / Services / Categories).
      * Reads the q/status/page query params, runs the model's status-aware keyword
-     * search (50/page), and returns the row page plus pagination + count metadata.
+     * search (25/page), and returns the row page plus pagination + count metadata.
      * The model must expose searchLookup()/countLookup()/statusCounts() (all three
      * lookup models do). Frontend: the Lookups/* views + their database-search bar,
      * status dropdown and pagination controls.
@@ -322,7 +322,7 @@ class DashboardPageBuilder
         $page    = max(1, (int) $this->request->getGet('page'));
         $perPageOptions = [10, 25, 50, 100];
         $perPage = (int) $this->request->getGet('per_page');
-        $perPage = in_array($perPage, $perPageOptions, true) ? $perPage : 50;
+        $perPage = in_array($perPage, $perPageOptions, true) ? $perPage : 25;
 
         $searchKeyword = $keyword === '' ? null : $keyword;
         $total      = $model->countLookup($searchKeyword, $status);
@@ -367,7 +367,7 @@ class DashboardPageBuilder
         $page    = max(1, (int) $this->request->getGet('page'));
         $perPageOptions = [10, 25, 50, 100];
         $perPage = (int) $this->request->getGet('per_page');
-        $perPage = in_array($perPage, $perPageOptions, true) ? $perPage : 50;
+        $perPage = in_array($perPage, $perPageOptions, true) ? $perPage : 25;
 
         $total = $userId === null
             ? $searchModel->countAuditTrails($keyword, $filters, $includeDeveloper)
@@ -852,6 +852,6 @@ class DashboardPageBuilder
     {
         $perPage = (int) $this->request->getGet('per_page');
 
-        return in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 50;
+        return in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 25;
     }
 }

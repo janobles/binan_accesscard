@@ -12,11 +12,16 @@ source of truth. Never hardcode a `btn-*` color class on a toolbar action.
 
 | Role     | Classes                    | Meaning                       |
 |----------|----------------------------|-------------------------------|
-| search   | btn btn-success            | run a server-side search      |
+| search   | btn btn-primary            | run a server-side search      |
 | clear    | btn btn-danger             | full reset of a toolbar       |
-| add      | btn btn-primary            | create a record (modal)       |
+| add      | btn btn-success            | create a record (modal)       |
 | import   | btn btn-warning            | bulk import                   |
 | filter   | btn btn-outline-secondary  | open a filter panel           |
+
+Buttons use stock Bootstrap colors only — theme.css must NOT re-tint
+`.btn-primary` to Biñan green (that made Search and Add two competing
+greens). Green buttons are Bootstrap's `#198754` success. Biñan green stays
+on the shell (topnav/sidenav/links), never on buttons.
 
 New role: add the row here first, then to the helper map, then a
 `UiHelperTest` assertion.
@@ -30,12 +35,18 @@ keyword input (grows) | Filters dropdown | two btn-groups separated by gap
 
 ## Rule 3: Filter panel
 
-Wide `.dropdown-menu` (`.records-filter-panel`, rules at the bottom of
-`public/css/managerecord.css`) with side-by-side columns and
-`data-bs-auto-close="outside"`. Checkboxes and radios live-apply (debounced
-in JS, see `FILTER_DEBOUNCE_MS`); NO Apply or Reset buttons inside the panel.
-Long option lists get a type-to-narrow input (`[data-records-narrow]`).
-Stock Bootstrap only; no drill-in submenus.
+`.dropdown-menu.records-filter-panel` (rules at the bottom of
+`public/css/managerecord.css`) with `data-bs-auto-close="outside"`.
+Checkboxes and radios live-apply (debounced in JS, see `FILTER_DEBOUNCE_MS`);
+NO Apply or Reset buttons inside the panel. Long option lists get a
+type-to-narrow input (`[data-records-narrow]`) and scroll inside a
+viewport-capped `.records-filter-list`. Stock Bootstrap only; no drill-in
+submenus.
+
+Sizing is content-driven, never fixed: the base panel is
+`width: max-content` capped at the viewport, so a lone Status group renders
+as a small flyout. Only a genuinely multi-column panel (Manage Records'
+sector/barangay/status) adds `.records-filter-panel--wide` for real width.
 
 ## Rule 4: Pills and the one-role-per-control rule
 
@@ -47,14 +58,69 @@ panel Reset.
 
 ## Rule 5: Dual search wording
 
-Toolbar input searches the whole database server-side, placeholder
-"Search entire database (incl. members)...". The in-table DataTables input
-filters loaded rows only, placeholder "Filter loaded results...". Keep both
-placeholders verbatim when retrofitting other tabs.
+Toolbar input searches the whole database server-side; its placeholder names
+the entity so the scope is obvious per tab: "Search all family records...",
+"Search all sectors...", "Search all services...", "Search all categories...",
+"Search all audit logs...", "Search all my activity...". The in-card input
+only searches what is already loaded — placeholder "Search this page..."
+everywhere (single-source pages like accounts say "Search accounts...").
+
+## Rule 6: In-card controls row
+
+Follow Manage Records: page search on the LEFT, "Show N entries" on the
+RIGHT (`.records-table-controls`, space-between). The page search is a small
+input-group with an integrated `btn-primary` search-icon button. No "Search:"
+label text.
+
+The "Show N entries" control is small + muted text with a `form-select-sm`
+select; default page size is **25** everywhere (options 10/25/50/100). Server
+pages read it from `DashboardPageBuilder::recordsPerPage()` (default 25) and the
+`table_controls` component defaults `perPage` to 25 too; view sentinels that
+strip `per_page` from URLs compare against 25. Manage Records is a DataTables
+grid, not the shared component — its native `.dt-length` label is forced to
+small/muted in `managerecord.css` so it reads identically (pageLength 25).
+
+## Rule 7: List page anatomy (Manage Records is the source of truth)
+
+Every list tab is the SAME composition as `Family/list.php` — no hand-rolled
+layout markup, no page-specific layout CSS:
+
+1. Toolbar ABOVE the card: `components/records_toolbar` (family, AJAX) or
+   `components/records_toolbar_server` (everything else). Pills row renders
+   with it.
+2. `components/card` with stock `.card` chrome — page CSS must never override
+   the card border/radius/background, re-pad the card-body, or set
+   `height: 100%` (that caused the dead space under short tables).
+3. First thing inside the body: `components/table_controls` (page search
+   left, show-entries right). Never copy its markup inline.
+4. The table: `.manage-record-table` typography is canonical (0.7rem/700
+   uppercase th, 0.85rem td, no bold name cells). Page CSS may add column
+   widths/badges only.
+5. `components/table_footer` as the card footer for server pagination.
+
+Page CSS files (`lookupmanagement/audittrails/accounts.css`) hold ONLY
+page-unique rules: badges, modals, column widths. Anything about toolbars,
+controls rows, card chrome, or cell typography belongs to the shared layer
+(`managerecord.css` + the components). If a new rule would apply to two
+pages, it goes in the shared layer.
 
 ## Retrofit status
 
-- manage-records: done (feat/manage-records-ui)
-- lookups (sectors/services/categories), accounts, audit-trails,
-  distribution tabs: pending; reuse records_toolbar/filter_pills with
-  page-specific filter groups
+- The toolbar always renders ABOVE the page's card (never inside it), pills
+  row directly under it — see `Family/list.php` for the standard.
+- manage-records: done (feat/manage-records-ui). AJAX flavor: filter panel +
+  pills wired by `assets/js/dashboard/family-datatable.js`.
+- lookups (sectors/services/categories), audit-trails, employee activity:
+  done (feat/retrofit-toolbar-conventions) via
+  `components/records_toolbar_server.php` — same Bootstrap-grid anatomy as
+  records_toolbar, wired by the shared
+  `assets/js/dashboard/records-filter-panel.js` (radios inside the GET form,
+  change = submit, pills from server state). Options that mean "no filter"
+  (Active default, All) get no pill label, so they never render pills.
+- accounts: done, client mode — the list is fully loaded, so the panel radios
+  carry `data-records-client` wiring (no submit; accounts-modal.js filters
+  rows, records-filter-panel.js renders pills).
+- distribution tabs: btn() roles + placeholder wording done; the
+  distributions log keeps its client-side aid-type select (no server search
+  to live-apply against). Batches tab has plain form buttons, not a toolbar —
+  out of scope.

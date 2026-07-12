@@ -256,7 +256,7 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                     <?= view('components/card', [
                         'icon' => 'tags-fill',
                         'title' => 'Aid Types',
-                        'cardClass' => 'sector-management records-scroll-panel',
+                        'cardClass' => 'sector-management',
                         'bodyView' => 'Admin/distribution-aidtypes-body',
                         'bodyData' => ['aidTypes' => $aidTypes],
                     ]) ?>
@@ -266,7 +266,7 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                     <?= view('components/card', [
                         'icon' => 'collection',
                         'title' => 'Distribution Batches',
-                        'cardClass' => 'sector-management records-scroll-panel',
+                        'cardClass' => 'sector-management',
                         'bodyView' => 'Admin/distribution-batches-body',
                         'bodyData' => [
                             'batches' => $batches,
@@ -281,7 +281,7 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                     <?= view('components/card', [
                         'icon' => 'clipboard-check-fill',
                         'title' => 'All Distributions',
-                        'cardClass' => 'sector-management records-scroll-panel',
+                        'cardClass' => 'sector-management',
                         'bodyView' => 'Admin/distribution-distributions-body',
                         'bodyData' => ['distributions' => $distributions, 'aidTypes' => $aidTypes],
                         'footer' => '<span id="distCount"></span>',
@@ -346,7 +346,7 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
 
                   [search, filter, local, perPage].forEach(el => el && el.addEventListener('input', render));
                   if (perPage) perPage.addEventListener('change', render);
-                  if (clear) clear.addEventListener('click', () => { search.value = ''; local.value = ''; filter.value = ''; perPage.value = '50'; render(); });
+                  if (clear) clear.addEventListener('click', () => { search.value = ''; local.value = ''; filter.value = ''; perPage.value = '25'; render(); });
                   render();
                 });
                 </script>

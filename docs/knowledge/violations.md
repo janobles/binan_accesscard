@@ -42,6 +42,15 @@ unchecked item was already moved to issue #9 (UX decision, not code mess).
   reword the convention to "typed signatures, no strict_types declare".
   `php-practices/idioms.md` documents current reality.
   *(Fixed: reworded CLAUDE.md convention to typed-signatures-only, refactor/mvc-cleanup)*
+- [ ] 🟠 Major: `app/Views/components/dashboard_sidebar.php:1` — sidebar exists
+  three times: this component (used only by `Admin/layout.php:83`, all links
+  hardcoded to `admin/*` despite the "role-aware" doc comment) plus hand-rolled
+  inline copies in `Employee/layout.php:41` and `Viewer/layout.php:48`. Also
+  accepts a dead `$sidebarUserUrl` prop. Fix: one genuinely role-aware sidebar
+  partial (nav items + route base per role) consumed by all three layouts, then
+  relocate to `Partials/` per the views-bootstrap.md taxonomy (it is a page
+  fragment, not a props-only component). Cross-role regression surface; own
+  branch.
 
 Exempt (checked, not violations): `app/Views/errors/html/*` (framework error
 pages, standalone by design), `app/Views/Scanner/pdf/report.php` (PDF

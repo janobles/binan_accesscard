@@ -80,18 +80,15 @@ $routes->group('admin', static function (RouteCollection $routes): void {
         $routes->get('lookup/(:any)', 'Cards\QrCardController::lookup/$1');
     });
 
-    $routes->get('distribution', 'Admin\DistributionController::index');
-    $routes->group('aid-types', static function (RouteCollection $routes): void {
-        $routes->post('create', 'Admin\DistributionController::createAidType');
-        $routes->post('archive/(:num)', 'Admin\DistributionController::archiveAidType/$1');
-        $routes->post('restore/(:num)', 'Admin\DistributionController::restoreAidType/$1');
-        $routes->post('delete/(:num)', 'Admin\DistributionController::deleteAidType/$1');
-    });
     $routes->group('batches', static function (RouteCollection $routes): void {
+        $routes->get('', 'Admin\DistributionController::batches');
         $routes->post('open', 'Admin\DistributionController::openBatch');
         $routes->post('close/(:num)', 'Admin\DistributionController::closeBatch/$1');
     });
-    $routes->post('distributions/void/(:num)', 'Admin\DistributionController::voidDistribution/$1');
+    $routes->group('distributions', static function (RouteCollection $routes): void {
+        $routes->get('', 'Admin\DistributionController::distributions');
+        $routes->post('void/(:num)', 'Admin\DistributionController::voidDistribution/$1');
+    });
     $routes->get('reports', 'Admin\ReportsController::index');
     $routes->get('reports/stats', 'Admin\ReportsController::stats');
     $routes->get('reports/pdf', 'Admin\ReportsController::pdf');

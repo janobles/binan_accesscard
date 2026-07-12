@@ -55,6 +55,18 @@ to your `app` folder. The affected files can be copied or merged from
 Copy `env` to `.env` and tailor for your app, specifically the baseURL
 and any database settings.
 
+### Dev server
+
+Run the dev server with multiple PHP workers so the page and its assets load
+in parallel instead of queueing behind a single worker:
+
+    PHP_CLI_SERVER_WORKERS=8 php spark serve --port 8090
+
+With one worker (the default) every CSS/JS/image request is served one at a
+time, which alone adds seconds to each page load. The env-var prefix syntax is
+for Unix-like shells; on Windows set PHP_CLI_SERVER_WORKERS first (e.g.
+`set PHP_CLI_SERVER_WORKERS=8` in cmd) and then run the serve command.
+
 ## Important Change with index.php
 
 `index.php` is no longer in the root of the project! It has been moved inside the *public* folder,

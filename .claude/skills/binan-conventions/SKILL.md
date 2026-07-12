@@ -36,6 +36,7 @@ version-pinned, so it's safe). PHP floor: 8.2.
 | model, query, table, allowedFields, schema, SQL dump, enum, role | `binan-conventions/models.md` |
 | view, layout, partial, component, bootstrap, css, page, inline style, empty state, stepper | `binan-conventions/views-bootstrap.md` |
 | batch, distribution_batch, kiosk, scanner shell, perScanner, myBatchCount, scan flow, setting page | `binan-conventions/scanner-batches.md` |
+| index, EXPLAIN, slow, performance, cache, TTL, patch script, benchmark, dump version | `binan-conventions/performance.md` |
 | adapter, sb-admin-adapter, sidebar css, theme token | `sbadmin/adapter.md` |
 | sb admin, target theme, sidenav, topnav, migration | `sbadmin/target-theme.md` |
 | strict_types, constructor, typed, match, docblock, php idiom | `php-practices/idioms.md` |

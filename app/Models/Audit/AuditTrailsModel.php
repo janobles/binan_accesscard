@@ -59,6 +59,11 @@ class AuditTrailsModel extends Model
         ?string $userAgent = null,
         ?string $detail = null
     ): bool {
+        // Every mutation in this app logs an audit row, so this is the one
+        // choke point where the dashboard counts can change. Drop the cached
+        // stats here so the tiles recount on the next dashboard visit.
+        cache()->delete(\App\Models\DashboardModel::STATS_CACHE_KEY);
+
         $memberId = $this->memberIdValue($memberId);
 
         if ($memberId === null && ! $this->isMemberIdNullable()) {

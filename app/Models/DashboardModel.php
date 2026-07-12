@@ -23,12 +23,28 @@ class DashboardModel
     }
 
     /**
+     * Cache key for the dashboard headline counts. The audit-trail writer
+     * deletes this key after every logged mutation, so the 60 second TTL is
+     * only a fallback for changes that bypass the app (direct DB edits).
+     */
+    public const STATS_CACHE_KEY = 'dashboard_stats';
+
+    /**
      * Returns the four headline counts (families, members, active sectors, active
      * services) for the dashboard summary cards. Frontend: dashboard overview.
+     *
+     * Counts are cached for 60 seconds because they scan the member table and
+     * every dashboard visit was recomputing them. See STATS_CACHE_KEY for how
+     * the cache stays fresh after mutations.
      */
     public function stats(): array
     {
-        return [
+        $cached = cache(self::STATS_CACHE_KEY);
+        if (is_array($cached)) {
+            return $cached;
+        }
+
+        $stats = [
             'families' => $this->countFamilies(),
             'members' => $this->countMembers(),
             // "Active Sectors" / "Services and Programs" cards: count only live
@@ -36,6 +52,10 @@ class DashboardModel
             'sectors' => $this->countActiveLookup('sector'),
             'assistance' => $this->countActiveLookup('services'),
         ];
+
+        cache()->save(self::STATS_CACHE_KEY, $stats, 60);
+
+        return $stats;
     }
 
     /**

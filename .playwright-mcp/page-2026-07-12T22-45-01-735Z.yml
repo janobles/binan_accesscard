@@ -1,0 +1,33 @@
+- generic [ref=f5e1]:
+  - navigation [ref=f5e2]:
+    - generic [ref=f5e3]:
+      - generic [ref=f5e4]: 
+      - generic [ref=f5e5]: Relief Test Batch
+      - generic [ref=f5e6]: EDA8 — Relief Food Pack
+    - generic [ref=f5e7]:
+      - group "Kiosk navigation" [ref=f5e8]:
+        - link "Scan" [ref=f5e9] [cursor=pointer]:
+          - /url: http://localhost:8090/scanner/scan
+          - generic [ref=f5e10]: 
+          - text: Scan
+        - link "Performance" [ref=f5e11] [cursor=pointer]:
+          - /url: http://localhost:8090/scanner/performance
+          - generic [ref=f5e12]: 
+          - text: Performance
+      - generic [ref=f5e13]: developer
+      - link "Logout" [ref=f5e14] [cursor=pointer]:
+        - /url: http://localhost:8090/logout
+  - main [ref=f5e15]:
+    - generic [ref=f5e19]:
+      - generic [ref=f5e20]: Scan or enter QR control number
+      - generic [ref=f5e21]:
+        - textbox "Scan or enter QR control number" [active] [ref=f5e22]:
+          - /placeholder: e.g. 42
+        - button "Scan with camera" [ref=f5e23] [cursor=pointer]:
+          - generic [ref=f5e24]: 
+        - button "Go" [ref=f5e25] [cursor=pointer]
+    - generic [ref=f5e26]:
+      - generic [ref=f5e27]: 
+      - generic [ref=f5e28]: No family loaded
+      - generic [ref=f5e29]: Scan a QR card to see the family and log a distribution.
+    - text:  

@@ -1,0 +1,94 @@
+- generic [active] [ref=f7e1]:
+  - navigation [ref=f7e2]:
+    - link [ref=f7e3] [cursor=pointer]:
+      - /url: http://localhost:8090/admin/accounts
+      - img "City of Binan Logo" [ref=f7e4]
+      - text: Biñan Access Card MIS
+    - button "Toggle sidebar" [ref=f7e5] [cursor=pointer]:
+      - generic [ref=f7e6]: 
+    - list [ref=f7e7]:
+      - listitem [ref=f7e8]:
+        - button "developer" [ref=f7e9] [cursor=pointer]:
+          - generic [ref=f7e10]: 
+        - text:  
+  - generic [ref=f7e12]:
+    - navigation [ref=f7e14]:
+      - generic [ref=f7e16]:
+        - generic [ref=f7e17]: Core
+        - link "Dashboard" [ref=f7e18] [cursor=pointer]:
+          - /url: http://localhost:8090/admin/dashboard
+          - generic [ref=f7e19]: 
+          - text: Dashboard
+        - generic [ref=f7e21]: Records
+        - link "Manage Records" [ref=f7e22] [cursor=pointer]:
+          - /url: http://localhost:8090/admin/manage-records
+          - generic [ref=f7e23]: 
+          - text: Manage Records
+        - generic [ref=f7e25]: Reference Data
+        - link "Sector Management" [ref=f7e26] [cursor=pointer]:
+          - /url: http://localhost:8090/admin/sectors
+          - generic [ref=f7e27]: 
+          - text: Sector Management
+        - link "Services and Programs" [ref=f7e29] [cursor=pointer]:
+          - /url: http://localhost:8090/admin/services
+          - generic [ref=f7e30]: 
+          - text: Services and Programs
+        - link "Manage Categories" [ref=f7e32] [cursor=pointer]:
+          - /url: http://localhost:8090/admin/categories
+          - generic [ref=f7e33]: 
+          - text: Manage Categories
+        - generic [ref=f7e35]: QR Code
+        - link "Generate" [ref=f7e36] [cursor=pointer]:
+          - /url: http://localhost:8090/admin/cards
+          - generic [ref=f7e37]: 
+          - text: Generate
+        - link "Batches" [ref=f7e39] [cursor=pointer]:
+          - /url: http://localhost:8090/admin/batches
+          - generic [ref=f7e40]: 
+          - text: Batches
+        - link "Distributions" [ref=f7e42] [cursor=pointer]:
+          - /url: http://localhost:8090/admin/distributions
+          - generic [ref=f7e43]: 
+          - text: Distributions
+        - link "Reports" [ref=f7e45] [cursor=pointer]:
+          - /url: http://localhost:8090/admin/reports
+          - generic [ref=f7e46]: 
+          - text: Reports
+        - generic [ref=f7e48]: Administration
+        - link "Account Management" [ref=f7e49] [cursor=pointer]:
+          - /url: http://localhost:8090/admin/accounts
+          - generic [ref=f7e50]: 
+          - text: Account Management
+        - link "Audit Trails" [ref=f7e52] [cursor=pointer]:
+          - /url: http://localhost:8090/admin/audit-trails
+          - generic [ref=f7e53]: 
+          - text: Audit Trails
+    - main [ref=f7e56]:
+      - heading "Distribution Batches" [level=1] [ref=f7e57]
+      - generic [ref=f7e58]:
+        - generic [ref=f7e60]:
+          - generic [ref=f7e61]: 
+          - text: Distribution Batches
+        - generic [ref=f7e62]:
+          - generic [ref=f7e63]:
+            - generic [ref=f7e64]:
+              - strong [ref=f7e65]: Relief Test Batch
+              - generic [ref=f7e66]: EDA8 — Relief Food Pack
+              - generic [ref=f7e67]: EDA
+              - text: — open since 2026-07-13 06:44:31
+            - button "Close batch" [ref=f7e69] [cursor=pointer]
+          - table [ref=f7e70]:
+            - rowgroup [ref=f7e71]:
+              - row [ref=f7e72]:
+                - columnheader "Batch" [ref=f7e73]
+                - columnheader "Service" [ref=f7e74]
+                - columnheader "Category" [ref=f7e75]
+                - columnheader "Started" [ref=f7e76]
+                - columnheader "Closed" [ref=f7e77]
+            - rowgroup [ref=f7e78]:
+              - row [ref=f7e79]:
+                - cell "Relief Test Batch" [ref=f7e80]
+                - cell "EDA8 — Relief Food Pack" [ref=f7e81]
+                - cell "EDA" [ref=f7e82]
+                - cell "2026-07-13 06:44:31" [ref=f7e83]
+                - cell "Open" [ref=f7e84]

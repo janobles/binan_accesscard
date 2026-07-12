@@ -1,0 +1,123 @@
+- generic [ref=f3e1]:
+  - navigation [ref=f3e2]:
+    - link [ref=f3e3] [cursor=pointer]:
+      - /url: http://localhost:8090/admin/accounts
+      - img "City of Binan Logo" [ref=f3e4]
+      - text: Biñan Access Card MIS
+    - button "Toggle sidebar" [ref=f3e5] [cursor=pointer]:
+      - generic [ref=f3e6]: 
+    - list [ref=f3e7]:
+      - listitem [ref=f3e8]:
+        - button "developer" [ref=f3e9] [cursor=pointer]:
+          - generic [ref=f3e10]: 
+        - text:  
+  - generic [ref=f3e12]:
+    - navigation [ref=f3e14]:
+      - generic [ref=f3e16]:
+        - generic [ref=f3e17]: Core
+        - link "Dashboard" [ref=f3e18] [cursor=pointer]:
+          - /url: http://localhost:8090/admin/dashboard
+          - generic [ref=f3e19]: 
+          - text: Dashboard
+        - generic [ref=f3e21]: Records
+        - link "Manage Records" [ref=f3e22] [cursor=pointer]:
+          - /url: http://localhost:8090/admin/manage-records
+          - generic [ref=f3e23]: 
+          - text: Manage Records
+        - generic [ref=f3e25]: Reference Data
+        - link "Sector Management" [ref=f3e26] [cursor=pointer]:
+          - /url: http://localhost:8090/admin/sectors
+          - generic [ref=f3e27]: 
+          - text: Sector Management
+        - link "Services and Programs" [ref=f3e29] [cursor=pointer]:
+          - /url: http://localhost:8090/admin/services
+          - generic [ref=f3e30]: 
+          - text: Services and Programs
+        - link "Manage Categories" [ref=f3e32] [cursor=pointer]:
+          - /url: http://localhost:8090/admin/categories
+          - generic [ref=f3e33]: 
+          - text: Manage Categories
+        - generic [ref=f3e35]: QR Code
+        - link "Generate" [ref=f3e36] [cursor=pointer]:
+          - /url: http://localhost:8090/admin/cards
+          - generic [ref=f3e37]: 
+          - text: Generate
+        - link "Batches" [ref=f3e39] [cursor=pointer]:
+          - /url: http://localhost:8090/admin/batches
+          - generic [ref=f3e40]: 
+          - text: Batches
+        - link "Distributions" [ref=f3e42] [cursor=pointer]:
+          - /url: http://localhost:8090/admin/distributions
+          - generic [ref=f3e43]: 
+          - text: Distributions
+        - link "Reports" [ref=f3e45] [cursor=pointer]:
+          - /url: http://localhost:8090/admin/reports
+          - generic [ref=f3e46]: 
+          - text: Reports
+        - generic [ref=f3e48]: Administration
+        - link "Account Management" [ref=f3e49] [cursor=pointer]:
+          - /url: http://localhost:8090/admin/accounts
+          - generic [ref=f3e50]: 
+          - text: Account Management
+        - link "Audit Trails" [ref=f3e52] [cursor=pointer]:
+          - /url: http://localhost:8090/admin/audit-trails
+          - generic [ref=f3e53]: 
+          - text: Audit Trails
+    - main [ref=f3e56]:
+      - heading "Distribution Batches" [level=1] [ref=f3e57]
+      - generic [ref=f3e58]:
+        - generic [ref=f3e60]:
+          - generic [ref=f3e61]: 
+          - text: Distribution Batches
+        - generic [ref=f3e62]:
+          - generic [ref=f3e63]:
+            - generic [ref=f3e64]: No active batch. Scanning is paused until one is opened.
+            - button "New Batch" [ref=f3e65] [cursor=pointer]:
+              - generic [ref=f3e66]: 
+              - text: New Batch
+          - table [ref=f3e67]:
+            - rowgroup [ref=f3e68]:
+              - row [ref=f3e69]:
+                - columnheader "Batch" [ref=f3e70]
+                - columnheader "Service" [ref=f3e71]
+                - columnheader "Category" [ref=f3e72]
+                - columnheader "Started" [ref=f3e73]
+                - columnheader "Closed" [ref=f3e74]
+            - rowgroup [ref=f3e75]:
+              - row [ref=f3e76]:
+                - cell "No batches yet." [ref=f3e77]
+      - dialog [ref=f3e78]:
+        - generic [ref=f3e79]:
+          - generic [ref=f3e80]:
+            - heading "New Batch" [level=5] [ref=f3e81]
+            - button "Close" [ref=f3e82] [cursor=pointer]
+          - generic [ref=f3e83]:
+            - generic [ref=f3e84]:
+              - generic [ref=f3e85]: Batch name
+              - textbox "Batch name" [active] [ref=f3e86]:
+                - /placeholder: e.g. Relief Distribution — Jul 12, 2026
+                - text: Relief Test Batch
+            - generic [ref=f3e87]:
+              - generic [ref=f3e88]: Category
+              - combobox "Category" [ref=f3e89]:
+                - option "Choose a category..." [disabled]
+                - option "EDA — Emergency / Disaster Assistance Programs" [selected]
+                - option "FA — Financial Assistance Programs"
+                - option "SWPS — Social Welfare Programs and Services"
+            - generic [ref=f3e90]:
+              - generic [ref=f3e91]: Service / program
+              - combobox "Service / program" [ref=f3e92]:
+                - option "Choose a service..." [disabled] [selected]
+                - option "EDA1 — Cash Assistance"
+                - option "EDA2 — Cash for Work"
+                - option "EDA3 — Emergency Shelter (Local)"
+                - option "EDA4 — Emergency Shelter (National / NHA)"
+                - option "EDA5 — Emergency Shelter (Province)"
+                - option "EDA6 — Food for Work"
+                - option "EDA7 — Non-Food Assistance"
+                - option "EDA8 — Relief Food Pack"
+                - option "EDA9 — Temporary Shelter"
+          - generic [ref=f3e93]:
+            - button "Cancel" [ref=f3e94] [cursor=pointer]
+            - button "Open Batch" [ref=f3e95] [cursor=pointer]
+  - text:  

@@ -1,0 +1,269 @@
+- generic [active] [ref=f9e1]:
+  - navigation [ref=f9e2]:
+    - link [ref=f9e3] [cursor=pointer]:
+      - /url: http://localhost:8090/admin/accounts
+      - img "City of Binan Logo" [ref=f9e4]
+      - text: Biñan Access Card MIS
+    - button "Toggle sidebar" [ref=f9e5] [cursor=pointer]:
+      - generic [ref=f9e6]: 
+    - list [ref=f9e7]:
+      - listitem [ref=f9e8]:
+        - button "developer" [ref=f9e9] [cursor=pointer]:
+          - generic [ref=f9e10]: 
+        - text:  
+  - generic [ref=f9e12]:
+    - navigation [ref=f9e14]:
+      - generic [ref=f9e16]:
+        - generic [ref=f9e17]: Core
+        - link "Dashboard" [ref=f9e18] [cursor=pointer]:
+          - /url: http://localhost:8090/admin/dashboard
+          - generic [ref=f9e19]: 
+          - text: Dashboard
+        - generic [ref=f9e21]: Records
+        - link "Manage Records" [ref=f9e22] [cursor=pointer]:
+          - /url: http://localhost:8090/admin/manage-records
+          - generic [ref=f9e23]: 
+          - text: Manage Records
+        - generic [ref=f9e25]: Reference Data
+        - link "Sector Management" [ref=f9e26] [cursor=pointer]:
+          - /url: http://localhost:8090/admin/sectors
+          - generic [ref=f9e27]: 
+          - text: Sector Management
+        - link "Services and Programs" [ref=f9e29] [cursor=pointer]:
+          - /url: http://localhost:8090/admin/services
+          - generic [ref=f9e30]: 
+          - text: Services and Programs
+        - link "Manage Categories" [ref=f9e32] [cursor=pointer]:
+          - /url: http://localhost:8090/admin/categories
+          - generic [ref=f9e33]: 
+          - text: Manage Categories
+        - generic [ref=f9e35]: QR Code
+        - link "Generate" [ref=f9e36] [cursor=pointer]:
+          - /url: http://localhost:8090/admin/cards
+          - generic [ref=f9e37]: 
+          - text: Generate
+        - link "Batches" [ref=f9e39] [cursor=pointer]:
+          - /url: http://localhost:8090/admin/batches
+          - generic [ref=f9e40]: 
+          - text: Batches
+        - link "Distributions" [ref=f9e42] [cursor=pointer]:
+          - /url: http://localhost:8090/admin/distributions
+          - generic [ref=f9e43]: 
+          - text: Distributions
+        - link "Reports" [ref=f9e45] [cursor=pointer]:
+          - /url: http://localhost:8090/admin/reports
+          - generic [ref=f9e46]: 
+          - text: Reports
+        - generic [ref=f9e48]: Administration
+        - link "Account Management" [ref=f9e49] [cursor=pointer]:
+          - /url: http://localhost:8090/admin/accounts
+          - generic [ref=f9e50]: 
+          - text: Account Management
+        - link "Audit Trails" [ref=f9e52] [cursor=pointer]:
+          - /url: http://localhost:8090/admin/audit-trails
+          - generic [ref=f9e53]: 
+          - text: Audit Trails
+    - main [ref=f9e56]:
+      - heading "Reports" [level=1] [ref=f9e57]
+      - generic [ref=f9e58]:
+        - generic [ref=f9e59]:
+          - generic [ref=f9e60]: Batch
+          - combobox "Batch" [ref=f9e61]:
+            - option "Relief Test Batch" [selected]
+        - generic [ref=f9e62]:
+          - button "Refresh" [ref=f9e63] [cursor=pointer]:
+            - generic [ref=f9e64]: 
+          - link "Download Report" [ref=f9e66] [cursor=pointer]:
+            - /url: http://localhost:8090/admin/reports/pdf?batch=1
+            - generic [ref=f9e67]: 
+      - paragraph [ref=f9e69]: "Showing batch: Relief Test Batch · Last updated 6:50:02 AM"
+      - region "Report statistics" [ref=f9e70]:
+        - article [ref=f9e71]:
+          - generic [ref=f9e73]:
+            - generic [ref=f9e74]:
+              - paragraph [ref=f9e75]: Families with a QR
+              - strong [ref=f9e76]: "137"
+            - generic [ref=f9e77]: 
+        - article [ref=f9e78]:
+          - generic [ref=f9e80]:
+            - generic [ref=f9e81]:
+              - paragraph [ref=f9e82]: Received aid
+              - strong [ref=f9e83]: "1"
+            - generic [ref=f9e84]: 
+        - article [ref=f9e85]:
+          - generic [ref=f9e87]:
+            - generic [ref=f9e88]:
+              - paragraph [ref=f9e89]: Still waiting
+              - strong [ref=f9e90]: "136"
+            - generic [ref=f9e91]: 
+        - article [ref=f9e92]:
+          - generic [ref=f9e94]:
+            - generic [ref=f9e95]:
+              - paragraph [ref=f9e96]: Coverage
+              - strong [ref=f9e97]: 1%
+            - generic [ref=f9e98]: 
+      - generic [ref=f9e99]:
+        - generic [ref=f9e101]:
+          - generic [ref=f9e102]: 
+          - text: Per-kiosk performance this batch
+        - table [ref=f9e105]:
+          - rowgroup [ref=f9e106]:
+            - row [ref=f9e107]:
+              - columnheader "Scanner" [ref=f9e108]
+              - columnheader "Families served" [ref=f9e109]
+              - columnheader "Handouts logged" [ref=f9e110]
+          - rowgroup [ref=f9e111]:
+            - row [ref=f9e112]:
+              - cell "developer" [ref=f9e113]
+              - cell "1" [ref=f9e114]
+              - cell "1" [ref=f9e115]
+        - generic [ref=f9e116]: "Showing batch: Relief Test Batch"
+      - generic [ref=f9e117]:
+        - generic [ref=f9e119]:
+          - generic [ref=f9e121]:
+            - generic [ref=f9e122]: 
+            - text: Families that received aid vs still waiting
+          - generic [ref=f9e125]: "Showing batch: Relief Test Batch"
+        - generic [ref=f9e127]:
+          - generic [ref=f9e129]:
+            - generic [ref=f9e130]: 
+            - text: Coverage by barangay (percent)
+          - generic [ref=f9e134]: "Showing batch: Relief Test Batch"
+        - generic [ref=f9e136]:
+          - generic [ref=f9e138]:
+            - generic [ref=f9e139]: 
+            - text: Number of handouts by service
+          - generic [ref=f9e143]: "Showing batch: Relief Test Batch"
+      - generic [ref=f9e144]:
+        - generic [ref=f9e146]:
+          - generic [ref=f9e147]: 
+          - text: Coverage by barangay
+        - table [ref=f9e150]:
+          - rowgroup [ref=f9e151]:
+            - row [ref=f9e152]:
+              - columnheader "Barangay" [ref=f9e153]
+              - columnheader "Families" [ref=f9e154]
+              - columnheader "Received" [ref=f9e155]
+              - columnheader "Coverage" [ref=f9e156]
+          - rowgroup [ref=f9e157]:
+            - row [ref=f9e158]:
+              - cell "Binan" [ref=f9e159]
+              - cell "4" [ref=f9e160]
+              - cell "0" [ref=f9e161]
+              - cell "0%" [ref=f9e162]
+            - row [ref=f9e164]:
+              - cell "Bungahan" [ref=f9e165]
+              - cell "5" [ref=f9e166]
+              - cell "0" [ref=f9e167]
+              - cell "0%" [ref=f9e168]
+            - row [ref=f9e170]:
+              - cell "Canlalay" [ref=f9e171]
+              - cell "4" [ref=f9e172]
+              - cell "0" [ref=f9e173]
+              - cell "0%" [ref=f9e174]
+            - row [ref=f9e176]:
+              - cell "Casile" [ref=f9e177]
+              - cell "6" [ref=f9e178]
+              - cell "0" [ref=f9e179]
+              - cell "0%" [ref=f9e180]
+            - row [ref=f9e182]:
+              - cell "De La Paz" [ref=f9e183]
+              - cell "4" [ref=f9e184]
+              - cell "0" [ref=f9e185]
+              - cell "0%" [ref=f9e186]
+            - row [ref=f9e188]:
+              - cell "Ganado" [ref=f9e189]
+              - cell "7" [ref=f9e190]
+              - cell "0" [ref=f9e191]
+              - cell "0%" [ref=f9e192]
+            - row [ref=f9e194]:
+              - cell "Langkiwa" [ref=f9e195]
+              - cell "9" [ref=f9e196]
+              - cell "0" [ref=f9e197]
+              - cell "0%" [ref=f9e198]
+            - row [ref=f9e200]:
+              - cell "Loma" [ref=f9e201]
+              - cell "6" [ref=f9e202]
+              - cell "0" [ref=f9e203]
+              - cell "0%" [ref=f9e204]
+            - row [ref=f9e206]:
+              - cell "Malaban" [ref=f9e207]
+              - cell "6" [ref=f9e208]
+              - cell "0" [ref=f9e209]
+              - cell "0%" [ref=f9e210]
+            - row [ref=f9e212]:
+              - cell "Malamig" [ref=f9e213]
+              - cell "4" [ref=f9e214]
+              - cell "0" [ref=f9e215]
+              - cell "0%" [ref=f9e216]
+            - row [ref=f9e218]:
+              - cell "Mamplasan" [ref=f9e219]
+              - cell "8" [ref=f9e220]
+              - cell "0" [ref=f9e221]
+              - cell "0%" [ref=f9e222]
+            - row [ref=f9e224]:
+              - cell "Platero" [ref=f9e225]
+              - cell "6" [ref=f9e226]
+              - cell "0" [ref=f9e227]
+              - cell "0%" [ref=f9e228]
+            - row [ref=f9e230]:
+              - cell "Poblacion" [ref=f9e231]
+              - cell "5" [ref=f9e232]
+              - cell "0" [ref=f9e233]
+              - cell "0%" [ref=f9e234]
+            - row [ref=f9e236]:
+              - cell "San Antonio" [ref=f9e237]
+              - cell "4" [ref=f9e238]
+              - cell "0" [ref=f9e239]
+              - cell "0%" [ref=f9e240]
+            - row [ref=f9e242]:
+              - cell "San Francisco (Halang)" [ref=f9e243]
+              - cell "4" [ref=f9e244]
+              - cell "0" [ref=f9e245]
+              - cell "0%" [ref=f9e246]
+            - row [ref=f9e248]:
+              - cell "San Jose" [ref=f9e249]
+              - cell "11" [ref=f9e250]
+              - cell "0" [ref=f9e251]
+              - cell "0%" [ref=f9e252]
+            - row [ref=f9e254]:
+              - cell "San Vicente" [ref=f9e255]
+              - cell "5" [ref=f9e256]
+              - cell "0" [ref=f9e257]
+              - cell "0%" [ref=f9e258]
+            - row [ref=f9e260]:
+              - cell "Santo Domingo" [ref=f9e261]
+              - cell "5" [ref=f9e262]
+              - cell "0" [ref=f9e263]
+              - cell "0%" [ref=f9e264]
+            - row [ref=f9e266]:
+              - cell "Santo Nino" [ref=f9e267]
+              - cell "10" [ref=f9e268]
+              - cell "0" [ref=f9e269]
+              - cell "0%" [ref=f9e270]
+            - row [ref=f9e272]:
+              - cell "Santo Tomas (Calabuso)" [ref=f9e273]
+              - cell "4" [ref=f9e274]
+              - cell "0" [ref=f9e275]
+              - cell "0%" [ref=f9e276]
+            - row [ref=f9e278]:
+              - cell "Soro-Soro" [ref=f9e279]
+              - cell "8" [ref=f9e280]
+              - cell "1" [ref=f9e281]
+              - cell "13%" [ref=f9e282]
+            - row [ref=f9e284]:
+              - cell "Timbao" [ref=f9e285]
+              - cell "5" [ref=f9e286]
+              - cell "0" [ref=f9e287]
+              - cell "0%" [ref=f9e288]
+            - row [ref=f9e290]:
+              - cell "Tubigan" [ref=f9e291]
+              - cell "3" [ref=f9e292]
+              - cell "0" [ref=f9e293]
+              - cell "0%" [ref=f9e294]
+            - row [ref=f9e296]:
+              - cell "Zapote" [ref=f9e297]
+              - cell "4" [ref=f9e298]
+              - cell "0" [ref=f9e299]
+              - cell "0%" [ref=f9e300]
+        - generic [ref=f9e302]: "Showing batch: Relief Test Batch"

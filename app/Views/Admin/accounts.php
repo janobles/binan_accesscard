@@ -1,6 +1,5 @@
 <?php
 
-$developerAccounts = $developerAccounts ?? [];
 $adminAccounts = $adminAccounts ?? [];
 $employeeAccounts = $employeeAccounts ?? [];
 $viewerAccounts = $viewerAccounts ?? [];
@@ -10,7 +9,7 @@ $canEditAccounts = (bool) ($canEditAccounts ?? false);
 $currentRole = (string) ($currentRole ?? '');
 $isDeveloper = $currentRole === 'Developer';
 $isAdmin = $currentRole === 'Admin';
-$accounts = array_merge($developerAccounts, $adminAccounts, $employeeAccounts, $viewerAccounts, $scannerAccounts);
+$accounts = array_merge($adminAccounts, $employeeAccounts, $viewerAccounts, $scannerAccounts);
 ?>
 
 <div class="accounts-page" data-account-management>

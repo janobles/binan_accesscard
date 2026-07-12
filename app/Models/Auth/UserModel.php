@@ -73,9 +73,9 @@ class UserModel extends Model
     }
 
     /**
-     * Returns all recognized accounts for the Account Management page, ordered by
-     * account level then username. Frontend: DashboardPageBuilder protects Developer
-     * rows from management actions.
+     * Returns non-Developer accounts for the Account Management page, ordered by
+     * account level then username. Developer identities are managed directly in the
+     * database and must never be exposed by this listing query.
      */
     public function getStaffAccounts(): array
     {
@@ -84,7 +84,7 @@ class UserModel extends Model
         }
 
         return $this->select('userID, username, account_level AS role, isactive, dt_created')
-            ->whereIn('account_level', ['developer', 'administrator', 'encoder', 'viewer', 'scanner'])
+            ->whereIn('account_level', ['administrator', 'encoder', 'viewer', 'scanner'])
             ->orderBy('account_level', 'ASC')
             ->orderBy('username', 'ASC')
             ->findAll();

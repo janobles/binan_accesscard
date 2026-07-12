@@ -174,7 +174,6 @@ class DashboardPageBuilder
                 'distribution' => $layoutModel->navActive($activePage, 'distribution'),
                 'reports'      => $layoutModel->navActive($activePage, 'reports'),
             ],
-            'developerAccounts'  => array_values(array_filter($visibleAccounts, static fn ($account) => $account['role'] === 'developer')),
             'adminAccounts'      => array_values(array_filter($visibleAccounts, static fn ($account) => $account['role'] === 'administrator')),
             // 'encoder' is the raw DB enum value for the Employee role (surfaced as
             // "Employee" in the UI); the rows here come straight from the users table

@@ -11,7 +11,6 @@ use App\Libraries\ViewFormatter;
             <input class="form-control" type="search" data-account-search placeholder="Search username..." autocomplete="off" aria-label="Search accounts by username">
             <select class="form-select" data-account-level-filter aria-label="Filter by account level">
                 <option value="">Select Level</option>
-                <option value="developer">Developer</option>
                 <option value="administrator">Administrator</option>
                 <option value="encoder">Encoder</option>
                 <option value="viewer">Viewer</option>

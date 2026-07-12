@@ -206,8 +206,9 @@ class SearchModel
     }
 
     /**
-     * Searches recognized accounts by username/role/status with optional role
-     * and active-status filters. Frontend: the Account Management search/filter UI.
+     * Searches non-Developer accounts by username/role/status with optional role
+     * and active-status filters. Developer identities are intentionally excluded
+     * from Account Management.
      */
     public function staffAccounts(string $keyword = '', array $filters = [], int $limit = 100): array
     {
@@ -220,7 +221,7 @@ class SearchModel
         // so downstream callers keep the same key.
         $builder = $this->db->table('users')
             ->select('userID, username, account_level AS role, isactive, dt_created')
-            ->whereIn('account_level', ['developer', 'administrator', 'encoder', 'viewer', 'scanner']);
+            ->whereIn('account_level', ['administrator', 'encoder', 'viewer', 'scanner']);
 
         $keyword = $this->normalizeKeyword($keyword);
 
@@ -234,7 +235,7 @@ class SearchModel
 
         $role = $this->normalizeKeyword((string) ($filters['role'] ?? ''));
 
-        if (in_array($role, ['developer', 'administrator', 'encoder', 'viewer', 'scanner'], true)) {
+        if (in_array($role, ['administrator', 'encoder', 'viewer', 'scanner'], true)) {
             $builder->where('account_level', $role);
         }
 

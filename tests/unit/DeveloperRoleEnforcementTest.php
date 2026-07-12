@@ -15,9 +15,18 @@ final class DeveloperRoleEnforcementTest extends CIUnitTestCase
         $model = file_get_contents(APPPATH . 'Models/Auth/UserModel.php');
 
         $this->assertIsString($model);
-        $this->assertStringContainsString("['developer', 'administrator', 'encoder', 'viewer', 'scanner']", $model);
+        $this->assertStringContainsString("['administrator', 'encoder', 'viewer', 'scanner']", $model);
+        $this->assertStringNotContainsString("whereIn('account_level', ['developer'", $model);
         $this->assertStringNotContainsString('DeveloperProfile', $model);
         $this->assertStringNotContainsString('verifyDeveloperLogin', $model);
+
+        $searchModel = file_get_contents(APPPATH . 'Models/SearchModel.php');
+        $accountView = file_get_contents(APPPATH . 'Views/Admin/accounts-body.php');
+
+        $this->assertIsString($searchModel);
+        $this->assertIsString($accountView);
+        $this->assertStringNotContainsString("whereIn('account_level', ['developer'", $searchModel);
+        $this->assertStringNotContainsString('option value="developer"', $accountView);
     }
 
     public function testDeveloperAndAdministratorStatusAuthorityIsSeparated(): void

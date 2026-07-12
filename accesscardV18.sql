@@ -66,8 +66,7 @@ CREATE TABLE `category` (
 INSERT INTO `category` (`categoryID`, `code`, `name`, `dt_created`, `dt_updated`, `dt_deleted`) VALUES
 (5, 'FA', 'Financial Assistance Programs', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
 (6, 'SWPS', 'Social Welfare Programs and Services', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
-(7, 'EDA', 'Emergency / Disaster Assistance Programs', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
-(8, 'TSC', 'Test Categories', '2026-07-01 03:58:50', '2026-07-01 03:58:50', NULL);
+(7, 'EDA', 'Emergency / Disaster Assistance Programs', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL);
 
 -- --------------------------------------------------------
 
@@ -186,8 +185,7 @@ INSERT INTO `sector` (`sectorID`, `shortcode`, `name`, `description`, `dt_create
 (7, 'IP', 'Indigenous People', '', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
 (8, 'IDP', 'Internally Displaced Person', '', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
 (9, 'PDL', 'Persons Deprived of Liberty', '', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
-(10, 'OTHER', 'Other Sectors', '', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
-(11, 'TS', 'Test', 'Test Description', '2026-07-01 03:57:36', '2026-07-01 03:58:36', NULL);
+(10, 'OTHER', 'Other Sectors', '', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL);
 
 -- --------------------------------------------------------
 
@@ -256,9 +254,7 @@ INSERT INTO `services` (`serviceID`, `shortcode`, `category`, `name`, `descripti
 (43, 'SP2', 'Solo Parent', 'Monthly Subsidy for Solo Parent', '', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
 (44, 'B1', 'Bata (Children)', 'Bahay Pag-Asa', '', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
 (45, 'B2', 'Bata (Children)', 'ECCD', '', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
-(46, 'B3', 'Bata (Children)', 'Supplementary Feeding Program', '', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
-(47, 'TS1', 'Test', 'Test Sector Services', 'Sector Service', '2026-07-01 03:59:48', '2026-07-01 03:59:48', NULL),
-(48, 'TSC1', 'Test Categories', 'Test Categories services and programs', 'Categories service and programs', '2026-07-01 04:00:24', '2026-07-01 04:00:24', NULL);
+(46, 'B3', 'Bata (Children)', 'Supplementary Feeding Program', '', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL);
 
 -- --------------------------------------------------------
 
@@ -271,7 +267,7 @@ CREATE TABLE `users` (
   `username` varchar(255) NOT NULL,
   `full_description` varchar(255) DEFAULT NULL,
   `password` text NOT NULL,
-  `account_level` enum('administrator','encoder','viewer','scanner') NOT NULL DEFAULT 'encoder',
+  `account_level` enum('viewer','scanner','administrator','developer','encoder') NOT NULL DEFAULT 'encoder',
   `isactive` enum('Enable','Disabled') DEFAULT NULL,
   `dt_created` timestamp NOT NULL DEFAULT current_timestamp(),
   `dt_updated` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
@@ -291,7 +287,8 @@ INSERT INTO `users` (`userID`, `username`, `full_description`, `password`, `acco
 (8, 'Administrator_Mel', 'LN:Tibay; FN:Romel; MN:Sarmiento; ADDR:Santa Rosa Laguna; CN:1234567819; BD:2000-05-31', '$argon2id$v=19$m=65536,t=4,p=1$ZDJRR0JYcXNSeHZscGJRMw$BaR00ZtPWvFXnC2C/+eH6YzVtig6z7KV+xYi5axzy/E', 'administrator', 'Enable', '2026-06-15 06:12:40', '2026-06-15 07:18:20'),
 (9, 'Encoder_Mel', 'LN:Tibay; FN:Romel Andres; MN:Sarmiento; ADDR:Santa Rosa Laguna; CN:12345678910; BD:2000-05-31', '$argon2id$v=19$m=65536,t=4,p=1$cWIycjlnd1BKUzV0eHhpMw$hMUEtyWR04QbP3TIXi1e6B0OtWSAfLRSV+zpv5ovJb4', 'encoder', 'Enable', '2026-06-15 07:15:55', '2026-06-15 07:15:55'),
 (10, 'Viewer_Mel', 'LN:Tibay; FN:Romel Andres; MN:Tibay; ADDR:Santa Rosa Laguna; CN:123456781910; BD:2000-05-31', '$argon2id$v=19$m=65536,t=4,p=1$ZVVMVGZJeG5qU2lHZUltLw$SAwUK4vrjkbuGrgtt3a5FQDYD6J4Zu6OLHbNEihi3Ow', 'viewer', 'Enable', '2026-06-15 07:16:58', '2026-06-16 01:13:48'),
-(11, 'adminjade', 'LN:Nobles; FN:Jade; MN:Tasoy; ADDR:Pulo, Cabuyao Laguna; CN:09821078512; BD:2003-07-05', '$argon2id$v=19$m=65536,t=4,p=1$akRyV3NhSlRaNUx6anpvRg$F/u37Ji3CfVmxrSysnOdrA6O5twZm0mk1teJNZ8lv2I', 'administrator', 'Enable', '2026-06-17 05:58:24', '2026-06-17 06:00:17');
+(11, 'adminjade', 'LN:Nobles; FN:Jade; MN:Tasoy; ADDR:Pulo, Cabuyao Laguna; CN:09821078512; BD:2003-07-05', '$argon2id$v=19$m=65536,t=4,p=1$akRyV3NhSlRaNUx6anpvRg$F/u37Ji3CfVmxrSysnOdrA6O5twZm0mk1teJNZ8lv2I', 'administrator', 'Enable', '2026-06-17 05:58:24', '2026-06-17 06:00:17'),
+(12, 'developer', NULL, '$argon2id$v=19$m=65536,t=4,p=1$UHVBVzJEMFV2VDNhaU5xTg$hzjRbNAe6Pw4DFwVP9VApkJtRhRfnuSHsv7laHnXHiQ', 'developer', 'Enable', '2026-07-12 22:05:26', '2026-07-12 22:05:26');
 
 -- --------------------------------------------------------
 
@@ -330,7 +327,8 @@ CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW 
 ALTER TABLE `audit_trails`
   ADD PRIMARY KEY (`auditID`),
   ADD KEY `fk_audit_user` (`userID`),
-  ADD KEY `fk_audit_member` (`memberID`);
+  ADD KEY `fk_audit_member` (`memberID`),
+  ADD KEY `idx_audit_created` (`dt_created`);
 
 --
 -- Indexes for table `category`
@@ -351,7 +349,9 @@ ALTER TABLE `job_queue`
 --
 ALTER TABLE `member`
   ADD PRIMARY KEY (`memberID`),
-  ADD KEY `fk_head` (`headID`);
+  ADD KEY `fk_head` (`headID`),
+  ADD KEY `idx_member_deleted_name` (`dt_deleted`,`lastname`,`firstname`),
+  ADD KEY `idx_member_created` (`dt_created`);
 
 --
 -- Indexes for table `member_services`
@@ -403,7 +403,8 @@ ALTER TABLE `job_queue`
 
 --
 --
--- Scanner module: QR control mapping, aid types, aid distribution log
+-- Scanner module: QR control mapping and aid distribution log. Batches and
+-- distributions bind directly to the services reference table (no aid_type).
 --
 DROP TABLE IF EXISTS `qr_control`;
 CREATE TABLE `qr_control` (
@@ -414,29 +415,19 @@ CREATE TABLE `qr_control` (
   KEY `idx_qr_head` (`headID`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
-DROP TABLE IF EXISTS `aid_type`;
-CREATE TABLE `aid_type` (
-  `aid_type_id` int(11) NOT NULL AUTO_INCREMENT,
-  `name` varchar(100) NOT NULL,
-  `dt_created` timestamp NOT NULL DEFAULT current_timestamp(),
-  `dt_deleted` timestamp NULL DEFAULT NULL,
-  PRIMARY KEY (`aid_type_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-INSERT INTO `aid_type` (`name`) VALUES ('Financial'), ('Rice'), ('Grocery');
-
 DROP TABLE IF EXISTS `aid_distribution`;
 CREATE TABLE `aid_distribution` (
   `aidID` int(11) NOT NULL AUTO_INCREMENT,
   `control_no` int(11) NOT NULL,
   `memberID` int(11) NOT NULL,
-  `aid_type_id` int(11) NOT NULL,
+  `service_id` int(11) NOT NULL,
   `claim_date` date NOT NULL,
   `userID` int(11) DEFAULT NULL,
   `batch_id` int(11) DEFAULT NULL,
   `dt_created` timestamp NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`aidID`),
   KEY `idx_ad_control` (`control_no`),
-  KEY `idx_ad_type` (`aid_type_id`),
+  KEY `idx_ad_service` (`service_id`),
   KEY `idx_ad_batch` (`batch_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -448,12 +439,12 @@ DROP TABLE IF EXISTS `distribution_batch`;
 CREATE TABLE `distribution_batch` (
   `batch_id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(100) NOT NULL,
-  `aid_type_id` int(11) NOT NULL,
+  `service_id` int(11) NOT NULL,
   `started_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `closed_at` timestamp NULL DEFAULT NULL,
   `created_by` int(11) DEFAULT NULL,
   PRIMARY KEY (`batch_id`),
-  KEY `idx_db_aidtype` (`aid_type_id`)
+  KEY `idx_db_service` (`service_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- AUTO_INCREMENT for table `member`
@@ -477,7 +468,7 @@ ALTER TABLE `sector`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `userID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1;
+  MODIFY `userID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- Constraints for dumped tables

@@ -97,8 +97,9 @@ class FamilyDataTableController extends BaseController
 
     /**
      * Reads the DataTables order[] request into a [columnKey, direction] pair.
-     * Only the name/address/birthday columns are sortable; everything else falls
-     * back to the name column. The `date` parameter is intentionally NOT consulted.
+     * Sortable columns: qr (default, ascending), name, address, birthday;
+     * everything else falls back to the name column. The `date` parameter is
+     * intentionally NOT consulted.
      *
      * @return array{0: string, 1: string}
      */
@@ -106,29 +107,26 @@ class FamilyDataTableController extends BaseController
     {
         $order = $this->request->getGet('order');
 
-        // No column sort requested (the table's default) -> newest records first, so
-        // a just-added or just-imported family is visible at the top of the list
-        // instead of being sorted by surname into a large dataset. 'newest' is
-        // unrecognized by applyMemberOrder(), which falls back to memberID DESC.
+        // No column sort requested (fresh table, or third header click which
+        // DataTables sends as an empty direction). Default order is the QR
+        // control number ascending so the list always reads 1 to n.
         if (! is_array($order) || ! isset($order[0]) || ! is_array($order[0])) {
-            return ['newest', 'desc'];
+            return ['qr', 'asc'];
         }
 
         $firstOrder = $order[0];
         $column = (int) ($firstOrder['column'] ?? 0);
         $requestedDirection = strtolower((string) ($firstOrder['dir'] ?? ''));
 
-        // DataTables sends an empty direction on the third header click. Restore
-        // the table's last-added-first order instead of coercing that state to ASC.
         if ($requestedDirection === '') {
-            return ['newest', 'desc'];
+            return ['qr', 'asc'];
         }
 
         $direction = $requestedDirection === 'desc' ? 'desc' : 'asc';
         // Column order: 0=QR, 1=name, 2=sector, 3=address, 4=birthday, 5=actions.
-        // QR/sector/actions are non-orderable, so only address/birthday map here;
-        // everything else (incl. the name column) falls back to the name sort.
+        // Sector and actions are non-orderable; unknown columns fall back to name.
         $orderKey = match ($column) {
+            0 => 'qr',
             3 => 'address',
             4 => 'birthday',
             default => 'name',

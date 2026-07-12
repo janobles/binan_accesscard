@@ -113,8 +113,9 @@ class SearchModel
     }
 
     /**
-     * Applies a DataTables column sort to the deep-member query. The `newest`
-     * key restores last-added-first order; null/unrecognized keys preserve the
+     * Applies a DataTables column sort to the deep-member query. The `qr` key
+     * sorts by the family head's control number (no-control members last); the
+     * `newest` key restores last-added-first order; null/unrecognized keys preserve the
      * original (lastname, firstname ASC) behavior for non-DataTables callers.
      */
     private function applyAllMembersOrder(BaseBuilder $builder, ?string $orderKey, string $orderDirection): void
@@ -122,6 +123,16 @@ class SearchModel
         $direction = strtolower(trim($orderDirection)) === 'desc' ? 'DESC' : 'ASC';
 
         switch ($orderKey) {
+            case 'qr':
+                // A member's QR is its family head's control number, so join on
+                // m.headID. Members without a control number sort last.
+                $builder->join('qr_control qc_sort', 'qc_sort.headID = m.headID', 'left')
+                    ->orderBy('qc_sort.control_no IS NULL', 'ASC', false)
+                    ->orderBy('qc_sort.control_no', $direction)
+                    // Family members share the head's control number; memberID
+                    // breaks the tie so pagination stays stable.
+                    ->orderBy('m.memberID', $direction);
+                return;
             case 'newest':
                 $builder->orderBy('m.memberID', 'DESC');
                 return;

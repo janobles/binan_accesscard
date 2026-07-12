@@ -35,6 +35,7 @@ version-pinned, so it's safe). PHP floor: 8.2.
 | route, namespace, subnamespace, Routes.php, new controller | `binan-conventions/routing-subnamespaces.md` |
 | model, query, table, allowedFields, schema, SQL dump, enum, role | `binan-conventions/models.md` |
 | view, layout, partial, component, bootstrap, css, page, inline style, empty state, stepper | `binan-conventions/views-bootstrap.md` |
+| button color, btn(), toolbar, filter panel, pills, dual search, design system | `binan-conventions/ui-design-system.md` |
 | batch, distribution_batch, kiosk, scanner shell, perScanner, myBatchCount, scan flow, setting page | `binan-conventions/scanner-batches.md` |
 | index, EXPLAIN, slow, performance, cache, TTL, patch script, benchmark, dump version | `binan-conventions/performance.md` |
 | adapter, sb-admin-adapter, sidebar css, theme token | `sbadmin/adapter.md` |

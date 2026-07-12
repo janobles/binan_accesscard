@@ -23,6 +23,18 @@ $sectorOptionLabel = static function (array $sector): string {
 };
 ?>
 
+<?= view('components/records_toolbar', [
+    'routeBase' => $routeBase,
+    'keyword' => $keyword,
+    'status' => $status,
+    'sectorOptions' => $sectorOptions,
+    'barangayOptions' => $barangayOptions,
+    'selectedSectorIds' => $selectedSectorIds,
+    'selectedBarangays' => $selectedBarangays,
+    'sectorOptionLabel' => $sectorOptionLabel,
+    'canEdit' => $canEdit,
+]) ?>
+
 <?= view('components/card', [
     'icon' => 'table',
     'title' => 'Family Records',
@@ -31,13 +43,5 @@ $sectorOptionLabel = static function (array $sector): string {
     'bodyView' => 'Family/list-body',
     'bodyData' => [
         'routeBase' => $routeBase,
-        'keyword' => $keyword,
-        'status' => $status,
-        'sectorOptions' => $sectorOptions,
-        'barangayOptions' => $barangayOptions,
-        'selectedSectorIds' => $selectedSectorIds,
-        'selectedBarangays' => $selectedBarangays,
-        'sectorOptionLabel' => $sectorOptionLabel,
-        'canEdit' => $canEdit,
     ],
 ]) ?>

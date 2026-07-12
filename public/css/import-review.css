@@ -57,7 +57,17 @@
     white-space: nowrap;
 }
 
-.import-review-group .card-header small {
+.import-review-group .card-header small,
+.import-review-ready .card-header small {
     max-width: 60%;
     text-align: right;
+}
+
+/* The "these are correct" panel — set apart from the problem cards. */
+.import-review-ready {
+    border-color: rgba(25, 135, 84, 0.35);
+}
+
+.import-review-ready > .card-header {
+    background: rgba(25, 135, 84, 0.07);
 }

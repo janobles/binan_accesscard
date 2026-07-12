@@ -178,13 +178,15 @@ class MemberModel extends Model
     }
 
     /**
-     * Bulk [headID => "First Last"] for a set of head IDs. Used by the importer to name
-     * the existing family a batch is adding members to.
+     * Bulk [headID => stored record] for a set of head IDs. The importer needs the whole
+     * person, not just a name: an existing QR only proves *a* family is on file, and the
+     * review has to compare the incoming head against the stored one to tell "the same
+     * family again" (skip) from "a mistyped QR that landed on someone else's family".
      *
      * @param int[] $headIds
-     * @return array<int, string>
+     * @return array<int, array<string, string|null>>
      */
-    public function namesForHeads(array $headIds): array
+    public function identitiesForHeads(array $headIds): array
     {
         $headIds = array_values(array_unique(array_filter(
             array_map('intval', $headIds),
@@ -195,20 +197,69 @@ class MemberModel extends Model
             return [];
         }
 
-        $rows = $this->db->table($this->table)
-            ->select('memberID, firstname, lastname')
-            ->where('member.memberID = member.headID', null, false)
-            ->whereIn('memberID', $headIds)
-            ->get()
-            ->getResultArray();
-
         $map = [];
 
-        foreach ($rows as $row) {
-            $map[(int) $row['memberID']] = trim(((string) $row['firstname']) . ' ' . ((string) $row['lastname']));
+        foreach (array_chunk($headIds, 1000) as $chunk) {
+            $rows = $this->db->table($this->table)
+                ->select('memberID, firstname, middlename, lastname, suffix, birthday, sex, civilstatus, contactnumber, religion, address')
+                ->where('member.memberID = member.headID', null, false)
+                ->whereIn('memberID', $chunk)
+                ->get()
+                ->getResultArray();
+
+            foreach ($rows as $row) {
+                $map[(int) $row['memberID']] = $row;
+            }
         }
 
         return $map;
+    }
+
+    /**
+     * ACTIVE people already on file whose surname appears in the batch — the candidate set
+     * for "this person is already in the system". Filtering by surname (instead of one
+     * query per row) keeps a 10k-row import to a handful of queries; the importer does the
+     * exact first+last+birthday match on the result in PHP.
+     *
+     * @param string[] $lastnames
+     * @return list<array<string, string|null>> memberID, headID, firstname, middlename, lastname, suffix, birthday
+     */
+    public function activePeopleByLastname(array $lastnames): array
+    {
+        $names = [];
+
+        foreach ($lastnames as $lastname) {
+            $clean = mb_strtolower(trim((string) $lastname));
+
+            if ($clean !== '') {
+                $names[$clean] = true;
+            }
+        }
+
+        $names = array_keys($names);
+
+        if (! $this->hasTable() || $names === []) {
+            return [];
+        }
+
+        $soft = $this->db->fieldExists('dt_deleted', $this->table);
+        $out  = [];
+
+        foreach (array_chunk($names, 500) as $chunk) {
+            $builder = $this->db->table($this->table)
+                ->select('memberID, headID, firstname, middlename, lastname, suffix, birthday')
+                ->whereIn('LOWER(member.lastname)', $chunk);
+
+            if ($soft) {
+                $builder->where('member.dt_deleted IS NULL', null, false);
+            }
+
+            foreach ($builder->get()->getResultArray() as $row) {
+                $out[] = $row;
+            }
+        }
+
+        return $out;
     }
 
     /**

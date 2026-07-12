@@ -135,9 +135,18 @@
         var blocking = Number(counts.blocking || 0);
         var warnings = Number(counts.warnings || 0);
         var existing = Number(counts.existing || 0);
-        var people = Number(counts.people != null ? counts.people : (counts.families || 0) + (counts.members || 0));
-        statsEl.appendChild(statTile('Family groups', counts.families || 0, ''));
-        statsEl.appendChild(statTile('Total members', people, ''));
+        var ready = Number(counts.ready || 0);
+
+        // These two describe the FILE — every person and every QR group in it, broken ones
+        // included. They must never fall back to the families/members counts, which only
+        // describe what the importer could BUILD: those omit head-less groups, two-head
+        // groups and bad-QR rows, i.e. precisely the people the operator has to go fix.
+        var people = Number(counts.rows || 0);
+        var groups = Number(counts.groups || 0);
+
+        statsEl.appendChild(statTile('People in file', people, ''));
+        statsEl.appendChild(statTile('Family groups', groups, ''));
+        statsEl.appendChild(statTile('Ready to import', ready, ready > 0 ? 'text-success' : 'text-muted'));
         statsEl.appendChild(statTile('Already in system', existing, existing > 0 ? 'text-warning' : 'text-muted'));
         statsEl.appendChild(statTile('Issues to fix', blocking, blocking > 0 ? 'text-danger' : 'text-success'));
         statsEl.appendChild(statTile('Warnings', warnings, warnings > 0 ? 'text-warning' : 'text-muted'));
@@ -148,26 +157,112 @@
 
         var groups = review.groups || [];
 
-        if (!groups.length) {
-            var ok = el('div', 'alert alert-success mb-0');
-            ok.appendChild(el('strong', null, 'No issues found. '));
-            ok.appendChild(document.createTextNode(
-                (counts.families || 0) + ' family group(s) are ready. Press Confirm import to save them.'
-            ));
-            groupsEl.appendChild(ok);
+        if (groups.length) {
+            groupsEl.appendChild(renderToolbar());
 
-            return;
+            if (view === 'row') {
+                renderByRow();
+            } else {
+                groups.forEach(function (group) {
+                    groupsEl.appendChild(renderGroup(group));
+                });
+            }
         }
 
-        groupsEl.appendChild(renderToolbar());
+        // The other half of the picture: what is CORRECT and will actually be saved. Without
+        // it the screen is nothing but bad news, and there is no way to check a head or an
+        // address before committing.
+        groupsEl.appendChild(renderReady(counts));
+    }
 
-        if (view === 'row') {
-            renderByRow();
+    // -- ready to import --------------------------------------------------------
+
+    function renderReady(counts) {
+        var ready = review.ready || [];
+        var blocking = Number(counts.blocking || 0);
+        var appends = Number(counts.appends || 0);
+
+        var card = el('div', 'card mb-3 import-review-ready');
+
+        var header = el('div', 'card-header d-flex justify-content-between align-items-center flex-wrap');
+        var left = el('span', 'fw-semibold');
+        left.appendChild(el('span', 'badge bg-success me-2', ready.length));
+        left.appendChild(document.createTextNode('Ready to import'));
+        header.appendChild(left);
+
+        var hint;
+        if (!ready.length && !appends) {
+            hint = 'Nothing here is ready to save yet.';
+        } else if (blocking > 0) {
+            hint = 'These are correct. They will be saved once the issues above are fixed.';
         } else {
-            groups.forEach(function (group) {
-                groupsEl.appendChild(renderGroup(group));
-            });
+            hint = 'These will be saved when you press Confirm import.';
         }
+        header.appendChild(el('small', 'text-muted', hint));
+        card.appendChild(header);
+
+        if (!ready.length) {
+            var body = el('div', 'card-body');
+            body.appendChild(el('p', 'text-muted small mb-0', appends > 0
+                ? 'No NEW families — but ' + appends + ' member(s) will be added to families already in the system (see the list above).'
+                : 'No new families are ready. Every group either has an issue to fix, or is already in the system.'));
+            card.appendChild(body);
+
+            return card;
+        }
+
+        var body2 = el('div', 'card-body p-0');
+        var wrap = el('div', 'table-responsive');
+        var table = el('table', 'table table-sm mb-0 align-middle import-review-table');
+
+        var thead = el('thead');
+        var htr = el('tr');
+        ['Row', 'QR', 'Head of family', 'Members', 'Barangay', 'Address', 'Notes'].forEach(function (h) {
+            htr.appendChild(el('th', null, h));
+        });
+        thead.appendChild(htr);
+        table.appendChild(thead);
+
+        var tbody = el('tbody');
+        ready.forEach(function (family) {
+            tbody.appendChild(renderReadyRow(family));
+        });
+        table.appendChild(tbody);
+        wrap.appendChild(table);
+        body2.appendChild(wrap);
+        card.appendChild(body2);
+
+        if (appends > 0) {
+            var foot = el('div', 'card-footer small text-muted');
+            foot.textContent = 'Plus ' + appends + ' member(s) being added to families already in the system.';
+            card.appendChild(foot);
+        }
+
+        return card;
+    }
+
+    function renderReadyRow(family) {
+        var tr = el('tr');
+
+        tr.appendChild(el('td', 'text-nowrap', family.sheetRow != null ? family.sheetRow : '—'));
+        tr.appendChild(el('td', 'text-nowrap fw-semibold', family.qr || '—'));
+        tr.appendChild(el('td', null, family.head || '—'));
+        tr.appendChild(el('td', 'text-nowrap', family.members));
+        tr.appendChild(el('td', 'small', family.barangay || '—'));
+        tr.appendChild(el('td', 'small import-review-addr', family.address || '—'));
+
+        // Warning-only families still import — say so plainly instead of leaving a blank.
+        var notes = el('td', 'small');
+        if (Number(family.warnings) > 0) {
+            notes.appendChild(el('span', 'badge bg-warning text-dark',
+                family.warnings + ' warning' + (Number(family.warnings) === 1 ? '' : 's')));
+            notes.appendChild(document.createTextNode(' imports as typed'));
+        } else {
+            notes.appendChild(el('span', 'text-success', 'No issues'));
+        }
+        tr.appendChild(notes);
+
+        return tr;
     }
 
     // How to read the report + the view switch.

@@ -32,6 +32,7 @@ class ImportReviewPresenter
         'QR-07'      => ['label' => 'QR Number too large',         'hint' => 'Above the allowed maximum.'],
         'QR-08'      => ['label' => 'QR Number is an error cell',  'hint' => 'The cell holds an Excel error value. Retype the number.'],
         'QR-12'      => ['label' => 'QR Number is a formula',      'hint' => 'Type the number itself, not a formula.'],
+        'QR-TAKEN'   => ['label' => 'QR belongs to someone else',  'hint' => 'That QR is already used by a DIFFERENT family in the system. Correct the QR number, or give this family its own.'],
         'HEAD-NONE'  => ['label' => 'No Head in the family',       'hint' => 'Set Relationship = Head on exactly one person.'],
         'HEAD-MULTI' => ['label' => 'More than one Head',          'hint' => 'Only one person per family can be the Head.'],
         'FP-ADDR'    => ['label' => 'Two addresses under one QR',  'hint' => 'One QR = one household. Fix the mistyped QR, or give the other household its own QR.'],
@@ -42,7 +43,9 @@ class ImportReviewPresenter
         'SERVICE'    => ['label' => 'Unknown service code',        'hint' => 'Use a code from the Reference sheet.'],
         'LENGTH'     => ['label' => 'Value too long',              'hint' => 'Shorten it to fit the database limit.'],
         'ADD-MEMBER' => ['label' => 'Will be added to an existing family', 'hint' => 'The QR already belongs to a family. These people are ADDED to it on import — to skip one, delete the row from the file.'],
-        'DUP-EXISTS' => ['label' => 'Already in the system',       'hint' => 'These families already exist (matched by QR) and are SKIPPED on import.'],
+        'DUP-EXISTS' => ['label' => 'Already in the system',       'hint' => 'Same QR, same head (name + birthday) as a family already on file. SKIPPED on import.'],
+        'DUP-DB'     => ['label' => 'Person already in the system','hint' => 'This person is already on file under another family. A HEAD already on file means the whole group is skipped — check the QR.'],
+        'DUP-DIFF'   => ['label' => 'Details differ from the system', 'hint' => 'Same family, but the file disagrees with what is stored. The import skips it, so nothing here is saved — edit the record in Manage Family.'],
         'DUP-PERSON' => ['label' => 'Possible duplicate person',   'hint' => 'Same name, birthday and address as another row. Imports anyway — delete a row if it really is a duplicate.'],
         'BRGY'       => ['label' => 'Barangay not recognised',     'hint' => 'Not an official Biñan barangay. Imports as typed.'],
         'CONTACT'    => ['label' => 'Contact number format',       'hint' => 'Should start with 09 and be 11 digits. Imports as typed.'],
@@ -101,10 +104,15 @@ class ImportReviewPresenter
 
         $families = (int) ($counts['families'] ?? 0);
         $existing = (int) ($counts['existing'] ?? 0);
+        $ready    = $this->readyFamilies($byQr, $byRow, $errors);
 
         return [
             'file'   => (string) ($result['file'] ?? 'import.xlsx'),
             'counts' => [
+                // What is in the file — every person row and QR group, broken ones included.
+                'rows'        => (int) ($counts['rows'] ?? count($rows)),
+                'groups'      => (int) ($counts['groups'] ?? $families),
+                // What the importer could build (a head-less or bad-QR group builds nothing).
                 'families'    => $families,
                 'members'     => (int) ($counts['members'] ?? 0),
                 'people'      => (int) ($counts['people'] ?? $families + (int) ($counts['members'] ?? 0)),
@@ -113,10 +121,114 @@ class ImportReviewPresenter
                 'appends'     => (int) ($counts['appends'] ?? 0),
                 'blocking'    => (int) ($counts['blocking'] ?? 0),
                 'warnings'    => (int) ($counts['warnings'] ?? 0),
+                'ready'       => count($ready),
             ],
             'groups'  => $groups,
             'byRow'   => $byRowIdx,
+            'ready'   => $ready,
         ];
+    }
+
+    /**
+     * The families that are CORRECT — what the import will actually create.
+     *
+     * The rest of this report is nothing but bad news, which leaves the operator no way to
+     * see that the other 300 families are fine, or to eyeball a head and address before
+     * committing. This is the other half of the picture.
+     *
+     * A family is ready when nothing in its group blocks, it is not already on file
+     * (DUP-EXISTS / a head caught by DUP-DB are SKIPPED, never written), and it is not an
+     * add-to-an-existing-family group (those are listed under ADD-MEMBER). Warning-only
+     * families ARE ready — they import as typed — but their warning count rides along so
+     * nothing is quietly glossed over.
+     *
+     * @param array<string, list<int>>          $byQr   [qr => sheet rows]
+     * @param array<int, array<string, string>> $byRow  [sheet row => cell values]
+     * @param list<array>                       $errors
+     *
+     * @return list<array>
+     */
+    private function readyFamilies(array $byQr, array $byRow, array $errors): array
+    {
+        $blocked  = [];
+        $skipped  = [];
+        $appended = [];
+        $warnings = [];
+
+        foreach ($errors as $error) {
+            $qr = trim((string) ($error['familyNo'] ?? ''));
+
+            if ($qr === '') {
+                continue;
+            }
+
+            $code = (string) ($error['code'] ?? '');
+
+            if (($error['severity'] ?? 'blocking') === 'blocking') {
+                $blocked[$qr] = true;
+            } else {
+                $warnings[$qr] = ($warnings[$qr] ?? 0) + 1;
+            }
+
+            if ($code === 'DUP-EXISTS') {
+                $skipped[$qr] = true;
+            }
+
+            if ($code === 'ADD-MEMBER') {
+                $appended[$qr] = true;
+            }
+
+            // Only a HEAD already on file skips the family; a member just gets a warning.
+            if ($code === 'DUP-DB' && $this->isHeadRow($byRow[(int) ($error['sheetRow'] ?? 0)] ?? [])) {
+                $skipped[$qr] = true;
+            }
+        }
+
+        $out = [];
+
+        foreach ($byQr as $qr => $sheetRows) {
+            $qr = (string) $qr;
+
+            if (isset($blocked[$qr]) || isset($skipped[$qr]) || isset($appended[$qr])) {
+                continue;
+            }
+
+            $headRow = null;
+
+            foreach ($sheetRows as $sheetRow) {
+                if ($this->isHeadRow($byRow[$sheetRow] ?? [])) {
+                    $headRow = $sheetRow;
+                    break;
+                }
+            }
+
+            // No head = HEAD-NONE, which blocks; it can't reach here. Guard anyway.
+            if ($headRow === null) {
+                continue;
+            }
+
+            $head = $byRow[$headRow] ?? [];
+
+            $out[] = [
+                'qr'       => $qr,
+                'sheetRow' => $headRow,
+                'head'     => trim((string) ($head['firstname'] ?? '') . ' ' . (string) ($head['lastname'] ?? '')),
+                'members'  => max(0, count($sheetRows) - 1),
+                'barangay' => (string) ($head['barangay'] ?? ''),
+                'address'  => (string) ($head['address'] ?? ''),
+                'warnings' => (int) ($warnings[$qr] ?? 0),
+            ];
+        }
+
+        usort($out, static fn (array $a, array $b): int => $a['sheetRow'] <=> $b['sheetRow']);
+
+        return $out;
+    }
+
+    /** @param array<string, string> $data */
+    private function isHeadRow(array $data): bool
+    {
+        return strcasecmp(trim((string) ($data['relationship'] ?? '')), 'Head') === 0;
     }
 
     /** One report line: the exact cell, what's wrong, and the value that's there now. */

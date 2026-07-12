@@ -431,12 +431,13 @@ class FamilyImportController extends BaseController
      */
     private function revalidate(array $result, array $rows): array
     {
-        $importer      = new FamilyExcelImporter();
-        $existingHeads = $importer->existingHeadsForRows($rows);
-        $built         = $importer->validateAndBuild($rows, $existingHeads);
-        $fileErrors    = is_array($result['fileErrors'] ?? null) ? $result['fileErrors'] : [];
-        $errors        = array_merge($fileErrors, $built['errors']);
-        $counts        = $importer->summarize($built['families'], $errors, $built['appends']);
+        $importer       = new FamilyExcelImporter();
+        $existingHeads  = $importer->existingHeadsForRows($rows);
+        $existingPeople = $importer->existingPeopleForRows($rows);
+        $built          = $importer->validateAndBuild($rows, $existingHeads, $existingPeople);
+        $fileErrors     = is_array($result['fileErrors'] ?? null) ? $result['fileErrors'] : [];
+        $errors         = array_merge($fileErrors, $built['errors']);
+        $counts         = $importer->summarize($built['families'], $errors, $built['appends']);
 
         $result['rows']    = $rows;
         $result['errors']  = $errors;

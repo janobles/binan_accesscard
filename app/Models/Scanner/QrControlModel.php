@@ -56,7 +56,9 @@ class QrControlModel extends Model
     }
 
     /**
-     * Batch lookup: the control numbers mapped to a set of heads, in one query.
+     * Batch lookup: the control numbers mapped to a set of heads. Chunked at 1000 like
+     * existingControlNos() — the importer feeds this every head it matched in a batch, which
+     * on a 10k-row file is thousands of IDs, far too many for one IN (...).
      *
      * @param int[] $headIds
      *
@@ -75,8 +77,10 @@ class QrControlModel extends Model
 
         $map = [];
 
-        foreach ($this->whereIn('headID', $headIds)->findAll() as $row) {
-            $map[(int) $row['headID']] = (int) $row['control_no'];
+        foreach (array_chunk($headIds, 1000) as $chunk) {
+            foreach ($this->whereIn('headID', $chunk)->findAll() as $row) {
+                $map[(int) $row['headID']] = (int) $row['control_no'];
+            }
         }
 
         return $map;

@@ -66,10 +66,34 @@ class FamilyExcelImporter
     /** Members whose QR already belongs to a family — added to it on import. */
     private array $appends = [];
 
-    /** [int qr => head name] for QRs already in the DB (passed into validateAndBuild). */
+    /**
+     * QRs already in the DB, with the head stored under each — NOT just a name: the review
+     * has to check the incoming head IS that person before it can call a group a duplicate.
+     *
+     * @var array<int, array{headID: int, name: string, record: array<string, string|null>}>
+     */
     private array $existingHeads = [];
 
+    /**
+     * People already on file, keyed by identity (see identityKey()). Catches the person
+     * re-entered under a NEW QR — which the write step silently skips — and the member
+     * re-added to a family that already has them.
+     *
+     * @var array<string, array{name: string, qr: int, headID: int, isHead: bool}>
+     */
+    private array $existingPeople = [];
+
     private int $memberCount = 0;
+
+    /**
+     * What was actually IN the last validated file: every non-empty person row, and the QR
+     * groups they formed. Deliberately separate from the families/members counts, which only
+     * ever describe families the importer could BUILD — a row in a head-less or bad-QR group
+     * builds nothing, so counting people that way silently hides the very rows with problems.
+     */
+    private int $rowCount = 0;
+
+    private int $groupCount = 0;
 
     // Cached DB lookups (reference data) so re-validation on each edit stays cheap.
     private ?array $sectorByCode  = null;
@@ -103,8 +127,9 @@ class FamilyExcelImporter
             ];
         }
 
-        $existingHeads = $this->existingHeadsForRows($parsed['rows']);
-        $built  = $this->validateAndBuild($parsed['rows'], $existingHeads);
+        $existingHeads  = $this->existingHeadsForRows($parsed['rows']);
+        $existingPeople = $this->existingPeopleForRows($parsed['rows']);
+        $built  = $this->validateAndBuild($parsed['rows'], $existingHeads, $existingPeople);
         $errors = array_merge($parsed['errors'], $built['errors']);
 
         return [
@@ -185,13 +210,16 @@ class FamilyExcelImporter
      * @param list<array{sheetRow: int|string, data: array<string,string>}> $rows
      * @return array{families: list<array>, errors: list<array>, counts: array{families:int, members:int, blocking:int, warnings:int}}
      */
-    public function validateAndBuild(array $rows, array $existingHeads = []): array
+    public function validateAndBuild(array $rows, array $existingHeads = [], array $existingPeople = []): array
     {
-        $this->families      = [];
-        $this->errors        = [];
-        $this->appends       = [];
-        $this->existingHeads = $existingHeads;
-        $this->memberCount   = 0;
+        $this->families       = [];
+        $this->errors         = [];
+        $this->appends        = [];
+        $this->existingHeads  = $existingHeads;
+        $this->existingPeople = $existingPeople;
+        $this->memberCount    = 0;
+        $this->rowCount       = 0;
+        $this->groupCount     = 0;
 
         $sectorByCode  = $this->sectorCodeMap();
         $serviceByCode = $this->serviceCodeMap();
@@ -209,6 +237,10 @@ class FamilyExcelImporter
                 continue;
             }
 
+            // Counted BEFORE the QR check: a row with an unusable QR is still a person in
+            // the file, and the review must not pretend they are not there.
+            $this->rowCount++;
+
             $qr = $this->validateQr((string) ($data['familyno'] ?? ''));
 
             if (! $qr['ok']) {
@@ -219,12 +251,16 @@ class FamilyExcelImporter
             $groups[$qr['qr']][] = ['row' => $sheetRow, 'data' => $data];
         }
 
+        $this->groupCount = count($groups);
+
         foreach ($groups as $familyNo => $familyRows) {
             $this->processFamily((string) $familyNo, $familyRows, $sectorByCode, $serviceByCode, $incomeByLabel);
         }
 
         // Cross-row pass: flag rows that look like the same person (name+birthday+address).
         $this->checkDuplicatePersons($groups);
+        // Same idea against the DB: people this batch is re-entering under a different QR.
+        $this->checkExistingPeople($groups);
 
         return [
             'families' => $this->families,
@@ -290,13 +326,14 @@ class FamilyExcelImporter
     }
 
     /**
-     * Looks up which of a row set's QR numbers already exist in the DB, and the name of
-     * each existing family's head. Feeds validateAndBuild so it can tell a duplicate
-     * family (skip) and members-being-added-to-an-existing-family (append) apart from a
-     * genuinely head-less group. Bulk queries; safe when the tables are absent.
+     * Looks up which of a row set's QR numbers already exist in the DB, and the FULL stored
+     * head record for each. Feeds validateAndBuild so it can tell apart: the same family
+     * uploaded twice (skip), members being added to an existing family (append), a
+     * genuinely head-less group, and a mistyped QR that landed on a stranger's family.
+     * Bulk queries; safe when the tables are absent.
      *
      * @param list<array{sheetRow: int|string, data: array<string,string>}> $rows
-     * @return array<int, string> [qr => head name]
+     * @return array<int, array{headID: int, name: string, record: array<string, string|null>}>
      */
     public function existingHeadsForRows(array $rows): array
     {
@@ -331,15 +368,84 @@ class FamilyExcelImporter
             }
         }
 
-        $names = (new MemberModel())->namesForHeads(array_values($headByQr));
+        $records = (new MemberModel())->identitiesForHeads(array_values($headByQr));
 
         $map = [];
 
         foreach ($headByQr as $qr => $headId) {
-            $map[$qr] = $names[$headId] ?? ('family ' . $qr);
+            $record = $records[$headId] ?? [];
+
+            $map[$qr] = [
+                'headID' => $headId,
+                'name'   => $this->personName($record) ?: ('family ' . $qr),
+                'record' => $record,
+            ];
         }
 
         return $map;
+    }
+
+    /**
+     * Indexes the people from this batch who are ALREADY on file, by identity. Without it
+     * the review can only see QR collisions: a person re-entered under a brand-new QR looks
+     * clean, then the write step silently skips their whole family (activeHeadExists) and
+     * the operator is never told. Bulk queries; safe when the tables are absent.
+     *
+     * @param list<array{sheetRow: int|string, data: array<string,string>}> $rows
+     * @return array<string, array{name: string, qr: int, headID: int, isHead: bool}>
+     */
+    public function existingPeopleForRows(array $rows): array
+    {
+        $lastnames = [];
+
+        foreach ($rows as $entry) {
+            $lastname = trim((string) ($entry['data']['lastname'] ?? ''));
+
+            if ($lastname !== '') {
+                $lastnames[] = $lastname;
+            }
+        }
+
+        if ($lastnames === []) {
+            return [];
+        }
+
+        $people = (new MemberModel())->activePeopleByLastname($lastnames);
+
+        if ($people === []) {
+            return [];
+        }
+
+        $qrByHead = (new QrControlModel())->controlsForHeads(array_map(
+            static fn (array $row): int => (int) ($row['headID'] ?? 0),
+            $people,
+        ));
+
+        $index = [];
+
+        foreach ($people as $row) {
+            $key = $this->identityKey(
+                (string) ($row['firstname'] ?? ''),
+                (string) ($row['lastname'] ?? ''),
+                $row['birthday'] ?? null,
+            );
+
+            if ($key === '') {
+                continue;
+            }
+
+            $headId = (int) ($row['headID'] ?? 0);
+
+            // First match wins — a person filed twice is the DB's problem, not the import's.
+            $index[$key] ??= [
+                'name'   => $this->personName($row),
+                'qr'     => $qrByHead[$headId] ?? 0,
+                'headID' => $headId,
+                'isHead' => (int) ($row['memberID'] ?? 0) === $headId,
+            ];
+        }
+
+        return $index;
     }
 
     /**
@@ -356,7 +462,25 @@ class FamilyExcelImporter
             $payload    = $this->buildPersonPayload($entry, $familyNo, false, $sectorByCode, $incomeByLabel);
             $serviceIds = $this->mapServices($entry, $familyNo, $serviceByCode);
 
-            $memberName = trim(((string) ($payload['firstname'] ?? '')) . ' ' . ((string) ($payload['lastname'] ?? '')));
+            $memberName = $this->personName($payload);
+
+            $key = $this->identityKey(
+                (string) ($payload['firstname'] ?? ''),
+                (string) ($payload['lastname'] ?? ''),
+                $payload['birthday'] ?? null,
+            );
+            $match = $key !== '' ? ($this->existingPeople[$key] ?? null) : null;
+
+            // Already in this very family: the write step skips them (memberExistsUnderHead),
+            // so promising an ADD would be a lie. Don't queue the append — report the truth.
+            if ($match !== null && (int) $match['qr'] === (int) $familyNo) {
+                $this->addError((int) $entry['row'], $familyNo, 'DUP-DB', null,
+                    ($memberName !== '' ? $memberName : 'This person') . ' is already in family ' . $familyNo
+                    . ($headName !== '' ? ' (' . $headName . ')' : '')
+                    . ' — this row will be skipped, nothing is added twice.', 'warning');
+
+                continue;
+            }
 
             $this->appends[] = [
                 'sheetRow'   => (int) $entry['row'],
@@ -375,8 +499,17 @@ class FamilyExcelImporter
 
     /**
      * Builds the review counts from a family set, its errors, and the append list.
-     * `members` is the extra (non-head) members; `people` is every individual; `existing`
-     * is duplicate families; the `appends*` keys track members bound for existing families.
+     *
+     * TWO different populations here, and mixing them up misleads the operator:
+     *   rows / groups     — what is IN THE FILE. Every person row, and every QR group they
+     *                       form, INCLUDING the broken ones.
+     *   families / members / people
+     *                     — only what the importer could BUILD. A head-less group, a group
+     *                       with two heads, or a row with an unusable QR builds nothing, so
+     *                       its people are absent from these. Never label them as a file
+     *                       total: they hide exactly the rows that need attention.
+     *
+     * `existing` is duplicate families; `appends` are members bound for existing families.
      *
      * @param list<array> $families
      * @param list<array> $errors
@@ -393,6 +526,10 @@ class FamilyExcelImporter
         $familyCount = count($families);
 
         return [
+            // In the file.
+            'rows'     => $this->rowCount,
+            'groups'   => $this->groupCount,
+            // Buildable.
             'families' => $familyCount,
             'members'  => $members,
             'people'   => $familyCount + $members,
@@ -582,8 +719,9 @@ class FamilyExcelImporter
             }
         }
 
-        $existsInDb = isset($this->existingHeads[(int) $familyNo]);
-        $existingHeadName = (string) ($this->existingHeads[(int) $familyNo] ?? '');
+        $existing         = $this->existingHeads[(int) $familyNo] ?? null;
+        $existsInDb       = $existing !== null;
+        $existingHeadName = (string) ($existing['name'] ?? '');
 
         // Family-level coherence (does not early-return — fields are still validated).
         $this->checkFingerprint($familyNo, $rows);
@@ -617,14 +755,16 @@ class FamilyExcelImporter
             return;
         }
 
-        // One head whose QR is already on file = a duplicate family (skipped on write).
-        if ($existsInDb) {
-            $this->addError($heads[0]['row'], $familyNo, 'DUP-EXISTS', null,
-                'Family ' . $familyNo . ' is already in the system (' . $existingHeadName . '). It will be skipped if you import.', 'warning');
-        }
-
         $headPayload    = $this->buildPersonPayload($heads[0], $familyNo, true, $sectorByCode, $incomeByLabel);
         $headServiceIds = $this->mapServices($heads[0], $familyNo, $serviceByCode);
+
+        // A QR already on file proves only that SOME family owns it — never that it is this
+        // one. Check the incoming head IS the stored head before calling the group a
+        // duplicate, otherwise a single mistyped digit reports someone else's family as
+        // "already in the system" and the row is written against the wrong household.
+        if ($existsInDb) {
+            $this->checkExistingFamily($familyNo, $heads[0], $headPayload, $existing);
+        }
 
         $memberPayloads = [];
 
@@ -1112,6 +1252,194 @@ class FamilyExcelImporter
             $this->addError($row, $familyNo, 'BRGY', 'barangay',
                 'Barangay "' . $value . '" is not an official Biñan barangay — please check the spelling.', 'warning');
         }
+    }
+
+    /**
+     * The 1:1 check behind "Already in the system". An existing QR proves only that SOME
+     * family owns that number — never that it is this one. So compare the incoming head
+     * against the stored head:
+     *
+     *   same person  -> DUP-EXISTS. A genuine re-upload; the write step skips it. Stored
+     *                   details the file disagrees with become DUP-DIFF, because the skip
+     *                   means the DB keeps its values and the operator's edit is lost.
+     *   anyone else  -> QR-TAKEN (blocking). A mistyped QR. Left alone, the write step
+     *                   neither skips (this head is new to the DB) nor inserts (qr_control
+     *                   already owns the number), and the family dies mid-import.
+     *
+     * Identity is first + last + birthday — the same test MemberModel::activeHeadExists
+     * applies at write time, so the review predicts the write exactly.
+     */
+    private function checkExistingFamily(string $familyNo, array $headEntry, array $headPayload, array $existing): void
+    {
+        $row    = (int) $headEntry['row'];
+        $record = is_array($existing['record'] ?? null) ? $existing['record'] : [];
+        $stored = (string) ($existing['name'] ?? '');
+
+        $sameName = $this->normalizeText((string) ($headPayload['firstname'] ?? '')) === $this->normalizeText((string) ($record['firstname'] ?? ''))
+            && $this->normalizeText((string) ($headPayload['lastname'] ?? '')) === $this->normalizeText((string) ($record['lastname'] ?? ''));
+
+        if (! $sameName) {
+            $incoming = $this->personName($headPayload);
+
+            $this->addError($row, $familyNo, 'QR-TAKEN', 'familyno',
+                'QR ' . $familyNo . ' already belongs to ' . $stored . ' in the system, but this row is '
+                . ($incoming !== '' ? $incoming : 'someone else')
+                . '. Check the QR number — if this really is a different family, give it its own QR.');
+
+            return;
+        }
+
+        $fileBirthday   = trim((string) ($headPayload['birthday'] ?? ''));
+        $storedBirthday = trim((string) ($record['birthday'] ?? ''));
+
+        if ($fileBirthday !== $storedBirthday) {
+            $this->addError($row, $familyNo, 'QR-TAKEN', 'birthday',
+                'QR ' . $familyNo . ' belongs to ' . $stored . ', whose birthday on file is '
+                . ($storedBirthday !== '' ? $storedBirthday : 'not set') . ', but this row says '
+                . ($fileBirthday !== '' ? $fileBirthday : 'not set')
+                . '. Fix whichever is wrong — as it stands the import cannot save this family.');
+
+            return;
+        }
+
+        // Same person, same family: a re-upload. The write step skips it.
+        $this->addError($row, $familyNo, 'DUP-EXISTS', null,
+            'Family ' . $familyNo . ' is already in the system (' . $stored . '). It will be skipped if you import.', 'warning');
+
+        $differences = $this->comparePersonToRecord($headPayload, $record);
+
+        if ($differences !== []) {
+            $this->addError($row, $familyNo, 'DUP-DIFF', null,
+                'Family ' . $familyNo . ' (' . $stored . ') is already in the system, but the file does not match what is stored: '
+                . implode('; ', $differences)
+                . '. Families already on file are SKIPPED, so these changes will NOT be saved — edit the record in Manage Family instead.', 'warning');
+        }
+    }
+
+    /**
+     * Fields where the uploaded person and the stored record disagree. Identity fields are
+     * excluded: a difference there is not a drifted detail, it is a different person, and
+     * checkExistingFamily has already blocked it.
+     *
+     * @return list<string>
+     */
+    private function comparePersonToRecord(array $payload, array $record): array
+    {
+        $fields = [
+            'middlename'    => 'Middle name',
+            'suffix'        => 'Suffix',
+            'sex'           => 'Sex',
+            'civilstatus'   => 'Civil status',
+            'contactnumber' => 'Contact number',
+            'religion'      => 'Religion',
+            'address'       => 'Address',
+        ];
+
+        $differences = [];
+
+        foreach ($fields as $key => $label) {
+            $file   = trim((string) ($payload[$key] ?? ''));
+            $stored = trim((string) ($record[$key] ?? ''));
+
+            if ($this->normalizeText($file) === $this->normalizeText($stored)) {
+                continue;
+            }
+
+            $differences[] = $label . ' — file has ' . ($file !== '' ? '"' . $file . '"' : '(blank)')
+                . ', system has ' . ($stored !== '' ? '"' . $stored . '"' : '(blank)');
+        }
+
+        return $differences;
+    }
+
+    /**
+     * Flags people in the batch who are ALREADY on file, matched on the same first + last +
+     * birthday the write step uses. This is the gap that hurt most: a head re-entered under
+     * a NEW QR reviews perfectly clean, then activeHeadExists silently skips the whole
+     * family — members and all — and the operator is never told.
+     *
+     * A person matched to the family they are already in is skipped here: that is the
+     * DUP-EXISTS re-upload (or the already-a-member append), both reported elsewhere.
+     *
+     * @param array<int|string, list<array{row: int, data: array<string,string>}>> $groups
+     */
+    private function checkExistingPeople(array $groups): void
+    {
+        if ($this->existingPeople === []) {
+            return;
+        }
+
+        foreach ($groups as $qr => $rows) {
+            foreach ($rows as $entry) {
+                $data = $entry['data'];
+
+                $key = $this->identityKey(
+                    (string) ($data['firstname'] ?? ''),
+                    (string) ($data['lastname'] ?? ''),
+                    $this->normalizeBirthday((string) ($data['birthday'] ?? '')),
+                );
+
+                $match = $key !== '' ? ($this->existingPeople[$key] ?? null) : null;
+
+                if ($match === null || (int) $match['qr'] === (int) $qr) {
+                    continue;
+                }
+
+                $isHead = strcasecmp(trim((string) ($data['relationship'] ?? '')), 'Head') === 0;
+                $where  = $match['qr'] > 0 ? 'family ' . $match['qr'] : 'another family';
+
+                $this->addError((int) $entry['row'], (string) $qr, 'DUP-DB', null,
+                    $match['name'] . ' is already in the system under ' . $where
+                    . ($isHead
+                        ? '. A family whose head is already on file is SKIPPED on import — this whole group, members and all, will NOT be saved. Check the QR number, or delete these rows from the file.'
+                        : '. If this is the same person, delete this row; if it is a different person who happens to share the name and birthday, they will both be kept.'),
+                    'warning');
+            }
+        }
+    }
+
+    /** Y-m-d for a sheet birthday, or null when blank/unparseable. Emits no errors. */
+    private function normalizeBirthday(string $value): ?string
+    {
+        $value = trim($value);
+
+        if ($value === '') {
+            return null;
+        }
+
+        foreach (['m-d-Y', 'Y-m-d'] as $format) {
+            $date = \DateTimeImmutable::createFromFormat('!' . $format, $value);
+
+            if ($date !== false && $date->format($format) === $value) {
+                return $date->format('Y-m-d');
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Identity for matching a person against the DB: first + last + birthday, folded.
+     * Mirrors MemberModel::activeHeadExists — the very test that decides the write-time
+     * skip — so the review predicts the write instead of guessing. '' when unusable
+     * (a blank name is already reported as REQUIRED; it must not match anything).
+     */
+    private function identityKey(string $first, string $last, ?string $birthday): string
+    {
+        $first = $this->normalizeText($first);
+        $last  = $this->normalizeText($last);
+
+        if ($first === '' || $last === '') {
+            return '';
+        }
+
+        return $first . '|' . $last . '|' . trim((string) $birthday);
+    }
+
+    /** "First Last" for a stored member row or a built payload. */
+    private function personName(array $record): string
+    {
+        return trim(((string) ($record['firstname'] ?? '')) . ' ' . ((string) ($record['lastname'] ?? '')));
     }
 
     /**

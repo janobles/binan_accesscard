@@ -135,11 +135,15 @@ class FamilyImportJob implements JobHandlerInterface
             return JobOutcome::failed('The reviewed import data is no longer available. Please upload the file again.');
         }
 
-        $rows          = is_array($bundle['rows'] ?? null) ? $bundle['rows'] : [];
-        $importer      = new FamilyExcelImporter();
-        $existingHeads = $importer->existingHeadsForRows($rows);
-        $built         = $importer->validateAndBuild($rows, $existingHeads);
-        $blocking      = (int) ($built['counts']['blocking'] ?? 0);
+        $rows     = is_array($bundle['rows'] ?? null) ? $bundle['rows'] : [];
+        $importer = new FamilyExcelImporter();
+
+        // Re-read the DB, don't trust the staged snapshot: another operator may have added
+        // one of these families since the review, which turns a clean batch into a QR clash.
+        $existingHeads  = $importer->existingHeadsForRows($rows);
+        $existingPeople = $importer->existingPeopleForRows($rows);
+        $built          = $importer->validateAndBuild($rows, $existingHeads, $existingPeople);
+        $blocking       = (int) ($built['counts']['blocking'] ?? 0);
 
         // Defense in depth: never write a batch that still has blocking errors.
         if ($blocking > 0) {

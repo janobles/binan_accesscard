@@ -44,9 +44,9 @@ $canEdit = (bool) ($canEdit ?? true);
         >
     </div>
 
-    <div class="col-auto">
+    <div class="col-12 col-lg-auto">
         <div class="dropdown" data-records-panel>
-            <button class="<?= btn('filter') ?> dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+            <button class="<?= btn('filter') ?> dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
                 <i class="bi bi-funnel" aria-hidden="true"></i> Filters
             </button>
             <div class="dropdown-menu dropdown-menu-end records-filter-panel p-3">
@@ -100,12 +100,12 @@ $canEdit = (bool) ($canEdit ?? true);
     </div>
 
     <div class="col-12 col-lg-auto d-flex flex-wrap align-items-center gap-2" role="group" aria-label="Toolbar actions">
-        <button class="<?= btn('search') ?>" type="submit">Search</button>
-        <button class="<?= btn('clear') ?>" type="button" data-records-clear>Clear</button>
+        <button class="<?= btn('search') ?> flex-fill" type="submit">Search</button>
+        <button class="<?= btn('clear') ?> flex-fill" type="button" data-records-clear>Clear</button>
         <?php if ($canEdit): ?>
         <div class="vr"></div>
-        <button class="<?= btn('add') ?> js-open-family-add-modal" type="button" data-family-add-record data-modal-url="<?= esc(site_url($routeBase . '/create?partial=1'), 'attr') ?>" data-modal-title="New Family Record">Add</button>
-        <button class="<?= btn('import') ?> js-open-family-import-modal" type="button" data-modal-url="<?= esc(site_url($routeBase . '/import'), 'attr') ?>" data-modal-title="Import from Excel" title="Bulk-import families from an Excel file">Import</button>
+        <button class="<?= btn('add') ?> flex-fill js-open-family-add-modal" type="button" data-family-add-record data-modal-url="<?= esc(site_url($routeBase . '/create?partial=1'), 'attr') ?>" data-modal-title="New Family Record">Add</button>
+        <button class="<?= btn('import') ?> flex-fill js-open-family-import-modal" type="button" data-modal-url="<?= esc(site_url($routeBase . '/import'), 'attr') ?>" data-modal-title="Import from Excel" title="Bulk-import families from an Excel file">Import</button>
         <?php endif; ?>
     </div>
 </form>

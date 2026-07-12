@@ -256,6 +256,13 @@
                     var matches = !term || option.textContent.toLowerCase().indexOf(term) !== -1;
                     option.classList.toggle('d-none', !matches);
                 });
+
+                // A column with no matches hides entirely (header included) so
+                // the remaining columns pack to the left.
+                panelRoot.querySelectorAll('[data-records-filter]').forEach(function (group) {
+                    var anyVisible = group.querySelector('[data-records-option]:not(.d-none)');
+                    group.classList.toggle('d-none', !anyVisible);
+                });
             });
         }
 

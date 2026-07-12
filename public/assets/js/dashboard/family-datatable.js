@@ -244,13 +244,15 @@
             }
         });
 
-        // Barangay type-to-narrow: hides non-matching options, nothing more.
+        // Panel-wide type-to-narrow: hides non-matching options across the
+        // sector, barangay, and status columns, nothing more.
+        var panelRoot = filterForm.querySelector('[data-records-panel]');
         var narrowInput = filterForm.querySelector('[data-records-narrow]');
-        if (narrowInput && barangayFilter) {
+        if (narrowInput && panelRoot) {
             narrowInput.addEventListener('input', function () {
                 var term = narrowInput.value.trim().toLowerCase();
 
-                barangayFilter.querySelectorAll('[data-records-option]').forEach(function (option) {
+                panelRoot.querySelectorAll('[data-records-option]').forEach(function (option) {
                     var matches = !term || option.textContent.toLowerCase().indexOf(term) !== -1;
                     option.classList.toggle('d-none', !matches);
                 });

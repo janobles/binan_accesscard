@@ -658,3 +658,26 @@ div.dt-container div.dt-paging .page-link {
 .records-filter-panel .records-filter-list {
     max-height: 14rem;
 }
+
+/* Panel polish: checkboxes keep their size when a long label wraps, and the
+   option rows stay compact. */
+.records-filter-panel .form-check-input {
+    flex-shrink: 0;
+}
+
+.records-filter-panel [data-records-option] {
+    line-height: 1.2;
+}
+
+/* The in-card quick search sits flush with the table: DataTables 2 wraps its
+   controls in dt-layout rows with their own margins, and the (empty) search
+   label still adds a gap before the input. */
+#familyRecordsTable_wrapper div.dt-search input,
+div.dt-container div.dt-search input {
+    margin-left: 0;
+}
+
+div.dt-container .dt-layout-row {
+    margin-left: 0;
+    margin-right: 0;
+}

@@ -50,6 +50,7 @@ $canEdit = (bool) ($canEdit ?? true);
                 <i class="bi bi-funnel" aria-hidden="true"></i> Filters
             </button>
             <div class="dropdown-menu dropdown-menu-end records-filter-panel p-3">
+                <input class="form-control form-control-sm mb-2" type="search" placeholder="Search filters..." aria-label="Search filter options" data-records-narrow>
                 <div class="row g-3">
                     <div class="col-12 col-md-4" data-records-filter="sector">
                         <div class="fw-semibold small text-uppercase text-muted mb-1">Sector</div>
@@ -71,7 +72,6 @@ $canEdit = (bool) ($canEdit ?? true);
 
                     <div class="col-12 col-md-4" data-records-filter="barangay">
                         <div class="fw-semibold small text-uppercase text-muted mb-1">Barangay</div>
-                        <input class="form-control form-control-sm mb-1" type="search" placeholder="Type to narrow list..." aria-label="Narrow barangay list" data-records-narrow>
                         <div class="records-filter-list overflow-auto">
                             <?php foreach ($barangayOptions as $barangay): ?>
                                 <?php $barangayName = trim((string) $barangay); ?>
@@ -88,7 +88,7 @@ $canEdit = (bool) ($canEdit ?? true);
                     <div class="col-12 col-md-4" data-records-filter="status">
                         <div class="fw-semibold small text-uppercase text-muted mb-1">Status</div>
                         <?php foreach (['all' => 'All', 'active' => 'Active', 'archived' => 'Archived'] as $value => $label): ?>
-                            <label class="form-check d-flex align-items-center gap-2 py-1">
+                            <label class="form-check d-flex align-items-center gap-2 py-1" data-records-option>
                                 <input class="form-check-input m-0" type="radio" name="status" value="<?= esc($value, 'attr') ?>" data-records-pill-label="<?= esc($label, 'attr') ?>" <?= $status === $value ? 'checked' : '' ?>>
                                 <span class="form-check-label small"><?= esc($label) ?></span>
                             </label>
@@ -99,16 +99,13 @@ $canEdit = (bool) ($canEdit ?? true);
         </div>
     </div>
 
-    <div class="col-12 col-lg-auto d-flex flex-wrap gap-2">
-        <div class="btn-group" role="group" aria-label="Search actions">
-            <button class="<?= btn('search') ?>" type="submit">Search</button>
-            <button class="<?= btn('clear') ?>" type="button" data-records-clear>Clear</button>
-        </div>
+    <div class="col-12 col-lg-auto d-flex flex-wrap align-items-center gap-2" role="group" aria-label="Toolbar actions">
+        <button class="<?= btn('search') ?>" type="submit">Search</button>
+        <button class="<?= btn('clear') ?>" type="button" data-records-clear>Clear</button>
         <?php if ($canEdit): ?>
-        <div class="btn-group" role="group" aria-label="Record actions">
-            <button class="<?= btn('add') ?> js-open-family-add-modal" type="button" data-family-add-record data-modal-url="<?= esc(site_url($routeBase . '/create?partial=1'), 'attr') ?>" data-modal-title="New Family Record">Add</button>
-            <button class="<?= btn('import') ?> js-open-family-import-modal" type="button" data-modal-url="<?= esc(site_url($routeBase . '/import'), 'attr') ?>" data-modal-title="Import from Excel" title="Bulk-import families from an Excel file">Import</button>
-        </div>
+        <div class="vr"></div>
+        <button class="<?= btn('add') ?> js-open-family-add-modal" type="button" data-family-add-record data-modal-url="<?= esc(site_url($routeBase . '/create?partial=1'), 'attr') ?>" data-modal-title="New Family Record">Add</button>
+        <button class="<?= btn('import') ?> js-open-family-import-modal" type="button" data-modal-url="<?= esc(site_url($routeBase . '/import'), 'attr') ?>" data-modal-title="Import from Excel" title="Bulk-import families from an Excel file">Import</button>
         <?php endif; ?>
     </div>
 </form>

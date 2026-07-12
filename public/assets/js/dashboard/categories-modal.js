@@ -168,5 +168,5 @@
 })(window, document);
 
 // NOTE: the Active/Archived row toggle that used to live here is gone — status is
-// now server-driven (the #category-status-select dropdown reloads the page via
-// lookup-search.js, and the server renders only the matching 50-row page).
+// now server-driven (the Filters panel radios reload the page via
+// records-filter-panel.js, and the server renders only the matching 50-row page).

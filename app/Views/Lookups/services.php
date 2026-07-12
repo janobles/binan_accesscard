@@ -31,20 +31,19 @@ $servicePageUrl = static function (int $targetPage) use ($listRoute, $keyword, $
     return site_url($listRoute) . ($params === [] ? '' : '?' . http_build_query($params));
 };
 
-// "Clear" drops the keyword (and resets to page 1) but keeps status + page size.
-$serviceClearUrl = static function () use ($listRoute, $status, $perPage): string {
-    $params = array_filter([
-        'status'   => $status === 'active' ? '' : $status,
-        'per_page' => $perPage !== 50 ? (string) $perPage : '',
-    ], static fn ($value): bool => $value !== '');
+// "Clear" resets the whole toolbar (keyword + status filter, back to page 1)
+// per the one-role-per-control rule; only the page size survives.
+$serviceClearUrl = static function () use ($listRoute, $perPage): string {
+    $params = $perPage !== 50 ? ['per_page' => (string) $perPage] : [];
 
     return site_url($listRoute) . ($params === [] ? '' : '?' . http_build_query($params));
 };
 ?>
 
-<?php /* Reuses the Manage Records .records-* layout (managerecord.css). All melbranch hooks preserved:
-         data-service-management-root, #service-status-select (data-lookup-status-select),
-         data-lookup-search local filter, .js-service-modal-open + data-service-* attributes, the service-modal include. */ ?>
+<?php /* Reuses the Manage Records .records-* layout (managerecord.css). Status filter lives in the
+         Filters dropdown panel (records-filter-panel.js live-apply + pills). Melbranch hooks preserved:
+         data-service-management-root, data-lookup-search local filter, .js-service-modal-open +
+         data-service-* attributes, the service-modal include. */ ?>
 <?php
 $serviceFooter = ($totalRows ?? 0) > 0 ? view('components/table_footer', [
     'fromRecord' => $fromRecord,

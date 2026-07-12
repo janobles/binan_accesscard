@@ -160,11 +160,10 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
                         return site_url($listRoute) . ($params === [] ? '' : '?' . http_build_query($params));
                     };
     
-                    $auditClearUrl = static function () use ($listRoute, $auditAction, $perPage): string {
-                        $params = array_filter([
-                            'action' => $auditAction,
-                            'per_page' => $perPage !== 50 ? (string) $perPage : '',
-                        ], static fn ($value): bool => $value !== '');
+                    // "Clear" resets the whole toolbar (keyword + action filter, back to
+                    // page 1) per the one-role-per-control rule; page size survives.
+                    $auditClearUrl = static function () use ($listRoute, $perPage): string {
+                        $params = $perPage !== 50 ? ['per_page' => (string) $perPage] : [];
 
                         return site_url($listRoute) . ($params === [] ? '' : '?' . http_build_query($params));
                     };

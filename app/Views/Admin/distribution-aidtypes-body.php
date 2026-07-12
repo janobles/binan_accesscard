@@ -10,7 +10,7 @@ $canManageAidTypes = in_array($currentRole ?? '', ['Admin', 'Developer'], true);
 ?>
 <div class="records-search-panel">
           <div class="records-search-row justify-content-end">
-            <button class="btn btn-primary records-search-action" type="button" data-bs-toggle="modal" data-bs-target="#addAidTypeModal"><i class="bi bi-plus-lg" aria-hidden="true"></i><span>Add Aid Type</span></button>
+            <button class="<?= btn('add') ?> records-search-action" type="button" data-bs-toggle="modal" data-bs-target="#addAidTypeModal"><i class="bi bi-plus-lg" aria-hidden="true"></i><span>Add Aid Type</span></button>
           </div>
         </div>
 

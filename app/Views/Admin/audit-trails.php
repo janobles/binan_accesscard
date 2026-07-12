@@ -29,12 +29,10 @@ $auditPageUrl = static function (int $targetPage) use ($listRoute, $searchTerm, 
     return site_url($listRoute) . ($params === [] ? '' : '?' . http_build_query($params));
 };
 
-// "Clear" drops the keyword (resets to page 1) but keeps the action filter + page size.
-$auditClearUrl = static function () use ($listRoute, $auditAction, $perPage): string {
-    $params = array_filter([
-        'action'   => $auditAction,
-        'per_page' => $perPage !== 50 ? (string) $perPage : '',
-    ], static fn ($value): bool => $value !== '');
+// "Clear" resets the whole toolbar (keyword + action filter, back to page 1)
+// per the one-role-per-control rule; only the page size survives.
+$auditClearUrl = static function () use ($listRoute, $perPage): string {
+    $params = $perPage !== 50 ? ['per_page' => (string) $perPage] : [];
 
     return site_url($listRoute) . ($params === [] ? '' : '?' . http_build_query($params));
 };
@@ -59,8 +57,8 @@ $formatAuditUser = static function (array $audit): string {
 ?>
 
 <?php /* Jade-style audit panel reusing the Lookups dual-search layout (records-* classes,
-         managerecord.css). Bar 1 = database search (server GET) keeping the melbranch hooks
-         .js-audit-filter-form + .js-audit-action-filter (audit-filters.js auto-submit). Bar 2 =
+         managerecord.css). Bar 1 = database search (server GET) with the action filter in the
+         Filters dropdown panel (records-filter-panel.js live-apply + pills). Bar 2 =
          page-size + client-side local "Search:" filter via data-lookup-search (lookup-search.js,
          scoped by data-audit-management-root). */ ?>
 <?php

@@ -37,12 +37,10 @@ $categoryPageUrl = static function (int $targetPage) use ($listRoute, $keyword, 
     return site_url($listRoute) . ($params === [] ? '' : '?' . http_build_query($params));
 };
 
-// "Clear" drops the keyword (and resets to page 1) but keeps status + page size.
-$categoryClearUrl = static function () use ($listRoute, $status, $perPage): string {
-    $params = array_filter([
-        'status'   => $status === 'active' ? '' : $status,
-        'per_page' => $perPage !== 50 ? (string) $perPage : '',
-    ], static fn ($value): bool => $value !== '');
+// "Clear" resets the whole toolbar (keyword + status filter, back to page 1)
+// per the one-role-per-control rule; only the page size survives.
+$categoryClearUrl = static function () use ($listRoute, $perPage): string {
+    $params = $perPage !== 50 ? ['per_page' => (string) $perPage] : [];
 
     return site_url($listRoute) . ($params === [] ? '' : '?' . http_build_query($params));
 };

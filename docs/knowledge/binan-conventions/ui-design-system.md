@@ -54,7 +54,17 @@ placeholders verbatim when retrofitting other tabs.
 
 ## Retrofit status
 
-- manage-records: done (feat/manage-records-ui)
-- lookups (sectors/services/categories), accounts, audit-trails,
-  distribution tabs: pending; reuse records_toolbar/filter_pills with
-  page-specific filter groups
+- manage-records: done (feat/manage-records-ui). AJAX flavor: filter panel +
+  pills wired by `assets/js/dashboard/family-datatable.js`.
+- lookups (sectors/services/categories), audit-trails, employee activity:
+  done (feat/retrofit-toolbar-conventions). Server-driven flavor: these pages
+  reload on every filter change, so the panel + pills are wired by the shared
+  `assets/js/dashboard/records-filter-panel.js` (radios inside the GET form,
+  change = submit) instead of records_toolbar, which stays family-specific.
+- distribution tabs: btn() roles + placeholder wording done; the
+  distributions log keeps its client-side aid-type select (no server search
+  to live-apply against). Batches tab has plain form buttons, not a toolbar —
+  out of scope.
+- accounts: btn() roles + placeholder wording done. Its level/status selects
+  are client-side only; converting them to a panel + pills waits on a
+  server-side account search (deferred).

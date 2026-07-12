@@ -6,20 +6,38 @@
  */
 ?>
 <div class="records-search-panel">
-		<form class="records-search-row records-lookup-search" method="get" action="<?= esc(site_url($listRoute), 'attr') ?>" role="search" aria-label="Search the sector database">
-			<input class="form-control" type="search" name="q" value="<?= esc($keyword, 'attr') ?>" placeholder="Search the whole sector database" aria-label="Search the sector database" autocomplete="off">
-			<select class="form-select records-status-select" id="sector-status-select" name="status" data-lookup-status-select aria-label="Sector view">
-				<option value="active" <?= $status === 'active' ? 'selected' : '' ?>>Active (<?= esc((string) $activeSectorCount) ?>)</option>
-				<option value="archived" <?= $status === 'archived' ? 'selected' : '' ?>>Archive (<?= esc((string) $archivedSectorCount) ?>)</option>
-				<option value="all" <?= $status === 'all' ? 'selected' : '' ?>>All (<?= esc((string) $allSectorCount) ?>)</option>
-			</select>
+		<form class="records-search-row records-lookup-search" method="get" action="<?= esc(site_url($listRoute), 'attr') ?>" role="search" aria-label="Search the sector database" data-records-filter-form data-records-pills="sectorFilterPills">
+			<input class="form-control" type="search" name="q" value="<?= esc($keyword, 'attr') ?>" placeholder="Search entire database..." aria-label="Search the sector database" autocomplete="off">
+			<div class="dropdown" data-records-panel>
+				<button class="<?= btn('filter') ?> dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+					<i class="bi bi-funnel" aria-hidden="true"></i> Filters
+				</button>
+				<div class="dropdown-menu records-filter-panel p-3">
+					<div data-records-filter="status" data-records-group-label="Status">
+						<div class="fw-semibold small text-uppercase text-muted mb-1">Status</div>
+						<label class="form-check d-flex align-items-center gap-2 py-1" data-records-option>
+							<input class="form-check-input m-0" type="radio" name="status" value="active" data-records-default <?= $status === 'active' ? 'checked' : '' ?>>
+							<span class="form-check-label small">Active (<?= esc((string) $activeSectorCount) ?>)</span>
+						</label>
+						<label class="form-check d-flex align-items-center gap-2 py-1" data-records-option>
+							<input class="form-check-input m-0" type="radio" name="status" value="archived" data-records-pill-label="Archived" <?= $status === 'archived' ? 'checked' : '' ?>>
+							<span class="form-check-label small">Archived (<?= esc((string) $archivedSectorCount) ?>)</span>
+						</label>
+						<label class="form-check d-flex align-items-center gap-2 py-1" data-records-option>
+							<input class="form-check-input m-0" type="radio" name="status" value="all" data-records-pill-label="All" <?= $status === 'all' ? 'checked' : '' ?>>
+							<span class="form-check-label small">All (<?= esc((string) $allSectorCount) ?>)</span>
+						</label>
+					</div>
+				</div>
+			</div>
 			<?php if ($perPage !== 50): ?><input type="hidden" name="per_page" value="<?= esc((string) $perPage, 'attr') ?>"><?php endif; ?>
-			<a class="btn btn-danger records-search-action" href="<?= esc($sectorClearUrl(), 'attr') ?>"><i class="bi bi-x-lg" aria-hidden="true"></i><span>Clear</span></a>
-			<button class="btn btn-outline-success records-search-action" type="submit"><i class="bi bi-search" aria-hidden="true"></i><span>Search All</span></button>
+			<button class="<?= btn('search') ?> records-search-action" type="submit"><i class="bi bi-search" aria-hidden="true"></i><span>Search</span></button>
+			<a class="<?= btn('clear') ?> records-search-action" href="<?= esc($sectorClearUrl(), 'attr') ?>"><i class="bi bi-x-lg" aria-hidden="true"></i><span>Clear</span></a>
 			<?php if ($canManage): ?>
-			<button class="btn btn-primary records-search-action js-sector-modal-open" type="button" data-sector-mode="create"><span>Add Sector</span></button>
+			<button class="<?= btn('add') ?> records-search-action js-sector-modal-open" type="button" data-sector-mode="create"><span>Add Sector</span></button>
 			<?php endif; ?>
 		</form>
+		<?= view('components/filter_pills', ['id' => 'sectorFilterPills']) ?>
 	</div>
 
 	<?php /* Controls row: page size (server) + local "Search:" live filter (client-side, no reload). */ ?>
@@ -38,7 +56,7 @@
 			</form>
 			<form class="records-table-search-form" role="search" data-lookup-search aria-label="Filter shown sectors">
 				<label for="sectorLocalSearch">Search:</label>
-				<input class="form-control form-control-sm" type="search" id="sectorLocalSearch" data-lookup-search-input placeholder="Type to filter..." autocomplete="off" aria-label="Filter shown sectors">
+				<input class="form-control form-control-sm" type="search" id="sectorLocalSearch" data-lookup-search-input placeholder="Filter loaded results..." autocomplete="off" aria-label="Filter shown sectors">
 			</form>
 		</div>
 	</div>

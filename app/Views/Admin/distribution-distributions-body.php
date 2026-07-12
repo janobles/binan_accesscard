@@ -17,7 +17,7 @@
                 <option value="<?= esc($t['name'], 'attr') ?>"><?= esc($t['name']) ?></option>
               <?php endforeach; ?>
             </select>
-            <button class="btn btn-outline-secondary records-search-action" type="button" id="distClear"><i class="bi bi-x-lg" aria-hidden="true"></i><span>Clear</span></button>
+            <button class="<?= btn('clear') ?> records-search-action" type="button" id="distClear"><i class="bi bi-x-lg" aria-hidden="true"></i><span>Clear</span></button>
           </div>
         </div>
 
@@ -36,7 +36,7 @@
             </div>
             <div class="records-table-search-form">
               <label for="distLocalSearch">Search:</label>
-              <input class="form-control form-control-sm" type="search" id="distLocalSearch" placeholder="Type to filter..." autocomplete="off">
+              <input class="form-control form-control-sm" type="search" id="distLocalSearch" placeholder="Filter loaded results..." autocomplete="off">
             </div>
           </div>
         </div>

@@ -7,19 +7,37 @@
  */
 ?>
 <div class="records-search-panel">
-                            <form class="records-search-row records-lookup-search js-audit-filter-form" method="get" action="<?= esc(site_url($listRoute), 'attr') ?>" role="search" aria-label="Search my activity">
-                                <input class="form-control" type="search" name="q" value="<?= esc($searchTerm, 'attr') ?>" placeholder="Search my activity by action or description" aria-label="Search my activity" autocomplete="off">
-                                <select class="form-select records-status-select js-audit-action-filter" name="action" aria-label="Filter by action">
-                                    <option value="">All actions</option>
-                                    <?php foreach ($auditActionOptions as $action): ?>
-                                        <?php $action = trim((string) $action); ?>
-                                        <option value="<?= esc($action) ?>" <?= $auditAction === $action ? 'selected' : '' ?>><?= esc($action) ?></option>
-                                    <?php endforeach; ?>
-                                </select>
+                            <form class="records-search-row records-lookup-search" method="get" action="<?= esc(site_url($listRoute), 'attr') ?>" role="search" aria-label="Search my activity" data-records-filter-form data-records-pills="activityFilterPills">
+                                <input class="form-control" type="search" name="q" value="<?= esc($searchTerm, 'attr') ?>" placeholder="Search entire database..." aria-label="Search my activity" autocomplete="off">
+                                <div class="dropdown" data-records-panel>
+                                    <button class="<?= btn('filter') ?> dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                                        <i class="bi bi-funnel" aria-hidden="true"></i> Filters
+                                    </button>
+                                    <div class="dropdown-menu records-filter-panel p-3">
+                                        <input class="form-control form-control-sm mb-2" type="search" placeholder="Search filters..." aria-label="Search filter options" data-records-narrow>
+                                        <div data-records-filter="action" data-records-group-label="Action">
+                                            <div class="fw-semibold small text-uppercase text-muted mb-1">Action</div>
+                                            <div class="records-filter-list overflow-auto">
+                                                <label class="form-check d-flex align-items-center gap-2 py-1" data-records-option>
+                                                    <input class="form-check-input m-0" type="radio" name="action" value="" data-records-default <?= $auditAction === '' ? 'checked' : '' ?>>
+                                                    <span class="form-check-label small">All actions</span>
+                                                </label>
+                                                <?php foreach ($auditActionOptions as $action): ?>
+                                                    <?php $action = trim((string) $action); ?>
+                                                    <label class="form-check d-flex align-items-center gap-2 py-1" data-records-option>
+                                                        <input class="form-check-input m-0" type="radio" name="action" value="<?= esc($action, 'attr') ?>" data-records-pill-label="<?= esc($action, 'attr') ?>" <?= $auditAction === $action ? 'checked' : '' ?>>
+                                                        <span class="form-check-label text-wrap small"><?= esc($action) ?></span>
+                                                    </label>
+                                                <?php endforeach; ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                                 <?php if ($perPage !== 50): ?><input type="hidden" name="per_page" value="<?= esc((string) $perPage, 'attr') ?>"><?php endif; ?>
-                                <a class="btn btn-danger records-search-action" href="<?= esc($auditClearUrl(), 'attr') ?>"><i class="bi bi-x-lg" aria-hidden="true"></i><span>Clear</span></a>
-                                <button class="btn btn-primary records-search-action" type="submit"><i class="bi bi-search" aria-hidden="true"></i><span>Search</span></button>
+                                <button class="<?= btn('search') ?> records-search-action" type="submit"><i class="bi bi-search" aria-hidden="true"></i><span>Search</span></button>
+                                <a class="<?= btn('clear') ?> records-search-action" href="<?= esc($auditClearUrl(), 'attr') ?>"><i class="bi bi-x-lg" aria-hidden="true"></i><span>Clear</span></a>
                             </form>
+                            <?= view('components/filter_pills', ['id' => 'activityFilterPills']) ?>
                         </div>
 
                         <div class="table-meta">
@@ -37,7 +55,7 @@
                                 </form>
                                 <form class="records-table-search-form" role="search" data-lookup-search aria-label="Filter shown activity">
                                     <label for="activityLocalSearch">Search:</label>
-                                    <input class="form-control form-control-sm" type="search" id="activityLocalSearch" data-lookup-search-input placeholder="Type to filter..." autocomplete="off" aria-label="Filter shown activity">
+                                    <input class="form-control form-control-sm" type="search" id="activityLocalSearch" data-lookup-search-input placeholder="Filter loaded results..." autocomplete="off" aria-label="Filter shown activity">
                                 </form>
                             </div>
                         </div>

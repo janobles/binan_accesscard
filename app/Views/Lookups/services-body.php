@@ -6,20 +6,38 @@
  */
 ?>
 <div class="records-search-panel">
-		<form class="records-search-row records-lookup-search" method="get" action="<?= esc(site_url($listRoute), 'attr') ?>" role="search" aria-label="Search the services database">
-			<input class="form-control" type="search" name="q" value="<?= esc($keyword, 'attr') ?>" placeholder="Search the whole services database" aria-label="Search the services database" autocomplete="off">
-			<select class="form-select records-status-select" id="service-status-select" name="status" data-lookup-status-select aria-label="Service view">
-				<option value="active" <?= $status === 'active' ? 'selected' : '' ?>>Active (<?= esc((string) $activeServiceCount) ?>)</option>
-				<option value="archived" <?= $status === 'archived' ? 'selected' : '' ?>>Archive (<?= esc((string) $archivedServiceCount) ?>)</option>
-				<option value="all" <?= $status === 'all' ? 'selected' : '' ?>>All (<?= esc((string) $allServiceCount) ?>)</option>
-			</select>
+		<form class="records-search-row records-lookup-search" method="get" action="<?= esc(site_url($listRoute), 'attr') ?>" role="search" aria-label="Search the services database" data-records-filter-form data-records-pills="serviceFilterPills">
+			<input class="form-control" type="search" name="q" value="<?= esc($keyword, 'attr') ?>" placeholder="Search entire database..." aria-label="Search the services database" autocomplete="off">
+			<div class="dropdown" data-records-panel>
+				<button class="<?= btn('filter') ?> dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+					<i class="bi bi-funnel" aria-hidden="true"></i> Filters
+				</button>
+				<div class="dropdown-menu records-filter-panel p-3">
+					<div data-records-filter="status" data-records-group-label="Status">
+						<div class="fw-semibold small text-uppercase text-muted mb-1">Status</div>
+						<label class="form-check d-flex align-items-center gap-2 py-1" data-records-option>
+							<input class="form-check-input m-0" type="radio" name="status" value="active" data-records-default <?= $status === 'active' ? 'checked' : '' ?>>
+							<span class="form-check-label small">Active (<?= esc((string) $activeServiceCount) ?>)</span>
+						</label>
+						<label class="form-check d-flex align-items-center gap-2 py-1" data-records-option>
+							<input class="form-check-input m-0" type="radio" name="status" value="archived" data-records-pill-label="Archived" <?= $status === 'archived' ? 'checked' : '' ?>>
+							<span class="form-check-label small">Archived (<?= esc((string) $archivedServiceCount) ?>)</span>
+						</label>
+						<label class="form-check d-flex align-items-center gap-2 py-1" data-records-option>
+							<input class="form-check-input m-0" type="radio" name="status" value="all" data-records-pill-label="All" <?= $status === 'all' ? 'checked' : '' ?>>
+							<span class="form-check-label small">All (<?= esc((string) $allServiceCount) ?>)</span>
+						</label>
+					</div>
+				</div>
+			</div>
 			<?php if ($perPage !== 50): ?><input type="hidden" name="per_page" value="<?= esc((string) $perPage, 'attr') ?>"><?php endif; ?>
-			<a class="btn btn-danger records-search-action" href="<?= esc($serviceClearUrl(), 'attr') ?>"><i class="bi bi-x-lg" aria-hidden="true"></i><span>Clear</span></a>
-			<button class="btn btn-outline-success records-search-action" type="submit"><i class="bi bi-search" aria-hidden="true"></i><span>Search All</span></button>
+			<button class="<?= btn('search') ?> records-search-action" type="submit"><i class="bi bi-search" aria-hidden="true"></i><span>Search</span></button>
+			<a class="<?= btn('clear') ?> records-search-action" href="<?= esc($serviceClearUrl(), 'attr') ?>"><i class="bi bi-x-lg" aria-hidden="true"></i><span>Clear</span></a>
 			<?php if ($canManage): ?>
-			<button class="btn btn-primary records-search-action js-service-modal-open" type="button" data-service-mode="create"><span>Add Program</span></button>
+			<button class="<?= btn('add') ?> records-search-action js-service-modal-open" type="button" data-service-mode="create"><span>Add Program</span></button>
 			<?php endif; ?>
 		</form>
+		<?= view('components/filter_pills', ['id' => 'serviceFilterPills']) ?>
 	</div>
 
 	<?php /* Controls row: page size (server) + local "Search:" live filter (client-side, no reload). */ ?>
@@ -38,7 +56,7 @@
 			</form>
 			<form class="records-table-search-form" role="search" data-lookup-search aria-label="Filter shown services">
 				<label for="serviceLocalSearch">Search:</label>
-				<input class="form-control form-control-sm" type="search" id="serviceLocalSearch" data-lookup-search-input placeholder="Type to filter..." autocomplete="off" aria-label="Filter shown services">
+				<input class="form-control form-control-sm" type="search" id="serviceLocalSearch" data-lookup-search-input placeholder="Filter loaded results..." autocomplete="off" aria-label="Filter shown services">
 			</form>
 		</div>
 	</div>

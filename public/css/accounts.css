@@ -241,6 +241,7 @@
     background: #ffffff;
 }
 
+/* Colors come from btn('clear') in the view; only layout lives here. */
 .account-filter-clear {
     display: inline-flex;
     align-items: center;
@@ -250,16 +251,6 @@
     border-radius: 0.35rem;
     font-weight: 700;
     white-space: nowrap;
-    color: #ffffff;
-    border-color: #b42318;
-    background-color: #b42318;
-}
-
-.account-filter-clear:hover,
-.account-filter-clear:focus {
-    color: #ffffff;
-    border-color: #8f1d14;
-    background-color: #8f1d14;
 }
 
 .account-table {

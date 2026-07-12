@@ -8,7 +8,7 @@
 use App\Libraries\ViewFormatter;
 ?>
         <div class="account-list-toolbar" role="search" aria-label="Filter accounts">
-            <input class="form-control" type="search" data-account-search placeholder="Search username..." autocomplete="off" aria-label="Search accounts by username">
+            <input class="form-control" type="search" data-account-search placeholder="Filter loaded results..." autocomplete="off" aria-label="Search accounts by username">
             <select class="form-select" data-account-level-filter aria-label="Filter by account level">
                 <option value="">Select Level</option>
                 <option value="administrator">Administrator</option>
@@ -21,12 +21,12 @@ use App\Libraries\ViewFormatter;
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
             </select>
-            <button class="btn btn-danger account-filter-clear" type="button" data-account-clear-filters>
+            <button class="<?= btn('clear') ?> account-filter-clear" type="button" data-account-clear-filters>
                 <i class="bi bi-x-lg" aria-hidden="true"></i>
                 <span>Clear</span>
             </button>
             <?php if ($canCreateAccounts): ?>
-                <button class="btn btn-success account-create-trigger js-open-account-create-modal" type="button" data-modal-url="<?= site_url('accounts/create') ?>" data-modal-title="Create Account">
+                <button class="<?= btn('add') ?> account-create-trigger js-open-account-create-modal" type="button" data-modal-url="<?= site_url('accounts/create') ?>" data-modal-title="Create Account">
                     <i class="bi bi-plus-lg" aria-hidden="true"></i>
                     <span>Create Account</span>
                 </button>

@@ -6,18 +6,36 @@
  */
 ?>
 <div class="records-search-panel">
-		<form class="records-search-row records-lookup-search" method="get" action="<?= esc(site_url($listRoute), 'attr') ?>" role="search" aria-label="Search the category database">
-			<input class="form-control" type="search" name="q" value="<?= esc($keyword, 'attr') ?>" placeholder="Search the whole category database" aria-label="Search the category database" autocomplete="off">
-			<select class="form-select records-status-select" id="category-status-select" name="status" data-lookup-status-select aria-label="Category view">
-				<option value="active" <?= $status === 'active' ? 'selected' : '' ?>>Active (<?= esc((string) $activeCategoryCount) ?>)</option>
-				<option value="archived" <?= $status === 'archived' ? 'selected' : '' ?>>Archive (<?= esc((string) $archivedCategoryCount) ?>)</option>
-				<option value="all" <?= $status === 'all' ? 'selected' : '' ?>>All (<?= esc((string) $allCategoryCount) ?>)</option>
-			</select>
+		<form class="records-search-row records-lookup-search" method="get" action="<?= esc(site_url($listRoute), 'attr') ?>" role="search" aria-label="Search the category database" data-records-filter-form data-records-pills="categoryFilterPills">
+			<input class="form-control" type="search" name="q" value="<?= esc($keyword, 'attr') ?>" placeholder="Search entire database..." aria-label="Search the category database" autocomplete="off">
+			<div class="dropdown" data-records-panel>
+				<button class="<?= btn('filter') ?> dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+					<i class="bi bi-funnel" aria-hidden="true"></i> Filters
+				</button>
+				<div class="dropdown-menu records-filter-panel p-3">
+					<div data-records-filter="status" data-records-group-label="Status">
+						<div class="fw-semibold small text-uppercase text-muted mb-1">Status</div>
+						<label class="form-check d-flex align-items-center gap-2 py-1" data-records-option>
+							<input class="form-check-input m-0" type="radio" name="status" value="active" data-records-default <?= $status === 'active' ? 'checked' : '' ?>>
+							<span class="form-check-label small">Active (<?= esc((string) $activeCategoryCount) ?>)</span>
+						</label>
+						<label class="form-check d-flex align-items-center gap-2 py-1" data-records-option>
+							<input class="form-check-input m-0" type="radio" name="status" value="archived" data-records-pill-label="Archived" <?= $status === 'archived' ? 'checked' : '' ?>>
+							<span class="form-check-label small">Archived (<?= esc((string) $archivedCategoryCount) ?>)</span>
+						</label>
+						<label class="form-check d-flex align-items-center gap-2 py-1" data-records-option>
+							<input class="form-check-input m-0" type="radio" name="status" value="all" data-records-pill-label="All" <?= $status === 'all' ? 'checked' : '' ?>>
+							<span class="form-check-label small">All (<?= esc((string) $allCategoryCount) ?>)</span>
+						</label>
+					</div>
+				</div>
+			</div>
 			<?php if ($perPage !== 50): ?><input type="hidden" name="per_page" value="<?= esc((string) $perPage, 'attr') ?>"><?php endif; ?>
-			<a class="btn btn-danger records-search-action" href="<?= esc($categoryClearUrl(), 'attr') ?>"><i class="bi bi-x-lg" aria-hidden="true"></i><span>Clear</span></a>
-			<button class="btn btn-outline-success records-search-action" type="submit"><i class="bi bi-search" aria-hidden="true"></i><span>Search All</span></button>
-			<button class="btn btn-primary records-search-action js-category-modal-open" type="button" data-category-mode="create"><i class="bi bi-plus-lg" aria-hidden="true"></i><span>Add Category</span></button>
+			<button class="<?= btn('search') ?> records-search-action" type="submit"><i class="bi bi-search" aria-hidden="true"></i><span>Search</span></button>
+			<a class="<?= btn('clear') ?> records-search-action" href="<?= esc($categoryClearUrl(), 'attr') ?>"><i class="bi bi-x-lg" aria-hidden="true"></i><span>Clear</span></a>
+			<button class="<?= btn('add') ?> records-search-action js-category-modal-open" type="button" data-category-mode="create"><i class="bi bi-plus-lg" aria-hidden="true"></i><span>Add Category</span></button>
 		</form>
+		<?= view('components/filter_pills', ['id' => 'categoryFilterPills']) ?>
 	</div>
 
 	<?php /* Controls row: page size (server) + local "Search:" live filter (client-side, no reload). */ ?>
@@ -36,7 +54,7 @@
 			</form>
 			<form class="records-table-search-form" role="search" data-lookup-search aria-label="Filter shown categories">
 				<label for="categoryLocalSearch">Search:</label>
-				<input class="form-control form-control-sm" type="search" id="categoryLocalSearch" data-lookup-search-input placeholder="Type to filter..." autocomplete="off" aria-label="Filter shown categories">
+				<input class="form-control form-control-sm" type="search" id="categoryLocalSearch" data-lookup-search-input placeholder="Filter loaded results..." autocomplete="off" aria-label="Filter shown categories">
 			</form>
 		</div>
 	</div>

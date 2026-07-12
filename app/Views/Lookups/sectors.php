@@ -12,7 +12,7 @@ $allSectorCount      = $activeSectorCount + $archivedSectorCount;
 $status              = (string) ($status ?? 'active');
 $keyword             = (string) ($keyword ?? '');
 $listRoute           = (string) ($listRoute ?? 'admin/sectors');
-$perPage             = (int) ($perPage ?? 50);
+$perPage             = (int) ($perPage ?? 25);
 $perPageOptions      = ($perPageOptions ?? []) ?: [10, 25, 50, 100];
 // Read-only roles (Viewer) see the list without Add / Edit / Archive / Restore.
 // Defaults true so the admin/developer sector page is unaffected.
@@ -23,7 +23,7 @@ $sectorPageUrl = static function (int $targetPage) use ($listRoute, $keyword, $s
     $params = array_filter([
         'q'        => $keyword,
         'status'   => $status === 'active' ? '' : $status,
-        'per_page' => $perPage !== 50 ? (string) $perPage : '',
+        'per_page' => $perPage !== 25 ? (string) $perPage : '',
         'page'     => $targetPage > 1 ? (string) $targetPage : '',
     ], static fn ($value): bool => $value !== '');
 
@@ -33,7 +33,7 @@ $sectorPageUrl = static function (int $targetPage) use ($listRoute, $keyword, $s
 // "Clear" resets the whole toolbar (keyword + status filter, back to page 1)
 // per the one-role-per-control rule; only the page size survives.
 $sectorClearUrl = static function () use ($listRoute, $perPage): string {
-    $params = $perPage !== 50 ? ['per_page' => (string) $perPage] : [];
+    $params = $perPage !== 25 ? ['per_page' => (string) $perPage] : [];
 
     return site_url($listRoute) . ($params === [] ? '' : '?' . http_build_query($params));
 };
@@ -50,7 +50,7 @@ $sectorClearUrl = static function () use ($listRoute, $perPage): string {
     'keyword' => $keyword,
     'clearUrl' => $sectorClearUrl(),
     'pillsId' => 'sectorFilterPills',
-    'hiddenHtml' => $perPage !== 50 ? '<input type="hidden" name="per_page" value="' . esc((string) $perPage, 'attr') . '">' : '',
+    'hiddenHtml' => $perPage !== 25 ? '<input type="hidden" name="per_page" value="' . esc((string) $perPage, 'attr') . '">' : '',
     'actionsHtml' => $canManage ? '<button class="' . btn('add') . ' flex-fill js-sector-modal-open" type="button" data-sector-mode="create">Add Sector</button>' : '',
     'radioGroups' => [[
         'name' => 'status',

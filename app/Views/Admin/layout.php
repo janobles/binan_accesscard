@@ -346,7 +346,7 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
 
                   [search, filter, local, perPage].forEach(el => el && el.addEventListener('input', render));
                   if (perPage) perPage.addEventListener('change', render);
-                  if (clear) clear.addEventListener('click', () => { search.value = ''; local.value = ''; filter.value = ''; perPage.value = '50'; render(); });
+                  if (clear) clear.addEventListener('click', () => { search.value = ''; local.value = ''; filter.value = ''; perPage.value = '25'; render(); });
                   render();
                 });
                 </script>

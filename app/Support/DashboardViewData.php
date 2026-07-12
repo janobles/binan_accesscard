@@ -145,7 +145,7 @@ class DashboardViewData
         $auditActionOptions = self::arrayValue($data['auditActionOptions'] ?? []);
         $hasSearchFilters = self::hasSearchFilters($searchTerm, $searchFilters);
         $auditPage = max(1, (int) ($data['auditPage'] ?? 1));
-        $auditPerPage = max(1, (int) ($data['auditPerPage'] ?? 50));
+        $auditPerPage = max(1, (int) ($data['auditPerPage'] ?? 25));
         $auditTotal = max(0, (int) ($data['auditTotal'] ?? count($recentAudits)));
         $auditTotalPages = max(1, (int) ($data['auditTotalPages'] ?? (int) ceil($auditTotal / $auditPerPage)));
         $auditFromRecord = max(0, (int) ($data['auditFromRecord'] ?? ($auditTotal === 0 ? 0 : (($auditPage - 1) * $auditPerPage) + 1)));
@@ -328,7 +328,7 @@ class DashboardViewData
             'status'        => $status,
             'keyword'       => (string) ($bundle['keyword'] ?? ''),
             'page'          => max(1, (int) ($bundle['page'] ?? 1)),
-            'perPage'       => max(1, (int) ($bundle['perPage'] ?? 50)),
+            'perPage'       => max(1, (int) ($bundle['perPage'] ?? 25)),
             'perPageOptions'=> array_values(array_map('intval', (array) ($bundle['perPageOptions'] ?? []))) ?: [10, 25, 50, 100],
             'totalPages'    => max(1, (int) ($bundle['totalPages'] ?? 1)),
             'totalRows'     => max(0, (int) ($bundle['totalRows'] ?? 0)),

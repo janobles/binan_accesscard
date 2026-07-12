@@ -31,12 +31,12 @@ if (! function_exists('family_list_url')) {
      * Builds a records-list URL carrying the current keyword/sector/date/status
      * and page. Frontend: the href for filter and pagination links.
      */
-    function family_list_url(string $listRoute, string $keyword, mixed $sectorId, string $date, string $status, int $page = 1, int $perPage = 50, mixed $barangay = ''): string
+    function family_list_url(string $listRoute, string $keyword, mixed $sectorId, string $date, string $status, int $page = 1, int $perPage = 25, mixed $barangay = ''): string
     {
         $params = ['page' => $page];
         $allowedPerPage = [10, 25, 50, 100];
 
-        if (in_array($perPage, $allowedPerPage, true) && $perPage !== 50) {
+        if (in_array($perPage, $allowedPerPage, true) && $perPage !== 25) {
             $params['per_page'] = $perPage;
         }
 
@@ -71,12 +71,12 @@ if (! function_exists('family_list_deep_url')) {
      * Builds a deep ("search the whole database") URL using deep_q/deep_page plus
      * the active filters. Frontend: the href for deep-search pagination links.
      */
-    function family_list_deep_url(string $listRoute, string $keyword, mixed $sectorId, string $date, string $status, int $page, int $perPage = 50, mixed $barangay = ''): string
+    function family_list_deep_url(string $listRoute, string $keyword, mixed $sectorId, string $date, string $status, int $page, int $perPage = 25, mixed $barangay = ''): string
     {
         $params = ['deep_q' => $keyword, 'deep_page' => $page];
         $allowedPerPage = [10, 25, 50, 100];
 
-        if (in_array($perPage, $allowedPerPage, true) && $perPage !== 50) {
+        if (in_array($perPage, $allowedPerPage, true) && $perPage !== 25) {
             $params['per_page'] = $perPage;
         }
 

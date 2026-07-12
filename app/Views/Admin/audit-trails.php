@@ -9,7 +9,7 @@ $hasSearchFilters   = $searchTerm !== '' || array_filter($searchFilters, static 
 // Pagination + page-size bundle (from DashboardPageBuilder::buildAuditListData).
 $listRoute      = (string) ($auditListData['listRoute'] ?? 'admin/audit-trails');
 $auditAction    = trim((string) ($searchFilters['action'] ?? ''));
-$perPage        = (int) ($auditListData['perPage'] ?? 50);
+$perPage        = (int) ($auditListData['perPage'] ?? 25);
 $perPageOptions = ($auditListData['perPageOptions'] ?? []) ?: [10, 25, 50, 100];
 $page           = (int) ($auditListData['page'] ?? 1);
 $totalPages     = (int) ($auditListData['totalPages'] ?? 1);
@@ -22,7 +22,7 @@ $auditPageUrl = static function (int $targetPage) use ($listRoute, $searchTerm, 
     $params = array_filter([
         'q'        => $searchTerm,
         'action'   => $auditAction,
-        'per_page' => $perPage !== 50 ? (string) $perPage : '',
+        'per_page' => $perPage !== 25 ? (string) $perPage : '',
         'page'     => $targetPage > 1 ? (string) $targetPage : '',
     ], static fn ($value): bool => $value !== '');
 
@@ -32,7 +32,7 @@ $auditPageUrl = static function (int $targetPage) use ($listRoute, $searchTerm, 
 // "Clear" resets the whole toolbar (keyword + action filter, back to page 1)
 // per the one-role-per-control rule; only the page size survives.
 $auditClearUrl = static function () use ($listRoute, $perPage): string {
-    $params = $perPage !== 50 ? ['per_page' => (string) $perPage] : [];
+    $params = $perPage !== 25 ? ['per_page' => (string) $perPage] : [];
 
     return site_url($listRoute) . ($params === [] ? '' : '?' . http_build_query($params));
 };
@@ -75,7 +75,7 @@ foreach ($auditActionOptions as $action) {
     'clearUrl' => $auditClearUrl(),
     'pillsId' => 'auditFilterPills',
     'narrow' => true,
-    'hiddenHtml' => $perPage !== 50 ? '<input type="hidden" name="per_page" value="' . esc((string) $perPage, 'attr') . '">' : '',
+    'hiddenHtml' => $perPage !== 25 ? '<input type="hidden" name="per_page" value="' . esc((string) $perPage, 'attr') . '">' : '',
     'radioGroups' => [[
         'name' => 'action',
         'label' => 'Action',

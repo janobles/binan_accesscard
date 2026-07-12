@@ -22,7 +22,7 @@ $allCategoryCount      = $activeCategoryCount + $archivedCategoryCount;
 $status                = (string) ($status ?? 'active');
 $keyword               = (string) ($keyword ?? '');
 $listRoute             = (string) ($listRoute ?? 'admin/categories');
-$perPage               = (int) ($perPage ?? 50);
+$perPage               = (int) ($perPage ?? 25);
 $perPageOptions        = ($perPageOptions ?? []) ?: [10, 25, 50, 100];
 
 // Builds a page URL preserving the current database keyword + status + page size.
@@ -30,7 +30,7 @@ $categoryPageUrl = static function (int $targetPage) use ($listRoute, $keyword, 
     $params = array_filter([
         'q'        => $keyword,
         'status'   => $status === 'active' ? '' : $status,
-        'per_page' => $perPage !== 50 ? (string) $perPage : '',
+        'per_page' => $perPage !== 25 ? (string) $perPage : '',
         'page'     => $targetPage > 1 ? (string) $targetPage : '',
     ], static fn ($value): bool => $value !== '');
 
@@ -40,7 +40,7 @@ $categoryPageUrl = static function (int $targetPage) use ($listRoute, $keyword, 
 // "Clear" resets the whole toolbar (keyword + status filter, back to page 1)
 // per the one-role-per-control rule; only the page size survives.
 $categoryClearUrl = static function () use ($listRoute, $perPage): string {
-    $params = $perPage !== 50 ? ['per_page' => (string) $perPage] : [];
+    $params = $perPage !== 25 ? ['per_page' => (string) $perPage] : [];
 
     return site_url($listRoute) . ($params === [] ? '' : '?' . http_build_query($params));
 };
@@ -55,7 +55,7 @@ $categoryClearUrl = static function () use ($listRoute, $perPage): string {
     'keyword' => $keyword,
     'clearUrl' => $categoryClearUrl(),
     'pillsId' => 'categoryFilterPills',
-    'hiddenHtml' => $perPage !== 50 ? '<input type="hidden" name="per_page" value="' . esc((string) $perPage, 'attr') . '">' : '',
+    'hiddenHtml' => $perPage !== 25 ? '<input type="hidden" name="per_page" value="' . esc((string) $perPage, 'attr') . '">' : '',
     'actionsHtml' => '<button class="' . btn('add') . ' flex-fill js-category-modal-open" type="button" data-category-mode="create">Add Category</button>',
     'radioGroups' => [[
         'name' => 'status',

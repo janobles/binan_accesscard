@@ -558,6 +558,15 @@ div.dt-container .dt-layout-cell {
     padding-right: 0;
 }
 
+/* Match the shared table_controls "Show N entries": DataTables' bootstrap5
+   build already gives the select .form-select-sm, but its label text stays
+   full-size and full-colour. Make it small + muted so the length control reads
+   identically to the lookup/audit pages (ui-design-system.md). */
+div.dt-container div.dt-length label {
+    font-size: .875em;
+    color: var(--bs-secondary-color);
+}
+
 div.dt-container div.dt-search {
     display: flex;
     align-items: center;

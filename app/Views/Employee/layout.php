@@ -141,7 +141,7 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
                     $auditListData = $auditListData ?? [];
                     $listRoute = (string) ($auditListData['listRoute'] ?? 'employee/activity');
                     $auditAction = trim((string) ($searchFilters['action'] ?? ''));
-                    $perPage = (int) ($auditListData['perPage'] ?? 50);
+                    $perPage = (int) ($auditListData['perPage'] ?? 25);
                     $perPageOptions = ($auditListData['perPageOptions'] ?? []) ?: [10, 25, 50, 100];
                     $page = (int) ($auditListData['page'] ?? 1);
                     $totalPages = (int) ($auditListData['totalPages'] ?? 1);
@@ -153,7 +153,7 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
                         $params = array_filter([
                             'q' => $searchTerm,
                             'action' => $auditAction,
-                            'per_page' => $perPage !== 50 ? (string) $perPage : '',
+                            'per_page' => $perPage !== 25 ? (string) $perPage : '',
                             'page' => $targetPage > 1 ? (string) $targetPage : '',
                         ], static fn ($value): bool => $value !== '');
 
@@ -163,7 +163,7 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
                     // "Clear" resets the whole toolbar (keyword + action filter, back to
                     // page 1) per the one-role-per-control rule; page size survives.
                     $auditClearUrl = static function () use ($listRoute, $perPage): string {
-                        $params = $perPage !== 50 ? ['per_page' => (string) $perPage] : [];
+                        $params = $perPage !== 25 ? ['per_page' => (string) $perPage] : [];
 
                         return site_url($listRoute) . ($params === [] ? '' : '?' . http_build_query($params));
                     };
@@ -183,7 +183,7 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
                         'clearUrl' => $auditClearUrl(),
                         'pillsId' => 'activityFilterPills',
                         'narrow' => true,
-                        'hiddenHtml' => $perPage !== 50 ? '<input type="hidden" name="per_page" value="' . esc((string) $perPage, 'attr') . '">' : '',
+                        'hiddenHtml' => $perPage !== 25 ? '<input type="hidden" name="per_page" value="' . esc((string) $perPage, 'attr') . '">' : '',
                         'radioGroups' => [[
                             'name' => 'action',
                             'label' => 'Action',

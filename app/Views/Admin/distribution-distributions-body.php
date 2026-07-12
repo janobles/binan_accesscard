@@ -34,7 +34,7 @@
             'searchButtonAttrs' => 'onclick="document.getElementById(\'distLocalSearch\').dispatchEvent(new Event(\'input\'))"',
             'sizeId' => 'distPerPage',
             'sizeAction' => null,
-            'perPage' => 50,
+            'perPage' => 25,
             'perPageOptions' => [10 => '10', 25 => '25', 50 => '50', 100 => '100', 0 => 'All'],
         ]) ?>
 

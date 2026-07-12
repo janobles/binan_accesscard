@@ -13,7 +13,7 @@ $allServiceCount      = $activeServiceCount + $archivedServiceCount;
 $status               = (string) ($status ?? 'active');
 $keyword              = (string) ($keyword ?? '');
 $listRoute            = (string) ($listRoute ?? 'admin/services');
-$perPage              = (int) ($perPage ?? 50);
+$perPage              = (int) ($perPage ?? 25);
 $perPageOptions       = ($perPageOptions ?? []) ?: [10, 25, 50, 100];
 // Read-only roles (Viewer) see the list without Add / Edit / Archive / Restore.
 // Defaults true so the admin/developer services page is unaffected.
@@ -24,7 +24,7 @@ $servicePageUrl = static function (int $targetPage) use ($listRoute, $keyword, $
     $params = array_filter([
         'q'        => $keyword,
         'status'   => $status === 'active' ? '' : $status,
-        'per_page' => $perPage !== 50 ? (string) $perPage : '',
+        'per_page' => $perPage !== 25 ? (string) $perPage : '',
         'page'     => $targetPage > 1 ? (string) $targetPage : '',
     ], static fn ($value): bool => $value !== '');
 
@@ -34,7 +34,7 @@ $servicePageUrl = static function (int $targetPage) use ($listRoute, $keyword, $
 // "Clear" resets the whole toolbar (keyword + status filter, back to page 1)
 // per the one-role-per-control rule; only the page size survives.
 $serviceClearUrl = static function () use ($listRoute, $perPage): string {
-    $params = $perPage !== 50 ? ['per_page' => (string) $perPage] : [];
+    $params = $perPage !== 25 ? ['per_page' => (string) $perPage] : [];
 
     return site_url($listRoute) . ($params === [] ? '' : '?' . http_build_query($params));
 };
@@ -51,7 +51,7 @@ $serviceClearUrl = static function () use ($listRoute, $perPage): string {
     'keyword' => $keyword,
     'clearUrl' => $serviceClearUrl(),
     'pillsId' => 'serviceFilterPills',
-    'hiddenHtml' => $perPage !== 50 ? '<input type="hidden" name="per_page" value="' . esc((string) $perPage, 'attr') . '">' : '',
+    'hiddenHtml' => $perPage !== 25 ? '<input type="hidden" name="per_page" value="' . esc((string) $perPage, 'attr') . '">' : '',
     'actionsHtml' => $canManage ? '<button class="' . btn('add') . ' flex-fill js-service-modal-open" type="button" data-service-mode="create">Add Program</button>' : '',
     'radioGroups' => [[
         'name' => 'status',

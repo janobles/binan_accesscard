@@ -72,6 +72,14 @@ RIGHT (`.records-table-controls`, space-between). The page search is a small
 input-group with an integrated `btn-primary` search-icon button. No "Search:"
 label text.
 
+The "Show N entries" control is small + muted text with a `form-select-sm`
+select; default page size is **25** everywhere (options 10/25/50/100). Server
+pages read it from `DashboardPageBuilder::recordsPerPage()` (default 25) and the
+`table_controls` component defaults `perPage` to 25 too; view sentinels that
+strip `per_page` from URLs compare against 25. Manage Records is a DataTables
+grid, not the shared component — its native `.dt-length` label is forced to
+small/muted in `managerecord.css` so it reads identically (pageLength 25).
+
 ## Rule 7: List page anatomy (Manage Records is the source of truth)
 
 Every list tab is the SAME composition as `Family/list.php` — no hand-rolled

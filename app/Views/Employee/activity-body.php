@@ -7,8 +7,15 @@
  */
 ?>
 <?php /* Search toolbar lives in Employee/layout.php, above this card (Manage Records standard). */ ?>
+                        <?php /* Controls row, Manage Records standard: page search left, show-entries right. */ ?>
                         <div class="table-meta">
                             <div class="records-table-controls">
+                                <form class="records-table-search-form" role="search" data-lookup-search aria-label="Search shown activity">
+                                    <div class="input-group input-group-sm">
+                                        <input class="form-control" type="search" id="activityLocalSearch" data-lookup-search-input placeholder="Search this page..." autocomplete="off" aria-label="Search this page">
+                                        <button class="btn btn-primary" type="submit" aria-label="Search this page"><i class="bi bi-search" aria-hidden="true"></i></button>
+                                    </div>
+                                </form>
                                 <form class="records-page-size-form" method="get" action="<?= esc(site_url($listRoute), 'attr') ?>">
                                     <?php if ($searchTerm !== ''): ?><input type="hidden" name="q" value="<?= esc($searchTerm, 'attr') ?>"><?php endif; ?>
                                     <?php if ($auditAction !== ''): ?><input type="hidden" name="action" value="<?= esc($auditAction, 'attr') ?>"><?php endif; ?>
@@ -19,10 +26,6 @@
                                         <?php endforeach; ?>
                                     </select>
                                     <span>entries</span>
-                                </form>
-                                <form class="records-table-search-form" role="search" data-lookup-search aria-label="Filter shown activity">
-                                    <label for="activityLocalSearch">Search:</label>
-                                    <input class="form-control form-control-sm" type="search" id="activityLocalSearch" data-lookup-search-input placeholder="Filter loaded results..." autocomplete="off" aria-label="Filter shown activity">
                                 </form>
                             </div>
                         </div>

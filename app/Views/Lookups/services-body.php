@@ -6,9 +6,15 @@
  */
 ?>
 <?php /* Search toolbar lives in services.php, above this card (Manage Records standard). */ ?>
-	<?php /* Controls row: page size (server) + local "Search:" live filter (client-side, no reload). */ ?>
+	<?php /* Controls row, Manage Records standard: page search left, show-entries right. */ ?>
 	<div class="table-meta">
 		<div class="records-table-controls">
+			<form class="records-table-search-form" role="search" data-lookup-search aria-label="Search shown services">
+				<div class="input-group input-group-sm">
+					<input class="form-control" type="search" id="serviceLocalSearch" data-lookup-search-input placeholder="Search this page..." autocomplete="off" aria-label="Search this page">
+					<button class="btn btn-primary" type="submit" aria-label="Search this page"><i class="bi bi-search" aria-hidden="true"></i></button>
+				</div>
+			</form>
 			<form class="records-page-size-form" method="get" action="<?= esc(site_url($listRoute), 'attr') ?>">
 				<?php if ($keyword !== ''): ?><input type="hidden" name="q" value="<?= esc($keyword, 'attr') ?>"><?php endif; ?>
 				<?php if ($status !== 'active'): ?><input type="hidden" name="status" value="<?= esc($status, 'attr') ?>"><?php endif; ?>
@@ -19,10 +25,6 @@
 					<?php endforeach; ?>
 				</select>
 				<span>entries</span>
-			</form>
-			<form class="records-table-search-form" role="search" data-lookup-search aria-label="Filter shown services">
-				<label for="serviceLocalSearch">Search:</label>
-				<input class="form-control form-control-sm" type="search" id="serviceLocalSearch" data-lookup-search-input placeholder="Filter loaded results..." autocomplete="off" aria-label="Filter shown services">
 			</form>
 		</div>
 	</div>

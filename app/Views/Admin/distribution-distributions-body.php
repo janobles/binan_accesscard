@@ -21,8 +21,15 @@
           </div>
         </div>
 
+        <?php /* Controls row, Manage Records standard: page search left, show-entries right. */ ?>
         <div class="table-meta">
           <div class="records-table-controls">
+            <div class="records-table-search-form" role="search" aria-label="Search shown distributions">
+              <div class="input-group input-group-sm">
+                <input class="form-control" type="search" id="distLocalSearch" placeholder="Search this page..." autocomplete="off" aria-label="Search this page">
+                <button class="btn btn-primary" type="button" aria-label="Search this page" onclick="document.getElementById('distLocalSearch').dispatchEvent(new Event('input'))"><i class="bi bi-search" aria-hidden="true"></i></button>
+              </div>
+            </div>
             <div class="records-page-size-form">
               <label for="distPerPage">Show</label>
               <select class="form-select form-select-sm" id="distPerPage">
@@ -33,10 +40,6 @@
                 <option value="0">All</option>
               </select>
               <span>entries</span>
-            </div>
-            <div class="records-table-search-form">
-              <label for="distLocalSearch">Search:</label>
-              <input class="form-control form-control-sm" type="search" id="distLocalSearch" placeholder="Filter loaded results..." autocomplete="off">
             </div>
           </div>
         </div>

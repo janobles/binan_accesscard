@@ -177,7 +177,8 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
                     ?>
                     <?= view('components/records_toolbar_server', [
                         'formAction' => site_url($listRoute),
-                        'formAria' => 'Search my activity',
+                        'formAria' => 'Search all my activity',
+                        'searchPlaceholder' => 'Search all my activity...',
                         'keyword' => $searchTerm,
                         'clearUrl' => $auditClearUrl(),
                         'pillsId' => 'activityFilterPills',

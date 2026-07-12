@@ -72,7 +72,7 @@
 
             quickSearchInput = dataTablesSearchInput.cloneNode(true);
             quickSearchInput.value = quickSearchTerm;
-            quickSearchInput.placeholder = 'Filter loaded results...';
+            quickSearchInput.placeholder = 'Search this page...';
             dataTablesSearchInput.parentNode.replaceChild(quickSearchInput, dataTablesSearchInput);
 
             quickSearchInput.addEventListener('input', function () {

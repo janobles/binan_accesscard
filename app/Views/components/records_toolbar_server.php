@@ -10,6 +10,7 @@
  * Variables:
  * - $formAction   string  GET target URL
  * - $formAria     string  aria-label for the form
+ * - $searchPlaceholder string entity-specific placeholder, e.g. "Search all sectors..."
  * - $keyword      string  current database keyword
  * - $clearUrl     string  full-reset URL (keyword + filters; page size survives)
  * - $pillsId      string  id for the components/filter_pills container
@@ -26,6 +27,7 @@
  */
 $formAction = (string) ($formAction ?? '');
 $formAria = (string) ($formAria ?? 'Search and filters');
+$searchPlaceholder = (string) ($searchPlaceholder ?? 'Search all records...');
 $keyword = trim((string) ($keyword ?? ''));
 $clearUrl = (string) ($clearUrl ?? $formAction);
 $pillsId = (string) ($pillsId ?? 'recordsFilterPills');
@@ -41,8 +43,8 @@ $radioGroups = (array) ($radioGroups ?? []);
             type="search"
             name="q"
             value="<?= esc($keyword, 'attr') ?>"
-            aria-label="Search entire database"
-            placeholder="Search entire database..."
+            aria-label="<?= esc($searchPlaceholder, 'attr') ?>"
+            placeholder="<?= esc($searchPlaceholder, 'attr') ?>"
             autocomplete="off"
         >
     </div>
@@ -56,9 +58,11 @@ $radioGroups = (array) ($radioGroups ?? []);
                 <?php if ($narrow): ?>
                     <input class="form-control form-control-sm mb-2" type="search" placeholder="Search filters..." aria-label="Search filter options" data-records-narrow>
                 <?php endif; ?>
-                <div class="row g-3">
+                <?php /* Flex, not row/cols: the panel hugs its content (see
+                         .records-filter-panel) and groups wrap on narrow screens. */ ?>
+                <div class="d-flex flex-wrap gap-4">
                     <?php foreach ($radioGroups as $group): ?>
-                        <div class="col-12 col-md" data-records-filter="<?= esc((string) $group['name'], 'attr') ?>" data-records-group-label="<?= esc((string) $group['label'], 'attr') ?>">
+                        <div data-records-filter="<?= esc((string) $group['name'], 'attr') ?>" data-records-group-label="<?= esc((string) $group['label'], 'attr') ?>">
                             <div class="fw-semibold small text-uppercase text-muted mb-1"><?= esc((string) $group['label']) ?></div>
                             <?php $scroll = (bool) ($group['scroll'] ?? false); ?>
                             <?php if ($scroll): ?><div class="records-filter-list overflow-auto"><?php endif; ?>

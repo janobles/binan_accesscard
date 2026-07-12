@@ -20,7 +20,7 @@ $accounts = array_merge($adminAccounts, $employeeAccounts, $viewerAccounts, $sca
              (accounts-modal.js) and records-filter-panel.js renders the pills — no reload. */ ?>
     <form class="row g-2 align-items-center mb-2" role="search" aria-label="Filter accounts" data-records-filter-form data-records-client data-records-pills="accountFilterPills">
         <div class="col-12 col-lg">
-            <input class="form-control" type="search" data-account-search placeholder="Filter loaded results..." autocomplete="off" aria-label="Search accounts by username">
+            <input class="form-control" type="search" data-account-search placeholder="Search accounts..." autocomplete="off" aria-label="Search accounts by username">
         </div>
 
         <div class="col-12 col-lg-auto">
@@ -29,8 +29,8 @@ $accounts = array_merge($adminAccounts, $employeeAccounts, $viewerAccounts, $sca
                     <i class="bi bi-funnel" aria-hidden="true"></i> Filters
                 </button>
                 <div class="dropdown-menu dropdown-menu-end records-filter-panel p-3">
-                    <div class="row g-3">
-                        <div class="col-12 col-md" data-records-filter="level" data-records-group-label="Level">
+                    <div class="d-flex flex-wrap gap-4">
+                        <div data-records-filter="level" data-records-group-label="Level">
                             <div class="fw-semibold small text-uppercase text-muted mb-1">Level</div>
                             <?php $accountLevels = ['' => 'All levels', 'administrator' => 'Administrator', 'encoder' => 'Encoder', 'viewer' => 'Viewer', 'scanner' => 'Scanner']; ?>
                             <?php foreach ($accountLevels as $value => $label): ?>
@@ -41,7 +41,7 @@ $accounts = array_merge($adminAccounts, $employeeAccounts, $viewerAccounts, $sca
                                 </label>
                             <?php endforeach; ?>
                         </div>
-                        <div class="col-12 col-md" data-records-filter="status" data-records-group-label="Status">
+                        <div data-records-filter="status" data-records-group-label="Status">
                             <div class="fw-semibold small text-uppercase text-muted mb-1">Status</div>
                             <?php $accountStatuses = ['' => 'All statuses', 'active' => 'Active', 'inactive' => 'Inactive']; ?>
                             <?php foreach ($accountStatuses as $value => $label): ?>

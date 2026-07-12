@@ -35,12 +35,18 @@ keyword input (grows) | Filters dropdown | two btn-groups separated by gap
 
 ## Rule 3: Filter panel
 
-Wide `.dropdown-menu` (`.records-filter-panel`, rules at the bottom of
-`public/css/managerecord.css`) with side-by-side columns and
-`data-bs-auto-close="outside"`. Checkboxes and radios live-apply (debounced
-in JS, see `FILTER_DEBOUNCE_MS`); NO Apply or Reset buttons inside the panel.
-Long option lists get a type-to-narrow input (`[data-records-narrow]`).
-Stock Bootstrap only; no drill-in submenus.
+`.dropdown-menu.records-filter-panel` (rules at the bottom of
+`public/css/managerecord.css`) with `data-bs-auto-close="outside"`.
+Checkboxes and radios live-apply (debounced in JS, see `FILTER_DEBOUNCE_MS`);
+NO Apply or Reset buttons inside the panel. Long option lists get a
+type-to-narrow input (`[data-records-narrow]`) and scroll inside a
+viewport-capped `.records-filter-list`. Stock Bootstrap only; no drill-in
+submenus.
+
+Sizing is content-driven, never fixed: the base panel is
+`width: max-content` capped at the viewport, so a lone Status group renders
+as a small flyout. Only a genuinely multi-column panel (Manage Records'
+sector/barangay/status) adds `.records-filter-panel--wide` for real width.
 
 ## Rule 4: Pills and the one-role-per-control rule
 
@@ -52,10 +58,19 @@ panel Reset.
 
 ## Rule 5: Dual search wording
 
-Toolbar input searches the whole database server-side, placeholder
-"Search entire database (incl. members)...". The in-table DataTables input
-filters loaded rows only, placeholder "Filter loaded results...". Keep both
-placeholders verbatim when retrofitting other tabs.
+Toolbar input searches the whole database server-side; its placeholder names
+the entity so the scope is obvious per tab: "Search all family records...",
+"Search all sectors...", "Search all services...", "Search all categories...",
+"Search all audit logs...", "Search all my activity...". The in-card input
+only searches what is already loaded — placeholder "Search this page..."
+everywhere (single-source pages like accounts say "Search accounts...").
+
+## Rule 6: In-card controls row
+
+Follow Manage Records: page search on the LEFT, "Show N entries" on the
+RIGHT (`.records-table-controls`, space-between). The page search is a small
+input-group with an integrated `btn-primary` search-icon button. No "Search:"
+label text.
 
 ## Retrofit status
 

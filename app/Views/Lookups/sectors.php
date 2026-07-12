@@ -45,7 +45,8 @@ $sectorClearUrl = static function () use ($listRoute, $perPage): string {
          data-sector-* attributes, the sector-modal include. */ ?>
 <?= view('components/records_toolbar_server', [
     'formAction' => site_url($listRoute),
-    'formAria' => 'Search the sector database',
+    'formAria' => 'Search all sectors',
+    'searchPlaceholder' => 'Search all sectors...',
     'keyword' => $keyword,
     'clearUrl' => $sectorClearUrl(),
     'pillsId' => 'sectorFilterPills',

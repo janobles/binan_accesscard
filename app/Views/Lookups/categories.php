@@ -50,7 +50,8 @@ $categoryClearUrl = static function () use ($listRoute, $perPage): string {
          records-filter-panel.js live-apply + pills). */ ?>
 <?= view('components/records_toolbar_server', [
     'formAction' => site_url($listRoute),
-    'formAria' => 'Search the category database',
+    'formAria' => 'Search all categories',
+    'searchPlaceholder' => 'Search all categories...',
     'keyword' => $keyword,
     'clearUrl' => $categoryClearUrl(),
     'pillsId' => 'categoryFilterPills',

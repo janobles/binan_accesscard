@@ -69,7 +69,8 @@ foreach ($auditActionOptions as $action) {
 ?>
 <?= view('components/records_toolbar_server', [
     'formAction' => site_url($listRoute),
-    'formAria' => 'Search the audit database',
+    'formAria' => 'Search all audit logs',
+    'searchPlaceholder' => 'Search all audit logs...',
     'keyword' => $searchTerm,
     'clearUrl' => $auditClearUrl(),
     'pillsId' => 'auditFilterPills',

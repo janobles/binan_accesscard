@@ -46,7 +46,8 @@ $serviceClearUrl = static function () use ($listRoute, $perPage): string {
          data-service-* attributes, the service-modal include. */ ?>
 <?= view('components/records_toolbar_server', [
     'formAction' => site_url($listRoute),
-    'formAria' => 'Search the services database',
+    'formAria' => 'Search all services',
+    'searchPlaceholder' => 'Search all services...',
     'keyword' => $keyword,
     'clearUrl' => $serviceClearUrl(),
     'pillsId' => 'serviceFilterPills',

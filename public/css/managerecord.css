@@ -648,15 +648,25 @@ div.dt-container div.dt-paging .page-link {
     line-height: 1.2;
 }
 
-/* Manage Records filter panel (components/records_toolbar.php). Wide
-   multi-column dropdown; columns scroll independently so the panel keeps a
-   fixed height. Collapses to stacked columns on small screens via the grid. */
+/* Filter panels (components/records_toolbar*.php). The panel hugs its
+   content — a lone Status group stays a small flyout — and caps at the
+   viewport so it never overflows on phones. Long option lists scroll inside
+   a viewport-relative height instead of growing the panel. */
 .records-filter-panel {
+    width: max-content;
+    min-width: 12rem;
+    max-width: min(92vw, 35rem);
+}
+
+/* Manage Records' three side-by-side columns need real width; the grid
+   collapses them to stacked columns on small screens. */
+.records-filter-panel--wide {
+    width: auto;
     min-width: min(560px, 92vw);
 }
 
 .records-filter-panel .records-filter-list {
-    max-height: 14rem;
+    max-height: min(50vh, 14rem);
 }
 
 /* Panel polish: checkboxes keep their size when a long label wraps, and the

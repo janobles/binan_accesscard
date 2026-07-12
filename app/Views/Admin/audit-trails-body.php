@@ -8,22 +8,27 @@
  */
 ?>
     <?php /* Bar 1 (database search) lives in audit-trails.php, above this card (Manage Records standard). */ ?>
-    <?php /* Bar 2: full-width "search this page" local filter (client-side, no reload) + show-entries. */ ?>
-    <div class="audit-table-toolbar">
-        <form class="records-table-search-form audit-page-search-form" role="search" data-lookup-search aria-label="Filter shown audit logs">
-            <input class="form-control audit-page-search" type="search" id="auditLocalSearch" data-lookup-search-input placeholder="Filter loaded results..." autocomplete="off" aria-label="Filter shown audit logs">
-        </form>
-        <form class="records-page-size-form audit-show-entries" method="get" action="<?= esc(site_url($listRoute), 'attr') ?>">
-            <?php if ($searchTerm !== ''): ?><input type="hidden" name="q" value="<?= esc($searchTerm, 'attr') ?>"><?php endif; ?>
-            <?php if ($auditAction !== ''): ?><input type="hidden" name="action" value="<?= esc($auditAction, 'attr') ?>"><?php endif; ?>
-            <label for="auditPerPage">Show</label>
-            <select class="form-select form-select-sm" id="auditPerPage" name="per_page" onchange="this.form.submit()">
-                <?php foreach ($perPageOptions as $option): ?>
-                    <option value="<?= esc((string) $option, 'attr') ?>" <?= $perPage === (int) $option ? 'selected' : '' ?>><?= esc((string) $option) ?></option>
-                <?php endforeach; ?>
-            </select>
-            <span>entries</span>
-        </form>
+    <?php /* Controls row, Manage Records standard: page search left, show-entries right. */ ?>
+    <div class="table-meta">
+        <div class="records-table-controls">
+            <form class="records-table-search-form" role="search" data-lookup-search aria-label="Search shown audit logs">
+                <div class="input-group input-group-sm">
+                    <input class="form-control" type="search" id="auditLocalSearch" data-lookup-search-input placeholder="Search this page..." autocomplete="off" aria-label="Search this page">
+                    <button class="btn btn-primary" type="submit" aria-label="Search this page"><i class="bi bi-search" aria-hidden="true"></i></button>
+                </div>
+            </form>
+            <form class="records-page-size-form" method="get" action="<?= esc(site_url($listRoute), 'attr') ?>">
+                <?php if ($searchTerm !== ''): ?><input type="hidden" name="q" value="<?= esc($searchTerm, 'attr') ?>"><?php endif; ?>
+                <?php if ($auditAction !== ''): ?><input type="hidden" name="action" value="<?= esc($auditAction, 'attr') ?>"><?php endif; ?>
+                <label for="auditPerPage">Show</label>
+                <select class="form-select form-select-sm" id="auditPerPage" name="per_page" onchange="this.form.submit()">
+                    <?php foreach ($perPageOptions as $option): ?>
+                        <option value="<?= esc((string) $option, 'attr') ?>" <?= $perPage === (int) $option ? 'selected' : '' ?>><?= esc((string) $option) ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <span>entries</span>
+            </form>
+        </div>
     </div>
 
     <div class="table-responsive">

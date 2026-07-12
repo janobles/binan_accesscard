@@ -100,33 +100,8 @@
 
 /* --- Audit log table reskin (CEDO-style layout: Date/Time · Action pill · Description ·
        User Agent · User; airy clickable rows; full-width "search this page" + show-entries). */
-.audit-table-toolbar {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.6rem 1rem;
-    padding: 0.85rem 1rem 0;
-}
-
-.audit-page-search-form {
-    flex: 1 1 100%;
-    margin: 0;
-}
-
-.audit-page-search {
-    width: 100%;
-    min-height: 2.5rem;
-}
-
-.audit-show-entries {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    margin-left: auto;
-    margin-bottom: 0;
-    color: #65736e;
-    font-size: 0.83rem;
-}
+/* The controls row (page search + show-entries) is the shared
+   .records-table-controls layout from managerecord.css. */
 
 .audit-show-entries label {
     margin: 0;

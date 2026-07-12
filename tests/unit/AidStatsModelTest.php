@@ -21,16 +21,16 @@ final class AidStatsModelTest extends CIUnitTestCase
         $this->assertIsArray((new AidStatsModel())->byBarangay());
     }
 
-    public function testByAidTypeReturnsArray(): void
+    public function testByServiceReturnsArray(): void
     {
-        $this->assertIsArray((new AidStatsModel())->byAidType());
+        $this->assertIsArray((new AidStatsModel())->byService());
     }
 
     public function testMethodsAcceptNullBatchIdWithoutError(): void
     {
         $m = new AidStatsModel();
         $this->assertIsArray($m->byBarangay(null));
-        $this->assertIsArray($m->byAidType(null));
+        $this->assertIsArray($m->byService(null));
     }
 
     public function testMethodsAcceptBatchIdWithoutError(): void
@@ -38,7 +38,7 @@ final class AidStatsModelTest extends CIUnitTestCase
         $m = new AidStatsModel();
         $this->assertIsArray($m->receivedVsNot(3));
         $this->assertIsArray($m->byBarangay(3));
-        $this->assertIsArray($m->byAidType(3));
+        $this->assertIsArray($m->byService(3));
     }
 
     public function testPerScannerReturnsArrayAndRejectsBadBatch(): void

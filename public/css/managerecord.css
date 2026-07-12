@@ -681,3 +681,18 @@ div.dt-container .dt-layout-row {
     margin-left: 0;
     margin-right: 0;
 }
+
+/* On small screens the in-card controls stack like the toolbar does: quick
+   search stretches the full row, page-length row aligns left instead of the
+   DataTables default centered layout. */
+@media (max-width: 991.98px) {
+    div.dt-container div.dt-search,
+    div.dt-container div.dt-search input {
+        width: 100%;
+    }
+
+    div.dt-container .dt-layout-cell {
+        justify-content: flex-start;
+        text-align: start;
+    }
+}

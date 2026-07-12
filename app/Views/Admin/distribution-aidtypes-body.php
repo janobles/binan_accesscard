@@ -8,10 +8,9 @@
  */
 $canManageAidTypes = in_array($currentRole ?? '', ['Admin', 'Developer'], true);
 ?>
-<div class="records-search-panel">
-          <div class="records-search-row justify-content-end">
-            <button class="<?= btn('add') ?> records-search-action" type="button" data-bs-toggle="modal" data-bs-target="#addAidTypeModal"><i class="bi bi-plus-lg" aria-hidden="true"></i><span>Add Aid Type</span></button>
-          </div>
+<?php /* Action row: Bootstrap utilities inside the card-body's own padding. */ ?>
+<div class="d-flex justify-content-end mb-3">
+          <button class="<?= btn('add') ?>" type="button" data-bs-toggle="modal" data-bs-target="#addAidTypeModal"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add Aid Type</button>
         </div>
 
         <div class="table-responsive">

@@ -72,6 +72,30 @@ RIGHT (`.records-table-controls`, space-between). The page search is a small
 input-group with an integrated `btn-primary` search-icon button. No "Search:"
 label text.
 
+## Rule 7: List page anatomy (Manage Records is the source of truth)
+
+Every list tab is the SAME composition as `Family/list.php` — no hand-rolled
+layout markup, no page-specific layout CSS:
+
+1. Toolbar ABOVE the card: `components/records_toolbar` (family, AJAX) or
+   `components/records_toolbar_server` (everything else). Pills row renders
+   with it.
+2. `components/card` with stock `.card` chrome — page CSS must never override
+   the card border/radius/background, re-pad the card-body, or set
+   `height: 100%` (that caused the dead space under short tables).
+3. First thing inside the body: `components/table_controls` (page search
+   left, show-entries right). Never copy its markup inline.
+4. The table: `.manage-record-table` typography is canonical (0.7rem/700
+   uppercase th, 0.85rem td, no bold name cells). Page CSS may add column
+   widths/badges only.
+5. `components/table_footer` as the card footer for server pagination.
+
+Page CSS files (`lookupmanagement/audittrails/accounts.css`) hold ONLY
+page-unique rules: badges, modals, column widths. Anything about toolbars,
+controls rows, card chrome, or cell typography belongs to the shared layer
+(`managerecord.css` + the components). If a new rule would apply to two
+pages, it goes in the shared layer.
+
 ## Retrofit status
 
 - The toolbar always renders ABOVE the page's card (never inside it), pills

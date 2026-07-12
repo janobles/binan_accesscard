@@ -6,82 +6,11 @@
     overflow: hidden;
 }
 
-.sector-toolbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: nowrap;
-    gap: 0.75rem;
-    padding: 0.85rem 1rem;
-    border-bottom: 1px solid #e2e9e7;
-}
-
-.sector-lookup-toolbar {
-    justify-content: flex-start;
-}
-
-/* Bar 2 — the whole-database search row sits directly under the Bar 1 toolbar. */
-.sector-database-search {
-    padding-top: 0.55rem;
-}
-
-/* Manage Records is card-less and gets its side padding from the page content area;
-   inside the bordered .sector-management card we supply that padding on the search
-   panel so its inputs align with the controls row, table cells and footer (all 1rem). */
+/* The QR card generator (Cards/batch_form.php) still uses the old
+   .records-search-panel layout inside a .sector-management card. */
 .sector-management .records-search-panel {
     margin: 0;
     padding: 0.85rem 1rem 1rem;
-}
-
-/* Lookup pages reuse Manage Records' .records-* layout (managerecord.css), but the
-   top database form has only 5 controls (keyword + status + Clear/Search/Add), not
-   the 7 of .records-quick-search — so it needs its own grid template. */
-.records-lookup-search {
-    grid-template-columns: minmax(22rem, 1fr) minmax(7.5rem, 10rem) repeat(3, minmax(6.25rem, 8.5rem));
-}
-
-@media (max-width: 62rem) {
-    .records-lookup-search {
-        grid-template-columns: repeat(2, minmax(9rem, 1fr));
-    }
-}
-
-@media (max-width: 40rem) {
-    .records-lookup-search {
-        grid-template-columns: repeat(2, minmax(8rem, 1fr));
-    }
-}
-
-/* "Showing X–Y of Z" meta line + Prev/Next pagination under the list. */
-.lookup-list-footer {
-    flex: 0 0 auto;
-    padding: 0.75rem 1rem;
-}
-
-.sector-toolbar-search {
-    flex: 1 1 28rem;
-    min-width: 16rem;
-}
-
-.sector-status-select {
-    flex: 0 0 auto;
-    width: auto;
-    min-width: 7.5rem;
-    border-color: #198754;
-    background-color: #ffffff;
-    color: #12684f;
-    font-weight: 700;
-}
-
-.sector-toolbar-action {
-    flex: 0 0 auto;
-    justify-content: center;
-    min-width: 8.5rem;
-}
-
-#sector-add-btn-wrap,
-#service-add-btn-wrap {
-    flex: 0 0 auto;
 }
 
 .sector-management .btn {
@@ -90,75 +19,8 @@
     gap: 0.4rem;
 }
 
-.sector-searchbar {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 0.75rem;
-    padding: 1rem;
-    border-bottom: 1px solid #e2e9e7;
-    background: #fbfcfc;
-}
-
-.sector-searchbar .form-control,
-.sector-searchbar .btn {
-    min-height: 2.5rem;
-    font-size: 0.88rem;
-}
-
-.sector-searchbar .form-control {
-    width: 100%;
-    min-width: 0;
-}
-
-.sector-searchbar-actions {
-    display: grid;
-    grid-template-columns: repeat(2, 8.5rem);
-    gap: 0.75rem;
-    justify-self: end;
-    min-width: 0;
-}
-
-.sector-searchbar-action {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.4rem;
-    width: 8.5rem;
-}
-
-.sector-table {
-    min-width: 42rem;
-    margin: 0;
-    table-layout: auto;
-}
-
-.sector-table th {
-    padding: 0.8rem 1rem;
-    border-bottom-color: #cedbd7;
-    background: #f4f7f7;
-    color: #53635e;
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    word-break: keep-all;
-}
-
-.sector-table td {
-    padding: 0.85rem 1rem;
-    border-bottom-color: #e4ece9;
-    color: #34443f;
-    font-size: 0.85rem;
-    overflow-wrap: break-word;
-    word-break: normal;
-}
-
-.sector-table tbody tr:last-child td {
-    border-bottom: 0;
-}
-
-.sector-name {
-    font-weight: 700;
-}
+/* .sector-name carries no styling of its own: name cells read like every
+   other cell, matching the Manage Records table. */
 
 .lookup-management-table {
     min-width: 52rem;
@@ -427,88 +289,7 @@
     justify-content: center;
 }
 
-@media (max-width: 70rem) {
-    .sector-toolbar {
-        overflow-x: auto;
-    }
-
-    .sector-toolbar-search {
-        flex: 0 0 min(28rem, 48vw);
-    }
-}
-
 @media (max-width: 48rem) {
-    .sector-toolbar {
-        align-items: center;
-        flex-direction: row;
-        flex-wrap: nowrap;
-        gap: 0.55rem;
-        overflow-x: auto;
-        padding: 0.8rem;
-    }
-
-    .sector-toolbar-search {
-        width: min(16rem, 58vw);
-        min-width: 12rem;
-    }
-
-    .sector-status-select,
-    .sector-toolbar-action,
-    #sector-add-btn-wrap,
-    #service-add-btn-wrap {
-        flex: 0 0 auto;
-    }
-
-    .sector-status-select,
-    .sector-toolbar-action {
-        justify-content: center;
-        min-height: 2.2rem;
-        padding: 0.4rem 0.7rem;
-        font-size: 0.8rem;
-    }
-
-    .sector-status-select {
-        min-width: 8.25rem;
-    }
-
-    .sector-toolbar-action {
-        min-width: 6.75rem;
-    }
-
-    .sector-searchbar {
-        grid-template-columns: minmax(8rem, 1fr) auto;
-        gap: 0.55rem;
-        overflow-x: auto;
-        padding: 0.7rem;
-    }
-
-    .sector-searchbar .form-control,
-    .sector-searchbar .btn {
-        min-height: 2.25rem;
-        font-size: 0.8rem;
-    }
-
-    .sector-searchbar-actions {
-        width: auto;
-        grid-template-columns: repeat(2, 6.75rem);
-        gap: 0.5rem;
-    }
-
-    .sector-searchbar-action {
-        width: 6.75rem;
-    }
-
-    .sector-table {
-        min-width: 38rem;
-    }
-
-    .sector-table th,
-    .sector-table td {
-        padding: 0.5rem 0.45rem;
-        font-size: 0.68rem;
-        line-height: 1.22;
-    }
-
     .lookup-management-table {
         min-width: 46rem;
     }

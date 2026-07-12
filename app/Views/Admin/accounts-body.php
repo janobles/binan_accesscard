@@ -37,7 +37,7 @@ use App\Libraries\ViewFormatter;
                         $hasRowActions = $canEditRow || $canDeveloperToggle || $canAdminToggle;
                         ?>
                         <tr data-account-row data-account-username="<?= esc(mb_strtolower((string) ($account['username'] ?? '')), 'attr') ?>" data-account-role="<?= esc(mb_strtolower($rawRole), 'attr') ?>" data-account-status="<?= esc($statusFilter, 'attr') ?>">
-                            <td><strong><?= esc((string) ($account['username'] ?? '')) ?></strong></td>
+                            <td><?= esc((string) ($account['username'] ?? '')) ?></td>
                             <td><?= esc($roleLabel) ?></td>
                             <td><span class="account-status-badge <?= esc($statusClass) ?>"><?= esc($statusLabel) ?></span></td>
                             <td class="text-end">

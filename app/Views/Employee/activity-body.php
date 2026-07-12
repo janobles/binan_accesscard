@@ -7,28 +7,18 @@
  */
 ?>
 <?php /* Search toolbar lives in Employee/layout.php, above this card (Manage Records standard). */ ?>
-                        <?php /* Controls row, Manage Records standard: page search left, show-entries right. */ ?>
-                        <div class="table-meta">
-                            <div class="records-table-controls">
-                                <form class="records-table-search-form" role="search" data-lookup-search aria-label="Search shown activity">
-                                    <div class="input-group input-group-sm">
-                                        <input class="form-control" type="search" id="activityLocalSearch" data-lookup-search-input placeholder="Search this page..." autocomplete="off" aria-label="Search this page">
-                                        <button class="btn btn-primary" type="submit" aria-label="Search this page"><i class="bi bi-search" aria-hidden="true"></i></button>
-                                    </div>
-                                </form>
-                                <form class="records-page-size-form" method="get" action="<?= esc(site_url($listRoute), 'attr') ?>">
-                                    <?php if ($searchTerm !== ''): ?><input type="hidden" name="q" value="<?= esc($searchTerm, 'attr') ?>"><?php endif; ?>
-                                    <?php if ($auditAction !== ''): ?><input type="hidden" name="action" value="<?= esc($auditAction, 'attr') ?>"><?php endif; ?>
-                                    <label for="activityPerPage">Show</label>
-                                    <select class="form-select form-select-sm" id="activityPerPage" name="per_page" onchange="this.form.submit()">
-                                        <?php foreach ($perPageOptions as $option): ?>
-                                            <option value="<?= esc((string) $option, 'attr') ?>" <?= $perPage === (int) $option ? 'selected' : '' ?>><?= esc((string) $option) ?></option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                    <span>entries</span>
-                                </form>
-                            </div>
-                        </div>
+                        <?= view('components/table_controls', [
+                            'searchId' => 'activityLocalSearch',
+                            'searchAria' => 'Search shown activity',
+                            'searchFormAttrs' => 'data-lookup-search',
+                            'searchInputAttrs' => 'data-lookup-search-input',
+                            'sizeId' => 'activityPerPage',
+                            'sizeAction' => site_url($listRoute),
+                            'sizeHiddenHtml' => ($searchTerm !== '' ? '<input type="hidden" name="q" value="' . esc($searchTerm, 'attr') . '">' : '')
+                                . ($auditAction !== '' ? '<input type="hidden" name="action" value="' . esc($auditAction, 'attr') . '">' : ''),
+                            'perPage' => $perPage,
+                            'perPageOptions' => $perPageOptions,
+                        ]) ?>
 
                         <div class="table-responsive">
                             <table class="table align-middle">

@@ -6,28 +6,18 @@
  */
 ?>
 <?php /* Search toolbar lives in services.php, above this card (Manage Records standard). */ ?>
-	<?php /* Controls row, Manage Records standard: page search left, show-entries right. */ ?>
-	<div class="table-meta">
-		<div class="records-table-controls">
-			<form class="records-table-search-form" role="search" data-lookup-search aria-label="Search shown services">
-				<div class="input-group input-group-sm">
-					<input class="form-control" type="search" id="serviceLocalSearch" data-lookup-search-input placeholder="Search this page..." autocomplete="off" aria-label="Search this page">
-					<button class="btn btn-primary" type="submit" aria-label="Search this page"><i class="bi bi-search" aria-hidden="true"></i></button>
-				</div>
-			</form>
-			<form class="records-page-size-form" method="get" action="<?= esc(site_url($listRoute), 'attr') ?>">
-				<?php if ($keyword !== ''): ?><input type="hidden" name="q" value="<?= esc($keyword, 'attr') ?>"><?php endif; ?>
-				<?php if ($status !== 'active'): ?><input type="hidden" name="status" value="<?= esc($status, 'attr') ?>"><?php endif; ?>
-				<label for="servicePerPage">Show</label>
-				<select class="form-select form-select-sm" id="servicePerPage" name="per_page" onchange="this.form.submit()">
-					<?php foreach ($perPageOptions as $option): ?>
-						<option value="<?= esc((string) $option, 'attr') ?>" <?= $perPage === (int) $option ? 'selected' : '' ?>><?= esc((string) $option) ?></option>
-					<?php endforeach; ?>
-				</select>
-				<span>entries</span>
-			</form>
-		</div>
-	</div>
+	<?= view('components/table_controls', [
+		'searchId' => 'serviceLocalSearch',
+		'searchAria' => 'Search shown services',
+		'searchFormAttrs' => 'data-lookup-search',
+		'searchInputAttrs' => 'data-lookup-search-input',
+		'sizeId' => 'servicePerPage',
+		'sizeAction' => site_url($listRoute),
+		'sizeHiddenHtml' => ($keyword !== '' ? '<input type="hidden" name="q" value="' . esc($keyword, 'attr') . '">' : '')
+			. ($status !== 'active' ? '<input type="hidden" name="status" value="' . esc($status, 'attr') . '">' : ''),
+		'perPage' => $perPage,
+		'perPageOptions' => $perPageOptions,
+	]) ?>
 
 	<div class="table-responsive">
 		<table class="table manage-record-table align-middle lookup-management-table lookup-management-table--services">

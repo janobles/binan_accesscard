@@ -78,28 +78,12 @@
     overflow-wrap: anywhere;
 }
 
-/* Bar 1 (database search) is the stock Bootstrap-grid toolbar
-   (components/records_toolbar_server) rendered above the card; the employee
-   shell doesn't load lookupmanagement.css, so the footer rules audit relies
-   on are defined here (loaded by both the admin and employee shells). */
-[data-audit-management-root] .lookup-list-footer {
-    flex: 0 0 auto;
-    padding: 0.75rem 1rem;
-}
-
-/* The admin audit card (.audit-trails) is a bordered overflow:hidden panel with no inner
-   padding of its own, so pad the database-search row to line up with the 1rem table cells.
-   (The employee Activity panel supplies its own padding, so it is left untouched.) */
-.audit-trails .records-search-panel {
-    padding-top: 0.85rem;
-    padding-left: 1rem;
-    padding-right: 1rem;
-}
+/* Bar 1 (database search) is the shared components/records_toolbar_server
+   toolbar rendered above the card; the controls row and footer are shared
+   components too, so no audit-specific layout rules remain. */
 
 /* --- Audit log table reskin (CEDO-style layout: Date/Time · Action pill · Description ·
-       User Agent · User; airy clickable rows; full-width "search this page" + show-entries). */
-/* The controls row (page search + show-entries) is the shared
-   .records-table-controls layout from managerecord.css. */
+       User Agent · User; airy clickable rows). */
 
 .audit-show-entries label {
     margin: 0;
@@ -164,11 +148,9 @@
     overflow-wrap: anywhere;
 }
 
+/* Cell typography matches .manage-record-table; only the uppercase treatment
+   for usernames is audit-specific. */
 .audit-user {
-    color: #34443f;
-    font-size: 0.8rem;
-    font-weight: 700;
-    letter-spacing: 0.02em;
     text-transform: uppercase;
     white-space: nowrap;
 }

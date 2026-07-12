@@ -128,7 +128,10 @@ class SearchModel
                 // m.headID. Members without a control number sort last.
                 $builder->join('qr_control qc_sort', 'qc_sort.headID = m.headID', 'left')
                     ->orderBy('qc_sort.control_no IS NULL', 'ASC', false)
-                    ->orderBy('qc_sort.control_no', $direction);
+                    ->orderBy('qc_sort.control_no', $direction)
+                    // Family members share the head's control number; memberID
+                    // breaks the tie so pagination stays stable.
+                    ->orderBy('m.memberID', $direction);
                 return;
             case 'newest':
                 $builder->orderBy('m.memberID', 'DESC');

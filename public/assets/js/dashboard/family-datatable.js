@@ -220,9 +220,19 @@
 
         // Explicit keyword search. Switches to the whole-database scope so the
         // keyword also matches non-head family members.
+        // Cancels a pending live-apply reload before an immediate one so the
+        // stale timer does not fire a duplicate request afterwards.
+        function cancelPendingFilterReload() {
+            if (debounceTimer) {
+                window.clearTimeout(debounceTimer);
+                debounceTimer = null;
+            }
+        }
+
         filterForm.addEventListener('submit', function (event) {
             event.preventDefault();
             scope = 'all';
+            cancelPendingFilterReload();
             dataTable.ajax.reload(null, true);
         });
 
@@ -271,6 +281,7 @@
                 }
                 scope = 'heads';
                 renderFilterPills();
+                cancelPendingFilterReload();
                 dataTable.order([[0, 'asc']]);
                 dataTable.ajax.reload(null, true);
             });

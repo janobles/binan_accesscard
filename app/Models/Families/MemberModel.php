@@ -263,7 +263,10 @@ class MemberModel extends Model
                 // control number sort last in either direction.
                 $builder->join('qr_control qc_sort', 'qc_sort.headID = member.memberID', 'left')
                     ->orderBy('qc_sort.control_no IS NULL', 'ASC', false)
-                    ->orderBy('qc_sort.control_no', $direction);
+                    ->orderBy('qc_sort.control_no', $direction)
+                    // memberID breaks ties among heads without a control number
+                    // so pagination stays stable.
+                    ->orderBy('member.memberID', $direction);
                 return;
             case 'name':
                 $builder->orderBy('member.lastname', $direction)

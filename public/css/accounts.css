@@ -220,38 +220,8 @@
     font-weight: 700;
 }
 
-.account-create-trigger {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.4rem;
-    min-height: 2.65rem;
-    border-radius: 0.35rem;
-    font-weight: 700;
-    white-space: nowrap;
-}
-
-.account-list-toolbar {
-    display: grid;
-    grid-template-columns: minmax(14rem, 1fr) minmax(10rem, 12rem) minmax(10rem, 12rem) minmax(6.5rem, 8rem) minmax(8.5rem, 10rem);
-    gap: 0.75rem;
-    padding: 0.85rem 1rem;
-    border-top: 1px solid #e2e9e7;
-    border-bottom: 1px solid #e2e9e7;
-    background: #ffffff;
-}
-
-/* Colors come from btn('clear') in the view; only layout lives here. */
-.account-filter-clear {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.4rem;
-    min-height: 2.65rem;
-    border-radius: 0.35rem;
-    font-weight: 700;
-    white-space: nowrap;
-}
+/* The filter toolbar is stock Bootstrap grid + btn() markup in
+   Admin/accounts.php (Manage Records standard); no custom rules needed. */
 
 .account-table {
     min-width: 36rem;
@@ -356,7 +326,6 @@
 
 @media (max-width: 48rem) {
     .account-card-header,
-    .account-list-toolbar,
     .account-create-grid {
         padding: 0.85rem;
     }
@@ -398,11 +367,6 @@
 
     .account-create-actions .btn {
         width: 100%;
-    }
-
-    .account-list-toolbar {
-        grid-template-columns: 1fr;
-        gap: 0.6rem;
     }
 
     .account-table {

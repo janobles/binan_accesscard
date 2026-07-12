@@ -169,6 +169,28 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
                     };
                     ?>
                     <?php
+                    $activityActionRadios = [['value' => '', 'label' => 'All actions', 'checked' => $auditAction === '', 'default' => true]];
+                    foreach ($auditActionOptions as $action) {
+                        $action = trim((string) $action);
+                        $activityActionRadios[] = ['value' => $action, 'label' => $action, 'pill' => $action, 'checked' => $auditAction === $action];
+                    }
+                    ?>
+                    <?= view('components/records_toolbar_server', [
+                        'formAction' => site_url($listRoute),
+                        'formAria' => 'Search my activity',
+                        'keyword' => $searchTerm,
+                        'clearUrl' => $auditClearUrl(),
+                        'pillsId' => 'activityFilterPills',
+                        'narrow' => true,
+                        'hiddenHtml' => $perPage !== 50 ? '<input type="hidden" name="per_page" value="' . esc((string) $perPage, 'attr') . '">' : '',
+                        'radioGroups' => [[
+                            'name' => 'action',
+                            'label' => 'Action',
+                            'scroll' => true,
+                            'options' => $activityActionRadios,
+                        ]],
+                    ]) ?>
+                    <?php
                     $activityFooter = $totalRows > 0 ? view('components/table_footer', [
                         'fromRecord' => $fromRecord,
                         'toRecord' => $toRecord,

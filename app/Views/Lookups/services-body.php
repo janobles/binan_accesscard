@@ -5,41 +5,7 @@
  * view's get_defined_vars(), matching its existing extract() convention).
  */
 ?>
-<div class="records-search-panel">
-		<form class="records-search-row records-lookup-search" method="get" action="<?= esc(site_url($listRoute), 'attr') ?>" role="search" aria-label="Search the services database" data-records-filter-form data-records-pills="serviceFilterPills">
-			<input class="form-control" type="search" name="q" value="<?= esc($keyword, 'attr') ?>" placeholder="Search entire database..." aria-label="Search the services database" autocomplete="off">
-			<div class="dropdown" data-records-panel>
-				<button class="<?= btn('filter') ?> dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
-					<i class="bi bi-funnel" aria-hidden="true"></i> Filters
-				</button>
-				<div class="dropdown-menu records-filter-panel p-3">
-					<div data-records-filter="status" data-records-group-label="Status">
-						<div class="fw-semibold small text-uppercase text-muted mb-1">Status</div>
-						<label class="form-check d-flex align-items-center gap-2 py-1" data-records-option>
-							<input class="form-check-input m-0" type="radio" name="status" value="active" data-records-default <?= $status === 'active' ? 'checked' : '' ?>>
-							<span class="form-check-label small">Active (<?= esc((string) $activeServiceCount) ?>)</span>
-						</label>
-						<label class="form-check d-flex align-items-center gap-2 py-1" data-records-option>
-							<input class="form-check-input m-0" type="radio" name="status" value="archived" data-records-pill-label="Archived" <?= $status === 'archived' ? 'checked' : '' ?>>
-							<span class="form-check-label small">Archived (<?= esc((string) $archivedServiceCount) ?>)</span>
-						</label>
-						<label class="form-check d-flex align-items-center gap-2 py-1" data-records-option>
-							<input class="form-check-input m-0" type="radio" name="status" value="all" data-records-pill-label="All" <?= $status === 'all' ? 'checked' : '' ?>>
-							<span class="form-check-label small">All (<?= esc((string) $allServiceCount) ?>)</span>
-						</label>
-					</div>
-				</div>
-			</div>
-			<?php if ($perPage !== 50): ?><input type="hidden" name="per_page" value="<?= esc((string) $perPage, 'attr') ?>"><?php endif; ?>
-			<button class="<?= btn('search') ?> records-search-action" type="submit"><i class="bi bi-search" aria-hidden="true"></i><span>Search</span></button>
-			<a class="<?= btn('clear') ?> records-search-action" href="<?= esc($serviceClearUrl(), 'attr') ?>"><i class="bi bi-x-lg" aria-hidden="true"></i><span>Clear</span></a>
-			<?php if ($canManage): ?>
-			<button class="<?= btn('add') ?> records-search-action js-service-modal-open" type="button" data-service-mode="create"><span>Add Program</span></button>
-			<?php endif; ?>
-		</form>
-		<?= view('components/filter_pills', ['id' => 'serviceFilterPills']) ?>
-	</div>
-
+<?php /* Search toolbar lives in services.php, above this card (Manage Records standard). */ ?>
 	<?php /* Controls row: page size (server) + local "Search:" live filter (client-side, no reload). */ ?>
 	<div class="table-meta">
 		<div class="records-table-controls">

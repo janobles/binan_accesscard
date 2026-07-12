@@ -46,6 +46,26 @@ $categoryClearUrl = static function () use ($listRoute, $perPage): string {
 };
 ?>
 
+<?php /* Toolbar above the card, Manage Records standard (components/records_toolbar_server +
+         records-filter-panel.js live-apply + pills). */ ?>
+<?= view('components/records_toolbar_server', [
+    'formAction' => site_url($listRoute),
+    'formAria' => 'Search the category database',
+    'keyword' => $keyword,
+    'clearUrl' => $categoryClearUrl(),
+    'pillsId' => 'categoryFilterPills',
+    'hiddenHtml' => $perPage !== 50 ? '<input type="hidden" name="per_page" value="' . esc((string) $perPage, 'attr') . '">' : '',
+    'actionsHtml' => '<button class="' . btn('add') . ' flex-fill js-category-modal-open" type="button" data-category-mode="create">Add Category</button>',
+    'radioGroups' => [[
+        'name' => 'status',
+        'label' => 'Status',
+        'options' => [
+            ['value' => 'active', 'label' => "Active ({$activeCategoryCount})", 'checked' => $status === 'active', 'default' => true],
+            ['value' => 'archived', 'label' => "Archived ({$archivedCategoryCount})", 'pill' => 'Archived', 'checked' => $status === 'archived'],
+            ['value' => 'all', 'label' => "All ({$allCategoryCount})", 'checked' => $status === 'all'],
+        ],
+    ]],
+]) ?>
 <?php
 $categoryFooter = ($totalRows ?? 0) > 0 ? view('components/table_footer', [
     'fromRecord' => $fromRecord,

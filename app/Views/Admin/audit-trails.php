@@ -56,11 +56,32 @@ $formatAuditUser = static function (array $audit): string {
 };
 ?>
 
-<?php /* Jade-style audit panel reusing the Lookups dual-search layout (records-* classes,
-         managerecord.css). Bar 1 = database search (server GET) with the action filter in the
-         Filters dropdown panel (records-filter-panel.js live-apply + pills). Bar 2 =
+<?php /* Toolbar above the card, Manage Records standard (components/records_toolbar_server +
+         records-filter-panel.js live-apply + pills). Bar 2 inside the card =
          page-size + client-side local "Search:" filter via data-lookup-search (lookup-search.js,
          scoped by data-audit-management-root). */ ?>
+<?php
+$auditActionRadios = [['value' => '', 'label' => 'All actions', 'checked' => $auditAction === '', 'default' => true]];
+foreach ($auditActionOptions as $action) {
+    $action = trim((string) $action);
+    $auditActionRadios[] = ['value' => $action, 'label' => $action, 'pill' => $action, 'checked' => $auditAction === $action];
+}
+?>
+<?= view('components/records_toolbar_server', [
+    'formAction' => site_url($listRoute),
+    'formAria' => 'Search the audit database',
+    'keyword' => $searchTerm,
+    'clearUrl' => $auditClearUrl(),
+    'pillsId' => 'auditFilterPills',
+    'narrow' => true,
+    'hiddenHtml' => $perPage !== 50 ? '<input type="hidden" name="per_page" value="' . esc((string) $perPage, 'attr') . '">' : '',
+    'radioGroups' => [[
+        'name' => 'action',
+        'label' => 'Action',
+        'scroll' => true,
+        'options' => $auditActionRadios,
+    ]],
+]) ?>
 <?php
 $auditFooter = $totalRows > 0 ? view('components/table_footer', [
     'fromRecord' => $fromRecord,

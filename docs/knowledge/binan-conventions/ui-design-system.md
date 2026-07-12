@@ -12,11 +12,16 @@ source of truth. Never hardcode a `btn-*` color class on a toolbar action.
 
 | Role     | Classes                    | Meaning                       |
 |----------|----------------------------|-------------------------------|
-| search   | btn btn-success            | run a server-side search      |
+| search   | btn btn-primary            | run a server-side search      |
 | clear    | btn btn-danger             | full reset of a toolbar       |
-| add      | btn btn-primary            | create a record (modal)       |
+| add      | btn btn-success            | create a record (modal)       |
 | import   | btn btn-warning            | bulk import                   |
 | filter   | btn btn-outline-secondary  | open a filter panel           |
+
+Buttons use stock Bootstrap colors only — theme.css must NOT re-tint
+`.btn-primary` to Biñan green (that made Search and Add two competing
+greens). Green buttons are Bootstrap's `#198754` success. Biñan green stays
+on the shell (topnav/sidenav/links), never on buttons.
 
 New role: add the row here first, then to the helper map, then a
 `UiHelperTest` assertion.
@@ -54,17 +59,21 @@ placeholders verbatim when retrofitting other tabs.
 
 ## Retrofit status
 
+- The toolbar always renders ABOVE the page's card (never inside it), pills
+  row directly under it — see `Family/list.php` for the standard.
 - manage-records: done (feat/manage-records-ui). AJAX flavor: filter panel +
   pills wired by `assets/js/dashboard/family-datatable.js`.
 - lookups (sectors/services/categories), audit-trails, employee activity:
-  done (feat/retrofit-toolbar-conventions). Server-driven flavor: these pages
-  reload on every filter change, so the panel + pills are wired by the shared
+  done (feat/retrofit-toolbar-conventions) via
+  `components/records_toolbar_server.php` — same Bootstrap-grid anatomy as
+  records_toolbar, wired by the shared
   `assets/js/dashboard/records-filter-panel.js` (radios inside the GET form,
-  change = submit) instead of records_toolbar, which stays family-specific.
+  change = submit, pills from server state). Options that mean "no filter"
+  (Active default, All) get no pill label, so they never render pills.
+- accounts: done, client mode — the list is fully loaded, so the panel radios
+  carry `data-records-client` wiring (no submit; accounts-modal.js filters
+  rows, records-filter-panel.js renders pills).
 - distribution tabs: btn() roles + placeholder wording done; the
   distributions log keeps its client-side aid-type select (no server search
   to live-apply against). Batches tab has plain form buttons, not a toolbar —
   out of scope.
-- accounts: btn() roles + placeholder wording done. Its level/status selects
-  are client-side only; converting them to a panel + pills waits on a
-  server-side account search (deferred).

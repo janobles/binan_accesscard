@@ -39,10 +39,28 @@ $sectorClearUrl = static function () use ($listRoute, $perPage): string {
 };
 ?>
 
-<?php /* Reuses the Manage Records .records-* layout (managerecord.css). Status filter lives in the
-         Filters dropdown panel (records-filter-panel.js live-apply + pills). Melbranch hooks preserved:
+<?php /* Toolbar above the card, Manage Records standard (components/records_toolbar_server +
+         records-filter-panel.js live-apply + pills). Melbranch hooks preserved:
          data-sector-management-root, data-lookup-search local filter, .js-sector-modal-open +
          data-sector-* attributes, the sector-modal include. */ ?>
+<?= view('components/records_toolbar_server', [
+    'formAction' => site_url($listRoute),
+    'formAria' => 'Search the sector database',
+    'keyword' => $keyword,
+    'clearUrl' => $sectorClearUrl(),
+    'pillsId' => 'sectorFilterPills',
+    'hiddenHtml' => $perPage !== 50 ? '<input type="hidden" name="per_page" value="' . esc((string) $perPage, 'attr') . '">' : '',
+    'actionsHtml' => $canManage ? '<button class="' . btn('add') . ' flex-fill js-sector-modal-open" type="button" data-sector-mode="create">Add Sector</button>' : '',
+    'radioGroups' => [[
+        'name' => 'status',
+        'label' => 'Status',
+        'options' => [
+            ['value' => 'active', 'label' => "Active ({$activeSectorCount})", 'checked' => $status === 'active', 'default' => true],
+            ['value' => 'archived', 'label' => "Archived ({$archivedSectorCount})", 'pill' => 'Archived', 'checked' => $status === 'archived'],
+            ['value' => 'all', 'label' => "All ({$allSectorCount})", 'checked' => $status === 'all'],
+        ],
+    ]],
+]) ?>
 <?php
 $sectorFooter = ($totalRows ?? 0) > 0 ? view('components/table_footer', [
     'fromRecord' => $fromRecord,

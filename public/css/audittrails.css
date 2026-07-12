@@ -80,27 +80,10 @@
     overflow-wrap: anywhere;
 }
 
-/* Dual-search layout (Bar 1 database search + Bar 2 page-size / local filter) reusing
-   the Manage Records .records-* grid from managerecord.css. The audit Bar 1 has only 4
-   controls (keyword + action + Clear + Search All), so it needs its own column template;
-   and the employee shell doesn't load lookupmanagement.css, so the grid + footer rules
-   audit relies on are defined here (loaded by both the admin and employee shells). */
-[data-audit-management-root] .records-lookup-search {
-    grid-template-columns: minmax(18rem, 1fr) minmax(9rem, 13rem) repeat(2, minmax(6.25rem, 9rem));
-}
-
-@media (max-width: 62rem) {
-    [data-audit-management-root] .records-lookup-search {
-        grid-template-columns: repeat(2, minmax(9rem, 1fr));
-    }
-}
-
-@media (max-width: 40rem) {
-    [data-audit-management-root] .records-lookup-search {
-        grid-template-columns: repeat(2, minmax(8rem, 1fr));
-    }
-}
-
+/* Bar 1 (database search) is the stock Bootstrap-grid toolbar
+   (components/records_toolbar_server) rendered above the card; the employee
+   shell doesn't load lookupmanagement.css, so the footer rules audit relies
+   on are defined here (loaded by both the admin and employee shells). */
 [data-audit-management-root] .lookup-list-footer {
     flex: 0 0 auto;
     padding: 0.75rem 1rem;

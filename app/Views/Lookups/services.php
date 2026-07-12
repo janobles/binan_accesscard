@@ -40,10 +40,28 @@ $serviceClearUrl = static function () use ($listRoute, $perPage): string {
 };
 ?>
 
-<?php /* Reuses the Manage Records .records-* layout (managerecord.css). Status filter lives in the
-         Filters dropdown panel (records-filter-panel.js live-apply + pills). Melbranch hooks preserved:
+<?php /* Toolbar above the card, Manage Records standard (components/records_toolbar_server +
+         records-filter-panel.js live-apply + pills). Melbranch hooks preserved:
          data-service-management-root, data-lookup-search local filter, .js-service-modal-open +
          data-service-* attributes, the service-modal include. */ ?>
+<?= view('components/records_toolbar_server', [
+    'formAction' => site_url($listRoute),
+    'formAria' => 'Search the services database',
+    'keyword' => $keyword,
+    'clearUrl' => $serviceClearUrl(),
+    'pillsId' => 'serviceFilterPills',
+    'hiddenHtml' => $perPage !== 50 ? '<input type="hidden" name="per_page" value="' . esc((string) $perPage, 'attr') . '">' : '',
+    'actionsHtml' => $canManage ? '<button class="' . btn('add') . ' flex-fill js-service-modal-open" type="button" data-service-mode="create">Add Program</button>' : '',
+    'radioGroups' => [[
+        'name' => 'status',
+        'label' => 'Status',
+        'options' => [
+            ['value' => 'active', 'label' => "Active ({$activeServiceCount})", 'checked' => $status === 'active', 'default' => true],
+            ['value' => 'archived', 'label' => "Archived ({$archivedServiceCount})", 'pill' => 'Archived', 'checked' => $status === 'archived'],
+            ['value' => 'all', 'label' => "All ({$allServiceCount})", 'checked' => $status === 'all'],
+        ],
+    ]],
+]) ?>
 <?php
 $serviceFooter = ($totalRows ?? 0) > 0 ? view('components/table_footer', [
     'fromRecord' => $fromRecord,

@@ -18,9 +18,9 @@ if (! function_exists('btn')) {
     function btn(string $role): string
     {
         $map = [
-            'search' => 'btn btn-success',
+            'search' => 'btn btn-primary',
             'clear'  => 'btn btn-danger',
-            'add'    => 'btn btn-primary',
+            'add'    => 'btn btn-success',
             'import' => 'btn btn-warning',
             'filter' => 'btn btn-outline-secondary',
         ];

@@ -63,7 +63,9 @@ in parallel instead of queueing behind a single worker:
     PHP_CLI_SERVER_WORKERS=8 php spark serve --port 8090
 
 With one worker (the default) every CSS/JS/image request is served one at a
-time, which alone adds seconds to each page load.
+time, which alone adds seconds to each page load. The env-var prefix syntax is
+for Unix-like shells; on Windows set PHP_CLI_SERVER_WORKERS first (e.g.
+`set PHP_CLI_SERVER_WORKERS=8` in cmd) and then run the serve command.
 
 ## Important Change with index.php
 

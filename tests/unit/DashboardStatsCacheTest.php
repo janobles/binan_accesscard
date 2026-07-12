@@ -48,10 +48,10 @@ final class DashboardStatsCacheTest extends CIUnitTestCase
 
     public function testStatsPopulatesCacheOnMiss(): void
     {
-        (new DashboardModel())->stats();
+        $stats = (new DashboardModel())->stats();
 
         $cached = cache()->get(DashboardModel::STATS_CACHE_KEY);
         $this->assertIsArray($cached);
-        $this->assertArrayHasKey('families', $cached);
+        $this->assertSame($stats, $cached);
     }
 }

@@ -1,5 +1,6 @@
 <?php
 
+$developerAccounts = $developerAccounts ?? [];
 $adminAccounts = $adminAccounts ?? [];
 $employeeAccounts = $employeeAccounts ?? [];
 $viewerAccounts = $viewerAccounts ?? [];
@@ -9,9 +10,7 @@ $canEditAccounts = (bool) ($canEditAccounts ?? false);
 $currentRole = (string) ($currentRole ?? '');
 $isDeveloper = $currentRole === 'Developer';
 $isAdmin = $currentRole === 'Admin';
-$currentUserId = (int) session()->get('user_id');
-// Admins and developers both manage every non-developer account now.
-$accounts = array_merge($adminAccounts, $employeeAccounts, $viewerAccounts, $scannerAccounts);
+$accounts = array_merge($developerAccounts, $adminAccounts, $employeeAccounts, $viewerAccounts, $scannerAccounts);
 ?>
 
 <div class="accounts-page" data-account-management>

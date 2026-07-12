@@ -13,12 +13,11 @@ class RoleAccess
     /**
      * Canonicalizes a raw account-level string to the app's role labels
      * 'Developer'/'Admin'/'Employee'/'Viewer', or null if unrecognized. This is the
-     * single translation point between the database enum (account_level:
-     * 'administrator'/'encoder'/'viewer') and the rest of the app. The legacy enum
+     * single translation point between the database account_level enum and the rest
+     * of the app. The legacy enum
      * values ('Admin'/'User') and the app labels are still accepted so stale
      * sessions and pre-migration rows keep resolving: 'administrator'/'Admin' map to
-     * the Admin label, 'encoder'/'User' map to Employee. The developer is no longer
-     * a DB row (it lives in .env) but its 'developer' value still maps here.
+     * the Admin label, and 'encoder'/'User' map to Employee.
      */
     public static function normalizeRole(string $role): ?string
     {
@@ -111,9 +110,7 @@ class RoleAccess
 
         $currentRole = self::normalizeRole((string) session()->get('role'));
 
-        // The developer logs in from .env (no users row, user_id 0), so the row
-        // existence check does not apply to it.
-        if ($currentRole !== 'Developer' && ! self::sessionUserExists()) {
+        if (! self::sessionUserExists()) {
             session()->destroy();
 
             return redirect()->to(site_url('login'))

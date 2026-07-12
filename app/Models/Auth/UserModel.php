@@ -2,20 +2,15 @@
 
 namespace App\Models\Auth;
 
-use App\Libraries\DeveloperProfile;
 use CodeIgniter\Model;
 
 /**
  * Manages staff users, login verification, and account creation.
  *
- * Role note: the `account_level` column is the DB enum('administrator','encoder',
- * 'viewer'). 'administrator' is the Admin role and 'encoder' is the staff/employee
- * role; the rest of the app refers to them as 'Admin'/'Employee' (translated by
- * App\Libraries\RoleAccess::normalizeRole). The literals in the queries below are
- * the raw DB enum values and must match the schema. Read queries alias the column
- * back as `account_level AS role` so existing `$row['role']` callers keep working.
- * The Developer no longer lives in this table — it authenticates from .env (see
- * verifyLogin) so it cannot be seen, disabled, or edited through the app.
+ * Role note: `account_level` stores developer, administrator, encoder, viewer, or
+ * scanner. The rest of the app translates these raw DB values through
+ * App\Libraries\RoleAccess::normalizeRole. Read queries alias the column back as
+ * `account_level AS role` so existing `$row['role']` callers keep working.
  */
 class UserModel extends Model
 {
@@ -39,12 +34,6 @@ class UserModel extends Model
      */
     public function verifyLogin(string $username, string $password): ?array
     {
-        $developer = $this->verifyDeveloperLogin($username, $password);
-
-        if ($developer !== null) {
-            return $developer;
-        }
-
         $user = $this->where('username', $username)->first();
 
         if ($user === null) {
@@ -52,7 +41,7 @@ class UserModel extends Model
         }
 
         // Expose the DB enum column under the `role` key the rest of the auth flow
-        // reads (RoleAccess::normalizeRole), matching the developer's synthetic row.
+        // reads (RoleAccess::normalizeRole).
         $user['role'] = $user['account_level'] ?? '';
 
         $storedPassword = (string) ($user['password'] ?? '');
@@ -84,9 +73,9 @@ class UserModel extends Model
     }
 
     /**
-     * Returns all administrator and encoder (Admin/Employee) accounts for the admin
-     * Account Management page, ordered by account level then username. The Developer
-     * is not in this table. Frontend: feeds the accounts table via DashboardPageBuilder.
+     * Returns all recognized accounts for the Account Management page, ordered by
+     * account level then username. Frontend: DashboardPageBuilder protects Developer
+     * rows from management actions.
      */
     public function getStaffAccounts(): array
     {
@@ -95,7 +84,7 @@ class UserModel extends Model
         }
 
         return $this->select('userID, username, account_level AS role, isactive, dt_created')
-            ->whereIn('account_level', ['administrator', 'encoder', 'viewer', 'scanner'])
+            ->whereIn('account_level', ['developer', 'administrator', 'encoder', 'viewer', 'scanner'])
             ->orderBy('account_level', 'ASC')
             ->orderBy('username', 'ASC')
             ->findAll();
@@ -277,38 +266,6 @@ class UserModel extends Model
         }
 
         return (int) $this->getInsertID();
-    }
-
-    /**
-     * Authenticates the hardcoded Developer account from .env (developer.username +
-     * developer.passwordHash, an Argon2id hash) before any DB lookup. Returns a
-     * synthetic user row (userID 0, role 'developer', active) on success, or null
-     * when the env credentials are unset or do not match. Keeping the Developer out
-     * of the `users` table means it cannot be seen, disabled, or edited via the app.
-     */
-    private function verifyDeveloperLogin(string $username, string $password): ?array
-    {
-        // Live credentials come from writable/developer/credentials.json when present,
-        // else the .env developer.* seed (see DeveloperProfile::credentials()).
-        $creds = DeveloperProfile::credentials();
-        $devUsername = $creds['username'];
-        $devHash = $creds['passwordHash'];
-
-        if ($devUsername === '' || $devHash === '') {
-            return null;
-        }
-
-        if (! hash_equals($devUsername, $username) || ! password_verify($password, $devHash)) {
-            return null;
-        }
-
-        return [
-            'userID' => 0,
-            'memberID' => 0,
-            'username' => $username,
-            'role' => 'developer',
-            'isactive' => 'Enable',
-        ];
     }
 
     /**

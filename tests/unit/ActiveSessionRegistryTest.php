@@ -27,9 +27,8 @@ final class ActiveSessionRegistryTest extends CIUnitTestCase
         $this->assertSame('uid:42', ActiveSessionRegistry::identityKey(42, 'anyone'));
     }
 
-    public function testIdentityKeyFallsBackToUsernameForDeveloper(): void
+    public function testIdentityKeyFallsBackToUsernameForInvalidUserId(): void
     {
-        // The .env Developer has userID 0 and no users row, so it is keyed by username.
         $this->assertSame('user:devtester', ActiveSessionRegistry::identityKey(0, 'DevTester'));
     }
 

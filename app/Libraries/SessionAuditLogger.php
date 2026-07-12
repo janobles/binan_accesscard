@@ -105,9 +105,8 @@ class SessionAuditLogger
         ?RequestInterface $request,
         ?string $detail = null
     ): void {
-        // userID 0 is either the .env Developer (login/logout) or an unknown/targeted
-        // account on a failed login; both are valid and logged with a NULL userID by
-        // AuditTrailsModel. Only negative IDs are bogus.
+        // userID 0 represents an unknown/targeted account on a failed login and is
+        // logged with a NULL userID by AuditTrailsModel. Only negative IDs are bogus.
         if ($userId < 0) {
             return;
         }

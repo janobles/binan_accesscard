@@ -87,8 +87,8 @@ class DashboardPageBuilder
             ? $searchModel->families($searchTerm, $searchFilters, 25)
             : $dashboardModel->recentFamilies(10);
 
-        // Only the Developer may see Developer (NULL-userID) audit rows; admins must
-        // never learn a Developer exists.
+        // Keep legacy file-backed Developer audit rows (NULL userID) visible only to
+        // Developers. New Developer activity has a real userID like every DB account.
         $includeDeveloperAudits = $currentRole === 'Developer';
         $auditListData = $activePage === 'audit-trails'
             ? $this->buildAuditListData($includeDeveloperAudits, null, 'admin/audit-trails')
@@ -130,9 +130,8 @@ class DashboardPageBuilder
                 'reportsPerScanner' => [],
             ];
 
-        // Hide the logged-in user's own account from their Account Management list;
-        // other admins/developers still see it. The Developer logs in from .env
-        // (userID 0, no users row), so nothing is hidden for it.
+        // Hide the logged-in user's own account from Account Management; self-service
+        // changes belong in My Account.
         $currentUserId = (int) session()->get('user_id');
         $visibleAccounts = $currentUserId > 0
             ? array_values(array_filter($users, static fn ($account) => (int) ($account['userID'] ?? 0) !== $currentUserId))
@@ -157,8 +156,8 @@ class DashboardPageBuilder
             'activePage' => $activePage,
             'pageTitle' => $layoutModel->pageTitle($activePage),
             'modeLabel' => $layoutModel->adminModeLabel($isDeveloper),
-            // Developers and admins both manage all non-developer staff accounts:
-            // create, edit, reset password, and (for admin/encoder) enable/disable.
+            // Developers and admins share account-management features. Developer
+            // targets remain protected, and only Developers may toggle Administrators.
             'canManageAccounts' => $isDeveloper || $isAdmin,
             'canCreateAccounts' => $isDeveloper || $isAdmin,
             'canEditAccounts' => $isDeveloper || $isAdmin,
@@ -175,6 +174,7 @@ class DashboardPageBuilder
                 'distribution' => $layoutModel->navActive($activePage, 'distribution'),
                 'reports'      => $layoutModel->navActive($activePage, 'reports'),
             ],
+            'developerAccounts'  => array_values(array_filter($visibleAccounts, static fn ($account) => $account['role'] === 'developer')),
             'adminAccounts'      => array_values(array_filter($visibleAccounts, static fn ($account) => $account['role'] === 'administrator')),
             // 'encoder' is the raw DB enum value for the Employee role (surfaced as
             // "Employee" in the UI); the rows here come straight from the users table

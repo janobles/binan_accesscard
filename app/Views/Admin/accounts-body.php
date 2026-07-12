@@ -11,6 +11,7 @@ use App\Libraries\ViewFormatter;
             <input class="form-control" type="search" data-account-search placeholder="Search username..." autocomplete="off" aria-label="Search accounts by username">
             <select class="form-select" data-account-level-filter aria-label="Filter by account level">
                 <option value="">Select Level</option>
+                <option value="developer">Developer</option>
                 <option value="administrator">Administrator</option>
                 <option value="encoder">Encoder</option>
                 <option value="viewer">Viewer</option>
@@ -56,9 +57,9 @@ use App\Libraries\ViewFormatter;
                         $statusFilter = $isActive ? 'active' : 'inactive';
                         $canEditRow = $canEditAccounts && in_array($rawRole, ['administrator', 'encoder', 'viewer', 'scanner'], true);
                         $canDeveloperToggle = $isDeveloper && in_array($rawRole, ['administrator', 'encoder', 'viewer', 'scanner'], true);
-                        // Backend enableAccount/disableAccount only accept encoder/viewer;
-                        // scanner toggling is Developer-only (see canDeveloperToggle above).
-                        $canAdminToggle = $isAdmin && in_array($rawRole, ['encoder', 'viewer'], true);
+                        // Administrators manage lower roles; only Developers can
+                        // toggle Administrator accounts.
+                        $canAdminToggle = $isAdmin && in_array($rawRole, ['encoder', 'viewer', 'scanner'], true);
                         $hasRowActions = $canEditRow || $canDeveloperToggle || $canAdminToggle;
                         ?>
                         <tr data-account-row data-account-username="<?= esc(mb_strtolower((string) ($account['username'] ?? '')), 'attr') ?>" data-account-role="<?= esc(mb_strtolower($rawRole), 'attr') ?>" data-account-status="<?= esc($statusFilter, 'attr') ?>">

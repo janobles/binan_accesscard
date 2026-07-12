@@ -145,7 +145,8 @@ final class FamilyDataTableTest extends TestCase
 
         $orderMethod = $methodEnd !== false ? substr($controller, $methodEnd) : '';
         $this->assertStringContainsString("if (\$requestedDirection === '')", $orderMethod);
-        $this->assertStringContainsString("return ['newest', 'desc'];", $orderMethod);
+        // Default order is QR ascending (manage-records UI spec, 2026-07-12).
+        $this->assertStringContainsString("return ['qr', 'asc'];", $orderMethod);
 
         $searchModel = (string) file_get_contents(APPPATH . 'Models/SearchModel.php');
         $this->assertStringContainsString("case 'newest':", $searchModel);

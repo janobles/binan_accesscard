@@ -40,9 +40,18 @@ Pagination already exists (50/page via `SearchModel::allMembers`), so no batch-l
 - Before/after network-tab timings: records list, keyword search, dashboard, lookup pages. Targets: 5–10s full page load, never over 30s (expected well under).
 - `vendor/bin/phpunit` green; smoke-test login, role redirect, family create/update, audit log creation.
 
+## Code comments
+
+Comments in this work are written for the developers on this team, not for tooling. They should explain how the code works and why it is built that way, in plain language a teammate can follow. Concretely:
+
+- Explain intent and mechanism: why an index has these columns in this order, why the cache key is deleted in the mutation path, what the TTL is a fallback for.
+- Plain sentences. No em dashes, no filler phrases, no generated-sounding boilerplate.
+- Patch scripts and non-obvious queries get a short header comment saying what they do and when to run them.
+
 ## RAG / docs update (final step)
 
-- New `docs/knowledge/binan-conventions/performance.md`: index conventions, dump-version + patch-script pattern, caching + invalidation rule, "EXPLAIN before shipping queries".
+- New `docs/knowledge/binan-conventions/performance.md`: index conventions, dump-version + patch-script pattern, caching + invalidation rule, "EXPLAIN before shipping queries". Written in the same plain style described above, since the team reads these docs directly.
+- Add the comment-style rule above to the conventions docs so future work follows it.
 - Update the `binan-conventions` skill grep index and `docs/knowledge/violations.md` (tick fixed items).
 - Memory note for the V17 dump.
 

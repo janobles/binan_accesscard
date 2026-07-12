@@ -14,13 +14,13 @@ final class ScanControllerBatchTest extends CIUnitTestCase
         $this->assertArrayHasKey('scanner/stats', $routes->getRoutes('GET'));
     }
 
-    public function testScanGuardsAidTypeAndBatch(): void
+    public function testScanGuardsServiceAndBatch(): void
     {
         $src = file_get_contents(APPPATH . 'Controllers/Scanner/ScanController.php');
         // logAid() must refuse with 409 when no batch is open.
         $this->assertStringContainsString('setStatusCode(409)', $src);
-        // The aid type comes from the active batch, not POST.
-        $this->assertStringContainsString("(int) \$activeBatch['aid_type_id']", $src);
+        // The service comes from the active batch, not POST.
+        $this->assertStringContainsString("(int) \$activeBatch['service_id']", $src);
         // Every logged row is stamped with the open batch and the response
         // carries the live personal counter.
         $this->assertStringContainsString("'batch_id'", $src);

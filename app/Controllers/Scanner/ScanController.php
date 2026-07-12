@@ -49,8 +49,12 @@ class ScanController extends BaseController
             'user'         => SessionAccount::user(),
             'accountLevelLabel' => SessionAccount::levelLabel(),
             'activeBatch'  => $activeBatch,
-            'aidType'      => $activeBatch !== null
-                ? ['aid_type_id' => (int) $activeBatch['aid_type_id'], 'name' => (string) ($activeBatch['aid_type_name'] ?? 'Aid')]
+            'service'      => $activeBatch !== null
+                ? [
+                    'service_id' => (int) $activeBatch['service_id'],
+                    'name'       => (string) ($activeBatch['service_name'] ?? 'Service'),
+                    'code'       => (string) ($activeBatch['service_code'] ?? ''),
+                ]
                 : null,
             'myBatchCount' => $activeBatch !== null
                 ? model(AidDistributionModel::class)->familiesForUserInBatch($userId, (int) $activeBatch['batch_id'])
@@ -152,7 +156,12 @@ class ScanController extends BaseController
         $snapshot = $this->kioskSnapshot($batchId, $userId, $activeBatch);
 
         return $this->response->setJSON([
-            'batch'    => ['id' => $batchId, 'name' => (string) $activeBatch['name'], 'aid_type' => (string) ($activeBatch['aid_type_name'] ?? '')],
+            'batch'    => [
+                'id'           => $batchId,
+                'name'         => (string) $activeBatch['name'],
+                'service'      => (string) ($activeBatch['service_name'] ?? ''),
+                'service_code' => (string) ($activeBatch['service_code'] ?? ''),
+            ],
             'families' => $snapshot['mine']['families'],
             'handouts' => $snapshot['mine']['handouts'],
             'timeline' => $snapshot['timeline'],
@@ -226,7 +235,7 @@ class ScanController extends BaseController
                 ->setJSON(['errors' => ['general' => 'No active distribution batch. Ask an administrator to open one.']]);
         }
 
-        $aidTypeId = (int) $activeBatch['aid_type_id'];
+        $serviceId = (int) $activeBatch['service_id'];
         $userId    = (int) (session('user_id') ?? 0);
 
         // The insert and its audit row must land together: without a shared
@@ -238,7 +247,7 @@ class ScanController extends BaseController
         $aidId = model(AidDistributionModel::class)->logAid([
             'control_no'  => $controlNo,
             'memberID'    => $memberId,
-            'aid_type_id' => $aidTypeId,
+            'service_id'  => $serviceId,
             'claim_date'  => $this->request->getPost('claim_date'),
             'userID'      => $userId,
             'batch_id'    => (int) $activeBatch['batch_id'],
@@ -251,7 +260,7 @@ class ScanController extends BaseController
             'Control #' . $controlNo,
             $this->request->getIPAddress(),
             (string) $this->request->getUserAgent(),
-            'Aid type ID ' . $aidTypeId . ' on ' . $this->request->getPost('claim_date')
+            'Service ID ' . $serviceId . ' on ' . $this->request->getPost('claim_date')
         );
 
         if (! $audited) {

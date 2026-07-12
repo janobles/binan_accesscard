@@ -96,8 +96,8 @@
 <?php if ($activeBatch !== null): ?>
 <script>
 const BASE = '<?= rtrim(base_url(), '/') ?>';
-const AID_TYPE_NAME = <?= json_encode((string) $aidType['name'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-const AID_TYPE_ID = <?= (int) $aidType['aid_type_id'] ?>;
+const SERVICE_NAME = <?= json_encode((string) $service['name'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+const SERVICE_ID = <?= (int) $service['service_id'] ?>;
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
@@ -179,12 +179,12 @@ function todayStr() {
 }
 
 function evaluateDuplicate(history) {
-  const aidId = AID_TYPE_ID;
-  const aidName = AID_TYPE_NAME;
+  const svcId = SERVICE_ID;
+  const svcName = SERVICE_NAME;
   const dupe = (history || []).some(r =>
-    String(r.aid_type_id) === String(aidId) && String(r.claim_date) === todayStr());
+    String(r.service_id) === String(svcId) && String(r.claim_date) === todayStr());
   if (dupe) {
-    $('dupAlert').textContent = `Already claimed ${aidName} today. Confirm again only if this is correct.`;
+    $('dupAlert').textContent = `Already claimed ${svcName} today. Confirm again only if this is correct.`;
     $('dupAlert').hidden = false;
     $('submitBtn').className = 'btn btn-warning w-100';
   } else {
@@ -196,7 +196,7 @@ function evaluateDuplicate(history) {
 function renderHistory(rows) {
   $('historyList').innerHTML = rows.length
     ? rows.map((r, i) => `<li class="list-group-item d-flex justify-content-between${i === 0 && lastLoggedAidId !== null ? ' scan-history-flash' : ''}">
-        <span><span class="badge bg-light text-dark border me-1">${esc(r.aid_type)}</span>${esc(r.claimant)}</span><span class="text-muted">${esc(r.claim_date)}</span></li>`).join('')
+        <span><span class="badge bg-light text-dark border me-1">${esc(r.service_code ? r.service_code + ' — ' + r.service : r.service)}</span>${esc(r.claimant)}</span><span class="text-muted">${esc(r.claim_date)}</span></li>`).join('')
     : '<li class="list-group-item text-muted">No aid received yet.</li>';
 }
 
@@ -246,10 +246,10 @@ $('logForm').addEventListener('submit', async (e) => {
       $('fieldErrors').innerHTML = Object.values(errs).map(m => `<div>${esc(m)}</div>`).join('');
       return;
     }
-    const aidName = AID_TYPE_NAME;
+    const svcName = SERVICE_NAME;
     const claimant = $('memberID').selectedOptions[0]?.text || '';
-    lastLoggedAidId = AID_TYPE_ID;
-    showReceipt(`${aidName} → ${claimant} (Family #${$('control_no').value}), ${fd.get('claim_date')}`);
+    lastLoggedAidId = SERVICE_ID;
+    showReceipt(`${svcName} → ${claimant} (Family #${$('control_no').value}), ${fd.get('claim_date')}`);
     lastHistory = data.history;
     renderHistory(data.history);
     var countEl = document.getElementById('myBatchCount');

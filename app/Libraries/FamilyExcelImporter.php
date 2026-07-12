@@ -63,7 +63,7 @@ class FamilyExcelImporter
     /** @var list<array{sheetRow: ?int, familyNo: string, field: ?string, code: string, message: string, severity: string}> */
     private array $errors = [];
 
-    /** Members to add to an already-existing family, each with the operator's decision. */
+    /** Members whose QR already belongs to a family — added to it on import. */
     private array $appends = [];
 
     /** [int qr => head name] for QRs already in the DB (passed into validateAndBuild). */
@@ -111,9 +111,9 @@ class FamilyExcelImporter
             'ok'         => true,
             'rows'       => $parsed['rows'],
             'errors'     => $errors,
-            // File-level errors (e.g. merged QR cells) that re-validation can't reproduce
-            // from rows alone — the caller re-merges these after each inline edit.
             'fileErrors' => $parsed['errors'],
+            // [field => Excel column letter] so the review can name the exact cell.
+            'columns'    => $parsed['columns'] ?? [],
             'families'   => $built['families'],
             'appends'    => $built['appends'],
             'counts'     => $this->summarize($built['families'], $errors, $built['appends']),
@@ -172,7 +172,9 @@ class FamilyExcelImporter
             $errors[] = $this->makeError(null, '', 'EMPTY', null, 'No family rows were found on the "' . FamilyExcelTemplate::DATA_SHEET . '" sheet.');
         }
 
-        return ['ok' => true, 'rows' => $rows, 'errors' => $errors];
+        // The column map is carried through so the review can print the EXACT Excel cell
+        // to fix (e.g. "H42") — the operator fixes the file, not a copy of it.
+        return ['ok' => true, 'rows' => $rows, 'errors' => $errors, 'columns' => $columnMap];
     }
 
     /**
@@ -342,9 +344,9 @@ class FamilyExcelImporter
 
     /**
      * Builds the "add this member to an existing family" entries for a head-less group
-     * whose QR is already on file. Each carries the built member payload + the operator's
-     * decision (append/remove/blank, read from the staged row) and a warning so it shows
-     * in the review with the existing head's name.
+     * whose QR is already on file — the classic "worker forgot a member last batch" case.
+     * These are ADDED automatically on import and listed in the review; to skip someone,
+     * the operator deletes that row from the spreadsheet and re-uploads.
      *
      * @param list<array{row: int, data: array<string, string>}> $rows
      */
@@ -354,9 +356,6 @@ class FamilyExcelImporter
             $payload    = $this->buildPersonPayload($entry, $familyNo, false, $sectorByCode, $incomeByLabel);
             $serviceIds = $this->mapServices($entry, $familyNo, $serviceByCode);
 
-            $decision = strtolower(trim((string) ($entry['data']['_decision'] ?? '')));
-            $decision = in_array($decision, ['append', 'remove'], true) ? $decision : '';
-
             $memberName = trim(((string) ($payload['firstname'] ?? '')) . ' ' . ((string) ($payload['lastname'] ?? '')));
 
             $this->appends[] = [
@@ -365,12 +364,12 @@ class FamilyExcelImporter
                 'headName'   => $headName,
                 'payload'    => $payload,
                 'serviceIds' => $serviceIds,
-                'decision'   => $decision,
             ];
 
-            $this->addError((int) $entry['row'], $familyNo, 'ADD-MEMBER', '_decision',
-                'Add ' . ($memberName !== '' ? $memberName : 'this person') . ' to existing family ' . $familyNo
-                . ($headName !== '' ? ' (' . $headName . ')' : '') . '? Choose add or remove.', 'warning');
+            $this->addError((int) $entry['row'], $familyNo, 'ADD-MEMBER', null,
+                ($memberName !== '' ? $memberName : 'This person') . ' will be ADDED to existing family ' . $familyNo
+                . ($headName !== '' ? ' (' . $headName . ')' : '')
+                . '. To skip them, delete this row from the file and upload again.', 'warning');
         }
     }
 
@@ -393,27 +392,15 @@ class FamilyExcelImporter
 
         $familyCount = count($families);
 
-        $appendsPending  = 0;
-        $appendsToImport = 0;
-
-        foreach ($appends as $append) {
-            if (($append['decision'] ?? '') === 'append') {
-                $appendsToImport++;
-            } elseif (($append['decision'] ?? '') !== 'remove') {
-                $appendsPending++;
-            }
-        }
-
         return [
-            'families'        => $familyCount,
-            'members'         => $members,
-            'people'          => $familyCount + $members,
-            'existing'        => count(array_filter($errors, static fn (array $e): bool => ($e['code'] ?? '') === 'DUP-EXISTS')),
-            'appends'         => count($appends),
-            'appendsPending'  => $appendsPending,
-            'appendsToImport' => $appendsToImport,
-            'blocking'        => $this->tally($errors, 'blocking'),
-            'warnings'        => $this->tally($errors, 'warning'),
+            'families' => $familyCount,
+            'members'  => $members,
+            'people'   => $familyCount + $members,
+            'existing' => count(array_filter($errors, static fn (array $e): bool => ($e['code'] ?? '') === 'DUP-EXISTS')),
+            // Members that will be added to an already-existing family on import.
+            'appends'  => count($appends),
+            'blocking' => $this->tally($errors, 'blocking'),
+            'warnings' => $this->tally($errors, 'warning'),
         ];
     }
 
@@ -612,12 +599,13 @@ class FamilyExcelImporter
         }
 
         if (count($heads) !== 1) {
-            $code = count($heads) === 0 ? 'HEAD-NONE' : 'HEAD-MULTI';
-            $anchorRow = count($heads) > 1 ? $heads[1]['row'] : $rows[0]['row'];
-            $message = count($heads) === 0
-                ? 'Family ' . $familyNo . ' has no Head row. Set Relationship = Head on exactly one person.'
-                : 'Family ' . $familyNo . ' has more than one Head row. Only one person can be the Head.';
-            $this->addError($anchorRow, $familyNo, $code, 'relationship', $message);
+            if (count($heads) === 0) {
+                [$anchorRow, $message] = $this->headlessDiagnosis($familyNo, $rows);
+                $this->addError($anchorRow, $familyNo, 'HEAD-NONE', 'relationship', $message);
+            } else {
+                $this->addError($heads[1]['row'], $familyNo, 'HEAD-MULTI', 'relationship',
+                    'Family ' . $familyNo . ' has more than one Head row. Only one person can be the Head.');
+            }
 
             // Aggregate: still validate every row's fields so those errors surface now.
             foreach ($rows as $entry) {
@@ -660,6 +648,77 @@ class FamilyExcelImporter
         ];
 
         $this->memberCount += count($memberPayloads);
+    }
+
+    /**
+     * Works out WHO the missing Head probably is, for a family with no Head row.
+     *
+     * In the template only the Head fills Address/Barangay — members leave them blank and
+     * inherit the head's. So in a head-less family, the row that carries an address is
+     * almost certainly the intended Head (the worker filled it like a head but never set
+     * Relationship = Head). Point the error straight at that person.
+     *
+     * @param list<array{row: int, data: array<string, string>}> $rows
+     * @return array{0: int, 1: string} [anchor sheet row, message]
+     */
+    private function headlessDiagnosis(string $familyNo, array $rows): array
+    {
+        $withAddress = [];
+
+        foreach ($rows as $entry) {
+            $address  = trim((string) ($entry['data']['address'] ?? ''));
+            $barangay = trim((string) ($entry['data']['barangay'] ?? ''));
+
+            if ($address !== '' || $barangay !== '') {
+                $withAddress[] = $entry;
+            }
+        }
+
+        // Exactly one person carries the address → that is the Head.
+        if (count($withAddress) === 1) {
+            $candidate = $withAddress[0];
+            $name = trim(((string) ($candidate['data']['firstname'] ?? '')) . ' ' . ((string) ($candidate['data']['lastname'] ?? '')));
+
+            return [
+                (int) $candidate['row'],
+                'Family ' . $familyNo . ' has no Head. Row ' . $candidate['row']
+                    . ($name !== '' ? ' (' . $name . ')' : '')
+                    . ' is the only person with an address, so they are most likely the Head — set their relationship to Head.',
+            ];
+        }
+
+        // Nobody carries an address → the head is missing entirely, address and all.
+        if ($withAddress === []) {
+            return [
+                (int) $rows[0]['row'],
+                'Family ' . $familyNo . ' has no Head and no address on any row. Set one person as Head and give them an Address and Barangay.',
+            ];
+        }
+
+        // Several rows carry an address. If it is the SAME address it is one household
+        // (the worker just repeated it) — the operator only has to pick who the Head is.
+        // Different addresses mean two households sharing one QR.
+        $distinct = [];
+
+        foreach ($withAddress as $entry) {
+            $key = $this->normalizeText((string) ($entry['data']['address'] ?? ''))
+                . '|' . $this->normalizeText((string) ($entry['data']['barangay'] ?? ''));
+            $distinct[$key] = true;
+        }
+
+        if (count($distinct) === 1) {
+            return [
+                (int) $withAddress[0]['row'],
+                'Family ' . $familyNo . ' has no Head. ' . count($withAddress) . ' people carry the same address, '
+                    . 'so this is one household — set exactly one of them as Head.',
+            ];
+        }
+
+        return [
+            (int) $withAddress[0]['row'],
+            'Family ' . $familyNo . ' has no Head, and ' . count($distinct) . ' different addresses appear. '
+                . 'This looks like two households sharing one QR — give each household its own QR, then set one Head in each.',
+        ];
     }
 
     /**

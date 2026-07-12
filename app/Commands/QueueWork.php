@@ -4,6 +4,7 @@ namespace App\Commands;
 
 use App\Jobs\JobHandlerInterface;
 use App\Jobs\JobReporter;
+use App\Libraries\ImportStagingStore;
 use App\Models\Jobs\JobQueueModel;
 use CodeIgniter\CLI\BaseCommand;
 use CodeIgniter\CLI\CLI;
@@ -104,10 +105,31 @@ class QueueWork extends BaseCommand
                 CLI::write('No queued jobs.', 'dark_gray');
             }
 
+            $this->sweepImportStaging($model);
+
             return EXIT_SUCCESS;
         } finally {
             flock($lockHandle, LOCK_UN);
             fclose($lockHandle);
+        }
+    }
+
+    /**
+     * Housekeeping: drops import staging files nobody will finish reviewing (the operator
+     * closed the tab). Commit/cancel/upload-again all clean up on their own; this catches
+     * what none of them can see. Files an unfinished job still needs are protected, and a
+     * failure here must never take the worker down — its jobs already ran.
+     */
+    private function sweepImportStaging(JobQueueModel $model): void
+    {
+        try {
+            $removed = (new ImportStagingStore())->sweep($model->activeStagingIds());
+
+            if ($removed > 0) {
+                CLI::write('Swept ' . $removed . ' abandoned import staging file(s).', 'dark_gray');
+            }
+        } catch (Throwable $e) {
+            CLI::write('  staging sweep skipped: ' . $e->getMessage(), 'yellow');
         }
     }
 

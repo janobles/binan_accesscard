@@ -104,6 +104,8 @@ class FamilyImportJob implements JobHandlerInterface
             'rows'       => $staged['rows'],
             'errors'     => $staged['errors'],
             'fileErrors' => $staged['fileErrors'] ?? [],
+            // [field => Excel column letter] so the review can name the exact cell to fix.
+            'columns'    => $staged['columns'] ?? [],
             'counts'     => $counts,
         ]);
 
@@ -138,14 +140,13 @@ class FamilyImportJob implements JobHandlerInterface
         $existingHeads = $importer->existingHeadsForRows($rows);
         $built         = $importer->validateAndBuild($rows, $existingHeads);
         $blocking      = (int) ($built['counts']['blocking'] ?? 0);
-        $pending       = (int) ($built['counts']['appendsPending'] ?? 0);
 
-        // Defense in depth: never write a batch with unresolved errors or undecided appends.
-        if ($blocking > 0 || $pending > 0) {
+        // Defense in depth: never write a batch that still has blocking errors.
+        if ($blocking > 0) {
             $store->delete($stageJobId);
 
             return JobOutcome::failed(
-                'The import still has unresolved items. Fix them in the review screen and confirm again.',
+                'The import still has ' . $blocking . ' issue(s) to fix. Correct them in the spreadsheet and upload it again.',
                 ['imported' => 0, 'failed' => 0, 'skipped' => 0, 'members' => 0, 'errors' => array_slice(array_values($built['errors']), 0, 300)],
             );
         }
@@ -276,12 +277,10 @@ class FamilyImportJob implements JobHandlerInterface
 
         $reporter->checkpoint($done + $failed + $skipped, $total, $snapshot());
 
-        // Add reviewed members to already-existing families (the operator chose "append").
+        // Add the members whose QR already belongs to a family (the forgotten-member case).
+        // These are listed in the review; to skip one, the operator deletes the row from
+        // the spreadsheet and uploads again.
         foreach ($built['appends'] as $append) {
-            if (($append['decision'] ?? '') !== 'append') {
-                continue;
-            }
-
             $qr      = (int) ($append['qr'] ?? 0);
             $payload = is_array($append['payload'] ?? null) ? $append['payload'] : [];
             $headId  = $qr > 0 ? $qrControlModel->headForControl($qr) : null;

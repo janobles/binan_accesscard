@@ -269,6 +269,78 @@ final class FamilyExcelImporterTest extends CIUnitTestCase
         $this->assertNotContains('DUP-PERSON', $this->codes($notDup));
     }
 
+    // -- head-less family: use the address to find the likely Head --------------
+
+    public function testHeadlessFamilyPointsAtTheRowCarryingTheAddress(): void
+    {
+        // Only the Head fills Address/Barangay — so the row that has one IS the head.
+        $result = $this->importer()->validateAndBuild([
+            $this->memberRow(3, '6001', ['firstname' => 'Maria', 'address' => '', 'barangay' => '']),
+            $this->memberRow(4, '6001', ['firstname' => 'Juan', 'address' => '12 Rizal St', 'barangay' => 'Poblacion']),
+            $this->memberRow(5, '6001', ['firstname' => 'Jose', 'address' => '', 'barangay' => '']),
+        ]);
+
+        $headNone = array_values(array_filter(
+            $result['errors'],
+            static fn (array $e): bool => $e['code'] === 'HEAD-NONE'
+        ));
+
+        $this->assertCount(1, $headNone);
+        $this->assertSame(4, $headNone[0]['sheetRow']); // anchored on Juan, who has the address
+        $this->assertStringContainsString('most likely the Head', $headNone[0]['message']);
+        $this->assertStringContainsString('Juan', $headNone[0]['message']);
+    }
+
+    public function testHeadlessFamilyWithNoAddressSaysSo(): void
+    {
+        $result = $this->importer()->validateAndBuild([
+            $this->memberRow(3, '6001', ['address' => '', 'barangay' => '']),
+            $this->memberRow(4, '6001', ['address' => '', 'barangay' => '']),
+        ]);
+
+        $headNone = array_values(array_filter(
+            $result['errors'],
+            static fn (array $e): bool => $e['code'] === 'HEAD-NONE'
+        ));
+
+        $this->assertStringContainsString('no address on any row', $headNone[0]['message']);
+    }
+
+    public function testHeadlessFamilyWithTwoDifferentAddressesWarnsOfTwoHouseholds(): void
+    {
+        $result = $this->importer()->validateAndBuild([
+            $this->memberRow(3, '6001', ['address' => '12 Rizal St', 'barangay' => 'Poblacion']),
+            $this->memberRow(4, '6001', ['address' => '9 Luna St', 'barangay' => 'Malaban']),
+        ]);
+
+        $headNone = array_values(array_filter(
+            $result['errors'],
+            static fn (array $e): bool => $e['code'] === 'HEAD-NONE'
+        ));
+
+        $this->assertStringContainsString('two households', $headNone[0]['message']);
+    }
+
+    public function testHeadlessFamilyWithTheSameAddressRepeatedIsOneHousehold(): void
+    {
+        // The worker repeated the same address on several rows — one household, so the
+        // operator only has to pick who the Head is (NOT a two-household split).
+        $result = $this->importer()->validateAndBuild([
+            $this->memberRow(3, '6001', ['address' => '12 Rizal St', 'barangay' => 'Poblacion']),
+            $this->memberRow(4, '6001', ['address' => '12 Rizal St', 'barangay' => 'Poblacion']),
+            $this->memberRow(5, '6001', ['address' => '12 Rizal St', 'barangay' => 'Poblacion']),
+        ]);
+
+        $headNone = array_values(array_filter(
+            $result['errors'],
+            static fn (array $e): bool => $e['code'] === 'HEAD-NONE'
+        ));
+
+        $this->assertStringContainsString('same address', $headNone[0]['message']);
+        $this->assertStringContainsString('one household', $headNone[0]['message']);
+        $this->assertStringNotContainsString('two households', $headNone[0]['message']);
+    }
+
     // -- add-member-to-existing-family (append) --------------------------------
 
     public function testHeadlessGroupForExistingQrBecomesAddMember(): void
@@ -282,8 +354,8 @@ final class FamilyExcelImporterTest extends CIUnitTestCase
         $this->assertContains('ADD-MEMBER', $codes);
         $this->assertNotContains('HEAD-NONE', $codes); // the head is in the DB, not missing
         $this->assertCount(1, $result['appends']);
-        $this->assertSame('', $result['appends'][0]['decision']);       // undecided
-        $this->assertSame(1, $result['counts']['appendsPending']);
+        $this->assertSame(6001, $result['appends'][0]['qr']);
+        $this->assertSame(1, $result['counts']['appends']);
     }
 
     public function testHeadlessGroupForNewQrIsStillHeadNone(): void
@@ -297,16 +369,25 @@ final class FamilyExcelImporterTest extends CIUnitTestCase
         $this->assertSame([], $result['appends']);
     }
 
-    public function testAddMemberDecisionCountsAppendVsPending(): void
+    public function testAddMemberIsAutomaticAndSaysSo(): void
     {
+        // No decision to make: the person IS added on import. To skip them the operator
+        // deletes the row from the spreadsheet and uploads again.
         $result = $this->importer()->validateAndBuild(
-            [$this->memberRow(3, '6001', ['firstname' => 'Maria', '_decision' => 'append'])],
+            [$this->memberRow(3, '6001', ['firstname' => 'Maria', 'lastname' => 'Cruz'])],
             [6001 => 'Juan Dela Cruz'],
         );
 
-        $this->assertSame('append', $result['appends'][0]['decision']);
-        $this->assertSame(1, $result['counts']['appendsToImport']);
-        $this->assertSame(0, $result['counts']['appendsPending']);
+        $add = array_values(array_filter(
+            $result['errors'],
+            static fn (array $e): bool => $e['code'] === 'ADD-MEMBER'
+        ));
+
+        $this->assertCount(1, $add);
+        $this->assertSame('warning', $add[0]['severity']);   // informational, never blocks
+        $this->assertStringContainsString('will be ADDED', $add[0]['message']);
+        $this->assertStringContainsString('delete this row', $add[0]['message']);
+        $this->assertSame(1, $result['counts']['appends']);
     }
 
     public function testExistingQrWithAHeadIsADuplicateFamily(): void

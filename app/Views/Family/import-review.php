@@ -9,11 +9,13 @@
  * @var string $routeBase  admin/manage-family or employee/manage-family
  * @var array  $review     ImportReviewPresenter::build() output
  * @var string $username
+ * @var int    $idleTimeoutSeconds
  */
 $jobId     = (int) ($jobId ?? 0);
 $routeBase = (string) ($routeBase ?? 'admin/manage-family');
 $review    = $review ?? ['file' => '', 'counts' => ['families' => 0, 'members' => 0, 'blocking' => 0, 'warnings' => 0], 'groups' => []];
 $backUrl   = site_url($routeBase);
+$idleTimeoutSeconds = (int) ($idleTimeoutSeconds ?? 900);
 
 // JSON island: HEX_TAG/HEX_AMP keep any "</script>" or "&" inside a spreadsheet cell
 // from breaking out of the <script> tag (defence against a crafted .xlsx).
@@ -41,10 +43,8 @@ $reviewJson = json_encode($review, JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_
 
 <main class="container-fluid px-4 py-4"
       id="importReview"
-      data-row-url="<?= esc(site_url($routeBase . '/import/review/' . $jobId . '/row'), 'attr') ?>"
       data-commit-url="<?= esc(site_url($routeBase . '/import/review/' . $jobId . '/commit'), 'attr') ?>"
       data-cancel-url="<?= esc(site_url($routeBase . '/import/review/' . $jobId . '/cancel'), 'attr') ?>"
-      data-status-base="<?= esc(site_url($routeBase . '/import/status/'), 'attr') ?>"
       data-redirect-url="<?= esc($backUrl, 'attr') ?>">
 
     <input type="hidden" id="reviewCsrf" name="<?= csrf_token() ?>" value="<?= csrf_hash() ?>">
@@ -54,7 +54,9 @@ $reviewJson = json_encode($review, JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_
             <h2 class="h4 mb-1">Check before importing</h2>
             <p class="text-muted mb-0">
                 File: <strong id="reviewFileName"></strong>. Nothing is saved until you press
-                <strong>Confirm import</strong>. Fix the highlighted values below — start with the QR numbers.
+                <strong>Confirm import</strong>. Anything listed below must be fixed
+                <strong>in the spreadsheet itself</strong>, then uploaded again — that keeps the file and
+                the records in step.
             </p>
         </div>
     </div>
@@ -79,5 +81,12 @@ $reviewJson = json_encode($review, JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_
 <script src="<?= esc(asset_url($scriptPath), 'attr') ?>"></script>
 <?php endforeach; ?>
 <script src="<?= esc(asset_url('assets/js/dashboard/import-review.js'), 'attr') ?>"></script>
+<?php /* Idle-timeout logout — this page is its own shell, so it wires the same
+         session-timeout script the dashboard layouts render. */ ?>
+<script src="<?= esc(asset_url('assets/js/session-timeout.js'), 'attr') ?>"
+        data-timeout-seconds="<?= esc((string) $idleTimeoutSeconds) ?>"
+        data-logout-url="<?= site_url('logout?timeout=1') ?>"
+        data-home-url="<?= site_url('/') ?>"
+        data-keep-alive-url="<?= site_url('session/keep-alive') ?>"></script>
 </body>
 </html>

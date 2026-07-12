@@ -16,6 +16,9 @@ namespace App\Libraries;
  */
 class ImportStagingStore
 {
+    /** Age after which an abandoned staging file is swept (see sweep()). */
+    public const TTL_HOURS = 24;
+
     private string $dir;
 
     public function __construct(?string $dir = null)
@@ -61,5 +64,53 @@ class ImportStagingStore
         if (is_file($path)) {
             @unlink($path);
         }
+    }
+
+    /**
+     * Deletes staging files older than $ttlHours, skipping any an unfinished job still
+     * reads. Commit and cancel already clean up after themselves; this is the backstop for
+     * the review nobody finished — the operator closed the tab, fixed the spreadsheet, and
+     * uploaded it as a NEW job. That first file is orphaned, and it holds family PII, so it
+     * must not sit on disk forever.
+     *
+     * $protectedIds MUST carry JobQueueModel::activeStagingIds(): a queued write job can
+     * wait hours for a stopped worker, and sweeping its rows out from under it kills the
+     * import.
+     *
+     * @param list<int> $protectedIds staging IDs a pending/running job still needs
+     *
+     * @return int files removed
+     */
+    public function sweep(array $protectedIds = [], int $ttlHours = self::TTL_HOURS): int
+    {
+        if (! is_dir($this->dir)) {
+            return 0;
+        }
+
+        $protected = array_flip(array_map('intval', $protectedIds));
+        $cutoff    = time() - (max(1, $ttlHours) * 3600);
+        $removed   = 0;
+
+        foreach ((array) glob($this->dir . DIRECTORY_SEPARATOR . 'job-*.json') as $file) {
+            if (! preg_match('/^job-(\d+)\.json$/', basename((string) $file), $match)) {
+                continue;
+            }
+
+            if (isset($protected[(int) $match[1]])) {
+                continue;
+            }
+
+            $mtime = @filemtime((string) $file);
+
+            if ($mtime === false || $mtime > $cutoff) {
+                continue;
+            }
+
+            if (@unlink((string) $file)) {
+                $removed++;
+            }
+        }
+
+        return $removed;
     }
 }

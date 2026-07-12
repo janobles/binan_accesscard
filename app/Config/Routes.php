@@ -43,7 +43,6 @@ $routes->group('admin', static function (RouteCollection $routes): void {
         $routes->post('import', 'Families\FamilyImportController::import');
         $routes->get('import/status/(:num)', 'Families\FamilyImportController::importStatus/$1');
         $routes->get('import/review/(:num)', 'Families\FamilyImportController::reviewPage/$1');
-        $routes->post('import/review/(:num)/row', 'Families\FamilyImportController::reviewRow/$1');
         $routes->post('import/review/(:num)/commit', 'Families\FamilyImportController::reviewCommit/$1');
         $routes->post('import/review/(:num)/cancel', 'Families\FamilyImportController::reviewCancel/$1');
         $routes->get('create', 'Families\FamilyController::createFamily');
@@ -120,7 +119,6 @@ $routes->group('employee', static function (RouteCollection $routes): void {
         $routes->post('import', 'Families\FamilyImportController::import');
         $routes->get('import/status/(:num)', 'Families\FamilyImportController::importStatus/$1');
         $routes->get('import/review/(:num)', 'Families\FamilyImportController::reviewPage/$1');
-        $routes->post('import/review/(:num)/row', 'Families\FamilyImportController::reviewRow/$1');
         $routes->post('import/review/(:num)/commit', 'Families\FamilyImportController::reviewCommit/$1');
         $routes->post('import/review/(:num)/cancel', 'Families\FamilyImportController::reviewCancel/$1');
         $routes->get('create', 'Families\FamilyController::createFamily');

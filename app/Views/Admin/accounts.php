@@ -9,8 +9,6 @@ $canEditAccounts = (bool) ($canEditAccounts ?? false);
 $currentRole = (string) ($currentRole ?? '');
 $isDeveloper = $currentRole === 'Developer';
 $isAdmin = $currentRole === 'Admin';
-$currentUserId = (int) session()->get('user_id');
-// Admins and developers both manage every non-developer account now.
 $accounts = array_merge($adminAccounts, $employeeAccounts, $viewerAccounts, $scannerAccounts);
 ?>
 

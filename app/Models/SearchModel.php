@@ -206,8 +206,9 @@ class SearchModel
     }
 
     /**
-     * Searches Admin/Employee accounts by username/role/status with optional role
-     * and active-status filters. Frontend: the Account Management search/filter UI.
+     * Searches non-Developer accounts by username/role/status with optional role
+     * and active-status filters. Developer identities are intentionally excluded
+     * from Account Management.
      */
     public function staffAccounts(string $keyword = '', array $filters = [], int $limit = 100): array
     {
@@ -216,12 +217,11 @@ class SearchModel
         }
 
         $limit = max(1, $limit);
-        // 'administrator'/'encoder' are the DB enum values for the Admin/Employee
-        // roles; these queries use the raw enum to match the users.account_level
-        // column, aliased back to `role` so downstream callers keep the same key.
+        // Use raw enum values to match users.account_level, aliased back to `role`
+        // so downstream callers keep the same key.
         $builder = $this->db->table('users')
             ->select('userID, username, account_level AS role, isactive, dt_created')
-            ->whereIn('account_level', ['administrator', 'encoder', 'viewer']);
+            ->whereIn('account_level', ['administrator', 'encoder', 'viewer', 'scanner']);
 
         $keyword = $this->normalizeKeyword($keyword);
 
@@ -235,7 +235,7 @@ class SearchModel
 
         $role = $this->normalizeKeyword((string) ($filters['role'] ?? ''));
 
-        if (in_array($role, ['administrator', 'encoder', 'viewer'], true)) {
+        if (in_array($role, ['administrator', 'encoder', 'viewer', 'scanner'], true)) {
             $builder->where('account_level', $role);
         }
 
@@ -274,9 +274,8 @@ class SearchModel
             $builder->where('audit_trails.userID', $userId);
         }
 
-        // Developer audit rows (NULL userID, no users row) stay hidden from
-        // non-developer viewers so the other roles never learn a Developer exists.
-        // Only relevant to the all-users admin view ($userId === null).
+        // Legacy file-backed Developer rows (NULL userID) stay hidden from
+        // Administrators. Only relevant to the all-users view ($userId === null).
         if ($userId === null && ! $includeDeveloper) {
             // Hide only the Developer's own rows; failed logins and system errors
             // (logged without a users row) still surface to admins.
@@ -558,8 +557,7 @@ class SearchModel
             $memberId = (int) ($row['memberID'] ?? 0);
             $memberName = $memberNames[$memberId] ?? ['firstname' => '', 'lastname' => ''];
             // NULL/0 userID is an action with no users row. Failed logins / system
-            // errors are real (non-Developer) events shown to admins; everything else
-            // with no user is the .env Developer.
+            // errors are system events; everything else is legacy Developer activity.
             $user = $userId > 0
                 ? ($users[$userId] ?? ['username' => '', 'role' => ''])
                 : $this->systemAuditActor((string) ($row['user_action'] ?? ''));

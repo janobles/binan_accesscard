@@ -271,7 +271,7 @@ CREATE TABLE `users` (
   `username` varchar(255) NOT NULL,
   `full_description` varchar(255) DEFAULT NULL,
   `password` text NOT NULL,
-  `account_level` enum('administrator','encoder','viewer','scanner') NOT NULL DEFAULT 'encoder',
+  `account_level` enum('viewer','scanner','administrator','developer','encoder') NOT NULL DEFAULT 'encoder',
   `isactive` enum('Enable','Disabled') DEFAULT NULL,
   `dt_created` timestamp NOT NULL DEFAULT current_timestamp(),
   `dt_updated` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
@@ -291,7 +291,8 @@ INSERT INTO `users` (`userID`, `username`, `full_description`, `password`, `acco
 (8, 'Administrator_Mel', 'LN:Tibay; FN:Romel; MN:Sarmiento; ADDR:Santa Rosa Laguna; CN:1234567819; BD:2000-05-31', '$argon2id$v=19$m=65536,t=4,p=1$ZDJRR0JYcXNSeHZscGJRMw$BaR00ZtPWvFXnC2C/+eH6YzVtig6z7KV+xYi5axzy/E', 'administrator', 'Enable', '2026-06-15 06:12:40', '2026-06-15 07:18:20'),
 (9, 'Encoder_Mel', 'LN:Tibay; FN:Romel Andres; MN:Sarmiento; ADDR:Santa Rosa Laguna; CN:12345678910; BD:2000-05-31', '$argon2id$v=19$m=65536,t=4,p=1$cWIycjlnd1BKUzV0eHhpMw$hMUEtyWR04QbP3TIXi1e6B0OtWSAfLRSV+zpv5ovJb4', 'encoder', 'Enable', '2026-06-15 07:15:55', '2026-06-15 07:15:55'),
 (10, 'Viewer_Mel', 'LN:Tibay; FN:Romel Andres; MN:Tibay; ADDR:Santa Rosa Laguna; CN:123456781910; BD:2000-05-31', '$argon2id$v=19$m=65536,t=4,p=1$ZVVMVGZJeG5qU2lHZUltLw$SAwUK4vrjkbuGrgtt3a5FQDYD6J4Zu6OLHbNEihi3Ow', 'viewer', 'Enable', '2026-06-15 07:16:58', '2026-06-16 01:13:48'),
-(11, 'adminjade', 'LN:Nobles; FN:Jade; MN:Tasoy; ADDR:Pulo, Cabuyao Laguna; CN:09821078512; BD:2003-07-05', '$argon2id$v=19$m=65536,t=4,p=1$akRyV3NhSlRaNUx6anpvRg$F/u37Ji3CfVmxrSysnOdrA6O5twZm0mk1teJNZ8lv2I', 'administrator', 'Enable', '2026-06-17 05:58:24', '2026-06-17 06:00:17');
+(11, 'adminjade', 'LN:Nobles; FN:Jade; MN:Tasoy; ADDR:Pulo, Cabuyao Laguna; CN:09821078512; BD:2003-07-05', '$argon2id$v=19$m=65536,t=4,p=1$akRyV3NhSlRaNUx6anpvRg$F/u37Ji3CfVmxrSysnOdrA6O5twZm0mk1teJNZ8lv2I', 'administrator', 'Enable', '2026-06-17 05:58:24', '2026-06-17 06:00:17'),
+(12, 'developer', NULL, '$argon2id$v=19$m=65536,t=4,p=1$SDJHU0p3NHF0L2hRQkhiZA$WQqhzKPvG3nBUNLwH4naRBjjwBoUunH8soeNEgeyvzk', 'developer', 'Enable', '2026-07-12 22:05:26', '2026-07-12 22:05:26');
 
 -- --------------------------------------------------------
 
@@ -480,7 +481,7 @@ ALTER TABLE `sector`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `userID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1;
+  MODIFY `userID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- Constraints for dumped tables

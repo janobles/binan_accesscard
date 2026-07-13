@@ -369,6 +369,29 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
 <script src="<?= esc(asset_url($scriptPath), 'attr') ?>"></script>
 <?php endforeach; ?>
 <script src="<?= esc(asset_url('assets/js/session-timeout.js'), 'attr') ?>" data-timeout-seconds="<?= esc((string) $idleTimeoutSeconds) ?>" data-logout-url="<?= site_url('logout?timeout=1') ?>" data-keep-alive-url="<?= site_url('session/keep-alive') ?>"></script>
+
+<?php if (session()->getFlashdata('openModal')): ?>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function() {
+        var modalType = '<?= esc(session()->getFlashdata('openModal')) ?>';
+        var modalId = '<?= esc((string) session()->getFlashdata('openModalId')) ?>';
+        var btn = null;
+        if (modalType === 'account-create') {
+            btn = document.querySelector('.js-open-account-create-modal');
+        } else if (modalType === 'account-profile') {
+            btn = document.querySelector('.js-open-my-account-modal');
+        } else if (modalType === 'account-edit' && modalId) {
+            var urlPart = '/edit/' + modalId;
+            btn = document.querySelector('.js-open-account-edit-modal[data-modal-url*="' + urlPart + '"]');
+        }
+        if (btn) {
+            btn.click();
+        }
+    }, 100);
+});
+</script>
+<?php endif; ?>
+
 </body>
 </html>
-

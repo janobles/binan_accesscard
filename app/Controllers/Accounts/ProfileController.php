@@ -74,11 +74,10 @@ class ProfileController extends BaseController
             'username' => 'required|min_length[4]|max_length[255]|is_unique[users.username,userID,' . $userId . ']',
             'last_name' => 'required|max_length[100]',
             'first_name' => 'required|max_length[100]',
-            'middle_name' => 'required|max_length[100]',
+            'middle_name' => 'permit_empty|max_length[100]',
             'suffix' => 'permit_empty|max_length[20]',
             'address' => 'required|max_length[255]',
             'contact_no' => 'required|max_length[50]',
-            'birthday' => 'required|valid_date[Y-m-d]',
         ];
         $messages = [
             'username' => [
@@ -87,7 +86,10 @@ class ProfileController extends BaseController
         ];
 
         if (! $this->validate($rules, $messages)) {
-            return redirect()->back()->with('error', implode(' ', $this->validator->getErrors()));
+            return redirect()->back()
+                ->withInput()
+                ->with('validationErrors', $this->validator->getErrors())
+                ->with('openModal', 'account-profile');
         }
 
         // Password change is optional; validate it fully before writing anything.
@@ -160,7 +162,6 @@ class ProfileController extends BaseController
             'SF'   => trim((string) $this->request->getPost('suffix')),
             'ADDR' => trim((string) $this->request->getPost('address')),
             'CN'   => trim((string) $this->request->getPost('contact_no')),
-            'BD'   => trim((string) $this->request->getPost('birthday')),
         ];
 
         $parts = [];

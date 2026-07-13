@@ -13,17 +13,17 @@ class AidDistributionModel extends Model
     protected $table         = 'aid_distribution';
     protected $primaryKey    = 'aidID';
     protected $returnType    = 'array';
-    protected $allowedFields = ['control_no', 'memberID', 'service_id', 'claim_date', 'userID', 'batch_id'];
+    protected $allowedFields = ['control_no', 'memberID', 'aid_type_id', 'claim_date', 'userID', 'batch_id'];
     protected $useTimestamps = false;
 
     /** Inserts one distribution row and returns its aidID. */
     public function logAid(array $data): int
     {
         // Guard against a malformed handout: control number, claimant, and
-        // service must all be positive ids and a claim date must be present.
+        // aid type must all be positive ids and a claim date must be present.
         if ((int) ($data['control_no'] ?? 0) <= 0
             || (int) ($data['memberID'] ?? 0) <= 0
-            || (int) ($data['service_id'] ?? 0) <= 0
+            || (int) ($data['aid_type_id'] ?? 0) <= 0
             || empty($data['claim_date'])
         ) {
             return 0;
@@ -32,7 +32,7 @@ class AidDistributionModel extends Model
         $this->insert([
             'control_no'  => (int) $data['control_no'],
             'memberID'    => (int) $data['memberID'],
-            'service_id'  => (int) $data['service_id'],
+            'aid_type_id' => (int) $data['aid_type_id'],
             'claim_date'  => $data['claim_date'],
             'userID'      => isset($data['userID']) && (int) $data['userID'] > 0 ? (int) $data['userID'] : null,
             'batch_id'    => isset($data['batch_id']) && (int) $data['batch_id'] > 0 ? (int) $data['batch_id'] : null,
@@ -53,7 +53,7 @@ class AidDistributionModel extends Model
 
     /**
      * Chronological (newest-first) aid history for a control number, with the
-     * service name/shortcode and the claimant's full name resolved via joins.
+     * aid type name and the claimant's full name resolved via joins.
      */
     public function historyFor(int $controlNo): array
     {
@@ -63,10 +63,10 @@ class AidDistributionModel extends Model
 
         try {
             return $this->select('aid_distribution.aidID, aid_distribution.claim_date,'
-                    . ' aid_distribution.service_id,'
-                    . " services.name AS service, services.shortcode AS service_code,"
+                    . ' aid_distribution.aid_type_id,'
+                    . " aid_type.name AS aid_type,"
                     . " TRIM(CONCAT(member.firstname, ' ', member.lastname)) AS claimant")
-                ->join('services', 'services.serviceID = aid_distribution.service_id', 'left')
+                ->join('aid_type', 'aid_type.aid_type_id = aid_distribution.aid_type_id', 'left')
                 ->join('member', 'member.memberID = aid_distribution.memberID', 'left')
                 ->where('aid_distribution.control_no', $controlNo)
                 ->orderBy('aid_distribution.claim_date', 'DESC')
@@ -78,19 +78,19 @@ class AidDistributionModel extends Model
     }
 
     /**
-     * Every distribution, newest first, with service name/shortcode, claimant
-     * name, family-head name, and the scanning user's username resolved via
-     * joins. Drives the all-distributions table.
+     * Every distribution, newest first, with aid type name, claimant name,
+     * family-head name, and the scanning user's username resolved via joins.
+     * Drives the all-distributions table.
      */
     public function allDistributions(): array
     {
         try {
             return $this->select('aid_distribution.aidID, aid_distribution.control_no, aid_distribution.claim_date,'
-                    . " services.name AS service, services.shortcode AS service_code,"
+                    . " aid_type.name AS aid_type,"
                     . " TRIM(CONCAT(member.firstname, ' ', member.lastname)) AS claimant,"
                     . " TRIM(CONCAT(head.firstname, ' ', head.lastname)) AS head,"
                     . " COALESCE(users.username, '') AS scanned_by")
-                ->join('services', 'services.serviceID = aid_distribution.service_id', 'left')
+                ->join('aid_type', 'aid_type.aid_type_id = aid_distribution.aid_type_id', 'left')
                 ->join('member', 'member.memberID = aid_distribution.memberID', 'left')
                 ->join('qr_control', 'qr_control.control_no = aid_distribution.control_no', 'left')
                 ->join('member head', 'head.memberID = qr_control.headID', 'left')
@@ -100,6 +100,32 @@ class AidDistributionModel extends Model
                 ->findAll();
         } catch (\Throwable $e) {
             return [];
+        }
+    }
+
+    /**
+     * The existing distribution row for this family in this batch, or null.
+     * One family may only be logged once per batch; this is the probe the
+     * scan endpoint uses to report "Duplicate Entry".
+     */
+    public function inBatch(int $controlNo, int $batchId): ?array
+    {
+        if ($controlNo <= 0 || $batchId <= 0) {
+            return null;
+        }
+
+        try {
+            $row = $this->select('aid_distribution.aidID, aid_distribution.claim_date,'
+                    . ' aid_distribution.dt_created,'
+                    . " COALESCE(users.username, '') AS scanned_by")
+                ->join('users', 'users.userID = aid_distribution.userID', 'left')
+                ->where('aid_distribution.control_no', $controlNo)
+                ->where('aid_distribution.batch_id', $batchId)
+                ->first();
+
+            return is_array($row) ? $row : null;
+        } catch (\Throwable $e) {
+            return null;
         }
     }
 

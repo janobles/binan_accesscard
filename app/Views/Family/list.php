@@ -104,4 +104,5 @@ if ($canEdit) {
     'bodyData' => [
         'routeBase' => $routeBase,
     ],
+    'footer' => '<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 w-100"><div id="familyFooterLeft"></div><div id="familyFooterRight"></div></div>',
 ]) ?>

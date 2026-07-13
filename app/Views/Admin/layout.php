@@ -291,7 +291,7 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                     'cardClass' => 'sector-management',
                     'bodyView' => 'Admin/distribution-distributions-body',
                     'bodyData' => ['distributions' => $distributions],
-                    'footer' => '<span id="distCount"></span>',
+                    'footer' => view('components/table_footer', ['leftContent' => '<span id="distCount"></span>']),
                 ]) ?>
 
                 <script>

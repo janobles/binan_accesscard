@@ -73,5 +73,6 @@ $accounts = array_merge($adminAccounts, $employeeAccounts, $viewerAccounts, $sca
             'isDeveloper' => $isDeveloper,
             'isAdmin' => $isAdmin,
         ],
+        'footer' => view('components/table_footer', ['leftContent' => '<span id="accountsCount">Loading...</span>']),
     ]) ?>
 </div>

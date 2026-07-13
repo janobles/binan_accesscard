@@ -20,6 +20,18 @@
     border-radius: 0.5rem;
 }
 
+.scanner-result-qr {
+    width: 15rem;
+    height: 15rem;
+    object-fit: contain;
+    image-rendering: pixelated;
+}
+
+.scanner-result-number {
+    font-size: clamp(3rem, 12vw, 6rem);
+    line-height: 1;
+}
+
 /* Post-log success receipt */
 .scan-receipt {
     border-left: 0.25rem solid var(--bs-success, #198754);

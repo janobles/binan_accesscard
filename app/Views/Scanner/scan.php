@@ -26,9 +26,7 @@
   </div>
 </div>
 
-<?php /* One-action result banner: scan = log. alert-success when the handout
-         was recorded, alert-danger when the family was already logged in
-         this batch. Big text so it reads from arm's length. */ ?>
+<?php /* One-action result banner: green for a new QR, red for a duplicate. */ ?>
 <div id="resultBanner" class="alert d-none align-items-center gap-3 fs-4 py-4" role="alert" aria-live="assertive">
   <i id="resultIcon" class="bi display-6" aria-hidden="true"></i>
   <div>
@@ -40,48 +38,17 @@
 
 <div id="emptyState" class="text-center py-5">
   <i id="emptyIcon" class="bi bi-qr-code-scan display-3 text-secondary" aria-hidden="true"></i>
-  <div id="emptyTitle" class="fw-bold mt-3">No family loaded</div>
+  <div id="emptyTitle" class="fw-bold mt-3">No QR scanned</div>
   <div id="emptyText" class="text-muted small">Scan a QR card to log a distribution.</div>
 </div>
 
-<div id="familyPanel" hidden>
-  <div class="row g-3">
-    <div class="col-lg-7">
-      <div class="card border-0 rounded-3 mb-3 bg-white py-4 px-4">
-        <div class="card-body d-flex flex-row align-items-center">
-          <img id="qrImage" src="" alt="QR Code" class="rounded-3 shadow-sm border bg-white me-5" style="width: 240px; height: 240px; object-fit: contain; image-rendering: pixelated; display: none;">
-          <div class="flex-grow-1 text-center">
-            <div class="text-muted text-uppercase fw-bold mb-2 fs-4">Scanned QR Code</div>
-            <div id="qrHeadline" class="fw-bold text-primary mb-0" style="font-size: 6rem; line-height: 1;"></div>
-          </div>
-        </div>
-      </div>
-      <!--
-      <div class="card border-0 rounded-3 mb-3">
-        <div class="card-body">
-          <div class="fw-bold mb-2">Family Head</div>
-          <div id="headBody"></div>
-        </div>
-      </div>
-      <div class="card border-0 rounded-3 mb-3">
-        <div class="d-flex justify-content-between align-items-center px-3 pt-3 pb-2">
-          <span class="fw-bold">Members</span>
-          <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse"
-                  data-bs-target="#membersCollapse" aria-expanded="false" aria-controls="membersCollapse">
-            Show members
-          </button>
-        </div>
-        <div class="collapse" id="membersCollapse">
-          <ul class="list-group list-group-flush" id="membersList"></ul>
-        </div>
-      </div>
-      -->
-    </div>
-
-    <div class="col-lg-5">
-      <div class="card border-0 rounded-3 mb-3">
-        <div class="fw-bold px-3 pt-3 pb-2">Aid History</div>
-        <ul class="list-group list-group-flush" id="historyList"></ul>
+<div id="scanPanel" hidden>
+  <div class="card border-0 rounded-3 mb-3 bg-white py-4 px-4">
+    <div class="card-body d-flex flex-column flex-md-row align-items-center justify-content-center gap-4">
+      <img id="qrImage" src="" alt="Scanned QR code" class="scanner-result-qr rounded-3 shadow-sm border bg-white" hidden>
+      <div class="text-center">
+        <div class="text-muted text-uppercase fw-bold mb-2 fs-4">Scanned QR Code</div>
+        <div id="qrHeadline" class="scanner-result-number fw-bold text-primary mb-0"></div>
       </div>
     </div>
   </div>
@@ -95,13 +62,12 @@
 const BASE = '<?= rtrim(base_url(), '/') ?>';
 const AID_TYPE_NAME = <?= json_encode((string) $aidType['name'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 const $ = (id) => document.getElementById(id);
-const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 // Empty-state zone doubles as the error surface: idle prompt by default,
 // warning icon + message when a scan fails.
 function showEmpty(error) {
   $('emptyState').hidden = false;
-  $('familyPanel').hidden = true;
+  $('scanPanel').hidden = true;
   $('resultBanner').classList.add('d-none');
   $('resultBanner').classList.remove('d-flex');
   if (error) {
@@ -110,7 +76,7 @@ function showEmpty(error) {
     $('emptyText').textContent = error;
   } else {
     $('emptyIcon').className = 'bi bi-qr-code-scan display-3 text-secondary';
-    $('emptyTitle').textContent = 'No family loaded';
+    $('emptyTitle').textContent = 'No QR scanned';
     $('emptyText').textContent = 'Scan a QR card to log a distribution.';
   }
 }
@@ -124,47 +90,17 @@ function showBanner(logged, text) {
   $('resultText').textContent = text;
 }
 
-function badgeList(items) {
-  return (items || []).map(b => `<span class="badge bg-light text-dark border me-1">${esc(b)}</span>`).join('');
-}
-
-function renderFamily(data) {
-  const h = data.head;
-  if ($('headBody')) {
-    $('headBody').innerHTML =
-      `<div class="fw-bold">${esc(h.firstname)} ${esc(h.lastname)}</div>` +
-      `<div class="text-muted small">${esc(h.address)}</div>` +
-      `<div class="mt-2">${badgeList(h.badges)}</div>`;
-  }
-  if ($('membersList')) {
-    $('membersList').innerHTML = data.members
-      .map(m => `<li class="list-group-item">
-          <div>${esc(m.firstname)} ${esc(m.lastname)} <span class="text-muted">(${esc(m.relationship || 'Member')})</span></div>
-          <div class="small text-muted">${esc(m.sex || '—')} · ${esc(m.birthday || '—')}</div>
-          <div class="mt-1">${badgeList(m.badges)}</div>
-        </li>`).join('');
-  }
-  if ($('qrHeadline')) {
-    $('qrHeadline').textContent = data.control_no;
-  }
-  if ($('qrImage') && data.qr_code_image) {
+function renderScan(data) {
+  $('qrHeadline').textContent = data.control_no;
+  if (data.qr_code_image) {
     $('qrImage').src = data.qr_code_image;
-    $('qrImage').style.display = 'inline-block';
+    $('qrImage').hidden = false;
   }
-  renderHistory(data.history);
   $('emptyState').hidden = true;
-  $('familyPanel').hidden = false;
+  $('scanPanel').hidden = false;
 }
 
-function renderHistory(rows) {
-  $('historyList').innerHTML = rows.length
-    ? rows.map(r => `<li class="list-group-item d-flex justify-content-between">
-        <span><span class="badge bg-light text-dark border me-1">${esc(r.aid_type)}</span>${esc(r.claimant)}</span><span class="text-muted">${esc(r.claim_date)}</span></li>`).join('')
-    : '<li class="list-group-item text-muted">No aid received yet.</li>';
-}
-
-// One action: scan = log. The server resolves the family, refuses in-batch
-// duplicates, and returns everything the panel needs in one round trip.
+// One action: scan = log. Family encoding is not required in temporary mode.
 async function scanLog(control) {
   // Auto-clear: hardware scanners type code + Enter but never clear the
   // field; clearing here keeps consecutive scans from concatenating.
@@ -186,16 +122,12 @@ async function scanLog(control) {
     return;
   }
 
-  renderFamily(data);
-  const headName = `${data.head.firstname} ${data.head.lastname}`;
+  renderScan(data);
   if (data.logged) {
-    // Prefer the server-returned aid type: the batch (and its aid type) may
-    // have changed since this page loaded.
-    showBanner(true, `${data.aid_type_name || AID_TYPE_NAME} → ${headName} (Family #${data.control_no})`);
+    showBanner(true, `${data.aid_type_name || AID_TYPE_NAME} → QR #${data.control_no} recorded.`);
   } else {
     const d = data.duplicate || {};
-    const by = d.scanned_by ? ` by ${d.scanned_by}` : '';
-    showBanner(false, `Already gave out to Family #${data.control_no} in this batch (${d.dt_created || d.claim_date || ''}${by}). Nothing was logged.`);
+    showBanner(false, `QR #${data.control_no} was already recorded in this batch (${d.dt_created || d.claim_date || ''}). Nothing was logged.`);
   }
   const countEl = document.getElementById('myBatchCount');
   if (countEl && typeof data.myBatchCount === 'number') {

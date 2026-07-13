@@ -446,6 +446,19 @@ CREATE TABLE `aid_distribution` (
   KEY `idx_ad_batch` (`batch_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+-- Temporary scanner table used until family encoding is complete.
+DROP TABLE IF EXISTS `temp_aid_distribution`;
+CREATE TABLE `temp_aid_distribution` (
+  `temp_aidID` int(11) NOT NULL AUTO_INCREMENT,
+  `control_no` int(11) NOT NULL,
+  `aid_type_id` int(11) NOT NULL,
+  `claim_date` date NOT NULL,
+  `batch_id` int(11) DEFAULT NULL,
+  `dt_created` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`temp_aidID`),
+  UNIQUE KEY `uq_temp_aid_batch_control` (`batch_id`, `control_no`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
 --
 -- Distribution batches: one row per giving event; closed_at NULL = the single
 -- open batch. Closing a batch is the manual statistics reset.

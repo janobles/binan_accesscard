@@ -42,10 +42,12 @@ final class ScanViewTest extends CIUnitTestCase
         $this->assertStringContainsString('No active distribution batch', $this->html);
     }
 
-    public function testTwoColumnResponsiveGrid(): void
+    public function testQrOnlyResultPanel(): void
     {
-        $this->assertStringContainsString('col-lg-7', $this->html);
-        $this->assertStringContainsString('col-lg-5', $this->html);
+        $this->assertStringContainsString('id="scanPanel"', $this->html);
+        $this->assertStringContainsString('id="qrHeadline"', $this->html);
+        $this->assertStringNotContainsString('data.head', $this->html);
+        $this->assertStringNotContainsString('historyList', $this->html);
     }
 
     public function testOneActionScanBanner(): void

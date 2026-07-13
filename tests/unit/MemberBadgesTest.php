@@ -14,10 +14,10 @@ final class MemberBadgesTest extends CIUnitTestCase
         $this->assertSame([], $model->referenceBadges([]));
     }
 
-    public function testScanControllerAttachesBadges(): void
+    public function testTemporaryScanDoesNotRequireMemberBadges(): void
     {
         $src = file_get_contents(APPPATH . 'Controllers/Scanner/ScanController.php');
-        $this->assertStringContainsString('referenceBadges(', $src);
-        $this->assertStringContainsString("'badges'", $src);
+        $this->assertStringNotContainsString('referenceBadges(', $src);
+        $this->assertStringContainsString('TempAidDistributionModel', $src);
     }
 }

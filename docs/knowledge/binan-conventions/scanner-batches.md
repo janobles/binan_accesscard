@@ -4,6 +4,13 @@
 performance stats, and the kiosk-vs-dashboard shell split in the scanner
 module.
 
+> **Temporary encoder-gap flow:** Until family encoding is complete,
+> `POST scanner/log` does not resolve `qr_control` or `member`. It records
+> `control_no`, the active batch's `aid_type_id` and `batch_id`, and the claim
+> date in `temp_aid_distribution`. Duplicate QR numbers are refused within the
+> same batch. No `memberID` or `userID` is stored, so the legacy history,
+> reports, and per-scanner performance remain based on `aid_distribution`.
+
 ## Rule 1: Batch = one giving event; at most one open; aid type bound at open
 
 `distribution_batch` (dump V18) holds one row per giving event, including the

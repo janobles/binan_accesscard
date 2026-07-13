@@ -5,18 +5,15 @@ namespace App\Controllers\Scanner;
 use App\Controllers\BaseController;
 use App\Libraries\RoleAccess;
 use App\Libraries\SessionAccount;
-use App\Models\Audit\AuditTrailsModel;
-use App\Models\Families\MemberModel;
-use App\Models\Scanner\AidDistributionModel;
 use App\Models\Scanner\AidStatsModel;
 use App\Models\Scanner\DistributionBatchModel;
-use App\Models\Scanner\QrControlModel;
+use App\Models\Scanner\TempAidDistributionModel;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
 
 /**
- * Scanner module: resolve a paper QR control number to a family, show its aid
- * history, and log a new aid distribution. Scanner/Admin/Developer only.
+ * Scanner module: record paper QR control numbers for an active distribution
+ * batch. Scanner/Admin/Developer only.
  *
  * The kiosk (scan + performance) renders in the kiosk shell
  * (Scanner/kiosk-layout): no sidebar/topbar, one slim header with the live
@@ -26,8 +23,8 @@ use CodeIgniter\HTTP\ResponseInterface;
  * - scan():        GET  scanner/scan        -> one-action scan UI; empty state when no batch is open.
  * - performance(): GET  scanner/performance  -> this kiosk's own live metrics.
  * - stats():       GET  scanner/stats        -> JSON own-performance snapshot for polling.
- * - logAid():      POST scanner/log          -> the whole scan in one call: resolve family,
- *                                               per-batch duplicate guard, insert + audit;
+ * - logAid():      POST scanner/log          -> validate QR, reject a batch duplicate,
+ *                                               and insert a temporary distribution;
  *                                               409 when no open batch.
  */
 class ScanController extends BaseController
@@ -41,7 +38,6 @@ class ScanController extends BaseController
         }
 
         $activeBatch = model(DistributionBatchModel::class)->activeBatch();
-        $userId      = (int) (session('user_id') ?? 0);
 
         return view('Scanner/scan', [
             'pageTitle'    => 'Scan',
@@ -56,7 +52,7 @@ class ScanController extends BaseController
                 ]
                 : null,
             'myBatchCount' => $activeBatch !== null
-                ? model(AidDistributionModel::class)->familiesForUserInBatch($userId, (int) $activeBatch['batch_id'])
+                ? model(TempAidDistributionModel::class)->countInBatch((int) $activeBatch['batch_id'])
                 : 0,
         ]);
     }
@@ -169,11 +165,8 @@ class ScanController extends BaseController
     }
 
     /**
-     * POST scanner/log — the whole scan in one action. Resolves the control
-     * number to a family, refuses when the family was already logged in the
-     * open batch (Duplicate Entry), otherwise inserts a distribution for the
-     * family HEAD dated today and audits it. The response always carries the
-     * family panel data so the kiosk renders in one round trip.
+     * POST scanner/log — records a QR number without requiring encoded family
+     * data. A QR can be recorded once per active batch.
      */
     public function logAid(): ResponseInterface
     {
@@ -188,111 +181,59 @@ class ScanController extends BaseController
         }
         $controlNo = (int) $this->request->getPost('control_no');
 
-        $headId = model(QrControlModel::class)->headForControl($controlNo);
-        if ($headId === null) {
-            return $this->response->setStatusCode(404)->setJSON(['error' => 'QR control number is not registered.']);
-        }
-        $members = new MemberModel();
-        $head    = $members->findHead($headId);
-        if ($head === null) {
-            log_message('error', 'Scanner log: control {c} maps to missing head {h}', ['c' => $controlNo, 'h' => $headId]);
-            return $this->response->setStatusCode(404)->setJSON(['error' => 'Family record unavailable.']);
-        }
-
         $activeBatch = model(DistributionBatchModel::class)->activeBatch();
         if ($activeBatch === null) {
             return $this->response->setStatusCode(409)
                 ->setJSON(['error' => 'No active distribution batch. Ask an administrator to open one.']);
         }
-        $batchId = (int) $activeBatch['batch_id'];
-        $userId  = (int) (session('user_id') ?? 0);
-
-        // Project the head row to what the kiosk renders; the full member row
-        // carries salary/contact/religion, which have no business in this JSON.
-        $familyPayload = [
+        $batchId  = (int) $activeBatch['batch_id'];
+        $tempLog  = model(TempAidDistributionModel::class);
+        $payload  = [
             'control_no'    => $controlNo,
             'qr_code_image' => (new \App\Libraries\Qr\QrImageGenerator())->dataUri(
                 config('QrCardSettings')->qrUrlPrefix . \App\Libraries\Qr\ControlNumber::format($controlNo)
             ),
             'aid_type_name' => (string) ($activeBatch['aid_type_name'] ?? 'Aid'),
-            'head'          => [
-                'memberID'  => (int) $head['memberID'],
-                'firstname' => (string) ($head['firstname'] ?? ''),
-                'lastname'  => (string) ($head['lastname'] ?? ''),
-                'address'   => (string) ($head['address'] ?? ''),
-            ],
-            'members'       => $members->familyMembers($headId),
         ];
 
-        // Sector/category/service badges per member for the family panel.
-        $memberRows = $familyPayload['members'];
-        $badges     = $members->referenceBadges(array_map(static fn (array $m): int => (int) $m['memberID'], $memberRows));
-        $familyPayload['head']['badges'] = $badges[(int) $head['memberID']] ?? [];
-        foreach ($memberRows as $i => $m) {
-            $memberRows[$i]['badges'] = $badges[(int) $m['memberID']] ?? [];
-        }
-        $familyPayload['members'] = $memberRows;
-
-        // One handout per family per batch: a repeat scan reports the original
-        // entry instead of logging again. The check is server-side so a stale
-        // kiosk page can never double-log.
-        $existing = model(AidDistributionModel::class)->inBatch($controlNo, $batchId);
+        $existing = $tempLog->inBatch($controlNo, $batchId);
         if ($existing !== null) {
-            return $this->response->setJSON($familyPayload + [
+            return $this->response->setJSON($payload + [
                 'ok'           => true,
                 'logged'       => false,
                 'duplicate'    => $existing,
-                'history'      => model(AidDistributionModel::class)->historyFor($controlNo),
-                'myBatchCount' => model(AidDistributionModel::class)->familiesForUserInBatch($userId, $batchId),
+                'myBatchCount' => $tempLog->countInBatch($batchId),
             ]);
         }
 
         $aidTypeId = (int) $activeBatch['aid_type_id'];
         $claimDate = date('Y-m-d');
-
-        // The insert and its audit row must land together: without a shared
-        // transaction, a handout could get logged with no audit trail (or an
-        // audit row could survive a rolled-back handout).
-        $db = db_connect();
-        $db->transStart();
-
-        $aidId = model(AidDistributionModel::class)->logAid([
+        $aidId      = $tempLog->logAid([
             'control_no'  => $controlNo,
-            'memberID'    => (int) $head['memberID'],
             'aid_type_id' => $aidTypeId,
             'claim_date'  => $claimDate,
-            'userID'      => $userId,
             'batch_id'    => $batchId,
         ]);
 
-        $audited = $aidId > 0 && (new AuditTrailsModel())->logAction(
-            $userId,
-            (int) $head['memberID'],
-            'Logged aid distribution',
-            'Control #' . $controlNo,
-            $this->request->getIPAddress(),
-            (string) $this->request->getUserAgent(),
-            'Aid type ID ' . $aidTypeId . ' on ' . $claimDate
-        );
-
-        if (! $audited) {
-            $db->transRollback();
+        if ($aidId <= 0) {
+            $existing = $tempLog->inBatch($controlNo, $batchId);
+            if ($existing !== null) {
+                return $this->response->setJSON($payload + [
+                    'ok'           => true,
+                    'logged'       => false,
+                    'duplicate'    => $existing,
+                    'myBatchCount' => $tempLog->countInBatch($batchId),
+                ]);
+            }
 
             return $this->response->setStatusCode(500)->setJSON(['error' => 'Failed to log the aid distribution.']);
         }
 
-        $db->transComplete();
-
-        if ($db->transStatus() === false) {
-            return $this->response->setStatusCode(500)->setJSON(['error' => 'Failed to log the aid distribution.']);
-        }
-
-        return $this->response->setJSON($familyPayload + [
+        return $this->response->setJSON($payload + [
             'ok'           => true,
             'logged'       => true,
             'duplicate'    => null,
-            'history'      => model(AidDistributionModel::class)->historyFor($controlNo),
-            'myBatchCount' => model(AidDistributionModel::class)->familiesForUserInBatch($userId, $batchId),
+            'myBatchCount' => $tempLog->countInBatch($batchId),
         ]);
     }
 }

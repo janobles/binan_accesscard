@@ -73,6 +73,14 @@ $routes->group('admin', static function (RouteCollection $routes): void {
         $routes->post('restore/(:num)', 'Lookups\ServiceController::restore/$1');
     });
 
+    $routes->get('aidtypes', 'Admin\AidTypesController::index');
+    $routes->group('aidtypes', static function (RouteCollection $routes): void {
+        $routes->post('create', 'Admin\AidTypesController::create');
+        $routes->post('archive/(:num)', 'Admin\AidTypesController::archive/$1');
+        $routes->post('restore/(:num)', 'Admin\AidTypesController::restore/$1');
+        $routes->post('delete/(:num)', 'Admin\AidTypesController::deleteType/$1');
+    });
+
     $routes->group('cards', static function (RouteCollection $routes): void {
         $routes->get('', 'Admin\DashboardController::cards');
         $routes->post('generate', 'Cards\QrCardController::batch');

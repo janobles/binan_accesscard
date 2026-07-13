@@ -28,6 +28,7 @@ $employeeAccounts = $employeeAccounts ?? [];
 $recordListData = $recordListData ?? [];
 $categories = $categories ?? [];
 $activeAidTypes = $activeAidTypes ?? [];
+$aidTypes = $aidTypes ?? [];
 $sectorShortcodeOptions = $sectorShortcodeOptions ?? [];
 $searchTerm = $searchTerm ?? '';
 $searchFilters = $searchFilters ?? [];
@@ -243,6 +244,20 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
 
             <?php if ($activePage === 'cards'): ?>
                 <?= view('Cards/batch_form') ?>
+            <?php endif; ?>
+
+            <?php if ($activePage === 'aidtypes'): ?>
+                <?= view('components/card', [
+                    'icon' => 'box-seam',
+                    'title' => 'Aid Types',
+                    'cardClass' => 'sector-management',
+                    'bodyView' => 'Admin/aidtypes-body',
+                    'bodyData' => [
+                        'aidTypes' => $aidTypes,
+                        'currentRole' => $currentRole,
+                    ],
+                ]) ?>
+                <?= view('Admin/aidtype-create-modal') ?>
             <?php endif; ?>
 
             <?php if ($activePage === 'batches'): ?>

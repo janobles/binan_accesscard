@@ -2,13 +2,13 @@
 /**
  * Kiosk shell for the scan flow (setting + scan pages): full-viewport, no
  * sidebar/topbar. Deliberately minimal for time-and-motion — one slim header
- * bar (batch · service · live personal counter · logout) and the page
+ * bar (batch · aid type · live personal counter · logout) and the page
  * content. Reports and stats stay in the admin dashboard shell.
  */
 $pageTitle          = $pageTitle ?? 'Scan';
 $username           = $username ?? 'Scanner';
 $activeBatch        = $activeBatch ?? null;
-$service            = $service ?? null;
+$aidType            = $aidType ?? null;
 $myBatchCount       = (int) ($myBatchCount ?? 0);
 $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
 ?>
@@ -27,8 +27,8 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
   <span class="navbar-brand mb-0 h1 d-flex align-items-center gap-2">
     <i class="bi bi-qr-code-scan" aria-hidden="true"></i>
     <span><?= $activeBatch !== null ? esc($activeBatch['name']) : 'No active batch' ?></span>
-    <?php if ($service !== null): ?>
-      <span class="badge bg-info text-dark fs-6"><?= esc(($service['code'] ?? '') !== '' ? $service['code'] . ' — ' . $service['name'] : $service['name']) ?></span>
+    <?php if ($aidType !== null): ?>
+      <span class="badge bg-info text-dark fs-6"><?= esc($aidType['name']) ?></span>
     <?php endif; ?>
   </span>
   <div class="d-flex align-items-center gap-3 text-white">

@@ -26,14 +26,14 @@ final class ScanViewTest extends CIUnitTestCase
         $this->assertStringNotContainsString('style="', $this->html);
     }
 
-    public function testServiceFixedByServer(): void
+    public function testAidTypeFixedByServer(): void
     {
-        // The service comes from the active batch; the scan page carries it as
-        // server-filled JS constants — no in-page dropdown, and it is never
-        // posted (logAid derives it server-side from the batch).
+        // The aid type comes from the active batch; the scan page carries it
+        // as a server-filled JS constant — no in-page dropdown, and it is
+        // never posted (logAid derives it server-side from the batch).
         $this->assertStringNotContainsString('sessionAidType', $this->html);
-        $this->assertStringContainsString('SERVICE_NAME', $this->html);
-        $this->assertStringContainsString('SERVICE_ID', $this->html);
+        $this->assertStringContainsString('AID_TYPE_NAME', $this->html);
+        $this->assertStringNotContainsString('SERVICE_NAME', $this->html);
         $this->assertStringNotContainsString('name="service_id"', $this->html);
     }
 
@@ -48,21 +48,23 @@ final class ScanViewTest extends CIUnitTestCase
         $this->assertStringContainsString('col-lg-5', $this->html);
     }
 
-    public function testReceiptPanelPresent(): void
+    public function testOneActionScanBanner(): void
     {
-        $this->assertStringContainsString('receiptPanel', $this->html);
-        $this->assertStringContainsString('scan-receipt', $this->html);
-    }
-
-    public function testConfirmMentionsEnterKey(): void
-    {
-        $this->assertStringContainsString('Confirm (Enter)', $this->html);
+        // One-action scan: no confirm form, one result banner region that
+        // reads Logged (success) or Duplicate Entry (danger).
+        $this->assertStringNotContainsString('id="logForm"', $this->html);
+        $this->assertStringNotContainsString('Confirm (Enter)', $this->html);
+        $this->assertStringContainsString('id="resultBanner"', $this->html);
+        $this->assertStringContainsString('Duplicate Entry', $this->html);
+        $this->assertStringContainsString('alert-success', $this->html);
+        $this->assertStringContainsString('alert-danger', $this->html);
     }
 
     public function testScanLoopJsBehaviors(): void
     {
-        // clear-on-lookup, empty-Enter confirm, focus guard, step engine
-        foreach (['requestSubmit', "window.addEventListener('keydown'", 'showReceipt('] as $needle) {
+        // clear-on-scan, focus guard, banner renderer
+        foreach
+            (["\$('controlInput').value = ''", "window.addEventListener('keydown'", 'showBanner('] as $needle) {
             $this->assertStringContainsString($needle, $this->html, "missing JS behavior: {$needle}");
         }
     }

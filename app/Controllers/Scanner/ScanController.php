@@ -211,6 +211,9 @@ class ScanController extends BaseController
         // carries salary/contact/religion, which have no business in this JSON.
         $familyPayload = [
             'control_no'    => $controlNo,
+            'qr_code_image' => (new \App\Libraries\Qr\QrImageGenerator())->dataUri(
+                config('QrCardSettings')->qrUrlPrefix . \App\Libraries\Qr\ControlNumber::format($controlNo)
+            ),
             'aid_type_name' => (string) ($activeBatch['aid_type_name'] ?? 'Aid'),
             'head'          => [
                 'memberID'  => (int) $head['memberID'],

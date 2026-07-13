@@ -145,6 +145,8 @@ if (! function_exists('asset_scripts')) {
                 'assets/js/login.js',
             ],
             'scanner' => [
+                'assets/js/dashboard/dashboard-modal-loader.js',
+                'assets/js/dashboard/account-form-modal.js',
                 'vendor/chart.js/chart.umd.min.js',
                 'assets/js/dashboard/scanner-reports.js',
             ],

@@ -47,6 +47,16 @@
 <div id="familyPanel" hidden>
   <div class="row g-3">
     <div class="col-lg-7">
+      <div class="card border-0 rounded-3 mb-3 bg-white py-4 px-4">
+        <div class="card-body d-flex flex-row align-items-center">
+          <img id="qrImage" src="" alt="QR Code" class="rounded-3 shadow-sm border bg-white me-5" style="width: 240px; height: 240px; object-fit: contain; image-rendering: pixelated; display: none;">
+          <div class="flex-grow-1 text-center">
+            <div class="text-muted text-uppercase fw-bold mb-2 fs-4">Scanned QR Code</div>
+            <div id="qrHeadline" class="fw-bold text-primary mb-0" style="font-size: 6rem; line-height: 1;"></div>
+          </div>
+        </div>
+      </div>
+      <!--
       <div class="card border-0 rounded-3 mb-3">
         <div class="card-body">
           <div class="fw-bold mb-2">Family Head</div>
@@ -65,6 +75,7 @@
           <ul class="list-group list-group-flush" id="membersList"></ul>
         </div>
       </div>
+      -->
     </div>
 
     <div class="col-lg-5">
@@ -119,16 +130,27 @@ function badgeList(items) {
 
 function renderFamily(data) {
   const h = data.head;
-  $('headBody').innerHTML =
-    `<div class="fw-bold">${esc(h.firstname)} ${esc(h.lastname)}</div>` +
-    `<div class="text-muted small">${esc(h.address)}</div>` +
-    `<div class="mt-2">${badgeList(h.badges)}</div>`;
-  $('membersList').innerHTML = data.members
-    .map(m => `<li class="list-group-item">
-        <div>${esc(m.firstname)} ${esc(m.lastname)} <span class="text-muted">(${esc(m.relationship || 'Member')})</span></div>
-        <div class="small text-muted">${esc(m.sex || '—')} · ${esc(m.birthday || '—')}</div>
-        <div class="mt-1">${badgeList(m.badges)}</div>
-      </li>`).join('');
+  if ($('headBody')) {
+    $('headBody').innerHTML =
+      `<div class="fw-bold">${esc(h.firstname)} ${esc(h.lastname)}</div>` +
+      `<div class="text-muted small">${esc(h.address)}</div>` +
+      `<div class="mt-2">${badgeList(h.badges)}</div>`;
+  }
+  if ($('membersList')) {
+    $('membersList').innerHTML = data.members
+      .map(m => `<li class="list-group-item">
+          <div>${esc(m.firstname)} ${esc(m.lastname)} <span class="text-muted">(${esc(m.relationship || 'Member')})</span></div>
+          <div class="small text-muted">${esc(m.sex || '—')} · ${esc(m.birthday || '—')}</div>
+          <div class="mt-1">${badgeList(m.badges)}</div>
+        </li>`).join('');
+  }
+  if ($('qrHeadline')) {
+    $('qrHeadline').textContent = data.control_no;
+  }
+  if ($('qrImage') && data.qr_code_image) {
+    $('qrImage').src = data.qr_code_image;
+    $('qrImage').style.display = 'inline-block';
+  }
   renderHistory(data.history);
   $('emptyState').hidden = true;
   $('familyPanel').hidden = false;

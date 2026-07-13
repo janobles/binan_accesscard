@@ -2,8 +2,8 @@
 /**
  * Distributions log body: client-side filter toolbar + distributions table.
  * Rendered inside components/card by Admin/layout.php's distributions block
- * (vars: distributions). Each row shows the service (shortcode + name) the
- * batch handed out. Filtering/paging handled by the inline script in
+ * (vars: distributions). Each row shows the aid type the batch handed out.
+ * Filtering/paging handled by the inline script in
  * Admin/layout.php's distributions block.
  */
 ?>
@@ -37,7 +37,7 @@
                 <th>QR #</th>
                 <th>Family Head</th>
                 <th>Claimant</th>
-                <th>Service</th>
+                <th>Aid Type</th>
                 <th>Scanned By</th>
                 <th class="text-end">Actions</th>
               </tr>
@@ -49,7 +49,7 @@
                   <td><span class="badge bg-light text-dark border"><?= esc($d['control_no']) ?></span></td>
                   <td><span class="sector-name"><?= esc($d['head']) ?></span></td>
                   <td><?= esc($d['claimant']) ?></td>
-                  <td><span class="badge bg-light text-dark border"><?= esc(($d['service_code'] ?? '') !== '' ? $d['service_code'] . ' — ' . $d['service'] : (string) $d['service']) ?></span></td>
+                  <td><span class="badge bg-light text-dark border"><?= esc((string) $d['aid_type']) ?></span></td>
                   <td><?= esc($d['scanned_by']) ?></td>
                   <td class="text-end">
                     <div class="dropdown actions-menu">

@@ -1,15 +1,12 @@
 <?php
 /**
- * New Batch modal: name + category -> service pick. Services are embedded
- * as JSON and the service select is filtered client-side by the chosen
- * category (services.category stores the category NAME, not an id).
+ * New Batch modal: name + aid type pick. Aid types come from the aid_type
+ * reference table (admin/aidtypes page).
  *
  * Variables:
- * - $activeCategories list of category rows (code, name)
- * - $activeServices   list of service rows (serviceID, shortcode, category, name)
+ * - $activeAidTypes list of aid type rows (aid_type_id, name)
  */
-$activeCategories = $activeCategories ?? [];
-$activeServices   = $activeServices ?? [];
+$activeAidTypes = $activeAidTypes ?? [];
 ?>
 <div class="modal fade" id="newBatchModal" tabindex="-1" aria-labelledby="newBatchModalLabel" aria-hidden="true">
   <div class="modal-dialog">
@@ -26,18 +23,12 @@ $activeServices   = $activeServices ?? [];
                  placeholder="e.g. Relief Distribution — <?= esc(date('M j, Y')) ?>">
         </div>
         <div class="mb-3">
-          <label for="batchCategory" class="form-label">Category</label>
-          <select class="form-select" id="batchCategory" required>
-            <option value="" selected disabled>Choose a category...</option>
-            <?php foreach ($activeCategories as $c): ?>
-              <option value="<?= esc($c['name'], 'attr') ?>"><?= esc($c['code']) ?> — <?= esc($c['name']) ?></option>
+          <label for="batchAidType" class="form-label">Aid type</label>
+          <select class="form-select" id="batchAidType" name="aid_type_id" required>
+            <option value="" selected disabled>Choose an aid type...</option>
+            <?php foreach ($activeAidTypes as $t): ?>
+              <option value="<?= (int) $t['aid_type_id'] ?>"><?= esc($t['name']) ?></option>
             <?php endforeach; ?>
-          </select>
-        </div>
-        <div class="mb-3">
-          <label for="batchService" class="form-label">Service / program</label>
-          <select class="form-select" id="batchService" name="service_id" required disabled>
-            <option value="" selected disabled>Choose a category first...</option>
           </select>
         </div>
       </div>
@@ -48,26 +39,3 @@ $activeServices   = $activeServices ?? [];
     </form>
   </div>
 </div>
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-  const services = <?= json_encode(array_map(static fn (array $s) => [
-      'id'       => (int) $s['serviceID'],
-      'code'     => (string) ($s['shortcode'] ?? ''),
-      'name'     => (string) ($s['name'] ?? ''),
-      'category' => (string) ($s['category'] ?? ''),
-  ], $activeServices), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-  const catSel = document.getElementById('batchCategory');
-  const svcSel = document.getElementById('batchService');
-  if (!catSel || !svcSel) return;
-  catSel.addEventListener('change', () => {
-    svcSel.innerHTML = '<option value="" selected disabled>Choose a service...</option>';
-    services.filter(s => s.category === catSel.value).forEach(s => {
-      const o = document.createElement('option');
-      o.value = s.id;
-      o.textContent = s.code ? s.code + ' — ' + s.name : s.name;
-      svcSel.appendChild(o);
-    });
-    svcSel.disabled = false;
-  });
-});
-</script>

@@ -27,6 +27,7 @@ $adminAccounts = $adminAccounts ?? [];
 $employeeAccounts = $employeeAccounts ?? [];
 $recordListData = $recordListData ?? [];
 $categories = $categories ?? [];
+$activeAidTypes = $activeAidTypes ?? [];
 $sectorShortcodeOptions = $sectorShortcodeOptions ?? [];
 $searchTerm = $searchTerm ?? '';
 $searchFilters = $searchFilters ?? [];
@@ -257,8 +258,7 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                     ],
                 ]) ?>
                 <?= view('Admin/batch-create-modal', [
-                    'activeCategories' => $activeCategories,
-                    'activeServices' => $activeServices,
+                    'activeAidTypes' => $activeAidTypes,
                 ]) ?>
             <?php endif; ?>
 

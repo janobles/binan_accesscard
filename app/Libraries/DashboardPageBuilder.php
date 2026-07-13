@@ -11,6 +11,7 @@ use App\Models\Lookups\SectorModel;
 use App\Models\Lookups\ServiceModel;
 use App\Models\Auth\UserModel;
 use App\Models\Scanner\AidDistributionModel;
+use App\Models\Scanner\AidTypeModel;
 use App\Models\Scanner\AidStatsModel;
 use App\Models\Scanner\DistributionBatchModel;
 use App\Support\FamilyProfilingFormV2;
@@ -194,8 +195,7 @@ class DashboardPageBuilder
             'categoryListData'   => $categoryListData,
             'batches'            => $isBatches ? $batchModel->allBatches() : [],
             'activeBatch'        => $isBatches ? $batchModel->activeBatch() : null,
-            'activeCategories'   => $isBatches ? (new CategoryModel())->getActive() : [],
-            'activeServices'     => $isBatches ? (new ServiceModel())->getActive() : [],
+            'activeAidTypes'     => $isBatches ? model(AidTypeModel::class)->active() : [],
             'distributions'      => $isDistributions ? model(AidDistributionModel::class)->allDistributions() : [],
             'reportsBatches'     => $reportsData['reportsBatches'],
             'reportsBatchId'     => $reportsData['reportsBatchId'],

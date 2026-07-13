@@ -12,7 +12,7 @@ use CodeIgniter\HTTP\ResponseInterface;
 
 /**
  * Admin server: distribution-batch control and the all-distributions log.
- * Admin/Developer only. Batch open binds a service (from the services
+ * Admin/Developer only. Batch open binds an aid type (from the aid_type
  * reference table) for the whole batch. Every mutation writes an
  * audit_trails row. Rendered in the admin dashboard shell.
  */
@@ -53,25 +53,25 @@ class DistributionController extends BaseController
         $this->audit(
             'Voided aid distribution #' . $id,
             (int) ($row['memberID'] ?? 0),
-            'Control #' . (string) ($row['control_no'] ?? '') . ', service ID ' . (int) ($row['service_id'] ?? 0) . ', claim date ' . (string) ($row['claim_date'] ?? '')
+            'Control #' . (string) ($row['control_no'] ?? '') . ', aid type ID ' . (int) ($row['aid_type_id'] ?? 0) . ', claim date ' . (string) ($row['claim_date'] ?? '')
         );
         return redirect()->to('admin/distributions')->with('success', 'Distribution voided.');
     }
 
-    /** POST admin/batches/open — name + service. */
+    /** POST admin/batches/open — name + aid type. */
     public function openBatch(): RedirectResponse
     {
         if ($g = $this->guard()) { return $g; }
         $name      = trim((string) $this->request->getPost('name'));
-        $serviceId = (int) $this->request->getPost('service_id');
+        $aidTypeId = (int) $this->request->getPost('aid_type_id');
         if ($name === '') {
             return redirect()->to('admin/batches')->with('error', 'Batch name is required.');
         }
-        if ($serviceId <= 0) {
-            return redirect()->to('admin/batches')->with('error', 'Choose a service for this batch.');
+        if ($aidTypeId <= 0) {
+            return redirect()->to('admin/batches')->with('error', 'Choose an aid type for this batch.');
         }
         $batchModel = model(DistributionBatchModel::class);
-        $id         = $batchModel->open($name, $serviceId, (int) (session('user_id') ?? 0));
+        $id         = $batchModel->open($name, $aidTypeId, (int) (session('user_id') ?? 0));
         if ($id <= 0) {
             $message = $batchModel->activeBatch() !== null
                 ? 'A batch is already open. Close the active batch before opening a new one.'
@@ -79,7 +79,7 @@ class DistributionController extends BaseController
 
             return redirect()->to('admin/batches')->with('error', $message);
         }
-        $this->audit('Opened distribution batch "' . $name . '" #' . $id . ' (service ID ' . $serviceId . ')');
+        $this->audit('Opened distribution batch "' . $name . '" #' . $id . ' (aid type ID ' . $aidTypeId . ')');
         return redirect()->to('admin/batches')->with('success', 'Batch opened. Scanning is now live.');
     }
 

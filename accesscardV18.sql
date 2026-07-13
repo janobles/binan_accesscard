@@ -1,3 +1,9 @@
+-- Binan Access Card dump V18.
+-- V18 = V17 + test reference rows removed (sector 11 TS, category 8 TSC,
+-- services 47-48 TS1/TSC1) + developer login (developer/developer123).
+-- Batches bind aid_type_id: aid_type is its own reference table,
+-- unrelated to services/programs.
+--
 -- phpMyAdmin SQL Dump
 -- version 5.2.1
 -- https://www.phpmyadmin.net/
@@ -288,7 +294,7 @@ INSERT INTO `users` (`userID`, `username`, `full_description`, `password`, `acco
 (9, 'Encoder_Mel', 'LN:Tibay; FN:Romel Andres; MN:Sarmiento; ADDR:Santa Rosa Laguna; CN:12345678910; BD:2000-05-31', '$argon2id$v=19$m=65536,t=4,p=1$cWIycjlnd1BKUzV0eHhpMw$hMUEtyWR04QbP3TIXi1e6B0OtWSAfLRSV+zpv5ovJb4', 'encoder', 'Enable', '2026-06-15 07:15:55', '2026-06-15 07:15:55'),
 (10, 'Viewer_Mel', 'LN:Tibay; FN:Romel Andres; MN:Tibay; ADDR:Santa Rosa Laguna; CN:123456781910; BD:2000-05-31', '$argon2id$v=19$m=65536,t=4,p=1$ZVVMVGZJeG5qU2lHZUltLw$SAwUK4vrjkbuGrgtt3a5FQDYD6J4Zu6OLHbNEihi3Ow', 'viewer', 'Enable', '2026-06-15 07:16:58', '2026-06-16 01:13:48'),
 (11, 'adminjade', 'LN:Nobles; FN:Jade; MN:Tasoy; ADDR:Pulo, Cabuyao Laguna; CN:09821078512; BD:2003-07-05', '$argon2id$v=19$m=65536,t=4,p=1$akRyV3NhSlRaNUx6anpvRg$F/u37Ji3CfVmxrSysnOdrA6O5twZm0mk1teJNZ8lv2I', 'administrator', 'Enable', '2026-06-17 05:58:24', '2026-06-17 06:00:17'),
-(12, 'developer', NULL, '$argon2id$v=19$m=65536,t=4,p=1$UHVBVzJEMFV2VDNhaU5xTg$hzjRbNAe6Pw4DFwVP9VApkJtRhRfnuSHsv7laHnXHiQ', 'developer', 'Enable', '2026-07-12 22:05:26', '2026-07-12 22:05:26');
+(12, 'developer', NULL, '$argon2id$v=19$m=65536,t=4,p=1$SDJHU0p3NHF0L2hRQkhiZA$WQqhzKPvG3nBUNLwH4naRBjjwBoUunH8soeNEgeyvzk', 'developer', 'Enable', '2026-07-12 22:05:26', '2026-07-12 22:05:26');
 
 -- --------------------------------------------------------
 
@@ -403,8 +409,7 @@ ALTER TABLE `job_queue`
 
 --
 --
--- Scanner module: QR control mapping and aid distribution log. Batches and
--- distributions bind directly to the services reference table (no aid_type).
+-- Scanner module: QR control mapping, aid types, aid distribution log
 --
 DROP TABLE IF EXISTS `qr_control`;
 CREATE TABLE `qr_control` (
@@ -415,19 +420,29 @@ CREATE TABLE `qr_control` (
   KEY `idx_qr_head` (`headID`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+DROP TABLE IF EXISTS `aid_type`;
+CREATE TABLE `aid_type` (
+  `aid_type_id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) NOT NULL,
+  `dt_created` timestamp NOT NULL DEFAULT current_timestamp(),
+  `dt_deleted` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`aid_type_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+INSERT INTO `aid_type` (`name`) VALUES ('Financial'), ('Rice'), ('Grocery');
+
 DROP TABLE IF EXISTS `aid_distribution`;
 CREATE TABLE `aid_distribution` (
   `aidID` int(11) NOT NULL AUTO_INCREMENT,
   `control_no` int(11) NOT NULL,
   `memberID` int(11) NOT NULL,
-  `service_id` int(11) NOT NULL,
+  `aid_type_id` int(11) NOT NULL,
   `claim_date` date NOT NULL,
   `userID` int(11) DEFAULT NULL,
   `batch_id` int(11) DEFAULT NULL,
   `dt_created` timestamp NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`aidID`),
   KEY `idx_ad_control` (`control_no`),
-  KEY `idx_ad_service` (`service_id`),
+  KEY `idx_ad_type` (`aid_type_id`),
   KEY `idx_ad_batch` (`batch_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -439,12 +454,12 @@ DROP TABLE IF EXISTS `distribution_batch`;
 CREATE TABLE `distribution_batch` (
   `batch_id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(100) NOT NULL,
-  `service_id` int(11) NOT NULL,
+  `aid_type_id` int(11) NOT NULL,
   `started_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `closed_at` timestamp NULL DEFAULT NULL,
   `created_by` int(11) DEFAULT NULL,
   PRIMARY KEY (`batch_id`),
-  KEY `idx_db_service` (`service_id`)
+  KEY `idx_db_aidtype` (`aid_type_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- AUTO_INCREMENT for table `member`

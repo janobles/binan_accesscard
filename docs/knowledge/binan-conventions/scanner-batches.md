@@ -10,6 +10,8 @@ module.
 > date in `temp_aid_distribution`. Duplicate QR numbers are refused within the
 > same batch. No `memberID` or `userID` is stored, so the legacy history,
 > reports, and per-scanner performance remain based on `aid_distribution`.
+> The scan page can void its currently displayed QR through `POST scanner/void`;
+> the delete is restricted to the active batch.
 
 ## Rule 1: Batch = one giving event; at most one open; aid type bound at open
 

@@ -30,5 +30,6 @@ final class ScanControllerBatchTest extends CIUnitTestCase
         $this->assertStringContainsString('inBatch(', $src);
         $this->assertStringContainsString("'batch_id'", $src);
         $this->assertStringContainsString('myBatchCount', $src);
+        $this->assertStringContainsString('voidInBatch($controlNo, $batchId)', $src);
     }
 }

@@ -61,4 +61,21 @@ class TempAidDistributionModel extends Model
     {
         return $batchId > 0 ? $this->where('batch_id', $batchId)->countAllResults() : 0;
     }
+
+    /** Deletes one QR scan from the specified batch. */
+    public function voidInBatch(int $controlNo, int $batchId): bool
+    {
+        if ($controlNo <= 0 || $batchId <= 0) {
+            return false;
+        }
+
+        try {
+            $this->where('control_no', $controlNo)
+                ->where('batch_id', $batchId);
+
+            return $this->delete() !== false && $this->db->affectedRows() > 0;
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
 }

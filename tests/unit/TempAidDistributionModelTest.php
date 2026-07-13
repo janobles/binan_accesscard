@@ -15,5 +15,8 @@ final class TempAidDistributionModelTest extends CIUnitTestCase
         }
         $this->assertStringNotContainsString('memberID', $src);
         $this->assertStringNotContainsString('userID', $src);
+        $this->assertStringContainsString('voidInBatch', $src);
+        $this->assertStringContainsString("->where('control_no', \$controlNo)", $src);
+        $this->assertStringContainsString("->where('batch_id', \$batchId)", $src);
     }
 }

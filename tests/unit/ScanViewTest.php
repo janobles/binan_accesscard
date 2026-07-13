@@ -70,4 +70,14 @@ final class ScanViewTest extends CIUnitTestCase
             $this->assertStringContainsString($needle, $this->html, "missing JS behavior: {$needle}");
         }
     }
+
+    public function testVoidCurrentScanAction(): void
+    {
+        $this->assertStringContainsString('id="voidScanBtn"', $this->html);
+        $this->assertStringContainsString('btn btn-danger', $this->html);
+        $this->assertStringContainsString('justify-content-center', $this->html);
+        $this->assertStringContainsString('scanner/void', $this->html);
+        $this->assertStringContainsString('window.confirm', $this->html);
+        $this->assertStringContainsString('Scan Voided', $this->html);
+    }
 }

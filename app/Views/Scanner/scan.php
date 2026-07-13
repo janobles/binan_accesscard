@@ -52,6 +52,11 @@
       </div>
     </div>
   </div>
+  <div class="d-flex justify-content-center mt-4">
+    <button type="button" class="btn btn-danger btn-lg px-5" id="voidScanBtn" hidden>
+      <i class="bi bi-trash3 me-2" aria-hidden="true"></i>Void Scan
+    </button>
+  </div>
 </div>
 <?php endif; ?>
 <?= $this->endSection() ?>
@@ -62,12 +67,15 @@
 const BASE = '<?= rtrim(base_url(), '/') ?>';
 const AID_TYPE_NAME = <?= json_encode((string) $aidType['name'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 const $ = (id) => document.getElementById(id);
+let currentControlNo = null;
 
 // Empty-state zone doubles as the error surface: idle prompt by default,
 // warning icon + message when a scan fails.
 function showEmpty(error) {
   $('emptyState').hidden = false;
   $('scanPanel').hidden = true;
+  $('voidScanBtn').hidden = true;
+  currentControlNo = null;
   $('resultBanner').classList.add('d-none');
   $('resultBanner').classList.remove('d-flex');
   if (error) {
@@ -81,16 +89,19 @@ function showEmpty(error) {
   }
 }
 
-function showBanner(logged, text) {
+function showBanner(kind, text) {
   const banner = $('resultBanner');
-  banner.classList.remove('d-none', 'alert-success', 'alert-danger');
-  banner.classList.add('d-flex', logged ? 'alert-success' : 'alert-danger');
-  $('resultIcon').className = 'bi display-6 ' + (logged ? 'bi-check-circle-fill' : 'bi-x-octagon-fill');
-  $('resultTitle').textContent = logged ? 'Logged' : $('dupTitleText').content.textContent;
+  const warning = kind === 'voided';
+  const success = kind === 'logged';
+  banner.classList.remove('d-none', 'alert-success', 'alert-danger', 'alert-warning');
+  banner.classList.add('d-flex', success ? 'alert-success' : (warning ? 'alert-warning' : 'alert-danger'));
+  $('resultIcon').className = 'bi display-6 ' + (success ? 'bi-check-circle-fill' : (warning ? 'bi-trash3-fill' : 'bi-x-octagon-fill'));
+  $('resultTitle').textContent = success ? 'Logged' : (warning ? 'Scan Voided' : (kind === 'duplicate' ? $('dupTitleText').content.textContent : 'Void Failed'));
   $('resultText').textContent = text;
 }
 
 function renderScan(data) {
+  currentControlNo = Number(data.control_no);
   $('qrHeadline').textContent = data.control_no;
   if (data.qr_code_image) {
     $('qrImage').src = data.qr_code_image;
@@ -98,6 +109,7 @@ function renderScan(data) {
   }
   $('emptyState').hidden = true;
   $('scanPanel').hidden = false;
+  $('voidScanBtn').hidden = false;
 }
 
 // One action: scan = log. Family encoding is not required in temporary mode.
@@ -124,16 +136,51 @@ async function scanLog(control) {
 
   renderScan(data);
   if (data.logged) {
-    showBanner(true, `${data.aid_type_name || AID_TYPE_NAME} → QR #${data.control_no} recorded.`);
+    showBanner('logged', `${data.aid_type_name || AID_TYPE_NAME} → QR #${data.control_no} recorded.`);
   } else {
     const d = data.duplicate || {};
-    showBanner(false, `QR #${data.control_no} was already recorded in this batch (${d.dt_created || d.claim_date || ''}). Nothing was logged.`);
+    showBanner('duplicate', `QR #${data.control_no} was already recorded in this batch (${d.dt_created || d.claim_date || ''}). Nothing was logged.`);
   }
   const countEl = document.getElementById('myBatchCount');
   if (countEl && typeof data.myBatchCount === 'number') {
     countEl.textContent = String(data.myBatchCount);
   }
 }
+
+$('voidScanBtn').addEventListener('click', async () => {
+  const controlNo = currentControlNo;
+  if (!controlNo || !window.confirm(`Void QR #${controlNo} from the active batch?`)) {
+    $('controlInput').focus();
+    return;
+  }
+
+  const button = $('voidScanBtn');
+  const fd = new FormData();
+  fd.append('control_no', String(controlNo));
+  button.disabled = true;
+
+  try {
+    const res = await fetch(`${BASE}/scanner/void`, { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!res.ok) {
+      showBanner('error', data.error || Object.values(data.errors || {}).join(' ') || 'Unable to void scan.');
+      return;
+    }
+
+    currentControlNo = null;
+    button.hidden = true;
+    showBanner('voided', `QR #${controlNo} was removed from the active batch.`);
+    const countEl = document.getElementById('myBatchCount');
+    if (countEl && typeof data.myBatchCount === 'number') {
+      countEl.textContent = String(data.myBatchCount);
+    }
+  } catch (err) {
+    showBanner('error', 'Network error. The scan was not voided.');
+  } finally {
+    button.disabled = false;
+    $('controlInput').focus();
+  }
+});
 
 function scanFailed(control, message) {
   showEmpty(message);

@@ -26,6 +26,7 @@ use CodeIgniter\HTTP\ResponseInterface;
  * - logAid():      POST scanner/log          -> validate QR, reject a batch duplicate,
  *                                               and insert a temporary distribution;
  *                                               409 when no open batch.
+ * - voidScan():    POST scanner/void         -> delete the displayed QR from the active batch.
  */
 class ScanController extends BaseController
 {
@@ -233,6 +234,40 @@ class ScanController extends BaseController
             'ok'           => true,
             'logged'       => true,
             'duplicate'    => null,
+            'myBatchCount' => $tempLog->countInBatch($batchId),
+        ]);
+    }
+
+    /** POST scanner/void — removes one mistaken temporary scan. */
+    public function voidScan(): ResponseInterface
+    {
+        $guard = RoleAccess::requireRole(['Scanner', 'Admin', 'Developer']);
+        if ($guard instanceof RedirectResponse) {
+            return $this->response->setStatusCode(403)->setJSON(['error' => 'Forbidden.']);
+        }
+
+        if (! $this->validate(['control_no' => 'required|is_natural_no_zero'])) {
+            return $this->response->setStatusCode(422)
+                ->setJSON(['errors' => $this->validator->getErrors()]);
+        }
+
+        $activeBatch = model(DistributionBatchModel::class)->activeBatch();
+        if ($activeBatch === null) {
+            return $this->response->setStatusCode(409)
+                ->setJSON(['error' => 'No active distribution batch.']);
+        }
+
+        $controlNo = (int) $this->request->getPost('control_no');
+        $batchId   = (int) $activeBatch['batch_id'];
+        $tempLog   = model(TempAidDistributionModel::class);
+        if (! $tempLog->voidInBatch($controlNo, $batchId)) {
+            return $this->response->setStatusCode(404)
+                ->setJSON(['error' => 'Scan record not found in the active batch.']);
+        }
+
+        return $this->response->setJSON([
+            'ok'           => true,
+            'control_no'   => $controlNo,
             'myBatchCount' => $tempLog->countInBatch($batchId),
         ]);
     }

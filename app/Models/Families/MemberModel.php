@@ -248,14 +248,25 @@ class MemberModel extends Model
     /**
      * Applies a DataTables column sort to a member query, or the default
      * newest-first ordering when $orderKey is null/unrecognized. Column keys map
-     * to the visible Manage Records columns: name (lastname, firstname), address,
-     * birthday. Used only by the server-side DataTables path.
+     * to the visible Manage Records columns: qr (qr_control join, no-control
+     * heads last), name (lastname, firstname), address, birthday. Used only by
+     * the server-side DataTables path.
      */
     private function applyMemberOrder($builder, ?string $orderKey, string $orderDirection): void
     {
         $direction = strtolower(trim($orderDirection)) === 'desc' ? 'DESC' : 'ASC';
 
         switch ($orderKey) {
+            case 'qr':
+                // qr_control holds one row per family head. Heads without a
+                // control number sort last in either direction.
+                $builder->join('qr_control qc_sort', 'qc_sort.headID = member.memberID', 'left')
+                    ->orderBy('qc_sort.control_no IS NULL', 'ASC', false)
+                    ->orderBy('qc_sort.control_no', $direction)
+                    // memberID breaks ties among heads without a control number
+                    // so pagination stays stable.
+                    ->orderBy('member.memberID', $direction);
+                return;
             case 'name':
                 $builder->orderBy('member.lastname', $direction)
                     ->orderBy('member.firstname', $direction);

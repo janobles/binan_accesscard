@@ -75,25 +75,23 @@
     font-size: 0.84rem;
 }
 
+/* The management page wrapper is chromeless (Manage Records standard: the
+   toolbar sits on the page, only the card is a box); the bordered
+   .accounts-page look above is kept for the create/edit modal views. */
 .accounts-page[data-account-management] {
+    display: block;
+    overflow: visible;
     gap: 0;
     padding: 0;
-    border: 1px solid #dce5e2;
-    border-radius: 0.35rem;
-    background: #ffffff;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
     box-shadow: none;
 }
 
-.accounts-page[data-account-management] .account-card {
-    border: 0;
-    border-radius: 0;
-}
-
+/* Border/radius come from the stock .card (Manage Records standard). */
 .account-card {
     overflow: hidden;
-    border: 1px solid #dce5e2;
-    border-radius: 0.45rem;
-    background: #ffffff;
 }
 
 .account-card-header {
@@ -220,82 +218,30 @@
     font-weight: 700;
 }
 
-.account-create-trigger {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.4rem;
-    min-height: 2.35rem;
-    border-radius: 0.35rem;
-    font-weight: 700;
-    white-space: nowrap;
-}
-
-.account-list-toolbar {
-    display: grid;
-    grid-template-columns: minmax(14rem, 1fr) minmax(10rem, 12rem) minmax(10rem, 12rem) minmax(13rem, 16rem);
-    gap: 0.75rem;
-    padding: 0.85rem 1rem;
-    border-top: 1px solid #e2e9e7;
-    border-bottom: 1px solid #e2e9e7;
-    background: #ffffff;
-}
-
-.account-list-toolbar .btn-toolbar,
-.account-list-toolbar .btn-group {
-    height: 2.35rem;
-    min-height: 2.35rem;
-}
-
-.account-list-toolbar .btn-group .btn {
-    min-width: 6.5rem;
-    padding-right: 0.85rem;
-    padding-left: 0.85rem;
-    font-size: 0.82rem;
-    font-weight: 700;
-}
-
-.account-filter-clear {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.4rem;
-    min-height: 2.35rem;
-    border-radius: 0.35rem;
-    font-weight: 700;
-    white-space: nowrap;
-    color: #ffffff;
-    border-color: #b42318;
-    background-color: #b42318;
-}
-
-.account-filter-clear:hover,
-.account-filter-clear:focus {
-    color: #ffffff;
-    border-color: #8f1d14;
-    background-color: #8f1d14;
-}
+/* The filter toolbar is stock Bootstrap grid + btn() markup in
+   Admin/accounts.php (Manage Records standard); no custom rules needed. */
 
 .account-table {
     min-width: 36rem;
     margin: 0;
 }
 
+/* Typography mirrors .manage-record-table (managerecord.css). */
 .account-table th {
     padding: 0.8rem 1rem;
     border-bottom-color: #cedbd7;
     background: #f4f7f7;
     color: #53635e;
-    font-size: 0.74rem;
-    font-weight: 800;
+    font-size: 0.7rem;
+    font-weight: 700;
     text-transform: uppercase;
 }
 
 .account-table td {
-    padding: 0.9rem 1rem;
+    padding: 0.85rem 1rem;
     border-bottom-color: #e4ece9;
     color: #34443f;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
 }
 
 .account-table form {
@@ -379,7 +325,6 @@
 
 @media (max-width: 48rem) {
     .account-card-header,
-    .account-list-toolbar,
     .account-create-grid {
         padding: 0.85rem;
     }
@@ -421,11 +366,6 @@
 
     .account-create-actions .btn {
         width: 100%;
-    }
-
-    .account-list-toolbar {
-        grid-template-columns: 1fr;
-        gap: 0.6rem;
     }
 
     .account-table {

@@ -255,9 +255,7 @@ class AuthController extends BaseController
             return false;
         }
 
-        // The developer logs in from .env (no users row), so the row existence
-        // check does not apply to it.
-        if ($role !== 'Developer' && ! RoleAccess::sessionUserExists()) {
+        if (! RoleAccess::sessionUserExists()) {
             return false;
         }
 

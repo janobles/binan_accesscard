@@ -1,9 +1,7 @@
+/* Border/radius come from the stock .card (Manage Records standard). */
 .audit-trails {
     margin-top: 0;
     overflow: hidden;
-    border: 1px solid #dce5e2;
-    border-radius: 0.35rem;
-    background: #ffffff;
 }
 
 .audit-filter-bar {
@@ -94,70 +92,12 @@
     overflow-wrap: anywhere;
 }
 
-/* Dual-search layout (Bar 1 database search + Bar 2 page-size / local filter) reusing
-   the Manage Records .records-* grid from managerecord.css. The audit Bar 1 has only 4
-   controls (keyword + action + Clear + Search All), so it needs its own column template;
-   and the employee shell doesn't load lookupmanagement.css, so the grid + footer rules
-   audit relies on are defined here (loaded by both the admin and employee shells). */
-[data-audit-management-root] .records-lookup-search {
-    grid-template-columns: minmax(18rem, 1fr) minmax(9rem, 13rem) repeat(2, minmax(6.25rem, 9rem));
-}
-
-@media (max-width: 62rem) {
-    [data-audit-management-root] .records-lookup-search {
-        grid-template-columns: repeat(2, minmax(9rem, 1fr));
-    }
-}
-
-@media (max-width: 40rem) {
-    [data-audit-management-root] .records-lookup-search {
-        grid-template-columns: repeat(2, minmax(8rem, 1fr));
-    }
-}
-
-[data-audit-management-root] .lookup-list-footer {
-    flex: 0 0 auto;
-    padding: 0.75rem 1rem;
-}
-
-/* The admin audit card (.audit-trails) is a bordered overflow:hidden panel with no inner
-   padding of its own, so pad the database-search row to line up with the 1rem table cells.
-   (The employee Activity panel supplies its own padding, so it is left untouched.) */
-.audit-trails .records-search-panel {
-    padding-top: 0.85rem;
-    padding-left: 1rem;
-    padding-right: 1rem;
-}
+/* Bar 1 (database search) is the shared components/records_toolbar_server
+   toolbar rendered above the card; the controls row and footer are shared
+   components too, so no audit-specific layout rules remain. */
 
 /* --- Audit log table reskin (CEDO-style layout: Date/Time · Action pill · Description ·
-       User Agent · User; airy clickable rows; full-width "search this page" + show-entries). */
-.audit-table-toolbar {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.6rem 1rem;
-    padding: 0.85rem 1rem 0;
-}
-
-.audit-page-search-form {
-    flex: 1 1 100%;
-    margin: 0;
-}
-
-.audit-page-search {
-    width: 100%;
-    min-height: 2.5rem;
-}
-
-.audit-show-entries {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    margin-left: auto;
-    margin-bottom: 0;
-    color: #65736e;
-    font-size: 0.83rem;
-}
+       User Agent · User; airy clickable rows). */
 
 .audit-show-entries label {
     margin: 0;
@@ -222,11 +162,9 @@
     overflow-wrap: anywhere;
 }
 
+/* Cell typography matches .manage-record-table; only the uppercase treatment
+   for usernames is audit-specific. */
 .audit-user {
-    color: #34443f;
-    font-size: 0.8rem;
-    font-weight: 700;
-    letter-spacing: 0.02em;
     text-transform: uppercase;
     white-space: nowrap;
 }

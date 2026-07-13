@@ -16,16 +16,15 @@ $userId = (int) ($account['userID'] ?? 0);
 $username = ($isEdit || $isSelfProfile) ? (string) ($account['username'] ?? '') : (string) old('username');
 $role = ($isEdit || $isSelfProfile) ? (string) ($account['role'] ?? '') : (string) old('role');
 $isSelf = (bool) ($isSelf ?? false);
-// True when an admin edits another administrator: personal details are locked
-// (read-only), but username/account level/reset password stay editable.
+// True when an admin edits another administrator: personal details and account
+// level are locked, while username and password reset remain available.
 $personalLocked = (bool) ($personalLocked ?? false);
 $lockAttr = $personalLocked ? ' disabled' : '';
-// Developer self-profile: username + account level are .env-managed (read-only).
-$isDeveloper = (bool) ($isDeveloper ?? false);
 $roleLabel = (string) ($roleLabel ?? $role);
-$isRoleReadOnly = $isDeveloper || ($isEdit && $isSelf) || $isSelfProfile;
+$isRoleReadOnly = $personalLocked || ($isEdit && $isSelf) || $isSelfProfile;
 $displayRoleLabel = $roleLabel !== '' ? $roleLabel : match ($role) {
     'administrator' => 'Administrator',
+    'developer' => 'Developer',
     'encoder' => 'Encoder',
     'viewer' => 'Viewer',
     'scanner' => 'Scanner',
@@ -56,7 +55,7 @@ $value = static function (array $details, string $key, bool $isEdit): string {
                 <div class="account-field-group" aria-label="User credentials">
                     <h3 class="account-field-group-title">User Credentials</h3>
                     <?php if ($personalLocked): ?>
-                        <p class="text-muted account-field small mb-0">Personal details are read-only. As an administrator you can only update this account's username, account level, and password.</p>
+                        <p class="text-muted account-field small mb-0">Personal details and account level are read-only. As an administrator you can only update this account's username and password.</p>
                     <?php endif; ?>
                     <div class="account-fields-row account-fields-row--requirements">
                         <div class="account-field">
@@ -103,10 +102,8 @@ $value = static function (array $details, string $key, bool $isEdit): string {
                             <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>-role">Account Level <span class="account-required-marker" aria-hidden="true">*</span></label>
                             <?php if ($isRoleReadOnly): ?>
                                 <input class="form-control account-role-readonly" id="<?= esc($fieldPrefix, 'attr') ?>-role" type="text" value="<?= esc($displayRoleLabel, 'attr') ?>" disabled>
-                                <small class="text-muted"><?= $isSelfProfile || $isDeveloper ? '' : 'You cannot change your own account level.' ?></small>
-                                <?php if (! $isDeveloper): ?>
-                                    <input type="hidden" name="role" value="<?= esc($role, 'attr') ?>">
-                                <?php endif; ?>
+                                <small class="text-muted"><?= $isSelfProfile ? '' : 'You cannot change this account level.' ?></small>
+                                <input type="hidden" name="role" value="<?= esc($role, 'attr') ?>">
                             <?php else: ?>
                                 <select class="form-select" id="<?= esc($fieldPrefix, 'attr') ?>-role" name="role" required>
                                     <?php if (! $isEdit && ! $isSelfProfile): ?>

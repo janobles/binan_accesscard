@@ -13,8 +13,8 @@ use Config\Session as SessionConfig;
  * Storage is writable/active_sessions/sessions.json: a map of identity key =>
  * { token, username, ip, user_agent, updated_at }.
  *
- *   - Identity key is the immutable userID for real accounts, or the username for
- *     the .env Developer (userID 0, no `users` row).
+ *   - Identity key is the immutable userID. A username fallback is retained for
+ *     malformed or legacy sessions that do not contain a valid userID.
  *   - `token` is a random per-login value kept in the session's DATA (not the PHP
  *     session id, which CI4 auto-rotates every Session::timeToUpdate seconds and
  *     would make the id-based match spuriously fail). App\Filters\SingleSessionFilter
@@ -25,7 +25,7 @@ use Config\Session as SessionConfig;
  *     session's idle_last_activity), so an abandoned session ages out in lockstep
  *     and stops blocking re-login.
  *
- * Mirrors App\Libraries\DeveloperProfile's writable-JSON + atomic-write pattern.
+ * Uses writable JSON with atomic replacement.
  */
 class ActiveSessionRegistry
 {
@@ -36,8 +36,8 @@ class ActiveSessionRegistry
     }
 
     /**
-     * Stable per-account key: the immutable userID for real accounts, or the
-     * lower-cased username for the .env Developer (userID 0, no users row).
+     * Stable per-account key: the immutable userID, with a lower-cased username
+     * fallback for malformed or legacy sessions.
      */
     public static function identityKey(int $userId, string $username): string
     {
@@ -116,7 +116,7 @@ class ActiveSessionRegistry
     /**
      * Persists the map, dropping entries older than the session expiration so the
      * file cannot grow without bound. Atomic write + Windows-safe overwrite, matching
-     * DeveloperProfile::atomicWrite.
+     * the atomic-write helper below.
      */
     private static function writeAll(array $all): bool
     {
@@ -142,7 +142,7 @@ class ActiveSessionRegistry
 
     /**
      * Writes a file atomically: temp file + rename, with a Windows-safe overwrite
-     * fallback (rename() cannot overwrite on Windows). Mirrors DeveloperProfile.
+     * fallback (rename() cannot overwrite on Windows).
      */
     private static function atomicWrite(string $path, string $content): bool
     {

@@ -59,6 +59,11 @@ class AuditTrailsModel extends Model
         ?string $userAgent = null,
         ?string $detail = null
     ): bool {
+        // Every mutation in this app logs an audit row, so this is the one
+        // choke point where the dashboard counts can change. Drop the cached
+        // stats here so the tiles recount on the next dashboard visit.
+        cache()->delete(\App\Models\DashboardModel::STATS_CACHE_KEY);
+
         $memberId = $this->memberIdValue($memberId);
 
         if ($memberId === null && ! $this->isMemberIdNullable()) {
@@ -68,9 +73,8 @@ class AuditTrailsModel extends Model
         }
 
         $payload = [
-            // The .env Developer has no users row (userID 0). Its audit rows are
-            // stored with a NULL userID so they don't violate the users FK and stay
-            // invisible to non-developer viewers (see getRecent / withNames).
+            // Unknown actors use NULL so they do not violate the users FK. Legacy
+            // file-backed Developer rows also used NULL (see getRecent / withNames).
             'userID' => $userId > 0 ? $userId : null,
             'memberID' => $memberId,
             'user_action' => $action,
@@ -325,8 +329,7 @@ class AuditTrailsModel extends Model
             $memberId = (int) ($row['memberID'] ?? 0);
             $memberName = $memberNames[$memberId] ?? ['firstname' => '', 'lastname' => ''];
             // A NULL/0 userID is an action with no users row. Failed logins and system
-            // errors are real (non-Developer) events shown to admins; everything else
-            // with no user is the .env Developer.
+            // errors are system events; everything else is legacy Developer activity.
             $user = $userId > 0
                 ? ($users[$userId] ?? ['username' => '', 'role' => ''])
                 : $this->systemActorLabel((string) ($row['user_action'] ?? ''));

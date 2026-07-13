@@ -9,131 +9,62 @@ $canEditAccounts = (bool) ($canEditAccounts ?? false);
 $currentRole = (string) ($currentRole ?? '');
 $isDeveloper = $currentRole === 'Developer';
 $isAdmin = $currentRole === 'Admin';
-$currentUserId = (int) session()->get('user_id');
-// Admins and developers both manage every non-developer account now.
 $accounts = array_merge($adminAccounts, $employeeAccounts, $viewerAccounts, $scannerAccounts);
 ?>
 
 <div class="accounts-page" data-account-management>
-<<<<<<< HEAD
-    <section class="account-card" aria-labelledby="accounts-title">
-        <div class="account-card-header">
+    <?php /* Toolbar above the card, Manage Records standard. Client mode: the account list is
+             fully loaded, so the keyword and the panel radios filter rows in the browser
+             (accounts-modal.js) and records-filter-panel.js renders the pills — no reload. */ ?>
+    <form class="row g-2 align-items-center mb-2" role="search" aria-label="Filter accounts" data-records-filter-form data-records-client data-records-pills="accountFilterPills">
+        <div class="col-12 col-lg">
+            <input class="form-control" type="search" data-account-search placeholder="Search accounts..." autocomplete="off" aria-label="Search accounts by username">
         </div>
 
-        <div class="account-list-toolbar" role="search" aria-label="Filter accounts">
-            <input class="form-control" type="search" data-account-search placeholder="Search username..." autocomplete="off" aria-label="Search accounts by username">
-            <select class="form-select" data-account-level-filter aria-label="Filter by account level">
-                <option value="">Select Level</option>
-                <option value="administrator">Administrator</option>
-                <option value="encoder">Encoder</option>
-                <option value="viewer">Viewer</option>
-            </select>
-            <select class="form-select" data-account-status-filter aria-label="Filter by account status">
-                <option value="">Select Status</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-            </select>
-            <div class="btn-toolbar" role="toolbar" aria-label="Account actions">
-                <div class="btn-group" role="group" aria-label="Filter and account actions">
-                    <button class="btn btn-outline-secondary account-filter-clear" type="button" data-account-clear-filters>
-                        <span>Clear</span>
-                    </button>
-                    <?php if ($canCreateAccounts): ?>
-                        <button class="btn btn-success account-create-trigger js-open-account-create-modal" type="button" data-modal-url="<?= site_url('accounts/create') ?>" data-modal-title="Create Account">
-                            <span>Create Account</span>
-                        </button>
-                    <?php endif; ?>
+        <div class="col-12 col-lg-auto">
+            <div class="dropdown" data-records-panel>
+                <button class="<?= btn('filter') ?> dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                    <i class="bi bi-funnel" aria-hidden="true"></i> Filters
+                </button>
+                <div class="dropdown-menu dropdown-menu-end records-filter-panel p-3">
+                    <div class="d-flex flex-wrap gap-4">
+                        <div data-records-filter="level" data-records-group-label="Level">
+                            <div class="fw-semibold small text-uppercase text-muted mb-1">Level</div>
+                            <?php $accountLevels = ['' => 'All levels', 'administrator' => 'Administrator', 'encoder' => 'Encoder', 'viewer' => 'Viewer', 'scanner' => 'Scanner']; ?>
+                            <?php foreach ($accountLevels as $value => $label): ?>
+                                <label class="form-check d-flex align-items-center gap-2 py-1" data-records-option>
+                                    <input class="form-check-input m-0" type="radio" name="account_level" value="<?= esc((string) $value, 'attr') ?>" data-account-level-filter
+                                        <?= $value === '' ? 'data-records-default checked' : 'data-records-pill-label="' . esc($label, 'attr') . '"' ?>>
+                                    <span class="form-check-label small"><?= esc($label) ?></span>
+                                </label>
+                            <?php endforeach; ?>
+                        </div>
+                        <div data-records-filter="status" data-records-group-label="Status">
+                            <div class="fw-semibold small text-uppercase text-muted mb-1">Status</div>
+                            <?php $accountStatuses = ['' => 'All statuses', 'active' => 'Active', 'inactive' => 'Inactive']; ?>
+                            <?php foreach ($accountStatuses as $value => $label): ?>
+                                <label class="form-check d-flex align-items-center gap-2 py-1" data-records-option>
+                                    <input class="form-check-input m-0" type="radio" name="account_status" value="<?= esc((string) $value, 'attr') ?>" data-account-status-filter
+                                        <?= $value === '' ? 'data-records-default checked' : 'data-records-pill-label="' . esc($label, 'attr') . '"' ?>>
+                                    <span class="form-check-label small"><?= esc($label) ?></span>
+                                </label>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="table-responsive">
-            <table class="table account-table align-middle">
-                <thead>
-                    <tr>
-                        <th scope="col">Username</th>
-                        <th scope="col">Role</th>
-                        <th scope="col">Status</th>
-                        <th scope="col">Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($accounts as $account): ?>
-                        <?php
-                        $userId = (int) ($account['userID'] ?? 0);
-                        $rawRole = (string) ($account['role'] ?? '');
-                        $roleLabel = \App\Libraries\RoleAccess::normalizeRole($rawRole) ?? $rawRole;
-                        $isActive = ViewFormatter::isActiveStatus($account['isactive'] ?? null);
-                        $nextStatus = $isActive ? 'Disabled' : 'Enable';
-                        $statusLabel = $isActive ? 'Active' : 'Inactive';
-                        $statusClass = $isActive ? 'is-active' : 'is-disabled';
-                        $statusFilter = $isActive ? 'active' : 'inactive';
-                        $canEditRow = $canEditAccounts && in_array($rawRole, ['administrator', 'encoder', 'viewer'], true);
-                        $canDeveloperToggle = $isDeveloper && in_array($rawRole, ['administrator', 'encoder', 'viewer'], true);
-                        $canAdminToggle = $isAdmin && in_array($rawRole, ['encoder', 'viewer'], true);
-                        $hasRowActions = $canEditRow || $canDeveloperToggle || $canAdminToggle;
-                        ?>
-                        <tr data-account-row data-account-username="<?= esc(mb_strtolower((string) ($account['username'] ?? '')), 'attr') ?>" data-account-role="<?= esc(mb_strtolower($rawRole), 'attr') ?>" data-account-status="<?= esc($statusFilter, 'attr') ?>">
-                            <td><strong><?= esc((string) ($account['username'] ?? '')) ?></strong></td>
-                            <td><?= esc($roleLabel) ?></td>
-                            <td><span class="account-status-badge <?= esc($statusClass) ?>"><?= esc($statusLabel) ?></span></td>
-                            <td>
-                                <div class="account-actions">
-                                    <?php if ($hasRowActions): ?>
-                                        <div class="dropdown">
-                                            <button class="btn btn-sm btn-outline-secondary account-action-toggle dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false">
-                                                Actions
-                                            </button>
-                                            <div class="dropdown-menu account-action-menu">
-                                                <?php if ($canEditRow): ?>
-                                                    <button class="dropdown-item js-open-account-edit-modal" type="button"
-                                                            data-modal-url="<?= site_url('accounts/edit/' . $userId) ?>"
-                                                            data-modal-title="Edit Account">
-                                                        <span>Edit</span>
-                                                    </button>
-                                                <?php endif; ?>
-
-                                                <?php if ($canDeveloperToggle): ?>
-                                                    <form class="js-account-status-form" method="post" action="<?= site_url('developer/accounts/status') ?>" data-confirm-message="<?= esc(($isActive ? 'Disable' : 'Enable') . ' ' . $roleLabel . ' account "' . (string) ($account['username'] ?? '') . '"?', 'attr') ?>">
-                                                        <?= csrf_field() ?>
-                                                        <input type="hidden" name="userID" value="<?= esc((string) $userId) ?>">
-                                                        <input type="hidden" name="status" value="<?= esc($nextStatus) ?>">
-                                                        <button class="dropdown-item <?= $isActive ? 'text-danger' : 'text-success' ?>" type="submit">
-                                                            <span><?= $isActive ? 'Disable' : 'Enable' ?></span>
-                                                        </button>
-                                                    </form>
-                                                <?php elseif ($canAdminToggle): ?>
-                                                    <form class="js-account-status-form" method="post" action="<?= site_url($isActive ? 'admin/accounts/disable' : 'admin/accounts/enable') ?>" data-confirm-message="<?= esc(($isActive ? 'Disable' : 'Enable') . ' ' . $roleLabel . ' account "' . (string) ($account['username'] ?? '') . '"?', 'attr') ?>">
-                                                        <?= csrf_field() ?>
-                                                        <input type="hidden" name="userID" value="<?= esc((string) $userId) ?>">
-                                                        <button class="dropdown-item <?= $isActive ? 'text-danger' : 'text-success' ?>" type="submit">
-                                                            <span><?= $isActive ? 'Disable' : 'Enable' ?></span>
-                                                        </button>
-                                                    </form>
-                                                <?php endif; ?>
-                                            </div>
-                                        </div>
-                                    <?php else: ?>
-                                        <span class="text-muted">-</span>
-                                    <?php endif; ?>
-                                </div>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                    <?php if ($accounts === []): ?>
-                        <tr>
-                            <td colspan="4" class="account-empty-state">No accounts found.</td>
-                        </tr>
-                    <?php else: ?>
-                        <tr data-account-filter-empty hidden>
-                            <td colspan="4" class="account-empty-state">No matching accounts found.</td>
-                        </tr>
-                    <?php endif; ?>
-                </tbody>
-            </table>
+        <div class="col-12 col-lg-auto d-flex flex-wrap align-items-center gap-2" role="group" aria-label="Toolbar actions">
+            <button class="<?= btn('clear') ?> flex-fill" type="button" data-account-clear-filters>Clear</button>
+            <?php if ($canCreateAccounts): ?>
+            <div class="vr"></div>
+            <button class="<?= btn('add') ?> flex-fill js-open-account-create-modal" type="button" data-modal-url="<?= site_url('accounts/create') ?>" data-modal-title="Create Account">Create Account</button>
+            <?php endif; ?>
         </div>
-    </section>
-=======
+    </form>
+    <?= view('components/filter_pills', ['id' => 'accountFilterPills']) ?>
+
     <?= view('components/card', [
         'icon' => 'people-fill',
         'title' => 'Account Management',
@@ -142,11 +73,9 @@ $accounts = array_merge($adminAccounts, $employeeAccounts, $viewerAccounts, $sca
         'bodyView' => 'Admin/accounts-body',
         'bodyData' => [
             'accounts' => $accounts,
-            'canCreateAccounts' => $canCreateAccounts,
             'canEditAccounts' => $canEditAccounts,
             'isDeveloper' => $isDeveloper,
             'isAdmin' => $isAdmin,
         ],
     ]) ?>
->>>>>>> 37b227b891c97c89790df56f4936d5278dde408a
 </div>

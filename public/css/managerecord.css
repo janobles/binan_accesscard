@@ -5,18 +5,22 @@
     --records-search-hover: #0f5132;
     --records-add-color: #0d6efd;
     --records-add-hover: #0b5ed7;
-    --records-search-control-height: var(--ui-control-height, 2.15rem);
-    --records-toolbar-button-min-width: 5.25rem;
-    --records-toolbar-button-padding-x: 0.85rem;
+    --records-search-control-height: clamp(2.25rem, 3.1vw, 2.65rem);
 }
 
+.manage-records {
+    overflow: hidden;
+    border: 1px solid #dce5e2;
+    border-radius: 0.35rem;
+    background: #ffffff;
+}
+
+.manage-records-toolbar,
 .table-meta {
     display: flex;
     align-items: center;
 }
 
-<<<<<<< HEAD
-=======
 .manage-records-toolbar {
     justify-content: space-between;
     gap: 1rem;
@@ -52,7 +56,6 @@
     z-index: 1080;
 }
 
->>>>>>> 37b227b891c97c89790df56f4936d5278dde408a
 .records-scroll-panel {
     display: flex;
     height: 100%;
@@ -69,53 +72,20 @@
     border-bottom: 1px solid #e2e9e7;
 }
 
+.manage-records .records-search-panel {
+    margin: 0;
+    padding: 0.85rem 1rem 1rem;
+}
+
+.manage-records .table-meta {
+    border-bottom: 1px solid #e2e9e7;
+}
+
 .records-search-row {
     display: grid;
     align-items: center;
     gap: clamp(0.45rem, 1vw, 0.75rem);
     margin: 0;
-}
-
-#familyDataTableFilters .btn-toolbar,
-#familyDataTableFilters .btn-group {
-    height: 100%;
-    min-height: var(--records-search-control-height);
-}
-
-#familyDataTableFilters [data-records-filter],
-#familyDataTableFilters .form-select[name="status"] {
-    min-width: 0;
-}
-
-#familyDataTableFilters [data-records-filter] .dropdown-toggle,
-#familyDataTableFilters .form-select[name="status"] {
-    font-size: var(--ui-font-sm, 0.8rem);
-}
-
-@media (min-width: 75rem) {
-    #familyDataTableFilters .family-keyword-field {
-        flex: 0 0 34%;
-        max-width: 34%;
-    }
-
-    #familyDataTableFilters .family-filter-field {
-        flex: 0 0 13%;
-        max-width: 13%;
-    }
-
-    #familyDataTableFilters .family-action-field {
-        flex: 0 0 27%;
-        max-width: 27%;
-    }
-}
-
-#familyDataTableFilters .btn-group .btn {
-    min-width: 0;
-    flex: 1 1 0;
-    padding-right: 0.75rem;
-    padding-left: 0.75rem;
-    font-size: var(--ui-font-sm, 0.8rem);
-    font-weight: 700;
 }
 
 /* Scanner Manage: folder tabs sit on top of the .sector-management panel and
@@ -168,34 +138,19 @@
 .records-search-row .btn {
     height: var(--records-search-control-height);
     min-height: var(--records-search-control-height);
-    padding-top: var(--ui-control-padding-y, 0.25rem);
-    padding-bottom: var(--ui-control-padding-y, 0.25rem);
-    font-size: var(--ui-font-sm, 0.8rem);
+    padding-top: 0.48rem;
+    padding-bottom: 0.48rem;
+    font-size: clamp(0.76rem, 1.1vw, 0.84rem);
     line-height: 1.25;
-}
-
-.records-search-row .btn-toolbar {
-    height: var(--records-search-control-height);
-    min-height: var(--records-search-control-height);
-}
-
-.records-search-row .btn-group {
-    height: 100%;
-}
-
-.records-search-row .btn-group .btn {
-    width: auto;
-    min-width: var(--records-toolbar-button-min-width);
-    padding-right: var(--records-toolbar-button-padding-x);
-    padding-left: var(--records-toolbar-button-padding-x);
-    font-size: var(--ui-font-sm, 0.8rem);
-    font-weight: 700;
 }
 
 .records-search-row .form-control,
 .records-search-row .form-select {
     min-width: 0;
 }
+
+/* (The old records-multiselect / records-check-option widget was retired with
+   the Filters dropdown panel redesign.) */
 
 .records-search-action {
     display: inline-flex;
@@ -205,11 +160,6 @@
     width: 100%;
     min-width: 0;
     white-space: nowrap;
-}
-
-.btn-group .records-search-action {
-    width: auto;
-    min-width: var(--records-toolbar-button-min-width);
 }
 
 .records-search-action.btn-outline-secondary,
@@ -293,10 +243,6 @@
     background-color: var(--records-add-hover);
 }
 
-.records-status-select {
-    cursor: pointer;
-}
-
 .table-meta {
     justify-content: space-between;
     flex: 0 0 auto;
@@ -306,45 +252,19 @@
     font-size: 0.83rem;
 }
 
-.records-table-controls,
-.records-page-size-form,
-.records-table-search-form {
+/* Kept for the QR card generator (Cards/batch_form.php), which still uses the
+   old controls-row layout. */
+.records-table-controls {
     display: inline-flex;
     align-items: center;
-}
-
-.records-table-controls {
     width: 100%;
     justify-content: space-between;
     gap: 1rem;
 }
 
-.records-page-size-form,
-.records-table-search-form {
-    gap: 0.45rem;
-    margin: 0;
-}
-
-.records-page-size-form label,
-.records-table-search-form label {
-    margin: 0;
-    color: #65736e;
-    font-weight: 700;
-    white-space: nowrap;
-}
-
-.records-page-size-form .form-select {
-    width: 5.25rem;
-    min-height: 2rem;
-    padding-top: 0.2rem;
-    padding-bottom: 0.2rem;
-}
-
+/* Sizes the page search inside components/table_controls.php. */
 .records-table-search-form .form-control {
     width: min(18rem, 42vw);
-    min-height: 2rem;
-    padding-top: 0.2rem;
-    padding-bottom: 0.2rem;
 }
 
 .manage-record-table {
@@ -370,6 +290,10 @@
 .records-scroll-panel .table-responsive > .dt-container {
     font-size: 0.875rem;
     line-height: 1.5;
+}
+
+.records-scroll-panel > .d-flex.justify-content-end {
+    flex: 0 0 auto;
 }
 
 .manage-record-table th {
@@ -476,17 +400,6 @@
         padding-right: 0.55rem;
         padding-left: 0.55rem;
     }
-
-    .records-search-row .btn-toolbar,
-    .records-search-row .btn-group {
-        width: 100%;
-    }
-
-    .records-search-row .btn-group .btn {
-        min-width: 0;
-        padding-right: 0.55rem;
-        padding-left: 0.55rem;
-    }
 }
 
 /* ---------------------------------------------------------------------------
@@ -590,4 +503,92 @@ div.dt-container div.dt-paging .page-link {
     overflow-wrap: normal;
     word-break: normal;
     line-height: 1.2;
+}
+
+/* Filter panels (components/records_toolbar*.php). The panel hugs its
+   content — a lone Status group stays a small flyout — and caps at the
+   viewport so it never overflows on phones. Long option lists scroll inside
+   a viewport-relative height instead of growing the panel. */
+.records-filter-panel {
+    width: max-content;
+    min-width: 12rem;
+    max-width: min(92vw, 35rem);
+}
+
+/* Manage Records' three side-by-side columns need real width; the grid
+   collapses them to stacked columns on small screens. */
+.records-filter-panel--wide {
+    width: auto;
+    min-width: min(560px, 92vw);
+}
+
+.records-filter-panel .records-filter-list {
+    max-height: min(50vh, 14rem);
+}
+
+/* Panel polish: checkboxes keep their size when a long label wraps, and the
+   option rows stay compact. */
+.records-filter-panel .form-check-input {
+    flex-shrink: 0;
+}
+
+.records-filter-panel [data-records-option] {
+    line-height: 1.2;
+}
+
+/* The in-card quick search sits flush with the table: DataTables 2 wraps its
+   controls in dt-layout rows with their own margins, and the (empty) search
+   label still adds a gap before the input. */
+#familyRecordsTable_wrapper div.dt-search input,
+div.dt-container div.dt-search input {
+    margin-left: 0;
+}
+
+/* The controls row is a Bootstrap .row: kill its gutter margins/paddings so
+   the quick search lines up with the table edge, and center both cells
+   vertically so the input-group and "Show N entries" sit on one line. */
+div.dt-container .dt-layout-row {
+    margin-left: 0;
+    margin-right: 0;
+    align-items: center;
+}
+
+div.dt-container .dt-layout-cell {
+    padding-left: 0;
+    padding-right: 0;
+}
+
+/* Match the shared table_controls "Show N entries": DataTables' bootstrap5
+   build already gives the select .form-select-sm, but its label text stays
+   full-size and full-colour. Make it small + muted so the length control reads
+   identically to the lookup/audit pages (ui-design-system.md). */
+div.dt-container div.dt-length label {
+    font-size: .875em;
+    color: var(--bs-secondary-color);
+}
+
+div.dt-container div.dt-search {
+    display: flex;
+    align-items: center;
+}
+
+div.dt-container div.dt-search .input-group {
+    width: min(18rem, 42vw);
+    flex-wrap: nowrap;
+}
+
+/* On small screens the in-card controls stack like the toolbar does: quick
+   search stretches the full row, page-length row aligns left instead of the
+   DataTables default centered layout. */
+@media (max-width: 991.98px) {
+    div.dt-container div.dt-search,
+    div.dt-container div.dt-search input,
+    div.dt-container div.dt-search .input-group {
+        width: 100%;
+    }
+
+    div.dt-container .dt-layout-cell {
+        justify-content: flex-start;
+        text-align: start;
+    }
 }

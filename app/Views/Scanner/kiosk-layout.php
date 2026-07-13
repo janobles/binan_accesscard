@@ -36,6 +36,12 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
       <a class="btn <?= url_is('scanner/scan') ? 'btn-light' : 'btn-outline-light' ?>" href="<?= site_url('scanner/scan') ?>"><i class="bi bi-upc-scan me-1" aria-hidden="true"></i>Scan</a>
       <a class="btn <?= url_is('scanner/performance') ? 'btn-light' : 'btn-outline-light' ?>" href="<?= site_url('scanner/performance') ?>"><i class="bi bi-graph-up me-1" aria-hidden="true"></i>Performance</a>
     </div>
+    <?php if ($activeBatch !== null): ?>
+      <span class="small" title="Families you served this batch">
+        <i class="bi bi-people-fill" aria-hidden="true"></i>
+        <span id="myBatchCount"><?= esc((string) $myBatchCount) ?></span>
+      </span>
+    <?php endif; ?>
     <span class="small"><?= esc($username) ?></span>
     <a class="btn btn-outline-light btn-sm" href="<?= site_url('logout') ?>">Logout</a>
   </div>

@@ -167,7 +167,9 @@ async function scanLog(control) {
   renderFamily(data);
   const headName = `${data.head.firstname} ${data.head.lastname}`;
   if (data.logged) {
-    showBanner(true, `${AID_TYPE_NAME} → ${headName} (Family #${data.control_no})`);
+    // Prefer the server-returned aid type: the batch (and its aid type) may
+    // have changed since this page loaded.
+    showBanner(true, `${data.aid_type_name || AID_TYPE_NAME} → ${headName} (Family #${data.control_no})`);
   } else {
     const d = data.duplicate || {};
     const by = d.scanned_by ? ` by ${d.scanned_by}` : '';

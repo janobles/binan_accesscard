@@ -6,7 +6,7 @@ use Dompdf\Dompdf;
 use Dompdf\Options;
 
 /**
- * Renders the Scanner Reports summary (KPIs + per-barangay + per-service
+ * Renders the Scanner Reports summary (KPIs + per-barangay + per-aid-type
  * tables) into a one-page US-Letter PDF. Server-side, no chart.js: the barangay
  * coverage is drawn as CSS bars. Mirrors Qr\QrCardPdfGenerator's dompdf setup.
  */

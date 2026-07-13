@@ -207,10 +207,18 @@ class ScanController extends BaseController
         $batchId = (int) $activeBatch['batch_id'];
         $userId  = (int) (session('user_id') ?? 0);
 
+        // Project the head row to what the kiosk renders; the full member row
+        // carries salary/contact/religion, which have no business in this JSON.
         $familyPayload = [
-            'control_no' => $controlNo,
-            'head'       => $head,
-            'members'    => $members->familyMembers($headId),
+            'control_no'    => $controlNo,
+            'aid_type_name' => (string) ($activeBatch['aid_type_name'] ?? 'Aid'),
+            'head'          => [
+                'memberID'  => (int) $head['memberID'],
+                'firstname' => (string) ($head['firstname'] ?? ''),
+                'lastname'  => (string) ($head['lastname'] ?? ''),
+                'address'   => (string) ($head['address'] ?? ''),
+            ],
+            'members'       => $members->familyMembers($headId),
         ];
 
         // Sector/category/service badges per member for the family panel.

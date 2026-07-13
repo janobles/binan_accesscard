@@ -44,7 +44,7 @@ $serviceClearUrl = static function () use ($listRoute, $perPage): string {
          records-filter-panel.js live-apply + pills). Melbranch hooks preserved:
          data-service-management-root, data-lookup-search local filter, .js-service-modal-open +
          data-service-* attributes, the service-modal include. */ ?>
-<?= view('components/records_toolbar_server', [
+<?= view('components/toolbar', [
     'formAction' => site_url($listRoute),
     'formAria' => 'Search all services',
     'searchPlaceholder' => 'Search all services...',
@@ -53,7 +53,7 @@ $serviceClearUrl = static function () use ($listRoute, $perPage): string {
     'pillsId' => 'serviceFilterPills',
     'hiddenHtml' => $perPage !== 25 ? '<input type="hidden" name="per_page" value="' . esc((string) $perPage, 'attr') . '">' : '',
     'actionsHtml' => $canManage ? '<button class="' . btn('add') . ' flex-fill js-service-modal-open" type="button" data-service-mode="create">Add Program</button>' : '',
-    'radioGroups' => [[
+    'filterGroups' => [[
         'name' => 'status',
         'label' => 'Status',
         'options' => [

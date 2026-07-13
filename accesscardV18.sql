@@ -1,3 +1,9 @@
+-- Binan Access Card dump V18.
+-- V18 = V17 + test reference rows removed (sector 11 TS, category 8 TSC,
+-- services 47-48 TS1/TSC1) + developer login (developer/developer123).
+-- Batches bind aid_type_id: aid_type is its own reference table,
+-- unrelated to services/programs.
+--
 -- phpMyAdmin SQL Dump
 -- version 5.2.1
 -- https://www.phpmyadmin.net/
@@ -66,8 +72,7 @@ CREATE TABLE `category` (
 INSERT INTO `category` (`categoryID`, `code`, `name`, `dt_created`, `dt_updated`, `dt_deleted`) VALUES
 (5, 'FA', 'Financial Assistance Programs', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
 (6, 'SWPS', 'Social Welfare Programs and Services', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
-(7, 'EDA', 'Emergency / Disaster Assistance Programs', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
-(8, 'TSC', 'Test Categories', '2026-07-01 03:58:50', '2026-07-01 03:58:50', NULL);
+(7, 'EDA', 'Emergency / Disaster Assistance Programs', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL);
 
 -- --------------------------------------------------------
 
@@ -186,8 +191,7 @@ INSERT INTO `sector` (`sectorID`, `shortcode`, `name`, `description`, `dt_create
 (7, 'IP', 'Indigenous People', '', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
 (8, 'IDP', 'Internally Displaced Person', '', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
 (9, 'PDL', 'Persons Deprived of Liberty', '', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
-(10, 'OTHER', 'Other Sectors', '', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
-(11, 'TS', 'Test', 'Test Description', '2026-07-01 03:57:36', '2026-07-01 03:58:36', NULL);
+(10, 'OTHER', 'Other Sectors', '', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL);
 
 -- --------------------------------------------------------
 
@@ -256,9 +260,7 @@ INSERT INTO `services` (`serviceID`, `shortcode`, `category`, `name`, `descripti
 (43, 'SP2', 'Solo Parent', 'Monthly Subsidy for Solo Parent', '', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
 (44, 'B1', 'Bata (Children)', 'Bahay Pag-Asa', '', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
 (45, 'B2', 'Bata (Children)', 'ECCD', '', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
-(46, 'B3', 'Bata (Children)', 'Supplementary Feeding Program', '', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
-(47, 'TS1', 'Test', 'Test Sector Services', 'Sector Service', '2026-07-01 03:59:48', '2026-07-01 03:59:48', NULL),
-(48, 'TSC1', 'Test Categories', 'Test Categories services and programs', 'Categories service and programs', '2026-07-01 04:00:24', '2026-07-01 04:00:24', NULL);
+(46, 'B3', 'Bata (Children)', 'Supplementary Feeding Program', '', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL);
 
 -- --------------------------------------------------------
 

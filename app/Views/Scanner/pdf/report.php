@@ -56,7 +56,7 @@ $window = ($batchName ?? null) !== null
 
 <h2>Handouts by aid type</h2>
 <table class="data">
-  <thead><tr><th>Aid type</th><th>Handouts</th></tr></thead>
+  <thead><tr><th>Aid Type</th><th>Handouts</th></tr></thead>
   <tbody>
   <?php foreach ($byAidType as $a): ?>
     <tr><td><?= esc($a['aid_type']) ?></td><td><?= esc((string) $a['count']) ?></td></tr>

@@ -36,6 +36,13 @@ $submitLabel = $isEdit ? 'Save Changes' : ($isSelfProfile ? 'Save Account' : 'Cr
 $value = static function (array $details, string $key, bool $isEdit): string {
     return $isEdit ? (string) ($details[$key] ?? '') : (string) old($key);
 };
+$errors = session()->getFlashdata('validationErrors') ?? [];
+$hasError = static function (string $field) use ($errors): bool {
+    return isset($errors[$field]);
+};
+$getError = static function (string $field) use ($errors): string {
+    return $errors[$field] ?? '';
+};
 ?>
 <div class="accounts-page edit-account-modal">
     <form method="post" action="<?= esc($action, 'attr') ?>">
@@ -59,28 +66,34 @@ $value = static function (array $details, string $key, bool $isEdit): string {
                     <?php endif; ?>
                     <div class="account-fields-row account-fields-row--requirements">
                         <div class="account-field">
-                            <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>-last-name">Last Name <span class="account-required-marker" aria-hidden="true">*</span></label>
-                            <input class="form-control" id="<?= esc($fieldPrefix, 'attr') ?>-last-name" name="last_name" type="text" value="<?= esc($value($details, 'last_name', $isEdit || $isSelfProfile), 'attr') ?>" placeholder="Enter last name" required<?= $lockAttr ?>>
+                            <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>-last-name">Last Name <span class="account-required-marker text-danger" aria-hidden="true">*</span></label>
+                            <input class="form-control <?= $hasError('last_name') ? 'is-invalid' : '' ?>" id="<?= esc($fieldPrefix, 'attr') ?>-last-name" name="last_name" type="text" value="<?= esc($value($details, 'last_name', $isEdit || $isSelfProfile), 'attr') ?>" placeholder="Enter last name" required<?= $lockAttr ?>>
+                            <?php if ($hasError('last_name')): ?><div class="invalid-feedback"><?= esc($getError('last_name')) ?></div><?php endif; ?>
                         </div>
                         <div class="account-field">
-                            <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>-first-name">First Name <span class="account-required-marker" aria-hidden="true">*</span></label>
-                            <input class="form-control" id="<?= esc($fieldPrefix, 'attr') ?>-first-name" name="first_name" type="text" value="<?= esc($value($details, 'first_name', $isEdit || $isSelfProfile), 'attr') ?>" placeholder="Enter first name" required<?= $lockAttr ?>>
+                            <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>-first-name">First Name <span class="account-required-marker text-danger" aria-hidden="true">*</span></label>
+                            <input class="form-control <?= $hasError('first_name') ? 'is-invalid' : '' ?>" id="<?= esc($fieldPrefix, 'attr') ?>-first-name" name="first_name" type="text" value="<?= esc($value($details, 'first_name', $isEdit || $isSelfProfile), 'attr') ?>" placeholder="Enter first name" required<?= $lockAttr ?>>
+                            <?php if ($hasError('first_name')): ?><div class="invalid-feedback"><?= esc($getError('first_name')) ?></div><?php endif; ?>
                         </div>
                         <div class="account-field">
                             <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>-middle-name">Middle Name <span class="text-muted">(optional)</span></label>
-                            <input class="form-control" id="<?= esc($fieldPrefix, 'attr') ?>-middle-name" name="middle_name" type="text" value="<?= esc($value($details, 'middle_name', $isEdit || $isSelfProfile), 'attr') ?>" placeholder="Enter middle name"<?= $lockAttr ?>>
+                            <input class="form-control <?= $hasError('middle_name') ? 'is-invalid' : '' ?>" id="<?= esc($fieldPrefix, 'attr') ?>-middle-name" name="middle_name" type="text" value="<?= esc($value($details, 'middle_name', $isEdit || $isSelfProfile), 'attr') ?>" placeholder="Enter middle name"<?= $lockAttr ?>>
+                            <?php if ($hasError('middle_name')): ?><div class="invalid-feedback"><?= esc($getError('middle_name')) ?></div><?php endif; ?>
                         </div>
                         <div class="account-field">
                             <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>-suffix">Suffix <span class="text-muted">(optional)</span></label>
-                            <input class="form-control" id="<?= esc($fieldPrefix, 'attr') ?>-suffix" name="suffix" type="text" value="<?= esc($value($details, 'suffix', $isEdit || $isSelfProfile), 'attr') ?>" placeholder="e.g. Jr, Sr, III"<?= $lockAttr ?>>
+                            <input class="form-control <?= $hasError('suffix') ? 'is-invalid' : '' ?>" id="<?= esc($fieldPrefix, 'attr') ?>-suffix" name="suffix" type="text" value="<?= esc($value($details, 'suffix', $isEdit || $isSelfProfile), 'attr') ?>" placeholder="e.g. Jr, Sr, III"<?= $lockAttr ?>>
+                            <?php if ($hasError('suffix')): ?><div class="invalid-feedback"><?= esc($getError('suffix')) ?></div><?php endif; ?>
                         </div>
                         <div class="account-field account-field--wide">
-                            <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>-address">Address <span class="account-required-marker" aria-hidden="true">*</span></label>
-                            <input class="form-control" id="<?= esc($fieldPrefix, 'attr') ?>-address" name="address" type="text" value="<?= esc($value($details, 'address', $isEdit || $isSelfProfile), 'attr') ?>" placeholder="Enter address" required<?= $lockAttr ?>>
+                            <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>-address">Address <span class="account-required-marker text-danger" aria-hidden="true">*</span></label>
+                            <input class="form-control <?= $hasError('address') ? 'is-invalid' : '' ?>" id="<?= esc($fieldPrefix, 'attr') ?>-address" name="address" type="text" value="<?= esc($value($details, 'address', $isEdit || $isSelfProfile), 'attr') ?>" placeholder="Enter address" required<?= $lockAttr ?>>
+                            <?php if ($hasError('address')): ?><div class="invalid-feedback"><?= esc($getError('address')) ?></div><?php endif; ?>
                         </div>
                         <div class="account-field">
-                            <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>-contact-no">Contact No. <span class="account-required-marker" aria-hidden="true">*</span></label>
-                            <input class="form-control" id="<?= esc($fieldPrefix, 'attr') ?>-contact-no" name="contact_no" type="text" value="<?= esc($value($details, 'contact_no', $isEdit || $isSelfProfile), 'attr') ?>" placeholder="Enter contact number" required<?= $lockAttr ?>>
+                            <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>-contact-no">Contact No. <span class="account-required-marker text-danger" aria-hidden="true">*</span></label>
+                            <input class="form-control <?= $hasError('contact_no') ? 'is-invalid' : '' ?>" id="<?= esc($fieldPrefix, 'attr') ?>-contact-no" name="contact_no" type="text" value="<?= esc($value($details, 'contact_no', $isEdit || $isSelfProfile), 'attr') ?>" placeholder="Enter contact number" required<?= $lockAttr ?>>
+                            <?php if ($hasError('contact_no')): ?><div class="invalid-feedback"><?= esc($getError('contact_no')) ?></div><?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -89,23 +102,25 @@ $value = static function (array $details, string $key, bool $isEdit): string {
                     <h3 class="account-field-group-title">Login Information</h3>
                     <div class="account-fields-row account-fields-row--credentials">
                         <div class="account-field">
-                            <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>-username">Username <span class="account-required-marker" aria-hidden="true">*</span></label>
-                            <input class="form-control" id="<?= esc($fieldPrefix, 'attr') ?>-username" name="username" type="text" value="<?= esc($username, 'attr') ?>" placeholder="Enter username" required minlength="4">
+                            <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>-username">Username <span class="account-required-marker text-danger" aria-hidden="true">*</span></label>
+                            <input class="form-control <?= $hasError('username') ? 'is-invalid' : '' ?>" id="<?= esc($fieldPrefix, 'attr') ?>-username" name="username" type="text" value="<?= esc($username, 'attr') ?>" placeholder="Enter username" required minlength="4">
+                            <?php if ($hasError('username')): ?><div class="invalid-feedback"><?= esc($getError('username')) ?></div><?php endif; ?>
                         </div>
                         <?php if (! $isEdit && ! $isSelfProfile): ?>
                             <div class="account-field">
-                                <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>-password">Password <span class="account-required-marker" aria-hidden="true">*</span></label>
-                                <input class="form-control" id="<?= esc($fieldPrefix, 'attr') ?>-password" name="password" type="password" placeholder="Enter password" required minlength="8">
+                                <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>-password">Password <span class="account-required-marker text-danger" aria-hidden="true">*</span></label>
+                                <input class="form-control <?= $hasError('password') ? 'is-invalid' : '' ?>" id="<?= esc($fieldPrefix, 'attr') ?>-password" name="password" type="password" placeholder="Enter password" required minlength="8">
+                                <?php if ($hasError('password')): ?><div class="invalid-feedback"><?= esc($getError('password')) ?></div><?php endif; ?>
                             </div>
                         <?php endif; ?>
                         <div class="account-field">
-                            <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>-role">Account Level <span class="account-required-marker" aria-hidden="true">*</span></label>
+                            <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>-role">Account Level <span class="account-required-marker text-danger" aria-hidden="true">*</span></label>
                             <?php if ($isRoleReadOnly): ?>
-                                <input class="form-control account-role-readonly" id="<?= esc($fieldPrefix, 'attr') ?>-role" type="text" value="<?= esc($displayRoleLabel, 'attr') ?>" disabled>
+                                <input class="form-control account-role-readonly <?= $hasError('role') ? 'is-invalid' : '' ?>" id="<?= esc($fieldPrefix, 'attr') ?>-role" type="text" value="<?= esc($displayRoleLabel, 'attr') ?>" disabled>
                                 <small class="text-muted"><?= $isSelfProfile ? '' : 'You cannot change this account level.' ?></small>
                                 <input type="hidden" name="role" value="<?= esc($role, 'attr') ?>">
                             <?php else: ?>
-                                <select class="form-select" id="<?= esc($fieldPrefix, 'attr') ?>-role" name="role" required>
+                                <select class="form-select <?= $hasError('role') ? 'is-invalid' : '' ?>" id="<?= esc($fieldPrefix, 'attr') ?>-role" name="role" required>
                                     <?php if (! $isEdit && ! $isSelfProfile): ?>
                                         <option value="">Choose account level</option>
                                     <?php endif; ?>
@@ -115,6 +130,7 @@ $value = static function (array $details, string $key, bool $isEdit): string {
                                     <option value="scanner" <?= $role === 'scanner' ? 'selected' : '' ?>>Scanner</option>
                                 </select>
                             <?php endif; ?>
+                            <?php if ($hasError('role')): ?><div class="invalid-feedback d-block"><?= esc($getError('role')) ?></div><?php endif; ?>
                         </div>
                         <?php if ($isEdit && ! $isSelf): ?>
                             <div class="account-field">
@@ -132,15 +148,18 @@ $value = static function (array $details, string $key, bool $isEdit): string {
                         <?php if ($isSelfProfile): ?>
                             <div class="account-field">
                                 <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>-current-password">Current Password</label>
-                                <input class="form-control" id="<?= esc($fieldPrefix, 'attr') ?>-current-password" name="current_password" type="password" autocomplete="current-password" placeholder="Enter current password">
+                                <input class="form-control <?= $hasError('current_password') ? 'is-invalid' : '' ?>" id="<?= esc($fieldPrefix, 'attr') ?>-current-password" name="current_password" type="password" autocomplete="current-password" placeholder="Enter current password">
+                                <?php if ($hasError('current_password')): ?><div class="invalid-feedback"><?= esc($getError('current_password')) ?></div><?php endif; ?>
                             </div>
                             <div class="account-field">
                                 <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>-new-password">New Password</label>
-                                <input class="form-control" id="<?= esc($fieldPrefix, 'attr') ?>-new-password" name="new_password" type="password" autocomplete="new-password" placeholder="At least 8 characters" minlength="8">
+                                <input class="form-control <?= $hasError('new_password') ? 'is-invalid' : '' ?>" id="<?= esc($fieldPrefix, 'attr') ?>-new-password" name="new_password" type="password" autocomplete="new-password" placeholder="At least 8 characters" minlength="8">
+                                <?php if ($hasError('new_password')): ?><div class="invalid-feedback"><?= esc($getError('new_password')) ?></div><?php endif; ?>
                             </div>
                             <div class="account-field">
                                 <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>-confirm-password">Confirm Password</label>
-                                <input class="form-control" id="<?= esc($fieldPrefix, 'attr') ?>-confirm-password" name="confirm_password" type="password" autocomplete="new-password" placeholder="Re-enter new password">
+                                <input class="form-control <?= $hasError('confirm_password') ? 'is-invalid' : '' ?>" id="<?= esc($fieldPrefix, 'attr') ?>-confirm-password" name="confirm_password" type="password" autocomplete="new-password" placeholder="Re-enter new password">
+                                <?php if ($hasError('confirm_password')): ?><div class="invalid-feedback"><?= esc($getError('confirm_password')) ?></div><?php endif; ?>
                             </div>
                         <?php endif; ?>
                     </div>

@@ -67,7 +67,7 @@ foreach ($auditActionOptions as $action) {
     $auditActionRadios[] = ['value' => $action, 'label' => $action, 'pill' => $action, 'checked' => $auditAction === $action];
 }
 ?>
-<?= view('components/records_toolbar_server', [
+<?= view('components/toolbar', [
     'formAction' => site_url($listRoute),
     'formAria' => 'Search all audit logs',
     'searchPlaceholder' => 'Search all audit logs...',
@@ -76,7 +76,7 @@ foreach ($auditActionOptions as $action) {
     'pillsId' => 'auditFilterPills',
     'narrow' => true,
     'hiddenHtml' => $perPage !== 25 ? '<input type="hidden" name="per_page" value="' . esc((string) $perPage, 'attr') . '">' : '',
-    'radioGroups' => [[
+    'filterGroups' => [[
         'name' => 'action',
         'label' => 'Action',
         'scroll' => true,

@@ -56,11 +56,10 @@ class AccountController extends BaseController
             // column (see buildFullDescription). Suffix is optional.
             'last_name' => 'required|max_length[100]',
             'first_name' => 'required|max_length[100]',
-            'middle_name' => 'required|max_length[100]',
+            'middle_name' => 'permit_empty|max_length[100]',
             'suffix' => 'permit_empty|max_length[20]',
             'address' => 'required|max_length[255]',
             'contact_no' => 'required|max_length[50]',
-            'birthday' => 'required|valid_date[Y-m-d]',
             // The form posts the DB enum value for account_level directly.
             'role' => 'required|in_list[administrator,encoder,viewer,scanner]',
         ];
@@ -74,9 +73,6 @@ class AccountController extends BaseController
                 'required' => 'Password is required.',
                 'min_length' => 'Password must have at least 8 characters.',
             ],
-            'birthday' => [
-                'valid_date' => 'Birthday must be a valid date.',
-            ],
             'role' => [
                 'in_list' => 'Account level must be Administrator, Encoder, Viewer, or Scanner.',
             ],
@@ -85,7 +81,8 @@ class AccountController extends BaseController
         if (! $this->validate($rules, $messages)) {
             return redirect()->back()
                 ->withInput()
-                ->with('error', implode(' ', $this->validator->getErrors()));
+                ->with('validationErrors', $this->validator->getErrors())
+                ->with('openModal', 'account-create');
         }
 
         $role = (string) $this->request->getPost('role');
@@ -214,20 +211,19 @@ class AccountController extends BaseController
             $rules += [
                 'last_name' => 'required|max_length[100]',
                 'first_name' => 'required|max_length[100]',
-                'middle_name' => 'required|max_length[100]',
+                'middle_name' => 'permit_empty|max_length[100]',
                 'suffix' => 'permit_empty|max_length[20]',
                 'address' => 'required|max_length[255]',
                 'contact_no' => 'required|max_length[50]',
-                'birthday' => 'required|valid_date[Y-m-d]',
-            ];
-            $messages['birthday'] = [
-                'valid_date' => 'Birthday must be a valid date.',
             ];
         }
 
         if (! $this->validate($rules, $messages)) {
-            return redirect()->to(site_url('admin/accounts'))
-                ->with('error', implode(' ', $this->validator->getErrors()));
+            return redirect()->back()
+                ->withInput()
+                ->with('validationErrors', $this->validator->getErrors())
+                ->with('openModal', 'account-edit')
+                ->with('openModalId', $userId);
         }
 
         $newRole = (string) $this->request->getPost('role');
@@ -534,7 +530,6 @@ class AccountController extends BaseController
             'SF'   => trim((string) $this->request->getPost('suffix')),
             'ADDR' => trim((string) $this->request->getPost('address')),
             'CN'   => trim((string) $this->request->getPost('contact_no')),
-            'BD'   => trim((string) $this->request->getPost('birthday')),
         ];
 
         $parts = [];

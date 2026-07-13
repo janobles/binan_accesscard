@@ -32,13 +32,8 @@ class SearchModel
 
     /**
      * FIRST (quick) Manage Records search: family HEADS only, matched by name/
-<<<<<<< HEAD
-     * contact/relationship and sector. Applies the sector filters and
-     * resolves sector names. Frontend: the quick search box on Manage Records.
-=======
      * contact/relationship, sector, or exact QR number. Applies the sector + date
      * filters and resolves sector names. Frontend: the Manage Records search box.
->>>>>>> 37b227b891c97c89790df56f4936d5278dde408a
      */
     public function families(string $keyword = '', array $filters = [], int $limit = 25): array
     {
@@ -89,13 +84,8 @@ class SearchModel
      * members under that family head. Each row carries its head ("belongs to")
      * name, resolved sector names, and resolved service names.
      *
-<<<<<<< HEAD
-     * Used by the server-side family DataTables endpoint when member-wide search
-     * is selected.
-=======
      * Called from App\Libraries\DashboardPageBuilder::buildMemberListData() and
      * Employee\WorkspaceModel::recordListData() when the deep search box (deep_q) is used.
->>>>>>> 37b227b891c97c89790df56f4936d5278dde408a
      */
     //
     // $orderKey/$orderDirection are an OPTIONAL, append-only addition for the
@@ -123,9 +113,8 @@ class SearchModel
     }
 
     /**
-     * Applies a DataTables column sort to the deep-member query. The `qr` key
-     * sorts by the family head's control number (no-control members last); the
-     * `newest` key restores last-added-first order; null/unrecognized keys preserve the
+     * Applies a DataTables column sort to the deep-member query. The `newest`
+     * key restores last-added-first order; null/unrecognized keys preserve the
      * original (lastname, firstname ASC) behavior for non-DataTables callers.
      */
     private function applyAllMembersOrder(BaseBuilder $builder, ?string $orderKey, string $orderDirection): void
@@ -133,16 +122,6 @@ class SearchModel
         $direction = strtolower(trim($orderDirection)) === 'desc' ? 'DESC' : 'ASC';
 
         switch ($orderKey) {
-            case 'qr':
-                // A member's QR is its family head's control number, so join on
-                // m.headID. Members without a control number sort last.
-                $builder->join('qr_control qc_sort', 'qc_sort.headID = m.headID', 'left')
-                    ->orderBy('qc_sort.control_no IS NULL', 'ASC', false)
-                    ->orderBy('qc_sort.control_no', $direction)
-                    // Family members share the head's control number; memberID
-                    // breaks the tie so pagination stays stable.
-                    ->orderBy('m.memberID', $direction);
-                return;
             case 'newest':
                 $builder->orderBy('m.memberID', 'DESC');
                 return;
@@ -174,7 +153,7 @@ class SearchModel
     /**
      * Shared query for allMembers()/countAllMembers(): every member (incl. non-heads),
      * left-joined to its head, with keyword across member fields + sector + service,
-     * plus the Manage Records filters (sectorID, barangay, active/archived status).
+     * plus the Manage Records filters (sectorID, date, active/archived status).
      */
     private function allMembersBuilder(string $keyword, array $filters): BaseBuilder
     {
@@ -210,13 +189,14 @@ class SearchModel
         $this->applySectorIdFilter($builder, $filters['sectorID'] ?? [], 'm.sectorID');
         $this->applyBarangayFilter($builder, $filters['barangay'] ?? [], 'm.address', 'm.barangay');
 
+        $this->applyDateRange($builder, 'm.dt_created', $filters);
+
         return $builder;
     }
 
     /**
-     * Searches non-Developer accounts by username/role/status with optional role
-     * and active-status filters. Developer identities are intentionally excluded
-     * from Account Management.
+     * Searches Admin/Employee accounts by username/role/status with optional role
+     * and active-status filters. Frontend: the Account Management search/filter UI.
      */
     public function staffAccounts(string $keyword = '', array $filters = [], int $limit = 100): array
     {
@@ -225,11 +205,12 @@ class SearchModel
         }
 
         $limit = max(1, $limit);
-        // Use raw enum values to match users.account_level, aliased back to `role`
-        // so downstream callers keep the same key.
+        // 'administrator'/'encoder' are the DB enum values for the Admin/Employee
+        // roles; these queries use the raw enum to match the users.account_level
+        // column, aliased back to `role` so downstream callers keep the same key.
         $builder = $this->db->table('users')
             ->select('userID, username, account_level AS role, isactive, dt_created')
-            ->whereIn('account_level', ['administrator', 'encoder', 'viewer', 'scanner']);
+            ->whereIn('account_level', ['administrator', 'encoder', 'viewer']);
 
         $keyword = $this->normalizeKeyword($keyword);
 
@@ -243,7 +224,7 @@ class SearchModel
 
         $role = $this->normalizeKeyword((string) ($filters['role'] ?? ''));
 
-        if (in_array($role, ['administrator', 'encoder', 'viewer', 'scanner'], true)) {
+        if (in_array($role, ['administrator', 'encoder', 'viewer'], true)) {
             $builder->where('account_level', $role);
         }
 
@@ -282,8 +263,9 @@ class SearchModel
             $builder->where('audit_trails.userID', $userId);
         }
 
-        // Legacy file-backed Developer rows (NULL userID) stay hidden from
-        // Administrators. Only relevant to the all-users view ($userId === null).
+        // Developer audit rows (NULL userID, no users row) stay hidden from
+        // non-developer viewers so the other roles never learn a Developer exists.
+        // Only relevant to the all-users admin view ($userId === null).
         if ($userId === null && ! $includeDeveloper) {
             // Hide only the Developer's own rows; failed logins and system errors
             // (logged without a users row) still surface to admins.
@@ -476,27 +458,6 @@ class SearchModel
             && $this->db->tableExists('member');
     }
 
-<<<<<<< HEAD
-    /** Sector IDs whose name/description match the keyword (so search can match sector text). */
-    private function sectorIdsForKeyword(string $keyword): array
-    {
-        if (! $this->db->tableExists('sector')) {
-            return [];
-        }
-
-        return array_map(
-            static fn (array $sector): int => (int) $sector['sectorID'],
-            $this->db->table('sector')
-                ->select('sectorID')
-                ->like('name', $keyword)
-                ->orLike('description', $keyword)
-                ->get()
-                ->getResultArray()
-        );
-    }
-
-=======
->>>>>>> 37b227b891c97c89790df56f4936d5278dde408a
     // Service/program IDs whose name or category matches the keyword (for deep search).
     private function serviceIdsForKeyword(string $keyword): array
     {
@@ -586,7 +547,8 @@ class SearchModel
             $memberId = (int) ($row['memberID'] ?? 0);
             $memberName = $memberNames[$memberId] ?? ['firstname' => '', 'lastname' => ''];
             // NULL/0 userID is an action with no users row. Failed logins / system
-            // errors are system events; everything else is legacy Developer activity.
+            // errors are real (non-Developer) events shown to admins; everything else
+            // with no user is the .env Developer.
             $user = $userId > 0
                 ? ($users[$userId] ?? ['username' => '', 'role' => ''])
                 : $this->systemAuditActor((string) ($row['user_action'] ?? ''));

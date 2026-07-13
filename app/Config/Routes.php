@@ -22,6 +22,7 @@ $routes->group('admin', static function (RouteCollection $routes): void {
     $routes->get('', 'Admin\DashboardController::index');
     $routes->get('dashboard', 'Admin\DashboardController::dashboard');
     $routes->get('accounts', 'Admin\DashboardController::accounts');
+    $routes->get('family-entry', 'Admin\DashboardController::familyEntry');
     $routes->get('manage-records', 'Admin\DashboardController::manageRecords');
     $routes->get('audit-trails', 'Admin\DashboardController::auditTrails');
     $routes->get('sectors', 'Admin\DashboardController::sectors');
@@ -34,10 +35,7 @@ $routes->group('admin', static function (RouteCollection $routes): void {
 
     $routes->get('manage-families', 'Admin\DashboardController::manageRecords');
     $routes->group('manage-family', static function (RouteCollection $routes): void {
-<<<<<<< HEAD
-=======
         $routes->get('', 'Admin\DashboardController::manageRecords');
->>>>>>> 37b227b891c97c89790df56f4936d5278dde408a
         $routes->get('list', 'Families\FamilyController::listFamilies');
         $routes->get('data', 'Families\FamilyDataTableController::dataTable');
         $routes->get('template', 'Families\FamilyImportController::downloadTemplate');
@@ -46,6 +44,7 @@ $routes->group('admin', static function (RouteCollection $routes): void {
         $routes->get('import/status/(:num)', 'Families\FamilyImportController::importStatus/$1');
         $routes->get('create', 'Families\FamilyController::createFamily');
         $routes->get('view/(:num)', 'Families\FamilyController::viewFamily/$1');
+        $routes->get('edit/(:num)', 'Families\FamilyController::editFamily/$1');
         $routes->post('update/(:num)', 'Families\FamilyController::update/$1');
         $routes->post('archive/(:num)', 'Families\FamilyController::archive/$1');
         $routes->post('restore/(:num)', 'Families\FamilyController::restore/$1');
@@ -103,15 +102,13 @@ $routes->group('admin', static function (RouteCollection $routes): void {
  */
 $routes->group('employee', static function (RouteCollection $routes): void {
     $routes->get('workspace', 'Employee\DashboardController::dashboard');
+    $routes->get('family-entry', 'Employee\DashboardController::familyEntry');
     $routes->get('manage-records', 'Employee\DashboardController::manageRecords');
     $routes->get('activity', 'Employee\DashboardController::activity');
 
     $routes->get('manage-families', 'Employee\DashboardController::manageRecords');
     $routes->group('manage-family', static function (RouteCollection $routes): void {
-<<<<<<< HEAD
-=======
         $routes->get('', 'Employee\DashboardController::manageRecords');
->>>>>>> 37b227b891c97c89790df56f4936d5278dde408a
         $routes->get('list', 'Families\FamilyController::listFamilies');
         $routes->get('data', 'Families\FamilyDataTableController::dataTable');
         $routes->get('template', 'Families\FamilyImportController::downloadTemplate');
@@ -120,6 +117,7 @@ $routes->group('employee', static function (RouteCollection $routes): void {
         $routes->get('import/status/(:num)', 'Families\FamilyImportController::importStatus/$1');
         $routes->get('create', 'Families\FamilyController::createFamily');
         $routes->get('view/(:num)', 'Families\FamilyController::viewFamily/$1');
+        $routes->get('edit/(:num)', 'Families\FamilyController::editFamily/$1');
         $routes->post('update/(:num)', 'Families\FamilyController::update/$1');
         $routes->post('archive/(:num)', 'Families\FamilyController::archive/$1');
         $routes->post('restore/(:num)', 'Families\FamilyController::restore/$1');
@@ -159,7 +157,6 @@ $routes->group('scanner', static function (RouteCollection $routes): void {
 /*
  * Shared submissions
  */
-$routes->post('families', 'Families\FamilyController::store');
 $routes->post('developer/accounts', 'Accounts\AccountController::create');
 $routes->post('developer/accounts/status', 'Accounts\AccountController::updateStatus');
 
@@ -172,3 +169,5 @@ $routes->post('accounts/reset-password', 'Accounts\AccountController::resetPassw
 // Self-service My Account (any logged-in non-developer).
 $routes->get('account/profile', 'Accounts\ProfileController::myAccount');
 $routes->post('account/profile/update', 'Accounts\ProfileController::update');
+
+$routes->post('families', 'Families\FamilyController::store');

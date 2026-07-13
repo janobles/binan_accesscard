@@ -4,8 +4,6 @@
  * Uses the same dashboard frame as Admin, limited to Dashboard, Manage Records,
  * and My Activity.
  */
-helper('asset');
-
 $activePage = $activePage ?? 'dashboard';
 $pageTitle = $pageTitle ?? ($activePage === 'dashboard' ? 'Dashboard' : ucwords(str_replace('-', ' ', $activePage)));
 $navActive = $navActive ?? [];
@@ -31,43 +29,6 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
     <link rel="stylesheet" href="<?= esc(asset_url($stylePath), 'attr') ?>">
     <?php endforeach; ?>
 </head>
-<<<<<<< HEAD
-<body>
-<div id="wrapper">
-    <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion employee" id="dashboard-sidebar">
-        <li class="sidebar-brand-wrap">
-            <a class="sidebar-brand d-flex align-items-center justify-content-center" href="<?= site_url('employee/workspace') ?>">
-                <img class="sidebar-brand-icon" src="<?= asset_url('assets/image/binan.png') ?>" alt="City of Binan Logo">
-                <span class="sidebar-brand-text mx-2">Bi&ntilde;an Access Card MIS</span>
-            </a>
-        </li>
-        <li><hr class="sidebar-divider my-0"></li>
-        <li class="nav-item">
-            <a class="nav-link <?= esc($navActive['dashboard'] ?? '') ?>" href="<?= site_url('employee/workspace') ?>"><i class="bi bi-speedometer2" aria-hidden="true"></i><span>Dashboard</span></a>
-        </li>
-        <li><hr class="sidebar-divider"></li>
-        <li><div class="sidebar-heading">Records</div></li>
-        <li class="nav-item">
-            <a class="nav-link <?= esc($navActive['family-manage'] ?? '') ?>" href="<?= site_url('employee/manage-records') ?>"><i class="bi bi-people" aria-hidden="true"></i><span>Manage Records</span></a>
-        </li>
-        <li><hr class="sidebar-divider"></li>
-        <li><div class="sidebar-heading">Activity</div></li>
-        <li class="nav-item">
-            <a class="nav-link <?= esc($navActive['activity'] ?? '') ?>" href="<?= site_url('employee/activity') ?>"><i class="bi bi-clock-history" aria-hidden="true"></i><span>My Activity</span></a>
-        </li>
-    </ul>
-
-    <div id="content-wrapper" class="d-flex flex-column">
-        <div id="content">
-            <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow-sm">
-                <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle me-3" type="button" aria-label="Toggle navigation menu" aria-controls="dashboard-sidebar" aria-expanded="false">
-                    <span>Menu</span>
-                </button>
-                <div class="topbar-title">
-                    <div>
-                        <h1 id="dashboard-page-title"><?= esc($pageTitle) ?></h1>
-                    </div>
-=======
 <body class="sb-nav-fixed">
 <?= view('Partials/dashboard-topnav', [
     'brandUrl' => site_url('employee/workspace'),
@@ -86,7 +47,6 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
                     <a class="nav-link <?= esc($navActive['family-manage'] ?? '') ?>" href="<?= site_url('employee/manage-records') ?>"><div class="sb-nav-link-icon"><i class="bi bi-people-fill" aria-hidden="true"></i></div>Manage Records</a>
                     <div class="sb-sidenav-menu-heading">Activity</div>
                     <a class="nav-link <?= esc($navActive['activity'] ?? '') ?>" href="<?= site_url('employee/activity') ?>"><div class="sb-nav-link-icon"><i class="bi bi-clock-history" aria-hidden="true"></i></div>My Activity</a>
->>>>>>> 37b227b891c97c89790df56f4936d5278dde408a
                 </div>
             </div>
         </nav>
@@ -100,6 +60,10 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
                 <?php if (session()->getFlashdata('error')): ?>
                     <div class="alert alert-danger" data-auto-dismiss-alert><?= esc(session()->getFlashdata('error')) ?></div>
                 <?php endif; ?>
+                <?php if (session()->getFlashdata('family_record_saved')): ?>
+                    <span id="familyDraftSavedMarker" hidden></span>
+                <?php endif; ?>
+
                 <?php if ($activePage === 'dashboard'): ?>
                     <div class="dashboard-overview" data-dashboard-overview>
                         <section class="overview-stats" aria-label="Dashboard statistics">
@@ -177,7 +141,7 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
                     $auditListData = $auditListData ?? [];
                     $listRoute = (string) ($auditListData['listRoute'] ?? 'employee/activity');
                     $auditAction = trim((string) ($searchFilters['action'] ?? ''));
-                    $perPage = (int) ($auditListData['perPage'] ?? 25);
+                    $perPage = (int) ($auditListData['perPage'] ?? 50);
                     $perPageOptions = ($auditListData['perPageOptions'] ?? []) ?: [10, 25, 50, 100];
                     $page = (int) ($auditListData['page'] ?? 1);
                     $totalPages = (int) ($auditListData['totalPages'] ?? 1);
@@ -189,120 +153,22 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
                         $params = array_filter([
                             'q' => $searchTerm,
                             'action' => $auditAction,
-                            'per_page' => $perPage !== 25 ? (string) $perPage : '',
+                            'per_page' => $perPage !== 50 ? (string) $perPage : '',
                             'page' => $targetPage > 1 ? (string) $targetPage : '',
                         ], static fn ($value): bool => $value !== '');
 
                         return site_url($listRoute) . ($params === [] ? '' : '?' . http_build_query($params));
                     };
     
-                    // "Clear" resets the whole toolbar (keyword + action filter, back to
-                    // page 1) per the one-role-per-control rule; page size survives.
-                    $auditClearUrl = static function () use ($listRoute, $perPage): string {
-                        $params = $perPage !== 25 ? ['per_page' => (string) $perPage] : [];
+                    $auditClearUrl = static function () use ($listRoute, $auditAction, $perPage): string {
+                        $params = array_filter([
+                            'action' => $auditAction,
+                            'per_page' => $perPage !== 50 ? (string) $perPage : '',
+                        ], static fn ($value): bool => $value !== '');
 
                         return site_url($listRoute) . ($params === [] ? '' : '?' . http_build_query($params));
                     };
                     ?>
-<<<<<<< HEAD
-                    <div class="panel" data-audit-management-root>
-                        <div class="section-title mt-0"><span>My Recent Activity</span></div>
-
-                        <div class="records-search-panel">
-                            <form class="records-search-row records-lookup-search js-audit-filter-form" method="get" action="<?= esc(site_url($listRoute), 'attr') ?>" role="search" aria-label="Search my activity">
-                                <input class="form-control" type="search" name="q" value="<?= esc($searchTerm, 'attr') ?>" placeholder="Search my activity by action or description" aria-label="Search my activity" autocomplete="off">
-                                <select class="form-select records-status-select js-audit-action-filter" name="action" aria-label="Filter by action">
-                                    <option value="">All actions</option>
-                                    <?php foreach ($auditActionOptions as $action): ?>
-                                        <?php $action = trim((string) $action); ?>
-                                        <option value="<?= esc($action) ?>" <?= $auditAction === $action ? 'selected' : '' ?>><?= esc($action) ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                                <?php if ($perPage !== 50): ?><input type="hidden" name="per_page" value="<?= esc((string) $perPage, 'attr') ?>"><?php endif; ?>
-                                <div class="btn-toolbar" role="toolbar" aria-label="Activity actions">
-                                    <div class="btn-group" role="group" aria-label="Search activity">
-                                        <a class="btn btn-outline-secondary records-search-action" href="<?= esc($auditClearUrl(), 'attr') ?>"><span>Clear</span></a>
-                                        <button class="btn btn-primary records-search-action" type="submit"><span>Search</span></button>
-                                    </div>
-                                </div>
-                            </form>
-                        </div>
-
-                        <div class="table-meta">
-                            <div class="records-table-controls">
-                                <form class="records-page-size-form" method="get" action="<?= esc(site_url($listRoute), 'attr') ?>">
-                                    <?php if ($searchTerm !== ''): ?><input type="hidden" name="q" value="<?= esc($searchTerm, 'attr') ?>"><?php endif; ?>
-                                    <?php if ($auditAction !== ''): ?><input type="hidden" name="action" value="<?= esc($auditAction, 'attr') ?>"><?php endif; ?>
-                                    <label for="activityPerPage">Show</label>
-                                    <select class="form-select form-select-sm" id="activityPerPage" name="per_page" onchange="this.form.submit()">
-                                        <?php foreach ($perPageOptions as $option): ?>
-                                            <option value="<?= esc((string) $option, 'attr') ?>" <?= $perPage === (int) $option ? 'selected' : '' ?>><?= esc((string) $option) ?></option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                    <span>entries</span>
-                                </form>
-                                <form class="records-table-search-form" role="search" data-lookup-search aria-label="Filter shown activity">
-                                    <label for="activityLocalSearch">Search:</label>
-                                    <input class="form-control form-control-sm" type="search" id="activityLocalSearch" data-lookup-search-input placeholder="Type to filter..." autocomplete="off" aria-label="Filter shown activity">
-                                </form>
-                            </div>
-                        </div>
-
-                        <div class="table-responsive">
-                            <table class="table table-sm">
-                                <thead><tr><th>Action</th><th>Member</th><th>Description</th></tr></thead>
-                                <tbody>
-                                    <?php foreach ($myAudits as $audit): ?>
-                                        <tr>
-                                            <td><span class="status-pill is-muted"><?= esc((string) ($audit['user_action'] ?? '')) ?></span></td>
-                                            <td><?= esc(isset($formatAuditMember) ? $formatAuditMember($audit) : '') ?></td>
-                                            <td><?= esc((string) ($audit['description'] ?? '')) ?></td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                    <?php if ($myAudits === []): ?>
-                                        <tr><td colspan="3" class="text-center text-muted audit-empty-state"><?= $hasSearchFilters ? 'No matching activity found.' : 'No activity yet.' ?></td></tr>
-                                    <?php endif; ?>
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <?php if ($totalRows > 0): ?>
-                            <div class="lookup-list-footer d-flex flex-wrap justify-content-between align-items-center gap-2">
-                                <span class="text-muted small">Showing <?= esc((string) $fromRecord) ?>-<?= esc((string) $toRecord) ?> of <?= esc((string) $totalRows) ?></span>
-                                <?php if ($totalPages > 1): ?>
-                                    <div class="d-flex gap-2">
-                                        <a class="btn btn-outline-secondary btn-sm<?= $page <= 1 ? ' disabled' : '' ?>" href="<?= esc($auditPageUrl(max(1, $page - 1)), 'attr') ?>" aria-disabled="<?= $page <= 1 ? 'true' : 'false' ?>">Previous</a>
-                                        <span class="btn btn-sm disabled">Page <?= esc((string) $page) ?> of <?= esc((string) $totalPages) ?></span>
-                                        <a class="btn btn-outline-secondary btn-sm<?= $page >= $totalPages ? ' disabled' : '' ?>" href="<?= esc($auditPageUrl(min($totalPages, $page + 1)), 'attr') ?>" aria-disabled="<?= $page >= $totalPages ? 'true' : 'false' ?>">Next</a>
-                                    </div>
-                                <?php endif; ?>
-                            </div>
-                        <?php endif; ?>
-                    </div>
-=======
-                    <?php
-                    $activityActionRadios = [['value' => '', 'label' => 'All actions', 'checked' => $auditAction === '', 'default' => true]];
-                    foreach ($auditActionOptions as $action) {
-                        $action = trim((string) $action);
-                        $activityActionRadios[] = ['value' => $action, 'label' => $action, 'pill' => $action, 'checked' => $auditAction === $action];
-                    }
-                    ?>
-                    <?= view('components/records_toolbar_server', [
-                        'formAction' => site_url($listRoute),
-                        'formAria' => 'Search all my activity',
-                        'searchPlaceholder' => 'Search all my activity...',
-                        'keyword' => $searchTerm,
-                        'clearUrl' => $auditClearUrl(),
-                        'pillsId' => 'activityFilterPills',
-                        'narrow' => true,
-                        'hiddenHtml' => $perPage !== 25 ? '<input type="hidden" name="per_page" value="' . esc((string) $perPage, 'attr') . '">' : '',
-                        'radioGroups' => [[
-                            'name' => 'action',
-                            'label' => 'Action',
-                            'scroll' => true,
-                            'options' => $activityActionRadios,
-                        ]],
-                    ]) ?>
                     <?php
                     $activityFooter = $totalRows > 0 ? view('components/table_footer', [
                         'fromRecord' => $fromRecord,
@@ -333,7 +199,6 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
                         ],
                         'footer' => $activityFooter,
                     ]) ?>
->>>>>>> 37b227b891c97c89790df56f4936d5278dde408a
                 <?php endif; ?>
             </main>
     </div>

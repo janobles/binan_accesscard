@@ -31,8 +31,6 @@ class DashboardController extends BaseController
     }
 
     /**
-<<<<<<< HEAD
-=======
      * GET `employee/family-entry`. Legacy URL; the add/edit experience now lives
      * in the Manage Records modal.
      */
@@ -42,7 +40,6 @@ class DashboardController extends BaseController
     }
 
     /**
->>>>>>> 37b227b891c97c89790df56f4936d5278dde408a
      * GET `employee/manage-records` (and `manage-families`). Renders the employee
      * records list page, or the list fragment for AJAX search/pagination.
      */

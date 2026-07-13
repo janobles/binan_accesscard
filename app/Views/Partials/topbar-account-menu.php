@@ -16,7 +16,7 @@ $topbarFullName = $topbarFullName !== '' ? $topbarFullName : $username;
 ?>
 <li class="nav-item dropdown topbar-account">
     <button class="nav-link topbar-user topbar-account-toggle dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-        <span><?= esc($username) ?></span>
+        <i class="bi bi-person-circle" aria-hidden="true"></i><span><?= esc($username) ?></span>
     </button>
     <div class="dropdown-menu dropdown-menu-end topbar-account-menu">
         <div class="topbar-account-summary">
@@ -25,16 +25,10 @@ $topbarFullName = $topbarFullName !== '' ? $topbarFullName : $username;
             <small><?= esc($accountLevelLabel) ?></small>
         </div>
         <?php if ($accountSettingsMode === 'link'): ?>
-<<<<<<< HEAD
-            <a href="<?= esc($accountSettingsUrl, 'attr') ?>" class="dropdown-item"><span>Account Settings</span></a>
-        <?php else: ?>
-            <button type="button" class="dropdown-item js-open-my-account-modal" data-modal-url="<?= esc($accountSettingsUrl, 'attr') ?>" data-modal-title="My Account"><span>Account Settings</span></button>
-=======
             <a href="<?= esc($accountSettingsUrl, 'attr') ?>" class="dropdown-item"><i class="bi bi-gear-fill" aria-hidden="true"></i><span>Account Settings</span></a>
         <?php else: ?>
             <button type="button" class="dropdown-item js-open-my-account-modal" data-modal-url="<?= esc($accountSettingsUrl, 'attr') ?>" data-modal-title="My Account"><i class="bi bi-gear-fill" aria-hidden="true"></i><span>Account Settings</span></button>
->>>>>>> 37b227b891c97c89790df56f4936d5278dde408a
         <?php endif; ?>
-        <a href="<?= site_url('logout') ?>" class="dropdown-item js-logout-link"><span>Sign Out</span></a>
+        <a href="<?= site_url('logout') ?>" class="dropdown-item js-logout-link"><i class="bi bi-box-arrow-right" aria-hidden="true"></i><span>Sign Out</span></a>
     </div>
 </li>

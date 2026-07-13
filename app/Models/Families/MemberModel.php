@@ -70,8 +70,8 @@ class MemberModel extends Model
     }
 
     /**
-     * Confirms every table the family-save flow needs exists. Kept for the future
-     * Bootstrap family form rebuild.
+     * Confirms every table the family-save flow needs exists. FamilyController::store()
+     * calls this up front and aborts with a clear message if the schema is incomplete.
      */
     public function hasRequiredFamilyTables(): bool
     {
@@ -84,8 +84,8 @@ class MemberModel extends Model
         return true;
     }
 
-    // Transaction wrappers kept for the future family save flow so the head,
-    // members, service links, and audit row all commit together or roll back as one.
+    // Transaction wrappers used by FamilyController::store() so the head, members,
+    // service links, and audit row all commit together or roll back as one unit.
 
     /** Opens a managed DB transaction. */
     public function beginTransaction(): void
@@ -127,7 +127,7 @@ class MemberModel extends Model
 
     /**
      * Inserts a head-of-family row, where headID points to its own memberID.
-     * Kept for the future family form rebuild; returns the new memberID or false.
+     * Called by FamilyController::store(); returns the new memberID or false.
      */
     public function createHead(array $data): int|false
     {
@@ -179,7 +179,8 @@ class MemberModel extends Model
 
     /**
      * Inserts a relative under an existing head (validating the head exists).
-     * Kept for the future family form rebuild; returns the new memberID or false.
+     * Called per member by FamilyController::store(); returns the new memberID
+     * or false.
      */
     public function addFamilyMember(int $headId, array $data): int|false
     {
@@ -248,25 +249,14 @@ class MemberModel extends Model
     /**
      * Applies a DataTables column sort to a member query, or the default
      * newest-first ordering when $orderKey is null/unrecognized. Column keys map
-     * to the visible Manage Records columns: qr (qr_control join, no-control
-     * heads last), name (lastname, firstname), address, birthday. Used only by
-     * the server-side DataTables path.
+     * to the visible Manage Records columns: name (lastname, firstname), address,
+     * birthday. Used only by the server-side DataTables path.
      */
     private function applyMemberOrder($builder, ?string $orderKey, string $orderDirection): void
     {
         $direction = strtolower(trim($orderDirection)) === 'desc' ? 'DESC' : 'ASC';
 
         switch ($orderKey) {
-            case 'qr':
-                // qr_control holds one row per family head. Heads without a
-                // control number sort last in either direction.
-                $builder->join('qr_control qc_sort', 'qc_sort.headID = member.memberID', 'left')
-                    ->orderBy('qc_sort.control_no IS NULL', 'ASC', false)
-                    ->orderBy('qc_sort.control_no', $direction)
-                    // memberID breaks ties among heads without a control number
-                    // so pagination stays stable.
-                    ->orderBy('member.memberID', $direction);
-                return;
             case 'name':
                 $builder->orderBy('member.lastname', $direction)
                     ->orderBy('member.firstname', $direction);
@@ -332,112 +322,13 @@ class MemberModel extends Model
         return $builder;
     }
 
-<<<<<<< HEAD
-    /** Applies a whitelisted order to the head-only family query. */
-    private function applyFamilyOrder($builder, string $orderKey, string $orderDirection): void
-    {
-        $direction = strtolower($orderDirection) === 'desc' ? 'DESC' : 'ASC';
-
-        if ($orderKey === 'address' && $this->memberFieldExists('address')) {
-            $builder->orderBy('member.address', $direction);
-            return;
-        }
-
-        if ($orderKey === 'birthday') {
-            $builder->orderBy('member.birthday', $direction);
-            return;
-        }
-
-        if ($orderKey === 'name') {
-            $builder
-                ->orderBy('member.lastname', $direction)
-                ->orderBy('member.firstname', $direction)
-                ->orderBy('member.middlename', $direction);
-            return;
-        }
-
-        $builder->orderBy('member.memberID', $direction);
-    }
-
-    /**
-     * Adds the Manage Records keyword clause to a member query. Each whitespace
-     * token must match one of the name columns (AND across tokens, OR across
-     * firstname/middlename/lastname), so a full "Firstname Lastname" matches even
-     * though the words live in different columns. The whole keyword is still matched
-     * against the non-name fields (contact/relationship/religion/address/sector) as
-     * an OR branch, so single-word and non-name searches behave as before.
-     */
-    private function applyMemberKeyword($builder, string $keyword): void
-    {
-        $tokens = preg_split('/\s+/', $keyword, -1, PREG_SPLIT_NO_EMPTY) ?: [$keyword];
-
-        $builder->groupStart();
-
-        // Name tokens, AND-ed together.
-        $builder->groupStart();
-        foreach ($tokens as $token) {
-            $builder->groupStart()
-                ->like('member.firstname', $token)
-                ->orLike('member.middlename', $token)
-                ->orLike('member.lastname', $token)
-                ->orLike('member.suffix', $token)
-                ->groupEnd();
-        }
-        $builder->groupEnd();
-
-        // Whole-keyword matches on the non-name fields, OR-ed with the name match.
-        $builder->orGroupStart()
-            ->like('member.contactnumber', $keyword)
-            ->orLike('member.relationship', $keyword);
-
-        foreach (['religion', 'address', 'barangay'] as $field) {
-            if ($this->memberFieldExists($field)) {
-                $builder->orLike('member.' . $field, $keyword);
-            }
-        }
-
-        foreach ($this->sectorIdsForKeyword($keyword) as $sectorId) {
-            $builder->orWhere(SectorIds::containsCondition($sectorId, 'member.sectorID'), null, false);
-        }
-
-        $builder->groupEnd();
-
-        $builder->groupEnd();
-    }
-
-=======
->>>>>>> 37b227b891c97c89790df56f4936d5278dde408a
     // Applies the Manage Records filter controls to a member query builder.
     // Connects to: family-list.php filter form -> DashboardPageBuilder -> here.
     private function applyRecordFilters($builder, array $filters): void
     {
-<<<<<<< HEAD
-        $sectorIds = $this->normalizeFilterList($filters['sectorID'] ?? []);
-
-        if ($sectorIds !== []) {
-            $builder->groupStart();
-            foreach ($sectorIds as $index => $sectorId) {
-                if ($index === 0) {
-                    $builder->where(SectorIds::containsCondition((int) $sectorId, 'member.sectorID'), null, false);
-                    continue;
-                }
-
-                $builder->orWhere(SectorIds::containsCondition((int) $sectorId, 'member.sectorID'), null, false);
-            }
-            $builder->groupEnd();
-        }
-
-        $barangays = $this->normalizeFilterList($filters['barangay'] ?? [], false);
-
-        if ($barangays !== [] && $this->memberFieldExists('barangay')) {
-            $builder->whereIn('member.barangay', $barangays);
-        }
-
-=======
         $this->applySectorIdFilter($builder, $filters['sectorID'] ?? [], 'member.sectorID');
         $this->applyBarangayFilter($builder, $filters['barangay'] ?? [], 'member.address', 'member.barangay');
         $this->applyDateRange($builder, 'member.dt_created', $filters);
->>>>>>> 37b227b891c97c89790df56f4936d5278dde408a
     }
 
     /**

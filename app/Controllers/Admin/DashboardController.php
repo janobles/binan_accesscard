@@ -65,8 +65,6 @@ class DashboardController extends BaseController
     }
 
     /**
-<<<<<<< HEAD
-=======
      * GET `admin/family-entry`. Legacy URL; the add/edit experience now lives in
      * the Manage Records modal.
      */
@@ -76,7 +74,6 @@ class DashboardController extends BaseController
     }
 
     /**
->>>>>>> 37b227b891c97c89790df56f4936d5278dde408a
      * GET `admin/manage-records` (and `manage-families`). Renders the family
      * records list page, or the list fragment for AJAX search/pagination.
      */
@@ -161,7 +158,7 @@ class DashboardController extends BaseController
 
     // ---------------------------------------------------------------------
     // AJAX partial rendering.
-    // The dashboard shell loads some sections (accounts, audit,
+    // The dashboard shell loads some sections (accounts, family form, audit,
     // sectors, services) into a modal/panel via fetch. When ?partial=1 or an
     // XHR header is present we return just the inner view fragment instead of
     // the whole page. Front-end loader: assets/js/dashboard/*-modal.js.

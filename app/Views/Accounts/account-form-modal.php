@@ -16,15 +16,16 @@ $userId = (int) ($account['userID'] ?? 0);
 $username = ($isEdit || $isSelfProfile) ? (string) ($account['username'] ?? '') : (string) old('username');
 $role = ($isEdit || $isSelfProfile) ? (string) ($account['role'] ?? '') : (string) old('role');
 $isSelf = (bool) ($isSelf ?? false);
-// True when an admin edits another administrator: personal details and account
-// level are locked, while username and password reset remain available.
+// True when an admin edits another administrator: personal details are locked
+// (read-only), but username/account level/reset password stay editable.
 $personalLocked = (bool) ($personalLocked ?? false);
 $lockAttr = $personalLocked ? ' disabled' : '';
+// Developer self-profile: username + account level are .env-managed (read-only).
+$isDeveloper = (bool) ($isDeveloper ?? false);
 $roleLabel = (string) ($roleLabel ?? $role);
-$isRoleReadOnly = $personalLocked || ($isEdit && $isSelf) || $isSelfProfile;
+$isRoleReadOnly = $isDeveloper || ($isEdit && $isSelf) || $isSelfProfile;
 $displayRoleLabel = $roleLabel !== '' ? $roleLabel : match ($role) {
     'administrator' => 'Administrator',
-    'developer' => 'Developer',
     'encoder' => 'Encoder',
     'viewer' => 'Viewer',
     'scanner' => 'Scanner',
@@ -55,7 +56,7 @@ $value = static function (array $details, string $key, bool $isEdit): string {
                 <div class="account-field-group" aria-label="User credentials">
                     <h3 class="account-field-group-title">User Credentials</h3>
                     <?php if ($personalLocked): ?>
-                        <p class="text-muted account-field small mb-0">Personal details and account level are read-only. As an administrator you can only update this account's username and password.</p>
+                        <p class="text-muted account-field small mb-0">Personal details are read-only. As an administrator you can only update this account's username, account level, and password.</p>
                     <?php endif; ?>
                     <div class="account-fields-row account-fields-row--requirements">
                         <div class="account-field">
@@ -102,8 +103,10 @@ $value = static function (array $details, string $key, bool $isEdit): string {
                             <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>-role">Account Level <span class="account-required-marker" aria-hidden="true">*</span></label>
                             <?php if ($isRoleReadOnly): ?>
                                 <input class="form-control account-role-readonly" id="<?= esc($fieldPrefix, 'attr') ?>-role" type="text" value="<?= esc($displayRoleLabel, 'attr') ?>" disabled>
-                                <small class="text-muted"><?= $isSelfProfile ? '' : 'You cannot change this account level.' ?></small>
-                                <input type="hidden" name="role" value="<?= esc($role, 'attr') ?>">
+                                <small class="text-muted"><?= $isSelfProfile || $isDeveloper ? '' : 'You cannot change your own account level.' ?></small>
+                                <?php if (! $isDeveloper): ?>
+                                    <input type="hidden" name="role" value="<?= esc($role, 'attr') ?>">
+                                <?php endif; ?>
                             <?php else: ?>
                                 <select class="form-select" id="<?= esc($fieldPrefix, 'attr') ?>-role" name="role" required>
                                     <?php if (! $isEdit && ! $isSelfProfile): ?>
@@ -144,35 +147,6 @@ $value = static function (array $details, string $key, bool $isEdit): string {
                             </div>
                         <?php endif; ?>
                     </div>
-<<<<<<< HEAD
-                    <?php if ($isEdit && ! $isSelf): ?>
-                        <div class="account-field">
-                            <button class="btn btn-outline-warning account-reset-password-action" type="submit"
-                                    formaction="<?= site_url('accounts/reset-password') ?>"
-                                    formmethod="post"
-                                    formnovalidate
-                                    onclick="return confirm('Generate a new random password for this account? The current password will stop working.');">
-                                <span>Reset Password</span>
-                            </button>
-                            <small class="text-muted">Generates a new password for this account.</small>
-                        </div>
-                    <?php endif; ?>
-                    <?php if ($isSelfProfile): ?>
-                        <div class="account-field">
-                            <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>-current-password">Current Password</label>
-                            <input class="form-control" id="<?= esc($fieldPrefix, 'attr') ?>-current-password" name="current_password" type="password" autocomplete="current-password" placeholder="Enter current password">
-                        </div>
-                        <div class="account-field">
-                            <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>-new-password">New Password</label>
-                            <input class="form-control" id="<?= esc($fieldPrefix, 'attr') ?>-new-password" name="new_password" type="password" autocomplete="new-password" placeholder="At least 8 characters" minlength="8">
-                        </div>
-                        <div class="account-field">
-                            <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>-confirm-password">Confirm Password</label>
-                            <input class="form-control" id="<?= esc($fieldPrefix, 'attr') ?>-confirm-password" name="confirm_password" type="password" autocomplete="new-password" placeholder="Re-enter new password">
-                        </div>
-                    <?php endif; ?>
-=======
->>>>>>> 37b227b891c97c89790df56f4936d5278dde408a
                 </div>
             </div>
         </section>

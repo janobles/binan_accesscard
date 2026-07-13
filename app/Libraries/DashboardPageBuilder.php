@@ -14,6 +14,7 @@ use App\Models\Scanner\AidDistributionModel;
 use App\Models\Scanner\AidTypeModel;
 use App\Models\Scanner\AidStatsModel;
 use App\Models\Scanner\DistributionBatchModel;
+use App\Models\Scanner\TempAidDistributionModel;
 use App\Support\FamilyProfilingFormV2;
 use App\Libraries\RoleAccess;
 use App\Models\ViewLayoutModel;
@@ -426,11 +427,15 @@ class DashboardPageBuilder
         $scope = $batchId > 0 ? $batchId : null;
         $stats = model(AidStatsModel::class);
 
+        // Temp mode: family import not done yet, so summary tiles are driven by
+        // the QR-only temp log (every scan = one received handout, 0 waiting).
+        $tempSummary = model(TempAidDistributionModel::class)->summary($scope);
+
         return [
             'reportsBatches'    => $batches,
             'reportsBatchId'    => $batchId > 0 ? $batchId : null,
             'reportsBatchName'  => $batch['name'] ?? null,
-            'reportsSummary'    => $stats->receivedVsNot($scope),
+            'reportsSummary'    => $tempSummary,
             'reportsByBarangay' => $stats->byBarangay($scope),
             'reportsByAidType'  => $stats->byAidType($scope),
             'reportsPerScanner' => $batchId > 0 ? $stats->perScanner($batchId) : [],

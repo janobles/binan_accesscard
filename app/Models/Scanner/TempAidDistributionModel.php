@@ -78,4 +78,23 @@ class TempAidDistributionModel extends Model
             return false;
         }
     }
+
+    /**
+     * Reports summary while family encoding is incomplete: every logged QR counts
+     * as a received handout, so nothing is ever "waiting". Same shape as
+     * AidStatsModel::receivedVsNot(). Batch id 0/null counts every batch.
+     */
+    public function summary(?int $batchId): array
+    {
+        $count = $batchId !== null && $batchId > 0
+            ? $this->countInBatch($batchId)
+            : $this->countAllResults();
+
+        return [
+            'total'       => $count,
+            'received'    => $count,
+            'notReceived' => 0,
+            'coverage'    => $count > 0 ? 100 : 0,
+        ];
+    }
 }

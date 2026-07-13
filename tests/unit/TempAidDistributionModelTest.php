@@ -19,4 +19,16 @@ final class TempAidDistributionModelTest extends CIUnitTestCase
         $this->assertStringContainsString("->where('control_no', \$controlNo)", $src);
         $this->assertStringContainsString("->where('batch_id', \$batchId)", $src);
     }
+
+    public function testSummaryReturnsReceivedVsNotShapeWithNothingWaiting(): void
+    {
+        $src = file_get_contents(APPPATH . 'Models/Scanner/TempAidDistributionModel.php');
+
+        // Same keys as AidStatsModel::receivedVsNot() so the reports tiles bind.
+        foreach (["'total'", "'received'", "'notReceived'", "'coverage'"] as $key) {
+            $this->assertStringContainsString($key, $src);
+        }
+        // Temp mode never has anyone waiting.
+        $this->assertStringContainsString("'notReceived' => 0", $src);
+    }
 }

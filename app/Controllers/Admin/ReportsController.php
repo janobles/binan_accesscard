@@ -6,6 +6,7 @@ use App\Controllers\BaseController;
 use App\Libraries\RoleAccess;
 use App\Models\Scanner\AidStatsModel;
 use App\Models\Scanner\DistributionBatchModel;
+use App\Models\Scanner\TempAidDistributionModel;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
 
@@ -61,7 +62,7 @@ class ReportsController extends BaseController
         $stats             = model(AidStatsModel::class);
 
         return $this->response->setJSON([
-            'received'   => $stats->receivedVsNot($scope),
+            'received'   => model(TempAidDistributionModel::class)->summary($scope),
             'barangay'   => $stats->byBarangay($scope),
             'byAidType'  => $stats->byAidType($scope),
             'perScanner' => $batchId > 0 ? $stats->perScanner($batchId) : [],

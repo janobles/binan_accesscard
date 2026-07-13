@@ -16,53 +16,49 @@ $accounts = array_merge($adminAccounts, $employeeAccounts, $viewerAccounts, $sca
     <?php /* Toolbar above the card, Manage Records standard. Client mode: the account list is
              fully loaded, so the keyword and the panel radios filter rows in the browser
              (accounts-modal.js) and records-filter-panel.js renders the pills — no reload. */ ?>
-    <form class="row g-2 align-items-center mb-2" role="search" aria-label="Filter accounts" data-records-filter-form data-records-client data-records-pills="accountFilterPills">
-        <div class="col-12 col-lg">
-            <input class="form-control" type="search" data-account-search placeholder="Search accounts..." autocomplete="off" aria-label="Search accounts by username">
-        </div>
+    <?php
+    $accountLevelsGroup = [
+        'name' => 'account_level',
+        'label' => 'Level',
+        'type' => 'radio',
+        'options' => [
+            ['value' => '', 'label' => 'All levels', 'pill' => 'All levels', 'checked' => true, 'default' => true],
+            ['value' => 'administrator', 'label' => 'Administrator', 'pill' => 'Administrator', 'checked' => false],
+            ['value' => 'encoder', 'label' => 'Encoder', 'pill' => 'Encoder', 'checked' => false],
+            ['value' => 'viewer', 'label' => 'Viewer', 'pill' => 'Viewer', 'checked' => false],
+            ['value' => 'scanner', 'label' => 'Scanner', 'pill' => 'Scanner', 'checked' => false],
+        ],
+        'attrs' => 'data-account-level-filter',
+    ];
 
-        <div class="col-12 col-lg-auto">
-            <div class="dropdown" data-records-panel>
-                <button class="<?= btn('filter') ?> dropdown-toggle w-100" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
-                    <i class="bi bi-funnel" aria-hidden="true"></i> Filters
-                </button>
-                <div class="dropdown-menu dropdown-menu-end records-filter-panel p-3">
-                    <div class="d-flex flex-wrap gap-4">
-                        <div data-records-filter="level" data-records-group-label="Level">
-                            <div class="fw-semibold small text-uppercase text-muted mb-1">Level</div>
-                            <?php $accountLevels = ['' => 'All levels', 'administrator' => 'Administrator', 'encoder' => 'Encoder', 'viewer' => 'Viewer', 'scanner' => 'Scanner']; ?>
-                            <?php foreach ($accountLevels as $value => $label): ?>
-                                <label class="form-check d-flex align-items-center gap-2 py-1" data-records-option>
-                                    <input class="form-check-input m-0" type="radio" name="account_level" value="<?= esc((string) $value, 'attr') ?>" data-account-level-filter
-                                        <?= $value === '' ? 'data-records-default checked' : 'data-records-pill-label="' . esc($label, 'attr') . '"' ?>>
-                                    <span class="form-check-label small"><?= esc($label) ?></span>
-                                </label>
-                            <?php endforeach; ?>
-                        </div>
-                        <div data-records-filter="status" data-records-group-label="Status">
-                            <div class="fw-semibold small text-uppercase text-muted mb-1">Status</div>
-                            <?php $accountStatuses = ['' => 'All statuses', 'active' => 'Active', 'inactive' => 'Inactive']; ?>
-                            <?php foreach ($accountStatuses as $value => $label): ?>
-                                <label class="form-check d-flex align-items-center gap-2 py-1" data-records-option>
-                                    <input class="form-check-input m-0" type="radio" name="account_status" value="<?= esc((string) $value, 'attr') ?>" data-account-status-filter
-                                        <?= $value === '' ? 'data-records-default checked' : 'data-records-pill-label="' . esc($label, 'attr') . '"' ?>>
-                                    <span class="form-check-label small"><?= esc($label) ?></span>
-                                </label>
-                            <?php endforeach; ?>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+    $accountStatusesGroup = [
+        'name' => 'account_status',
+        'label' => 'Status',
+        'type' => 'radio',
+        'options' => [
+            ['value' => '', 'label' => 'All statuses', 'pill' => 'All statuses', 'checked' => true, 'default' => true],
+            ['value' => 'active', 'label' => 'Active', 'pill' => 'Active', 'checked' => false],
+            ['value' => 'inactive', 'label' => 'Inactive', 'pill' => 'Inactive', 'checked' => false],
+        ],
+        'attrs' => 'data-account-status-filter',
+    ];
 
-        <div class="col-12 col-lg-auto d-flex flex-wrap align-items-center gap-2" role="group" aria-label="Toolbar actions">
-            <button class="<?= btn('clear') ?> flex-fill" type="button" data-account-clear-filters>Clear</button>
-            <?php if ($canCreateAccounts): ?>
-            <div class="vr"></div>
-            <button class="<?= btn('add') ?> flex-fill js-open-account-create-modal" type="button" data-modal-url="<?= site_url('accounts/create') ?>" data-modal-title="Create Account">Create Account</button>
-            <?php endif; ?>
-        </div>
-    </form>
+    $actionsHtml = '';
+    if ($canCreateAccounts) {
+        $actionsHtml = '<button class="' . btn('add') . ' flex-fill js-open-account-create-modal" type="button" data-modal-url="' . site_url('accounts/create') . '" data-modal-title="Create Account">Create Account</button>';
+    }
+    ?>
+    <?= view('components/toolbar', [
+        'isClient' => true,
+        'formAria' => 'Filter accounts',
+        'searchPlaceholder' => 'Search accounts...',
+        'searchName' => 'q',
+        'searchAttrs' => 'data-account-search aria-label="Search accounts by username"',
+        'clearAttrs' => 'data-account-clear-filters',
+        'pillsId' => 'accountFilterPills',
+        'actionsHtml' => $actionsHtml,
+        'filterGroups' => [$accountLevelsGroup, $accountStatusesGroup],
+    ]) ?>
     <?= view('components/filter_pills', ['id' => 'accountFilterPills']) ?>
 
     <?= view('components/card', [

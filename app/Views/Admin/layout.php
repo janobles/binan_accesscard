@@ -278,6 +278,13 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
             <?php endif; ?>
 
             <?php if ($activePage === 'distributions'): ?>
+                <?= view('components/toolbar', [
+                    'isClient' => true,
+                    'formAria' => 'Search distributions',
+                    'searchPlaceholder' => 'Search the distributions log',
+                    'searchAttrs' => 'id="distSearch"',
+                    'clearAttrs' => 'id="distClear"',
+                ]) ?>
                 <?= view('components/card', [
                     'icon' => 'clipboard-check-fill',
                     'title' => 'All Distributions',

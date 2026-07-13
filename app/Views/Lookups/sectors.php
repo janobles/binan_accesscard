@@ -43,7 +43,7 @@ $sectorClearUrl = static function () use ($listRoute, $perPage): string {
          records-filter-panel.js live-apply + pills). Melbranch hooks preserved:
          data-sector-management-root, data-lookup-search local filter, .js-sector-modal-open +
          data-sector-* attributes, the sector-modal include. */ ?>
-<?= view('components/records_toolbar_server', [
+<?= view('components/toolbar', [
     'formAction' => site_url($listRoute),
     'formAria' => 'Search all sectors',
     'searchPlaceholder' => 'Search all sectors...',
@@ -52,7 +52,7 @@ $sectorClearUrl = static function () use ($listRoute, $perPage): string {
     'pillsId' => 'sectorFilterPills',
     'hiddenHtml' => $perPage !== 25 ? '<input type="hidden" name="per_page" value="' . esc((string) $perPage, 'attr') . '">' : '',
     'actionsHtml' => $canManage ? '<button class="' . btn('add') . ' flex-fill js-sector-modal-open" type="button" data-sector-mode="create">Add Sector</button>' : '',
-    'radioGroups' => [[
+    'filterGroups' => [[
         'name' => 'status',
         'label' => 'Status',
         'options' => [

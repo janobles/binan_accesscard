@@ -9,15 +9,6 @@
 ?>
 <?php /* Filter bar + controls row: pure Bootstrap grid/utilities inside the
          card-body's own padding (Manage Records standard). */ ?>
-<div class="row g-2 align-items-center mb-3">
-          <div class="col-12 col-lg">
-            <input class="form-control" type="search" id="distSearch" placeholder="Search the distributions log" aria-label="Search the distributions log" autocomplete="off">
-          </div>
-          <div class="col-12 col-lg-auto">
-            <button class="<?= btn('clear') ?> w-100" type="button" id="distClear">Clear</button>
-          </div>
-        </div>
-
         <?= view('components/table_controls', [
             'searchId' => 'distLocalSearch',
             'searchAria' => 'Search shown distributions',
@@ -46,7 +37,7 @@
               <?php foreach ($distributions as $d): ?>
                 <tr>
                   <td><?= esc($d['claim_date']) ?></td>
-                  <td><span class="badge bg-light text-dark border"><?= esc($d['control_no']) ?></span></td>
+                  <td><?= esc($d['control_no']) ?></td>
                   <td><span class="sector-name"><?= esc($d['head']) ?></span></td>
                   <td><?= esc($d['claimant']) ?></td>
                   <td><span class="badge bg-light text-dark border"><?= esc((string) $d['aid_type']) ?></span></td>

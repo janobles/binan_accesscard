@@ -54,14 +54,14 @@ $window = ($batchName ?? null) !== null
 </table>
 <?php endif; ?>
 
-<h2>Handouts by service</h2>
+<h2>Handouts by aid type</h2>
 <table class="data">
-  <thead><tr><th>Service</th><th>Handouts</th></tr></thead>
+  <thead><tr><th>Aid Type</th><th>Handouts</th></tr></thead>
   <tbody>
-  <?php foreach ($byService as $a): ?>
-    <tr><td><?= esc(($a['service_code'] ?? '') !== '' ? $a['service_code'] . ' — ' . $a['service'] : $a['service']) ?></td><td><?= esc((string) $a['count']) ?></td></tr>
+  <?php foreach ($byAidType as $a): ?>
+    <tr><td><?= esc($a['aid_type']) ?></td><td><?= esc((string) $a['count']) ?></td></tr>
   <?php endforeach; ?>
-  <?php if ($byService === []): ?>
+  <?php if ($byAidType === []): ?>
     <tr><td colspan="2">No data for this range.</td></tr>
   <?php endif; ?>
   </tbody>

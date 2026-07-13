@@ -63,7 +63,7 @@ class ReportsController extends BaseController
         return $this->response->setJSON([
             'received'   => $stats->receivedVsNot($scope),
             'barangay'   => $stats->byBarangay($scope),
-            'byService'  => $stats->byService($scope),
+            'byAidType'  => $stats->byAidType($scope),
             'perScanner' => $batchId > 0 ? $stats->perScanner($batchId) : [],
             'updated'    => date('c'),
         ]);
@@ -83,7 +83,7 @@ class ReportsController extends BaseController
         $bytes = (new \App\Libraries\Scanner\ReportsPdfGenerator())->generate(
             $stats->receivedVsNot($scope),
             $stats->byBarangay($scope),
-            $stats->byService($scope),
+            $stats->byAidType($scope),
             null,
             null,
             $batchId > 0 ? $stats->perScanner($batchId) : [],

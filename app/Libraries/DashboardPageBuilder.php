@@ -126,7 +126,7 @@ class DashboardPageBuilder
                 'reportsBatchName'  => null,
                 'reportsSummary'    => ['total' => 0, 'received' => 0, 'notReceived' => 0, 'coverage' => 0],
                 'reportsByBarangay' => [],
-                'reportsByService'  => [],
+                'reportsByAidType'  => [],
                 'reportsPerScanner' => [],
             ];
 
@@ -204,7 +204,7 @@ class DashboardPageBuilder
             'reportsBatchName'   => $reportsData['reportsBatchName'],
             'reportsSummary'     => $reportsData['reportsSummary'],
             'reportsByBarangay'  => $reportsData['reportsByBarangay'],
-            'reportsByService'   => $reportsData['reportsByService'],
+            'reportsByAidType'   => $reportsData['reportsByAidType'],
             'reportsPerScanner'  => $reportsData['reportsPerScanner'],
             'stats'              => $dashboardModel->stats(),
             'canCreateFamily'    => true,
@@ -432,7 +432,7 @@ class DashboardPageBuilder
             'reportsBatchName'  => $batch['name'] ?? null,
             'reportsSummary'    => $stats->receivedVsNot($scope),
             'reportsByBarangay' => $stats->byBarangay($scope),
-            'reportsByService'  => $stats->byService($scope),
+            'reportsByAidType'  => $stats->byAidType($scope),
             'reportsPerScanner' => $batchId > 0 ? $stats->perScanner($batchId) : [],
         ];
     }

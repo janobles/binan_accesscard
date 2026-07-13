@@ -10,7 +10,7 @@ $reportsBatchId    = $reportsBatchId ?? null;
 $reportsBatchName  = $reportsBatchName ?? null;
 $reportsSummary    = $reportsSummary ?? ['total' => 0, 'received' => 0, 'notReceived' => 0, 'coverage' => 0];
 $reportsByBarangay = $reportsByBarangay ?? [];
-$reportsByService  = $reportsByService ?? [];
+$reportsByAidType  = $reportsByAidType ?? [];
 $reportsPerScanner = $reportsPerScanner ?? [];
 
 $rangeLabel = $reportsBatchName !== null
@@ -110,8 +110,8 @@ foreach ($reportsPerScanner as $p) {
   <div class="col-lg-12">
     <?= view('components/card', [
         'icon' => 'bar-chart-fill',
-        'title' => 'Number of handouts by service',
-        'bodyHtml' => '<div style="position:relative;height:260px"><canvas id="chartService"></canvas></div>',
+        'title' => 'Number of handouts by aid type',
+        'bodyHtml' => '<div style="position:relative;height:260px"><canvas id="chartAidType"></canvas></div>',
         'footer' => $rangeLabel,
         'cardClass' => 'reports-chart-card',
     ]) ?>
@@ -145,7 +145,7 @@ foreach ($reportsByBarangay as $b) {
     [
         'received' => $reportsSummary,
         'barangay'  => $reportsByBarangay,
-        'byService' => $reportsByService,
+        'byAidType' => $reportsByAidType,
     ],
     JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT,
 ) ?></script>

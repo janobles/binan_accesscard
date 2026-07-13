@@ -107,27 +107,26 @@ class AidStatsModel extends Model
     }
 
     /**
-     * Handout counts per service, within the batch scope, busiest first.
-     * Services with zero handouts are omitted (the catalogue is ~46 rows).
+     * Handout counts per aid type, within the batch scope, busiest first.
+     * Aid types with zero handouts are omitted.
      */
-    public function byService(?int $batchId = null): array
+    public function byAidType(?int $batchId = null): array
     {
         try {
-            $b = $this->db->table('services')
-                ->select('services.name AS service, services.shortcode AS service_code,'
+            $b = $this->db->table('aid_type')
+                ->select('aid_type.name AS aid_type,'
                     . ' COUNT(aid_distribution.aidID) AS count')
-                ->join('aid_distribution', 'aid_distribution.service_id = services.serviceID', 'left');
+                ->join('aid_distribution', 'aid_distribution.aid_type_id = aid_type.aid_type_id', 'left');
             $this->applyScope($b, $batchId);
-            $rows = $b->groupBy('services.serviceID')
+            $rows = $b->groupBy('aid_type.aid_type_id')
                 ->having('count >', 0)
                 ->orderBy('count', 'DESC')
-                ->orderBy('services.name', 'ASC')
+                ->orderBy('aid_type.name', 'ASC')
                 ->get()->getResultArray();
 
             return array_map(static fn ($r) => [
-                'service'      => (string) $r['service'],
-                'service_code' => (string) ($r['service_code'] ?? ''),
-                'count'        => (int) $r['count'],
+                'aid_type' => (string) $r['aid_type'],
+                'count'    => (int) $r['count'],
             ], $rows);
         } catch (\Throwable $e) {
             return [];

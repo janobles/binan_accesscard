@@ -97,17 +97,17 @@
         });
     }
 
-    function serviceLabel(a) { return a.service_code ? a.service_code + ' — ' + a.service : a.service; }
+    function aidTypeLabel(a) { return a.aid_type; }
 
-    var byService = ctx('chartService');
-    if (byService && Array.isArray(data.byService)) {
-        charts.byService = new Chart(byService, {
+    var byAidType = ctx('chartAidType');
+    if (byAidType && Array.isArray(data.byAidType)) {
+        charts.byAidType = new Chart(byAidType, {
             type: 'bar',
             data: {
-                labels: data.byService.map(serviceLabel),
+                labels: data.byAidType.map(aidTypeLabel),
                 datasets: [{
                     label: 'Handouts',
-                    data: data.byService.map(function (a) { return a.count; }),
+                    data: data.byAidType.map(function (a) { return a.count; }),
                     backgroundColor: palette[2],
                     borderRadius: 4,
                     maxBarThickness: 64,
@@ -136,10 +136,10 @@
                 charts.barangay.data.datasets[0].data = r.map(function (b) { return b.coverage; });
                 charts.barangay.update();
             }
-            if (charts.byService && Array.isArray(fresh.byService)) {
-                charts.byService.data.labels = fresh.byService.map(serviceLabel);
-                charts.byService.data.datasets[0].data = fresh.byService.map(function (a) { return a.count; });
-                charts.byService.update();
+            if (charts.byAidType && Array.isArray(fresh.byAidType)) {
+                charts.byAidType.data.labels = fresh.byAidType.map(aidTypeLabel);
+                charts.byAidType.data.datasets[0].data = fresh.byAidType.map(function (a) { return a.count; });
+                charts.byAidType.update();
             }
         }
     };

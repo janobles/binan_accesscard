@@ -213,6 +213,15 @@ class ScanController extends BaseController
             'members'    => $members->familyMembers($headId),
         ];
 
+        // Sector/category/service badges per member for the family panel.
+        $memberRows = $familyPayload['members'];
+        $badges     = $members->referenceBadges(array_map(static fn (array $m): int => (int) $m['memberID'], $memberRows));
+        $familyPayload['head']['badges'] = $badges[(int) $head['memberID']] ?? [];
+        foreach ($memberRows as $i => $m) {
+            $memberRows[$i]['badges'] = $badges[(int) $m['memberID']] ?? [];
+        }
+        $familyPayload['members'] = $memberRows;
+
         // One handout per family per batch: a repeat scan reports the original
         // entry instead of logging again. The check is server-side so a stale
         // kiosk page can never double-log.

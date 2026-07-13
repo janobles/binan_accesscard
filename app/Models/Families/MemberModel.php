@@ -498,8 +498,75 @@ class MemberModel extends Model
     }
 
     /**
-     * All active members of a family (head + relatives), head first. Drives the
-     * scan claimant dropdown. Returns [] for a non-positive id.
+     * Reference-data badges per member for the kiosk family panel: sector
+     * shortcodes (member.sectorID JSON), then category names, then service
+     * shortcodes (member_services -> services). Returns memberID => list of
+     * badge labels; empty map on empty input or any DB error.
+     *
+     * @param list<int> $memberIds
+     * @return array<int, list<string>>
+     */
+    public function referenceBadges(array $memberIds): array
+    {
+        $memberIds = array_values(array_filter(array_map('intval', $memberIds), static fn (int $id): bool => $id > 0));
+        if ($memberIds === []) {
+            return [];
+        }
+
+        try {
+            // Sector shortcodes keyed by sectorID, resolved once for the family.
+            $sectorCodes = [];
+            foreach ($this->db->table('sector')->select('sectorID, shortcode')->get()->getResultArray() as $s) {
+                $sectorCodes[(int) $s['sectorID']] = (string) $s['shortcode'];
+            }
+
+            $sectorJson = [];
+            foreach ($this->db->table('member')->select('memberID, sectorID')->whereIn('memberID', $memberIds)->get()->getResultArray() as $m) {
+                $sectorJson[(int) $m['memberID']] = $m['sectorID'];
+            }
+
+            $serviceRows = $this->db->table('member_services')
+                ->select('member_services.memberID, services.shortcode, services.category')
+                ->join('services', 'services.serviceID = member_services.serviceID')
+                ->whereIn('member_services.memberID', $memberIds)
+                ->where('services.dt_deleted IS NULL', null, false)
+                ->get()->getResultArray();
+
+            $badges = [];
+            foreach ($memberIds as $id) {
+                $sectors = [];
+                foreach (\App\Libraries\SectorIds::normalize($sectorJson[$id] ?? '[]') as $sid) {
+                    if (isset($sectorCodes[$sid])) {
+                        $sectors[] = $sectorCodes[$sid];
+                    }
+                }
+                $categories = [];
+                $services   = [];
+                foreach ($serviceRows as $r) {
+                    if ((int) $r['memberID'] !== $id) {
+                        continue;
+                    }
+                    $cat = trim((string) ($r['category'] ?? ''));
+                    if ($cat !== '' && ! in_array($cat, $categories, true)) {
+                        $categories[] = $cat;
+                    }
+                    $code = trim((string) ($r['shortcode'] ?? ''));
+                    if ($code !== '') {
+                        $services[] = $code;
+                    }
+                }
+                $badges[$id] = array_merge($sectors, $categories, $services);
+            }
+
+            return $badges;
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
+
+    /**
+     * All active members of a family (head + relatives), head first. Drives
+     * the kiosk family panel. Returns [] for a non-positive id.
      */
     public function familyMembers(int $headId): array
     {

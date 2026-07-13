@@ -8,38 +8,35 @@
  * handled by the inline script in Admin/layout.php's distribution block.
  */
 ?>
-<div class="records-search-panel">
-          <div class="records-search-row records-lookup-search">
+<?php /* Filter bar + controls row: pure Bootstrap grid/utilities inside the
+         card-body's own padding (Manage Records standard). */ ?>
+<div class="row g-2 align-items-center mb-3">
+          <div class="col-12 col-lg">
             <input class="form-control" type="search" id="distSearch" placeholder="Search the distributions log" aria-label="Search the distributions log" autocomplete="off">
-            <select class="form-select records-status-select" id="distAidFilter" aria-label="Filter by aid type">
+          </div>
+          <div class="col-12 col-lg-auto">
+            <select class="form-select" id="distAidFilter" aria-label="Filter by aid type">
               <option value="">All aid types</option>
               <?php foreach ($aidTypes as $t): ?>
                 <option value="<?= esc($t['name'], 'attr') ?>"><?= esc($t['name']) ?></option>
               <?php endforeach; ?>
             </select>
-            <button class="btn btn-outline-secondary records-search-action" type="button" id="distClear"><i class="bi bi-x-lg" aria-hidden="true"></i><span>Clear</span></button>
+          </div>
+          <div class="col-12 col-lg-auto">
+            <button class="<?= btn('clear') ?> w-100" type="button" id="distClear">Clear</button>
           </div>
         </div>
 
-        <div class="table-meta">
-          <div class="records-table-controls">
-            <div class="records-page-size-form">
-              <label for="distPerPage">Show</label>
-              <select class="form-select form-select-sm" id="distPerPage">
-                <option value="10">10</option>
-                <option value="25">25</option>
-                <option value="50" selected>50</option>
-                <option value="100">100</option>
-                <option value="0">All</option>
-              </select>
-              <span>entries</span>
-            </div>
-            <div class="records-table-search-form">
-              <label for="distLocalSearch">Search:</label>
-              <input class="form-control form-control-sm" type="search" id="distLocalSearch" placeholder="Type to filter..." autocomplete="off">
-            </div>
-          </div>
-        </div>
+        <?= view('components/table_controls', [
+            'searchId' => 'distLocalSearch',
+            'searchAria' => 'Search shown distributions',
+            'searchFormAttrs' => 'onsubmit="return false;"',
+            'searchButtonAttrs' => 'onclick="document.getElementById(\'distLocalSearch\').dispatchEvent(new Event(\'input\'))"',
+            'sizeId' => 'distPerPage',
+            'sizeAction' => null,
+            'perPage' => 25,
+            'perPageOptions' => [10 => '10', 25 => '25', 50 => '50', 100 => '100', 0 => 'All'],
+        ]) ?>
 
         <div class="table-responsive">
           <table class="table manage-record-table align-middle w-100" id="distTable">

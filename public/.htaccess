@@ -47,3 +47,16 @@ Options -Indexes
 # Disable server signature start
 ServerSignature Off
 # Disable server signature end
+
+# Let browsers cache static assets for a week. Fingerprintless filenames mean
+# a hard refresh is needed after asset changes, which is acceptable here
+# because assets change only on deploys.
+<IfModule mod_expires.c>
+	ExpiresActive On
+	ExpiresByType text/css "access plus 7 days"
+	ExpiresByType application/javascript "access plus 7 days"
+	ExpiresByType image/png "access plus 7 days"
+	ExpiresByType image/jpeg "access plus 7 days"
+	ExpiresByType image/svg+xml "access plus 7 days"
+	ExpiresByType font/woff2 "access plus 7 days"
+</IfModule>

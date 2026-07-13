@@ -37,7 +37,9 @@ final class FamilyDataTableTest extends TestCase
         // QR NO. + HEAD/MEMBER NAME + SECTOR + ADDRESS + BIRTHDAY + ACTIONS.
         $this->assertSame(6, preg_match_all('/<th(?:\s|>)/', $view));
         $this->assertStringContainsString('<th class="fw-semibold small text-center">QR NO.</th>', $view);
-        $this->assertStringContainsString("{ data: 'qr', name: 'qr', orderable: false", $script);
+        // QR is sortable and the table's default order (manage-records UI
+        // spec, 2026-07-12): opens 1 to n, header clicks toggle asc/desc.
+        $this->assertStringContainsString("{ data: 'qr', name: 'qr', orderSequence: ['asc', 'desc']", $script);
         $this->assertStringContainsString("className: 'text-center text-nowrap'", $script);
         $this->assertStringNotContainsString('>DATE<', $view);
         $this->assertStringNotContainsString('name="date"', $view);
@@ -45,12 +47,11 @@ final class FamilyDataTableTest extends TestCase
         $this->assertStringContainsString('searching: true', $script);
         $this->assertStringContainsString('applyCurrentPageQuickSearch', $script);
         $this->assertStringContainsString("request.search.value = ''", $script);
-        $this->assertStringContainsString("topStart: 'pageLength'", $script);
-        $this->assertStringContainsString("topEnd: 'search'", $script);
-        // Import feature: no initial column sort so the server's newest-first
-        // order (a just-imported family) shows at the top; header clicks still sort.
-        $this->assertStringContainsString('order: []', $script);
-        $this->assertSame(3, substr_count($script, "orderSequence: ['asc', 'desc', '']"));
+        // In-card layout: quick search left, page length right.
+        $this->assertStringContainsString("topStart: 'search'", $script);
+        $this->assertStringContainsString("topEnd: 'pageLength'", $script);
+        $this->assertStringContainsString("order: [[0, 'asc']]", $script);
+        $this->assertSame(4, substr_count($script, "orderSequence: ['asc', 'desc']"));
         $this->assertStringNotContainsString('request.date', $script);
     }
 
@@ -145,7 +146,8 @@ final class FamilyDataTableTest extends TestCase
 
         $orderMethod = $methodEnd !== false ? substr($controller, $methodEnd) : '';
         $this->assertStringContainsString("if (\$requestedDirection === '')", $orderMethod);
-        $this->assertStringContainsString("return ['newest', 'desc'];", $orderMethod);
+        // Default order is QR ascending (manage-records UI spec, 2026-07-12).
+        $this->assertStringContainsString("return ['qr', 'asc'];", $orderMethod);
 
         $searchModel = (string) file_get_contents(APPPATH . 'Models/SearchModel.php');
         $this->assertStringContainsString("case 'newest':", $searchModel);

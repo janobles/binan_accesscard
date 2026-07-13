@@ -103,6 +103,16 @@ Run `vendor/bin/phpunit` before and after changes (DB/session tests skip
 without `sqlite3` ext). Smoke-test key flows: login, role redirect, family
 create/update, audit log creation.
 
+## UI/UX verification (Playwright)
+
+For any UI/UX change, verify visually with the Playwright MCP against the dev
+server (`app.baseURL`, e.g. `http://localhost:8090`; start with `php spark
+serve` if down). Navigate, log in (developer/developer123), then
+`browser_snapshot` (accessibility tree, best for asserting structure) or
+`browser_take_screenshot` each affected tab at desktop and 390px mobile widths;
+compare against Manage Records, the design source of truth. Needs a browser —
+if the MCP reports Chromium missing, run `npx playwright install chrome`.
+
 ## Retrieval (before editing app code)
 
 Before editing `app/Controllers|Models|Views|Libraries` or routes, use the

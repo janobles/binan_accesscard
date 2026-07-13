@@ -51,26 +51,8 @@
     color: #fff;
 }
 
-/* Primary controls follow the green. */
-.btn-primary {
-    --bs-btn-bg: var(--binan-green);
-    --bs-btn-border-color: var(--binan-green);
-    --bs-btn-hover-bg: var(--binan-green-deep);
-    --bs-btn-hover-border-color: var(--binan-green-deep);
-    --bs-btn-active-bg: var(--binan-green-deep);
-    --bs-btn-active-border-color: var(--binan-green-deep);
-    --bs-btn-disabled-bg: var(--binan-green);
-    --bs-btn-disabled-border-color: var(--binan-green);
-}
-
-.btn-outline-primary {
-    --bs-btn-color: var(--binan-green);
-    --bs-btn-border-color: var(--binan-green);
-    --bs-btn-hover-bg: var(--binan-green);
-    --bs-btn-hover-border-color: var(--binan-green);
-    --bs-btn-active-bg: var(--binan-green-deep);
-    --bs-btn-active-border-color: var(--binan-green-deep);
-}
+/* Buttons keep stock Bootstrap colors (see ui-design-system.md Rule 1);
+   the Biñan green lives on the shell and links only. */
 
 .form-control:focus,
 .form-select:focus {

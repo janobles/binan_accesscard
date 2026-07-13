@@ -3,6 +3,7 @@
 namespace App\Controllers\Accounts;
 
 use App\Controllers\BaseController;
+use App\Libraries\RoleAccess;
 use App\Libraries\ViewFormatter;
 use App\Models\Audit\AuditTrailsModel;
 use App\Models\Auth\UserModel;
@@ -10,7 +11,7 @@ use CodeIgniter\HTTP\RedirectResponse;
 use Throwable;
 
 /**
- * Handles developer-only staff account creation.
+ * Handles Administrator/Developer account management.
  *
  * Validation and redirects stay here; user persistence stays in UserModel.
  */
@@ -33,7 +34,7 @@ class AccountController extends BaseController
     }
 
     /**
-     * Creates a staff account from POST `developer/accounts`. Developer-only;
+     * Creates a staff account from POST `developer/accounts`. Admin/Developer;
      * validates the username/password/role, delegates persistence to
      * UserModel::createAccount, writes an audit row, then redirects to
      * `admin/accounts` with a flash message. Frontend: the account-creation
@@ -41,8 +42,7 @@ class AccountController extends BaseController
      */
     public function create(): RedirectResponse
     {
-        // Admins now have the same create privilege as the Developer: they can add
-        // administrator, encoder, and viewer accounts.
+        // Admins and Developers may create any non-Developer account level.
         $guard = $this->requireAdminOrDeveloper();
 
         if ($guard instanceof RedirectResponse) {
@@ -122,8 +122,8 @@ class AccountController extends BaseController
     /**
      * Returns the prefilled edit-account modal fragment for GET `accounts/edit/{id}`.
      * Admin/Developer only. Loads the target account, unpacks full_description into
-     * form fields, and renders the shared account form modal. The Developer (no DB
-     * row) and unknown roles cannot be edited. Frontend: the Edit button in the
+     * form fields, and renders the shared account form modal. Developer and unknown
+     * roles cannot be edited. Frontend: the Edit button in the
      * admin Account Management list (loaded by the dashboard modal loader).
      */
     public function editForm(int $userId): string|RedirectResponse
@@ -151,9 +151,8 @@ class AccountController extends BaseController
             'account' => $account,
             'details' => ViewFormatter::parseFullDescription((string) ($account['full_description'] ?? '')),
             'isSelf'  => $userId === $currentUserId,
-            // An admin may manage another administrator's login (username, account
-            // level, password) but not their personal details; the developer and
-            // editing your own row are unrestricted.
+            // An Admin may change another Admin's username/password but not role,
+            // status, or personal details. Developers are unrestricted.
             'personalLocked' => $this->isPersonalLocked((string) ($account['role'] ?? ''), $userId === $currentUserId),
         ]);
     }
@@ -232,6 +231,11 @@ class AccountController extends BaseController
         }
 
         $newRole = (string) $this->request->getPost('role');
+
+        if ($personalLocked && $newRole !== $currentRole) {
+            return redirect()->to(site_url('admin/accounts'))
+                ->with('error', 'Administrators cannot change another administrator account level.');
+        }
 
         // Changing your own account level could lock you out of your own dashboard.
         if ($isSelf && $newRole !== $currentRole) {
@@ -339,9 +343,9 @@ class AccountController extends BaseController
     }
 
     /**
-     * Developer-only: enable/disable Admin or Employee accounts via POST
+     * Developer-only: enable/disable Administrator or lower-level accounts via POST
      * `developer/accounts/status`. Blocks self-changes, verifies the target is an
-     * Admin/User account, updates status through UserModel, and audits the change.
+     * account, updates status through UserModel, and audits the change.
      * Frontend: the enable/disable controls on the admin accounts page.
      */
     public function updateStatus(): RedirectResponse
@@ -398,8 +402,9 @@ class AccountController extends BaseController
     }
 
     /**
-     * Admin/Developer: disable an Employee account via POST `admin/accounts/disable`.
-     * Only `User`-role accounts may be disabled here; self-disable is blocked.
+     * Admin/Developer: disable an Encoder, Viewer, or Scanner account via POST
+     * `admin/accounts/disable`; self-disable is blocked. Administrator targets are
+     * intentionally reserved for updateStatus(), which is Developer-only.
      * Audits the change and redirects to `admin/accounts`. Frontend: the
      * "disable" button in the admin Account Management list.
      */
@@ -428,8 +433,8 @@ class AccountController extends BaseController
             return redirect()->back()->with('error', 'Account not found.');
         }
 
-        if (! in_array((string) ($user['role'] ?? ''), ['encoder', 'viewer'], true)) {
-            return redirect()->back()->with('error', 'Only employee or viewer accounts can be disabled from this action.');
+        if (! in_array((string) ($user['role'] ?? ''), ['encoder', 'viewer', 'scanner'], true)) {
+            return redirect()->back()->with('error', 'Only encoder, viewer, or scanner accounts can be disabled from this action.');
         }
 
         $displayRole = $this->normalizeRole((string) ($user['role'] ?? '')) ?? (string) ($user['role'] ?? '');
@@ -447,8 +452,9 @@ class AccountController extends BaseController
     }
 
     /**
-     * Admin/Developer: enable an Employee account via POST `admin/accounts/enable`.
-     * Only `User`-role accounts may be enabled here; self-enable is blocked.
+     * Admin/Developer: enable an Encoder, Viewer, or Scanner account via POST
+     * `admin/accounts/enable`; self-enable is blocked. Administrator targets are
+     * intentionally reserved for updateStatus(), which is Developer-only.
      * Audits the change and redirects to `admin/accounts`. Frontend: the
      * "enable" button in the admin Account Management list.
      */
@@ -477,8 +483,8 @@ class AccountController extends BaseController
             return redirect()->back()->with('error', 'Account not found.');
         }
 
-        if (! in_array((string) ($user['role'] ?? ''), ['encoder', 'viewer'], true)) {
-            return redirect()->back()->with('error', 'Only employee or viewer accounts can be enabled from this action.');
+        if (! in_array((string) ($user['role'] ?? ''), ['encoder', 'viewer', 'scanner'], true)) {
+            return redirect()->back()->with('error', 'Only encoder, viewer, or scanner accounts can be enabled from this action.');
         }
 
         $displayRole = $this->normalizeRole((string) ($user['role'] ?? '')) ?? (string) ($user['role'] ?? '');
@@ -501,15 +507,7 @@ class AccountController extends BaseController
      */
     private function requireDeveloper(): ?RedirectResponse
     {
-        if (! session()->get('is_logged_in')) {
-            return redirect()->to(site_url('/'))->with('error', 'Please login first.');
-        }
-
-        if ($this->normalizeRole((string) session()->get('role')) !== 'Developer') {
-            return redirect()->to(site_url('/'))->with('error', 'Developer access is required.');
-        }
-
-        return null;
+        return RoleAccess::requireRole(['Developer']);
     }
 
     /**
@@ -518,15 +516,7 @@ class AccountController extends BaseController
      */
     private function requireAdminOrDeveloper(): ?RedirectResponse
     {
-        if (! session()->get('is_logged_in')) {
-            return redirect()->to(site_url('/'))->with('error', 'Please login first.');
-        }
-
-        if (! in_array($this->normalizeRole((string) session()->get('role')), ['Developer', 'Admin'], true)) {
-            return redirect()->to(site_url('/'))->with('error', 'Admin or Developer access is required.');
-        }
-
-        return null;
+        return RoleAccess::requireRole(['Developer', 'Admin']);
     }
 
     /**
@@ -561,8 +551,8 @@ class AccountController extends BaseController
     /**
      * Whether the current editor may NOT change the target account's personal
      * details (name, suffix, birthday, contact no, address). True only when an
-     * administrator edits another administrator: an admin can still manage that
-     * account's username, account level, and password, but not its personal info.
+     * administrator edits another administrator: an admin can manage that account's
+     * username and password, but not its role, status, or personal information.
      * The developer is unrestricted, and editing your own row is never locked.
      *
      * @param string $targetRole the target account's raw account_level enum value

@@ -95,16 +95,18 @@
     function filterAccountRows(root) {
         var panel = root || document;
         var searchInput = panel.querySelector('[data-account-search]');
-        var levelFilter = panel.querySelector('[data-account-level-filter]');
-        var statusFilter = panel.querySelector('[data-account-status-filter]');
+        // Level and status are radio groups inside the Filters dropdown panel
+        // (Admin/accounts.php); records-filter-panel.js renders their pills.
+        var levelFilter = panel.querySelector('[data-account-level-filter]:checked');
+        var statusFilter = panel.querySelector('[data-account-status-filter]:checked');
 
-        if (!searchInput || !levelFilter || !statusFilter) {
+        if (!searchInput) {
             return;
         }
 
         var keyword = searchInput.value.trim().toLowerCase();
-        var level = levelFilter.value;
-        var status = statusFilter.value;
+        var level = levelFilter ? levelFilter.value : '';
+        var status = statusFilter ? statusFilter.value : '';
         var rows = Array.from(panel.querySelectorAll('[data-account-row]'));
         var visibleCount = 0;
 
@@ -166,20 +168,17 @@
 
         var panel = button.closest('[data-account-management]') || document;
         var searchInput = panel.querySelector('[data-account-search]');
-        var levelFilter = panel.querySelector('[data-account-level-filter]');
-        var statusFilter = panel.querySelector('[data-account-status-filter]');
 
         if (searchInput) {
             searchInput.value = '';
         }
 
-        if (levelFilter) {
-            levelFilter.value = '';
-        }
-
-        if (statusFilter) {
-            statusFilter.value = '';
-        }
+        // Re-check each group's "All" radio; the bubbling change event lets
+        // records-filter-panel.js clear the pills.
+        panel.querySelectorAll('[data-account-level-filter][data-records-default], [data-account-status-filter][data-records-default]').forEach(function (radio) {
+            radio.checked = true;
+            radio.dispatchEvent(new Event('change', { bubbles: true }));
+        });
 
         filterAccountRows(panel);
     });

@@ -5,43 +5,19 @@
  * view's get_defined_vars(), matching its existing extract() convention).
  */
 ?>
-<div class="records-search-panel">
-		<form class="records-search-row records-lookup-search" method="get" action="<?= esc(site_url($listRoute), 'attr') ?>" role="search" aria-label="Search the services database">
-			<input class="form-control" type="search" name="q" value="<?= esc($keyword, 'attr') ?>" placeholder="Search the whole services database" aria-label="Search the services database" autocomplete="off">
-			<select class="form-select records-status-select" id="service-status-select" name="status" data-lookup-status-select aria-label="Service view">
-				<option value="active" <?= $status === 'active' ? 'selected' : '' ?>>Active (<?= esc((string) $activeServiceCount) ?>)</option>
-				<option value="archived" <?= $status === 'archived' ? 'selected' : '' ?>>Archive (<?= esc((string) $archivedServiceCount) ?>)</option>
-				<option value="all" <?= $status === 'all' ? 'selected' : '' ?>>All (<?= esc((string) $allServiceCount) ?>)</option>
-			</select>
-			<?php if ($perPage !== 50): ?><input type="hidden" name="per_page" value="<?= esc((string) $perPage, 'attr') ?>"><?php endif; ?>
-			<a class="btn btn-danger records-search-action" href="<?= esc($serviceClearUrl(), 'attr') ?>"><i class="bi bi-x-lg" aria-hidden="true"></i><span>Clear</span></a>
-			<button class="btn btn-outline-success records-search-action" type="submit"><i class="bi bi-search" aria-hidden="true"></i><span>Search All</span></button>
-			<?php if ($canManage): ?>
-			<button class="btn btn-primary records-search-action js-service-modal-open" type="button" data-service-mode="create"><span>Add Program</span></button>
-			<?php endif; ?>
-		</form>
-	</div>
-
-	<?php /* Controls row: page size (server) + local "Search:" live filter (client-side, no reload). */ ?>
-	<div class="table-meta">
-		<div class="records-table-controls">
-			<form class="records-page-size-form" method="get" action="<?= esc(site_url($listRoute), 'attr') ?>">
-				<?php if ($keyword !== ''): ?><input type="hidden" name="q" value="<?= esc($keyword, 'attr') ?>"><?php endif; ?>
-				<?php if ($status !== 'active'): ?><input type="hidden" name="status" value="<?= esc($status, 'attr') ?>"><?php endif; ?>
-				<label for="servicePerPage">Show</label>
-				<select class="form-select form-select-sm" id="servicePerPage" name="per_page" onchange="this.form.submit()">
-					<?php foreach ($perPageOptions as $option): ?>
-						<option value="<?= esc((string) $option, 'attr') ?>" <?= $perPage === (int) $option ? 'selected' : '' ?>><?= esc((string) $option) ?></option>
-					<?php endforeach; ?>
-				</select>
-				<span>entries</span>
-			</form>
-			<form class="records-table-search-form" role="search" data-lookup-search aria-label="Filter shown services">
-				<label for="serviceLocalSearch">Search:</label>
-				<input class="form-control form-control-sm" type="search" id="serviceLocalSearch" data-lookup-search-input placeholder="Type to filter..." autocomplete="off" aria-label="Filter shown services">
-			</form>
-		</div>
-	</div>
+<?php /* Search toolbar lives in services.php, above this card (Manage Records standard). */ ?>
+	<?= view('components/table_controls', [
+		'searchId' => 'serviceLocalSearch',
+		'searchAria' => 'Search shown services',
+		'searchFormAttrs' => 'data-lookup-search',
+		'searchInputAttrs' => 'data-lookup-search-input',
+		'sizeId' => 'servicePerPage',
+		'sizeAction' => site_url($listRoute),
+		'sizeHiddenHtml' => ($keyword !== '' ? '<input type="hidden" name="q" value="' . esc($keyword, 'attr') . '">' : '')
+			. ($status !== 'active' ? '<input type="hidden" name="status" value="' . esc($status, 'attr') . '">' : ''),
+		'perPage' => $perPage,
+		'perPageOptions' => $perPageOptions,
+	]) ?>
 
 	<div class="table-responsive">
 		<table class="table manage-record-table align-middle lookup-management-table lookup-management-table--services">

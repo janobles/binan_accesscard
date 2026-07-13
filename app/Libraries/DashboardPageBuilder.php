@@ -87,8 +87,8 @@ class DashboardPageBuilder
             ? $searchModel->families($searchTerm, $searchFilters, 25)
             : $dashboardModel->recentFamilies(10);
 
-        // Only the Developer may see Developer (NULL-userID) audit rows; admins must
-        // never learn a Developer exists.
+        // Keep legacy file-backed Developer audit rows (NULL userID) visible only to
+        // Developers. New Developer activity has a real userID like every DB account.
         $includeDeveloperAudits = $currentRole === 'Developer';
         $auditListData = $activePage === 'audit-trails'
             ? $this->buildAuditListData($includeDeveloperAudits, null, 'admin/audit-trails')
@@ -130,9 +130,8 @@ class DashboardPageBuilder
                 'reportsPerScanner' => [],
             ];
 
-        // Hide the logged-in user's own account from their Account Management list;
-        // other admins/developers still see it. The Developer logs in from .env
-        // (userID 0, no users row), so nothing is hidden for it.
+        // Hide the logged-in user's own account from Account Management; self-service
+        // changes belong in My Account.
         $currentUserId = (int) session()->get('user_id');
         $visibleAccounts = $currentUserId > 0
             ? array_values(array_filter($users, static fn ($account) => (int) ($account['userID'] ?? 0) !== $currentUserId))
@@ -157,8 +156,8 @@ class DashboardPageBuilder
             'activePage' => $activePage,
             'pageTitle' => $layoutModel->pageTitle($activePage),
             'modeLabel' => $layoutModel->adminModeLabel($isDeveloper),
-            // Developers and admins both manage all non-developer staff accounts:
-            // create, edit, reset password, and (for admin/encoder) enable/disable.
+            // Developers and admins share account-management features. Developer
+            // targets remain protected, and only Developers may toggle Administrators.
             'canManageAccounts' => $isDeveloper || $isAdmin,
             'canCreateAccounts' => $isDeveloper || $isAdmin,
             'canEditAccounts' => $isDeveloper || $isAdmin,
@@ -306,7 +305,7 @@ class DashboardPageBuilder
     /**
      * Builds a paginated lookup-management list (Sectors / Services / Categories).
      * Reads the q/status/page query params, runs the model's status-aware keyword
-     * search (50/page), and returns the row page plus pagination + count metadata.
+     * search (25/page), and returns the row page plus pagination + count metadata.
      * The model must expose searchLookup()/countLookup()/statusCounts() (all three
      * lookup models do). Frontend: the Lookups/* views + their database-search bar,
      * status dropdown and pagination controls.
@@ -323,7 +322,7 @@ class DashboardPageBuilder
         $page    = max(1, (int) $this->request->getGet('page'));
         $perPageOptions = [10, 25, 50, 100];
         $perPage = (int) $this->request->getGet('per_page');
-        $perPage = in_array($perPage, $perPageOptions, true) ? $perPage : 50;
+        $perPage = in_array($perPage, $perPageOptions, true) ? $perPage : 25;
 
         $searchKeyword = $keyword === '' ? null : $keyword;
         $total      = $model->countLookup($searchKeyword, $status);
@@ -368,7 +367,7 @@ class DashboardPageBuilder
         $page    = max(1, (int) $this->request->getGet('page'));
         $perPageOptions = [10, 25, 50, 100];
         $perPage = (int) $this->request->getGet('per_page');
-        $perPage = in_array($perPage, $perPageOptions, true) ? $perPage : 50;
+        $perPage = in_array($perPage, $perPageOptions, true) ? $perPage : 25;
 
         $total = $userId === null
             ? $searchModel->countAuditTrails($keyword, $filters, $includeDeveloper)
@@ -853,6 +852,6 @@ class DashboardPageBuilder
     {
         $perPage = (int) $this->request->getGet('per_page');
 
-        return in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 50;
+        return in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 25;
     }
 }

@@ -22,7 +22,7 @@ $allCategoryCount      = $activeCategoryCount + $archivedCategoryCount;
 $status                = (string) ($status ?? 'active');
 $keyword               = (string) ($keyword ?? '');
 $listRoute             = (string) ($listRoute ?? 'admin/categories');
-$perPage               = (int) ($perPage ?? 50);
+$perPage               = (int) ($perPage ?? 25);
 $perPageOptions        = ($perPageOptions ?? []) ?: [10, 25, 50, 100];
 
 // Builds a page URL preserving the current database keyword + status + page size.
@@ -30,24 +30,43 @@ $categoryPageUrl = static function (int $targetPage) use ($listRoute, $keyword, 
     $params = array_filter([
         'q'        => $keyword,
         'status'   => $status === 'active' ? '' : $status,
-        'per_page' => $perPage !== 50 ? (string) $perPage : '',
+        'per_page' => $perPage !== 25 ? (string) $perPage : '',
         'page'     => $targetPage > 1 ? (string) $targetPage : '',
     ], static fn ($value): bool => $value !== '');
 
     return site_url($listRoute) . ($params === [] ? '' : '?' . http_build_query($params));
 };
 
-// "Clear" drops the keyword (and resets to page 1) but keeps status + page size.
-$categoryClearUrl = static function () use ($listRoute, $status, $perPage): string {
-    $params = array_filter([
-        'status'   => $status === 'active' ? '' : $status,
-        'per_page' => $perPage !== 50 ? (string) $perPage : '',
-    ], static fn ($value): bool => $value !== '');
+// "Clear" resets the whole toolbar (keyword + status filter, back to page 1)
+// per the one-role-per-control rule; only the page size survives.
+$categoryClearUrl = static function () use ($listRoute, $perPage): string {
+    $params = $perPage !== 25 ? ['per_page' => (string) $perPage] : [];
 
     return site_url($listRoute) . ($params === [] ? '' : '?' . http_build_query($params));
 };
 ?>
 
+<?php /* Toolbar above the card, Manage Records standard (components/records_toolbar_server +
+         records-filter-panel.js live-apply + pills). */ ?>
+<?= view('components/records_toolbar_server', [
+    'formAction' => site_url($listRoute),
+    'formAria' => 'Search all categories',
+    'searchPlaceholder' => 'Search all categories...',
+    'keyword' => $keyword,
+    'clearUrl' => $categoryClearUrl(),
+    'pillsId' => 'categoryFilterPills',
+    'hiddenHtml' => $perPage !== 25 ? '<input type="hidden" name="per_page" value="' . esc((string) $perPage, 'attr') . '">' : '',
+    'actionsHtml' => '<button class="' . btn('add') . ' flex-fill js-category-modal-open" type="button" data-category-mode="create">Add Category</button>',
+    'radioGroups' => [[
+        'name' => 'status',
+        'label' => 'Status',
+        'options' => [
+            ['value' => 'active', 'label' => "Active ({$activeCategoryCount})", 'checked' => $status === 'active', 'default' => true],
+            ['value' => 'archived', 'label' => "Archived ({$archivedCategoryCount})", 'pill' => 'Archived', 'checked' => $status === 'archived'],
+            ['value' => 'all', 'label' => "All ({$allCategoryCount})", 'checked' => $status === 'all'],
+        ],
+    ]],
+]) ?>
 <?php
 $categoryFooter = ($totalRows ?? 0) > 0 ? view('components/table_footer', [
     'fromRecord' => $fromRecord,
@@ -62,7 +81,7 @@ $categoryFooter = ($totalRows ?? 0) > 0 ? view('components/table_footer', [
 <?= view('components/card', [
     'icon' => 'tags-fill',
     'title' => 'Manage Categories',
-    'cardClass' => 'sector-management records-scroll-panel',
+    'cardClass' => 'sector-management',
     'attrs' => 'data-category-management-root',
     'bodyView' => 'Lookups/categories-body',
     'bodyData' => get_defined_vars(),

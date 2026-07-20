@@ -1,8 +1,14 @@
-# Control Numbers page — design
+# Control Numbers page + Aid→Subsidy relabel — design
 
 **Date:** 2026-07-20
 **Status:** Approved (brainstorming)
 **Supersedes UI of:** `app/Views/Cards/batch_form.php` (the old "Generate Cards" page)
+
+This spec covers two related relabeling changes shipped together:
+
+1. **Control Numbers page** — rebuild the "Generate Cards" page (below).
+2. **Aid → Subsidy relabel** — rename the user-facing word "aid" to "subsidy"
+   across the app (see the final section). Display text only; no DB/schema.
 
 ## Goal
 
@@ -146,6 +152,64 @@ with the filter scope; single-card generation uses the existing reprint audit in
 - Playwright: Batch preview updates on filter change and matches the generated
   count; Single-card picker resolves and downloads; both buttons are blue; desktop
   + 390px layouts match the Manage Records house style.
+
+## Fold-in: relabel "Aid" → "Subsidy" (user-facing)
+
+Rename the visible word **"aid" → "subsidy"** everywhere it appears to the user.
+Rationale: "subsidy" reads unambiguously as government assistance; "aid" is
+vaguer. Preserve the surrounding phrasing and capitalization, e.g.:
+
+| Before                 | After                     |
+|------------------------|---------------------------|
+| Aid Distribution       | Subsidy Distribution      |
+| Aid Type / Aid Types   | Subsidy Type / Subsidy Types |
+| Received Aid           | Received Subsidy          |
+| Aid Coverage           | Subsidy Coverage          |
+| Aid History            | Subsidy History           |
+| Aid Distribution Report| Subsidy Distribution Report |
+| "aid already recorded" | "subsidy already recorded" |
+| "Choose an aid type…"  | "Choose a subsidy type…"  |
+
+### In scope (display text only)
+
+- **Views** (`app/Views/**`): table headers, empty states, labels, placeholders,
+  option text, section headings, KPI/nav labels, the scanner `pdf/report.php`
+  output.
+- **KPI / nav labels built in code**: `app/Views/Admin/layout.php` label arrays,
+  `DashboardPageBuilder` and any controller/library that assembles a user-visible
+  label or flash/error message (e.g. "Choose an aid type for this batch.").
+- **Audit-trail strings** passed to `AuditTrailsModel::logAction()` (e.g.
+  "Logged aid distribution", "Voided aid distribution #N"). New rows will read
+  "subsidy"; old rows keep "aid" (mixed history is acceptable). Update any test
+  asserting the old wording.
+
+### Explicitly NOT touched (per "don't touch DB", surgical scope)
+
+- DB schema, table names (`aid_distribution`, `aid_type`), column names, enum
+  values — the SQL dump is the source of truth.
+- Route URLs / segments (`admin/aidtypes`, `admin/distribution`) — visible label
+  changes, the URL does not.
+- PHP identifiers: class/method/variable names, model names (`AidStatsModel`,
+  `AidDistributionModel`), `$aid*` vars, `getAid*()`, config keys.
+- Code comments — mechanical, not user-facing; leave unless trivially adjacent.
+
+### Approach
+
+Not a blind global sed — each hit is triaged: relabel only strings a user reads,
+leave every identifier/URL/schema reference. Grep surface to work through:
+
+```
+grep -rniE '\baid\b' app/Views app/Controllers app/Libraries --include='*.php'
+```
+filtered to string literals / template text, skipping identifiers, `aid_*`,
+`aidtypes`, and URL builders.
+
+### Testing (relabel)
+
+- `vendor/bin/phpunit` green; update audit-assertion tests to "subsidy".
+- Playwright sweep: sidebar, dashboard KPIs, distribution tabs, scanner Aid
+  History panel, and the reports PDF all read "Subsidy"; no route 404s (URLs
+  unchanged).
 
 ## Open decisions (resolved in the plan, not blocking)
 

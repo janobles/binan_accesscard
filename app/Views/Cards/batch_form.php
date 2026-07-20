@@ -34,7 +34,7 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
     <div class="card-body">
         <form id="cn-batch-form" class="row g-3 align-items-end" autocomplete="off">
             <?= csrf_field() ?>
-            <div class="col-12 col-md-6">
+            <div class="col-12 col-md-5">
                 <label class="form-label" for="cn-barangay">Barangay</label>
                 <select class="form-select" id="cn-barangay" name="barangay">
                     <option value="">All barangays</option>
@@ -43,18 +43,24 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
                     <?php endforeach; ?>
                 </select>
             </div>
-            <div class="col-6 col-md-3">
+            <div class="col-6 col-md-2">
                 <label class="form-label" for="cn-from">From #</label>
                 <input type="number" min="1" inputmode="numeric" class="form-control" id="cn-from" name="from" placeholder="e.g. 100">
             </div>
-            <div class="col-6 col-md-3">
+            <div class="col-6 col-md-2">
                 <label class="form-label" for="cn-to">To #</label>
                 <input type="number" min="1" inputmode="numeric" class="form-control" id="cn-to" name="to" placeholder="e.g. 150">
             </div>
-            <div class="col-12">
-                <span class="text-muted small">Leave all blank to print every active head. Both range bounds are inclusive.</span>
+            <div class="col-12 col-md-3 d-grid">
+                <button type="submit" class="<?= btn('generate') ?>" id="cn-batch-btn">
+                    <i class="bi bi-printer" aria-hidden="true"></i> Generate cards
+                </button>
             </div>
         </form>
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2">
+            <span class="text-muted small">Leave all blank to print every active head. Both range bounds are inclusive.</span>
+            <span id="cn-batch-status" class="small text-muted" aria-live="polite"></span>
+        </div>
 
         <div class="table-responsive mt-3">
             <table class="table manage-record-table align-middle w-100 mb-0" id="cn-preview-table">
@@ -67,14 +73,8 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
             </table>
         </div>
     </div>
-    <div class="card-footer d-flex flex-wrap justify-content-between align-items-center gap-2">
-        <span id="cn-preview-count" class="small text-muted" aria-live="polite">Loading preview&hellip;</span>
-        <div class="d-flex align-items-center gap-2">
-            <span id="cn-batch-status" class="small text-muted" aria-live="polite"></span>
-            <button type="submit" form="cn-batch-form" class="<?= btn('generate') ?>" id="cn-batch-btn">
-                <i class="bi bi-printer" aria-hidden="true"></i> Generate cards
-            </button>
-        </div>
+    <div class="card-footer small text-muted">
+        <span id="cn-preview-count" aria-live="polite">Loading preview&hellip;</span>
     </div>
 </div>
 
@@ -85,25 +85,25 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
     </div>
     <div class="card-body">
         <div class="row g-3 align-items-end">
-            <div class="col-12 col-md-8 cn-typeahead">
+            <div class="col-12 col-md-6 cn-typeahead">
                 <label class="form-label" for="cn-head">Head</label>
                 <input type="text" class="form-control" id="cn-head" placeholder="Type a head name&hellip;" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="cn-head-list">
                 <ul class="list-group cn-typeahead-list shadow-sm" id="cn-head-list" hidden></ul>
             </div>
-            <div class="col-12 col-md-4">
+            <div class="col-6 col-md-3">
                 <label class="form-label" for="cn-control">Control #</label>
-                <input type="number" min="1" inputmode="numeric" class="form-control" id="cn-control" placeholder="Exact control number">
+                <input type="number" min="1" inputmode="numeric" class="form-control" id="cn-control" placeholder="Exact number">
             </div>
-            <div class="col-12">
-                <span class="text-muted small">Pick a head from the list OR type an exact control number, then Generate.</span>
+            <div class="col-6 col-md-3 d-grid">
+                <button type="button" class="<?= btn('generate') ?>" id="cn-single-btn">
+                    <i class="bi bi-printer" aria-hidden="true"></i> Generate card
+                </button>
             </div>
         </div>
-    </div>
-    <div class="card-footer d-flex flex-wrap justify-content-end align-items-center gap-2">
-        <span id="cn-single-status" class="small text-muted" aria-live="polite"></span>
-        <button type="button" class="<?= btn('generate') ?>" id="cn-single-btn">
-            <i class="bi bi-printer" aria-hidden="true"></i> Generate card
-        </button>
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2">
+            <span class="text-muted small">Pick a head from the list OR type an exact control number, then Generate.</span>
+            <span id="cn-single-status" class="small text-muted" aria-live="polite"></span>
+        </div>
     </div>
 </div>
 

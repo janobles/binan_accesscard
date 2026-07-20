@@ -82,7 +82,7 @@ class ReportsController extends BaseController
             $batch['name'] ?? null
         );
 
-        $name = 'aid-report-' . ($batchId > 0 ? 'batch' . $batchId : 'all') . '.pdf';
+        $name = 'subsidy-report-' . ($batchId > 0 ? 'batch' . $batchId : 'all') . '.pdf';
 
         return $this->response
             ->setHeader('Content-Type', 'application/pdf')

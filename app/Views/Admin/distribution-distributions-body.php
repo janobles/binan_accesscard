@@ -28,7 +28,7 @@
                 <th>QR #</th>
                 <th>Family Head</th>
                 <th>Claimant</th>
-                <th>Aid Type</th>
+                <th>Subsidy Type</th>
                 <th>Scanned By</th>
                 <th class="text-end">Actions</th>
               </tr>
@@ -59,7 +59,7 @@
                 </tr>
               <?php endforeach; ?>
               <?php if ($distributions === []): ?>
-                <tr><td colspan="7" class="sector-empty-state">No aid distributions logged yet.</td></tr>
+                <tr><td colspan="7" class="sector-empty-state">No subsidy distributions logged yet.</td></tr>
               <?php endif; ?>
             </tbody>
           </table>

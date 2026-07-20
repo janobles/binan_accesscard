@@ -38,8 +38,11 @@ class QrCardController extends BaseController
         if (($barangay = trim((string) $this->request->getPost('barangay'))) !== '') {
             $filter['barangay'] = $barangay;
         }
-        if (($sectorID = (int) $this->request->getPost('sectorID')) > 0) {
-            $filter['sectorID'] = $sectorID;
+        if (($from = (int) $this->request->getPost('from')) > 0) {
+            $filter['controlFrom'] = $from;
+        }
+        if (($to = (int) $this->request->getPost('to')) > 0) {
+            $filter['controlTo'] = $to;
         }
 
         $heads    = model(MemberModel::class)->headsForCards($filter);
@@ -68,6 +71,53 @@ class QrCardController extends BaseController
         $this->recordBatchAudit(count($heads), $filter);
 
         return $this->streamDownload($result);
+    }
+
+    /**
+     * GET admin/cards/heads. JSON feed for the Control Numbers page: powers both
+     * the Batch preview table and the Single-card head autocomplete. Returns the
+     * full match count plus a capped row list, drawn from the same MemberModel
+     * selection the printed PDF uses so preview and output never diverge.
+     */
+    public function heads(): ResponseInterface
+    {
+        $guard = RoleAccess::requireRole(['Developer', 'Admin']);
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        $mode  = (string) $this->request->getGet('mode');
+        $limit = $mode === 'search' ? 15 : 50;
+
+        $filter = ['limit' => $limit];
+        if (($keyword = trim((string) $this->request->getGet('q'))) !== '') {
+            $filter['keyword'] = $keyword;
+        }
+        if (($barangay = trim((string) $this->request->getGet('barangay'))) !== '') {
+            $filter['barangay'] = $barangay;
+        }
+        if (($from = (int) $this->request->getGet('from')) > 0) {
+            $filter['controlFrom'] = $from;
+        }
+        if (($to = (int) $this->request->getGet('to')) > 0) {
+            $filter['controlTo'] = $to;
+        }
+
+        $model = model(MemberModel::class);
+        $rows  = array_map(static fn (array $h): array => [
+            'memberID'  => $h['memberID'],
+            'controlNo' => $h['controlNo'],
+            'name'      => $h['fullname'],
+            'barangay'  => $h['barangay'],
+        ], $model->headsForCards($filter));
+
+        $countFilter = $filter;
+        unset($countFilter['limit']);
+
+        return $this->response->setJSON([
+            'count' => $model->countHeadsForCards($countFilter),
+            'rows'  => $rows,
+        ]);
     }
 
     public function card(int $memberID): ResponseInterface

@@ -26,7 +26,7 @@ $showDistDetail = $reportsBatchOpen || $hasScanData;
 ?>
 
 <div class="dashboard-section-head">
-  <h2><i class="bi bi-clipboard-check-fill" aria-hidden="true"></i>Aid Distribution</h2>
+  <h2><i class="bi bi-clipboard-check-fill" aria-hidden="true"></i>Subsidy Distribution</h2>
   <div class="section-actions">
     <form class="reports-filter" method="get" action="<?= site_url('admin/dashboard') ?>">
       <label for="batchPick" class="form-label mb-0 visually-hidden">Batch</label>

@@ -8,13 +8,13 @@ $window = ($batchName ?? null) !== null
         : 'All dates');
 ?>
 <?= $this->include('Scanner/pdf/_styles') ?>
-<h1>Aid Distribution Report</h1>
+<h1>Subsidy Distribution Report</h1>
 <p class="sub">City of Bi&ntilde;an CSWD &middot; <?= esc($window) ?> &middot; Generated <?= esc(date('Y-m-d H:i')) ?></p>
 
 <table class="kpis" style="width:100%; border-collapse:collapse;">
   <tr>
     <td>Families with a QR<br><span class="n"><?= esc((string) $summary['total']) ?></span></td>
-    <td>Received aid<br><span class="n"><?= esc((string) $summary['received']) ?></span></td>
+    <td>Received subsidy<br><span class="n"><?= esc((string) $summary['received']) ?></span></td>
     <td>Still waiting<br><span class="n"><?= esc((string) $summary['notReceived']) ?></span></td>
     <td>Coverage<br><span class="n"><?= esc((string) $summary['coverage']) ?>%</span></td>
   </tr>
@@ -54,9 +54,9 @@ $window = ($batchName ?? null) !== null
 </table>
 <?php endif; ?>
 
-<h2>Handouts by aid type</h2>
+<h2>Handouts by subsidy type</h2>
 <table class="data">
-  <thead><tr><th>Aid Type</th><th>Handouts</th></tr></thead>
+  <thead><tr><th>Subsidy Type</th><th>Handouts</th></tr></thead>
   <tbody>
   <?php foreach ($byAidType as $a): ?>
     <tr><td><?= esc($a['aid_type']) ?></td><td><?= esc((string) $a['count']) ?></td></tr>

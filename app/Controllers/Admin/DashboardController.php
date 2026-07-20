@@ -65,17 +65,8 @@ class DashboardController extends BaseController
     }
 
     /**
-     * GET `admin/family-entry`. Legacy URL; the add/edit experience now lives in
-     * the Manage Records modal.
-     */
-    public function familyEntry(): RedirectResponse
-    {
-        return redirect()->to(site_url('admin/manage-records'));
-    }
-
-    /**
-     * GET `admin/manage-records` (and `manage-families`). Renders the family
-     * records list page, or the list fragment for AJAX search/pagination.
+     * GET `admin/manage-records`. Renders the family records list page, or the
+     * list fragment for AJAX search/pagination.
      */
     public function manageRecords(): string|RedirectResponse
     {
@@ -116,15 +107,6 @@ class DashboardController extends BaseController
     public function cards(): string|RedirectResponse
     {
         return (new DashboardPageBuilder($this->request))->renderAdminPage('cards');
-    }
-
-    /**
-     * GET `admin/manage-members`. Reuses the family-manage page (member-centric
-     * view of the same records). Frontend: full-page load of the admin shell.
-     */
-    public function manageMembers(): string|RedirectResponse
-    {
-        return (new DashboardPageBuilder($this->request))->renderAdminPage('family-manage');
     }
 
     // ---------------------------------------------------------------------

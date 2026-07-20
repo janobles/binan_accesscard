@@ -31,17 +31,8 @@ class DashboardController extends BaseController
     }
 
     /**
-     * GET `employee/family-entry`. Legacy URL; the add/edit experience now lives
-     * in the Manage Records modal.
-     */
-    public function familyEntry(): RedirectResponse
-    {
-        return redirect()->to(site_url('employee/manage-records'));
-    }
-
-    /**
-     * GET `employee/manage-records` (and `manage-families`). Renders the employee
-     * records list page, or the list fragment for AJAX search/pagination.
+     * GET `employee/manage-records`. Renders the employee records list page, or
+     * the list fragment for AJAX search/pagination.
      */
     public function manageRecords(): string|RedirectResponse
     {

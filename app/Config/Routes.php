@@ -22,18 +22,14 @@ $routes->group('admin', static function (RouteCollection $routes): void {
     $routes->get('', 'Admin\DashboardController::index');
     $routes->get('dashboard', 'Admin\DashboardController::dashboard');
     $routes->get('accounts', 'Admin\DashboardController::accounts');
-    $routes->get('family-entry', 'Admin\DashboardController::familyEntry');
     $routes->get('manage-records', 'Admin\DashboardController::manageRecords');
     $routes->get('audit-trails', 'Admin\DashboardController::auditTrails');
     $routes->get('reference-data', 'Admin\DashboardController::referenceData');
-    $routes->get('manage-members', 'Admin\DashboardController::manageMembers');
     // Admin-only: disable/enable employee accounts from Account Management.
     $routes->post('accounts/disable', 'Accounts\AccountController::disableEmployee');
     $routes->post('accounts/enable', 'Accounts\AccountController::enableEmployee');
 
-    $routes->get('manage-families', 'Admin\DashboardController::manageRecords');
     $routes->group('manage-family', static function (RouteCollection $routes): void {
-        $routes->get('', 'Admin\DashboardController::manageRecords');
         $routes->get('list', 'Families\FamilyController::listFamilies');
         $routes->get('data', 'Families\FamilyDataTableController::dataTable');
         $routes->get('template', 'Families\FamilyImportController::downloadTemplate');
@@ -102,13 +98,10 @@ $routes->group('admin', static function (RouteCollection $routes): void {
  */
 $routes->group('employee', static function (RouteCollection $routes): void {
     $routes->get('workspace', 'Employee\DashboardController::dashboard');
-    $routes->get('family-entry', 'Employee\DashboardController::familyEntry');
     $routes->get('manage-records', 'Employee\DashboardController::manageRecords');
     $routes->get('activity', 'Employee\DashboardController::activity');
 
-    $routes->get('manage-families', 'Employee\DashboardController::manageRecords');
     $routes->group('manage-family', static function (RouteCollection $routes): void {
-        $routes->get('', 'Employee\DashboardController::manageRecords');
         $routes->get('list', 'Families\FamilyController::listFamilies');
         $routes->get('data', 'Families\FamilyDataTableController::dataTable');
         $routes->get('template', 'Families\FamilyImportController::downloadTemplate');
@@ -133,7 +126,6 @@ $routes->group('viewer', static function (RouteCollection $routes): void {
     $routes->get('', 'Viewer\DashboardController::index');
     $routes->get('dashboard', 'Viewer\DashboardController::dashboard');
     $routes->get('manage-records', 'Viewer\DashboardController::manageRecords');
-    $routes->get('manage-families', 'Viewer\DashboardController::manageRecords');
     $routes->get('sectors', 'Viewer\DashboardController::sectors');
     $routes->get('services', 'Viewer\DashboardController::services');
     $routes->group('manage-family', static function (RouteCollection $routes): void {

@@ -39,8 +39,8 @@ class DashboardController extends BaseController
     }
 
     /**
-     * GET `viewer/manage-records` (and `manage-families`). Renders the read-only
-     * records list page, or the list fragment for AJAX search/pagination.
+     * GET `viewer/manage-records`. Renders the read-only records list page, or
+     * the list fragment for AJAX search/pagination.
      */
     public function manageRecords(): string|RedirectResponse
     {

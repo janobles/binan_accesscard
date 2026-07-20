@@ -49,7 +49,9 @@ $showDistDetail = $reportsBatchOpen || $hasScanData;
   No scans were logged in this batch. Pick another batch above to see its breakdown.</p>
 <?php else: ?>
 
-<!-- Barangay chart + aid-type/kiosk column (standard card anatomy) -->
+<!-- Barangay chart + kiosk column (standard card anatomy). No aid-type
+     breakdown: a batch binds one aid type for its whole run (DistributionController::
+     openBatch), so "handouts by aid type" is always a single row here — dead weight. -->
 <div class="row g-3 reports-charts">
   <div class="col-lg-8">
     <?= view('components/card', [
@@ -61,25 +63,6 @@ $showDistDetail = $reportsBatchOpen || $hasScanData;
     ]) ?>
   </div>
   <div class="col-lg-4 d-flex flex-column gap-3">
-    <?php
-    $aidTypeRows = [];
-    foreach ($reportsByAidType as $t) {
-        $aidTypeRows[] = [
-            esc((string) $t['aid_type']),
-            esc((string) $t['count']),
-        ];
-    }
-    ?>
-    <?= view('components/data_table', [
-        'icon' => 'box-seam',
-        'title' => 'Handouts by aid type',
-        'columns' => ['Aid type', 'Handouts'],
-        'rows' => $aidTypeRows,
-        'emptyMessage' => 'No handouts in this batch yet.',
-        'tableClass' => 'table align-middle w-100 mb-0',
-        'cardClass' => 'reports-fallback mb-0',
-        'footer' => null,
-    ]) ?>
     <?php
     $scannerRows = [];
     foreach ($reportsPerScanner as $p) {

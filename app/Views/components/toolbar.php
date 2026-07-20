@@ -76,16 +76,19 @@ $buildAttrs = static function(array $attrs): string {
 ?>
 <form <?= $buildAttrs($formTagAttrs) ?>>
     <div class="col-12 col-lg">
-        <input
-            class="form-control"
-            type="search"
-            name="<?= esc($searchName, 'attr') ?>"
-            value="<?= esc($keyword, 'attr') ?>"
-            aria-label="<?= esc($searchPlaceholder, 'attr') ?>"
-            placeholder="<?= esc($searchPlaceholder, 'attr') ?>"
-            autocomplete="off"
-            <?= $searchAttrs ?>
-        >
+        <div class="input-group">
+            <input
+                class="form-control"
+                type="search"
+                name="<?= esc($searchName, 'attr') ?>"
+                value="<?= esc($keyword, 'attr') ?>"
+                aria-label="<?= esc($searchPlaceholder, 'attr') ?>"
+                placeholder="<?= esc($searchPlaceholder, 'attr') ?>"
+                autocomplete="off"
+                <?= $searchAttrs ?>
+            >
+            <button class="<?= btn('search') ?>" type="submit" aria-label="Search"><i class="bi bi-search" aria-hidden="true"></i></button>
+        </div>
     </div>
 
     <div class="col-12 col-lg-auto">
@@ -133,7 +136,6 @@ $buildAttrs = static function(array $attrs): string {
         <?php if ($isClient): ?>
             <button class="<?= btn('clear') ?> flex-fill" type="button" <?= $clearAttrs ?: 'data-records-clear' ?>>Clear</button>
         <?php else: ?>
-            <button class="<?= btn('search') ?> flex-fill" type="submit">Search</button>
             <a class="<?= btn('clear') ?> flex-fill" href="<?= esc($clearUrl, 'attr') ?>" <?= $clearAttrs ?>>Clear</a>
         <?php endif; ?>
         <?php if ($actionsHtml !== ''): ?>

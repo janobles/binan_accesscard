@@ -268,23 +268,23 @@ class ScanController extends BaseController
         $audited = $aidId > 0 && (new AuditTrailsModel())->logAction(
             $userId,
             (int) $head['memberID'],
-            'Logged aid distribution',
+            'Logged subsidy distribution',
             'Control #' . $controlNo,
             $this->request->getIPAddress(),
             (string) $this->request->getUserAgent(),
-            'Aid type ID ' . $aidTypeId . ' on ' . $claimDate
+            'Subsidy type ID ' . $aidTypeId . ' on ' . $claimDate
         );
 
         if (! $audited) {
             $db->transRollback();
 
-            return $this->response->setStatusCode(500)->setJSON(['error' => 'Failed to log the aid distribution.']);
+            return $this->response->setStatusCode(500)->setJSON(['error' => 'Failed to log the subsidy distribution.']);
         }
 
         $db->transComplete();
 
         if ($db->transStatus() === false) {
-            return $this->response->setStatusCode(500)->setJSON(['error' => 'Failed to log the aid distribution.']);
+            return $this->response->setStatusCode(500)->setJSON(['error' => 'Failed to log the subsidy distribution.']);
         }
 
         return $this->response->setJSON($familyPayload + [

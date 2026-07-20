@@ -91,19 +91,13 @@ reuse `Admin/distribution-batches-body.php` and
   right tab.
 - Old GET routes `admin/batches` and `admin/distributions` are removed.
 
-## 4. Account Management: one table
+## 4. Account Management: one table — already implemented
 
-Replace the four stacked per-role tables (Administrators, Employees, Viewers,
-Scanners) with a single table: Name, Username, Role (badge), Status, Actions.
-
-- Filter pills above the table: All | Admins | Employees | Viewers | Scanners
-  via `?role=` param, using the `records_toolbar` component (UI toolbar
-  standard: no pill highlighted for the "All" default).
-- Controller/builder already produces the four role arrays; merge them into
-  one list with a role key. Per-row action rules unchanged (only Developers
-  may toggle Administrators; Developer targets stay protected; own account
-  hidden — self-service lives in My Account).
-- Existing create/edit/enable/disable/reset-password endpoints unchanged.
+Verified during planning: `Admin/accounts.php` already merges the four role
+arrays into a single table with client-side role/status filter pills
+(`accounts.php:12`, toolbar at `accounts.php:51`). No change needed. The
+builder keeps exposing the four arrays (`adminAccounts`, `employeeAccounts`,
+`viewerAccounts`, `scannerAccounts`) as the view's input contract.
 
 ## 5. Route cleanup
 

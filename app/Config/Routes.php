@@ -25,9 +25,7 @@ $routes->group('admin', static function (RouteCollection $routes): void {
     $routes->get('family-entry', 'Admin\DashboardController::familyEntry');
     $routes->get('manage-records', 'Admin\DashboardController::manageRecords');
     $routes->get('audit-trails', 'Admin\DashboardController::auditTrails');
-    $routes->get('sectors', 'Admin\DashboardController::sectors');
-    $routes->get('services', 'Admin\DashboardController::services');
-    $routes->get('categories', 'Admin\DashboardController::categories');
+    $routes->get('reference-data', 'Admin\DashboardController::referenceData');
     $routes->get('manage-members', 'Admin\DashboardController::manageMembers');
     // Admin-only: disable/enable employee accounts from Account Management.
     $routes->post('accounts/disable', 'Accounts\AccountController::disableEmployee');
@@ -73,7 +71,6 @@ $routes->group('admin', static function (RouteCollection $routes): void {
         $routes->post('restore/(:num)', 'Lookups\ServiceController::restore/$1');
     });
 
-    $routes->get('aidtypes', 'Admin\AidTypesController::index');
     $routes->group('aidtypes', static function (RouteCollection $routes): void {
         $routes->post('create', 'Admin\AidTypesController::create');
         $routes->post('archive/(:num)', 'Admin\AidTypesController::archive/$1');

@@ -217,47 +217,56 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                 ]) ?>
             <?php endif; ?>
 
-            <?php if ($activePage === 'sectors'): ?>
-                <?= view('Lookups/sectors', [
-                    'sectors' => $sectors ?? [],
-                    'sectorShortcodeOptions' => $sectorShortcodeOptions,
-                    'lookupStatus' => $lookupStatus ?? 'active',
-                    'canRestore' => $canRestoreLookups ?? false,
+            <?php if ($activePage === 'reference-data'): ?>
+                <?= view('components/page_tabs', [
+                    'tabs' => [
+                        ['key' => 'sectors', 'label' => 'Sectors', 'icon' => 'diagram-3-fill'],
+                        ['key' => 'services', 'label' => 'Services & Programs', 'icon' => 'grid-fill'],
+                        ['key' => 'categories', 'label' => 'Categories', 'icon' => 'tags-fill'],
+                        ['key' => 'aidtypes', 'label' => 'Aid Types', 'icon' => 'box-seam'],
+                    ],
+                    'active' => $referenceTab ?? 'sectors',
+                    'baseUrl' => 'admin/reference-data',
                 ]) ?>
-            <?php endif; ?>
-
-            <?php if ($activePage === 'services'): ?>
-                <?= view('Lookups/services', [
-                    'services' => $services ?? [],
-                    'lookupStatus' => $lookupStatus ?? 'active',
-                    'canRestore' => $canRestoreLookups ?? false,
-                ]) ?>
-            <?php endif; ?>
-
-            <?php if ($activePage === 'categories'): ?>
-                <?= view('Lookups/categories', [
-                    'categories' => $categories ?? [],
-                    'lookupStatus' => $lookupStatus ?? 'active',
-                    'canRestore' => $canRestoreLookups ?? false,
-                ]) ?>
+                <?php if (($referenceTab ?? 'sectors') === 'sectors'): ?>
+                    <?= view('Lookups/sectors', [
+                        'sectors' => $sectors ?? [],
+                        'sectorShortcodeOptions' => $sectorShortcodeOptions,
+                        'lookupStatus' => $lookupStatus ?? 'active',
+                        'canRestore' => $canRestoreLookups ?? false,
+                        'tabParam' => 'sectors',
+                    ]) ?>
+                <?php elseif ($referenceTab === 'services'): ?>
+                    <?= view('Lookups/services', [
+                        'services' => $services ?? [],
+                        'lookupStatus' => $lookupStatus ?? 'active',
+                        'canRestore' => $canRestoreLookups ?? false,
+                        'tabParam' => 'services',
+                    ]) ?>
+                <?php elseif ($referenceTab === 'categories'): ?>
+                    <?= view('Lookups/categories', [
+                        'categories' => $categories ?? [],
+                        'lookupStatus' => $lookupStatus ?? 'active',
+                        'canRestore' => $canRestoreLookups ?? false,
+                        'tabParam' => 'categories',
+                    ]) ?>
+                <?php elseif ($referenceTab === 'aidtypes'): ?>
+                    <?= view('components/card', [
+                        'icon' => 'box-seam',
+                        'title' => 'Aid Types',
+                        'cardClass' => 'sector-management',
+                        'bodyView' => 'Admin/aidtypes-body',
+                        'bodyData' => [
+                            'aidTypes' => $aidTypes,
+                            'currentRole' => $currentRole,
+                        ],
+                    ]) ?>
+                    <?= view('Admin/aidtype-create-modal') ?>
+                <?php endif; ?>
             <?php endif; ?>
 
             <?php if ($activePage === 'cards'): ?>
                 <?= view('Cards/batch_form') ?>
-            <?php endif; ?>
-
-            <?php if ($activePage === 'aidtypes'): ?>
-                <?= view('components/card', [
-                    'icon' => 'box-seam',
-                    'title' => 'Aid Types',
-                    'cardClass' => 'sector-management',
-                    'bodyView' => 'Admin/aidtypes-body',
-                    'bodyData' => [
-                        'aidTypes' => $aidTypes,
-                        'currentRole' => $currentRole,
-                    ],
-                ]) ?>
-                <?= view('Admin/aidtype-create-modal') ?>
             <?php endif; ?>
 
             <?php if ($activePage === 'batches'): ?>

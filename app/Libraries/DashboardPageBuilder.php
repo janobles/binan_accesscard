@@ -98,16 +98,22 @@ class DashboardPageBuilder
             ? $this->buildMemberListData()
             : [];
 
-        // Paginated server-side list bundles for the lookup-management pages (built
-        // only for the active page; other pages keep the full fetchVisible* lists).
-        $sectorListData = $activePage === 'sectors'
-            ? $this->buildLookupListData($sectorModel, 'admin/sectors', 'sectorID')
+        // Reference Data page: four lookup tables share one page, switched by
+        // ?tab=. Only the active tab's list bundle is built (the tab strip is
+        // server-side and only the active pane renders).
+        $referenceTab = (string) $this->request->getGet('tab');
+        $referenceTab = in_array($referenceTab, ['sectors', 'services', 'categories', 'aidtypes'], true)
+            ? $referenceTab : 'sectors';
+        $isReference = $activePage === 'reference-data';
+
+        $sectorListData = $isReference && $referenceTab === 'sectors'
+            ? $this->buildLookupListData($sectorModel, 'admin/reference-data', 'sectorID')
             : [];
-        $serviceListData = $activePage === 'services'
-            ? $this->buildLookupListData($serviceModel, 'admin/services', 'serviceID')
+        $serviceListData = $isReference && $referenceTab === 'services'
+            ? $this->buildLookupListData($serviceModel, 'admin/reference-data', 'serviceID')
             : [];
-        $categoryListData = $activePage === 'categories'
-            ? $this->buildLookupListData(new CategoryModel(), 'admin/categories', 'categoryID')
+        $categoryListData = $isReference && $referenceTab === 'categories'
+            ? $this->buildLookupListData(new CategoryModel(), 'admin/reference-data', 'categoryID')
             : [];
 
         // Batch/distribution data for the Batches and Distributions pages,
@@ -167,10 +173,7 @@ class DashboardPageBuilder
                 'accounts'     => $layoutModel->navActive($activePage, 'accounts'),
                 'family-manage' => $layoutModel->navActive($activePage, 'family-manage'),
                 'audit-trails' => $layoutModel->navActive($activePage, 'audit-trails'),
-                'sectors'      => $layoutModel->navActive($activePage, 'sectors'),
-                'services'     => $layoutModel->navActive($activePage, 'services'),
-                'categories'   => $layoutModel->navActive($activePage, 'categories'),
-                'aidtypes'     => $layoutModel->navActive($activePage, 'aidtypes'),
+                'reference-data' => $layoutModel->navActive($activePage, 'reference-data'),
                 'cards'         => $layoutModel->navActive($activePage, 'cards'),
                 'batches'       => $layoutModel->navActive($activePage, 'batches'),
                 'distributions' => $layoutModel->navActive($activePage, 'distributions'),
@@ -191,13 +194,14 @@ class DashboardPageBuilder
             'sectors'            => $sectorListData['rows'] ?? $this->fetchVisibleSectors($sectorModel),
             'services'           => $serviceListData['rows'] ?? $this->fetchVisibleServices($serviceModel),
             'categories'         => $categoryListData['rows'] ?? $this->fetchVisibleCategories(new CategoryModel()),
+            'referenceTab'       => $referenceTab,
             'sectorListData'     => $sectorListData,
             'serviceListData'    => $serviceListData,
             'categoryListData'   => $categoryListData,
             'batches'            => $isBatches ? $batchModel->allBatches() : [],
             'activeBatch'        => $isBatches ? $batchModel->activeBatch() : null,
             'activeAidTypes'     => $isBatches ? model(AidTypeModel::class)->active() : [],
-            'aidTypes'           => $activePage === 'aidtypes' ? model(AidTypeModel::class)->all() : [],
+            'aidTypes'           => $isReference && $referenceTab === 'aidtypes' ? model(AidTypeModel::class)->all() : [],
             'distributions'      => $isDistributions ? model(AidDistributionModel::class)->allDistributions() : [],
             'reportsBatches'     => $reportsData['reportsBatches'],
             'reportsBatchId'     => $reportsData['reportsBatchId'],

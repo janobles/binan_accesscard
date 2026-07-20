@@ -198,7 +198,7 @@ class CategoryController extends BaseController
     /** Redirect back to the categories page with a typed flash message. */
     private function redirect(string $type, string $message): RedirectResponse
     {
-        return $this->redirectAdmin('admin/categories', $type, $message);
+        return $this->redirectAdmin('admin/reference-data?tab=categories', $type, $message);
     }
 
     /** Human-readable category label for audit descriptions, e.g. "category SC (Senior Citizen) #3". */

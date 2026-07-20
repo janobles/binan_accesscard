@@ -58,13 +58,13 @@ class SectorController extends BaseController
         $model = new SectorModel();
 
         if (! $model->hasTable()) {
-            return $this->redirectAdmin('admin/sectors', 'error', 'Sector table is not available.');
+            return $this->redirectAdmin('admin/reference-data?tab=sectors', 'error', 'Sector table is not available.');
         }
 
         $sector = $model->find($sectorId);
 
         if (! $model->archive($sectorId)) {
-            return $this->redirectAdmin('admin/sectors', 'error', 'Unable to archive sector.');
+            return $this->redirectAdmin('admin/reference-data?tab=sectors', 'error', 'Unable to archive sector.');
         }
 
         $sectorName       = trim((string) ($sector['name'] ?? ''));
@@ -73,7 +73,7 @@ class SectorController extends BaseController
 
         $this->audit('SECTOR_ARCHIVE', 'Archived ' . $this->sectorLabel($sector, $sectorId) . '.' . $this->cascadeNote($archivedServices));
 
-        return $this->redirectAdmin('admin/sectors', 'success', 'Sector archived successfully.' . $this->cascadeMessage($archivedServices));
+        return $this->redirectAdmin('admin/reference-data?tab=sectors', 'success', 'Sector archived successfully.' . $this->cascadeMessage($archivedServices));
     }
 
     /**
@@ -94,14 +94,14 @@ class SectorController extends BaseController
         $model = new SectorModel();
 
         if (! $model->hasTable()) {
-            return $this->redirectAdmin('admin/sectors?status=archived', 'error', 'Sector table is not available.');
+            return $this->redirectAdmin('admin/reference-data?tab=sectors&status=archived', 'error', 'Sector table is not available.');
         }
 
         $sector     = $model->find($sectorId);
         $archivedAt = (string) ($sector['dt_deleted'] ?? '');
 
         if (! $model->restore($sectorId)) {
-            return $this->redirectAdmin('admin/sectors?status=archived', 'error', 'Unable to restore sector.');
+            return $this->redirectAdmin('admin/reference-data?tab=sectors&status=archived', 'error', 'Unable to restore sector.');
         }
 
         $sectorName       = trim((string) ($sector['name'] ?? ''));
@@ -109,7 +109,7 @@ class SectorController extends BaseController
 
         $this->audit('SECTOR_RESTORE', 'Restored ' . $this->sectorLabel($sector, $sectorId) . '.' . $this->cascadeNote($restoredServices, 'restored'));
 
-        return $this->redirectAdmin('admin/sectors', 'success', 'Sector restored successfully.' . $this->cascadeMessage($restoredServices, 'restored'));
+        return $this->redirectAdmin('admin/reference-data?tab=sectors', 'success', 'Sector restored successfully.' . $this->cascadeMessage($restoredServices, 'restored'));
     }
 
     /**
@@ -127,11 +127,11 @@ class SectorController extends BaseController
         $model = new SectorModel();
 
         if (! $model->hasTable()) {
-            return $this->redirectAdmin('admin/sectors', 'error', 'Sector table is not available.');
+            return $this->redirectAdmin('admin/reference-data?tab=sectors', 'error', 'Sector table is not available.');
         }
 
         if ($model->isInUse($sectorId)) {
-            return $this->redirectAdmin('admin/sectors', 'error', 'This sector is already used by one or more records and cannot be deleted.');
+            return $this->redirectAdmin('admin/reference-data?tab=sectors', 'error', 'This sector is already used by one or more records and cannot be deleted.');
         }
 
         $sector = $model->find($sectorId);
@@ -139,16 +139,16 @@ class SectorController extends BaseController
         // A sector doubles as a service category; block deleting one that still backs a
         // service's category label (archive stays allowed — it only retires new picks).
         if ($sector !== null && $model->usedAsServiceCategory((string) ($sector['name'] ?? ''))) {
-            return $this->redirectAdmin('admin/sectors', 'error', 'This sector is used as a service category by one or more services and cannot be deleted. Reassign or archive those services first.');
+            return $this->redirectAdmin('admin/reference-data?tab=sectors', 'error', 'This sector is used as a service category by one or more services and cannot be deleted. Reassign or archive those services first.');
         }
 
         if (! $model->delete($sectorId)) {
-            return $this->redirectAdmin('admin/sectors', 'error', 'Unable to delete sector.');
+            return $this->redirectAdmin('admin/reference-data?tab=sectors', 'error', 'Unable to delete sector.');
         }
 
         $this->audit('SECTOR_DELETE', 'Permanently deleted ' . $this->sectorLabel($sector, $sectorId) . '.');
 
-        return redirect()->to(site_url('admin/sectors'))->with('success', 'Sector deleted successfully.');
+        return redirect()->to(site_url('admin/reference-data?tab=sectors'))->with('success', 'Sector deleted successfully.');
     }
 
     /**
@@ -168,7 +168,7 @@ class SectorController extends BaseController
         $model = new SectorModel();
 
         if (! $model->hasTable()) {
-            return $this->redirectAdmin('admin/sectors', 'error', 'Sector table is not available.');
+            return $this->redirectAdmin('admin/reference-data?tab=sectors', 'error', 'Sector table is not available.');
         }
 
         $data = [
@@ -183,29 +183,29 @@ class SectorController extends BaseController
         }
 
         if ($data['shortcode'] === '' || $data['name'] === '') {
-            return $this->redirectAdmin('admin/sectors', 'error', 'Shortcode and name are required.');
+            return $this->redirectAdmin('admin/reference-data?tab=sectors', 'error', 'Shortcode and name are required.');
         }
 
         // Block duplicate codes (excludes the current row on edit, so re-saving an
         // unchanged code is fine). Mirrors the client-side check in the sector modal.
         if ($model->shortcodeExists($data['shortcode'], $sectorId)) {
-            return $this->redirectAdmin('admin/sectors', 'error', 'Duplicate code "' . $data['shortcode'] . '". Please enter another code.');
+            return $this->redirectAdmin('admin/reference-data?tab=sectors', 'error', 'Duplicate code "' . $data['shortcode'] . '". Please enter another code.');
         }
 
         if ($model->nameExists($data['name'], $sectorId)) {
-            return $this->redirectAdmin('admin/sectors', 'error', 'Duplicate name "' . $data['name'] . '". Please enter another name.');
+            return $this->redirectAdmin('admin/reference-data?tab=sectors', 'error', 'Duplicate name "' . $data['name'] . '". Please enter another name.');
         }
 
         // Keep sectors and standalone service categories disjoint (Phase B): a sector
         // may not duplicate a Manage-Categories entry (FA/SWPS/EDA).
         if ((new CategoryModel())->activeCodeOrNameExists($data['shortcode'], $data['name'])) {
-            return $this->redirectAdmin('admin/sectors', 'error', 'A service category already uses this code or name. Manage it under Manage Categories, or choose a different sector code/name.');
+            return $this->redirectAdmin('admin/reference-data?tab=sectors', 'error', 'A service category already uses this code or name. Manage it under Manage Categories, or choose a different sector code/name.');
         }
 
         $isUpdate = $sectorId !== null;
 
         if (! $model->saveSectorRecord($data, $sectorId)) {
-            return redirect()->to(site_url('admin/sectors'))->with('error', 'Unable to save sector.');
+            return redirect()->to(site_url('admin/reference-data?tab=sectors'))->with('error', 'Unable to save sector.');
         }
 
         $this->audit(
@@ -215,7 +215,7 @@ class SectorController extends BaseController
 
         $message = $isUpdate ? 'Sector updated successfully.' : 'Sector added successfully.';
 
-        return $this->redirectAdmin('admin/sectors', 'success', $message);
+        return $this->redirectAdmin('admin/reference-data?tab=sectors', 'success', $message);
     }
 
     /**

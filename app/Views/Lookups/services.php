@@ -12,7 +12,8 @@ $archivedServiceCount = (int) ($archivedCount ?? 0);
 $allServiceCount      = $activeServiceCount + $archivedServiceCount;
 $status               = (string) ($status ?? 'active');
 $keyword              = (string) ($keyword ?? '');
-$listRoute            = (string) ($listRoute ?? 'admin/services');
+$listRoute            = (string) ($listRoute ?? 'admin/reference-data');
+$tabParam             = (string) ($tabParam ?? '');
 $perPage              = (int) ($perPage ?? 25);
 $perPageOptions       = ($perPageOptions ?? []) ?: [10, 25, 50, 100];
 // Read-only roles (Viewer) see the list without Add / Edit / Archive / Restore.
@@ -20,8 +21,9 @@ $perPageOptions       = ($perPageOptions ?? []) ?: [10, 25, 50, 100];
 $canManage            = (bool) ($canManage ?? true);
 
 // Builds a page URL preserving the current database keyword + status + page size.
-$servicePageUrl = static function (int $targetPage) use ($listRoute, $keyword, $status, $perPage): string {
+$servicePageUrl = static function (int $targetPage) use ($listRoute, $keyword, $status, $perPage, $tabParam): string {
     $params = array_filter([
+        'tab'      => $tabParam,
         'q'        => $keyword,
         'status'   => $status === 'active' ? '' : $status,
         'per_page' => $perPage !== 25 ? (string) $perPage : '',
@@ -33,8 +35,11 @@ $servicePageUrl = static function (int $targetPage) use ($listRoute, $keyword, $
 
 // "Clear" resets the whole toolbar (keyword + status filter, back to page 1)
 // per the one-role-per-control rule; only the page size survives.
-$serviceClearUrl = static function () use ($listRoute, $perPage): string {
-    $params = $perPage !== 25 ? ['per_page' => (string) $perPage] : [];
+$serviceClearUrl = static function () use ($listRoute, $perPage, $tabParam): string {
+    $params = array_filter([
+        'tab'      => $tabParam,
+        'per_page' => $perPage !== 25 ? (string) $perPage : '',
+    ], static fn ($value): bool => $value !== '');
 
     return site_url($listRoute) . ($params === [] ? '' : '?' . http_build_query($params));
 };
@@ -51,7 +56,8 @@ $serviceClearUrl = static function () use ($listRoute, $perPage): string {
     'keyword' => $keyword,
     'clearUrl' => $serviceClearUrl(),
     'pillsId' => 'serviceFilterPills',
-    'hiddenHtml' => $perPage !== 25 ? '<input type="hidden" name="per_page" value="' . esc((string) $perPage, 'attr') . '">' : '',
+    'hiddenHtml' => ($tabParam !== '' ? '<input type="hidden" name="tab" value="' . esc($tabParam, 'attr') . '">' : '')
+        . ($perPage !== 25 ? '<input type="hidden" name="per_page" value="' . esc((string) $perPage, 'attr') . '">' : ''),
     'actionsHtml' => $canManage ? '<button class="' . btn('add') . ' flex-fill js-service-modal-open" type="button" data-service-mode="create">Add Program</button>' : '',
     'filterGroups' => [[
         'name' => 'status',

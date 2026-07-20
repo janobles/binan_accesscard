@@ -92,24 +92,8 @@ class ImportFamilyModalBuilder
             ];
         }
 
-        $formValues = [
-            'head_lastname'      => (string) ($headData['lastname'] ?? ''),
-            'head_firstname'     => (string) ($headData['firstname'] ?? ''),
-            'head_middlename'    => (string) ($headData['middlename'] ?? ''),
-            'head_suffix'        => (string) ($headData['suffix'] ?? ''),
-            'head_birthday'      => $this->toDateInput((string) ($headData['birthday'] ?? '')),
-            'head_sex'           => (string) ($headData['sex'] ?? ''),
-            'head_civilstatus'   => $this->fullFromCode((string) ($headData['civilstatus'] ?? ''), FamilyExcelTemplate::CIVIL_STATUS_CODES),
-            'head_contactnumber' => (string) ($headData['contactnumber'] ?? ''),
-            'head_religion'      => (string) ($headData['religion'] ?? ''),
-            'head_education'     => $this->fullFromCode((string) ($headData['education'] ?? ''), FamilyExcelTemplate::EDUCATION_CODES),
-            'head_job'           => (string) ($headData['job'] ?? ''),
-            'head_salary'        => $this->incomeValue((string) ($headData['monthlyincome'] ?? '')),
-            'head_address'       => (string) ($headData['address'] ?? ''),
-            'head_barangay'      => (string) ($headData['barangay'] ?? ''),
-            // The QR the operator is fixing — editable (it may be the very thing that's wrong).
-            'qr_control_no'      => (string) ($headData['familyno'] ?? $familyNo),
-        ];
+        // The QR the operator is fixing — editable (it may be the very thing that's wrong).
+        $formValues = $this->headFormValues($headData, (string) ($headData['familyno'] ?? $familyNo));
 
         $options = (new FamilyFormOptionsModel())->getViewDataForEdit(
             array_values(array_unique(array_map('intval', $assignedSectorIds))),
@@ -138,6 +122,145 @@ class ImportFamilyModalBuilder
             // box and show the message beneath it.
             'importFieldIssues'  => $this->fieldIssues($bundle, $familyNo),
         ]);
+    }
+
+    /**
+     * Builds the modal view data for a single staged row that has no QR (blank familyno). The
+     * row is prefilled as the head with an EMPTY qr_control_no for the operator to type; on
+     * save the row is replaced (keyed by sheet row) and re-validated so it groups into a
+     * family. Members can be added in the modal as usual.
+     */
+    public function viewDataForRow(array $bundle, int $sheetRow, string $action): array
+    {
+        $data = $this->rowData($bundle, $sheetRow);
+
+        $sectorIds  = $this->sectorIds((string) ($data['sector'] ?? ''));
+        $serviceIds = $this->serviceIds((string) ($data['services'] ?? ''));
+
+        $options = (new FamilyFormOptionsModel())->getViewDataForEdit(
+            array_values(array_unique(array_map('intval', $sectorIds))),
+            array_values(array_unique(array_map('intval', $serviceIds)))
+        );
+
+        return array_merge($options, [
+            'action'             => $action,
+            'fieldPrefix'        => 'family-import',
+            'modalTitle'         => 'Assign a QR — Row ' . $sheetRow,
+            'modalMode'          => 'update',
+            'submitLabel'        => 'Save fixes',
+            'headId'             => 0,
+            'saveDisabled'       => false,
+            'qrLocked'           => false,
+            // Blank QR: the operator types it. Everything else is prefilled from the row.
+            'formValues'         => $this->headFormValues($data, ''),
+            'selectedSectorIds'  => $sectorIds,
+            'selectedServiceIds' => $serviceIds,
+            'existingMembers'    => [],
+            // Rendered as hidden import_row so the save/remove endpoint targets this sheet row.
+            'importRow'          => $sheetRow,
+            'importIssues'       => $this->issuesForRow($bundle, $sheetRow),
+            'importFieldIssues'  => $this->fieldIssuesForRow($bundle, $sheetRow),
+        ]);
+    }
+
+    /** The head_* form-value map for one person's data; qr_control_no is set to $qr. */
+    private function headFormValues(array $data, string $qr): array
+    {
+        return [
+            'head_lastname'      => (string) ($data['lastname'] ?? ''),
+            'head_firstname'     => (string) ($data['firstname'] ?? ''),
+            'head_middlename'    => (string) ($data['middlename'] ?? ''),
+            'head_suffix'        => (string) ($data['suffix'] ?? ''),
+            'head_birthday'      => $this->toDateInput((string) ($data['birthday'] ?? '')),
+            'head_sex'           => (string) ($data['sex'] ?? ''),
+            'head_civilstatus'   => $this->fullFromCode((string) ($data['civilstatus'] ?? ''), FamilyExcelTemplate::CIVIL_STATUS_CODES),
+            'head_contactnumber' => (string) ($data['contactnumber'] ?? ''),
+            'head_religion'      => (string) ($data['religion'] ?? ''),
+            'head_education'     => $this->fullFromCode((string) ($data['education'] ?? ''), FamilyExcelTemplate::EDUCATION_CODES),
+            'head_job'           => (string) ($data['job'] ?? ''),
+            'head_salary'        => $this->incomeValue((string) ($data['monthlyincome'] ?? '')),
+            'head_address'       => (string) ($data['address'] ?? ''),
+            'head_barangay'      => (string) ($data['barangay'] ?? ''),
+            'qr_control_no'      => $qr,
+        ];
+    }
+
+    /** The staged data for one sheet row, or [] when absent. */
+    private function rowData(array $bundle, int $sheetRow): array
+    {
+        foreach ((is_array($bundle['rows'] ?? null) ? $bundle['rows'] : []) as $row) {
+            if ((int) ($row['sheetRow'] ?? -1) === $sheetRow) {
+                return is_array($row['data'] ?? null) ? $row['data'] : [];
+            }
+        }
+
+        return [];
+    }
+
+    /**
+     * The staged errors for one sheet row, shaped for the modal issue panel (blocking first).
+     *
+     * @return list<array{severity:string, person:string, column:string, message:string}>
+     */
+    public function issuesForRow(array $bundle, int $sheetRow): array
+    {
+        $errors = is_array($bundle['errors'] ?? null) ? $bundle['errors'] : [];
+        $data   = $this->rowData($bundle, $sheetRow);
+        $person = trim((string) ($data['firstname'] ?? '') . ' ' . (string) ($data['lastname'] ?? ''));
+
+        $out = [];
+
+        foreach ($errors as $error) {
+            if ((int) ($error['sheetRow'] ?? -1) !== $sheetRow) {
+                continue;
+            }
+
+            $field = $error['field'] ?? null;
+
+            $out[] = [
+                'severity' => (string) ($error['severity'] ?? 'blocking'),
+                'person'   => $person,
+                'column'   => ($field !== null) ? (self::FIELD_LABELS[$field] ?? (string) $field) : '',
+                'message'  => (string) ($error['message'] ?? ''),
+            ];
+        }
+
+        usort($out, static fn (array $a, array $b): int =>
+            (($a['severity'] === 'blocking') ? 0 : 1) <=> (($b['severity'] === 'blocking') ? 0 : 1));
+
+        return $out;
+    }
+
+    /**
+     * Per-field errors for one sheet row keyed to the modal input name (the row is the head).
+     *
+     * @return list<array{name:string, severity:string, message:string}>
+     */
+    private function fieldIssuesForRow(array $bundle, int $sheetRow): array
+    {
+        $errors = is_array($bundle['errors'] ?? null) ? $bundle['errors'] : [];
+        $out    = [];
+
+        foreach ($errors as $error) {
+            if ((int) ($error['sheetRow'] ?? -1) !== $sheetRow) {
+                continue;
+            }
+
+            $field = (string) ($error['field'] ?? '');
+            $name  = $field !== '' ? $this->inputName('head', $field) : null;
+
+            if ($name === null) {
+                continue;
+            }
+
+            $out[] = [
+                'name'     => $name,
+                'severity' => (string) ($error['severity'] ?? 'blocking'),
+                'message'  => (string) ($error['message'] ?? ''),
+            ];
+        }
+
+        return $out;
     }
 
     /**
@@ -283,11 +406,31 @@ class ImportFamilyModalBuilder
      */
     public function toStagedRows(array $post, array $bundle, string $oldFamilyNo): array
     {
-        $qr = trim((string) ($post['qr_control_no'] ?? $oldFamilyNo));
+        return $this->assignSheetRows($this->postToPeople($post), $bundle, $this->groupSheetRows($bundle, $oldFamilyNo));
+    }
+
+    /**
+     * Rebuilds rows for a single blank-QR sheet row the operator just gave a QR: that row's
+     * number is reused, any members added in the modal get fresh numbers.
+     *
+     * @return list<array{sheetRow:int, data:array<string,string>}>
+     */
+    public function toStagedRowsForRow(array $post, array $bundle, int $sheetRow): array
+    {
+        return $this->assignSheetRows($this->postToPeople($post), $bundle, [$sheetRow]);
+    }
+
+    /**
+     * Head + members from the modal POST as raw person-data arrays (QR from qr_control_no).
+     *
+     * @return list<array<string,string>>
+     */
+    private function postToPeople(array $post): array
+    {
+        $qr = trim((string) ($post['qr_control_no'] ?? ''));
 
         $people = [];
 
-        // Head row.
         $people[] = $this->personData($qr, 'Head', [
             'lastname'      => $post['head_lastname']      ?? '',
             'firstname'     => $post['head_firstname']     ?? '',
@@ -311,7 +454,21 @@ class ImportFamilyModalBuilder
             $people[] = $this->personData($qr, (string) ($member['relationship'] ?? ''), $member);
         }
 
-        return $this->assignSheetRows($people, $bundle, $oldFamilyNo);
+        return $people;
+    }
+
+    /** The sheet rows currently belonging to a QR group, for stable re-numbering. */
+    private function groupSheetRows(array $bundle, string $familyNo): array
+    {
+        $out = [];
+
+        foreach ((is_array($bundle['rows'] ?? null) ? $bundle['rows'] : []) as $row) {
+            if (trim((string) (($row['data'] ?? [])['familyno'] ?? '')) === $familyNo) {
+                $out[] = (int) ($row['sheetRow'] ?? 0);
+            }
+        }
+
+        return $out;
     }
 
     // -- prefill helpers -------------------------------------------------------
@@ -599,20 +756,13 @@ class ImportFamilyModalBuilder
      * @param list<array<string,string>> $people
      * @return list<array{sheetRow:int, data:array<string,string>}>
      */
-    private function assignSheetRows(array $people, array $bundle, string $oldFamilyNo): array
+    private function assignSheetRows(array $people, array $bundle, array $reusable): array
     {
-        $rows = is_array($bundle['rows'] ?? null) ? $bundle['rows'] : [];
-
-        $reusable = [];
-        $maxRow   = 1;
+        $rows   = is_array($bundle['rows'] ?? null) ? $bundle['rows'] : [];
+        $maxRow = 1;
 
         foreach ($rows as $row) {
-            $sheetRow = (int) ($row['sheetRow'] ?? 0);
-            $maxRow   = max($maxRow, $sheetRow);
-
-            if (trim((string) (($row['data'] ?? [])['familyno'] ?? '')) === $oldFamilyNo) {
-                $reusable[] = $sheetRow;
-            }
+            $maxRow = max($maxRow, (int) ($row['sheetRow'] ?? 0));
         }
 
         sort($reusable);

@@ -32,7 +32,13 @@
     var cancelBtn  = document.getElementById('importReviewCancel');
 
     var review = parseJson();
-    var view = 'type'; // 'type' = grouped by problem, 'row' = straight down the sheet
+
+    // Client-side filter over the "Families to fix" list. Persists across re-renders (Edit /
+    // Remove / Save rebuild the card) so the operator's focus filter survives an action.
+    var familyFilter = { search: '', severity: 'all', code: 'all' };
+    var familyPage = 1;       // current page of the "Families to fix" list
+    var familyPageSize = 25;  // rows per page (Manage Records default)
+    var readyCollapsed = true; // Ready-to-import list starts hidden behind its Show button
 
     function parseJson() {
         var node = document.getElementById('importReviewData');
@@ -68,20 +74,6 @@
         if (statusEl) {
             statusEl.textContent = message || '';
         }
-    }
-
-    // A click-to-copy Excel cell reference, e.g. "H42". Paste into Excel's Go To (Ctrl+G).
-    function cellRef(cell) {
-        if (!cell) {
-            return el('span', 'text-muted', '—');
-        }
-
-        var btn = el('button', 'btn btn-sm btn-outline-secondary import-review-cell', cell);
-        btn.type = 'button';
-        btn.title = 'Copy "' + cell + '" — paste into Excel with Ctrl+G to jump to it';
-        btn.dataset.cell = cell;
-
-        return btn;
     }
 
     // -- rendering -------------------------------------------------------------
@@ -156,34 +148,121 @@
     function renderBody(counts) {
         groupsEl.textContent = '';
 
-        // Actionable summary first: one row per flagged family, with Edit (fix in place) and
-        // Remove (drop from this import). Everything below stays the read-only cell guidance.
+        // Whole-file problems (unreadable / empty) — nothing to edit; upload a corrected file.
+        var notices = review.fileNotices || [];
+        if (notices.length) {
+            var alert = el('div', 'alert alert-danger');
+            alert.appendChild(el('strong', null, 'This file could not be fully read. '));
+            alert.appendChild(document.createTextNode(notices.join(' ') + ' Upload a corrected file.'));
+            groupsEl.appendChild(alert);
+        }
+
+        // Rows with no QR number can't be grouped into a family — surface them first so the
+        // operator can give them a QR and fix them in place.
+        var needsQr = renderNeedsQr();
+        if (needsQr) {
+            groupsEl.appendChild(needsQr);
+        }
+
+        // The flagged families, each with Edit (fix in place) and Remove.
         var families = renderFamiliesToFix();
         if (families) {
             groupsEl.appendChild(families);
         }
 
-        var groups = review.groups || [];
-
-        if (groups.length) {
-            groupsEl.appendChild(renderToolbar());
-
-            if (view === 'row') {
-                renderByRow();
-            } else {
-                groups.forEach(function (group) {
-                    groupsEl.appendChild(renderGroup(group));
-                });
-            }
-        }
-
-        // The other half of the picture: what is CORRECT and will actually be saved. Without
-        // it the screen is nothing but bad news, and there is no way to check a head or an
-        // address before committing.
+        // What is CORRECT and will be saved — behind its own Show button so the screen leads
+        // with the problems.
         groupsEl.appendChild(renderReady(counts));
     }
 
     // -- families to fix (in-place edit / remove) -------------------------------
+
+    // -- rows with no QR (edit to assign one) -----------------------------------
+
+    function renderNeedsQr() {
+        var rows = review.unassigned || [];
+
+        if (!rows.length || !familyBaseUrl) {
+            return null;
+        }
+
+        var card = el('div', 'card mb-3 import-review-needsqr');
+
+        var header = el('div', 'card-header');
+        var title = el('span', 'fw-semibold');
+        var icon = el('i', 'bi bi-question-circle me-2');
+        icon.setAttribute('aria-hidden', 'true');
+        title.appendChild(icon);
+        title.appendChild(el('span', 'badge bg-danger me-2', rows.length));
+        title.appendChild(document.createTextNode('Needs a QR number'));
+        header.appendChild(title);
+        header.appendChild(el('small', 'text-muted',
+            'These rows have no QR, so they are not part of any family yet. Edit to give each a QR — rows with the same QR join one family — or Remove.'));
+        card.appendChild(header);
+
+        var body = el('div', 'card-body');
+        var wrap = el('div', 'table-responsive');
+        var table = el('table', 'table manage-record-table align-middle mb-0 import-review-table');
+
+        var thead = el('thead');
+        var htr = el('tr');
+        ['Row', 'Person', 'Issues', 'Actions'].forEach(function (h) {
+            htr.appendChild(el('th', null, h));
+        });
+        thead.appendChild(htr);
+        table.appendChild(thead);
+
+        var tbody = el('tbody');
+        rows.forEach(function (row) {
+            tbody.appendChild(renderNeedsQrRow(row));
+        });
+        table.appendChild(tbody);
+        wrap.appendChild(table);
+        body.appendChild(wrap);
+        card.appendChild(body);
+
+        return card;
+    }
+
+    function renderNeedsQrRow(row) {
+        var tr = el('tr');
+
+        tr.appendChild(el('td', 'text-nowrap', row.sheetRow != null ? row.sheetRow : '—'));
+        tr.appendChild(el('td', null, row.person || '—'));
+
+        var issues = el('td', 'small');
+        var types = row.types || [];
+        if (types.length) {
+            types.forEach(function (type) {
+                var cls = type.severity === 'blocking'
+                    ? 'badge bg-danger me-1 mb-1'
+                    : 'badge bg-warning text-dark me-1 mb-1';
+                issues.appendChild(el('span', cls, type.label || type.code));
+            });
+        } else {
+            issues.appendChild(el('span', 'badge bg-danger', 'No QR number'));
+        }
+        tr.appendChild(issues);
+
+        var actions = el('td', 'text-nowrap');
+
+        var edit = el('button', 'btn btn-sm btn-primary me-1 js-import-fix-edit', 'Edit');
+        edit.type = 'button';
+        edit.dataset.modalUrl = familyBaseUrl + '?row=' + encodeURIComponent(row.sheetRow);
+        edit.dataset.modalTitle = 'Assign a QR — Row ' + (row.sheetRow || '');
+        actions.appendChild(edit);
+
+        var remove = el('button', 'btn btn-sm btn-outline-danger js-import-fix-remove', 'Remove');
+        remove.type = 'button';
+        remove.dataset.row = row.sheetRow;
+        actions.appendChild(remove);
+
+        tr.appendChild(actions);
+
+        return tr;
+    }
+
+    // -- families to fix --------------------------------------------------------
 
     function renderFamiliesToFix() {
         var families = review.families || [];
@@ -194,17 +273,21 @@
 
         var card = el('div', 'card mb-3 import-review-families');
 
-        var header = el('div', 'card-header d-flex justify-content-between align-items-center flex-wrap');
-        var left = el('span', 'fw-semibold');
-        left.appendChild(el('span', 'badge bg-primary me-2', families.length));
-        left.appendChild(document.createTextNode('Families to fix'));
-        header.appendChild(left);
-        header.appendChild(el('small', 'text-muted', 'Fix a family here without touching the spreadsheet, or remove it from this import.'));
+        // Header — Manage Records style: icon + title + total badge.
+        var header = el('div', 'card-header');
+        var title = el('span', 'fw-semibold');
+        var icon = el('i', 'bi bi-tools me-2');
+        icon.setAttribute('aria-hidden', 'true');
+        title.appendChild(icon);
+        title.appendChild(el('span', 'badge bg-primary me-2', families.length));
+        title.appendChild(document.createTextNode('Families to fix'));
+        header.appendChild(title);
         card.appendChild(header);
 
-        var body = el('div', 'card-body p-0');
+        var body = el('div', 'card-body');
+
         var wrap = el('div', 'table-responsive');
-        var table = el('table', 'table table-sm mb-0 align-middle import-review-table');
+        var table = el('table', 'table manage-record-table align-middle mb-0 import-review-table');
 
         var thead = el('thead');
         var htr = el('tr');
@@ -215,15 +298,260 @@
         table.appendChild(thead);
 
         var tbody = el('tbody');
-        families.forEach(function (family) {
-            tbody.appendChild(renderFamilyToFixRow(family));
-        });
         table.appendChild(tbody);
         wrap.appendChild(table);
+
+        var footer = el('div', 'card-footer');
+
+        // Repaint the rows + footer only (never a full render()), so the search box keeps
+        // focus and the current page/filter survive.
+        var repaint = function () {
+            paintFamilyRows(tbody, footer, repaint);
+        };
+
+        body.appendChild(buildFamilyFilterBar(families, repaint));
         body.appendChild(wrap);
         card.appendChild(body);
+        card.appendChild(footer);
+
+        repaint();
 
         return card;
+    }
+
+    // The families matching the current filter (search over QR/name, severity, issue type).
+    function filteredFamilies() {
+        var families = review.families || [];
+        var query = familyFilter.search.trim().toLowerCase();
+
+        return families.filter(function (family) {
+            var blocking = Number(family.blocking || 0);
+            var warnings = Number(family.warnings || 0);
+
+            if (familyFilter.severity === 'blocking' && blocking <= 0) {
+                return false;
+            }
+
+            if (familyFilter.severity === 'warning' && !(warnings > 0 && blocking === 0)) {
+                return false;
+            }
+
+            if (familyFilter.code !== 'all') {
+                var hasCode = (family.types || []).some(function (type) {
+                    return type.code === familyFilter.code;
+                });
+
+                if (!hasCode) {
+                    return false;
+                }
+            }
+
+            if (query) {
+                var hay = (String(family.qr || '') + ' ' + String(family.head || '')).toLowerCase();
+
+                if (hay.indexOf(query) === -1) {
+                    return false;
+                }
+            }
+
+            return true;
+        });
+    }
+
+    // Slices an array into the current page; page is clamped into 1..pages.
+    function paginate(items, page, size) {
+        var total = items.length;
+        var pages = Math.max(1, Math.ceil(total / size));
+        var current = Math.min(Math.max(1, page), pages);
+        var start = (current - 1) * size;
+        var rows = items.slice(start, start + size);
+
+        return {
+            rows: rows,
+            page: current,
+            pages: pages,
+            total: total,
+            from: total ? start + 1 : 0,
+            to: total ? start + rows.length : 0
+        };
+    }
+
+    function paintFamilyRows(tbody, footer, repaint) {
+        tbody.textContent = '';
+
+        var matches = filteredFamilies();
+        var state = paginate(matches, familyPage, familyPageSize);
+        familyPage = state.page; // keep the clamped page (the list may have shrunk)
+
+        if (!matches.length) {
+            var tr = el('tr');
+            var td = el('td', 'text-center text-muted py-3', 'No families match this filter.');
+            td.colSpan = 6;
+            tr.appendChild(td);
+            tbody.appendChild(tr);
+        } else {
+            state.rows.forEach(function (family) {
+                tbody.appendChild(renderFamilyToFixRow(family));
+            });
+        }
+
+        paintFamilyFooter(footer, state, repaint);
+    }
+
+    // "Showing A–B of C" + Previous / Page N of M / Next — Manage Records footer markup.
+    function paintFamilyFooter(footer, state, repaint) {
+        footer.textContent = '';
+
+        var row = el('div', 'd-flex flex-wrap justify-content-between align-items-center gap-2 w-100');
+        row.appendChild(el('div', 'table-footer-left', state.total
+            ? 'Showing ' + state.from + '–' + state.to + ' of ' + state.total
+            : 'Showing 0 of 0'));
+
+        var right = el('div', 'table-footer-right');
+
+        if (state.pages > 1) {
+            var ul = el('ul', 'pagination pagination-sm m-0');
+
+            var prev = el('li', 'page-item' + (state.page <= 1 ? ' disabled' : ''));
+            var prevLink = el('a', 'page-link', 'Previous');
+            prevLink.href = '#';
+            prevLink.addEventListener('click', function (event) {
+                event.preventDefault();
+                if (state.page > 1) {
+                    familyPage = state.page - 1;
+                    repaint();
+                }
+            });
+            prev.appendChild(prevLink);
+            ul.appendChild(prev);
+
+            var info = el('li', 'page-item disabled');
+            info.appendChild(el('span', 'page-link', 'Page ' + state.page + ' of ' + state.pages));
+            ul.appendChild(info);
+
+            var next = el('li', 'page-item' + (state.page >= state.pages ? ' disabled' : ''));
+            var nextLink = el('a', 'page-link', 'Next');
+            nextLink.href = '#';
+            nextLink.addEventListener('click', function (event) {
+                event.preventDefault();
+                if (state.page < state.pages) {
+                    familyPage = state.page + 1;
+                    repaint();
+                }
+            });
+            next.appendChild(nextLink);
+            ul.appendChild(next);
+
+            right.appendChild(ul);
+        }
+
+        row.appendChild(right);
+        footer.appendChild(row);
+    }
+
+    // "Show N entries" control (Manage Records look; client-side, no form).
+    function buildSizeSelect(size, onChange) {
+        var wrap = el('div', 'd-flex align-items-center gap-2 small text-muted import-review-size');
+        wrap.appendChild(el('label', 'mb-0', 'Show'));
+
+        var select = el('select', 'form-select form-select-sm w-auto');
+        [10, 25, 50, 100].forEach(function (n) {
+            var opt = el('option', null, String(n));
+            opt.value = String(n);
+            if (n === size) {
+                opt.selected = true;
+            }
+            select.appendChild(opt);
+        });
+        select.addEventListener('change', function () {
+            onChange(parseInt(select.value, 10) || 25);
+        });
+        wrap.appendChild(select);
+        wrap.appendChild(el('span', null, 'entries'));
+
+        return wrap;
+    }
+
+    // Toolbar: search + severity + issue-type filters on the left, "Show N entries" on the
+    // right (Manage Records layout). Every control resets to page 1 and repaints.
+    function buildFamilyFilterBar(families, repaint) {
+        var bar = el('div', 'd-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 import-review-filterbar');
+
+        var leftGroup = el('div', 'd-flex flex-wrap align-items-center gap-2');
+
+        var searchGroup = el('div', 'input-group input-group-sm import-review-filter-search');
+        var search = el('input', 'form-control');
+        search.type = 'search';
+        search.placeholder = 'Search QR or name...';
+        search.setAttribute('aria-label', 'Search families to fix');
+        search.value = familyFilter.search;
+        search.addEventListener('input', function () {
+            familyFilter.search = search.value;
+            familyPage = 1;
+            repaint();
+        });
+        var searchIcon = el('span', 'input-group-text');
+        searchIcon.appendChild(el('i', 'bi bi-search'));
+        searchGroup.appendChild(search);
+        searchGroup.appendChild(searchIcon);
+        leftGroup.appendChild(searchGroup);
+
+        var group = el('div', 'btn-group btn-group-sm');
+        [['all', 'All'], ['blocking', 'Must fix'], ['warning', 'Warnings']].forEach(function (pair) {
+            var btn = el('button', 'btn ' + (familyFilter.severity === pair[0] ? 'btn-primary' : 'btn-outline-primary'), pair[1]);
+            btn.type = 'button';
+            btn.dataset.sev = pair[0];
+            btn.addEventListener('click', function () {
+                familyFilter.severity = pair[0];
+                Array.prototype.forEach.call(group.children, function (sibling) {
+                    sibling.className = 'btn ' + (sibling.dataset.sev === familyFilter.severity ? 'btn-primary' : 'btn-outline-primary');
+                });
+                familyPage = 1;
+                repaint();
+            });
+            group.appendChild(btn);
+        });
+        leftGroup.appendChild(group);
+
+        var select = el('select', 'form-select form-select-sm w-auto import-review-filter-type');
+        var optAll = el('option', null, 'All issue types');
+        optAll.value = 'all';
+        select.appendChild(optAll);
+
+        var seen = {};
+        families.forEach(function (family) {
+            (family.types || []).forEach(function (type) {
+                if (type.code && !seen[type.code]) {
+                    seen[type.code] = true;
+                    var option = el('option', null, type.label || type.code);
+                    option.value = type.code;
+                    select.appendChild(option);
+                }
+            });
+        });
+
+        // A previously-picked issue may no longer exist after edits — fall back to "all".
+        if (familyFilter.code !== 'all' && !seen[familyFilter.code]) {
+            familyFilter.code = 'all';
+        }
+
+        select.value = familyFilter.code;
+        select.addEventListener('change', function () {
+            familyFilter.code = select.value;
+            familyPage = 1;
+            repaint();
+        });
+        leftGroup.appendChild(select);
+
+        bar.appendChild(leftGroup);
+
+        bar.appendChild(buildSizeSelect(familyPageSize, function (size) {
+            familyPageSize = size;
+            familyPage = 1;
+            repaint();
+        }));
+
+        return bar;
     }
 
     function renderFamilyToFixRow(family) {
@@ -302,12 +630,13 @@
 
         var card = el('div', 'card mb-3 import-review-ready');
 
-        var header = el('div', 'card-header d-flex justify-content-between align-items-center flex-wrap');
+        var header = el('div', 'card-header d-flex justify-content-between align-items-center flex-wrap gap-2');
         var left = el('span', 'fw-semibold');
         left.appendChild(el('span', 'badge bg-success me-2', ready.length));
         left.appendChild(document.createTextNode('Ready to import'));
         header.appendChild(left);
 
+        var right = el('div', 'd-flex align-items-center gap-2 flex-wrap');
         var hint;
         if (!ready.length && !appends) {
             hint = 'Nothing here is ready to save yet.';
@@ -316,7 +645,25 @@
         } else {
             hint = 'These will be saved when you press Confirm import.';
         }
-        header.appendChild(el('small', 'text-muted', hint));
+        right.appendChild(el('small', 'text-muted', hint));
+
+        // Everything below the header lives in one container so it can be collapsed to let
+        // the operator focus on the problems above.
+        var content = el('div', 'import-review-ready-content');
+
+        if (ready.length) {
+            var showLabel = 'Show ready to import (' + ready.length + ')';
+            var toggle = el('button', 'btn btn-sm btn-outline-success', readyCollapsed ? showLabel : 'Hide ready to import');
+            toggle.type = 'button';
+            toggle.addEventListener('click', function () {
+                readyCollapsed = !readyCollapsed;
+                content.hidden = readyCollapsed;
+                toggle.textContent = readyCollapsed ? showLabel : 'Hide ready to import';
+            });
+            right.appendChild(toggle);
+        }
+
+        header.appendChild(right);
         card.appendChild(header);
 
         if (!ready.length) {
@@ -324,7 +671,8 @@
             body.appendChild(el('p', 'text-muted small mb-0', appends > 0
                 ? 'No NEW families — but ' + appends + ' member(s) will be added to families already in the system (see the list above).'
                 : 'No new families are ready. Every group either has an issue to fix, or is already in the system.'));
-            card.appendChild(body);
+            content.appendChild(body);
+            card.appendChild(content);
 
             return card;
         }
@@ -348,13 +696,16 @@
         table.appendChild(tbody);
         wrap.appendChild(table);
         body2.appendChild(wrap);
-        card.appendChild(body2);
+        content.appendChild(body2);
 
         if (appends > 0) {
             var foot = el('div', 'card-footer small text-muted');
             foot.textContent = 'Plus ' + appends + ' member(s) being added to families already in the system.';
-            card.appendChild(foot);
+            content.appendChild(foot);
         }
+
+        content.hidden = readyCollapsed;
+        card.appendChild(content);
 
         return card;
     }
@@ -381,247 +732,6 @@
         tr.appendChild(notes);
 
         return tr;
-    }
-
-    // How to read the report + the view switch.
-    function renderToolbar() {
-        var bar = el('div', 'd-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 import-review-toolbar');
-
-        var help = el('div', 'small text-muted');
-        help.appendChild(el('strong', null, 'Fix these in your Excel file, then upload it again. '));
-        help.appendChild(document.createTextNode(
-            'Each issue shows the exact cell — click it to copy, then press Ctrl+G in Excel and paste to jump straight there.'
-        ));
-        bar.appendChild(help);
-
-        var switcher = el('div', 'btn-group btn-group-sm');
-        [['type', 'By problem'], ['row', 'By row']].forEach(function (pair) {
-            var btn = el('button', 'btn ' + (view === pair[0] ? 'btn-primary' : 'btn-outline-primary') + ' js-view', pair[1]);
-            btn.type = 'button';
-            btn.dataset.view = pair[0];
-            switcher.appendChild(btn);
-        });
-        bar.appendChild(switcher);
-
-        return bar;
-    }
-
-    // -- grouped by problem type -----------------------------------------------
-
-    function renderGroup(group) {
-        var card = el('div', 'card mb-3 import-review-group');
-
-        var header = el('div', 'card-header d-flex justify-content-between align-items-center flex-wrap');
-        var left = el('span', 'fw-semibold');
-        var badgeClass = group.severity === 'warning' ? 'bg-warning text-dark' : 'bg-danger';
-        left.appendChild(el('span', 'badge me-2 ' + badgeClass, group.count));
-        left.appendChild(document.createTextNode(group.label || group.code));
-        header.appendChild(left);
-        header.appendChild(el('small', 'text-muted', group.hint || ''));
-        card.appendChild(header);
-
-        var body = el('div', isFamilyCode(group.code) ? 'card-body' : 'card-body p-0');
-        body.appendChild(isFamilyCode(group.code) ? renderFamilyPanels(group) : renderIssueTable(group.items));
-        card.appendChild(body);
-
-        return card;
-    }
-
-    function isFamilyCode(code) {
-        return code === 'FP-ADDR' || code === 'HEAD-NONE' || code === 'HEAD-MULTI';
-    }
-
-    // Flat table of issues: the cell to fix, what's in it now, and the problem.
-    function renderIssueTable(items) {
-        var wrap = el('div', 'table-responsive');
-        var table = el('table', 'table table-sm mb-0 align-middle import-review-table');
-
-        var thead = el('thead');
-        var htr = el('tr');
-        ['Cell', 'Row', 'QR', 'Person', 'Column', 'Value now', 'What to do'].forEach(function (h) {
-            htr.appendChild(el('th', null, h));
-        });
-        thead.appendChild(htr);
-        table.appendChild(thead);
-
-        var tbody = el('tbody');
-        items.forEach(function (item) {
-            tbody.appendChild(renderIssueRow(item));
-        });
-        table.appendChild(tbody);
-        wrap.appendChild(table);
-
-        return wrap;
-    }
-
-    function renderIssueRow(item) {
-        var tr = el('tr');
-
-        var cellTd = el('td');
-        cellTd.appendChild(cellRef(item.cell));
-        tr.appendChild(cellTd);
-
-        tr.appendChild(el('td', 'text-nowrap', item.sheetRow != null ? item.sheetRow : '—'));
-        tr.appendChild(el('td', 'text-nowrap', item.familyNo || '—'));
-        tr.appendChild(el('td', null, item.name || '—'));
-        tr.appendChild(el('td', 'text-nowrap small', item.column || '—'));
-
-        var valueTd = el('td', 'small');
-        // NB: "0" is a real value (a zero QR) — don't let it fall into the blank branch.
-        if (item.value !== '' && item.value != null) {
-            valueTd.appendChild(el('code', 'import-review-value', item.value));
-        } else {
-            valueTd.appendChild(el('span', 'text-muted', '(blank)'));
-        }
-        tr.appendChild(valueTd);
-
-        tr.appendChild(el('td', 'small', item.message));
-
-        return tr;
-    }
-
-    // -- family-structure problems: show the whole family for context -----------
-
-    function renderFamilyPanels(group) {
-        var wrap = el('div', 'd-flex flex-column gap-3');
-
-        group.items.forEach(function (item) {
-            wrap.appendChild(renderFamilyPanel(item));
-        });
-
-        return wrap;
-    }
-
-    function renderFamilyPanel(item) {
-        var panel = el('div', 'import-review-family border rounded p-2');
-        panel.appendChild(el('div', 'fw-semibold', 'Family ' + (item.familyNo || '')));
-
-        var sev = item.severity === 'warning' ? 'warning' : 'danger';
-        panel.appendChild(el('div', 'small fw-semibold mb-2 text-' + sev, item.message));
-
-        var wrap = el('div', 'table-responsive');
-        var table = el('table', 'table table-sm mb-0 align-middle import-review-table');
-
-        var thead = el('thead');
-        var htr = el('tr');
-        ['Row', 'Person', 'Relationship', 'Barangay', 'Address', 'QR', 'Cells'].forEach(function (h) {
-            htr.appendChild(el('th', null, h));
-        });
-        thead.appendChild(htr);
-        table.appendChild(thead);
-
-        var tbody = el('tbody');
-        (item.familyRows || []).forEach(function (r) {
-            var flagged = item.sheetRow != null && Number(item.sheetRow) === Number(r.sheetRow);
-            tbody.appendChild(renderFamilyContextRow(r, flagged, item.code));
-        });
-        table.appendChild(tbody);
-        wrap.appendChild(table);
-        panel.appendChild(wrap);
-
-        return panel;
-    }
-
-    function renderFamilyContextRow(r, flagged, code) {
-        var tr = el('tr');
-
-        if (flagged) {
-            tr.className = 'import-review-flagged';
-        }
-
-        tr.appendChild(el('td', 'text-nowrap', r.sheetRow));
-
-        var personCell = el('td');
-        personCell.appendChild(document.createTextNode(r.name || '—'));
-
-        // Only the Head fills the address, so in a head-less family the row carrying one
-        // is the likely Head — say so instead of making the operator guess.
-        if (flagged && code === 'HEAD-NONE') {
-            personCell.appendChild(document.createTextNode(' '));
-            personCell.appendChild(el('span', 'badge bg-primary', 'Likely Head'));
-        } else if (flagged && code === 'HEAD-MULTI') {
-            personCell.appendChild(document.createTextNode(' '));
-            personCell.appendChild(el('span', 'badge bg-danger', 'Extra Head'));
-        }
-        tr.appendChild(personCell);
-
-        tr.appendChild(el('td', 'small', r.relationship || '—'));
-        tr.appendChild(el('td', 'small', r.barangay || '—'));
-        tr.appendChild(el('td', 'small import-review-addr', r.address || '—'));
-        tr.appendChild(el('td', 'small', r.qr || '—'));
-
-        // The two cells you'd normally change to fix a family problem.
-        var cells = el('td', 'text-nowrap');
-        cells.appendChild(cellRef(r.qrCell));
-        cells.appendChild(document.createTextNode(' '));
-        cells.appendChild(cellRef(r.relCell));
-        tr.appendChild(cells);
-
-        return tr;
-    }
-
-    // -- ordered straight down the sheet ---------------------------------------
-
-    function renderByRow() {
-        var card = el('div', 'card mb-3 import-review-group');
-        var header = el('div', 'card-header fw-semibold');
-        header.textContent = 'Every issue, in sheet order';
-        card.appendChild(header);
-
-        var body = el('div', 'card-body p-0');
-        var wrap = el('div', 'table-responsive');
-        var table = el('table', 'table table-sm mb-0 align-middle import-review-table');
-
-        var thead = el('thead');
-        var htr = el('tr');
-        ['Row', 'QR', 'Person', 'Cell', 'Column', 'Value now', 'What to do'].forEach(function (h) {
-            htr.appendChild(el('th', null, h));
-        });
-        thead.appendChild(htr);
-        table.appendChild(thead);
-
-        var tbody = el('tbody');
-        (review.byRow || []).forEach(function (entry) {
-            entry.issues.forEach(function (item, i) {
-                var tr = el('tr');
-
-                if (i === 0) {
-                    tr.className = 'import-review-rowstart';
-                }
-
-                tr.appendChild(el('td', 'text-nowrap fw-semibold', i === 0 ? (entry.sheetRow != null ? entry.sheetRow : '—') : ''));
-                tr.appendChild(el('td', 'text-nowrap', i === 0 ? (entry.familyNo || '—') : ''));
-                tr.appendChild(el('td', null, i === 0 ? (entry.name || '—') : ''));
-
-                var cellTd = el('td');
-                cellTd.appendChild(cellRef(item.cell));
-                tr.appendChild(cellTd);
-
-                tr.appendChild(el('td', 'text-nowrap small', item.column || '—'));
-
-                var valueTd = el('td', 'small');
-                if (item.value) {
-                    valueTd.appendChild(el('code', 'import-review-value', item.value));
-                } else {
-                    valueTd.appendChild(el('span', 'text-muted', '(blank)'));
-                }
-                tr.appendChild(valueTd);
-
-                var what = el('td', 'small');
-                var badge = el('span', 'badge me-1 ' + (item.severity === 'warning' ? 'bg-warning text-dark' : 'bg-danger'), item.severity === 'warning' ? 'warn' : 'fix');
-                what.appendChild(badge);
-                what.appendChild(document.createTextNode(item.message));
-                tr.appendChild(what);
-
-                tbody.appendChild(tr);
-            });
-        });
-        table.appendChild(tbody);
-        wrap.appendChild(table);
-        body.appendChild(wrap);
-        card.appendChild(body);
-
-        groupsEl.appendChild(card);
     }
 
     // -- network ---------------------------------------------------------------
@@ -708,30 +818,39 @@
 
     window.importReviewApply = applyReview;
 
-    function removeFamily(familyNo) {
-        if (!familyNo || !familyBaseUrl) {
+    function removeFamily(familyNo, row) {
+        if (!familyBaseUrl) {
             return;
         }
 
-        if (!window.confirm('Remove family ' + familyNo + ' from this import? Its rows will be dropped.')) {
+        // A blank-QR row is keyed by its sheet row; a normal family by its QR.
+        var isRow = row != null && row !== '';
+        var label = isRow ? 'row ' + row : 'family ' + familyNo;
+        var extra = isRow ? { import_row: row } : { import_family_no: familyNo };
+
+        if (!isRow && !familyNo) {
             return;
         }
 
-        setStatus('Removing family ' + familyNo + '...');
+        if (!window.confirm('Remove ' + label + ' from this import? Its rows will be dropped.')) {
+            return;
+        }
 
-        // QR travels in the POST body, not the path (raw QR cells are not URL-path-safe).
-        postForm(familyBaseUrl + '/remove', { import_family_no: familyNo }).then(function (result) {
+        setStatus('Removing ' + label + '...');
+
+        // Keys travel in the POST body, not the path (raw QR cells are not URL-path-safe).
+        postForm(familyBaseUrl + '/remove', extra).then(function (result) {
             var data = result.data || {};
 
             if (result.ok && data.review) {
                 applyReview(data.review, data.csrf);
-                setStatus('Family ' + familyNo + ' removed.');
+                setStatus(data.message || 'Removed.');
 
                 return;
             }
 
             refreshCsrf(data.csrf);
-            setStatus(data.message || 'Could not remove the family. Please try again.');
+            setStatus(data.message || 'Could not remove. Please try again.');
         }).catch(function () {
             setStatus('A network error occurred. Please try again.');
         });
@@ -782,58 +901,11 @@
             return;
         }
 
-        var cellBtn = target.closest('.import-review-cell');
-        if (cellBtn) {
-            copyCell(cellBtn);
-
-            return;
-        }
-
         var removeBtn = target.closest('.js-import-fix-remove');
         if (removeBtn) {
-            removeFamily(removeBtn.dataset.familyNo);
-
-            return;
-        }
-
-        var viewBtn = target.closest('.js-view');
-        if (viewBtn) {
-            view = viewBtn.dataset.view;
-            render();
+            removeFamily(removeBtn.dataset.familyNo, removeBtn.dataset.row);
         }
     });
-
-    function copyCell(button) {
-        var cell = button.dataset.cell || '';
-
-        var done = function () {
-            var was = button.textContent;
-            button.textContent = 'Copied ' + cell;
-            button.classList.add('btn-success');
-            button.classList.remove('btn-outline-secondary');
-            setStatus('Copied "' + cell + '" — press Ctrl+G in Excel and paste to jump to it.');
-            window.setTimeout(function () {
-                button.textContent = was;
-                button.classList.remove('btn-success');
-                button.classList.add('btn-outline-secondary');
-            }, 1200);
-        };
-
-        if (window.navigator.clipboard && window.navigator.clipboard.writeText) {
-            window.navigator.clipboard.writeText(cell).then(done).catch(function () { done(); });
-
-            return;
-        }
-
-        // Fallback for non-secure contexts.
-        var tmp = document.createElement('input');
-        tmp.value = cell;
-        document.body.appendChild(tmp);
-        tmp.select();
-        try { document.execCommand('copy'); } catch (e) { /* nothing to do */ }
-        document.body.removeChild(tmp);
-        done();
-    }
 
     confirmBtn.addEventListener('click', confirmImport);
     cancelBtn.addEventListener('click', cancelImport);

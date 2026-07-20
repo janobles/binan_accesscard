@@ -57,9 +57,8 @@ $reviewJson = json_encode($review, JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_
             <h2 class="h4 mb-1">Check before importing</h2>
             <p class="text-muted mb-0">
                 File: <strong id="reviewFileName"></strong>. Nothing is saved until you press
-                <strong>Confirm import</strong>. Fix a family right here with <strong>Edit</strong>,
-                or correct it <strong>in the spreadsheet</strong> and upload again — either keeps the
-                file and the records in step.
+                <strong>Confirm import</strong>. Fix a flagged family right here with
+                <strong>Edit</strong>, or <strong>Remove</strong> it from this import.
             </p>
         </div>
     </div>

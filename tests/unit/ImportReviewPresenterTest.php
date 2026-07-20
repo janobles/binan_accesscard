@@ -216,6 +216,34 @@ final class ImportReviewPresenterTest extends CIUnitTestCase
         }
     }
 
+    public function testBlankQrRowsAreListedAsUnassignedWithTheirIssues(): void
+    {
+        $review = (new ImportReviewPresenter())->build([
+            'rows' => [
+                $this->row(12, '', 'Head'),       // blank QR -> unassigned
+                $this->row(13, '6001', 'Head'),   // has a QR -> not unassigned
+            ],
+            'errors' => [$this->error(12, '', 'QR-01', 'blocking')],
+        ]);
+
+        $this->assertCount(1, $review['unassigned']);
+        $this->assertSame(12, $review['unassigned'][0]['sheetRow']);
+        $this->assertSame('Juan Cruz', $review['unassigned'][0]['person']);
+        $this->assertContains('Missing QR Number', array_column($review['unassigned'][0]['types'], 'label'));
+    }
+
+    public function testFileNoticesSurfaceWholeFileErrors(): void
+    {
+        $review = (new ImportReviewPresenter())->build([
+            'rows'   => [],
+            'errors' => [
+                ['sheetRow' => null, 'familyNo' => '', 'field' => null, 'code' => 'EMPTY', 'message' => 'No family rows were found.', 'severity' => 'blocking'],
+            ],
+        ]);
+
+        $this->assertSame(['No family rows were found.'], $review['fileNotices']);
+    }
+
     // -- helpers ---------------------------------------------------------------
 
     /**

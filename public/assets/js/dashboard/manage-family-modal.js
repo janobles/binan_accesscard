@@ -198,6 +198,66 @@
         });
     }
 
+    // The personal fields shared by the head block (head_*) and each member row (members[i][*]).
+    var PERSON_FIELDS = ['lastname', 'firstname', 'middlename', 'suffix', 'birthday', 'sex',
+        'civilstatus', 'contactnumber', 'religion', 'education', 'job', 'salary'];
+
+    function readPersonField(control) {
+        if (!control) {
+            return '';
+        }
+
+        return control.matches('.js-other-select') ? selectedFieldValue(control) : control.value;
+    }
+
+    function writePersonField(control, value) {
+        if (!control) {
+            return;
+        }
+
+        if (control.matches('.js-other-select')) {
+            setSelectValueWithOther(control, value);
+        } else {
+            control.value = value;
+        }
+    }
+
+    // "Set as Head": swap the person fields between the head block and this member row.
+    // Address / barangay / QR stay with the head position (they describe the household); the
+    // demoted head becomes a member whose relationship is cleared for the operator to re-pick.
+    function promoteMemberToHead(root, row) {
+        var form = root.querySelector('form');
+        var prefix = row.dataset.memberFieldPrefix;
+
+        if (!form || !prefix) {
+            return;
+        }
+
+        var memberField = function (key) {
+            var name = (prefix + '[' + key + ']').replace(/(["\\])/g, '\\$1');
+
+            return row.querySelector('[name="' + name + '"]');
+        };
+
+        PERSON_FIELDS.forEach(function (key) {
+            var headCtrl = form.querySelector('[name="head_' + key + '"]');
+            var memberCtrl = memberField(key);
+
+            if (!headCtrl || !memberCtrl) {
+                return;
+            }
+
+            var headVal = readPersonField(headCtrl);
+            var memberVal = readPersonField(memberCtrl);
+            writePersonField(headCtrl, memberVal);
+            writePersonField(memberCtrl, headVal);
+        });
+
+        writePersonField(memberField('relationship'), '');
+
+        renderHeadSummary(root);
+    }
+
     // ---- field error helper ------------------------------------------------
 
     function setFieldError(field, message) {
@@ -1248,6 +1308,20 @@
 
                 if (row) {
                     row.remove();
+                    scheduleSave(root);
+                }
+
+                return;
+            }
+
+            var setHeadButton = event.target.closest('[data-family-set-head]');
+
+            if (setHeadButton) {
+                event.preventDefault();
+                var headRow = setHeadButton.closest('[data-family-member-row]');
+
+                if (headRow) {
+                    promoteMemberToHead(root, headRow);
                     scheduleSave(root);
                 }
             }

@@ -43,7 +43,10 @@ $renderMemberRow = static function ($index, array $m = []) use (
     <div class="family-member-card" data-family-member-row>
         <div class="family-member-card-header">
             <strong class="family-member-card-title">Member</strong>
-            <button type="button" class="btn btn-sm btn-outline-danger" data-family-member-remove>Remove</button>
+            <div class="btn-group btn-group-sm">
+                <button type="button" class="btn btn-outline-primary" data-family-set-head>Set as Head</button>
+                <button type="button" class="btn btn-outline-danger" data-family-member-remove>Remove</button>
+            </div>
         </div>
         <div class="row g-3">
             <?= family_modal_render_person_fields([
@@ -186,6 +189,10 @@ $renderMemberRow = static function ($index, array $m = []) use (
                  modal is replacing (see FamilyImportController::reviewFamilySave). */ ?>
         <?php if (($importFamilyNo ?? '') !== ''): ?>
             <input type="hidden" name="import_family_no" value="<?= esc((string) $importFamilyNo, 'attr') ?>">
+        <?php endif; ?>
+        <?php /* Import-fix context for a blank-QR row: keyed by its sheet row, not a QR. */ ?>
+        <?php if ((int) ($importRow ?? 0) > 0): ?>
+            <input type="hidden" name="import_row" value="<?= esc((string) $importRow, 'attr') ?>">
         <?php endif; ?>
 
         <div class="btn-toolbar family-entry-steps" role="toolbar" aria-label="Family record steps">

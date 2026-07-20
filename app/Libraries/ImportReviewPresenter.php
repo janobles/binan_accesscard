@@ -122,10 +122,15 @@ class ImportReviewPresenter
                 'warnings'    => (int) ($counts['warnings'] ?? 0),
                 'ready'       => count($ready),
             ],
-            'groups'   => $groups,
-            'byRow'    => $byRowIdx,
-            'ready'    => $ready,
-            'families' => $this->familiesToFix($byQr, $byRow, $errors),
+            'groups'     => $groups,
+            'byRow'      => $byRowIdx,
+            'ready'      => $ready,
+            'families'   => $this->familiesToFix($byQr, $byRow, $errors),
+            // Rows with a blank QR are never grouped into a family — surfaced so the operator
+            // can give them a QR and fix them in place.
+            'unassigned' => $this->unassignedRows($rows, $errors),
+            // Whole-file problems (unreadable / empty) — nothing to edit; upload a fixed file.
+            'fileNotices' => $this->fileNotices($errors),
         ];
     }
 
@@ -247,6 +252,75 @@ class ImportReviewPresenter
 
         usort($out, static fn (array $a, array $b): int =>
             (($a['severity'] === 'blocking') ? 0 : 1) <=> (($b['severity'] === 'blocking') ? 0 : 1));
+
+        return $out;
+    }
+
+    /**
+     * Every staged row with a blank QR — the importer never groups these into a family, so
+     * they carry no QR to Edit by. Each is listed with its own issue types so the operator can
+     * open it, type a QR, and fix it in place (keyed by sheet row, not QR).
+     *
+     * @param list<array>  $rows
+     * @param list<array>  $errors
+     * @return list<array{sheetRow:int, person:string, types:list<array>}>
+     */
+    private function unassignedRows(array $rows, array $errors): array
+    {
+        $codesByRow = [];
+
+        foreach ($errors as $error) {
+            $sheetRow = $error['sheetRow'] ?? null;
+            $code     = (string) ($error['code'] ?? '');
+
+            if ($sheetRow === null || $code === '') {
+                continue;
+            }
+
+            $sev = (($error['severity'] ?? 'blocking') === 'blocking') ? 'blocking' : 'warning';
+
+            if (! isset($codesByRow[(int) $sheetRow][$code]) || $sev === 'blocking') {
+                $codesByRow[(int) $sheetRow][$code] = $sev;
+            }
+        }
+
+        $out = [];
+
+        foreach ($rows as $entry) {
+            $data = is_array($entry['data'] ?? null) ? $entry['data'] : [];
+
+            if (trim((string) ($data['familyno'] ?? '')) !== '') {
+                continue;
+            }
+
+            $sheetRow = (int) ($entry['sheetRow'] ?? 0);
+
+            $out[] = [
+                'sheetRow' => $sheetRow,
+                'person'   => trim((string) ($data['firstname'] ?? '') . ' ' . (string) ($data['lastname'] ?? '')),
+                'types'    => $this->issueTypes($codesByRow[$sheetRow] ?? []),
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * Whole-file problems (unreadable / empty) — there is nothing to edit, so these surface as
+     * a single page notice rather than an editable row.
+     *
+     * @param list<array> $errors
+     * @return list<string>
+     */
+    private function fileNotices(array $errors): array
+    {
+        $out = [];
+
+        foreach ($errors as $error) {
+            if (in_array((string) ($error['code'] ?? ''), ['FILE', 'EMPTY'], true)) {
+                $out[] = (string) ($error['message'] ?? '');
+            }
+        }
 
         return $out;
     }

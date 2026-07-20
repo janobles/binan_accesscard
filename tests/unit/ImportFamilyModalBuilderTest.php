@@ -167,6 +167,39 @@ final class ImportFamilyModalBuilderTest extends CIUnitTestCase
         $this->assertSame(5, $rows[0]['sheetRow']);               // reused the -1 group's row
     }
 
+    public function testToStagedRowsForRowReusesTheRowAndAppliesTheTypedQr(): void
+    {
+        $bundle = ['rows' => [
+            ['sheetRow' => 12, 'data' => ['familyno' => '', 'relationship' => '']],
+            ['sheetRow' => 13, 'data' => ['familyno' => '6001', 'relationship' => 'Head']],
+        ]];
+
+        // Operator opened the blank-QR row 12 and typed QR 700.
+        $rows = (new ImportFamilyModalBuilder())->toStagedRowsForRow($this->headPost('700'), $bundle, 12);
+
+        $this->assertCount(1, $rows);
+        $this->assertSame(12, $rows[0]['sheetRow']);              // reused the row's own number
+        $this->assertSame('700', $rows[0]['data']['familyno']);  // typed QR applied
+        $this->assertSame('Head', $rows[0]['data']['relationship']);
+    }
+
+    public function testIssuesForRowReturnsOnlyThatRowsErrors(): void
+    {
+        $bundle = [
+            'rows' => [['sheetRow' => 12, 'data' => ['familyno' => '', 'firstname' => 'Juan', 'lastname' => 'Cruz']]],
+            'errors' => [
+                ['sheetRow' => 12, 'familyNo' => '', 'field' => 'familyno', 'message' => 'QR required', 'severity' => 'blocking'],
+                ['sheetRow' => 13, 'familyNo' => '', 'field' => 'sex', 'message' => 'other row', 'severity' => 'blocking'],
+            ],
+        ];
+
+        $issues = (new ImportFamilyModalBuilder())->issuesForRow($bundle, 12);
+
+        $this->assertCount(1, $issues);
+        $this->assertSame('QR Number', $issues[0]['column']);   // FIELD_LABELS['familyno']
+        $this->assertSame('Juan Cruz', $issues[0]['person']);
+    }
+
     // -- helpers ---------------------------------------------------------------
 
     /** A minimal head-only POST (no sectors/services, so no DB is touched). */

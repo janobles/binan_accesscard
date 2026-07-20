@@ -413,6 +413,16 @@ class FamilyImportController extends BaseController
             return '<div class="alert alert-danger mb-0">That import is no longer available to review.</div>';
         }
 
+        $builder = new ImportFamilyModalBuilder();
+        $action  = site_url($this->currentRouteBase() . '/import/review/' . $jobId . '/family/save');
+
+        // A blank-QR row is keyed by its sheet row (?row=), since it has no QR to key by.
+        $row = (int) $this->request->getGet('row');
+
+        if ($row > 0) {
+            return view('Family/family-modal', $builder->viewDataForRow($loaded['result'], $row, $action));
+        }
+
         // The QR group is passed as a query param, not a path segment: a QR cell can hold any
         // raw text (a negative number, "N/A", "5880.0", a slash) that is not URL-path-safe.
         $familyNo = trim((string) $this->request->getGet('fno'));
@@ -420,9 +430,6 @@ class FamilyImportController extends BaseController
         if ($familyNo === '') {
             return '<div class="alert alert-danger mb-0">No family was selected to edit.</div>';
         }
-
-        $builder = new ImportFamilyModalBuilder();
-        $action  = site_url($this->currentRouteBase() . '/import/review/' . $jobId . '/family/save');
 
         return view('Family/family-modal', $builder->viewData($loaded['result'], $familyNo, $action));
     }
@@ -448,28 +455,30 @@ class FamilyImportController extends BaseController
             return $this->jsonError('That import is no longer available to review.', 404);
         }
 
-        // The group being replaced is carried in the form's hidden import_family_no (a raw QR
-        // string, not URL-path-safe), so it is read from the POST, not the route.
-        $familyNo = trim((string) $this->request->getPost('import_family_no'));
+        $bundle  = $loaded['result'];
+        $builder = new ImportFamilyModalBuilder();
+        $post    = $this->request->getPost();
 
-        if ($familyNo === '') {
+        // A blank-QR row is keyed by import_row; a normal family by import_family_no.
+        $row      = (int) ($post['import_row'] ?? 0);
+        $familyNo = trim((string) ($post['import_family_no'] ?? ''));
+
+        if ($row > 0) {
+            $rows = $this->replaceRows($bundle, ['row' => $row], $builder->toStagedRowsForRow($post, $bundle, $row));
+        } elseif ($familyNo !== '') {
+            $rows = $this->replaceRows($bundle, ['fno' => $familyNo], $builder->toStagedRows($post, $bundle, $familyNo));
+        } else {
             return $this->jsonError('No family was selected to edit.', 422);
         }
-
-        $bundle   = $loaded['result'];
-        $builder  = new ImportFamilyModalBuilder();
-
-        $newRows = $builder->toStagedRows($this->request->getPost(), $bundle, $familyNo);
-        $rows    = $this->replaceFamilyRows($bundle, $familyNo, $newRows);
 
         $result = $this->revalidate($bundle, $rows);
         $this->restageReview($jobId, $result);
 
-        $newQr = trim((string) ($this->request->getPost('qr_control_no') ?? $familyNo));
+        $newQr = trim((string) ($post['qr_control_no'] ?? ''));
 
         return $this->response->setJSON([
             'status'  => 'success',
-            'message' => 'Family ' . ($newQr !== '' ? $newQr : $familyNo) . ' updated.',
+            'message' => $newQr !== '' ? 'Saved family ' . $newQr . '.' : 'Changes saved.',
             'review'  => (new ImportReviewPresenter())->build($result),
             'csrf'    => csrf_hash(),
         ]);
@@ -495,40 +504,53 @@ class FamilyImportController extends BaseController
             return $this->jsonError('That import is no longer available to review.', 404);
         }
 
-        // Raw QR string carried in the POST body (see reviewFamilySave), not the route.
-        $familyNo = trim((string) $this->request->getPost('import_family_no'));
+        $bundle   = $loaded['result'];
+        $row      = (int) ($this->request->getPost('import_row') ?? 0);
+        $familyNo = trim((string) ($this->request->getPost('import_family_no') ?? ''));
 
-        if ($familyNo === '') {
+        if ($row > 0) {
+            $rows    = $this->replaceRows($bundle, ['row' => $row], []);
+            $message = 'Row ' . $row . ' removed from this import.';
+        } elseif ($familyNo !== '') {
+            $rows    = $this->replaceRows($bundle, ['fno' => $familyNo], []);
+            $message = 'Family ' . $familyNo . ' removed from this import.';
+        } else {
             return $this->jsonError('No family was selected to remove.', 422);
         }
-
-        $bundle   = $loaded['result'];
-        $rows     = $this->replaceFamilyRows($bundle, $familyNo, []);
 
         $result = $this->revalidate($bundle, $rows);
         $this->restageReview($jobId, $result);
 
         return $this->response->setJSON([
             'status'  => 'success',
-            'message' => 'Family ' . $familyNo . ' removed from this import.',
+            'message' => $message,
             'review'  => (new ImportReviewPresenter())->build($result),
             'csrf'    => csrf_hash(),
         ]);
     }
 
     /**
-     * Returns the bundle's rows with one QR group's rows swapped for $replacement (an empty
-     * replacement just drops the group), ordered by sheet row.
+     * Returns the bundle's rows with the targeted rows swapped for $replacement (an empty
+     * replacement just drops them), ordered by sheet row. The target is either a whole QR
+     * group (`['fno' => qr]`) or a single blank-QR sheet row (`['row' => n]`).
      *
-     * @param list<array> $replacement
+     * @param array{fno?: string, row?: int} $key
+     * @param list<array>                    $replacement
      * @return list<array>
      */
-    private function replaceFamilyRows(array $bundle, string $familyNo, array $replacement): array
+    private function replaceRows(array $bundle, array $key, array $replacement): array
     {
         $rows = is_array($bundle['rows'] ?? null) ? $bundle['rows'] : [];
 
-        $kept = array_values(array_filter($rows, static fn (array $row): bool =>
-            trim((string) (($row['data'] ?? [])['familyno'] ?? '')) !== $familyNo));
+        if (isset($key['row'])) {
+            $target = (int) $key['row'];
+            $kept   = array_values(array_filter($rows, static fn (array $row): bool =>
+                (int) ($row['sheetRow'] ?? -1) !== $target));
+        } else {
+            $familyNo = (string) ($key['fno'] ?? '');
+            $kept     = array_values(array_filter($rows, static fn (array $row): bool =>
+                trim((string) (($row['data'] ?? [])['familyno'] ?? '')) !== $familyNo));
+        }
 
         $merged = array_merge($kept, $replacement);
 

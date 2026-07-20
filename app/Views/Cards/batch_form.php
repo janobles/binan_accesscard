@@ -56,19 +56,7 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
             </div>
         </form>
 
-        <hr class="my-3">
-
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-            <span id="cn-preview-count" class="text-muted small" aria-live="polite">Loading preview&hellip;</span>
-            <div class="d-flex align-items-center gap-2">
-                <span id="cn-batch-status" class="text-muted small" aria-live="polite"></span>
-                <button type="submit" form="cn-batch-form" class="<?= btn('generate') ?>" id="cn-batch-btn">
-                    <i class="bi bi-printer" aria-hidden="true"></i> Generate cards
-                </button>
-            </div>
-        </div>
-
-        <div class="table-responsive">
+        <div class="table-responsive mt-3">
             <table class="table manage-record-table align-middle w-100 mb-0" id="cn-preview-table">
                 <thead>
                     <tr><th scope="col">Control #</th><th scope="col">Head name</th><th scope="col">Barangay</th></tr>
@@ -77,6 +65,15 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
                     <tr><td colspan="3" class="text-muted">Loading&hellip;</td></tr>
                 </tbody>
             </table>
+        </div>
+    </div>
+    <div class="card-footer d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <span id="cn-preview-count" class="small text-muted" aria-live="polite">Loading preview&hellip;</span>
+        <div class="d-flex align-items-center gap-2">
+            <span id="cn-batch-status" class="small text-muted" aria-live="polite"></span>
+            <button type="submit" form="cn-batch-form" class="<?= btn('generate') ?>" id="cn-batch-btn">
+                <i class="bi bi-printer" aria-hidden="true"></i> Generate cards
+            </button>
         </div>
     </div>
 </div>
@@ -101,15 +98,12 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
                 <span class="text-muted small">Pick a head from the list OR type an exact control number, then Generate.</span>
             </div>
         </div>
-
-        <hr class="my-3">
-
-        <div class="d-flex flex-wrap justify-content-end align-items-center gap-2">
-            <span id="cn-single-status" class="text-muted small" aria-live="polite"></span>
-            <button type="button" class="<?= btn('generate') ?>" id="cn-single-btn">
-                <i class="bi bi-printer" aria-hidden="true"></i> Generate card
-            </button>
-        </div>
+    </div>
+    <div class="card-footer d-flex flex-wrap justify-content-end align-items-center gap-2">
+        <span id="cn-single-status" class="small text-muted" aria-live="polite"></span>
+        <button type="button" class="<?= btn('generate') ?>" id="cn-single-btn">
+            <i class="bi bi-printer" aria-hidden="true"></i> Generate card
+        </button>
     </div>
 </div>
 

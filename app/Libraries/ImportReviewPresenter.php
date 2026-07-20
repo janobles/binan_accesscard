@@ -143,8 +143,13 @@ class ImportReviewPresenter
      */
     private function familiesToFix(array $byQr, array $byRow, array $errors): array
     {
+        // Codes that mean this QR/family (or its people) are already on file.
+        $existingCodes = ['DUP-EXISTS' => true, 'DUP-DIFF' => true, 'ADD-MEMBER' => true];
+
         $blocking = [];
         $warnings = [];
+        $types    = [];   // [qr => [code => severity]] — distinct issue kinds per family
+        $existing = [];   // [qr => true] — already in the system
 
         foreach ($errors as $error) {
             $qr = trim((string) ($error['familyNo'] ?? ''));
@@ -153,10 +158,27 @@ class ImportReviewPresenter
                 continue;
             }
 
-            if (($error['severity'] ?? 'blocking') === 'blocking') {
+            $code = (string) ($error['code'] ?? '');
+            $sev  = (($error['severity'] ?? 'blocking') === 'blocking') ? 'blocking' : 'warning';
+
+            if ($sev === 'blocking') {
                 $blocking[$qr] = ($blocking[$qr] ?? 0) + 1;
             } else {
                 $warnings[$qr] = ($warnings[$qr] ?? 0) + 1;
+            }
+
+            // Keep one entry per code, upgrading to blocking if any instance blocks.
+            if ($code !== '' && (! isset($types[$qr][$code]) || $sev === 'blocking')) {
+                $types[$qr][$code] = $sev;
+            }
+
+            if (isset($existingCodes[$code])) {
+                $existing[$qr] = true;
+            }
+
+            // Only a HEAD already on file marks the whole family as on file (mirrors ready()).
+            if ($code === 'DUP-DB' && $this->isHeadRow($byRow[(int) ($error['sheetRow'] ?? 0)] ?? [])) {
+                $existing[$qr] = true;
             }
         }
 
@@ -193,10 +215,38 @@ class ImportReviewPresenter
                 'members'  => max(0, count($sheetRows) - 1),
                 'blocking' => $b,
                 'warnings' => $w,
+                'existing' => ! empty($existing[$qr]),
+                // Each distinct problem as {label, severity} so the row can list them all.
+                'types'    => $this->issueTypes($types[$qr] ?? []),
             ];
         }
 
         usort($out, static fn (array $a, array $b): int => ((int) ($a['sheetRow'] ?? 0)) <=> ((int) ($b['sheetRow'] ?? 0)));
+
+        return $out;
+    }
+
+    /**
+     * Turns a [code => severity] map into an ordered list of {code, label, severity}, blocking
+     * kinds first, using the same friendly labels as the grouped report.
+     *
+     * @param array<string, string> $codes
+     * @return list<array{code:string, label:string, severity:string}>
+     */
+    private function issueTypes(array $codes): array
+    {
+        $out = [];
+
+        foreach ($codes as $code => $severity) {
+            $out[] = [
+                'code'     => $code,
+                'label'    => self::GROUPS[$code]['label'] ?? $code,
+                'severity' => $severity,
+            ];
+        }
+
+        usort($out, static fn (array $a, array $b): int =>
+            (($a['severity'] === 'blocking') ? 0 : 1) <=> (($b['severity'] === 'blocking') ? 0 : 1));
 
         return $out;
     }

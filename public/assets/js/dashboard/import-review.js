@@ -231,20 +231,43 @@
 
         tr.appendChild(el('td', 'text-nowrap', family.sheetRow != null ? family.sheetRow : '—'));
         tr.appendChild(el('td', 'text-nowrap fw-semibold', family.qr || '—'));
-        tr.appendChild(el('td', null, family.head || '—'));
+
+        // Head of family, plus an "Already in system" emblem when the QR/family is on file.
+        var headTd = el('td');
+        headTd.appendChild(document.createTextNode(family.head || '—'));
+        if (family.existing) {
+            headTd.appendChild(document.createTextNode(' '));
+            var emblem = el('span', 'badge bg-info text-dark import-review-existing', 'Already in system');
+            emblem.title = 'This QR/family is already on file — the import skips it unless you change it.';
+            headTd.appendChild(emblem);
+        }
+        tr.appendChild(headTd);
+
         tr.appendChild(el('td', 'text-nowrap', family.members));
 
-        var issues = el('td', 'small');
-        var blocking = Number(family.blocking || 0);
-        var warnings = Number(family.warnings || 0);
-        if (blocking > 0) {
-            issues.appendChild(el('span', 'badge bg-danger me-1', blocking + ' to fix'));
-        }
-        if (warnings > 0) {
-            issues.appendChild(el('span', 'badge bg-warning text-dark', warnings + ' warning' + (warnings === 1 ? '' : 's')));
-        }
-        if (blocking === 0 && warnings === 0) {
-            issues.appendChild(el('span', 'text-success', 'No issues'));
+        // Every distinct issue as its own badge (red = must fix, amber = warning), so the
+        // worker sees all of them at a glance instead of just a count.
+        var issues = el('td', 'small import-review-issue-cell');
+        var types = family.types || [];
+        if (types.length) {
+            types.forEach(function (type) {
+                var cls = type.severity === 'blocking'
+                    ? 'badge bg-danger me-1 mb-1'
+                    : 'badge bg-warning text-dark me-1 mb-1';
+                issues.appendChild(el('span', cls, type.label || type.code));
+            });
+        } else {
+            var blocking = Number(family.blocking || 0);
+            var warnings = Number(family.warnings || 0);
+            if (blocking > 0) {
+                issues.appendChild(el('span', 'badge bg-danger me-1', blocking + ' to fix'));
+            }
+            if (warnings > 0) {
+                issues.appendChild(el('span', 'badge bg-warning text-dark', warnings + ' warning' + (warnings === 1 ? '' : 's')));
+            }
+            if (blocking === 0 && warnings === 0) {
+                issues.appendChild(el('span', 'text-success', 'No issues'));
+            }
         }
         tr.appendChild(issues);
 

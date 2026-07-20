@@ -170,6 +170,37 @@ final class ImportReviewPresenterTest extends CIUnitTestCase
         $this->assertSame(3, $families[0]['sheetRow']);
     }
 
+    public function testFamiliesToFixListsEachDistinctIssueTypeBlockingFirst(): void
+    {
+        $families = $this->families(
+            [$this->row(3, '6001', 'Head')],
+            [
+                $this->error(3, '6001', 'SEX', 'blocking'),
+                $this->error(3, '6001', 'BRGY', 'warning'),
+                $this->error(3, '6001', 'SEX', 'blocking'),   // duplicate code -> collapsed
+            ],
+        );
+
+        $labels = array_column($families[0]['types'], 'label');
+
+        $this->assertContains('Invalid sex', $labels);
+        $this->assertContains('Barangay not recognised', $labels);
+        $this->assertCount(2, $labels);                               // SEX de-duplicated
+        $this->assertSame('blocking', $families[0]['types'][0]['severity']); // blocking first
+        $this->assertFalse($families[0]['existing']);
+    }
+
+    public function testAFamilyAlreadyInTheSystemCarriesTheExistingFlag(): void
+    {
+        $families = $this->families(
+            [$this->row(3, '6001', 'Head')],
+            [$this->error(3, '6001', 'DUP-EXISTS', 'warning')],
+        );
+
+        $this->assertCount(1, $families);
+        $this->assertTrue($families[0]['existing']);
+    }
+
     public function testAFamilyWithANonNumericQrIsStillListedToFixWithItsQrIntact(): void
     {
         // "-1", "N/A", "5880.0" etc. reach the review as raw QR text. They must still be

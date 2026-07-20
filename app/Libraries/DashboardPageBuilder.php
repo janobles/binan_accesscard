@@ -11,8 +11,8 @@ use App\Models\Lookups\SectorModel;
 use App\Models\Lookups\ServiceModel;
 use App\Models\Auth\UserModel;
 use App\Models\Scanner\AidDistributionModel;
-use App\Models\Scanner\AidStatsModel;
 use App\Models\Scanner\AidTypeModel;
+use App\Models\Scanner\AidStatsModel;
 use App\Models\Scanner\DistributionBatchModel;
 use App\Support\FamilyProfilingFormV2;
 use App\Libraries\RoleAccess;
@@ -110,11 +110,11 @@ class DashboardPageBuilder
             ? $this->buildLookupListData(new CategoryModel(), 'admin/categories', 'categoryID')
             : [];
 
-        // Aid-type/batch/distribution data for the Distribution hub, gated so
-        // other pages don't run these queries.
-        $isDistribution = $activePage === 'distribution';
-        $aidTypeModel   = model(AidTypeModel::class);
-        $batchModel     = model(DistributionBatchModel::class);
+        // Batch/distribution data for the Batches and Distributions pages,
+        // gated so other pages don't run these queries.
+        $isBatches       = $activePage === 'batches';
+        $isDistributions = $activePage === 'distributions';
+        $batchModel      = model(DistributionBatchModel::class);
 
         // Overall reports (combined totals + per-kiosk table), batch-scoped only
         // (no date filter). Gated so other pages don't run these queries.
@@ -170,9 +170,11 @@ class DashboardPageBuilder
                 'sectors'      => $layoutModel->navActive($activePage, 'sectors'),
                 'services'     => $layoutModel->navActive($activePage, 'services'),
                 'categories'   => $layoutModel->navActive($activePage, 'categories'),
-                'cards'        => $layoutModel->navActive($activePage, 'cards'),
-                'distribution' => $layoutModel->navActive($activePage, 'distribution'),
-                'reports'      => $layoutModel->navActive($activePage, 'reports'),
+                'aidtypes'     => $layoutModel->navActive($activePage, 'aidtypes'),
+                'cards'         => $layoutModel->navActive($activePage, 'cards'),
+                'batches'       => $layoutModel->navActive($activePage, 'batches'),
+                'distributions' => $layoutModel->navActive($activePage, 'distributions'),
+                'reports'       => $layoutModel->navActive($activePage, 'reports'),
             ],
             'adminAccounts'      => array_values(array_filter($visibleAccounts, static fn ($account) => $account['role'] === 'administrator')),
             // 'encoder' is the raw DB enum value for the Employee role (surfaced as
@@ -192,11 +194,11 @@ class DashboardPageBuilder
             'sectorListData'     => $sectorListData,
             'serviceListData'    => $serviceListData,
             'categoryListData'   => $categoryListData,
-            'aidTypes'           => $isDistribution ? $aidTypeModel->all() : [],
-            'activeAidTypes'     => $isDistribution ? $aidTypeModel->active() : [],
-            'batches'            => $isDistribution ? $batchModel->allBatches() : [],
-            'activeBatch'        => $isDistribution ? $batchModel->activeBatch() : null,
-            'distributions'      => $isDistribution ? model(AidDistributionModel::class)->allDistributions() : [],
+            'batches'            => $isBatches ? $batchModel->allBatches() : [],
+            'activeBatch'        => $isBatches ? $batchModel->activeBatch() : null,
+            'activeAidTypes'     => $isBatches ? model(AidTypeModel::class)->active() : [],
+            'aidTypes'           => $activePage === 'aidtypes' ? model(AidTypeModel::class)->all() : [],
+            'distributions'      => $isDistributions ? model(AidDistributionModel::class)->allDistributions() : [],
             'reportsBatches'     => $reportsData['reportsBatches'],
             'reportsBatchId'     => $reportsData['reportsBatchId'],
             'reportsBatchName'   => $reportsData['reportsBatchName'],

@@ -161,3 +161,6 @@ _modules/*
 .superpowers/
 
 sessions.json
+
+# Playwright MCP
+.playwright-mcp/

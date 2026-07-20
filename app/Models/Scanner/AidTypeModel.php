@@ -5,8 +5,9 @@ namespace App\Models\Scanner;
 use CodeIgniter\Model;
 
 /**
- * Aid-type lookup for the scan log dropdown. Isolated from the `services`
- * table per the scanner-module boundary. CRUD is a later spec; this reads only.
+ * Aid-type reference lookup (Financial/Rice/Grocery, admin-editable) backing
+ * the admin/aidtypes page and the batch-open modal. Isolated from the
+ * `services` table: aid types are their own concept, not services/programs.
  */
 class AidTypeModel extends Model
 {

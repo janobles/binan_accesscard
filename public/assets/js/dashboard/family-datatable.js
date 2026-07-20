@@ -221,6 +221,24 @@
                 }
 
                 applyCurrentPageQuickSearch();
+
+                // Move DataTables info and paging elements to the card footer
+                var dtInfo = tableElement.closest('.dt-container').querySelector('.dt-info');
+                var dtPaging = tableElement.closest('.dt-container').querySelector('.dt-paging');
+                var footerLeft = document.getElementById('familyFooterLeft');
+                var footerRight = document.getElementById('familyFooterRight');
+                
+                if (dtInfo && footerLeft) {
+                    footerLeft.appendChild(dtInfo);
+                }
+                if (dtPaging && footerRight) {
+                    footerRight.appendChild(dtPaging);
+                    // Override DataTables default pagination classes to strictly match Bootstrap 5
+                    var paginationUl = dtPaging.querySelector('.pagination');
+                    if (paginationUl) {
+                        paginationUl.classList.add('pagination-sm', 'm-0');
+                    }
+                }
             }
         });
 

@@ -1,32 +1,14 @@
 <?php
 /**
  * Distributions log body: client-side filter toolbar + distributions table.
- * Ported from Scanner/manage-distributions-body.php for the admin
- * distribution hub (void action moved off the old scanner shell
- * to admin/distributions/void/*). Rendered inside components/card by
- * Admin/layout.php's distribution block (vars: distributions, aidTypes). Filtering/paging
- * handled by the inline script in Admin/layout.php's distribution block.
+ * Rendered inside components/card by Admin/layout.php's distributions block
+ * (vars: distributions). Each row shows the aid type the batch handed out.
+ * Filtering/paging handled by the inline script in
+ * Admin/layout.php's distributions block.
  */
 ?>
 <?php /* Filter bar + controls row: pure Bootstrap grid/utilities inside the
          card-body's own padding (Manage Records standard). */ ?>
-<div class="row g-2 align-items-center mb-3">
-          <div class="col-12 col-lg">
-            <input class="form-control" type="search" id="distSearch" placeholder="Search the distributions log" aria-label="Search the distributions log" autocomplete="off">
-          </div>
-          <div class="col-12 col-lg-auto">
-            <select class="form-select" id="distAidFilter" aria-label="Filter by aid type">
-              <option value="">All aid types</option>
-              <?php foreach ($aidTypes as $t): ?>
-                <option value="<?= esc($t['name'], 'attr') ?>"><?= esc($t['name']) ?></option>
-              <?php endforeach; ?>
-            </select>
-          </div>
-          <div class="col-12 col-lg-auto">
-            <button class="<?= btn('clear') ?> w-100" type="button" id="distClear">Clear</button>
-          </div>
-        </div>
-
         <?= view('components/table_controls', [
             'searchId' => 'distLocalSearch',
             'searchAria' => 'Search shown distributions',
@@ -53,12 +35,12 @@
             </thead>
             <tbody>
               <?php foreach ($distributions as $d): ?>
-                <tr data-aidtype="<?= esc($d['aid_type'], 'attr') ?>">
+                <tr>
                   <td><?= esc($d['claim_date']) ?></td>
-                  <td><span class="badge bg-light text-dark border"><?= esc($d['control_no']) ?></span></td>
+                  <td><?= esc($d['control_no']) ?></td>
                   <td><span class="sector-name"><?= esc($d['head']) ?></span></td>
                   <td><?= esc($d['claimant']) ?></td>
-                  <td><span class="badge bg-light text-dark border"><?= esc($d['aid_type']) ?></span></td>
+                  <td><span class="badge bg-light text-dark border"><?= esc((string) $d['aid_type']) ?></span></td>
                   <td><?= esc($d['scanned_by']) ?></td>
                   <td class="text-end">
                     <div class="dropdown actions-menu">

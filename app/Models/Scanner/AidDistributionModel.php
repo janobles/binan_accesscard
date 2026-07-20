@@ -19,8 +19,8 @@ class AidDistributionModel extends Model
     /** Inserts one distribution row and returns its aidID. */
     public function logAid(array $data): int
     {
-        // Guard against a malformed handout: control number, claimant, and aid
-        // type must all be positive ids and a claim date must be present.
+        // Guard against a malformed handout: control number, claimant, and
+        // aid type must all be positive ids and a claim date must be present.
         if ((int) ($data['control_no'] ?? 0) <= 0
             || (int) ($data['memberID'] ?? 0) <= 0
             || (int) ($data['aid_type_id'] ?? 0) <= 0
@@ -53,7 +53,7 @@ class AidDistributionModel extends Model
 
     /**
      * Chronological (newest-first) aid history for a control number, with the
-     * aid-type name and the claimant's full name resolved via joins.
+     * aid type name and the claimant's full name resolved via joins.
      */
     public function historyFor(int $controlNo): array
     {
@@ -78,9 +78,9 @@ class AidDistributionModel extends Model
     }
 
     /**
-     * Every distribution, newest first, with aid-type name, claimant name,
+     * Every distribution, newest first, with aid type name, claimant name,
      * family-head name, and the scanning user's username resolved via joins.
-     * Drives the Manage-tab global table.
+     * Drives the all-distributions table.
      */
     public function allDistributions(): array
     {
@@ -100,6 +100,32 @@ class AidDistributionModel extends Model
                 ->findAll();
         } catch (\Throwable $e) {
             return [];
+        }
+    }
+
+    /**
+     * The existing distribution row for this family in this batch, or null.
+     * One family may only be logged once per batch; this is the probe the
+     * scan endpoint uses to report "Duplicate Entry".
+     */
+    public function inBatch(int $controlNo, int $batchId): ?array
+    {
+        if ($controlNo <= 0 || $batchId <= 0) {
+            return null;
+        }
+
+        try {
+            $row = $this->select('aid_distribution.aidID, aid_distribution.claim_date,'
+                    . ' aid_distribution.dt_created,'
+                    . " COALESCE(users.username, '') AS scanned_by")
+                ->join('users', 'users.userID = aid_distribution.userID', 'left')
+                ->where('aid_distribution.control_no', $controlNo)
+                ->where('aid_distribution.batch_id', $batchId)
+                ->first();
+
+            return is_array($row) ? $row : null;
+        } catch (\Throwable $e) {
+            return null;
         }
     }
 

@@ -97,15 +97,17 @@
         });
     }
 
-    var aidType = ctx('chartAidType');
-    if (aidType && Array.isArray(data.aidType)) {
-        charts.aidType = new Chart(aidType, {
+    function aidTypeLabel(a) { return a.aid_type; }
+
+    var byAidType = ctx('chartAidType');
+    if (byAidType && Array.isArray(data.byAidType)) {
+        charts.byAidType = new Chart(byAidType, {
             type: 'bar',
             data: {
-                labels: data.aidType.map(function (a) { return a.aid_type; }),
+                labels: data.byAidType.map(aidTypeLabel),
                 datasets: [{
                     label: 'Handouts',
-                    data: data.aidType.map(function (a) { return a.count; }),
+                    data: data.byAidType.map(function (a) { return a.count; }),
                     backgroundColor: palette[2],
                     borderRadius: 4,
                     maxBarThickness: 64,
@@ -134,10 +136,10 @@
                 charts.barangay.data.datasets[0].data = r.map(function (b) { return b.coverage; });
                 charts.barangay.update();
             }
-            if (charts.aidType && Array.isArray(fresh.aidType)) {
-                charts.aidType.data.labels = fresh.aidType.map(function (a) { return a.aid_type; });
-                charts.aidType.data.datasets[0].data = fresh.aidType.map(function (a) { return a.count; });
-                charts.aidType.update();
+            if (charts.byAidType && Array.isArray(fresh.byAidType)) {
+                charts.byAidType.data.labels = fresh.byAidType.map(aidTypeLabel);
+                charts.byAidType.data.datasets[0].data = fresh.byAidType.map(function (a) { return a.count; });
+                charts.byAidType.update();
             }
         }
     };

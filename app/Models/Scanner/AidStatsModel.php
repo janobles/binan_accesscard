@@ -106,15 +106,20 @@ class AidStatsModel extends Model
         }
     }
 
-    /** Handout counts per aid type, within the batch scope, busiest first. */
+    /**
+     * Handout counts per aid type, within the batch scope, busiest first.
+     * Aid types with zero handouts are omitted.
+     */
     public function byAidType(?int $batchId = null): array
     {
         try {
             $b = $this->db->table('aid_type')
-                ->select('aid_type.name AS aid_type, COUNT(aid_distribution.aidID) AS count')
+                ->select('aid_type.name AS aid_type,'
+                    . ' COUNT(aid_distribution.aidID) AS count')
                 ->join('aid_distribution', 'aid_distribution.aid_type_id = aid_type.aid_type_id', 'left');
             $this->applyScope($b, $batchId);
             $rows = $b->groupBy('aid_type.aid_type_id')
+                ->having('count >', 0)
                 ->orderBy('count', 'DESC')
                 ->orderBy('aid_type.name', 'ASC')
                 ->get()->getResultArray();

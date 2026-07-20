@@ -84,7 +84,7 @@ foreach ($reportsPerScanner as $p) {
     'emptyMessage' => 'No scans in this batch yet.',
     'tableClass' => 'table manage-record-table align-middle w-100 mb-0',
     'cardClass' => 'reports-fallback',
-    'footer' => $rangeLabel,
+    'footer' => view('components/table_footer', ['leftContent' => $rangeLabel]),
 ]) ?>
 
 <!-- Charts: each in the standard card anatomy (components/card) -->
@@ -94,7 +94,7 @@ foreach ($reportsPerScanner as $p) {
         'icon' => 'pie-chart-fill',
         'title' => 'Families that received aid vs still waiting',
         'bodyHtml' => '<canvas id="chartReceived" height="220"></canvas>',
-        'footer' => $rangeLabel,
+        'footer' => view('components/table_footer', ['leftContent' => $rangeLabel]),
         'cardClass' => 'reports-chart-card h-100',
     ]) ?>
   </div>
@@ -103,7 +103,7 @@ foreach ($reportsPerScanner as $p) {
         'icon' => 'bar-chart-fill',
         'title' => 'Coverage by barangay (percent)',
         'bodyHtml' => '<div class="reports-barangay-chart"><canvas id="chartBarangay"></canvas></div>',
-        'footer' => $rangeLabel,
+        'footer' => view('components/table_footer', ['leftContent' => $rangeLabel]),
         'cardClass' => 'reports-chart-card h-100',
     ]) ?>
   </div>
@@ -112,7 +112,7 @@ foreach ($reportsPerScanner as $p) {
         'icon' => 'bar-chart-fill',
         'title' => 'Number of handouts by aid type',
         'bodyHtml' => '<div style="position:relative;height:260px"><canvas id="chartAidType"></canvas></div>',
-        'footer' => $rangeLabel,
+        'footer' => view('components/table_footer', ['leftContent' => $rangeLabel]),
         'cardClass' => 'reports-chart-card',
     ]) ?>
   </div>
@@ -138,14 +138,14 @@ foreach ($reportsByBarangay as $b) {
     'emptyMessage' => 'No data for this batch.',
     'tableClass' => 'table manage-record-table align-middle w-100 mb-0',
     'cardClass' => 'reports-fallback',
-    'footer' => $rangeLabel,
+    'footer' => view('components/table_footer', ['leftContent' => $rangeLabel]),
 ]) ?>
 
 <script id="reportsData" type="application/json"><?= json_encode(
     [
         'received' => $reportsSummary,
-        'barangay' => $reportsByBarangay,
-        'aidType'  => $reportsByAidType,
+        'barangay'  => $reportsByBarangay,
+        'byAidType' => $reportsByAidType,
     ],
     JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT,
 ) ?></script>

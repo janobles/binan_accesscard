@@ -48,7 +48,7 @@ $categoryClearUrl = static function () use ($listRoute, $perPage): string {
 
 <?php /* Toolbar above the card, Manage Records standard (components/records_toolbar_server +
          records-filter-panel.js live-apply + pills). */ ?>
-<?= view('components/records_toolbar_server', [
+<?= view('components/toolbar', [
     'formAction' => site_url($listRoute),
     'formAria' => 'Search all categories',
     'searchPlaceholder' => 'Search all categories...',
@@ -57,7 +57,7 @@ $categoryClearUrl = static function () use ($listRoute, $perPage): string {
     'pillsId' => 'categoryFilterPills',
     'hiddenHtml' => $perPage !== 25 ? '<input type="hidden" name="per_page" value="' . esc((string) $perPage, 'attr') . '">' : '',
     'actionsHtml' => '<button class="' . btn('add') . ' flex-fill js-category-modal-open" type="button" data-category-mode="create">Add Category</button>',
-    'radioGroups' => [[
+    'filterGroups' => [[
         'name' => 'status',
         'label' => 'Status',
         'options' => [

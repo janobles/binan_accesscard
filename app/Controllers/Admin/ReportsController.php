@@ -63,7 +63,7 @@ class ReportsController extends BaseController
         return $this->response->setJSON([
             'received'   => $stats->receivedVsNot($scope),
             'barangay'   => $stats->byBarangay($scope),
-            'aidType'    => $stats->byAidType($scope),
+            'byAidType'  => $stats->byAidType($scope),
             'perScanner' => $batchId > 0 ? $stats->perScanner($batchId) : [],
             'updated'    => date('c'),
         ]);

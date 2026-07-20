@@ -131,6 +131,11 @@
         if (emptyRow) {
             emptyRow.hidden = visibleCount !== 0;
         }
+
+        var countLabel = document.getElementById('accountsCount');
+        if (countLabel) {
+            countLabel.textContent = 'Showing ' + visibleCount + ' account' + (visibleCount !== 1 ? 's' : '');
+        }
     }
 
     function initAccountFilters(root) {

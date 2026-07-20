@@ -1,18 +1,21 @@
 <?php
 /**
- * Distribution Batches pane: active-batch banner + open/close controls + past
- * list. Ported from Scanner/manage-batches-body.php for the admin distribution
- * hub (routes moved off the old scanner shell to admin/batches/*). Opening a
- * batch now requires choosing an aid type ($activeAidTypes); each batch row
- * shows its bound aid type. Lifecycle buttons render only for Admin/Developer.
- * Rendered inside components/card by Admin/layout.php's distribution block.
+ * Distribution Batches pane: active-batch banner + close control + past list.
+ * Opening a batch happens through the New Batch modal
+ * (Admin/batch-create-modal.php), which binds an aid type from the aid_type
+ * reference table. Each batch row shows its bound aid type. Lifecycle
+ * buttons render only for Admin/Developer. Rendered inside components/card
+ * by Admin/layout.php's batches block.
  */
 $canManageBatches = in_array($currentRole ?? '', ['Admin', 'Developer'], true);
-$activeAidTypes   = $activeAidTypes ?? [];
 ?>
 <?php if (($activeBatch ?? null) !== null): ?>
   <div class="alert alert-success d-flex justify-content-between align-items-center">
-    <span><strong><?= esc($activeBatch['name']) ?></strong> (<?= esc((string) ($activeBatch['aid_type_name'] ?? '')) ?>) — open since <?= esc($activeBatch['started_at']) ?></span>
+    <span>
+      <strong><?= esc($activeBatch['name']) ?></strong>
+      <span class="badge bg-light text-dark border"><?= esc((string) ($activeBatch['aid_type_name'] ?? '')) ?></span>
+      — open since <?= esc($activeBatch['started_at']) ?>
+    </span>
     <?php if ($canManageBatches): ?>
     <form method="post" action="<?= site_url('admin/batches/close/' . (int) $activeBatch['batch_id']) ?>"
           onsubmit="return confirm('Close this batch? Statistics reset for the next batch.');">
@@ -22,29 +25,14 @@ $activeAidTypes   = $activeAidTypes ?? [];
     <?php endif; ?>
   </div>
 <?php else: ?>
-  <div class="alert alert-secondary">No active batch. Scanning is paused until one is opened.</div>
-  <?php if ($canManageBatches): ?>
-  <form method="post" action="<?= site_url('admin/batches/open') ?>" class="row g-2 align-items-end mb-3">
-    <?= csrf_field() ?>
-    <div class="col-auto flex-grow-1">
-      <label for="batchName" class="form-label mb-0">Batch name</label>
-      <input class="form-control" type="text" id="batchName" name="name" maxlength="100"
-             placeholder="e.g. Rice Distribution — <?= esc(date('M j, Y')) ?>" required>
-    </div>
-    <div class="col-auto">
-      <label for="batchAidType" class="form-label mb-0">Aid type</label>
-      <select class="form-select" id="batchAidType" name="aid_type_id" required>
-        <option value="">Select aid type</option>
-        <?php foreach ($activeAidTypes as $t): ?>
-          <option value="<?= esc((string) $t['aid_type_id'], 'attr') ?>"><?= esc($t['name']) ?></option>
-        <?php endforeach; ?>
-      </select>
-    </div>
-    <div class="col-auto">
-      <button class="btn btn-primary" type="submit">Open batch</button>
-    </div>
-  </form>
-  <?php endif; ?>
+  <div class="alert alert-secondary d-flex justify-content-between align-items-center">
+    <span>No active batch. Scanning is paused until one is opened.</span>
+    <?php if ($canManageBatches): ?>
+    <button type="button" class="<?= btn('add') ?>" data-bs-toggle="modal" data-bs-target="#newBatchModal">
+      <i class="bi bi-plus-lg" aria-hidden="true"></i> New Batch
+    </button>
+    <?php endif; ?>
+  </div>
 <?php endif; ?>
 
 <table class="table manage-record-table align-middle w-100 mb-0">

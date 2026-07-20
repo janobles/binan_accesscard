@@ -20,6 +20,9 @@ class ViewLayoutModel
             'sectors' => 'Sector Management',
             'services' => 'Services and Programs Management',
             'categories' => 'Manage Categories',
+            'aidtypes' => 'Aid Types',
+            'batches' => 'Distribution Batches',
+            'distributions' => 'All Distributions',
             default => ucwords(str_replace('-', ' ', $activePage)),
         };
     }

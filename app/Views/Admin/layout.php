@@ -27,6 +27,8 @@ $adminAccounts = $adminAccounts ?? [];
 $employeeAccounts = $employeeAccounts ?? [];
 $recordListData = $recordListData ?? [];
 $categories = $categories ?? [];
+$activeAidTypes = $activeAidTypes ?? [];
+$aidTypes = $aidTypes ?? [];
 $sectorShortcodeOptions = $sectorShortcodeOptions ?? [];
 $searchTerm = $searchTerm ?? '';
 $searchFilters = $searchFilters ?? [];
@@ -244,76 +246,58 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                 <?= view('Cards/batch_form') ?>
             <?php endif; ?>
 
-            <?php if ($activePage === 'distribution'): ?>
-                <ul class="nav nav-tabs manage-tabs mb-0" role="tablist">
-                  <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-types" type="button" role="tab">Aid Types</button></li>
-                  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-batches" type="button" role="tab">Batches</button></li>
-                  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-dist" type="button" role="tab">All Distributions</button></li>
-                </ul>
+            <?php if ($activePage === 'aidtypes'): ?>
+                <?= view('components/card', [
+                    'icon' => 'box-seam',
+                    'title' => 'Aid Types',
+                    'cardClass' => 'sector-management',
+                    'bodyView' => 'Admin/aidtypes-body',
+                    'bodyData' => [
+                        'aidTypes' => $aidTypes,
+                        'currentRole' => $currentRole,
+                    ],
+                ]) ?>
+                <?= view('Admin/aidtype-create-modal') ?>
+            <?php endif; ?>
 
-                <div class="tab-content">
-                  <div class="tab-pane fade show active" id="tab-types" role="tabpanel">
-                    <?= view('components/card', [
-                        'icon' => 'tags-fill',
-                        'title' => 'Aid Types',
-                        'cardClass' => 'sector-management',
-                        'bodyView' => 'Admin/distribution-aidtypes-body',
-                        'bodyData' => ['aidTypes' => $aidTypes],
-                    ]) ?>
-                  </div>
+            <?php if ($activePage === 'batches'): ?>
+                <?= view('components/card', [
+                    'icon' => 'collection',
+                    'title' => 'Distribution Batches',
+                    'cardClass' => 'sector-management',
+                    'bodyView' => 'Admin/distribution-batches-body',
+                    'bodyData' => [
+                        'batches' => $batches,
+                        'activeBatch' => $activeBatch,
+                        'currentRole' => $currentRole,
+                    ],
+                ]) ?>
+                <?= view('Admin/batch-create-modal', [
+                    'activeAidTypes' => $activeAidTypes,
+                ]) ?>
+            <?php endif; ?>
 
-                  <div class="tab-pane fade" id="tab-batches" role="tabpanel">
-                    <?= view('components/card', [
-                        'icon' => 'collection',
-                        'title' => 'Distribution Batches',
-                        'cardClass' => 'sector-management',
-                        'bodyView' => 'Admin/distribution-batches-body',
-                        'bodyData' => [
-                            'batches' => $batches,
-                            'activeBatch' => $activeBatch,
-                            'activeAidTypes' => $activeAidTypes,
-                            'currentRole' => $currentRole,
-                        ],
-                    ]) ?>
-                  </div>
-
-                  <div class="tab-pane fade" id="tab-dist" role="tabpanel">
-                    <?= view('components/card', [
-                        'icon' => 'clipboard-check-fill',
-                        'title' => 'All Distributions',
-                        'cardClass' => 'sector-management',
-                        'bodyView' => 'Admin/distribution-distributions-body',
-                        'bodyData' => ['distributions' => $distributions, 'aidTypes' => $aidTypes],
-                        'footer' => '<span id="distCount"></span>',
-                    ]) ?>
-                  </div>
-                </div>
-
-                <div class="modal fade" id="addAidTypeModal" tabindex="-1">
-                  <div class="modal-dialog">
-                    <form class="modal-content" method="post" action="<?= site_url('admin/aid-types/create') ?>">
-                      <?= csrf_field() ?>
-                      <div class="modal-header">
-                        <h5 class="modal-title">Add Aid Type</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                      </div>
-                      <div class="modal-body">
-                        <label for="aidTypeName" class="form-label">Name</label>
-                        <input type="text" class="form-control" id="aidTypeName" name="name" required maxlength="100">
-                      </div>
-                      <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Add</button>
-                      </div>
-                    </form>
-                  </div>
-                </div>
+            <?php if ($activePage === 'distributions'): ?>
+                <?= view('components/toolbar', [
+                    'isClient' => true,
+                    'formAria' => 'Search distributions',
+                    'searchPlaceholder' => 'Search the distributions log',
+                    'searchAttrs' => 'id="distSearch"',
+                    'clearAttrs' => 'id="distClear"',
+                ]) ?>
+                <?= view('components/card', [
+                    'icon' => 'clipboard-check-fill',
+                    'title' => 'All Distributions',
+                    'cardClass' => 'sector-management',
+                    'bodyView' => 'Admin/distribution-distributions-body',
+                    'bodyData' => ['distributions' => $distributions],
+                    'footer' => view('components/table_footer', ['leftContent' => '<span id="distCount"></span>']),
+                ]) ?>
 
                 <script>
                 document.addEventListener('DOMContentLoaded', () => {
                   const table   = document.getElementById('distTable');
                   const search  = document.getElementById('distSearch');
-                  const filter  = document.getElementById('distAidFilter');
                   const clear   = document.getElementById('distClear');
                   const perPage = document.getElementById('distPerPage');
                   const local   = document.getElementById('distLocalSearch');
@@ -324,15 +308,13 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                   const render = () => {
                     const q     = (search.value || '').trim().toLowerCase();
                     const q2    = (local.value || '').trim().toLowerCase();
-                    const aid   = filter.value || '';
                     const limit = parseInt(perPage.value, 10) || 0;
                     let matched = 0;
                     let shown = 0;
                     rows.forEach(r => {
                       const text = r.textContent.toLowerCase();
                       const ok = (q === '' || text.includes(q))
-                              && (q2 === '' || text.includes(q2))
-                              && (aid === '' || (r.getAttribute('data-aidtype') || '') === aid);
+                              && (q2 === '' || text.includes(q2));
                       let visible = ok;
                       if (ok) {
                         matched++;
@@ -344,9 +326,9 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                     if (count) count.textContent = 'Showing ' + shown + ' of ' + rows.length + ' distribution' + (rows.length === 1 ? '' : 's');
                   };
 
-                  [search, filter, local, perPage].forEach(el => el && el.addEventListener('input', render));
+                  [search, local, perPage].forEach(el => el && el.addEventListener('input', render));
                   if (perPage) perPage.addEventListener('change', render);
-                  if (clear) clear.addEventListener('click', () => { search.value = ''; local.value = ''; filter.value = ''; perPage.value = '25'; render(); });
+                  if (clear) clear.addEventListener('click', () => { search.value = ''; local.value = ''; perPage.value = '25'; render(); });
                   render();
                 });
                 </script>
@@ -394,6 +376,29 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
 <script src="<?= esc(asset_url($scriptPath), 'attr') ?>"></script>
 <?php endforeach; ?>
 <script src="<?= esc(asset_url('assets/js/session-timeout.js'), 'attr') ?>" data-timeout-seconds="<?= esc((string) $idleTimeoutSeconds) ?>" data-logout-url="<?= site_url('logout?timeout=1') ?>" data-keep-alive-url="<?= site_url('session/keep-alive') ?>"></script>
+
+<?php if (session()->getFlashdata('openModal')): ?>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function() {
+        var modalType = '<?= esc(session()->getFlashdata('openModal')) ?>';
+        var modalId = '<?= esc((string) session()->getFlashdata('openModalId')) ?>';
+        var btn = null;
+        if (modalType === 'account-create') {
+            btn = document.querySelector('.js-open-account-create-modal');
+        } else if (modalType === 'account-profile') {
+            btn = document.querySelector('.js-open-my-account-modal');
+        } else if (modalType === 'account-edit' && modalId) {
+            var urlPart = '/edit/' + modalId;
+            btn = document.querySelector('.js-open-account-edit-modal[data-modal-url*="' + urlPart + '"]');
+        }
+        if (btn) {
+            btn.click();
+        }
+    }, 100);
+});
+</script>
+<?php endif; ?>
+
 </body>
 </html>
-

@@ -21,7 +21,7 @@ final class AidStatsModelTest extends CIUnitTestCase
         $this->assertIsArray((new AidStatsModel())->byBarangay());
     }
 
-    public function testByAidTypeReturnsArray(): void
+    public function testByServiceReturnsArray(): void
     {
         $this->assertIsArray((new AidStatsModel())->byAidType());
     }

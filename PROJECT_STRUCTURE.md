@@ -30,18 +30,22 @@ Lookups, Audit, Admin, Employee) is self-contained and easy to navigate. Routes 
 - `Lookups/SectorController.php`, `Lookups/ServiceController.php` — create/update/
   archive/restore/delete mutations for the `sector` and `services` lookup tables.
   These back the live `admin/sectors` and `admin/services` management screens.
-- `Admin/DistributionController.php` — Admin/Developer-only aid-type CRUD, batch
-  open/close (aid type is chosen when a batch is opened), and distribution void.
-  Serves `admin/distribution` (+ `admin/aid-types/*`, `admin/batches/*`,
+- `Admin/DistributionController.php` — Admin/Developer-only batch open/close
+  (aid type is chosen when a batch is opened) and distribution void. Serves
+  `admin/batches` and `admin/distributions` (+ `admin/batches/open|close`,
   `admin/distributions/void/(:num)`), rendered via
   `DashboardPageBuilder::renderAdminPage()` in the shared `Admin/layout.php` shell.
+- `Admin/AidTypesController.php` — Admin/Developer-only aid-type CRUD on the
+  `admin/aidtypes` Reference Data page (+ `admin/aidtypes/create|archive|
+  restore|delete`), same admin shell.
 - `Admin/ReportsController.php` — overall distribution reports (combined totals +
   per-kiosk drilldown + PDF export), batch-scoped only (no date-range filter).
   Serves `admin/reports` and `admin/reports/pdf`, same admin shell.
-- `Scanner/ScanController.php` — kiosk-only scan flow: `scanner/scan` (log a
-  handout against the currently open batch's aid type — the kiosk no longer
-  picks an aid type), `scanner/performance` (self-scoped stats page),
-  `scanner/stats` (JSON poll, 5s), `scanner/lookup/(:num)`, `scanner/log`. Rendered
+- `Scanner/ScanController.php` — kiosk-only one-action scan flow: `scanner/scan`
+  (scan = log: `POST scanner/log` resolves the family, guards one handout per
+  family per batch, and records the head with today's date against the open
+  batch's aid type), `scanner/performance` (self-scoped stats page),
+  `scanner/stats` (JSON poll, 5s). Rendered
   in the green kiosk shell (`Scanner/kiosk-layout.php`), not the admin/dashboard
   shell. The former `Scanner\ManageController` and `Scanner\ReportsController`
   (and `scanner/manage`, `scanner/reports`, `scanner/setting` routes) are removed —

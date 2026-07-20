@@ -2,8 +2,8 @@
 /**
  * Kiosk shell for the scan flow (setting + scan pages): full-viewport, no
  * sidebar/topbar. Deliberately minimal for time-and-motion — one slim header
- * bar (batch · aid type · live personal counter · change-type · logout) and
- * the page content. Reports and stats stay in the admin dashboard shell.
+ * bar (batch · aid type · live personal counter · logout) and the page
+ * content. Reports and stats stay in the admin dashboard shell.
  */
 $pageTitle          = $pageTitle ?? 'Scan';
 $username           = $username ?? 'Scanner';
@@ -23,29 +23,46 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
     <?php endforeach; ?>
 </head>
 <body>
-<nav class="navbar navbar-dark px-3" style="background-color: var(--binan-green);">
-  <span class="navbar-brand mb-0 h1 d-flex align-items-center gap-2">
-    <i class="bi bi-qr-code-scan" aria-hidden="true"></i>
-    <span><?= $activeBatch !== null ? esc($activeBatch['name']) : 'No active batch' ?></span>
-    <?php if ($aidType !== null): ?>
-      <span class="badge bg-info text-dark fs-6"><?= esc($aidType['name']) ?></span>
-    <?php endif; ?>
-  </span>
-  <div class="d-flex align-items-center gap-3 text-white">
-    <div class="btn-group btn-group-sm" role="group" aria-label="Kiosk navigation">
-      <a class="btn <?= url_is('scanner/scan') ? 'btn-light' : 'btn-outline-light' ?>" href="<?= site_url('scanner/scan') ?>"><i class="bi bi-upc-scan me-1" aria-hidden="true"></i>Scan</a>
-      <a class="btn <?= url_is('scanner/performance') ? 'btn-light' : 'btn-outline-light' ?>" href="<?= site_url('scanner/performance') ?>"><i class="bi bi-graph-up me-1" aria-hidden="true"></i>Performance</a>
-    </div>
-    <span class="small"><?= esc($username) ?></span>
-    <a class="btn btn-outline-light btn-sm" href="<?= site_url('logout') ?>">Logout</a>
+<?php
+$accountMenuData = [
+    'user' => $user ?? [],
+    'username' => $username ?? 'Scanner',
+    'accountLevelLabel' => $accountLevelLabel ?? 'Scanner'
+];
+?>
+<nav class="sb-topnav navbar navbar-expand navbar-dark" style="background-color: var(--binan-green);">
+  <div class="navbar-brand ps-3 d-flex align-items-center pe-3" style="white-space: nowrap;">
+      <img src="<?= asset_url('assets/image/binan.png') ?>" alt="City of Binan Logo" height="24" class="me-2">
+      <span class="d-none d-sm-inline">Bi&ntilde;an Access Card MIS</span>
+      <div class="mx-3" style="border-left: 1px solid rgba(255,255,255,0.3); height: 20px;"></div>
+      <span class="me-2" style="font-size: 0.95rem;"><?= $activeBatch !== null ? esc($activeBatch['name']) : 'No active batch' ?></span>
+      <?php if ($aidType !== null): ?>
+        <span class="badge bg-light text-dark"><?= esc($aidType['name']) ?></span>
+      <?php endif; ?>
   </div>
+  <ul class="navbar-nav ms-auto me-3 me-lg-4">
+      <?= view('Partials/topbar-account-menu', $accountMenuData) ?>
+  </ul>
 </nav>
 <main class="container-fluid px-4 py-3">
+
   <?php if (session()->getFlashdata('error')): ?>
     <div class="alert alert-danger"><?= esc(session()->getFlashdata('error')) ?></div>
   <?php endif; ?>
   <?= $this->renderSection('content') ?>
 </main>
+
+<?= view('components/modal', [
+    'id' => 'familyModal',
+    'modalClass' => 'floating-family-modal',
+    'attrs' => 'aria-label="Record details" data-bs-backdrop="static" data-bs-keyboard="false"',
+    'size' => 'modal-xl',
+    'title' => 'Record',
+    'titleId' => 'familyModalLabel',
+    'bodyId' => 'familyModalBody',
+    'bodyHtml' => '<div class="family-modal-loading" role="status" aria-live="polite"><div class="spinner-border text-primary" aria-hidden="true"></div><span>Loading...</span></div>',
+    'footerHtml' => '<button type="button" class="btn btn-outline-secondary family-modal-close" data-bs-dismiss="modal">Close</button>',
+]) ?>
 <?php foreach (array_merge(asset_scripts('core'), asset_scripts('scanner')) as $scriptPath): ?>
 <script src="<?= esc(asset_url($scriptPath), 'attr') ?>"></script>
 <?php endforeach; ?>

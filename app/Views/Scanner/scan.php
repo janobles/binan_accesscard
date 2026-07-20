@@ -26,15 +26,37 @@
   </div>
 </div>
 
+<?php /* One-action result banner: scan = log. alert-success when the handout
+         was recorded, alert-danger when the family was already logged in
+         this batch. Big text so it reads from arm's length. */ ?>
+<div id="resultBanner" class="alert d-none align-items-center gap-3 fs-4 py-4" role="alert" aria-live="assertive">
+  <i id="resultIcon" class="bi display-6" aria-hidden="true"></i>
+  <div>
+    <div id="resultTitle" class="fw-bold"></div>
+    <div id="resultText" class="fs-6"></div>
+  </div>
+</div>
+<template id="dupTitleText">Duplicate Entry</template>
+
 <div id="emptyState" class="text-center py-5">
   <i id="emptyIcon" class="bi bi-qr-code-scan display-3 text-secondary" aria-hidden="true"></i>
   <div id="emptyTitle" class="fw-bold mt-3">No family loaded</div>
-  <div id="emptyText" class="text-muted small">Scan a QR card to see the family and log a distribution.</div>
+  <div id="emptyText" class="text-muted small">Scan a QR card to log a distribution.</div>
 </div>
 
 <div id="familyPanel" hidden>
   <div class="row g-3">
-    <div class="col-lg-7" id="familyColumn">
+    <div class="col-lg-7">
+      <div class="card border-0 rounded-3 mb-3 bg-white py-4 px-4">
+        <div class="card-body d-flex flex-row align-items-center">
+          <img id="qrImage" src="" alt="QR Code" class="rounded-3 shadow-sm border bg-white me-5" style="width: 240px; height: 240px; object-fit: contain; image-rendering: pixelated; display: none;">
+          <div class="flex-grow-1 text-center">
+            <div class="text-muted text-uppercase fw-bold mb-2 fs-4">Scanned QR Code</div>
+            <div id="qrHeadline" class="fw-bold text-primary mb-0" style="font-size: 6rem; line-height: 1;"></div>
+          </div>
+        </div>
+      </div>
+      <!--
       <div class="card border-0 rounded-3 mb-3">
         <div class="card-body">
           <div class="fw-bold mb-2">Family Head</div>
@@ -42,46 +64,21 @@
         </div>
       </div>
       <div class="card border-0 rounded-3 mb-3">
-        <div class="fw-bold px-3 pt-3 pb-2">Members</div>
-        <ul class="list-group list-group-flush" id="membersList"></ul>
+        <div class="d-flex justify-content-between align-items-center px-3 pt-3 pb-2">
+          <span class="fw-bold">Members</span>
+          <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse"
+                  data-bs-target="#membersCollapse" aria-expanded="false" aria-controls="membersCollapse">
+            Show members
+          </button>
+        </div>
+        <div class="collapse" id="membersCollapse">
+          <ul class="list-group list-group-flush" id="membersList"></ul>
+        </div>
       </div>
+      -->
     </div>
 
     <div class="col-lg-5">
-      <div class="card border-0 rounded-3 mb-3" id="logPanel">
-        <div class="card-body">
-          <div class="fw-bold mb-2">Log Distribution</div>
-          <form id="logForm">
-            <input type="hidden" id="control_no" name="control_no">
-            <div id="dupAlert" class="alert alert-warning" hidden></div>
-            <div class="mb-3">
-              <label for="claim_date" class="form-label">Date</label>
-              <input type="date" class="form-control" id="claim_date" name="claim_date" required>
-            </div>
-            <div class="mb-3">
-              <label for="memberID" class="form-label">Claimant</label>
-              <select class="form-select" id="memberID" name="memberID" required>
-                <option value="">Select claimant&hellip;</option>
-              </select>
-            </div>
-            <div id="fieldErrors" class="text-danger small mb-3"></div>
-            <button class="btn btn-success w-100" id="submitBtn" type="submit">
-              <i class="bi bi-check-lg me-1" aria-hidden="true"></i> Confirm (Enter)
-            </button>
-          </form>
-        </div>
-      </div>
-
-      <div class="card border-0 rounded-3 scan-receipt mb-3" id="receiptPanel" hidden>
-        <div class="card-body">
-          <div class="fw-bold text-success mb-1">
-            <i class="bi bi-check-circle-fill me-1" aria-hidden="true"></i> Logged
-          </div>
-          <div id="receiptBody"></div>
-          <div class="text-muted small mt-1">Ready for next scan&hellip;</div>
-        </div>
-      </div>
-
       <div class="card border-0 rounded-3 mb-3">
         <div class="fw-bold px-3 pt-3 pb-2">Aid History</div>
         <ul class="list-group list-group-flush" id="historyList"></ul>
@@ -97,18 +94,16 @@
 <script>
 const BASE = '<?= rtrim(base_url(), '/') ?>';
 const AID_TYPE_NAME = <?= json_encode((string) $aidType['name'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-const AID_TYPE_ID = <?= (int) $aidType['aid_type_id'] ?>;
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-let lastHistory = [];
-let lastLoggedAidId = null;
-
 // Empty-state zone doubles as the error surface: idle prompt by default,
-// warning icon + message when a lookup fails.
+// warning icon + message when a scan fails.
 function showEmpty(error) {
   $('emptyState').hidden = false;
   $('familyPanel').hidden = true;
+  $('resultBanner').classList.add('d-none');
+  $('resultBanner').classList.remove('d-flex');
   if (error) {
     $('emptyIcon').className = 'bi bi-exclamation-triangle display-3 text-warning';
     $('emptyTitle').textContent = 'Scan problem';
@@ -116,54 +111,99 @@ function showEmpty(error) {
   } else {
     $('emptyIcon').className = 'bi bi-qr-code-scan display-3 text-secondary';
     $('emptyTitle').textContent = 'No family loaded';
-    $('emptyText').textContent = 'Scan a QR card to see the family and log a distribution.';
+    $('emptyText').textContent = 'Scan a QR card to log a distribution.';
   }
 }
 
-async function lookup(control) {
+function showBanner(logged, text) {
+  const banner = $('resultBanner');
+  banner.classList.remove('d-none', 'alert-success', 'alert-danger');
+  banner.classList.add('d-flex', logged ? 'alert-success' : 'alert-danger');
+  $('resultIcon').className = 'bi display-6 ' + (logged ? 'bi-check-circle-fill' : 'bi-x-octagon-fill');
+  $('resultTitle').textContent = logged ? 'Logged' : $('dupTitleText').content.textContent;
+  $('resultText').textContent = text;
+}
+
+function badgeList(items) {
+  return (items || []).map(b => `<span class="badge bg-light text-dark border me-1">${esc(b)}</span>`).join('');
+}
+
+function renderFamily(data) {
+  const h = data.head;
+  if ($('headBody')) {
+    $('headBody').innerHTML =
+      `<div class="fw-bold">${esc(h.firstname)} ${esc(h.lastname)}</div>` +
+      `<div class="text-muted small">${esc(h.address)}</div>` +
+      `<div class="mt-2">${badgeList(h.badges)}</div>`;
+  }
+  if ($('membersList')) {
+    $('membersList').innerHTML = data.members
+      .map(m => `<li class="list-group-item">
+          <div>${esc(m.firstname)} ${esc(m.lastname)} <span class="text-muted">(${esc(m.relationship || 'Member')})</span></div>
+          <div class="small text-muted">${esc(m.sex || '—')} · ${esc(m.birthday || '—')}</div>
+          <div class="mt-1">${badgeList(m.badges)}</div>
+        </li>`).join('');
+  }
+  if ($('qrHeadline')) {
+    $('qrHeadline').textContent = data.control_no;
+  }
+  if ($('qrImage') && data.qr_code_image) {
+    $('qrImage').src = data.qr_code_image;
+    $('qrImage').style.display = 'inline-block';
+  }
+  renderHistory(data.history);
+  $('emptyState').hidden = true;
+  $('familyPanel').hidden = false;
+}
+
+function renderHistory(rows) {
+  $('historyList').innerHTML = rows.length
+    ? rows.map(r => `<li class="list-group-item d-flex justify-content-between">
+        <span><span class="badge bg-light text-dark border me-1">${esc(r.aid_type)}</span>${esc(r.claimant)}</span><span class="text-muted">${esc(r.claim_date)}</span></li>`).join('')
+    : '<li class="list-group-item text-muted">No aid received yet.</li>';
+}
+
+// One action: scan = log. The server resolves the family, refuses in-batch
+// duplicates, and returns everything the panel needs in one round trip.
+async function scanLog(control) {
   // Auto-clear: hardware scanners type code + Enter but never clear the
   // field; clearing here keeps consecutive scans from concatenating.
   $('controlInput').value = '';
   $('controlInput').focus();
   $('controlInput').classList.remove('is-invalid');
-  $('receiptPanel').hidden = true;
-  $('familyColumn').classList.remove('scan-dimmed');
-  $('logPanel').hidden = false;
-  let res;
+  const fd = new FormData();
+  fd.append('control_no', control);
+  let res, data;
   try {
-    res = await fetch(`${BASE}/scanner/lookup/${encodeURIComponent(control)}`);
+    res = await fetch(`${BASE}/scanner/log`, { method: 'POST', body: fd });
+    data = await res.json();
   } catch (err) {
-    lookupFailed(control, 'Network error. Please check your connection and try again.');
+    scanFailed(control, 'Network error. Please check your connection and try again.');
     return;
   }
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    lookupFailed(control, err.error || 'Lookup failed.');
+    scanFailed(control, data.error || Object.values(data.errors || {}).join(' ') || 'Scan failed.');
     return;
   }
-  const data = await res.json();
-  const h = data.head;
-  $('headBody').innerHTML =
-    `<div class="fw-bold">${esc(h.firstname)} ${esc(h.lastname)}</div>` +
-    `<div class="text-muted small">${esc(h.address)}</div>`;
-  $('membersList').innerHTML = data.members
-    .map(m => `<li class="list-group-item">
-        <div>${esc(m.firstname)} ${esc(m.lastname)} <span class="text-muted">(${esc(m.relationship || 'Member')})</span></div>
-        <div class="small text-muted">${esc(m.sex || '—')} · ${esc(m.birthday || '—')}</div>
-      </li>`).join('');
-  renderHistory(data.history);
-  $('memberID').innerHTML = '<option value="">Select claimant&hellip;</option>' +
-    data.members.map(m => `<option value="${esc(m.memberID)}">${esc(m.firstname)} ${esc(m.lastname)} (${esc(m.relationship || 'Member')})</option>`).join('');
-  $('memberID').value = String(data.head.memberID);
-  $('control_no').value = data.control_no;
-  lastHistory = data.history;
-  evaluateDuplicate(lastHistory);
-  if (!$('claim_date').value) { $('claim_date').value = todayStr(); }
-  $('emptyState').hidden = true;
-  $('familyPanel').hidden = false;
+
+  renderFamily(data);
+  const headName = `${data.head.firstname} ${data.head.lastname}`;
+  if (data.logged) {
+    // Prefer the server-returned aid type: the batch (and its aid type) may
+    // have changed since this page loaded.
+    showBanner(true, `${data.aid_type_name || AID_TYPE_NAME} → ${headName} (Family #${data.control_no})`);
+  } else {
+    const d = data.duplicate || {};
+    const by = d.scanned_by ? ` by ${d.scanned_by}` : '';
+    showBanner(false, `Already gave out to Family #${data.control_no} in this batch (${d.dt_created || d.claim_date || ''}${by}). Nothing was logged.`);
+  }
+  const countEl = document.getElementById('myBatchCount');
+  if (countEl && typeof data.myBatchCount === 'number') {
+    countEl.textContent = String(data.myBatchCount);
+  }
 }
 
-function lookupFailed(control, message) {
+function scanFailed(control, message) {
   showEmpty(message);
   // Restore the scanned value selected so the user can see/correct it;
   // the next gun scan overwrites the selection.
@@ -172,56 +212,15 @@ function lookupFailed(control, message) {
   $('controlInput').select();
 }
 
-function todayStr() {
-  const now = new Date();
-  const pad = (n) => String(n).padStart(2, '0');
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-}
-
-function evaluateDuplicate(history) {
-  const aidId = AID_TYPE_ID;
-  const aidName = AID_TYPE_NAME;
-  const dupe = (history || []).some(r =>
-    String(r.aid_type_id) === String(aidId) && String(r.claim_date) === todayStr());
-  if (dupe) {
-    $('dupAlert').textContent = `Already claimed ${aidName} today. Confirm again only if this is correct.`;
-    $('dupAlert').hidden = false;
-    $('submitBtn').className = 'btn btn-warning w-100';
-  } else {
-    $('dupAlert').hidden = true;
-    $('submitBtn').className = 'btn btn-success w-100';
-  }
-}
-
-function renderHistory(rows) {
-  $('historyList').innerHTML = rows.length
-    ? rows.map((r, i) => `<li class="list-group-item d-flex justify-content-between${i === 0 && lastLoggedAidId !== null ? ' scan-history-flash' : ''}">
-        <span><span class="badge bg-light text-dark border me-1">${esc(r.aid_type)}</span>${esc(r.claimant)}</span><span class="text-muted">${esc(r.claim_date)}</span></li>`).join('')
-    : '<li class="list-group-item text-muted">No aid received yet.</li>';
-}
-
-function showReceipt(text) {
-  $('receiptBody').textContent = text;
-  $('receiptPanel').hidden = false;
-  $('logPanel').hidden = true;
-  $('familyColumn').classList.add('scan-dimmed');
-}
-
 $('lookupBtn').addEventListener('click', () => {
   const v = $('controlInput').value.trim();
-  if (v) lookup(v);
+  if (v) scanLog(v);
 });
 $('controlInput').addEventListener('keydown', (e) => {
   if (e.key !== 'Enter') return;
   e.preventDefault();
   const v = $('controlInput').value.trim();
-  if (v) {
-    lookup(v);
-  } else if (!$('familyPanel').hidden && !$('logPanel').hidden) {
-    // Bare Enter on an empty input with a family loaded = confirm.
-    // The gun always sends code+Enter, so this can only be a human keypress.
-    $('logForm').requestSubmit();
-  }
+  if (v) scanLog(v);
 });
 // Focus guard: a stray click must never break the gun flow. Any printable
 // key typed outside a form control re-arms the scan input.
@@ -230,41 +229,6 @@ window.addEventListener('keydown', (e) => {
   const inField = t instanceof HTMLElement && ['INPUT', 'SELECT', 'TEXTAREA', 'BUTTON', 'A'].includes(t.tagName);
   if (!inField && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
     $('controlInput').focus();
-  }
-});
-
-$('logForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  $('fieldErrors').innerHTML = '';
-  $('submitBtn').disabled = true;
-  const fd = new FormData($('logForm'));
-  try {
-    const res = await fetch(`${BASE}/scanner/log`, { method: 'POST', body: fd });
-    const data = await res.json();
-    if (!res.ok) {
-      const errs = data.errors || {};
-      $('fieldErrors').innerHTML = Object.values(errs).map(m => `<div>${esc(m)}</div>`).join('');
-      return;
-    }
-    const aidName = AID_TYPE_NAME;
-    const claimant = $('memberID').selectedOptions[0]?.text || '';
-    lastLoggedAidId = AID_TYPE_ID;
-    showReceipt(`${aidName} → ${claimant} (Family #${$('control_no').value}), ${fd.get('claim_date')}`);
-    lastHistory = data.history;
-    renderHistory(data.history);
-    var countEl = document.getElementById('myBatchCount');
-    if (countEl && typeof data.myBatchCount === 'number') {
-      countEl.textContent = String(data.myBatchCount);
-    }
-    lastLoggedAidId = null;
-    $('controlInput').value = '';
-    $('controlInput').focus();
-    $('claim_date').value = todayStr();
-
-  } catch (err) {
-    $('fieldErrors').innerHTML = '<div>Network error. Please check your connection and try again.</div>';
-  } finally {
-    $('submitBtn').disabled = false;
   }
 });
 
@@ -286,7 +250,7 @@ $('cameraBtn').addEventListener('click', () => {
   scanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 250, height: 250 } },
     (text) => {
       stopCamera();
-      lookup(text.trim());
+      scanLog(text.trim());
     }, () => {}).catch(() => {
       stopCamera();
       showEmpty('Camera unavailable. Check permissions or use manual entry.');

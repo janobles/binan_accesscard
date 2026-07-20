@@ -39,8 +39,8 @@ class DashboardController extends BaseController
     }
 
     /**
-     * GET `viewer/manage-records` (and `manage-families`). Renders the read-only
-     * records list page, or the list fragment for AJAX search/pagination.
+     * GET `viewer/manage-records`. Renders the read-only records list page, or
+     * the list fragment for AJAX search/pagination.
      */
     public function manageRecords(): string|RedirectResponse
     {
@@ -51,16 +51,10 @@ class DashboardController extends BaseController
         return $this->pageBuilder()->renderViewerPage('family-manage');
     }
 
-    /** GET `viewer/sectors`. Renders the read-only sector list page. */
-    public function sectors(): string|RedirectResponse
+    /** GET `viewer/reference-data`. Read-only Sectors and Services lists, switched by ?tab=. */
+    public function referenceData(): string|RedirectResponse
     {
-        return $this->pageBuilder()->renderViewerPage('sectors');
-    }
-
-    /** GET `viewer/services`. Renders the read-only services/programs list page. */
-    public function services(): string|RedirectResponse
-    {
-        return $this->pageBuilder()->renderViewerPage('services');
+        return $this->pageBuilder()->renderViewerPage('reference-data');
     }
 
     /** Builds a page builder bound to the current request. */

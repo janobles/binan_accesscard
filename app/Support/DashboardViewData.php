@@ -240,7 +240,7 @@ class DashboardViewData
                 'canRestore',
                 'existingShortcodes'
             ),
-            self::lookupListVars($bundle, 'admin/sectors')
+            self::lookupListVars($bundle, 'admin/reference-data')
         );
     }
 
@@ -290,7 +290,7 @@ class DashboardViewData
 
         return array_merge(
             compact('services', 'canRestore', 'serviceCategoryOptions', 'serviceNextCodeMap', 'existingShortcodes'),
-            self::lookupListVars($bundle, 'admin/services')
+            self::lookupListVars($bundle, 'admin/reference-data')
         );
     }
 
@@ -310,7 +310,7 @@ class DashboardViewData
 
         return array_merge(
             compact('categories', 'canRestore', 'existingCodes'),
-            self::lookupListVars($bundle, 'admin/categories')
+            self::lookupListVars($bundle, 'admin/reference-data')
         );
     }
 

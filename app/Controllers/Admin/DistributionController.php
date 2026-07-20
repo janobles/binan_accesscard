@@ -24,20 +24,15 @@ class DistributionController extends BaseController
         return $g instanceof RedirectResponse ? $g : null;
     }
 
-    /** GET admin/batches — batch control page (create modal, open/close). */
-    public function batches(): ResponseInterface|string
+    /**
+     * GET admin/distribution — batches and the distribution log share one
+     * page, switched by ?tab= (batches|log).
+     */
+    public function distribution(): ResponseInterface|string
     {
         if ($g = $this->guard()) { return $g; }
 
-        return (new \App\Libraries\DashboardPageBuilder($this->request))->renderAdminPage('batches');
-    }
-
-    /** GET admin/distributions — every handout, searchable log. */
-    public function distributions(): ResponseInterface|string
-    {
-        if ($g = $this->guard()) { return $g; }
-
-        return (new \App\Libraries\DashboardPageBuilder($this->request))->renderAdminPage('distributions');
+        return (new \App\Libraries\DashboardPageBuilder($this->request))->renderAdminPage('distribution');
     }
 
     public function voidDistribution(int $id): RedirectResponse
@@ -45,17 +40,17 @@ class DistributionController extends BaseController
         if ($g = $this->guard()) { return $g; }
         $row = model(AidDistributionModel::class)->find($id);
         if ($row === null) {
-            return redirect()->to('admin/distributions')->with('error', 'Distribution not found.');
+            return redirect()->to('admin/distribution?tab=log')->with('error', 'Distribution not found.');
         }
         if (! model(AidDistributionModel::class)->void($id)) {
-            return redirect()->to('admin/distributions')->with('error', 'Unable to void distribution.');
+            return redirect()->to('admin/distribution?tab=log')->with('error', 'Unable to void distribution.');
         }
         $this->audit(
             'Voided aid distribution #' . $id,
             (int) ($row['memberID'] ?? 0),
             'Control #' . (string) ($row['control_no'] ?? '') . ', aid type ID ' . (int) ($row['aid_type_id'] ?? 0) . ', claim date ' . (string) ($row['claim_date'] ?? '')
         );
-        return redirect()->to('admin/distributions')->with('success', 'Distribution voided.');
+        return redirect()->to('admin/distribution?tab=log')->with('success', 'Distribution voided.');
     }
 
     /** POST admin/batches/open — name + aid type. */
@@ -65,10 +60,10 @@ class DistributionController extends BaseController
         $name      = trim((string) $this->request->getPost('name'));
         $aidTypeId = (int) $this->request->getPost('aid_type_id');
         if ($name === '') {
-            return redirect()->to('admin/batches')->with('error', 'Batch name is required.');
+            return redirect()->to('admin/distribution?tab=batches')->with('error', 'Batch name is required.');
         }
         if ($aidTypeId <= 0) {
-            return redirect()->to('admin/batches')->with('error', 'Choose an aid type for this batch.');
+            return redirect()->to('admin/distribution?tab=batches')->with('error', 'Choose an aid type for this batch.');
         }
         $batchModel = model(DistributionBatchModel::class);
         $id         = $batchModel->open($name, $aidTypeId, (int) (session('user_id') ?? 0));
@@ -77,10 +72,10 @@ class DistributionController extends BaseController
                 ? 'A batch is already open. Close the active batch before opening a new one.'
                 : 'Unable to open batch. Please try again or contact an administrator.';
 
-            return redirect()->to('admin/batches')->with('error', $message);
+            return redirect()->to('admin/distribution?tab=batches')->with('error', $message);
         }
         $this->audit('Opened distribution batch "' . $name . '" #' . $id . ' (aid type ID ' . $aidTypeId . ')');
-        return redirect()->to('admin/batches')->with('success', 'Batch opened. Scanning is now live.');
+        return redirect()->to('admin/distribution?tab=batches')->with('success', 'Batch opened. Scanning is now live.');
     }
 
     public function closeBatch(int $id): RedirectResponse
@@ -88,10 +83,10 @@ class DistributionController extends BaseController
         if ($g = $this->guard()) { return $g; }
         $batch = model(DistributionBatchModel::class)->find($id);
         if (! model(DistributionBatchModel::class)->close($id)) {
-            return redirect()->to('admin/batches')->with('error', 'Unable to close batch.');
+            return redirect()->to('admin/distribution?tab=batches')->with('error', 'Unable to close batch.');
         }
         $this->audit('Closed distribution batch "' . (string) ($batch['name'] ?? '') . '" #' . $id);
-        return redirect()->to('admin/batches')->with('success', 'Batch closed. Statistics reset for the next batch.');
+        return redirect()->to('admin/distribution?tab=batches')->with('success', 'Batch closed. Statistics reset for the next batch.');
     }
 
     private function audit(string $action, int $memberId = 0, ?string $detail = null): void

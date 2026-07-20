@@ -27,12 +27,9 @@ final class DashboardControllerRoutingTest extends TestCase
             'index',
             'dashboard',
             'accounts',
-            'familyEntry',
             'manageRecords',
             'auditTrails',
-            'sectors',
-            'services',
-            'manageMembers',
+            'referenceData',
         ]);
     }
 
@@ -40,7 +37,6 @@ final class DashboardControllerRoutingTest extends TestCase
     {
         $this->assertPublicMethods(EmployeeDashboardController::class, [
             'dashboard',
-            'familyEntry',
             'manageRecords',
             'activity',
         ]);

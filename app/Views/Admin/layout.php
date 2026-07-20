@@ -62,10 +62,10 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
     <title><?= esc($pageTitle) ?> - Binan Access Card MIS</title>
     <link rel="icon" type="image/png" href="<?= asset_url('assets/image/binan.png') ?>">
     <?php
-    // The reports page reuses the scanner reports styles (KPI tiles, chart cards,
-    // barangay chart) that live in the scanner asset group.
+    // The dashboard's distribution analytics reuse the scanner reports styles
+    // (KPI tiles, chart cards, barangay chart) from the scanner asset group.
     $layoutStyles = array_merge(asset_styles('head'), asset_styles('admin'));
-    if (($activePage ?? '') === 'reports') {
+    if (($activePage ?? '') === 'dashboard') {
         $layoutStyles = array_merge($layoutStyles, asset_styles('scanner'));
     }
     ?>
@@ -121,6 +121,10 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                      recent records/activity); the rest delegate to sub-views below. */ ?>
             <?php if ($activePage === 'dashboard'): ?>
                 <div class="dashboard-overview" data-dashboard-overview>
+                    <?php /* One unified KPI row: records + distribution numbers
+                             together so the two domains don't fight for rows.
+                             Distribution tiles use the sectors/services variants
+                             (unique on this page) so the live poll can target them. */ ?>
                     <section class="overview-stats" aria-label="Dashboard statistics">
                         <?= view('components/stat_card', [
                             'label' => 'Total Records',
@@ -135,56 +139,53 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                             'variant' => 'stat-card--members',
                         ]) ?>
                         <?= view('components/stat_card', [
-                            'label' => 'Active Sectors',
-                            'value' => (string) ($stats['sectors'] ?? 0),
-                            'icon' => 'diagram-3-fill',
+                            'label' => 'Received Aid',
+                            'value' => ($reportsSummary['received'] ?? 0) . ' of ' . ($reportsSummary['total'] ?? 0),
+                            'icon' => 'check-circle-fill',
                             'variant' => 'stat-card--sectors',
                         ]) ?>
                         <?= view('components/stat_card', [
-                            'label' => 'Services and Programs',
-                            'value' => (string) ($stats['assistance'] ?? 0),
-                            'icon' => 'grid-fill',
+                            'label' => 'Aid Coverage',
+                            'value' => ((string) ($reportsSummary['coverage'] ?? 0)) . '%',
+                            'icon' => 'pie-chart-fill',
                             'variant' => 'stat-card--services',
                         ]) ?>
                     </section>
 
+                    <?php /* Aid Distribution section (header + charts/tables);
+                             variables come from buildReportsData(). */ ?>
+                    <?= view('Admin/reports-body') ?>
+
+                    <div class="dashboard-section-head">
+                        <h2><i class="bi bi-people-fill" aria-hidden="true"></i>Family Records</h2>
+                        <div class="section-actions">
+                            <a class="btn btn-sm btn-outline-secondary" href="<?= site_url('admin/manage-records') ?>">View All <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+                        </div>
+                    </div>
                     <?php
                     $recentFamilyRows = [];
                     foreach ($recentFamilies as $family) {
+                        $contact = trim((string) ($family['contactnumber'] ?? ''));
                         $recentFamilyRows[] = [
                             esc(trim(($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? ''))),
                             esc((string) ($family['sector_name'] ?? '-')),
-                        ];
-                    }
-                    $recentAuditRows = [];
-                    foreach ($recentAudits as $audit) {
-                        $recentAuditRows[] = [
-                            esc($formatAuditUser($audit)),
-                            esc($formatAuditMember($audit)),
-                            '<span class="badge bg-light text-dark border">' . esc((string) ($audit['user_action'] ?? '')) . '</span>',
-                            esc((string) ($audit['description'] ?? '')),
+                            $contact === '' ? '<span class="text-muted">—</span>' : esc($contact),
+                            esc($formatDate($family['dt_created'] ?? '')),
                         ];
                     }
                     ?>
                     <?= view('components/data_table', [
                         'icon' => 'table',
                         'title' => 'Recent Records',
-                        'columns' => ['Name (Head)', 'Sector'],
+                        'columns' => ['Name (Head)', 'Sector', 'Contact', 'Date Added'],
                         'rows' => $recentFamilyRows,
                         'emptyMessage' => 'No records yet.',
                         'tableClass' => 'table overview-table mb-0',
                         'cardClass' => 'dashboard-table-panel',
-                    ]) ?>
-
-                    <?= view('components/data_table', [
-                        'icon' => 'clock-history',
-                        'title' => 'Recent Activity',
-                        'headerActions' => '<a class="btn btn-sm panel-action" href="' . site_url('admin/audit-trails') . '"><i class="bi bi-arrow-right" aria-hidden="true"></i><span>View All</span></a>',
-                        'columns' => ['User', 'Member', 'Action', 'Description'],
-                        'rows' => $recentAuditRows,
-                        'emptyMessage' => 'No activity yet.',
-                        'tableClass' => 'table overview-table mb-0',
-                        'cardClass' => 'dashboard-table-panel',
+                        // reports-body renders first and CI4 shares view data
+                        // between view() calls, so clear its leaked vars.
+                        'headerActions' => null,
+                        'footer' => null,
                     ]) ?>
                 </div>
             <?php endif; ?>
@@ -217,50 +218,70 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                 ]) ?>
             <?php endif; ?>
 
-            <?php if ($activePage === 'sectors'): ?>
-                <?= view('Lookups/sectors', [
-                    'sectors' => $sectors ?? [],
-                    'sectorShortcodeOptions' => $sectorShortcodeOptions,
-                    'lookupStatus' => $lookupStatus ?? 'active',
-                    'canRestore' => $canRestoreLookups ?? false,
+            <?php if ($activePage === 'reference-data'): ?>
+                <?= view('components/page_tabs', [
+                    'tabs' => [
+                        ['key' => 'sectors', 'label' => 'Sectors', 'icon' => 'diagram-3-fill'],
+                        ['key' => 'services', 'label' => 'Services & Programs', 'icon' => 'grid-fill'],
+                        ['key' => 'categories', 'label' => 'Categories', 'icon' => 'tags-fill'],
+                        ['key' => 'aidtypes', 'label' => 'Aid Types', 'icon' => 'box-seam'],
+                    ],
+                    'active' => $referenceTab ?? 'sectors',
+                    'baseUrl' => 'admin/reference-data',
                 ]) ?>
-            <?php endif; ?>
-
-            <?php if ($activePage === 'services'): ?>
-                <?= view('Lookups/services', [
-                    'services' => $services ?? [],
-                    'lookupStatus' => $lookupStatus ?? 'active',
-                    'canRestore' => $canRestoreLookups ?? false,
-                ]) ?>
-            <?php endif; ?>
-
-            <?php if ($activePage === 'categories'): ?>
-                <?= view('Lookups/categories', [
-                    'categories' => $categories ?? [],
-                    'lookupStatus' => $lookupStatus ?? 'active',
-                    'canRestore' => $canRestoreLookups ?? false,
-                ]) ?>
+                <?php if (($referenceTab ?? 'sectors') === 'sectors'): ?>
+                    <?= view('Lookups/sectors', [
+                        'sectors' => $sectors ?? [],
+                        'sectorShortcodeOptions' => $sectorShortcodeOptions,
+                        'lookupStatus' => $lookupStatus ?? 'active',
+                        'canRestore' => $canRestoreLookups ?? false,
+                        'tabParam' => 'sectors',
+                    ]) ?>
+                <?php elseif ($referenceTab === 'services'): ?>
+                    <?= view('Lookups/services', [
+                        'services' => $services ?? [],
+                        'lookupStatus' => $lookupStatus ?? 'active',
+                        'canRestore' => $canRestoreLookups ?? false,
+                        'tabParam' => 'services',
+                    ]) ?>
+                <?php elseif ($referenceTab === 'categories'): ?>
+                    <?= view('Lookups/categories', [
+                        'categories' => $categories ?? [],
+                        'lookupStatus' => $lookupStatus ?? 'active',
+                        'canRestore' => $canRestoreLookups ?? false,
+                        'tabParam' => 'categories',
+                    ]) ?>
+                <?php elseif ($referenceTab === 'aidtypes'): ?>
+                    <?= view('components/card', [
+                        'icon' => 'box-seam',
+                        'title' => 'Aid Types',
+                        'cardClass' => 'sector-management',
+                        'bodyView' => 'Admin/aidtypes-body',
+                        'bodyData' => [
+                            'aidTypes' => $aidTypes,
+                            'currentRole' => $currentRole,
+                        ],
+                    ]) ?>
+                    <?= view('Admin/aidtype-create-modal') ?>
+                <?php endif; ?>
             <?php endif; ?>
 
             <?php if ($activePage === 'cards'): ?>
                 <?= view('Cards/batch_form') ?>
             <?php endif; ?>
 
-            <?php if ($activePage === 'aidtypes'): ?>
-                <?= view('components/card', [
-                    'icon' => 'box-seam',
-                    'title' => 'Aid Types',
-                    'cardClass' => 'sector-management',
-                    'bodyView' => 'Admin/aidtypes-body',
-                    'bodyData' => [
-                        'aidTypes' => $aidTypes,
-                        'currentRole' => $currentRole,
+            <?php if ($activePage === 'distribution'): ?>
+                <?= view('components/page_tabs', [
+                    'tabs' => [
+                        ['key' => 'batches', 'label' => 'Batches', 'icon' => 'collection'],
+                        ['key' => 'log', 'label' => 'Distribution Log', 'icon' => 'clipboard-check-fill'],
                     ],
+                    'active' => $distributionTab ?? 'batches',
+                    'baseUrl' => 'admin/distribution',
                 ]) ?>
-                <?= view('Admin/aidtype-create-modal') ?>
             <?php endif; ?>
 
-            <?php if ($activePage === 'batches'): ?>
+            <?php if ($activePage === 'distribution' && ($distributionTab ?? 'batches') === 'batches'): ?>
                 <?= view('components/card', [
                     'icon' => 'collection',
                     'title' => 'Distribution Batches',
@@ -277,7 +298,7 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                 ]) ?>
             <?php endif; ?>
 
-            <?php if ($activePage === 'distributions'): ?>
+            <?php if ($activePage === 'distribution' && ($distributionTab ?? '') === 'log'): ?>
                 <?= view('components/toolbar', [
                     'isClient' => true,
                     'formAria' => 'Search distributions',
@@ -334,9 +355,6 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                 </script>
             <?php endif; ?>
 
-            <?php if ($activePage === 'reports'): ?>
-                <?= view('Admin/reports-body') ?>
-            <?php endif; ?>
             </main>
     </div>
 </div>

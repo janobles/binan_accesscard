@@ -47,13 +47,6 @@ $formatAuditMember = static function (array $audit): string {
     return $memberName === '' ? '-' : $memberName;
 };
 
-$formatAuditUser = static function (array $audit): string {
-    $username = trim((string) ($audit['username'] ?? $audit['userID'] ?? ''));
-    $role     = trim((string) ($audit['user_role'] ?? ''));
-    $role     = \App\Libraries\RoleAccess::auditRoleLabel($role) ?? $role;
-
-    return $role === '' ? $username : $username . ' (' . $role . ')';
-};
 ?>
 
 <?php /* Toolbar above the card, Manage Records standard (components/records_toolbar_server +
@@ -109,7 +102,6 @@ $auditFooter = $totalRows > 0 ? view('components/table_footer', [
         'perPageOptions' => $perPageOptions,
         'recentAudits' => $recentAudits,
         'hasSearchFilters' => $hasSearchFilters,
-        'formatAuditUser' => $formatAuditUser,
         'auditClearUrl' => $auditClearUrl,
     ],
     'footer' => $auditFooter,

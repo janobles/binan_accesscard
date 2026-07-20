@@ -27,16 +27,10 @@ $sidebarUserUrl = $sidebarUserUrl ?? site_url('admin/dashboard');
                 <a class="nav-link <?= esc($navActive['dashboard'] ?? '') ?>" href="<?= site_url('admin/dashboard') ?>"><div class="sb-nav-link-icon"><i class="bi bi-speedometer2" aria-hidden="true"></i></div>Dashboard</a>
                 <div class="sb-sidenav-menu-heading">Records</div>
                 <a class="nav-link <?= esc($navActive['family-manage'] ?? '') ?>" href="<?= site_url('admin/manage-records') ?>"><div class="sb-nav-link-icon"><i class="bi bi-people-fill" aria-hidden="true"></i></div>Manage Records</a>
-                <div class="sb-sidenav-menu-heading">Reference Data</div>
-                <a class="nav-link <?= esc($navActive['sectors'] ?? '') ?>" href="<?= site_url('admin/sectors') ?>"><div class="sb-nav-link-icon"><i class="bi bi-diagram-3-fill" aria-hidden="true"></i></div>Sector Management</a>
-                <a class="nav-link <?= esc($navActive['services'] ?? '') ?>" href="<?= site_url('admin/services') ?>"><div class="sb-nav-link-icon"><i class="bi bi-grid-fill" aria-hidden="true"></i></div>Services and Programs</a>
-                <a class="nav-link <?= esc($navActive['categories'] ?? '') ?>" href="<?= site_url('admin/categories') ?>"><div class="sb-nav-link-icon"><i class="bi bi-tags-fill" aria-hidden="true"></i></div>Manage Categories</a>
-                <a class="nav-link <?= esc($navActive['aidtypes'] ?? '') ?>" href="<?= site_url('admin/aidtypes') ?>"><div class="sb-nav-link-icon"><i class="bi bi-box-seam" aria-hidden="true"></i></div>Aid Types</a>
-                <div class="sb-sidenav-menu-heading">QR Code</div>
-                <a class="nav-link <?= esc($navActive['cards'] ?? '') ?>" href="<?= site_url('admin/cards') ?>"><div class="sb-nav-link-icon"><i class="bi bi-qr-code" aria-hidden="true"></i></div>Generate</a>
-                <a class="nav-link <?= esc($navActive['batches'] ?? '') ?>" href="<?= site_url('admin/batches') ?>"><div class="sb-nav-link-icon"><i class="bi bi-collection" aria-hidden="true"></i></div>Batches</a>
-                <a class="nav-link <?= esc($navActive['distributions'] ?? '') ?>" href="<?= site_url('admin/distributions') ?>"><div class="sb-nav-link-icon"><i class="bi bi-clipboard-check-fill" aria-hidden="true"></i></div>Distributions</a>
-                <a class="nav-link <?= esc($navActive['reports'] ?? '') ?>" href="<?= site_url('admin/reports') ?>"><div class="sb-nav-link-icon"><i class="bi bi-bar-chart-fill" aria-hidden="true"></i></div>Reports</a>
+                <a class="nav-link <?= esc($navActive['reference-data'] ?? '') ?>" href="<?= site_url('admin/reference-data') ?>"><div class="sb-nav-link-icon"><i class="bi bi-collection" aria-hidden="true"></i></div>Reference Data</a>
+                <div class="sb-sidenav-menu-heading">Aid Distribution</div>
+                <a class="nav-link <?= esc($navActive['cards'] ?? '') ?>" href="<?= site_url('admin/cards') ?>"><div class="sb-nav-link-icon"><i class="bi bi-qr-code" aria-hidden="true"></i></div>Generate Cards</a>
+                <a class="nav-link <?= esc($navActive['distribution'] ?? '') ?>" href="<?= site_url('admin/distribution') ?>"><div class="sb-nav-link-icon"><i class="bi bi-clipboard-check-fill" aria-hidden="true"></i></div>Distribution</a>
                 <div class="sb-sidenav-menu-heading">Administration</div>
                 <?php if ($canManageAccounts): ?>
                 <a class="nav-link <?= esc($navActive['accounts'] ?? '') ?>" href="<?= site_url('admin/accounts') ?>"><div class="sb-nav-link-icon"><i class="bi bi-person-fill-gear" aria-hidden="true"></i></div>Account Management</a>

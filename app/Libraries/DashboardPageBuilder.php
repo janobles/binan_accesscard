@@ -93,37 +93,49 @@ class DashboardPageBuilder
         $auditListData = $activePage === 'audit-trails'
             ? $this->buildAuditListData($includeDeveloperAudits, null, 'admin/audit-trails')
             : [];
-        $recentAudits = $auditListData['rows'] ?? (new AuditTrailsModel())->getRecent(10, $includeDeveloperAudits);
+        // Only the Audit Trails page shows audit rows now (the dashboard's
+        // Recent Activity panel was retired in the admin reorg).
+        $recentAudits = $auditListData['rows'] ?? [];
         $memberListData = $activePage === 'family-manage'
             ? $this->buildMemberListData()
             : [];
 
-        // Paginated server-side list bundles for the lookup-management pages (built
-        // only for the active page; other pages keep the full fetchVisible* lists).
-        $sectorListData = $activePage === 'sectors'
-            ? $this->buildLookupListData($sectorModel, 'admin/sectors', 'sectorID')
+        // Reference Data page: four lookup tables share one page, switched by
+        // ?tab=. Only the active tab's list bundle is built (the tab strip is
+        // server-side and only the active pane renders).
+        $referenceTab = (string) $this->request->getGet('tab');
+        $referenceTab = in_array($referenceTab, ['sectors', 'services', 'categories', 'aidtypes'], true)
+            ? $referenceTab : 'sectors';
+        $isReference = $activePage === 'reference-data';
+
+        $sectorListData = $isReference && $referenceTab === 'sectors'
+            ? $this->buildLookupListData($sectorModel, 'admin/reference-data', 'sectorID')
             : [];
-        $serviceListData = $activePage === 'services'
-            ? $this->buildLookupListData($serviceModel, 'admin/services', 'serviceID')
+        $serviceListData = $isReference && $referenceTab === 'services'
+            ? $this->buildLookupListData($serviceModel, 'admin/reference-data', 'serviceID')
             : [];
-        $categoryListData = $activePage === 'categories'
-            ? $this->buildLookupListData(new CategoryModel(), 'admin/categories', 'categoryID')
+        $categoryListData = $isReference && $referenceTab === 'categories'
+            ? $this->buildLookupListData(new CategoryModel(), 'admin/reference-data', 'categoryID')
             : [];
 
-        // Batch/distribution data for the Batches and Distributions pages,
-        // gated so other pages don't run these queries.
-        $isBatches       = $activePage === 'batches';
-        $isDistributions = $activePage === 'distributions';
+        // Distribution page: batches and the log share one page, switched by
+        // ?tab=. Data gated so other pages don't run these queries.
+        $distributionTab = (string) $this->request->getGet('tab');
+        $distributionTab = in_array($distributionTab, ['batches', 'log'], true) ? $distributionTab : 'batches';
+        $isBatches       = $activePage === 'distribution' && $distributionTab === 'batches';
+        $isDistributions = $activePage === 'distribution' && $distributionTab === 'log';
         $batchModel      = model(DistributionBatchModel::class);
 
-        // Overall reports (combined totals + per-kiosk table), batch-scoped only
-        // (no date filter). Gated so other pages don't run these queries.
-        $reportsData = $activePage === 'reports'
+        // Distribution analytics now live on the dashboard (combined totals +
+        // per-kiosk table), batch-scoped only (no date filter). Gated so other
+        // pages don't run these queries.
+        $reportsData = $activePage === 'dashboard'
             ? $this->buildReportsData($batchModel)
             : [
                 'reportsBatches'    => [],
                 'reportsBatchId'    => null,
                 'reportsBatchName'  => null,
+                'reportsBatchOpen'  => false,
                 'reportsSummary'    => ['total' => 0, 'received' => 0, 'notReceived' => 0, 'coverage' => 0],
                 'reportsByBarangay' => [],
                 'reportsByAidType'  => [],
@@ -167,14 +179,9 @@ class DashboardPageBuilder
                 'accounts'     => $layoutModel->navActive($activePage, 'accounts'),
                 'family-manage' => $layoutModel->navActive($activePage, 'family-manage'),
                 'audit-trails' => $layoutModel->navActive($activePage, 'audit-trails'),
-                'sectors'      => $layoutModel->navActive($activePage, 'sectors'),
-                'services'     => $layoutModel->navActive($activePage, 'services'),
-                'categories'   => $layoutModel->navActive($activePage, 'categories'),
-                'aidtypes'     => $layoutModel->navActive($activePage, 'aidtypes'),
+                'reference-data' => $layoutModel->navActive($activePage, 'reference-data'),
                 'cards'         => $layoutModel->navActive($activePage, 'cards'),
-                'batches'       => $layoutModel->navActive($activePage, 'batches'),
-                'distributions' => $layoutModel->navActive($activePage, 'distributions'),
-                'reports'       => $layoutModel->navActive($activePage, 'reports'),
+                'distribution'  => $layoutModel->navActive($activePage, 'distribution'),
             ],
             'adminAccounts'      => array_values(array_filter($visibleAccounts, static fn ($account) => $account['role'] === 'administrator')),
             // 'encoder' is the raw DB enum value for the Employee role (surfaced as
@@ -191,17 +198,20 @@ class DashboardPageBuilder
             'sectors'            => $sectorListData['rows'] ?? $this->fetchVisibleSectors($sectorModel),
             'services'           => $serviceListData['rows'] ?? $this->fetchVisibleServices($serviceModel),
             'categories'         => $categoryListData['rows'] ?? $this->fetchVisibleCategories(new CategoryModel()),
+            'referenceTab'       => $referenceTab,
+            'distributionTab'    => $distributionTab,
             'sectorListData'     => $sectorListData,
             'serviceListData'    => $serviceListData,
             'categoryListData'   => $categoryListData,
             'batches'            => $isBatches ? $batchModel->allBatches() : [],
             'activeBatch'        => $isBatches ? $batchModel->activeBatch() : null,
             'activeAidTypes'     => $isBatches ? model(AidTypeModel::class)->active() : [],
-            'aidTypes'           => $activePage === 'aidtypes' ? model(AidTypeModel::class)->all() : [],
+            'aidTypes'           => $isReference && $referenceTab === 'aidtypes' ? model(AidTypeModel::class)->all() : [],
             'distributions'      => $isDistributions ? model(AidDistributionModel::class)->allDistributions() : [],
             'reportsBatches'     => $reportsData['reportsBatches'],
             'reportsBatchId'     => $reportsData['reportsBatchId'],
             'reportsBatchName'   => $reportsData['reportsBatchName'],
+            'reportsBatchOpen'   => $reportsData['reportsBatchOpen'],
             'reportsSummary'     => $reportsData['reportsSummary'],
             'reportsByBarangay'  => $reportsData['reportsByBarangay'],
             'reportsByAidType'   => $reportsData['reportsByAidType'],
@@ -430,6 +440,7 @@ class DashboardPageBuilder
             'reportsBatches'    => $batches,
             'reportsBatchId'    => $batchId > 0 ? $batchId : null,
             'reportsBatchName'  => $batch['name'] ?? null,
+            'reportsBatchOpen'  => $batch !== null && ($batch['closed_at'] ?? null) === null,
             'reportsSummary'    => $stats->receivedVsNot($scope),
             'reportsByBarangay' => $stats->byBarangay($scope),
             'reportsByAidType'  => $stats->byAidType($scope),
@@ -669,11 +680,17 @@ class DashboardPageBuilder
         $recentFamilies = $activePage === 'dashboard' && ($searchTerm !== '' || $hasSearchFilters)
             ? $searchModel->families($searchTerm, $searchFilters, 25)
             : $dashboardModel->recentFamilies(10);
-        $sectorListData = $activePage === 'sectors'
-            ? $this->buildLookupListData(new SectorModel(), 'viewer/sectors', 'sectorID')
+        // Read-only Reference Data page: Sectors and Services tabs share one
+        // page, switched by ?tab= (mirrors the admin reference-data page).
+        $referenceTab = (string) $this->request->getGet('tab');
+        $referenceTab = in_array($referenceTab, ['sectors', 'services'], true) ? $referenceTab : 'sectors';
+        $isReference  = $activePage === 'reference-data';
+
+        $sectorListData = $isReference && $referenceTab === 'sectors'
+            ? $this->buildLookupListData(new SectorModel(), 'viewer/reference-data', 'sectorID')
             : [];
-        $serviceListData = $activePage === 'services'
-            ? $this->buildLookupListData(new ServiceModel(), 'viewer/services', 'serviceID')
+        $serviceListData = $isReference && $referenceTab === 'services'
+            ? $this->buildLookupListData(new ServiceModel(), 'viewer/reference-data', 'serviceID')
             : [];
 
         return view('Viewer/layout', [
@@ -683,9 +700,9 @@ class DashboardPageBuilder
             'navActive' => [
                 'dashboard' => $layoutModel->navActive($activePage, 'dashboard'),
                 'family-manage' => $layoutModel->navActive($activePage, 'family-manage'),
-                'sectors' => $layoutModel->navActive($activePage, 'sectors'),
-                'services' => $layoutModel->navActive($activePage, 'services'),
+                'reference-data' => $layoutModel->navActive($activePage, 'reference-data'),
             ],
+            'referenceTab'       => $referenceTab,
             'recordListData'     => $recordListData,
             'recentFamilies'     => $recentFamilies,
             'sectorListData'     => $sectorListData,

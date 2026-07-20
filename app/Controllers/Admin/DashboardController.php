@@ -65,17 +65,8 @@ class DashboardController extends BaseController
     }
 
     /**
-     * GET `admin/family-entry`. Legacy URL; the add/edit experience now lives in
-     * the Manage Records modal.
-     */
-    public function familyEntry(): RedirectResponse
-    {
-        return redirect()->to(site_url('admin/manage-records'));
-    }
-
-    /**
-     * GET `admin/manage-records` (and `manage-families`). Renders the family
-     * records list page, or the list fragment for AJAX search/pagination.
+     * GET `admin/manage-records`. Renders the family records list page, or the
+     * list fragment for AJAX search/pagination.
      */
     public function manageRecords(): string|RedirectResponse
     {
@@ -100,42 +91,13 @@ class DashboardController extends BaseController
     }
 
     /**
-     * GET `admin/sectors`. Renders the sector lookup page, or the sector fragment
-     * for AJAX. Mutations are posted to Lookups\SectorController.
+     * GET `admin/reference-data`. One page for the four lookup tables
+     * (Sectors, Services, Categories, Aid Types), switched by ?tab=.
+     * Mutations still post to the Lookups\* and AidTypes controllers.
      */
-    public function sectors(): string|RedirectResponse
+    public function referenceData(): string|RedirectResponse
     {
-        if ($this->isPartialRequest()) {
-            return $this->renderSectorsPartial();
-        }
-
-        return (new DashboardPageBuilder($this->request))->renderAdminPage('sectors');
-    }
-
-    /**
-     * GET `admin/services`. Renders the service lookup page, or the service
-     * fragment for AJAX. Mutations are posted to Lookups\ServiceController.
-     */
-    public function services(): string|RedirectResponse
-    {
-        if ($this->isPartialRequest()) {
-            return $this->renderServicesPartial();
-        }
-
-        return (new DashboardPageBuilder($this->request))->renderAdminPage('services');
-    }
-
-    /**
-     * GET `admin/categories`. Renders the sector-category lookup page, or the
-     * category fragment for AJAX. Mutations are posted to Lookups\CategoryController.
-     */
-    public function categories(): string|RedirectResponse
-    {
-        if ($this->isPartialRequest()) {
-            return $this->renderCategoriesPartial();
-        }
-
-        return (new DashboardPageBuilder($this->request))->renderAdminPage('categories');
+        return (new DashboardPageBuilder($this->request))->renderAdminPage('reference-data');
     }
 
     /**
@@ -145,15 +107,6 @@ class DashboardController extends BaseController
     public function cards(): string|RedirectResponse
     {
         return (new DashboardPageBuilder($this->request))->renderAdminPage('cards');
-    }
-
-    /**
-     * GET `admin/manage-members`. Reuses the family-manage page (member-centric
-     * view of the same records). Frontend: full-page load of the admin shell.
-     */
-    public function manageMembers(): string|RedirectResponse
-    {
-        return (new DashboardPageBuilder($this->request))->renderAdminPage('family-manage');
     }
 
     // ---------------------------------------------------------------------
@@ -250,67 +203,4 @@ class DashboardController extends BaseController
         ]);
     }
 
-    /**
-     * Returns the sectors lookup fragment for the admin sectors AJAX view.
-     * Renders `Lookups/sectors`.
-     */
-    private function renderSectorsPartial(): string|RedirectResponse
-    {
-        $guard = $this->guardAdminPartialAccess();
-
-        if ($guard instanceof RedirectResponse) {
-            return $guard;
-        }
-
-        $viewData = (new DashboardPageBuilder($this->request))->buildAdminViewData('sectors');
-
-        return view('Lookups/sectors', [
-            'sectors' => $viewData['sectors'] ?? [],
-            'sectorShortcodeOptions' => $viewData['sectorShortcodeOptions'] ?? [],
-            'lookupStatus' => $viewData['lookupStatus'] ?? 'active',
-            'canRestore' => $viewData['canRestoreLookups'] ?? false,
-        ]);
-    }
-
-    /**
-     * Returns the services lookup fragment for the admin services AJAX view.
-     * Renders `Lookups/services`.
-     */
-    private function renderServicesPartial(): string|RedirectResponse
-    {
-        $guard = $this->guardAdminPartialAccess();
-
-        if ($guard instanceof RedirectResponse) {
-            return $guard;
-        }
-
-        $viewData = (new DashboardPageBuilder($this->request))->buildAdminViewData('services');
-
-        return view('Lookups/services', [
-            'services' => $viewData['services'] ?? [],
-            'lookupStatus' => $viewData['lookupStatus'] ?? 'active',
-            'canRestore' => $viewData['canRestoreLookups'] ?? false,
-        ]);
-    }
-
-    /**
-     * Returns the categories lookup fragment for the admin categories AJAX view.
-     * Renders `Lookups/categories`.
-     */
-    private function renderCategoriesPartial(): string|RedirectResponse
-    {
-        $guard = $this->guardAdminPartialAccess();
-
-        if ($guard instanceof RedirectResponse) {
-            return $guard;
-        }
-
-        $viewData = (new DashboardPageBuilder($this->request))->buildAdminViewData('categories');
-
-        return view('Lookups/categories', [
-            'categories' => $viewData['categories'] ?? [],
-            'lookupStatus' => $viewData['lookupStatus'] ?? 'active',
-            'canRestore' => $viewData['canRestoreLookups'] ?? false,
-        ]);
-    }
 }

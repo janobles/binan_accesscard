@@ -53,18 +53,18 @@ class ServiceController extends BaseController
         $model = new ServiceModel();
 
         if (! $model->hasTable()) {
-            return $this->redirectAdmin('admin/services', 'error', 'Services table is not available.');
+            return $this->redirectAdmin('admin/reference-data?tab=services', 'error', 'Services table is not available.');
         }
 
         $service = $model->find($serviceId);
 
         if (! $model->archive($serviceId)) {
-            return $this->redirectAdmin('admin/services', 'error', 'Unable to archive service.');
+            return $this->redirectAdmin('admin/reference-data?tab=services', 'error', 'Unable to archive service.');
         }
 
         $this->audit('SERVICE_ARCHIVE', 'Archived ' . $this->serviceLabel($service, $serviceId) . '.');
 
-        return $this->redirectAdmin('admin/services', 'success', 'Service or program archived successfully.');
+        return $this->redirectAdmin('admin/reference-data?tab=services', 'success', 'Service or program archived successfully.');
     }
 
     /**
@@ -82,18 +82,18 @@ class ServiceController extends BaseController
         $model = new ServiceModel();
 
         if (! $model->hasTable()) {
-            return $this->redirectAdmin('admin/services?status=archived', 'error', 'Services table is not available.');
+            return $this->redirectAdmin('admin/reference-data?tab=services&status=archived', 'error', 'Services table is not available.');
         }
 
         $service = $model->find($serviceId);
 
         if (! $model->restore($serviceId)) {
-            return $this->redirectAdmin('admin/services?status=archived', 'error', 'Unable to restore service.');
+            return $this->redirectAdmin('admin/reference-data?tab=services&status=archived', 'error', 'Unable to restore service.');
         }
 
         $this->audit('SERVICE_RESTORE', 'Restored ' . $this->serviceLabel($service, $serviceId) . '.');
 
-        return $this->redirectAdmin('admin/services', 'success', 'Service or program restored successfully.');
+        return $this->redirectAdmin('admin/reference-data?tab=services', 'success', 'Service or program restored successfully.');
     }
 
     /**
@@ -111,22 +111,22 @@ class ServiceController extends BaseController
         $model = new ServiceModel();
 
         if (! $model->hasTable()) {
-            return $this->redirectAdmin('admin/services', 'error', 'Services table is not available.');
+            return $this->redirectAdmin('admin/reference-data?tab=services', 'error', 'Services table is not available.');
         }
 
         if ($model->isInUse($serviceId)) {
-            return $this->redirectAdmin('admin/services', 'error', 'This service or program is already used by one or more records and cannot be deleted.');
+            return $this->redirectAdmin('admin/reference-data?tab=services', 'error', 'This service or program is already used by one or more records and cannot be deleted.');
         }
 
         $service = $model->find($serviceId);
 
         if (! $model->delete($serviceId)) {
-            return $this->redirectAdmin('admin/services', 'error', 'Unable to delete service.');
+            return $this->redirectAdmin('admin/reference-data?tab=services', 'error', 'Unable to delete service.');
         }
 
         $this->audit('SERVICE_DELETE', 'Permanently deleted ' . $this->serviceLabel($service, $serviceId) . '.');
 
-        return $this->redirectAdmin('admin/services', 'success', 'Service or program deleted successfully.');
+        return $this->redirectAdmin('admin/reference-data?tab=services', 'success', 'Service or program deleted successfully.');
     }
 
     /**
@@ -146,7 +146,7 @@ class ServiceController extends BaseController
         $model = new ServiceModel();
 
         if (! $model->hasTable()) {
-            return $this->redirectAdmin('admin/services', 'error', 'Services table is not available.');
+            return $this->redirectAdmin('admin/reference-data?tab=services', 'error', 'Services table is not available.');
         }
 
         $category = trim((string) $this->request->getPost('category'));
@@ -165,12 +165,12 @@ class ServiceController extends BaseController
         ];
 
         if ($data['category'] === '' || $data['name'] === '' || $data['shortcode'] === '') {
-            return $this->redirectAdmin('admin/services', 'error', 'Code, category and name are required.');
+            return $this->redirectAdmin('admin/reference-data?tab=services', 'error', 'Code, category and name are required.');
         }
 
         // The code is the unique key the Excel import uses, so it must not clash.
         if ($model->shortcodeExists($data['shortcode'], $serviceId)) {
-            return $this->redirectAdmin('admin/services', 'error', 'The code "' . $data['shortcode'] . '" is already used by another service.');
+            return $this->redirectAdmin('admin/reference-data?tab=services', 'error', 'The code "' . $data['shortcode'] . '" is already used by another service.');
         }
 
         $isUpdate = $serviceId !== null;
@@ -187,7 +187,7 @@ class ServiceController extends BaseController
         }
 
         if (! $saved) {
-            return $this->redirectAdmin('admin/services', 'error', 'Unable to save service.');
+            return $this->redirectAdmin('admin/reference-data?tab=services', 'error', 'Unable to save service.');
         }
 
         $this->audit(
@@ -197,7 +197,7 @@ class ServiceController extends BaseController
 
         $message = $isUpdate ? 'Service updated successfully.' : 'Service added successfully.';
 
-        return $this->redirectAdmin('admin/services', 'success', $message);
+        return $this->redirectAdmin('admin/reference-data?tab=services', 'success', $message);
     }
 
     /**

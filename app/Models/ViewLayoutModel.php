@@ -17,12 +17,8 @@ class ViewLayoutModel
             'family-manage' => 'Manage Records',
             'accounts' => 'Account Management',
             'audit-trails' => 'Audit Trails',
-            'sectors' => 'Sector Management',
-            'services' => 'Services and Programs Management',
-            'categories' => 'Manage Categories',
-            'aidtypes' => 'Aid Types',
-            'batches' => 'Distribution Batches',
-            'distributions' => 'All Distributions',
+            'reference-data' => 'Reference Data',
+            'distribution' => 'Aid Distribution',
             default => ucwords(str_replace('-', ' ', $activePage)),
         };
     }

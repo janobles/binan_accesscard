@@ -4,13 +4,12 @@ namespace App\Libraries;
 
 /**
  * Shapes a staged family-import job (the review-phase result_json produced by
- * App\Jobs\FamilyImportJob) into a READ-ONLY report.
+ * App\Jobs\FamilyImportJob) into a report.
  *
- * Nothing is edited here: the spreadsheet is the single source of truth. If fixes were
- * applied in the browser the file would still hold the mistakes, and the next person to
- * re-use it would import them again. So the report's only job is to make fixing the file
- * effortless — every issue names the EXACT Excel cell (e.g. "H42"), the column, the
- * current value, and what to do. Fix the file, upload it again.
+ * Every issue names the EXACT Excel cell (e.g. "H42"), the column, the current value, and
+ * what to do — so the operator can fix it in the spreadsheet and upload again. A flagged
+ * family can also be fixed in place: familiesToFix() drives the per-family Edit/Remove
+ * actions on the review screen, which restage the corrected group without a re-upload.
  *
  * Pure presentation — no DB, request, or session.
  */
@@ -123,10 +122,83 @@ class ImportReviewPresenter
                 'warnings'    => (int) ($counts['warnings'] ?? 0),
                 'ready'       => count($ready),
             ],
-            'groups'  => $groups,
-            'byRow'   => $byRowIdx,
-            'ready'   => $ready,
+            'groups'   => $groups,
+            'byRow'    => $byRowIdx,
+            'ready'    => $ready,
+            'families' => $this->familiesToFix($byQr, $byRow, $errors),
         ];
+    }
+
+    /**
+     * One entry per QR group that has any blocking error OR warning — the families the
+     * operator can open in the Edit modal (or Remove). Clean, warning-free groups are
+     * omitted; they need no attention. Groups with a blank QR are omitted too — with no QR
+     * there is nothing to key the in-app fix on (fix those in the file).
+     *
+     * @param array<string, list<int>>          $byQr   [qr => sheet rows]
+     * @param array<int, array<string, string>> $byRow  [sheet row => cell values]
+     * @param list<array>                       $errors
+     *
+     * @return list<array>
+     */
+    private function familiesToFix(array $byQr, array $byRow, array $errors): array
+    {
+        $blocking = [];
+        $warnings = [];
+
+        foreach ($errors as $error) {
+            $qr = trim((string) ($error['familyNo'] ?? ''));
+
+            if ($qr === '') {
+                continue;
+            }
+
+            if (($error['severity'] ?? 'blocking') === 'blocking') {
+                $blocking[$qr] = ($blocking[$qr] ?? 0) + 1;
+            } else {
+                $warnings[$qr] = ($warnings[$qr] ?? 0) + 1;
+            }
+        }
+
+        $out = [];
+
+        foreach ($byQr as $qr => $sheetRows) {
+            $qr = (string) $qr;
+            $b  = (int) ($blocking[$qr] ?? 0);
+            $w  = (int) ($warnings[$qr] ?? 0);
+
+            if ($b === 0 && $w === 0) {
+                continue;
+            }
+
+            $headRow = null;
+
+            foreach ($sheetRows as $sheetRow) {
+                if ($this->isHeadRow($byRow[$sheetRow] ?? [])) {
+                    $headRow = $sheetRow;
+                    break;
+                }
+            }
+
+            if ($headRow === null) {
+                $headRow = $sheetRows[0] ?? null;
+            }
+
+            $head = $headRow !== null ? ($byRow[$headRow] ?? []) : [];
+
+            $out[] = [
+                'qr'       => $qr,
+                'sheetRow' => $headRow,
+                'head'     => trim((string) ($head['firstname'] ?? '') . ' ' . (string) ($head['lastname'] ?? '')),
+                'members'  => max(0, count($sheetRows) - 1),
+                'blocking' => $b,
+                'warnings' => $w,
+            ];
+        }
+
+        usort($out, static fn (array $a, array $b): int => ((int) ($a['sheetRow'] ?? 0)) <=> ((int) ($b['sheetRow'] ?? 0)));
+
+        return $out;
     }
 
     /**

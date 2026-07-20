@@ -132,12 +132,44 @@ $renderMemberRow = static function ($index, array $m = []) use (
 };
 ?>
 
-<div class="family-entry-form" data-family-entry-form>
+<?php $importFieldIssues = (array) ($importFieldIssues ?? []); ?>
+<div class="family-entry-form" data-family-entry-form<?php if ($importFieldIssues !== []): ?> data-family-import-field-issues="<?= esc(json_encode($importFieldIssues), 'attr') ?>"<?php endif; ?>>
     <div class="family-entry-header">
         <div>
             <h2 class="family-entry-title"><?= esc($modalTitle) ?></h2>
         </div>
     </div>
+
+    <?php /* Import-fix context: the staged errors/warnings for this family, so the worker sees
+             exactly what to correct. Only rendered when opened from the Import Review screen. */ ?>
+    <?php
+    $importIssues   = (array) ($importIssues ?? []);
+    $blockingIssues = array_values(array_filter($importIssues, static fn (array $i): bool => ($i['severity'] ?? 'blocking') === 'blocking'));
+    $warningIssues  = array_values(array_filter($importIssues, static fn (array $i): bool => ($i['severity'] ?? 'blocking') !== 'blocking'));
+    $renderIssue    = static function (array $issue): string {
+        $person = trim((string) ($issue['person'] ?? ''));
+        $column = trim((string) ($issue['column'] ?? ''));
+        $lead   = $person !== '' ? $person . ($column !== '' ? ' · ' . $column : '') : $column;
+
+        return '<li>' . ($lead !== '' ? '<strong>' . esc($lead) . ':</strong> ' : '') . esc((string) ($issue['message'] ?? '')) . '</li>';
+    };
+    ?>
+    <?php if ($blockingIssues !== [] || $warningIssues !== []): ?>
+        <div class="family-import-issues" data-family-import-issues>
+            <?php if ($blockingIssues !== []): ?>
+                <div class="alert alert-danger">
+                    <div class="fw-semibold mb-1"><i class="bi bi-exclamation-octagon me-1" aria-hidden="true"></i><?= count($blockingIssues) ?> issue<?= count($blockingIssues) === 1 ? '' : 's' ?> to fix before this family can import</div>
+                    <ul class="mb-0 ps-3"><?php foreach ($blockingIssues as $issue): ?><?= $renderIssue($issue) ?><?php endforeach; ?></ul>
+                </div>
+            <?php endif; ?>
+            <?php if ($warningIssues !== []): ?>
+                <div class="alert alert-warning">
+                    <div class="fw-semibold mb-1"><i class="bi bi-exclamation-triangle me-1" aria-hidden="true"></i><?= count($warningIssues) ?> warning<?= count($warningIssues) === 1 ? '' : 's' ?> — imports as typed unless you change it</div>
+                    <ul class="mb-0 ps-3"><?php foreach ($warningIssues as $issue): ?><?= $renderIssue($issue) ?><?php endforeach; ?></ul>
+                </div>
+            <?php endif; ?>
+        </div>
+    <?php endif; ?>
 
     <form method="post" action="<?= esc($action, 'attr') ?>" autocomplete="off">
         <?= csrf_field() ?>
@@ -150,6 +182,11 @@ $renderMemberRow = static function ($index, array $m = []) use (
                  count just before submit. The server compares it against the members it
                  actually received to catch a POST silently clipped by max_input_vars. */ ?>
         <input type="hidden" name="members_meta_count" value="0" data-members-count>
+        <?php /* Import-fix context only: tells the staging-save endpoint which QR group this
+                 modal is replacing (see FamilyImportController::reviewFamilySave). */ ?>
+        <?php if (($importFamilyNo ?? '') !== ''): ?>
+            <input type="hidden" name="import_family_no" value="<?= esc((string) $importFamilyNo, 'attr') ?>">
+        <?php endif; ?>
 
         <div class="btn-toolbar family-entry-steps" role="toolbar" aria-label="Family record steps">
             <div class="btn-group w-100" role="group" aria-label="Family record steps">

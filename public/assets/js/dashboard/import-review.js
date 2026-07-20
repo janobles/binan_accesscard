@@ -19,9 +19,10 @@
         return;
     }
 
-    var commitUrl   = root.dataset.commitUrl;
-    var cancelUrl   = root.dataset.cancelUrl;
-    var redirectUrl = root.dataset.redirectUrl;
+    var commitUrl     = root.dataset.commitUrl;
+    var cancelUrl     = root.dataset.cancelUrl;
+    var familyBaseUrl = root.dataset.familyBaseUrl;
+    var redirectUrl   = root.dataset.redirectUrl;
 
     var statsEl    = document.getElementById('importReviewStats');
     var groupsEl   = document.getElementById('importReviewGroups');
@@ -155,6 +156,13 @@
     function renderBody(counts) {
         groupsEl.textContent = '';
 
+        // Actionable summary first: one row per flagged family, with Edit (fix in place) and
+        // Remove (drop from this import). Everything below stays the read-only cell guidance.
+        var families = renderFamiliesToFix();
+        if (families) {
+            groupsEl.appendChild(families);
+        }
+
         var groups = review.groups || [];
 
         if (groups.length) {
@@ -173,6 +181,93 @@
         // it the screen is nothing but bad news, and there is no way to check a head or an
         // address before committing.
         groupsEl.appendChild(renderReady(counts));
+    }
+
+    // -- families to fix (in-place edit / remove) -------------------------------
+
+    function renderFamiliesToFix() {
+        var families = review.families || [];
+
+        if (!families.length || !familyBaseUrl) {
+            return null;
+        }
+
+        var card = el('div', 'card mb-3 import-review-families');
+
+        var header = el('div', 'card-header d-flex justify-content-between align-items-center flex-wrap');
+        var left = el('span', 'fw-semibold');
+        left.appendChild(el('span', 'badge bg-primary me-2', families.length));
+        left.appendChild(document.createTextNode('Families to fix'));
+        header.appendChild(left);
+        header.appendChild(el('small', 'text-muted', 'Fix a family here without touching the spreadsheet, or remove it from this import.'));
+        card.appendChild(header);
+
+        var body = el('div', 'card-body p-0');
+        var wrap = el('div', 'table-responsive');
+        var table = el('table', 'table table-sm mb-0 align-middle import-review-table');
+
+        var thead = el('thead');
+        var htr = el('tr');
+        ['Row', 'QR', 'Head of family', 'Members', 'Issues', 'Actions'].forEach(function (h) {
+            htr.appendChild(el('th', null, h));
+        });
+        thead.appendChild(htr);
+        table.appendChild(thead);
+
+        var tbody = el('tbody');
+        families.forEach(function (family) {
+            tbody.appendChild(renderFamilyToFixRow(family));
+        });
+        table.appendChild(tbody);
+        wrap.appendChild(table);
+        body.appendChild(wrap);
+        card.appendChild(body);
+
+        return card;
+    }
+
+    function renderFamilyToFixRow(family) {
+        var tr = el('tr');
+
+        tr.appendChild(el('td', 'text-nowrap', family.sheetRow != null ? family.sheetRow : '—'));
+        tr.appendChild(el('td', 'text-nowrap fw-semibold', family.qr || '—'));
+        tr.appendChild(el('td', null, family.head || '—'));
+        tr.appendChild(el('td', 'text-nowrap', family.members));
+
+        var issues = el('td', 'small');
+        var blocking = Number(family.blocking || 0);
+        var warnings = Number(family.warnings || 0);
+        if (blocking > 0) {
+            issues.appendChild(el('span', 'badge bg-danger me-1', blocking + ' to fix'));
+        }
+        if (warnings > 0) {
+            issues.appendChild(el('span', 'badge bg-warning text-dark', warnings + ' warning' + (warnings === 1 ? '' : 's')));
+        }
+        if (blocking === 0 && warnings === 0) {
+            issues.appendChild(el('span', 'text-success', 'No issues'));
+        }
+        tr.appendChild(issues);
+
+        var actions = el('td', 'text-nowrap');
+
+        // Opens the shared family modal (registered under the 'importFix' namespace in
+        // manage-family-modal.js) prefilled with this group's staged data.
+        var edit = el('button', 'btn btn-sm btn-primary me-1 js-import-fix-edit', 'Edit');
+        edit.type = 'button';
+        // QR goes in a query param, not the path: a raw QR cell ("-1", "N/A", "5880.0", a
+        // slash) is not URL-path-safe and would 404 against a numeric route segment.
+        edit.dataset.modalUrl = familyBaseUrl + '?fno=' + encodeURIComponent(family.qr);
+        edit.dataset.modalTitle = 'Fix Family ' + (family.qr || '');
+        actions.appendChild(edit);
+
+        var remove = el('button', 'btn btn-sm btn-outline-danger js-import-fix-remove', 'Remove');
+        remove.type = 'button';
+        remove.dataset.familyNo = family.qr;
+        actions.appendChild(remove);
+
+        tr.appendChild(actions);
+
+        return tr;
     }
 
     // -- ready to import --------------------------------------------------------
@@ -508,12 +603,18 @@
 
     // -- network ---------------------------------------------------------------
 
-    function postForm(url) {
+    function postForm(url, extra) {
         var body = new FormData();
         var field = csrfField();
 
         if (field) {
             body.append(field.name, field.value);
+        }
+
+        if (extra) {
+            Object.keys(extra).forEach(function (key) {
+                body.append(key, extra[key]);
+            });
         }
 
         return window.fetch(url, {
@@ -571,6 +672,48 @@
         });
     }
 
+    // Applies a fresh review report (returned by a save/remove) and re-renders. Also called
+    // by manage-family-modal.js after the Edit modal saves — hence the global handle.
+    function applyReview(freshReview, csrfHash) {
+        if (freshReview) {
+            review = freshReview;
+        }
+
+        refreshCsrf(csrfHash);
+        render();
+    }
+
+    window.importReviewApply = applyReview;
+
+    function removeFamily(familyNo) {
+        if (!familyNo || !familyBaseUrl) {
+            return;
+        }
+
+        if (!window.confirm('Remove family ' + familyNo + ' from this import? Its rows will be dropped.')) {
+            return;
+        }
+
+        setStatus('Removing family ' + familyNo + '...');
+
+        // QR travels in the POST body, not the path (raw QR cells are not URL-path-safe).
+        postForm(familyBaseUrl + '/remove', { import_family_no: familyNo }).then(function (result) {
+            var data = result.data || {};
+
+            if (result.ok && data.review) {
+                applyReview(data.review, data.csrf);
+                setStatus('Family ' + familyNo + ' removed.');
+
+                return;
+            }
+
+            refreshCsrf(data.csrf);
+            setStatus(data.message || 'Could not remove the family. Please try again.');
+        }).catch(function () {
+            setStatus('A network error occurred. Please try again.');
+        });
+    }
+
     function cancelImport() {
         if (!window.confirm('Discard this import? Nothing will be saved.')) {
             return;
@@ -619,6 +762,13 @@
         var cellBtn = target.closest('.import-review-cell');
         if (cellBtn) {
             copyCell(cellBtn);
+
+            return;
+        }
+
+        var removeBtn = target.closest('.js-import-fix-remove');
+        if (removeBtn) {
+            removeFamily(removeBtn.dataset.familyNo);
 
             return;
         }

@@ -5,6 +5,7 @@ namespace App\Controllers\Families;
 use App\Controllers\BaseController;
 use App\Libraries\FamilyExcelImporter;
 use App\Libraries\FamilyExcelTemplate;
+use App\Libraries\ImportFamilyModalBuilder;
 use App\Libraries\ImportReviewPresenter;
 use App\Libraries\ImportStagingStore;
 use App\Models\Families\MemberModel;
@@ -388,6 +389,166 @@ class FamilyImportController extends BaseController
             'status'   => 'ok',
             'redirect' => site_url($this->currentRouteBase()),
             'csrf'     => csrf_hash(),
+        ]);
+    }
+
+    /**
+     * GET `{admin|employee}/manage-family/import/review/(:num)/family?fno=<qr>`: the shared
+     * Add/Update family modal, prefilled from the staged rows of one QR group so the operator
+     * fixes it in the browser instead of editing the .xlsx and re-uploading. The QR group is a
+     * query param (a raw QR cell is not URL-path-safe). Posts to reviewFamilySave().
+     */
+    public function reviewFamilyModal(int $jobId): string|RedirectResponse
+    {
+        $guard = $this->requireFamilyEntryAccess();
+
+        if ($guard instanceof RedirectResponse) {
+            return $this->partialGuard($guard, 'You do not have permission to edit import records.');
+        }
+
+        $jobs   = new JobQueueModel();
+        $loaded = $jobs->hasTable() ? $this->loadReviewJob($jobs, $jobId) : null;
+
+        if ($loaded === null) {
+            return '<div class="alert alert-danger mb-0">That import is no longer available to review.</div>';
+        }
+
+        // The QR group is passed as a query param, not a path segment: a QR cell can hold any
+        // raw text (a negative number, "N/A", "5880.0", a slash) that is not URL-path-safe.
+        $familyNo = trim((string) $this->request->getGet('fno'));
+
+        if ($familyNo === '') {
+            return '<div class="alert alert-danger mb-0">No family was selected to edit.</div>';
+        }
+
+        $builder = new ImportFamilyModalBuilder();
+        $action  = site_url($this->currentRouteBase() . '/import/review/' . $jobId . '/family/save');
+
+        return view('Family/family-modal', $builder->viewData($loaded['result'], $familyNo, $action));
+    }
+
+    /**
+     * POST `{admin|employee}/manage-family/import/review/(:num)/family/save`: replaces one QR
+     * group (from the POST's import_family_no) with the modal's submitted values, re-validates
+     * the whole batch, re-stages it, and returns the refreshed review report. Mirrors
+     * store()/update()'s JSON success contract so the shared modal submit handler reuses it.
+     */
+    public function reviewFamilySave(int $jobId)
+    {
+        $guard = $this->requireFamilyEntryAccess();
+
+        if ($guard instanceof RedirectResponse) {
+            return $this->jsonError('You do not have permission to edit import records.', 403);
+        }
+
+        $jobs   = new JobQueueModel();
+        $loaded = $jobs->hasTable() ? $this->loadReviewJob($jobs, $jobId) : null;
+
+        if ($loaded === null) {
+            return $this->jsonError('That import is no longer available to review.', 404);
+        }
+
+        // The group being replaced is carried in the form's hidden import_family_no (a raw QR
+        // string, not URL-path-safe), so it is read from the POST, not the route.
+        $familyNo = trim((string) $this->request->getPost('import_family_no'));
+
+        if ($familyNo === '') {
+            return $this->jsonError('No family was selected to edit.', 422);
+        }
+
+        $bundle   = $loaded['result'];
+        $builder  = new ImportFamilyModalBuilder();
+
+        $newRows = $builder->toStagedRows($this->request->getPost(), $bundle, $familyNo);
+        $rows    = $this->replaceFamilyRows($bundle, $familyNo, $newRows);
+
+        $result = $this->revalidate($bundle, $rows);
+        $this->restageReview($jobId, $result);
+
+        $newQr = trim((string) ($this->request->getPost('qr_control_no') ?? $familyNo));
+
+        return $this->response->setJSON([
+            'status'  => 'success',
+            'message' => 'Family ' . ($newQr !== '' ? $newQr : $familyNo) . ' updated.',
+            'review'  => (new ImportReviewPresenter())->build($result),
+            'csrf'    => csrf_hash(),
+        ]);
+    }
+
+    /**
+     * POST `{admin|employee}/manage-family/import/review/(:num)/family/remove`: drops one QR
+     * group (from the POST's import_family_no) from the staged batch, re-validates the rest,
+     * re-stages, and returns the refreshed report.
+     */
+    public function reviewFamilyRemove(int $jobId)
+    {
+        $guard = $this->requireFamilyEntryAccess();
+
+        if ($guard instanceof RedirectResponse) {
+            return $this->jsonError('You do not have permission to edit import records.', 403);
+        }
+
+        $jobs   = new JobQueueModel();
+        $loaded = $jobs->hasTable() ? $this->loadReviewJob($jobs, $jobId) : null;
+
+        if ($loaded === null) {
+            return $this->jsonError('That import is no longer available to review.', 404);
+        }
+
+        // Raw QR string carried in the POST body (see reviewFamilySave), not the route.
+        $familyNo = trim((string) $this->request->getPost('import_family_no'));
+
+        if ($familyNo === '') {
+            return $this->jsonError('No family was selected to remove.', 422);
+        }
+
+        $bundle   = $loaded['result'];
+        $rows     = $this->replaceFamilyRows($bundle, $familyNo, []);
+
+        $result = $this->revalidate($bundle, $rows);
+        $this->restageReview($jobId, $result);
+
+        return $this->response->setJSON([
+            'status'  => 'success',
+            'message' => 'Family ' . $familyNo . ' removed from this import.',
+            'review'  => (new ImportReviewPresenter())->build($result),
+            'csrf'    => csrf_hash(),
+        ]);
+    }
+
+    /**
+     * Returns the bundle's rows with one QR group's rows swapped for $replacement (an empty
+     * replacement just drops the group), ordered by sheet row.
+     *
+     * @param list<array> $replacement
+     * @return list<array>
+     */
+    private function replaceFamilyRows(array $bundle, string $familyNo, array $replacement): array
+    {
+        $rows = is_array($bundle['rows'] ?? null) ? $bundle['rows'] : [];
+
+        $kept = array_values(array_filter($rows, static fn (array $row): bool =>
+            trim((string) (($row['data'] ?? [])['familyno'] ?? '')) !== $familyNo));
+
+        $merged = array_merge($kept, $replacement);
+
+        usort($merged, static fn (array $a, array $b): int =>
+            ((int) ($a['sheetRow'] ?? 0)) <=> ((int) ($b['sheetRow'] ?? 0)));
+
+        return $merged;
+    }
+
+    /** Persists a re-validated review result back to the job's staging file. */
+    private function restageReview(int $jobId, array $result): void
+    {
+        (new ImportStagingStore())->save($jobId, [
+            'phase'      => 'review',
+            'file'       => (string) ($result['file'] ?? 'import.xlsx'),
+            'rows'       => $result['rows'] ?? [],
+            'errors'     => $result['errors'] ?? [],
+            'fileErrors' => $result['fileErrors'] ?? [],
+            'columns'    => $result['columns'] ?? [],
+            'counts'     => $result['counts'] ?? [],
         ]);
     }
 

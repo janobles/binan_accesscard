@@ -1084,6 +1084,12 @@
                     window.reloadFamilyDataTable();
                 }
 
+                // Import-fix context (Review Import screen): the save returns a fresh review
+                // report — hand it back so the screen re-renders without a reload.
+                if (data.review && typeof window.importReviewApply === 'function') {
+                    window.importReviewApply(data.review, data.csrf);
+                }
+
                 showFamilyToast(data.message || 'Family record saved successfully.', false);
                 return;
             }
@@ -1384,5 +1390,90 @@
         loadingMarkup: '<div class="family-modal-loading" role="status" aria-live="polite"><div class="spinner-border text-primary" aria-hidden="true"></div><span>Loading form...</span></div>',
         errorMarkup: '<div class="alert alert-danger mb-0">Unable to load the form. Please try again.</div>',
         onLoaded: initFamilyEntryModal
+    });
+
+    // Import Review "Fix family" modal: the SAME family form, prefilled from the staged
+    // import rows and pointed at the staging-save endpoint. Reuses initFamilyEntryModal
+    // wholesale; the only difference is the form's action (server-rendered) and that its
+    // success payload carries a fresh review report (handled in submitFamilyForm above).
+    function initImportFixModal(container) {
+        initFamilyEntryModal(container);
+        applyImportFieldIssues(container);
+    }
+
+    // Flags each errored input (red = blocking, amber = warning) with the message beneath it,
+    // from the data-family-import-field-issues JSON the builder emits on the form root.
+    function applyImportFieldIssues(container) {
+        var root = container.querySelector('[data-family-entry-form]');
+
+        if (!root || !root.dataset.familyImportFieldIssues) {
+            return;
+        }
+
+        var issues;
+
+        try {
+            issues = JSON.parse(root.dataset.familyImportFieldIssues);
+        } catch (e) {
+            return;
+        }
+
+        var form = root.querySelector('form');
+
+        if (!form || !Array.isArray(issues)) {
+            return;
+        }
+
+        issues.forEach(function (issue) {
+            if (!issue || !issue.name) {
+                return;
+            }
+
+            var field = form.querySelector('[name="' + String(issue.name).replace(/(["\\])/g, '\\$1') + '"]');
+
+            if (field) {
+                markImportField(field, issue);
+            }
+        });
+    }
+
+    function markImportField(field, issue) {
+        var blocking = issue.severity === 'blocking';
+
+        field.classList.add('import-field-flagged', blocking ? 'import-field-error' : 'import-field-warn');
+
+        var note = document.createElement('div');
+        note.className = 'small import-field-note ' + (blocking ? 'import-field-note-error' : 'import-field-note-warn');
+        note.textContent = issue.message || '';
+
+        // Sit the note below the field — or below its "Other" freetext input when there is one.
+        var anchor = field;
+        var other = field.parentNode ? field.parentNode.querySelector('.js-other-input') : null;
+        if (other) {
+            anchor = other;
+        }
+        anchor.insertAdjacentElement('afterend', note);
+
+        // Clear the flag once the worker touches the field, so a corrected box stops shouting.
+        var clear = function () {
+            field.classList.remove('import-field-flagged', 'import-field-error', 'import-field-warn');
+            if (note.parentNode) {
+                note.parentNode.removeChild(note);
+            }
+            field.removeEventListener('input', clear);
+            field.removeEventListener('change', clear);
+        };
+
+        field.addEventListener('input', clear);
+        field.addEventListener('change', clear);
+    }
+
+    window.registerDashboardModal({
+        namespace: 'importFix',
+        triggerSelector: '.js-import-fix-edit',
+        defaultTitle: 'Fix Family Record',
+        loadingMarkup: '<div class="family-modal-loading" role="status" aria-live="polite"><div class="spinner-border text-primary" aria-hidden="true"></div><span>Loading form...</span></div>',
+        errorMarkup: '<div class="alert alert-danger mb-0">Unable to load the form. Please try again.</div>',
+        onLoaded: initImportFixModal
     });
 })(window, document);

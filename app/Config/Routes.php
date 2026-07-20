@@ -45,6 +45,9 @@ $routes->group('admin', static function (RouteCollection $routes): void {
         $routes->get('import/review/(:num)', 'Families\FamilyImportController::reviewPage/$1');
         $routes->post('import/review/(:num)/commit', 'Families\FamilyImportController::reviewCommit/$1');
         $routes->post('import/review/(:num)/cancel', 'Families\FamilyImportController::reviewCancel/$1');
+        $routes->get('import/review/(:num)/family', 'Families\FamilyImportController::reviewFamilyModal/$1');
+        $routes->post('import/review/(:num)/family/save', 'Families\FamilyImportController::reviewFamilySave/$1');
+        $routes->post('import/review/(:num)/family/remove', 'Families\FamilyImportController::reviewFamilyRemove/$1');
         $routes->get('create', 'Families\FamilyController::createFamily');
         $routes->get('view/(:num)', 'Families\FamilyController::viewFamily/$1');
         $routes->get('edit/(:num)', 'Families\FamilyController::editFamily/$1');
@@ -126,6 +129,9 @@ $routes->group('employee', static function (RouteCollection $routes): void {
         $routes->get('import/review/(:num)', 'Families\FamilyImportController::reviewPage/$1');
         $routes->post('import/review/(:num)/commit', 'Families\FamilyImportController::reviewCommit/$1');
         $routes->post('import/review/(:num)/cancel', 'Families\FamilyImportController::reviewCancel/$1');
+        $routes->get('import/review/(:num)/family', 'Families\FamilyImportController::reviewFamilyModal/$1');
+        $routes->post('import/review/(:num)/family/save', 'Families\FamilyImportController::reviewFamilySave/$1');
+        $routes->post('import/review/(:num)/family/remove', 'Families\FamilyImportController::reviewFamilyRemove/$1');
         $routes->get('create', 'Families\FamilyController::createFamily');
         $routes->get('view/(:num)', 'Families\FamilyController::viewFamily/$1');
         $routes->get('edit/(:num)', 'Families\FamilyController::editFamily/$1');

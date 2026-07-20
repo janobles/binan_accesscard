@@ -116,7 +116,87 @@ final class ImportReviewPresenterTest extends CIUnitTestCase
         $this->assertCount(2, $review['ready']);
     }
 
+    // -- families to fix (in-place Edit / Remove) ------------------------------
+
+    public function testAFlaggedFamilyIsListedToFixWithItsIssueCounts(): void
+    {
+        $families = $this->families(
+            [$this->row(3, '6001', 'Head'), $this->row(4, '6001', 'Child')],
+            [$this->error(3, '6001', 'SEX', 'blocking'), $this->error(3, '6001', 'BRGY', 'warning')],
+        );
+
+        $this->assertCount(1, $families);
+        $this->assertSame('6001', $families[0]['qr']);
+        $this->assertSame('Juan Cruz', $families[0]['head']);
+        $this->assertSame(1, $families[0]['members']);
+        $this->assertSame(1, $families[0]['blocking']);
+        $this->assertSame(1, $families[0]['warnings']);
+        $this->assertSame(3, $families[0]['sheetRow']);
+    }
+
+    public function testAWarningOnlyFamilyIsListedToFix(): void
+    {
+        $families = $this->families(
+            [$this->row(3, '6001', 'Head')],
+            [$this->error(3, '6001', 'CONTACT', 'warning')],
+        );
+
+        $this->assertCount(1, $families);
+        $this->assertSame(0, $families[0]['blocking']);
+        $this->assertSame(1, $families[0]['warnings']);
+    }
+
+    public function testACleanFamilyIsNotListedToFix(): void
+    {
+        $families = $this->families(
+            [$this->row(3, '6001', 'Head'), $this->row(4, '6001', 'Child')],
+            [],
+        );
+
+        $this->assertSame([], $families);
+    }
+
+    public function testAHeadlessFlaggedFamilyStillListsToFix(): void
+    {
+        // HEAD-NONE blocks; the operator must be able to open it and designate a head, so it
+        // must appear even though no row is marked Head (falls back to the first row).
+        $families = $this->families(
+            [$this->row(3, '6001', 'Child'), $this->row(4, '6001', 'Child')],
+            [$this->error(3, '6001', 'HEAD-NONE', 'blocking')],
+        );
+
+        $this->assertCount(1, $families);
+        $this->assertSame('6001', $families[0]['qr']);
+        $this->assertSame(3, $families[0]['sheetRow']);
+    }
+
+    public function testAFamilyWithANonNumericQrIsStillListedToFixWithItsQrIntact(): void
+    {
+        // "-1", "N/A", "5880.0" etc. reach the review as raw QR text. They must still be
+        // editable — the Edit action carries the QR as data, not a numeric URL segment.
+        foreach (['-1', 'N/A', '5880.0'] as $qr) {
+            $families = $this->families(
+                [$this->row(3, $qr, 'Head')],
+                [$this->error(3, $qr, 'QR-FORMAT', 'blocking')],
+            );
+
+            $this->assertCount(1, $families);
+            $this->assertSame($qr, $families[0]['qr']);
+        }
+    }
+
     // -- helpers ---------------------------------------------------------------
+
+    /**
+     * @param list<array> $rows
+     * @param list<array> $errors
+     *
+     * @return list<array>
+     */
+    private function families(array $rows, array $errors): array
+    {
+        return (new ImportReviewPresenter())->build(['rows' => $rows, 'errors' => $errors])['families'];
+    }
 
     /**
      * @param list<array> $rows

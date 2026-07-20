@@ -79,6 +79,7 @@ $routes->group('admin', static function (RouteCollection $routes): void {
         $routes->post('generate', 'Cards\QrCardController::batch');
         $routes->get('card/(:num)', 'Cards\QrCardController::card/$1');
         $routes->get('lookup/(:any)', 'Cards\QrCardController::lookup/$1');
+        $routes->get('heads', 'Cards\QrCardController::heads');
     });
 
     $routes->get('distribution', 'Admin\DistributionController::distribution');

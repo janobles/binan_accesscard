@@ -121,6 +121,10 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                      recent records/activity); the rest delegate to sub-views below. */ ?>
             <?php if ($activePage === 'dashboard'): ?>
                 <div class="dashboard-overview" data-dashboard-overview>
+                    <?php /* One unified KPI row: records + distribution numbers
+                             together so the two domains don't fight for rows.
+                             Distribution tiles use the sectors/services variants
+                             (unique on this page) so the live poll can target them. */ ?>
                     <section class="overview-stats" aria-label="Dashboard statistics">
                         <?= view('components/stat_card', [
                             'label' => 'Total Records',
@@ -134,13 +138,30 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                             'icon' => 'people-fill',
                             'variant' => 'stat-card--members',
                         ]) ?>
+                        <?= view('components/stat_card', [
+                            'label' => 'Received Aid',
+                            'value' => ($reportsSummary['received'] ?? 0) . ' of ' . ($reportsSummary['total'] ?? 0),
+                            'icon' => 'check-circle-fill',
+                            'variant' => 'stat-card--sectors',
+                        ]) ?>
+                        <?= view('components/stat_card', [
+                            'label' => 'Aid Coverage',
+                            'value' => ((string) ($reportsSummary['coverage'] ?? 0)) . '%',
+                            'icon' => 'pie-chart-fill',
+                            'variant' => 'stat-card--services',
+                        ]) ?>
                     </section>
 
-                    <?php /* Distribution analytics (batch selector, KPI tiles,
-                             barangay chart, per-kiosk table) share the stat-card
-                             house style; variables come from buildReportsData(). */ ?>
+                    <?php /* Aid Distribution section (header + charts/tables);
+                             variables come from buildReportsData(). */ ?>
                     <?= view('Admin/reports-body') ?>
 
+                    <div class="dashboard-section-head">
+                        <h2><i class="bi bi-people-fill" aria-hidden="true"></i>Family Records</h2>
+                        <div class="section-actions">
+                            <a class="btn btn-sm btn-outline-secondary" href="<?= site_url('admin/manage-records') ?>">View All <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+                        </div>
+                    </div>
                     <?php
                     $recentFamilyRows = [];
                     foreach ($recentFamilies as $family) {
@@ -153,14 +174,14 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                     <?= view('components/data_table', [
                         'icon' => 'table',
                         'title' => 'Recent Records',
-                        'headerActions' => '<a class="btn btn-sm panel-action" href="' . site_url('admin/manage-records') . '"><i class="bi bi-arrow-right" aria-hidden="true"></i><span>View All</span></a>',
                         'columns' => ['Name (Head)', 'Sector'],
                         'rows' => $recentFamilyRows,
                         'emptyMessage' => 'No records yet.',
                         'tableClass' => 'table overview-table mb-0',
                         'cardClass' => 'dashboard-table-panel',
                         // reports-body renders first and CI4 shares view data
-                        // between view() calls, so clear its leaked footer.
+                        // between view() calls, so clear its leaked vars.
+                        'headerActions' => null,
                         'footer' => null,
                     ]) ?>
                 </div>

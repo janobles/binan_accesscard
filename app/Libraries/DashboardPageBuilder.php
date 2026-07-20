@@ -116,10 +116,12 @@ class DashboardPageBuilder
             ? $this->buildLookupListData(new CategoryModel(), 'admin/reference-data', 'categoryID')
             : [];
 
-        // Batch/distribution data for the Batches and Distributions pages,
-        // gated so other pages don't run these queries.
-        $isBatches       = $activePage === 'batches';
-        $isDistributions = $activePage === 'distributions';
+        // Distribution page: batches and the log share one page, switched by
+        // ?tab=. Data gated so other pages don't run these queries.
+        $distributionTab = (string) $this->request->getGet('tab');
+        $distributionTab = in_array($distributionTab, ['batches', 'log'], true) ? $distributionTab : 'batches';
+        $isBatches       = $activePage === 'distribution' && $distributionTab === 'batches';
+        $isDistributions = $activePage === 'distribution' && $distributionTab === 'log';
         $batchModel      = model(DistributionBatchModel::class);
 
         // Overall reports (combined totals + per-kiosk table), batch-scoped only
@@ -175,8 +177,7 @@ class DashboardPageBuilder
                 'audit-trails' => $layoutModel->navActive($activePage, 'audit-trails'),
                 'reference-data' => $layoutModel->navActive($activePage, 'reference-data'),
                 'cards'         => $layoutModel->navActive($activePage, 'cards'),
-                'batches'       => $layoutModel->navActive($activePage, 'batches'),
-                'distributions' => $layoutModel->navActive($activePage, 'distributions'),
+                'distribution'  => $layoutModel->navActive($activePage, 'distribution'),
                 'reports'       => $layoutModel->navActive($activePage, 'reports'),
             ],
             'adminAccounts'      => array_values(array_filter($visibleAccounts, static fn ($account) => $account['role'] === 'administrator')),
@@ -195,6 +196,7 @@ class DashboardPageBuilder
             'services'           => $serviceListData['rows'] ?? $this->fetchVisibleServices($serviceModel),
             'categories'         => $categoryListData['rows'] ?? $this->fetchVisibleCategories(new CategoryModel()),
             'referenceTab'       => $referenceTab,
+            'distributionTab'    => $distributionTab,
             'sectorListData'     => $sectorListData,
             'serviceListData'    => $serviceListData,
             'categoryListData'   => $categoryListData,

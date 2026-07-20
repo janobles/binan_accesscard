@@ -269,7 +269,18 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                 <?= view('Cards/batch_form') ?>
             <?php endif; ?>
 
-            <?php if ($activePage === 'batches'): ?>
+            <?php if ($activePage === 'distribution'): ?>
+                <?= view('components/page_tabs', [
+                    'tabs' => [
+                        ['key' => 'batches', 'label' => 'Batches', 'icon' => 'collection'],
+                        ['key' => 'log', 'label' => 'Distribution Log', 'icon' => 'clipboard-check-fill'],
+                    ],
+                    'active' => $distributionTab ?? 'batches',
+                    'baseUrl' => 'admin/distribution',
+                ]) ?>
+            <?php endif; ?>
+
+            <?php if ($activePage === 'distribution' && ($distributionTab ?? 'batches') === 'batches'): ?>
                 <?= view('components/card', [
                     'icon' => 'collection',
                     'title' => 'Distribution Batches',
@@ -286,7 +297,7 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                 ]) ?>
             <?php endif; ?>
 
-            <?php if ($activePage === 'distributions'): ?>
+            <?php if ($activePage === 'distribution' && ($distributionTab ?? '') === 'log'): ?>
                 <?= view('components/toolbar', [
                     'isClient' => true,
                     'formAria' => 'Search distributions',

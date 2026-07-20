@@ -31,8 +31,7 @@ $sidebarUserUrl = $sidebarUserUrl ?? site_url('admin/dashboard');
                 <a class="nav-link <?= esc($navActive['reference-data'] ?? '') ?>" href="<?= site_url('admin/reference-data') ?>"><div class="sb-nav-link-icon"><i class="bi bi-collection" aria-hidden="true"></i></div>Reference Data</a>
                 <div class="sb-sidenav-menu-heading">QR Code</div>
                 <a class="nav-link <?= esc($navActive['cards'] ?? '') ?>" href="<?= site_url('admin/cards') ?>"><div class="sb-nav-link-icon"><i class="bi bi-qr-code" aria-hidden="true"></i></div>Generate</a>
-                <a class="nav-link <?= esc($navActive['batches'] ?? '') ?>" href="<?= site_url('admin/batches') ?>"><div class="sb-nav-link-icon"><i class="bi bi-collection" aria-hidden="true"></i></div>Batches</a>
-                <a class="nav-link <?= esc($navActive['distributions'] ?? '') ?>" href="<?= site_url('admin/distributions') ?>"><div class="sb-nav-link-icon"><i class="bi bi-clipboard-check-fill" aria-hidden="true"></i></div>Distributions</a>
+                <a class="nav-link <?= esc($navActive['distribution'] ?? '') ?>" href="<?= site_url('admin/distribution') ?>"><div class="sb-nav-link-icon"><i class="bi bi-clipboard-check-fill" aria-hidden="true"></i></div>Distribution</a>
                 <a class="nav-link <?= esc($navActive['reports'] ?? '') ?>" href="<?= site_url('admin/reports') ?>"><div class="sb-nav-link-icon"><i class="bi bi-bar-chart-fill" aria-hidden="true"></i></div>Reports</a>
                 <div class="sb-sidenav-menu-heading">Administration</div>
                 <?php if ($canManageAccounts): ?>

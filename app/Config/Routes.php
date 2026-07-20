@@ -85,13 +85,12 @@ $routes->group('admin', static function (RouteCollection $routes): void {
         $routes->get('lookup/(:any)', 'Cards\QrCardController::lookup/$1');
     });
 
+    $routes->get('distribution', 'Admin\DistributionController::distribution');
     $routes->group('batches', static function (RouteCollection $routes): void {
-        $routes->get('', 'Admin\DistributionController::batches');
         $routes->post('open', 'Admin\DistributionController::openBatch');
         $routes->post('close/(:num)', 'Admin\DistributionController::closeBatch/$1');
     });
     $routes->group('distributions', static function (RouteCollection $routes): void {
-        $routes->get('', 'Admin\DistributionController::distributions');
         $routes->post('void/(:num)', 'Admin\DistributionController::voidDistribution/$1');
     });
     $routes->get('reports', 'Admin\ReportsController::index');

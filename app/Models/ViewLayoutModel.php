@@ -18,8 +18,7 @@ class ViewLayoutModel
             'accounts' => 'Account Management',
             'audit-trails' => 'Audit Trails',
             'reference-data' => 'Reference Data',
-            'batches' => 'Distribution Batches',
-            'distributions' => 'All Distributions',
+            'distribution' => 'Aid Distribution',
             default => ucwords(str_replace('-', ' ', $activePage)),
         };
     }

@@ -159,6 +159,9 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                         'emptyMessage' => 'No records yet.',
                         'tableClass' => 'table overview-table mb-0',
                         'cardClass' => 'dashboard-table-panel',
+                        // reports-body renders first and CI4 shares view data
+                        // between view() calls, so clear its leaked footer.
+                        'footer' => null,
                     ]) ?>
                 </div>
             <?php endif; ?>

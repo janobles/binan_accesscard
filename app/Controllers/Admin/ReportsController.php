@@ -38,14 +38,6 @@ class ReportsController extends BaseController
         return [0, null];
     }
 
-    /** GET admin/reports — combined totals + per-kiosk table, rendered in the admin shell. */
-    public function index(): ResponseInterface|string
-    {
-        if ($g = $this->guard()) { return $g; }
-
-        return (new \App\Libraries\DashboardPageBuilder($this->request))->renderAdminPage('reports');
-    }
-
     /** GET admin/reports/stats — JSON snapshot for the live poll (no reload). */
     public function stats(): ResponseInterface
     {

@@ -62,10 +62,10 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
     <title><?= esc($pageTitle) ?> - Binan Access Card MIS</title>
     <link rel="icon" type="image/png" href="<?= asset_url('assets/image/binan.png') ?>">
     <?php
-    // The reports page reuses the scanner reports styles (KPI tiles, chart cards,
-    // barangay chart) that live in the scanner asset group.
+    // The dashboard's distribution analytics reuse the scanner reports styles
+    // (KPI tiles, chart cards, barangay chart) from the scanner asset group.
     $layoutStyles = array_merge(asset_styles('head'), asset_styles('admin'));
-    if (($activePage ?? '') === 'reports') {
+    if (($activePage ?? '') === 'dashboard') {
         $layoutStyles = array_merge($layoutStyles, asset_styles('scanner'));
     }
     ?>
@@ -134,19 +134,12 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                             'icon' => 'people-fill',
                             'variant' => 'stat-card--members',
                         ]) ?>
-                        <?= view('components/stat_card', [
-                            'label' => 'Active Sectors',
-                            'value' => (string) ($stats['sectors'] ?? 0),
-                            'icon' => 'diagram-3-fill',
-                            'variant' => 'stat-card--sectors',
-                        ]) ?>
-                        <?= view('components/stat_card', [
-                            'label' => 'Services and Programs',
-                            'value' => (string) ($stats['assistance'] ?? 0),
-                            'icon' => 'grid-fill',
-                            'variant' => 'stat-card--services',
-                        ]) ?>
                     </section>
+
+                    <?php /* Distribution analytics (batch selector, KPI tiles,
+                             barangay chart, per-kiosk table) share the stat-card
+                             house style; variables come from buildReportsData(). */ ?>
+                    <?= view('Admin/reports-body') ?>
 
                     <?php
                     $recentFamilyRows = [];
@@ -156,33 +149,14 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                             esc((string) ($family['sector_name'] ?? '-')),
                         ];
                     }
-                    $recentAuditRows = [];
-                    foreach ($recentAudits as $audit) {
-                        $recentAuditRows[] = [
-                            esc($formatAuditUser($audit)),
-                            esc($formatAuditMember($audit)),
-                            '<span class="badge bg-light text-dark border">' . esc((string) ($audit['user_action'] ?? '')) . '</span>',
-                            esc((string) ($audit['description'] ?? '')),
-                        ];
-                    }
                     ?>
                     <?= view('components/data_table', [
                         'icon' => 'table',
                         'title' => 'Recent Records',
+                        'headerActions' => '<a class="btn btn-sm panel-action" href="' . site_url('admin/manage-records') . '"><i class="bi bi-arrow-right" aria-hidden="true"></i><span>View All</span></a>',
                         'columns' => ['Name (Head)', 'Sector'],
                         'rows' => $recentFamilyRows,
                         'emptyMessage' => 'No records yet.',
-                        'tableClass' => 'table overview-table mb-0',
-                        'cardClass' => 'dashboard-table-panel',
-                    ]) ?>
-
-                    <?= view('components/data_table', [
-                        'icon' => 'clock-history',
-                        'title' => 'Recent Activity',
-                        'headerActions' => '<a class="btn btn-sm panel-action" href="' . site_url('admin/audit-trails') . '"><i class="bi bi-arrow-right" aria-hidden="true"></i><span>View All</span></a>',
-                        'columns' => ['User', 'Member', 'Action', 'Description'],
-                        'rows' => $recentAuditRows,
-                        'emptyMessage' => 'No activity yet.',
                         'tableClass' => 'table overview-table mb-0',
                         'cardClass' => 'dashboard-table-panel',
                     ]) ?>
@@ -354,9 +328,6 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                 </script>
             <?php endif; ?>
 
-            <?php if ($activePage === 'reports'): ?>
-                <?= view('Admin/reports-body') ?>
-            <?php endif; ?>
             </main>
     </div>
 </div>

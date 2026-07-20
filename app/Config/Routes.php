@@ -93,7 +93,6 @@ $routes->group('admin', static function (RouteCollection $routes): void {
     $routes->group('distributions', static function (RouteCollection $routes): void {
         $routes->post('void/(:num)', 'Admin\DistributionController::voidDistribution/$1');
     });
-    $routes->get('reports', 'Admin\ReportsController::index');
     $routes->get('reports/stats', 'Admin\ReportsController::stats');
     $routes->get('reports/pdf', 'Admin\ReportsController::pdf');
 });

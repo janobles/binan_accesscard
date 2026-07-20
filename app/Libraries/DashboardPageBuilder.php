@@ -93,7 +93,9 @@ class DashboardPageBuilder
         $auditListData = $activePage === 'audit-trails'
             ? $this->buildAuditListData($includeDeveloperAudits, null, 'admin/audit-trails')
             : [];
-        $recentAudits = $auditListData['rows'] ?? (new AuditTrailsModel())->getRecent(10, $includeDeveloperAudits);
+        // Only the Audit Trails page shows audit rows now (the dashboard's
+        // Recent Activity panel was retired in the admin reorg).
+        $recentAudits = $auditListData['rows'] ?? [];
         $memberListData = $activePage === 'family-manage'
             ? $this->buildMemberListData()
             : [];
@@ -124,14 +126,16 @@ class DashboardPageBuilder
         $isDistributions = $activePage === 'distribution' && $distributionTab === 'log';
         $batchModel      = model(DistributionBatchModel::class);
 
-        // Overall reports (combined totals + per-kiosk table), batch-scoped only
-        // (no date filter). Gated so other pages don't run these queries.
-        $reportsData = $activePage === 'reports'
+        // Distribution analytics now live on the dashboard (combined totals +
+        // per-kiosk table), batch-scoped only (no date filter). Gated so other
+        // pages don't run these queries.
+        $reportsData = $activePage === 'dashboard'
             ? $this->buildReportsData($batchModel)
             : [
                 'reportsBatches'    => [],
                 'reportsBatchId'    => null,
                 'reportsBatchName'  => null,
+                'reportsBatchOpen'  => false,
                 'reportsSummary'    => ['total' => 0, 'received' => 0, 'notReceived' => 0, 'coverage' => 0],
                 'reportsByBarangay' => [],
                 'reportsByAidType'  => [],
@@ -178,7 +182,6 @@ class DashboardPageBuilder
                 'reference-data' => $layoutModel->navActive($activePage, 'reference-data'),
                 'cards'         => $layoutModel->navActive($activePage, 'cards'),
                 'distribution'  => $layoutModel->navActive($activePage, 'distribution'),
-                'reports'       => $layoutModel->navActive($activePage, 'reports'),
             ],
             'adminAccounts'      => array_values(array_filter($visibleAccounts, static fn ($account) => $account['role'] === 'administrator')),
             // 'encoder' is the raw DB enum value for the Employee role (surfaced as
@@ -208,6 +211,7 @@ class DashboardPageBuilder
             'reportsBatches'     => $reportsData['reportsBatches'],
             'reportsBatchId'     => $reportsData['reportsBatchId'],
             'reportsBatchName'   => $reportsData['reportsBatchName'],
+            'reportsBatchOpen'   => $reportsData['reportsBatchOpen'],
             'reportsSummary'     => $reportsData['reportsSummary'],
             'reportsByBarangay'  => $reportsData['reportsByBarangay'],
             'reportsByAidType'   => $reportsData['reportsByAidType'],
@@ -436,6 +440,7 @@ class DashboardPageBuilder
             'reportsBatches'    => $batches,
             'reportsBatchId'    => $batchId > 0 ? $batchId : null,
             'reportsBatchName'  => $batch['name'] ?? null,
+            'reportsBatchOpen'  => $batch !== null && ($batch['closed_at'] ?? null) === null,
             'reportsSummary'    => $stats->receivedVsNot($scope),
             'reportsByBarangay' => $stats->byBarangay($scope),
             'reportsByAidType'  => $stats->byAidType($scope),

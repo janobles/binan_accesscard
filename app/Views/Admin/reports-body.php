@@ -1,13 +1,14 @@
 <?php
-/* Admin overall Reports body fragment (no doctype/html/head/nav/script-shell —
-   rendered inline by Admin/layout.php's $activePage === 'reports' block, same
-   pattern as Admin/distribution-*-body.php). Batch-scoped only (no date
-   filter); admin always sees every kiosk's per-scanner row. Data comes from
+/* Distribution analytics fragment (no doctype/html/head/nav/script-shell —
+   rendered inline by Admin/layout.php's dashboard block, same pattern as
+   Admin/distribution-*-body.php). Batch-scoped only (no date filter); admin
+   always sees every kiosk's per-scanner row. Data comes from
    DashboardPageBuilder::buildReportsData(). All server data esc()'d. */
 
 $reportsBatches    = $reportsBatches ?? [];
 $reportsBatchId    = $reportsBatchId ?? null;
 $reportsBatchName  = $reportsBatchName ?? null;
+$reportsBatchOpen  = $reportsBatchOpen ?? false;
 $reportsSummary    = $reportsSummary ?? ['total' => 0, 'received' => 0, 'notReceived' => 0, 'coverage' => 0];
 $reportsByBarangay = $reportsByBarangay ?? [];
 $reportsByAidType  = $reportsByAidType ?? [];
@@ -20,7 +21,7 @@ $rangeLabel = $reportsBatchName !== null
 
 <!-- Batch selector + PDF export -->
 <div class="reports-toolbar">
-  <form class="reports-filter" method="get" action="<?= site_url('admin/reports') ?>">
+  <form class="reports-filter" method="get" action="<?= site_url('admin/dashboard') ?>">
     <label for="batchPick" class="form-label mb-0">Batch</label>
     <select class="form-select" id="batchPick" name="batch" onchange="this.form.submit()">
       <?php foreach ($reportsBatches as $b): ?>
@@ -37,25 +38,14 @@ $rangeLabel = $reportsBatchName !== null
 </div>
 <p class="text-muted small mb-3"><?= $rangeLabel ?> &middot; Last updated <span id="lastUpdated">-</span></p>
 
-<!-- KPI tiles: same house style as the admin dashboard stat cards -->
-<section class="reports-stats" aria-label="Report statistics">
-  <?= view('components/stat_card', [
-      'label' => 'Families with a QR',
-      'value' => (string) $reportsSummary['total'],
-      'icon' => 'qr-code',
-      'variant' => 'stat-card--records',
-  ]) ?>
+<!-- KPI tiles: same house style as the admin dashboard stat cards. "Received"
+     folds the QR-holder total into its value so it reads as X of Y. -->
+<section class="reports-stats" aria-label="Distribution statistics">
   <?= view('components/stat_card', [
       'label' => 'Received aid',
-      'value' => (string) $reportsSummary['received'],
+      'value' => $reportsSummary['received'] . ' of ' . $reportsSummary['total'],
       'icon' => 'check-circle-fill',
       'variant' => 'stat-card--members',
-  ]) ?>
-  <?= view('components/stat_card', [
-      'label' => 'Still waiting',
-      'value' => (string) $reportsSummary['notReceived'],
-      'icon' => 'hourglass-split',
-      'variant' => 'stat-card--sectors',
   ]) ?>
   <?= view('components/stat_card', [
       'label' => 'Coverage',
@@ -87,17 +77,8 @@ foreach ($reportsPerScanner as $p) {
     'footer' => view('components/table_footer', ['leftContent' => $rangeLabel]),
 ]) ?>
 
-<!-- Charts: each in the standard card anatomy (components/card) -->
+<!-- Barangay chart + aid-type table side by side (standard card anatomy) -->
 <div class="row g-3 reports-charts">
-  <div class="col-lg-4">
-    <?= view('components/card', [
-        'icon' => 'pie-chart-fill',
-        'title' => 'Families that received aid vs still waiting',
-        'bodyHtml' => '<canvas id="chartReceived" height="220"></canvas>',
-        'footer' => view('components/table_footer', ['leftContent' => $rangeLabel]),
-        'cardClass' => 'reports-chart-card h-100',
-    ]) ?>
-  </div>
   <div class="col-lg-8">
     <?= view('components/card', [
         'icon' => 'bar-chart-fill',
@@ -107,18 +88,30 @@ foreach ($reportsPerScanner as $p) {
         'cardClass' => 'reports-chart-card h-100',
     ]) ?>
   </div>
-  <div class="col-lg-12">
-    <?= view('components/card', [
-        'icon' => 'bar-chart-fill',
-        'title' => 'Number of handouts by aid type',
-        'bodyHtml' => '<div style="position:relative;height:260px"><canvas id="chartAidType"></canvas></div>',
+  <div class="col-lg-4">
+    <?php
+    $aidTypeRows = [];
+    foreach ($reportsByAidType as $t) {
+        $aidTypeRows[] = [
+            esc((string) $t['aid_type']),
+            esc((string) $t['count']),
+        ];
+    }
+    ?>
+    <?= view('components/data_table', [
+        'icon' => 'box-seam',
+        'title' => 'Handouts by aid type',
+        'columns' => ['Aid type', 'Handouts'],
+        'rows' => $aidTypeRows,
+        'emptyMessage' => 'No handouts in this batch yet.',
+        'tableClass' => 'table manage-record-table align-middle w-100 mb-0',
+        'cardClass' => 'reports-fallback h-100',
         'footer' => view('components/table_footer', ['leftContent' => $rangeLabel]),
-        'cardClass' => 'reports-chart-card',
     ]) ?>
   </div>
 </div>
 
-<!-- No-JS / print fallback summary table -->
+<!-- No-JS / print fallback summary table (duplicates the chart, so screen hides it) -->
 <?php
 $barangayRows = [];
 foreach ($reportsByBarangay as $b) {
@@ -130,6 +123,7 @@ foreach ($reportsByBarangay as $b) {
     ];
 }
 ?>
+<div class="d-none d-print-block">
 <?= view('components/data_table', [
     'icon' => 'table',
     'title' => 'Coverage by barangay',
@@ -140,6 +134,7 @@ foreach ($reportsByBarangay as $b) {
     'cardClass' => 'reports-fallback',
     'footer' => view('components/table_footer', ['leftContent' => $rangeLabel]),
 ]) ?>
+</div>
 
 <script id="reportsData" type="application/json"><?= json_encode(
     [
@@ -158,19 +153,20 @@ foreach ($reportsByBarangay as $b) {
   // KPI tiles in place (no page reload, so the batch selector and scroll stay put).
   var statsUrl = '<?= site_url('admin/reports/stats') ?>';
   var batchId = <?= (int) ($reportsBatchId ?? 0) ?>;
+  var batchOpen = <?= $reportsBatchOpen ? 'true' : 'false' ?>;
   if (batchId > 0) { statsUrl += '?batch=' + batchId; }
 
   function setTile(variant, value) {
-    var el = document.querySelector('.' + variant + ' strong');
+    // Scope to the distribution tiles: the dashboard's own stat cards reuse
+    // the same variant classes.
+    var el = document.querySelector('.reports-stats .' + variant + ' strong');
     if (el) { el.textContent = value; }
   }
 
   function apply(d) {
     if (d.received) {
-      setTile('stat-card--records', d.received.total);
-      setTile('stat-card--members', d.received.received);
-      setTile('stat-card--sectors', d.received.notReceived);
-      setTile('stat-card--services', d.received.coverage + '%');
+      setTile('stat-card--members', (d.received.received || 0) + ' of ' + (d.received.total || 0));
+      setTile('stat-card--services', (d.received.coverage || 0) + '%');
     }
     if (window.ReportsCharts) { window.ReportsCharts.update(d); }
     var stamp = document.getElementById('lastUpdated');
@@ -189,9 +185,12 @@ foreach ($reportsByBarangay as $b) {
   var stamp = document.getElementById('lastUpdated');
   if (stamp) { stamp.textContent = new Date().toLocaleTimeString(); }
 
-  // Only poll while the tab is visible; browsers throttle hidden-tab timers anyway.
-  setInterval(function () {
-    if (document.visibilityState === 'visible') { poll(); }
-  }, 5000);
+  // Live-poll only while the selected batch is open (closed batches are
+  // static) and the tab is visible; browsers throttle hidden-tab timers anyway.
+  if (batchOpen) {
+    setInterval(function () {
+      if (document.visibilityState === 'visible') { poll(); }
+    }, 5000);
+  }
 })();
 </script>

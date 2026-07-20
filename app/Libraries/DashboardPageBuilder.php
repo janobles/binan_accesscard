@@ -680,11 +680,17 @@ class DashboardPageBuilder
         $recentFamilies = $activePage === 'dashboard' && ($searchTerm !== '' || $hasSearchFilters)
             ? $searchModel->families($searchTerm, $searchFilters, 25)
             : $dashboardModel->recentFamilies(10);
-        $sectorListData = $activePage === 'sectors'
-            ? $this->buildLookupListData(new SectorModel(), 'viewer/sectors', 'sectorID')
+        // Read-only Reference Data page: Sectors and Services tabs share one
+        // page, switched by ?tab= (mirrors the admin reference-data page).
+        $referenceTab = (string) $this->request->getGet('tab');
+        $referenceTab = in_array($referenceTab, ['sectors', 'services'], true) ? $referenceTab : 'sectors';
+        $isReference  = $activePage === 'reference-data';
+
+        $sectorListData = $isReference && $referenceTab === 'sectors'
+            ? $this->buildLookupListData(new SectorModel(), 'viewer/reference-data', 'sectorID')
             : [];
-        $serviceListData = $activePage === 'services'
-            ? $this->buildLookupListData(new ServiceModel(), 'viewer/services', 'serviceID')
+        $serviceListData = $isReference && $referenceTab === 'services'
+            ? $this->buildLookupListData(new ServiceModel(), 'viewer/reference-data', 'serviceID')
             : [];
 
         return view('Viewer/layout', [
@@ -694,9 +700,9 @@ class DashboardPageBuilder
             'navActive' => [
                 'dashboard' => $layoutModel->navActive($activePage, 'dashboard'),
                 'family-manage' => $layoutModel->navActive($activePage, 'family-manage'),
-                'sectors' => $layoutModel->navActive($activePage, 'sectors'),
-                'services' => $layoutModel->navActive($activePage, 'services'),
+                'reference-data' => $layoutModel->navActive($activePage, 'reference-data'),
             ],
+            'referenceTab'       => $referenceTab,
             'recordListData'     => $recordListData,
             'recentFamilies'     => $recentFamilies,
             'sectorListData'     => $sectorListData,

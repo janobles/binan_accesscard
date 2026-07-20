@@ -4,8 +4,8 @@
  *
  * Rendered by App\Libraries\DashboardPageBuilder::renderViewerPage(), which passes
  * every variable used below. Like the admin/employee shells, this is one layout
- * that swaps its main section on $activePage (dashboard / family-manage / sectors /
- * services). Controller entry points live in App\Controllers\Viewer\DashboardController.
+ * that swaps its main section on $activePage (dashboard / family-manage /
+ * reference-data). Controller entry points live in App\Controllers\Viewer\DashboardController.
  *
  * A Viewer can only LOOK: the family records list shows "View" (no Add/Update/
  * Archive), and the sector/service lists render without Add/Edit/Archive. The
@@ -19,6 +19,7 @@ $navActive = $navActive ?? [];
 $stats = $stats ?? ['families' => 0, 'members' => 0, 'sectors' => 0, 'assistance' => 0];
 $recentFamilies = $recentFamilies ?? [];
 $recordListData = $recordListData ?? [];
+$referenceTab = $referenceTab ?? 'sectors';
 $sectorListData = $sectorListData ?? [];
 $serviceListData = $serviceListData ?? [];
 $sectors = $sectors ?? [];
@@ -52,9 +53,7 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
                     <a class="nav-link <?= esc($navActive['dashboard'] ?? '') ?>" href="<?= site_url('viewer/dashboard') ?>"><div class="sb-nav-link-icon"><i class="bi bi-speedometer2" aria-hidden="true"></i></div>Dashboard</a>
                     <div class="sb-sidenav-menu-heading">Records</div>
                     <a class="nav-link <?= esc($navActive['family-manage'] ?? '') ?>" href="<?= site_url('viewer/manage-records') ?>"><div class="sb-nav-link-icon"><i class="bi bi-people-fill" aria-hidden="true"></i></div>Manage Records</a>
-                    <div class="sb-sidenav-menu-heading">Reference Data</div>
-                    <a class="nav-link <?= esc($navActive['sectors'] ?? '') ?>" href="<?= site_url('viewer/sectors') ?>"><div class="sb-nav-link-icon"><i class="bi bi-diagram-3-fill" aria-hidden="true"></i></div>Sectors</a>
-                    <a class="nav-link <?= esc($navActive['services'] ?? '') ?>" href="<?= site_url('viewer/services') ?>"><div class="sb-nav-link-icon"><i class="bi bi-grid-fill" aria-hidden="true"></i></div>Services and Programs</a>
+                    <a class="nav-link <?= esc($navActive['reference-data'] ?? '') ?>" href="<?= site_url('viewer/reference-data') ?>"><div class="sb-nav-link-icon"><i class="bi bi-collection" aria-hidden="true"></i></div>Reference Data</a>
                 </div>
             </div>
         </nav>
@@ -125,20 +124,30 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
                 <?= view('Family/list', $recordListData) ?>
             <?php endif; ?>
 
-            <?php if ($activePage === 'sectors'): ?>
-                <?= view('Lookups/sectors', [
-                    'sectorListData' => $sectorListData,
-                    'sectors' => $sectors,
-                    'canManage' => false,
+            <?php if ($activePage === 'reference-data'): ?>
+                <?= view('components/page_tabs', [
+                    'tabs' => [
+                        ['key' => 'sectors', 'label' => 'Sectors', 'icon' => 'diagram-3-fill'],
+                        ['key' => 'services', 'label' => 'Services & Programs', 'icon' => 'grid-fill'],
+                    ],
+                    'active' => $referenceTab ?? 'sectors',
+                    'baseUrl' => 'viewer/reference-data',
                 ]) ?>
-            <?php endif; ?>
-
-            <?php if ($activePage === 'services'): ?>
-                <?= view('Lookups/services', [
-                    'serviceListData' => $serviceListData,
-                    'services' => $services,
-                    'canManage' => false,
-                ]) ?>
+                <?php if (($referenceTab ?? 'sectors') === 'sectors'): ?>
+                    <?= view('Lookups/sectors', [
+                        'sectorListData' => $sectorListData,
+                        'sectors' => $sectors,
+                        'canManage' => false,
+                        'tabParam' => 'sectors',
+                    ]) ?>
+                <?php else: ?>
+                    <?= view('Lookups/services', [
+                        'serviceListData' => $serviceListData,
+                        'services' => $services,
+                        'canManage' => false,
+                        'tabParam' => 'services',
+                    ]) ?>
+                <?php endif; ?>
             <?php endif; ?>
             </main>
     </div>

@@ -126,8 +126,7 @@ $routes->group('viewer', static function (RouteCollection $routes): void {
     $routes->get('', 'Viewer\DashboardController::index');
     $routes->get('dashboard', 'Viewer\DashboardController::dashboard');
     $routes->get('manage-records', 'Viewer\DashboardController::manageRecords');
-    $routes->get('sectors', 'Viewer\DashboardController::sectors');
-    $routes->get('services', 'Viewer\DashboardController::services');
+    $routes->get('reference-data', 'Viewer\DashboardController::referenceData');
     $routes->group('manage-family', static function (RouteCollection $routes): void {
         $routes->get('data', 'Families\FamilyDataTableController::dataTable');
         $routes->get('view/(:num)', 'Families\FamilyController::viewFamily/$1');

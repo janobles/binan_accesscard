@@ -10,7 +10,7 @@ $tabs = $tabs ?? [];
 $active = $active ?? '';
 $baseUrl = $baseUrl ?? '';
 ?>
-<ul class="nav nav-tabs mb-3">
+<ul class="nav nav-tabs manage-tabs mb-3">
     <?php foreach ($tabs as $tab): ?>
     <li class="nav-item">
         <a class="nav-link <?= $tab['key'] === $active ? 'active' : '' ?>"

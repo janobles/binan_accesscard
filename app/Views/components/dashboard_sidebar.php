@@ -28,7 +28,7 @@ $sidebarUserUrl = $sidebarUserUrl ?? site_url('admin/dashboard');
                 <div class="sb-sidenav-menu-heading">Records</div>
                 <a class="nav-link <?= esc($navActive['family-manage'] ?? '') ?>" href="<?= site_url('admin/manage-records') ?>"><div class="sb-nav-link-icon"><i class="bi bi-people-fill" aria-hidden="true"></i></div>Manage Records</a>
                 <a class="nav-link <?= esc($navActive['reference-data'] ?? '') ?>" href="<?= site_url('admin/reference-data') ?>"><div class="sb-nav-link-icon"><i class="bi bi-collection" aria-hidden="true"></i></div>Reference Data</a>
-                <div class="sb-sidenav-menu-heading">Subsidy Distribution</div>
+                <div class="sb-sidenav-menu-heading">Subsidy</div>
                 <a class="nav-link <?= esc($navActive['cards'] ?? '') ?>" href="<?= site_url('admin/cards') ?>"><div class="sb-nav-link-icon"><i class="bi bi-qr-code" aria-hidden="true"></i></div>Control Numbers</a>
                 <a class="nav-link <?= esc($navActive['distribution'] ?? '') ?>" href="<?= site_url('admin/distribution') ?>"><div class="sb-nav-link-icon"><i class="bi bi-clipboard-check-fill" aria-hidden="true"></i></div>Distribution</a>
                 <div class="sb-sidenav-menu-heading">Administration</div>

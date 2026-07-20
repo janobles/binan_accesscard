@@ -3,111 +3,124 @@
 // from the canonical source so filter values always match what headsForCards()
 // compares against. Two modes: Batch (barangay + control-number range, live
 // preview table) and Single card (searchable head or exact control number).
+//
+// Markup follows the house design system: segmented tabs (components/page_tabs
+// style) at the top level, then a standard `card mb-4` per mode with the shared
+// manage-record-table. The tabs must NOT sit inside a flex wrapper such as
+// .records-scroll-panel, or the inline-flex tab track stretches full width.
 helper('ui');
 $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
 ?>
-<div class="sector-management records-scroll-panel" id="control-numbers-page">
-    <div class="records-table-controls mb-2">
-        <span class="text-muted small">Issue printable QR access cards for registered heads of family. The PDF is the output; the table below previews who will be printed.</span>
+<p class="text-muted small mb-3">Issue printable QR access cards for registered heads of family. The PDF is the output; the table below previews who will be printed.</p>
+
+<ul class="nav nav-pills segmented-tabs mb-3" id="cn-modes" role="tablist">
+    <li class="nav-item">
+        <button class="nav-link active" type="button" data-mode="batch" aria-current="page">
+            <i class="bi bi-collection" aria-hidden="true"></i> Batch
+        </button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link" type="button" data-mode="single">
+            <i class="bi bi-person-vcard" aria-hidden="true"></i> Single card
+        </button>
+    </li>
+</ul>
+
+<!-- BATCH -->
+<div class="card mb-4 sector-management" id="cn-card-batch">
+    <div class="card-header">
+        <span><i class="bi bi-collection me-1" aria-hidden="true"></i>Batch generation</span>
     </div>
-
-    <ul class="nav nav-pills segmented-tabs mb-3" id="cn-modes" role="tablist">
-        <li class="nav-item">
-            <button class="nav-link active" type="button" data-mode="batch" aria-current="page">
-                <i class="bi bi-collection" aria-hidden="true"></i> Batch
-            </button>
-        </li>
-        <li class="nav-item">
-            <button class="nav-link" type="button" data-mode="single">
-                <i class="bi bi-person-vcard" aria-hidden="true"></i> Single card
-            </button>
-        </li>
-    </ul>
-
-    <div class="card">
-        <div class="card-body">
-            <!-- BATCH -->
-            <div id="cn-panel-batch">
-                <form id="cn-batch-form" class="row g-3 align-items-end" autocomplete="off">
-                    <?= csrf_field() ?>
-                    <div class="col-12 col-md-6">
-                        <label class="form-label" for="cn-barangay">Barangay</label>
-                        <select class="form-select" id="cn-barangay" name="barangay">
-                            <option value="">All barangays</option>
-                            <?php foreach ($barangayList as $barangay): ?>
-                                <option value="<?= esc($barangay, 'attr') ?>"><?= esc($barangay) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="col-6 col-md-3">
-                        <label class="form-label" for="cn-from">From #</label>
-                        <input type="number" min="1" inputmode="numeric" class="form-control" id="cn-from" name="from" placeholder="e.g. 100">
-                    </div>
-                    <div class="col-6 col-md-3">
-                        <label class="form-label" for="cn-to">To #</label>
-                        <input type="number" min="1" inputmode="numeric" class="form-control" id="cn-to" name="to" placeholder="e.g. 150">
-                    </div>
-                    <div class="col-12">
-                        <span class="text-muted small">Leave all blank to print every active head. Both range bounds are inclusive.</span>
-                    </div>
-                </form>
-
-                <div class="table-meta mt-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
-                    <span id="cn-preview-count" class="fw-semibold" aria-live="polite">Loading preview&hellip;</span>
-                    <div class="d-flex align-items-center gap-2">
-                        <span id="cn-batch-status" class="text-muted small" aria-live="polite"></span>
-                        <button type="submit" form="cn-batch-form" class="<?= btn('generate') ?>" id="cn-batch-btn">
-                            <i class="bi bi-printer" aria-hidden="true"></i> <span>Generate cards</span>
-                        </button>
-                    </div>
-                </div>
-
-                <div class="table-responsive mt-2">
-                    <table class="table table-sm align-middle mb-0" id="cn-preview-table">
-                        <thead>
-                            <tr><th scope="col">Control #</th><th scope="col">Head name</th><th scope="col">Barangay</th></tr>
-                        </thead>
-                        <tbody id="cn-preview-body">
-                            <tr><td colspan="3" class="sector-empty-state">Loading&hellip;</td></tr>
-                        </tbody>
-                    </table>
-                </div>
+    <div class="card-body">
+        <form id="cn-batch-form" class="row g-3 align-items-end" autocomplete="off">
+            <?= csrf_field() ?>
+            <div class="col-12 col-md-6">
+                <label class="form-label" for="cn-barangay">Barangay</label>
+                <select class="form-select" id="cn-barangay" name="barangay">
+                    <option value="">All barangays</option>
+                    <?php foreach ($barangayList as $barangay): ?>
+                        <option value="<?= esc($barangay, 'attr') ?>"><?= esc($barangay) ?></option>
+                    <?php endforeach; ?>
+                </select>
             </div>
-
-            <!-- SINGLE -->
-            <div id="cn-panel-single" hidden>
-                <div class="row g-3 align-items-end">
-                    <div class="col-12 col-md-8 cn-typeahead">
-                        <label class="form-label" for="cn-head">Head</label>
-                        <input type="text" class="form-control" id="cn-head" placeholder="Type a head name&hellip;" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="cn-head-list">
-                        <ul class="list-group cn-typeahead-list shadow-sm" id="cn-head-list" hidden></ul>
-                    </div>
-                    <div class="col-12 col-md-4">
-                        <label class="form-label" for="cn-control">Control #</label>
-                        <input type="number" min="1" inputmode="numeric" class="form-control" id="cn-control" placeholder="Exact control number">
-                    </div>
-                    <div class="col-12">
-                        <span class="text-muted small">Pick a head from the list OR type an exact control number, then Generate.</span>
-                    </div>
-                    <div class="col-12 d-flex justify-content-end align-items-center gap-2">
-                        <span id="cn-single-status" class="text-muted small" aria-live="polite"></span>
-                        <button type="button" class="<?= btn('generate') ?>" id="cn-single-btn">
-                            <i class="bi bi-printer" aria-hidden="true"></i> <span>Generate card</span>
-                        </button>
-                    </div>
-                </div>
+            <div class="col-6 col-md-3">
+                <label class="form-label" for="cn-from">From #</label>
+                <input type="number" min="1" inputmode="numeric" class="form-control" id="cn-from" name="from" placeholder="e.g. 100">
             </div>
+            <div class="col-6 col-md-3">
+                <label class="form-label" for="cn-to">To #</label>
+                <input type="number" min="1" inputmode="numeric" class="form-control" id="cn-to" name="to" placeholder="e.g. 150">
+            </div>
+            <div class="col-12">
+                <span class="text-muted small">Leave all blank to print every active head. Both range bounds are inclusive.</span>
+            </div>
+        </form>
+
+        <hr class="my-3">
+
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+            <span id="cn-preview-count" class="text-muted small" aria-live="polite">Loading preview&hellip;</span>
+            <div class="d-flex align-items-center gap-2">
+                <span id="cn-batch-status" class="text-muted small" aria-live="polite"></span>
+                <button type="submit" form="cn-batch-form" class="<?= btn('generate') ?>" id="cn-batch-btn">
+                    <i class="bi bi-printer" aria-hidden="true"></i> Generate cards
+                </button>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table manage-record-table align-middle w-100 mb-0" id="cn-preview-table">
+                <thead>
+                    <tr><th scope="col">Control #</th><th scope="col">Head name</th><th scope="col">Barangay</th></tr>
+                </thead>
+                <tbody id="cn-preview-body">
+                    <tr><td colspan="3" class="text-muted">Loading&hellip;</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- SINGLE -->
+<div class="card mb-4 sector-management" id="cn-card-single" hidden>
+    <div class="card-header">
+        <span><i class="bi bi-person-vcard me-1" aria-hidden="true"></i>Single card</span>
+    </div>
+    <div class="card-body">
+        <div class="row g-3 align-items-end">
+            <div class="col-12 col-md-8 cn-typeahead">
+                <label class="form-label" for="cn-head">Head</label>
+                <input type="text" class="form-control" id="cn-head" placeholder="Type a head name&hellip;" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="cn-head-list">
+                <ul class="list-group cn-typeahead-list shadow-sm" id="cn-head-list" hidden></ul>
+            </div>
+            <div class="col-12 col-md-4">
+                <label class="form-label" for="cn-control">Control #</label>
+                <input type="number" min="1" inputmode="numeric" class="form-control" id="cn-control" placeholder="Exact control number">
+            </div>
+            <div class="col-12">
+                <span class="text-muted small">Pick a head from the list OR type an exact control number, then Generate.</span>
+            </div>
+        </div>
+
+        <hr class="my-3">
+
+        <div class="d-flex flex-wrap justify-content-end align-items-center gap-2">
+            <span id="cn-single-status" class="text-muted small" aria-live="polite"></span>
+            <button type="button" class="<?= btn('generate') ?>" id="cn-single-btn">
+                <i class="bi bi-printer" aria-hidden="true"></i> Generate card
+            </button>
         </div>
     </div>
 </div>
 
 <style>
-#control-numbers-page .cn-typeahead { position: relative; }
-#control-numbers-page .cn-typeahead-list {
+#cn-modes .nav-link { cursor: pointer; }
+.cn-typeahead { position: relative; }
+.cn-typeahead-list {
     position: absolute; width: 100%; z-index: 5;
     max-height: 16rem; overflow-y: auto;
 }
-#control-numbers-page .cn-typeahead-list .list-group-item { cursor: pointer; }
+.cn-typeahead-list .list-group-item { cursor: pointer; }
 </style>
 
 <script>
@@ -119,13 +132,13 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
 
     // ---- mode switch ------------------------------------------------------
     const modeBtns = document.querySelectorAll('#cn-modes [data-mode]');
-    const panels = { batch: document.getElementById('cn-panel-batch'), single: document.getElementById('cn-panel-single') };
+    const cards = { batch: document.getElementById('cn-card-batch'), single: document.getElementById('cn-card-single') };
     modeBtns.forEach((b) => b.addEventListener('click', function () {
         modeBtns.forEach((x) => { x.classList.remove('active'); x.removeAttribute('aria-current'); });
         b.classList.add('active'); b.setAttribute('aria-current', 'page');
         const mode = b.dataset.mode;
-        panels.batch.hidden = mode !== 'batch';
-        panels.single.hidden = mode !== 'single';
+        cards.batch.hidden = mode !== 'batch';
+        cards.single.hidden = mode !== 'single';
     }));
 
     // ---- shared helpers ---------------------------------------------------
@@ -165,12 +178,12 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
 
             if (count === 0) {
                 countEl.textContent = 'No heads match — adjust filters.';
-                bodyEl.innerHTML = '<tr><td colspan="3" class="sector-empty-state">No heads match — adjust filters.</td></tr>';
+                bodyEl.innerHTML = '<tr><td colspan="3" class="text-muted">No heads match the current filters.</td></tr>';
                 batchBtn.disabled = true;
                 return;
             }
             if (count > maxQuantity) {
-                countEl.textContent = count + ' cards match, exceeding the max of ' + maxQuantity + ' per batch. Narrow the filters.';
+                countEl.textContent = count + ' cards match, over the max of ' + maxQuantity + ' per batch. Narrow the filters.';
                 batchBtn.disabled = true;
             } else {
                 countEl.textContent = count + (count === 1 ? ' card will be generated.' : ' cards will be generated.');
@@ -180,12 +193,12 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
                 '<tr><td>' + esc(String(r.controlNo)) + '</td><td>' + esc(r.name) + '</td><td>' + esc(r.barangay) + '</td></tr>'
             ).join('');
             if (count > rows.length) {
-                html += '<tr><td colspan="3" class="text-muted small">…and ' + (count - rows.length) + ' more</td></tr>';
+                html += '<tr><td colspan="3" class="text-muted">…and ' + (count - rows.length) + ' more</td></tr>';
             }
             bodyEl.innerHTML = html;
         } catch (e) {
             countEl.textContent = 'Preview unavailable.';
-            bodyEl.innerHTML = '<tr><td colspan="3" class="sector-empty-state">Preview unavailable.</td></tr>';
+            bodyEl.innerHTML = '<tr><td colspan="3" class="text-muted">Preview unavailable.</td></tr>';
             batchBtn.disabled = true;
         }
     }

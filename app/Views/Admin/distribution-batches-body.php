@@ -36,7 +36,7 @@ $canManageBatches = in_array($currentRole ?? '', ['Admin', 'Developer'], true);
 <?php endif; ?>
 
 <table class="table manage-record-table align-middle w-100 mb-0">
-  <thead><tr><th>Batch</th><th>Aid Type</th><th>Started</th><th>Closed</th></tr></thead>
+  <thead><tr><th>Batch</th><th>Subsidy Type</th><th>Started</th><th>Closed</th></tr></thead>
   <tbody>
     <?php foreach (($batches ?? []) as $b): ?>
       <tr>

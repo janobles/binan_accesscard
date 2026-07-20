@@ -6,7 +6,7 @@
     <form class="modal-content" method="post" action="<?= site_url('admin/aidtypes/create') ?>">
       <?= csrf_field() ?>
       <div class="modal-header">
-        <h5 class="modal-title" id="addAidTypeModalLabel">Add Aid Type</h5>
+        <h5 class="modal-title" id="addAidTypeModalLabel">Add Subsidy Type</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
@@ -18,7 +18,7 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="submit" class="<?= btn('add') ?>">Add Aid Type</button>
+        <button type="submit" class="<?= btn('add') ?>">Add Subsidy Type</button>
       </div>
     </form>
   </div>

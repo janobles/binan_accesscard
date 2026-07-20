@@ -23,9 +23,9 @@ $activeAidTypes = $activeAidTypes ?? [];
                  placeholder="e.g. Relief Distribution — <?= esc(date('M j, Y')) ?>">
         </div>
         <div class="mb-3">
-          <label for="batchAidType" class="form-label">Aid type</label>
+          <label for="batchAidType" class="form-label">Subsidy type</label>
           <select class="form-select" id="batchAidType" name="aid_type_id" required>
-            <option value="" selected disabled>Choose an aid type...</option>
+            <option value="" selected disabled>Choose a subsidy type...</option>
             <?php foreach ($activeAidTypes as $t): ?>
               <option value="<?= (int) $t['aid_type_id'] ?>"><?= esc($t['name']) ?></option>
             <?php endforeach; ?>

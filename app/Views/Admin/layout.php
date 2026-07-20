@@ -139,13 +139,13 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                             'variant' => 'stat-card--members',
                         ]) ?>
                         <?= view('components/stat_card', [
-                            'label' => 'Received Aid',
+                            'label' => 'Received Subsidy',
                             'value' => ($reportsSummary['received'] ?? 0) . ' of ' . ($reportsSummary['total'] ?? 0),
                             'icon' => 'check-circle-fill',
                             'variant' => 'stat-card--sectors',
                         ]) ?>
                         <?= view('components/stat_card', [
-                            'label' => 'Aid Coverage',
+                            'label' => 'Subsidy Coverage',
                             'value' => ((string) ($reportsSummary['coverage'] ?? 0)) . '%',
                             'icon' => 'pie-chart-fill',
                             'variant' => 'stat-card--services',
@@ -224,7 +224,7 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                         ['key' => 'sectors', 'label' => 'Sectors', 'icon' => 'diagram-3-fill'],
                         ['key' => 'services', 'label' => 'Services & Programs', 'icon' => 'grid-fill'],
                         ['key' => 'categories', 'label' => 'Categories', 'icon' => 'tags-fill'],
-                        ['key' => 'aidtypes', 'label' => 'Aid Types', 'icon' => 'box-seam'],
+                        ['key' => 'aidtypes', 'label' => 'Subsidy Types', 'icon' => 'box-seam'],
                     ],
                     'active' => $referenceTab ?? 'sectors',
                     'baseUrl' => 'admin/reference-data',
@@ -254,7 +254,7 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                 <?php elseif ($referenceTab === 'aidtypes'): ?>
                     <?= view('components/card', [
                         'icon' => 'box-seam',
-                        'title' => 'Aid Types',
+                        'title' => 'Subsidy Types',
                         'cardClass' => 'sector-management',
                         'bodyView' => 'Admin/aidtypes-body',
                         'bodyData' => [

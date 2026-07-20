@@ -165,16 +165,19 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                     <?php
                     $recentFamilyRows = [];
                     foreach ($recentFamilies as $family) {
+                        $contact = trim((string) ($family['contactnumber'] ?? ''));
                         $recentFamilyRows[] = [
                             esc(trim(($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? ''))),
                             esc((string) ($family['sector_name'] ?? '-')),
+                            $contact === '' ? '<span class="text-muted">—</span>' : esc($contact),
+                            esc($formatDate($family['dt_created'] ?? '')),
                         ];
                     }
                     ?>
                     <?= view('components/data_table', [
                         'icon' => 'table',
                         'title' => 'Recent Records',
-                        'columns' => ['Name (Head)', 'Sector'],
+                        'columns' => ['Name (Head)', 'Sector', 'Contact', 'Date Added'],
                         'rows' => $recentFamilyRows,
                         'emptyMessage' => 'No records yet.',
                         'tableClass' => 'table overview-table mb-0',

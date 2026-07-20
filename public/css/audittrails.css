@@ -110,8 +110,8 @@
 }
 
 .audit-row td {
-    padding-top: 1rem;
-    padding-bottom: 1rem;
+    padding-top: 0.65rem;
+    padding-bottom: 0.65rem;
 }
 
 .audit-when {
@@ -121,8 +121,10 @@
 }
 
 .audit-action-pill {
-    display: inline-flex;
-    align-items: center;
+    display: inline-block;
+    max-width: 16rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
     padding: 0.32rem 0.85rem;
     border: 1px solid #b9d2f2;
     border-radius: 999px;
@@ -140,19 +142,28 @@
     font-size: 0.85rem;
 }
 
+/* Short "Browser · OS" label; the full user-agent string lives in the cell's
+   title tooltip and the detail modal. */
 .audit-ua {
-    max-width: 22rem;
     color: #6c7a75;
-    font-size: 0.78rem;
-    line-height: 1.35;
-    overflow-wrap: anywhere;
+    font-size: 0.82rem;
+    white-space: nowrap;
 }
 
-/* Cell typography matches .manage-record-table; only the uppercase treatment
-   for usernames is audit-specific. */
+/* Cell typography matches .manage-record-table; username stacked over the
+   muted role label (same treatment as the accounts table). */
 .audit-user {
-    text-transform: uppercase;
     white-space: nowrap;
+    line-height: 1.25;
+}
+
+.audit-user strong {
+    font-size: 0.88rem;
+    font-weight: 600;
+}
+
+.audit-user small {
+    font-size: 0.72rem;
 }
 
 @media (max-width: 48rem) {

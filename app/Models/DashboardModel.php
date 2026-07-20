@@ -70,7 +70,7 @@ class DashboardModel
         }
 
         $rows = $this->db->table('member')
-            ->select('memberID, firstname, lastname, contactnumber, relationship, headID, sectorID')
+            ->select('memberID, firstname, lastname, contactnumber, relationship, headID, sectorID, dt_created')
             ->where('memberID = headID', null, false)
             ->where('dt_deleted IS NULL', null, false)
             ->orderBy('memberID', 'DESC')

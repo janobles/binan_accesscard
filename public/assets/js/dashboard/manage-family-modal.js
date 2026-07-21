@@ -884,9 +884,10 @@
         var firstInvalid = null;
 
         requiredFields.forEach(function (field) {
-            var invalid = String(field.value || '').trim() === '';
+            var isEmpty = String(field.value || '').trim() === '';
+            var invalid = !field.checkValidity();
 
-            setFieldError(field, invalid ? 'This field is required.' : '');
+            setFieldError(field, invalid ? (isEmpty ? 'This field is required.' : field.validationMessage) : '');
 
             if (invalid && !firstInvalid) {
                 firstInvalid = field;

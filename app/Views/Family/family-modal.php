@@ -230,7 +230,7 @@ $renderMemberRow = static function ($index, array $m = []) use (
 
                         <div class="col-12 col-xl-9">
                             <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>HeadAddress">Address</label>
-                            <input id="<?= esc($fieldPrefix, 'attr') ?>HeadAddress" name="head_address" type="text" value="<?= esc($oldValue('head_address'), 'attr') ?>" data-summary="address" required>
+                            <input id="<?= esc($fieldPrefix, 'attr') ?>HeadAddress" name="head_address" type="text" value="<?= esc($oldValue('head_address'), 'attr') ?>" data-summary="address" minlength="2" required>
                         </div>
                         <div class="col-12 col-xl-3">
                             <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>HeadBarangay">Barangay</label>

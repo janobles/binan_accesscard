@@ -125,6 +125,9 @@ class ImportReviewPresenter
             'groups'     => $groups,
             'byRow'      => $byRowIdx,
             'ready'      => $ready,
+            // The worker's in-review edit history (newest last), so the screen can show what
+            // they changed before they commit.
+            'changes'    => is_array($result['changes'] ?? null) ? array_values($result['changes']) : [],
             'families'   => $this->familiesToFix($byQr, $byRow, $errors),
             // Rows with a blank QR are never grouped into a family — surfaced so the operator
             // can give them a QR and fix them in place.

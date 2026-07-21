@@ -164,7 +164,8 @@
             groupsEl.appendChild(needsQr);
         }
 
-        // The flagged families, each with Edit (fix in place) and Remove.
+        // The flagged families, each with Edit (fix in place), Remove, and — once edited —
+        // a per-family "View changes" button (history lives in a modal, not a global list).
         var families = renderFamiliesToFix();
         if (families) {
             groupsEl.appendChild(families);
@@ -601,6 +602,12 @@
 
         var actions = el('td', 'text-nowrap');
 
+        // Per-family history (only after this family was edited/removed in review).
+        var history = changesButton(family.qr);
+        if (history) {
+            actions.appendChild(history);
+        }
+
         // Opens the shared family modal (registered under the 'importFix' namespace in
         // manage-family-modal.js) prefilled with this group's staged data.
         var edit = el('button', 'btn btn-sm btn-primary me-1 js-import-fix-edit', 'Edit');
@@ -619,6 +626,105 @@
         tr.appendChild(actions);
 
         return tr;
+    }
+
+    // -- changes made (per-family history, shown in a modal) --------------------
+
+    // The change entries recorded for one QR group (oldest-first, as stored).
+    function changesForQr(qr) {
+        var all = review.changes || [];
+        var key = String(qr == null ? '' : qr);
+
+        return all.filter(function (change) {
+            return String(change.qr || '') === key;
+        });
+    }
+
+    // A "View changes (N)" button for a family row, or null when it has no history yet.
+    function changesButton(qr) {
+        var entries = changesForQr(qr);
+
+        if (!entries.length) {
+            return null;
+        }
+
+        var btn = el('button', 'btn btn-sm btn-outline-secondary me-1 js-import-view-changes');
+        btn.type = 'button';
+        var icon = el('i', 'bi bi-clock-history me-1');
+        icon.setAttribute('aria-hidden', 'true');
+        btn.appendChild(icon);
+        btn.appendChild(document.createTextNode('View changes (' + entries.length + ')'));
+        btn.addEventListener('click', function () {
+            openChangesModal(qr, entries);
+        });
+
+        return btn;
+    }
+
+    // A lightweight, dependency-free modal listing one family's edit history (newest first).
+    function openChangesModal(qr, entries) {
+        var backdrop = el('div', 'import-changes-modal');
+        var dialog = el('div', 'import-changes-dialog');
+
+        var header = el('div', 'import-changes-header');
+        header.appendChild(el('h5', 'mb-0', 'Changes to family ' + (qr || '—')));
+        var close = el('button', 'btn-close');
+        close.type = 'button';
+        close.setAttribute('aria-label', 'Close');
+        header.appendChild(close);
+        dialog.appendChild(header);
+
+        var body = el('div', 'import-changes-body');
+
+        if (!entries.length) {
+            body.appendChild(el('p', 'text-muted mb-0 px-3 py-2', 'No changes recorded for this family.'));
+        } else {
+            var list = el('ul', 'list-group list-group-flush');
+            entries.slice().reverse().forEach(function (change) {
+                var li = el('li', 'list-group-item');
+                var top = el('div', 'd-flex justify-content-between align-items-baseline gap-2');
+                top.appendChild(el('span', 'fw-semibold', (change.action || 'Changed') + (change.head ? ' · ' + change.head : '')));
+                top.appendChild(el('span', 'text-muted small text-nowrap', change.at || ''));
+                li.appendChild(top);
+
+                var lines = change.lines || [];
+                if (lines.length) {
+                    var ul = el('ul', 'small text-muted mb-0 ps-3 mt-1');
+                    lines.forEach(function (line) {
+                        ul.appendChild(el('li', null, line));
+                    });
+                    li.appendChild(ul);
+                }
+
+                list.appendChild(li);
+            });
+            body.appendChild(list);
+        }
+
+        dialog.appendChild(body);
+        backdrop.appendChild(dialog);
+        document.body.appendChild(backdrop);
+
+        function closeModal() {
+            document.removeEventListener('keydown', onKey);
+            if (backdrop.parentNode) {
+                backdrop.parentNode.removeChild(backdrop);
+            }
+        }
+
+        function onKey(event) {
+            if (event.key === 'Escape') {
+                closeModal();
+            }
+        }
+
+        close.addEventListener('click', closeModal);
+        backdrop.addEventListener('click', function (event) {
+            if (event.target === backdrop) {
+                closeModal();
+            }
+        });
+        document.addEventListener('keydown', onKey);
     }
 
     // -- ready to import --------------------------------------------------------
@@ -728,6 +834,14 @@
             notes.appendChild(document.createTextNode(' imports as typed'));
         } else {
             notes.appendChild(el('span', 'text-success', 'No issues'));
+        }
+
+        // A family fixed into "ready" keeps its edit history reachable here.
+        var readyHistory = changesButton(family.qr);
+        if (readyHistory) {
+            readyHistory.classList.remove('me-1');
+            readyHistory.classList.add('ms-2');
+            notes.appendChild(readyHistory);
         }
         tr.appendChild(notes);
 

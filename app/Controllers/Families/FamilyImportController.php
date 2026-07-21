@@ -6,6 +6,7 @@ use App\Controllers\BaseController;
 use App\Libraries\FamilyExcelImporter;
 use App\Libraries\FamilyExcelTemplate;
 use App\Libraries\ImportFamilyModalBuilder;
+use App\Libraries\ImportReviewChangeLog;
 use App\Libraries\ImportReviewPresenter;
 use App\Libraries\ImportStagingStore;
 use App\Models\Families\MemberModel;
@@ -465,14 +466,21 @@ class FamilyImportController extends BaseController
         $familyNo = trim((string) ($post['import_family_no'] ?? ''));
 
         if ($row > 0) {
-            $rows = $this->replaceRows($bundle, ['row' => $row], $builder->toStagedRowsForRow($post, $bundle, $row));
+            $key     = ['row' => $row];
+            $newRows = $builder->toStagedRowsForRow($post, $bundle, $row);
         } elseif ($familyNo !== '') {
-            $rows = $this->replaceRows($bundle, ['fno' => $familyNo], $builder->toStagedRows($post, $bundle, $familyNo));
+            $key     = ['fno' => $familyNo];
+            $newRows = $builder->toStagedRows($post, $bundle, $familyNo);
         } else {
             return $this->jsonError('No family was selected to edit.', 422);
         }
 
-        $result = $this->revalidate($bundle, $rows);
+        // Diff the group before it is replaced, so the review can show what the worker changed.
+        $oldRows = $this->targetRows($bundle, $key);
+        $rows    = $this->replaceRows($bundle, $key, $newRows);
+
+        $result            = $this->revalidate($bundle, $rows);
+        $result['changes'] = $this->appendChanges($bundle, ImportReviewChangeLog::edited($oldRows, $newRows));
         $this->restageReview($jobId, $result);
 
         $newQr = trim((string) ($post['qr_control_no'] ?? ''));
@@ -510,16 +518,20 @@ class FamilyImportController extends BaseController
         $familyNo = trim((string) ($this->request->getPost('import_family_no') ?? ''));
 
         if ($row > 0) {
-            $rows    = $this->replaceRows($bundle, ['row' => $row], []);
+            $key     = ['row' => $row];
             $message = 'Row ' . $row . ' removed from this import.';
         } elseif ($familyNo !== '') {
-            $rows    = $this->replaceRows($bundle, ['fno' => $familyNo], []);
+            $key     = ['fno' => $familyNo];
             $message = 'Family ' . $familyNo . ' removed from this import.';
         } else {
             return $this->jsonError('No family was selected to remove.', 422);
         }
 
-        $result = $this->revalidate($bundle, $rows);
+        $oldRows = $this->targetRows($bundle, $key);
+        $rows    = $this->replaceRows($bundle, $key, []);
+
+        $result            = $this->revalidate($bundle, $rows);
+        $result['changes'] = $this->appendChanges($bundle, ImportReviewChangeLog::removed($oldRows));
         $this->restageReview($jobId, $result);
 
         return $this->response->setJSON([
@@ -561,6 +573,47 @@ class FamilyImportController extends BaseController
         return $merged;
     }
 
+    /**
+     * The bundle rows belonging to the edit/remove target (a whole QR group `['fno' => qr]`
+     * or a single blank-QR sheet row `['row' => n]`) — the "before" snapshot for the diff.
+     *
+     * @param array{fno?: string, row?: int} $key
+     * @return list<array>
+     */
+    private function targetRows(array $bundle, array $key): array
+    {
+        $rows = is_array($bundle['rows'] ?? null) ? $bundle['rows'] : [];
+
+        if (isset($key['row'])) {
+            $target = (int) $key['row'];
+
+            return array_values(array_filter($rows, static fn (array $r): bool =>
+                (int) ($r['sheetRow'] ?? -1) === $target));
+        }
+
+        $familyNo = (string) ($key['fno'] ?? '');
+
+        return array_values(array_filter($rows, static fn (array $r): bool =>
+            trim((string) (($r['data'] ?? [])['familyno'] ?? '')) === $familyNo));
+    }
+
+    /**
+     * Appends one change entry (skipping a null no-op) to the bundle's running change log,
+     * newest last. Capped so a long review session can't grow the staging file unbounded.
+     *
+     * @return list<array>
+     */
+    private function appendChanges(array $bundle, ?array $entry): array
+    {
+        $changes = is_array($bundle['changes'] ?? null) ? $bundle['changes'] : [];
+
+        if ($entry !== null) {
+            $changes[] = $entry;
+        }
+
+        return array_slice($changes, -100);
+    }
+
     /** Persists a re-validated review result back to the job's staging file. */
     private function restageReview(int $jobId, array $result): void
     {
@@ -572,6 +625,8 @@ class FamilyImportController extends BaseController
             'fileErrors' => $result['fileErrors'] ?? [],
             'columns'    => $result['columns'] ?? [],
             'counts'     => $result['counts'] ?? [],
+            // The worker's in-review edit history, so it survives a reload.
+            'changes'    => is_array($result['changes'] ?? null) ? $result['changes'] : [],
         ]);
     }
 

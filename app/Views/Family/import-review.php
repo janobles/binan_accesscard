@@ -8,15 +8,18 @@
  * re-upload. Confirm queues the write job.
  *
  * @var int    $jobId
- * @var string $routeBase  admin/manage-family or employee/manage-family
- * @var array  $review     ImportReviewPresenter::build() output
+ * @var string $routeBase   admin/manage-family or employee/manage-family
+ * @var string $recordsUrl  Manage Records landing page (the bare route base has no index route)
+ * @var array  $review      ImportReviewPresenter::build() output
  * @var string $username
  * @var int    $idleTimeoutSeconds
  */
 $jobId     = (int) ($jobId ?? 0);
 $routeBase = (string) ($routeBase ?? 'admin/manage-family');
 $review    = $review ?? ['file' => '', 'counts' => ['families' => 0, 'members' => 0, 'blocking' => 0, 'warnings' => 0], 'groups' => []];
-$backUrl   = site_url($routeBase);
+// Back / post-commit redirect must hit the Manage Records page: the bare route base
+// (`{role}/manage-family`) has no index route and 404s.
+$backUrl   = (string) ($recordsUrl ?? site_url(str_replace('/manage-family', '/manage-records', $routeBase)));
 $idleTimeoutSeconds = (int) ($idleTimeoutSeconds ?? 900);
 
 // JSON island: HEX_TAG/HEX_AMP keep any "</script>" or "&" inside a spreadsheet cell

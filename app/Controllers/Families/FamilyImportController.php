@@ -278,15 +278,16 @@ class FamilyImportController extends BaseController
         $loaded = $jobs->hasTable() ? $this->loadReviewJob($jobs, $jobId) : null;
 
         if ($loaded === null) {
-            return redirect()->to(site_url($this->currentRouteBase()))
+            return redirect()->to($this->recordsUrl())
                 ->with('error', 'That import is no longer available to review.');
         }
 
         return view('Family/import-review', [
-            'jobId'     => $jobId,
-            'routeBase' => $this->currentRouteBase(),
-            'review'    => (new ImportReviewPresenter())->build($loaded['result']),
-            'username'  => (string) (session()->get('username') ?? ''),
+            'jobId'      => $jobId,
+            'routeBase'  => $this->currentRouteBase(),
+            'recordsUrl' => $this->recordsUrl(),
+            'review'     => (new ImportReviewPresenter())->build($loaded['result']),
+            'username'   => (string) (session()->get('username') ?? ''),
             // This page is a standalone shell (not a dashboard layout), so it has to wire
             // up the idle-timeout logout itself — otherwise sitting on the review screen
             // never times out.
@@ -359,7 +360,7 @@ class FamilyImportController extends BaseController
             'status'     => 'queued',
             'jobID'      => $writeJobId,
             'statusUrl'  => site_url($this->currentRouteBase() . '/import/status/' . $writeJobId),
-            'redirect'   => site_url($this->currentRouteBase()),
+            'redirect'   => $this->recordsUrl(),
             'message'    => 'Import started for ' . (int) ($result['counts']['families'] ?? 0) . ' family group(s).',
             'csrf'       => csrf_hash(),
         ]);
@@ -387,7 +388,7 @@ class FamilyImportController extends BaseController
 
         return $this->response->setJSON([
             'status'   => 'ok',
-            'redirect' => site_url($this->currentRouteBase()),
+            'redirect' => $this->recordsUrl(),
             'csrf'     => csrf_hash(),
         ]);
     }

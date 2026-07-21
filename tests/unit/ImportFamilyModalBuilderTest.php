@@ -200,7 +200,74 @@ final class ImportFamilyModalBuilderTest extends CIUnitTestCase
         $this->assertSame('Juan Cruz', $issues[0]['person']);
     }
 
+    // -- head / relationship modal alignment ------------------------------------
+    //
+    // The Edit modal now lines up with the importer's head validators (see the diagnosis in
+    // C:\Users\Mel\.claude\plans\can-you-explain-to-purrfect-valley.md): a demoted extra
+    // head no longer round-trips as a second Head, and a head-less group opens on the same
+    // person the review report names.
+
+    public function testDemotedExtraHeadNoLongerRoundTripsIntoMultiHead(): void
+    {
+        // The modal now presents the demoted extra head with a BLANK relationship
+        // (see testSplitHeadAndMembersBlanksTheDemotedExtraHead), so a Save leaves exactly one
+        // Head. The blank relationship then raises the normal "Relationship is required"
+        // prompt, guiding the operator to pick a real one — no silent HEAD-MULTI loop.
+        $post = $this->headPost('42') + [
+            'members' => [
+                ['firstname' => 'Pedro', 'lastname' => 'Cruz', 'relationship' => ''],
+            ],
+        ];
+
+        $rows = (new ImportFamilyModalBuilder())->toStagedRows($post, $this->bundle('42', [5, 6]), '42');
+
+        $heads = array_filter($rows, static fn (array $row): bool =>
+            strcasecmp((string) ($row['data']['relationship'] ?? ''), 'Head') === 0);
+
+        $this->assertCount(1, $heads);
+        $this->assertSame('', $rows[1]['data']['relationship']);   // demoted head awaits a re-pick
+    }
+
+    public function testSplitHeadAndMembersBlanksTheDemotedExtraHead(): void
+    {
+        // Two Head rows: the first stays Head, the extra head is demoted to a member with its
+        // "Head" relationship CLEARED so it can't round-trip into a second head.
+        $rows = [
+            ['sheetRow' => 5, 'data' => ['familyno' => '42', 'relationship' => 'Head', 'firstname' => 'Juan']],
+            ['sheetRow' => 6, 'data' => ['familyno' => '42', 'relationship' => 'Head', 'firstname' => 'Pedro']],
+        ];
+
+        [$head, $members] = $this->invokeSplit($rows);
+
+        $this->assertSame('Juan', $head['data']['firstname']);         // first head kept
+        $this->assertCount(1, $members);
+        $this->assertSame('', $members[0]['data']['relationship']);    // extra head demoted + cleared
+    }
+
+    public function testSplitHeadAndMembersPromotesTheAddressCarrierWhenNoExplicitHead(): void
+    {
+        // No Head row: the modal promotes the row carrying the address (Maria) — the same
+        // person the review report names as the likely head — not blindly row 0 (Jose).
+        $rows = [
+            ['sheetRow' => 5, 'data' => ['familyno' => '42', 'relationship' => 'Child', 'firstname' => 'Jose', 'address' => '']],
+            ['sheetRow' => 6, 'data' => ['familyno' => '42', 'relationship' => 'Spouse', 'firstname' => 'Maria', 'address' => '123 Rizal St']],
+        ];
+
+        [$head] = $this->invokeSplit($rows);
+
+        $this->assertSame('Maria', $head['data']['firstname']);
+    }
+
     // -- helpers ---------------------------------------------------------------
+
+    /** Invokes the private splitHeadAndMembers (no DB) to characterize the head split. */
+    private function invokeSplit(array $rows): array
+    {
+        $method = new \ReflectionMethod(ImportFamilyModalBuilder::class, 'splitHeadAndMembers');
+        $method->setAccessible(true);
+
+        return $method->invoke(new ImportFamilyModalBuilder(), $rows);
+    }
 
     /** A minimal head-only POST (no sectors/services, so no DB is touched). */
     private function headPost(string $qr): array

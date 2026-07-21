@@ -510,17 +510,29 @@ class ImportFamilyModalBuilder
             }
         }
 
+        // No explicit Head (HEAD-NONE): promote the same candidate the review report names —
+        // the row carrying an address — so the modal's Head pane matches the report's guidance
+        // instead of blindly taking row 0.
         if ($headIndex === null) {
-            $headIndex = 0;
+            $headIndex = FamilyExcelImporter::likelyHeadIndex($rows);
         }
 
         $head    = $rows[$headIndex] ?? ['sheetRow' => 0, 'data' => []];
         $members = [];
 
         foreach ($rows as $i => $row) {
-            if ($i !== $headIndex) {
-                $members[] = $row;
+            if ($i === $headIndex) {
+                continue;
             }
+
+            // An extra Head being demoted to a member (HEAD-MULTI): clear its "Head"
+            // relationship so the operator re-picks a real one. Left as "Head", it would
+            // silently round-trip back into a second head and re-block the import.
+            if (strcasecmp(trim((string) (($row['data'] ?? [])['relationship'] ?? '')), 'Head') === 0) {
+                $row['data']['relationship'] = '';
+            }
+
+            $members[] = $row;
         }
 
         return [$head, $members];

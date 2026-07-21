@@ -1,5 +1,6 @@
 <?php
 
+use App\Controllers\Families\FamilyController;
 use App\Validation\FamilyRules;
 use CodeIgniter\Test\CIUnitTestCase;
 
@@ -59,5 +60,17 @@ final class FamilyRulesTest extends CIUnitTestCase
         foreach (['civilstatus', 'religion', 'education', 'job'] as $field) {
             $this->assertSame('.*[^\d\s].*', $fields[$field]['otherPattern']);
         }
+    }
+
+    public function testQrNumberAllowsLeadingZerosWithinSevenDigitLimit(): void
+    {
+        $method = new ReflectionMethod(FamilyController::class, 'rulesForEntryType');
+        $rules = $method->invoke(new FamilyController(), 'head');
+        $validation = service('validation');
+
+        $this->assertTrue($validation->check('00823', $rules['qr_control_no']));
+        $this->assertSame(823, (int) '00823');
+        $this->assertTrue($validation->check('9999999', $rules['qr_control_no']));
+        $this->assertFalse($validation->check('10000000', $rules['qr_control_no']));
     }
 }

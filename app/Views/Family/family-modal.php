@@ -242,7 +242,8 @@ $renderMemberRow = static function ($index, array $m = []) use (
                         <div class="col-12 col-xl-3">
                             <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>HeadQr">QR Number</label>
                             <input id="<?= esc($fieldPrefix, 'attr') ?>HeadQr" name="qr_control_no" type="text"
-                                inputmode="numeric" pattern="[0-9]*"
+                                inputmode="numeric" pattern="0*[1-9][0-9]{0,6}"
+                                title="QR number must be numeric and should not exceed 9,999,999 "
                                 value="<?= esc($oldValue('qr_control_no'), 'attr') ?>"
                                 <?= $qrLocked ? 'readonly' : 'required' ?>>
                             <?php if ($qrLocked): ?>

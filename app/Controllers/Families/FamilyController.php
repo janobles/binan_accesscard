@@ -818,7 +818,7 @@ class FamilyController extends BaseController
             'head_salary' => 'required',
             'head_address' => 'required|min_length[2]|max_length[255]',
             'head_barangay' => 'required|max_length[100]',
-            'qr_control_no' => 'required|is_natural_no_zero',
+            'qr_control_no' => 'required|is_natural_no_zero|less_than_equal_to[9999999]',
         ];
     }
 

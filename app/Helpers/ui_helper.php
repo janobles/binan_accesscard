@@ -18,11 +18,12 @@ if (! function_exists('btn')) {
     function btn(string $role): string
     {
         $map = [
-            'search' => 'btn btn-primary',
-            'clear'  => 'btn btn-danger',
-            'add'    => 'btn btn-success',
-            'import' => 'btn btn-warning',
-            'filter' => 'btn btn-outline-secondary',
+            'search'   => 'btn btn-primary',
+            'generate' => 'btn btn-primary',
+            'clear'    => 'btn btn-danger',
+            'add'      => 'btn btn-success',
+            'import'   => 'btn btn-warning',
+            'filter'   => 'btn btn-outline-secondary',
         ];
 
         if (! isset($map[$role])) {

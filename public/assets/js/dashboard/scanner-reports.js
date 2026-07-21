@@ -52,7 +52,7 @@
         charts.received = new Chart(received, {
             type: 'pie',
             data: {
-                labels: ['Received aid', 'Still waiting'],
+                labels: ['Received subsidy', 'Still waiting'],
                 datasets: [{
                     data: [data.received.received || 0, data.received.notReceived || 0],
                     backgroundColor: [palette[3], palette[1]],

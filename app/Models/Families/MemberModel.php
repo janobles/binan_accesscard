@@ -473,54 +473,25 @@ class MemberModel extends Model
 
     /**
      * Active heads of family (headID = memberID, not archived) for QR card
-     * generation. Each row: memberID, a display fullname, and barangay.
-     * Optional $filter narrows by 'barangay' (string) and/or 'sectorID' (int).
+     * generation. Each row: memberID, control number, a display fullname, and
+     * barangay. Optional $filter narrows by 'memberID' (int), 'barangay'
+     * (string), 'controlFrom'/'controlTo' (int, inclusive control-number bounds),
+     * 'keyword' (string, name match), 'sectorID' (int), and caps rows with
+     * 'limit' (int).
      *
-     * @return list<array{memberID:int, fullname:string, barangay:string}>
+     * @return list<array{memberID:int, controlNo:int, fullname:string, barangay:string}>
      */
     public function headsForCards(array $filter = []): array
     {
-        $hasBarangayColumn = $this->memberFieldExists('barangay');
-
-        $builder = $this->db->table('member')
-            ->select('member.memberID, member.lastname, member.firstname, member.middlename, member.suffix, member.address, qc.control_no'
-                . ($hasBarangayColumn ? ', member.barangay' : ''))
-            ->join('qr_control qc', 'qc.headID = member.memberID', 'left')
-            ->where('member.headID = member.memberID', null, false);
-
-        // qr_control is the single source of truth for control numbers: a head with
-        // no mapping cannot be scanned, so it is excluded from card generation
-        // rather than printed with a memberID that the scanner would reject.
-        $builder->where('qc.control_no IS NOT NULL', null, false);
-
-        if ($this->db->fieldExists('dt_deleted', 'member')) {
-            $builder->where('member.dt_deleted IS NULL', null, false);
-        }
-
-        if (isset($filter['memberID']) && (int) $filter['memberID'] > 0) {
-            $builder->where('member.memberID', (int) $filter['memberID']);
-        }
-
-        if (! empty($filter['barangay'])) {
-            if ($hasBarangayColumn) {
-                $builder->where('member.barangay', $filter['barangay']);
-            } else {
-                // Barangay lives at the tail of the combined address ("address, barangay").
-                $builder->groupStart()
-                    ->like('member.address', ', ' . $filter['barangay'], 'before')
-                    ->orWhere('member.address', $filter['barangay'])
-                    ->groupEnd();
-            }
-        }
-
-        if (! empty($filter['sectorID'])) {
-            // sectorID is stored as a JSON array ('[1,2,3]'); match membership.
-            $builder->where(SectorIds::containsCondition((int) $filter['sectorID'], 'member.sectorID'), null, false);
-        }
+        $builder = $this->headsForCardsBuilder($filter);
 
         $builder->orderBy('qc.control_no IS NULL', 'asc', false)
             ->orderBy('qc.control_no', 'asc')
             ->orderBy('member.memberID', 'asc');
+
+        if (isset($filter['limit']) && (int) $filter['limit'] > 0) {
+            $builder->limit((int) $filter['limit']);
+        }
 
         $rows = $builder->get()->getResultArray();
 
@@ -557,6 +528,87 @@ class MemberModel extends Model
                 'barangay'  => $barangay,
             ];
         }, $rows);
+    }
+
+    /**
+     * Total heads matching $filter, ignoring any 'limit'. Backs the Control
+     * Numbers preview header ("N cards will be generated") so the count is always
+     * the full selection even when only the first rows are rendered.
+     */
+    public function countHeadsForCards(array $filter = []): int
+    {
+        unset($filter['limit']);
+
+        return $this->headsForCardsBuilder($filter, true)->countAllResults();
+    }
+
+    /**
+     * Shared SELECT for headsForCards()/countHeadsForCards(). Active heads with a
+     * qr_control mapping, filtered by memberID, barangay, control-number range,
+     * name keyword, and sector. $forCount omits the display columns so the count
+     * query stays lean.
+     */
+    private function headsForCardsBuilder(array $filter = [], bool $forCount = false): \CodeIgniter\Database\BaseBuilder
+    {
+        $hasBarangayColumn = $this->memberFieldExists('barangay');
+
+        $columns = $forCount
+            ? 'member.memberID'
+            : 'member.memberID, member.lastname, member.firstname, member.middlename, member.suffix, member.address, qc.control_no'
+                . ($hasBarangayColumn ? ', member.barangay' : '');
+
+        $builder = $this->db->table('member')
+            ->select($columns)
+            ->join('qr_control qc', 'qc.headID = member.memberID', 'left')
+            ->where('member.headID = member.memberID', null, false);
+
+        // qr_control is the single source of truth for control numbers: a head with
+        // no mapping cannot be scanned, so it is excluded from card generation
+        // rather than printed with a memberID that the scanner would reject.
+        $builder->where('qc.control_no IS NOT NULL', null, false);
+
+        if ($this->db->fieldExists('dt_deleted', 'member')) {
+            $builder->where('member.dt_deleted IS NULL', null, false);
+        }
+
+        if (isset($filter['memberID']) && (int) $filter['memberID'] > 0) {
+            $builder->where('member.memberID', (int) $filter['memberID']);
+        }
+
+        if (! empty($filter['barangay'])) {
+            if ($hasBarangayColumn) {
+                $builder->where('member.barangay', $filter['barangay']);
+            } else {
+                // Barangay lives at the tail of the combined address ("address, barangay").
+                $builder->groupStart()
+                    ->like('member.address', ', ' . $filter['barangay'], 'before')
+                    ->orWhere('member.address', $filter['barangay'])
+                    ->groupEnd();
+            }
+        }
+
+        if (isset($filter['controlFrom']) && (int) $filter['controlFrom'] > 0) {
+            $builder->where('qc.control_no >=', (int) $filter['controlFrom']);
+        }
+        if (isset($filter['controlTo']) && (int) $filter['controlTo'] > 0) {
+            $builder->where('qc.control_no <=', (int) $filter['controlTo']);
+        }
+
+        if (isset($filter['keyword']) && trim((string) $filter['keyword']) !== '') {
+            $keyword = trim((string) $filter['keyword']);
+            $builder->groupStart()
+                ->like('member.lastname', $keyword)
+                ->orLike('member.firstname', $keyword)
+                ->orLike('member.middlename', $keyword)
+                ->groupEnd();
+        }
+
+        if (! empty($filter['sectorID'])) {
+            // sectorID is stored as a JSON array ('[1,2,3]'); match membership.
+            $builder->where(SectorIds::containsCondition((int) $filter['sectorID'], 'member.sectorID'), null, false);
+        }
+
+        return $builder;
     }
 
     /**

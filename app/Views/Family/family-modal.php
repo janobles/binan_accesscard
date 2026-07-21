@@ -243,7 +243,7 @@ $renderMemberRow = static function ($index, array $m = []) use (
                                 value="<?= esc($oldValue('qr_control_no'), 'attr') ?>"
                                 <?= $qrLocked ? 'readonly' : 'required' ?>>
                             <?php if ($qrLocked): ?>
-                                <small class="text-muted">Locked: aid already recorded under this number.</small>
+                                <small class="text-muted">Locked: subsidy already recorded under this number.</small>
                             <?php endif; ?>
                         </div>
                     </div>

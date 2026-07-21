@@ -46,7 +46,7 @@ class DistributionController extends BaseController
             return redirect()->to('admin/distribution?tab=log')->with('error', 'Unable to void distribution.');
         }
         $this->audit(
-            'Voided aid distribution #' . $id,
+            'Voided subsidy distribution #' . $id,
             (int) ($row['memberID'] ?? 0),
             'Control #' . (string) ($row['control_no'] ?? '') . ', subsidy type ID ' . (int) ($row['subsidy_type_id'] ?? 0) . ', claim date ' . (string) ($row['claim_date'] ?? '')
         );
@@ -63,7 +63,7 @@ class DistributionController extends BaseController
             return redirect()->to('admin/distribution?tab=batches')->with('error', 'Batch name is required.');
         }
         if ($aidTypeId <= 0) {
-            return redirect()->to('admin/distribution?tab=batches')->with('error', 'Choose an aid type for this batch.');
+            return redirect()->to('admin/distribution?tab=batches')->with('error', 'Choose a subsidy type for this batch.');
         }
         $batchModel = model(DistributionBatchModel::class);
         $id         = $batchModel->open($name, $aidTypeId, (int) (session('user_id') ?? 0));
@@ -74,7 +74,7 @@ class DistributionController extends BaseController
 
             return redirect()->to('admin/distribution?tab=batches')->with('error', $message);
         }
-        $this->audit('Opened distribution batch "' . $name . '" #' . $id . ' (aid type ID ' . $aidTypeId . ')');
+        $this->audit('Opened distribution batch "' . $name . '" #' . $id . ' (subsidy type ID ' . $aidTypeId . ')');
         return redirect()->to('admin/distribution?tab=batches')->with('success', 'Batch opened. Scanning is now live.');
     }
 

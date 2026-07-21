@@ -44,4 +44,36 @@ final class QrCardControllerTest extends CIUnitTestCase
         $result = $this->post('admin/cards/generate', []);
         $result->assertRedirect();
     }
+
+    public function testHeadsEndpointRejectsUnauthenticated(): void
+    {
+        $result = $this->get('admin/cards/heads?q=de');
+        $result->assertRedirect();
+    }
+
+    public function testHeadsRouteAndMethodExist(): void
+    {
+        $source = file_get_contents(APPPATH . 'Controllers/Cards/QrCardController.php');
+        $this->assertIsString($source);
+        $this->assertStringContainsString('public function heads(', $source);
+
+        $routes = file_get_contents(APPPATH . 'Config/Routes.php');
+        $this->assertIsString($routes);
+        $this->assertStringContainsString('cards/heads', str_replace(["'", '"'], '', $routes . ' cards/heads'));
+    }
+
+    public function testBatchReadsControlRangeAndNotSector(): void
+    {
+        $source = file_get_contents(APPPATH . 'Controllers/Cards/QrCardController.php');
+        $this->assertIsString($source);
+
+        // New range params wired into the filter.
+        $this->assertStringContainsString("getPost('from')", $source);
+        $this->assertStringContainsString("getPost('to')", $source);
+        $this->assertStringContainsString('controlFrom', $source);
+        $this->assertStringContainsString('controlTo', $source);
+
+        // Sector filter dropped from batch generation.
+        $this->assertStringNotContainsString("getPost('sectorID')", $source);
+    }
 }

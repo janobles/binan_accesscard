@@ -13,6 +13,7 @@ source of truth. Never hardcode a `btn-*` color class on a toolbar action.
 | Role     | Classes                    | Meaning                       |
 |----------|----------------------------|-------------------------------|
 | search   | btn btn-primary            | run a server-side search      |
+| generate | btn btn-primary            | produce output from a selection (e.g. Control Numbers); blue, not add-green, because it is not record creation |
 | clear    | btn btn-danger             | full reset of a toolbar       |
 | add      | btn btn-success            | create a record (modal)       |
 | import   | btn btn-warning            | bulk import                   |

@@ -8,7 +8,7 @@ $canManageAidTypes = in_array($currentRole ?? '', ['Admin', 'Developer'], true);
 ?>
 <?php /* Action row: Bootstrap utilities inside the card-body's own padding. */ ?>
 <div class="d-flex justify-content-end mb-3">
-          <button class="<?= btn('add') ?>" type="button" data-bs-toggle="modal" data-bs-target="#addAidTypeModal"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add Aid Type</button>
+          <button class="<?= btn('add') ?>" type="button" data-bs-toggle="modal" data-bs-target="#addAidTypeModal"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add Subsidy Type</button>
         </div>
 
         <div class="table-responsive">
@@ -24,7 +24,7 @@ $canManageAidTypes = in_array($currentRole ?? '', ['Admin', 'Developer'], true);
                   <td><span class="sector-status-badge <?= $archived ? 'sector-status-archived' : 'sector-status-active' ?>"><?= $archived ? 'Archived' : 'Active' ?></span></td>
                   <td class="text-end">
                     <div class="dropdown actions-menu">
-                      <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false" aria-label="Aid type actions">
+                      <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false" aria-label="Subsidy type actions">
                         <i class="bi bi-three-dots" aria-hidden="true"></i>
                       </button>
                       <div class="dropdown-menu dropdown-menu-end">
@@ -52,7 +52,7 @@ $canManageAidTypes = in_array($currentRole ?? '', ['Admin', 'Developer'], true);
                 </tr>
               <?php endforeach; ?>
               <?php if ($aidTypes === []): ?>
-                <tr><td colspan="3" class="sector-empty-state">No aid types defined.</td></tr>
+                <tr><td colspan="3" class="sector-empty-state">No subsidy types defined.</td></tr>
               <?php endif; ?>
             </tbody>
           </table>

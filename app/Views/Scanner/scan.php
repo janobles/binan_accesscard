@@ -80,7 +80,7 @@
 
     <div class="col-lg-5">
       <div class="card border-0 rounded-3 mb-3">
-        <div class="fw-bold px-3 pt-3 pb-2">Aid History</div>
+        <div class="fw-bold px-3 pt-3 pb-2">Subsidy History</div>
         <ul class="list-group list-group-flush" id="historyList"></ul>
       </div>
     </div>
@@ -160,7 +160,7 @@ function renderHistory(rows) {
   $('historyList').innerHTML = rows.length
     ? rows.map(r => `<li class="list-group-item d-flex justify-content-between">
         <span><span class="badge bg-light text-dark border me-1">${esc(r.aid_type)}</span>${esc(r.claimant)}</span><span class="text-muted">${esc(r.claim_date)}</span></li>`).join('')
-    : '<li class="list-group-item text-muted">No aid received yet.</li>';
+    : '<li class="list-group-item text-muted">No subsidy received yet.</li>';
 }
 
 // One action: scan = log. The server resolves the family, refuses in-batch

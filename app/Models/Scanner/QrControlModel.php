@@ -139,7 +139,7 @@ class QrControlModel extends Model
         }
 
         if ($this->takenByOtherHead($controlNo, $headId)) {
-            throw new \RuntimeException('QR Number ' . $controlNo . ' is already assigned to another family.');
+            throw new \RuntimeException('QR Number ' . $controlNo . ' already exists in the records and is assigned to another family.');
         }
 
         $existing = $this->controlForHead($headId);

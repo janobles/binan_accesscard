@@ -49,6 +49,7 @@ final class DashboardControllerRoutingTest extends TestCase
             'listFamilies',
             'viewFamily',
             'editFamily',
+            'qrAvailability',
             'update',
             'archive',
             'restore',

@@ -32,6 +32,16 @@ trait FamilyRequestContext
     }
 
     /**
+     * The Manage Records landing page for the request. The bare route base
+     * (`{role}/manage-family`) has NO index route — only sub-paths (/list, /import, …) —
+     * so navigations "back to records" must target this page, not the base.
+     */
+    private function recordsUrl(): string
+    {
+        return site_url($this->isEmployeeContext() ? 'employee/manage-records' : 'admin/manage-records');
+    }
+
+    /**
      * For a partial (modal) request whose access guard failed, returns an inline
      * alert fragment so the modal shows the reason; otherwise returns the redirect.
      */

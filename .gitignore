@@ -75,6 +75,10 @@ Vagrantfile
 /writable/active_sessions/*
 !/writable/active_sessions/index.html
 
+# Family-import review staging (per-job parsed rows — contains PII) — never commit
+/writable/import-staging/*
+!/writable/import-staging/index.html
+
 #-------------------------
 # Local scratch / junk
 #-------------------------

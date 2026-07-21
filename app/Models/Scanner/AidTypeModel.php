@@ -11,8 +11,8 @@ use CodeIgniter\Model;
  */
 class AidTypeModel extends Model
 {
-    protected $table         = 'aid_type';
-    protected $primaryKey    = 'aid_type_id';
+    protected $table         = 'subsidy';
+    protected $primaryKey    = 'subsidy_type_id';
     protected $returnType    = 'array';
     protected $allowedFields = ['name', 'dt_deleted'];
     protected $useTimestamps = false;
@@ -80,7 +80,7 @@ class AidTypeModel extends Model
             $this->db->transStart();
 
             $used = $this->db->table('aid_distribution')
-                ->where('aid_type_id', $id)
+                ->where('subsidy_type_id', $id)
                 ->countAllResults();
             if ($used > 0) {
                 $this->db->transComplete();

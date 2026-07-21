@@ -1,0 +1,109 @@
+/* Import Review — read-only report (Views/Family/import-review.php + import-review.js). */
+
+.import-review-actionbar {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    background: #fff;
+    padding: 0.75rem 1rem;
+    border-top: 1px solid #dee2e6;
+    box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.import-review-table td,
+.import-review-table th {
+    vertical-align: middle;
+}
+
+.import-review-addr {
+    max-width: 18rem;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.import-review-families .card-header small,
+.import-review-needsqr .card-header small,
+.import-review-ready .card-header small {
+    max-width: 60%;
+    text-align: right;
+}
+
+/* The "these are correct" panel — set apart from the problem cards. */
+.import-review-ready {
+    border-color: rgba(25, 135, 84, 0.35);
+}
+
+.import-review-ready > .card-header {
+    background: rgba(25, 135, 84, 0.07);
+}
+
+/* Show every column and wrap long values (grow vertically) instead of an x-scrollbar.
+   The Manage Records skin sets a min-width that forces horizontal scroll — drop it here. */
+#importReviewGroups .manage-record-table {
+    min-width: 0;
+    width: 100%;
+}
+
+#importReviewGroups .import-review-table td,
+#importReviewGroups .import-review-table th {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+/* Families-to-fix toolbar: search + severity + issue-type on the left, Show-entries right. */
+.import-review-filter-search {
+    max-width: 260px;
+}
+
+@media (max-width: 575.98px) {
+    .import-review-filterbar > * {
+        width: 100%;
+    }
+
+    .import-review-filter-search,
+    .import-review-filter-type,
+    .import-review-filterbar .btn-group,
+    .import-review-size {
+        width: 100%;
+    }
+
+    .import-review-size {
+        justify-content: flex-start;
+    }
+}
+
+/* Per-family "View changes" history modal (dependency-free overlay). */
+.import-changes-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1080;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.import-changes-dialog {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 560px;
+    max-height: 85vh;
+    background: #fff;
+    border-radius: 0.5rem;
+    box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.3);
+}
+
+.import-changes-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.import-changes-body {
+    padding: 0.25rem 0;
+    overflow-y: auto;
+}

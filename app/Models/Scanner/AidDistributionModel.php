@@ -13,7 +13,7 @@ class AidDistributionModel extends Model
     protected $table         = 'aid_distribution';
     protected $primaryKey    = 'aidID';
     protected $returnType    = 'array';
-    protected $allowedFields = ['control_no', 'memberID', 'aid_type_id', 'claim_date', 'userID', 'batch_id'];
+    protected $allowedFields = ['control_no', 'memberID', 'subsidy_type_id', 'claim_date', 'userID', 'batch_id'];
     protected $useTimestamps = false;
 
     /** Inserts one distribution row and returns its aidID. */
@@ -23,7 +23,7 @@ class AidDistributionModel extends Model
         // aid type must all be positive ids and a claim date must be present.
         if ((int) ($data['control_no'] ?? 0) <= 0
             || (int) ($data['memberID'] ?? 0) <= 0
-            || (int) ($data['aid_type_id'] ?? 0) <= 0
+            || (int) ($data['subsidy_type_id'] ?? 0) <= 0
             || empty($data['claim_date'])
         ) {
             return 0;
@@ -32,7 +32,7 @@ class AidDistributionModel extends Model
         $this->insert([
             'control_no'  => (int) $data['control_no'],
             'memberID'    => (int) $data['memberID'],
-            'aid_type_id' => (int) $data['aid_type_id'],
+            'subsidy_type_id' => (int) $data['subsidy_type_id'],
             'claim_date'  => $data['claim_date'],
             'userID'      => isset($data['userID']) && (int) $data['userID'] > 0 ? (int) $data['userID'] : null,
             'batch_id'    => isset($data['batch_id']) && (int) $data['batch_id'] > 0 ? (int) $data['batch_id'] : null,
@@ -63,10 +63,10 @@ class AidDistributionModel extends Model
 
         try {
             return $this->select('aid_distribution.aidID, aid_distribution.claim_date,'
-                    . ' aid_distribution.aid_type_id,'
-                    . " aid_type.name AS aid_type,"
+                    . ' aid_distribution.subsidy_type_id,'
+                    . " subsidy.name AS aid_type,"
                     . " TRIM(CONCAT(member.firstname, ' ', member.lastname)) AS claimant")
-                ->join('aid_type', 'aid_type.aid_type_id = aid_distribution.aid_type_id', 'left')
+                ->join('subsidy', 'subsidy.subsidy_type_id = aid_distribution.subsidy_type_id', 'left')
                 ->join('member', 'member.memberID = aid_distribution.memberID', 'left')
                 ->where('aid_distribution.control_no', $controlNo)
                 ->orderBy('aid_distribution.claim_date', 'DESC')
@@ -86,11 +86,11 @@ class AidDistributionModel extends Model
     {
         try {
             return $this->select('aid_distribution.aidID, aid_distribution.control_no, aid_distribution.claim_date,'
-                    . " aid_type.name AS aid_type,"
+                    . " subsidy.name AS aid_type,"
                     . " TRIM(CONCAT(member.firstname, ' ', member.lastname)) AS claimant,"
                     . " TRIM(CONCAT(head.firstname, ' ', head.lastname)) AS head,"
                     . " COALESCE(users.username, '') AS scanned_by")
-                ->join('aid_type', 'aid_type.aid_type_id = aid_distribution.aid_type_id', 'left')
+                ->join('subsidy', 'subsidy.subsidy_type_id = aid_distribution.subsidy_type_id', 'left')
                 ->join('member', 'member.memberID = aid_distribution.memberID', 'left')
                 ->join('qr_control', 'qr_control.control_no = aid_distribution.control_no', 'left')
                 ->join('member head', 'head.memberID = qr_control.headID', 'left')

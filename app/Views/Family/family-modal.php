@@ -43,7 +43,10 @@ $renderMemberRow = static function ($index, array $m = []) use (
     <div class="family-member-card" data-family-member-row>
         <div class="family-member-card-header">
             <strong class="family-member-card-title">Member</strong>
-            <button type="button" class="btn btn-sm btn-outline-danger" data-family-member-remove>Remove</button>
+            <div class="btn-group btn-group-sm">
+                <button type="button" class="btn btn-outline-primary" data-family-set-head>Set as Head</button>
+                <button type="button" class="btn btn-outline-danger" data-family-member-remove>Remove</button>
+            </div>
         </div>
         <div class="row g-3">
             <?= family_modal_render_person_fields([
@@ -52,6 +55,9 @@ $renderMemberRow = static function ($index, array $m = []) use (
                 'selectOptions' => $selectOptions,
                 'field' => $field,
                 'value' => $val,
+                // Members require the same personal fields as the head (Address/Barangay are
+                // head-only — members inherit them, so they are not part of this component).
+                'required' => true,
             ]) ?>
             <div class="col-12 col-md-6 col-xl-3">
                 <label class="form-label">Relationship</label>
@@ -132,12 +138,44 @@ $renderMemberRow = static function ($index, array $m = []) use (
 };
 ?>
 
-<div class="family-entry-form" data-family-entry-form>
+<?php $importFieldIssues = (array) ($importFieldIssues ?? []); ?>
+<div class="family-entry-form" data-family-entry-form<?php if ($importFieldIssues !== []): ?> data-family-import-field-issues="<?= esc(json_encode($importFieldIssues), 'attr') ?>"<?php endif; ?>>
     <div class="family-entry-header">
         <div>
             <h2 class="family-entry-title"><?= esc($modalTitle) ?></h2>
         </div>
     </div>
+
+    <?php /* Import-fix context: the staged errors/warnings for this family, so the worker sees
+             exactly what to correct. Only rendered when opened from the Import Review screen. */ ?>
+    <?php
+    $importIssues   = (array) ($importIssues ?? []);
+    $blockingIssues = array_values(array_filter($importIssues, static fn (array $i): bool => ($i['severity'] ?? 'blocking') === 'blocking'));
+    $warningIssues  = array_values(array_filter($importIssues, static fn (array $i): bool => ($i['severity'] ?? 'blocking') !== 'blocking'));
+    $renderIssue    = static function (array $issue): string {
+        $person = trim((string) ($issue['person'] ?? ''));
+        $column = trim((string) ($issue['column'] ?? ''));
+        $lead   = $person !== '' ? $person . ($column !== '' ? ' · ' . $column : '') : $column;
+
+        return '<li>' . ($lead !== '' ? '<strong>' . esc($lead) . ':</strong> ' : '') . esc((string) ($issue['message'] ?? '')) . '</li>';
+    };
+    ?>
+    <?php if ($blockingIssues !== [] || $warningIssues !== []): ?>
+        <div class="family-import-issues" data-family-import-issues>
+            <?php if ($blockingIssues !== []): ?>
+                <div class="alert alert-danger">
+                    <div class="fw-semibold mb-1"><i class="bi bi-exclamation-octagon me-1" aria-hidden="true"></i><?= count($blockingIssues) ?> issue<?= count($blockingIssues) === 1 ? '' : 's' ?> to fix before this family can import</div>
+                    <ul class="mb-0 ps-3"><?php foreach ($blockingIssues as $issue): ?><?= $renderIssue($issue) ?><?php endforeach; ?></ul>
+                </div>
+            <?php endif; ?>
+            <?php if ($warningIssues !== []): ?>
+                <div class="alert alert-warning">
+                    <div class="fw-semibold mb-1"><i class="bi bi-exclamation-triangle me-1" aria-hidden="true"></i><?= count($warningIssues) ?> warning<?= count($warningIssues) === 1 ? '' : 's' ?> — imports as typed unless you change it</div>
+                    <ul class="mb-0 ps-3"><?php foreach ($warningIssues as $issue): ?><?= $renderIssue($issue) ?><?php endforeach; ?></ul>
+                </div>
+            <?php endif; ?>
+        </div>
+    <?php endif; ?>
 
     <form method="post" action="<?= esc($action, 'attr') ?>" autocomplete="off">
         <?= csrf_field() ?>
@@ -150,6 +188,15 @@ $renderMemberRow = static function ($index, array $m = []) use (
                  count just before submit. The server compares it against the members it
                  actually received to catch a POST silently clipped by max_input_vars. */ ?>
         <input type="hidden" name="members_meta_count" value="0" data-members-count>
+        <?php /* Import-fix context only: tells the staging-save endpoint which QR group this
+                 modal is replacing (see FamilyImportController::reviewFamilySave). */ ?>
+        <?php if (($importFamilyNo ?? '') !== ''): ?>
+            <input type="hidden" name="import_family_no" value="<?= esc((string) $importFamilyNo, 'attr') ?>">
+        <?php endif; ?>
+        <?php /* Import-fix context for a blank-QR row: keyed by its sheet row, not a QR. */ ?>
+        <?php if ((int) ($importRow ?? 0) > 0): ?>
+            <input type="hidden" name="import_row" value="<?= esc((string) $importRow, 'attr') ?>">
+        <?php endif; ?>
 
         <div class="btn-toolbar family-entry-steps" role="toolbar" aria-label="Family record steps">
             <div class="btn-group w-100" role="group" aria-label="Family record steps">

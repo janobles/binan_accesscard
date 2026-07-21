@@ -98,6 +98,52 @@ class FamilyRecordWriter
     }
 
     /**
+     * Appends ONE member to an existing family (its head already on file), with its
+     * services, and writes a FAMILY_UPDATED audit row. Caller must already be inside a
+     * transaction and must have confirmed the head exists.
+     *
+     * @param int   $headId       existing head member ID
+     * @param array $memberPayload `member` row for the person being added
+     * @param int[] $serviceIds    services to assign to the added member
+     *
+     * @return int the new member ID
+     * @throws FamilyRecordWriteException on any insert/assignment failure.
+     */
+    public function appendMember(
+        int $headId,
+        array $memberPayload,
+        array $serviceIds,
+        int $operatorUserId,
+        ?string $ipAddress = null,
+        ?string $userAgent = null,
+        string $auditSuffix = '',
+    ): int {
+        $memberId = $this->memberModel->addFamilyMember($headId, $memberPayload);
+
+        if ($memberId === false) {
+            throw new FamilyRecordWriteException('The member could not be added to the family.');
+        }
+
+        $this->assignServices($memberId, $serviceIds, 'the added member');
+
+        if ($this->auditModel->hasTable()) {
+            $name = trim(((string) ($memberPayload['firstname'] ?? '')) . ' ' . ((string) ($memberPayload['lastname'] ?? '')));
+
+            $this->auditModel->logAction(
+                $operatorUserId,
+                $headId,
+                'FAMILY_UPDATED',
+                'Added ' . ($name !== '' ? $name : 'a member') . ' to an existing family.',
+                $ipAddress,
+                $userAgent,
+                'Added member: ' . $name . $auditSuffix,
+            );
+        }
+
+        return $memberId;
+    }
+
+    /**
      * Assigns a list of service IDs to a member, skipping IDs that don't exist
      * (matches the manual form's tolerant behavior). Throws only when an existing
      * service genuinely fails to link.

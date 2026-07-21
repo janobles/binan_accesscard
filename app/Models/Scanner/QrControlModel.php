@@ -56,7 +56,9 @@ class QrControlModel extends Model
     }
 
     /**
-     * Batch lookup: the control numbers mapped to a set of heads, in one query.
+     * Batch lookup: the control numbers mapped to a set of heads. Chunked at 1000 like
+     * existingControlNos() — the importer feeds this every head it matched in a batch, which
+     * on a 10k-row file is thousands of IDs, far too many for one IN (...).
      *
      * @param int[] $headIds
      *
@@ -75,11 +77,43 @@ class QrControlModel extends Model
 
         $map = [];
 
-        foreach ($this->whereIn('headID', $headIds)->findAll() as $row) {
-            $map[(int) $row['headID']] = (int) $row['control_no'];
+        foreach (array_chunk($headIds, 1000) as $chunk) {
+            foreach ($this->whereIn('headID', $chunk)->findAll() as $row) {
+                $map[(int) $row['headID']] = (int) $row['control_no'];
+            }
         }
 
         return $map;
+    }
+
+    /**
+     * Batch existence check: of the given control numbers, which are already assigned.
+     * One query per 1000 ids (kept small so a 10k-family import can't build a monster
+     * IN clause). Used by the import review to flag families already in the system.
+     *
+     * @param int[] $controlNos
+     * @return int[] the subset already present, as ints
+     */
+    public function existingControlNos(array $controlNos): array
+    {
+        $ids = array_values(array_unique(array_filter(
+            array_map('intval', $controlNos),
+            static fn (int $n): bool => $n > 0,
+        )));
+
+        if ($ids === []) {
+            return [];
+        }
+
+        $found = [];
+
+        foreach (array_chunk($ids, 1000) as $chunk) {
+            foreach ($this->whereIn('control_no', $chunk)->findAll() as $row) {
+                $found[] = (int) $row['control_no'];
+            }
+        }
+
+        return $found;
     }
 
     /** True when $controlNo is already assigned to a head other than $headId. */

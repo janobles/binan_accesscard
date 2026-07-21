@@ -1301,3 +1301,28 @@
 .family-choice--archived .form-check-label {
     color: #8a6d1b;
 }
+
+/* Import-fix modal: a box flagged by an import error/warning, with the message beneath it. */
+.import-field-error {
+    border-color: #dc3545 !important;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.18);
+}
+
+.import-field-warn {
+    border-color: #d6a400 !important;
+    box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.22);
+}
+
+.import-field-note {
+    margin-top: 0.25rem;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.import-field-note-error {
+    color: #b02a37;
+}
+
+.import-field-note-warn {
+    color: #997404;
+}

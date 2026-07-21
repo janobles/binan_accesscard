@@ -1,0 +1,312 @@
+===============================================================================
+ FAMILY EXCEL IMPORT - VALIDATION REFERENCE
+ Binan Access Card (CSWD)
+===============================================================================
+
+HOW THE IMPORT WORKS
+--------------------
+1. You upload the filled .xlsx.
+2. The system READS and CHECKS it. Nothing is saved yet.
+3. The Import Review screen lists every problem it found.
+4. You fix the problems IN THE SPREADSHEET and upload again.
+   (The review screen is read-only on purpose. The spreadsheet is the single
+   source of truth - fixing it in the browser would leave the mistakes in the
+   file, and the next person to use that file would import them all over again.)
+5. When there are no ISSUES left, press Confirm import.
+
+
+WHAT THE REVIEW SCREEN SHOWS
+----------------------------
+Six tiles across the top:
+
+    Family groups       how many families the file contains
+    Total members       every person in the file
+    Ready to import     families that are CORRECT and will be saved
+    Already in system   families that already exist and will be SKIPPED
+    Issues to fix       blocking problems - the import will not run
+    Warnings            things to read, but which do not stop the import
+
+Then the problems, grouped by type (or by row - there is a toggle), each naming
+the exact Excel cell. Click a cell to copy it, then press Ctrl+G in Excel and
+paste to jump straight to it.
+
+Finally the READY TO IMPORT list: every family that is correct, with its head,
+member count and address. This is the other half of the picture - the rest of
+the screen is nothing but problems, so this is where you confirm the good data
+really is good before you commit.
+
+A family only appears there if the import would genuinely CREATE it. Families
+that are blocked, already on file (skipped), or being added to an existing
+family are deliberately left out - listing them would be a promise the import
+does not keep. A family with warnings only DOES appear, marked "imports as
+typed", so nothing is glossed over.
+
+
+THE TWO SEVERITIES
+------------------
+ISSUE TO FIX (blocking)
+    Stops the import. "Confirm import" stays disabled until it is gone.
+    Either the data is wrong, or the database would physically refuse it.
+
+WARNING (informational)
+    Does NOT stop the import. It tells you what the import is about to do, or
+    points at something that looks like a typo. Read them - some of them mean
+    rows will be SKIPPED and not saved.
+
+
+===============================================================================
+ ISSUES TO FIX  (blocking - the import will not run)
+===============================================================================
+
+FILE
+    The file could not be read at all.
+    Catches: not an .xlsx, wrong sheet, missing column headers, corrupt file.
+
+EMPTY
+    The file was read but has no family rows under the header.
+
+QR-11 - Merged QR cells
+    The QR Number column has merged cells in the data area.
+    Catches: a worker merging one QR across a family's rows instead of
+    repeating it. Merged cells hide the QR from every row but the first.
+    (The template's decorative banner at the top is ignored - only merges that
+    reach the data rows are flagged.)
+
+QR-01 - Missing QR Number
+    The QR Number cell is blank.
+    Catches: a forgotten QR. Every person needs their family's QR on their row.
+
+QR-FORMAT - Invalid QR Number
+    The QR is not a plain whole number.
+    Catches: letters ("ABC123"), decimals ("5880.0"), commas ("6,001"),
+    negatives ("-1"), scientific notation, stray symbols.
+
+QR-05 - QR Number is zero
+    The QR is 0. Zero is not a valid card number.
+
+QR-07 - QR Number too large
+    The QR is above 2,147,483,647 (the database column's ceiling).
+    Catches: a slipped keyboard producing a 12-digit number.
+
+QR-08 - QR Number is an error cell
+    The cell holds an Excel error value like #REF! or #N/A.
+    Catches: a broken formula or a bad paste.
+
+QR-12 - QR Number is a formula
+    The cell holds a formula (=A4) instead of a typed number.
+    Catches: a dragged/filled formula. The value can change out from under you.
+
+QR-TAKEN - QR belongs to someone else        [NEW]
+    That QR number is ALREADY used by a DIFFERENT family in the system.
+    Catches: THE MISTYPED QR. One wrong digit (6001 instead of 6091) files a
+    brand-new family onto a stranger's card number.
+    Two forms:
+      - the QR is on file under a completely different person; or
+      - the same name, but the birthday does not match what is stored.
+    Blocking because it CANNOT be saved: a QR belongs to exactly one family
+    (it is the primary key), so the import can neither skip it (this head is
+    new) nor insert it (the number is taken). Left as a warning it would fail
+    halfway through the import instead of being caught here.
+    Fix: correct the QR, or give the new family its own unused QR.
+
+HEAD-NONE - No Head in the family
+    A QR group has no row with Relationship = Head.
+    Catches: a forgotten Head, or a family whose Head landed on another QR.
+    The message tells you who is most likely the Head, using the address (only
+    the Head fills in Address/Barangay, so the person with an address is
+    almost always the Head).
+
+HEAD-MULTI - More than one Head
+    A QR group has two or more Head rows.
+    Catches: a copied block, or two households sharing one QR by mistake.
+
+FP-ADDR - Two addresses under one QR
+    Rows sharing one QR carry different addresses or barangays.
+    Catches: a copy-pasted block, or a row shift that dropped a stranger's
+    household onto this QR. One QR = one household.
+    Fix: correct the mistyped QR, or give the other household its own QR.
+
+REQUIRED - Missing required value
+    A required cell is blank.
+    Head needs: Civil status, Education, Job, Address, Barangay.
+    Everyone needs: QR, Relationship, First name, Last name.
+
+BDAY - Invalid birthday
+    The birthday is not a real date, or is missing on a Head.
+    Format: MM-DD-YYYY.
+
+SEX - Invalid sex
+    Not Male or Female.
+
+INCOME - Invalid monthly income
+    Not a bracket label from the dropdown, and not a number.
+
+SERVICE - Unknown service code
+    A service code that is not on the Reference sheet.
+
+LENGTH - Value too long
+    The value would not fit the database column and would be cut off silently.
+    Limits: First/Last name 100, Middle name 50, Civil status 100,
+            Contact number 20, Religion 100.
+
+
+===============================================================================
+ WARNINGS  (the import still runs - but READ THESE)
+===============================================================================
+
+DUP-EXISTS - Already in the system
+    Same QR AND same Head (name + birthday) as a family already on file.
+    This is a genuine re-upload. The family is SKIPPED - it is not imported
+    twice, and nothing is duplicated.
+    Note: this now checks the PERSON, not just the QR. It only says "already in
+    the system" when the head really is the same human being.
+
+DUP-DIFF - Details differ from the system      [NEW]
+    Same family as above, but your file disagrees with what is stored (a new
+    phone number, a corrected middle name, etc).
+    Catches: someone editing the spreadsheet expecting the import to UPDATE the
+    record. It does not. Families already on file are SKIPPED, so those edits
+    would be silently thrown away.
+    Fix: edit the record in Manage Family instead. The message lists exactly
+    which fields differ, and both values.
+
+DUP-DB - Person already in the system          [NEW]
+    This person is already on file, under a DIFFERENT QR.
+    Catches: THE SILENT SKIP. A head re-entered under a brand-new QR used to
+    look perfectly clean in the review - then the import quietly dropped the
+    whole family (head, members, everything) because the head already existed,
+    and nobody was told.
+    If the person is a HEAD: the whole group will NOT be saved. Check the QR.
+    If the person is a member: they will be added as a second record. If it is
+    really the same person, delete the row.
+
+ADD-MEMBER - Will be added to an existing family
+    A group with NO head whose QR already belongs to a family = members being
+    added to that family.
+    Catches: the forgotten-member case. A worker finishes a family, then
+    remembers a member the next day and adds the row in a later batch.
+    These people are ADDED automatically on import. To skip one, delete their
+    row from the file.
+    (If the person is already in that family, they are NOT added twice - you
+    get a DUP-DB warning instead.)
+
+DUP-PERSON - Possible duplicate person
+    Two rows in YOUR FILE look like the same person: same first + middle + last
+    + suffix + birthday, AND the same household address.
+    Catches: the same person typed twice. Two real people can share a name -
+    but never a name, a birthday, AND an address.
+    Imports anyway, on purpose. Delete a row if it really is a duplicate.
+
+BRGY - Barangay not recognised
+    Not one of the official Binan barangays.
+    Catches: a spelling slip. The Barangay dropdown has no "Other" option, so
+    anything off-list is suspect. Matching is tolerant (Sto./Santo, n/n-tilde,
+    "(alias)" ignored). Imports as typed.
+
+CONTACT - Contact number format
+    Does not start with 09, or is not 11 digits.
+    Imports as typed.
+
+SUFFIX - Suffix adjusted
+    The suffix was mapped to the matching dropdown value ("Junior" -> "Jr",
+    "the 3rd" -> "III"). If it matches nothing, it is left blank.
+    The database only accepts Jr, Sr, I, II, III, IV, V.
+
+BDAY-RANGE - Birthday out of range
+    A valid date, but implausible: in the future, or over 150 years ago.
+    Catches: a mistyped year. 150 is well past the oldest human on record
+    (~122), so it cannot flag a real person. Imports anyway.
+
+QR-CONTIG - Family rows not together
+    One family's rows are not next to each other in the sheet.
+    Catches: a sort or a paste that scattered a family. The family still
+    imports correctly - this just asks you to check the grouping.
+
+
+===============================================================================
+ QUICK ANSWER: "same QR" - when is it a problem?
+===============================================================================
+
+NOT a problem - this is the design:
+    A whole family shares ONE QR. The head and every member carry the same QR
+    number on their row. That is how the importer groups them into a family.
+
+        QR     Relationship   Name
+        6001   Head           Juan Cruz
+        6001   Spouse         Maria Cruz
+        6001   Child          Jose Cruz          <- correct
+
+A problem - the QR collides with the DATABASE:
+
+    Your file's QR is already in the system as...   Result
+    ------------------------------------------------------------------
+    the SAME head, same details                     DUP-EXISTS (warning)
+                                                    re-upload, skipped
+    the SAME head, but your file's details differ   DUP-EXISTS + DUP-DIFF
+                                                    (warning) skipped, your
+                                                    edits are NOT saved
+    a DIFFERENT person                              QR-TAKEN (BLOCKING)
+                                                    mistyped QR
+    the same name, DIFFERENT birthday               QR-TAKEN (BLOCKING)
+                                                    would fail on import
+
+Only the cases that genuinely cannot be written are blocked. Re-uploads stay
+warnings and import fine.
+
+
+===============================================================================
+ THE DEMO FILE - family-import-DEMO-validations.xlsx
+===============================================================================
+
+30 rows, 13 family groups. Upload it and the review screen shows
+19 ISSUES TO FIX and 12 WARNINGS. Nothing is written unless you confirm, and
+you cannot confirm while issues remain - so it is safe to run.
+
+It is keyed to real families already in the database (QR 1-5), which is what
+makes the "already in the system" checks fire. If those families are ever
+removed, regenerate the file.
+
+  SHEET ROW   CODE            WHAT IT DEMONSTRATES
+  ---------   -------------   -----------------------------------------------
+  3           DUP-EXISTS      QR 1 re-uploaded EXACTLY as stored. Skipped.
+                              (Deliberately raises no DUP-DIFF - proof that a
+                              clean re-upload does not cry wolf.)
+  4           DUP-EXISTS      QR 4, same head, but a NEW phone number in the
+              + DUP-DIFF      file. Skipped, so that edit is NOT saved.
+  5           QR-TAKEN        QR 2 belongs to Ronald Andrada - this row is
+                              Carmela Reyes. A mistyped QR.
+  6           QR-TAKEN        QR 3, right name (Rafael Ramos), WRONG birthday.
+  7           ADD-MEMBER      No head, and QR 5 already exists: a forgotten
+                              member being added to family 5.
+  8           DUP-DB          Ronald Andrada re-entered under a brand-new QR.
+                              The QR looks fine - but the whole family would be
+                              silently skipped. This is the one that used to be
+                              invisible.
+  10-11       HEAD-NONE       Nobody marked Head. The message names the person
+                              who most likely IS the head (they have the
+                              address).
+  12-13       HEAD-MULTI      Two Head rows under one QR.
+  14-15       FP-ADDR         One QR, two different households.
+  16          REQUIRED, BDAY, One row with five separate field errors: blank
+              SEX, INCOME,    Job, impossible date, "Malee", "plenty" income,
+              SERVICE         unknown service code "ZZZ".
+  17          LENGTH          A first name past the 100-character limit.
+  18          QR-01           Blank QR.
+  19          QR-FORMAT       "ABC123".
+  20          QR-05           Zero.
+  21          QR-07           9999999999 - above the 2,147,483,647 ceiling.
+  22          QR-08           "#REF!" - an Excel error cell.
+  23          QR-12           "=A4" - a formula instead of a number.
+  24          BRGY, CONTACT,  One row with four warnings: "Barangay Wakanda",
+              SUFFIX,         a 5-digit phone, "Junior" (remapped to Jr), and
+              BDAY-RANGE      a birthday in 1850.
+  26-27       DUP-PERSON      The same child typed twice in one family.
+  28,30       QR-CONTIG       Family 9000009's rows split apart by another
+                              family's row.
+  31-32       QR-11           The QR cells of these two rows are MERGED. Row 32
+              (+ QR-01)       then has no QR of its own - which is exactly why
+                              merging is banned.
+
+Not demonstrated: FILE and EMPTY. Both are whole-file failures (unreadable
+file / no rows at all), so they cannot coexist with any other error - there is
+nothing left to review. To see FILE, rename a .txt to .xlsx and upload it.

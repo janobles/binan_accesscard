@@ -4,6 +4,7 @@ namespace App\Commands;
 
 use App\Jobs\JobHandlerInterface;
 use App\Jobs\JobReporter;
+use App\Libraries\ImportStagingStore;
 use App\Models\Jobs\JobQueueModel;
 use CodeIgniter\CLI\BaseCommand;
 use CodeIgniter\CLI\CLI;
@@ -104,10 +105,31 @@ class QueueWork extends BaseCommand
                 CLI::write('No queued jobs.', 'dark_gray');
             }
 
+            $this->sweepImportStaging($model);
+
             return EXIT_SUCCESS;
         } finally {
             flock($lockHandle, LOCK_UN);
             fclose($lockHandle);
+        }
+    }
+
+    /**
+     * Housekeeping: drops import staging files nobody will finish reviewing (the operator
+     * closed the tab). Commit/cancel/upload-again all clean up on their own; this catches
+     * what none of them can see. Files an unfinished job still needs are protected, and a
+     * failure here must never take the worker down — its jobs already ran.
+     */
+    private function sweepImportStaging(JobQueueModel $model): void
+    {
+        try {
+            $removed = (new ImportStagingStore())->sweep($model->activeStagingIds());
+
+            if ($removed > 0) {
+                CLI::write('Swept ' . $removed . ' abandoned import staging file(s).', 'dark_gray');
+            }
+        } catch (Throwable $e) {
+            CLI::write('  staging sweep skipped: ' . $e->getMessage(), 'yellow');
         }
     }
 
@@ -169,12 +191,29 @@ class QueueWork extends BaseCommand
             return;
         }
 
-        $model->finish(
-            $jobId,
-            $outcome->status,
-            $outcome->message,
-            $outcome->result !== null ? json_encode($outcome->result) : null,
-        );
+        // finish() runs OUTSIDE the handle() try/catch above. If storing the result
+        // throws (classically: an oversized result_json past MySQL's max_allowed_packet),
+        // an unguarded throw here leaves the job stuck 'processing' — re-claimed and
+        // re-run every STALE_MINUTES forever. Guard it: fall back to a resultless 'failed'
+        // so the job reaches a terminal state instead of looping.
+        try {
+            $model->finish(
+                $jobId,
+                $outcome->status,
+                $outcome->message,
+                $outcome->result !== null ? json_encode($outcome->result) : null,
+            );
+        } catch (Throwable $e) {
+            CLI::error('  could not store job result: ' . $e->getMessage());
+
+            try {
+                $model->finish($jobId, 'failed', 'The job finished but its result could not be saved: ' . $e->getMessage());
+            } catch (Throwable $inner) {
+                log_message('error', 'queue: could not mark job ' . $jobId . ' failed: ' . $inner->getMessage());
+            }
+
+            return;
+        }
 
         CLI::write('  ' . $outcome->status . ': ' . $outcome->message, $outcome->status === 'done' ? 'green' : 'yellow');
     }

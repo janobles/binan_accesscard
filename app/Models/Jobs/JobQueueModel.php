@@ -169,4 +169,74 @@ class JobQueueModel
             'available_at' => date('Y-m-d H:i:s', time() + max(0, $delaySeconds)),
         ]);
     }
+
+    /**
+     * IDs of a user's family imports still parked on the review screen — staged, never
+     * committed or cancelled. Uploading a new file retires these (see
+     * FamilyImportController::retirePreviousReviews), so an abandoned error report does
+     * not leave its staging file on disk for good.
+     *
+     * @return list<int>
+     */
+    public function stagedReviewIds(int $userId): array
+    {
+        if ($userId <= 0) {
+            return [];
+        }
+
+        $rows = $this->db->table('job_queue')
+            ->select('jobID, result_json')
+            ->where('type', 'family_import')
+            ->where('userID', $userId)
+            ->where('status', 'done')
+            ->like('result_json', '"phase":"review"')
+            ->get()
+            ->getResultArray();
+
+        $ids = [];
+
+        foreach ($rows as $row) {
+            // The LIKE narrows the scan; the decode is what actually decides.
+            $summary = json_decode((string) ($row['result_json'] ?? ''), true);
+
+            if (is_array($summary) && ($summary['phase'] ?? '') === 'review') {
+                $ids[] = (int) $row['jobID'];
+            }
+        }
+
+        return $ids;
+    }
+
+    /**
+     * Staging IDs an unfinished import still needs: every queued/running family_import
+     * job, plus the review job a queued WRITE job reads its rows from (payload.stageJobId).
+     * The staging janitor must never sweep these — a write job can sit `pending` for hours
+     * when the worker is not running, and deleting its rows underneath it kills the import.
+     *
+     * @return list<int>
+     */
+    public function activeStagingIds(): array
+    {
+        $rows = $this->db->table('job_queue')
+            ->select('jobID, payload')
+            ->where('type', 'family_import')
+            ->whereIn('status', ['pending', 'processing'])
+            ->get()
+            ->getResultArray();
+
+        $ids = [];
+
+        foreach ($rows as $row) {
+            $ids[] = (int) $row['jobID'];
+
+            $payload    = json_decode((string) ($row['payload'] ?? ''), true);
+            $stageJobId = is_array($payload) ? (int) ($payload['stageJobId'] ?? 0) : 0;
+
+            if ($stageJobId > 0) {
+                $ids[] = $stageJobId;
+            }
+        }
+
+        return array_values(array_unique($ids));
+    }
 }

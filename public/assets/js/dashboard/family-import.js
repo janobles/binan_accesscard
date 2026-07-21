@@ -219,7 +219,40 @@
         bar.textContent = progress.total > 0 ? progress.percent + '%' : '';
     }
 
+    // The upload only STAGES the file now; a finished review-phase job is not "imported",
+    // it is ready for the operator to inspect. Show an "Open review" call to action.
+    function renderReviewReady(toast, data) {
+        var bar = toast.querySelector('.progress-bar');
+        var closeBtn = toast.querySelector('.fit-close');
+
+        bar.className = 'progress-bar';
+        bar.style.width = '100%';
+        bar.textContent = '';
+        bar.classList.add('bg-info');
+
+        setToastState(toast, 'success');
+        toast.querySelector('.fit-title').textContent = 'Ready to review';
+        toast.querySelector('.fit-msg').textContent = data.message || 'Your file is ready to review.';
+
+        var errorsEl = toast.querySelector('.fit-errors');
+        errorsEl.innerHTML = '';
+        var link = document.createElement('a');
+        link.className = 'btn btn-sm btn-primary mt-2';
+        link.href = data.reviewUrl;
+        link.textContent = 'Open review';
+        errorsEl.appendChild(link);
+
+        closeBtn.hidden = false;
+    }
+
     function renderFinal(toast, data) {
+        // A staged file that finished cleanly routes to the review screen, not "done".
+        if (data.reviewUrl) {
+            renderReviewReady(toast, data);
+
+            return;
+        }
+
         var bar = toast.querySelector('.progress-bar');
         var closeBtn = toast.querySelector('.fit-close');
 
@@ -328,7 +361,9 @@
             renderFinal(toast, data);
             stopTracking(statusUrl);
 
+            // Only a WRITE-phase job changed records; a review-phase job wrote nothing.
             if ((data.status === 'done' || data.status === 'partial') &&
+                data.phase !== 'review' &&
                 typeof window.reloadFamilyDataTable === 'function') {
                 window.reloadFamilyDataTable();
             }

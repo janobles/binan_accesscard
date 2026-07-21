@@ -1,0 +1,681 @@
+<?php
+
+namespace Tests\Unit;
+
+use App\Libraries\FamilyExcelImporter;
+use CodeIgniter\Test\CIUnitTestCase;
+use ReflectionClass;
+
+/**
+ * Unit coverage for the hardened QR validation and the family-coherence /
+ * fingerprint checks. The lookup caches (sector/service/income) are primed to empty
+ * arrays via reflection so validateAndBuild runs without a database.
+ *
+ * @internal
+ */
+final class FamilyExcelImporterTest extends CIUnitTestCase
+{
+    // -- validateQr: the acceptance table (spec section 7) ---------------------
+
+    public function testValidateQrRejectsMalformedValues(): void
+    {
+        $importer = new FamilyExcelImporter();
+
+        $rejects = [
+            ''               => 'QR-01',
+            'ABC123'         => 'QR-FORMAT',
+            'QR-6001'        => 'QR-FORMAT',
+            'NULL'           => 'QR-FORMAT',
+            'TBD'            => 'QR-FORMAT',
+            'N/A'            => 'QR-FORMAT',
+            '-1'             => 'QR-FORMAT',
+            '-57'            => 'QR-FORMAT',
+            '0'              => 'QR-05',
+            '5880.5'         => 'QR-FORMAT',
+            '5880.0'         => 'QR-FORMAT', // integral-float TEXT keeps the dot -> rejected
+            '6,001'          => 'QR-FORMAT',
+            '1.23457E+11'    => 'QR-FORMAT',
+            '#REF!'          => 'QR-08',
+            '=A4'            => 'QR-12',
+            '3000000000'     => 'QR-07',     // 10 digits, over the 2147483647 ceiling
+            '999999999999'   => 'QR-FORMAT', // 12 digits, over the 10-digit format cap
+        ];
+
+        foreach ($rejects as $raw => $expectedCode) {
+            $result = $importer->validateQr($raw);
+            $this->assertFalse($result['ok'], "expected '{$raw}' to be rejected");
+            $this->assertSame($expectedCode, $result['code'], "wrong code for '{$raw}'");
+        }
+    }
+
+    public function testValidateQrNormalisesAndAcceptsGoodValues(): void
+    {
+        $importer = new FamilyExcelImporter();
+
+        $accepts = [
+            '  6001  '        => 6001,   // padded
+            '6001'            => 6001,   // text-formatted number
+            "6001\u{00A0}"    => 6001,   // trailing non-breaking space
+            "\u{200B}6001"    => 6001,   // leading zero-width space
+            '006001'          => 6001,   // leading zeros -> accepted (logged)
+            '1'               => 1,
+            '2147483647'      => 2147483647, // exactly the ceiling
+        ];
+
+        foreach ($accepts as $raw => $expected) {
+            $result = $importer->validateQr($raw);
+            $this->assertTrue($result['ok'], "expected '{$raw}' to be accepted");
+            $this->assertSame($expected, $result['qr'], "wrong value for '{$raw}'");
+        }
+    }
+
+    // -- family coherence + fingerprint ----------------------------------------
+
+    public function testCleanSingleHeadFamilyBuildsWithNoBlockingErrors(): void
+    {
+        $result = $this->importer()->validateAndBuild([
+            $this->headRow(3, '6001'),
+            $this->memberRow(4, '6001'),
+        ]);
+
+        $this->assertSame(1, $result['counts']['families']);
+        $this->assertSame(1, $result['counts']['members']);
+        $this->assertSame(0, $result['counts']['blocking']);
+    }
+
+    public function testMembersRequireTheSamePersonalFieldsAsTheHead(): void
+    {
+        // A member missing the personal fields (birthday, sex, civil status, education, job,
+        // monthly income) is now blocking — the same rule the head has, matching the form.
+        $result = $this->importer()->validateAndBuild([
+            $this->headRow(3, '6001'),
+            $this->memberRow(4, '6001', [
+                'birthday' => '', 'sex' => '', 'civilstatus' => '',
+                'education' => '', 'job' => '', 'monthlyincome' => '',
+            ]),
+        ]);
+
+        $this->assertSame(6, $result['counts']['blocking']);   // one per missing personal field
+        $this->assertContains('REQUIRED', $this->codes($result));
+    }
+
+    public function testMemberBlankAddressAndBarangayStayAllowed(): void
+    {
+        // Address/Barangay remain head-only — a member leaving them blank (inherited) is fine.
+        $result = $this->importer()->validateAndBuild([
+            $this->headRow(3, '6001'),
+            $this->memberRow(4, '6001', ['address' => '', 'barangay' => '']),
+        ]);
+
+        $this->assertSame(0, $result['counts']['blocking']);
+    }
+
+    public function testFingerprintFlagsDifferentBarangayInOneFamily(): void
+    {
+        $result = $this->importer()->validateAndBuild([
+            $this->headRow(3, '6001', ['barangay' => 'Poblacion']),
+            $this->memberRow(4, '6001', ['barangay' => 'Malaban']),
+        ]);
+
+        $this->assertContains('FP-ADDR', $this->codes($result));
+    }
+
+    public function testFingerprintIgnoresMixedSurnames(): void
+    {
+        // Two different surnames but the same (blank) member address/barangay: a real
+        // household. Surname is deliberately NOT part of the fingerprint.
+        $result = $this->importer()->validateAndBuild([
+            $this->headRow(3, '6001', ['lastname' => 'Dela Cruz']),
+            $this->memberRow(4, '6001', ['lastname' => 'Reyes']),
+        ]);
+
+        $this->assertNotContains('FP-ADDR', $this->codes($result));
+    }
+
+    public function testHeadNoneAndHeadMultiAreFlagged(): void
+    {
+        $none = $this->importer()->validateAndBuild([
+            $this->memberRow(3, '6001'),
+            $this->memberRow(4, '6001'),
+        ]);
+        $this->assertContains('HEAD-NONE', $this->codes($none));
+
+        $multi = $this->importer()->validateAndBuild([
+            $this->headRow(3, '6002'),
+            $this->headRow(4, '6002'),
+        ]);
+        $this->assertContains('HEAD-MULTI', $this->codes($multi));
+    }
+
+    public function testEveryRowIsValidatedEvenWhenTheFamilyHasNoHead(): void
+    {
+        // The spec's secondary bug: field validation was skipped for rows whose family
+        // already failed a family-level check. Here a headless family also has a member
+        // missing a first name — BOTH errors must surface.
+        $result = $this->importer()->validateAndBuild([
+            $this->memberRow(3, '6001', ['firstname' => '']),
+            $this->memberRow(4, '6001'),
+        ]);
+
+        $codes = $this->codes($result);
+        $this->assertContains('HEAD-NONE', $codes);
+        $this->assertContains('REQUIRED', $codes);
+    }
+
+    public function testNonContiguousFamilyIsAWarningNotBlocking(): void
+    {
+        $result = $this->importer()->validateAndBuild([
+            $this->headRow(3, '6001'),
+            $this->memberRow(5, '6001'), // gap at row 4
+        ]);
+
+        $contig = array_values(array_filter(
+            $result['errors'],
+            static fn (array $e): bool => $e['code'] === 'QR-CONTIG'
+        ));
+
+        $this->assertCount(1, $contig);
+        $this->assertSame('warning', $contig[0]['severity']);
+    }
+
+    // -- barangay / contact / suffix / duplicate-person (all warnings) ---------
+
+    public function testBarangayToleratesSpellingButFlagsNonBarangays(): void
+    {
+        // "Biñan" and "Sto. Tomas" are legitimate spellings of official barangays.
+        $ok = $this->importer()->validateAndBuild([
+            $this->headRow(3, '6001', ['barangay' => 'Biñan']),
+            $this->headRow(4, '6002', ['barangay' => 'Sto. Tomas']),
+        ]);
+        $this->assertNotContains('BRGY', $this->codes($ok));
+
+        // "Santa Rosa" is a different city — flagged (warning).
+        $bad = $this->importer()->validateAndBuild([
+            $this->headRow(3, '6003', ['barangay' => 'Santa Rosa']),
+        ]);
+        $brgy = array_values(array_filter($bad['errors'], static fn (array $e): bool => $e['code'] === 'BRGY'));
+        $this->assertCount(1, $brgy);
+        $this->assertSame('warning', $brgy[0]['severity']);
+    }
+
+    public function testContactNumberMustBe09Plus11Digits(): void
+    {
+        $good = $this->importer()->validateAndBuild([
+            $this->headRow(3, '6001', ['contactnumber' => '0917-123-4567']), // punctuation ok
+        ]);
+        $this->assertNotContains('CONTACT', $this->codes($good));
+
+        foreach (['0917', '+639171234567', '09171234567890', '99171234567'] as $bad) {
+            $result = $this->importer()->validateAndBuild([
+                $this->headRow(3, '6001', ['contactnumber' => $bad]),
+            ]);
+            $this->assertContains('CONTACT', $this->codes($result), "expected '{$bad}' to warn");
+        }
+    }
+
+    public function testSuffixNormalisesDotSilently(): void
+    {
+        // "Jr." is just a trailing dot — accepted silently, stored as "Jr".
+        $ok = $this->importer()->validateAndBuild([
+            $this->headRow(3, '6001', ['suffix' => 'Jr.']),
+        ]);
+        $this->assertNotContains('SUFFIX', $this->codes($ok));
+        $this->assertSame('Jr', $ok['families'][0]['headPayload']['suffix']);
+    }
+
+    public function testSuffixMapsVariantsToDropdownValueWithWarning(): void
+    {
+        // "the 3rd" and "Junior" are real changes — coerced to the dropdown value + warned.
+        $map = ['the 3rd' => 'III', 'Junior' => 'Jr', '2nd' => 'II'];
+
+        foreach ($map as $typed => $expected) {
+            $result = $this->importer()->validateAndBuild([
+                $this->headRow(3, '6001', ['suffix' => $typed]),
+            ]);
+            $this->assertContains('SUFFIX', $this->codes($result), "expected '{$typed}' to warn");
+            $this->assertSame($expected, $result['families'][0]['headPayload']['suffix'], "'{$typed}' should map to {$expected}");
+        }
+    }
+
+    public function testUnmappableSuffixIsLeftBlank(): void
+    {
+        // Genuine junk maps to nothing — left blank (enum-safe) with a warning.
+        $result = $this->importer()->validateAndBuild([
+            $this->headRow(3, '6001', ['suffix' => 'Bogus']),
+        ]);
+        $this->assertContains('SUFFIX', $this->codes($result));
+        $this->assertNull($result['families'][0]['headPayload']['suffix']);
+    }
+
+    public function testBirthdayRangeWarnsButStillImports(): void
+    {
+        // In the future, or an age over 150 → flagged (still imports).
+        foreach (['01-01-2050', '05-14-1870'] as $bad) {
+            $result = $this->importer()->validateAndBuild([
+                $this->headRow(3, '6001', ['birthday' => $bad]),
+            ]);
+            $codes = $this->codes($result);
+            $this->assertContains('BDAY-RANGE', $codes, "expected '{$bad}' to warn");
+            $this->assertNotContains('BDAY', $codes); // valid format, just implausible
+            $this->assertSame(1, $result['counts']['families']); // still built/imported
+        }
+
+        // Plausible ages — including a centenarian (~100) — raise nothing.
+        foreach (['05-14-1980', '05-14-1926'] as $good) {
+            $ok = $this->importer()->validateAndBuild([$this->headRow(3, '6002', ['birthday' => $good])]);
+            $this->assertNotContains('BDAY-RANGE', $this->codes($ok), "expected '{$good}' to pass");
+        }
+    }
+
+    public function testOverLongValueIsBlocked(): void
+    {
+        $result = $this->importer()->validateAndBuild([
+            $this->headRow(3, '6001', ['firstname' => str_repeat('A', 150)]),
+        ]);
+        $length = array_values(array_filter($result['errors'], static fn (array $e): bool => $e['code'] === 'LENGTH'));
+        $this->assertCount(1, $length);
+        $this->assertSame('blocking', $length[0]['severity']);
+        $this->assertSame('firstname', $length[0]['field']);
+    }
+
+    public function testDuplicatePersonWarnsOnlyAtTheSameAddress(): void
+    {
+        // Same person twice in one family (shared head address) → warning.
+        $dup = $this->importer()->validateAndBuild([
+            $this->headRow(3, '6001'),
+            $this->memberRow(4, '6001', ['firstname' => 'Jose', 'lastname' => 'Cruz', 'birthday' => '01-10-2010']),
+            $this->memberRow(5, '6001', ['firstname' => 'Jose', 'lastname' => 'Cruz', 'birthday' => '01-10-2010']),
+        ]);
+        $this->assertContains('DUP-PERSON', $this->codes($dup));
+
+        // Same-named heads in two families at DIFFERENT addresses → not flagged.
+        $notDup = $this->importer()->validateAndBuild([
+            $this->headRow(3, '6002', ['firstname' => 'Juan', 'lastname' => 'Reyes', 'barangay' => 'Poblacion']),
+            $this->headRow(4, '6003', ['firstname' => 'Juan', 'lastname' => 'Reyes', 'barangay' => 'Malaban']),
+        ]);
+        $this->assertNotContains('DUP-PERSON', $this->codes($notDup));
+    }
+
+    // -- head-less family: use the address to find the likely Head --------------
+
+    public function testHeadlessFamilyPointsAtTheRowCarryingTheAddress(): void
+    {
+        // Only the Head fills Address/Barangay — so the row that has one IS the head.
+        $result = $this->importer()->validateAndBuild([
+            $this->memberRow(3, '6001', ['firstname' => 'Maria', 'address' => '', 'barangay' => '']),
+            $this->memberRow(4, '6001', ['firstname' => 'Juan', 'address' => '12 Rizal St', 'barangay' => 'Poblacion']),
+            $this->memberRow(5, '6001', ['firstname' => 'Jose', 'address' => '', 'barangay' => '']),
+        ]);
+
+        $headNone = array_values(array_filter(
+            $result['errors'],
+            static fn (array $e): bool => $e['code'] === 'HEAD-NONE'
+        ));
+
+        $this->assertCount(1, $headNone);
+        $this->assertSame(4, $headNone[0]['sheetRow']); // anchored on Juan, who has the address
+        $this->assertStringContainsString('most likely the Head', $headNone[0]['message']);
+        $this->assertStringContainsString('Juan', $headNone[0]['message']);
+    }
+
+    public function testHeadlessFamilyWithNoAddressSaysSo(): void
+    {
+        $result = $this->importer()->validateAndBuild([
+            $this->memberRow(3, '6001', ['address' => '', 'barangay' => '']),
+            $this->memberRow(4, '6001', ['address' => '', 'barangay' => '']),
+        ]);
+
+        $headNone = array_values(array_filter(
+            $result['errors'],
+            static fn (array $e): bool => $e['code'] === 'HEAD-NONE'
+        ));
+
+        $this->assertStringContainsString('no address on any row', $headNone[0]['message']);
+    }
+
+    public function testHeadlessFamilyWithTwoDifferentAddressesWarnsOfTwoHouseholds(): void
+    {
+        $result = $this->importer()->validateAndBuild([
+            $this->memberRow(3, '6001', ['address' => '12 Rizal St', 'barangay' => 'Poblacion']),
+            $this->memberRow(4, '6001', ['address' => '9 Luna St', 'barangay' => 'Malaban']),
+        ]);
+
+        $headNone = array_values(array_filter(
+            $result['errors'],
+            static fn (array $e): bool => $e['code'] === 'HEAD-NONE'
+        ));
+
+        $this->assertStringContainsString('two households', $headNone[0]['message']);
+    }
+
+    public function testHeadlessFamilyWithTheSameAddressRepeatedIsOneHousehold(): void
+    {
+        // The worker repeated the same address on several rows — one household, so the
+        // operator only has to pick who the Head is (NOT a two-household split).
+        $result = $this->importer()->validateAndBuild([
+            $this->memberRow(3, '6001', ['address' => '12 Rizal St', 'barangay' => 'Poblacion']),
+            $this->memberRow(4, '6001', ['address' => '12 Rizal St', 'barangay' => 'Poblacion']),
+            $this->memberRow(5, '6001', ['address' => '12 Rizal St', 'barangay' => 'Poblacion']),
+        ]);
+
+        $headNone = array_values(array_filter(
+            $result['errors'],
+            static fn (array $e): bool => $e['code'] === 'HEAD-NONE'
+        ));
+
+        $this->assertStringContainsString('same address', $headNone[0]['message']);
+        $this->assertStringContainsString('one household', $headNone[0]['message']);
+        $this->assertStringNotContainsString('two households', $headNone[0]['message']);
+    }
+
+    // -- add-member-to-existing-family (append) --------------------------------
+
+    public function testHeadlessGroupForExistingQrBecomesAddMember(): void
+    {
+        $result = $this->importer()->validateAndBuild(
+            [$this->memberRow(3, '6001', ['firstname' => 'Maria', 'lastname' => 'Dela Cruz'])],
+            $this->existingHead(6001, $this->storedHead()), // QR 6001 already on file
+        );
+
+        $codes = $this->codes($result);
+        $this->assertContains('ADD-MEMBER', $codes);
+        $this->assertNotContains('HEAD-NONE', $codes); // the head is in the DB, not missing
+        $this->assertCount(1, $result['appends']);
+        $this->assertSame(6001, $result['appends'][0]['qr']);
+        $this->assertSame(1, $result['counts']['appends']);
+    }
+
+    public function testHeadlessGroupForNewQrIsStillHeadNone(): void
+    {
+        $result = $this->importer()->validateAndBuild(
+            [$this->memberRow(3, '6002', ['firstname' => 'Maria'])],
+            [], // QR 6002 does not exist
+        );
+
+        $this->assertContains('HEAD-NONE', $this->codes($result));
+        $this->assertSame([], $result['appends']);
+    }
+
+    public function testAddMemberIsAutomaticAndSaysSo(): void
+    {
+        // No decision to make: the person IS added on import. To skip them the operator
+        // deletes the row from the spreadsheet and uploads again.
+        $result = $this->importer()->validateAndBuild(
+            [$this->memberRow(3, '6001', ['firstname' => 'Maria', 'lastname' => 'Cruz'])],
+            $this->existingHead(6001, $this->storedHead()),
+        );
+
+        $add = array_values(array_filter(
+            $result['errors'],
+            static fn (array $e): bool => $e['code'] === 'ADD-MEMBER'
+        ));
+
+        $this->assertCount(1, $add);
+        $this->assertSame('warning', $add[0]['severity']);   // informational, never blocks
+        $this->assertStringContainsString('will be ADDED', $add[0]['message']);
+        $this->assertStringContainsString('delete this row', $add[0]['message']);
+        $this->assertSame(1, $result['counts']['appends']);
+    }
+
+    // -- "already in the system" must be the SAME person, 1:1 -------------------
+
+    public function testExistingQrWithTheSameHeadIsADuplicateFamily(): void
+    {
+        // Same QR, same head (name + birthday), same details: a genuine re-upload.
+        $result = $this->importer()->validateAndBuild(
+            [$this->headRow(3, '6001')],
+            $this->existingHead(6001, $this->storedHead()),
+        );
+
+        $codes = $this->codes($result);
+        $this->assertContains('DUP-EXISTS', $codes);
+        $this->assertNotContains('QR-TAKEN', $codes);
+        $this->assertNotContains('DUP-DIFF', $codes);
+        $this->assertSame(1, $result['counts']['existing']);
+        $this->assertSame(0, $result['counts']['blocking']);
+    }
+
+    public function testExistingQrHeldByADifferentPersonIsBlocked(): void
+    {
+        // The mistyped-QR case: 6001 is Juan's, but this row is Maria's new family. Left
+        // alone the write step neither skips nor inserts — it dies on the qr_control clash.
+        $result = $this->importer()->validateAndBuild(
+            [$this->headRow(3, '6001', ['firstname' => 'Maria', 'lastname' => 'Santos'])],
+            $this->existingHead(6001, $this->storedHead()),
+        );
+
+        $taken = $this->errorsFor($result, 'QR-TAKEN');
+
+        $this->assertCount(1, $taken);
+        $this->assertSame('blocking', $taken[0]['severity']);
+        $this->assertStringContainsString('Juan Dela Cruz', $taken[0]['message']);
+        $this->assertStringContainsString('Maria Santos', $taken[0]['message']);
+        $this->assertNotContains('DUP-EXISTS', $this->codes($result));
+        $this->assertSame(0, $result['counts']['existing']);
+    }
+
+    public function testExistingQrWithTheSameNameButADifferentBirthdayIsBlocked(): void
+    {
+        // activeHeadExists matches on birthday too, so this would NOT be skipped — it would
+        // be inserted, and then fail on the QR. Block it in review instead.
+        $result = $this->importer()->validateAndBuild(
+            [$this->headRow(3, '6001', ['birthday' => '06-14-1980'])],
+            $this->existingHead(6001, $this->storedHead()),
+        );
+
+        $taken = $this->errorsFor($result, 'QR-TAKEN');
+
+        $this->assertCount(1, $taken);
+        $this->assertSame('blocking', $taken[0]['severity']);
+        $this->assertStringContainsString('1980-05-14', $taken[0]['message']); // what is stored
+        $this->assertStringContainsString('1980-06-14', $taken[0]['message']); // what the file says
+    }
+
+    public function testDuplicateFamilyWhoseStoredDetailsDifferIsReported(): void
+    {
+        // Same person, same family — but the file carries a newer contact number. The import
+        // SKIPS the family, so that edit would be silently lost. Say so.
+        $result = $this->importer()->validateAndBuild(
+            [$this->headRow(3, '6001', ['contactnumber' => '09171234567'])],
+            $this->existingHead(6001, $this->storedHead(['contactnumber' => '09990000000'])),
+        );
+
+        $diff = $this->errorsFor($result, 'DUP-DIFF');
+
+        $this->assertContains('DUP-EXISTS', $this->codes($result)); // still the same family
+        $this->assertCount(1, $diff);
+        $this->assertSame('warning', $diff[0]['severity']);
+        $this->assertStringContainsString('Contact number', $diff[0]['message']);
+        $this->assertStringContainsString('09171234567', $diff[0]['message']);
+        $this->assertStringContainsString('09990000000', $diff[0]['message']);
+        $this->assertStringContainsString('will NOT be saved', $diff[0]['message']);
+    }
+
+    public function testHeadAlreadyInTheSystemUnderAnotherQrIsFlagged(): void
+    {
+        // The silent-skip case: Juan is already a head under QR 6001, and the batch re-enters
+        // him under a brand-new QR 7777. The QR is free, so nothing else catches it — but the
+        // write step skips his whole family and says nothing.
+        $result = $this->importer()->validateAndBuild(
+            [$this->headRow(3, '7777'), $this->memberRow(4, '7777')],
+            [],
+            $this->existingPerson('Juan', 'Dela Cruz', '1980-05-14', 6001),
+        );
+
+        $dup = $this->errorsFor($result, 'DUP-DB');
+
+        $this->assertCount(1, $dup);
+        $this->assertSame('warning', $dup[0]['severity']);
+        $this->assertSame(3, $dup[0]['sheetRow']);
+        $this->assertStringContainsString('family 6001', $dup[0]['message']);
+        $this->assertStringContainsString('will NOT be saved', $dup[0]['message']);
+    }
+
+    public function testAppendIsNotPromisedForAMemberAlreadyInThatFamily(): void
+    {
+        // The write step skips a member already under the head, so "will be ADDED" was a lie.
+        $result = $this->importer()->validateAndBuild(
+            [$this->memberRow(3, '6001', ['firstname' => 'Jose', 'lastname' => 'Dela Cruz', 'birthday' => '01-02-2005'])],
+            $this->existingHead(6001, $this->storedHead()),
+            $this->existingPerson('Jose', 'Dela Cruz', '2005-01-02', 6001, false),
+        );
+
+        $codes = $this->codes($result);
+
+        $this->assertContains('DUP-DB', $codes);
+        $this->assertNotContains('ADD-MEMBER', $codes);
+        $this->assertSame([], $result['appends']);          // nothing queued to add
+        $this->assertSame(0, $result['counts']['appends']);
+    }
+
+    public function testAPersonOnFileUnderTheirOwnQrIsNotDoubleReported(): void
+    {
+        // Juan is head of 6001 and the batch re-uploads 6001. That is DUP-EXISTS, not a
+        // "person is under another family" warning.
+        $result = $this->importer()->validateAndBuild(
+            [$this->headRow(3, '6001')],
+            $this->existingHead(6001, $this->storedHead()),
+            $this->existingPerson('Juan', 'Dela Cruz', '1980-05-14', 6001),
+        );
+
+        $this->assertContains('DUP-EXISTS', $this->codes($result));
+        $this->assertNotContains('DUP-DB', $this->codes($result));
+    }
+
+    // -- counts: the file total vs what can be built ---------------------------
+
+    public function testRowsAndGroupsCountEveryPersonInTheFileIncludingBrokenOnes(): void
+    {
+        // 6 people: one buildable family (2), a head-less group (2), and 2 rows whose QR is
+        // unusable. families/members only ever describe what could be BUILT, so they see 2
+        // of these people — the counts the review shows the operator must see all 6, or the
+        // tile quietly hides exactly the rows that need fixing.
+        $result = $this->importer()->validateAndBuild([
+            $this->headRow(3, '6001'),
+            $this->memberRow(4, '6001'),
+            $this->memberRow(5, '6002', ['firstname' => 'Rosa']),   // head-less: builds nothing
+            $this->memberRow(6, '6002', ['firstname' => 'Mark']),
+            $this->headRow(7, 'ABC', ['firstname' => 'Rico']),      // bad QR: never grouped
+            $this->headRow(8, '', ['firstname' => 'Nilo']),         // blank QR: never grouped
+        ]);
+
+        $counts = $result['counts'];
+
+        $this->assertSame(6, $counts['rows']);      // everyone in the file
+        $this->assertSame(2, $counts['groups']);    // 6001 and 6002 (the bad QRs form none)
+        $this->assertSame(1, $counts['families']);  // only 6001 could be built
+        $this->assertSame(1, $counts['members']);
+        $this->assertSame(2, $counts['people']);    // buildable only — NOT a file total
+    }
+
+    public function testBlankRowsAreNotCountedAsPeople(): void
+    {
+        $result = $this->importer()->validateAndBuild([
+            $this->headRow(3, '6001'),
+            ['sheetRow' => 4, 'data' => ['familyno' => '', 'relationship' => '', 'firstname' => '', 'lastname' => '']],
+        ]);
+
+        $this->assertSame(1, $result['counts']['rows']);
+    }
+
+    // -- helpers ---------------------------------------------------------------
+
+    /** Importer with lookup caches primed empty so validateAndBuild needs no DB. */
+    private function importer(): FamilyExcelImporter
+    {
+        $importer = new FamilyExcelImporter();
+        $reflection = new ReflectionClass($importer);
+
+        foreach (['sectorByCode', 'serviceByCode', 'incomeByLabel'] as $property) {
+            $prop = $reflection->getProperty($property);
+            $prop->setAccessible(true);
+            $prop->setValue($importer, []);
+        }
+
+        return $importer;
+    }
+
+    /** @return list<string> */
+    private function codes(array $result): array
+    {
+        return array_map(static fn (array $e): string => $e['code'], $result['errors']);
+    }
+
+    /** @return list<array> the result's errors carrying $code. */
+    private function errorsFor(array $result, string $code): array
+    {
+        return array_values(array_filter(
+            $result['errors'],
+            static fn (array $e): bool => $e['code'] === $code,
+        ));
+    }
+
+    /**
+     * The stored DB record for the default head — taken from what the importer itself would
+     * write, so the fixture can't drift from the real normalisation (name cleaning, birthday
+     * to Y-m-d, address+barangay combined).
+     *
+     * @param array<string, string|null> $overrides
+     */
+    private function storedHead(array $overrides = []): array
+    {
+        $built = $this->importer()->validateAndBuild([$this->headRow(2, '6001')]);
+
+        return array_merge($built['families'][0]['headPayload'], $overrides);
+    }
+
+    /**
+     * [qr => stored head] — the shape existingHeadsForRows() returns.
+     *
+     * @param array<string, string|null> $record
+     */
+    private function existingHead(int $qr, array $record): array
+    {
+        return [$qr => [
+            'headID' => 42,
+            'name'   => trim(((string) ($record['firstname'] ?? '')) . ' ' . ((string) ($record['lastname'] ?? ''))),
+            'record' => $record,
+        ]];
+    }
+
+    /** [identity => person on file] — the shape existingPeopleForRows() returns. */
+    private function existingPerson(string $first, string $last, string $birthday, int $qr, bool $isHead = true): array
+    {
+        return [mb_strtolower($first) . '|' . mb_strtolower($last) . '|' . $birthday => [
+            'name'   => $first . ' ' . $last,
+            'qr'     => $qr,
+            'headID' => 42,
+            'isHead' => $isHead,
+        ]];
+    }
+
+    /** @param array<string,string> $overrides */
+    private function headRow(int $sheetRow, string $qr, array $overrides = []): array
+    {
+        return ['sheetRow' => $sheetRow, 'data' => array_merge([
+            'familyno' => $qr, 'relationship' => 'Head', 'firstname' => 'Juan', 'lastname' => 'Dela Cruz',
+            'middlename' => '', 'suffix' => '', 'birthday' => '05-14-1980', 'sex' => 'Male',
+            'civilstatus' => 'M', 'contactnumber' => '', 'religion' => '', 'education' => 'CG',
+            'job' => 'Driver', 'monthlyincome' => '5000', 'address' => '123 Rizal St',
+            'barangay' => 'Poblacion', 'sector' => '', 'services' => '',
+        ], $overrides)];
+    }
+
+    /**
+     * A complete member row by default: members now require the same personal fields as the
+     * head (birthday, sex, civil status, education, job, monthly income). Address/Barangay
+     * stay blank — members inherit the head's. Tests that need a gap override the key.
+     *
+     * @param array<string,string> $overrides
+     */
+    private function memberRow(int $sheetRow, string $qr, array $overrides = []): array
+    {
+        return ['sheetRow' => $sheetRow, 'data' => array_merge([
+            'familyno' => $qr, 'relationship' => 'Child', 'firstname' => 'Jose', 'lastname' => 'Dela Cruz',
+            'middlename' => '', 'suffix' => '', 'birthday' => '01-10-2012', 'sex' => 'Male',
+            'civilstatus' => 'S', 'contactnumber' => '', 'religion' => '', 'education' => 'E',
+            'job' => 'Student', 'monthlyincome' => '0', 'address' => '', 'barangay' => '',
+            'sector' => '', 'services' => '',
+        ], $overrides)];
+    }
+}

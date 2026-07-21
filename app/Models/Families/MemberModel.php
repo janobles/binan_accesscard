@@ -178,6 +178,118 @@ class MemberModel extends Model
     }
 
     /**
+     * Bulk [headID => stored record] for a set of head IDs. The importer needs the whole
+     * person, not just a name: an existing QR only proves *a* family is on file, and the
+     * review has to compare the incoming head against the stored one to tell "the same
+     * family again" (skip) from "a mistyped QR that landed on someone else's family".
+     *
+     * @param int[] $headIds
+     * @return array<int, array<string, string|null>>
+     */
+    public function identitiesForHeads(array $headIds): array
+    {
+        $headIds = array_values(array_unique(array_filter(
+            array_map('intval', $headIds),
+            static fn (int $id): bool => $id > 0,
+        )));
+
+        if (! $this->hasTable() || $headIds === []) {
+            return [];
+        }
+
+        $map = [];
+
+        foreach (array_chunk($headIds, 1000) as $chunk) {
+            $rows = $this->db->table($this->table)
+                ->select('memberID, firstname, middlename, lastname, suffix, birthday, sex, civilstatus, contactnumber, religion, address')
+                ->where('member.memberID = member.headID', null, false)
+                ->whereIn('memberID', $chunk)
+                ->get()
+                ->getResultArray();
+
+            foreach ($rows as $row) {
+                $map[(int) $row['memberID']] = $row;
+            }
+        }
+
+        return $map;
+    }
+
+    /**
+     * ACTIVE people already on file whose surname appears in the batch — the candidate set
+     * for "this person is already in the system". Filtering by surname (instead of one
+     * query per row) keeps a 10k-row import to a handful of queries; the importer does the
+     * exact first+last+birthday match on the result in PHP.
+     *
+     * @param string[] $lastnames
+     * @return list<array<string, string|null>> memberID, headID, firstname, middlename, lastname, suffix, birthday
+     */
+    public function activePeopleByLastname(array $lastnames): array
+    {
+        $names = [];
+
+        foreach ($lastnames as $lastname) {
+            $clean = mb_strtolower(trim((string) $lastname));
+
+            if ($clean !== '') {
+                $names[$clean] = true;
+            }
+        }
+
+        $names = array_keys($names);
+
+        if (! $this->hasTable() || $names === []) {
+            return [];
+        }
+
+        $soft = $this->db->fieldExists('dt_deleted', $this->table);
+        $out  = [];
+
+        foreach (array_chunk($names, 500) as $chunk) {
+            $builder = $this->db->table($this->table)
+                ->select('memberID, headID, firstname, middlename, lastname, suffix, birthday')
+                ->whereIn('LOWER(member.lastname)', $chunk);
+
+            if ($soft) {
+                $builder->where('member.dt_deleted IS NULL', null, false);
+            }
+
+            foreach ($builder->get()->getResultArray() as $row) {
+                $out[] = $row;
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * True when an ACTIVE member with this name + birthday already sits under the head.
+     * Guards the "add member to existing family" import path against inserting the same
+     * person twice.
+     */
+    public function memberExistsUnderHead(int $headId, string $firstname, string $lastname, ?string $birthday): bool
+    {
+        if (! $this->hasTable() || $headId <= 0) {
+            return false;
+        }
+
+        $builder = $this->db->table($this->table)
+            ->where('member.headID', $headId)
+            ->where('LOWER(member.firstname) = ' . $this->db->escape(mb_strtolower(trim($firstname))), null, false)
+            ->where('LOWER(member.lastname) = ' . $this->db->escape(mb_strtolower(trim($lastname))), null, false);
+
+        if ($birthday !== null && trim($birthday) !== '') {
+            $builder->where('member.birthday', $birthday);
+        }
+
+        if ($this->db->fieldExists('dt_deleted', $this->table)) {
+            $builder->where('member.dt_deleted IS NULL', null, false);
+        }
+
+        return $builder->countAllResults() > 0;
+    }
+
+    /**
      * Inserts a relative under an existing head (validating the head exists).
      * Called per member by FamilyController::store(); returns the new memberID
      * or false.

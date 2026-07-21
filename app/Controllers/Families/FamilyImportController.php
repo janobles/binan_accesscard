@@ -3,10 +3,16 @@
 namespace App\Controllers\Families;
 
 use App\Controllers\BaseController;
+use App\Libraries\FamilyExcelImporter;
 use App\Libraries\FamilyExcelTemplate;
+use App\Libraries\ImportFamilyModalBuilder;
+use App\Libraries\ImportReviewChangeLog;
+use App\Libraries\ImportReviewPresenter;
+use App\Libraries\ImportStagingStore;
 use App\Models\Families\MemberModel;
 use App\Models\Jobs\JobQueueModel;
 use CodeIgniter\HTTP\RedirectResponse;
+use Config\IdleTimeout;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Throwable;
 
@@ -129,7 +135,7 @@ class FamilyImportController extends BaseController
         try {
             $jobId = $jobs->enqueue(
                 'family_import',
-                ['storedPath' => $storedPath, 'originalName' => $originalName],
+                ['phase' => 'review', 'storedPath' => $storedPath, 'originalName' => $originalName],
                 (int) session()->get('user_id'),
                 $this->request->getIPAddress(),
                 $this->request->getUserAgent()->getAgentString()
@@ -141,13 +147,41 @@ class FamilyImportController extends BaseController
             return $this->jsonError('The import could not be queued. Please try again.', 500);
         }
 
+        // One operator, one open review: uploading a file retires any review they left
+        // staged. Typical flow is upload -> read the errors -> fix the .xlsx -> upload
+        // again; without this the first upload's staging file (family PII, up to several
+        // MB) is orphaned on disk with nothing to ever delete it. Runs after the enqueue
+        // so a failed enqueue leaves the previous review intact.
+        $this->retirePreviousReviews($jobs, (int) session()->get('user_id'), $jobId);
+
         return $this->response->setJSON([
             'status'    => 'queued',
             'jobID'     => $jobId,
             'statusUrl' => site_url($this->currentRouteBase() . '/import/status/' . $jobId),
-            'message'   => 'Your file is queued and importing in the background.',
+            'message'   => 'Your file is queued and being checked for problems.',
             'csrf'      => csrf_hash(),
         ]);
+    }
+
+    /**
+     * Discards the staging files of this user's earlier, never-committed reviews and marks
+     * those jobs terminal, so they can no longer be re-opened or committed.
+     *
+     * $keepJobId is the upload that just queued — it is still `pending`, so it is never
+     * returned as a staged review, but it is excluded explicitly all the same.
+     */
+    private function retirePreviousReviews(JobQueueModel $jobs, int $userId, int $keepJobId): void
+    {
+        $store = new ImportStagingStore();
+
+        foreach ($jobs->stagedReviewIds($userId) as $priorId) {
+            if ($priorId === $keepJobId) {
+                continue;
+            }
+
+            $store->delete($priorId);
+            $jobs->finish($priorId, 'failed', 'Replaced by a newer upload.', (string) json_encode(['phase' => 'superseded']));
+        }
     }
 
     /**
@@ -196,10 +230,19 @@ class FamilyImportController extends BaseController
         $skipped  = (int) ($result['skipped'] ?? 0);
         $members  = (int) ($result['members'] ?? 0);
 
+        // Review-phase jobs stage for the operator to inspect; write-phase jobs persist.
+        $phase    = (string) ($result['phase'] ?? 'write');
+        $finished = in_array($status, ['done', 'partial', 'failed'], true);
+        $reviewUrl = ($phase === 'review' && $finished && $status !== 'failed')
+            ? site_url($this->currentRouteBase() . '/import/review/' . $jobId)
+            : null;
+
         return $this->response->setJSON([
-            'status'   => $status,
-            'finished' => in_array($status, ['done', 'partial', 'failed'], true),
-            'message'  => (string) ($job['message'] ?? ''),
+            'status'    => $status,
+            'phase'     => $phase,
+            'finished'  => $finished,
+            'reviewUrl' => $reviewUrl,
+            'message'   => (string) ($job['message'] ?? ''),
             'progress' => [
                 'total'     => $total,
                 'processed' => $done,
@@ -209,12 +252,438 @@ class FamilyImportController extends BaseController
                 'members'   => $members,
                 'percent'   => $total > 0 ? (int) floor($done * 100 / $total) : 0,
             ],
-            'errors'   => array_slice($errors, 0, 200),
+            // The review page is the uncapped surface; this list only feeds the toast.
+            'errors'   => array_slice($errors, 0, 500),
             'summary'  => [
                 'families' => $imported,
                 'members'  => $members,
             ],
             'csrf'     => csrf_hash(),
         ]);
+    }
+
+    /**
+     * GET `{admin|employee}/manage-family/import/review/(:num)`: the full-page Import
+     * Review screen for a staged job — grouped errors the operator fixes inline before
+     * confirming the import.
+     */
+    public function reviewPage(int $jobId): string|RedirectResponse
+    {
+        $guard = $this->requireFamilyEntryAccess();
+
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        $jobs = new JobQueueModel();
+        $loaded = $jobs->hasTable() ? $this->loadReviewJob($jobs, $jobId) : null;
+
+        if ($loaded === null) {
+            return redirect()->to($this->recordsUrl())
+                ->with('error', 'That import is no longer available to review.');
+        }
+
+        return view('Family/import-review', [
+            'jobId'      => $jobId,
+            'routeBase'  => $this->currentRouteBase(),
+            'recordsUrl' => $this->recordsUrl(),
+            'review'     => (new ImportReviewPresenter())->build($loaded['result']),
+            'username'   => (string) (session()->get('username') ?? ''),
+            // This page is a standalone shell (not a dashboard layout), so it has to wire
+            // up the idle-timeout logout itself — otherwise sitting on the review screen
+            // never times out.
+            'idleTimeoutSeconds' => (new IdleTimeout())->seconds,
+        ]);
+    }
+
+    /**
+     * POST `{admin|employee}/manage-family/import/review/(:num)/commit`: re-validates the
+     * staged batch and, only when no blocking issues remain, queues the write job that
+     * persists the families. Returns that job's status URL for the progress toast.
+     *
+     * Nothing is edited in the browser — the spreadsheet is the source of truth — so this
+     * only ever confirms or refuses what was uploaded.
+     */
+    public function reviewCommit(int $jobId)
+    {
+        $guard = $this->requireFamilyEntryAccess();
+
+        if ($guard instanceof RedirectResponse) {
+            return $this->jsonError('You do not have permission to import family records.', 403);
+        }
+
+        $jobs = new JobQueueModel();
+        $loaded = $jobs->hasTable() ? $this->loadReviewJob($jobs, $jobId) : null;
+
+        if ($loaded === null) {
+            return $this->jsonError('That import is no longer available to review.', 404);
+        }
+
+        $rows   = is_array($loaded['result']['rows'] ?? null) ? $loaded['result']['rows'] : [];
+        $result = $this->revalidate($loaded['result'], $rows);
+
+        $blocking = (int) ($result['counts']['blocking'] ?? 0);
+
+        if ($blocking > 0) {
+            return $this->response->setStatusCode(422)->setJSON([
+                'status'  => 'blocked',
+                'message' => 'There ' . ($blocking === 1 ? 'is 1 issue' : 'are ' . $blocking . ' issues')
+                    . ' to fix. Correct them in the spreadsheet and upload it again.',
+                'review'  => (new ImportReviewPresenter())->build($result),
+                'csrf'    => csrf_hash(),
+            ]);
+        }
+
+        try {
+            $writeJobId = $jobs->enqueue(
+                'family_import',
+                ['phase' => 'write', 'stageJobId' => $jobId, 'originalName' => (string) ($result['file'] ?? 'import.xlsx')],
+                (int) session()->get('user_id'),
+                $this->request->getIPAddress(),
+                $this->request->getUserAgent()->getAgentString()
+            );
+        } catch (Throwable $exception) {
+            $this->auditSystemError('queueing a reviewed family import', $exception);
+
+            return $this->jsonError('The import could not be queued. Please try again.', 500);
+        }
+
+        // Flip the review job's phase so it can't be re-opened or committed twice
+        // (loadReviewJob only accepts phase 'review'). The staging file stays until the
+        // write job consumes it.
+        $jobs->finish($jobId, 'done', 'Reviewed and imported.', (string) json_encode([
+            'phase'  => 'committed',
+            'file'   => (string) ($result['file'] ?? 'import.xlsx'),
+            'counts' => $result['counts'] ?? [],
+        ]));
+
+        return $this->response->setJSON([
+            'status'     => 'queued',
+            'jobID'      => $writeJobId,
+            'statusUrl'  => site_url($this->currentRouteBase() . '/import/status/' . $writeJobId),
+            'redirect'   => $this->recordsUrl(),
+            'message'    => 'Import started for ' . (int) ($result['counts']['families'] ?? 0) . ' family group(s).',
+            'csrf'       => csrf_hash(),
+        ]);
+    }
+
+    /**
+     * POST `{admin|employee}/manage-family/import/review/(:num)/cancel`: discards a
+     * staged import without writing anything.
+     */
+    public function reviewCancel(int $jobId)
+    {
+        $guard = $this->requireFamilyEntryAccess();
+
+        if ($guard instanceof RedirectResponse) {
+            return $this->jsonError('You do not have permission to cancel this import.', 403);
+        }
+
+        $jobs = new JobQueueModel();
+        $loaded = $jobs->hasTable() ? $this->loadReviewJob($jobs, $jobId) : null;
+
+        if ($loaded !== null) {
+            (new ImportStagingStore())->delete($jobId);
+            $jobs->finish($jobId, 'failed', 'Import cancelled during review.');
+        }
+
+        return $this->response->setJSON([
+            'status'   => 'ok',
+            'redirect' => $this->recordsUrl(),
+            'csrf'     => csrf_hash(),
+        ]);
+    }
+
+    /**
+     * GET `{admin|employee}/manage-family/import/review/(:num)/family?fno=<qr>`: the shared
+     * Add/Update family modal, prefilled from the staged rows of one QR group so the operator
+     * fixes it in the browser instead of editing the .xlsx and re-uploading. The QR group is a
+     * query param (a raw QR cell is not URL-path-safe). Posts to reviewFamilySave().
+     */
+    public function reviewFamilyModal(int $jobId): string|RedirectResponse
+    {
+        $guard = $this->requireFamilyEntryAccess();
+
+        if ($guard instanceof RedirectResponse) {
+            return $this->partialGuard($guard, 'You do not have permission to edit import records.');
+        }
+
+        $jobs   = new JobQueueModel();
+        $loaded = $jobs->hasTable() ? $this->loadReviewJob($jobs, $jobId) : null;
+
+        if ($loaded === null) {
+            return '<div class="alert alert-danger mb-0">That import is no longer available to review.</div>';
+        }
+
+        $builder = new ImportFamilyModalBuilder();
+        $action  = site_url($this->currentRouteBase() . '/import/review/' . $jobId . '/family/save');
+
+        // A blank-QR row is keyed by its sheet row (?row=), since it has no QR to key by.
+        $row = (int) $this->request->getGet('row');
+
+        if ($row > 0) {
+            return view('Family/family-modal', $builder->viewDataForRow($loaded['result'], $row, $action));
+        }
+
+        // The QR group is passed as a query param, not a path segment: a QR cell can hold any
+        // raw text (a negative number, "N/A", "5880.0", a slash) that is not URL-path-safe.
+        $familyNo = trim((string) $this->request->getGet('fno'));
+
+        if ($familyNo === '') {
+            return '<div class="alert alert-danger mb-0">No family was selected to edit.</div>';
+        }
+
+        return view('Family/family-modal', $builder->viewData($loaded['result'], $familyNo, $action));
+    }
+
+    /**
+     * POST `{admin|employee}/manage-family/import/review/(:num)/family/save`: replaces one QR
+     * group (from the POST's import_family_no) with the modal's submitted values, re-validates
+     * the whole batch, re-stages it, and returns the refreshed review report. Mirrors
+     * store()/update()'s JSON success contract so the shared modal submit handler reuses it.
+     */
+    public function reviewFamilySave(int $jobId)
+    {
+        $guard = $this->requireFamilyEntryAccess();
+
+        if ($guard instanceof RedirectResponse) {
+            return $this->jsonError('You do not have permission to edit import records.', 403);
+        }
+
+        $jobs   = new JobQueueModel();
+        $loaded = $jobs->hasTable() ? $this->loadReviewJob($jobs, $jobId) : null;
+
+        if ($loaded === null) {
+            return $this->jsonError('That import is no longer available to review.', 404);
+        }
+
+        $bundle  = $loaded['result'];
+        $builder = new ImportFamilyModalBuilder();
+        $post    = $this->request->getPost();
+
+        // A blank-QR row is keyed by import_row; a normal family by import_family_no.
+        $row      = (int) ($post['import_row'] ?? 0);
+        $familyNo = trim((string) ($post['import_family_no'] ?? ''));
+
+        if ($row > 0) {
+            $key     = ['row' => $row];
+            $newRows = $builder->toStagedRowsForRow($post, $bundle, $row);
+        } elseif ($familyNo !== '') {
+            $key     = ['fno' => $familyNo];
+            $newRows = $builder->toStagedRows($post, $bundle, $familyNo);
+        } else {
+            return $this->jsonError('No family was selected to edit.', 422);
+        }
+
+        // Diff the group before it is replaced, so the review can show what the worker changed.
+        $oldRows = $this->targetRows($bundle, $key);
+        $rows    = $this->replaceRows($bundle, $key, $newRows);
+
+        $result            = $this->revalidate($bundle, $rows);
+        $result['changes'] = $this->appendChanges($bundle, ImportReviewChangeLog::edited($oldRows, $newRows));
+        $this->restageReview($jobId, $result);
+
+        $newQr = trim((string) ($post['qr_control_no'] ?? ''));
+
+        return $this->response->setJSON([
+            'status'  => 'success',
+            'message' => $newQr !== '' ? 'Saved family ' . $newQr . '.' : 'Changes saved.',
+            'review'  => (new ImportReviewPresenter())->build($result),
+            'csrf'    => csrf_hash(),
+        ]);
+    }
+
+    /**
+     * POST `{admin|employee}/manage-family/import/review/(:num)/family/remove`: drops one QR
+     * group (from the POST's import_family_no) from the staged batch, re-validates the rest,
+     * re-stages, and returns the refreshed report.
+     */
+    public function reviewFamilyRemove(int $jobId)
+    {
+        $guard = $this->requireFamilyEntryAccess();
+
+        if ($guard instanceof RedirectResponse) {
+            return $this->jsonError('You do not have permission to edit import records.', 403);
+        }
+
+        $jobs   = new JobQueueModel();
+        $loaded = $jobs->hasTable() ? $this->loadReviewJob($jobs, $jobId) : null;
+
+        if ($loaded === null) {
+            return $this->jsonError('That import is no longer available to review.', 404);
+        }
+
+        $bundle   = $loaded['result'];
+        $row      = (int) ($this->request->getPost('import_row') ?? 0);
+        $familyNo = trim((string) ($this->request->getPost('import_family_no') ?? ''));
+
+        if ($row > 0) {
+            $key     = ['row' => $row];
+            $message = 'Row ' . $row . ' removed from this import.';
+        } elseif ($familyNo !== '') {
+            $key     = ['fno' => $familyNo];
+            $message = 'Family ' . $familyNo . ' removed from this import.';
+        } else {
+            return $this->jsonError('No family was selected to remove.', 422);
+        }
+
+        $oldRows = $this->targetRows($bundle, $key);
+        $rows    = $this->replaceRows($bundle, $key, []);
+
+        $result            = $this->revalidate($bundle, $rows);
+        $result['changes'] = $this->appendChanges($bundle, ImportReviewChangeLog::removed($oldRows));
+        $this->restageReview($jobId, $result);
+
+        return $this->response->setJSON([
+            'status'  => 'success',
+            'message' => $message,
+            'review'  => (new ImportReviewPresenter())->build($result),
+            'csrf'    => csrf_hash(),
+        ]);
+    }
+
+    /**
+     * Returns the bundle's rows with the targeted rows swapped for $replacement (an empty
+     * replacement just drops them), ordered by sheet row. The target is either a whole QR
+     * group (`['fno' => qr]`) or a single blank-QR sheet row (`['row' => n]`).
+     *
+     * @param array{fno?: string, row?: int} $key
+     * @param list<array>                    $replacement
+     * @return list<array>
+     */
+    private function replaceRows(array $bundle, array $key, array $replacement): array
+    {
+        $rows = is_array($bundle['rows'] ?? null) ? $bundle['rows'] : [];
+
+        if (isset($key['row'])) {
+            $target = (int) $key['row'];
+            $kept   = array_values(array_filter($rows, static fn (array $row): bool =>
+                (int) ($row['sheetRow'] ?? -1) !== $target));
+        } else {
+            $familyNo = (string) ($key['fno'] ?? '');
+            $kept     = array_values(array_filter($rows, static fn (array $row): bool =>
+                trim((string) (($row['data'] ?? [])['familyno'] ?? '')) !== $familyNo));
+        }
+
+        $merged = array_merge($kept, $replacement);
+
+        usort($merged, static fn (array $a, array $b): int =>
+            ((int) ($a['sheetRow'] ?? 0)) <=> ((int) ($b['sheetRow'] ?? 0)));
+
+        return $merged;
+    }
+
+    /**
+     * The bundle rows belonging to the edit/remove target (a whole QR group `['fno' => qr]`
+     * or a single blank-QR sheet row `['row' => n]`) — the "before" snapshot for the diff.
+     *
+     * @param array{fno?: string, row?: int} $key
+     * @return list<array>
+     */
+    private function targetRows(array $bundle, array $key): array
+    {
+        $rows = is_array($bundle['rows'] ?? null) ? $bundle['rows'] : [];
+
+        if (isset($key['row'])) {
+            $target = (int) $key['row'];
+
+            return array_values(array_filter($rows, static fn (array $r): bool =>
+                (int) ($r['sheetRow'] ?? -1) === $target));
+        }
+
+        $familyNo = (string) ($key['fno'] ?? '');
+
+        return array_values(array_filter($rows, static fn (array $r): bool =>
+            trim((string) (($r['data'] ?? [])['familyno'] ?? '')) === $familyNo));
+    }
+
+    /**
+     * Appends one change entry (skipping a null no-op) to the bundle's running change log,
+     * newest last. Capped so a long review session can't grow the staging file unbounded.
+     *
+     * @return list<array>
+     */
+    private function appendChanges(array $bundle, ?array $entry): array
+    {
+        $changes = is_array($bundle['changes'] ?? null) ? $bundle['changes'] : [];
+
+        if ($entry !== null) {
+            $changes[] = $entry;
+        }
+
+        return array_slice($changes, -100);
+    }
+
+    /** Persists a re-validated review result back to the job's staging file. */
+    private function restageReview(int $jobId, array $result): void
+    {
+        (new ImportStagingStore())->save($jobId, [
+            'phase'      => 'review',
+            'file'       => (string) ($result['file'] ?? 'import.xlsx'),
+            'rows'       => $result['rows'] ?? [],
+            'errors'     => $result['errors'] ?? [],
+            'fileErrors' => $result['fileErrors'] ?? [],
+            'columns'    => $result['columns'] ?? [],
+            'counts'     => $result['counts'] ?? [],
+            // The worker's in-review edit history, so it survives a reload.
+            'changes'    => is_array($result['changes'] ?? null) ? $result['changes'] : [],
+        ]);
+    }
+
+    /**
+     * Loads a staged review job by ID, or null when it is missing, the wrong type, or no
+     * longer in the review phase (already committed / cancelled).
+     *
+     * @return array{job: array, result: array}|null
+     */
+    private function loadReviewJob(JobQueueModel $jobs, int $jobId): ?array
+    {
+        $job = $jobs->find($jobId);
+
+        if ($job === null || ($job['type'] ?? '') !== 'family_import') {
+            return null;
+        }
+
+        $summary = json_decode((string) ($job['result_json'] ?? ''), true);
+
+        if (! is_array($summary) || ($summary['phase'] ?? '') !== 'review') {
+            return null;
+        }
+
+        // The rows + errors live in the staging file, not the DB (they are too big).
+        $bundle = (new ImportStagingStore())->load($jobId);
+
+        if ($bundle === null) {
+            return null;
+        }
+
+        return ['job' => $job, 'result' => $bundle];
+    }
+
+
+    /**
+     * Re-runs validation over the (edited) staged rows and returns an updated review
+     * result: refreshed rows, errors (file-level errors re-merged) and counts.
+     *
+     * @param array $result the staged review result
+     * @param array $rows   the current row set (possibly edited)
+     */
+    private function revalidate(array $result, array $rows): array
+    {
+        $importer       = new FamilyExcelImporter();
+        $existingHeads  = $importer->existingHeadsForRows($rows);
+        $existingPeople = $importer->existingPeopleForRows($rows);
+        $built          = $importer->validateAndBuild($rows, $existingHeads, $existingPeople);
+        $fileErrors     = is_array($result['fileErrors'] ?? null) ? $result['fileErrors'] : [];
+        $errors         = array_merge($fileErrors, $built['errors']);
+        $counts         = $importer->summarize($built['families'], $errors, $built['appends']);
+
+        $result['rows']    = $rows;
+        $result['errors']  = $errors;
+        $result['counts']  = $counts;
+        $result['members'] = (int) ($counts['members'] ?? 0);
+        $result['phase']   = 'review';
+
+        return $result;
     }
 }

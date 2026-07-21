@@ -1,7 +1,7 @@
 -- Binan Access Card dump V18.
 -- V18 = V17 + test reference rows removed (sector 11 TS, category 8 TSC,
 -- services 47-48 TS1/TSC1) + developer login (developer/developer123).
--- Batches bind aid_type_id: aid_type is its own reference table,
+-- Batches bind subsidy_type_id: subsidy is its own reference table,
 -- unrelated to services/programs.
 --
 -- phpMyAdmin SQL Dump
@@ -182,16 +182,16 @@ CREATE TABLE `sector` (
 --
 
 INSERT INTO `sector` (`sectorID`, `shortcode`, `name`, `description`, `dt_created`, `dt_updated`, `dt_deleted`) VALUES
-(1, 'SC', 'Senior Citizen', '', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
-(2, 'PWD', 'Person with Disability', '', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
-(3, 'SP', 'Solo Parent', '', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
-(4, 'B', 'Bata (Children)', '', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
-(5, 'LGBT', 'LGBTQIA+', '', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
-(6, 'OFW', 'Overseas Filipino Worker', '', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
-(7, 'IP', 'Indigenous People', '', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
-(8, 'IDP', 'Internally Displaced Person', '', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
-(9, 'PDL', 'Persons Deprived of Liberty', '', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
-(10, 'OTHER', 'Other Sectors', '', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL);
+(1, 'SC', 'Senior Citizen', 'Individuals aged 60 years old and above.', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
+(2, 'PWD', 'Person with Disability', 'Persons with a long-term physical, mental, intellectual, or sensory disability.', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
+(3, 'SP', 'Solo Parent', 'Individuals raising one or more children on their own.', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
+(4, 'B', 'Bata (Children)', 'Minors below 18 years of age.', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
+(5, 'LGBT', 'LGBTQIA+', 'Members of the LGBTQIA+ community.', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
+(6, 'OFW', 'Overseas Filipino Worker', 'Filipinos working or residing abroad.', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
+(7, 'IP', 'Indigenous People', 'Members of indigenous cultural communities.', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
+(8, 'IDP', 'Internally Displaced Person', 'Persons forced to flee their homes but remaining within the country.', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
+(9, 'PDL', 'Persons Deprived of Liberty', 'Persons detained or under lawful custody.', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
+(10, 'OTHER', 'Other Sectors', 'Sectors not covered by the listed categories.', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL);
 
 -- --------------------------------------------------------
 
@@ -215,52 +215,52 @@ CREATE TABLE `services` (
 --
 
 INSERT INTO `services` (`serviceID`, `shortcode`, `category`, `name`, `description`, `dt_created`, `dt_updated`, `dt_deleted`) VALUES
-(1, 'EDA1', 'Emergency / Disaster Assistance Programs', 'Cash Assistance', '', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
-(2, 'EDA2', 'Emergency / Disaster Assistance Programs', 'Cash for Work', '', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
-(3, 'EDA3', 'Emergency / Disaster Assistance Programs', 'Emergency Shelter (Local)', '', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
-(4, 'EDA4', 'Emergency / Disaster Assistance Programs', 'Emergency Shelter (National / NHA)', '', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
-(5, 'EDA5', 'Emergency / Disaster Assistance Programs', 'Emergency Shelter (Province)', '', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
-(6, 'EDA6', 'Emergency / Disaster Assistance Programs', 'Food for Work', '', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
-(7, 'EDA7', 'Emergency / Disaster Assistance Programs', 'Non-Food Assistance', '', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
-(8, 'EDA8', 'Emergency / Disaster Assistance Programs', 'Relief Food Pack', '', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
-(9, 'EDA9', 'Emergency / Disaster Assistance Programs', 'Temporary Shelter', '', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
-(10, 'FA1', 'Financial Assistance Programs', 'Balik Probinsya', '', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
-(11, 'FA2', 'Financial Assistance Programs', 'Burial Assistance', '', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
-(12, 'FA3', 'Financial Assistance Programs', 'Dental Assistance', '', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
-(13, 'FA4', 'Financial Assistance Programs', 'Eyeglasses Assistance', '', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
-(14, 'FA5', 'Financial Assistance Programs', 'Lingap sa Mahirap', '', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
-(15, 'FA6', 'Financial Assistance Programs', 'Medical Assistance', '', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
-(16, 'SWPS1', 'Social Welfare Programs and Services', 'Balay Silangan', '', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
-(17, 'SWPS2', 'Social Welfare Programs and Services', 'Business Skills Management Training', '', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
-(18, 'SWPS3', 'Social Welfare Programs and Services', 'Counseling / Dialogue', '', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
-(19, 'SWPS4', 'Social Welfare Programs and Services', 'Family Development Session', '', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
-(20, 'SWPS5', 'Social Welfare Programs and Services', 'Gender Sensitivity Training', '', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
-(21, 'SWPS6', 'Social Welfare Programs and Services', 'Legal Assistance / Free Notary', '', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
-(22, 'SWPS7', 'Social Welfare Programs and Services', 'Licensed Foster Parent', '', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
-(23, 'SWPS8', 'Social Welfare Programs and Services', 'Pamaskong Handog', '', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
-(24, 'SWPS9', 'Social Welfare Programs and Services', 'Parent Effectiveness Service', '', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
-(25, 'SWPS10', 'Social Welfare Programs and Services', 'PMOC (Pre-Marriage Orientation / Counseling)', '', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
-(26, 'SWPS11', 'Social Welfare Programs and Services', 'Referral', '', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
-(27, '4PS', 'Social Welfare Programs and Services', '4Ps (Pantawid Pamilyang Pilipino Programs)', '', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
-(28, 'SC1', 'Senior Citizen', 'Registered OSCA Biñan', '', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
-(29, 'SC2', 'Senior Citizen', 'Local Pensioner', '', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
-(30, 'SC3', 'Senior Citizen', 'National Pensioner', '', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
-(31, 'SC4', 'Senior Citizen', 'Centenarian Local Awardee', '', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
-(32, 'SC5', 'Senior Citizen', 'Centenarian National Awardee', '', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
-(33, 'SC6', 'Senior Citizen', 'Centenarian Province Awardee', '', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
-(34, 'SC7', 'Senior Citizen', 'Eyeglasses Assistance', '', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
-(35, 'SC8', 'Senior Citizen', 'One Time Cash Incentive (85yrs old)', '', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
-(36, 'SC9', 'Senior Citizen', 'Wheelchair / Crutches', '', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
-(37, 'PWD1', 'Person with Disability', 'Registered PWD in Biñan', '', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
-(38, 'PWD2', 'Person with Disability', 'Biñan City Development Center', '', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
-(39, 'PWD3', 'Person with Disability', 'Birthday Cash Gift', '', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
-(40, 'PWD4', 'Person with Disability', 'Project Aruga', '', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
-(41, 'PWD5', 'Person with Disability', 'Subsidy for Unemployable PWD', '', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
-(42, 'SP1', 'Solo Parent', 'Registered Solo Parent in Biñan', '', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
-(43, 'SP2', 'Solo Parent', 'Monthly Subsidy for Solo Parent', '', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
-(44, 'B1', 'Bata (Children)', 'Bahay Pag-Asa', '', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
-(45, 'B2', 'Bata (Children)', 'ECCD', '', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
-(46, 'B3', 'Bata (Children)', 'Supplementary Feeding Program', '', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL);
+(1, 'EDA1', 'Emergency / Disaster Assistance Programs', 'Cash Assistance', 'Financial aid for families affected by an emergency or disaster.', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
+(2, 'EDA2', 'Emergency / Disaster Assistance Programs', 'Cash for Work', 'Temporary paid work for disaster-affected residents in community activities.', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
+(3, 'EDA3', 'Emergency / Disaster Assistance Programs', 'Emergency Shelter (Local)', 'City-funded temporary shelter for displaced families.', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
+(4, 'EDA4', 'Emergency / Disaster Assistance Programs', 'Emergency Shelter (National / NHA)', 'National Housing Authority shelter assistance for displaced families.', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
+(5, 'EDA5', 'Emergency / Disaster Assistance Programs', 'Emergency Shelter (Province)', 'Province-funded temporary shelter for displaced families.', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
+(6, 'EDA6', 'Emergency / Disaster Assistance Programs', 'Food for Work', 'Food packs given in exchange for community work during emergencies.', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
+(7, 'EDA7', 'Emergency / Disaster Assistance Programs', 'Non-Food Assistance', 'Relief goods other than food, such as hygiene kits and blankets.', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
+(8, 'EDA8', 'Emergency / Disaster Assistance Programs', 'Relief Food Pack', 'Ready-to-distribute food packs for disaster-affected families.', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
+(9, 'EDA9', 'Emergency / Disaster Assistance Programs', 'Temporary Shelter', 'Short-term housing for families displaced by a disaster.', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
+(10, 'FA1', 'Financial Assistance Programs', 'Balik Probinsya', 'Transportation and support to help residents return to their home province.', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
+(11, 'FA2', 'Financial Assistance Programs', 'Burial Assistance', 'Financial aid for funeral and burial expenses.', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
+(12, 'FA3', 'Financial Assistance Programs', 'Dental Assistance', 'Support for dental treatment and services.', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
+(13, 'FA4', 'Financial Assistance Programs', 'Eyeglasses Assistance', 'Provision of prescription eyeglasses.', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
+(14, 'FA5', 'Financial Assistance Programs', 'Lingap sa Mahirap', 'Emergency financial aid for indigent residents.', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
+(15, 'FA6', 'Financial Assistance Programs', 'Medical Assistance', 'Financial aid for hospital bills, medicines, and treatment.', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
+(16, 'SWPS1', 'Social Welfare Programs and Services', 'Balay Silangan', 'Community-based reformation program for recovering drug users.', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
+(17, 'SWPS2', 'Social Welfare Programs and Services', 'Business Skills Management Training', 'Livelihood and entrepreneurship skills training.', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
+(18, 'SWPS3', 'Social Welfare Programs and Services', 'Counseling / Dialogue', 'Guidance and counseling sessions for individuals or families.', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
+(19, 'SWPS4', 'Social Welfare Programs and Services', 'Family Development Session', 'Regular sessions to strengthen family well-being.', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
+(20, 'SWPS5', 'Social Welfare Programs and Services', 'Gender Sensitivity Training', 'Training to promote gender awareness and equality.', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
+(21, 'SWPS6', 'Social Welfare Programs and Services', 'Legal Assistance / Free Notary', 'Free legal advice and notarial services.', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
+(22, 'SWPS7', 'Social Welfare Programs and Services', 'Licensed Foster Parent', 'Support and accreditation for licensed foster parents.', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
+(23, 'SWPS8', 'Social Welfare Programs and Services', 'Pamaskong Handog', 'Christmas gift-giving program for beneficiaries.', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
+(24, 'SWPS9', 'Social Welfare Programs and Services', 'Parent Effectiveness Service', 'Parenting skills and effectiveness training.', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
+(25, 'SWPS10', 'Social Welfare Programs and Services', 'PMOC (Pre-Marriage Orientation / Counseling)', 'Orientation and counseling for couples before marriage.', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
+(26, 'SWPS11', 'Social Welfare Programs and Services', 'Referral', 'Referral to other agencies or services as needed.', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
+(27, '4PS', 'Social Welfare Programs and Services', '4Ps (Pantawid Pamilyang Pilipino Programs)', 'Conditional cash transfer for qualified poor families.', '2026-06-29 07:22:54', '2026-06-29 07:22:54', NULL),
+(28, 'SC1', 'Senior Citizen', 'Registered OSCA Biñan', 'Senior citizens registered with the Office for Senior Citizens Affairs of Biñan.', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
+(29, 'SC2', 'Senior Citizen', 'Local Pensioner', 'Senior citizens receiving a city-funded pension.', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
+(30, 'SC3', 'Senior Citizen', 'National Pensioner', 'Senior citizens receiving a national government pension.', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
+(31, 'SC4', 'Senior Citizen', 'Centenarian Local Awardee', 'Local cash award for residents reaching 100 years old.', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
+(32, 'SC5', 'Senior Citizen', 'Centenarian National Awardee', 'National cash award for citizens reaching 100 years old.', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
+(33, 'SC6', 'Senior Citizen', 'Centenarian Province Awardee', 'Provincial cash award for residents reaching 100 years old.', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
+(34, 'SC7', 'Senior Citizen', 'Eyeglasses Assistance', 'Provision of prescription eyeglasses for senior citizens.', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
+(35, 'SC8', 'Senior Citizen', 'One Time Cash Incentive (85yrs old)', 'One-time cash gift for senior citizens turning 85 years old.', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
+(36, 'SC9', 'Senior Citizen', 'Wheelchair / Crutches', 'Provision of wheelchairs or crutches for senior citizens.', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
+(37, 'PWD1', 'Person with Disability', 'Registered PWD in Biñan', 'Persons with disability registered in Biñan.', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
+(38, 'PWD2', 'Person with Disability', 'Biñan City Development Center', 'Services through the Biñan City Development Center for PWDs.', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
+(39, 'PWD3', 'Person with Disability', 'Birthday Cash Gift', 'Birthday cash gift for registered PWDs.', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
+(40, 'PWD4', 'Person with Disability', 'Project Aruga', 'Care and support program for persons with disability.', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
+(41, 'PWD5', 'Person with Disability', 'Subsidy for Unemployable PWD', 'Monthly subsidy for persons with disability unable to work.', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
+(42, 'SP1', 'Solo Parent', 'Registered Solo Parent in Biñan', 'Solo parents registered in Biñan.', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
+(43, 'SP2', 'Solo Parent', 'Monthly Subsidy for Solo Parent', 'Monthly financial subsidy for qualified solo parents.', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
+(44, 'B1', 'Bata (Children)', 'Bahay Pag-Asa', 'Residential care facility for children in conflict with the law.', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
+(45, 'B2', 'Bata (Children)', 'ECCD', 'Early Childhood Care and Development program for young children.', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL),
+(46, 'B3', 'Bata (Children)', 'Supplementary Feeding Program', 'Supplementary meals for undernourished children.', '2026-07-01 01:13:55', '2026-07-01 01:13:55', NULL);
 
 -- --------------------------------------------------------
 
@@ -284,17 +284,52 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`userID`, `username`, `full_description`, `password`, `account_level`, `isactive`, `dt_created`, `dt_updated`) VALUES
-(1, 'admin', NULL, '$argon2id$v=19$m=65536,t=4,p=1$LmM5bWgzQnFIOTRPZHJzbg$qwukn0E/F4uV6rXD8UTPEcZR5mS6gKPC69dpV+xW3Js', 'administrator', 'Enable', '2026-05-18 02:32:47', '2026-06-15 07:08:41'),
-(3, 'Admin_Mel', NULL, '$argon2id$v=19$m=65536,t=4,p=1$aWVsWUlBVlpmTmFQVXEySQ$G8dtlmtL2U7hY8qZr+nW2SJGsRFmKUO3XJFJEnBgsO0', 'administrator', 'Enable', '2026-05-29 04:11:24', '2026-06-11 07:32:25'),
-(4, 'Employee_Mel', NULL, '$argon2id$v=19$m=65536,t=4,p=1$Q1hydHUyczRmZ0pWV1VJLw$ytij+sFXZEPfMtE2Fu8sBy2LF4jnfkeuMdZZL2mtuNE', 'encoder', 'Enable', '2026-05-29 04:11:41', '2026-06-11 07:32:25'),
-(5, 'test', NULL, '$argon2id$v=19$m=65536,t=4,p=1$T3pSVkxSOFgzczM5cVlMNA$avLsIKZdvC7huK3D7rRD3d/iMJH2+kqwWy/M8J1b/oA', 'administrator', 'Enable', '2026-06-08 07:39:19', '2026-06-11 07:32:25'),
-(6, 'Employee_JC', NULL, '$argon2id$v=19$m=65536,t=4,p=1$d3hPa0t3MC9BcnVnQUxRYw$cVqxUnDI0s3SMhhUgek5FXS08wN8HJHTeupTQVfyZUg', 'encoder', 'Disabled', '2026-06-10 06:23:19', '2026-06-11 07:32:25'),
-(7, 'Emp_RomelATibay', 'LN:Tibay; FN:Romel; MN:Sarmiento; ADDR:Santa Rosa Laguna; CN:123456781910; BD:2000-05-31', '$argon2id$v=19$m=65536,t=4,p=1$SHo4MlhhNXRKbU0uckk5TA$JpnxWW5W8QAV+JMb6GYHMPJBexm+CsxRobfaYS6h2z0', 'administrator', 'Enable', '2026-06-11 07:51:28', '2026-06-11 07:51:28'),
-(8, 'Administrator_Mel', 'LN:Tibay; FN:Romel; MN:Sarmiento; ADDR:Santa Rosa Laguna; CN:1234567819; BD:2000-05-31', '$argon2id$v=19$m=65536,t=4,p=1$ZDJRR0JYcXNSeHZscGJRMw$BaR00ZtPWvFXnC2C/+eH6YzVtig6z7KV+xYi5axzy/E', 'administrator', 'Enable', '2026-06-15 06:12:40', '2026-06-15 07:18:20'),
-(9, 'Encoder_Mel', 'LN:Tibay; FN:Romel Andres; MN:Sarmiento; ADDR:Santa Rosa Laguna; CN:12345678910; BD:2000-05-31', '$argon2id$v=19$m=65536,t=4,p=1$cWIycjlnd1BKUzV0eHhpMw$hMUEtyWR04QbP3TIXi1e6B0OtWSAfLRSV+zpv5ovJb4', 'encoder', 'Enable', '2026-06-15 07:15:55', '2026-06-15 07:15:55'),
-(10, 'Viewer_Mel', 'LN:Tibay; FN:Romel Andres; MN:Tibay; ADDR:Santa Rosa Laguna; CN:123456781910; BD:2000-05-31', '$argon2id$v=19$m=65536,t=4,p=1$ZVVMVGZJeG5qU2lHZUltLw$SAwUK4vrjkbuGrgtt3a5FQDYD6J4Zu6OLHbNEihi3Ow', 'viewer', 'Enable', '2026-06-15 07:16:58', '2026-06-16 01:13:48'),
-(11, 'adminjade', 'LN:Nobles; FN:Jade; MN:Tasoy; ADDR:Pulo, Cabuyao Laguna; CN:09821078512; BD:2003-07-05', '$argon2id$v=19$m=65536,t=4,p=1$akRyV3NhSlRaNUx6anpvRg$F/u37Ji3CfVmxrSysnOdrA6O5twZm0mk1teJNZ8lv2I', 'administrator', 'Enable', '2026-06-17 05:58:24', '2026-06-17 06:00:17'),
-(12, 'developer', NULL, '$argon2id$v=19$m=65536,t=4,p=1$SDJHU0p3NHF0L2hRQkhiZA$WQqhzKPvG3nBUNLwH4naRBjjwBoUunH8soeNEgeyvzk', 'developer', 'Enable', '2026-07-12 22:05:26', '2026-07-12 22:05:26');
+(1, 'developer', NULL, '$argon2id$v=19$m=65536,t=4,p=1$SDJHU0p3NHF0L2hRQkhiZA$WQqhzKPvG3nBUNLwH4naRBjjwBoUunH8soeNEgeyvzk', 'developer', 'Enable', '2026-07-12 22:05:26', '2026-07-12 22:05:26'),
+(2, 'Administrator1', NULL, '$argon2id$v=19$m=65536,t=4,p=1$QS4zaTQ5bWFNVC9GaG8zbA$LnM1Ll2YUyUk6tZeNjin0EEiEuZNU9dP4WK+cXyRUmw', 'administrator', 'Enable', '2026-07-20 00:00:00', '2026-07-20 00:00:00'),
+(3, 'Administrator2', NULL, '$argon2id$v=19$m=65536,t=4,p=1$bFNKQ1h1V1JHQUl4czFpSg$xKfnElVSeJ/HV5bFQIE1wSQwqIfU2/81ofZdRgN4nlU', 'administrator', 'Enable', '2026-07-20 00:00:00', '2026-07-20 00:00:00'),
+(4, 'Administrator3', NULL, '$argon2id$v=19$m=65536,t=4,p=1$OEJFTC9QOVduYzdEZ3V2WQ$s5Hqrnkqz+c2/kWo77JaQdkUEo9dpsXGw6vyUyiRkqU', 'administrator', 'Enable', '2026-07-20 00:00:00', '2026-07-20 00:00:00'),
+(5, 'Administrator4', NULL, '$argon2id$v=19$m=65536,t=4,p=1$aUxIM2ExLjBYeDBSSEovNQ$DLEa3hnlKAI9Dw/V8gUw+YeV4Ih+q7v92NEt2gr5KQM', 'administrator', 'Enable', '2026-07-20 00:00:00', '2026-07-20 00:00:00'),
+(6, 'Administrator5', NULL, '$argon2id$v=19$m=65536,t=4,p=1$MFNrVVgubFgxbnR0aUwwLw$QiiRhkG+GvNdtRn12BudXnQFWWgKsovkw40IJhzV6xA', 'administrator', 'Enable', '2026-07-20 00:00:00', '2026-07-20 00:00:00'),
+(7, 'Scanner1', NULL, '$argon2id$v=19$m=65536,t=4,p=1$TVlWZTBxNWdncEdLMVRoTg$iiju6JG9/opGYjHKHpnEW10czPH7/9FdF241s2IUeIk', 'scanner', 'Enable', '2026-07-20 00:00:00', '2026-07-20 00:00:00'),
+(8, 'Scanner2', NULL, '$argon2id$v=19$m=65536,t=4,p=1$UGQ4U2drU1pjbjJPbGNyLw$IChkuTvgwyoLRe37CZpT9STnN9HksmA1k1skxbIFCA0', 'scanner', 'Enable', '2026-07-20 00:00:00', '2026-07-20 00:00:00'),
+(9, 'Scanner3', NULL, '$argon2id$v=19$m=65536,t=4,p=1$cjRiV0pFdGwwMFBqUi9XYw$bOukipVUow2Jgh4QRjPPR7P/kZKjvifwozbaqor/ne4', 'scanner', 'Enable', '2026-07-20 00:00:00', '2026-07-20 00:00:00'),
+(10, 'Scanner4', NULL, '$argon2id$v=19$m=65536,t=4,p=1$dVVocXM3elo5TnNUQXlDbw$9Yn9YntDSW6MbKjWab8n7N+oYy/HhzgAoZZaaSJIubk', 'scanner', 'Enable', '2026-07-20 00:00:00', '2026-07-20 00:00:00'),
+(11, 'Scanner5', NULL, '$argon2id$v=19$m=65536,t=4,p=1$U0pac1RTL0ZkMzg4LlUyeg$hZLcNgYwMjOYJx/Rj/mmuW0+Y4ECAef8+PCopMCiQUY', 'scanner', 'Enable', '2026-07-20 00:00:00', '2026-07-20 00:00:00'),
+(12, 'Scanner6', NULL, '$argon2id$v=19$m=65536,t=4,p=1$ZDNLUURHZlNjYkFpREFGcQ$JLajJ3zSOEHRJ0WNpFaOVEjAe/PhNtkNKTT2IZon1rw', 'scanner', 'Enable', '2026-07-20 00:00:00', '2026-07-20 00:00:00'),
+(13, 'Scanner7', NULL, '$argon2id$v=19$m=65536,t=4,p=1$LnQ2OU5jOXVSbncwSEdxZw$mXpPnxFyqeq6IuOBMbmiEc4/EURzpkgO5eAW/1Pz3As', 'scanner', 'Enable', '2026-07-20 00:00:00', '2026-07-20 00:00:00'),
+(14, 'Scanner8', NULL, '$argon2id$v=19$m=65536,t=4,p=1$NDhNb0pQLzZidkFSMnZjLw$U3eCOhgLn8GmQmOKzVKtYPRIZoyI/YPVUaoGYcY80yo', 'scanner', 'Enable', '2026-07-20 00:00:00', '2026-07-20 00:00:00'),
+(15, 'Scanner9', NULL, '$argon2id$v=19$m=65536,t=4,p=1$MjZLYlRFVXVxeXdkTGVkdg$LwODBfqzPCGSEa+JtFogQqyQsBIK+cAq9Lio3Okv81A', 'scanner', 'Enable', '2026-07-20 00:00:00', '2026-07-20 00:00:00'),
+(16, 'Scanner10', NULL, '$argon2id$v=19$m=65536,t=4,p=1$QnVjNXhhMUtIeE9OcFpXOA$a4RlD3uI/JOQv1k0vLgJBXd5rw2A4VDpK77/PjdCxiQ', 'scanner', 'Enable', '2026-07-20 00:00:00', '2026-07-20 00:00:00'),
+(17, 'Scanner11', NULL, '$argon2id$v=19$m=65536,t=4,p=1$TEVrZUp5MndiVlRPL0ZqdA$DSbL8UhJ8miHL6uf5wOSmaOZonXBGGNwX7OJ8GZRn7c', 'scanner', 'Enable', '2026-07-20 00:00:00', '2026-07-20 00:00:00'),
+(18, 'Scanner12', NULL, '$argon2id$v=19$m=65536,t=4,p=1$c0x3dE91SmtCMnBPcTNxMw$JnxbibKd/ndqK90rNyrGD5gHKZVX9/zODSNjxBbkmJA', 'scanner', 'Enable', '2026-07-20 00:00:00', '2026-07-20 00:00:00'),
+(19, 'Scanner13', NULL, '$argon2id$v=19$m=65536,t=4,p=1$aElTMjVvZDM5SzFjTGE3SQ$iB95AVggJynM4sPyNQUKdU9zrIBaUE4NrN/Xebt+F3I', 'scanner', 'Enable', '2026-07-20 00:00:00', '2026-07-20 00:00:00'),
+(20, 'Scanner14', NULL, '$argon2id$v=19$m=65536,t=4,p=1$ZGpxWnU4djc1ZWVqR0J4Lg$UlAtr11gOG9e7SnzjUn3mWKus3yT9K7S5DSsJnphdnY', 'scanner', 'Enable', '2026-07-20 00:00:00', '2026-07-20 00:00:00'),
+(21, 'Scanner15', NULL, '$argon2id$v=19$m=65536,t=4,p=1$a2VBcldHTVVxWDcxblRtNg$F+h17y+tdd3lMYtC1/vRmQ9OfrDUrEnFmeOLdNtB7UU', 'scanner', 'Enable', '2026-07-20 00:00:00', '2026-07-20 00:00:00'),
+(22, 'Scanner16', NULL, '$argon2id$v=19$m=65536,t=4,p=1$VHdyOGVCSFpMdUQzRTJsNA$8bz2Ddng/SNH4rfkwADDRx9U50+9dWyPsHYxa/feDZE', 'scanner', 'Enable', '2026-07-20 00:00:00', '2026-07-20 00:00:00'),
+(23, 'Scanner17', NULL, '$argon2id$v=19$m=65536,t=4,p=1$eWRoTml4VERHdVpvd3JMSw$09UiSpO60brLAbpqWuUKhsuI1YcvyNXJymhPC6kLdwc', 'scanner', 'Enable', '2026-07-20 00:00:00', '2026-07-20 00:00:00'),
+(24, 'Scanner18', NULL, '$argon2id$v=19$m=65536,t=4,p=1$S042YzQ0Rkp3L0M1NWZmRQ$ynei6uhXgaTBX6kPGtVgq8YAMFPl7G6oEy1tOU1mk9E', 'scanner', 'Enable', '2026-07-20 00:00:00', '2026-07-20 00:00:00'),
+(25, 'Scanner19', NULL, '$argon2id$v=19$m=65536,t=4,p=1$Zkd5MWV6OUpPY1FvUVJvRQ$rhEO0zdTyrsAMEp5G4CU92TSeUPZU/IZ7UDzdCSuttg', 'scanner', 'Enable', '2026-07-20 00:00:00', '2026-07-20 00:00:00'),
+(26, 'Scanner20', NULL, '$argon2id$v=19$m=65536,t=4,p=1$Vnp1R2hrenFtOWVrM2Y0WA$TSlKLu6Tuy6gfN5luJm6hbJ5PjWe5L/8oJKB0Hc82RM', 'scanner', 'Enable', '2026-07-20 00:00:00', '2026-07-20 00:00:00'),
+(27, 'Encoder1', NULL, '$argon2id$v=19$m=65536,t=4,p=1$OFFqSHgwNHgwZUNJenpvUA$4vhxCpaHeFQebY1Zly/JnaW3CXrZPnvmQQyWUGguKbA', 'encoder', 'Enable', '2026-07-20 00:00:00', '2026-07-20 00:00:00'),
+(28, 'Encoder2', NULL, '$argon2id$v=19$m=65536,t=4,p=1$eFZXWURJdTBKR01RR2twbg$TqYcUQqtD2EWnF8VdpqJj+jX6bLXf/Sr8QKpMoRC2C0', 'encoder', 'Enable', '2026-07-20 00:00:00', '2026-07-20 00:00:00'),
+(29, 'Encoder3', NULL, '$argon2id$v=19$m=65536,t=4,p=1$N0k1VndEamc5emNOQlVqMg$9rh4yOLfXnU16y92UtqZl9RfD/k1D2loxj8gzKrrRGA', 'encoder', 'Enable', '2026-07-20 00:00:00', '2026-07-20 00:00:00'),
+(30, 'Encoder4', NULL, '$argon2id$v=19$m=65536,t=4,p=1$WFRpcFk1bE1iTUFoVlN3NA$xcDJWSAyZ3US+EY75JSUgPvWZco1BCzQjKnKy9Ve9to', 'encoder', 'Enable', '2026-07-20 00:00:00', '2026-07-20 00:00:00'),
+(31, 'Encoder5', NULL, '$argon2id$v=19$m=65536,t=4,p=1$MGJvTGIxLlJoR01zcjdDZg$zNemg3DGydMFatmOPG7uYzoM18GVuCxDUrNoisG74P4', 'encoder', 'Enable', '2026-07-20 00:00:00', '2026-07-20 00:00:00'),
+(32, 'Encoder6', NULL, '$argon2id$v=19$m=65536,t=4,p=1$dTZGbTc4eWtIY1hxamR6Yg$JTPScDmxK64WeEwSGJfJmJZUnRwjXO67Ka2v1iusym0', 'encoder', 'Enable', '2026-07-20 00:00:00', '2026-07-20 00:00:00'),
+(33, 'Encoder7', NULL, '$argon2id$v=19$m=65536,t=4,p=1$RHRwaHdKMWVISWF3U3lRNQ$+3w2mYGW5XreuFUNFmamyszVtISJYd4FCVDIgioCfjw', 'encoder', 'Enable', '2026-07-20 00:00:00', '2026-07-20 00:00:00'),
+(34, 'Encoder8', NULL, '$argon2id$v=19$m=65536,t=4,p=1$d3pQdXVabjUvQlBpWHpZRg$1Ng/5Pq4Ww/+gfyiYImmS9JN7/Pm9zkw8Qrug34acpo', 'encoder', 'Enable', '2026-07-20 00:00:00', '2026-07-20 00:00:00'),
+(35, 'Encoder9', NULL, '$argon2id$v=19$m=65536,t=4,p=1$MWgyVmY4ZnN5VWhzWjhTNA$eS/3iZ4E5bH6o1sc+mbX8AIpOHaJhG+FH1XQlLahcDg', 'encoder', 'Enable', '2026-07-20 00:00:00', '2026-07-20 00:00:00'),
+(36, 'Encoder10', NULL, '$argon2id$v=19$m=65536,t=4,p=1$N09JZ0tVcm9Ra3VvZkNSbw$yCVStMtZuhvnWxu4XgutXUUBuMEk5qxqh/nyx2CCDDE', 'encoder', 'Enable', '2026-07-20 00:00:00', '2026-07-20 00:00:00'),
+(37, 'Encoder11', NULL, '$argon2id$v=19$m=65536,t=4,p=1$dXlId0drUjNRLjFTczl0dg$Ii5eEzFDjRkNYQwYWpCeRInlvA9SlA0duiRuK7dKEN4', 'encoder', 'Enable', '2026-07-20 00:00:00', '2026-07-20 00:00:00'),
+(38, 'Encoder12', NULL, '$argon2id$v=19$m=65536,t=4,p=1$Q1I3bFR0eC5veFBIZlFhdw$6PW6sWEY+dHPbVtEEn+8iAGpyTg34NWjuOtPVrSkYCU', 'encoder', 'Enable', '2026-07-20 00:00:00', '2026-07-20 00:00:00'),
+(39, 'Encoder13', NULL, '$argon2id$v=19$m=65536,t=4,p=1$emk1SlVISXpDRnNWNjlhcA$ETwazbO0OcpFebkpaqtVfGnLx5oZg73Loih4R53Indw', 'encoder', 'Enable', '2026-07-20 00:00:00', '2026-07-20 00:00:00'),
+(40, 'Encoder14', NULL, '$argon2id$v=19$m=65536,t=4,p=1$eXdrVHlMbFlhWkVuTVJHQQ$D7Ki2tNAW+U/oO3yzul/DNwxGzVxXtI1S9otfJkZFzc', 'encoder', 'Enable', '2026-07-20 00:00:00', '2026-07-20 00:00:00'),
+(41, 'Encoder15', NULL, '$argon2id$v=19$m=65536,t=4,p=1$RlN0Q2FNb2hwcjk4STBGZQ$HZ3bQzMpJwF3aLD1Mu7vEQYRLclgrh5E4d+Fn4bWlqc', 'encoder', 'Enable', '2026-07-20 00:00:00', '2026-07-20 00:00:00'),
+(42, 'Encoder16', NULL, '$argon2id$v=19$m=65536,t=4,p=1$NVczdktsbVBUVG01QklWQw$0Tm5vBJFHPoLrhnPwph91d00XPWT4sBGgLh7nAhGUeo', 'encoder', 'Enable', '2026-07-20 00:00:00', '2026-07-20 00:00:00'),
+(43, 'Encoder17', NULL, '$argon2id$v=19$m=65536,t=4,p=1$bS9HdENKVUVrZzFzT2duVg$I40RoJVs9Yap8Mdz8+mD+3UTX72t5x/MszgWPMQZkHE', 'encoder', 'Enable', '2026-07-20 00:00:00', '2026-07-20 00:00:00'),
+(44, 'Encoder18', NULL, '$argon2id$v=19$m=65536,t=4,p=1$RjN5eXZmRFlZd0VvYlFtbA$qPMznnOD+29HgOzXiId0Kt7NaXiPgwvmsGg6BHvsobQ', 'encoder', 'Enable', '2026-07-20 00:00:00', '2026-07-20 00:00:00'),
+(45, 'Encoder19', NULL, '$argon2id$v=19$m=65536,t=4,p=1$Tkoxek51eS9OZndTTkxQTQ$gsY9DH2wk3c1DY1YfPXjBQO6AcSe6V/NunZ61NYMB20', 'encoder', 'Enable', '2026-07-20 00:00:00', '2026-07-20 00:00:00'),
+(46, 'Encoder20', NULL, '$argon2id$v=19$m=65536,t=4,p=1$b2FhU0sxaGo5M0dsWER2Lw$XRmbQLt4cDf966G6k1qoRIe2q8LwLzBZOSFez8ZHDfM', 'encoder', 'Enable', '2026-07-20 00:00:00', '2026-07-20 00:00:00');
 
 -- --------------------------------------------------------
 
@@ -420,29 +455,29 @@ CREATE TABLE `qr_control` (
   KEY `idx_qr_head` (`headID`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
-DROP TABLE IF EXISTS `aid_type`;
-CREATE TABLE `aid_type` (
-  `aid_type_id` int(11) NOT NULL AUTO_INCREMENT,
+DROP TABLE IF EXISTS `subsidy`;
+CREATE TABLE `subsidy` (
+  `subsidy_type_id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(100) NOT NULL,
   `dt_created` timestamp NOT NULL DEFAULT current_timestamp(),
   `dt_deleted` timestamp NULL DEFAULT NULL,
-  PRIMARY KEY (`aid_type_id`)
+  PRIMARY KEY (`subsidy_type_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-INSERT INTO `aid_type` (`name`) VALUES ('Financial'), ('Rice'), ('Grocery');
+INSERT INTO `subsidy` (`name`) VALUES ('Financial'), ('Rice'), ('Grocery');
 
 DROP TABLE IF EXISTS `aid_distribution`;
 CREATE TABLE `aid_distribution` (
   `aidID` int(11) NOT NULL AUTO_INCREMENT,
   `control_no` int(11) NOT NULL,
   `memberID` int(11) NOT NULL,
-  `aid_type_id` int(11) NOT NULL,
+  `subsidy_type_id` int(11) NOT NULL,
   `claim_date` date NOT NULL,
   `userID` int(11) DEFAULT NULL,
   `batch_id` int(11) DEFAULT NULL,
   `dt_created` timestamp NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`aidID`),
   KEY `idx_ad_control` (`control_no`),
-  KEY `idx_ad_type` (`aid_type_id`),
+  KEY `idx_ad_type` (`subsidy_type_id`),
   KEY `idx_ad_batch` (`batch_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -454,12 +489,12 @@ DROP TABLE IF EXISTS `distribution_batch`;
 CREATE TABLE `distribution_batch` (
   `batch_id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(100) NOT NULL,
-  `aid_type_id` int(11) NOT NULL,
+  `subsidy_type_id` int(11) NOT NULL,
   `started_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `closed_at` timestamp NULL DEFAULT NULL,
   `created_by` int(11) DEFAULT NULL,
   PRIMARY KEY (`batch_id`),
-  KEY `idx_db_aidtype` (`aid_type_id`)
+  KEY `idx_db_aidtype` (`subsidy_type_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- AUTO_INCREMENT for table `member`
@@ -483,7 +518,7 @@ ALTER TABLE `sector`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `userID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+  MODIFY `userID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=47;
 
 --
 -- Constraints for dumped tables

@@ -17,7 +17,7 @@ final class AidDistributionModelTest extends CIUnitTestCase
         $model  = new AidDistributionModel();
         $fields = (new \ReflectionClass($model))->getProperty('allowedFields');
         $fields->setAccessible(true);
-        foreach (['control_no', 'memberID', 'aid_type_id', 'claim_date', 'userID'] as $col) {
+        foreach (['control_no', 'memberID', 'subsidy_type_id', 'claim_date', 'userID'] as $col) {
             $this->assertContains($col, $fields->getValue($model));
         }
     }

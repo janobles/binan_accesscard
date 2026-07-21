@@ -955,16 +955,20 @@ class FamilyExcelImporter
         $this->requireField($row, $familyNo, 'firstname', 'First name', $firstName);
         $this->requireField($row, $familyNo, 'lastname', 'Last name', $lastName);
 
-        $birthday = $this->validateBirthday($row, $familyNo, (string) ($data['birthday'] ?? ''), $isHead);
-        $sex      = $this->validateSex($row, $familyNo, (string) ($data['sex'] ?? ''), $isHead);
+        // Personal-profile fields are required for EVERY person (head and member), mirroring
+        // the Add/Edit family form. Only the head carries Address/Barangay — members inherit
+        // the head's, so those stay head-only.
+        $birthday = $this->validateBirthday($row, $familyNo, (string) ($data['birthday'] ?? ''), true);
+        $sex      = $this->validateSex($row, $familyNo, (string) ($data['sex'] ?? ''), true);
 
         $civilStatus = $this->fullValueFromCode((string) ($data['civilstatus'] ?? ''), FamilyExcelTemplate::CIVIL_STATUS_CODES);
         $education   = $this->fullValueFromCode((string) ($data['education'] ?? ''), FamilyExcelTemplate::EDUCATION_CODES);
 
+        $this->requireField($row, $familyNo, 'civilstatus', 'Civil status', $civilStatus);
+        $this->requireField($row, $familyNo, 'education', 'Education', $education);
+        $this->requireField($row, $familyNo, 'job', 'Job', (string) ($data['job'] ?? ''));
+
         if ($isHead) {
-            $this->requireField($row, $familyNo, 'civilstatus', 'Civil status', $civilStatus);
-            $this->requireField($row, $familyNo, 'education', 'Education', $education);
-            $this->requireField($row, $familyNo, 'job', 'Job', (string) ($data['job'] ?? ''));
             $this->requireField($row, $familyNo, 'address', 'Address', (string) ($data['address'] ?? ''));
             $this->requireField($row, $familyNo, 'barangay', 'Barangay', (string) ($data['barangay'] ?? ''));
             // Barangay has no "Other" option — it must be one of the official barangays
@@ -974,7 +978,7 @@ class FamilyExcelImporter
             $this->requireField($row, $familyNo, 'relationship', 'Relationship', (string) ($data['relationship'] ?? ''));
         }
 
-        $income    = $this->resolveIncome($row, $familyNo, (string) ($data['monthlyincome'] ?? ''), $isHead, $incomeByLabel);
+        $income    = $this->resolveIncome($row, $familyNo, (string) ($data['monthlyincome'] ?? ''), true, $incomeByLabel);
         $sectorIds = $this->mapSectors($entry, $familyNo, $sectorByCode);
 
         // Contact number (optional): warn if present and not 09 + 11 digits.

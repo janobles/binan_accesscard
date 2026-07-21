@@ -72,10 +72,10 @@ class FamilyExcelTemplate
     ];
 
     /** Always-required columns (every person) — marked with " *". */
-    private const ALWAYS_REQUIRED = ['QR Number', 'Relationship', 'FirstName', 'LastName'];
+    private const ALWAYS_REQUIRED = ['QR Number', 'Relationship', 'FirstName', 'LastName', 'Birthday', 'Sex', 'CivilStatus', 'Education', 'Job', 'MonthlyIncome'];
 
-    /** Columns required only on the Head row — flagged via a header comment. */
-    private const HEAD_REQUIRED = ['Birthday', 'Sex', 'CivilStatus', 'Education', 'Job', 'MonthlyIncome', 'Address', 'Barangay'];
+    /** Columns required only on the Head row (members inherit) — flagged via a header comment. */
+    private const HEAD_REQUIRED = ['Address', 'Barangay'];
 
     /** Per-column entry widths (display only). */
     private const WIDTHS = [
@@ -262,7 +262,7 @@ class FamilyExcelTemplate
 
         $lastColumn = $this->columnLetter(count(self::COLUMNS));
         $noteRow = 8;
-        $sheet->setCellValue('A' . $noteRow, 'Examples only — enter real data on the "' . self::DATA_SHEET . '" sheet. One row per person. Name order is Last Name, First Name, Middle Name. Birthday is MM-DD-YYYY. Mark each head of family with Relationship = Head. Put as many families as you like in one file: each family gets its own QR number, shared by its members. Members leave Address and Barangay blank — they automatically use the head\'s address. SECTOR = WHO the person is (SC, PWD, SP, B, LGBT, OFW, IP, IDP, PDL, or OTHER) and SERVICES = the programs they RECEIVED (e.g. SC1, FA6, EDA5, 4PS) — both take CODES separated by commas; see the Reference sheet. " * " marks always-required columns; the Head row also needs Birthday, Sex, Civil Status, Education, Job, Monthly Income, Address and Barangay.');
+        $sheet->setCellValue('A' . $noteRow, 'Examples only — enter real data on the "' . self::DATA_SHEET . '" sheet. One row per person. Name order is Last Name, First Name, Middle Name. Birthday is MM-DD-YYYY. Mark each head of family with Relationship = Head. Put as many families as you like in one file: each family gets its own QR number, shared by its members. Members leave Address and Barangay blank — they automatically use the head\'s address. SECTOR = WHO the person is (SC, PWD, SP, B, LGBT, OFW, IP, IDP, PDL, or OTHER) and SERVICES = the programs they RECEIVED (e.g. SC1, FA6, EDA5, 4PS) — both take CODES separated by commas; see the Reference sheet. " * " marks columns required for EVERY person (incl. Birthday, Sex, Civil Status, Education, Job and Monthly Income); the Head row also needs Address and Barangay.');
         $sheet->mergeCells('A' . $noteRow . ':' . $lastColumn . $noteRow);
         $sheet->getStyle('A' . $noteRow)->getAlignment()->setWrapText(true)->setVertical(Alignment::VERTICAL_TOP);
         $sheet->getStyle('A' . $noteRow)->getFont()->setBold(true);

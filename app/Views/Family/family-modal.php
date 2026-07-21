@@ -55,6 +55,9 @@ $renderMemberRow = static function ($index, array $m = []) use (
                 'selectOptions' => $selectOptions,
                 'field' => $field,
                 'value' => $val,
+                // Members require the same personal fields as the head (Address/Barangay are
+                // head-only — members inherit them, so they are not part of this component).
+                'required' => true,
             ]) ?>
             <div class="col-12 col-md-6 col-xl-3">
                 <label class="form-label">Relationship</label>

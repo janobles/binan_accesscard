@@ -130,6 +130,10 @@ class FamilyController extends BaseController
             $members = [];
         }
 
+        if ($incomplete = $this->firstIncompleteMember($members)) {
+            return $this->storeError($incomplete);
+        }
+
         $userId = (int) session()->get('user_id');
         $successMessage = 'Family record saved successfully.';
 
@@ -333,6 +337,10 @@ class FamilyController extends BaseController
         $serviceIds = is_array($serviceIds) ? $serviceIds : [];
         $members = $this->request->getPost('members');
         $members = is_array($members) ? $members : [];
+
+        if ($incomplete = $this->firstIncompleteMember($members)) {
+            return $this->failUpdate($incomplete, 422);
+        }
 
         $userId = (int) session()->get('user_id');
 
@@ -851,6 +859,40 @@ class FamilyController extends BaseController
     {
         return trim((string) ($member['firstname'] ?? '')) !== ''
             && trim((string) ($member['lastname'] ?? '')) !== '';
+    }
+
+    /**
+     * The first "this member is incomplete" message, or null when every real member row
+     * carries the required personal fields. Members need the same profile fields as the head
+     * (Date of birth, Sex, Civil status, Education, Job, Monthly income); Address/Barangay are
+     * the head's and inherited. Empty template rows (no name) are skipped via hasMemberData().
+     */
+    private function firstIncompleteMember(array $members): ?string
+    {
+        $required = [
+            'birthday'    => 'Date of birth',
+            'sex'         => 'Sex',
+            'civilstatus' => 'Civil status',
+            'education'   => 'Education',
+            'job'         => 'Job',
+            'salary'      => 'Monthly income',
+        ];
+
+        foreach ($members as $member) {
+            if (! is_array($member) || ! $this->hasMemberData($member)) {
+                continue;
+            }
+
+            foreach ($required as $key => $label) {
+                if (trim((string) ($member[$key] ?? '')) === '') {
+                    $name = trim((string) ($member['firstname'] ?? '') . ' ' . (string) ($member['lastname'] ?? ''));
+
+                    return $label . ' is required for member ' . ($name !== '' ? '"' . $name . '"' : '(unnamed)') . '.';
+                }
+            }
+        }
+
+        return null;
     }
 
     /**

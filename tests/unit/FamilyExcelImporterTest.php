@@ -83,6 +83,33 @@ final class FamilyExcelImporterTest extends CIUnitTestCase
         $this->assertSame(0, $result['counts']['blocking']);
     }
 
+    public function testMembersRequireTheSamePersonalFieldsAsTheHead(): void
+    {
+        // A member missing the personal fields (birthday, sex, civil status, education, job,
+        // monthly income) is now blocking — the same rule the head has, matching the form.
+        $result = $this->importer()->validateAndBuild([
+            $this->headRow(3, '6001'),
+            $this->memberRow(4, '6001', [
+                'birthday' => '', 'sex' => '', 'civilstatus' => '',
+                'education' => '', 'job' => '', 'monthlyincome' => '',
+            ]),
+        ]);
+
+        $this->assertSame(6, $result['counts']['blocking']);   // one per missing personal field
+        $this->assertContains('REQUIRED', $this->codes($result));
+    }
+
+    public function testMemberBlankAddressAndBarangayStayAllowed(): void
+    {
+        // Address/Barangay remain head-only — a member leaving them blank (inherited) is fine.
+        $result = $this->importer()->validateAndBuild([
+            $this->headRow(3, '6001'),
+            $this->memberRow(4, '6001', ['address' => '', 'barangay' => '']),
+        ]);
+
+        $this->assertSame(0, $result['counts']['blocking']);
+    }
+
     public function testFingerprintFlagsDifferentBarangayInOneFamily(): void
     {
         $result = $this->importer()->validateAndBuild([
@@ -634,14 +661,20 @@ final class FamilyExcelImporterTest extends CIUnitTestCase
         ], $overrides)];
     }
 
-    /** @param array<string,string> $overrides */
+    /**
+     * A complete member row by default: members now require the same personal fields as the
+     * head (birthday, sex, civil status, education, job, monthly income). Address/Barangay
+     * stay blank — members inherit the head's. Tests that need a gap override the key.
+     *
+     * @param array<string,string> $overrides
+     */
     private function memberRow(int $sheetRow, string $qr, array $overrides = []): array
     {
         return ['sheetRow' => $sheetRow, 'data' => array_merge([
             'familyno' => $qr, 'relationship' => 'Child', 'firstname' => 'Jose', 'lastname' => 'Dela Cruz',
-            'middlename' => '', 'suffix' => '', 'birthday' => '', 'sex' => '',
-            'civilstatus' => '', 'contactnumber' => '', 'religion' => '', 'education' => '',
-            'job' => '', 'monthlyincome' => '', 'address' => '', 'barangay' => '',
+            'middlename' => '', 'suffix' => '', 'birthday' => '01-10-2012', 'sex' => 'Male',
+            'civilstatus' => 'S', 'contactnumber' => '', 'religion' => '', 'education' => 'E',
+            'job' => 'Student', 'monthlyincome' => '0', 'address' => '', 'barangay' => '',
             'sector' => '', 'services' => '',
         ], $overrides)];
     }

@@ -32,6 +32,19 @@ final class FamilyRulesTest extends CIUnitTestCase
         $this->assertStringContainsString('not_future_date', $rules['birthday']);
     }
 
+    public function testOtherProfileValuesCannotContainNumbersOnly(): void
+    {
+        $rules = new FamilyRules();
+
+        $this->assertFalse($rules->not_numeric_only('123'));
+        $this->assertFalse($rules->not_numeric_only('123 456'));
+        $this->assertTrue($rules->not_numeric_only('Religion 2'));
+
+        foreach (['civilstatus', 'religion', 'education', 'job'] as $field) {
+            $this->assertStringContainsString('not_numeric_only', \App\Models\Families\MemberModel::VALIDATION_RULES[$field]);
+        }
+    }
+
     public function testSharedModalFieldsExposeBrowserConstraints(): void
     {
         helper('family_modal');
@@ -42,5 +55,9 @@ final class FamilyRulesTest extends CIUnitTestCase
         $this->assertSame(2, $fields['education']['otherMinlength']);
         $this->assertSame(2, $fields['job']['otherMinlength']);
         $this->assertSame(2, $fields['religion']['otherMinlength']);
+
+        foreach (['civilstatus', 'religion', 'education', 'job'] as $field) {
+            $this->assertSame('.*[^\d\s].*', $fields[$field]['otherPattern']);
+        }
     }
 }

@@ -26,4 +26,18 @@ class FamilyRules
 
         return true;
     }
+
+    /** Rejects values made entirely of numbers, with optional whitespace. */
+    public function not_numeric_only(mixed $value, ?string &$error = null): bool
+    {
+        $compact = preg_replace('/\s+/u', '', trim((string) $value));
+
+        if ($compact !== '' && preg_match('/^\p{N}+$/u', $compact) === 1) {
+            $error = 'The {field} field cannot contain numbers only.';
+
+            return false;
+        }
+
+        return true;
+    }
 }

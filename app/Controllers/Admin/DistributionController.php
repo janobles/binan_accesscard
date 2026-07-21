@@ -48,7 +48,7 @@ class DistributionController extends BaseController
         $this->audit(
             'Voided aid distribution #' . $id,
             (int) ($row['memberID'] ?? 0),
-            'Control #' . (string) ($row['control_no'] ?? '') . ', aid type ID ' . (int) ($row['aid_type_id'] ?? 0) . ', claim date ' . (string) ($row['claim_date'] ?? '')
+            'Control #' . (string) ($row['control_no'] ?? '') . ', subsidy type ID ' . (int) ($row['subsidy_type_id'] ?? 0) . ', claim date ' . (string) ($row['claim_date'] ?? '')
         );
         return redirect()->to('admin/distribution?tab=log')->with('success', 'Distribution voided.');
     }
@@ -58,7 +58,7 @@ class DistributionController extends BaseController
     {
         if ($g = $this->guard()) { return $g; }
         $name      = trim((string) $this->request->getPost('name'));
-        $aidTypeId = (int) $this->request->getPost('aid_type_id');
+        $aidTypeId = (int) $this->request->getPost('subsidy_type_id');
         if ($name === '') {
             return redirect()->to('admin/distribution?tab=batches')->with('error', 'Batch name is required.');
         }

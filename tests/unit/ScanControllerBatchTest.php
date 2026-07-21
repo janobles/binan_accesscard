@@ -20,7 +20,7 @@ final class ScanControllerBatchTest extends CIUnitTestCase
         // logAid() must refuse with 409 when no batch is open.
         $this->assertStringContainsString('setStatusCode(409)', $src);
         // The aid type comes from the active batch, not POST.
-        $this->assertStringContainsString("(int) \$activeBatch['aid_type_id']", $src);
+        $this->assertStringContainsString("(int) \$activeBatch['subsidy_type_id']", $src);
         // One-action scan: claimant is the family head, claim date is today.
         $this->assertStringContainsString("(int) \$head['memberID']", $src);
         $this->assertStringContainsString("date('Y-m-d')", $src);

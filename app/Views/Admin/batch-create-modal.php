@@ -4,7 +4,7 @@
  * reference table (admin/aidtypes page).
  *
  * Variables:
- * - $activeAidTypes list of aid type rows (aid_type_id, name)
+ * - $activeAidTypes list of aid type rows (subsidy_type_id, name)
  */
 $activeAidTypes = $activeAidTypes ?? [];
 ?>
@@ -24,10 +24,10 @@ $activeAidTypes = $activeAidTypes ?? [];
         </div>
         <div class="mb-3">
           <label for="batchAidType" class="form-label">Aid type</label>
-          <select class="form-select" id="batchAidType" name="aid_type_id" required>
+          <select class="form-select" id="batchAidType" name="subsidy_type_id" required>
             <option value="" selected disabled>Choose an aid type...</option>
             <?php foreach ($activeAidTypes as $t): ?>
-              <option value="<?= (int) $t['aid_type_id'] ?>"><?= esc($t['name']) ?></option>
+              <option value="<?= (int) $t['subsidy_type_id'] ?>"><?= esc($t['name']) ?></option>
             <?php endforeach; ?>
           </select>
         </div>

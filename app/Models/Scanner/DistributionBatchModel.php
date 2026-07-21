@@ -16,15 +16,15 @@ class DistributionBatchModel extends Model
     protected $table         = 'distribution_batch';
     protected $primaryKey    = 'batch_id';
     protected $returnType    = 'array';
-    protected $allowedFields = ['name', 'aid_type_id', 'closed_at', 'created_by'];
+    protected $allowedFields = ['name', 'subsidy_type_id', 'closed_at', 'created_by'];
     protected $useTimestamps = false;
 
     /** The single open batch, or null when none (or on DB error). */
     public function activeBatch(): ?array
     {
         try {
-            $row = $this->select('distribution_batch.*, aid_type.name AS aid_type_name')
-                ->join('aid_type', 'aid_type.aid_type_id = distribution_batch.aid_type_id', 'left')
+            $row = $this->select('distribution_batch.*, subsidy.name AS aid_type_name')
+                ->join('subsidy', 'subsidy.subsidy_type_id = distribution_batch.subsidy_type_id', 'left')
                 ->where('distribution_batch.closed_at', null)
                 ->orderBy('distribution_batch.batch_id', 'DESC')
                 ->first();
@@ -45,8 +45,8 @@ class DistributionBatchModel extends Model
 
         try {
             if ($this->insert([
-                'name'        => $name,
-                'aid_type_id' => $aidTypeId,
+                'name'            => $name,
+                'subsidy_type_id' => $aidTypeId,
                 'created_by'  => $userId > 0 ? $userId : null,
             ]) === false) {
                 return 0;
@@ -81,8 +81,8 @@ class DistributionBatchModel extends Model
     public function allBatches(): array
     {
         try {
-            return $this->select('distribution_batch.*, aid_type.name AS aid_type_name')
-                ->join('aid_type', 'aid_type.aid_type_id = distribution_batch.aid_type_id', 'left')
+            return $this->select('distribution_batch.*, subsidy.name AS aid_type_name')
+                ->join('subsidy', 'subsidy.subsidy_type_id = distribution_batch.subsidy_type_id', 'left')
                 ->orderBy('distribution_batch.batch_id', 'DESC')
                 ->findAll();
         } catch (\Throwable $e) {

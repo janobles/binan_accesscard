@@ -51,8 +51,8 @@ class ScanController extends BaseController
             'activeBatch'  => $activeBatch,
             'aidType'      => $activeBatch !== null
                 ? [
-                    'aid_type_id' => (int) $activeBatch['aid_type_id'],
-                    'name'        => (string) ($activeBatch['aid_type_name'] ?? 'Aid'),
+                    'subsidy_type_id' => (int) $activeBatch['subsidy_type_id'],
+                    'name'            => (string) ($activeBatch['aid_type_name'] ?? 'Aid'),
                 ]
                 : null,
             'myBatchCount' => $activeBatch !== null
@@ -247,7 +247,7 @@ class ScanController extends BaseController
             ]);
         }
 
-        $aidTypeId = (int) $activeBatch['aid_type_id'];
+        $aidTypeId = (int) $activeBatch['subsidy_type_id'];
         $claimDate = date('Y-m-d');
 
         // The insert and its audit row must land together: without a shared
@@ -258,9 +258,9 @@ class ScanController extends BaseController
 
         $aidId = model(AidDistributionModel::class)->logAid([
             'control_no'  => $controlNo,
-            'memberID'    => (int) $head['memberID'],
-            'aid_type_id' => $aidTypeId,
-            'claim_date'  => $claimDate,
+            'memberID'        => (int) $head['memberID'],
+            'subsidy_type_id' => $aidTypeId,
+            'claim_date'      => $claimDate,
             'userID'      => $userId,
             'batch_id'    => $batchId,
         ]);

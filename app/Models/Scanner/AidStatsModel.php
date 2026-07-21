@@ -113,15 +113,15 @@ class AidStatsModel extends Model
     public function byAidType(?int $batchId = null): array
     {
         try {
-            $b = $this->db->table('aid_type')
-                ->select('aid_type.name AS aid_type,'
+            $b = $this->db->table('subsidy')
+                ->select('subsidy.name AS aid_type,'
                     . ' COUNT(aid_distribution.aidID) AS count')
-                ->join('aid_distribution', 'aid_distribution.aid_type_id = aid_type.aid_type_id', 'left');
+                ->join('aid_distribution', 'aid_distribution.subsidy_type_id = subsidy.subsidy_type_id', 'left');
             $this->applyScope($b, $batchId);
-            $rows = $b->groupBy('aid_type.aid_type_id')
+            $rows = $b->groupBy('subsidy.subsidy_type_id')
                 ->having('count >', 0)
                 ->orderBy('count', 'DESC')
-                ->orderBy('aid_type.name', 'ASC')
+                ->orderBy('subsidy.name', 'ASC')
                 ->get()->getResultArray();
 
             return array_map(static fn ($r) => [

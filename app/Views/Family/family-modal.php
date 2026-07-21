@@ -244,6 +244,7 @@ $renderMemberRow = static function ($index, array $m = []) use (
                             <input id="<?= esc($fieldPrefix, 'attr') ?>HeadQr" name="qr_control_no" type="text"
                                 inputmode="numeric" pattern="0*[1-9][0-9]{0,6}"
                                 title="QR number must be numeric and should not exceed 9,999,999 "
+                                data-qr-check-url="<?= esc($qrCheckUrl, 'attr') ?>"
                                 value="<?= esc($oldValue('qr_control_no'), 'attr') ?>"
                                 <?= $qrLocked ? 'readonly' : 'required' ?>>
                             <?php if ($qrLocked): ?>

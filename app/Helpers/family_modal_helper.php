@@ -81,6 +81,7 @@ if (! function_exists('family_modal_prepare')) {
             'fieldPrefix' => (string) ($data['fieldPrefix'] ?? 'family-add'),
             'modalTitle' => (string) ($data['modalTitle'] ?? 'New Family Record'),
             'modalMode' => (string) ($data['modalMode'] ?? 'create'),
+            'qrCheckUrl' => (string) ($data['qrCheckUrl'] ?? ''),
             'submitLabel' => (string) ($data['submitLabel'] ?? 'Save Family Record'),
             'headId' => (int) ($data['headId'] ?? 0),
             'sectorOptions' => (array) ($data['sectorOptions'] ?? []),

@@ -17,6 +17,7 @@ use App\Models\Lookups\ServiceModel;
 use App\Support\FamilyRecordPresenter;
 use App\Support\MemberFieldNormalizer;
 use CodeIgniter\HTTP\RedirectResponse;
+use CodeIgniter\HTTP\ResponseInterface;
 use Throwable;
 
 /**
@@ -140,7 +141,7 @@ class FamilyController extends BaseController
         $controlNo = (int) $this->request->getPost('qr_control_no');
 
         if (model(\App\Models\Scanner\QrControlModel::class)->takenByOtherHead($controlNo, 0)) {
-            return $this->storeError('QR Number ' . $controlNo . ' is already assigned to another family.');
+            return $this->storeError('QR Number ' . $controlNo . ' already exists in the records and is assigned to another family.');
         }
 
         // Shape the additional members (skipping the form's empty rows) into the
@@ -358,7 +359,7 @@ class FamilyController extends BaseController
                 return $this->failUpdate('QR Number is required.', 422);
             }
             if ($qrModel->takenByOtherHead($controlNo, $headId)) {
-                return $this->failUpdate('QR Number ' . $controlNo . ' is already assigned to another family.', 422);
+                return $this->failUpdate('QR Number ' . $controlNo . ' already exists in the records and is assigned to another family.', 422);
             }
         }
 
@@ -960,6 +961,38 @@ class FamilyController extends BaseController
         return $this->renderFamilyModal($isUpdateMode ? 'update' : 'create', $headId);
     }
 
+    /** Returns whether a QR number is available to the current Add/Update form. */
+    public function qrAvailability(): ResponseInterface
+    {
+        if ($this->requireFamilyEntryAccess() instanceof RedirectResponse) {
+            return $this->response->setStatusCode(403)->setJSON([
+                'available' => false,
+                'message' => 'You do not have permission to validate QR numbers.',
+            ]);
+        }
+
+        $rawControlNo = (string) $this->request->getGet('control_no');
+        $rule = $this->rulesForEntryType('head')['qr_control_no'];
+
+        if (! service('validation')->check($rawControlNo, $rule)) {
+            return $this->response->setStatusCode(422)->setJSON([
+                'available' => false,
+                'message' => 'Enter a QR number from 1 to 9999999.',
+            ]);
+        }
+
+        $controlNo = (int) $rawControlNo;
+        $headId = max(0, (int) $this->request->getGet('head_id'));
+        $exists = model(\App\Models\Scanner\QrControlModel::class)->takenByOtherHead($controlNo, $headId);
+
+        return $this->response->setJSON([
+            'available' => ! $exists,
+            'message' => $exists
+                ? 'QR Number ' . $controlNo . ' already exists in the records and is assigned to another family.'
+                : '',
+        ]);
+    }
+
     /**
      * Shared renderer for the Add/Update family modal. In create mode it serves a
      * blank form pointed at `families` (store). In update mode it prefills the head,
@@ -1015,6 +1048,7 @@ class FamilyController extends BaseController
                     'fieldPrefix' => 'family-update',
                     'modalTitle' => 'Update Family Record',
                     'modalMode' => 'update',
+                    'qrCheckUrl' => site_url($this->currentRouteBase() . '/qr-check'),
                     'submitLabel' => 'Update',
                     'saveDisabled' => false,
                     'qrLocked' => $qrLocked,
@@ -1032,6 +1066,7 @@ class FamilyController extends BaseController
                 'fieldPrefix' => 'family-add',
                 'modalTitle' => 'New Family Record',
                 'modalMode' => 'create',
+                'qrCheckUrl' => site_url($this->currentRouteBase() . '/qr-check'),
                 'submitLabel' => 'Save',
                 'headId' => 0,
                 'saveDisabled' => false,

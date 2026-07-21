@@ -24,6 +24,8 @@
 
     var DRAFT_KEY = 'binan_family_modal_draft_v1';
     var saveTimer = null;
+    var qrCheckTimer = null;
+    var qrCheckSequence = 0;
 
     // ---- small DOM helpers -------------------------------------------------
 
@@ -316,6 +318,59 @@
         setFieldError(el, '');
 
         return true;
+    }
+
+    // ---- QR number availability -------------------------------------------
+
+    function scheduleQrAvailabilityCheck(root, field) {
+        if (!field || field.readOnly || !field.dataset.qrCheckUrl) {
+            return;
+        }
+
+        if (qrCheckTimer) {
+            window.clearTimeout(qrCheckTimer);
+        }
+
+        var sequence = ++qrCheckSequence;
+        field.setCustomValidity('');
+        setFieldError(field, '');
+
+        if (String(field.value || '').trim() === '' || !field.checkValidity()) {
+            return;
+        }
+
+        field.setCustomValidity('Checking whether this QR number already exists.');
+
+        qrCheckTimer = window.setTimeout(function () {
+            var url = new URL(field.dataset.qrCheckUrl, window.location.href);
+            var headId = root.querySelector('[name="head_id"]');
+            url.searchParams.set('control_no', field.value);
+            url.searchParams.set('head_id', headId ? headId.value : '0');
+
+            window.fetch(url.toString(), {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                credentials: 'same-origin'
+            }).then(function (response) {
+                return response.json().then(function (data) {
+                    return { ok: response.ok, data: data };
+                });
+            }).then(function (result) {
+                if (sequence !== qrCheckSequence || !field.isConnected) {
+                    return;
+                }
+
+                var message = result.ok && result.data.available
+                    ? ''
+                    : (result.data.message || 'The QR number could not be validated.');
+                field.setCustomValidity(message);
+                setFieldError(field, message);
+            }).catch(function () {
+                if (sequence === qrCheckSequence && field.isConnected) {
+                    field.setCustomValidity('');
+                    setFieldError(field, '');
+                }
+            });
+        }, 350);
     }
 
     // ---- confirm dialog ----------------------------------------------------
@@ -1254,6 +1309,10 @@
 
             if (target && target.matches('[required]')) {
                 clearFieldError(target);
+            }
+
+            if (target && target.name === 'qr_control_no') {
+                scheduleQrAvailabilityCheck(root, target);
             }
 
             renderHeadSummary(root);

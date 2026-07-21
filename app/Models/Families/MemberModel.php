@@ -30,7 +30,7 @@ class MemberModel extends Model
         'education' => 'permit_empty|min_length[2]|max_length[150]',
         'job' => 'permit_empty|min_length[2]|max_length[150]',
         'contactnumber' => 'permit_empty|max_length[30]',
-        'religion' => 'permit_empty|max_length[100]',
+        'religion' => 'permit_empty|min_length[2]|max_length[100]',
         'address' => 'permit_empty|max_length[255]',
         'barangay' => 'permit_empty|max_length[100]',
     ];

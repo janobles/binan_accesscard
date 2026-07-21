@@ -70,7 +70,7 @@ if (! function_exists('family_modal_prepare')) {
             ['name' => 'sex', 'label' => 'Sex', 'type' => 'select', 'options' => 'sexOptions', 'idSuffix' => 'Sex', 'summary' => 'sex', 'required' => true],
             ['name' => 'civilstatus', 'label' => 'Civil status', 'type' => 'select', 'options' => 'civilOptions', 'other' => true, 'otherMinlength' => 2, 'idSuffix' => 'CivilStatus', 'summary' => 'civil', 'required' => true],
             ['name' => 'contactnumber', 'label' => 'Contact number', 'type' => 'tel', 'maxlength' => '30', 'idSuffix' => 'Contact', 'summary' => 'contact'],
-            ['name' => 'religion', 'label' => 'Religion', 'type' => 'select', 'options' => 'religionOptions', 'other' => true, 'idSuffix' => 'Religion', 'summary' => 'religion'],
+            ['name' => 'religion', 'label' => 'Religion', 'type' => 'select', 'options' => 'religionOptions', 'other' => true, 'otherMinlength' => 2, 'idSuffix' => 'Religion', 'summary' => 'religion'],
             ['name' => 'education', 'label' => 'Education', 'type' => 'select', 'options' => 'educationOptions', 'other' => true, 'otherMinlength' => 2, 'idSuffix' => 'Education', 'summary' => 'education', 'required' => true],
             ['name' => 'job', 'label' => 'Job', 'type' => 'select', 'options' => 'jobOptions', 'other' => true, 'otherMinlength' => 2, 'idSuffix' => 'Job', 'summary' => 'job', 'required' => true],
             ['name' => 'salary', 'label' => 'Monthly income', 'type' => 'select', 'options' => 'incomeOptions', 'idSuffix' => 'Salary', 'summary' => 'income', 'required' => true],

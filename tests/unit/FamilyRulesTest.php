@@ -28,6 +28,7 @@ final class FamilyRulesTest extends CIUnitTestCase
         $this->assertStringContainsString('min_length[2]', $rules['civilstatus']);
         $this->assertStringContainsString('min_length[2]', $rules['education']);
         $this->assertStringContainsString('min_length[2]', $rules['job']);
+        $this->assertStringContainsString('min_length[2]', $rules['religion']);
         $this->assertStringContainsString('not_future_date', $rules['birthday']);
     }
 
@@ -40,5 +41,6 @@ final class FamilyRulesTest extends CIUnitTestCase
         $this->assertSame(2, $fields['civilstatus']['otherMinlength']);
         $this->assertSame(2, $fields['education']['otherMinlength']);
         $this->assertSame(2, $fields['job']['otherMinlength']);
+        $this->assertSame(2, $fields['religion']['otherMinlength']);
     }
 }

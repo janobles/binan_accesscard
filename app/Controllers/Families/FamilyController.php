@@ -14,6 +14,7 @@ use App\Models\Families\MemberModel;
 use App\Models\Families\MemberServiceModel;
 use App\Models\Lookups\SectorModel;
 use App\Models\Lookups\ServiceModel;
+use App\Support\FamilyAgeEligibility;
 use App\Support\FamilyRecordPresenter;
 use App\Support\MemberFieldNormalizer;
 use CodeIgniter\HTTP\RedirectResponse;
@@ -62,6 +63,7 @@ class FamilyController extends BaseController
 
         $memberModel = new MemberModel();
         $memberServiceModel = new MemberServiceModel();
+        $sectorModel = new SectorModel();
         $serviceModel = new ServiceModel();
         $auditModel = new AuditTrailsModel();
 
@@ -133,6 +135,10 @@ class FamilyController extends BaseController
 
         if ($incomplete = $this->firstIncompleteMember($members)) {
             return $this->storeError($incomplete);
+        }
+
+        if ($eligibilityError = $this->firstAgeEligibilityError($members, $sectorModel, $serviceModel)) {
+            return $this->storeError($eligibilityError);
         }
 
         $userId = (int) session()->get('user_id');
@@ -311,6 +317,7 @@ class FamilyController extends BaseController
 
         $memberModel = new MemberModel();
         $memberServiceModel = new MemberServiceModel();
+        $sectorModel = new SectorModel();
         $serviceModel = new ServiceModel();
         $auditModel = new AuditTrailsModel();
 
@@ -341,6 +348,10 @@ class FamilyController extends BaseController
 
         if ($incomplete = $this->firstIncompleteMember($members)) {
             return $this->failUpdate($incomplete, 422);
+        }
+
+        if ($eligibilityError = $this->firstAgeEligibilityError($members, $sectorModel, $serviceModel)) {
+            return $this->failUpdate($eligibilityError, 422);
         }
 
         $userId = (int) session()->get('user_id');
@@ -826,7 +837,7 @@ class FamilyController extends BaseController
     /**
      * Like memberPayload() but builds a `member` row from one entry of the
      * repeated `members[]` array (additional family members) instead of prefixed
-     * POST fields. Falls back to the form's sector selection when a member has none.
+     * POST fields. Each member keeps an independent sector selection.
      */
     private function memberPayloadFromArray(array $member): array
     {
@@ -848,7 +859,7 @@ class FamilyController extends BaseController
                 $this->request->getPost('head_barangay')
             ),
             'relationship' => $this->nullableText($member['relationship'] ?? 'Member'),
-            'sectorID' => SectorIds::normalize($member['sector_ids'] ?? $this->request->getPost('sector_ids')),
+            'sectorID' => SectorIds::normalize($member['sector_ids'] ?? []),
         ];
     }
 
@@ -894,6 +905,71 @@ class FamilyController extends BaseController
         }
 
         return null;
+    }
+
+    /** Returns the first age-specific sector/service error across the submitted family. */
+    private function firstAgeEligibilityError(array $members, SectorModel $sectorModel, ServiceModel $serviceModel): ?string
+    {
+        $people = [[
+            'label' => 'Head of family',
+            'birthday' => $this->request->getPost('head_birthday'),
+            'sectorIds' => SectorIds::normalize($this->request->getPost('sector_ids')),
+            'serviceIds' => $this->positiveIds($this->request->getPost('service_ids')),
+        ]];
+
+        foreach ($members as $member) {
+            if (! is_array($member) || ! $this->hasMemberData($member)) {
+                continue;
+            }
+
+            $name = trim((string) ($member['firstname'] ?? '') . ' ' . (string) ($member['lastname'] ?? ''));
+            $people[] = [
+                'label' => 'Member' . ($name !== '' ? ' "' . $name . '"' : ''),
+                'birthday' => $member['birthday'] ?? null,
+                'sectorIds' => SectorIds::normalize($member['sector_ids'] ?? []),
+                'serviceIds' => $this->positiveIds($member['service_ids'] ?? []),
+            ];
+        }
+
+        $sectorIds = [];
+        $serviceIds = [];
+
+        foreach ($people as $person) {
+            $sectorIds = array_merge($sectorIds, $person['sectorIds']);
+            $serviceIds = array_merge($serviceIds, $person['serviceIds']);
+        }
+
+        $sectorRows = $sectorModel->getByIdsIncludingArchived(array_values(array_unique($sectorIds)));
+        $serviceRows = $serviceModel->getByIdsIncludingArchived(array_values(array_unique($serviceIds)));
+
+        foreach ($people as $person) {
+            $error = FamilyAgeEligibility::selectionError(
+                $person['birthday'],
+                $person['sectorIds'],
+                $person['serviceIds'],
+                $sectorRows,
+                $serviceRows,
+            );
+
+            if ($error !== null) {
+                return $person['label'] . ': ' . $error;
+            }
+        }
+
+        return null;
+    }
+
+    /** @return list<int> */
+    private function positiveIds(mixed $value): array
+    {
+        if (! is_array($value)) {
+            return [];
+        }
+
+        return array_values(array_unique(array_filter(
+            array_map('intval', $value),
+            static fn (int $id): bool => $id > 0,
+        )));
     }
 
     /**

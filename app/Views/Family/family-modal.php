@@ -214,6 +214,22 @@ $renderMemberRow = static function ($index, array $m = []) use (
         <div class="tab-content family-entry-content">
             <div class="tab-pane fade show active" id="<?= esc($fieldPrefix, 'attr') ?>HeadPane" role="tabpanel" aria-labelledby="<?= esc($fieldPrefix, 'attr') ?>HeadTab" tabindex="0">
                 <section class="family-entry-section family-entry-personal">
+                    <?php $qrLocked = ! empty($qrLocked ?? false); ?>
+                    <div class="row g-3 mb-4">
+                        <div class="col-12 col-xl-3">
+                            <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>HeadQr">QR Number</label>
+                            <input id="<?= esc($fieldPrefix, 'attr') ?>HeadQr" name="qr_control_no" type="text"
+                                inputmode="numeric" pattern="0*[1-9][0-9]{0,6}"
+                                title="QR number must be numeric and should not exceed 9,999,999 "
+                                data-qr-check-url="<?= esc($qrCheckUrl, 'attr') ?>"
+                                value="<?= esc($oldValue('qr_control_no'), 'attr') ?>"
+                                <?= $qrLocked ? 'readonly' : 'required' ?>>
+                            <?php if ($qrLocked): ?>
+                                <small class="text-muted">Locked: subsidy already recorded under this number.</small>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
                     <h3 class="family-section-title">Personal Information</h3>
 
                     <div class="row g-3">
@@ -237,19 +253,6 @@ $renderMemberRow = static function ($index, array $m = []) use (
                             <select id="<?= esc($fieldPrefix, 'attr') ?>HeadBarangay" name="head_barangay" data-summary="barangay" required>
                                 <?= $selectOptions($barangayOptions, $oldValue('head_barangay'), 'Barangay') ?>
                             </select>
-                        </div>
-                        <?php $qrLocked = ! empty($qrLocked ?? false); ?>
-                        <div class="col-12 col-xl-3">
-                            <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>HeadQr">QR Number</label>
-                            <input id="<?= esc($fieldPrefix, 'attr') ?>HeadQr" name="qr_control_no" type="text"
-                                inputmode="numeric" pattern="0*[1-9][0-9]{0,6}"
-                                title="QR number must be numeric and should not exceed 9,999,999 "
-                                data-qr-check-url="<?= esc($qrCheckUrl, 'attr') ?>"
-                                value="<?= esc($oldValue('qr_control_no'), 'attr') ?>"
-                                <?= $qrLocked ? 'readonly' : 'required' ?>>
-                            <?php if ($qrLocked): ?>
-                                <small class="text-muted">Locked: subsidy already recorded under this number.</small>
-                            <?php endif; ?>
                         </div>
                     </div>
                 </section>

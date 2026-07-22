@@ -77,10 +77,8 @@ $renderMemberRow = static function ($index, array $m = []) use (
                         <?php
                         $sectorGroup = array_values((array) $sectorGroup);
                         if ($sectorGroup === []) { continue; }
-                        $groupTitle = trim((string) ($sectorGroup[0]['category_label'] ?? ''));
                         ?>
                         <div class="family-option-group">
-                            <?php if ($groupTitle !== ''): ?><p class="family-option-group-title"><?= esc($groupTitle) ?></p><?php endif; ?>
                             <?php foreach ($sectorGroup as $sector): ?>
                                 <?php
                                 $sector = (array) $sector;
@@ -214,6 +212,22 @@ $renderMemberRow = static function ($index, array $m = []) use (
         <div class="tab-content family-entry-content">
             <div class="tab-pane fade show active" id="<?= esc($fieldPrefix, 'attr') ?>HeadPane" role="tabpanel" aria-labelledby="<?= esc($fieldPrefix, 'attr') ?>HeadTab" tabindex="0">
                 <section class="family-entry-section family-entry-personal">
+                    <?php $qrLocked = ! empty($qrLocked ?? false); ?>
+                    <div class="row g-3 mb-4">
+                        <div class="col-12 col-xl-3">
+                            <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>HeadQr">QR Number</label>
+                            <input id="<?= esc($fieldPrefix, 'attr') ?>HeadQr" name="qr_control_no" type="text"
+                                inputmode="numeric" pattern="0*[1-9][0-9]{0,6}"
+                                title="QR number must be numeric and should not exceed 9,999,999 "
+                                data-qr-check-url="<?= esc($qrCheckUrl, 'attr') ?>"
+                                value="<?= esc($oldValue('qr_control_no'), 'attr') ?>"
+                                <?= $qrLocked ? 'readonly' : 'required' ?>>
+                            <?php if ($qrLocked): ?>
+                                <small class="text-muted">Locked: subsidy already recorded under this number.</small>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
                     <h3 class="family-section-title">Personal Information</h3>
 
                     <div class="row g-3">
@@ -238,24 +252,10 @@ $renderMemberRow = static function ($index, array $m = []) use (
                                 <?= $selectOptions($barangayOptions, $oldValue('head_barangay'), 'Barangay') ?>
                             </select>
                         </div>
-                        <?php $qrLocked = ! empty($qrLocked ?? false); ?>
-                        <div class="col-12 col-xl-3">
-                            <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>HeadQr">QR Number</label>
-                            <input id="<?= esc($fieldPrefix, 'attr') ?>HeadQr" name="qr_control_no" type="text"
-                                inputmode="numeric" pattern="0*[1-9][0-9]{0,6}"
-                                title="QR number must be numeric and should not exceed 9,999,999 "
-                                data-qr-check-url="<?= esc($qrCheckUrl, 'attr') ?>"
-                                value="<?= esc($oldValue('qr_control_no'), 'attr') ?>"
-                                <?= $qrLocked ? 'readonly' : 'required' ?>>
-                            <?php if ($qrLocked): ?>
-                                <small class="text-muted">Locked: subsidy already recorded under this number.</small>
-                            <?php endif; ?>
-                        </div>
                     </div>
                 </section>
 
                 <section class="family-entry-section family-sector-service">
-                    <h3 class="family-section-title">Sectors and Services</h3>
                     <div class="row g-4">
                         <div class="col-12 col-lg-5">
                             <h4 class="family-column-title">Sectors</h4>
@@ -267,10 +267,8 @@ $renderMemberRow = static function ($index, array $m = []) use (
                                     <?php
                                     $sectorGroup = array_values((array) $sectorGroup);
                                     if ($sectorGroup === []) { continue; }
-                                    $groupTitle = trim((string) ($sectorGroup[0]['category_label'] ?? ''));
                                     ?>
                                     <div class="family-option-group">
-                                        <?php if ($groupTitle !== ''): ?><p class="family-option-group-title"><?= esc($groupTitle) ?></p><?php endif; ?>
                                         <?php foreach ($sectorGroup as $sector): ?>
                                             <?php
                                             $sector = (array) $sector;

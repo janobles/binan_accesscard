@@ -77,10 +77,8 @@ $renderMemberRow = static function ($index, array $m = []) use (
                         <?php
                         $sectorGroup = array_values((array) $sectorGroup);
                         if ($sectorGroup === []) { continue; }
-                        $groupTitle = trim((string) ($sectorGroup[0]['category_label'] ?? ''));
                         ?>
                         <div class="family-option-group">
-                            <?php if ($groupTitle !== ''): ?><p class="family-option-group-title"><?= esc($groupTitle) ?></p><?php endif; ?>
                             <?php foreach ($sectorGroup as $sector): ?>
                                 <?php
                                 $sector = (array) $sector;
@@ -258,7 +256,6 @@ $renderMemberRow = static function ($index, array $m = []) use (
                 </section>
 
                 <section class="family-entry-section family-sector-service">
-                    <h3 class="family-section-title">Sectors and Services</h3>
                     <div class="row g-4">
                         <div class="col-12 col-lg-5">
                             <h4 class="family-column-title">Sectors</h4>
@@ -270,10 +267,8 @@ $renderMemberRow = static function ($index, array $m = []) use (
                                     <?php
                                     $sectorGroup = array_values((array) $sectorGroup);
                                     if ($sectorGroup === []) { continue; }
-                                    $groupTitle = trim((string) ($sectorGroup[0]['category_label'] ?? ''));
                                     ?>
                                     <div class="family-option-group">
-                                        <?php if ($groupTitle !== ''): ?><p class="family-option-group-title"><?= esc($groupTitle) ?></p><?php endif; ?>
                                         <?php foreach ($sectorGroup as $sector): ?>
                                             <?php
                                             $sector = (array) $sector;

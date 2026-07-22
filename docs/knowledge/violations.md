@@ -51,6 +51,12 @@ unchecked item was already moved to issue #9 (UX decision, not code mess).
   relocate to `Partials/` per the views-bootstrap.md taxonomy (it is a page
   fragment, not a props-only component). Cross-role regression surface; own
   branch.
+- [x] 🟠 Major: `app/Controllers/Families/FamilyController.php:862` — when a
+  member posted no sector checkbox, `memberPayloadFromArray()` silently copied
+  the head's sectors, contradicting the per-person sector controls and allowing
+  an age-ineligible classification to be stored on the member.
+  *(Fixed: members without a sector selection now persist an empty selection;
+  age eligibility validation change.)*
 
 Exempt (checked, not violations): `app/Views/errors/html/*` (framework error
 pages, standalone by design), `app/Views/Scanner/pdf/report.php` (PDF

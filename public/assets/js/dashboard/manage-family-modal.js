@@ -257,6 +257,7 @@
 
         writePersonField(memberField('relationship'), '');
 
+        refreshAllAgeEligibility(root);
         renderHeadSummary(root);
     }
 
@@ -700,7 +701,7 @@
         });
 
         renderHeadSummary(root);
-        refreshAllSuggestions(root);
+        refreshAllAgeEligibility(root);
     }
 
     // ---- summary -----------------------------------------------------------
@@ -793,9 +794,97 @@
     // nothing is ever hidden — groups only relocate.
 
     var SECTOR_INPUT_SELECTOR = 'input[name="sector_ids[]"], input[name$="[sector_ids][]"]';
+    var SERVICE_INPUT_SELECTOR = 'input[name="service_ids[]"], input[name$="[service_ids][]"]';
 
     function normName(value) {
         return String(value || '').trim().toLowerCase();
+    }
+
+    function completedAge(value) {
+        var match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || ''));
+
+        if (!match) {
+            return null;
+        }
+
+        var year = parseInt(match[1], 10);
+        var month = parseInt(match[2], 10);
+        var day = parseInt(match[3], 10);
+        var birthday = new Date(year, month - 1, day);
+        var today = new Date();
+
+        if (birthday.getFullYear() !== year || birthday.getMonth() !== month - 1 || birthday.getDate() !== day
+            || birthday > today) {
+            return null;
+        }
+
+        var age = today.getFullYear() - year;
+
+        if (today.getMonth() < month - 1 || (today.getMonth() === month - 1 && today.getDate() < day)) {
+            age -= 1;
+        }
+
+        return age;
+    }
+
+    // A person's birthday controls only that person's age-specific choices.
+    function refreshAgeEligibility(scopeEl) {
+        if (!scopeEl || !scopeEl.querySelectorAll) {
+            return;
+        }
+
+        var row = scopeEl.matches && scopeEl.matches('[data-family-member-row]') ? scopeEl : null;
+        var birthday = row
+            ? row.querySelector('input[name$="[birthday]"]')
+            : scopeEl.querySelector('input[name="head_birthday"]');
+        var age = birthday ? completedAge(birthday.value) : null;
+        var selector = row
+            ? 'input[name$="[sector_ids][]"], input[name$="[service_ids][]"]'
+            : 'input[name="sector_ids[]"], input[name="service_ids[]"]';
+
+        scopeEl.querySelectorAll(selector).forEach(function (input) {
+            var group = '';
+
+            if (input.matches(SECTOR_INPUT_SELECTOR)) {
+                var code = String(input.dataset.sectorCode || '').trim().toUpperCase();
+                group = code === 'B' ? 'child' : (code === 'SC' ? 'senior' : '');
+            } else if (input.matches(SERVICE_INPUT_SELECTOR)) {
+                var serviceGroup = input.closest('[data-service-category]');
+                var category = normName(serviceGroup ? serviceGroup.dataset.serviceCategory : '');
+                group = category === 'bata (children)' ? 'child' : (category === 'senior citizen' ? 'senior' : '');
+            }
+
+            if (group === '') {
+                return;
+            }
+
+            var allowed = age !== null && (group === 'child' ? age < 18 : age >= 60);
+            var message = age === null
+                ? 'Enter a valid date of birth to determine eligibility.'
+                : (group === 'child'
+                    ? 'Available only to persons below 18 years old.'
+                    : 'Available only to persons 60 years old and above.');
+            var choice = input.closest('.family-choice');
+
+            input.disabled = !allowed;
+
+            if (!allowed) {
+                input.checked = false;
+            }
+
+            if (choice) {
+                choice.title = allowed ? '' : message;
+            }
+        });
+
+        refreshSuggestions(scopeEl);
+    }
+
+    function refreshAllAgeEligibility(root) {
+        refreshAgeEligibility(root);
+        root.querySelectorAll('[data-family-member-row]').forEach(function (row) {
+            refreshAgeEligibility(row);
+        });
     }
 
     function stampGroupOrder(box) {
@@ -922,13 +1011,6 @@
         }
     }
 
-    function refreshAllSuggestions(root) {
-        refreshSuggestions(root);
-        root.querySelectorAll('[data-family-member-row]').forEach(function (row) {
-            refreshSuggestions(row);
-        });
-    }
-
     // ---- step navigation + validation --------------------------------------
 
     function validateHeadStep(container) {
@@ -1035,7 +1117,7 @@
         button.dataset.nextIndex = String(nextIndex + 1);
 
         initOtherSelects(row);
-        refreshSuggestions(row);
+        refreshAgeEligibility(row);
 
         return row;
     }
@@ -1315,6 +1397,10 @@
                 scheduleQrAvailabilityCheck(root, target);
             }
 
+            if (target && (target.name === 'head_birthday' || /\[birthday\]$/.test(target.name || ''))) {
+                refreshAgeEligibility(target.closest('[data-family-member-row]') || root);
+            }
+
             renderHeadSummary(root);
             scheduleSave(root);
         });
@@ -1345,6 +1431,10 @@
 
             if (target && target.matches(SECTOR_INPUT_SELECTOR)) {
                 refreshSuggestions(target.closest('[data-family-member-row]') || root);
+            }
+
+            if (target && (target.name === 'head_birthday' || /\[birthday\]$/.test(target.name || ''))) {
+                refreshAgeEligibility(target.closest('[data-family-member-row]') || root);
             }
 
             renderHeadSummary(root);
@@ -1393,7 +1483,7 @@
                     clearMemberRows(root);
                     initOtherSelects(root);
                     renderHeadSummary(root);
-                    refreshAllSuggestions(root);
+                    refreshAllAgeEligibility(root);
                     showStep(root, 'head');
 
                     if (isCreateForm(root)) {
@@ -1409,7 +1499,7 @@
         }
 
         renderHeadSummary(root);
-        refreshAllSuggestions(root);
+        refreshAllAgeEligibility(root);
         showStep(root, 'head');
 
         // Restore-on-reopen prompt (create mode only).

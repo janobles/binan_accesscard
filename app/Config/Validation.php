@@ -2,6 +2,7 @@
 
 namespace Config;
 
+use App\Validation\FamilyRules;
 use App\Validation\SectorRules;
 use CodeIgniter\Config\BaseConfig;
 use CodeIgniter\Validation\StrictRules\CreditCardRules;
@@ -26,6 +27,7 @@ class Validation extends BaseConfig
         FormatRules::class,
         FileRules::class,
         CreditCardRules::class,
+        FamilyRules::class,
         SectorRules::class,
     ];
 

@@ -66,13 +66,13 @@ if (! function_exists('family_modal_prepare')) {
             ['name' => 'firstname', 'label' => 'First Name', 'type' => 'text', 'idSuffix' => 'Firstname', 'summary' => 'name-first', 'required' => true],
             ['name' => 'middlename', 'label' => 'Middle Name', 'type' => 'text', 'idSuffix' => 'Middlename', 'summary' => 'name-middle'],
             ['name' => 'suffix', 'label' => 'Suffix', 'type' => 'select', 'options' => 'suffixOptions', 'idSuffix' => 'Suffix', 'summary' => 'name-suffix'],
-            ['name' => 'birthday', 'label' => 'Date of birth', 'type' => 'date', 'idSuffix' => 'Birthday', 'summary' => 'birthday', 'required' => true],
+            ['name' => 'birthday', 'label' => 'Date of birth', 'type' => 'date', 'idSuffix' => 'Birthday', 'summary' => 'birthday', 'required' => true, 'max' => date('Y-m-d')],
             ['name' => 'sex', 'label' => 'Sex', 'type' => 'select', 'options' => 'sexOptions', 'idSuffix' => 'Sex', 'summary' => 'sex', 'required' => true],
-            ['name' => 'civilstatus', 'label' => 'Civil status', 'type' => 'select', 'options' => 'civilOptions', 'other' => true, 'idSuffix' => 'CivilStatus', 'summary' => 'civil', 'required' => true],
+            ['name' => 'civilstatus', 'label' => 'Civil status', 'type' => 'select', 'options' => 'civilOptions', 'other' => true, 'otherMinlength' => 2, 'otherPattern' => '.*[^\d\s].*', 'idSuffix' => 'CivilStatus', 'summary' => 'civil', 'required' => true],
             ['name' => 'contactnumber', 'label' => 'Contact number', 'type' => 'tel', 'maxlength' => '30', 'idSuffix' => 'Contact', 'summary' => 'contact'],
-            ['name' => 'religion', 'label' => 'Religion', 'type' => 'select', 'options' => 'religionOptions', 'other' => true, 'idSuffix' => 'Religion', 'summary' => 'religion'],
-            ['name' => 'education', 'label' => 'Education', 'type' => 'select', 'options' => 'educationOptions', 'other' => true, 'idSuffix' => 'Education', 'summary' => 'education', 'required' => true],
-            ['name' => 'job', 'label' => 'Job', 'type' => 'select', 'options' => 'jobOptions', 'other' => true, 'idSuffix' => 'Job', 'summary' => 'job', 'required' => true],
+            ['name' => 'religion', 'label' => 'Religion', 'type' => 'select', 'options' => 'religionOptions', 'other' => true, 'otherMinlength' => 2, 'otherPattern' => '.*[^\d\s].*', 'idSuffix' => 'Religion', 'summary' => 'religion'],
+            ['name' => 'education', 'label' => 'Education', 'type' => 'select', 'options' => 'educationOptions', 'other' => true, 'otherMinlength' => 2, 'otherPattern' => '.*[^\d\s].*', 'idSuffix' => 'Education', 'summary' => 'education', 'required' => true],
+            ['name' => 'job', 'label' => 'Job', 'type' => 'select', 'options' => 'jobOptions', 'other' => true, 'otherMinlength' => 2, 'otherPattern' => '.*[^\d\s].*', 'idSuffix' => 'Job', 'summary' => 'job', 'required' => true],
             ['name' => 'salary', 'label' => 'Monthly income', 'type' => 'select', 'options' => 'incomeOptions', 'idSuffix' => 'Salary', 'summary' => 'income', 'required' => true],
         ];
 
@@ -81,6 +81,7 @@ if (! function_exists('family_modal_prepare')) {
             'fieldPrefix' => (string) ($data['fieldPrefix'] ?? 'family-add'),
             'modalTitle' => (string) ($data['modalTitle'] ?? 'New Family Record'),
             'modalMode' => (string) ($data['modalMode'] ?? 'create'),
+            'qrCheckUrl' => (string) ($data['qrCheckUrl'] ?? ''),
             'submitLabel' => (string) ($data['submitLabel'] ?? 'Save Family Record'),
             'headId' => (int) ($data['headId'] ?? 0),
             'sectorOptions' => (array) ($data['sectorOptions'] ?? []),
@@ -189,6 +190,9 @@ if (! function_exists('family_modal_render_person_fields')) {
                             'data-other-for' => $otherKey,
                             'placeholder' => 'Enter ' . strtolower($label),
                             'aria-label' => $idPrefix !== '' ? 'Other ' . strtolower($label) : '',
+                            'minlength' => $personField['otherMinlength'] ?? '',
+                            'pattern' => $personField['otherPattern'] ?? '',
+                            'title' => isset($personField['otherPattern']) ? 'Enter text, not numbers only.' : '',
                         ]) ?>>
                     <?php endif; ?>
                 <?php else: ?>
@@ -201,6 +205,7 @@ if (! function_exists('family_modal_render_person_fields')) {
                         'data-summary' => $summary,
                         'required' => $required,
                         'maxlength' => $personField['maxlength'] ?? '',
+                        'max' => $personField['max'] ?? '',
                     ]) ?>>
                 <?php endif; ?>
             </div>

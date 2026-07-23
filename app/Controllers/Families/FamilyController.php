@@ -14,9 +14,11 @@ use App\Models\Families\MemberModel;
 use App\Models\Families\MemberServiceModel;
 use App\Models\Lookups\SectorModel;
 use App\Models\Lookups\ServiceModel;
+use App\Support\FamilyAgeEligibility;
 use App\Support\FamilyRecordPresenter;
 use App\Support\MemberFieldNormalizer;
 use CodeIgniter\HTTP\RedirectResponse;
+use CodeIgniter\HTTP\ResponseInterface;
 use Throwable;
 
 /**
@@ -61,6 +63,7 @@ class FamilyController extends BaseController
 
         $memberModel = new MemberModel();
         $memberServiceModel = new MemberServiceModel();
+        $sectorModel = new SectorModel();
         $serviceModel = new ServiceModel();
         $auditModel = new AuditTrailsModel();
 
@@ -134,13 +137,17 @@ class FamilyController extends BaseController
             return $this->storeError($incomplete);
         }
 
+        if ($eligibilityError = $this->firstAgeEligibilityError($members, $sectorModel, $serviceModel)) {
+            return $this->storeError($eligibilityError);
+        }
+
         $userId = (int) session()->get('user_id');
         $successMessage = 'Family record saved successfully.';
 
         $controlNo = (int) $this->request->getPost('qr_control_no');
 
         if (model(\App\Models\Scanner\QrControlModel::class)->takenByOtherHead($controlNo, 0)) {
-            return $this->storeError('QR Number ' . $controlNo . ' is already assigned to another family.');
+            return $this->storeError('QR Number ' . $controlNo . ' already exists in the records and is assigned to another family.');
         }
 
         // Shape the additional members (skipping the form's empty rows) into the
@@ -310,6 +317,7 @@ class FamilyController extends BaseController
 
         $memberModel = new MemberModel();
         $memberServiceModel = new MemberServiceModel();
+        $sectorModel = new SectorModel();
         $serviceModel = new ServiceModel();
         $auditModel = new AuditTrailsModel();
 
@@ -342,6 +350,10 @@ class FamilyController extends BaseController
             return $this->failUpdate($incomplete, 422);
         }
 
+        if ($eligibilityError = $this->firstAgeEligibilityError($members, $sectorModel, $serviceModel)) {
+            return $this->failUpdate($eligibilityError, 422);
+        }
+
         $userId = (int) session()->get('user_id');
 
         $qrModel        = model(\App\Models\Scanner\QrControlModel::class);
@@ -358,7 +370,7 @@ class FamilyController extends BaseController
                 return $this->failUpdate('QR Number is required.', 422);
             }
             if ($qrModel->takenByOtherHead($controlNo, $headId)) {
-                return $this->failUpdate('QR Number ' . $controlNo . ' is already assigned to another family.', 422);
+                return $this->failUpdate('QR Number ' . $controlNo . ' already exists in the records and is assigned to another family.', 422);
             }
         }
 
@@ -810,22 +822,22 @@ class FamilyController extends BaseController
             'head_firstname' => 'required|max_length[100]',
             'head_middlename' => 'permit_empty|max_length[50]',
             'head_lastname' => 'required|max_length[100]',
-            'head_birthday' => 'required|valid_date[Y-m-d]',
+            'head_birthday' => 'required|valid_date[Y-m-d]|not_future_date',
             'head_sex' => 'required|in_list[Male,Female]',
-            'head_civilstatus' => 'required',
-            'head_education' => 'required',
-            'head_job' => 'required',
+            'head_civilstatus' => 'required|min_length[2]',
+            'head_education' => 'required|min_length[2]',
+            'head_job' => 'required|min_length[2]',
             'head_salary' => 'required',
-            'head_address' => 'required|max_length[255]',
+            'head_address' => 'required|min_length[2]|max_length[255]',
             'head_barangay' => 'required|max_length[100]',
-            'qr_control_no' => 'required|is_natural_no_zero',
+            'qr_control_no' => 'required|is_natural_no_zero|less_than_equal_to[9999999]',
         ];
     }
 
     /**
      * Like memberPayload() but builds a `member` row from one entry of the
      * repeated `members[]` array (additional family members) instead of prefixed
-     * POST fields. Falls back to the form's sector selection when a member has none.
+     * POST fields. Each member keeps an independent sector selection.
      */
     private function memberPayloadFromArray(array $member): array
     {
@@ -847,7 +859,7 @@ class FamilyController extends BaseController
                 $this->request->getPost('head_barangay')
             ),
             'relationship' => $this->nullableText($member['relationship'] ?? 'Member'),
-            'sectorID' => SectorIds::normalize($member['sector_ids'] ?? $this->request->getPost('sector_ids')),
+            'sectorID' => SectorIds::normalize($member['sector_ids'] ?? []),
         ];
     }
 
@@ -893,6 +905,71 @@ class FamilyController extends BaseController
         }
 
         return null;
+    }
+
+    /** Returns the first age-specific sector/service error across the submitted family. */
+    private function firstAgeEligibilityError(array $members, SectorModel $sectorModel, ServiceModel $serviceModel): ?string
+    {
+        $people = [[
+            'label' => 'Head of family',
+            'birthday' => $this->request->getPost('head_birthday'),
+            'sectorIds' => SectorIds::normalize($this->request->getPost('sector_ids')),
+            'serviceIds' => $this->positiveIds($this->request->getPost('service_ids')),
+        ]];
+
+        foreach ($members as $member) {
+            if (! is_array($member) || ! $this->hasMemberData($member)) {
+                continue;
+            }
+
+            $name = trim((string) ($member['firstname'] ?? '') . ' ' . (string) ($member['lastname'] ?? ''));
+            $people[] = [
+                'label' => 'Member' . ($name !== '' ? ' "' . $name . '"' : ''),
+                'birthday' => $member['birthday'] ?? null,
+                'sectorIds' => SectorIds::normalize($member['sector_ids'] ?? []),
+                'serviceIds' => $this->positiveIds($member['service_ids'] ?? []),
+            ];
+        }
+
+        $sectorIds = [];
+        $serviceIds = [];
+
+        foreach ($people as $person) {
+            $sectorIds = array_merge($sectorIds, $person['sectorIds']);
+            $serviceIds = array_merge($serviceIds, $person['serviceIds']);
+        }
+
+        $sectorRows = $sectorModel->getByIdsIncludingArchived(array_values(array_unique($sectorIds)));
+        $serviceRows = $serviceModel->getByIdsIncludingArchived(array_values(array_unique($serviceIds)));
+
+        foreach ($people as $person) {
+            $error = FamilyAgeEligibility::selectionError(
+                $person['birthday'],
+                $person['sectorIds'],
+                $person['serviceIds'],
+                $sectorRows,
+                $serviceRows,
+            );
+
+            if ($error !== null) {
+                return $person['label'] . ': ' . $error;
+            }
+        }
+
+        return null;
+    }
+
+    /** @return list<int> */
+    private function positiveIds(mixed $value): array
+    {
+        if (! is_array($value)) {
+            return [];
+        }
+
+        return array_values(array_unique(array_filter(
+            array_map('intval', $value),
+            static fn (int $id): bool => $id > 0,
+        )));
     }
 
     /**
@@ -960,6 +1037,38 @@ class FamilyController extends BaseController
         return $this->renderFamilyModal($isUpdateMode ? 'update' : 'create', $headId);
     }
 
+    /** Returns whether a QR number is available to the current Add/Update form. */
+    public function qrAvailability(): ResponseInterface
+    {
+        if ($this->requireFamilyEntryAccess() instanceof RedirectResponse) {
+            return $this->response->setStatusCode(403)->setJSON([
+                'available' => false,
+                'message' => 'You do not have permission to validate QR numbers.',
+            ]);
+        }
+
+        $rawControlNo = (string) $this->request->getGet('control_no');
+        $rule = $this->rulesForEntryType('head')['qr_control_no'];
+
+        if (! service('validation')->check($rawControlNo, $rule)) {
+            return $this->response->setStatusCode(422)->setJSON([
+                'available' => false,
+                'message' => 'Enter a QR number from 1 to 9999999.',
+            ]);
+        }
+
+        $controlNo = (int) $rawControlNo;
+        $headId = max(0, (int) $this->request->getGet('head_id'));
+        $exists = model(\App\Models\Scanner\QrControlModel::class)->takenByOtherHead($controlNo, $headId);
+
+        return $this->response->setJSON([
+            'available' => ! $exists,
+            'message' => $exists
+                ? 'QR Number ' . $controlNo . ' already exists in the records and is assigned to another family.'
+                : '',
+        ]);
+    }
+
     /**
      * Shared renderer for the Add/Update family modal. In create mode it serves a
      * blank form pointed at `families` (store). In update mode it prefills the head,
@@ -1015,6 +1124,7 @@ class FamilyController extends BaseController
                     'fieldPrefix' => 'family-update',
                     'modalTitle' => 'Update Family Record',
                     'modalMode' => 'update',
+                    'qrCheckUrl' => site_url($this->currentRouteBase() . '/qr-check'),
                     'submitLabel' => 'Update',
                     'saveDisabled' => false,
                     'qrLocked' => $qrLocked,
@@ -1032,6 +1142,7 @@ class FamilyController extends BaseController
                 'fieldPrefix' => 'family-add',
                 'modalTitle' => 'New Family Record',
                 'modalMode' => 'create',
+                'qrCheckUrl' => site_url($this->currentRouteBase() . '/qr-check'),
                 'submitLabel' => 'Save',
                 'headId' => 0,
                 'saveDisabled' => false,

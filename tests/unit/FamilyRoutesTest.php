@@ -23,6 +23,8 @@ final class FamilyRoutesTest extends CIUnitTestCase
             ['employee/manage-family/data', $getRoutes, 'FamilyDataTableController::dataTable'],
             ['viewer/manage-family/data', $getRoutes, 'FamilyDataTableController::dataTable'],
             ['admin/manage-family/view/([0-9]+)', $getRoutes, 'FamilyController::viewFamily'],
+            ['admin/manage-family/qr-check', $getRoutes, 'FamilyController::qrAvailability'],
+            ['employee/manage-family/qr-check', $getRoutes, 'FamilyController::qrAvailability'],
             ['families', $postRoutes, 'FamilyController::store'],
         ];
 

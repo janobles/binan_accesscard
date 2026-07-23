@@ -32,6 +32,7 @@ $routes->group('admin', static function (RouteCollection $routes): void {
     $routes->group('manage-family', static function (RouteCollection $routes): void {
         $routes->get('list', 'Families\FamilyController::listFamilies');
         $routes->get('data', 'Families\FamilyDataTableController::dataTable');
+        $routes->get('qr-check', 'Families\FamilyController::qrAvailability');
         $routes->get('template', 'Families\FamilyImportController::downloadTemplate');
         $routes->get('import', 'Families\FamilyImportController::importForm');
         $routes->post('import', 'Families\FamilyImportController::import');
@@ -111,6 +112,7 @@ $routes->group('employee', static function (RouteCollection $routes): void {
     $routes->group('manage-family', static function (RouteCollection $routes): void {
         $routes->get('list', 'Families\FamilyController::listFamilies');
         $routes->get('data', 'Families\FamilyDataTableController::dataTable');
+        $routes->get('qr-check', 'Families\FamilyController::qrAvailability');
         $routes->get('template', 'Families\FamilyImportController::downloadTemplate');
         $routes->get('import', 'Families\FamilyImportController::importForm');
         $routes->post('import', 'Families\FamilyImportController::import');

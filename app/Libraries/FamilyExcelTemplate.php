@@ -385,6 +385,31 @@ class FamilyExcelTemplate
             ->getAlignment()->setWrapText(true)->setVertical(Alignment::VERTICAL_CENTER);
     }
 
+    /**
+     * The dropdown option lists the data sheet attaches to each column, keyed by the importer's
+     * normalized field. Single source of truth for BOTH the Excel data-validation dropdowns and
+     * the import reviewer's inline <select> cells, so the two always offer the same choices.
+     * Sector/Services are omitted — they are comma-separated code lists, not single dropdowns.
+     *
+     * @return array<string, list<string>>
+     */
+    public function dropdownOptions(): array
+    {
+        $relationships = array_merge(['Head'], (new FamilyFormOptionsModel())->getOptions()['relationships'] ?? []);
+
+        return [
+            'relationship'  => $relationships,
+            'suffix'        => FamilyProfilingFormV2::suffixes(),
+            'sex'           => ['Male', 'Female'],
+            'civilstatus'   => $this->codeNameList(self::CIVIL_STATUS_CODES, FamilyProfilingFormV2::civilStatuses()),
+            'religion'      => FamilyProfilingFormV2::religions(),
+            'education'     => $this->codeNameList(self::EDUCATION_CODES, FamilyProfilingFormV2::educationLevels()),
+            'job'           => FamilyProfilingFormV2::jobOptions(),
+            'monthlyincome' => $this->incomeLabels(),
+            'barangay'      => FamilyProfilingFormV2::barangays(),
+        ];
+    }
+
     // -- low-level helpers -----------------------------------------------------
 
     /**

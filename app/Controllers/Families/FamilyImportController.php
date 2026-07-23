@@ -11,6 +11,7 @@ use App\Libraries\ImportReviewPresenter;
 use App\Libraries\ImportStagingStore;
 use App\Models\Families\MemberModel;
 use App\Models\Jobs\JobQueueModel;
+use App\Models\Scanner\QrControlModel;
 use CodeIgniter\HTTP\RedirectResponse;
 use Config\IdleTimeout;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -288,6 +289,9 @@ class FamilyImportController extends BaseController
             'routeBase'  => $this->currentRouteBase(),
             'recordsUrl' => $this->recordsUrl(),
             'review'     => (new ImportReviewPresenter())->build($loaded['result']),
+            // Dropdown columns (Sex, Barangay, Civil Status, …) so an inline cell edit offers the
+            // exact same choices as the Excel template's data-validation lists.
+            'fieldOptions' => (new FamilyExcelTemplate())->dropdownOptions(),
             'username'   => (string) (session()->get('username') ?? ''),
             // This page is a standalone shell (not a dashboard layout), so it has to wire
             // up the idle-timeout logout itself — otherwise sitting on the review screen
@@ -475,6 +479,13 @@ class FamilyImportController extends BaseController
             return $this->jsonError('No family was selected to edit.', 422);
         }
 
+        // Reuse Manage Records' QR-uniqueness rule so an edit can't assign a QR already owned by
+        // another family in the system ($familyNo is the group's QR before the edit).
+        $conflict = $this->qrConflictMessage($familyNo, (string) ($post['qr_control_no'] ?? ''));
+        if ($conflict !== null) {
+            return $this->jsonError($conflict, 422);
+        }
+
         // Diff the group before it is replaced, so the review can show what the worker changed.
         $oldRows = $this->targetRows($bundle, $key);
         $rows    = $this->replaceRows($bundle, $key, $newRows);
@@ -491,6 +502,120 @@ class FamilyImportController extends BaseController
             'review'  => (new ImportReviewPresenter())->build($result),
             'csrf'    => csrf_hash(),
         ]);
+    }
+
+    /**
+     * POST `{admin|employee}/manage-family/import/review/(:num)/family/cell`: patches ONE field
+     * of ONE staged row (the review screen's inline cell edit), re-validates the whole batch,
+     * re-stages, logs the change, and returns the refreshed report. Structural problems (no
+     * single cell to blame) are not editable this way — they go through reviewFamilySave.
+     *
+     * POST: import_row (sheet row, int), field (a FIELD_LABELS key), value (the new cell text).
+     */
+    public function reviewCellSave(int $jobId)
+    {
+        $guard = $this->requireFamilyEntryAccess();
+
+        if ($guard instanceof RedirectResponse) {
+            return $this->jsonError('You do not have permission to edit import records.', 403);
+        }
+
+        $jobs   = new JobQueueModel();
+        $loaded = $jobs->hasTable() ? $this->loadReviewJob($jobs, $jobId) : null;
+
+        if ($loaded === null) {
+            return $this->jsonError('That import is no longer available to review.', 404);
+        }
+
+        $sheetRow = (int) ($this->request->getPost('import_row') ?? 0);
+        $field    = trim((string) ($this->request->getPost('field') ?? ''));
+        $value    = (string) ($this->request->getPost('value') ?? '');
+
+        // Only the importer's known fields may be patched (blocks arbitrary staged-row keys).
+        if ($sheetRow <= 0 || ! isset(ImportReviewPresenter::FIELD_LABELS[$field])) {
+            return $this->jsonError('That cell cannot be edited.', 422);
+        }
+
+        $bundle = $loaded['result'];
+        $rows   = is_array($bundle['rows'] ?? null) ? $bundle['rows'] : [];
+
+        $oldRow = null;
+        foreach ($rows as $index => $row) {
+            if ((int) ($row['sheetRow'] ?? -1) !== $sheetRow) {
+                continue;
+            }
+
+            $oldRow = $row;
+            $data   = is_array($row['data'] ?? null) ? $row['data'] : [];
+            $data[$field]         = trim($value);
+            $rows[$index]['data'] = $data;
+            break;
+        }
+
+        if ($oldRow === null) {
+            return $this->jsonError('That row is no longer part of this import.', 404);
+        }
+
+        // Inline-editing the QR itself: same Manage Records uniqueness rule as the modal edit.
+        if ($field === 'familyno') {
+            $conflict = $this->qrConflictMessage((string) (($oldRow['data'] ?? [])['familyno'] ?? ''), $value);
+            if ($conflict !== null) {
+                return $this->jsonError($conflict, 422);
+            }
+        }
+
+        $newRow = $this->rowBySheetRow($rows, $sheetRow);
+
+        $result            = $this->revalidate($bundle, $rows);
+        $result['changes'] = $this->appendChanges($bundle, ImportReviewChangeLog::edited([$oldRow], [$newRow]));
+        $this->restageReview($jobId, $result);
+
+        return $this->response->setJSON([
+            'status'  => 'success',
+            'message' => 'Saved.',
+            'review'  => (new ImportReviewPresenter())->build($result),
+            'csrf'    => csrf_hash(),
+        ]);
+    }
+
+    /**
+     * The staged row with the given sheet row, or null. Used to snapshot the "after" state for
+     * the change log.
+     *
+     * @param list<array> $rows
+     */
+    private function rowBySheetRow(array $rows, int $sheetRow): ?array
+    {
+        foreach ($rows as $row) {
+            if ((int) ($row['sheetRow'] ?? -1) === $sheetRow) {
+                return $row;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Reuses Manage Records' QR-uniqueness rule (QrControlModel::takenByOtherHead, with headID 0
+     * = "belongs to anyone") so an in-review edit can't assign a QR already owned by a DIFFERENT
+     * family in the system. Enforced only when the QR actually CHANGES to a new whole number — a
+     * family keeping its own QR (including a legitimate already-in-system re-upload) is left
+     * alone, and non-numeric QRs fall to the importer's format check. Returns the error message,
+     * or null when the QR is fine.
+     */
+    private function qrConflictMessage(string $oldQr, string $newQr): ?string
+    {
+        $newQr = trim($newQr);
+
+        if ($newQr === '' || ! ctype_digit($newQr) || $newQr === trim($oldQr)) {
+            return null;
+        }
+
+        if (model(QrControlModel::class)->takenByOtherHead((int) $newQr, 0)) {
+            return 'QR Number ' . $newQr . ' already exists in the records and is assigned to another family.';
+        }
+
+        return null;
     }
 
     /**

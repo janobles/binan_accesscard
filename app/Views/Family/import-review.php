@@ -21,10 +21,13 @@ $review    = $review ?? ['file' => '', 'counts' => ['families' => 0, 'members' =
 // (`{role}/manage-family`) has no index route and 404s.
 $backUrl   = (string) ($recordsUrl ?? site_url(str_replace('/manage-family', '/manage-records', $routeBase)));
 $idleTimeoutSeconds = (int) ($idleTimeoutSeconds ?? 900);
+$fieldOptions = $fieldOptions ?? [];
 
 // JSON island: HEX_TAG/HEX_AMP keep any "</script>" or "&" inside a spreadsheet cell
 // from breaking out of the <script> tag (defence against a crafted .xlsx).
 $reviewJson = json_encode($review, JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE);
+// Dropdown option lists for inline <select> cells (mirrors the Excel template dropdowns).
+$fieldOptionsJson = json_encode($fieldOptions, JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -51,6 +54,7 @@ $reviewJson = json_encode($review, JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_
       data-commit-url="<?= esc(site_url($routeBase . '/import/review/' . $jobId . '/commit'), 'attr') ?>"
       data-cancel-url="<?= esc(site_url($routeBase . '/import/review/' . $jobId . '/cancel'), 'attr') ?>"
       data-family-base-url="<?= esc(site_url($routeBase . '/import/review/' . $jobId . '/family'), 'attr') ?>"
+      data-cell-url="<?= esc(site_url($routeBase . '/import/review/' . $jobId . '/family/cell'), 'attr') ?>"
       data-redirect-url="<?= esc($backUrl, 'attr') ?>">
 
     <input type="hidden" id="reviewCsrf" name="<?= csrf_token() ?>" value="<?= csrf_hash() ?>">
@@ -98,6 +102,7 @@ $reviewJson = json_encode($review, JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_
 <?= view('Family/action-confirm-modal') ?>
 
 <script id="importReviewData" type="application/json"><?= $reviewJson ?></script>
+<script id="importReviewFieldOptions" type="application/json"><?= $fieldOptionsJson ?></script>
 <?php foreach (asset_scripts('core') as $scriptPath): ?>
 <script src="<?= esc(asset_url($scriptPath), 'attr') ?>"></script>
 <?php endforeach; ?>

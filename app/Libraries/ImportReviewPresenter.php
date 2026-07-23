@@ -54,6 +54,19 @@ class ImportReviewPresenter
     ];
 
     /**
+     * Friendly column names, keyed by the importer's normalized field (matches the Excel
+     * headers). Doubles as the allowlist of fields an inline cell edit may target.
+     */
+    public const FIELD_LABELS = [
+        'familyno' => 'QR Number', 'relationship' => 'Relationship', 'lastname' => 'LastName',
+        'firstname' => 'FirstName', 'middlename' => 'MiddleName', 'suffix' => 'Suffix',
+        'birthday' => 'Birthday', 'sex' => 'Sex', 'civilstatus' => 'CivilStatus',
+        'contactnumber' => 'ContactNumber', 'religion' => 'Religion', 'education' => 'Education',
+        'job' => 'Job', 'monthlyincome' => 'MonthlyIncome', 'address' => 'Address',
+        'barangay' => 'Barangay', 'sector' => 'Sector', 'services' => 'Services',
+    ];
+
+    /**
      * Builds the read-only report from a decoded review-phase result_json.
      *
      * @param array $result {rows, errors, counts, file}
@@ -63,6 +76,8 @@ class ImportReviewPresenter
         $rows    = is_array($result['rows'] ?? null) ? $result['rows'] : [];
         $errors  = is_array($result['errors'] ?? null) ? $result['errors'] : [];
         $counts  = is_array($result['counts'] ?? null) ? $result['counts'] : [];
+        // field => Excel column letter, so an inline-editable cell can show its ref (e.g. H42).
+        $columns = is_array($result['columns'] ?? null) ? $result['columns'] : [];
 
         // Index cell values per sheet row, and the rows of each QR group.
         $byRow = [];
@@ -102,10 +117,10 @@ class ImportReviewPresenter
             // The worker's in-review edit history (newest last), so the screen can show what
             // they changed before they commit.
             'changes'    => is_array($result['changes'] ?? null) ? array_values($result['changes']) : [],
-            'families'   => $this->familiesToFix($byQr, $byRow, $errors),
+            'families'   => $this->familiesToFix($byQr, $byRow, $errors, $columns),
             // Rows with a blank QR are never grouped into a family — surfaced so the operator
             // can give them a QR and fix them in place.
-            'unassigned' => $this->unassignedRows($rows, $errors),
+            'unassigned' => $this->unassignedRows($rows, $errors, $byRow, $columns),
             // Whole-file problems (unreadable / empty) — nothing to edit; upload a fixed file.
             'fileNotices' => $this->fileNotices($errors),
         ];
@@ -117,13 +132,14 @@ class ImportReviewPresenter
      * omitted; they need no attention. Groups with a blank QR are omitted too — with no QR
      * there is nothing to key the in-app fix on (fix those in the file).
      *
-     * @param array<string, list<int>>          $byQr   [qr => sheet rows]
-     * @param array<int, array<string, string>> $byRow  [sheet row => cell values]
+     * @param array<string, list<int>>          $byQr    [qr => sheet rows]
+     * @param array<int, array<string, string>> $byRow   [sheet row => cell values]
      * @param list<array>                       $errors
+     * @param array<string, string>             $columns [field => Excel column letter]
      *
      * @return list<array>
      */
-    private function familiesToFix(array $byQr, array $byRow, array $errors): array
+    private function familiesToFix(array $byQr, array $byRow, array $errors, array $columns): array
     {
         // Codes that mean this QR/family (or its people) are already on file.
         $existingCodes = ['DUP-EXISTS' => true, 'DUP-DIFF' => true, 'ADD-MEMBER' => true];
@@ -200,12 +216,70 @@ class ImportReviewPresenter
                 'existing' => ! empty($existing[$qr]),
                 // Each distinct problem as {label, severity} so the row can list them all.
                 'types'    => $this->issueTypes($types[$qr] ?? []),
+                // Field-level problems as inline-editable cells (structural ones stay in the modal).
+                'editableCells' => $this->editableCells($sheetRows, $byRow, $errors, $columns),
             ];
         }
 
         usort($out, static fn (array $a, array $b): int => ((int) ($a['sheetRow'] ?? 0)) <=> ((int) ($b['sheetRow'] ?? 0)));
 
         return $out;
+    }
+
+    /**
+     * The inline-editable cells for a set of sheet rows: one input per field-level error (an
+     * error carrying a non-null `field`). Structural errors (head / address / grouping — field
+     * null) are excluded; those still need the Edit modal. Keyed to the exact staged cell so the
+     * screen can render an input and POST {sheetRow, field, value}.
+     *
+     * @param list<int>                         $sheetRows the group's sheet rows
+     * @param array<int, array<string, string>> $byRow     [sheet row => cell values]
+     * @param list<array>                       $errors
+     * @param array<string, string>             $columns   [field => Excel column letter]
+     * @return list<array{sheetRow:int, field:string, cell:string, label:string, value:string, code:string, severity:string, message:string}>
+     */
+    private function editableCells(array $sheetRows, array $byRow, array $errors, array $columns): array
+    {
+        $wanted = array_fill_keys(array_map('intval', $sheetRows), true);
+        $out    = [];   // [sheetRow|field => cell] — one input per cell
+
+        foreach ($errors as $error) {
+            $field    = $error['field'] ?? null;
+            $sheetRow = $error['sheetRow'] ?? null;
+
+            if ($field === null || $sheetRow === null || ! isset($wanted[(int) $sheetRow])) {
+                continue;
+            }
+
+            $field    = (string) $field;
+            $sheetRow = (int) $sheetRow;
+            $key      = $sheetRow . '|' . $field;
+            $sev      = (($error['severity'] ?? 'blocking') === 'blocking') ? 'blocking' : 'warning';
+
+            // One input per cell; a blocking error wins over a warning on the same cell.
+            if (isset($out[$key]) && ($out[$key]['severity'] === 'blocking' || $sev !== 'blocking')) {
+                continue;
+            }
+
+            $letter = isset($columns[$field]) ? (string) $columns[$field] : '';
+            $data   = $byRow[$sheetRow] ?? [];
+
+            $out[$key] = [
+                'sheetRow' => $sheetRow,
+                'field'    => $field,
+                'cell'     => $letter !== '' ? $letter . $sheetRow : '',
+                'label'    => self::FIELD_LABELS[$field] ?? $field,
+                'value'    => (string) ($data[$field] ?? ''),
+                // Whose cell this is — so the editor names the person to fix, not just a cell ref.
+                'person'   => trim((string) ($data['firstname'] ?? '') . ' ' . (string) ($data['lastname'] ?? '')),
+                'role'     => $this->isHeadRow($data) ? 'head' : 'member',
+                'code'     => (string) ($error['code'] ?? ''),
+                'severity' => $sev,
+                'message'  => (string) ($error['message'] ?? ''),
+            ];
+        }
+
+        return array_values($out);
     }
 
     /**
@@ -238,11 +312,13 @@ class ImportReviewPresenter
      * they carry no QR to Edit by. Each is listed with its own issue types so the operator can
      * open it, type a QR, and fix it in place (keyed by sheet row, not QR).
      *
-     * @param list<array>  $rows
-     * @param list<array>  $errors
-     * @return list<array{sheetRow:int, person:string, types:list<array>}>
+     * @param list<array>                       $rows
+     * @param list<array>                       $errors
+     * @param array<int, array<string, string>> $byRow   [sheet row => cell values]
+     * @param array<string, string>             $columns [field => Excel column letter]
+     * @return list<array{sheetRow:int, person:string, types:list<array>, editableCells:list<array>}>
      */
-    private function unassignedRows(array $rows, array $errors): array
+    private function unassignedRows(array $rows, array $errors, array $byRow, array $columns): array
     {
         $codesByRow = [];
 
@@ -276,6 +352,7 @@ class ImportReviewPresenter
                 'sheetRow' => $sheetRow,
                 'person'   => trim((string) ($data['firstname'] ?? '') . ' ' . (string) ($data['lastname'] ?? '')),
                 'types'    => $this->issueTypes($codesByRow[$sheetRow] ?? []),
+                'editableCells' => $this->editableCells([$sheetRow], $byRow, $errors, $columns),
             ];
         }
 

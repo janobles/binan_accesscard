@@ -232,6 +232,81 @@ final class ImportReviewPresenterTest extends CIUnitTestCase
         $this->assertContains('Missing QR Number', array_column($review['unassigned'][0]['types'], 'label'));
     }
 
+    // -- inline-editable cells (hybrid fix-in-place) ---------------------------
+
+    public function testAFieldLevelErrorBecomesAnEditableCell(): void
+    {
+        $families = $this->families(
+            [$this->row(3, '6001', 'Head')],
+            [$this->fieldError(3, '6001', 'BRGY', 'barangay', 'warning')],
+        );
+
+        $this->assertCount(1, $families);
+        $cells = $families[0]['editableCells'];
+        $this->assertCount(1, $cells);
+        $this->assertSame('barangay', $cells[0]['field']);
+        $this->assertSame('Barangay', $cells[0]['label']);
+        $this->assertSame('Poblacion', $cells[0]['value']);   // the row's current value
+        $this->assertSame('BRGY', $cells[0]['code']);
+        $this->assertSame('warning', $cells[0]['severity']);
+    }
+
+    public function testAStructuralErrorHasNoEditableCell(): void
+    {
+        // HEAD-NONE carries no field, so it is not an inline cell — it is fixed via the modal.
+        $families = $this->families(
+            [$this->row(3, '6001', 'Child'), $this->row(4, '6001', 'Child')],
+            [$this->error(3, '6001', 'HEAD-NONE', 'blocking')],   // field => null
+        );
+
+        $this->assertCount(1, $families);
+        $this->assertSame([], $families[0]['editableCells']);
+    }
+
+    public function testABlockingErrorWinsOverAWarningOnTheSameCell(): void
+    {
+        $families = $this->families(
+            [$this->row(3, '6001', 'Head')],
+            [
+                $this->fieldError(3, '6001', 'BDAY-RANGE', 'birthday', 'warning'),
+                $this->fieldError(3, '6001', 'BDAY', 'birthday', 'blocking'),
+            ],
+        );
+
+        $cells = $families[0]['editableCells'];
+        $this->assertCount(1, $cells);                 // one input per cell
+        $this->assertSame('birthday', $cells[0]['field']);
+        $this->assertSame('blocking', $cells[0]['severity']);
+    }
+
+    public function testAnEditableCellCarriesTheExcelReferenceWhenColumnsAreKnown(): void
+    {
+        $review = (new ImportReviewPresenter())->build([
+            'rows'    => [$this->row(42, '6001', 'Head')],
+            'errors'  => [$this->fieldError(42, '6001', 'SEX', 'sex', 'blocking')],
+            'columns' => ['sex' => 'H'],
+        ]);
+
+        $cell = $review['families'][0]['editableCells'][0];
+        $this->assertSame('H42', $cell['cell']);
+    }
+
+    public function testABlankQrRowExposesTheMissingQrAsAnEditableCell(): void
+    {
+        // "give them a QR" happens inline: the QR-01 error points at the familyno cell.
+        $review = (new ImportReviewPresenter())->build([
+            'rows'    => [$this->row(12, '', 'Head')],
+            'errors'  => [$this->fieldError(12, '', 'QR-01', 'familyno', 'blocking')],
+            'columns' => ['familyno' => 'A'],
+        ]);
+
+        $this->assertCount(1, $review['unassigned']);
+        $cells = $review['unassigned'][0]['editableCells'];
+        $this->assertCount(1, $cells);
+        $this->assertSame('familyno', $cells[0]['field']);
+        $this->assertSame('A12', $cells[0]['cell']);
+    }
+
     public function testFileNoticesSurfaceWholeFileErrors(): void
     {
         $review = (new ImportReviewPresenter())->build([
@@ -286,6 +361,19 @@ final class ImportReviewPresenterTest extends CIUnitTestCase
             'sheetRow' => $sheetRow,
             'familyNo' => $qr,
             'field'    => null,
+            'code'     => $code,
+            'message'  => $code,
+            'severity' => $severity,
+        ];
+    }
+
+    /** A field-level error (carries a `field`), which the presenter turns into an editable cell. */
+    private function fieldError(int $sheetRow, string $qr, string $code, string $field, string $severity): array
+    {
+        return [
+            'sheetRow' => $sheetRow,
+            'familyNo' => $qr,
+            'field'    => $field,
             'code'     => $code,
             'message'  => $code,
             'severity' => $severity,

@@ -71,6 +71,102 @@
     text-align: center;
 }
 
+/* Inline cell editor in the review tables (hybrid fix-in-place) — flat, tinted by severity to
+   echo the dashboard alert styling; no shadows. Green focus ring comes from theme.css. */
+.import-cell-edit {
+    max-width: 22rem;
+    margin-bottom: 0.5rem;
+    padding: 0.5rem 0.625rem;
+    border-radius: 0.35rem;
+    border-left: 3px solid transparent;
+}
+
+.import-cell-edit:last-child {
+    margin-bottom: 0;
+}
+
+.import-cell-edit--blocking {
+    background: rgba(220, 53, 69, 0.07);
+    border-left-color: #dc3545;
+}
+
+.import-cell-edit--warning {
+    background: rgba(255, 193, 7, 0.12);
+    border-left-color: #ffc107;
+}
+
+.import-cell-edit-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+}
+
+.import-cell-edit-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    color: #53635e;
+}
+
+.import-cell-edit-labelwrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+/* Dropdown affordance next to the label so the cell reads as a picker at a glance. */
+.import-cell-edit-caret {
+    font-size: 0.6rem;
+    color: #6b7a75;
+}
+
+.import-cell-edit-ref {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.7rem;
+    color: #6b7a75;
+    white-space: nowrap;
+    max-width: 12rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* background-color only — the `background` shorthand would wipe .form-select's caret image. */
+.import-cell-input {
+    background-color: #fff;
+}
+
+.import-cell-edit--blocking .import-cell-input {
+    border-color: #f1aeb5;
+}
+
+.import-cell-edit--warning .import-cell-input {
+    border-color: #ffe08a;
+}
+
+.import-cell-edit-msg {
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+    line-height: 1.25;
+}
+
+.import-cell-edit--blocking .import-cell-edit-msg {
+    color: #b02a37;
+}
+
+.import-cell-edit--warning .import-cell-edit-msg {
+    color: #997404;
+}
+
+@media (max-width: 575.98px) {
+    .import-cell-edit {
+        max-width: 100%;
+    }
+}
+
 @media (max-width: 575.98px) {
     .import-review-filterbar > * {
         width: 100%;

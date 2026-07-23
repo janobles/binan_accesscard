@@ -22,6 +22,7 @@
     var commitUrl     = root.dataset.commitUrl;
     var cancelUrl     = root.dataset.cancelUrl;
     var familyBaseUrl = root.dataset.familyBaseUrl;
+    var cellUrl       = root.dataset.cellUrl;
     var redirectUrl   = root.dataset.redirectUrl;
 
     var statsEl    = document.getElementById('importReviewStats');
@@ -63,6 +64,20 @@
             return { file: '', counts: {} };
         }
     }
+
+    // Dropdown option lists (field => [option strings]) for the columns that are dropdowns in
+    // the Excel template — so an inline cell edit on those offers the same choices as the sheet.
+    var fieldOptions = (function () {
+        var node = document.getElementById('importReviewFieldOptions');
+
+        try {
+            var parsed = JSON.parse(node ? node.textContent : '{}');
+
+            return (parsed && typeof parsed === 'object') ? parsed : {};
+        } catch (e) {
+            return {};
+        }
+    })();
 
     // -- small DOM helpers -----------------------------------------------------
 
@@ -485,19 +500,8 @@
         tr.appendChild(el('td', 'text-nowrap', row.sheetRow != null ? row.sheetRow : '—'));
         tr.appendChild(el('td', null, row.person || '—'));
 
-        var issues = el('td', 'small');
-        var types = row.types || [];
-        if (types.length) {
-            types.forEach(function (type) {
-                var cls = type.severity === 'blocking'
-                    ? 'badge bg-danger me-1 mb-1'
-                    : 'badge bg-warning text-dark me-1 mb-1';
-                issues.appendChild(el('span', cls, type.label || type.code));
-            });
-        } else {
-            issues.appendChild(el('span', 'badge bg-danger', 'No QR number'));
-        }
-        tr.appendChild(issues);
+        // Editable cells (e.g. the missing QR itself) inline; structural issues as badges.
+        tr.appendChild(renderIssueCell(row.editableCells, row.types, null));
 
         var actions = el('td', 'text-nowrap');
 
@@ -871,6 +875,196 @@
         return bar;
     }
 
+    // The "Issues" cell for a flagged row/group: an inline input per editable field-level cell,
+    // plus badges for any structural issue that has no single cell to fix. ctx (optional) carries
+    // blocking/warnings counts for a defensive fallback when there are no typed issues at all.
+    function renderIssueCell(editableCells, types, ctx) {
+        var td = el('td', 'small import-review-issue-cell');
+        editableCells = editableCells || [];
+        types = types || [];
+
+        var editableCodes = {};
+        editableCells.forEach(function (cell) {
+            editableCodes[cell.code] = true;
+            td.appendChild(buildCellEditor(cell));
+        });
+
+        var badges = 0;
+        types.forEach(function (type) {
+            if (editableCodes[type.code]) {
+                return;   // shown as an editable input above, not a duplicate badge
+            }
+            badges++;
+            var cls = type.severity === 'blocking'
+                ? 'badge bg-danger me-1 mb-1'
+                : 'badge bg-warning text-dark me-1 mb-1';
+            td.appendChild(el('span', cls, type.label || type.code));
+        });
+
+        if (!editableCells.length && !badges && ctx) {
+            var blocking = Number(ctx.blocking || 0);
+            var warnings = Number(ctx.warnings || 0);
+            if (blocking > 0) {
+                td.appendChild(el('span', 'badge bg-danger me-1', blocking + ' to fix'));
+            }
+            if (warnings > 0) {
+                td.appendChild(el('span', 'badge bg-warning text-dark', warnings + ' warning' + (warnings === 1 ? '' : 's')));
+            }
+            if (blocking === 0 && warnings === 0) {
+                td.appendChild(el('span', 'text-success', 'No issues'));
+            }
+        }
+
+        return td;
+    }
+
+    // One labelled inline editor for a flagged cell: a severity-tinted panel (red = must fix,
+    // amber = warning) with the column name, its Excel ref, the input, and the reason. Saves on
+    // blur/Enter (see the groupsEl listeners) by POSTing {import_row, field, value}.
+    function buildCellEditor(cell) {
+        var blocking = cell.severity === 'blocking';
+
+        var wrap = el('div', 'import-cell-edit ' + (blocking ? 'import-cell-edit--blocking' : 'import-cell-edit--warning'));
+
+        // A dropdown column (per the Excel template) edits as a <select>; everything else a text input.
+        var options = fieldOptions[cell.field];
+        var isSelect = !!(options && options.length);
+
+        var head = el('div', 'import-cell-edit-head');
+        var labelWrap = el('span', 'import-cell-edit-labelwrap');
+        labelWrap.appendChild(el('span', 'import-cell-edit-label', cell.label));
+        if (isSelect) {
+            // Chevron cue so the cell clearly reads as a dropdown (beside the native <select> caret).
+            var caret = el('i', 'bi bi-caret-down-fill import-cell-edit-caret');
+            caret.setAttribute('aria-hidden', 'true');
+            caret.title = 'Pick a value from the list';
+            labelWrap.appendChild(caret);
+        }
+        head.appendChild(labelWrap);
+
+        // Name whose cell this is (head / member) instead of a bare Excel ref — the operator
+        // needs to know WHO to fix. The Excel cell (e.g. "P4") stays reachable on hover.
+        var who = cell.person ? (cell.person + ' (' + (cell.role || 'member') + ')') : cell.cell;
+        if (who) {
+            var ref = el('span', 'import-cell-edit-ref');
+            var pIcon = el('i', 'bi ' + (cell.role === 'head' ? 'bi-person-badge' : 'bi-person') + ' me-1');
+            pIcon.setAttribute('aria-hidden', 'true');
+            ref.appendChild(pIcon);
+            ref.appendChild(document.createTextNode(who));
+            if (cell.cell) {
+                ref.title = 'Cell ' + cell.cell;
+            }
+            head.appendChild(ref);
+        }
+        wrap.appendChild(head);
+
+        wrap.appendChild(isSelect ? buildCellSelect(cell, options) : buildCellInput(cell));
+
+        if (cell.message) {
+            var msg = el('div', 'import-cell-edit-msg');
+            var icon = el('i', 'bi ' + (blocking ? 'bi-exclamation-triangle-fill' : 'bi-exclamation-circle-fill') + ' me-1');
+            icon.setAttribute('aria-hidden', 'true');
+            msg.appendChild(icon);
+            msg.appendChild(document.createTextNode(cell.message));
+            wrap.appendChild(msg);
+        }
+
+        return wrap;
+    }
+
+    // Shared data-* + a11y wiring for either control kind, plus the class the save handlers watch.
+    function applyCellControlAttrs(control, cell) {
+        control.classList.add('js-import-cell');
+        control.dataset.row = cell.sheetRow;
+        control.dataset.field = cell.field;
+        control.dataset.original = cell.value || '';
+        control.title = cell.message || '';
+        control.setAttribute('aria-label', cell.label + (cell.message ? ' — ' + cell.message : ''));
+    }
+
+    function buildCellInput(cell) {
+        var input = el('input', 'form-control form-control-sm import-cell-input');
+        input.type = 'text';
+        input.value = cell.value || '';
+        applyCellControlAttrs(input, cell);
+
+        return input;
+    }
+
+    // A <select> mirroring the Excel column's dropdown. A blank first choice lets a
+    // required-but-empty cell start unselected; an off-list current value is kept as its own
+    // option so saving never silently drops what is already there.
+    function buildCellSelect(cell, options) {
+        var select = el('select', 'form-select form-select-sm import-cell-input');
+        var current = cell.value || '';
+
+        var blank = el('option', null, '— choose —');
+        blank.value = '';
+        select.appendChild(blank);
+
+        var matched = current === '';
+        options.forEach(function (opt) {
+            var option = el('option', null, opt);
+            option.value = opt;
+            if (opt === current) {
+                option.selected = true;
+                matched = true;
+            }
+            select.appendChild(option);
+        });
+
+        if (!matched) {
+            var keep = el('option', null, current + ' (current)');
+            keep.value = current;
+            keep.selected = true;
+            select.appendChild(keep);
+        }
+
+        applyCellControlAttrs(select, cell);
+
+        return select;
+    }
+
+    // Persists one inline cell edit (only when its value actually changed), then re-renders from
+    // the fresh, re-validated report — so the stat tiles and issue lists update live.
+    function saveCell(input) {
+        if (!cellUrl) {
+            return;
+        }
+
+        var value = input.value;
+        var original = input.dataset.original != null ? input.dataset.original : '';
+
+        if (value === original) {
+            return;
+        }
+
+        input.disabled = true;
+        setStatus('Saving ' + (input.dataset.field || 'cell') + '...');
+
+        postForm(cellUrl, {
+            import_row: input.dataset.row,
+            field: input.dataset.field,
+            value: value
+        }).then(function (result) {
+            var data = result.data || {};
+
+            if (result.ok && data.review) {
+                applyReview(data.review, data.csrf);   // rebuilds the tables + stat tiles
+                setStatus(data.message || 'Saved.');
+
+                return;
+            }
+
+            input.disabled = false;
+            refreshCsrf(data.csrf);
+            setStatus(data.message || 'Could not save. Please try again.');
+        }).catch(function () {
+            input.disabled = false;
+            setStatus('A network error occurred. Please try again.');
+        });
+    }
+
     function renderFamilyToFixRow(family) {
         var tr = el('tr');
 
@@ -893,31 +1087,9 @@
 
         tr.appendChild(el('td', 'text-nowrap', family.members));
 
-        // Every distinct issue as its own badge (red = must fix, amber = warning), so the
-        // worker sees all of them at a glance instead of just a count.
-        var issues = el('td', 'small import-review-issue-cell');
-        var types = family.types || [];
-        if (types.length) {
-            types.forEach(function (type) {
-                var cls = type.severity === 'blocking'
-                    ? 'badge bg-danger me-1 mb-1'
-                    : 'badge bg-warning text-dark me-1 mb-1';
-                issues.appendChild(el('span', cls, type.label || type.code));
-            });
-        } else {
-            var blocking = Number(family.blocking || 0);
-            var warnings = Number(family.warnings || 0);
-            if (blocking > 0) {
-                issues.appendChild(el('span', 'badge bg-danger me-1', blocking + ' to fix'));
-            }
-            if (warnings > 0) {
-                issues.appendChild(el('span', 'badge bg-warning text-dark', warnings + ' warning' + (warnings === 1 ? '' : 's')));
-            }
-            if (blocking === 0 && warnings === 0) {
-                issues.appendChild(el('span', 'text-success', 'No issues'));
-            }
-        }
-        tr.appendChild(issues);
+        // Field-level problems as inline-editable cells (fix in place); structural problems
+        // (head / address) stay as badges and are fixed via the Edit modal.
+        tr.appendChild(renderIssueCell(family.editableCells, family.types, family));
 
         var actions = el('td', 'text-nowrap');
 
@@ -1204,6 +1376,16 @@
             notes.appendChild(el('span', 'text-success', 'No issues'));
         }
 
+        // Every ready family gets the same Edit modal as Families-to-fix, so the operator can
+        // tweak any record before committing — warning-only or perfectly clean.
+        if (familyBaseUrl) {
+            var edit = el('button', 'btn btn-sm btn-outline-primary ms-2 js-import-fix-edit', 'Edit');
+            edit.type = 'button';
+            edit.dataset.modalUrl = familyBaseUrl + '?fno=' + encodeURIComponent(family.qr);
+            edit.dataset.modalTitle = 'Edit Family ' + (family.qr || '');
+            notes.appendChild(edit);
+        }
+
         // A family fixed into "ready" keeps its edit history reachable here.
         var readyHistory = changesButton(family.qr);
         if (readyHistory) {
@@ -1484,9 +1666,16 @@
         }
     });
 
-    // Bulk-remove checkbox ticks (delegated — rows are re-rendered on every repaint).
+    // Bulk-remove checkbox ticks + inline cell edits (delegated — rows re-render on repaint).
     groupsEl.addEventListener('change', function (event) {
         var target = event.target;
+
+        if (target && target.classList && target.classList.contains('js-import-cell')) {
+            saveCell(target);
+
+            return;
+        }
+
         var box = target && target.closest ? target.closest('.js-import-select') : null;
 
         if (!box) {
@@ -1502,6 +1691,16 @@
 
         updateBulkButton();
         refreshSelectAll();
+    });
+
+    // Enter commits an inline cell edit (blur fires the change handler above).
+    groupsEl.addEventListener('keydown', function (event) {
+        var target = event.target;
+
+        if (event.key === 'Enter' && target && target.classList && target.classList.contains('js-import-cell')) {
+            event.preventDefault();
+            target.blur();
+        }
     });
 
     confirmBtn.addEventListener('click', confirmImport);

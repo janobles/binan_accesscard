@@ -513,7 +513,17 @@ class FamilyImportController extends BaseController
             return $this->jsonError('That import is no longer available to review.', 404);
         }
 
-        $bundle   = $loaded['result'];
+        $bundle = $loaded['result'];
+
+        // Bulk remove: arrays of QR groups (import_family_nos[]) and/or blank-QR sheet rows
+        // (import_rows[]). Sent by the review screen's "Remove selected" action.
+        $familyNos = $this->request->getPost('import_family_nos');
+        $rowsPost  = $this->request->getPost('import_rows');
+
+        if (is_array($familyNos) || is_array($rowsPost)) {
+            return $this->removeManyFamilies($jobId, $bundle, $familyNos, $rowsPost);
+        }
+
         $row      = (int) ($this->request->getPost('import_row') ?? 0);
         $familyNo = trim((string) ($this->request->getPost('import_family_no') ?? ''));
 
@@ -540,6 +550,104 @@ class FamilyImportController extends BaseController
             'review'  => (new ImportReviewPresenter())->build($result),
             'csrf'    => csrf_hash(),
         ]);
+    }
+
+    /**
+     * Drops many QR groups and/or blank-QR sheet rows at once, re-validates the remainder,
+     * logs each removal, re-stages, and returns the refreshed report. Backs the review
+     * screen's "Remove selected" action.
+     *
+     * @param mixed $familyNos POSTed import_family_nos[] (QR strings) — may be null/non-array
+     * @param mixed $rowsPost  POSTed import_rows[] (blank-QR sheet rows) — may be null/non-array
+     */
+    private function removeManyFamilies(int $jobId, array $bundle, mixed $familyNos, mixed $rowsPost)
+    {
+        $fnos = is_array($familyNos)
+            ? array_values(array_unique(array_filter(array_map(
+                static fn ($v): string => trim((string) $v),
+                $familyNos
+            ), static fn (string $v): bool => $v !== '')))
+            : [];
+
+        $rows = is_array($rowsPost)
+            ? array_values(array_unique(array_filter(array_map(
+                static fn ($v): int => (int) $v,
+                $rowsPost
+            ), static fn (int $v): bool => $v > 0)))
+            : [];
+
+        if ($fnos === [] && $rows === []) {
+            return $this->jsonError('No families were selected to remove.', 422);
+        }
+
+        $keys = [];
+        foreach ($fnos as $fno) {
+            $keys[] = ['fno' => $fno];
+        }
+        foreach ($rows as $sheetRow) {
+            $keys[] = ['row' => $sheetRow];
+        }
+
+        // Snapshot each target before dropping it, so the change log records every removal.
+        $changes = is_array($bundle['changes'] ?? null) ? $bundle['changes'] : [];
+        foreach ($keys as $key) {
+            $old = $this->targetRows($bundle, $key);
+            if ($old === []) {
+                continue;
+            }
+            $changes[] = ImportReviewChangeLog::removed($old);
+        }
+
+        $kept   = $this->removeManyRows($bundle, $keys);
+        $result = $this->revalidate($bundle, $kept);
+        $result['changes'] = array_slice($changes, -100);
+        $this->restageReview($jobId, $result);
+
+        $count = count($keys);
+
+        return $this->response->setJSON([
+            'status'  => 'success',
+            'message' => $count . ' ' . ($count === 1 ? 'family' : 'families') . ' removed from this import.',
+            'review'  => (new ImportReviewPresenter())->build($result),
+            'csrf'    => csrf_hash(),
+        ]);
+    }
+
+    /**
+     * The bundle rows with every targeted QR group / blank-QR sheet row filtered out at once,
+     * ordered by sheet row.
+     *
+     * @param list<array{fno?: string, row?: int}> $keys
+     * @return list<array>
+     */
+    private function removeManyRows(array $bundle, array $keys): array
+    {
+        $rows = is_array($bundle['rows'] ?? null) ? $bundle['rows'] : [];
+
+        $dropRows = [];
+        $dropFnos = [];
+        foreach ($keys as $key) {
+            if (isset($key['row'])) {
+                $dropRows[(int) $key['row']] = true;
+            } elseif (isset($key['fno'])) {
+                $dropFnos[(string) $key['fno']] = true;
+            }
+        }
+
+        $kept = array_values(array_filter($rows, static function (array $row) use ($dropRows, $dropFnos): bool {
+            if (isset($dropRows[(int) ($row['sheetRow'] ?? -1)])) {
+                return false;
+            }
+
+            $fno = trim((string) (($row['data'] ?? [])['familyno'] ?? ''));
+
+            return ! ($fno !== '' && isset($dropFnos[$fno]));
+        }));
+
+        usort($kept, static fn (array $a, array $b): int =>
+            ((int) ($a['sheetRow'] ?? 0)) <=> ((int) ($b['sheetRow'] ?? 0)));
+
+        return $kept;
     }
 
     /**

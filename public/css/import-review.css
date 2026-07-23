@@ -1,13 +1,19 @@
 /* Import Review — read-only report (Views/Family/import-review.php + import-review.js). */
 
+/* Green shell header — matches the dashboard topnav (theme.css .sb-topnav.bg-dark).
+   This standalone page has no dashboard layout, so it tints its own navbar. */
+.import-review-topbar {
+    background-color: var(--binan-green-deep) !important;
+}
+
+/* Flat action bar — the dashboard uses no drop shadows, only borders. */
 .import-review-actionbar {
     position: sticky;
     bottom: 0;
     z-index: 5;
     background: #fff;
     padding: 0.75rem 1rem;
-    border-top: 1px solid #dee2e6;
-    box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.04);
+    border-top: 1px solid #e2e9e7;
 }
 
 .import-review-table td,
@@ -21,8 +27,6 @@
     overflow-wrap: anywhere;
 }
 
-.import-review-families .card-header small,
-.import-review-needsqr .card-header small,
 .import-review-ready .card-header small {
     max-width: 60%;
     text-align: right;
@@ -44,15 +48,27 @@
     width: 100%;
 }
 
-#importReviewGroups .import-review-table td,
-#importReviewGroups .import-review-table th {
+#importReviewGroups .import-review-table td {
     overflow-wrap: anywhere;
     word-break: break-word;
+}
+
+/* Headers stay on one line — the wrap rule above is for data cells only, and
+   was breaking short labels mid-word (e.g. "MEMBE RS", "RO W"). */
+#importReviewGroups .import-review-table thead th {
+    white-space: nowrap;
 }
 
 /* Families-to-fix toolbar: search + severity + issue-type on the left, Show-entries right. */
 .import-review-filter-search {
     max-width: 260px;
+}
+
+/* Bulk-remove checkbox column — kept tight so it doesn't steal width from the data. */
+.import-review-select-col {
+    width: 1%;
+    white-space: nowrap;
+    text-align: center;
 }
 
 @media (max-width: 575.98px) {

@@ -53,30 +53,16 @@ class ImportReviewPresenter
         'QR-CONTIG'  => ['label' => 'Family rows not together',    'hint' => 'Warning only — the family imports, but check the grouping.'],
     ];
 
-    /** Family-structure problems: shown with the whole family's rows for context. */
-    private const FAMILY_CODES = ['FP-ADDR', 'HEAD-NONE', 'HEAD-MULTI'];
-
-    /** Friendly column names, keyed by the importer's normalized field. */
-    private const FIELD_LABELS = [
-        'familyno' => 'QR Number', 'relationship' => 'Relationship', 'lastname' => 'LastName',
-        'firstname' => 'FirstName', 'middlename' => 'MiddleName', 'suffix' => 'Suffix',
-        'birthday' => 'Birthday', 'sex' => 'Sex', 'civilstatus' => 'CivilStatus',
-        'contactnumber' => 'ContactNumber', 'religion' => 'Religion', 'education' => 'Education',
-        'job' => 'Job', 'monthlyincome' => 'MonthlyIncome', 'address' => 'Address',
-        'barangay' => 'Barangay', 'sector' => 'Sector', 'services' => 'Services',
-    ];
-
     /**
      * Builds the read-only report from a decoded review-phase result_json.
      *
-     * @param array $result {rows, errors, counts, columns, file}
+     * @param array $result {rows, errors, counts, file}
      */
     public function build(array $result): array
     {
         $rows    = is_array($result['rows'] ?? null) ? $result['rows'] : [];
         $errors  = is_array($result['errors'] ?? null) ? $result['errors'] : [];
         $counts  = is_array($result['counts'] ?? null) ? $result['counts'] : [];
-        $columns = is_array($result['columns'] ?? null) ? $result['columns'] : [];
 
         // Index cell values per sheet row, and the rows of each QR group.
         $byRow = [];
@@ -90,16 +76,6 @@ class ImportReviewPresenter
                 $byQr[$qr][] = $sheetRow;
             }
         }
-
-        $items = [];
-        foreach ($errors as $error) {
-            $items[] = $this->item($error, $byRow, $byQr, $columns);
-        }
-
-        // Two ways to read the same list: grouped by problem type (fix all the bad QRs at
-        // once), or straight down the sheet by row (work top-to-bottom in Excel).
-        $groups  = $this->groupByCode($items);
-        $byRowIdx = $this->orderBySheetRow($items);
 
         $families = (int) ($counts['families'] ?? 0);
         $existing = (int) ($counts['existing'] ?? 0);
@@ -122,8 +98,6 @@ class ImportReviewPresenter
                 'warnings'    => (int) ($counts['warnings'] ?? 0),
                 'ready'       => count($ready),
             ],
-            'groups'     => $groups,
-            'byRow'      => $byRowIdx,
             'ready'      => $ready,
             // The worker's in-review edit history (newest last), so the screen can show what
             // they changed before they commit.
@@ -428,129 +402,5 @@ class ImportReviewPresenter
     private function isHeadRow(array $data): bool
     {
         return strcasecmp(trim((string) ($data['relationship'] ?? '')), 'Head') === 0;
-    }
-
-    /** One report line: the exact cell, what's wrong, and the value that's there now. */
-    private function item(array $error, array $byRow, array $byQr, array $columns): array
-    {
-        $sheetRow = $error['sheetRow'] ?? null;
-        $field    = $error['field'] ?? null;
-        $code     = (string) ($error['code'] ?? '');
-        $data     = ($sheetRow !== null && isset($byRow[(int) $sheetRow])) ? $byRow[(int) $sheetRow] : [];
-
-        // The literal Excel cell, e.g. "H42" — paste into Excel's Go To (Ctrl+G).
-        $letter = ($field !== null && isset($columns[$field])) ? (string) $columns[$field] : '';
-        $cell   = ($letter !== '' && $sheetRow !== null) ? $letter . $sheetRow : '';
-
-        $out = [
-            'code'     => $code,
-            'sheetRow' => $sheetRow,
-            'familyNo' => (string) ($error['familyNo'] ?? ''),
-            'cell'     => $cell,
-            'column'   => $field !== null ? (self::FIELD_LABELS[$field] ?? $field) : '',
-            'value'    => $field !== null ? (string) ($data[$field] ?? '') : '',
-            'name'     => trim((string) ($data['firstname'] ?? '') . ' ' . (string) ($data['lastname'] ?? '')),
-            'message'  => (string) ($error['message'] ?? ''),
-            'severity' => (string) ($error['severity'] ?? 'blocking'),
-        ];
-
-        // Family-structure problems only make sense with the whole family in view.
-        if (in_array($code, self::FAMILY_CODES, true)) {
-            $out['familyRows'] = $this->familyRows((string) ($error['familyNo'] ?? ''), $byQr, $byRow, $columns);
-        }
-
-        return $out;
-    }
-
-    /** @param list<array> $items */
-    private function groupByCode(array $items): array
-    {
-        $buckets = [];
-        foreach ($items as $item) {
-            $buckets[$item['code']][] = $item;
-        }
-
-        $groups = [];
-        foreach (array_keys(self::GROUPS) as $code) {
-            if (isset($buckets[$code])) {
-                $groups[] = $this->group($code, $buckets[$code]);
-                unset($buckets[$code]);
-            }
-        }
-        foreach ($buckets as $code => $list) {
-            $groups[] = $this->group($code, $list);
-        }
-
-        return $groups;
-    }
-
-    /**
-     * The same issues ordered by sheet row, so the operator can walk straight down their
-     * spreadsheet. Rows with several problems are listed together.
-     *
-     * @param list<array> $items
-     */
-    private function orderBySheetRow(array $items): array
-    {
-        $byRow = [];
-        foreach ($items as $item) {
-            $key = $item['sheetRow'] ?? 0;
-            $byRow[$key][] = $item;
-        }
-        ksort($byRow);
-
-        $out = [];
-        foreach ($byRow as $sheetRow => $list) {
-            $out[] = [
-                'sheetRow' => $sheetRow > 0 ? (int) $sheetRow : null,
-                'familyNo' => (string) ($list[0]['familyNo'] ?? ''),
-                'name'     => (string) ($list[0]['name'] ?? ''),
-                'issues'   => $list,
-            ];
-        }
-
-        return $out;
-    }
-
-    /** @param list<array> $items */
-    private function group(string $code, array $items): array
-    {
-        $meta = self::GROUPS[$code] ?? ['label' => $code, 'hint' => ''];
-
-        return [
-            'code'     => $code,
-            'label'    => $meta['label'],
-            'hint'     => $meta['hint'],
-            'severity' => $items[0]['severity'] ?? 'blocking',
-            'count'    => count($items),
-            'items'    => $items,
-        ];
-    }
-
-    /**
-     * The rows of one QR group, for read-only family context.
-     *
-     * @return list<array>
-     */
-    private function familyRows(string $qr, array $byQr, array $byRow, array $columns): array
-    {
-        $out = [];
-
-        foreach (($byQr[$qr] ?? []) as $sheetRow) {
-            $data = $byRow[$sheetRow] ?? [];
-            $out[] = [
-                'sheetRow'     => (int) $sheetRow,
-                'name'         => trim((string) ($data['firstname'] ?? '') . ' ' . (string) ($data['lastname'] ?? '')),
-                'relationship' => (string) ($data['relationship'] ?? ''),
-                'barangay'     => (string) ($data['barangay'] ?? ''),
-                'address'      => (string) ($data['address'] ?? ''),
-                'qr'           => (string) ($data['familyno'] ?? ''),
-                // The cells most likely to need the fix.
-                'qrCell'       => isset($columns['familyno']) ? $columns['familyno'] . $sheetRow : '',
-                'relCell'      => isset($columns['relationship']) ? $columns['relationship'] . $sheetRow : '',
-            ];
-        }
-
-        return $out;
     }
 }

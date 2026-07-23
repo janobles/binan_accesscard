@@ -39,7 +39,7 @@ $reviewJson = json_encode($review, JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_
     <link rel="stylesheet" href="<?= esc(asset_url('css/import-review.css'), 'attr') ?>">
 </head>
 <body class="bg-light">
-<nav class="navbar navbar-dark bg-dark px-4">
+<nav class="navbar navbar-dark bg-dark px-4 import-review-topbar">
     <span class="navbar-brand mb-0 h1"><i class="bi bi-clipboard-check me-2" aria-hidden="true"></i>Review Import</span>
     <a class="btn btn-sm btn-outline-light" href="<?= esc($backUrl, 'attr') ?>">
         <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Back to Records

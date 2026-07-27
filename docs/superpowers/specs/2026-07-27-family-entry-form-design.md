@@ -147,12 +147,28 @@ scope here; worth its own pass.
 | Delivery | Three sequential branches |
 | jQuery in this form | No. Stays vanilla `fetch` |
 | Contact format | Mobile (11-digit) or Biñan landline |
+| Reference data casing | Unchanged. Sector/service names and category headings stay Title Case |
 | Dump version | Stays V18. No schema or seed change is triggered |
 
 **Dump version.** The option lists are PHP constants in `FamilyProfilingFormV2`, not DB
 reference tables, and the backfill is an `UPDATE` of `member` row data, not schema. So
 `accesscardV18.sql` is untouched. If any later step does change schema or seeded reference
 rows, cut V19 and update the memory note — flag it before doing so, do not decide silently.
+
+**Reference data casing.** Uppercasing applies to what a worker types, not to system-provided
+labels. Sector and service names and the service category headings come from DB reference
+tables and stay Title Case; `sectorLabel()` and `serviceLabel()` already uppercase the code
+portion, giving `SC - Senior Citizen`. The distinction is useful — reference labels read as
+system-provided rather than worker-entered — and it keeps the work clear of seed changes.
+
+**Ordering.** The code change and the backfill can land separately without risk: the importer
+lowercases its duplicate-comparison keys (`FamilyExcelImporter::normalizeText`, `:1652-1655`)
+and every DB name lookup uses `LOWER(member.firstname)` (`MemberModel:164,251,278`), so
+duplicate detection is case-insensitive on both sides throughout the window. (Those `LOWER()`
+calls prevent index usage — pre-existing, unchanged by this work.)
+
+**Tests.** `MemberFieldNormalizerTest` and `FamilyExcelImporterTest` assert Title Case
+(`'Dela Cruz'`) in a dozen-plus places. Updating them is part of Branch 1.
 
 **jQuery.** jQuery 3.7.1 loads globally (`asset_helper.php:93`) and
 `dashboard-modal-loader.js` uses it, but `manage-family-modal.js` is vanilla throughout and

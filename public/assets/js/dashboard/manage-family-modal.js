@@ -1,6 +1,6 @@
 // Registers the family record modals (View + Add/Update) with the shared
-// dashboard loader, drives the two-step Bootstrap form (Head -> Members),
-// captures repeatable family members, and submits Add/Update over AJAX to the
+// dashboard loader, drives the single-page Bootstrap entry form (head card plus
+// member rows), captures repeatable family members, and submits Add/Update over AJAX to the
 // existing FamilyController::store()/update() endpoints, refreshing the
 // server-side DataTable on success.
 //
@@ -31,33 +31,8 @@
 
     function setHidden(el, hidden) {
         if (el) {
-            el.classList.toggle('family-form-hidden', !!hidden);
+            el.classList.toggle('d-none', !!hidden);
         }
-    }
-
-    function escapeHtml(value) {
-        var div = document.createElement('div');
-        div.textContent = String(value || '');
-
-        return div.innerHTML;
-    }
-
-    function textValue(form, selector) {
-        var field = form.querySelector(selector);
-
-        if (!field) {
-            return '';
-        }
-
-        if (field.tagName === 'SELECT') {
-            if (String(field.value || '').trim() === '') {
-                return '';
-            }
-
-            return field.options[field.selectedIndex] ? field.options[field.selectedIndex].text.trim() : '';
-        }
-
-        return String(field.value || '').trim();
     }
 
     // ---- "Other" freetext selects -----------------------------------------
@@ -257,34 +232,36 @@
         writePersonField(memberField('relationship'), '');
 
         refreshAllAgeEligibility(root);
-        renderHeadSummary(root);
+        refreshAllServiceCategories(root);
+        refreshChoicesSummary(root);
+        renumberMembers(root);
+
+        // The swap rewrites who holds the QR card, so put the result in front of the
+        // worker rather than leaving it below the fold.
+        var headField = root.querySelector('[name="head_lastname"]');
+
+        if (headField) {
+            headField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
     }
 
     // ---- field error helper ------------------------------------------------
 
+    // Writes into the .invalid-feedback the view renders next to each control.
+    // Bootstrap reveals it only while the control carries .is-invalid, so that class
+    // toggle is the single switch and the div needs no hiding of its own.
     function setFieldError(field, message) {
         if (!field) {
             return;
         }
 
-        var wrapper = field.closest('[class*="col-"]') || field.parentElement;
-        var feedback = wrapper ? wrapper.querySelector('[data-family-field-error]') : null;
+        var scope = field.closest('.input-group') || field.closest('[class*="col-"]') || field.parentElement;
+        var feedback = scope ? scope.querySelector('[data-family-field-error]') : null;
 
         field.classList.toggle('is-invalid', message !== '');
 
-        if (!feedback && wrapper && message !== '') {
-            feedback = document.createElement('div');
-            feedback.className = 'family-field-error';
-            feedback.setAttribute('data-family-field-error', '');
-            wrapper.appendChild(feedback);
-        }
-
         if (feedback) {
-            if (message !== '') {
-                feedback.textContent = message;
-            }
-
-            feedback.hidden = message === '';
+            feedback.textContent = message;
         }
     }
 
@@ -320,7 +297,7 @@
         return true;
     }
 
-    // ---- QR number availability -------------------------------------------
+    // ---- control number availability -------------------------------------------
 
     function scheduleQrAvailabilityCheck(root, field) {
         if (!field || field.readOnly || !field.dataset.qrCheckUrl) {
@@ -339,13 +316,22 @@
             return;
         }
 
-        field.setCustomValidity('Checking whether this QR number already exists.');
+        field.setCustomValidity('Checking whether this control number already exists.');
 
         qrCheckTimer = window.setTimeout(function () {
             var url = new URL(field.dataset.qrCheckUrl, window.location.href);
             var headId = root.querySelector('[name="head_id"]');
             url.searchParams.set('control_no', field.value);
             url.searchParams.set('head_id', headId ? headId.value : '0');
+
+            // A hung request must never leave setCustomValidity parked: that blocks the
+            // save with no visible message. Release it and let the server decide.
+            var release = window.setTimeout(function () {
+                if (sequence === qrCheckSequence && field.isConnected) {
+                    field.setCustomValidity('');
+                    setFieldError(field, '');
+                }
+            }, 5000);
 
             window.fetch(url.toString(), {
                 headers: { 'X-Requested-With': 'XMLHttpRequest' },
@@ -355,16 +341,19 @@
                     return { ok: response.ok, data: data };
                 });
             }).then(function (result) {
+                window.clearTimeout(release);
+
                 if (sequence !== qrCheckSequence || !field.isConnected) {
                     return;
                 }
 
-                var message = result.ok && result.data.available
-                    ? ''
-                    : (result.data.message || 'The QR number could not be validated.');
+                var available = result.ok && result.data.available;
+                var message = available ? '' : (result.data.message || 'The control number could not be validated.');
                 field.setCustomValidity(message);
                 setFieldError(field, message);
             }).catch(function () {
+                window.clearTimeout(release);
+
                 if (sequence === qrCheckSequence && field.isConnected) {
                     field.setCustomValidity('');
                     setFieldError(field, '');
@@ -462,6 +451,18 @@
             cancelLabel: 'Keep',
             confirmLabel: 'Remove',
             confirmClass: 'btn btn-danger'
+        });
+    }
+
+    function askPromoteToHead(form, name) {
+        return askModalDialog(form, {
+            title: 'Make this person the head?',
+            message: (name !== '' ? name + ' ' : 'This member ') + 'will take the head position and hold the QR card. The current head becomes a member, and you will need to set their relationship.',
+            iconClass: 'bi bi-person-up',
+            tone: 'warning',
+            cancelLabel: 'Cancel',
+            confirmLabel: 'Make head',
+            confirmClass: 'btn btn-primary'
         });
     }
 
@@ -614,11 +615,24 @@
         };
     }
 
+    // Closing is safe because the draft is kept, so the footer says so outright rather
+    // than leaving the worker to infer it from a button color.
+    function setDraftStatus(form, text) {
+        var root = form.closest('[data-family-entry-form]') || form;
+        var status = root.querySelector('[data-family-draft-status]');
+
+        if (status) {
+            status.textContent = text;
+        }
+    }
+
     function saveDraftNow(form) {
         try {
             window.localStorage.setItem(DRAFT_KEY, JSON.stringify(snapshotForm(form)));
+            setDraftStatus(form, 'Draft saved');
         } catch (error) {
             /* storage unavailable / quota */
+            setDraftStatus(form, '');
         }
     }
 
@@ -698,99 +712,37 @@
                 }
             });
         });
-
-        renderHeadSummary(root);
         refreshAllAgeEligibility(root);
+        refreshAllServiceCategories(root);
+        refreshChoicesSummary(root);
+        renumberMembers(root);
     }
 
-    // ---- summary -----------------------------------------------------------
+    // ---- member row headers -------------------------------------------------
 
-    function checkedLabels(form, selector) {
-        return Array.from(form.querySelectorAll(selector + ':checked')).map(function (input) {
-            var label = input.closest('label');
+    // Each row says which person it is, so the head card and the member cards are
+    // never confused for each other. Numbering is recomputed rather than baked into
+    // the markup, because removing a row renumbers everything after it.
+    function renumberMembers(root) {
+        Array.from(root.querySelectorAll('[data-family-member-row]')).forEach(function (row, index) {
+            var title = row.querySelector('[data-family-member-title]');
 
-            return input.dataset.label || (label ? label.textContent.trim() : '') || input.value;
-        }).filter(Boolean);
-    }
-
-    function setSummary(container, key, value) {
-        var target = container.querySelector('[data-head-summary="' + key + '"]');
-
-        if (target) {
-            target.textContent = value || '-';
-        }
-    }
-
-    function setSummaryList(container, key, labels) {
-        var target = container.querySelector('[data-head-summary="' + key + '"]');
-
-        if (!target) {
-            return;
-        }
-
-        if (!labels.length) {
-            target.textContent = '-';
-            return;
-        }
-
-        target.innerHTML = '<ul class="mb-0">' + labels.map(function (label) {
-            return '<li>' + escapeHtml(label) + '</li>';
-        }).join('') + '</ul>';
-    }
-
-    // Resolves a field's display value, returning the "Other" freetext when chosen.
-    function fieldDisplayValue(form, selector) {
-        var field = form.querySelector(selector);
-
-        if (!field) {
-            return '';
-        }
-
-        if (field.tagName === 'SELECT' && field.classList.contains('js-other-select') && isOtherValue(field.value)) {
-            var otherInput = findOtherInput(field);
-            var typed = otherInput ? String(otherInput.value || '').trim() : '';
-
-            if (typed !== '') {
-                return typed;
+            if (!title) {
+                return;
             }
-        }
 
-        return textValue(form, selector);
+            var last = row.querySelector('[name$="[lastname]"]');
+            var first = row.querySelector('[name$="[firstname]"]');
+            var name = [
+                last ? String(last.value || '').trim() : '',
+                first ? String(first.value || '').trim() : ''
+            ].filter(Boolean).join(', ');
+
+            title.textContent = 'Member ' + (index + 1) + (name !== '' ? ' — ' + name : '');
+        });
     }
 
-    function renderHeadSummary(container) {
-        var form = container.querySelector('form');
-
-        if (!form) {
-            return;
-        }
-
-        var fullName = [
-            textValue(form, '[data-summary="name-first"]'),
-            textValue(form, '[data-summary="name-middle"]'),
-            textValue(form, '[data-summary="name-last"]'),
-            textValue(form, '[data-summary="name-suffix"]')
-        ].filter(Boolean).join(' ');
-
-        setSummary(container, 'name', fullName);
-        setSummary(container, 'birthday', textValue(form, '[data-summary="birthday"]'));
-        setSummary(container, 'sex', textValue(form, '[data-summary="sex"]'));
-        setSummary(container, 'civil', fieldDisplayValue(form, '[data-summary="civil"]'));
-        setSummary(container, 'contact', textValue(form, '[data-summary="contact"]'));
-        setSummary(container, 'religion', fieldDisplayValue(form, '[data-summary="religion"]'));
-        setSummary(container, 'education', fieldDisplayValue(form, '[data-summary="education"]'));
-        setSummary(container, 'job', fieldDisplayValue(form, '[data-summary="job"]'));
-        setSummary(container, 'income', textValue(form, '[data-summary="income"]'));
-        setSummary(container, 'address', [textValue(form, '[data-summary="address"]'), textValue(form, '[data-summary="barangay"]')].filter(Boolean).join(', '));
-        setSummaryList(container, 'sectors', checkedLabels(form, 'input[name="sector_ids[]"]'));
-        setSummaryList(container, 'services', checkedLabels(form, 'input[name="service_ids[]"]'));
-    }
-
-    // ---- sector-linked program suggestions ----------------------------------
-    // A service group is "linked" to a sector when its category name matches the
-    // sector's name (same convention the server uses for archive cascades).
-    // Checked sectors float their linked groups into the "Suggested" callout;
-    // nothing is ever hidden — groups only relocate.
+    // ---- sectors and services ------------------------------------------------
 
     var SECTOR_INPUT_SELECTOR = 'input[name="sector_ids[]"], input[name$="[sector_ids][]"]';
     var SERVICE_INPUT_SELECTOR = 'input[name="service_ids[]"], input[name$="[service_ids][]"]';
@@ -876,7 +828,6 @@
             }
         });
 
-        refreshSuggestions(scopeEl);
     }
 
     function refreshAllAgeEligibility(root) {
@@ -886,137 +837,160 @@
         });
     }
 
-    function stampGroupOrder(box) {
-        box.querySelectorAll('.family-option-group[data-service-category]').forEach(function (group, index) {
-            if (!group.dataset.suggestOrder) {
-                group.dataset.suggestOrder = String(index + 1);
-            }
+    // ---- service accordion state --------------------------------------------
+    // A category opens when it matches a ticked sector or already holds a tick, and
+    // closes again when neither is true any more. Panels the worker opened by hand
+    // are left alone: their click is an explicit instruction, so nothing auto-closes
+    // it. That flag is what keeps a cleared filter or an unticked box from leaving
+    // every category hanging open.
+
+    function servicePanelsIn(scopeEl) {
+        var row = scopeEl.matches && scopeEl.matches('[data-family-member-row]') ? scopeEl : null;
+
+        return Array.from(scopeEl.querySelectorAll('[data-family-service-panel]')).filter(function (panel) {
+            return row ? true : !panel.closest('[data-family-member-row]');
         });
     }
 
-    // Reinsert a group at its original slot among the non-suggested groups.
-    function returnGroupHome(box, suggestedContainer, group) {
-        var order = parseInt(group.dataset.suggestOrder || '0', 10);
-        var next = Array.from(box.querySelectorAll('.family-option-group[data-service-category]')).find(function (other) {
-            return other !== group
-                && !suggestedContainer.contains(other)
-                && parseInt(other.dataset.suggestOrder || '0', 10) > order;
-        });
+    // Drives a collapse panel without needing bootstrap.Collapse to be instantiated
+    // first, and keeps the header button's aria-expanded in step.
+    function setServicePanelOpen(panel, open) {
+        var item = panel.closest('.accordion-item');
+        var button = item ? item.querySelector('.accordion-button') : null;
 
-        if (next) {
-            box.insertBefore(group, next);
-        } else {
-            box.appendChild(group);
+        // Only the panel gets skipped when it is already where we want it. The
+        // header still gets synced, so markup that arrives with the two out of
+        // step (an import-fix fragment, say) is corrected instead of left alone.
+        if (panel.classList.contains('show') !== open) {
+            if (window.bootstrap && window.bootstrap.Collapse) {
+                window.bootstrap.Collapse.getOrCreateInstance(panel, { toggle: false })[open ? 'show' : 'hide']();
+            } else {
+                panel.classList.toggle('show', open);
+            }
+        }
+
+        if (button) {
+            button.classList.toggle('collapsed', !open);
+            button.setAttribute('aria-expanded', open ? 'true' : 'false');
         }
     }
 
-    // scopeEl: a member row, or the modal root (head section).
-    function refreshSuggestions(scopeEl) {
+    function refreshServiceCategories(scopeEl) {
         if (!scopeEl || !scopeEl.querySelectorAll) {
             return;
         }
 
         var row = scopeEl.matches && scopeEl.matches('[data-family-member-row]') ? scopeEl : null;
-        var container = row
-            ? row.querySelector('[data-family-suggested]')
-            : Array.from(scopeEl.querySelectorAll('[data-family-suggested]')).find(function (el) {
-                return !el.closest('[data-family-member-row]');
-            });
-
-        if (!container) {
-            return;
-        }
-
-        var box = container.closest('.family-option-box');
-        var holder = container.querySelector('[data-family-suggested-groups]');
-        var reasonEl = container.querySelector('[data-family-suggested-reason]');
-
-        if (!box || !holder) {
-            return;
-        }
-
-        stampGroupOrder(box);
-
         var searchRoot = row || scopeEl;
         var sectorSelector = row ? 'input[name$="[sector_ids][]"]:checked' : 'input[name="sector_ids[]"]:checked';
-        var checkedNames = [];
         var checkedKeys = {};
 
         searchRoot.querySelectorAll(sectorSelector).forEach(function (input) {
-            var name = String(input.dataset.sectorName || '').trim();
-            var key = normName(name);
+            checkedKeys[normName(input.dataset.sectorName)] = true;
+        });
 
-            if (name === '' || checkedKeys[key]) {
+        servicePanelsIn(searchRoot).forEach(function (panel) {
+            if (panel.dataset.familyUserToggled === '1') {
                 return;
             }
 
-            checkedKeys[key] = true;
-            checkedNames.push(name);
+            var matched = !!checkedKeys[normName(panel.dataset.serviceCategory)];
+            var hasChecked = panel.querySelector('input[type="checkbox"]:checked') !== null;
+
+            setServicePanelOpen(panel, matched || hasChecked);
         });
+    }
 
-        var groups = Array.from(box.querySelectorAll('.family-option-group[data-service-category]'));
-        var matched = [];
-        var groupKeys = {};
-
-        groups.forEach(function (group) {
-            groupKeys[normName(group.dataset.serviceCategory)] = true;
-
-            if (checkedKeys[normName(group.dataset.serviceCategory)]) {
-                matched.push(group);
-            } else if (container.contains(group)) {
-                returnGroupHome(box, container, group);
-            }
+    function refreshAllServiceCategories(root) {
+        refreshServiceCategories(root);
+        root.querySelectorAll('[data-family-member-row]').forEach(function (row) {
+            refreshServiceCategories(row);
         });
+    }
 
-        var beforeKeys = Array.from(holder.children).map(function (group) {
-            return normName(group.dataset.serviceCategory);
-        }).join('|');
+    // Type-to-narrow over one accordion: non-matching choices hide, a category with no
+    // match drops out, and matching categories open while the search runs. Clearing the
+    // box hands the open state back to the sector-and-tick rule above, so the accordion
+    // does not stay fully expanded afterwards.
+    function filterServiceAccordion(input) {
+        var accordion = input.parentElement ? input.parentElement.nextElementSibling : null;
 
-        matched.sort(function (a, b) {
-            return parseInt(a.dataset.suggestOrder || '0', 10) - parseInt(b.dataset.suggestOrder || '0', 10);
-        }).forEach(function (group) {
-            holder.appendChild(group);
-        });
-
-        var afterKeys = Array.from(holder.children).map(function (group) {
-            return normName(group.dataset.serviceCategory);
-        }).join('|');
-
-        container.hidden = matched.length === 0;
-
-        if (reasonEl) {
-            var matchingNames = checkedNames.filter(function (name) {
-                return groupKeys[normName(name)];
-            });
-
-            reasonEl.textContent = matchingNames.length
-                ? 'Showing: ' + matchingNames.join(', ') + '. All other programs are still shown below.'
-                : '';
+        if (!accordion || !accordion.matches('[data-family-service-accordion]')) {
+            return;
         }
 
-        // Gentle pulse + scroll to top when the suggested set actually changed.
-        if (!container.hidden && beforeKeys !== afterKeys) {
-            var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        var term = String(input.value || '').trim().toLowerCase();
+        var scope = input.closest('[data-family-member-row]') || input.closest('[data-family-entry-form]');
 
-            if (!reduceMotion) {
-                container.classList.remove('is-updated');
-                void container.offsetWidth;
-                container.classList.add('is-updated');
-                window.setTimeout(function () {
-                    container.classList.remove('is-updated');
-                }, 700);
-                box.scrollTop = 0;
+        accordion.querySelectorAll('[data-family-service-item]').forEach(function (item) {
+            var panel = item.querySelector('[data-family-service-panel]');
+            var matches = 0;
+
+            item.querySelectorAll('.family-choice').forEach(function (choice) {
+                var label = choice.querySelector('.form-check-label');
+                var hit = term === '' || (label ? label.textContent.toLowerCase().indexOf(term) !== -1 : false);
+                var cell = choice.closest('.col') || choice;
+
+                cell.classList.toggle('d-none', !hit);
+
+                if (hit) {
+                    matches++;
+                }
+            });
+
+            item.classList.toggle('d-none', term !== '' && matches === 0);
+
+            if (!panel) {
+                return;
             }
+
+            if (term !== '') {
+                // A search result the worker can't see is useless, so matches open for
+                // the duration. This is the filter's doing, not theirs, so it does not
+                // count as a manual toggle.
+                setServicePanelOpen(panel, matches > 0);
+            }
+        });
+
+        if (term === '' && scope) {
+            refreshServiceCategories(scope);
         }
     }
 
-    // ---- step navigation + validation --------------------------------------
+    // The collapse toggle doubles as the summary of what is ticked, so a collapsed
+    // block (edit mode) still says what this person is categorised as.
+    function refreshChoicesSummary(root) {
+        var target = root.querySelector('[data-family-choices-summary]');
 
-    function validateHeadStep(container) {
-        var headTrigger = container.querySelector('[data-family-step-target="head"]');
-        var headTarget = headTrigger ? headTrigger.getAttribute('data-family-step-pane') : '';
-        var headPane = headTarget ? container.querySelector(headTarget) : null;
-        var requiredFields = headPane ? Array.from(headPane.querySelectorAll('[required]')) : [];
+        if (!target) {
+            return;
+        }
+
+        var codes = Array.from(root.querySelectorAll('input[name="sector_ids[]"]:checked')).map(function (input) {
+            return String(input.dataset.sectorCode || input.dataset.label || '').trim();
+        }).filter(Boolean);
+        var services = root.querySelectorAll('input[name="service_ids[]"]:checked').length;
+
+        if (codes.length === 0 && services === 0) {
+            target.textContent = 'Nothing selected yet';
+            return;
+        }
+
+        target.textContent = 'Sectors: ' + (codes.length ? codes.join(', ') : 'none')
+            + ' (' + services + ' program' + (services === 1 ? '' : 's') + ')';
+    }
+
+    // ---- head validation ---------------------------------------------------
+
+    // The head fields are always visible now, so "the head section" is simply the
+    // head-scoped required controls. No pane lookup, no step gate.
+    function validateHead(container) {
+        var form = container.querySelector('form');
+        var requiredFields = form
+            ? Array.from(form.querySelectorAll('[required]')).filter(function (field) {
+                return !field.closest('[data-family-member-row]');
+            })
+            : [];
         var firstInvalid = null;
 
         requiredFields.forEach(function (field) {
@@ -1048,44 +1022,6 @@
     function clearFieldError(field) {
         if (String(field.value || '').trim() !== '') {
             setFieldError(field, '');
-        }
-    }
-
-    function showStep(container, step) {
-        if (step === 'members' && !validateHeadStep(container)) {
-            return;
-        }
-
-        var trigger = container.querySelector('[data-family-step-target="' + step + '"]');
-        var stepTriggers = container.querySelectorAll('[data-family-step-target]');
-        var panes = container.querySelectorAll('.tab-pane');
-        var targetSelector = trigger ? trigger.getAttribute('data-family-step-pane') : '';
-
-        stepTriggers.forEach(function (button) {
-            var isActive = button === trigger;
-
-            button.classList.toggle('active', isActive);
-            button.setAttribute('aria-selected', isActive ? 'true' : 'false');
-        });
-
-        panes.forEach(function (pane) {
-            var isActive = targetSelector && pane.matches(targetSelector);
-
-            pane.classList.toggle('active', isActive);
-            pane.classList.toggle('show', isActive);
-        });
-
-        var isMembers = step === 'members';
-        var prev = container.querySelector('[data-family-prev]');
-        var next = container.querySelector('[data-family-next]');
-        var save = container.querySelector('[data-family-save]');
-
-        if (prev) prev.hidden = !isMembers;
-        if (next) next.hidden = isMembers;
-        if (save) save.hidden = !isMembers;
-
-        if (isMembers) {
-            renderHeadSummary(container);
         }
     }
 
@@ -1203,6 +1139,45 @@
         }
     }
 
+    // Mirrors FamilyController::firstIncompleteMember() so the worker sees the gap at
+    // the field instead of after a round-trip. Same six fields, and the same
+    // skip-if-unnamed rule as hasMemberData(): a row with no name is an empty row, not
+    // an incomplete one. The server keeps its own copy and stays authoritative.
+    var MEMBER_REQUIRED_FIELDS = ['birthday', 'sex', 'civilstatus', 'education', 'job', 'salary'];
+
+    function memberHasData(row) {
+        return ['lastname', 'firstname'].some(function (key) {
+            var field = row.querySelector('[name$="[' + key + ']"]');
+
+            return field && String(field.value || '').trim() !== '';
+        });
+    }
+
+    function validateMembers(form) {
+        var firstInvalid = null;
+
+        Array.from(form.querySelectorAll('[data-family-member-row]')).forEach(function (row) {
+            var named = memberHasData(row);
+
+            MEMBER_REQUIRED_FIELDS.forEach(function (key) {
+                var field = row.querySelector('[name$="[' + key + ']"]');
+
+                if (!field) {
+                    return;
+                }
+
+                var empty = named && String(field.value || '').trim() === '';
+                setFieldError(field, empty ? 'This field is required.' : '');
+
+                if (empty && !firstInvalid) {
+                    firstInvalid = field;
+                }
+            });
+        });
+
+        return firstInvalid;
+    }
+
     function validateMemberContacts(form) {
         var firstInvalid = null;
 
@@ -1216,16 +1191,18 @@
     }
 
     function submitFamilyForm(root, form) {
-        if (!validateHeadStep(root)) {
-            showStep(root, 'head');
+        // Deliberately not was-validated: that also paints every untouched optional
+        // field green, which reads as "confirmed" on a box the worker never filled.
+        // setFieldError's .is-invalid toggle is the only signal we want.
+        if (!validateHead(root)) {
             return;
         }
 
-        var badContact = validateMemberContacts(form);
+        var badMember = validateMembers(form) || validateMemberContacts(form);
 
-        if (badContact) {
-            showStep(root, 'members');
-            badContact.focus();
+        if (badMember) {
+            badMember.focus();
+            badMember.scrollIntoView({ block: 'center' });
             return;
         }
 
@@ -1336,10 +1313,9 @@
         }
 
         var title = modal ? modal.querySelector('#familyModalLabel') : null;
-        var entryTitle = root.querySelector('.family-entry-title');
 
-        if (title && entryTitle) {
-            title.textContent = entryTitle.textContent.trim() || 'New Family Record';
+        if (title) {
+            title.textContent = (root.dataset.familyModalTitle || '').trim() || 'New Family Record';
         }
 
         root.dataset.familyEntryReady = '1';
@@ -1355,32 +1331,7 @@
 
         initOtherSelects(root);
 
-        root.querySelectorAll('[data-family-step-target]').forEach(function (stepTrigger) {
-            stepTrigger.addEventListener('click', function (event) {
-                event.preventDefault();
-                showStep(root, stepTrigger.dataset.familyStepTarget === 'members' ? 'members' : 'head');
-            });
-        });
-
-        var nextButton = root.querySelector('[data-family-next]');
-
-        if (nextButton) {
-            nextButton.addEventListener('click', function (event) {
-                event.preventDefault();
-                showStep(root, 'members');
-            });
-        }
-
-        var previousButton = root.querySelector('[data-family-prev]');
-
-        if (previousButton) {
-            previousButton.addEventListener('click', function (event) {
-                event.preventDefault();
-                showStep(root, 'head');
-            });
-        }
-
-        // Live input: contact strip, Other reveal, required-clear, summary, draft.
+        // Live input: contact strip, Other reveal, required-clear, draft.
         root.addEventListener('input', function (event) {
             var target = event.target;
 
@@ -1400,9 +1351,38 @@
                 refreshAgeEligibility(target.closest('[data-family-member-row]') || root);
             }
 
-            renderHeadSummary(root);
+            if (target && target.matches('[data-family-service-filter]')) {
+                filterServiceAccordion(target);
+            }
+
+            if (target && /\[(lastname|firstname)\]$/.test(target.name || '')) {
+                renumberMembers(root);
+            }
+
             scheduleSave(root);
         });
+
+        // Per-field validation on blur, so an error lands at the field the worker just
+        // left instead of only after a submit. blur does not bubble, hence capture.
+        root.addEventListener('blur', function (event) {
+            var target = event.target;
+
+            if (!target || !target.matches || !target.matches('input, select, textarea')) {
+                return;
+            }
+
+            if (isContactField(target)) {
+                validateContact(target);
+                return;
+            }
+
+            if (target.matches('[required]')) {
+                var isEmpty = String(target.value || '').trim() === '';
+                var invalid = !target.checkValidity();
+
+                setFieldError(target, invalid ? (isEmpty ? 'This field is required.' : target.validationMessage) : '');
+            }
+        }, true);
 
         root.addEventListener('change', function (event) {
             var target = event.target;
@@ -1419,32 +1399,55 @@
                     }
 
                     // "Keep" re-checks asynchronously, after the sync refresh below already ran.
-                    if (target.matches(SECTOR_INPUT_SELECTOR)) {
-                        refreshSuggestions(target.closest('[data-family-member-row]') || root);
-                    }
-
-                    renderHeadSummary(root);
+                    refreshServiceCategories(target.closest('[data-family-member-row]') || root);
+                    refreshChoicesSummary(root);
+                    renumberMembers(root);
                     scheduleSave(root);
                 });
-            }
-
-            if (target && target.matches(SECTOR_INPUT_SELECTOR)) {
-                refreshSuggestions(target.closest('[data-family-member-row]') || root);
             }
 
             if (target && (target.name === 'head_birthday' || /\[birthday\]$/.test(target.name || ''))) {
                 refreshAgeEligibility(target.closest('[data-family-member-row]') || root);
             }
 
-            renderHeadSummary(root);
+            if (target && (target.matches(SECTOR_INPUT_SELECTOR) || target.matches(SERVICE_INPUT_SELECTOR))) {
+                refreshServiceCategories(target.closest('[data-family-member-row]') || root);
+            }
+
+            refreshChoicesSummary(root);
+            renumberMembers(root);
             scheduleSave(root);
         });
+
+        // Clicking a category header is an explicit instruction, so that panel stops
+        // following the sector-and-tick rule and stays where the worker put it.
+        root.addEventListener('click', function (event) {
+            var header = event.target.closest('.accordion-button');
+
+            if (!header) {
+                return;
+            }
+
+            // An empty selector makes querySelector throw, so bail before asking.
+            var selector = header.getAttribute('data-bs-target') || '';
+
+            if (selector === '') {
+                return;
+            }
+
+            var panel = root.querySelector(selector);
+
+            if (panel) {
+                panel.dataset.familyUserToggled = '1';
+            }
+        }, true);
 
         // Add / remove repeatable family members.
         root.addEventListener('click', function (event) {
             if (event.target.closest('[data-family-add-member]')) {
                 event.preventDefault();
                 addMemberRow(root);
+                renumberMembers(root);
                 scheduleSave(root);
                 return;
             }
@@ -1457,6 +1460,7 @@
 
                 if (row) {
                     row.remove();
+                    renumberMembers(root);
                     scheduleSave(root);
                 }
 
@@ -1469,10 +1473,25 @@
                 event.preventDefault();
                 var headRow = setHeadButton.closest('[data-family-member-row]');
 
-                if (headRow) {
+                if (!headRow || !formEl) {
+                    return;
+                }
+
+                var firstName = headRow.querySelector('[name$="[firstname]"]');
+                var lastName = headRow.querySelector('[name$="[lastname]"]');
+                var memberName = [
+                    firstName ? String(firstName.value || '').trim() : '',
+                    lastName ? String(lastName.value || '').trim() : ''
+                ].filter(Boolean).join(' ');
+
+                askPromoteToHead(formEl, memberName).then(function (confirmed) {
+                    if (!confirmed) {
+                        return;
+                    }
+
                     promoteMemberToHead(root, headRow);
                     scheduleSave(root);
-                }
+                });
             }
         });
 
@@ -1481,12 +1500,14 @@
                 window.setTimeout(function () {
                     clearMemberRows(root);
                     initOtherSelects(root);
-                    renderHeadSummary(root);
                     refreshAllAgeEligibility(root);
-                    showStep(root, 'head');
+                    refreshAllServiceCategories(root);
+                    refreshChoicesSummary(root);
+                    renumberMembers(root);
 
                     if (isCreateForm(root)) {
                         clearDraft();
+                        setDraftStatus(formEl, '');
                     }
                 }, 0);
             });
@@ -1496,10 +1517,10 @@
                 submitFamilyForm(root, formEl);
             });
         }
-
-        renderHeadSummary(root);
         refreshAllAgeEligibility(root);
-        showStep(root, 'head');
+        refreshAllServiceCategories(root);
+        refreshChoicesSummary(root);
+        renumberMembers(root);
 
         // Restore-on-reopen prompt (create mode only).
         if (isCreateForm(root) && formEl) {
@@ -1511,6 +1532,7 @@
                         restoreDraftIntoForm(root, draft);
                     } else {
                         clearDraft();
+                        setDraftStatus(formEl, '');
                     }
                 });
             }
@@ -1566,37 +1588,6 @@
     } else {
         bindCloseGuard();
     }
-
-    document.addEventListener('click', function (event) {
-        var nextButton = event.target.closest('[data-family-next]');
-        var previousButton = event.target.closest('[data-family-prev]');
-        var stepTrigger = event.target.closest('[data-family-step-target]');
-        var control = nextButton || previousButton || stepTrigger;
-
-        if (!control) {
-            return;
-        }
-
-        var root = control.closest('[data-family-entry-form]');
-
-        if (!root) {
-            return;
-        }
-
-        event.preventDefault();
-
-        if (nextButton) {
-            showStep(root, 'members');
-            return;
-        }
-
-        if (previousButton) {
-            showStep(root, 'head');
-            return;
-        }
-
-        showStep(root, stepTrigger.dataset.familyStepTarget === 'members' ? 'members' : 'head');
-    });
 
     window.registerDashboardModal({
         namespace: 'family',

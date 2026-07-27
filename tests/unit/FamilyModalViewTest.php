@@ -184,8 +184,12 @@ final class FamilyModalViewTest extends CIUnitTestCase
         // HTML pattern is implicitly anchored, so the attribute carries no ^ or $.
         $html = $this->renderDecoded();
 
-        $this->assertStringContainsString('pattern="09\d{9}|(049)?\d{7,8}"', $html);
-        $this->assertMatchesRegularExpression('/name="head_contactnumber"[^>]+inputmode="numeric"/', $html);
+        // One match over the whole tag, so both attributes have to be on the contact
+        // input itself rather than on any two inputs on the form.
+        $this->assertMatchesRegularExpression(
+            '/name="head_contactnumber"[^>]+inputmode="numeric"[^>]+pattern="09\\\\d\{9\}\|\(049\)\?\\\\d\{7,8\}"/',
+            $html
+        );
     }
 
     public function testBirthdayCarriesAnAgeNoteSlot(): void
@@ -309,6 +313,10 @@ final class FamilyModalViewTest extends CIUnitTestCase
         // that already has one hides it and lets the list speak for itself.
         $this->assertMatchesRegularExpression(
             '/class="[^"]*"\s+data-family-members-empty/',
+            $this->render()
+        );
+        $this->assertDoesNotMatchRegularExpression(
+            '/class="[^"]*\bd-none\b[^"]*"\s+data-family-members-empty/',
             $this->render()
         );
         $this->assertMatchesRegularExpression(

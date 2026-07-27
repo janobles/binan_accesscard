@@ -328,17 +328,20 @@ $renderMemberRow = static function ($index, array $m = []) use (
                 </section>
         </div>
 
-        <footer class="btn-toolbar family-entry-actions" role="toolbar" aria-label="Family form actions">
-            <div class="btn-group" role="group" aria-label="Form actions">
-                <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Close</button>
-                <?php if ($headId > 0): ?>
-                <a class="btn btn-outline-secondary btn-sm"
-                   href="<?= site_url('admin/cards/card/' . $headId) ?>"
-                   target="_blank" rel="noopener">Print QR card</a>
-                <?php endif; ?>
+        <footer class="family-entry-actions d-flex flex-wrap align-items-center gap-2" aria-label="Family form actions">
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Close</button>
                 <button class="btn btn-danger" type="reset" data-family-clear>Clear</button>
-                <button class="btn btn-primary" type="submit" data-family-save <?= $saveDisabled ? 'disabled aria-disabled="true"' : '' ?>><?= esc($submitLabel) ?></button>
+                <?php if ($headId > 0): ?>
+                    <a class="btn btn-link btn-sm px-1"
+                       href="<?= site_url('admin/cards/card/' . $headId) ?>"
+                       target="_blank" rel="noopener">Print QR card</a>
+                <?php endif; ?>
             </div>
+            <?php /* States the guarantee that Close is safe, instead of asking the worker to
+                     infer it from a button color. manage-family-modal.js fills it on each draft save. */ ?>
+            <span class="text-muted small ms-auto" data-family-draft-status aria-live="polite"></span>
+            <button class="btn btn-primary" type="submit" data-family-save <?= $saveDisabled ? 'disabled aria-disabled="true"' : '' ?>><?= esc($submitLabel) ?></button>
         </footer>
 
         <?php /* Truncation sentinel — MUST stay the last named field in the form. A POST

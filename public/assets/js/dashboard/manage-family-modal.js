@@ -588,11 +588,24 @@
         };
     }
 
+    // Closing is safe because the draft is kept, so the footer says so outright rather
+    // than leaving the worker to infer it from a button color.
+    function setDraftStatus(form, text) {
+        var root = form.closest('[data-family-entry-form]') || form;
+        var status = root.querySelector('[data-family-draft-status]');
+
+        if (status) {
+            status.textContent = text;
+        }
+    }
+
     function saveDraftNow(form) {
         try {
             window.localStorage.setItem(DRAFT_KEY, JSON.stringify(snapshotForm(form)));
+            setDraftStatus(form, 'Draft saved');
         } catch (error) {
             /* storage unavailable / quota */
+            setDraftStatus(form, '');
         }
     }
 
@@ -1306,6 +1319,7 @@
 
                     if (isCreateForm(root)) {
                         clearDraft();
+                        setDraftStatus(formEl, '');
                     }
                 }, 0);
             });
@@ -1327,6 +1341,7 @@
                         restoreDraftIntoForm(root, draft);
                     } else {
                         clearDraft();
+                        setDraftStatus(formEl, '');
                     }
                 });
             }

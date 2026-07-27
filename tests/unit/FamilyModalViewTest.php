@@ -88,6 +88,41 @@ final class FamilyModalViewTest extends CIUnitTestCase
         );
     }
 
+    public function testFooterUsesTheAppButtonStandard(): void
+    {
+        $html = $this->render();
+
+        $this->assertMatchesRegularExpression(
+            '/class="btn btn-primary"[^>]*data-family-save/',
+            $html,
+            'Save is the commit action and must be primary blue'
+        );
+        $this->assertMatchesRegularExpression(
+            '/class="btn btn-danger"[^>]*data-family-clear/',
+            $html,
+            'Clear must match the clear role in btn()'
+        );
+        $this->assertStringContainsString('class="btn btn-success" type="button" data-family-add-member', $html);
+        $this->assertStringContainsString('btn btn-outline-secondary" type="button" data-bs-dismiss="modal"', $html);
+        $this->assertStringNotContainsString('btn btn-secondary" type="button" data-bs-dismiss="modal"', $html);
+        $this->assertStringNotContainsString('btn btn-warning', $html);
+    }
+
+    public function testFooterCarriesADraftSavedIndicator(): void
+    {
+        $this->assertStringContainsString('data-family-draft-status', $this->render());
+    }
+
+    public function testPrintQrLinkOnlyRendersForASavedRecordAndIsNotInsideTheButtonGroup(): void
+    {
+        $this->assertStringNotContainsString('Print QR card', $this->render());
+
+        $html = $this->render(['headId' => 42]);
+
+        $this->assertStringContainsString('Print QR card', $html);
+        $this->assertStringNotContainsString('btn-outline-secondary btn-sm', $html);
+    }
+
     public function testKeepsTheImportFixContract(): void
     {
         $html = $this->render([

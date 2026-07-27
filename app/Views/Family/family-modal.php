@@ -362,7 +362,10 @@ $renderMemberRow = static function ($index, array $m = []) use (
                 </div>
 
                 <section class="family-members-section">
-                    <p class="text-muted small mb-3">Family members in this household. Leave empty if there are none.</p>
+                    <div class="alert alert-info d-flex align-items-center gap-2 py-2" role="alert">
+                        <i class="bi bi-people" aria-hidden="true"></i>
+                        <span>Family members in this household. Leave empty if there are none.</span>
+                    </div>
 
                     <div data-family-members>
                         <?php foreach (array_values($existingMembers) as $i => $member): ?>
@@ -374,10 +377,12 @@ $renderMemberRow = static function ($index, array $m = []) use (
                         <?= $renderMemberRow('__INDEX__') ?>
                     </template>
 
-                    <div class="btn-toolbar family-member-toolbar" role="toolbar" aria-label="Family member actions">
-                        <div class="btn-group" role="group" aria-label="Member actions">
-                            <button class="btn btn-success" type="button" data-family-add-member data-next-index="<?= esc((string) count($existingMembers), 'attr') ?>">Add Member</button>
-                        </div>
+                    <?php /* Full width: adding the next member is the only action in this section
+                             and the one the worker reaches for on every household. */ ?>
+                    <div class="family-member-toolbar">
+                        <button class="btn btn-success w-100" type="button" data-family-add-member data-next-index="<?= esc((string) count($existingMembers), 'attr') ?>">
+                            <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Add Member
+                        </button>
                     </div>
                 </section>
         </div>

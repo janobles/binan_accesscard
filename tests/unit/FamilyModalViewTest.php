@@ -274,7 +274,7 @@ final class FamilyModalViewTest extends CIUnitTestCase
             $html,
             'Clear must match the clear role in btn()'
         );
-        $this->assertStringContainsString('class="btn btn-success" type="button" data-family-add-member', $html);
+        $this->assertMatchesRegularExpression('/class="btn btn-success[^"]*"[^>]*data-family-add-member/', $html);
         $this->assertStringContainsString('btn btn-outline-secondary" type="button" data-bs-dismiss="modal"', $html);
         $this->assertStringNotContainsString('btn btn-secondary" type="button" data-bs-dismiss="modal"', $html);
         $this->assertStringNotContainsString('btn btn-warning', $html);

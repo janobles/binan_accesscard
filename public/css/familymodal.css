@@ -515,7 +515,7 @@
     flex: 1 1 auto;
     min-height: 0;
     overflow: auto;
-    padding: 0 1rem 0.8rem;
+    padding: 1rem 1rem 0.8rem;
 }
 
 .family-entry-section {
@@ -643,24 +643,20 @@
     background: #f8fbff;
 }
 
+/* Buttons match Manage Records: stock Bootstrap weight and width, sized only so
+   they line up with the form controls beside them. */
 .family-entry-actions .btn:not(.btn-link) {
-    min-width: 7rem;
     min-height: 2.35rem;
     font-size: 0.84rem;
-    font-weight: 800;
 }
 
 .family-member-toolbar {
-    justify-content: flex-end;
     padding: 0.75rem 0 0;
 }
 
 .family-member-toolbar .btn {
-    min-width: 7.25rem;
-    min-height: 2.3rem;
-    border-radius: 0.35rem;
+    min-height: 2.35rem;
     font-size: 0.84rem;
-    font-weight: 800;
 }
 
 
@@ -680,7 +676,7 @@
 }
 
 .floating-family-modal.is-family-entry-modal .family-entry-content {
-    padding: 0 0.65rem 0.65rem;
+    padding: 0.85rem 0.65rem 0.65rem;
 }
 
 .floating-family-modal.is-family-entry-modal .family-entry-section {
@@ -717,7 +713,6 @@
 }
 
 .floating-family-modal.is-family-entry-modal .family-entry-actions .btn:not(.btn-link) {
-    min-width: 7.25rem;
     min-height: 2.3rem;
     font-size: 0.84rem;
 }

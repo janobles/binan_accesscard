@@ -52,6 +52,16 @@
     display: none !important;
 }
 
+/* Icon + text spacing for every actions-menu dropdown item (Manage Records,
+   Sectors/Services/Categories, Subsidy Types, distributions): the icon and
+   label render flush against each other without this, since Bootstrap's
+   .dropdown-item has no built-in gap. */
+.actions-menu .dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
 .actions-menu .dropdown-menu {
     z-index: 1080;
 }

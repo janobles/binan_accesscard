@@ -57,7 +57,7 @@ $sectorClearUrl = static function () use ($listRoute, $perPage, $tabParam): stri
     'pillsId' => 'sectorFilterPills',
     'hiddenHtml' => ($tabParam !== '' ? '<input type="hidden" name="tab" value="' . esc($tabParam, 'attr') . '">' : '')
         . ($perPage !== 25 ? '<input type="hidden" name="per_page" value="' . esc((string) $perPage, 'attr') . '">' : ''),
-    'actionsHtml' => $canManage ? '<button class="' . btn('add') . ' flex-fill js-sector-modal-open" type="button" data-sector-mode="create">Add Sector</button>' : '',
+    'actionsHtml' => $canManage ? '<button class="' . btn('add') . ' flex-fill js-sector-modal-open" type="button" data-sector-mode="create">Add</button>' : '',
     'filterGroups' => [[
         'name' => 'status',
         'label' => 'Status',

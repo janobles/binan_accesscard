@@ -186,14 +186,14 @@
         }
 
         if (title) {
-            title.textContent = mode === 'update' ? 'Update Service or Program' : (isArchive ? 'Archive Service or Program' : (isRestore ? 'Restore Service or Program' : 'Add Service or Program'));
+            title.textContent = mode === 'update' ? 'Update Service or Program' : (isArchive ? 'Archive Service or Program' : (isRestore ? 'Restore Service or Program' : 'Add'));
         }
 
         if (submit) {
-            submit.textContent = mode === 'update' ? 'Update Service or Program' : (isArchive ? 'Archive Service or Program' : (isRestore ? 'Restore Service or Program' : 'Add Service or Program'));
+            submit.textContent = isArchive ? 'Archive Service or Program' : (isRestore ? 'Restore Service or Program' : (mode === 'update' ? 'Update' : 'Add'));
             submit.classList.toggle('btn-danger', isArchive);
-            submit.classList.toggle('btn-success', isRestore);
-            submit.classList.toggle('btn-primary', !isAction);
+            submit.classList.toggle('btn-success', !isArchive);
+            submit.classList.toggle('btn-primary', false);
             submit.disabled = false;
         }
 

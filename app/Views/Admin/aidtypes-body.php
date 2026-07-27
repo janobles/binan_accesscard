@@ -1,15 +1,25 @@
 <?php
 /**
- * Aid Types reference body: Add button + aid-type table. Rendered inside
- * components/card by Admin/layout.php's aidtypes block (vars: aidTypes,
- * currentRole). Lifecycle buttons render only for Admin/Developer.
+ * Subsidy Types reference body: search/toolbar rows + aid-type table.
+ * Rendered inside components/card by Admin/aidtypes.php (bodyData is that
+ * view's get_defined_vars(), matching the Sectors/Services/Categories
+ * convention). Lifecycle buttons render only for Admin/Developer. The Add
+ * trigger lives in the toolbar above this card (Admin/aidtypes.php).
  */
 $canManageAidTypes = in_array($currentRole ?? '', ['Admin', 'Developer'], true);
 ?>
-<?php /* Action row: Bootstrap utilities inside the card-body's own padding. */ ?>
-<div class="d-flex justify-content-end mb-3">
-          <button class="<?= btn('add') ?>" type="button" data-bs-toggle="modal" data-bs-target="#addAidTypeModal"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add Subsidy Type</button>
-        </div>
+<?= view('components/table_controls', [
+    'searchId' => 'aidTypeLocalSearch',
+    'searchAria' => 'Search shown subsidy types',
+    'searchFormAttrs' => 'data-lookup-search',
+    'searchInputAttrs' => 'data-lookup-search-input',
+    'sizeId' => 'aidTypePerPage',
+    'sizeAction' => site_url($listRoute),
+    'sizeHiddenHtml' => ($keyword !== '' ? '<input type="hidden" name="q" value="' . esc($keyword, 'attr') . '">' : '')
+        . ($status !== 'active' ? '<input type="hidden" name="status" value="' . esc($status, 'attr') . '">' : ''),
+    'perPage' => $perPage,
+    'perPageOptions' => $perPageOptions,
+]) ?>
 
         <div class="table-responsive">
           <table class="table manage-record-table align-middle w-100">
@@ -24,7 +34,7 @@ $canManageAidTypes = in_array($currentRole ?? '', ['Admin', 'Developer'], true);
                   <td><span class="sector-status-badge <?= $archived ? 'sector-status-archived' : 'sector-status-active' ?>"><?= $archived ? 'Archived' : 'Active' ?></span></td>
                   <td class="text-end">
                     <div class="dropdown actions-menu">
-                      <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false" aria-label="Subsidy type actions">
+                      <button class="btn btn-outline-secondary btn-sm actions-menu-toggle" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false" aria-label="Subsidy type actions">
                         <i class="bi bi-three-dots" aria-hidden="true"></i>
                       </button>
                       <div class="dropdown-menu dropdown-menu-end">
@@ -52,7 +62,7 @@ $canManageAidTypes = in_array($currentRole ?? '', ['Admin', 'Developer'], true);
                 </tr>
               <?php endforeach; ?>
               <?php if ($aidTypes === []): ?>
-                <tr><td colspan="3" class="sector-empty-state">No subsidy types defined.</td></tr>
+                <tr><td colspan="3" class="sector-empty-state"><?= $keyword !== '' ? 'No subsidy types match your search.' : 'No subsidy types defined.' ?></td></tr>
               <?php endif; ?>
             </tbody>
           </table>

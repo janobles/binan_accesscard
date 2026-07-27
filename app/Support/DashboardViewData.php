@@ -314,6 +314,19 @@ class DashboardViewData
         );
     }
 
+    /** Prepares variables for the Subsidy Types management view (paginated list + search/status). */
+    public static function aidTypeManagement(array $data): array
+    {
+        $bundle = (array) ($data['aidTypeListData'] ?? []);
+        $aidTypes = self::arrayValue($bundle['rows'] ?? $data['aidTypes'] ?? []);
+        $canRestore = (bool) ($data['canRestore'] ?? false);
+
+        return array_merge(
+            compact('aidTypes', 'canRestore'),
+            self::lookupListVars($bundle, 'admin/reference-data')
+        );
+    }
+
     /**
      * Normalizes the paginated lookup-list bundle (from DashboardPageBuilder::
      * buildLookupListData) into the view vars shared by all three lookup pages:

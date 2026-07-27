@@ -2,20 +2,42 @@
 
 namespace App\Models\Scanner;
 
+use App\Models\Concerns\LookupModelTrait;
+use CodeIgniter\Database\BaseBuilder;
 use CodeIgniter\Model;
 
 /**
  * Aid-type reference lookup (Financial/Rice/Grocery, admin-editable) backing
  * the admin/aidtypes page and the batch-open modal. Isolated from the
  * `services` table: aid types are their own concept, not services/programs.
+ *
+ * LookupModelTrait supplies the Subsidy Types management-table search/
+ * pagination (searchLookup/countLookup/statusCounts), matching Sectors/
+ * Services/Categories. This model's own create()/archive()/restore() (single-
+ * field signatures already wired to AidTypesController) take precedence over
+ * the trait's generic versions.
  */
 class AidTypeModel extends Model
 {
+    use LookupModelTrait;
+
     protected $table         = 'subsidy';
     protected $primaryKey    = 'subsidy_type_id';
     protected $returnType    = 'array';
     protected $allowedFields = ['name', 'dt_deleted'];
     protected $useTimestamps = false;
+
+    /** Columns the management search box matches. */
+    protected function lookupSearchColumns(): array
+    {
+        return ['name'];
+    }
+
+    /** Alphabetical, matching all()/active(). */
+    protected function applyLookupOrder(BaseBuilder $builder): void
+    {
+        $builder->orderBy('name', 'ASC');
+    }
 
     /** Non-archived aid types, ordered by name, for the dropdown. */
     public function active(): array

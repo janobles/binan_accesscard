@@ -50,8 +50,8 @@
                                         </div>
                                 </div>
                                 <div class="modal-footer">
-                                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                                        <button type="submit" class="btn btn-primary js-service-modal-submit">Save</button>
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                        <button type="submit" class="btn btn-success js-service-modal-submit">Add</button>
                                 </div>
                         </form>
                 </div>

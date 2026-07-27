@@ -247,17 +247,13 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                         'tabParam' => 'categories',
                     ]) ?>
                 <?php elseif ($referenceTab === 'aidtypes'): ?>
-                    <?= view('components/card', [
-                        'icon' => 'box-seam',
-                        'title' => 'Subsidy Types',
-                        'cardClass' => 'sector-management',
-                        'bodyView' => 'Admin/aidtypes-body',
-                        'bodyData' => [
-                            'aidTypes' => $aidTypes,
-                            'currentRole' => $currentRole,
-                        ],
+                    <?= view('Admin/aidtypes', [
+                        'aidTypes' => $aidTypes,
+                        'aidTypeListData' => $aidTypeListData,
+                        'currentRole' => $currentRole,
+                        'canRestore' => $canRestoreLookups ?? false,
+                        'tabParam' => 'aidtypes',
                     ]) ?>
-                    <?= view('Admin/aidtype-create-modal') ?>
                 <?php endif; ?>
             <?php endif; ?>
 

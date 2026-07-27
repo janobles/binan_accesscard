@@ -255,7 +255,7 @@ warnings and import fine.
 
 
 ===============================================================================
- THE DEMO FILE - family-import-DEMO-validations.xlsx
+ THE DEMO FILE - excel/family-import-DEMO-validations.xlsx
 ===============================================================================
 
 30 rows, 13 family groups. Upload it and the review screen shows

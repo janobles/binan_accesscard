@@ -247,23 +247,38 @@ final class FamilyExcelImporterTest extends CIUnitTestCase
         $this->assertNull($result['families'][0]['headPayload']['suffix']);
     }
 
-    public function testBirthdayRangeWarnsButStillImports(): void
+    public function testFutureBirthdayIsBlockingNotAWarning(): void
     {
-        // In the future, or an age over 150 → flagged (still imports).
-        foreach (['01-01-2050', '05-14-1870'] as $bad) {
-            $result = $this->importer()->validateAndBuild([
-                $this->headRow(3, '6001', ['birthday' => $bad]),
-            ]);
-            $codes = $this->codes($result);
-            $this->assertContains('BDAY-RANGE', $codes, "expected '{$bad}' to warn");
-            $this->assertNotContains('BDAY', $codes); // valid format, just implausible
-            $this->assertSame(1, $result['counts']['families']); // still built/imported
-        }
+        // A future birthday is rejected by MemberModel's not_future_date rule on write, so the
+        // review must block it (BDAY-FUTURE) — not warn — or the whole family silently fails to
+        // import. See FamilyExcelImporter::checkBirthdayRange().
+        $result = $this->importer()->validateAndBuild([
+            $this->headRow(3, '6001', ['birthday' => '01-01-2050']),
+        ]);
+        $future = $this->errorsFor($result, 'BDAY-FUTURE');
+        $this->assertCount(1, $future, 'a future birthday must be flagged BDAY-FUTURE');
+        $this->assertSame('blocking', $future[0]['severity']);
+        $this->assertSame('birthday', $future[0]['field']);
+        $this->assertNotContains('BDAY', $this->codes($result)); // valid format, just future
+    }
+
+    public function testOver150YearsWarnsButStillImports(): void
+    {
+        // Over 150 years old is stored fine (the DB accepts it), so it stays a warning.
+        $result = $this->importer()->validateAndBuild([
+            $this->headRow(3, '6001', ['birthday' => '05-14-1870']),
+        ]);
+        $range = $this->errorsFor($result, 'BDAY-RANGE');
+        $this->assertCount(1, $range, 'an over-150-year birthday must warn');
+        $this->assertSame('warning', $range[0]['severity']);
+        $this->assertSame(1, $result['counts']['families']); // still built/imported
 
         // Plausible ages — including a centenarian (~100) — raise nothing.
         foreach (['05-14-1980', '05-14-1926'] as $good) {
             $ok = $this->importer()->validateAndBuild([$this->headRow(3, '6002', ['birthday' => $good])]);
-            $this->assertNotContains('BDAY-RANGE', $this->codes($ok), "expected '{$good}' to pass");
+            $codes = $this->codes($ok);
+            $this->assertNotContains('BDAY-RANGE', $codes, "expected '{$good}' to pass");
+            $this->assertNotContains('BDAY-FUTURE', $codes, "expected '{$good}' to pass");
         }
     }
 

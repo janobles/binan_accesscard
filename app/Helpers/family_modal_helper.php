@@ -171,6 +171,9 @@ if (! function_exists('family_modal_render_person_fields')) {
             $summary = $withSummary ? (string) ($personField['summary'] ?? '') : '';
             $required = $withRequired && ! empty($personField['required']);
             $otherKey = $hasOther ? preg_replace('/[^A-Za-z0-9_-]+/', '_', $field($name)) : '';
+            // Bootstrap only reveals .invalid-feedback beside an .is-invalid control, so an
+            // empty div renders as nothing until the JS fills it.
+            $feedbackId = $id !== '' ? $id . 'Feedback' : '';
             ?>
             <div class="col-12 col-md-6 col-xl-3">
                 <label class="form-label"<?= $attrs(['for' => $id]) ?>><?= esc($label) ?></label>
@@ -179,6 +182,7 @@ if (! function_exists('family_modal_render_person_fields')) {
                         'class' => 'form-select' . ($hasOther ? ' js-other-select' : ''),
                         'id' => $id,
                         'name' => $field($name),
+                        'aria-describedby' => $feedbackId,
                         'data-summary' => $summary,
                         'required' => $required,
                         'data-other-field' => $hasOther ? $otherKey : '',
@@ -186,7 +190,7 @@ if (! function_exists('family_modal_render_person_fields')) {
                     ]) ?>><?= $selectOptions($options, $val($name), 'Select') ?></select>
                     <?php if ($hasOther): ?>
                         <input<?= $attrs([
-                            'class' => 'form-control mt-2 js-other-input family-form-hidden',
+                            'class' => 'form-control mt-2 js-other-input d-none',
                             'data-other-for' => $otherKey,
                             'placeholder' => 'Enter ' . strtolower($label),
                             'aria-label' => $idPrefix !== '' ? 'Other ' . strtolower($label) : '',
@@ -202,12 +206,14 @@ if (! function_exists('family_modal_render_person_fields')) {
                         'name' => $field($name),
                         'type' => $type,
                         'value' => $val($name),
+                        'aria-describedby' => $feedbackId,
                         'data-summary' => $summary,
                         'required' => $required,
                         'maxlength' => $personField['maxlength'] ?? '',
                         'max' => $personField['max'] ?? '',
                     ]) ?>>
                 <?php endif; ?>
+                <div class="invalid-feedback"<?= $attrs(['id' => $feedbackId]) ?> data-family-field-error></div>
             </div>
         <?php endforeach;
 

@@ -267,32 +267,30 @@ $renderMemberValues = static function ($index, array $m) use ($sectorCatalog): s
 $renderMemberRow = static function ($index, array $m = [], bool $open = true) use ($renderMemberEditor, $renderMemberValues): string {
     ob_start();
     ?>
-    <div class="family-person-card" data-family-member-row data-family-member-open="<?= $open ? '1' : '0' ?>">
-        <div class="family-person-card-header">
-            <?php /* The number is the only thing the header states: who the person is
-                     belongs to the summary beside it, so a closed row is one line and
-                     the name is never printed twice. manage-family-modal.js renumbers
-                     as rows are added and removed. */ ?>
-            <h3 class="family-person-card-title" data-family-member-title>Member</h3>
-            <?php /* Filled by manage-family-modal.js from the row's own values, so a closed
-                     row still says who it is. */ ?>
-            <div class="family-member-summary d-none" data-family-member-summary></div>
-            <div class="d-flex align-items-center gap-2 ms-auto">
-                <button class="btn btn-outline-secondary btn-sm" type="button" data-family-member-toggle aria-expanded="<?= $open ? 'true' : 'false' ?>"><?= $open ? 'Done' : 'Edit' ?></button>
-                <?php /* Row actions live in the same actions menu the records table uses, rather
-                         than two competing outline buttons in colors that carry no role. */ ?>
-                <div class="dropdown">
-                    <button class="btn btn-outline-secondary btn-sm actions-menu-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Member actions">
-                        <i class="bi bi-three-dots" aria-hidden="true"></i>
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end">
-                        <li><button class="dropdown-item" type="button" data-family-set-head>Set as head</button></li>
-                        <li><button class="dropdown-item text-danger" type="button" data-family-member-remove>Remove</button></li>
-                    </ul>
-                </div>
+    <div class="list-group-item p-0<?= $open ? ' bg-body-tertiary' : '' ?>" data-family-member-row data-family-member-open="<?= $open ? '1' : '0' ?>">
+        <?php /* A household is a list of people, so it is a Bootstrap list group: the
+                 row itself is the control that opens it (list-group-item-action gives
+                 the hover and focus states), and the kebab beside it is the same
+                 actions menu the records table uses. */ ?>
+        <div class="d-flex align-items-center">
+            <button class="list-group-item-action btn btn-link text-decoration-none text-reset text-start d-flex align-items-center gap-3 px-3 py-2 border-0 rounded-0" type="button" data-family-member-toggle aria-expanded="<?= $open ? 'true' : 'false' ?>">
+                <span class="small fw-semibold text-body-secondary font-monospace" data-family-member-title></span>
+                <?php /* Name over muted detail, the same shape as the name cell in
+                         Manage Records. Filled by manage-family-modal.js. */ ?>
+                <span class="d-flex flex-column overflow-hidden" data-family-member-summary></span>
+                <i class="bi bi-chevron-<?= $open ? 'up' : 'down' ?> ms-auto text-body-secondary" aria-hidden="true" data-family-member-chevron></i>
+            </button>
+            <div class="dropdown pe-2">
+                <button class="btn btn-outline-secondary btn-sm actions-menu-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Member actions">
+                    <i class="bi bi-three-dots" aria-hidden="true"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><button class="dropdown-item" type="button" data-family-set-head>Set as head</button></li>
+                    <li><button class="dropdown-item text-danger" type="button" data-family-member-remove>Remove</button></li>
+                </ul>
             </div>
         </div>
-        <div data-family-member-editor><?= $open ? $renderMemberEditor($index, $m) : '' ?></div>
+        <div class="<?= $open ? 'px-3 pb-3' : '' ?>" data-family-member-editor><?= $open ? $renderMemberEditor($index, $m) : '' ?></div>
         <div data-family-member-values><?= $open ? '' : $renderMemberValues($index, $m) ?></div>
     </div>
     <?php
@@ -434,7 +432,7 @@ $renderMemberRow = static function ($index, array $m = [], bool $open = true) us
                         <span>Family members in this household. Leave empty if there are none.</span>
                     </div>
 
-                    <div data-family-members>
+                    <div class="list-group list-group-flush" data-family-members>
                         <?php foreach (array_values($existingMembers) as $i => $member): ?>
                             <?= $renderMemberRow($i, (array) $member, false) ?>
                         <?php endforeach; ?>

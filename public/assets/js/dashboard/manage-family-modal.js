@@ -689,6 +689,7 @@
         row.dataset.familyMemberOpen = '0';
         setMemberToggleState(row, false);
         renderMemberSummary(row);
+        renumberMembers(row.closest('[data-family-entry-form]') || row.parentElement);
     }
 
     function expandMemberRow(root, row) {
@@ -707,6 +708,7 @@
         writeMemberData(row, data);
         setMemberToggleState(row, true);
         renderMemberSummary(row);
+        renumberMembers(root);
         refreshAgeEligibility(row);
         refreshServiceCategories(row);
         refreshChoicesSummary(row);
@@ -714,14 +716,28 @@
 
     function setMemberToggleState(row, open) {
         var toggle = row.querySelector('[data-family-member-toggle]');
-        var summary = row.querySelector('[data-family-member-summary]');
+        var chevron = row.querySelector('[data-family-member-chevron]');
+        var editor = row.querySelector('[data-family-member-editor]');
 
         if (toggle) {
-            toggle.textContent = open ? 'Done' : 'Edit';
             toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
         }
 
-        setHidden(summary, open);
+        // Swapping the icon keeps the open/closed state in Bootstrap Icons rather
+        // than in a CSS transform of our own.
+        if (chevron) {
+            chevron.classList.toggle('bi-chevron-up', open);
+            chevron.classList.toggle('bi-chevron-down', !open);
+        }
+
+        // The open row is the one being worked on, and its fields need the padding
+        // the closed row has no use for.
+        row.classList.toggle('bg-body-tertiary', open);
+
+        if (editor) {
+            editor.classList.toggle('px-3', open);
+            editor.classList.toggle('pb-3', open);
+        }
     }
 
     // The closed row has to say who it is: name, relationship, age, and the sector
@@ -740,35 +756,29 @@
         var last = String(data.lastname || '').trim();
         var name = last !== '' && given !== '' ? last + ', ' + given : (last || given);
         var age = completedAge(data.birthday);
-        var parts = [String(data.relationship || '').trim(), age === null ? '' : age + ' yrs'].filter(Boolean);
+        var sectors = data.sector_labels.filter(Boolean).join(', ');
+        // One muted line under the name, in the order a worker scans a household:
+        // how they relate to the head, how old they are, what they are classified
+        // as, how much aid they draw. Empty facts drop out rather than leaving
+        // stray separators behind.
+        var meta = [
+            String(data.relationship || '').trim(),
+            age === null ? '' : age + ' yrs',
+            sectors,
+            data.service_ids.length ? data.service_ids.length + ' program' + (data.service_ids.length === 1 ? '' : 's') : ''
+        ].filter(Boolean).join(' · ');
 
         target.innerHTML = '';
 
         var nameEl = document.createElement('span');
-        nameEl.className = 'family-member-summary-name';
+        nameEl.className = 'fw-semibold text-truncate';
         nameEl.textContent = name !== '' ? name : 'Unnamed member';
         target.appendChild(nameEl);
 
-        if (parts.length) {
-            var meta = document.createElement('span');
-            meta.className = 'family-member-summary-meta';
-            meta.textContent = parts.join(' · ');
-            target.appendChild(meta);
-        }
-
-        data.sector_labels.filter(Boolean).forEach(function (code) {
-            var badge = document.createElement('span');
-            badge.className = 'badge text-bg-light family-member-summary-badge';
-            badge.textContent = code;
-            target.appendChild(badge);
-        });
-
-        if (data.service_ids.length) {
-            var services = document.createElement('span');
-            services.className = 'family-member-summary-meta';
-            services.textContent = data.service_ids.length + ' program' + (data.service_ids.length === 1 ? '' : 's');
-            target.appendChild(services);
-        }
+        var metaEl = document.createElement('span');
+        metaEl.className = 'small text-body-secondary text-truncate';
+        metaEl.textContent = meta !== '' ? meta : 'No details yet';
+        target.appendChild(metaEl);
     }
 
     function snapshotForm(form) {
@@ -910,7 +920,10 @@
             var title = row.querySelector('[data-family-member-title]');
 
             if (title) {
-                title.textContent = 'Member ' + (index + 1);
+                // Just the position, and the same in both states: the row header does
+                // not move or re-word when it opens, so an open row stays lined up
+                // with the closed ones above and below it.
+                title.textContent = String(index + 1);
             }
         });
     }
@@ -1045,11 +1058,11 @@
 
             if (choice) {
                 choice.title = allowed ? '' : message;
-                choice.classList.toggle('family-choice--ineligible', !allowed && input.checked);
 
                 var label = choice.querySelector('.form-check-label');
 
                 if (label) {
+                    label.classList.toggle('text-danger', !allowed && input.checked);
                     label.setAttribute('title', allowed ? '' : message);
                 }
             }

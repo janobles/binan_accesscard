@@ -303,13 +303,17 @@ final class FamilyModalViewTest extends CIUnitTestCase
         $this->assertStringNotContainsString('btn btn-outline-primary', $html);
     }
 
-    public function testHeadAndMembersUseTheSameCardChrome(): void
+    public function testHeadIsACardAndMembersAreABootstrapListGroup(): void
     {
         $html = $this->render();
 
-        // Head and member are the same kind of thing, so they render the same card.
-        $this->assertSame(2, substr_count($html, 'family-person-card-header'));
+        // There is one head, so it is a card. Members are a list of people, so they
+        // are a list group: Bootstrap components rather than hand-rolled row CSS.
+        $this->assertSame(1, substr_count($html, 'family-person-card-header'));
         $this->assertStringContainsString('>Head of Family</h3>', $html);
+        $this->assertStringContainsString('class="list-group list-group-flush"', $html);
+        $this->assertStringContainsString('list-group-item p-0', $html);
+        $this->assertStringContainsString('list-group-item-action', $html);
         $this->assertStringContainsString('data-family-member-title', $html);
     }
 

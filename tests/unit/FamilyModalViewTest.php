@@ -306,8 +306,9 @@ final class FamilyModalViewTest extends CIUnitTestCase
         $html = $this->render(['headId' => 42]);
 
         $this->assertStringContainsString('Print QR card', $html);
-        // It is a link, not a btn-sm wedged into a default-size button group.
-        $this->assertMatchesRegularExpression('/class="btn btn-link btn-sm[^"]*"[^>]*>\s*Print QR card/', $html);
+        // It is an anchor, not a btn-sm wedged into a default-size button group.
+        $this->assertMatchesRegularExpression('/<a\b[^>]*class="btn btn-link btn-sm[^"]*"[^>]*>\s*Print QR card/', $html);
+        $this->assertStringNotContainsString('btn-group', $html);
     }
 
     public function testKeepsTheImportFixContract(): void

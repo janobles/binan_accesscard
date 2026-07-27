@@ -855,17 +855,18 @@
     // Drives a collapse panel without needing bootstrap.Collapse to be instantiated
     // first, and keeps the header button's aria-expanded in step.
     function setServicePanelOpen(panel, open) {
-        if (panel.classList.contains('show') === open) {
-            return;
-        }
-
         var item = panel.closest('.accordion-item');
         var button = item ? item.querySelector('.accordion-button') : null;
 
-        if (window.bootstrap && window.bootstrap.Collapse) {
-            window.bootstrap.Collapse.getOrCreateInstance(panel, { toggle: false })[open ? 'show' : 'hide']();
-        } else {
-            panel.classList.toggle('show', open);
+        // Only the panel gets skipped when it is already where we want it. The
+        // header still gets synced, so markup that arrives with the two out of
+        // step (an import-fix fragment, say) is corrected instead of left alone.
+        if (panel.classList.contains('show') !== open) {
+            if (window.bootstrap && window.bootstrap.Collapse) {
+                window.bootstrap.Collapse.getOrCreateInstance(panel, { toggle: false })[open ? 'show' : 'hide']();
+            } else {
+                panel.classList.toggle('show', open);
+            }
         }
 
         if (button) {
@@ -1427,7 +1428,14 @@
                 return;
             }
 
-            var panel = root.querySelector(header.getAttribute('data-bs-target') || '');
+            // An empty selector makes querySelector throw, so bail before asking.
+            var selector = header.getAttribute('data-bs-target') || '';
+
+            if (selector === '') {
+                return;
+            }
+
+            var panel = root.querySelector(selector);
 
             if (panel) {
                 panel.dataset.familyUserToggled = '1';

@@ -484,24 +484,36 @@
     display: none;
 }
 
-/* Bootstrap 5.3 reads these per-component custom properties, so the form keeps its
-   look without a parallel implementation of .form-control and .form-select. There is
-   no Sass build here (bootstrap.min.css is vendored), so custom properties are the
-   route to variable-based customization. Values match what the old bare-element
-   rules produced. */
+/* Bootstrap reads --bs-border-color and --bs-body-color from an ancestor, so the
+   form's borders and text follow without a parallel implementation of
+   .form-control and .form-select. There is no Sass build here (bootstrap.min.css
+   is vendored), so these two are the only variable-based hooks available.
+   Values match what the old bare-element rules produced. */
 .family-entry-form {
     --bs-border-color: #b9d7f7;
     --bs-body-color: #001f3f;
-    --bs-form-control-bg: #fbfdff;
-    --bs-form-check-bg: #fbfdff;
-    --bs-form-check-checked-bg-color: #168a73;
-    --bs-form-check-checked-border-color: #168a73;
 
     display: flex;
     min-height: 100%;
     flex-direction: column;
     color: #001f3f;
     background: #ffffff;
+}
+
+/* Backgrounds and the checked color have to be set on the elements themselves.
+   .form-control and .form-select read var(--bs-body-bg), .form-check-input
+   redeclares --bs-form-check-bg on itself, and .form-check-input:checked
+   hardcodes Bootstrap blue, so none of them can be reached from an ancestor.
+   :disabled is left alone so Bootstrap's greyed-out state still shows. */
+.family-entry-form .form-control:not(:disabled),
+.family-entry-form .form-select:not(:disabled),
+.family-entry-form .form-check-input:not(:disabled) {
+    background-color: #fbfdff;
+}
+
+.family-entry-form .form-check-input:checked {
+    border-color: #168a73;
+    background-color: #168a73;
 }
 
 .family-entry-form form {

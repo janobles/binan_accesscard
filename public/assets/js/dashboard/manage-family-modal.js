@@ -1027,6 +1027,30 @@
 
     // ---- repeatable members ------------------------------------------------
 
+    function memberIndex(row) {
+        var match = /^members\[(\d+)\]$/.exec((row && row.dataset.memberFieldPrefix) || '');
+
+        return match ? match[1] : null;
+    }
+
+    // Mounts the field set into a row's editor slot. The template still carries the
+    // __INDEX__ placeholder, so one replace covers both the posted names and the ids
+    // the labels point at.
+    function buildMemberEditor(root, row) {
+        var template = root.querySelector('[data-family-member-editor-template]');
+        var mount = row ? row.querySelector('[data-family-member-editor]') : null;
+        var index = memberIndex(row);
+
+        if (!template || !mount || index === null) {
+            return null;
+        }
+
+        mount.innerHTML = (template.innerHTML || '').replace(/__INDEX__/g, index).trim();
+        initOtherSelects(mount);
+
+        return mount;
+    }
+
     function addMemberRow(root) {
         var button = root.querySelector('[data-family-add-member]');
         var container = root.querySelector('[data-family-members]');
@@ -1051,8 +1075,10 @@
         container.appendChild(row);
         button.dataset.nextIndex = String(nextIndex + 1);
 
-        initOtherSelects(row);
+        buildMemberEditor(root, row);
+        row.dataset.familyMemberOpen = '1';
         refreshAgeEligibility(row);
+        refreshServiceCategories(row);
 
         return row;
     }

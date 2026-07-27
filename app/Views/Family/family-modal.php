@@ -158,72 +158,97 @@ $renderChoicesBlock = static function (
 };
 
 /**
- * Renders one repeatable family-member row. $index is an int for a pre-filled
- * existing member, or the literal '__INDEX__' placeholder in the <template>;
- * manage-family-modal.js swaps the placeholder for the next counter on Add.
+ * The editable field set for one member row. It is mounted into the row shell:
+ * inline for a row that opens with the form, or by manage-family-modal.js when the
+ * worker opens a closed row. $index is an int for an existing member, or the
+ * literal '__INDEX__' placeholder inside the <template>, which the JS swaps for the
+ * row's own index (names and ids alike).
  * Field names post as members[$index][...] to match FamilyController::store()/update().
  */
-$renderMemberRow = static function ($index, array $m = []) use (
+$renderMemberEditor = static function ($index, array $m = []) use (
     $personFields,
     $personFieldOptions,
     $selectOptions,
     $relationshipOptions,
     $renderChoicesBlock,
+    $fieldPrefix,
     $modalMode
 ): string {
     $i = (string) $index;
     $field = static fn (string $name): string => 'members[' . $i . '][' . $name . ']';
     $val = static fn (string $key): string => (string) ($m[$key] ?? '');
+    $idPrefix = $fieldPrefix . 'Member' . $i;
     $selectedSectors = array_map('strval', (array) ($m['sector_ids'] ?? []));
     $selectedServices = array_map('strval', (array) ($m['service_ids'] ?? []));
 
     ob_start();
     ?>
-    <div class="family-person-card" data-family-member-row>
+    <div class="row g-3">
+        <?= family_modal_render_person_fields([
+            'personFields' => $personFields,
+            'optionsByKey' => $personFieldOptions,
+            'selectOptions' => $selectOptions,
+            'field' => $field,
+            'value' => $val,
+            // Members require the same personal fields as the head (Address/Barangay are
+            // head-only — members inherit them, so they are not part of this component).
+            'idPrefix' => $idPrefix,
+            'required' => true,
+        ]) ?>
+        <div class="col-12 col-md-6 col-xl-3">
+            <label class="form-label" for="<?= esc($idPrefix . 'Relationship', 'attr') ?>">Relationship</label>
+            <select id="<?= esc($idPrefix . 'Relationship', 'attr') ?>" class="form-select js-other-select" data-other-field="relationship<?= esc($i, 'attr') ?>" data-initial-value="<?= esc($val('relationship'), 'attr') ?>" name="<?= esc($field('relationship'), 'attr') ?>" aria-describedby="<?= esc($idPrefix . 'RelationshipFeedback', 'attr') ?>"><?= $selectOptions($relationshipOptions, $val('relationship'), 'Select') ?></select>
+            <input class="form-control mt-2 js-other-input d-none" data-other-for="relationship<?= esc($i, 'attr') ?>" placeholder="Enter relationship" aria-label="Other relationship">
+            <div class="invalid-feedback" id="<?= esc($idPrefix . 'RelationshipFeedback', 'attr') ?>" data-family-field-error></div>
+        </div>
+    </div>
+
+    <?= $renderChoicesBlock(
+        'familyMember' . $i . 'Choices',
+        $field('sector_ids') . '[]',
+        $selectedSectors,
+        $field('service_ids') . '[]',
+        $selectedServices,
+        $idPrefix,
+        $modalMode !== 'update'
+    ) ?>
+    <?php
+    return (string) ob_get_clean();
+};
+
+/**
+ * The persistent shell of one member row: header, summary line, and the two mount
+ * points. The editor is rendered inline when the row opens with the form; a closed
+ * row leaves the mount empty and carries its values as hidden inputs instead.
+ */
+$renderMemberRow = static function ($index, array $m = [], bool $open = true) use ($renderMemberEditor): string {
+    ob_start();
+    ?>
+    <div class="family-person-card" data-family-member-row data-family-member-open="<?= $open ? '1' : '0' ?>">
         <div class="family-person-card-header">
             <?php /* manage-family-modal.js keeps the number and name current as rows are
                      added, removed, or renamed. */ ?>
             <h3 class="family-person-card-title" data-family-member-title>Member</h3>
-            <?php /* Row actions live in the same actions menu the records table uses, rather
-                     than two competing outline buttons in colors that carry no role. */ ?>
-            <div class="dropdown">
-                <button class="btn btn-outline-secondary btn-sm actions-menu-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Member actions">
-                    <i class="bi bi-three-dots" aria-hidden="true"></i>
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end">
-                    <li><button class="dropdown-item" type="button" data-family-set-head>Set as head</button></li>
-                    <li><button class="dropdown-item text-danger" type="button" data-family-member-remove>Remove</button></li>
-                </ul>
+            <div class="d-flex align-items-center gap-2">
+                <button class="btn btn-outline-secondary btn-sm" type="button" data-family-member-toggle aria-expanded="<?= $open ? 'true' : 'false' ?>"><?= $open ? 'Done' : 'Edit' ?></button>
+                <?php /* Row actions live in the same actions menu the records table uses, rather
+                         than two competing outline buttons in colors that carry no role. */ ?>
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary btn-sm actions-menu-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Member actions">
+                        <i class="bi bi-three-dots" aria-hidden="true"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><button class="dropdown-item" type="button" data-family-set-head>Set as head</button></li>
+                        <li><button class="dropdown-item text-danger" type="button" data-family-member-remove>Remove</button></li>
+                    </ul>
+                </div>
             </div>
         </div>
-        <div class="row g-3">
-            <?= family_modal_render_person_fields([
-                'personFields' => $personFields,
-                'optionsByKey' => $personFieldOptions,
-                'selectOptions' => $selectOptions,
-                'field' => $field,
-                'value' => $val,
-                // Members require the same personal fields as the head (Address/Barangay are
-                // head-only — members inherit them, so they are not part of this component).
-                'required' => true,
-            ]) ?>
-            <div class="col-12 col-md-6 col-xl-3">
-                <label class="form-label">Relationship</label>
-                <select class="form-select js-other-select" data-other-field="relationship" data-initial-value="<?= esc($val('relationship'), 'attr') ?>" name="<?= esc($field('relationship'), 'attr') ?>"><?= $selectOptions($relationshipOptions, $val('relationship'), 'Select') ?></select>
-                <input class="form-control mt-2 js-other-input d-none" data-other-for="relationship" placeholder="Enter relationship">
-                <div class="invalid-feedback" data-family-field-error></div>
-            </div>
-        </div>
-
-        <?= $renderChoicesBlock(
-            'familyMember' . $i . 'Choices',
-            $field('sector_ids') . '[]',
-            $selectedSectors,
-            $field('service_ids') . '[]',
-            $selectedServices,
-            'familyMember' . $i,
-            $modalMode !== 'update'
-        ) ?>
+        <?php /* Filled by manage-family-modal.js from the row's own values, so a closed row
+                 still says who it is. */ ?>
+        <div class="family-member-summary d-none" data-family-member-summary></div>
+        <div data-family-member-editor><?= $open ? $renderMemberEditor($index, $m) : '' ?></div>
+        <div data-family-member-values></div>
     </div>
     <?php
     return (string) ob_get_clean();
@@ -370,8 +395,16 @@ $renderMemberRow = static function ($index, array $m = []) use (
                         <?php endforeach; ?>
                     </div>
 
+                    <?php /* The shell of a new row. Its editor mount arrives empty; the JS
+                             fills it from the editor template below. */ ?>
                     <template data-family-member-template>
-                        <?= $renderMemberRow('__INDEX__') ?>
+                        <?= $renderMemberRow('__INDEX__', [], false) ?>
+                    </template>
+
+                    <?php /* The field set for one row, mounted on Add and on Edit. The JS
+                             swaps __INDEX__ for the row's index across names and ids. */ ?>
+                    <template data-family-member-editor-template>
+                        <?= $renderMemberEditor('__INDEX__') ?>
                     </template>
 
                     <?php /* Full width: adding the next member is the only action in this section

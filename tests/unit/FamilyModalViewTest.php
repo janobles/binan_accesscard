@@ -161,6 +161,32 @@ final class FamilyModalViewTest extends CIUnitTestCase
         return html_entity_decode($this->render($data), ENT_QUOTES | ENT_HTML5);
     }
 
+    public function testMemberRowSplitsIntoAShellAndAMountedEditor(): void
+    {
+        $html = $this->render();
+
+        // The row template is the shell only: its editor mount is empty and the
+        // fields live in a separate template that JS mounts into it.
+        $this->assertStringContainsString('data-family-member-editor-template', $html);
+        $this->assertStringContainsString('data-family-member-editor', $html);
+        $this->assertStringContainsString('data-family-member-summary', $html);
+        $this->assertStringContainsString('data-family-member-toggle', $html);
+        $this->assertMatchesRegularExpression(
+            '/<div[^>]+data-family-member-editor[^>]*>\s*<\/div>\s*<div[^>]+data-family-member-values/',
+            $html,
+            'the shell template must ship an empty editor mount followed by the values mount'
+        );
+    }
+
+    public function testTheEditorTemplateCarriesTheMemberFieldsAndKeepsTheIndexPlaceholder(): void
+    {
+        $html = $this->renderDecoded();
+
+        $this->assertStringContainsString('members[__INDEX__][lastname]', $html);
+        $this->assertStringContainsString('members[__INDEX__][relationship]', $html);
+        $this->assertStringContainsString('members[__INDEX__][sector_ids][]', $html);
+    }
+
     public function testServicesRenderAsAnAlwaysOpenAccordionPerCategory(): void
     {
         $html = $this->renderDecoded();

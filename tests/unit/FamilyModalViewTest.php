@@ -161,6 +161,18 @@ final class FamilyModalViewTest extends CIUnitTestCase
         return html_entity_decode($this->render($data), ENT_QUOTES | ENT_HTML5);
     }
 
+    public function testAgeRestrictedChoicesCarryTheirBoundsAsData(): void
+    {
+        $html = $this->renderDecoded();
+
+        // B (children) is capped, SC (senior) has a floor, and the JS reads these
+        // instead of carrying its own copy of 18 / 60.
+        $this->assertMatchesRegularExpression('/data-sector-code="B"[^>]*data-max-age="17"/', $html);
+        $this->assertMatchesRegularExpression('/data-sector-code="SC"[^>]*data-min-age="60"/', $html);
+        $this->assertMatchesRegularExpression('/data-service-category="Senior Citizen"[^>]*data-min-age="60"/', $html);
+        $this->assertDoesNotMatchRegularExpression('/data-service-category="Financial Assistance"[^>]*data-(min|max)-age=/', $html);
+    }
+
     public function testMemberRowSplitsIntoAShellAndAMountedEditor(): void
     {
         $html = $this->render();

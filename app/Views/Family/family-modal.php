@@ -16,12 +16,22 @@ $personFieldOptions = compact(
     'incomeOptions'
 );
 
+/** Renders the age bounds of an age-restricted choice as data attributes, or nothing. */
+$ageBoundsAttrs = static function (?array $bounds): string {
+    if ($bounds === null) {
+        return '';
+    }
+
+    return ($bounds['min'] !== null ? ' data-min-age="' . (int) $bounds['min'] . '"' : '')
+        . ($bounds['max'] !== null ? ' data-max-age="' . (int) $bounds['max'] . '"' : '');
+};
+
 /**
  * Sectors is a fixed list of ten, so it needs no scroll region: a two-column grid
  * shows all of them at once. $fieldName is the posted name (head vs member row) and
  * $idPrefix keeps checkbox ids unique between the head and each member row.
  */
-$renderSectorGrid = static function (string $fieldName, array $selectedIds, string $idPrefix) use ($sectorCatalog, $sectorLabel): string {
+$renderSectorGrid = static function (string $fieldName, array $selectedIds, string $idPrefix) use ($sectorCatalog, $sectorLabel, $ageBoundsAttrs): string {
     ob_start();
     ?>
     <div class="row row-cols-1 row-cols-sm-2 g-1" data-family-sector-grid>
@@ -44,7 +54,7 @@ $renderSectorGrid = static function (string $fieldName, array $selectedIds, stri
                 ?>
                 <div class="col">
                     <div class="form-check family-choice<?= $isArchived ? ' family-choice--archived' : '' ?>">
-                        <input class="form-check-input" type="checkbox" id="<?= esc($choiceId, 'attr') ?>" name="<?= esc($fieldName, 'attr') ?>" value="<?= esc($sectorId, 'attr') ?>" data-label="<?= esc($label, 'attr') ?>" data-sector-code="<?= esc((string) ($sector['shortcode'] ?? $sector['code'] ?? ''), 'attr') ?>" data-sector-name="<?= esc((string) ($sector['name'] ?? ''), 'attr') ?>"<?= $isArchived ? ' data-archived="1"' : '' ?> <?= in_array($sectorId, $selectedIds, true) ? 'checked' : '' ?>>
+                        <input class="form-check-input" type="checkbox" id="<?= esc($choiceId, 'attr') ?>" name="<?= esc($fieldName, 'attr') ?>" value="<?= esc($sectorId, 'attr') ?>" data-label="<?= esc($label, 'attr') ?>" data-sector-code="<?= esc((string) ($sector['shortcode'] ?? $sector['code'] ?? ''), 'attr') ?>" data-sector-name="<?= esc((string) ($sector['name'] ?? ''), 'attr') ?>"<?= $isArchived ? ' data-archived="1"' : '' ?><?= $ageBoundsAttrs(\App\Support\FamilyAgeEligibility::sectorAgeBounds((string) ($sector['shortcode'] ?? $sector['code'] ?? ''))) ?> <?= in_array($sectorId, $selectedIds, true) ? 'checked' : '' ?>>
                         <label class="form-check-label" for="<?= esc($choiceId, 'attr') ?>"><?= esc($label) ?><?php if ($isArchived): ?> <span class="family-choice-badge">Archived</span><?php endif; ?></label>
                     </div>
                 </div>
@@ -63,7 +73,7 @@ $renderSectorGrid = static function (string $fieldName, array $selectedIds, stri
  * is hidden: a category matching no sector stays collapsed but present, because
  * programs like Financial Assistance apply regardless of sector.
  */
-$renderServiceAccordion = static function (string $fieldName, array $selectedIds, string $accordionId, string $idPrefix) use ($servicesByCategory, $serviceLabel): string {
+$renderServiceAccordion = static function (string $fieldName, array $selectedIds, string $accordionId, string $idPrefix) use ($servicesByCategory, $serviceLabel, $ageBoundsAttrs): string {
     ob_start();
     ?>
     <div class="mb-2">
@@ -83,7 +93,7 @@ $renderServiceAccordion = static function (string $fieldName, array $selectedIds
                 <h2 class="accordion-header">
                     <button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#<?= esc($panelId, 'attr') ?>" aria-expanded="false" aria-controls="<?= esc($panelId, 'attr') ?>"><?= esc((string) $category) ?></button>
                 </h2>
-                <div id="<?= esc($panelId, 'attr') ?>" class="accordion-collapse collapse" data-family-service-panel data-service-category="<?= esc((string) $category, 'attr') ?>">
+                <div id="<?= esc($panelId, 'attr') ?>" class="accordion-collapse collapse" data-family-service-panel data-service-category="<?= esc((string) $category, 'attr') ?>"<?= $ageBoundsAttrs(\App\Support\FamilyAgeEligibility::serviceCategoryAgeBounds((string) $category)) ?>>
                     <div class="accordion-body py-2">
                         <div class="row row-cols-1 row-cols-sm-2 g-1">
                             <?php foreach ((array) $services as $service): ?>

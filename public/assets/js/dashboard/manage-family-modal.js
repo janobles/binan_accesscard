@@ -955,6 +955,38 @@
         return age;
     }
 
+    // Where a choice's age limits come from: the view stamps them from
+    // FamilyAgeEligibility, so 18 / 60 / B / SC live in exactly one place.
+    function ageBoundsFor(input) {
+        var source = input.matches(SERVICE_INPUT_SELECTOR)
+            ? input.closest('[data-service-category]')
+            : input;
+
+        if (!source) {
+            return null;
+        }
+
+        var min = source.dataset.minAge;
+        var max = source.dataset.maxAge;
+
+        if (typeof min === 'undefined' && typeof max === 'undefined') {
+            return null;
+        }
+
+        return {
+            min: typeof min === 'undefined' ? null : parseInt(min, 10),
+            max: typeof max === 'undefined' ? null : parseInt(max, 10)
+        };
+    }
+
+    function ageBoundsMessage(bounds) {
+        if (bounds.max !== null) {
+            return 'Available only to persons below ' + (bounds.max + 1) + ' years old.';
+        }
+
+        return 'Available only to persons ' + bounds.min + ' years old and above.';
+    }
+
     // A person's birthday controls only that person's age-specific choices.
     function refreshAgeEligibility(scopeEl) {
         if (!scopeEl || !scopeEl.querySelectorAll) {
@@ -978,27 +1010,18 @@
                 return;
             }
 
-            var group = '';
+            var bounds = ageBoundsFor(input);
 
-            if (input.matches(SECTOR_INPUT_SELECTOR)) {
-                var code = String(input.dataset.sectorCode || '').trim().toUpperCase();
-                group = code === 'B' ? 'child' : (code === 'SC' ? 'senior' : '');
-            } else if (input.matches(SERVICE_INPUT_SELECTOR)) {
-                var serviceGroup = input.closest('[data-service-category]');
-                var category = normName(serviceGroup ? serviceGroup.dataset.serviceCategory : '');
-                group = category === 'bata (children)' ? 'child' : (category === 'senior citizen' ? 'senior' : '');
-            }
-
-            if (group === '') {
+            if (bounds === null) {
                 return;
             }
 
-            var allowed = age !== null && (group === 'child' ? age < 18 : age >= 60);
+            var allowed = age !== null
+                && (bounds.min === null || age >= bounds.min)
+                && (bounds.max === null || age <= bounds.max);
             var message = age === null
                 ? 'Enter a valid date of birth to determine eligibility.'
-                : (group === 'child'
-                    ? 'Available only to persons below 18 years old.'
-                    : 'Available only to persons 60 years old and above.');
+                : ageBoundsMessage(bounds);
             var choice = input.closest('.family-choice');
 
             input.disabled = !allowed;

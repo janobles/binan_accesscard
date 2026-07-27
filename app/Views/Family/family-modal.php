@@ -229,19 +229,19 @@ $renderMemberEditor = static function ($index, array $m = []) use (
 /**
  * The hidden inputs that stand in for a closed row's editor. Same names as the
  * controls they replace, so FormData and every [name$="[key]"] lookup are unaffected.
- * Sector ids carry their shortcode so the row summary can show badges without
+ * Sector ids carry their full name so the row summary can name them without
  * re-rendering the checkbox list.
  */
 $renderMemberValues = static function ($index, array $m) use ($sectorCatalog): string {
     $i = (string) $index;
     $scalarKeys = ['lastname', 'firstname', 'middlename', 'suffix', 'birthday', 'sex',
         'civilstatus', 'contactnumber', 'religion', 'education', 'job', 'salary', 'relationship'];
-    $codes = [];
+    $names = [];
 
     foreach ($sectorCatalog as $sectorGroup) {
         foreach (array_values((array) $sectorGroup) as $sector) {
             $sector = (array) $sector;
-            $codes[(string) ($sector['sectorID'] ?? $sector['id'] ?? '')] = (string) ($sector['shortcode'] ?? $sector['code'] ?? '');
+            $names[(string) ($sector['sectorID'] ?? $sector['id'] ?? '')] = (string) ($sector['name'] ?? $sector['sector_name'] ?? $sector['shortcode'] ?? $sector['code'] ?? '');
         }
     }
 
@@ -250,7 +250,7 @@ $renderMemberValues = static function ($index, array $m) use ($sectorCatalog): s
         <input type="hidden" name="<?= esc('members[' . $i . '][' . $key . ']', 'attr') ?>" value="<?= esc((string) ($m[$key] ?? ''), 'attr') ?>">
     <?php endforeach; ?>
     <?php foreach (array_map('strval', (array) ($m['sector_ids'] ?? [])) as $sectorId): ?>
-        <input type="hidden" name="<?= esc('members[' . $i . '][sector_ids][]', 'attr') ?>" value="<?= esc($sectorId, 'attr') ?>" data-sector-code="<?= esc($codes[$sectorId] ?? '', 'attr') ?>">
+        <input type="hidden" name="<?= esc('members[' . $i . '][sector_ids][]', 'attr') ?>" value="<?= esc($sectorId, 'attr') ?>" data-sector-name="<?= esc($names[$sectorId] ?? '', 'attr') ?>">
     <?php endforeach; ?>
     <?php foreach (array_map('strval', (array) ($m['service_ids'] ?? [])) as $serviceId): ?>
         <input type="hidden" name="<?= esc('members[' . $i . '][service_ids][]', 'attr') ?>" value="<?= esc($serviceId, 'attr') ?>">
@@ -273,7 +273,10 @@ $renderMemberRow = static function ($index, array $m = [], bool $open = true) us
                  the hover and focus states), and the kebab beside it is the same
                  actions menu the records table uses. */ ?>
         <div class="d-flex align-items-center">
-            <button class="list-group-item-action btn btn-link text-decoration-none text-reset text-start d-flex align-items-center gap-3 px-3 py-2 border-0 rounded-0" type="button" data-family-member-toggle aria-expanded="<?= $open ? 'true' : 'false' ?>">
+<?php /* flex-grow-1 + overflow-hidden: the toggle takes the room that is left and
+             shrinks below its text, so the kebab beside it stays inside the card on a
+             narrow screen instead of being pushed past the edge. */ ?>
+            <button class="list-group-item-action btn btn-link text-decoration-none text-reset text-start d-flex align-items-center gap-3 px-3 py-2 border-0 rounded-0 flex-grow-1 overflow-hidden" type="button" data-family-member-toggle aria-expanded="<?= $open ? 'true' : 'false' ?>">
                 <span class="small fw-semibold text-body-secondary font-monospace" data-family-member-title></span>
                 <?php /* Name over muted detail, the same shape as the name cell in
                          Manage Records. Filled by manage-family-modal.js. */ ?>
@@ -281,7 +284,9 @@ $renderMemberRow = static function ($index, array $m = [], bool $open = true) us
                 <i class="bi bi-chevron-<?= $open ? 'up' : 'down' ?> ms-auto text-body-secondary" aria-hidden="true" data-family-member-chevron></i>
             </button>
             <div class="dropdown pe-2">
-                <button class="btn btn-outline-secondary btn-sm actions-menu-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Member actions">
+                <?php /* Borderless: the row's own name is the heaviest thing in it, and a
+                         boxed kebab out-shouted it. */ ?>
+                <button class="btn btn-link btn-sm text-body-secondary actions-menu-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Member actions">
                     <i class="bi bi-three-dots" aria-hidden="true"></i>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end">
@@ -426,17 +431,26 @@ $renderMemberRow = static function ($index, array $m = [], bool $open = true) us
                     ) ?>
                 </div>
 
-                <section class="family-members-section">
-                    <div class="alert alert-info d-flex align-items-center gap-2 py-2" role="alert">
-                        <i class="bi bi-people" aria-hidden="true"></i>
-                        <span>Family members in this household. Leave empty if there are none.</span>
+                <section class="family-members-section family-person-card">
+                    <?php /* Same header as the head card, so the two sections read as the
+                             same kind of thing. The count sits with the title; the hint is
+                             quiet helper text rather than an alert, because nothing here
+                             is a warning. */ ?>
+                    <div class="family-person-card-header">
+                        <h3 class="family-person-card-title">Family Members</h3>
+                        <span class="badge rounded-pill text-bg-light border" data-family-members-count>0 members</span>
                     </div>
+                    <p class="small text-body-secondary mb-2">Everyone else in this household. Leave empty if there are none.</p>
 
                     <div class="list-group list-group-flush" data-family-members>
                         <?php foreach (array_values($existingMembers) as $i => $member): ?>
                             <?= $renderMemberRow($i, (array) $member, false) ?>
                         <?php endforeach; ?>
                     </div>
+
+                    <?php /* Stands in for the list while it is empty, so the section is never
+                             a blank gap between its header and the Add button. */ ?>
+                    <p class="small text-body-secondary fst-italic border rounded py-3 text-center mb-0<?= $existingMembers === [] ? '' : ' d-none' ?>" data-family-members-empty>No members added yet.</p>
 
                     <?php /* The shell of a new row. Its editor mount arrives empty; the JS
                              fills it from the editor template below. */ ?>
@@ -450,10 +464,10 @@ $renderMemberRow = static function ($index, array $m = [], bool $open = true) us
                         <?= $renderMemberEditor('__INDEX__') ?>
                     </template>
 
-                    <?php /* Full width: adding the next member is the only action in this section
-                             and the one the worker reaches for on every household. */ ?>
+                    <?php /* Sized to its label, not to the modal: a full-width green bar
+                             outweighed the list of people it belongs to. */ ?>
                     <div class="family-member-toolbar">
-                        <button class="btn btn-success w-100" type="button" data-family-add-member data-next-index="<?= esc((string) count($existingMembers), 'attr') ?>">
+                        <button class="btn btn-success" type="button" data-family-add-member data-next-index="<?= esc((string) count($existingMembers), 'attr') ?>">
                             <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Add Member
                         </button>
                     </div>

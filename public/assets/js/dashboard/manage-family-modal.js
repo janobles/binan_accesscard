@@ -602,7 +602,9 @@
                     data[key].push(field.value);
 
                     if (key === 'sector_ids') {
-                        data.sector_labels.push(String(field.dataset.sectorCode || field.dataset.label || '').trim());
+                        // The full sector name, not the shortcode: "Bata (Children)"
+                        // tells a worker what the row is, "B" does not.
+                        data.sector_labels.push(String(field.dataset.sectorName || field.dataset.sectorCode || field.dataset.label || '').trim());
                     }
                 }
 
@@ -641,14 +643,14 @@
         });
     }
 
-    function hiddenInput(name, value, sectorCode) {
+    function hiddenInput(name, value, sectorName) {
         var input = document.createElement('input');
         input.type = 'hidden';
         input.name = name;
         input.value = value;
 
-        if (sectorCode) {
-            input.dataset.sectorCode = sectorCode;
+        if (sectorName) {
+            input.dataset.sectorName = sectorName;
         }
 
         return input;
@@ -916,7 +918,9 @@
     // row two lines saying the same thing twice. Numbering is recomputed rather
     // than baked into the markup, because removing a row renumbers everything after it.
     function renumberMembers(root) {
-        Array.from(root.querySelectorAll('[data-family-member-row]')).forEach(function (row, index) {
+        var rows = Array.from(root.querySelectorAll('[data-family-member-row]'));
+
+        rows.forEach(function (row, index) {
             var title = row.querySelector('[data-family-member-title]');
 
             if (title) {
@@ -926,6 +930,19 @@
                 title.textContent = String(index + 1);
             }
         });
+
+        // The section header carries the count, and the empty state stands in for the
+        // list until there is a first member, so the section is never a blank gap.
+        var count = root.querySelector('[data-family-members-count]');
+        var empty = root.querySelector('[data-family-members-empty]');
+
+        if (count) {
+            count.textContent = rows.length === 1 ? '1 member' : rows.length + ' members';
+        }
+
+        if (empty) {
+            empty.classList.toggle('d-none', rows.length > 0);
+        }
     }
 
     // ---- sectors and services ------------------------------------------------
@@ -1212,7 +1229,7 @@
         var sectorSelector = row ? 'input[name$="[sector_ids][]"]:checked' : 'input[name="sector_ids[]"]:checked';
         var serviceSelector = row ? 'input[name$="[service_ids][]"]:checked' : 'input[name="service_ids[]"]:checked';
         var codes = Array.from(scopeEl.querySelectorAll(sectorSelector)).map(function (input) {
-            return String(input.dataset.sectorCode || input.dataset.label || '').trim();
+            return String(input.dataset.sectorName || input.dataset.sectorCode || input.dataset.label || '').trim();
         }).filter(Boolean);
         var services = scopeEl.querySelectorAll(serviceSelector).length;
 

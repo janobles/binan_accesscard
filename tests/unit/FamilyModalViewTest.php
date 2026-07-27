@@ -274,7 +274,7 @@ final class FamilyModalViewTest extends CIUnitTestCase
         ]);
 
         $this->assertMatchesRegularExpression(
-            '/name="members\[0\]\[sector_ids\]\[\]" value="1"[^>]*data-sector-code="SC"/',
+            '/name="members\[0\]\[sector_ids\]\[\]" value="1"[^>]*data-sector-name="Senior Citizen"/',
             $html
         );
     }
@@ -303,14 +303,37 @@ final class FamilyModalViewTest extends CIUnitTestCase
         $this->assertStringNotContainsString('btn btn-outline-primary', $html);
     }
 
+    public function testEmptyStateStandsInForAnEmptyMemberList(): void
+    {
+        // A new record has no members, so the section shows the empty state; a record
+        // that already has one hides it and lets the list speak for itself.
+        $this->assertMatchesRegularExpression(
+            '/class="[^"]*"\s+data-family-members-empty/',
+            $this->render()
+        );
+        $this->assertMatchesRegularExpression(
+            '/class="[^"]* d-none"\s+data-family-members-empty/',
+            $this->renderDecoded([
+                'modalMode' => 'update',
+                'headId' => 42,
+                'existingMembers' => [['lastname' => 'DELA CRUZ']],
+            ])
+        );
+    }
+
     public function testHeadIsACardAndMembersAreABootstrapListGroup(): void
     {
         $html = $this->render();
 
         // There is one head, so it is a card. Members are a list of people, so they
         // are a list group: Bootstrap components rather than hand-rolled row CSS.
-        $this->assertSame(1, substr_count($html, 'family-person-card-header'));
+        // Both sections wear the same card header, so they read as the same kind of
+        // thing, and the members header carries the count instead of an alert.
+        $this->assertSame(2, substr_count($html, 'family-person-card-header'));
         $this->assertStringContainsString('>Head of Family</h3>', $html);
+        $this->assertStringContainsString('>Family Members</h3>', $html);
+        $this->assertStringContainsString('data-family-members-count', $html);
+        $this->assertStringNotContainsString('alert-info', $html);
         $this->assertStringContainsString('class="list-group list-group-flush"', $html);
         $this->assertStringContainsString('list-group-item p-0', $html);
         $this->assertStringContainsString('list-group-item-action', $html);

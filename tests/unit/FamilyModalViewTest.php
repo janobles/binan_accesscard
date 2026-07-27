@@ -64,7 +64,9 @@ final class FamilyModalViewTest extends CIUnitTestCase
         $this->assertStringNotContainsString('family-entry-header', $html);
         $this->assertStringNotContainsString('family-entry-title', $html);
         $this->assertStringNotContainsString('Personal Information', $html);
-        $this->assertStringNotContainsString('family-member-card-title', $html);
+        // The generic per-card "Member" strong is gone; the card title now names the
+        // actual person, filled by JS.
+        $this->assertStringNotContainsString('<strong class="family-member-card-title">Member</strong>', $html);
     }
 
     public function testHeadAndMembersAreBothPresentInOneFlow(): void
@@ -121,7 +123,8 @@ final class FamilyModalViewTest extends CIUnitTestCase
     {
         $html = $this->render();
 
-        $this->assertStringContainsString('input-group has-validation', $html);
+        $this->assertStringContainsString('has-validation', $html);
+        $this->assertStringContainsString('input-group', $html);
         $this->assertStringContainsString('data-family-qr-status', $html);
     }
 
@@ -156,16 +159,50 @@ final class FamilyModalViewTest extends CIUnitTestCase
         return html_entity_decode($this->render($data), ENT_QUOTES | ENT_HTML5);
     }
 
-    public function testServicesRenderAsAnAlwaysOpenAccordionPerCategory(): void
+    public function testServicesRenderAsOneFlatListGroupedByCategory(): void
     {
         $html = $this->renderDecoded();
 
-        $this->assertStringContainsString('class="accordion"', $html);
-        $this->assertStringContainsString('accordion-item', $html);
-        $this->assertStringContainsString('data-bs-toggle="collapse"', $html);
-        $this->assertStringNotContainsString('data-bs-parent', $html);
+        $this->assertStringContainsString('data-family-service-list', $html);
+        $this->assertStringContainsString('data-family-service-group', $html);
         $this->assertStringContainsString('data-service-category="Senior Citizen"', $html);
         $this->assertStringContainsString('data-service-category="Financial Assistance"', $html);
+        // No program is behind a collapse: the only collapse left is the head's own
+        // sectors-and-programs block, which the toggle summary labels.
+        $this->assertStringNotContainsString('accordion', $html);
+        $this->assertSame(1, substr_count($html, 'data-bs-toggle="collapse"'));
+    }
+
+    public function testMemberRowActionsLiveInAnActionsMenu(): void
+    {
+        $html = $this->render();
+
+        $this->assertStringContainsString('actions-menu-toggle', $html);
+        $this->assertMatchesRegularExpression('/class="dropdown-item" type="button" data-family-set-head/', $html);
+        $this->assertMatchesRegularExpression('/class="dropdown-item text-danger" type="button" data-family-member-remove/', $html);
+        // No more competing outline buttons in colors that carry no role.
+        $this->assertStringNotContainsString('btn btn-outline-primary', $html);
+    }
+
+    public function testHeadCardIsLabelledAndOwnsTheQrNumber(): void
+    {
+        $html = $this->render();
+
+        $this->assertStringContainsString('Head of Family', $html);
+        $this->assertMatchesRegularExpression(
+            '/family-card-header.*Head of Family.*qr_control_no/s',
+            $html,
+            'The QR belongs in the head card header, not on a row of its own'
+        );
+        $this->assertStringContainsString('data-family-member-title', $html);
+    }
+
+    public function testAddressAndBarangaySplitTheRowEightFour(): void
+    {
+        $html = $this->render();
+
+        $this->assertMatchesRegularExpression('/col-12 col-xl-8">\s*<label[^>]*>Address/', $html);
+        $this->assertMatchesRegularExpression('/col-12 col-xl-4">\s*<label[^>]*>Barangay/', $html);
     }
 
     public function testServicesAreNotGatedBehindASectorTick(): void
@@ -237,7 +274,8 @@ final class FamilyModalViewTest extends CIUnitTestCase
         $html = $this->render(['headId' => 42]);
 
         $this->assertStringContainsString('Print QR card', $html);
-        $this->assertStringNotContainsString('btn-outline-secondary btn-sm', $html);
+        // It is a link, not a btn-sm wedged into a default-size button group.
+        $this->assertMatchesRegularExpression('/class="btn btn-link btn-sm[^"]*"[^>]*>\s*Print QR card/', $html);
     }
 
     public function testKeepsTheImportFixContract(): void

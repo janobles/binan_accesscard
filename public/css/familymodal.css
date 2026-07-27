@@ -571,10 +571,46 @@
     margin-top: 0.2rem;
 }
 
-/* A long accordion must not outgrow the modal. */
-.family-entry-form .accordion-body {
-    max-height: 16rem;
+/* One scroll region for the whole program list, so the categories inside it read as
+   one list instead of six separately scrolling boxes. */
+.family-service-picker {
+    max-height: 18rem;
     overflow-y: auto;
+    padding-right: 0.25rem;
+}
+
+.family-service-group + .family-service-group {
+    margin-top: 0.7rem;
+}
+
+.family-option-group-title {
+    margin: 0 0 0.35rem;
+    color: #294b73;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+/* Head card: title on the left, the QR that identifies the record on the right. */
+.family-card-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.family-section-title {
+    margin: 0;
+    color: #000000;
+    font-size: 1.08rem;
+    font-weight: 800;
+}
+
+.family-qr-field {
+    width: 12rem;
+    max-width: 100%;
 }
 
 .family-entry-actions {
@@ -1034,7 +1070,7 @@
 .family-members-section { margin-top: 1rem; }
 .family-member-card { border: 1px solid var(--bs-border-color, #dee2e6); border-radius: 0.5rem; padding: 1rem; margin-bottom: 1rem; background: var(--bs-body-bg, #fff); }
 .family-member-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
-.family-member-card-title { font-size: 0.95rem; }
+.family-member-card-title { font-size: 0.9rem; font-weight: 700; color: #294b73; }
 .family-toast { position: fixed; top: 1rem; right: 1rem; z-index: 1080; max-width: 22rem; margin: 0; }
 
 /* Background-import progress toasts (bottom-right). The modal closes on submit and

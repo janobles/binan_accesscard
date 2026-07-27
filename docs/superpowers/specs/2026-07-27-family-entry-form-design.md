@@ -43,11 +43,17 @@ Line references are as of commit `c6ecdb4`.
 (`accesscardV18.sql:124-132`), not foreign keys. Their dropdown options come from
 `FamilyProfilingFormV2` as PHP constants, in Title Case.
 
-**Consequence for this work:** uppercasing stored values without uppercasing the option lists
-breaks the edit round-trip. The option-selected check is an exact string compare
-(`family_modal_helper.php:58`), so a stored `ELEMENTARY GRADUATE` would match no option and
-the select would silently fall back to "Select" — losing a saved value on edit. The two must
-change in lockstep.
+**Consequence for this work:** these four are free-text *columns* but are populated from
+dropdowns — the worker picks, never types. They are therefore out of scope for stored
+uppercasing (see the "Uppercase applies to typed fields" decision). Had they been included,
+the option lists would have had to change in lockstep: the option-selected check is an exact
+string compare (`family_modal_helper.php:58`), so a stored `ELEMENTARY GRADUATE` matching no
+option would silently fall back to "Select" and lose a saved value on edit.
+
+`sex` additionally cannot be uppercased without a wide blast radius: it is validated by
+`in_list[Male,Female]` in `FamilyController:817,826` and `MemberModel:29`, is the importer's
+canonical return (`FamilyExcelImporter:1107`), and is a dropdown list in the Excel template
+(`FamilyExcelTemplate:144`).
 
 ### Layout
 
@@ -138,7 +144,7 @@ scope here; worth its own pass.
 
 | Decision | Choice |
 |---|---|
-| Uppercase scope | Storage and display, including the option lists, with a one-time backfill |
+| Uppercase scope | Stored for typed fields (names, address, "Other" freetext); displayed for picked values |
 | Bootstrap scope | Full: controls, validation, and layout |
 | Tabs | Removed. Single scrolling form |
 | Head layout | Always-expanded card at top; sector/service block expanded on create, collapsed on edit |
@@ -154,6 +160,25 @@ scope here; worth its own pass.
 reference tables, and the backfill is an `UPDATE` of `member` row data, not schema. So
 `accesscardV18.sql` is untouched. If any later step does change schema or seeded reference
 rows, cut V19 and update the memory note — flag it before doing so, do not decide silently.
+
+**Uppercase applies to typed fields.** On Philippine government forms the all-caps convention
+exists for hand-printing legibility and record matching — it governs the boxes where a person
+writes a surname, first name, middle name, and address. Choice fields have no caps tradition
+because nothing is typed into them; `Male ☐ Female ☐` is pre-printed form text and the encoder
+ticks a box. Where caps appear on printed output (a PSA certificate rendering `MALE`), that is
+a rendering decision, not how the value was captured.
+
+Applied here:
+
+| Field group | Stored | Displayed |
+|---|---|---|
+| Names, address | UPPERCASE | uppercase |
+| "Other" freetext (typed religion, job, education, civil status, relationship) | UPPERCASE | uppercase |
+| Sex, civil status, education, job, religion, relationship, suffix, barangay (picked) | canonical, unchanged | uppercase via CSS |
+
+This keeps the DB honest about what a worker actually entered, removes the lockstep
+option-list change and its silent-value-loss failure mode, requires no `in_list`, importer, or
+Excel-template changes, and shrinks the backfill to the columns workers type.
 
 **Reference data casing.** Uppercasing applies to what a worker types, not to system-provided
 labels. Sector and service names and the service category headings come from DB reference
@@ -193,31 +218,29 @@ pinned in `docs/knowledge/sources.md:25` to match the vendored 5.3.3 copy.
   `mb_convert_case(…, MB_CASE_TITLE)` for `mb_strtoupper(…, 'UTF-8')`. Character allowlists
   and whitespace collapsing are unchanged. This is the single choke point — the manual form
   and the Excel importer both delegate here, so one edit covers both paths.
-- **In lockstep**, uppercase the option lists in `FamilyProfilingFormV2` (civil statuses,
-  education levels, job options, religions, relationships) and uppercase the corresponding
-  posted values on save. Both sides must move together or the edit round-trip silently drops
-  the stored value, as described in the audit. Suffixes and income-bracket labels are
-  included for consistency; income `value` keys are numeric and untouched.
 - `manage-family-modal.js:71-80`: `cleanOtherValue()` drops its title-case regex for
   `.toUpperCase()`, covering the "Other" freetext on religion, job, education, civil status,
-  and relationship.
+  and relationship. This is typed text, so it is stored uppercase.
+- Dropdown-picked values (sex, civil status, education, job, religion, relationship, suffix,
+  barangay) are **not** touched: no option-list edits, no `in_list` changes, no importer or
+  Excel-template changes. They render uppercase via the CSS below.
 - `FamilyDataTablePresenter.php:35,38,57`: remove the three now-redundant `mb_strtoupper`
   calls. Storage becomes authoritative.
-- `familymodal.css`: `text-transform: uppercase` on the form's text inputs so the worker sees
-  caps while typing. Visual only — the server value is what counts.
+- `familymodal.css`: `text-transform: uppercase` on the form's text inputs **and selects**, so
+  typed text shows caps while typing and picked values render caps without changing what is
+  stored. Visual only — the server value is what counts.
 - `sql/patches/v18-uppercase-names.sql`: one-time `UPDATE … SET col = UPPER(col)` across the
-  name, address, civil status, education, job, and religion columns, following the
-  `sql/patches/v17-indexes.sql` convention. Not a migration; the no-migrations rule holds.
-  The exact column list is confirmed against `accesscardV18.sql` before writing, and the
-  patch is reviewed with the user before it runs.
+  name and address columns only, following the `sql/patches/v17-indexes.sql` convention. Not
+  a migration; the no-migrations rule holds. The exact column list is confirmed against
+  `accesscardV18.sql` before writing, and the patch is reviewed with the user before it runs.
 
 `mb_strtoupper` handles ñ→Ñ correctly under UTF-8. Barangay needs no special handling —
 `splitAddressBarangay` already compares with `strcasecmp`.
 
 **Verification:** `vendor/bin/phpunit`; create a family with lowercase input through the UI
 and confirm the DB row, records table, QR card, and edit form all agree; then **reopen a
-saved record and confirm every dropdown still shows its stored value** — this is the
-regression the lockstep change exists to prevent.
+saved record and confirm every dropdown still shows its stored value** — picked values must
+survive the round-trip untouched.
 
 **Audit trail:** unaffected. Values change before write, not the write path.
 

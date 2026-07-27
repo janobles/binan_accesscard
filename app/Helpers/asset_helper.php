@@ -115,6 +115,7 @@ if (! function_exists('asset_scripts')) {
                 'assets/js/dashboard/categories-modal.js',
                 'assets/js/dashboard/audit-trails-modal.js',
                 'assets/js/dashboard/audit-detail-modal.js',
+                'assets/js/dashboard/batch-close-modal.js',
             ],
             'employee' => [
                 'assets/js/dashboard/view-interactions.js',

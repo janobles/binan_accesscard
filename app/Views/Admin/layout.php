@@ -288,6 +288,7 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                 <?= view('Admin/batch-create-modal', [
                     'activeAidTypes' => $activeAidTypes,
                 ]) ?>
+                <?= view('Admin/batch-close-modal') ?>
             <?php endif; ?>
 
             <?php if ($activePage === 'distribution' && ($distributionTab ?? '') === 'log'): ?>

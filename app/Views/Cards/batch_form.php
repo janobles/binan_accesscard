@@ -34,7 +34,7 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
     <div class="card-body">
         <form id="cn-batch-form" class="row g-3 align-items-end" autocomplete="off">
             <?= csrf_field() ?>
-            <div class="col-12 col-md-5">
+            <div class="col">
                 <label class="form-label" for="cn-barangay">Barangay</label>
                 <select class="form-select" id="cn-barangay" name="barangay">
                     <option value="">All barangays</option>
@@ -43,15 +43,15 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
                     <?php endforeach; ?>
                 </select>
             </div>
-            <div class="col-6 col-md-2">
+            <div class="col-3 col-md-2">
                 <label class="form-label" for="cn-from">From #</label>
                 <input type="number" min="1" inputmode="numeric" class="form-control" id="cn-from" name="from" placeholder="e.g. 100">
             </div>
-            <div class="col-6 col-md-2">
+            <div class="col-3 col-md-2">
                 <label class="form-label" for="cn-to">To #</label>
                 <input type="number" min="1" inputmode="numeric" class="form-control" id="cn-to" name="to" placeholder="e.g. 150">
             </div>
-            <div class="col-12 col-md-3 d-grid">
+            <div class="col-12 col-md-auto">
                 <button type="submit" class="<?= btn('generate') ?>" id="cn-batch-btn">
                     <i class="bi bi-printer" aria-hidden="true"></i> Generate cards
                 </button>
@@ -84,16 +84,16 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
     </div>
     <div class="card-body">
         <div class="row g-3 align-items-end">
-            <div class="col-12 col-md-6 cn-typeahead">
+            <div class="col cn-typeahead">
                 <label class="form-label" for="cn-head">Head</label>
                 <input type="text" class="form-control" id="cn-head" placeholder="Type a head name&hellip;" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="cn-head-list">
                 <ul class="list-group cn-typeahead-list shadow-sm" id="cn-head-list" hidden></ul>
             </div>
-            <div class="col-6 col-md-3">
+            <div class="col-4 col-md-3">
                 <label class="form-label" for="cn-control">Control #</label>
                 <input type="number" min="1" inputmode="numeric" class="form-control" id="cn-control" placeholder="Exact number">
             </div>
-            <div class="col-6 col-md-3 d-grid">
+            <div class="col-12 col-md-auto">
                 <button type="button" class="<?= btn('generate') ?>" id="cn-single-btn">
                     <i class="bi bi-printer" aria-hidden="true"></i> Generate card
                 </button>

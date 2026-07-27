@@ -354,7 +354,7 @@
                 var message = available ? '' : (result.data.message || 'The control number could not be validated.');
                 field.setCustomValidity(message);
                 setFieldError(field, message);
-                setQrStatus(field, available ? 'ok' : 'bad');
+                setQrStatus(field, available ? 'ok' : '');
             }).catch(function () {
                 window.clearTimeout(release);
 
@@ -367,8 +367,10 @@
         }, 350);
     }
 
-    // The input-group addon beside the control number field: spinner while the check is in flight,
-    // tick or cross once it lands, empty when there is nothing to report.
+    // The input-group addon beside the control number field. It only reports what
+    // nothing else on screen already says: that a check is running, or that the
+    // number came back free. A taken number needs no cross here, because the field
+    // turns red and states the reason underneath it.
     function setQrStatus(field, state) {
         var group = field.closest('.input-group');
         var status = group ? group.querySelector('[data-family-qr-status]') : null;
@@ -379,8 +381,7 @@
 
         var icons = {
             checking: '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span><span class="visually-hidden">Checking control number</span>',
-            ok: '<i class="bi bi-check-lg text-success" aria-hidden="true"></i><span class="visually-hidden">Control number available</span>',
-            bad: '<i class="bi bi-x-lg text-danger" aria-hidden="true"></i><span class="visually-hidden">Control number not available</span>'
+            ok: '<i class="bi bi-check-lg text-success" aria-hidden="true"></i><span class="visually-hidden">Control number available</span>'
         };
 
         status.innerHTML = icons[state] || '';

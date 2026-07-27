@@ -13,7 +13,7 @@
 				<p class="mb-0 js-family-action-message">Are you sure?</p>
 			</div>
 			<div class="modal-footer">
-				<button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
 				<button type="button" class="btn btn-danger js-family-action-confirm">Archive</button>
 			</div>
 		</div>

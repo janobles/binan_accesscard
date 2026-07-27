@@ -56,7 +56,7 @@ $aidTypeClearUrl = static function () use ($listRoute, $perPage, $tabParam): str
     'pillsId' => 'aidTypeFilterPills',
     'hiddenHtml' => ($tabParam !== '' ? '<input type="hidden" name="tab" value="' . esc($tabParam, 'attr') . '">' : '')
         . ($perPage !== 25 ? '<input type="hidden" name="per_page" value="' . esc((string) $perPage, 'attr') . '">' : ''),
-    'actionsHtml' => '<button class="' . btn('add') . ' flex-fill" type="button" data-bs-toggle="modal" data-bs-target="#addAidTypeModal">Add</button>',
+    'actionsHtml' => '<button class="' . btn('add') . ' flex-fill" type="button" data-bs-toggle="modal" data-bs-target="#addAidTypeModal">Add Subsidy Type</button>',
     'filterGroups' => [[
         'name' => 'status',
         'label' => 'Status',

@@ -163,6 +163,10 @@
     min-width: 0;
 }
 
+.account-fields-row + .account-fields-row {
+    margin-top: 0.85rem;
+}
+
 .account-fields-row--credentials {
     grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
 }

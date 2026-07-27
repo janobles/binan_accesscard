@@ -13,7 +13,7 @@
 				<p class="mb-0 js-account-status-message">Update this account status?</p>
 			</div>
 			<div class="modal-footer">
-				<button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
 				<button type="button" class="btn btn-primary js-account-status-confirm">Confirm</button>
 			</div>
 		</div>

@@ -58,7 +58,7 @@ $serviceClearUrl = static function () use ($listRoute, $perPage, $tabParam): str
     'pillsId' => 'serviceFilterPills',
     'hiddenHtml' => ($tabParam !== '' ? '<input type="hidden" name="tab" value="' . esc($tabParam, 'attr') . '">' : '')
         . ($perPage !== 25 ? '<input type="hidden" name="per_page" value="' . esc((string) $perPage, 'attr') . '">' : ''),
-    'actionsHtml' => $canManage ? '<button class="' . btn('add') . ' flex-fill js-service-modal-open" type="button" data-service-mode="create">Add</button>' : '',
+    'actionsHtml' => $canManage ? '<button class="' . btn('add') . ' flex-fill js-service-modal-open" type="button" data-service-mode="create">Add Program</button>' : '',
     'filterGroups' => [[
         'name' => 'status',
         'label' => 'Status',

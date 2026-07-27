@@ -86,11 +86,35 @@ change in lockstep.
 - Member field labels have no `for`/`id`: the render helper only emits ids when given an
   `idPrefix`, which head passes (`:240`) and members do not (`:52-61`).
 - Contact number has no pattern (`family_modal_helper.php:72`).
-- Birthday drives sector eligibility but no age is shown, so eligibility errors surface only
-  after submit.
+- The computed age is never displayed, so a checkbox disabled on age grounds reads as broken
+  rather than explained.
+- `refreshAgeEligibility()` silently clears selections: `js:872` sets `input.checked = false`
+  when a choice becomes ineligible. A mistyped birth year wipes the worker's sector ticks with
+  no message, and correcting the date does not restore them.
+- Age thresholds are hardcoded in JS (`age < 18`, `age >= 60`, codes `B`/`SC`, categories
+  `bata (children)` / `senior citizen`, `js:848-861`), duplicating
+  `FamilyAgeEligibility.php:10-13,58-64`.
 - Relationship (`:64`) is not `required` though semantically mandatory.
 - No "no middle name" affordance; the `NO_DATA_TOKENS` list in the normalizer is evidence
   workers type placeholders into blanks.
+
+### Redundant labels
+
+The modal already carries a CSS band-aid for this: `familymodal.css:483-489` hides both the
+modal footer and `.family-entry-header` — the form's own `<h2>` title (`:141-145`) — because
+the modal header already says the same thing. It is rendered by PHP, then hidden by CSS.
+
+| Redundant element | Why | Action |
+|---|---|---|
+| `<h2>` "New Family Record" (`:141-145`) | Modal header states it | Delete element and the CSS hiding it |
+| `<h3>` "Personal Information" (`:231`) | First block of a form about a person | Delete |
+| `<h3>` "Family Members" + helper text (`:366-367`) | Heading, helper text, and the Add Member button all say it | Keep one |
+| `<strong>` "Member" per card (`:45`) | Replaced by the row's actual name | Delete |
+| "Sectors" / "Services and Programs Available" at two heading levels (`:71,101,261,295`) | Rendered once for head and once per member | Keep only as the collapse toggle label |
+| "Current Record Head" summary (`:331-363`) | Nine fields duplicating the head card | Deleted with the tabs |
+
+The same container-label-plus-subcontainer-label pattern appears elsewhere in the app. Out of
+scope here; worth its own pass.
 
 ### Investigated and dismissed
 
@@ -98,6 +122,17 @@ change in lockstep.
   (`FamilyFormOptionsModel:49-62`), so `moneyOrNull('13000')` yields `13000.0` cleanly. Noted
   for elsewhere: the stored number is the bracket's *upper bound*, so `Salary` means "top of
   declared bracket", not actual income — reports summing it will overstate. Out of scope.
+- **Age eligibility is already enforced client-side.** `refreshAgeEligibility()`
+  (`js:831-881`) computes each person's age from their own birthday and disables ineligible
+  sector and service checkboxes with an explanatory tooltip. An earlier draft of this spec
+  claimed eligibility errors surfaced only on submit; that was wrong. What remains is
+  displaying the age, fixing the silent uncheck, and de-duplicating the thresholds.
+- **Modal vs. full page.** The modal is effectively page-sized already
+  (`familymodal.css:447-449`: `min(76rem, …)` by `min(47rem, …)`). It stays a modal: for
+  high-volume entry from paper forms, keeping the record list underneath with no navigation
+  or page load is the larger time-and-motion win, and the draft dialog (`js:393-410`) already
+  covers the dismissal-loses-work risk. The problem was the amount of content, not the
+  container.
 
 ## Decisions
 
@@ -106,7 +141,8 @@ change in lockstep.
 | Uppercase scope | Storage and display, including the option lists, with a one-time backfill |
 | Bootstrap scope | Full: controls, validation, and layout |
 | Tabs | Removed. Single scrolling form |
-| Head layout | Always-expanded card at top; its sector/service block collapses to a summary |
+| Head layout | Always-expanded card at top; sector/service block expanded on create, collapsed on edit |
+| Container | Stays a modal. The content volume was the problem, not the container |
 | Member layout | Read-only compact rows; inline expand to edit one row at a time |
 | Delivery | Three sequential branches |
 | jQuery in this form | No. Stays vanilla `fetch` |
@@ -189,8 +225,32 @@ pane, so no required field is ever unreachable at submit time.
 
 Personal fields always visible in a compact card. The sector and service checkbox lists —
 the single longest block in the form — collapse to a text summary
-(`Sectors: SC, PWD (2 selected)`) with an expand control, so they do not dominate the initial
-scroll. Same interaction the member rows use, for consistency.
+(`Sectors: SC, PWD (2 selected)`) with an expand control. Same interaction the member rows
+use, for consistency.
+
+**Default state depends on mode:** expanded on create, collapsed on edit. During new entry
+the worker is reading a paper form and ticking boxes, so sectors and services are the primary
+task and collapsing them costs a click at the worst moment. When editing an existing record
+they are reference information. The view already knows which mode it is in — `$modalMode` is
+`'create'` or `'update'` (`family_modal_helper.php:83`).
+
+### Redundant headings
+
+Delete the labels listed in the audit's "Redundant labels" table, including the `<h2>` that
+`familymodal.css:483-489` currently hides — remove both the element and the CSS rule rather
+than leaving a hidden element in the DOM.
+
+### Set as Head
+
+`promoteMemberToHead()` (`js:1474`) swaps a member into the head slot. Under tabs this
+happened across a tab boundary and was effectively invisible. On one scrolling page it
+happens in front of the worker, so it needs defined behavior:
+
+- Confirm before swapping — it rewrites who holds the QR card, which is the record's identity.
+- The promoted member's row collapses out of the member list as the head card takes its values.
+- The previous head becomes a member row, appended to the list, expanded so the worker can set
+  its relationship (which the head record does not carry).
+- Scroll to the head card after the swap so the result is visible.
 
 ### Controls
 
@@ -278,14 +338,18 @@ along with the field names. The relationship select (`:64`) gains an id and a re
 
 ### Field guards
 
-- **Age.** Computed from the birthday input and shown as `.form-text` beside it ("Age: 67"),
-  and in the closed row summary. The eligibility rule fires at the checkbox rather than on
-  submit. To avoid duplicating thresholds in JS, `FamilyAgeEligibility` gains a public static
-  accessor for its bounds and the view renders them as `data-min-age` / `data-max-age` on the
-  affected checkboxes, which already carry `data-sector-code`. Current rules: sector `B` and
-  category `Bata (Children)` are under-18; sector `SC` and category `Senior Citizen` are
-  60-and-over (`FamilyAgeEligibility.php:10-13,58-64`). `selectionError()` stays
-  authoritative and unchanged.
+- **Age.** Eligibility enforcement already exists (`refreshAgeEligibility`, `js:831-881`);
+  this is three fixes to it, not a rewrite.
+  1. Display the computed age as `.form-text` beside the birthday field ("Age: 67") and in
+     the closed row summary, so a disabled checkbox reads as explained rather than broken.
+  2. Stop silently clearing selections. Instead of `input.checked = false` (`js:872`), keep
+     the tick, mark the choice invalid with a visible message, and let it resolve itself when
+     the birthday is corrected. Server-side `selectionError()` already blocks a genuinely bad
+     save, so nothing unsafe gets through.
+  3. De-duplicate the thresholds. `FamilyAgeEligibility` gains a public static accessor for
+     its bounds; the view renders them as `data-min-age` / `data-max-age` on the affected
+     checkboxes, which already carry `data-sector-code`. JS reads the attributes instead of
+     hardcoding `18` / `60` / `B` / `SC`. `selectionError()` stays authoritative and unchanged.
 - **Relationship.** Marked `required`.
 - **Middle name.** A "No middle name" checkbox that clears and disables the field.
 - **Contact number.** Accepts an 11-digit mobile (`09XXXXXXXXX`) or a Biñan landline
@@ -297,8 +361,18 @@ along with the field names. The relationship select (`:64`) gains an id and a re
 
 `vendor/bin/phpunit`; Playwright at desktop and 390px with a multi-member household —
 confirm rows read as text when closed, expand to edit one at a time, auto-expand on invalid
-submit, and that a household large enough to have previously tripped the truncation guard now
-saves.
+submit, Set as Head swaps visibly and confirms first, and that a household large enough to
+have previously tripped the truncation guard now saves.
+
+## Preserve: the import-fix flow
+
+This same view is reused by the Excel import review screen, which is easy to break silently.
+Every branch must keep working, and Playwright coverage must include this path, not only the
+Add/Edit path:
+
+- the blocking and warning alert block (`:161-176`) and `importFieldIssues` (`:140`)
+- the `qrLocked` readonly QR state and its explanatory note (`:215-227`)
+- the `import_family_no` (`:191-193`) and `import_row` (`:195-197`) hidden fields
 
 ## Out of scope
 

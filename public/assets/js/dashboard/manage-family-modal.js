@@ -297,7 +297,7 @@
         return true;
     }
 
-    // ---- QR number availability -------------------------------------------
+    // ---- control number availability -------------------------------------------
 
     function scheduleQrAvailabilityCheck(root, field) {
         if (!field || field.readOnly || !field.dataset.qrCheckUrl) {
@@ -318,7 +318,7 @@
         }
 
         setQrStatus(field, 'checking');
-        field.setCustomValidity('Checking whether this QR number already exists.');
+        field.setCustomValidity('Checking whether this control number already exists.');
 
         qrCheckTimer = window.setTimeout(function () {
             var url = new URL(field.dataset.qrCheckUrl, window.location.href);
@@ -351,7 +351,7 @@
                 }
 
                 var available = result.ok && result.data.available;
-                var message = available ? '' : (result.data.message || 'The QR number could not be validated.');
+                var message = available ? '' : (result.data.message || 'The control number could not be validated.');
                 field.setCustomValidity(message);
                 setFieldError(field, message);
                 setQrStatus(field, available ? 'ok' : 'bad');
@@ -367,7 +367,7 @@
         }, 350);
     }
 
-    // The input-group addon beside the QR field: spinner while the check is in flight,
+    // The input-group addon beside the control number field: spinner while the check is in flight,
     // tick or cross once it lands, empty when there is nothing to report.
     function setQrStatus(field, state) {
         var group = field.closest('.input-group');
@@ -378,9 +378,9 @@
         }
 
         var icons = {
-            checking: '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span><span class="visually-hidden">Checking QR number</span>',
-            ok: '<i class="bi bi-check-lg text-success" aria-hidden="true"></i><span class="visually-hidden">QR number available</span>',
-            bad: '<i class="bi bi-x-lg text-danger" aria-hidden="true"></i><span class="visually-hidden">QR number not available</span>'
+            checking: '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span><span class="visually-hidden">Checking control number</span>',
+            ok: '<i class="bi bi-check-lg text-success" aria-hidden="true"></i><span class="visually-hidden">Control number available</span>',
+            bad: '<i class="bi bi-x-lg text-danger" aria-hidden="true"></i><span class="visually-hidden">Control number not available</span>'
         };
 
         status.innerHTML = icons[state] || '';

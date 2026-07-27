@@ -297,14 +297,16 @@ $renderMemberRow = static function ($index, array $m = []) use (
                         <h3 class="family-person-card-title">Head of Family</h3>
                     </div>
                     <div class="row g-3">
-                        <?php /* The QR is the first field of the record, so it leads the head's
-                                 grid rather than sitting in a strip or a header of its own. */ ?>
-                        <div class="col-12 col-md-6 col-xl-3">
-                            <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>HeadQr">QR Number</label>
+                        <?php /* The control number identifies the whole record, so it leads the
+                                 head card on a row of its own rather than sharing one with the
+                                 name fields. The posted name stays qr_control_no: the column and
+                                 the controller contract are unchanged. */ ?>
+                        <div class="col-12">
+                            <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>HeadQr">Control Number</label>
                             <div class="input-group has-validation">
                                 <input id="<?= esc($fieldPrefix, 'attr') ?>HeadQr" name="qr_control_no" class="form-control" type="text"
                                     inputmode="numeric" pattern="0*[1-9][0-9]{0,6}"
-                                    title="QR number must be numeric and should not exceed 9,999,999"
+                                    title="Control number must be numeric and should not exceed 9,999,999"
                                     aria-describedby="<?= esc($fieldPrefix, 'attr') ?>HeadQrFeedback"
                                     data-qr-check-url="<?= esc($qrCheckUrl, 'attr') ?>"
                                     value="<?= esc($oldValue('qr_control_no'), 'attr') ?>"

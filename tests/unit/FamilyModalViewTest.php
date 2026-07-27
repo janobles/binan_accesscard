@@ -206,6 +206,18 @@ final class FamilyModalViewTest extends CIUnitTestCase
         $this->assertStringNotContainsString('family-record-strip', $html);
     }
 
+    public function testControlNumberIsLabelledAsSuchAndOwnsTheFirstRow(): void
+    {
+        $html = $this->render();
+
+        $this->assertStringContainsString('>Control Number</label>', $html);
+        $this->assertStringNotContainsString('>QR Number</label>', $html);
+        // Full width: it identifies the record, so it does not share a row with the
+        // name fields. The posted name is unchanged.
+        $this->assertMatchesRegularExpression('/<div class="col-12">\s*<label[^>]*>Control Number/', $html);
+        $this->assertStringContainsString('name="qr_control_no"', $html);
+    }
+
     public function testEveryPersonCardCarriesTheSameChoicesBlock(): void
     {
         $html = $this->render();

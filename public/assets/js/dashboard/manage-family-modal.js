@@ -232,6 +232,15 @@
         writePersonField(memberField('relationship'), '');
 
         refreshAllAgeEligibility(root);
+        refreshChoicesSummary(root);
+
+        // The swap rewrites who holds the QR card, so put the result in front of the
+        // worker rather than leaving it below the fold.
+        var headField = root.querySelector('[name="head_lastname"]');
+
+        if (headField) {
+            headField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
     }
 
     // ---- field error helper ------------------------------------------------
@@ -464,6 +473,18 @@
             cancelLabel: 'Keep',
             confirmLabel: 'Remove',
             confirmClass: 'btn btn-danger'
+        });
+    }
+
+    function askPromoteToHead(form, name) {
+        return askModalDialog(form, {
+            title: 'Make this person the head?',
+            message: (name !== '' ? name + ' ' : 'This member ') + 'will take the head position and hold the QR card. The current head becomes a member, and you will need to set their relationship.',
+            iconClass: 'bi bi-person-up',
+            tone: 'warning',
+            cancelLabel: 'Cancel',
+            confirmLabel: 'Make head',
+            confirmClass: 'btn btn-primary'
         });
     }
 
@@ -1397,10 +1418,25 @@
                 event.preventDefault();
                 var headRow = setHeadButton.closest('[data-family-member-row]');
 
-                if (headRow) {
+                if (!headRow || !formEl) {
+                    return;
+                }
+
+                var firstName = headRow.querySelector('[name$="[firstname]"]');
+                var lastName = headRow.querySelector('[name$="[lastname]"]');
+                var memberName = [
+                    firstName ? String(firstName.value || '').trim() : '',
+                    lastName ? String(lastName.value || '').trim() : ''
+                ].filter(Boolean).join(' ');
+
+                askPromoteToHead(formEl, memberName).then(function (confirmed) {
+                    if (!confirmed) {
+                        return;
+                    }
+
                     promoteMemberToHead(root, headRow);
                     scheduleSave(root);
-                }
+                });
             }
         });
 

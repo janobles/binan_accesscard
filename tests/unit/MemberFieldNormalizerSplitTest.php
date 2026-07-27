@@ -31,12 +31,27 @@ final class MemberFieldNormalizerSplitTest extends CIUnitTestCase
         $this->assertSame('', $parts['barangay']);
     }
 
+    /**
+     * Addresses are stored uppercase, so the splitter must match the Title Case
+     * barangay list case-insensitively. A case-sensitive match here printed a blank
+     * barangay on every QR card.
+     */
+    public function testSplitMatchesBarangayInAnUppercaseAddress(): void
+    {
+        $parts = MemberFieldNormalizer::splitAddressBarangay('123 RIZAL ST., POBLACION');
+
+        $this->assertSame('123 RIZAL ST.', $parts['address']);
+        $this->assertSame('Poblacion', $parts['barangay']);
+    }
+
     public function testSplitIsInverseOfCombine(): void
     {
         $combined = MemberFieldNormalizer::combineAddressBarangay('123 Sampaguita St', 'Canlalay');
         $parts    = MemberFieldNormalizer::splitAddressBarangay($combined);
 
-        $this->assertSame('123 Sampaguita St', $parts['address']);
+        // The address is typed, so combine() stores it uppercase. The barangay comes
+        // back in its canonical list casing, which is what the form's select matches on.
+        $this->assertSame('123 SAMPAGUITA ST', $parts['address']);
         $this->assertSame('Canlalay', $parts['barangay']);
     }
 }

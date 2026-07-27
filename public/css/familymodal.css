@@ -1326,3 +1326,13 @@
 .import-field-note-warn {
     color: #997404;
 }
+
+/* Government forms are filled in capitals. Typed values are stored uppercase too
+   (see MemberFieldNormalizer); values picked from a dropdown keep their stored
+   casing and are only displayed this way, so nothing here changes what is posted.
+   Placeholders are left alone: they are instructions to the worker, not data. */
+.family-entry-form input:not([type="checkbox"]):not([type="radio"]),
+.family-entry-form select,
+.family-entry-form textarea {
+    text-transform: uppercase;
+}

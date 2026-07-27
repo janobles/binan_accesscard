@@ -631,14 +631,48 @@
     margin-top: 0.2rem;
 }
 
-/* A closed member row reads as one line of text, not a form. */
+/* A closed member row reads as one line: number, then who the person is, then the
+   row actions. Nothing is stated twice and the row is a single line tall. */
 .family-member-summary {
     display: flex;
+    flex: 1 1 auto;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.4rem 0.6rem;
+    gap: 0.35rem 0.55rem;
+    min-width: 0;
     color: #062c57;
     font-size: 0.84rem;
+}
+
+/* Closed: the header IS the row, so it carries no rule beneath it and no gap for
+   the fields that are not rendered. */
+[data-family-member-open="0"] .family-person-card-header {
+    padding-bottom: 0;
+    margin-bottom: 0;
+    border-bottom: 0;
+}
+
+[data-family-member-open="0"].family-person-card {
+    padding-top: 0.6rem;
+    padding-bottom: 0.6rem;
+}
+
+.family-person-card-title {
+    flex: 0 0 auto;
+}
+
+/* Too narrow for one line: the number keeps the actions company on the top row
+   and the identity gets the full width beneath, instead of squeezing into a
+   column and wrapping after every second word. */
+@media (max-width: 575.98px) {
+    .family-person-card-header {
+        flex-wrap: wrap;
+    }
+
+    .family-member-summary {
+        order: 3;
+        flex-basis: 100%;
+    }
 }
 
 .family-member-summary-name {

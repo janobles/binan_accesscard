@@ -269,10 +269,15 @@ $renderMemberRow = static function ($index, array $m = [], bool $open = true) us
     ?>
     <div class="family-person-card" data-family-member-row data-family-member-open="<?= $open ? '1' : '0' ?>">
         <div class="family-person-card-header">
-            <?php /* manage-family-modal.js keeps the number and name current as rows are
-                     added, removed, or renamed. */ ?>
+            <?php /* The number is the only thing the header states: who the person is
+                     belongs to the summary beside it, so a closed row is one line and
+                     the name is never printed twice. manage-family-modal.js renumbers
+                     as rows are added and removed. */ ?>
             <h3 class="family-person-card-title" data-family-member-title>Member</h3>
-            <div class="d-flex align-items-center gap-2">
+            <?php /* Filled by manage-family-modal.js from the row's own values, so a closed
+                     row still says who it is. */ ?>
+            <div class="family-member-summary d-none" data-family-member-summary></div>
+            <div class="d-flex align-items-center gap-2 ms-auto">
                 <button class="btn btn-outline-secondary btn-sm" type="button" data-family-member-toggle aria-expanded="<?= $open ? 'true' : 'false' ?>"><?= $open ? 'Done' : 'Edit' ?></button>
                 <?php /* Row actions live in the same actions menu the records table uses, rather
                          than two competing outline buttons in colors that carry no role. */ ?>
@@ -287,9 +292,6 @@ $renderMemberRow = static function ($index, array $m = [], bool $open = true) us
                 </div>
             </div>
         </div>
-        <?php /* Filled by manage-family-modal.js from the row's own values, so a closed row
-                 still says who it is. */ ?>
-        <div class="family-member-summary d-none" data-family-member-summary></div>
         <div data-family-member-editor><?= $open ? $renderMemberEditor($index, $m) : '' ?></div>
         <div data-family-member-values><?= $open ? '' : $renderMemberValues($index, $m) ?></div>
     </div>

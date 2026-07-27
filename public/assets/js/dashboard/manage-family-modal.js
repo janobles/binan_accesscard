@@ -901,25 +901,17 @@
 
     // ---- member row headers -------------------------------------------------
 
-    // Each row says which person it is, so the head card and the member cards are
-    // never confused for each other. Numbering is recomputed rather than baked into
-    // the markup, because removing a row renumbers everything after it.
+    // The header states the position in the household and nothing else: the name
+    // sits beside it in the summary, and printing it in both places made a closed
+    // row two lines saying the same thing twice. Numbering is recomputed rather
+    // than baked into the markup, because removing a row renumbers everything after it.
     function renumberMembers(root) {
         Array.from(root.querySelectorAll('[data-family-member-row]')).forEach(function (row, index) {
             var title = row.querySelector('[data-family-member-title]');
 
-            if (!title) {
-                return;
+            if (title) {
+                title.textContent = 'Member ' + (index + 1);
             }
-
-            var last = row.querySelector('[name$="[lastname]"]');
-            var first = row.querySelector('[name$="[firstname]"]');
-            var name = [
-                last ? String(last.value || '').trim() : '',
-                first ? String(first.value || '').trim() : ''
-            ].filter(Boolean).join(', ');
-
-            title.textContent = 'Member ' + (index + 1) + (name !== '' ? ' — ' + name : '');
         });
     }
 

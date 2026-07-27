@@ -63,10 +63,6 @@ unchecked item was already moved to issue #9 (UX decision, not code mess).
   (red on `main` since before feat/family-member-rows, verified by stashing the
   branch). Move both to `public/css/scanner-scan.css`, which the scanner manifest
   already loads.
-- [ ] ⚪ Cleanup: `app/Views/Family/family-modal.php`: a closed member row now
-  states the person's name twice. The card title renders the member number plus
-  the name, and the summary line directly beneath it renders the name again.
-  Keep the index in the title and let the summary own the name.
 
 Exempt (checked, not violations): `app/Views/errors/html/*` (framework error
 pages, standalone by design), `app/Views/Scanner/pdf/report.php` (PDF

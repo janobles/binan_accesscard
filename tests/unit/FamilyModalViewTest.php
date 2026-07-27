@@ -193,15 +193,17 @@ final class FamilyModalViewTest extends CIUnitTestCase
         $this->assertStringContainsString('data-family-member-title', $html);
     }
 
-    public function testQrBelongsToTheRecordNotToTheHeadPerson(): void
+    public function testQrLeadsTheHeadCardGrid(): void
     {
         $html = $this->render();
 
-        // The QR strip sits above both cards rather than inside the head's.
+        // The QR is the first field inside the head card, not a strip or header of
+        // its own above it.
         $this->assertMatchesRegularExpression(
-            '/family-record-strip.*qr_control_no.*family-person-card/s',
+            '/family-person-card-header.*Head of Family.*qr_control_no.*head_lastname/s',
             $html
         );
+        $this->assertStringNotContainsString('family-record-strip', $html);
     }
 
     public function testEveryPersonCardCarriesTheSameChoicesBlock(): void

@@ -572,23 +572,6 @@
     font-weight: 800;
 }
 
-/* The QR belongs to the record, not to a person, so it sits above both cards. */
-.family-record-strip {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 0.6rem;
-    padding: 0.65rem 0.85rem;
-    margin-bottom: 0.85rem;
-    border: 1px solid #cfe0f5;
-    border-radius: 0.5rem;
-    background: #f8fbff;
-}
-
-.family-record-strip .form-label {
-    margin-bottom: 0;
-}
-
 /* Collapse toggle for the sectors-and-programs block, identical on every card. */
 .family-choices {
     padding-top: 0.85rem;
@@ -648,11 +631,6 @@
     font-size: 0.72rem;
     font-weight: 800;
     text-transform: uppercase;
-}
-
-.family-qr-field {
-    width: 11rem;
-    max-width: 100%;
 }
 
 .family-entry-actions {

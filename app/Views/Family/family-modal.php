@@ -290,30 +290,6 @@ $renderMemberRow = static function ($index, array $m = []) use (
 
         <div class="family-entry-content">
                 <?php $qrLocked = ! empty($qrLocked ?? false); ?>
-                <?php /* The QR number identifies the family record, not the head person, so it
-                         sits above both cards rather than inside one of them. */ ?>
-                <div class="family-record-strip">
-                    <label class="form-label mb-0" for="<?= esc($fieldPrefix, 'attr') ?>HeadQr">QR Number</label>
-                    <div class="family-qr-field">
-                        <div class="input-group input-group-sm has-validation">
-                            <input id="<?= esc($fieldPrefix, 'attr') ?>HeadQr" name="qr_control_no" class="form-control" type="text"
-                                inputmode="numeric" pattern="0*[1-9][0-9]{0,6}"
-                                title="QR number must be numeric and should not exceed 9,999,999"
-                                aria-describedby="<?= esc($fieldPrefix, 'attr') ?>HeadQrFeedback"
-                                data-qr-check-url="<?= esc($qrCheckUrl, 'attr') ?>"
-                                value="<?= esc($oldValue('qr_control_no'), 'attr') ?>"
-                                <?= $qrLocked ? 'readonly' : 'required' ?>>
-                            <?php /* Makes the async uniqueness check legible: spinner while checking,
-                                     tick or cross once it lands. Driven by manage-family-modal.js. */ ?>
-                            <span class="input-group-text d-none" data-family-qr-status aria-live="polite"></span>
-                            <div class="invalid-feedback" id="<?= esc($fieldPrefix, 'attr') ?>HeadQrFeedback" data-family-field-error></div>
-                        </div>
-                    </div>
-                    <?php if ($qrLocked): ?>
-                        <small class="text-muted">Locked: subsidy already recorded under this number.</small>
-                    <?php endif; ?>
-                </div>
-
                 <?php /* The head is a person card with the same chrome as every member card, so
                          the two read as the same kind of thing. */ ?>
                 <div class="family-person-card">
@@ -321,6 +297,28 @@ $renderMemberRow = static function ($index, array $m = []) use (
                         <h3 class="family-person-card-title">Head of Family</h3>
                     </div>
                     <div class="row g-3">
+                        <?php /* The QR is the first field of the record, so it leads the head's
+                                 grid rather than sitting in a strip or a header of its own. */ ?>
+                        <div class="col-12 col-md-6 col-xl-3">
+                            <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>HeadQr">QR Number</label>
+                            <div class="input-group has-validation">
+                                <input id="<?= esc($fieldPrefix, 'attr') ?>HeadQr" name="qr_control_no" class="form-control" type="text"
+                                    inputmode="numeric" pattern="0*[1-9][0-9]{0,6}"
+                                    title="QR number must be numeric and should not exceed 9,999,999"
+                                    aria-describedby="<?= esc($fieldPrefix, 'attr') ?>HeadQrFeedback"
+                                    data-qr-check-url="<?= esc($qrCheckUrl, 'attr') ?>"
+                                    value="<?= esc($oldValue('qr_control_no'), 'attr') ?>"
+                                    <?= $qrLocked ? 'readonly' : 'required' ?>>
+                                <?php /* Makes the async uniqueness check legible: spinner while checking,
+                                         tick or cross once it lands. Driven by manage-family-modal.js. */ ?>
+                                <span class="input-group-text d-none" data-family-qr-status aria-live="polite"></span>
+                                <div class="invalid-feedback" id="<?= esc($fieldPrefix, 'attr') ?>HeadQrFeedback" data-family-field-error></div>
+                            </div>
+                            <?php if ($qrLocked): ?>
+                                <small class="text-muted">Locked: subsidy already recorded under this number.</small>
+                            <?php endif; ?>
+                        </div>
+
                         <?= family_modal_render_person_fields([
                             'personFields' => $personFields,
                             'optionsByKey' => $personFieldOptions,
@@ -332,9 +330,12 @@ $renderMemberRow = static function ($index, array $m = []) use (
                             'required' => true,
                         ]) ?>
 
-                        <?php /* Every record is a BiÃ±an family, so the address stops at the barangay:
+                        <?php /* Every record is a Biñan family, so the address stops at the barangay:
                                  house/unit no., street, and subdivision go in Address, and Barangay
-                                 gets the room its longest option name needs. */ ?>
+                                 gets the room its longest option name needs. The break keeps the
+                                 pair on one row of its own, so Barangay never wraps away from the
+                                 address it belongs to. */ ?>
+                        <div class="w-100 d-none d-xl-block"></div>
                         <div class="col-12 col-xl-8">
                             <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>HeadAddress">Address</label>
                             <input id="<?= esc($fieldPrefix, 'attr') ?>HeadAddress" name="head_address" class="form-control" type="text" value="<?= esc($oldValue('head_address'), 'attr') ?>" aria-describedby="<?= esc($fieldPrefix, 'attr') ?>HeadAddressFeedback" minlength="2" required>

@@ -25,14 +25,17 @@ final class FamilyDataTablePresenterTest extends CIUnitTestCase
     public function testRowShapesHeadScopeCells(): void
     {
         $presenter = new FamilyDataTablePresenter('admin/manage-family', 'Viewer');
+        // Names and addresses are stored uppercase, so the fixture mirrors storage.
         $row       = $presenter->row(
-            ['memberID' => 5, 'firstname' => 'Ana', 'middlename' => 'Reyes', 'lastname' => 'Cruz', 'suffix' => '', 'address' => '123 St', 'birthday' => '1990-01-02', 'sectorID' => null],
+            ['memberID' => 5, 'firstname' => 'ANA', 'middlename' => 'REYES', 'lastname' => 'CRUZ', 'suffix' => '', 'address' => '123 ST', 'birthday' => '1990-01-02', 'sectorID' => null],
             false,
             []
         );
 
         $this->assertSame(['qr', 'name', 'sector', 'address', 'birthday', 'actions'], array_keys($row));
         $this->assertStringContainsString('CRUZ, ANA R.', $row['name']);
+        // The presenter shows values as stored rather than re-casing them.
+        $this->assertSame('123 ST', $row['address']);
         $this->assertSame('1990-01-02', $row['birthday']);
         $this->assertStringContainsString('&mdash;', $row['qr']);
     }

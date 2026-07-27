@@ -311,13 +311,11 @@
         var sequence = ++qrCheckSequence;
         field.setCustomValidity('');
         setFieldError(field, '');
-        setQrStatus(field, '');
 
         if (String(field.value || '').trim() === '' || !field.checkValidity()) {
             return;
         }
 
-        setQrStatus(field, 'checking');
         field.setCustomValidity('Checking whether this control number already exists.');
 
         qrCheckTimer = window.setTimeout(function () {
@@ -332,7 +330,6 @@
                 if (sequence === qrCheckSequence && field.isConnected) {
                     field.setCustomValidity('');
                     setFieldError(field, '');
-                    setQrStatus(field, '');
                 }
             }, 5000);
 
@@ -354,40 +351,15 @@
                 var message = available ? '' : (result.data.message || 'The control number could not be validated.');
                 field.setCustomValidity(message);
                 setFieldError(field, message);
-                setQrStatus(field, available ? 'ok' : '');
             }).catch(function () {
                 window.clearTimeout(release);
 
                 if (sequence === qrCheckSequence && field.isConnected) {
                     field.setCustomValidity('');
                     setFieldError(field, '');
-                    setQrStatus(field, '');
                 }
             });
         }, 350);
-    }
-
-    // The input-group addon beside the control number field. It only reports what
-    // nothing else on screen already says: that a check is running, or that the
-    // number came back free. A taken number needs no cross here, because the field
-    // turns red and states the reason underneath it.
-    function setQrStatus(field, state) {
-        var group = field.closest('.input-group');
-        var status = group ? group.querySelector('[data-family-qr-status]') : null;
-
-        if (!status) {
-            return;
-        }
-
-        var icons = {
-            checking: '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span><span class="visually-hidden">Checking control number</span>',
-            ok: '<i class="bi bi-check-lg text-success" aria-hidden="true"></i><span class="visually-hidden">Control number available</span>'
-        };
-
-        status.innerHTML = icons[state] || '';
-        // With nothing to report the addon would render as an empty grey stub, so it
-        // only joins the input group while it has something to say.
-        status.classList.toggle('d-none', !icons[state]);
     }
 
     // ---- confirm dialog ----------------------------------------------------

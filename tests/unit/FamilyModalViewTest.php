@@ -119,13 +119,15 @@ final class FamilyModalViewTest extends CIUnitTestCase
         $this->assertMatchesRegularExpression('/aria-describedby="[^"]+Feedback"/', $html);
     }
 
-    public function testQrFieldIsAnInputGroupWithAStatusAddon(): void
+    public function testControlNumberIsAPlainFieldWithNoStatusAddon(): void
     {
         $html = $this->render();
 
-        $this->assertStringContainsString('has-validation', $html);
-        $this->assertStringContainsString('input-group', $html);
-        $this->assertStringContainsString('data-family-qr-status', $html);
+        // A taken number turns the field red and states why underneath it, so the
+        // field needs no addon repeating that in its own box.
+        $this->assertStringNotContainsString('data-family-qr-status', $html);
+        $this->assertStringNotContainsString('input-group', $html);
+        $this->assertStringContainsString('name="qr_control_no"', $html);
     }
 
     public function testCheckboxesUseRealFormCheckMarkup(): void

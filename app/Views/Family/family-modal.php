@@ -303,19 +303,14 @@ $renderMemberRow = static function ($index, array $m = []) use (
                                  the controller contract are unchanged. */ ?>
                         <div class="col-12">
                             <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>HeadQr">Control Number</label>
-                            <div class="input-group has-validation">
-                                <input id="<?= esc($fieldPrefix, 'attr') ?>HeadQr" name="qr_control_no" class="form-control" type="text"
-                                    inputmode="numeric" pattern="0*[1-9][0-9]{0,6}"
-                                    title="Control number must be numeric and should not exceed 9,999,999"
-                                    aria-describedby="<?= esc($fieldPrefix, 'attr') ?>HeadQrFeedback"
-                                    data-qr-check-url="<?= esc($qrCheckUrl, 'attr') ?>"
-                                    value="<?= esc($oldValue('qr_control_no'), 'attr') ?>"
-                                    <?= $qrLocked ? 'readonly' : 'required' ?>>
-                                <?php /* Makes the async uniqueness check legible: spinner while checking,
-                                         tick or cross once it lands. Driven by manage-family-modal.js. */ ?>
-                                <span class="input-group-text d-none" data-family-qr-status aria-live="polite"></span>
-                                <div class="invalid-feedback" id="<?= esc($fieldPrefix, 'attr') ?>HeadQrFeedback" data-family-field-error></div>
-                            </div>
+                            <input id="<?= esc($fieldPrefix, 'attr') ?>HeadQr" name="qr_control_no" class="form-control" type="text"
+                                inputmode="numeric" pattern="0*[1-9][0-9]{0,6}"
+                                title="Control number must be numeric and should not exceed 9,999,999"
+                                aria-describedby="<?= esc($fieldPrefix, 'attr') ?>HeadQrFeedback"
+                                data-qr-check-url="<?= esc($qrCheckUrl, 'attr') ?>"
+                                value="<?= esc($oldValue('qr_control_no'), 'attr') ?>"
+                                <?= $qrLocked ? 'readonly' : 'required' ?>>
+                            <div class="invalid-feedback" id="<?= esc($fieldPrefix, 'attr') ?>HeadQrFeedback" data-family-field-error></div>
                             <?php if ($qrLocked): ?>
                                 <small class="text-muted">Locked: subsidy already recorded under this number.</small>
                             <?php endif; ?>

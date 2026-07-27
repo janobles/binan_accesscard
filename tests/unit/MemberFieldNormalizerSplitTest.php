@@ -36,7 +36,9 @@ final class MemberFieldNormalizerSplitTest extends CIUnitTestCase
         $combined = MemberFieldNormalizer::combineAddressBarangay('123 Sampaguita St', 'Canlalay');
         $parts    = MemberFieldNormalizer::splitAddressBarangay($combined);
 
-        $this->assertSame('123 Sampaguita St', $parts['address']);
+        // The address is typed, so combine() stores it uppercase. The barangay comes
+        // back in its canonical list casing, which is what the form's select matches on.
+        $this->assertSame('123 SAMPAGUITA ST', $parts['address']);
         $this->assertSame('Canlalay', $parts['barangay']);
     }
 }

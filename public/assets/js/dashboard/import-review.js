@@ -22,6 +22,7 @@
     var commitUrl     = root.dataset.commitUrl;
     var cancelUrl     = root.dataset.cancelUrl;
     var familyBaseUrl = root.dataset.familyBaseUrl;
+    var cellUrl       = root.dataset.cellUrl;
     var redirectUrl   = root.dataset.redirectUrl;
 
     var statsEl    = document.getElementById('importReviewStats');
@@ -40,15 +41,43 @@
     var familyPageSize = 25;  // rows per page (Manage Records default)
     var readyCollapsed = true; // Ready-to-import list starts hidden behind its Show button
 
+    // Search + paging state for the other two lists (same feel as Families to fix).
+    var needsQrFilter = { search: '' };
+    var needsQrPage = 1;
+    var needsQrPageSize = 25;
+    var readyFilter = { search: '' };
+    var readyPage = 1;
+    var readyPageSize = 25;
+
+    // Bulk-remove selection for "Families to fix" (QR string -> true). Reset on every full
+    // render() because the list itself changes after an edit/remove.
+    var selectedFno = {};
+    var bulkRemoveBtn = null;  // "Remove selected" button (lives in the filter bar)
+    var selectAllBox = null;   // header select-all checkbox
+
     function parseJson() {
         var node = document.getElementById('importReviewData');
 
         try {
             return JSON.parse(node ? node.textContent : '{}');
         } catch (e) {
-            return { file: '', counts: {}, groups: [], byRow: [] };
+            return { file: '', counts: {} };
         }
     }
+
+    // Dropdown option lists (field => [option strings]) for the columns that are dropdowns in
+    // the Excel template — so an inline cell edit on those offers the same choices as the sheet.
+    var fieldOptions = (function () {
+        var node = document.getElementById('importReviewFieldOptions');
+
+        try {
+            var parsed = JSON.parse(node ? node.textContent : '{}');
+
+            return (parsed && typeof parsed === 'object') ? parsed : {};
+        } catch (e) {
+            return {};
+        }
+    })();
 
     // -- small DOM helpers -----------------------------------------------------
 
@@ -76,6 +105,138 @@
         }
     }
 
+    // Promise-based confirm reusing the page's #familyActionModal markup (Bootstrap modal),
+    // so Remove / Cancel / Confirm match the app's dialog instead of a native window.confirm.
+    // Resolves true on confirm, false on dismiss. Falls back to window.confirm if the modal
+    // or Bootstrap is unavailable.
+    function confirmAction(opts) {
+        opts = opts || {};
+
+        var modalEl = document.getElementById('familyActionModal');
+        var bs = window.bootstrap;
+
+        if (!modalEl || !bs || !bs.Modal) {
+            return Promise.resolve(window.confirm(opts.message || 'Are you sure?'));
+        }
+
+        var titleEl = modalEl.querySelector('#familyActionModalLabel');
+        var msgEl = modalEl.querySelector('.js-family-action-message');
+        var confirmBtn = modalEl.querySelector('.js-family-action-confirm');
+
+        if (titleEl) {
+            titleEl.textContent = opts.title || 'Please confirm';
+        }
+        if (msgEl) {
+            msgEl.textContent = '';
+            if (opts.node) {
+                msgEl.appendChild(opts.node);
+            } else {
+                msgEl.textContent = opts.message || 'Are you sure?';
+            }
+        }
+        if (confirmBtn) {
+            confirmBtn.textContent = opts.confirmLabel || 'Confirm';
+            confirmBtn.className = 'btn ' + (opts.confirmClass || 'btn-danger') + ' js-family-action-confirm';
+        }
+
+        var modal = bs.Modal.getOrCreateInstance(modalEl);
+
+        return new Promise(function (resolve) {
+            var settled = false;
+
+            function cleanup() {
+                confirmBtn.removeEventListener('click', onConfirm);
+                modalEl.removeEventListener('hidden.bs.modal', onHidden);
+            }
+
+            function onConfirm() {
+                settled = true;
+                cleanup();
+                modal.hide();
+                resolve(true);
+            }
+
+            function onHidden() {
+                cleanup();
+                if (!settled) {
+                    resolve(false);
+                }
+            }
+
+            confirmBtn.addEventListener('click', onConfirm);
+            modalEl.addEventListener('hidden.bs.modal', onHidden);
+            modal.show();
+        });
+    }
+
+    // A search input group (Manage Records look). onInput gets the current value.
+    function buildSearchBox(placeholder, value, onInput) {
+        var group = el('div', 'input-group input-group-sm import-review-filter-search');
+        var input = el('input', 'form-control');
+        input.type = 'search';
+        input.placeholder = placeholder;
+        input.setAttribute('aria-label', placeholder);
+        input.value = value || '';
+        input.addEventListener('input', function () {
+            onInput(input.value);
+        });
+        var icon = el('span', 'input-group-text');
+        icon.appendChild(el('i', 'bi bi-search'));
+        group.appendChild(input);
+        group.appendChild(icon);
+
+        return group;
+    }
+
+    // "Showing A–B of C" + Previous / Page N of M / Next. onGoto(n) navigates to page n.
+    function paintPager(footer, state, onGoto) {
+        footer.textContent = '';
+
+        var row = el('div', 'd-flex flex-wrap justify-content-between align-items-center gap-2 w-100');
+        row.appendChild(el('div', 'table-footer-left', state.total
+            ? 'Showing ' + state.from + '–' + state.to + ' of ' + state.total
+            : 'Showing 0 of 0'));
+
+        var right = el('div', 'table-footer-right');
+
+        if (state.pages > 1) {
+            var ul = el('ul', 'pagination pagination-sm m-0');
+
+            var prev = el('li', 'page-item' + (state.page <= 1 ? ' disabled' : ''));
+            var prevLink = el('a', 'page-link', 'Previous');
+            prevLink.href = '#';
+            prevLink.addEventListener('click', function (event) {
+                event.preventDefault();
+                if (state.page > 1) {
+                    onGoto(state.page - 1);
+                }
+            });
+            prev.appendChild(prevLink);
+            ul.appendChild(prev);
+
+            var info = el('li', 'page-item disabled');
+            info.appendChild(el('span', 'page-link', 'Page ' + state.page + ' of ' + state.pages));
+            ul.appendChild(info);
+
+            var next = el('li', 'page-item' + (state.page >= state.pages ? ' disabled' : ''));
+            var nextLink = el('a', 'page-link', 'Next');
+            nextLink.href = '#';
+            nextLink.addEventListener('click', function (event) {
+                event.preventDefault();
+                if (state.page < state.pages) {
+                    onGoto(state.page + 1);
+                }
+            });
+            next.appendChild(nextLink);
+            ul.appendChild(next);
+
+            right.appendChild(ul);
+        }
+
+        row.appendChild(right);
+        footer.appendChild(row);
+    }
+
     // -- rendering -------------------------------------------------------------
 
     function render() {
@@ -84,6 +245,11 @@
         if (fileEl) {
             fileEl.textContent = review.file || 'import.xlsx';
         }
+
+        // The list is rebuilt below, so any prior bulk selection no longer maps cleanly.
+        selectedFno = {};
+        bulkRemoveBtn = null;
+        selectAllBox = null;
 
         renderStats(counts);
         renderBody(counts);
@@ -111,12 +277,25 @@
         confirmBtn.appendChild(document.createTextNode(label));
     }
 
-    function statTile(label, value, colorClass) {
+    // KPI tile matching the dashboard's house stat card (theme.css .stat-card*):
+    // flat (no shadow), green uppercase label, big value, soft icon. The status
+    // color stays on the value so the operator still spots red "Issues to fix".
+    function statTile(label, value, colorClass, icon) {
         var col = el('div', 'col-6 col-xl');
-        var card = el('div', 'card h-100 shadow-sm');
+        var card = el('article', 'stat-card card h-100 py-2');
         var body = el('div', 'card-body');
-        body.appendChild(el('div', 'small text-muted text-uppercase', label));
-        body.appendChild(el('div', 'h3 mb-0 ' + (colorClass || ''), String(value)));
+        var content = el('div', 'stat-card-content');
+
+        var text = el('div');
+        text.appendChild(el('p', null, label));
+        text.appendChild(el('strong', colorClass || null, String(value)));
+        content.appendChild(text);
+
+        var i = el('i', 'bi bi-' + (icon || 'graph-up') + ' stat-card-icon');
+        i.setAttribute('aria-hidden', 'true');
+        content.appendChild(i);
+
+        body.appendChild(content);
         card.appendChild(body);
         col.appendChild(card);
 
@@ -137,12 +316,12 @@
         var people = Number(counts.rows || 0);
         var groups = Number(counts.groups || 0);
 
-        statsEl.appendChild(statTile('People in file', people, ''));
-        statsEl.appendChild(statTile('Family groups', groups, ''));
-        statsEl.appendChild(statTile('Ready to import', ready, ready > 0 ? 'text-success' : 'text-muted'));
-        statsEl.appendChild(statTile('Already in system', existing, existing > 0 ? 'text-warning' : 'text-muted'));
-        statsEl.appendChild(statTile('Issues to fix', blocking, blocking > 0 ? 'text-danger' : 'text-success'));
-        statsEl.appendChild(statTile('Warnings', warnings, warnings > 0 ? 'text-warning' : 'text-muted'));
+        statsEl.appendChild(statTile('People in file', people, '', 'people'));
+        statsEl.appendChild(statTile('Family groups', groups, '', 'diagram-3'));
+        statsEl.appendChild(statTile('Ready to import', ready, ready > 0 ? 'text-success' : 'text-muted', 'check2-circle'));
+        statsEl.appendChild(statTile('Already in system', existing, existing > 0 ? 'text-warning' : 'text-muted', 'archive'));
+        statsEl.appendChild(statTile('Issues to fix', blocking, blocking > 0 ? 'text-danger' : 'text-success', 'exclamation-triangle'));
+        statsEl.appendChild(statTile('Warnings', warnings, warnings > 0 ? 'text-warning' : 'text-muted', 'exclamation-circle'));
     }
 
     function renderBody(counts) {
@@ -155,6 +334,18 @@
             alert.appendChild(el('strong', null, 'This file could not be fully read. '));
             alert.appendChild(document.createTextNode(notices.join(' ') + ' Upload a corrected file.'));
             groupsEl.appendChild(alert);
+        }
+
+        // Truly nothing to act on and nothing to save — show one clear empty state instead of
+        // an empty "Needs a QR" / "Ready" scaffold.
+        var hasProblems = notices.length || (review.unassigned || []).length || (review.families || []).length;
+        var ready = Number(counts.ready || 0);
+        var appends = Number(counts.appends || 0);
+
+        if (!hasProblems && ready <= 0 && appends <= 0) {
+            groupsEl.appendChild(renderEmptyState());
+
+            return;
         }
 
         // Rows with no QR number can't be grouped into a family — surface them first so the
@@ -176,9 +367,53 @@
         groupsEl.appendChild(renderReady(counts));
     }
 
+    // Empty state — the file held nothing to fix and nothing new to save.
+    function renderEmptyState() {
+        var card = el('div', 'card mb-3');
+        var body = el('div', 'card-body text-center py-5');
+        var icon = el('i', 'bi bi-inbox text-muted');
+        icon.setAttribute('aria-hidden', 'true');
+        icon.style.fontSize = '2.5rem';
+        body.appendChild(icon);
+        body.appendChild(el('p', 'h5 mt-3 mb-1', 'Nothing to import'));
+        body.appendChild(el('p', 'text-muted mb-0',
+            'This file has no new families to save and no issues to fix. Upload a different file to import records.'));
+        card.appendChild(body);
+
+        return card;
+    }
+
+    // Search box (left) + "Show N entries" (right) toolbar for the simple lists.
+    function buildSimpleToolbar(placeholder, filterObj, onSearch, size, onSize) {
+        var bar = el('div', 'd-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 import-review-filterbar');
+        bar.appendChild(buildSearchBox(placeholder, filterObj.search, function (value) {
+            filterObj.search = value;
+            onSearch();
+        }));
+        bar.appendChild(buildSizeSelect(size, onSize));
+
+        return bar;
+    }
+
     // -- families to fix (in-place edit / remove) -------------------------------
 
     // -- rows with no QR (edit to assign one) -----------------------------------
+
+    // The blank-QR rows matching the current search (over person name / sheet row).
+    function filteredNeedsQr() {
+        var rows = review.unassigned || [];
+        var query = needsQrFilter.search.trim().toLowerCase();
+
+        if (!query) {
+            return rows;
+        }
+
+        return rows.filter(function (row) {
+            var hay = (String(row.person || '') + ' ' + String(row.sheetRow || '')).toLowerCase();
+
+            return hay.indexOf(query) !== -1;
+        });
+    }
 
     function renderNeedsQr() {
         var rows = review.unassigned || [];
@@ -197,7 +432,7 @@
         title.appendChild(el('span', 'badge bg-danger me-2', rows.length));
         title.appendChild(document.createTextNode('Needs a QR number'));
         header.appendChild(title);
-        header.appendChild(el('small', 'text-muted',
+        header.appendChild(el('small', 'text-muted d-block mt-1',
             'These rows have no QR, so they are not part of any family yet. Edit to give each a QR — rows with the same QR join one family — or Remove.'));
         card.appendChild(header);
 
@@ -214,13 +449,47 @@
         table.appendChild(thead);
 
         var tbody = el('tbody');
-        rows.forEach(function (row) {
-            tbody.appendChild(renderNeedsQrRow(row));
-        });
         table.appendChild(tbody);
         wrap.appendChild(table);
+
+        var footer = el('div', 'card-footer');
+
+        var repaint = function () {
+            tbody.textContent = '';
+            var matches = filteredNeedsQr();
+            var state = paginate(matches, needsQrPage, needsQrPageSize);
+            needsQrPage = state.page;
+
+            if (!matches.length) {
+                var tr = el('tr');
+                var td = el('td', 'text-center text-muted py-3', 'No rows match this search.');
+                td.colSpan = 4;
+                tr.appendChild(td);
+                tbody.appendChild(tr);
+            } else {
+                state.rows.forEach(function (row) {
+                    tbody.appendChild(renderNeedsQrRow(row));
+                });
+            }
+
+            paintPager(footer, state, function (page) {
+                needsQrPage = page;
+                repaint();
+            });
+        };
+
+        // Only surface the search/size toolbar when the list is long enough to need it.
+        if (rows.length > needsQrPageSize) {
+            body.appendChild(buildSimpleToolbar('Search person or row...', needsQrFilter,
+                function () { needsQrPage = 1; repaint(); },
+                needsQrPageSize,
+                function (size) { needsQrPageSize = size; needsQrPage = 1; repaint(); }));
+        }
+
         body.appendChild(wrap);
         card.appendChild(body);
+        card.appendChild(footer);
+        repaint();
 
         return card;
     }
@@ -231,19 +500,8 @@
         tr.appendChild(el('td', 'text-nowrap', row.sheetRow != null ? row.sheetRow : '—'));
         tr.appendChild(el('td', null, row.person || '—'));
 
-        var issues = el('td', 'small');
-        var types = row.types || [];
-        if (types.length) {
-            types.forEach(function (type) {
-                var cls = type.severity === 'blocking'
-                    ? 'badge bg-danger me-1 mb-1'
-                    : 'badge bg-warning text-dark me-1 mb-1';
-                issues.appendChild(el('span', cls, type.label || type.code));
-            });
-        } else {
-            issues.appendChild(el('span', 'badge bg-danger', 'No QR number'));
-        }
-        tr.appendChild(issues);
+        // Editable cells (e.g. the missing QR itself) inline; structural issues as badges.
+        tr.appendChild(renderIssueCell(row.editableCells, row.types, null));
 
         var actions = el('td', 'text-nowrap');
 
@@ -292,6 +550,27 @@
 
         var thead = el('thead');
         var htr = el('tr');
+
+        // Select-all for bulk remove: toggles every family in the CURRENT filter (all pages),
+        // so the operator can e.g. filter by "Already in the system" then remove them all.
+        var selectTh = el('th', 'import-review-select-col');
+        selectAllBox = el('input', 'form-check-input');
+        selectAllBox.type = 'checkbox';
+        selectAllBox.setAttribute('aria-label', 'Select all families to fix');
+        selectAllBox.addEventListener('change', function () {
+            filteredFamilies().forEach(function (family) {
+                if (selectAllBox.checked) {
+                    selectedFno[String(family.qr)] = true;
+                } else {
+                    delete selectedFno[String(family.qr)];
+                }
+            });
+            updateBulkButton();
+            repaint();
+        });
+        selectTh.appendChild(selectAllBox);
+        htr.appendChild(selectTh);
+
         ['Row', 'QR', 'Head of family', 'Members', 'Issues', 'Actions'].forEach(function (h) {
             htr.appendChild(el('th', null, h));
         });
@@ -387,7 +666,7 @@
         if (!matches.length) {
             var tr = el('tr');
             var td = el('td', 'text-center text-muted py-3', 'No families match this filter.');
-            td.colSpan = 6;
+            td.colSpan = 7;
             tr.appendChild(td);
             tbody.appendChild(tr);
         } else {
@@ -396,7 +675,41 @@
             });
         }
 
+        refreshSelectAll();
         paintFamilyFooter(footer, state, repaint);
+    }
+
+    // Reflects how many of the currently-filtered families are selected on the header box.
+    function refreshSelectAll() {
+        if (!selectAllBox) {
+            return;
+        }
+
+        var matches = filteredFamilies();
+        var selected = 0;
+        matches.forEach(function (family) {
+            if (selectedFno[String(family.qr)]) {
+                selected++;
+            }
+        });
+
+        selectAllBox.checked = matches.length > 0 && selected === matches.length;
+        selectAllBox.indeterminate = selected > 0 && selected < matches.length;
+    }
+
+    // Enables/labels the "Remove selected" button from the current selection size.
+    function updateBulkButton() {
+        if (!bulkRemoveBtn) {
+            return;
+        }
+
+        var n = Object.keys(selectedFno).length;
+        bulkRemoveBtn.disabled = n === 0;
+        bulkRemoveBtn.textContent = '';
+        var ic = el('i', 'bi bi-trash me-1');
+        ic.setAttribute('aria-hidden', 'true');
+        bulkRemoveBtn.appendChild(ic);
+        bulkRemoveBtn.appendChild(document.createTextNode(n > 0 ? 'Remove selected (' + n + ')' : 'Remove selected'));
     }
 
     // "Showing A–B of C" + Previous / Page N of M / Next — Manage Records footer markup.
@@ -544,6 +857,13 @@
         });
         leftGroup.appendChild(select);
 
+        // Bulk remove — disabled until at least one family is ticked.
+        bulkRemoveBtn = el('button', 'btn btn-sm btn-outline-danger');
+        bulkRemoveBtn.type = 'button';
+        bulkRemoveBtn.addEventListener('click', bulkRemove);
+        leftGroup.appendChild(bulkRemoveBtn);
+        updateBulkButton();
+
         bar.appendChild(leftGroup);
 
         bar.appendChild(buildSizeSelect(familyPageSize, function (size) {
@@ -555,50 +875,221 @@
         return bar;
     }
 
+    // The "Issues" cell for a flagged row/group: an inline input per editable field-level cell,
+    // plus badges for any structural issue that has no single cell to fix. ctx (optional) carries
+    // blocking/warnings counts for a defensive fallback when there are no typed issues at all.
+    function renderIssueCell(editableCells, types, ctx) {
+        var td = el('td', 'small import-review-issue-cell');
+        editableCells = editableCells || [];
+        types = types || [];
+
+        var editableCodes = {};
+        editableCells.forEach(function (cell) {
+            editableCodes[cell.code] = true;
+            td.appendChild(buildCellEditor(cell));
+        });
+
+        var badges = 0;
+        types.forEach(function (type) {
+            if (editableCodes[type.code]) {
+                return;   // shown as an editable input above, not a duplicate badge
+            }
+            badges++;
+            var cls = type.severity === 'blocking'
+                ? 'badge bg-danger me-1 mb-1'
+                : 'badge bg-warning text-dark me-1 mb-1';
+            td.appendChild(el('span', cls, type.label || type.code));
+        });
+
+        if (!editableCells.length && !badges && ctx) {
+            var blocking = Number(ctx.blocking || 0);
+            var warnings = Number(ctx.warnings || 0);
+            if (blocking > 0) {
+                td.appendChild(el('span', 'badge bg-danger me-1', blocking + ' to fix'));
+            }
+            if (warnings > 0) {
+                td.appendChild(el('span', 'badge bg-warning text-dark', warnings + ' warning' + (warnings === 1 ? '' : 's')));
+            }
+            if (blocking === 0 && warnings === 0) {
+                td.appendChild(el('span', 'text-success', 'No issues'));
+            }
+        }
+
+        return td;
+    }
+
+    // One labelled inline editor for a flagged cell: a severity-tinted panel (red = must fix,
+    // amber = warning) with the column name, its Excel ref, the input, and the reason. Saves on
+    // blur/Enter (see the groupsEl listeners) by POSTing {import_row, field, value}.
+    function buildCellEditor(cell) {
+        var blocking = cell.severity === 'blocking';
+
+        var wrap = el('div', 'import-cell-edit ' + (blocking ? 'import-cell-edit--blocking' : 'import-cell-edit--warning'));
+
+        // A dropdown column (per the Excel template) edits as a <select>; everything else a text input.
+        var options = fieldOptions[cell.field];
+        var isSelect = !!(options && options.length);
+
+        var head = el('div', 'import-cell-edit-head');
+        var labelWrap = el('span', 'import-cell-edit-labelwrap');
+        labelWrap.appendChild(el('span', 'import-cell-edit-label', cell.label));
+        if (isSelect) {
+            // Chevron cue so the cell clearly reads as a dropdown (beside the native <select> caret).
+            var caret = el('i', 'bi bi-caret-down-fill import-cell-edit-caret');
+            caret.setAttribute('aria-hidden', 'true');
+            caret.title = 'Pick a value from the list';
+            labelWrap.appendChild(caret);
+        }
+        head.appendChild(labelWrap);
+
+        // Name whose cell this is (head / member) instead of a bare Excel ref — the operator
+        // needs to know WHO to fix. The Excel cell (e.g. "P4") stays reachable on hover.
+        var who = cell.person ? (cell.person + ' (' + (cell.role || 'member') + ')') : cell.cell;
+        if (who) {
+            var ref = el('span', 'import-cell-edit-ref');
+            var pIcon = el('i', 'bi ' + (cell.role === 'head' ? 'bi-person-badge' : 'bi-person') + ' me-1');
+            pIcon.setAttribute('aria-hidden', 'true');
+            ref.appendChild(pIcon);
+            ref.appendChild(document.createTextNode(who));
+            if (cell.cell) {
+                ref.title = 'Cell ' + cell.cell;
+            }
+            head.appendChild(ref);
+        }
+        wrap.appendChild(head);
+
+        wrap.appendChild(isSelect ? buildCellSelect(cell, options) : buildCellInput(cell));
+
+        if (cell.message) {
+            var msg = el('div', 'import-cell-edit-msg');
+            var icon = el('i', 'bi ' + (blocking ? 'bi-exclamation-triangle-fill' : 'bi-exclamation-circle-fill') + ' me-1');
+            icon.setAttribute('aria-hidden', 'true');
+            msg.appendChild(icon);
+            msg.appendChild(document.createTextNode(cell.message));
+            wrap.appendChild(msg);
+        }
+
+        return wrap;
+    }
+
+    // Shared data-* + a11y wiring for either control kind, plus the class the save handlers watch.
+    function applyCellControlAttrs(control, cell) {
+        control.classList.add('js-import-cell');
+        control.dataset.row = cell.sheetRow;
+        control.dataset.field = cell.field;
+        control.dataset.original = cell.value || '';
+        control.title = cell.message || '';
+        control.setAttribute('aria-label', cell.label + (cell.message ? ' — ' + cell.message : ''));
+    }
+
+    function buildCellInput(cell) {
+        var input = el('input', 'form-control form-control-sm import-cell-input');
+        input.type = 'text';
+        input.value = cell.value || '';
+        applyCellControlAttrs(input, cell);
+
+        return input;
+    }
+
+    // A <select> mirroring the Excel column's dropdown. A blank first choice lets a
+    // required-but-empty cell start unselected; an off-list current value is kept as its own
+    // option so saving never silently drops what is already there.
+    function buildCellSelect(cell, options) {
+        var select = el('select', 'form-select form-select-sm import-cell-input');
+        var current = cell.value || '';
+
+        var blank = el('option', null, '— choose —');
+        blank.value = '';
+        select.appendChild(blank);
+
+        var matched = current === '';
+        options.forEach(function (opt) {
+            var option = el('option', null, opt);
+            option.value = opt;
+            if (opt === current) {
+                option.selected = true;
+                matched = true;
+            }
+            select.appendChild(option);
+        });
+
+        if (!matched) {
+            var keep = el('option', null, current + ' (current)');
+            keep.value = current;
+            keep.selected = true;
+            select.appendChild(keep);
+        }
+
+        applyCellControlAttrs(select, cell);
+
+        return select;
+    }
+
+    // Persists one inline cell edit (only when its value actually changed), then re-renders from
+    // the fresh, re-validated report — so the stat tiles and issue lists update live.
+    function saveCell(input) {
+        if (!cellUrl) {
+            return;
+        }
+
+        var value = input.value;
+        var original = input.dataset.original != null ? input.dataset.original : '';
+
+        if (value === original) {
+            return;
+        }
+
+        input.disabled = true;
+        setStatus('Saving ' + (input.dataset.field || 'cell') + '...');
+
+        postForm(cellUrl, {
+            import_row: input.dataset.row,
+            field: input.dataset.field,
+            value: value
+        }).then(function (result) {
+            var data = result.data || {};
+
+            if (result.ok && data.review) {
+                applyReview(data.review, data.csrf);   // rebuilds the tables + stat tiles
+                setStatus(data.message || 'Saved.');
+
+                return;
+            }
+
+            input.disabled = false;
+            refreshCsrf(data.csrf);
+            setStatus(data.message || 'Could not save. Please try again.');
+        }).catch(function () {
+            input.disabled = false;
+            setStatus('A network error occurred. Please try again.');
+        });
+    }
+
     function renderFamilyToFixRow(family) {
         var tr = el('tr');
+
+        // Bulk-remove selector (delegated change handler on groupsEl).
+        var selectTd = el('td', 'import-review-select-col');
+        var box = el('input', 'form-check-input js-import-select');
+        box.type = 'checkbox';
+        box.dataset.fno = family.qr;
+        box.checked = !!selectedFno[String(family.qr)];
+        box.setAttribute('aria-label', 'Select family ' + (family.qr || ''));
+        selectTd.appendChild(box);
+        tr.appendChild(selectTd);
 
         tr.appendChild(el('td', 'text-nowrap', family.sheetRow != null ? family.sheetRow : '—'));
         tr.appendChild(el('td', 'text-nowrap fw-semibold', family.qr || '—'));
 
-        // Head of family, plus an "Already in system" emblem when the QR/family is on file.
-        var headTd = el('td');
-        headTd.appendChild(document.createTextNode(family.head || '—'));
-        if (family.existing) {
-            headTd.appendChild(document.createTextNode(' '));
-            var emblem = el('span', 'badge bg-info text-dark import-review-existing', 'Already in system');
-            emblem.title = 'This QR/family is already on file — the import skips it unless you change it.';
-            headTd.appendChild(emblem);
-        }
-        tr.appendChild(headTd);
+        // Head of family. "Already in system" is not shown here — the Issues column
+        // already carries that badge, so repeating it beside the name is noise.
+        tr.appendChild(el('td', null, family.head || '—'));
 
         tr.appendChild(el('td', 'text-nowrap', family.members));
 
-        // Every distinct issue as its own badge (red = must fix, amber = warning), so the
-        // worker sees all of them at a glance instead of just a count.
-        var issues = el('td', 'small import-review-issue-cell');
-        var types = family.types || [];
-        if (types.length) {
-            types.forEach(function (type) {
-                var cls = type.severity === 'blocking'
-                    ? 'badge bg-danger me-1 mb-1'
-                    : 'badge bg-warning text-dark me-1 mb-1';
-                issues.appendChild(el('span', cls, type.label || type.code));
-            });
-        } else {
-            var blocking = Number(family.blocking || 0);
-            var warnings = Number(family.warnings || 0);
-            if (blocking > 0) {
-                issues.appendChild(el('span', 'badge bg-danger me-1', blocking + ' to fix'));
-            }
-            if (warnings > 0) {
-                issues.appendChild(el('span', 'badge bg-warning text-dark', warnings + ' warning' + (warnings === 1 ? '' : 's')));
-            }
-            if (blocking === 0 && warnings === 0) {
-                issues.appendChild(el('span', 'text-success', 'No issues'));
-            }
-        }
-        tr.appendChild(issues);
+        // Field-level problems as inline-editable cells (fix in place); structural problems
+        // (head / address) stay as badges and are fixed via the Edit modal.
+        tr.appendChild(renderIssueCell(family.editableCells, family.types, family));
 
         var actions = el('td', 'text-nowrap');
 
@@ -783,7 +1274,15 @@
             return card;
         }
 
-        var body2 = el('div', 'card-body p-0');
+        var body2 = el('div', 'card-body');
+
+        if (ready.length > readyPageSize) {
+            body2.appendChild(buildSimpleToolbar('Search QR, name or barangay...', readyFilter,
+                function () { readyPage = 1; repaintReady(); },
+                readyPageSize,
+                function (size) { readyPageSize = size; readyPage = 1; repaintReady(); }));
+        }
+
         var wrap = el('div', 'table-responsive');
         var table = el('table', 'table table-sm mb-0 align-middle import-review-table');
 
@@ -796,24 +1295,65 @@
         table.appendChild(thead);
 
         var tbody = el('tbody');
-        ready.forEach(function (family) {
-            tbody.appendChild(renderReadyRow(family));
-        });
         table.appendChild(tbody);
         wrap.appendChild(table);
         body2.appendChild(wrap);
         content.appendChild(body2);
 
         if (appends > 0) {
-            var foot = el('div', 'card-footer small text-muted');
-            foot.textContent = 'Plus ' + appends + ' member(s) being added to families already in the system.';
-            content.appendChild(foot);
+            content.appendChild(el('div', 'px-3 pb-2 small text-muted',
+                'Plus ' + appends + ' member(s) being added to families already in the system.'));
         }
+
+        var readyFooter = el('div', 'card-footer');
+        content.appendChild(readyFooter);
+
+        var repaintReady = function () {
+            tbody.textContent = '';
+            var matches = filteredReady();
+            var state = paginate(matches, readyPage, readyPageSize);
+            readyPage = state.page;
+
+            if (!matches.length) {
+                var tr = el('tr');
+                var td = el('td', 'text-center text-muted py-3', 'No families match this search.');
+                td.colSpan = 7;
+                tr.appendChild(td);
+                tbody.appendChild(tr);
+            } else {
+                state.rows.forEach(function (family) {
+                    tbody.appendChild(renderReadyRow(family));
+                });
+            }
+
+            paintPager(readyFooter, state, function (page) {
+                readyPage = page;
+                repaintReady();
+            });
+        };
+
+        repaintReady();
 
         content.hidden = readyCollapsed;
         card.appendChild(content);
 
         return card;
+    }
+
+    // The ready-to-import families matching the current search (over QR / head / barangay).
+    function filteredReady() {
+        var rows = review.ready || [];
+        var query = readyFilter.search.trim().toLowerCase();
+
+        if (!query) {
+            return rows;
+        }
+
+        return rows.filter(function (family) {
+            var hay = (String(family.qr || '') + ' ' + String(family.head || '') + ' ' + String(family.barangay || '')).toLowerCase();
+
+            return hay.indexOf(query) !== -1;
+        });
     }
 
     function renderReadyRow(family) {
@@ -834,6 +1374,16 @@
             notes.appendChild(document.createTextNode(' imports as typed'));
         } else {
             notes.appendChild(el('span', 'text-success', 'No issues'));
+        }
+
+        // Every ready family gets the same Edit modal as Families-to-fix, so the operator can
+        // tweak any record before committing — warning-only or perfectly clean.
+        if (familyBaseUrl) {
+            var edit = el('button', 'btn btn-sm btn-outline-primary ms-2 js-import-fix-edit', 'Edit');
+            edit.type = 'button';
+            edit.dataset.modalUrl = familyBaseUrl + '?fno=' + encodeURIComponent(family.qr);
+            edit.dataset.modalTitle = 'Edit Family ' + (family.qr || '');
+            notes.appendChild(edit);
         }
 
         // A family fixed into "ready" keeps its edit history reachable here.
@@ -888,7 +1438,44 @@
 
     // -- actions ---------------------------------------------------------------
 
+    // Recap what the write job will do, then commit only on confirm — the write is not
+    // reversible from this screen.
     function confirmImport() {
+        var counts = review.counts || {};
+        var newFamilies = Number(counts.newFamilies != null ? counts.newFamilies : (counts.families || 0));
+        var appends = Number(counts.appends || 0);
+        var skipped = Number(counts.existing || 0);
+        var warnings = Number(counts.warnings || 0);
+
+        var node = document.createElement('div');
+        node.appendChild(el('p', 'mb-2', 'You are about to import:'));
+        var list = el('ul', 'mb-2');
+        list.appendChild(el('li', null, newFamilies + ' new famil' + (newFamilies === 1 ? 'y' : 'ies')));
+        if (appends > 0) {
+            list.appendChild(el('li', null, appends + ' member(s) added to existing families'));
+        }
+        if (skipped > 0) {
+            list.appendChild(el('li', null, skipped + ' already in the system (skipped)'));
+        }
+        if (warnings > 0) {
+            list.appendChild(el('li', null, warnings + ' warning(s) — imported as typed'));
+        }
+        node.appendChild(list);
+        node.appendChild(el('p', 'mb-0 text-muted small', 'This cannot be undone from here.'));
+
+        confirmAction({
+            title: 'Confirm import',
+            node: node,
+            confirmLabel: 'Yes, import',
+            confirmClass: 'btn-primary'
+        }).then(function (ok) {
+            if (ok) {
+                doCommit();
+            }
+        });
+    }
+
+    function doCommit() {
         confirmBtn.disabled = true;
         cancelBtn.disabled = true;
         setStatus('Starting import...');
@@ -946,44 +1533,102 @@
             return;
         }
 
-        if (!window.confirm('Remove ' + label + ' from this import? Its rows will be dropped.')) {
-            return;
-        }
-
-        setStatus('Removing ' + label + '...');
-
-        // Keys travel in the POST body, not the path (raw QR cells are not URL-path-safe).
-        postForm(familyBaseUrl + '/remove', extra).then(function (result) {
-            var data = result.data || {};
-
-            if (result.ok && data.review) {
-                applyReview(data.review, data.csrf);
-                setStatus(data.message || 'Removed.');
-
+        confirmAction({
+            title: 'Remove from import',
+            message: 'Remove ' + label + ' from this import? Its rows will be dropped.',
+            confirmLabel: 'Remove',
+            confirmClass: 'btn-danger'
+        }).then(function (ok) {
+            if (!ok) {
                 return;
             }
 
-            refreshCsrf(data.csrf);
-            setStatus(data.message || 'Could not remove. Please try again.');
-        }).catch(function () {
-            setStatus('A network error occurred. Please try again.');
+            setStatus('Removing ' + label + '...');
+
+            // Keys travel in the POST body, not the path (raw QR cells are not URL-path-safe).
+            postForm(familyBaseUrl + '/remove', extra).then(function (result) {
+                var data = result.data || {};
+
+                if (result.ok && data.review) {
+                    applyReview(data.review, data.csrf);
+                    setStatus(data.message || 'Removed.');
+
+                    return;
+                }
+
+                refreshCsrf(data.csrf);
+                setStatus(data.message || 'Could not remove. Please try again.');
+            }).catch(function () {
+                setStatus('A network error occurred. Please try again.');
+            });
+        });
+    }
+
+    // Removes every ticked family (QR groups) in one POST. Selection lives in selectedFno.
+    function bulkRemove() {
+        var qrs = Object.keys(selectedFno);
+
+        if (!qrs.length || !familyBaseUrl) {
+            return;
+        }
+
+        confirmAction({
+            title: 'Remove selected',
+            message: 'Remove ' + qrs.length + ' selected famil' + (qrs.length === 1 ? 'y' : 'ies')
+                + ' from this import? Their rows will be dropped.',
+            confirmLabel: 'Remove ' + qrs.length,
+            confirmClass: 'btn-danger'
+        }).then(function (ok) {
+            if (!ok) {
+                return;
+            }
+
+            setStatus('Removing ' + qrs.length + ' famil' + (qrs.length === 1 ? 'y' : 'ies') + '...');
+
+            var extra = {};
+            qrs.forEach(function (qr, index) {
+                extra['import_family_nos[' + index + ']'] = qr;
+            });
+
+            postForm(familyBaseUrl + '/remove', extra).then(function (result) {
+                var data = result.data || {};
+
+                if (result.ok && data.review) {
+                    applyReview(data.review, data.csrf);  // render() clears the selection
+                    setStatus(data.message || 'Removed.');
+
+                    return;
+                }
+
+                refreshCsrf(data.csrf);
+                setStatus(data.message || 'Could not remove. Please try again.');
+            }).catch(function () {
+                setStatus('A network error occurred. Please try again.');
+            });
         });
     }
 
     function cancelImport() {
-        if (!window.confirm('Discard this import? Nothing will be saved.')) {
-            return;
-        }
+        confirmAction({
+            title: 'Discard import',
+            message: 'Discard this import? Nothing will be saved.',
+            confirmLabel: 'Discard',
+            confirmClass: 'btn-danger'
+        }).then(function (ok) {
+            if (!ok) {
+                return;
+            }
 
-        cancelBtn.disabled = true;
-        setStatus('Cancelling...');
+            cancelBtn.disabled = true;
+            setStatus('Cancelling...');
 
-        postForm(cancelUrl).then(function (result) {
-            var data = result.data || {};
-            window.location.href = data.redirect || redirectUrl;
-        }).catch(function () {
-            cancelBtn.disabled = false;
-            setStatus('A network error occurred. Please try again.');
+            postForm(cancelUrl).then(function (result) {
+                var data = result.data || {};
+                window.location.href = data.redirect || redirectUrl;
+            }).catch(function () {
+                cancelBtn.disabled = false;
+                setStatus('A network error occurred. Please try again.');
+            });
         });
     }
 
@@ -1018,6 +1663,43 @@
         var removeBtn = target.closest('.js-import-fix-remove');
         if (removeBtn) {
             removeFamily(removeBtn.dataset.familyNo, removeBtn.dataset.row);
+        }
+    });
+
+    // Bulk-remove checkbox ticks + inline cell edits (delegated — rows re-render on repaint).
+    groupsEl.addEventListener('change', function (event) {
+        var target = event.target;
+
+        if (target && target.classList && target.classList.contains('js-import-cell')) {
+            saveCell(target);
+
+            return;
+        }
+
+        var box = target && target.closest ? target.closest('.js-import-select') : null;
+
+        if (!box) {
+            return;
+        }
+
+        var qr = String(box.dataset.fno);
+        if (box.checked) {
+            selectedFno[qr] = true;
+        } else {
+            delete selectedFno[qr];
+        }
+
+        updateBulkButton();
+        refreshSelectAll();
+    });
+
+    // Enter commits an inline cell edit (blur fires the change handler above).
+    groupsEl.addEventListener('keydown', function (event) {
+        var target = event.target;
+
+        if (event.key === 'Enter' && target && target.classList && target.classList.contains('js-import-cell')) {
+            event.preventDefault();
+            target.blur();
         }
     });
 

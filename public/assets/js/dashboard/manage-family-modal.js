@@ -1707,7 +1707,11 @@
             // nothing, which is what an empty box would have posted anyway.
             if (target && target.matches('[data-family-no-middlename]')) {
                 var middleColumn = target.closest('[class*="col-"]');
-                var middleName = middleColumn ? middleColumn.querySelector('input[name$="middlename"]') : null;
+                // A member field is members[i][middlename], so it ends in a bracket:
+                // matching on "middlename" alone finds the head field only.
+                var middleName = middleColumn
+                    ? middleColumn.querySelector('input[name="head_middlename"], input[name$="[middlename]"]')
+                    : null;
 
                 if (middleName) {
                     middleName.disabled = target.checked;

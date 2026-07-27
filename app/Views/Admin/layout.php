@@ -92,9 +92,7 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
     <div id="layoutSidenav_content">
             <main class="container-fluid px-4 dashboard-content">
             <h1 class="mt-4" id="dashboard-page-title"><?= esc($pageTitle) ?></h1>
-            <?php if (session()->getFlashdata('success')): ?>
-                <div class="alert alert-success" data-auto-dismiss-alert><?= esc(session()->getFlashdata('success')) ?></div>
-            <?php endif; ?>
+            <?= view('Partials/flash-toasts') ?>
             <?php if ($resetInfo = session()->getFlashdata('reset_password')): ?>
                 <div class="reset-password-callout" role="alert">
                     <div class="reset-password-callout__head">
@@ -109,9 +107,6 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                     </div>
                     <p class="reset-password-callout__hint">Share it with the user and ask them to change it in My Account.</p>
                 </div>
-            <?php endif; ?>
-            <?php if (session()->getFlashdata('error')): ?>
-                <div class="alert alert-danger" data-auto-dismiss-alert><?= esc(session()->getFlashdata('error')) ?></div>
             <?php endif; ?>
             <?php if (session()->getFlashdata('family_record_saved')): ?>
                 <span id="familyDraftSavedMarker" hidden></span>

@@ -93,6 +93,7 @@ if (! function_exists('asset_scripts')) {
                 'assets/jquery/jquery-3.7.1.min.js',
                 'assets/bootstrap/js/bootstrap.bundle.min.js',
                 'assets/sb-admin/js/scripts.js',
+                'assets/js/toast.js',
             ],
             'admin' => [
                 'assets/js/dashboard/view-interactions.js',
@@ -142,6 +143,8 @@ if (! function_exists('asset_scripts')) {
                 'assets/js/dashboard/account-form-modal.js',
             ],
             'login' => [
+                'assets/bootstrap/js/bootstrap.bundle.min.js',
+                'assets/js/toast.js',
                 'assets/js/login.js',
             ],
             'scanner' => [

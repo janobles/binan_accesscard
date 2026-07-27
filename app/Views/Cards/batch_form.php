@@ -59,7 +59,6 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
         </form>
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2">
             <span class="text-muted small">Leave all blank to print every active head. Both range bounds are inclusive.</span>
-            <span id="cn-batch-status" class="small text-muted" aria-live="polite"></span>
         </div>
 
         <div class="table-responsive mt-3">
@@ -102,7 +101,6 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
         </div>
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2">
             <span class="text-muted small">Pick a head from the list OR type an exact control number, then Generate.</span>
-            <span id="cn-single-status" class="small text-muted" aria-live="polite"></span>
         </div>
     </div>
 </div>
@@ -154,7 +152,6 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
     const countEl = document.getElementById('cn-preview-count');
     const bodyEl = document.getElementById('cn-preview-body');
     const batchBtn = document.getElementById('cn-batch-btn');
-    const batchStatus = document.getElementById('cn-batch-status');
     let debounce;
 
     async function refreshPreview() {
@@ -206,7 +203,7 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
 
     batchForm.addEventListener('submit', async function (e) {
         e.preventDefault();
-        batchStatus.textContent = 'Generating…';
+        const progressToast = window.showToast('Generating…', 'primary', { autohide: false });
         batchBtn.disabled = true;
         try {
             const resp = await fetch(generateUrl, {
@@ -219,13 +216,16 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
                 const text = await resp.text();
                 let msg = 'Generation failed.';
                 try { msg = JSON.parse(text).error || msg; } catch (_) {}
-                batchStatus.textContent = msg;
+                progressToast.hide();
+                window.showToast(msg, 'danger');
                 return;
             }
             await download(resp, 'binan-qr-cards.pdf');
-            batchStatus.textContent = 'Done.';
+            progressToast.hide();
+            window.showToast('Cards generated.', 'success');
         } catch (err) {
-            batchStatus.textContent = 'Generation failed. Please try again.';
+            progressToast.hide();
+            window.showToast('Generation failed. Please try again.', 'danger');
         } finally {
             refreshPreview();
         }
@@ -236,7 +236,6 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
     const headList = document.getElementById('cn-head-list');
     const controlInput = document.getElementById('cn-control');
     const singleBtn = document.getElementById('cn-single-btn');
-    const singleStatus = document.getElementById('cn-single-status');
     let selectedHead = null;
     let acDebounce;
 
@@ -279,7 +278,6 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
     });
 
     singleBtn.addEventListener('click', async function () {
-        singleStatus.textContent = '';
         let memberId = selectedHead;
 
         // Exact control number path: resolve to a head via the heads feed (range
@@ -289,25 +287,27 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
         // must look it up rather than assume control === memberID.
         if (!memberId) {
             const control = controlInput.value.trim();
-            if (!control) { singleStatus.textContent = 'Pick a head or enter a control number.'; return; }
+            if (!control) { window.showToast('Pick a head or enter a control number.', 'warning'); return; }
             try {
                 const resp = await fetch(headsUrl + '?from=' + encodeURIComponent(control) + '&to=' + encodeURIComponent(control), { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
                 const data = await resp.json();
                 const hit = (data.rows || []).find((r) => String(r.controlNo) === control);
-                if (!hit) { singleStatus.textContent = 'No head found for control number ' + control + '.'; return; }
+                if (!hit) { window.showToast('No head found for control number ' + control + '.', 'warning'); return; }
                 memberId = hit.memberID;
-            } catch (e) { singleStatus.textContent = 'Lookup failed. Try again.'; return; }
+            } catch (e) { window.showToast('Lookup failed. Try again.', 'danger'); return; }
         }
 
-        singleStatus.textContent = 'Generating…';
+        const progressToast = window.showToast('Generating…', 'primary', { autohide: false });
         singleBtn.disabled = true;
         try {
             const resp = await fetch(cardUrlBase + '/' + memberId, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-            if (!resp.ok) { singleStatus.textContent = 'Generation failed.'; return; }
+            if (!resp.ok) { progressToast.hide(); window.showToast('Generation failed.', 'danger'); return; }
             await download(resp, 'binan-qr-card.pdf');
-            singleStatus.textContent = 'Done.';
+            progressToast.hide();
+            window.showToast('Card generated.', 'success');
         } catch (e) {
-            singleStatus.textContent = 'Generation failed. Please try again.';
+            progressToast.hide();
+            window.showToast('Generation failed. Please try again.', 'danger');
         } finally {
             singleBtn.disabled = false;
         }

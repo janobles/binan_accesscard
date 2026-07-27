@@ -26,11 +26,7 @@
                     <p>Sign in to continue</p>
                 </div>
 
-                <?php if (session()->getFlashdata('error')): ?>
-                    <div class="alert alert-danger" role="alert">
-                        <?= esc(session()->getFlashdata('error')) ?>
-                    </div>
-                <?php endif; ?>
+                <?= view('Partials/flash-toasts') ?>
 
                 <form method="post" action="<?= site_url('login') ?>" autocomplete="on">
                     <?= csrf_field() ?>

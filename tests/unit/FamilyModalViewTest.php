@@ -88,6 +88,16 @@ final class FamilyModalViewTest extends CIUnitTestCase
         );
     }
 
+    public function testEveryControlCarriesItsBootstrapClass(): void
+    {
+        $html = $this->render();
+
+        $this->assertMatchesRegularExpression('/<input[^>]+name="qr_control_no"[^>]+class="form-control"/', $html);
+        $this->assertMatchesRegularExpression('/<input[^>]+name="head_address"[^>]+class="form-control"/', $html);
+        $this->assertMatchesRegularExpression('/<select[^>]+name="head_barangay"[^>]+class="form-select"/', $html);
+        $this->assertStringNotContainsString('family-form-hidden', $html);
+    }
+
     public function testFooterUsesTheAppButtonStandard(): void
     {
         $html = $this->render();

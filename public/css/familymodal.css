@@ -484,7 +484,19 @@
     display: none;
 }
 
+/* Bootstrap 5.3 reads these per-component custom properties, so the form keeps its
+   look without a parallel implementation of .form-control and .form-select. There is
+   no Sass build here (bootstrap.min.css is vendored), so custom properties are the
+   route to variable-based customization. Values match what the old bare-element
+   rules produced. */
 .family-entry-form {
+    --bs-border-color: #b9d7f7;
+    --bs-body-color: #001f3f;
+    --bs-form-control-bg: #fbfdff;
+    --bs-form-check-bg: #fbfdff;
+    --bs-form-check-checked-bg-color: #168a73;
+    --bs-form-check-checked-border-color: #168a73;
+
     display: flex;
     min-height: 100%;
     flex-direction: column;
@@ -523,41 +535,23 @@
     font-weight: 800;
 }
 
-.family-entry-form input:not([type="checkbox"]):not([type="radio"]),
-.family-entry-form select,
-.family-entry-form textarea {
-    display: block;
-    width: 100%;
+.family-entry-form .form-control,
+.family-entry-form .form-select {
     min-height: 2.45rem;
-    padding: 0.5rem 0.75rem;
-    border: 1px solid #b9d7f7;
-    border-radius: 0.45rem;
-    background-color: #fbfdff;
-    color: #001f3f;
+    background-color: var(--bs-form-control-bg);
     font-size: 0.84rem;
 }
 
-.family-entry-form input:not([type="checkbox"]):not([type="radio"]):focus,
-.family-entry-form select:focus,
-.family-entry-form textarea:focus {
-    border-color: #86b7fe;
-    outline: 0;
-    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.16);
+.family-entry-form .form-select {
+    cursor: pointer;
 }
 
-.family-entry-form .is-invalid {
-    border-color: #dc3545 !important;
-}
-
+/* Replaced by Bootstrap's .invalid-feedback in the validation pass. */
 .family-field-error {
     margin-top: 0.28rem;
     color: #dc3545;
     font-size: 0.74rem;
     font-weight: 700;
-}
-
-.family-entry-form select {
-    cursor: pointer;
 }
 
 .family-sector-service {
@@ -737,9 +731,8 @@
     font-size: 0.76rem;
 }
 
-.floating-family-modal.is-family-entry-modal .family-entry-form input:not([type="checkbox"]):not([type="radio"]),
-.floating-family-modal.is-family-entry-modal .family-entry-form select,
-.floating-family-modal.is-family-entry-modal .family-entry-form textarea {
+.floating-family-modal.is-family-entry-modal .family-entry-form .form-control,
+.floating-family-modal.is-family-entry-modal .family-entry-form .form-select {
     min-height: 2.25rem;
     padding: 0.45rem 0.65rem;
     font-size: 0.82rem;
@@ -1173,13 +1166,8 @@
 .family-import-toast.fit-hide    { opacity: 0; transition: opacity .25s ease; }
 
 /* ---------------------------------------------------------------------------
- * Shared modal utilities: hidden "Other" freetext, archived badge, and
- * archived-row tint.
+ * Shared modal utilities: archived badge and archived-row tint.
  * ------------------------------------------------------------------------- */
-.family-form-hidden {
-    display: none !important;
-}
-
 .family-choice-badge {
     display: inline-block;
     margin-left: 6px;

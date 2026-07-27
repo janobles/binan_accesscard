@@ -63,7 +63,7 @@ $renderMemberRow = static function ($index, array $m = []) use (
             <div class="col-12 col-md-6 col-xl-3">
                 <label class="form-label">Relationship</label>
                 <select class="form-select js-other-select" data-other-field="relationship" data-initial-value="<?= esc($val('relationship'), 'attr') ?>" name="<?= esc($field('relationship'), 'attr') ?>"><?= $selectOptions($relationshipOptions, $val('relationship'), 'Select') ?></select>
-                <input class="form-control mt-2 js-other-input family-form-hidden" data-other-for="relationship" placeholder="Enter relationship">
+                <input class="form-control mt-2 js-other-input d-none" data-other-for="relationship" placeholder="Enter relationship">
             </div>
         </div>
 
@@ -199,9 +199,9 @@ $renderMemberRow = static function ($index, array $m = []) use (
                     <div class="row g-3 mb-4">
                         <div class="col-12 col-xl-3">
                             <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>HeadQr">QR Number</label>
-                            <input id="<?= esc($fieldPrefix, 'attr') ?>HeadQr" name="qr_control_no" type="text"
+                            <input id="<?= esc($fieldPrefix, 'attr') ?>HeadQr" name="qr_control_no" class="form-control" type="text"
                                 inputmode="numeric" pattern="0*[1-9][0-9]{0,6}"
-                                title="QR number must be numeric and should not exceed 9,999,999 "
+                                title="QR number must be numeric and should not exceed 9,999,999"
                                 data-qr-check-url="<?= esc($qrCheckUrl, 'attr') ?>"
                                 value="<?= esc($oldValue('qr_control_no'), 'attr') ?>"
                                 <?= $qrLocked ? 'readonly' : 'required' ?>>
@@ -225,11 +225,11 @@ $renderMemberRow = static function ($index, array $m = []) use (
 
                         <div class="col-12 col-xl-9">
                             <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>HeadAddress">Address</label>
-                            <input id="<?= esc($fieldPrefix, 'attr') ?>HeadAddress" name="head_address" type="text" value="<?= esc($oldValue('head_address'), 'attr') ?>" data-summary="address" minlength="2" required>
+                            <input id="<?= esc($fieldPrefix, 'attr') ?>HeadAddress" name="head_address" class="form-control" type="text" value="<?= esc($oldValue('head_address'), 'attr') ?>" minlength="2" required>
                         </div>
                         <div class="col-12 col-xl-3">
                             <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>HeadBarangay">Barangay</label>
-                            <select id="<?= esc($fieldPrefix, 'attr') ?>HeadBarangay" name="head_barangay" data-summary="barangay" required>
+                            <select id="<?= esc($fieldPrefix, 'attr') ?>HeadBarangay" name="head_barangay" class="form-select" required>
                                 <?= $selectOptions($barangayOptions, $oldValue('head_barangay'), 'Barangay') ?>
                             </select>
                         </div>

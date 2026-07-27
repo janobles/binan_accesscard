@@ -186,7 +186,7 @@ if (! function_exists('family_modal_render_person_fields')) {
                     ]) ?>><?= $selectOptions($options, $val($name), 'Select') ?></select>
                     <?php if ($hasOther): ?>
                         <input<?= $attrs([
-                            'class' => 'form-control mt-2 js-other-input family-form-hidden',
+                            'class' => 'form-control mt-2 js-other-input d-none',
                             'data-other-for' => $otherKey,
                             'placeholder' => 'Enter ' . strtolower($label),
                             'aria-label' => $idPrefix !== '' ? 'Other ' . strtolower($label) : '',

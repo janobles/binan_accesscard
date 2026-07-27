@@ -31,7 +31,7 @@
 
     function setHidden(el, hidden) {
         if (el) {
-            el.classList.toggle('family-form-hidden', !!hidden);
+            el.classList.toggle('d-none', !!hidden);
         }
     }
 

@@ -54,6 +54,7 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
     <div id="layoutSidenav_content">
             <main class="container-fluid px-4 dashboard-content">
                 <h1 class="mt-4" id="dashboard-page-title"><?= esc($pageTitle) ?></h1>
+                <?= view('components/toast') ?>
                 <?= view('Partials/flash-toasts') ?>
                 <?php if (session()->getFlashdata('family_record_saved')): ?>
                     <span id="familyDraftSavedMarker" hidden></span>

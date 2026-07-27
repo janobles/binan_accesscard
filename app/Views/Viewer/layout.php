@@ -61,6 +61,7 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
     <div id="layoutSidenav_content">
             <main class="container-fluid px-4 dashboard-content">
             <h1 class="mt-4" id="dashboard-page-title"><?= esc($pageTitle) ?></h1>
+            <?= view('components/toast') ?>
             <?= view('Partials/flash-toasts') ?>
 
             <?php /* Main content swaps on $activePage: read-only overview, the shared

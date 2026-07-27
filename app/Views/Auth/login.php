@@ -26,6 +26,7 @@
                     <p>Sign in to continue</p>
                 </div>
 
+                <?= view('components/toast') ?>
                 <?= view('Partials/flash-toasts') ?>
 
                 <form method="post" action="<?= site_url('login') ?>" autocomplete="on">

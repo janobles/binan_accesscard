@@ -1,79 +1,82 @@
-// Shared Bootstrap 5 toast helper (bottom-right stack). Styling comes from the
-// vendored .toast/.toast-container rules in assets/sb-admin/css/styles.css.
+// Single reusable Bootstrap 5 toast (bottom-right). Styling comes from the
+// vendored .toast/.toast-container rules in assets/sb-admin/css/styles.css;
+// the DOM node itself is rendered once per layout by components/toast.php.
 //
-// Two ways in:
-//   - window.showToast(message, variant, opts) — call directly from any page
-//     script for a JS-triggered notice (variant: success|danger|warning|primary...).
-//     Returns { el, hide() } so a long-running action can swap a "working…"
-//     toast for a result once it finishes.
-//   - Server-rendered flash messages: Partials/flash-toasts.php drops a hidden
-//     [data-flash-toast-data] marker with the flash text; initFlashToasts()
-//     picks it up on DOMContentLoaded and shows it the same way.
+// Only one toast is ever on screen: window.showToast(message, variant, opts)
+// swaps the same node's variant/text and (re)shows it instead of spawning a
+// new instance each call — e.g. call showToast('Generating…', 'primary'),
+// then later showToast('Cards generated.', 'success') to replace it.
+//
+// Server-rendered flash messages: Partials/flash-toasts.php drops a hidden
+// [data-flash-toast-data] marker with the flash text; initFlashToasts() picks
+// it up on DOMContentLoaded and shows it the same way.
 (function (window, document) {
-    var CONTAINER_ID = 'appToastContainer';
+    var toastEl = null;
+    var bodyEl = null;
+    var instance = null;
+    var hideTimer = null;
+    var ready = false;
 
-    function getContainer() {
-        var el = document.getElementById(CONTAINER_ID);
-
-        if (!el) {
-            el = document.createElement('div');
-            el.id = CONTAINER_ID;
-            el.className = 'toast-container position-fixed bottom-0 end-0 p-3';
-            el.style.zIndex = '1090';
-            document.body.appendChild(el);
+    function ensureToast() {
+        if (ready) {
+            return toastEl !== null;
         }
 
-        return el;
+        ready = true;
+        toastEl = document.querySelector('[data-app-toast]');
+
+        if (!toastEl) {
+            return false;
+        }
+
+        bodyEl = toastEl.querySelector('[data-app-toast-body]');
+
+        if (window.bootstrap && window.bootstrap.Toast) {
+            // autohide is managed by us (hideTimer) so a new call can always
+            // replace the pending hide instead of racing Bootstrap's own timer.
+            instance = new window.bootstrap.Toast(toastEl, { autohide: false });
+        }
+
+        var closeBtn = toastEl.querySelector('.btn-close');
+
+        if (closeBtn) {
+            closeBtn.addEventListener('click', function () {
+                window.clearTimeout(hideTimer);
+            });
+        }
+
+        return true;
+    }
+
+    function hideToast() {
+        if (instance) {
+            instance.hide();
+        } else if (toastEl) {
+            toastEl.classList.remove('show');
+        }
     }
 
     function showToast(message, variant, opts) {
         opts = opts || {};
 
-        var toast = document.createElement('div');
-        toast.className = 'toast align-items-center text-bg-' + (variant || 'success') + ' border-0';
-        toast.setAttribute('role', 'status');
-        toast.setAttribute('aria-live', 'polite');
-        toast.setAttribute('aria-atomic', 'true');
-        toast.innerHTML =
-            '<div class="d-flex">' +
-            '<div class="toast-body"></div>' +
-            '<button type="button" class="btn-close btn-close-white me-2 m-auto" aria-label="Close"></button>' +
-            '</div>';
-        toast.querySelector('.toast-body').textContent = message;
-
-        getContainer().appendChild(toast);
-
-        var closeBtn = toast.querySelector('.btn-close');
-        var hasBootstrapToast = window.bootstrap && window.bootstrap.Toast;
-        var instance = hasBootstrapToast
-            ? new window.bootstrap.Toast(toast, {
-                autohide: opts.autohide !== false,
-                delay: opts.delay || 15000,
-            })
-            : null;
-
-        function hide() {
-            if (instance) {
-                instance.hide();
-            } else {
-                toast.remove();
-            }
+        if (!ensureToast()) {
+            return;
         }
 
-        toast.addEventListener('hidden.bs.toast', function () { toast.remove(); });
-        closeBtn.addEventListener('click', hide);
+        window.clearTimeout(hideTimer);
+
+        toastEl.className = 'toast align-items-center text-bg-' + (variant || 'success') + ' border-0';
+        bodyEl.textContent = message;
 
         if (instance) {
             instance.show();
         } else {
-            // Bootstrap JS unavailable: minimal fallback so the message still appears.
-            toast.classList.add('show');
-            if (opts.autohide !== false) {
-                window.setTimeout(function () { toast.remove(); }, opts.delay || 15000);
-            }
+            toastEl.classList.add('show');
         }
 
-        return { el: toast, hide: hide };
+        if (opts.autohide !== false) {
+            hideTimer = window.setTimeout(hideToast, opts.delay || 15000);
+        }
     }
 
     function initFlashToasts(root) {
@@ -81,8 +84,13 @@
             var success = marker.getAttribute('data-flash-success');
             var error = marker.getAttribute('data-flash-error');
 
-            if (success) { showToast(success, 'success'); }
-            if (error) { showToast(error, 'danger'); }
+            // Only one toast can show at once: an error takes priority over a
+            // success on the same request (rare, but favors the actionable one).
+            if (error) {
+                showToast(error, 'danger');
+            } else if (success) {
+                showToast(success, 'success');
+            }
 
             marker.remove();
         });

@@ -203,7 +203,7 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
 
     batchForm.addEventListener('submit', async function (e) {
         e.preventDefault();
-        const progressToast = window.showToast('Generating…', 'primary', { autohide: false });
+        window.showToast('Generating…', 'primary');
         batchBtn.disabled = true;
         try {
             const resp = await fetch(generateUrl, {
@@ -216,15 +216,12 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
                 const text = await resp.text();
                 let msg = 'Generation failed.';
                 try { msg = JSON.parse(text).error || msg; } catch (_) {}
-                progressToast.hide();
                 window.showToast(msg, 'danger');
                 return;
             }
             await download(resp, 'binan-qr-cards.pdf');
-            progressToast.hide();
             window.showToast('Cards generated.', 'success');
         } catch (err) {
-            progressToast.hide();
             window.showToast('Generation failed. Please try again.', 'danger');
         } finally {
             refreshPreview();
@@ -297,16 +294,14 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
             } catch (e) { window.showToast('Lookup failed. Try again.', 'danger'); return; }
         }
 
-        const progressToast = window.showToast('Generating…', 'primary', { autohide: false });
+        window.showToast('Generating…', 'primary');
         singleBtn.disabled = true;
         try {
             const resp = await fetch(cardUrlBase + '/' + memberId, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-            if (!resp.ok) { progressToast.hide(); window.showToast('Generation failed.', 'danger'); return; }
+            if (!resp.ok) { window.showToast('Generation failed.', 'danger'); return; }
             await download(resp, 'binan-qr-card.pdf');
-            progressToast.hide();
             window.showToast('Card generated.', 'success');
         } catch (e) {
-            progressToast.hide();
             window.showToast('Generation failed. Please try again.', 'danger');
         } finally {
             singleBtn.disabled = false;

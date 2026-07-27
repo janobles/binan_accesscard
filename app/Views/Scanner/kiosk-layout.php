@@ -46,6 +46,7 @@ $accountMenuData = [
 </nav>
 <main class="container-fluid px-4 py-3">
 
+  <?= view('components/toast') ?>
   <?= view('Partials/flash-toasts') ?>
   <?= $this->renderSection('content') ?>
 </main>

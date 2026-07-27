@@ -14,6 +14,11 @@
 -- Idempotent: UPPER() on already-uppercase text is a no-op, so re-running is
 -- safe. NOT reversible -- the original capitalization is recorded nowhere. Take
 -- a dump before running this.
+--
+-- Who needs this: only a database that already holds member rows. A fresh
+-- `php spark db:seed DummyDataSeeder` already writes uppercase, because the
+-- seeder now goes through MemberFieldNormalizer. accesscardV18.sql seeds no
+-- member rows at all, so importing the dump needs nothing here either.
 
 -- Count the rows this will actually change. The member table collates
 -- utf8mb4_general_ci (case-insensitive), so BINARY is required to compare case.

@@ -2,6 +2,7 @@
 
 namespace App\Database\Seeds;
 
+use App\Support\MemberFieldNormalizer;
 use CodeIgniter\CLI\CLI;
 use CodeIgniter\Database\Seeder;
 
@@ -266,9 +267,13 @@ class DummyDataSeeder extends Seeder
         return [
             'memberID'      => $id,
             'headID'        => $headID,
-            'lastname'      => $lastName,
-            'firstname'     => $firstName,
-            'middlename'    => $this->pick($this->middleNames),
+            // Seeded rows go through the same normalizer as the entry form and the
+            // Excel importer, so a fresh seed already matches what the app stores.
+            // Without this a re-seed puts Title Case names back and the uppercase
+            // patch would have to be run again.
+            'lastname'      => MemberFieldNormalizer::cleanName($lastName),
+            'firstname'     => MemberFieldNormalizer::cleanName($firstName),
+            'middlename'    => MemberFieldNormalizer::cleanName($this->pick($this->middleNames)),
             'suffix'        => null,
             'birthday'      => $birthday,
             'civilstatus'   => $civilStatus,
@@ -278,7 +283,7 @@ class DummyDataSeeder extends Seeder
             'Salary'        => $salary,
             'contactnumber' => rand(9000000000, 9999999999),
             'relationship'  => $relationship,
-            'address'       => $address,
+            'address'       => MemberFieldNormalizer::cleanAddress($address),
             'religion'      => $this->pick($this->religions),
             'sectorID'      => $sectors,
             'dt_created'    => $now,

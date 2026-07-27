@@ -686,13 +686,14 @@
             });
         });
         refreshAllAgeEligibility(root);
+        refreshChoicesSummary(root);
     }
 
-    // ---- sector-linked program suggestions ----------------------------------
-    // A service group is "linked" to a sector when its category name matches the
-    // sector's name (same convention the server uses for archive cascades).
-    // Checked sectors float their linked groups into the "Suggested" callout;
-    // nothing is ever hidden — groups only relocate.
+    // ---- sector-linked service categories -----------------------------------
+    // A service category is "linked" to a sector when its name matches the sector's
+    // name (the same convention the server uses for archive cascades). Linked
+    // categories auto-expand in the accordion; the rest stay collapsed but present,
+    // so no program is ever hidden behind a sector tick.
 
     var SECTOR_INPUT_SELECTOR = 'input[name="sector_ids[]"], input[name$="[sector_ids][]"]';
     var SERVICE_INPUT_SELECTOR = 'input[name="service_ids[]"], input[name$="[service_ids][]"]';
@@ -778,7 +779,7 @@
             }
         });
 
-        refreshSuggestions(scopeEl);
+        refreshServiceCategories(scopeEl);
     }
 
     function refreshAllAgeEligibility(root) {
@@ -788,128 +789,120 @@
         });
     }
 
-    function stampGroupOrder(box) {
-        box.querySelectorAll('.family-option-group[data-service-category]').forEach(function (group, index) {
-            if (!group.dataset.suggestOrder) {
-                group.dataset.suggestOrder = String(index + 1);
-            }
-        });
-    }
-
-    // Reinsert a group at its original slot among the non-suggested groups.
-    function returnGroupHome(box, suggestedContainer, group) {
-        var order = parseInt(group.dataset.suggestOrder || '0', 10);
-        var next = Array.from(box.querySelectorAll('.family-option-group[data-service-category]')).find(function (other) {
-            return other !== group
-                && !suggestedContainer.contains(other)
-                && parseInt(other.dataset.suggestOrder || '0', 10) > order;
-        });
-
-        if (next) {
-            box.insertBefore(group, next);
-        } else {
-            box.appendChild(group);
-        }
-    }
-
     // scopeEl: a member row, or the modal root (head section).
-    function refreshSuggestions(scopeEl) {
+    function refreshServiceCategories(scopeEl) {
         if (!scopeEl || !scopeEl.querySelectorAll) {
             return;
         }
 
         var row = scopeEl.matches && scopeEl.matches('[data-family-member-row]') ? scopeEl : null;
-        var container = row
-            ? row.querySelector('[data-family-suggested]')
-            : Array.from(scopeEl.querySelectorAll('[data-family-suggested]')).find(function (el) {
-                return !el.closest('[data-family-member-row]');
-            });
-
-        if (!container) {
-            return;
-        }
-
-        var box = container.closest('.family-option-box');
-        var holder = container.querySelector('[data-family-suggested-groups]');
-        var reasonEl = container.querySelector('[data-family-suggested-reason]');
-
-        if (!box || !holder) {
-            return;
-        }
-
-        stampGroupOrder(box);
-
         var searchRoot = row || scopeEl;
         var sectorSelector = row ? 'input[name$="[sector_ids][]"]:checked' : 'input[name="sector_ids[]"]:checked';
-        var checkedNames = [];
         var checkedKeys = {};
 
         searchRoot.querySelectorAll(sectorSelector).forEach(function (input) {
-            var name = String(input.dataset.sectorName || '').trim();
-            var key = normName(name);
-
-            if (name === '' || checkedKeys[key]) {
-                return;
-            }
-
-            checkedKeys[key] = true;
-            checkedNames.push(name);
+            checkedKeys[normName(input.dataset.sectorName)] = true;
         });
 
-        var groups = Array.from(box.querySelectorAll('.family-option-group[data-service-category]'));
-        var matched = [];
-        var groupKeys = {};
+        servicePanelsIn(searchRoot, row).forEach(function (panel) {
+            var matched = !!checkedKeys[normName(panel.dataset.serviceCategory)];
+            var hasChecked = panel.querySelector('input[type="checkbox"]:checked') !== null;
 
-        groups.forEach(function (group) {
-            groupKeys[normName(group.dataset.serviceCategory)] = true;
-
-            if (checkedKeys[normName(group.dataset.serviceCategory)]) {
-                matched.push(group);
-            } else if (container.contains(group)) {
-                returnGroupHome(box, container, group);
+            if (matched || hasChecked) {
+                setServicePanelOpen(panel, true);
             }
         });
+    }
 
-        var beforeKeys = Array.from(holder.children).map(function (group) {
-            return normName(group.dataset.serviceCategory);
-        }).join('|');
-
-        matched.sort(function (a, b) {
-            return parseInt(a.dataset.suggestOrder || '0', 10) - parseInt(b.dataset.suggestOrder || '0', 10);
-        }).forEach(function (group) {
-            holder.appendChild(group);
+    // The head accordion and each member row's accordion live in the same subtree, so
+    // a head-scoped refresh must skip the panels that belong to a member row.
+    function servicePanelsIn(searchRoot, row) {
+        return Array.from(searchRoot.querySelectorAll('[data-family-service-panel]')).filter(function (panel) {
+            return row ? true : !panel.closest('[data-family-member-row]');
         });
+    }
 
-        var afterKeys = Array.from(holder.children).map(function (group) {
-            return normName(group.dataset.serviceCategory);
-        }).join('|');
+    // Drives a collapse panel without needing bootstrap.Collapse to be instantiated
+    // first, and keeps the header button's aria-expanded in step.
+    function setServicePanelOpen(panel, open) {
+        if (panel.classList.contains('show') === open) {
+            return;
+        }
 
-        container.hidden = matched.length === 0;
+        var item = panel.closest('.accordion-item');
+        var button = item ? item.querySelector('.accordion-button') : null;
 
-        if (reasonEl) {
-            var matchingNames = checkedNames.filter(function (name) {
-                return groupKeys[normName(name)];
+        if (window.bootstrap && window.bootstrap.Collapse) {
+            window.bootstrap.Collapse.getOrCreateInstance(panel, { toggle: false })[open ? 'show' : 'hide']();
+        } else {
+            panel.classList.toggle('show', open);
+        }
+
+        if (button) {
+            button.classList.toggle('collapsed', !open);
+            button.setAttribute('aria-expanded', open ? 'true' : 'false');
+        }
+    }
+
+    // Type-to-narrow over one accordion: non-matching choices hide, categories with a
+    // match expand, and clearing the box restores the sector-driven default.
+    function filterServiceAccordion(input) {
+        var accordion = input.parentElement ? input.parentElement.nextElementSibling : null;
+
+        if (!accordion || !accordion.matches('[data-family-service-accordion]')) {
+            return;
+        }
+
+        var term = String(input.value || '').trim().toLowerCase();
+
+        accordion.querySelectorAll('[data-family-service-item]').forEach(function (item) {
+            var panel = item.querySelector('[data-family-service-panel]');
+            var matches = 0;
+
+            item.querySelectorAll('.family-choice').forEach(function (choice) {
+                var label = choice.querySelector('.form-check-label');
+                var hit = term === '' || (label ? label.textContent.toLowerCase().indexOf(term) !== -1 : false);
+
+                choice.classList.toggle('d-none', !hit);
+
+                if (hit) {
+                    matches++;
+                }
             });
 
-            reasonEl.textContent = matchingNames.length
-                ? 'Showing: ' + matchingNames.join(', ') + '. All other programs are still shown below.'
-                : '';
-        }
+            item.classList.toggle('d-none', term !== '' && matches === 0);
 
-        // Gentle pulse + scroll to top when the suggested set actually changed.
-        if (!container.hidden && beforeKeys !== afterKeys) {
-            var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-            if (!reduceMotion) {
-                container.classList.remove('is-updated');
-                void container.offsetWidth;
-                container.classList.add('is-updated');
-                window.setTimeout(function () {
-                    container.classList.remove('is-updated');
-                }, 700);
-                box.scrollTop = 0;
+            if (panel && term !== '') {
+                setServicePanelOpen(panel, matches > 0);
             }
+        });
+
+        if (term === '') {
+            refreshServiceCategories(input.closest('[data-family-member-row]') || input.closest('[data-family-entry-form]'));
         }
+    }
+
+    // The collapse toggle doubles as the summary of what is ticked, so a collapsed
+    // block (edit mode) still says what this person is categorised as.
+    function refreshChoicesSummary(root) {
+        var target = root.querySelector('[data-family-choices-summary]');
+
+        if (!target) {
+            return;
+        }
+
+        var codes = Array.from(root.querySelectorAll('input[name="sector_ids[]"]:checked')).map(function (input) {
+            return String(input.dataset.sectorCode || input.dataset.label || '').trim();
+        }).filter(Boolean);
+        var services = root.querySelectorAll('input[name="service_ids[]"]:checked').length;
+
+        if (codes.length === 0 && services === 0) {
+            target.textContent = 'Nothing selected yet';
+            return;
+        }
+
+        target.textContent = 'Sectors: ' + (codes.length ? codes.join(', ') : 'none')
+            + ' (' + services + ' program' + (services === 1 ? '' : 's') + ')';
     }
 
     // ---- head validation ---------------------------------------------------
@@ -1239,6 +1232,11 @@
             if (target && (target.name === 'head_birthday' || /\[birthday\]$/.test(target.name || ''))) {
                 refreshAgeEligibility(target.closest('[data-family-member-row]') || root);
             }
+
+            if (target && target.matches('[data-family-service-filter]')) {
+                filterServiceAccordion(target);
+            }
+
             scheduleSave(root);
         });
 
@@ -1258,19 +1256,23 @@
 
                     // "Keep" re-checks asynchronously, after the sync refresh below already ran.
                     if (target.matches(SECTOR_INPUT_SELECTOR)) {
-                        refreshSuggestions(target.closest('[data-family-member-row]') || root);
+                        refreshServiceCategories(target.closest('[data-family-member-row]') || root);
                     }
+
+                    refreshChoicesSummary(root);
                     scheduleSave(root);
                 });
             }
 
             if (target && target.matches(SECTOR_INPUT_SELECTOR)) {
-                refreshSuggestions(target.closest('[data-family-member-row]') || root);
+                refreshServiceCategories(target.closest('[data-family-member-row]') || root);
             }
 
             if (target && (target.name === 'head_birthday' || /\[birthday\]$/.test(target.name || ''))) {
                 refreshAgeEligibility(target.closest('[data-family-member-row]') || root);
             }
+
+            refreshChoicesSummary(root);
             scheduleSave(root);
         });
 
@@ -1316,6 +1318,7 @@
                     clearMemberRows(root);
                     initOtherSelects(root);
                     refreshAllAgeEligibility(root);
+                    refreshChoicesSummary(root);
 
                     if (isCreateForm(root)) {
                         clearDraft();
@@ -1330,6 +1333,7 @@
             });
         }
         refreshAllAgeEligibility(root);
+        refreshChoicesSummary(root);
 
         // Restore-on-reopen prompt (create mode only).
         if (isCreateForm(root) && formEl) {

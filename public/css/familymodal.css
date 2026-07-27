@@ -568,41 +568,7 @@
     font-weight: 800;
 }
 
-.family-option-box {
-    height: 15.6rem;
-    overflow: auto;
-    padding: 0.75rem;
-    border: 1px solid #cfe0f5;
-    border-radius: 0.5rem;
-    background: #f8fbff;
-}
-
-.family-option-group {
-    padding-top: 0.65rem;
-    border-top: 1px solid #dae7f5;
-}
-
-.family-option-group:first-child {
-    padding-top: 0;
-    border-top: 0;
-}
-
-.family-option-group + .family-option-group {
-    margin-top: 0.7rem;
-}
-
-.family-option-group-title {
-    margin: 0 0 0.45rem;
-    color: #294b73;
-    font-size: 0.72rem;
-    font-weight: 800;
-    text-transform: uppercase;
-}
-
 .family-choice {
-    display: flex;
-    align-items: center;
-    gap: 0.55rem;
     min-height: 1.85rem;
     margin: 0;
     color: #062c57;
@@ -613,64 +579,10 @@
     margin-top: 0.2rem;
 }
 
-.family-choice input[type="checkbox"] {
-    width: 0.9rem;
-    height: 0.9rem;
-    margin: 0;
-    flex: 0 0 auto;
-    border: 1px solid #d7e3df;
-    border-radius: 0.25rem;
-}
-
-.family-entry-form input[type="checkbox"]:checked {
-    accent-color: #168a73;
-}
-
-.family-suggested {
-    padding: 0.65rem 0.75rem;
-    margin-bottom: 0.8rem;
-    border: 2px solid #e2b93b;
-    border-radius: 0.5rem;
-    background: #fff8e6;
-}
-
-.family-suggested-title {
-    margin: 0 0 0.2rem;
-    color: #6b4d00;
-    font-size: 1rem;
-    font-weight: 800;
-}
-
-.family-suggested-reason {
-    margin: 0 0 0.45rem;
-    color: #5a4a12;
-    font-size: 0.9rem;
-}
-
-.family-suggested .family-option-group {
-    padding-top: 0.35rem;
-    border-top: 0;
-}
-
-.family-suggested .family-choice {
-    font-size: 0.95rem;
-}
-
-/* The always-present callout replaces the first group as :first-child. */
-.family-suggested + .family-option-group {
-    padding-top: 0;
-    border-top: 0;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-    .family-suggested.is-updated {
-        animation: family-suggested-pulse 0.6s ease;
-    }
-
-    @keyframes family-suggested-pulse {
-        0% { background: #ffe9a8; }
-        100% { background: #fff8e6; }
-    }
+/* A long accordion must not outgrow the modal. */
+.family-entry-form .accordion-body {
+    max-height: 16rem;
+    overflow-y: auto;
 }
 
 .family-entry-actions {
@@ -745,11 +657,6 @@
 .floating-family-modal.is-family-entry-modal .family-column-title {
     margin-bottom: 0.65rem;
     font-size: 0.95rem;
-}
-
-.floating-family-modal.is-family-entry-modal .family-option-box {
-    height: 14.5rem;
-    padding: 0.7rem 0.85rem;
 }
 
 .floating-family-modal.is-family-entry-modal .family-choice {
@@ -1136,7 +1043,6 @@
 .family-member-card { border: 1px solid var(--bs-border-color, #dee2e6); border-radius: 0.5rem; padding: 1rem; margin-bottom: 1rem; background: var(--bs-body-bg, #fff); }
 .family-member-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
 .family-member-card-title { font-size: 0.95rem; }
-.family-option-box--sm { max-height: 12rem; }
 .family-toast { position: fixed; top: 1rem; right: 1rem; z-index: 1080; max-width: 22rem; margin: 0; }
 
 /* Background-import progress toasts (bottom-right). The modal closes on submit and

@@ -17,6 +17,101 @@ $personFieldOptions = compact(
 );
 
 /**
+ * Sectors is a fixed list of ten, so it needs no scroll region: a two-column grid
+ * shows all of them at once. $fieldName is the posted name (head vs member row) and
+ * $idPrefix keeps checkbox ids unique between the head and each member row.
+ */
+$renderSectorGrid = static function (string $fieldName, array $selectedIds, string $idPrefix) use ($sectorCatalog, $sectorLabel): string {
+    ob_start();
+    ?>
+    <div class="row row-cols-1 row-cols-sm-2 g-1" data-family-sector-grid>
+        <?php if ($sectorCatalog === []): ?>
+            <div class="col"><p class="text-muted mb-0">No sectors available.</p></div>
+        <?php endif; ?>
+        <?php foreach ($sectorCatalog as $sectorGroup): ?>
+            <?php foreach (array_values((array) $sectorGroup) as $sector): ?>
+                <?php
+                $sector = (array) $sector;
+                $sectorId = (string) ($sector['sectorID'] ?? $sector['id'] ?? '');
+                $label = $sectorLabel($sector);
+
+                if ($sectorId === '' || $label === '') {
+                    continue;
+                }
+
+                $isArchived = ! empty($sector['is_archived']);
+                $choiceId = $idPrefix . 'Sector' . $sectorId;
+                ?>
+                <div class="col">
+                    <div class="form-check family-choice<?= $isArchived ? ' family-choice--archived' : '' ?>">
+                        <input class="form-check-input" type="checkbox" id="<?= esc($choiceId, 'attr') ?>" name="<?= esc($fieldName, 'attr') ?>" value="<?= esc($sectorId, 'attr') ?>" data-label="<?= esc($label, 'attr') ?>" data-sector-code="<?= esc((string) ($sector['shortcode'] ?? $sector['code'] ?? ''), 'attr') ?>" data-sector-name="<?= esc((string) ($sector['name'] ?? ''), 'attr') ?>"<?= $isArchived ? ' data-archived="1"' : '' ?> <?= in_array($sectorId, $selectedIds, true) ? 'checked' : '' ?>>
+                        <label class="form-check-label" for="<?= esc($choiceId, 'attr') ?>"><?= esc($label) ?><?php if ($isArchived): ?> <span class="family-choice-badge">Archived</span><?php endif; ?></label>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        <?php endforeach; ?>
+    </div>
+    <?php
+    return (string) ob_get_clean();
+};
+
+/**
+ * Services span several categories, so each category is an accordion item.
+ * data-bs-parent is deliberately omitted so more than one can stay open;
+ * manage-family-modal.js expands the ones matching the ticked sectors. Nothing is
+ * hidden: categories matching no sector stay collapsed but present, because
+ * programs like Financial Assistance apply regardless of sector.
+ */
+$renderServiceAccordion = static function (string $fieldName, array $selectedIds, string $accordionId, string $idPrefix) use ($servicesByCategory, $serviceLabel): string {
+    ob_start();
+    ?>
+    <div class="mb-2">
+        <input type="search" class="form-control form-control-sm" placeholder="Filter programs..." aria-label="Filter programs" data-family-service-filter>
+    </div>
+    <div class="accordion" id="<?= esc($accordionId, 'attr') ?>" data-family-service-accordion>
+        <?php if ($servicesByCategory === []): ?>
+            <p class="text-muted mb-0">No services available.</p>
+        <?php endif; ?>
+        <?php $categoryIndex = 0; ?>
+        <?php foreach ($servicesByCategory as $category => $services): ?>
+            <?php
+            $categoryIndex++;
+            $panelId = $accordionId . 'Panel' . $categoryIndex;
+            ?>
+            <div class="accordion-item" data-family-service-item>
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#<?= esc($panelId, 'attr') ?>" aria-expanded="false" aria-controls="<?= esc($panelId, 'attr') ?>"><?= esc((string) $category) ?></button>
+                </h2>
+                <div id="<?= esc($panelId, 'attr') ?>" class="accordion-collapse collapse" data-family-service-panel data-service-category="<?= esc((string) $category, 'attr') ?>">
+                    <div class="accordion-body py-2">
+                        <?php foreach ((array) $services as $service): ?>
+                            <?php
+                            $service = (array) $service;
+                            $serviceId = (string) ($service['serviceID'] ?? $service['id'] ?? '');
+                            $label = $serviceLabel($service);
+
+                            if ($serviceId === '' || $label === '') {
+                                continue;
+                            }
+
+                            $isArchived = ! empty($service['is_archived']);
+                            $choiceId = $idPrefix . 'Service' . $serviceId;
+                            ?>
+                            <div class="form-check family-choice<?= $isArchived ? ' family-choice--archived' : '' ?>">
+                                <input class="form-check-input" type="checkbox" id="<?= esc($choiceId, 'attr') ?>" name="<?= esc($fieldName, 'attr') ?>" value="<?= esc($serviceId, 'attr') ?>" data-label="<?= esc($label, 'attr') ?>"<?= $isArchived ? ' data-archived="1"' : '' ?> <?= in_array($serviceId, $selectedIds, true) ? 'checked' : '' ?>>
+                                <label class="form-check-label" for="<?= esc($choiceId, 'attr') ?>"><?= esc($label) ?><?php if ($isArchived): ?> <span class="family-choice-badge">Archived</span><?php endif; ?></label>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            </div>
+        <?php endforeach; ?>
+    </div>
+    <?php
+    return (string) ob_get_clean();
+};
+
+/**
  * Renders one repeatable family-member row. $index is an int for a pre-filled
  * existing member, or the literal '__INDEX__' placeholder in the <template>;
  * manage-family-modal.js swaps the placeholder for the next counter on Add.
@@ -26,11 +121,9 @@ $renderMemberRow = static function ($index, array $m = []) use (
     $personFields,
     $personFieldOptions,
     $selectOptions,
-    $sectorLabel,
-    $serviceLabel,
     $relationshipOptions,
-    $sectorCatalog,
-    $servicesByCategory
+    $renderSectorGrid,
+    $renderServiceAccordion
 ): string {
     $i = (string) $index;
     $field = static fn (string $name): string => 'members[' . $i . '][' . $name . ']';
@@ -67,68 +160,14 @@ $renderMemberRow = static function ($index, array $m = []) use (
             </div>
         </div>
 
-        <div class="row g-4 mt-1">
+        <div class="row g-3 mt-1">
             <div class="col-12 col-lg-5">
                 <h5 class="family-column-title">Sectors</h5>
-                <div class="family-option-box family-option-box--sm">
-                    <?php if ($sectorCatalog === []): ?>
-                        <p class="text-muted mb-0">No sectors available.</p>
-                    <?php endif; ?>
-                    <?php foreach ($sectorCatalog as $sectorGroup): ?>
-                        <?php
-                        $sectorGroup = array_values((array) $sectorGroup);
-                        if ($sectorGroup === []) { continue; }
-                        ?>
-                        <div class="family-option-group">
-                            <?php foreach ($sectorGroup as $sector): ?>
-                                <?php
-                                $sector = (array) $sector;
-                                $sectorId = (string) ($sector['sectorID'] ?? $sector['id'] ?? '');
-                                $label = $sectorLabel($sector);
-                                $isArchived = ! empty($sector['is_archived']);
-                                ?>
-                                <?php if ($sectorId !== '' && $label !== ''): ?>
-                                    <label class="form-check family-choice<?= $isArchived ? ' family-choice--archived' : '' ?>">
-                                        <input type="checkbox" name="<?= esc($field('sector_ids') . '[]', 'attr') ?>" value="<?= esc($sectorId, 'attr') ?>" data-label="<?= esc($label, 'attr') ?>" data-sector-code="<?= esc((string) ($sector['shortcode'] ?? $sector['code'] ?? ''), 'attr') ?>" data-sector-name="<?= esc((string) ($sector['name'] ?? ''), 'attr') ?>"<?= $isArchived ? ' data-archived="1"' : '' ?> <?= in_array($sectorId, $selectedSectors, true) ? 'checked' : '' ?>>
-                                        <span class="form-check-label"><?= esc($label) ?><?php if ($isArchived): ?> <span class="family-choice-badge">Archived</span><?php endif; ?></span>
-                                    </label>
-                                <?php endif; ?>
-                            <?php endforeach; ?>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
+                <?= $renderSectorGrid($field('sector_ids') . '[]', $selectedSectors, 'familyMember' . $i) ?>
             </div>
             <div class="col-12 col-lg-7">
-                <h5 class="family-column-title">Services and Programs Available</h5>
-                <div class="family-option-box family-option-box--sm">
-                    <div class="family-suggested" data-family-suggested hidden aria-live="polite">
-                        <p class="family-suggested-title">Suggested for this person</p>
-                        <p class="family-suggested-reason" data-family-suggested-reason></p>
-                        <div data-family-suggested-groups></div>
-                    </div>
-                    <?php if ($servicesByCategory === []): ?>
-                        <p class="text-muted mb-0">No services available.</p>
-                    <?php endif; ?>
-                    <?php foreach ($servicesByCategory as $category => $services): ?>
-                        <div class="family-option-group" data-service-category="<?= esc((string) $category, 'attr') ?>">
-                            <p class="family-option-group-title"><?= esc((string) $category) ?></p>
-                            <?php foreach ((array) $services as $service): ?>
-                                <?php
-                                $service = (array) $service;
-                                $serviceId = (string) ($service['serviceID'] ?? $service['id'] ?? '');
-                                $label = $serviceLabel($service);
-                                $isArchived = ! empty($service['is_archived']);
-                                ?>
-                                <?php if ($serviceId !== '' && $label !== ''): ?>
-                                    <label class="form-check family-choice<?= $isArchived ? ' family-choice--archived' : '' ?>">
-                                        <input type="checkbox" name="<?= esc($field('service_ids') . '[]', 'attr') ?>" value="<?= esc($serviceId, 'attr') ?>" data-label="<?= esc($label, 'attr') ?>"<?= $isArchived ? ' data-archived="1"' : '' ?> <?= in_array($serviceId, $selectedServices, true) ? 'checked' : '' ?>>
-                                        <span class="form-check-label"><?= esc($label) ?><?php if ($isArchived): ?> <span class="family-choice-badge">Archived</span><?php endif; ?></span>
-                                    </label>
-                                <?php endif; ?>
-                            <?php endforeach; ?>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
+                <h5 class="family-column-title">Services and Programs</h5>
+                <?= $renderServiceAccordion($field('service_ids') . '[]', $selectedServices, 'familyMember' . $i . 'Services', 'familyMember' . $i) ?>
             </div>
         </div>
     </div>
@@ -237,71 +276,26 @@ $renderMemberRow = static function ($index, array $m = []) use (
                 </section>
 
                 <section class="family-entry-section family-sector-service">
-                    <div class="row g-4">
-                        <div class="col-12 col-lg-5">
-                            <h4 class="family-column-title">Sectors</h4>
-                            <div class="family-option-box">
-                                <?php if ($sectorCatalog === []): ?>
-                                    <p class="text-muted mb-0">No sectors available.</p>
-                                <?php endif; ?>
-                                <?php foreach ($sectorCatalog as $sectorGroup): ?>
-                                    <?php
-                                    $sectorGroup = array_values((array) $sectorGroup);
-                                    if ($sectorGroup === []) { continue; }
-                                    ?>
-                                    <div class="family-option-group">
-                                        <?php foreach ($sectorGroup as $sector): ?>
-                                            <?php
-                                            $sector = (array) $sector;
-                                            $sectorId = (string) ($sector['sectorID'] ?? $sector['id'] ?? '');
-                                            $label = $sectorLabel($sector);
-                                            
-                                            
-                                            
-                                            
-                                            $isArchived = ! empty($sector['is_archived']);
-                                            ?>
-                                            <?php if ($sectorId !== '' && $label !== ''): ?>
-                                                <label class="form-check family-choice<?= $isArchived ? ' family-choice--archived' : '' ?>">
-                                                    <input type="checkbox" name="sector_ids[]" value="<?= esc($sectorId, 'attr') ?>" data-label="<?= esc($label, 'attr') ?>" data-sector-code="<?= esc((string) ($sector['shortcode'] ?? $sector['code'] ?? ''), 'attr') ?>" data-sector-name="<?= esc((string) ($sector['name'] ?? ''), 'attr') ?>"<?= $isArchived ? ' data-archived="1"' : '' ?> <?= in_array($sectorId, $selectedSectorIds, true) ? 'checked' : '' ?>>
-                                                    <span class="form-check-label"><?= esc($label) ?><?php if ($isArchived): ?> <span class="family-choice-badge">Archived</span><?php endif; ?></span>
-                                                </label>
-                                            <?php endif; ?>
-                                        <?php endforeach; ?>
-                                    </div>
-                                <?php endforeach; ?>
+                    <?php $choicesId = $fieldPrefix . 'HeadChoices'; ?>
+                    <?php /* Expanded when creating (the worker is ticking boxes off a paper form)
+                             and collapsed when editing, where they are reference information. The
+                             toggle carries the selection summary rather than repeating the column
+                             headings at a second level; JS keeps its text current. */ ?>
+                    <?php $choicesOpen = $modalMode !== 'update'; ?>
+                    <button class="btn btn-link p-0 mb-2 text-decoration-none" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#<?= esc($choicesId, 'attr') ?>"
+                            aria-expanded="<?= $choicesOpen ? 'true' : 'false' ?>" aria-controls="<?= esc($choicesId, 'attr') ?>">
+                        <span data-family-choices-summary>Nothing selected yet</span>
+                    </button>
+                    <div class="collapse<?= $choicesOpen ? ' show' : '' ?>" id="<?= esc($choicesId, 'attr') ?>" data-family-choices>
+                        <div class="row g-3">
+                            <div class="col-12 col-lg-5">
+                                <h5 class="family-column-title">Sectors</h5>
+                                <?= $renderSectorGrid('sector_ids[]', $selectedSectorIds, $fieldPrefix . 'Head') ?>
                             </div>
-                        </div>
-                        <div class="col-12 col-lg-7">
-                            <h4 class="family-column-title">Services and Programs Available</h4>
-                            <div class="family-option-box">
-                                <div class="family-suggested" data-family-suggested hidden aria-live="polite">
-                                    <p class="family-suggested-title">Suggested for this person</p>
-                                    <p class="family-suggested-reason" data-family-suggested-reason></p>
-                                    <div data-family-suggested-groups></div>
-                                </div>
-                                <?php if ($servicesByCategory === []): ?>
-                                    <p class="text-muted mb-0">No services available.</p>
-                                <?php endif; ?>
-                                <?php foreach ($servicesByCategory as $category => $services): ?>
-                                    <div class="family-option-group" data-service-category="<?= esc((string) $category, 'attr') ?>">
-                                        <p class="family-option-group-title"><?= esc((string) $category) ?></p>
-                                        <?php foreach ((array) $services as $service): ?>
-                                            <?php
-                                            $service = (array) $service;
-                                            $serviceId = (string) ($service['serviceID'] ?? $service['id'] ?? '');
-                                            $label = $serviceLabel($service);
-                                            $isArchived = ! empty($service['is_archived']);
-                                            ?>
-                                            <?php if ($serviceId !== '' && $label !== ''): ?>
-                                                <label class="form-check family-choice<?= $isArchived ? ' family-choice--archived' : '' ?>">
-                                                    <input type="checkbox" name="service_ids[]" value="<?= esc($serviceId, 'attr') ?>" data-label="<?= esc($label, 'attr') ?>"<?= $isArchived ? ' data-archived="1"' : '' ?> <?= in_array($serviceId, $selectedServiceIds, true) ? 'checked' : '' ?>>
-                                                    <span class="form-check-label"><?= esc($label) ?><?php if ($isArchived): ?> <span class="family-choice-badge">Archived</span><?php endif; ?></span>
-                                                </label>
-                                            <?php endif; ?>
-                                        <?php endforeach; ?>
-                                    </div>
-                                <?php endforeach; ?>
+                            <div class="col-12 col-lg-7">
+                                <h5 class="family-column-title">Services and Programs</h5>
+                                <?= $renderServiceAccordion('service_ids[]', $selectedServiceIds, $fieldPrefix . 'HeadServices', $fieldPrefix . 'Head') ?>
                             </div>
                         </div>
                     </div>

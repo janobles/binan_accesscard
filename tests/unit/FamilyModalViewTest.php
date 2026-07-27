@@ -30,7 +30,9 @@ final class FamilyModalViewTest extends CIUnitTestCase
             'barangayOptions' => ['Canlalay', 'Zapote'],
             'relationshipOptions' => ['Son', 'Daughter'],
             'sexOptions' => ['Male', 'Female'],
-        ], $data));
+            // view() keeps its data between calls by default, so one test's headId
+            // would leak into the next. saveData => false renders each case clean.
+        ], $data), ['saveData' => false]);
     }
 
     public function testRendersOneScrollingFormWithNoStepWizard(): void
@@ -96,6 +98,86 @@ final class FamilyModalViewTest extends CIUnitTestCase
         $this->assertMatchesRegularExpression('/<input[^>]+name="head_address"[^>]+class="form-control"/', $html);
         $this->assertMatchesRegularExpression('/<select[^>]+name="head_barangay"[^>]+class="form-select"/', $html);
         $this->assertStringNotContainsString('family-form-hidden', $html);
+    }
+
+    public function testCheckboxesUseRealFormCheckMarkup(): void
+    {
+        $html = $this->render();
+
+        $this->assertStringContainsString('class="form-check-input"', $html);
+        $this->assertMatchesRegularExpression('/<label class="form-check-label" for="[^"]+"/', $html);
+        // The old markup put form-check on a <label> wrapping a bare input.
+        $this->assertStringNotContainsString('<label class="form-check family-choice', $html);
+    }
+
+    public function testSectorsRenderAsATwoColumnGridWithNoScrollBox(): void
+    {
+        $html = $this->render();
+
+        $this->assertStringNotContainsString('family-option-box', $html);
+        $this->assertStringContainsString('data-family-sector-grid', $html);
+        $this->assertStringContainsString('row-cols-sm-2', $html);
+    }
+
+    /**
+     * esc(..., 'attr') entity-encodes spaces and brackets, so the raw HTML shows
+     * name="service_ids&#x5B;&#x5D;". The browser decodes them before the JS sees
+     * them, so assertions about attribute values run against the decoded markup.
+     *
+     * @param array<string, mixed> $data
+     */
+    private function renderDecoded(array $data = []): string
+    {
+        return html_entity_decode($this->render($data), ENT_QUOTES | ENT_HTML5);
+    }
+
+    public function testServicesRenderAsAnAlwaysOpenAccordionPerCategory(): void
+    {
+        $html = $this->renderDecoded();
+
+        $this->assertStringContainsString('class="accordion"', $html);
+        $this->assertStringContainsString('accordion-item', $html);
+        $this->assertStringContainsString('data-bs-toggle="collapse"', $html);
+        $this->assertStringNotContainsString('data-bs-parent', $html);
+        $this->assertStringContainsString('data-service-category="Senior Citizen"', $html);
+        $this->assertStringContainsString('data-service-category="Financial Assistance"', $html);
+    }
+
+    public function testServicesAreNotGatedBehindASectorTick(): void
+    {
+        $html = $this->renderDecoded();
+
+        // Every category is present and reachable with no sector ticked.
+        $this->assertStringContainsString('name="service_ids[]" value="5"', $html);
+        $this->assertStringContainsString('name="service_ids[]" value="9"', $html);
+        $this->assertStringNotContainsString('family-suggested', $html);
+    }
+
+    public function testServiceAccordionHasAFilterAndSectorsDoNot(): void
+    {
+        $html = $this->render();
+
+        $this->assertStringContainsString('data-family-service-filter', $html);
+        $this->assertStringNotContainsString('data-family-sector-filter', $html);
+    }
+
+    public function testHeadChoicesExpandOnCreateAndCollapseOnEdit(): void
+    {
+        $create = $this->render(['modalMode' => 'create']);
+        $edit = $this->render(['modalMode' => 'update', 'headId' => 42]);
+
+        $this->assertMatchesRegularExpression('/class="collapse show"[^>]*data-family-choices/', $create);
+        $this->assertDoesNotMatchRegularExpression('/class="collapse show"[^>]*data-family-choices/', $edit);
+    }
+
+    public function testTheChoicesToggleIsASelectionSummaryNotASecondHeading(): void
+    {
+        $html = $this->render();
+
+        $this->assertStringContainsString('data-family-choices-summary', $html);
+        // "Sectors" already labels the column; the toggle must not repeat it as a
+        // second heading level. One head block plus one member template = 2.
+        $this->assertSame(2, substr_count($html, '>Sectors</h5>'));
     }
 
     public function testFooterUsesTheAppButtonStandard(): void

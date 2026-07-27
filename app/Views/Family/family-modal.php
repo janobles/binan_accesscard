@@ -157,6 +157,7 @@ $renderMemberRow = static function ($index, array $m = []) use (
                 <label class="form-label">Relationship</label>
                 <select class="form-select js-other-select" data-other-field="relationship" data-initial-value="<?= esc($val('relationship'), 'attr') ?>" name="<?= esc($field('relationship'), 'attr') ?>"><?= $selectOptions($relationshipOptions, $val('relationship'), 'Select') ?></select>
                 <input class="form-control mt-2 js-other-input d-none" data-other-for="relationship" placeholder="Enter relationship">
+                <div class="invalid-feedback" data-family-field-error></div>
             </div>
         </div>
 
@@ -211,7 +212,9 @@ $renderMemberRow = static function ($index, array $m = []) use (
         </div>
     <?php endif; ?>
 
-    <form method="post" action="<?= esc($action, 'attr') ?>" autocomplete="off">
+    <?php /* novalidate suppresses the browser's own bubbles so Bootstrap's .invalid-feedback
+             is what the worker sees. manage-family-modal.js drives the validation. */ ?>
+    <form class="needs-validation" method="post" action="<?= esc($action, 'attr') ?>" autocomplete="off" novalidate>
         <?= csrf_field() ?>
         <input type="hidden" name="entry_type" value="head">
         <input type="hidden" name="form_mode" value="<?= esc($modalMode, 'attr') ?>">
@@ -238,12 +241,19 @@ $renderMemberRow = static function ($index, array $m = []) use (
                     <div class="row g-3 mb-4">
                         <div class="col-12 col-xl-3">
                             <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>HeadQr">QR Number</label>
-                            <input id="<?= esc($fieldPrefix, 'attr') ?>HeadQr" name="qr_control_no" class="form-control" type="text"
-                                inputmode="numeric" pattern="0*[1-9][0-9]{0,6}"
-                                title="QR number must be numeric and should not exceed 9,999,999"
-                                data-qr-check-url="<?= esc($qrCheckUrl, 'attr') ?>"
-                                value="<?= esc($oldValue('qr_control_no'), 'attr') ?>"
-                                <?= $qrLocked ? 'readonly' : 'required' ?>>
+                            <div class="input-group has-validation">
+                                <input id="<?= esc($fieldPrefix, 'attr') ?>HeadQr" name="qr_control_no" class="form-control" type="text"
+                                    inputmode="numeric" pattern="0*[1-9][0-9]{0,6}"
+                                    title="QR number must be numeric and should not exceed 9,999,999"
+                                    aria-describedby="<?= esc($fieldPrefix, 'attr') ?>HeadQrFeedback"
+                                    data-qr-check-url="<?= esc($qrCheckUrl, 'attr') ?>"
+                                    value="<?= esc($oldValue('qr_control_no'), 'attr') ?>"
+                                    <?= $qrLocked ? 'readonly' : 'required' ?>>
+                                <?php /* Makes the async uniqueness check legible: spinner while checking,
+                                         tick or cross once it lands. Driven by manage-family-modal.js. */ ?>
+                                <span class="input-group-text" data-family-qr-status aria-live="polite"></span>
+                                <div class="invalid-feedback" id="<?= esc($fieldPrefix, 'attr') ?>HeadQrFeedback" data-family-field-error></div>
+                            </div>
                             <?php if ($qrLocked): ?>
                                 <small class="text-muted">Locked: subsidy already recorded under this number.</small>
                             <?php endif; ?>
@@ -264,13 +274,15 @@ $renderMemberRow = static function ($index, array $m = []) use (
 
                         <div class="col-12 col-xl-9">
                             <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>HeadAddress">Address</label>
-                            <input id="<?= esc($fieldPrefix, 'attr') ?>HeadAddress" name="head_address" class="form-control" type="text" value="<?= esc($oldValue('head_address'), 'attr') ?>" minlength="2" required>
+                            <input id="<?= esc($fieldPrefix, 'attr') ?>HeadAddress" name="head_address" class="form-control" type="text" value="<?= esc($oldValue('head_address'), 'attr') ?>" aria-describedby="<?= esc($fieldPrefix, 'attr') ?>HeadAddressFeedback" minlength="2" required>
+                            <div class="invalid-feedback" id="<?= esc($fieldPrefix, 'attr') ?>HeadAddressFeedback" data-family-field-error></div>
                         </div>
                         <div class="col-12 col-xl-3">
                             <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>HeadBarangay">Barangay</label>
-                            <select id="<?= esc($fieldPrefix, 'attr') ?>HeadBarangay" name="head_barangay" class="form-select" required>
+                            <select id="<?= esc($fieldPrefix, 'attr') ?>HeadBarangay" name="head_barangay" class="form-select" aria-describedby="<?= esc($fieldPrefix, 'attr') ?>HeadBarangayFeedback" required>
                                 <?= $selectOptions($barangayOptions, $oldValue('head_barangay'), 'Barangay') ?>
                             </select>
+                            <div class="invalid-feedback" id="<?= esc($fieldPrefix, 'attr') ?>HeadBarangayFeedback" data-family-field-error></div>
                         </div>
                     </div>
                 </section>

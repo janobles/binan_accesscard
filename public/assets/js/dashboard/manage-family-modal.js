@@ -236,29 +236,21 @@
 
     // ---- field error helper ------------------------------------------------
 
+    // Writes into the .invalid-feedback the view renders next to each control.
+    // Bootstrap reveals it only while the control carries .is-invalid, so that class
+    // toggle is the single switch and the div needs no hiding of its own.
     function setFieldError(field, message) {
         if (!field) {
             return;
         }
 
-        var wrapper = field.closest('[class*="col-"]') || field.parentElement;
-        var feedback = wrapper ? wrapper.querySelector('[data-family-field-error]') : null;
+        var scope = field.closest('.input-group') || field.closest('[class*="col-"]') || field.parentElement;
+        var feedback = scope ? scope.querySelector('[data-family-field-error]') : null;
 
         field.classList.toggle('is-invalid', message !== '');
 
-        if (!feedback && wrapper && message !== '') {
-            feedback = document.createElement('div');
-            feedback.className = 'family-field-error';
-            feedback.setAttribute('data-family-field-error', '');
-            wrapper.appendChild(feedback);
-        }
-
         if (feedback) {
-            if (message !== '') {
-                feedback.textContent = message;
-            }
-
-            feedback.hidden = message === '';
+            feedback.textContent = message;
         }
     }
 
@@ -308,11 +300,13 @@
         var sequence = ++qrCheckSequence;
         field.setCustomValidity('');
         setFieldError(field, '');
+        setQrStatus(field, '');
 
         if (String(field.value || '').trim() === '' || !field.checkValidity()) {
             return;
         }
 
+        setQrStatus(field, 'checking');
         field.setCustomValidity('Checking whether this QR number already exists.');
 
         qrCheckTimer = window.setTimeout(function () {
@@ -320,6 +314,16 @@
             var headId = root.querySelector('[name="head_id"]');
             url.searchParams.set('control_no', field.value);
             url.searchParams.set('head_id', headId ? headId.value : '0');
+
+            // A hung request must never leave setCustomValidity parked: that blocks the
+            // save with no visible message. Release it and let the server decide.
+            var release = window.setTimeout(function () {
+                if (sequence === qrCheckSequence && field.isConnected) {
+                    field.setCustomValidity('');
+                    setFieldError(field, '');
+                    setQrStatus(field, '');
+                }
+            }, 5000);
 
             window.fetch(url.toString(), {
                 headers: { 'X-Requested-With': 'XMLHttpRequest' },
@@ -329,22 +333,46 @@
                     return { ok: response.ok, data: data };
                 });
             }).then(function (result) {
+                window.clearTimeout(release);
+
                 if (sequence !== qrCheckSequence || !field.isConnected) {
                     return;
                 }
 
-                var message = result.ok && result.data.available
-                    ? ''
-                    : (result.data.message || 'The QR number could not be validated.');
+                var available = result.ok && result.data.available;
+                var message = available ? '' : (result.data.message || 'The QR number could not be validated.');
                 field.setCustomValidity(message);
                 setFieldError(field, message);
+                setQrStatus(field, available ? 'ok' : 'bad');
             }).catch(function () {
+                window.clearTimeout(release);
+
                 if (sequence === qrCheckSequence && field.isConnected) {
                     field.setCustomValidity('');
                     setFieldError(field, '');
+                    setQrStatus(field, '');
                 }
             });
         }, 350);
+    }
+
+    // The input-group addon beside the QR field: spinner while the check is in flight,
+    // tick or cross once it lands, empty when there is nothing to report.
+    function setQrStatus(field, state) {
+        var group = field.closest('.input-group');
+        var status = group ? group.querySelector('[data-family-qr-status]') : null;
+
+        if (!status) {
+            return;
+        }
+
+        var icons = {
+            checking: '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span><span class="visually-hidden">Checking QR number</span>',
+            ok: '<i class="bi bi-check-lg text-success" aria-hidden="true"></i><span class="visually-hidden">QR number available</span>',
+            bad: '<i class="bi bi-x-lg text-danger" aria-hidden="true"></i><span class="visually-hidden">QR number not available</span>'
+        };
+
+        status.innerHTML = icons[state] || '';
     }
 
     // ---- confirm dialog ----------------------------------------------------
@@ -1064,6 +1092,45 @@
         }
     }
 
+    // Mirrors FamilyController::firstIncompleteMember() so the worker sees the gap at
+    // the field instead of after a round-trip. Same six fields, and the same
+    // skip-if-unnamed rule as hasMemberData(): a row with no name is an empty row, not
+    // an incomplete one. The server keeps its own copy and stays authoritative.
+    var MEMBER_REQUIRED_FIELDS = ['birthday', 'sex', 'civilstatus', 'education', 'job', 'salary'];
+
+    function memberHasData(row) {
+        return ['lastname', 'firstname'].some(function (key) {
+            var field = row.querySelector('[name$="[' + key + ']"]');
+
+            return field && String(field.value || '').trim() !== '';
+        });
+    }
+
+    function validateMembers(form) {
+        var firstInvalid = null;
+
+        Array.from(form.querySelectorAll('[data-family-member-row]')).forEach(function (row) {
+            var named = memberHasData(row);
+
+            MEMBER_REQUIRED_FIELDS.forEach(function (key) {
+                var field = row.querySelector('[name$="[' + key + ']"]');
+
+                if (!field) {
+                    return;
+                }
+
+                var empty = named && String(field.value || '').trim() === '';
+                setFieldError(field, empty ? 'This field is required.' : '');
+
+                if (empty && !firstInvalid) {
+                    firstInvalid = field;
+                }
+            });
+        });
+
+        return firstInvalid;
+    }
+
     function validateMemberContacts(form) {
         var firstInvalid = null;
 
@@ -1077,14 +1144,17 @@
     }
 
     function submitFamilyForm(root, form) {
+        form.classList.add('was-validated');
+
         if (!validateHead(root)) {
             return;
         }
 
-        var badContact = validateMemberContacts(form);
+        var badMember = validateMembers(form) || validateMemberContacts(form);
 
-        if (badContact) {
-            badContact.focus();
+        if (badMember) {
+            badMember.focus();
+            badMember.scrollIntoView({ block: 'center' });
             return;
         }
 
@@ -1239,6 +1309,28 @@
 
             scheduleSave(root);
         });
+
+        // Per-field validation on blur, so an error lands at the field the worker just
+        // left instead of only after a submit. blur does not bubble, hence capture.
+        root.addEventListener('blur', function (event) {
+            var target = event.target;
+
+            if (!target || !target.matches || !target.matches('input, select, textarea')) {
+                return;
+            }
+
+            if (isContactField(target)) {
+                validateContact(target);
+                return;
+            }
+
+            if (target.matches('[required]')) {
+                var isEmpty = String(target.value || '').trim() === '';
+                var invalid = !target.checkValidity();
+
+                setFieldError(target, invalid ? (isEmpty ? 'This field is required.' : target.validationMessage) : '');
+            }
+        }, true);
 
         root.addEventListener('change', function (event) {
             var target = event.target;

@@ -546,14 +546,6 @@
     cursor: pointer;
 }
 
-/* Replaced by Bootstrap's .invalid-feedback in the validation pass. */
-.family-field-error {
-    margin-top: 0.28rem;
-    color: #dc3545;
-    font-size: 0.74rem;
-    font-weight: 700;
-}
-
 .family-sector-service {
     padding: 0.9rem 1rem;
     border: 1px solid #cfe0f5;

@@ -100,6 +100,31 @@ final class FamilyModalViewTest extends CIUnitTestCase
         $this->assertStringNotContainsString('family-form-hidden', $html);
     }
 
+    public function testFormOptsIntoBootstrapValidation(): void
+    {
+        $html = $this->render();
+
+        $this->assertMatchesRegularExpression('/<form[^>]+class="[^"]*needs-validation[^"]*"[^>]*novalidate/', $html);
+    }
+
+    public function testEveryFieldCarriesAnInvalidFeedbackTarget(): void
+    {
+        $html = $this->render();
+
+        $this->assertStringContainsString('class="invalid-feedback"', $html);
+        $this->assertStringContainsString('data-family-field-error', $html);
+        $this->assertStringNotContainsString('class="family-field-error"', $html);
+        $this->assertMatchesRegularExpression('/aria-describedby="[^"]+Feedback"/', $html);
+    }
+
+    public function testQrFieldIsAnInputGroupWithAStatusAddon(): void
+    {
+        $html = $this->render();
+
+        $this->assertStringContainsString('input-group has-validation', $html);
+        $this->assertStringContainsString('data-family-qr-status', $html);
+    }
+
     public function testCheckboxesUseRealFormCheckMarkup(): void
     {
         $html = $this->render();

@@ -1991,7 +1991,16 @@
                 return;
             }
 
-            var field = form.querySelector('[name="' + String(issue.name).replace(/(["\\])/g, '\\$1') + '"]');
+            var selector = '[name="' + String(issue.name).replace(/(["\\])/g, '\\$1') + '"]';
+            var field = form.querySelector(selector);
+            var row = field ? field.closest('[data-family-member-row]') : null;
+
+            // A flagged field inside a closed row is a hidden input: the note would be
+            // invisible and the box uneditable, so the row opens to show what to fix.
+            if (row && row.dataset.familyMemberOpen === '0') {
+                expandMemberRow(root, row);
+                field = form.querySelector(selector);
+            }
 
             if (field) {
                 markImportField(field, issue);

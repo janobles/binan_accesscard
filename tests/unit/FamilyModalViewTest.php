@@ -159,18 +159,17 @@ final class FamilyModalViewTest extends CIUnitTestCase
         return html_entity_decode($this->render($data), ENT_QUOTES | ENT_HTML5);
     }
 
-    public function testServicesRenderAsOneFlatListGroupedByCategory(): void
+    public function testServicesRenderAsAnAlwaysOpenAccordionPerCategory(): void
     {
         $html = $this->renderDecoded();
 
-        $this->assertStringContainsString('data-family-service-list', $html);
-        $this->assertStringContainsString('data-family-service-group', $html);
+        $this->assertStringContainsString('class="accordion"', $html);
+        $this->assertStringContainsString('accordion-item', $html);
+        $this->assertStringContainsString('data-family-service-panel', $html);
         $this->assertStringContainsString('data-service-category="Senior Citizen"', $html);
         $this->assertStringContainsString('data-service-category="Financial Assistance"', $html);
-        // No program is behind a collapse: the only collapse left is the head's own
-        // sectors-and-programs block, which the toggle summary labels.
-        $this->assertStringNotContainsString('accordion', $html);
-        $this->assertSame(1, substr_count($html, 'data-bs-toggle="collapse"'));
+        // No data-bs-parent, so more than one category can stay open at a time.
+        $this->assertStringNotContainsString('data-bs-parent', $html);
     }
 
     public function testMemberRowActionsLiveInAnActionsMenu(): void
@@ -184,17 +183,34 @@ final class FamilyModalViewTest extends CIUnitTestCase
         $this->assertStringNotContainsString('btn btn-outline-primary', $html);
     }
 
-    public function testHeadCardIsLabelledAndOwnsTheQrNumber(): void
+    public function testHeadAndMembersUseTheSameCardChrome(): void
     {
         $html = $this->render();
 
-        $this->assertStringContainsString('Head of Family', $html);
-        $this->assertMatchesRegularExpression(
-            '/family-card-header.*Head of Family.*qr_control_no/s',
-            $html,
-            'The QR belongs in the head card header, not on a row of its own'
-        );
+        // Head and member are the same kind of thing, so they render the same card.
+        $this->assertSame(2, substr_count($html, 'family-person-card-header'));
+        $this->assertStringContainsString('>Head of Family</h3>', $html);
         $this->assertStringContainsString('data-family-member-title', $html);
+    }
+
+    public function testQrBelongsToTheRecordNotToTheHeadPerson(): void
+    {
+        $html = $this->render();
+
+        // The QR strip sits above both cards rather than inside the head's.
+        $this->assertMatchesRegularExpression(
+            '/family-record-strip.*qr_control_no.*family-person-card/s',
+            $html
+        );
+    }
+
+    public function testEveryPersonCardCarriesTheSameChoicesBlock(): void
+    {
+        $html = $this->render();
+
+        // One for the head, one for the member template.
+        $this->assertSame(2, substr_count($html, 'data-family-choices-block'));
+        $this->assertSame(2, substr_count($html, 'data-family-choices-summary'));
     }
 
     public function testAddressAndBarangaySplitTheRowEightFour(): void

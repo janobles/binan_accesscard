@@ -56,49 +56,102 @@ $renderSectorGrid = static function (string $fieldName, array $selectedIds, stri
 };
 
 /**
- * Services span several categories, so each category is a labelled group in one
- * scrolling list. Nothing collapses: the worker is ticking boxes off a paper form,
- * so every program stays readable at a glance, with a filter for long lists.
- * Services are not gated behind a sector tick, because programs like Financial
- * Assistance apply regardless of sector.
+ * Services span several categories, so each category is an accordion item.
+ * data-bs-parent is deliberately omitted so more than one can stay open;
+ * manage-family-modal.js opens the categories that match the ticked sectors or
+ * already hold a tick, and closes them again when that stops being true. Nothing
+ * is hidden: a category matching no sector stays collapsed but present, because
+ * programs like Financial Assistance apply regardless of sector.
  */
-$renderServiceList = static function (string $fieldName, array $selectedIds, string $idPrefix) use ($servicesByCategory, $serviceLabel): string {
+$renderServiceAccordion = static function (string $fieldName, array $selectedIds, string $accordionId, string $idPrefix) use ($servicesByCategory, $serviceLabel): string {
     ob_start();
     ?>
     <div class="mb-2">
         <input type="search" class="form-control form-control-sm" placeholder="Filter programs..." aria-label="Filter programs" data-family-service-filter>
     </div>
-    <div class="family-service-picker" data-family-service-list>
+    <div class="accordion" id="<?= esc($accordionId, 'attr') ?>" data-family-service-accordion>
         <?php if ($servicesByCategory === []): ?>
             <p class="text-muted mb-0">No services available.</p>
         <?php endif; ?>
+        <?php $categoryIndex = 0; ?>
         <?php foreach ($servicesByCategory as $category => $services): ?>
-            <div class="family-service-group" data-family-service-group data-service-category="<?= esc((string) $category, 'attr') ?>">
-                <p class="family-option-group-title"><?= esc((string) $category) ?></p>
-                <div class="row row-cols-1 row-cols-sm-2 g-1">
-                    <?php foreach ((array) $services as $service): ?>
-                        <?php
-                        $service = (array) $service;
-                        $serviceId = (string) ($service['serviceID'] ?? $service['id'] ?? '');
-                        $label = $serviceLabel($service);
+            <?php
+            $categoryIndex++;
+            $panelId = $accordionId . 'Panel' . $categoryIndex;
+            ?>
+            <div class="accordion-item" data-family-service-item>
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#<?= esc($panelId, 'attr') ?>" aria-expanded="false" aria-controls="<?= esc($panelId, 'attr') ?>"><?= esc((string) $category) ?></button>
+                </h2>
+                <div id="<?= esc($panelId, 'attr') ?>" class="accordion-collapse collapse" data-family-service-panel data-service-category="<?= esc((string) $category, 'attr') ?>">
+                    <div class="accordion-body py-2">
+                        <div class="row row-cols-1 row-cols-sm-2 g-1">
+                            <?php foreach ((array) $services as $service): ?>
+                                <?php
+                                $service = (array) $service;
+                                $serviceId = (string) ($service['serviceID'] ?? $service['id'] ?? '');
+                                $label = $serviceLabel($service);
 
-                        if ($serviceId === '' || $label === '') {
-                            continue;
-                        }
+                                if ($serviceId === '' || $label === '') {
+                                    continue;
+                                }
 
-                        $isArchived = ! empty($service['is_archived']);
-                        $choiceId = $idPrefix . 'Service' . $serviceId;
-                        ?>
-                        <div class="col">
-                            <div class="form-check family-choice<?= $isArchived ? ' family-choice--archived' : '' ?>">
-                                <input class="form-check-input" type="checkbox" id="<?= esc($choiceId, 'attr') ?>" name="<?= esc($fieldName, 'attr') ?>" value="<?= esc($serviceId, 'attr') ?>" data-label="<?= esc($label, 'attr') ?>"<?= $isArchived ? ' data-archived="1"' : '' ?> <?= in_array($serviceId, $selectedIds, true) ? 'checked' : '' ?>>
-                                <label class="form-check-label" for="<?= esc($choiceId, 'attr') ?>"><?= esc($label) ?><?php if ($isArchived): ?> <span class="family-choice-badge">Archived</span><?php endif; ?></label>
-                            </div>
+                                $isArchived = ! empty($service['is_archived']);
+                                $choiceId = $idPrefix . 'Service' . $serviceId;
+                                ?>
+                                <div class="col">
+                                    <div class="form-check family-choice<?= $isArchived ? ' family-choice--archived' : '' ?>">
+                                        <input class="form-check-input" type="checkbox" id="<?= esc($choiceId, 'attr') ?>" name="<?= esc($fieldName, 'attr') ?>" value="<?= esc($serviceId, 'attr') ?>" data-label="<?= esc($label, 'attr') ?>"<?= $isArchived ? ' data-archived="1"' : '' ?> <?= in_array($serviceId, $selectedIds, true) ? 'checked' : '' ?>>
+                                        <label class="form-check-label" for="<?= esc($choiceId, 'attr') ?>"><?= esc($label) ?><?php if ($isArchived): ?> <span class="family-choice-badge">Archived</span><?php endif; ?></label>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
                         </div>
-                    <?php endforeach; ?>
+                    </div>
                 </div>
             </div>
         <?php endforeach; ?>
+    </div>
+    <?php
+    return (string) ob_get_clean();
+};
+
+/**
+ * The sectors-and-programs block, identical for the head and for every member.
+ * It collapses to a one-line summary of what is ticked, expanded while creating
+ * (the worker is ticking boxes off a paper form) and collapsed while editing,
+ * where it is reference information.
+ */
+$renderChoicesBlock = static function (
+    string $blockId,
+    string $sectorFieldName,
+    array $selectedSectors,
+    string $serviceFieldName,
+    array $selectedServices,
+    string $idPrefix,
+    bool $open
+) use ($renderSectorGrid, $renderServiceAccordion): string {
+    ob_start();
+    ?>
+    <div class="family-choices" data-family-choices-block>
+        <button class="family-choices-toggle" type="button"
+                data-bs-toggle="collapse" data-bs-target="#<?= esc($blockId, 'attr') ?>"
+                aria-expanded="<?= $open ? 'true' : 'false' ?>" aria-controls="<?= esc($blockId, 'attr') ?>">
+            <i class="bi bi-chevron-down" aria-hidden="true"></i>
+            <span data-family-choices-summary>Sectors and programs</span>
+        </button>
+        <div class="collapse<?= $open ? ' show' : '' ?>" id="<?= esc($blockId, 'attr') ?>" data-family-choices>
+            <div class="row g-3 pt-2">
+                <div class="col-12 col-lg-5">
+                    <h5 class="family-column-title">Sectors</h5>
+                    <?= $renderSectorGrid($sectorFieldName, $selectedSectors, $idPrefix) ?>
+                </div>
+                <div class="col-12 col-lg-7">
+                    <h5 class="family-column-title">Services and Programs</h5>
+                    <?= $renderServiceAccordion($serviceFieldName, $selectedServices, $blockId . 'Services', $idPrefix) ?>
+                </div>
+            </div>
+        </div>
     </div>
     <?php
     return (string) ob_get_clean();
@@ -115,8 +168,8 @@ $renderMemberRow = static function ($index, array $m = []) use (
     $personFieldOptions,
     $selectOptions,
     $relationshipOptions,
-    $renderSectorGrid,
-    $renderServiceList
+    $renderChoicesBlock,
+    $modalMode
 ): string {
     $i = (string) $index;
     $field = static fn (string $name): string => 'members[' . $i . '][' . $name . ']';
@@ -126,11 +179,11 @@ $renderMemberRow = static function ($index, array $m = []) use (
 
     ob_start();
     ?>
-    <div class="family-member-card" data-family-member-row>
-        <div class="family-member-card-header">
+    <div class="family-person-card" data-family-member-row>
+        <div class="family-person-card-header">
             <?php /* manage-family-modal.js keeps the number and name current as rows are
                      added, removed, or renamed. */ ?>
-            <span class="family-member-card-title" data-family-member-title>Member</span>
+            <h3 class="family-person-card-title" data-family-member-title>Member</h3>
             <?php /* Row actions live in the same actions menu the records table uses, rather
                      than two competing outline buttons in colors that carry no role. */ ?>
             <div class="dropdown">
@@ -162,16 +215,15 @@ $renderMemberRow = static function ($index, array $m = []) use (
             </div>
         </div>
 
-        <div class="row g-3 mt-1">
-            <div class="col-12 col-lg-5">
-                <h5 class="family-column-title">Sectors</h5>
-                <?= $renderSectorGrid($field('sector_ids') . '[]', $selectedSectors, 'familyMember' . $i) ?>
-            </div>
-            <div class="col-12 col-lg-7">
-                <h5 class="family-column-title">Services and Programs</h5>
-                <?= $renderServiceList($field('service_ids') . '[]', $selectedServices, 'familyMember' . $i) ?>
-            </div>
-        </div>
+        <?= $renderChoicesBlock(
+            'familyMember' . $i . 'Choices',
+            $field('sector_ids') . '[]',
+            $selectedSectors,
+            $field('service_ids') . '[]',
+            $selectedServices,
+            'familyMember' . $i,
+            $modalMode !== 'update'
+        ) ?>
     </div>
     <?php
     return (string) ob_get_clean();
@@ -237,35 +289,37 @@ $renderMemberRow = static function ($index, array $m = []) use (
         <?php endif; ?>
 
         <div class="family-entry-content">
-                <section class="family-entry-section family-entry-personal">
-                    <?php $qrLocked = ! empty($qrLocked ?? false); ?>
-                    <?php /* Naming the card is what tells the worker these fields belong to the head
-                             rather than to a member, and the QR sits with it because the number is
-                             the head's identity on the card, not a field of its own row. */ ?>
-                    <div class="family-card-header">
-                        <h3 class="family-section-title mb-0">Head of Family</h3>
-                        <div class="family-qr-field">
-                            <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>HeadQr">QR Number</label>
-                            <div class="input-group input-group-sm has-validation">
-                                <input id="<?= esc($fieldPrefix, 'attr') ?>HeadQr" name="qr_control_no" class="form-control" type="text"
-                                    inputmode="numeric" pattern="0*[1-9][0-9]{0,6}"
-                                    title="QR number must be numeric and should not exceed 9,999,999"
-                                    aria-describedby="<?= esc($fieldPrefix, 'attr') ?>HeadQrFeedback"
-                                    data-qr-check-url="<?= esc($qrCheckUrl, 'attr') ?>"
-                                    value="<?= esc($oldValue('qr_control_no'), 'attr') ?>"
-                                    <?= $qrLocked ? 'readonly' : 'required' ?>>
-                                <?php /* Makes the async uniqueness check legible: spinner while checking,
-                                         tick or cross once it lands. Driven by manage-family-modal.js. */ ?>
-                                <span class="input-group-text d-none" data-family-qr-status aria-live="polite"></span>
-                                <div class="invalid-feedback" id="<?= esc($fieldPrefix, 'attr') ?>HeadQrFeedback" data-family-field-error></div>
-                            </div>
-                            <?php if ($qrLocked): ?>
-                                <small class="text-muted">Locked: subsidy already recorded under this number.</small>
-                            <?php endif; ?>
+                <?php $qrLocked = ! empty($qrLocked ?? false); ?>
+                <?php /* The QR number identifies the family record, not the head person, so it
+                         sits above both cards rather than inside one of them. */ ?>
+                <div class="family-record-strip">
+                    <label class="form-label mb-0" for="<?= esc($fieldPrefix, 'attr') ?>HeadQr">QR Number</label>
+                    <div class="family-qr-field">
+                        <div class="input-group input-group-sm has-validation">
+                            <input id="<?= esc($fieldPrefix, 'attr') ?>HeadQr" name="qr_control_no" class="form-control" type="text"
+                                inputmode="numeric" pattern="0*[1-9][0-9]{0,6}"
+                                title="QR number must be numeric and should not exceed 9,999,999"
+                                aria-describedby="<?= esc($fieldPrefix, 'attr') ?>HeadQrFeedback"
+                                data-qr-check-url="<?= esc($qrCheckUrl, 'attr') ?>"
+                                value="<?= esc($oldValue('qr_control_no'), 'attr') ?>"
+                                <?= $qrLocked ? 'readonly' : 'required' ?>>
+                            <?php /* Makes the async uniqueness check legible: spinner while checking,
+                                     tick or cross once it lands. Driven by manage-family-modal.js. */ ?>
+                            <span class="input-group-text d-none" data-family-qr-status aria-live="polite"></span>
+                            <div class="invalid-feedback" id="<?= esc($fieldPrefix, 'attr') ?>HeadQrFeedback" data-family-field-error></div>
                         </div>
                     </div>
+                    <?php if ($qrLocked): ?>
+                        <small class="text-muted">Locked: subsidy already recorded under this number.</small>
+                    <?php endif; ?>
+                </div>
 
-
+                <?php /* The head is a person card with the same chrome as every member card, so
+                         the two read as the same kind of thing. */ ?>
+                <div class="family-person-card">
+                    <div class="family-person-card-header">
+                        <h3 class="family-person-card-title">Head of Family</h3>
+                    </div>
                     <div class="row g-3">
                         <?= family_modal_render_person_fields([
                             'personFields' => $personFields,
@@ -294,35 +348,19 @@ $renderMemberRow = static function ($index, array $m = []) use (
                             <div class="invalid-feedback" id="<?= esc($fieldPrefix, 'attr') ?>HeadBarangayFeedback" data-family-field-error></div>
                         </div>
                     </div>
-                </section>
 
-                <section class="family-entry-section family-sector-service">
-                    <?php $choicesId = $fieldPrefix . 'HeadChoices'; ?>
-                    <?php /* Expanded when creating (the worker is ticking boxes off a paper form)
-                             and collapsed when editing, where they are reference information. The
-                             toggle carries the selection summary rather than repeating the column
-                             headings at a second level; JS keeps its text current. */ ?>
-                    <?php $choicesOpen = $modalMode !== 'update'; ?>
-                    <button class="btn btn-link p-0 mb-2 text-decoration-none" type="button"
-                            data-bs-toggle="collapse" data-bs-target="#<?= esc($choicesId, 'attr') ?>"
-                            aria-expanded="<?= $choicesOpen ? 'true' : 'false' ?>" aria-controls="<?= esc($choicesId, 'attr') ?>">
-                        <span data-family-choices-summary>Nothing selected yet</span>
-                    </button>
-                    <div class="collapse<?= $choicesOpen ? ' show' : '' ?>" id="<?= esc($choicesId, 'attr') ?>" data-family-choices>
-                        <div class="row g-3">
-                            <div class="col-12 col-lg-5">
-                                <h5 class="family-column-title">Sectors</h5>
-                                <?= $renderSectorGrid('sector_ids[]', $selectedSectorIds, $fieldPrefix . 'Head') ?>
-                            </div>
-                            <div class="col-12 col-lg-7">
-                                <h5 class="family-column-title">Services and Programs</h5>
-                                <?= $renderServiceList('service_ids[]', $selectedServiceIds, $fieldPrefix . 'Head') ?>
-                            </div>
-                        </div>
-                    </div>
-                </section>
+                    <?= $renderChoicesBlock(
+                        $fieldPrefix . 'HeadChoices',
+                        'sector_ids[]',
+                        $selectedSectorIds,
+                        'service_ids[]',
+                        $selectedServiceIds,
+                        $fieldPrefix . 'Head',
+                        $modalMode !== 'update'
+                    ) ?>
+                </div>
 
-                <section class="family-entry-section family-members-section">
+                <section class="family-members-section">
                     <p class="text-muted small mb-3">Family members in this household. Leave empty if there are none.</p>
 
                     <div data-family-members>

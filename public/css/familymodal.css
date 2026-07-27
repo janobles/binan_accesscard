@@ -546,11 +546,76 @@
     cursor: pointer;
 }
 
-.family-sector-service {
+/* Head and members are the same kind of thing, so they get the same card. */
+.family-person-card {
     padding: 0.9rem 1rem;
+    margin-bottom: 0.85rem;
     border: 1px solid #cfe0f5;
     border-radius: 0.5rem;
-    background: #fbfdff;
+    background: #ffffff;
+}
+
+.family-person-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding-bottom: 0.6rem;
+    margin-bottom: 0.9rem;
+    border-bottom: 1px solid #e6eefb;
+}
+
+.family-person-card-title {
+    margin: 0;
+    color: #294b73;
+    font-size: 0.95rem;
+    font-weight: 800;
+}
+
+/* The QR belongs to the record, not to a person, so it sits above both cards. */
+.family-record-strip {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    padding: 0.65rem 0.85rem;
+    margin-bottom: 0.85rem;
+    border: 1px solid #cfe0f5;
+    border-radius: 0.5rem;
+    background: #f8fbff;
+}
+
+.family-record-strip .form-label {
+    margin-bottom: 0;
+}
+
+/* Collapse toggle for the sectors-and-programs block, identical on every card. */
+.family-choices {
+    padding-top: 0.85rem;
+    margin-top: 0.85rem;
+    border-top: 1px solid #e6eefb;
+}
+
+.family-choices-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: #294b73;
+    font-size: 0.82rem;
+    font-weight: 800;
+    text-align: left;
+}
+
+.family-choices-toggle .bi {
+    transition: transform 0.15s ease;
+}
+
+.family-choices-toggle[aria-expanded="true"] .bi {
+    transform: rotate(180deg);
 }
 
 .family-column-title {
@@ -571,16 +636,10 @@
     margin-top: 0.2rem;
 }
 
-/* One scroll region for the whole program list, so the categories inside it read as
-   one list instead of six separately scrolling boxes. */
-.family-service-picker {
-    max-height: 18rem;
+/* A long accordion must not outgrow the modal. */
+.family-entry-form .accordion-body {
+    max-height: 15rem;
     overflow-y: auto;
-    padding-right: 0.25rem;
-}
-
-.family-service-group + .family-service-group {
-    margin-top: 0.7rem;
 }
 
 .family-option-group-title {
@@ -591,25 +650,8 @@
     text-transform: uppercase;
 }
 
-/* Head card: title on the left, the QR that identifies the record on the right. */
-.family-card-header {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 0.75rem;
-    margin-bottom: 1rem;
-}
-
-.family-section-title {
-    margin: 0;
-    color: #000000;
-    font-size: 1.08rem;
-    font-weight: 800;
-}
-
 .family-qr-field {
-    width: 12rem;
+    width: 11rem;
     max-width: 100%;
 }
 
@@ -678,7 +720,7 @@
     font-size: 0.82rem;
 }
 
-.floating-family-modal.is-family-entry-modal .family-sector-service {
+.floating-family-modal.is-family-entry-modal .family-person-card {
     padding: 0.75rem 0.85rem;
 }
 
@@ -1068,9 +1110,6 @@
  * Repeatable family-member capture (Members step) + save toast.
  * ------------------------------------------------------------------------- */
 .family-members-section { margin-top: 1rem; }
-.family-member-card { border: 1px solid var(--bs-border-color, #dee2e6); border-radius: 0.5rem; padding: 1rem; margin-bottom: 1rem; background: var(--bs-body-bg, #fff); }
-.family-member-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
-.family-member-card-title { font-size: 0.9rem; font-weight: 700; color: #294b73; }
 .family-toast { position: fixed; top: 1rem; right: 1rem; z-index: 1080; max-width: 22rem; margin: 0; }
 
 /* Background-import progress toasts (bottom-right). The modal closes on submit and

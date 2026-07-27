@@ -232,6 +232,7 @@
         writePersonField(memberField('relationship'), '');
 
         refreshAllAgeEligibility(root);
+        refreshAllServiceCategories(root);
         refreshChoicesSummary(root);
         renumberMembers(root);
 
@@ -739,6 +740,7 @@
             });
         });
         refreshAllAgeEligibility(root);
+        refreshAllServiceCategories(root);
         refreshChoicesSummary(root);
         renumberMembers(root);
     }
@@ -862,21 +864,95 @@
         });
     }
 
-    // Type-to-narrow over one service list: non-matching choices hide, and a category
-    // whose every choice is hidden drops out with them. Clearing the box restores all.
-    function filterServiceList(input) {
-        var list = input.parentElement ? input.parentElement.nextElementSibling : null;
+    // ---- service accordion state --------------------------------------------
+    // A category opens when it matches a ticked sector or already holds a tick, and
+    // closes again when neither is true any more. Panels the worker opened by hand
+    // are left alone: their click is an explicit instruction, so nothing auto-closes
+    // it. That flag is what keeps a cleared filter or an unticked box from leaving
+    // every category hanging open.
 
-        if (!list || !list.matches('[data-family-service-list]')) {
+    function servicePanelsIn(scopeEl) {
+        var row = scopeEl.matches && scopeEl.matches('[data-family-member-row]') ? scopeEl : null;
+
+        return Array.from(scopeEl.querySelectorAll('[data-family-service-panel]')).filter(function (panel) {
+            return row ? true : !panel.closest('[data-family-member-row]');
+        });
+    }
+
+    // Drives a collapse panel without needing bootstrap.Collapse to be instantiated
+    // first, and keeps the header button's aria-expanded in step.
+    function setServicePanelOpen(panel, open) {
+        if (panel.classList.contains('show') === open) {
+            return;
+        }
+
+        var item = panel.closest('.accordion-item');
+        var button = item ? item.querySelector('.accordion-button') : null;
+
+        if (window.bootstrap && window.bootstrap.Collapse) {
+            window.bootstrap.Collapse.getOrCreateInstance(panel, { toggle: false })[open ? 'show' : 'hide']();
+        } else {
+            panel.classList.toggle('show', open);
+        }
+
+        if (button) {
+            button.classList.toggle('collapsed', !open);
+            button.setAttribute('aria-expanded', open ? 'true' : 'false');
+        }
+    }
+
+    function refreshServiceCategories(scopeEl) {
+        if (!scopeEl || !scopeEl.querySelectorAll) {
+            return;
+        }
+
+        var row = scopeEl.matches && scopeEl.matches('[data-family-member-row]') ? scopeEl : null;
+        var searchRoot = row || scopeEl;
+        var sectorSelector = row ? 'input[name$="[sector_ids][]"]:checked' : 'input[name="sector_ids[]"]:checked';
+        var checkedKeys = {};
+
+        searchRoot.querySelectorAll(sectorSelector).forEach(function (input) {
+            checkedKeys[normName(input.dataset.sectorName)] = true;
+        });
+
+        servicePanelsIn(searchRoot).forEach(function (panel) {
+            if (panel.dataset.familyUserToggled === '1') {
+                return;
+            }
+
+            var matched = !!checkedKeys[normName(panel.dataset.serviceCategory)];
+            var hasChecked = panel.querySelector('input[type="checkbox"]:checked') !== null;
+
+            setServicePanelOpen(panel, matched || hasChecked);
+        });
+    }
+
+    function refreshAllServiceCategories(root) {
+        refreshServiceCategories(root);
+        root.querySelectorAll('[data-family-member-row]').forEach(function (row) {
+            refreshServiceCategories(row);
+        });
+    }
+
+    // Type-to-narrow over one accordion: non-matching choices hide, a category with no
+    // match drops out, and matching categories open while the search runs. Clearing the
+    // box hands the open state back to the sector-and-tick rule above, so the accordion
+    // does not stay fully expanded afterwards.
+    function filterServiceAccordion(input) {
+        var accordion = input.parentElement ? input.parentElement.nextElementSibling : null;
+
+        if (!accordion || !accordion.matches('[data-family-service-accordion]')) {
             return;
         }
 
         var term = String(input.value || '').trim().toLowerCase();
+        var scope = input.closest('[data-family-member-row]') || input.closest('[data-family-entry-form]');
 
-        list.querySelectorAll('[data-family-service-group]').forEach(function (group) {
+        accordion.querySelectorAll('[data-family-service-item]').forEach(function (item) {
+            var panel = item.querySelector('[data-family-service-panel]');
             var matches = 0;
 
-            group.querySelectorAll('.family-choice').forEach(function (choice) {
+            item.querySelectorAll('.family-choice').forEach(function (choice) {
                 var label = choice.querySelector('.form-check-label');
                 var hit = term === '' || (label ? label.textContent.toLowerCase().indexOf(term) !== -1 : false);
                 var cell = choice.closest('.col') || choice;
@@ -888,8 +964,23 @@
                 }
             });
 
-            group.classList.toggle('d-none', matches === 0);
+            item.classList.toggle('d-none', term !== '' && matches === 0);
+
+            if (!panel) {
+                return;
+            }
+
+            if (term !== '') {
+                // A search result the worker can't see is useless, so matches open for
+                // the duration. This is the filter's doing, not theirs, so it does not
+                // count as a manual toggle.
+                setServicePanelOpen(panel, matches > 0);
+            }
         });
+
+        if (term === '' && scope) {
+            refreshServiceCategories(scope);
+        }
     }
 
     // The collapse toggle doubles as the summary of what is ticked, so a collapsed
@@ -1287,7 +1378,7 @@
             }
 
             if (target && target.matches('[data-family-service-filter]')) {
-                filterServiceList(target);
+                filterServiceAccordion(target);
             }
 
             if (target && /\[(lastname|firstname)\]$/.test(target.name || '')) {
@@ -1334,6 +1425,7 @@
                     }
 
                     // "Keep" re-checks asynchronously, after the sync refresh below already ran.
+                    refreshServiceCategories(target.closest('[data-family-member-row]') || root);
                     refreshChoicesSummary(root);
                     renumberMembers(root);
                     scheduleSave(root);
@@ -1344,10 +1436,30 @@
                 refreshAgeEligibility(target.closest('[data-family-member-row]') || root);
             }
 
+            if (target && (target.matches(SECTOR_INPUT_SELECTOR) || target.matches(SERVICE_INPUT_SELECTOR))) {
+                refreshServiceCategories(target.closest('[data-family-member-row]') || root);
+            }
+
             refreshChoicesSummary(root);
-        renumberMembers(root);
+            renumberMembers(root);
             scheduleSave(root);
         });
+
+        // Clicking a category header is an explicit instruction, so that panel stops
+        // following the sector-and-tick rule and stays where the worker put it.
+        root.addEventListener('click', function (event) {
+            var header = event.target.closest('.accordion-button');
+
+            if (!header) {
+                return;
+            }
+
+            var panel = root.querySelector(header.getAttribute('data-bs-target') || '');
+
+            if (panel) {
+                panel.dataset.familyUserToggled = '1';
+            }
+        }, true);
 
         // Add / remove repeatable family members.
         root.addEventListener('click', function (event) {
@@ -1408,6 +1520,7 @@
                     clearMemberRows(root);
                     initOtherSelects(root);
                     refreshAllAgeEligibility(root);
+                    refreshAllServiceCategories(root);
                     refreshChoicesSummary(root);
                     renumberMembers(root);
 
@@ -1424,6 +1537,7 @@
             });
         }
         refreshAllAgeEligibility(root);
+        refreshAllServiceCategories(root);
         refreshChoicesSummary(root);
         renumberMembers(root);
 

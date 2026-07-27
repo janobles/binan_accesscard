@@ -251,7 +251,7 @@ $renderMemberRow = static function ($index, array $m = []) use (
                                     <?= $qrLocked ? 'readonly' : 'required' ?>>
                                 <?php /* Makes the async uniqueness check legible: spinner while checking,
                                          tick or cross once it lands. Driven by manage-family-modal.js. */ ?>
-                                <span class="input-group-text" data-family-qr-status aria-live="polite"></span>
+                                <span class="input-group-text d-none" data-family-qr-status aria-live="polite"></span>
                                 <div class="invalid-feedback" id="<?= esc($fieldPrefix, 'attr') ?>HeadQrFeedback" data-family-field-error></div>
                             </div>
                             <?php if ($qrLocked): ?>

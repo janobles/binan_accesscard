@@ -1118,3 +1118,8 @@
 .family-entry-form textarea {
     text-transform: uppercase;
 }
+
+/* The program filter is a search box, not a captured value. */
+.family-entry-form [data-family-service-filter] {
+    text-transform: none;
+}

@@ -382,6 +382,9 @@
         };
 
         status.innerHTML = icons[state] || '';
+        // With nothing to report the addon would render as an empty grey stub, so it
+        // only joins the input group while it has something to say.
+        status.classList.toggle('d-none', !icons[state]);
     }
 
     // ---- confirm dialog ----------------------------------------------------
@@ -1165,8 +1168,9 @@
     }
 
     function submitFamilyForm(root, form) {
-        form.classList.add('was-validated');
-
+        // Deliberately not was-validated: that also paints every untouched optional
+        // field green, which reads as "confirmed" on a box the worker never filled.
+        // setFieldError's .is-invalid toggle is the only signal we want.
         if (!validateHead(root)) {
             return;
         }

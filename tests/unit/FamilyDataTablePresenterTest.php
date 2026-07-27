@@ -25,6 +25,10 @@ final class FamilyDataTablePresenterTest extends CIUnitTestCase
     public function testRowShapesHeadScopeCells(): void
     {
         $presenter = new FamilyDataTablePresenter('admin/manage-family', 'Viewer');
+        // Deliberately mixed-case input: the presenter must render what it is given.
+        // Storage is uppercase in practice, but an uppercase fixture here could not tell
+        // pass-through apart from re-casing, so it would not catch a reintroduced
+        // mb_strtoupper.
         $row       = $presenter->row(
             ['memberID' => 5, 'firstname' => 'Ana', 'middlename' => 'Reyes', 'lastname' => 'Cruz', 'suffix' => '', 'address' => '123 St', 'birthday' => '1990-01-02', 'sectorID' => null],
             false,
@@ -32,7 +36,8 @@ final class FamilyDataTablePresenterTest extends CIUnitTestCase
         );
 
         $this->assertSame(['qr', 'name', 'sector', 'address', 'birthday', 'actions'], array_keys($row));
-        $this->assertStringContainsString('CRUZ, ANA R.', $row['name']);
+        $this->assertStringContainsString('Cruz, Ana R.', $row['name']);
+        $this->assertSame('123 St', $row['address']);
         $this->assertSame('1990-01-02', $row['birthday']);
         $this->assertStringContainsString('&mdash;', $row['qr']);
     }

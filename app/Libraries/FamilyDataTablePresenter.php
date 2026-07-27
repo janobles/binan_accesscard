@@ -32,10 +32,12 @@ class FamilyDataTablePresenter
         $headId = $allMembersScope ? (int) ($row['headID'] ?? $memberId) : $memberId;
         $name = $this->displayName($row);
         $relationship = trim((string) ($row['relationship'] ?? ''));
-        $nameHtml = '<span class="entity-title">' . esc(mb_strtoupper($name)) . '</span>';
+        // Names are stored uppercase, so show them as stored. Re-casing here would
+        // hide a casing bug rather than surface it.
+        $nameHtml = '<span class="entity-title">' . esc($name) . '</span>';
 
         if ($allMembersScope && $relationship !== '') {
-            $nameHtml .= '<small class="text-muted d-block">' . esc(mb_strtoupper($relationship)) . '</small>';
+            $nameHtml .= '<small class="text-muted d-block">' . esc($relationship) . '</small>';
         }
 
         $controlNo = (int) ($controlNumbers[$headId] ?? 0);
@@ -54,7 +56,7 @@ class FamilyDataTablePresenter
             'qr' => $this->qrCell($controlNo),
             'name' => $nameHtml,
             'sector' => esc(implode(', ', array_values(array_unique($sectors)))),
-            'address' => esc(mb_strtoupper((string) ($row['address'] ?? ''))),
+            'address' => esc((string) ($row['address'] ?? '')),
             'birthday' => $birthday === false ? '-' : date('Y-m-d', $birthday),
             'actions' => $this->actions($row, $headId, $name),
         ];

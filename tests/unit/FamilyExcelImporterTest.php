@@ -448,8 +448,8 @@ final class FamilyExcelImporterTest extends CIUnitTestCase
 
         $this->assertCount(1, $taken);
         $this->assertSame('blocking', $taken[0]['severity']);
-        $this->assertStringContainsString('Juan Dela Cruz', $taken[0]['message']);
-        $this->assertStringContainsString('Maria Santos', $taken[0]['message']);
+        $this->assertStringContainsString('JUAN DELA CRUZ', $taken[0]['message']);
+        $this->assertStringContainsString('MARIA SANTOS', $taken[0]['message']);
         $this->assertNotContains('DUP-EXISTS', $this->codes($result));
         $this->assertSame(0, $result['counts']['existing']);
     }

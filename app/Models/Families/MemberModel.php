@@ -7,6 +7,7 @@ use App\Models\Concerns\MemberQueryFilters;
 use App\Models\Concerns\NormalizesIds;
 use App\Models\Concerns\RecordStatus;
 use App\Models\Concerns\ResolvesSectorNames;
+use App\Support\MemberFieldNormalizer;
 use CodeIgniter\Model;
 
 /**
@@ -495,12 +496,7 @@ class MemberModel extends Model
 
         $rows = $builder->get()->getResultArray();
 
-        // Barangay is stored at the tail of the combined address; match it against the
-        // canonical list (longest first) so it prints on the QR card.
-        $barangays = \App\Support\FamilyProfilingFormV2::barangays();
-        usort($barangays, static fn (string $a, string $b): int => mb_strlen($b) <=> mb_strlen($a));
-
-        return array_map(static function (array $row) use ($barangays): array {
+        return array_map(static function (array $row): array {
             $name = trim(sprintf(
                 '%s, %s %s %s',
                 $row['lastname'] ?? '',
@@ -512,13 +508,11 @@ class MemberModel extends Model
             $barangay = trim((string) ($row['barangay'] ?? ''));
 
             if ($barangay === '') {
-                $address = trim((string) ($row['address'] ?? ''));
-                foreach ($barangays as $candidate) {
-                    if (str_ends_with($address, ', ' . $candidate) || strcasecmp($address, $candidate) === 0) {
-                        $barangay = $candidate;
-                        break;
-                    }
-                }
+                // Barangay lives at the tail of the combined address. Use the shared
+                // splitter rather than matching here: addresses are stored uppercase,
+                // and the local copy of this logic compared case-sensitively against
+                // the Title Case list, so the card printed a blank barangay.
+                $barangay = MemberFieldNormalizer::splitAddressBarangay($row['address'] ?? '')['barangay'];
             }
 
             return [

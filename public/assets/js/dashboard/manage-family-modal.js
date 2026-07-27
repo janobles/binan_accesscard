@@ -68,15 +68,14 @@
         return normalized === 'other' || normalized === 'others' || normalized === '__other__';
     }
 
+    // The "Other" freetext is typed by the worker, so it is stored uppercase like
+    // names and addresses. Values picked from a dropdown keep their stored casing.
     function cleanOtherValue(value) {
         return String(value || '')
             .replace(/[^\p{L}\p{N}\s.,'\-/&()]/gu, '')
             .replace(/\s+/g, ' ')
             .trim()
-            .toLowerCase()
-            .replace(/(^|[^\p{L}])(\p{L})/gu, function (match, boundary, letter) {
-                return boundary + letter.toUpperCase();
-            });
+            .toUpperCase();
     }
 
     function findOtherInput(select) {

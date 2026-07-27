@@ -60,6 +60,10 @@ canonical return (`FamilyExcelImporter:1107`), and is a dropdown list in the Exc
 - The Head/Members tab split (`family-modal.php:199-209`) hides the head while members are
   entered, which is why `:331-363` renders a read-only "Current Record Head" block
   duplicating all nine head fields. The tabs created the problem the summary patches.
+- That block is worse than a duplicate: its values are `.family-summary-value` divs, and
+  `familymodal.css:597-611` styles them with the **same rule as real inputs**. Read-only data
+  is dressed as editable fields, and it costs a full screen of scrolling before the member
+  list is reachable. Deleting the tabs removes the block's reason to exist.
 - Two steps is below the threshold where a wizard earns its cost. Step 2 needs step 1
   *visible*, which is exactly what a wizard prevents.
 - **Submit-hang:** Save is shown only on the Members tab (`js:1086`), so the form submits
@@ -332,11 +336,62 @@ worker sees. It is no longer load-bearing for the submit-hang; removing the tabs
 - Sector and service lists get a filter input.
 - No `.form-floating` — it fights the dense four-column grid.
 
-### Footer
+### Sector and service panels: flatten the nesting
 
+Today these are four containers deep: modal body → `.family-sector-service` card →
+`.family-option-box` (bordered, fixed `height: 15.6rem`, its own scrollbar) → the yellow
+`.family-suggested` panel, which scrolls *inside* that box and consumes most of the visible
+area. In practice about four checkboxes are visible at a time.
+
+- Drop `.family-option-box` as a bordered container. The section card is the container; the
+  list does not need a second border and its own scrollbar.
+- **Sectors** is a fixed list of 10. It needs no scroll region at all — render it as a
+  two-column `.form-check` grid (`col-6`), fully visible.
+- **Services** become a Bootstrap accordion, one `.accordion-item` per category, with no
+  `data-bs-parent` so several can stay open. Categories matching the ticked sectors
+  auto-expand; the rest stay collapsed but present.
+- Move `.family-suggested` out of the scroll region to a thin banner above the accordion, or
+  drop it once auto-expand does the same job more directly.
+
+**Services are deliberately not gated behind a sector tick.** Services are not a subset of
+sectors: the Financial Assistance, Social Welfare Programs, and Emergency / Disaster
+categories apply regardless of sector, and a person may have no sector at all. Hiding them
+until a sector is ticked would conceal programs a worker legitimately needs. The accordion
+gives the same "only what is relevant is expanded" compactness without hiding anything.
+
+### Footer and button colors
+
+The modal footer bypasses the `btn()` helper and hardcodes its own classes, which is why the
+colors disagree with the rest of the app. The standard lives in `app/Helpers/ui_helper.php:21-25`:
+
+```php
+'search' => 'btn btn-primary',   // blue
+'clear'  => 'btn btn-danger',    // red
+'add'    => 'btn btn-success',   // green
+'import' => 'btn btn-warning',   // yellow
+```
+
+Current mismatch: `family-modal.php:398` makes **Next `btn-success`**, the same green as Add
+Member, so two unrelated actions compete as the green one while Save is the only blue.
+
+Target mapping:
+
+| Button | Class | Reason |
+|---|---|---|
+| Save | `btn btn-primary` | The commit action. Blue is the primary per the standard |
+| Add Member | `btn btn-success` | Matches `add` in the standard |
+| Clear | `btn btn-danger` | Matches `clear`. Already correct |
+| Close | `btn btn-outline-secondary` | Dismissal, not destructive |
+
+`Previous`/`Next` disappear with the tabs, which removes the green-on-green clash outright.
 The six-button `.btn-group` (`:389-400`) splits into left (`Close`, `Clear`) and right
-(`Save`), dropping `Previous`/`Next` with the tabs. This also fixes the
-`btn-sm`-inside-default-group geometry break on the Print QR link.
+(`Save`), also fixing the `btn-sm`-inside-default-group geometry break on the Print QR link.
+
+**Close stays neutral, not yellow.** Yellow is `btn-warning`, which already means Import in
+this app, and warning-yellow reads as "this is risky" — the opposite of the intent, since
+closing is safe precisely because the draft is kept. To communicate that directly, add a
+small "Draft saved" indicator beside the footer, updated when `saveDraftNow()` fires
+(`js:617`). That states the guarantee instead of asking the worker to infer it from a color.
 
 ### Verification
 

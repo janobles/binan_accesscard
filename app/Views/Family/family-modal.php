@@ -201,7 +201,7 @@ $renderMemberEditor = static function ($index, array $m = []) use (
             'field' => $field,
             'value' => $val,
             // Members require the same personal fields as the head (Address/Barangay are
-            // head-only — members inherit them, so they are not part of this component).
+            // head-only, members inherit them, so they are not part of this component).
             'idPrefix' => $idPrefix,
             'required' => true,
         ]) ?>

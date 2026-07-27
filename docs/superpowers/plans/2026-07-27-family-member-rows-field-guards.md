@@ -4,14 +4,14 @@
 
 **Goal:** Make each family member a compact read-only row that expands to edit one at a time, and fix the four field guards (age display and non-destructive age eligibility, required relationship, "no middle name", contact-number format) on the family entry form.
 
-**Architecture:** The member card splits into a persistent *shell* (header, summary, actions) and a swappable *editor*. A row is either **open** — the full field set is mounted from a `<template>` — or **closed** — the editor is empty and the row's values ride along as `<input type="hidden">` elements with the same `name`s. Because the names are identical in both states, `new FormData(form)` and every existing `[name$="[key]"]` query keep working, and `FamilyController::store()/update()` need no change at all. Age thresholds stop being hardcoded in JS: `App\Support\FamilyAgeEligibility` exposes its bounds, the view stamps them on each age-restricted checkbox as `data-min-age` / `data-max-age`, and the JS reads the attributes.
+**Architecture:** The member card splits into a persistent *shell* (header, summary, actions) and a swappable *editor*. A row is either **open**, meaning the full field set is mounted from a `<template>`, or **closed**, meaning the editor is empty and the row's values ride along as `<input type="hidden">` elements with the same `name`s. Because the names are identical in both states, `new FormData(form)` and every existing `[name$="[key]"]` query keep working, and `FamilyController::store()/update()` need no change at all. Age thresholds stop being hardcoded in JS: `App\Support\FamilyAgeEligibility` exposes its bounds, the view stamps them on each age-restricted checkbox as `data-min-age` / `data-max-age`, and the JS reads the attributes.
 
 **Tech Stack:** CodeIgniter 4 views + helpers (PHP 8.2, typed signatures, no `declare(strict_types=1)`), vanilla ES5-style JS in `public/assets/js/dashboard/manage-family-modal.js` (no jQuery in this file), vendored Bootstrap 5.3.3, PHPUnit for the render/unit tests, Playwright MCP for UI verification.
 
 ## Global Constraints
 
 - **Branch 3 of** `docs/superpowers/specs/2026-07-27-family-entry-form-design.md`. Branches 1 (uppercase) and 2 (Bootstrap rework) already merged (PR #39, commit `0278ff1`); this plan starts from that state.
-- **No migrations, no schema change.** Dump stays **V18**. If any step turns out to need schema or seeded reference rows, stop and flag it — do not cut V19 silently.
+- **No migrations, no schema change.** Dump stays **V18**. If any step turns out to need schema or seeded reference rows, stop and flag it. Do not cut V19 silently.
 - **No jQuery in `manage-family-modal.js`.** It is vanilla `fetch` / `querySelector` throughout; keep it that way.
 - **Server stays authoritative.** `FamilyController::rulesForEntryType()`, `firstIncompleteMember()`, `hasMemberData()` and `FamilyAgeEligibility::selectionError()` keep their behavior. Client-side validation is UX only.
 - **The posted contract is unchanged:** `head_*` for the head, `members[i][key]` and `members[i][sector_ids][]` / `members[i][service_ids][]` for members, `members_meta_count`, and `_form_end` **must stay the last named field in the form**.
@@ -52,8 +52,8 @@ There is **no JS test harness in this repo**. JS behavior is verified with the P
 **Interfaces:**
 - Consumes: nothing from earlier tasks.
 - Produces:
-  - PHP closure `$renderMemberEditor(string|int $index, array $m = []): string` — the field grid, the relationship field, and the choices block for one member, with `__INDEX__` still substitutable.
-  - PHP closure `$renderMemberRow(string|int $index, array $m = [], bool $open = true): string` — the card shell; mounts the editor inline when `$open`, leaves `[data-family-member-editor]` empty when not.
+  - PHP closure `$renderMemberEditor(string|int $index, array $m = []): string`: the field grid, the relationship field, and the choices block for one member, with `__INDEX__` still substitutable.
+  - PHP closure `$renderMemberRow(string|int $index, array $m = [], bool $open = true): string`: the card shell; mounts the editor inline when `$open`, leaves `[data-family-member-editor]` empty when not.
   - DOM hooks: `[data-family-member-editor]` (mount point, one per row), `[data-family-member-editor-template]` (one per form), `[data-family-member-summary]` (empty in this task), `[data-family-member-toggle]` (button, wired in Task 2).
   - JS `buildMemberEditor(root, row)` → the mount element, or `null`.
   - JS `memberIndex(row)` → the row's numeric index as a string, or `null`.
@@ -93,7 +93,7 @@ Add to `tests/unit/FamilyModalViewTest.php`:
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `vendor/bin/phpunit --filter FamilyModalViewTest`
-Expected: FAIL — `data-family-member-editor-template` is not in the markup.
+Expected: FAIL, `data-family-member-editor-template` is not in the markup.
 
 - [ ] **Step 3: Split the row closure in the view**
 
@@ -290,8 +290,8 @@ git commit -m "refactor: split the member card into a shell and a mounted editor
 **Interfaces:**
 - Consumes: `$renderMemberEditor`, `$renderMemberRow(..., bool $open)`, `buildMemberEditor(root, row)`, `memberIndex(row)` from Task 1.
 - Produces:
-  - PHP closure `$renderMemberValues(string|int $index, array $m): string` — the hidden inputs for a closed row, including `data-label` / `data-sector-code` on sector ids so the summary can name them.
-  - JS `readMemberData(row)` → `{lastname, firstname, ..., sector_ids: [], service_ids: [], sector_labels: []}` — works whether the row is open or closed.
+  - PHP closure `$renderMemberValues(string|int $index, array $m): string`: the hidden inputs for a closed row, including `data-label` / `data-sector-code` on sector ids so the summary can name them.
+  - JS `readMemberData(row)` → `{lastname, firstname, ..., sector_ids: [], service_ids: [], sector_labels: []}`, which works whether the row is open or closed.
   - JS `collapseMemberRow(row)` / `expandMemberRow(root, row)`.
   - JS `renderMemberSummary(row)`.
   - JS `refreshAllChoicesSummaries(root)`.
@@ -346,7 +346,7 @@ Add to `tests/unit/FamilyModalViewTest.php`:
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `vendor/bin/phpunit --filter FamilyModalViewTest`
-Expected: FAIL — existing members still render open, so `data-family-member-open="0"` is absent.
+Expected: FAIL, existing members still render open, so `data-family-member-open="0"` is absent.
 
 - [ ] **Step 3: Render existing members closed**
 
@@ -387,7 +387,7 @@ $renderMemberValues = static function ($index, array $m) use ($sectorCatalog): s
 };
 ```
 
-Give `$renderMemberRow` access to it — add `$renderMemberValues` to its `use (...)` list, and change the values mount line to:
+Give `$renderMemberRow` access to it. Add `$renderMemberValues` to its `use (...)` list, and change the values mount line to:
 
 ```php
         <div data-family-member-values><?= $open ? '' : $renderMemberValues($index, $m) ?></div>
@@ -783,7 +783,7 @@ Replace `validateMembers` and `validateMemberContacts` (currently `:1156-1191`) 
     }
 ```
 
-`contactValueIsValid` does not exist yet — add it now beside `validateContact` (Task 6 replaces its body):
+`contactValueIsValid` does not exist yet, so add it now beside `validateContact` (Task 6 replaces its body):
 
 ```js
     // The value test on its own, so a closed row can be checked without a control.
@@ -1016,11 +1016,11 @@ Add to `tests/unit/FamilyModalViewTest.php`:
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `vendor/bin/phpunit --filter FamilyModalViewTest`
-Expected: FAIL — no `data-max-age` in the markup.
+Expected: FAIL, no `data-max-age` in the markup.
 
 - [ ] **Step 3: Emit the bounds from the view**
 
-At the top of `app/Views/Family/family-modal.php`, after the `extract(...)` line, add a small attribute helper. Reference the class fully qualified rather than adding a `use` statement — this file is an included view, and every other class reference in these views is already fully qualified:
+At the top of `app/Views/Family/family-modal.php`, after the `extract(...)` line, add a small attribute helper. Reference the class fully qualified rather than adding a `use` statement. This file is an included view, and every other class reference in these views is already fully qualified:
 
 ```php
 /** Renders the age bounds of an age-restricted choice as data attributes, or nothing. */
@@ -1036,13 +1036,13 @@ $ageBoundsAttrs = static function (?array $bounds): string {
 
 Add `$ageBoundsAttrs` to the `use (...)` list of `$renderSectorGrid` and `$renderServiceAccordion`.
 
-In `$renderSectorGrid`, extend the checkbox tag (currently `:47`) — append immediately before the `<?= in_array(...)` checked test:
+In `$renderSectorGrid`, extend the checkbox tag (currently `:47`), appending immediately before the `<?= in_array(...)` checked test:
 
 ```php
 <?= $ageBoundsAttrs(\App\Support\FamilyAgeEligibility::sectorAgeBounds((string) ($sector['shortcode'] ?? $sector['code'] ?? ''))) ?>
 ```
 
-In `$renderServiceAccordion`, extend the panel div (currently `:86`) — append after `data-service-category="..."`:
+In `$renderServiceAccordion`, extend the panel div (currently `:86`), appending after `data-service-category="..."`:
 
 ```php
 <?= $ageBoundsAttrs(\App\Support\FamilyAgeEligibility::serviceCategoryAgeBounds((string) $category)) ?>
@@ -1185,7 +1185,7 @@ Add to `tests/unit/FamilyModalViewTest.php`:
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `vendor/bin/phpunit --filter FamilyModalViewTest`
-Expected: FAIL — `data-family-age-note` is absent.
+Expected: FAIL, `data-family-age-note` is absent.
 
 - [ ] **Step 3: Render the note slot**
 
@@ -1367,7 +1367,7 @@ In `app/Views/Family/family-modal.php`, in `$renderMemberEditor`, add `required`
             <select id="<?= esc($idPrefix . 'Relationship', 'attr') ?>" class="form-select js-other-select" data-other-field="relationship<?= esc($i, 'attr') ?>" data-initial-value="<?= esc($val('relationship'), 'attr') ?>" name="<?= esc($field('relationship'), 'attr') ?>" aria-describedby="<?= esc($idPrefix . 'RelationshipFeedback', 'attr') ?>" required><?= $selectOptions($relationshipOptions, $val('relationship'), 'Select') ?></select>
 ```
 
-**Server side stays as it is.** `FamilyController` line 861 keeps `$this->nullableText($member['relationship'] ?? 'Member')`, and no validation rule is added: the Excel importer and older records legitimately arrive without a relationship, and rejecting them server-side is a separate decision with its own blast radius. This is a client-side guard on the entry form only — state that in the commit message.
+**Server side stays as it is.** `FamilyController` line 861 keeps `$this->nullableText($member['relationship'] ?? 'Member')`, and no validation rule is added: the Excel importer and older records legitimately arrive without a relationship, and rejecting them server-side is a separate decision with its own blast radius. This is a client-side guard on the entry form only. State that in the commit message.
 
 - [ ] **Step 4: Add the "No middle name" affordance and the contact pattern**
 
@@ -1480,7 +1480,7 @@ Add the middle-name toggle to the `change` handler in `initFamilyEntryModal`, di
 
 A disabled input posts nothing, and both `head_middlename` and `members[i][middlename]` are `permit_empty` on the server (`FamilyController:815,823`), so the value lands as null exactly as an empty box would.
 
-**One catch to handle:** `readMemberData` skips nothing by `disabled`, so a closed row would serialize the disabled middle name as `''` — which is what we want. But `collapseMemberRow` must not lose the checkbox state. Accept that: on re-expand the box is empty and the toggle is unchecked, which is honest (there is no stored "no middle name" flag, and the spec does not add a column). Note it in the commit message.
+**One catch to handle:** `readMemberData` skips nothing by `disabled`, so a closed row would serialize the disabled middle name as `''`, which is what we want. But `collapseMemberRow` must not lose the checkbox state. Accept that: on re-expand the box is empty and the toggle is unchecked, which is honest (there is no stored "no middle name" flag, and the spec does not add a column). Note it in the commit message.
 
 - [ ] **Step 7: Run the full suite**
 
@@ -1519,7 +1519,7 @@ git commit -m "feat: require relationship, add a no-middle-name toggle, widen th
 - [ ] **Step 1: Run the whole suite**
 
 Run: `vendor/bin/phpunit`
-Expected: PASS. Record the exact `Tests: N, Assertions: N` line — it goes in the PR body.
+Expected: PASS. Record the exact `Tests: N, Assertions: N` line, which goes in the PR body.
 
 - [ ] **Step 2: Confirm every route still resolves**
 
@@ -1576,7 +1576,7 @@ With Playwright: on a new record, fill the head, add two members, close the moda
 
 - [ ] **Step 7: Update the knowledge punch-list**
 
-Open `docs/knowledge/violations.md` and tick the items this branch resolved — the hardcoded age thresholds in JS, the missing member label association, the silent eligibility clearing, and the unlabelled relationship field, if they are listed. Append any new violation you **verified** while working (do not add speculative ones), following the file's existing format.
+Open `docs/knowledge/violations.md` and tick the items this branch resolved: the hardcoded age thresholds in JS, the missing member label association, the silent eligibility clearing, and the unlabelled relationship field, if they are listed. Append any new violation you **verified** while working (do not add speculative ones), following the file's existing format.
 
 - [ ] **Step 8: Commit and review**
 
@@ -1592,7 +1592,7 @@ Then follow `superpowers:receiving-code-review`: triage every finding against th
 
 ## Deferred with reasons (not in this plan)
 
-- **Server-side `required` on member relationship** — see Task 6 Step 3. The importer and older records legitimately lack it; tightening the server rule needs its own decision and an importer pass.
+- **Server-side `required` on member relationship**, see Task 6 Step 3. The importer and older records legitimately lack it; tightening the server rule needs its own decision and an importer pass.
 - **A stored "no middle name" flag.** The affordance is client-side only; adding a column would mean V19, which the spec rules out.
-- **Duplicate-person detection across control numbers** — out of scope per the spec.
-- **`Salary` storing bracket upper bounds** — reporting concern, not entry.
+- **Duplicate-person detection across control numbers**, out of scope per the spec.
+- **`Salary` storing bracket upper bounds**, a reporting concern, not entry.

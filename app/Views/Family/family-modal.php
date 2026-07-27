@@ -217,11 +217,44 @@ $renderMemberEditor = static function ($index, array $m = []) use (
 };
 
 /**
+ * The hidden inputs that stand in for a closed row's editor. Same names as the
+ * controls they replace, so FormData and every [name$="[key]"] lookup are unaffected.
+ * Sector ids carry their shortcode so the row summary can show badges without
+ * re-rendering the checkbox list.
+ */
+$renderMemberValues = static function ($index, array $m) use ($sectorCatalog): string {
+    $i = (string) $index;
+    $scalarKeys = ['lastname', 'firstname', 'middlename', 'suffix', 'birthday', 'sex',
+        'civilstatus', 'contactnumber', 'religion', 'education', 'job', 'salary', 'relationship'];
+    $codes = [];
+
+    foreach ($sectorCatalog as $sectorGroup) {
+        foreach (array_values((array) $sectorGroup) as $sector) {
+            $sector = (array) $sector;
+            $codes[(string) ($sector['sectorID'] ?? $sector['id'] ?? '')] = (string) ($sector['shortcode'] ?? $sector['code'] ?? '');
+        }
+    }
+
+    ob_start();
+    foreach ($scalarKeys as $key): ?>
+        <input type="hidden" name="<?= esc('members[' . $i . '][' . $key . ']', 'attr') ?>" value="<?= esc((string) ($m[$key] ?? ''), 'attr') ?>">
+    <?php endforeach; ?>
+    <?php foreach (array_map('strval', (array) ($m['sector_ids'] ?? [])) as $sectorId): ?>
+        <input type="hidden" name="<?= esc('members[' . $i . '][sector_ids][]', 'attr') ?>" value="<?= esc($sectorId, 'attr') ?>" data-sector-code="<?= esc($codes[$sectorId] ?? '', 'attr') ?>">
+    <?php endforeach; ?>
+    <?php foreach (array_map('strval', (array) ($m['service_ids'] ?? [])) as $serviceId): ?>
+        <input type="hidden" name="<?= esc('members[' . $i . '][service_ids][]', 'attr') ?>" value="<?= esc($serviceId, 'attr') ?>">
+    <?php endforeach; ?>
+    <?php
+    return (string) ob_get_clean();
+};
+
+/**
  * The persistent shell of one member row: header, summary line, and the two mount
  * points. The editor is rendered inline when the row opens with the form; a closed
  * row leaves the mount empty and carries its values as hidden inputs instead.
  */
-$renderMemberRow = static function ($index, array $m = [], bool $open = true) use ($renderMemberEditor): string {
+$renderMemberRow = static function ($index, array $m = [], bool $open = true) use ($renderMemberEditor, $renderMemberValues): string {
     ob_start();
     ?>
     <div class="family-person-card" data-family-member-row data-family-member-open="<?= $open ? '1' : '0' ?>">
@@ -248,7 +281,7 @@ $renderMemberRow = static function ($index, array $m = [], bool $open = true) us
                  still says who it is. */ ?>
         <div class="family-member-summary d-none" data-family-member-summary></div>
         <div data-family-member-editor><?= $open ? $renderMemberEditor($index, $m) : '' ?></div>
-        <div data-family-member-values></div>
+        <div data-family-member-values><?= $open ? '' : $renderMemberValues($index, $m) ?></div>
     </div>
     <?php
     return (string) ob_get_clean();
@@ -391,7 +424,7 @@ $renderMemberRow = static function ($index, array $m = [], bool $open = true) us
 
                     <div data-family-members>
                         <?php foreach (array_values($existingMembers) as $i => $member): ?>
-                            <?= $renderMemberRow($i, (array) $member) ?>
+                            <?= $renderMemberRow($i, (array) $member, false) ?>
                         <?php endforeach; ?>
                     </div>
 

@@ -187,6 +187,47 @@ final class FamilyModalViewTest extends CIUnitTestCase
         $this->assertStringContainsString('members[__INDEX__][sector_ids][]', $html);
     }
 
+    public function testExistingMembersRenderClosedWithHiddenValues(): void
+    {
+        $html = $this->renderDecoded([
+            'modalMode' => 'update',
+            'headId' => 42,
+            'existingMembers' => [[
+                'lastname' => 'DELA CRUZ',
+                'firstname' => 'JUAN',
+                'birthday' => '1960-01-02',
+                'relationship' => 'Son',
+                'sector_ids' => [1],
+                'service_ids' => [5],
+            ]],
+        ]);
+
+        // Closed: no editable control for the member, values ride as hidden inputs.
+        $this->assertStringContainsString('data-family-member-open="0"', $html);
+        $this->assertStringContainsString('<input type="hidden" name="members[0][lastname]" value="DELA CRUZ"', $html);
+        $this->assertStringContainsString('name="members[0][sector_ids][]" value="1"', $html);
+        $this->assertStringContainsString('name="members[0][service_ids][]" value="5"', $html);
+        $this->assertDoesNotMatchRegularExpression(
+            '/<select[^>]+name="members\[0\]\[civilstatus\]"/',
+            $html,
+            'a closed row must not render editable controls'
+        );
+    }
+
+    public function testClosedRowSectorValuesCarryTheirLabelForTheSummary(): void
+    {
+        $html = $this->renderDecoded([
+            'modalMode' => 'update',
+            'headId' => 42,
+            'existingMembers' => [['lastname' => 'DELA CRUZ', 'sector_ids' => [1]]],
+        ]);
+
+        $this->assertMatchesRegularExpression(
+            '/name="members\[0\]\[sector_ids\]\[\]" value="1"[^>]*data-sector-code="SC"/',
+            $html
+        );
+    }
+
     public function testServicesRenderAsAnAlwaysOpenAccordionPerCategory(): void
     {
         $html = $this->renderDecoded();

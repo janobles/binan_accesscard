@@ -631,6 +631,29 @@
     margin-top: 0.2rem;
 }
 
+/* A closed member row reads as one line of text, not a form. */
+.family-member-summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem 0.6rem;
+    color: #062c57;
+    font-size: 0.84rem;
+}
+
+.family-member-summary-name {
+    font-weight: 700;
+}
+
+.family-member-summary-meta {
+    color: #5b6b80;
+}
+
+.family-member-summary-badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
 /* A long accordion must not outgrow the modal. */
 .family-entry-form .accordion-body {
     max-height: 15rem;

@@ -233,7 +233,7 @@
 
         refreshAllAgeEligibility(root);
         refreshAllServiceCategories(root);
-        refreshChoicesSummary(root);
+        refreshAllChoicesSummaries(root);
         renumberMembers(root);
 
         // The swap rewrites who holds the QR card, so put the result in front of the
@@ -279,6 +279,13 @@
         }
     }
 
+    // The value test on its own, so a closed row can be checked without a control.
+    function contactValueIsValid(value) {
+        var digits = String(value || '').trim();
+
+        return digits === '' || digits.length === 11;
+    }
+
     function validateContact(el) {
         if (!el) {
             return true;
@@ -286,7 +293,7 @@
 
         var value = String(el.value || '').trim();
 
-        if (value !== '' && value.length !== 11) {
+        if (!contactValueIsValid(value)) {
             setFieldError(el, 'Contact number must be exactly 11 digits.');
 
             return false;
@@ -572,6 +579,194 @@
         });
     }
 
+    // One reader for both row states. An open row is read from its controls, a closed
+    // row from the hidden inputs that replaced them; the names are the same either way.
+    function readMemberData(row) {
+        var data = { sector_ids: [], service_ids: [], sector_labels: [] };
+
+        Array.from(row.querySelectorAll('input, select')).forEach(function (field) {
+            var match = /members\[\d+\]\[([a-z_]+)\](\[\])?$/.exec(field.name || '');
+
+            if (!match) {
+                return;
+            }
+
+            var key = match[1];
+
+            if (key === 'sector_ids' || key === 'service_ids') {
+                if (field.type === 'hidden' || field.checked) {
+                    data[key].push(field.value);
+
+                    if (key === 'sector_ids') {
+                        data.sector_labels.push(String(field.dataset.sectorCode || field.dataset.label || '').trim());
+                    }
+                }
+
+                return;
+            }
+
+            data[key] = field.classList.contains('js-other-select') ? selectedFieldValue(field) : field.value;
+        });
+
+        return data;
+    }
+
+    function writeMemberData(row, data) {
+        Object.keys(data).forEach(function (key) {
+            if (key === 'sector_ids' || key === 'service_ids') {
+                checkBoxes(row, row.dataset.memberFieldPrefix + '[' + key + '][]', data[key]);
+
+                return;
+            }
+
+            if (key === 'sector_labels') {
+                return;
+            }
+
+            var field = row.querySelector('[name="' + row.dataset.memberFieldPrefix + '[' + key + ']"]');
+
+            if (!field) {
+                return;
+            }
+
+            if (field.classList.contains('js-other-select')) {
+                setSelectValueWithOther(field, data[key]);
+            } else {
+                field.value = data[key];
+            }
+        });
+    }
+
+    function hiddenInput(name, value, sectorCode) {
+        var input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = name;
+        input.value = value;
+
+        if (sectorCode) {
+            input.dataset.sectorCode = sectorCode;
+        }
+
+        return input;
+    }
+
+    var MEMBER_VALUE_KEYS = ['lastname', 'firstname', 'middlename', 'suffix', 'birthday', 'sex',
+        'civilstatus', 'contactnumber', 'religion', 'education', 'job', 'salary', 'relationship'];
+
+    // Closed rows read as text, so a household of six is a list instead of six full
+    // forms. The values move into hidden inputs under the same names, which is what
+    // keeps FormData and the server contract unchanged.
+    function collapseMemberRow(row) {
+        var editor = row.querySelector('[data-family-member-editor]');
+        var values = row.querySelector('[data-family-member-values]');
+
+        if (!editor || !values || row.dataset.familyMemberOpen === '0') {
+            return;
+        }
+
+        var data = readMemberData(row);
+        var prefix = row.dataset.memberFieldPrefix;
+
+        values.innerHTML = '';
+
+        MEMBER_VALUE_KEYS.forEach(function (key) {
+            values.appendChild(hiddenInput(prefix + '[' + key + ']', data[key] || ''));
+        });
+
+        data.sector_ids.forEach(function (id, position) {
+            values.appendChild(hiddenInput(prefix + '[sector_ids][]', id, data.sector_labels[position]));
+        });
+
+        data.service_ids.forEach(function (id) {
+            values.appendChild(hiddenInput(prefix + '[service_ids][]', id));
+        });
+
+        editor.innerHTML = '';
+        row.dataset.familyMemberOpen = '0';
+        setMemberToggleState(row, false);
+        renderMemberSummary(row);
+    }
+
+    function expandMemberRow(root, row) {
+        if (!row || row.dataset.familyMemberOpen === '1') {
+            return;
+        }
+
+        // Read before mounting: the editor replaces the hidden inputs these come from.
+        var data = readMemberData(row);
+
+        if (!buildMemberEditor(root, row)) {
+            return;
+        }
+
+        row.dataset.familyMemberOpen = '1';
+        writeMemberData(row, data);
+        setMemberToggleState(row, true);
+        renderMemberSummary(row);
+        refreshAgeEligibility(row);
+        refreshServiceCategories(row);
+        refreshChoicesSummary(row);
+    }
+
+    function setMemberToggleState(row, open) {
+        var toggle = row.querySelector('[data-family-member-toggle]');
+        var summary = row.querySelector('[data-family-member-summary]');
+
+        if (toggle) {
+            toggle.textContent = open ? 'Done' : 'Edit';
+            toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        }
+
+        setHidden(summary, open);
+    }
+
+    // The closed row has to say who it is: name, relationship, age, and the sector
+    // codes, which is everything the worker scans a household list for.
+    function renderMemberSummary(row) {
+        var target = row.querySelector('[data-family-member-summary]');
+
+        if (!target) {
+            return;
+        }
+
+        var data = readMemberData(row);
+        var middle = String(data.middlename || '').trim();
+        var given = [String(data.firstname || '').trim(), middle !== '' ? middle.charAt(0) + '.' : '', String(data.suffix || '').trim()]
+            .filter(Boolean).join(' ');
+        var last = String(data.lastname || '').trim();
+        var name = last !== '' && given !== '' ? last + ', ' + given : (last || given);
+        var age = completedAge(data.birthday);
+        var parts = [String(data.relationship || '').trim(), age === null ? '' : age + ' yrs'].filter(Boolean);
+
+        target.innerHTML = '';
+
+        var nameEl = document.createElement('span');
+        nameEl.className = 'family-member-summary-name';
+        nameEl.textContent = name !== '' ? name : 'Unnamed member';
+        target.appendChild(nameEl);
+
+        if (parts.length) {
+            var meta = document.createElement('span');
+            meta.className = 'family-member-summary-meta';
+            meta.textContent = parts.join(' · ');
+            target.appendChild(meta);
+        }
+
+        data.sector_labels.filter(Boolean).forEach(function (code) {
+            var badge = document.createElement('span');
+            badge.className = 'badge text-bg-light family-member-summary-badge';
+            badge.textContent = code;
+            target.appendChild(badge);
+        });
+
+        if (data.service_ids.length) {
+            var services = document.createElement('span');
+            services.className = 'family-member-summary-meta';
+            services.textContent = data.service_ids.length + ' program' + (data.service_ids.length === 1 ? '' : 's');
+            target.appendChild(services);
+        }
+    }
+
     function snapshotForm(form) {
         var head = {};
 
@@ -580,27 +775,9 @@
         });
 
         var members = Array.from(form.querySelectorAll('[data-family-member-row]')).map(function (row) {
-            var data = { sector_ids: [], service_ids: [] };
+            var data = readMemberData(row);
 
-            Array.from(row.querySelectorAll('input, select')).forEach(function (field) {
-                var match = /members\[\d+\]\[([a-z_]+)\](\[\])?$/.exec(field.name || '');
-
-                if (!match) {
-                    return;
-                }
-
-                var key = match[1];
-
-                if (key === 'sector_ids' || key === 'service_ids') {
-                    if (field.checked) {
-                        data[key].push(field.value);
-                    }
-
-                    return;
-                }
-
-                data[key] = field.classList.contains('js-other-select') ? selectedFieldValue(field) : field.value;
-            });
+            delete data.sector_labels;
 
             return data;
         });
@@ -714,7 +891,7 @@
         });
         refreshAllAgeEligibility(root);
         refreshAllServiceCategories(root);
-        refreshChoicesSummary(root);
+        refreshAllChoicesSummaries(root);
         renumberMembers(root);
     }
 
@@ -794,6 +971,13 @@
             : 'input[name="sector_ids[]"], input[name="service_ids[]"]';
 
         scopeEl.querySelectorAll(selector).forEach(function (input) {
+            // A closed row carries its ticks as hidden inputs under the same names.
+            // Disabling one would drop it from the POST, so eligibility only ever
+            // touches a real checkbox the worker can see.
+            if (input.type !== 'checkbox') {
+                return;
+            }
+
             var group = '';
 
             if (input.matches(SECTOR_INPUT_SELECTOR)) {
@@ -959,17 +1143,21 @@
 
     // The collapse toggle doubles as the summary of what is ticked, so a collapsed
     // block (edit mode) still says what this person is categorised as.
-    function refreshChoicesSummary(root) {
-        var target = root.querySelector('[data-family-choices-summary]');
+    // Scoped, so a member row summarises its own ticks instead of the head's.
+    function refreshChoicesSummary(scopeEl) {
+        var target = scopeEl.querySelector('[data-family-choices-summary]');
 
         if (!target) {
             return;
         }
 
-        var codes = Array.from(root.querySelectorAll('input[name="sector_ids[]"]:checked')).map(function (input) {
+        var row = scopeEl.matches && scopeEl.matches('[data-family-member-row]') ? scopeEl : null;
+        var sectorSelector = row ? 'input[name$="[sector_ids][]"]:checked' : 'input[name="sector_ids[]"]:checked';
+        var serviceSelector = row ? 'input[name$="[service_ids][]"]:checked' : 'input[name="service_ids[]"]:checked';
+        var codes = Array.from(scopeEl.querySelectorAll(sectorSelector)).map(function (input) {
             return String(input.dataset.sectorCode || input.dataset.label || '').trim();
         }).filter(Boolean);
-        var services = root.querySelectorAll('input[name="service_ids[]"]:checked').length;
+        var services = scopeEl.querySelectorAll(serviceSelector).length;
 
         if (codes.length === 0 && services === 0) {
             target.textContent = 'Nothing selected yet';
@@ -978,6 +1166,14 @@
 
         target.textContent = 'Sectors: ' + (codes.length ? codes.join(', ') : 'none')
             + ' (' + services + ' program' + (services === 1 ? '' : 's') + ')';
+    }
+
+    function refreshAllChoicesSummaries(root) {
+        refreshChoicesSummary(root);
+        root.querySelectorAll('[data-family-member-row]').forEach(function (row) {
+            refreshChoicesSummary(row);
+            renderMemberSummary(row);
+        });
     }
 
     // ---- head validation ---------------------------------------------------
@@ -1035,10 +1231,12 @@
 
     // Mounts the field set into a row's editor slot. The template still carries the
     // __INDEX__ placeholder, so one replace covers both the posted names and the ids
-    // the labels point at.
+    // the labels point at. A mounted editor and the hidden values are mutually
+    // exclusive: they share field names, so leaving both would post each key twice.
     function buildMemberEditor(root, row) {
         var template = root.querySelector('[data-family-member-editor-template]');
         var mount = row ? row.querySelector('[data-family-member-editor]') : null;
+        var values = row ? row.querySelector('[data-family-member-values]') : null;
         var index = memberIndex(row);
 
         if (!template || !mount || index === null) {
@@ -1046,6 +1244,11 @@
         }
 
         mount.innerHTML = (template.innerHTML || '').replace(/__INDEX__/g, index).trim();
+
+        if (values) {
+            values.innerHTML = '';
+        }
+
         initOtherSelects(mount);
 
         return mount;
@@ -1171,49 +1374,70 @@
     // an incomplete one. The server keeps its own copy and stays authoritative.
     var MEMBER_REQUIRED_FIELDS = ['birthday', 'sex', 'civilstatus', 'education', 'job', 'salary'];
 
-    function memberHasData(row) {
-        return ['lastname', 'firstname'].some(function (key) {
-            var field = row.querySelector('[name$="[' + key + ']"]');
-
-            return field && String(field.value || '').trim() !== '';
-        });
+    function memberField(row, key) {
+        return row.querySelector('[name="' + row.dataset.memberFieldPrefix + '[' + key + ']"]');
     }
 
-    function validateMembers(form) {
-        var firstInvalid = null;
+    function validateMembers(root, form) {
+        var first = null;
 
         Array.from(form.querySelectorAll('[data-family-member-row]')).forEach(function (row) {
-            var named = memberHasData(row);
+            var data = readMemberData(row);
+            var named = ['lastname', 'firstname'].some(function (key) {
+                return String(data[key] || '').trim() !== '';
+            });
 
             MEMBER_REQUIRED_FIELDS.forEach(function (key) {
-                var field = row.querySelector('[name$="[' + key + ']"]');
+                var empty = named && String(data[key] || '').trim() === '';
 
-                if (!field) {
-                    return;
+                if (row.dataset.familyMemberOpen === '1') {
+                    setFieldError(memberField(row, key), empty ? 'This field is required.' : '');
                 }
 
-                var empty = named && String(field.value || '').trim() === '';
-                setFieldError(field, empty ? 'This field is required.' : '');
-
-                if (empty && !firstInvalid) {
-                    firstInvalid = field;
+                if (empty && !first) {
+                    first = { row: row, key: key };
                 }
             });
         });
 
-        return firstInvalid;
+        if (!first) {
+            return null;
+        }
+
+        // A complaint about a field the worker cannot see is useless, so the row opens.
+        expandMemberRow(root, first.row);
+
+        var field = memberField(first.row, first.key);
+        setFieldError(field, 'This field is required.');
+
+        return field;
     }
 
-    function validateMemberContacts(form) {
-        var firstInvalid = null;
+    function validateMemberContacts(root, form) {
+        var firstRow = null;
 
-        Array.from(form.querySelectorAll('[name$="[contactnumber]"]')).forEach(function (field) {
-            if (!validateContact(field) && !firstInvalid) {
-                firstInvalid = field;
+        Array.from(form.querySelectorAll('[data-family-member-row]')).forEach(function (row) {
+            var value = String(readMemberData(row).contactnumber || '').trim();
+
+            if (row.dataset.familyMemberOpen === '1') {
+                validateContact(memberField(row, 'contactnumber'));
+            }
+
+            if (!contactValueIsValid(value) && !firstRow) {
+                firstRow = row;
             }
         });
 
-        return firstInvalid;
+        if (!firstRow) {
+            return null;
+        }
+
+        expandMemberRow(root, firstRow);
+
+        var field = memberField(firstRow, 'contactnumber');
+        validateContact(field);
+
+        return field;
     }
 
     function submitFamilyForm(root, form) {
@@ -1224,7 +1448,7 @@
             return;
         }
 
-        var badMember = validateMembers(form) || validateMemberContacts(form);
+        var badMember = validateMembers(root, form) || validateMemberContacts(root, form);
 
         if (badMember) {
             badMember.focus();
@@ -1353,6 +1577,9 @@
             if (!row.dataset.memberFieldPrefix) {
                 row.dataset.memberFieldPrefix = 'members[' + index + ']';
             }
+
+            setMemberToggleState(row, row.dataset.familyMemberOpen === '1');
+            renderMemberSummary(row);
         });
 
         initOtherSelects(root);
@@ -1426,7 +1653,7 @@
 
                     // "Keep" re-checks asynchronously, after the sync refresh below already ran.
                     refreshServiceCategories(target.closest('[data-family-member-row]') || root);
-                    refreshChoicesSummary(root);
+                    refreshAllChoicesSummaries(root);
                     renumberMembers(root);
                     scheduleSave(root);
                 });
@@ -1440,7 +1667,7 @@
                 refreshServiceCategories(target.closest('[data-family-member-row]') || root);
             }
 
-            refreshChoicesSummary(root);
+            refreshAllChoicesSummaries(root);
             renumberMembers(root);
             scheduleSave(root);
         });
@@ -1470,6 +1697,25 @@
 
         // Add / remove repeatable family members.
         root.addEventListener('click', function (event) {
+            var toggleButton = event.target.closest('[data-family-member-toggle]');
+
+            if (toggleButton) {
+                event.preventDefault();
+                var toggleRow = toggleButton.closest('[data-family-member-row]');
+
+                if (toggleRow) {
+                    if (toggleRow.dataset.familyMemberOpen === '1') {
+                        collapseMemberRow(toggleRow);
+                    } else {
+                        expandMemberRow(root, toggleRow);
+                    }
+
+                    scheduleSave(root);
+                }
+
+                return;
+            }
+
             if (event.target.closest('[data-family-add-member]')) {
                 event.preventDefault();
                 addMemberRow(root);
@@ -1515,6 +1761,7 @@
                         return;
                     }
 
+                    expandMemberRow(root, headRow);
                     promoteMemberToHead(root, headRow);
                     scheduleSave(root);
                 });
@@ -1528,7 +1775,7 @@
                     initOtherSelects(root);
                     refreshAllAgeEligibility(root);
                     refreshAllServiceCategories(root);
-                    refreshChoicesSummary(root);
+                    refreshAllChoicesSummaries(root);
                     renumberMembers(root);
 
                     if (isCreateForm(root)) {
@@ -1545,7 +1792,7 @@
         }
         refreshAllAgeEligibility(root);
         refreshAllServiceCategories(root);
-        refreshChoicesSummary(root);
+        refreshAllChoicesSummaries(root);
         renumberMembers(root);
 
         // Restore-on-reopen prompt (create mode only).

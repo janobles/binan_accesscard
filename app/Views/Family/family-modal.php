@@ -207,7 +207,7 @@ $renderMemberEditor = static function ($index, array $m = []) use (
         ]) ?>
         <div class="col-12 col-md-6 col-xl-3">
             <label class="form-label" for="<?= esc($idPrefix . 'Relationship', 'attr') ?>">Relationship</label>
-            <select id="<?= esc($idPrefix . 'Relationship', 'attr') ?>" class="form-select js-other-select" data-other-field="relationship<?= esc($i, 'attr') ?>" data-initial-value="<?= esc($val('relationship'), 'attr') ?>" name="<?= esc($field('relationship'), 'attr') ?>" aria-describedby="<?= esc($idPrefix . 'RelationshipFeedback', 'attr') ?>"><?= $selectOptions($relationshipOptions, $val('relationship'), 'Select') ?></select>
+            <select id="<?= esc($idPrefix . 'Relationship', 'attr') ?>" class="form-select js-other-select" data-other-field="relationship<?= esc($i, 'attr') ?>" data-initial-value="<?= esc($val('relationship'), 'attr') ?>" name="<?= esc($field('relationship'), 'attr') ?>" aria-describedby="<?= esc($idPrefix . 'RelationshipFeedback', 'attr') ?>" required><?= $selectOptions($relationshipOptions, $val('relationship'), 'Select') ?></select>
             <input class="form-control mt-2 js-other-input d-none" data-other-for="relationship<?= esc($i, 'attr') ?>" placeholder="Enter relationship" aria-label="Other relationship">
             <div class="invalid-feedback" id="<?= esc($idPrefix . 'RelationshipFeedback', 'attr') ?>" data-family-field-error></div>
         </div>

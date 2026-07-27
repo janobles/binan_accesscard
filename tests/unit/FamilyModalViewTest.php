@@ -161,6 +161,33 @@ final class FamilyModalViewTest extends CIUnitTestCase
         return html_entity_decode($this->render($data), ENT_QUOTES | ENT_HTML5);
     }
 
+    public function testRelationshipIsRequired(): void
+    {
+        $html = $this->renderDecoded();
+
+        $this->assertMatchesRegularExpression(
+            '/<select[^>]+name="members\[__INDEX__\]\[relationship\]"[^>]*\srequired/',
+            $html
+        );
+    }
+
+    public function testMiddleNameOffersANoMiddleNameCheckbox(): void
+    {
+        $html = $this->render();
+
+        $this->assertStringContainsString('data-family-no-middlename', $html);
+        $this->assertMatchesRegularExpression('/<label class="form-check-label"[^>]*>No middle name<\/label>/', $html);
+    }
+
+    public function testContactNumberAcceptsMobileOrBinanLandline(): void
+    {
+        // HTML pattern is implicitly anchored, so the attribute carries no ^ or $.
+        $html = $this->renderDecoded();
+
+        $this->assertStringContainsString('pattern="09\d{9}|(049)?\d{7,8}"', $html);
+        $this->assertMatchesRegularExpression('/name="head_contactnumber"[^>]+inputmode="numeric"/', $html);
+    }
+
     public function testBirthdayCarriesAnAgeNoteSlot(): void
     {
         $html = $this->render();

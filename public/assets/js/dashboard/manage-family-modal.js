@@ -271,10 +271,16 @@
         return el && (el.name === 'head_contactnumber' || /\[contactnumber\]$/.test(el.name || ''));
     }
 
+    // An 11-digit mobile (09XXXXXXXXX) or a Binan landline (7 to 8 digits, with the
+    // 049 area code optional). The looser rule is deliberate: a mobile-only pattern
+    // would block an edit to an older record whose landline nobody touched.
+    var CONTACT_PATTERN = /^(09\d{9}|(049)?\d{7,8})$/;
+    var CONTACT_MESSAGE = 'Enter an 11-digit mobile number (09XXXXXXXXX) or a Binan landline (7 to 8 digits, optional 049 prefix).';
+
     function enforceContactDigits(el) {
         el.value = String(el.value || '').replace(/[^0-9]/g, '').slice(0, 11);
 
-        if (el.value === '' || el.value.length === 11) {
+        if (contactValueIsValid(el.value)) {
             setFieldError(el, '');
         }
     }
@@ -283,7 +289,7 @@
     function contactValueIsValid(value) {
         var digits = String(value || '').trim();
 
-        return digits === '' || digits.length === 11;
+        return digits === '' || CONTACT_PATTERN.test(digits);
     }
 
     function validateContact(el) {
@@ -291,10 +297,8 @@
             return true;
         }
 
-        var value = String(el.value || '').trim();
-
-        if (!contactValueIsValid(value)) {
-            setFieldError(el, 'Contact number must be exactly 11 digits.');
+        if (!contactValueIsValid(el.value)) {
+            setFieldError(el, CONTACT_MESSAGE);
 
             return false;
         }
@@ -1422,6 +1426,12 @@
     // an incomplete one. The server keeps its own copy and stays authoritative.
     var MEMBER_REQUIRED_FIELDS = ['birthday', 'sex', 'civilstatus', 'education', 'job', 'salary'];
 
+    // Relationship is required on this form but NOT server-side: the Excel importer and
+    // older records legitimately arrive without one, so the server keeps defaulting it
+    // rather than rejecting them. Held apart from the list above so that stays an
+    // honest mirror of firstIncompleteMember().
+    var MEMBER_CLIENT_REQUIRED_FIELDS = MEMBER_REQUIRED_FIELDS.concat(['relationship']);
+
     function memberField(row, key) {
         return row.querySelector('[name="' + row.dataset.memberFieldPrefix + '[' + key + ']"]');
     }
@@ -1435,7 +1445,7 @@
                 return String(data[key] || '').trim() !== '';
             });
 
-            MEMBER_REQUIRED_FIELDS.forEach(function (key) {
+            MEMBER_CLIENT_REQUIRED_FIELDS.forEach(function (key) {
                 var empty = named && String(data[key] || '').trim() === '';
 
                 if (row.dataset.familyMemberOpen === '1') {
@@ -1690,6 +1700,23 @@
 
             if (target && target.matches('.js-other-select')) {
                 syncOtherControl(target);
+            }
+
+            // Blank is a real answer for a middle name, so it gets said outright
+            // instead of being typed as a placeholder. A disabled input posts
+            // nothing, which is what an empty box would have posted anyway.
+            if (target && target.matches('[data-family-no-middlename]')) {
+                var middleColumn = target.closest('[class*="col-"]');
+                var middleName = middleColumn ? middleColumn.querySelector('input[name$="middlename"]') : null;
+
+                if (middleName) {
+                    middleName.disabled = target.checked;
+
+                    if (target.checked) {
+                        middleName.value = '';
+                        setFieldError(middleName, '');
+                    }
+                }
             }
 
             // Archived (grandfather) un-tick warning.

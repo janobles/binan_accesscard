@@ -48,6 +48,20 @@ final class FamilyAgeEligibilityTest extends CIUnitTestCase
         $this->assertNull($this->error('not-a-date', [1, 4], [28, 44]));
     }
 
+    public function testSectorAgeBoundsAreExposedForTheClient(): void
+    {
+        $this->assertSame(['min' => null, 'max' => 17], FamilyAgeEligibility::sectorAgeBounds('B'));
+        $this->assertSame(['min' => 60, 'max' => null], FamilyAgeEligibility::sectorAgeBounds('sc'));
+        $this->assertNull(FamilyAgeEligibility::sectorAgeBounds('PWD'));
+    }
+
+    public function testServiceCategoryAgeBoundsAreExposedForTheClient(): void
+    {
+        $this->assertSame(['min' => null, 'max' => 17], FamilyAgeEligibility::serviceCategoryAgeBounds('Bata (Children)'));
+        $this->assertSame(['min' => 60, 'max' => null], FamilyAgeEligibility::serviceCategoryAgeBounds('senior citizen'));
+        $this->assertNull(FamilyAgeEligibility::serviceCategoryAgeBounds('Financial Assistance Programs'));
+    }
+
     private function error(string $birthday, array $sectorIds, array $serviceIds): ?string
     {
         return FamilyAgeEligibility::selectionError(

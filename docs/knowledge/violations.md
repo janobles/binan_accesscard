@@ -58,6 +58,12 @@ unchecked item was already moved to issue #9 (UX decision, not code mess).
   *(Fixed: members without a sector selection now persist an empty selection;
   age eligibility validation change.)*
 
+- [ ] 🟡 Minor: `app/Views/Scanner/scan.php:52,55`: inline `style="..."` on the
+  QR image and the headline, which is what fails `ScanViewTest::testNoInlineStyles`
+  (red on `main` since before feat/family-member-rows, verified by stashing the
+  branch). Move both to `public/css/scanner-scan.css`, which the scanner manifest
+  already loads.
+
 Exempt (checked, not violations): `app/Views/errors/html/*` (framework error
 pages, standalone by design), `app/Views/Scanner/pdf/report.php` (PDF
 rendering needs inline styles), layout shells + `Auth/login.php` (standalone

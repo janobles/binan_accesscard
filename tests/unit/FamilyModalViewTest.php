@@ -161,6 +161,128 @@ final class FamilyModalViewTest extends CIUnitTestCase
         return html_entity_decode($this->render($data), ENT_QUOTES | ENT_HTML5);
     }
 
+    public function testRelationshipIsRequired(): void
+    {
+        $html = $this->renderDecoded();
+
+        $this->assertMatchesRegularExpression(
+            '/<select[^>]+name="members\[__INDEX__\]\[relationship\]"[^>]*\srequired/',
+            $html
+        );
+    }
+
+    public function testMiddleNameOffersANoMiddleNameCheckbox(): void
+    {
+        $html = $this->render();
+
+        $this->assertStringContainsString('data-family-no-middlename', $html);
+        $this->assertMatchesRegularExpression('/<label class="form-check-label"[^>]*>No middle name<\/label>/', $html);
+    }
+
+    public function testContactNumberAcceptsMobileOrBinanLandline(): void
+    {
+        // HTML pattern is implicitly anchored, so the attribute carries no ^ or $.
+        $html = $this->renderDecoded();
+
+        // One match over the whole tag, so both attributes have to be on the contact
+        // input itself rather than on any two inputs on the form.
+        $this->assertMatchesRegularExpression(
+            '/name="head_contactnumber"[^>]+inputmode="numeric"[^>]+pattern="09\\\\d\{9\}\|\(049\)\?\\\\d\{7,8\}"/',
+            $html
+        );
+    }
+
+    public function testBirthdayCarriesAnAgeNoteSlot(): void
+    {
+        $html = $this->render();
+
+        $this->assertMatchesRegularExpression(
+            '/name="head_birthday"[\s\S]{0,400}?data-family-age-note/',
+            $html,
+            'the head birthday field needs a note slot for the computed age'
+        );
+        $this->assertSame(2, substr_count($html, 'data-family-age-note'), 'head plus the member editor template');
+    }
+
+    public function testAgeRestrictedChoicesCarryTheirBoundsAsData(): void
+    {
+        $html = $this->renderDecoded();
+
+        // B (children) is capped, SC (senior) has a floor, and the JS reads these
+        // instead of carrying its own copy of 18 / 60.
+        $this->assertMatchesRegularExpression('/data-sector-code="B"[^>]*data-max-age="17"/', $html);
+        $this->assertMatchesRegularExpression('/data-sector-code="SC"[^>]*data-min-age="60"/', $html);
+        $this->assertMatchesRegularExpression('/data-service-category="Senior Citizen"[^>]*data-min-age="60"/', $html);
+        $this->assertDoesNotMatchRegularExpression('/data-service-category="Financial Assistance"[^>]*data-(min|max)-age=/', $html);
+    }
+
+    public function testMemberRowSplitsIntoAShellAndAMountedEditor(): void
+    {
+        $html = $this->render();
+
+        // The row template is the shell only: its editor mount is empty and the
+        // fields live in a separate template that JS mounts into it.
+        $this->assertStringContainsString('data-family-member-editor-template', $html);
+        $this->assertStringContainsString('data-family-member-editor', $html);
+        $this->assertStringContainsString('data-family-member-summary', $html);
+        $this->assertStringContainsString('data-family-member-toggle', $html);
+        $this->assertMatchesRegularExpression(
+            '/<div[^>]+data-family-member-editor[^>]*>\s*<\/div>\s*<div[^>]+data-family-member-values/',
+            $html,
+            'the shell template must ship an empty editor mount followed by the values mount'
+        );
+    }
+
+    public function testTheEditorTemplateCarriesTheMemberFieldsAndKeepsTheIndexPlaceholder(): void
+    {
+        $html = $this->renderDecoded();
+
+        $this->assertStringContainsString('members[__INDEX__][lastname]', $html);
+        $this->assertStringContainsString('members[__INDEX__][relationship]', $html);
+        $this->assertStringContainsString('members[__INDEX__][sector_ids][]', $html);
+    }
+
+    public function testExistingMembersRenderClosedWithHiddenValues(): void
+    {
+        $html = $this->renderDecoded([
+            'modalMode' => 'update',
+            'headId' => 42,
+            'existingMembers' => [[
+                'lastname' => 'DELA CRUZ',
+                'firstname' => 'JUAN',
+                'birthday' => '1960-01-02',
+                'relationship' => 'Son',
+                'sector_ids' => [1],
+                'service_ids' => [5],
+            ]],
+        ]);
+
+        // Closed: no editable control for the member, values ride as hidden inputs.
+        $this->assertStringContainsString('data-family-member-open="0"', $html);
+        $this->assertStringContainsString('<input type="hidden" name="members[0][lastname]" value="DELA CRUZ"', $html);
+        $this->assertStringContainsString('name="members[0][sector_ids][]" value="1"', $html);
+        $this->assertStringContainsString('name="members[0][service_ids][]" value="5"', $html);
+        $this->assertDoesNotMatchRegularExpression(
+            '/<select[^>]+name="members\[0\]\[civilstatus\]"/',
+            $html,
+            'a closed row must not render editable controls'
+        );
+    }
+
+    public function testClosedRowSectorValuesCarryTheirLabelForTheSummary(): void
+    {
+        $html = $this->renderDecoded([
+            'modalMode' => 'update',
+            'headId' => 42,
+            'existingMembers' => [['lastname' => 'DELA CRUZ', 'sector_ids' => [1]]],
+        ]);
+
+        $this->assertMatchesRegularExpression(
+            '/name="members\[0\]\[sector_ids\]\[\]" value="1"[^>]*data-sector-name="Senior Citizen"/',
+            $html
+        );
+    }
+
     public function testServicesRenderAsAnAlwaysOpenAccordionPerCategory(): void
     {
         $html = $this->renderDecoded();
@@ -185,13 +307,44 @@ final class FamilyModalViewTest extends CIUnitTestCase
         $this->assertStringNotContainsString('btn btn-outline-primary', $html);
     }
 
-    public function testHeadAndMembersUseTheSameCardChrome(): void
+    public function testEmptyStateStandsInForAnEmptyMemberList(): void
+    {
+        // A new record has no members, so the section shows the empty state; a record
+        // that already has one hides it and lets the list speak for itself.
+        $this->assertMatchesRegularExpression(
+            '/class="[^"]*"\s+data-family-members-empty/',
+            $this->render()
+        );
+        $this->assertDoesNotMatchRegularExpression(
+            '/class="[^"]*\bd-none\b[^"]*"\s+data-family-members-empty/',
+            $this->render()
+        );
+        $this->assertMatchesRegularExpression(
+            '/class="[^"]* d-none"\s+data-family-members-empty/',
+            $this->renderDecoded([
+                'modalMode' => 'update',
+                'headId' => 42,
+                'existingMembers' => [['lastname' => 'DELA CRUZ']],
+            ])
+        );
+    }
+
+    public function testHeadIsACardAndMembersAreABootstrapListGroup(): void
     {
         $html = $this->render();
 
-        // Head and member are the same kind of thing, so they render the same card.
+        // There is one head, so it is a card. Members are a list of people, so they
+        // are a list group: Bootstrap components rather than hand-rolled row CSS.
+        // Both sections wear the same card header, so they read as the same kind of
+        // thing, and the members header carries the count instead of an alert.
         $this->assertSame(2, substr_count($html, 'family-person-card-header'));
         $this->assertStringContainsString('>Head of Family</h3>', $html);
+        $this->assertStringContainsString('>Family Members</h3>', $html);
+        $this->assertStringContainsString('data-family-members-count', $html);
+        $this->assertStringNotContainsString('alert-info', $html);
+        $this->assertStringContainsString('class="list-group list-group-flush"', $html);
+        $this->assertStringContainsString('list-group-item p-0', $html);
+        $this->assertStringContainsString('list-group-item-action', $html);
         $this->assertStringContainsString('data-family-member-title', $html);
     }
 

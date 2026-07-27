@@ -42,7 +42,8 @@ $renderMemberRow = static function ($index, array $m = []) use (
     ?>
     <div class="family-member-card" data-family-member-row>
         <div class="family-member-card-header">
-            <strong class="family-member-card-title">Member</strong>
+            <?php /* Filled with the member's name in a later pass; renders as nothing today. */ ?>
+            <span class="text-muted small" data-family-member-name></span>
             <div class="btn-group btn-group-sm">
                 <button type="button" class="btn btn-outline-primary" data-family-set-head>Set as Head</button>
                 <button type="button" class="btn btn-outline-danger" data-family-member-remove>Remove</button>
@@ -137,13 +138,9 @@ $renderMemberRow = static function ($index, array $m = []) use (
 ?>
 
 <?php $importFieldIssues = (array) ($importFieldIssues ?? []); ?>
-<div class="family-entry-form" data-family-entry-form<?php if ($importFieldIssues !== []): ?> data-family-import-field-issues="<?= esc(json_encode($importFieldIssues), 'attr') ?>"<?php endif; ?>>
-    <div class="family-entry-header">
-        <div>
-            <h2 class="family-entry-title"><?= esc($modalTitle) ?></h2>
-        </div>
-    </div>
-
+<?php /* The modal header already shows the title, so the form no longer renders its own
+         heading. manage-family-modal.js copies this attribute into the header instead. */ ?>
+<div class="family-entry-form" data-family-entry-form data-family-modal-title="<?= esc($modalTitle, 'attr') ?>"<?php if ($importFieldIssues !== []): ?> data-family-import-field-issues="<?= esc(json_encode($importFieldIssues), 'attr') ?>"<?php endif; ?>>
     <?php /* Import-fix context: the staged errors/warnings for this family, so the worker sees
              exactly what to correct. Only rendered when opened from the Import Review screen. */ ?>
     <?php
@@ -196,21 +193,7 @@ $renderMemberRow = static function ($index, array $m = []) use (
             <input type="hidden" name="import_row" value="<?= esc((string) $importRow, 'attr') ?>">
         <?php endif; ?>
 
-        <div class="btn-toolbar family-entry-steps" role="toolbar" aria-label="Family record steps">
-            <div class="btn-group w-100" role="group" aria-label="Family record steps">
-                <button class="btn active" id="<?= esc($fieldPrefix, 'attr') ?>HeadTab" data-family-step-target="head" data-family-step-pane="#<?= esc($fieldPrefix, 'attr') ?>HeadPane" type="button" role="tab" aria-controls="<?= esc($fieldPrefix, 'attr') ?>HeadPane" aria-selected="true">
-                    <span class="family-step-number">1</span>
-                    <span>Head of Family</span>
-                </button>
-                <button class="btn" id="<?= esc($fieldPrefix, 'attr') ?>MemberTab" data-family-step-target="members" data-family-step-pane="#<?= esc($fieldPrefix, 'attr') ?>MemberPane" type="button" role="tab" aria-controls="<?= esc($fieldPrefix, 'attr') ?>MemberPane" aria-selected="false">
-                    <span class="family-step-number">2</span>
-                    <span>Members</span>
-                </button>
-            </div>
-        </div>
-
-        <div class="tab-content family-entry-content">
-            <div class="tab-pane fade show active" id="<?= esc($fieldPrefix, 'attr') ?>HeadPane" role="tabpanel" aria-labelledby="<?= esc($fieldPrefix, 'attr') ?>HeadTab" tabindex="0">
+        <div class="family-entry-content">
                 <section class="family-entry-section family-entry-personal">
                     <?php $qrLocked = ! empty($qrLocked ?? false); ?>
                     <div class="row g-3 mb-4">
@@ -227,8 +210,6 @@ $renderMemberRow = static function ($index, array $m = []) use (
                             <?php endif; ?>
                         </div>
                     </div>
-
-                    <h3 class="family-section-title">Personal Information</h3>
 
                     <div class="row g-3">
                         <?= family_modal_render_person_fields([
@@ -325,46 +306,9 @@ $renderMemberRow = static function ($index, array $m = []) use (
                         </div>
                     </div>
                 </section>
-            </div>
-
-            <div class="tab-pane fade" id="<?= esc($fieldPrefix, 'attr') ?>MemberPane" role="tabpanel" aria-labelledby="<?= esc($fieldPrefix, 'attr') ?>MemberTab" tabindex="0">
-                <section class="family-entry-section family-head-summary">
-                    <h3 class="family-summary-title">Current Record Head</h3>
-                    <div class="row g-3">
-                        <?php foreach ([
-                            'Name' => 'name',
-                            'Date of birth' => 'birthday',
-                            'Sex' => 'sex',
-                            'Civil status' => 'civil',
-                            'Contact' => 'contact',
-                            'Religion' => 'religion',
-                            'Education' => 'education',
-                            'Job' => 'job',
-                            'Monthly income' => 'income',
-                        ] as $label => $key): ?>
-                            <div class="col-12 col-md-6 col-xl-4">
-                                <span class="family-summary-label"><?= esc($label) ?>:</span>
-                                <div class="family-summary-value" data-head-summary="<?= esc($key, 'attr') ?>">-</div>
-                            </div>
-                        <?php endforeach; ?>
-                        <div class="col-12">
-                            <span class="family-summary-label">Address:</span>
-                            <div class="family-summary-value" data-head-summary="address">-</div>
-                        </div>
-                        <div class="col-12 col-lg-6">
-                            <span class="family-summary-label">Sector(s):</span>
-                            <div class="family-summary-list" data-head-summary="sectors">-</div>
-                        </div>
-                        <div class="col-12 col-lg-6">
-                            <span class="family-summary-label">Services and programs availed:</span>
-                            <div class="family-summary-list" data-head-summary="services">-</div>
-                        </div>
-                    </div>
-                </section>
 
                 <section class="family-entry-section family-members-section">
-                    <h3 class="family-section-title">Family Members</h3>
-                    <p class="text-muted small">Add the household members under this head of family. Leave empty if there are none.</p>
+                    <p class="text-muted small mb-3">Family members in this household. Leave empty if there are none.</p>
 
                     <div data-family-members>
                         <?php foreach (array_values($existingMembers) as $i => $member): ?>
@@ -382,7 +326,6 @@ $renderMemberRow = static function ($index, array $m = []) use (
                         </div>
                     </div>
                 </section>
-            </div>
         </div>
 
         <footer class="btn-toolbar family-entry-actions" role="toolbar" aria-label="Family form actions">
@@ -394,9 +337,7 @@ $renderMemberRow = static function ($index, array $m = []) use (
                    target="_blank" rel="noopener">Print QR card</a>
                 <?php endif; ?>
                 <button class="btn btn-danger" type="reset" data-family-clear>Clear</button>
-                <button class="btn btn-secondary" type="button" data-family-prev hidden>Previous</button>
-                <button class="btn btn-success" type="button" data-family-next>Next</button>
-                <button class="btn btn-primary" type="submit" data-family-save <?= $saveDisabled ? 'disabled aria-disabled="true"' : '' ?> hidden><?= esc($submitLabel) ?></button>
+                <button class="btn btn-primary" type="submit" data-family-save <?= $saveDisabled ? 'disabled aria-disabled="true"' : '' ?>><?= esc($submitLabel) ?></button>
             </div>
         </footer>
 

@@ -484,10 +484,6 @@
     display: none;
 }
 
-.floating-family-modal.is-family-entry-modal .family-entry-header {
-    display: none;
-}
-
 .family-entry-form {
     display: flex;
     min-height: 100%;
@@ -501,64 +497,6 @@
     min-height: 0;
     flex: 1 1 auto;
     flex-direction: column;
-}
-
-.family-entry-header {
-    flex: 0 0 auto;
-    padding: 0.9rem 1rem 0.7rem;
-    border-bottom: 1px solid #cfe0f5;
-}
-
-.family-entry-kicker {
-    margin: 0 0 0.25rem;
-    color: #000000;
-    font-size: 0.78rem;
-    font-weight: 800;
-    text-transform: uppercase;
-}
-
-.family-entry-title {
-    margin: 0;
-    color: #000000;
-    font-size: 1.1rem;
-    font-weight: 800;
-}
-
-.family-entry-steps {
-    flex: 0 0 auto;
-    padding: 0.65rem 1rem 0.5rem;
-}
-
-.family-entry-steps .btn {
-    min-height: 3.35rem;
-    border-color: #b9d7f7;
-    background: #eef7ff;
-    color: #a7b5c4;
-    font-size: 0.84rem;
-    font-weight: 800;
-}
-
-.family-entry-steps .btn.active {
-    border-bottom: 0.2rem solid #1976d2;
-    background: #eaf6ff;
-    color: #000000;
-}
-
-.family-step-number {
-    display: block;
-    width: 1.35rem;
-    height: 1.35rem;
-    margin: 0 auto 0.2rem;
-    border-radius: 50%;
-    background: #dcecf8;
-    color: #243b53;
-    font-size: 0.72rem;
-    line-height: 1.35rem;
-}
-
-.family-entry-steps .btn.active .family-step-number {
-    background: #168a73;
-    color: #ffffff;
 }
 
 .family-entry-content {
@@ -577,16 +515,7 @@
     border-top: 0;
 }
 
-.family-section-title,
-.family-summary-title {
-    margin: 0 0 1rem;
-    color: #000000;
-    font-size: 1.08rem;
-    font-weight: 800;
-}
-
-.family-entry-form .form-label,
-.family-summary-label {
+.family-entry-form .form-label {
     display: block;
     margin-bottom: 0.35rem;
     color: #294b73;
@@ -596,9 +525,7 @@
 
 .family-entry-form input:not([type="checkbox"]):not([type="radio"]),
 .family-entry-form select,
-.family-entry-form textarea,
-.family-summary-value,
-.family-summary-list {
+.family-entry-form textarea {
     display: block;
     width: 100%;
     min-height: 2.45rem;
@@ -633,13 +560,7 @@
     cursor: pointer;
 }
 
-.family-summary-value,
-.family-summary-list {
-    padding: 0.65rem 0.75rem;
-}
-
-.family-sector-service,
-.family-head-summary {
+.family-sector-service {
     padding: 0.9rem 1rem;
     border: 1px solid #cfe0f5;
     border-radius: 0.5rem;
@@ -810,15 +731,6 @@
     font-weight: 800;
 }
 
-.floating-family-modal.is-family-entry-modal .family-entry-steps {
-    padding: 0.65rem;
-}
-
-.floating-family-modal.is-family-entry-modal .family-entry-steps .btn {
-    min-height: 3rem;
-    font-size: 0.82rem;
-}
-
 .floating-family-modal.is-family-entry-modal .family-entry-content {
     padding: 0 0.65rem 0.65rem;
 }
@@ -827,29 +739,19 @@
     padding: 0.75rem 0;
 }
 
-.floating-family-modal.is-family-entry-modal .family-section-title,
-.floating-family-modal.is-family-entry-modal .family-summary-title {
-    margin-bottom: 0.85rem;
-    font-size: 0.95rem;
-}
-
-.floating-family-modal.is-family-entry-modal .family-entry-form .form-label,
-.floating-family-modal.is-family-entry-modal .family-summary-label {
+.floating-family-modal.is-family-entry-modal .family-entry-form .form-label {
     font-size: 0.76rem;
 }
 
 .floating-family-modal.is-family-entry-modal .family-entry-form input:not([type="checkbox"]):not([type="radio"]),
 .floating-family-modal.is-family-entry-modal .family-entry-form select,
-.floating-family-modal.is-family-entry-modal .family-entry-form textarea,
-.floating-family-modal.is-family-entry-modal .family-summary-value,
-.floating-family-modal.is-family-entry-modal .family-summary-list {
+.floating-family-modal.is-family-entry-modal .family-entry-form textarea {
     min-height: 2.25rem;
     padding: 0.45rem 0.65rem;
     font-size: 0.82rem;
 }
 
-.floating-family-modal.is-family-entry-modal .family-sector-service,
-.floating-family-modal.is-family-entry-modal .family-head-summary {
+.floating-family-modal.is-family-entry-modal .family-sector-service {
     padding: 0.75rem 0.85rem;
 }
 

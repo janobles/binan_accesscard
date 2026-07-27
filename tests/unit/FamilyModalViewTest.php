@@ -161,6 +161,18 @@ final class FamilyModalViewTest extends CIUnitTestCase
         return html_entity_decode($this->render($data), ENT_QUOTES | ENT_HTML5);
     }
 
+    public function testBirthdayCarriesAnAgeNoteSlot(): void
+    {
+        $html = $this->render();
+
+        $this->assertMatchesRegularExpression(
+            '/name="head_birthday"[\s\S]{0,400}?data-family-age-note/',
+            $html,
+            'the head birthday field needs a note slot for the computed age'
+        );
+        $this->assertSame(2, substr_count($html, 'data-family-age-note'), 'head plus the member editor template');
+    }
+
     public function testAgeRestrictedChoicesCarryTheirBoundsAsData(): void
     {
         $html = $this->renderDecoded();

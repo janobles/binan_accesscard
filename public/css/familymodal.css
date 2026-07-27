@@ -654,6 +654,12 @@
     font-weight: 700;
 }
 
+/* A tick that is no longer eligible says so instead of vanishing. */
+.family-choice--ineligible .form-check-label {
+    color: #b02a37;
+    text-decoration: underline dotted;
+}
+
 /* A long accordion must not outgrow the modal. */
 .family-entry-form .accordion-body {
     max-height: 15rem;

@@ -66,7 +66,7 @@ if (! function_exists('family_modal_prepare')) {
             ['name' => 'firstname', 'label' => 'First Name', 'type' => 'text', 'idSuffix' => 'Firstname', 'summary' => 'name-first', 'required' => true],
             ['name' => 'middlename', 'label' => 'Middle Name', 'type' => 'text', 'idSuffix' => 'Middlename', 'summary' => 'name-middle'],
             ['name' => 'suffix', 'label' => 'Suffix', 'type' => 'select', 'options' => 'suffixOptions', 'idSuffix' => 'Suffix', 'summary' => 'name-suffix'],
-            ['name' => 'birthday', 'label' => 'Date of birth', 'type' => 'date', 'idSuffix' => 'Birthday', 'summary' => 'birthday', 'required' => true, 'max' => date('Y-m-d')],
+            ['name' => 'birthday', 'label' => 'Date of birth', 'type' => 'date', 'idSuffix' => 'Birthday', 'summary' => 'birthday', 'required' => true, 'max' => date('Y-m-d'), 'ageNote' => true],
             ['name' => 'sex', 'label' => 'Sex', 'type' => 'select', 'options' => 'sexOptions', 'idSuffix' => 'Sex', 'summary' => 'sex', 'required' => true],
             ['name' => 'civilstatus', 'label' => 'Civil status', 'type' => 'select', 'options' => 'civilOptions', 'other' => true, 'otherMinlength' => 2, 'otherPattern' => '.*[^\d\s].*', 'idSuffix' => 'CivilStatus', 'summary' => 'civil', 'required' => true],
             ['name' => 'contactnumber', 'label' => 'Contact number', 'type' => 'tel', 'maxlength' => '30', 'idSuffix' => 'Contact', 'summary' => 'contact'],
@@ -214,6 +214,11 @@ if (! function_exists('family_modal_render_person_fields')) {
                     ]) ?>>
                 <?php endif; ?>
                 <div class="invalid-feedback"<?= $attrs(['id' => $feedbackId]) ?> data-family-field-error></div>
+                <?php if (! empty($personField['ageNote'])): ?>
+                    <?php /* A checkbox disabled on age grounds reads as broken unless the age
+                             it was judged on is on screen. manage-family-modal.js fills it. */ ?>
+                    <div class="form-text" data-family-age-note></div>
+                <?php endif; ?>
             </div>
         <?php endforeach;
 

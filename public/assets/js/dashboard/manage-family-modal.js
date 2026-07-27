@@ -987,6 +987,22 @@
         return 'Available only to persons ' + bounds.min + ' years old and above.';
     }
 
+    function refreshAgeNote(scopeEl) {
+        var row = scopeEl.matches && scopeEl.matches('[data-family-member-row]') ? scopeEl : null;
+        var birthday = row
+            ? scopeEl.querySelector('input[name$="[birthday]"]')
+            : scopeEl.querySelector('input[name="head_birthday"]');
+        var note = birthday ? birthday.parentElement.querySelector('[data-family-age-note]') : null;
+
+        if (!note) {
+            return;
+        }
+
+        var age = completedAge(birthday.value);
+
+        note.textContent = age === null ? '' : 'Age: ' + age;
+    }
+
     // A person's birthday controls only that person's age-specific choices.
     function refreshAgeEligibility(scopeEl) {
         if (!scopeEl || !scopeEl.querySelectorAll) {
@@ -1024,17 +1040,26 @@
                 : ageBoundsMessage(bounds);
             var choice = input.closest('.family-choice');
 
-            input.disabled = !allowed;
-
-            if (!allowed) {
-                input.checked = false;
-            }
+            // A ticked box is never cleared on the worker's behalf: a mistyped birth year
+            // used to wipe the ticks with no message and no way back. The tick stays,
+            // says why it is wrong, and resolves itself when the date is corrected.
+            // FamilyAgeEligibility::selectionError() still blocks a genuinely bad save.
+            input.disabled = !allowed && !input.checked;
+            input.classList.toggle('is-invalid', !allowed && input.checked);
 
             if (choice) {
                 choice.title = allowed ? '' : message;
+                choice.classList.toggle('family-choice--ineligible', !allowed && input.checked);
+
+                var label = choice.querySelector('.form-check-label');
+
+                if (label) {
+                    label.setAttribute('title', allowed ? '' : message);
+                }
             }
         });
 
+        refreshAgeNote(scopeEl);
     }
 
     function refreshAllAgeEligibility(root) {

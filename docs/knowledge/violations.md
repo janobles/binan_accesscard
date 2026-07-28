@@ -68,3 +68,31 @@ Exempt (checked, not violations): `app/Views/errors/html/*` (framework error
 pages, standalone by design), `app/Views/Scanner/pdf/report.php` (PDF
 rendering needs inline styles), layout shells + `Auth/login.php` (standalone
 `<html>` is their job).
+
+## Deferred from chore/doc-standard (2026-07-28)
+
+- [ ] ⚪ Cleanup: `public/assets/js/` (23 files) - has the same comment problems
+  the PHP had: divider banners, notes recording a requested change. Skipped
+  because comment markers occur inside strings and regex literals, so there is
+  no mechanical way to prove an edit changed nothing, and because a view's
+  inline `<script>` is compared verbatim by the token gate. Needs its own branch
+  with its own gate.
+- [ ] 🔵 UX/needs-decision: two brand greens are in use, `--binan-green: #145c3b`
+  (`public/css/theme.css:8`) and `--login-green: #176b4d`
+  (`public/css/login.css:8`). A design decision, not a cleanup one.
+- [ ] ⚪ Cleanup: `public/css/managerecord.css:263` - `.records-table-controls`
+  is emitted by no view; `app/Views/components/table_controls.php` builds the
+  same row from Bootstrap utilities. Left in place because
+  `docs/knowledge/binan-conventions/ui-design-system.md:72` still names the
+  class as the controls-row hook. Retire the rule and the doc reference together.
+- [ ] ⚪ Cleanup: `app/Views/Lookups/picker.php` - rendered by nothing. The family
+  form uses the picker built into `family-modal.php`. Superseded, not wired up.
+- [ ] 🟡 Minor: `app/Views/components/table_controls.php:8` - the header carries a
+  full variable list, which the comment standard bans for views. Kept because a
+  props-only component has no `*_view_data()` function to hold the contract, so
+  deleting the list would lose it with nowhere to put it. Resolve by deciding
+  where a component's props contract lives.
+- [ ] 🟡 Minor: `scripts/check-comment-style.sh` - the em-dash scan still covers
+  inline `<script>` blocks, which the divider scan now skips. No file hits it
+  today, so nothing was changed; an em dash written into a view's inline JS would
+  fail a check that cannot be satisfied without failing the token gate.

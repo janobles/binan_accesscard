@@ -1,3 +1,9 @@
+/* Login page. Loaded via the `login` manifest context (asset_helper.php), which
+   pulls in stock Bootstrap but not the dashboard shell CSS, so this file carries
+   its own color tokens rather than reusing theme.css.
+   Scope: split layout, form card, branding panel. Note --login-green differs
+   from theme.css's --binan-green; see docs/knowledge/violations.md. */
+
 :root {
     --login-green: #176b4d;
     --login-green-dark: #10503a;

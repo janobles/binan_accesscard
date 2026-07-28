@@ -130,3 +130,20 @@ decision table + grep index over `docs/knowledge/`:
 
 `DashboardPageBuilder` assembles all dashboard view data - start debugging
 there. Full file map: `PROJECT_STRUCTURE.md`.
+
+## Comments and docblocks
+
+Every class, view, and stylesheet carries a docblock. A method carries one
+only when it says something the signature cannot. Prose
+first: what it is, who calls it, why it exists. `@param`/`@return` only when
+the native type is not enough (array shapes, what a null means, units).
+`@param string $id The id.` is a lint error, not a style preference.
+
+Views state purpose and data source, no variable list. The data contracts
+live on the `*_view_data()` functions in `app/Helpers/dashboard_view_helper.php`.
+
+Banned: em dashes, `---- ----` dividers, `@author`/`@created`/`@version`,
+comments recording a change someone wanted, AI-slop register.
+
+Run `composer lint` before any PR. Full standard:
+`docs/knowledge/php-practices/comments.md`.

@@ -37,7 +37,7 @@ class AccountController extends BaseController
      * Creates a staff account from POST `developer/accounts`. Admin/Developer;
      * validates the username/password/role, delegates persistence to
      * UserModel::createAccount, writes an audit row, then redirects to
-     * `admin/accounts` with a flash message. Frontend: the account-creation
+     * `accounts` with a flash message. Frontend: the account-creation
      * form on the admin accounts page.
      */
     public function create(): RedirectResponse
@@ -113,7 +113,7 @@ class AccountController extends BaseController
         $displayRole = $this->normalizeRole($role) ?? $role;
         $this->audit('ACCOUNT_CREATED', 'Created ' . $displayRole . ' account "' . $username . '" (#' . $userId . ').');
 
-        return redirect()->to(site_url('admin/accounts'))->with('success', 'Account created successfully.');
+        return redirect()->to(site_url('accounts'))->with('success', 'Account created successfully.');
     }
 
     /**
@@ -172,20 +172,20 @@ class AccountController extends BaseController
         $userId = (int) $this->request->getPost('userID');
 
         if ($userId <= 0) {
-            return redirect()->to(site_url('admin/accounts'))->with('error', 'Account is required.');
+            return redirect()->to(site_url('accounts'))->with('error', 'Account is required.');
         }
 
         $userModel = new UserModel();
         $account = $userModel->getAccountById($userId);
 
         if ($account === null) {
-            return redirect()->to(site_url('admin/accounts'))->with('error', 'Account not found.');
+            return redirect()->to(site_url('accounts'))->with('error', 'Account not found.');
         }
 
         $currentRole = (string) ($account['role'] ?? '');
 
         if (! in_array($currentRole, ['administrator', 'encoder', 'viewer', 'scanner'], true)) {
-            return redirect()->to(site_url('admin/accounts'))->with('error', 'This account cannot be edited.');
+            return redirect()->to(site_url('accounts'))->with('error', 'This account cannot be edited.');
         }
 
         $isSelf = $userId === (int) session()->get('user_id');
@@ -229,13 +229,13 @@ class AccountController extends BaseController
         $newRole = (string) $this->request->getPost('role');
 
         if ($personalLocked && $newRole !== $currentRole) {
-            return redirect()->to(site_url('admin/accounts'))
+            return redirect()->to(site_url('accounts'))
                 ->with('error', 'Administrators cannot change another administrator account level.');
         }
 
         // Changing your own account level could lock you out of your own dashboard.
         if ($isSelf && $newRole !== $currentRole) {
-            return redirect()->to(site_url('admin/accounts'))
+            return redirect()->to(site_url('accounts'))
                 ->with('error', 'You cannot change your own account level.');
         }
 
@@ -254,11 +254,11 @@ class AccountController extends BaseController
         } catch (Throwable $exception) {
             $this->auditSystemError('account update', $exception);
 
-            return redirect()->to(site_url('admin/accounts'))->with('error', 'Account could not be updated due to a system error.');
+            return redirect()->to(site_url('accounts'))->with('error', 'Account could not be updated due to a system error.');
         }
 
         if (! $saved) {
-            return redirect()->to(site_url('admin/accounts'))->with('error', 'Account could not be updated.');
+            return redirect()->to(site_url('accounts'))->with('error', 'Account could not be updated.');
         }
 
         // Keep the topbar/session in sync if an admin renamed their own account.
@@ -281,7 +281,7 @@ class AccountController extends BaseController
             $this->audit('ACCOUNT_UPDATED', 'Updated ' . $displayRole . ' account "' . $username . '" (#' . $userId . ').');
         }
 
-        return redirect()->to(site_url('admin/accounts'))->with('success', 'Account updated successfully.');
+        return redirect()->to(site_url('accounts'))->with('success', 'Account updated successfully.');
     }
 
     /**
@@ -303,11 +303,11 @@ class AccountController extends BaseController
         $userId = (int) $this->request->getPost('userID');
 
         if ($userId <= 0) {
-            return redirect()->to(site_url('admin/accounts'))->with('error', 'Account is required.');
+            return redirect()->to(site_url('accounts'))->with('error', 'Account is required.');
         }
 
         if ($userId === (int) session()->get('user_id')) {
-            return redirect()->to(site_url('admin/accounts'))
+            return redirect()->to(site_url('accounts'))
                 ->with('error', 'Use My Account to change your own password.');
         }
 
@@ -315,23 +315,23 @@ class AccountController extends BaseController
         $account = $userModel->getAccountById($userId);
 
         if ($account === null) {
-            return redirect()->to(site_url('admin/accounts'))->with('error', 'Account not found.');
+            return redirect()->to(site_url('accounts'))->with('error', 'Account not found.');
         }
 
         if (! in_array((string) ($account['role'] ?? ''), ['administrator', 'encoder', 'viewer', 'scanner'], true)) {
-            return redirect()->to(site_url('admin/accounts'))->with('error', 'This account password cannot be reset.');
+            return redirect()->to(site_url('accounts'))->with('error', 'This account password cannot be reset.');
         }
 
         $newPassword = $userModel->generateRandomPassword();
 
         if (! $userModel->updatePassword($userId, $newPassword)) {
-            return redirect()->to(site_url('admin/accounts'))->with('error', 'Password could not be reset.');
+            return redirect()->to(site_url('accounts'))->with('error', 'Password could not be reset.');
         }
 
         $username = (string) ($account['username'] ?? '');
         $this->audit('ACCOUNT_PASSWORD_RESET', 'Reset password for account "' . $username . '" (#' . $userId . ').');
 
-        return redirect()->to(site_url('admin/accounts'))
+        return redirect()->to(site_url('accounts'))
             ->with('reset_password', [
                 'username' => $username,
                 'password' => $newPassword,
@@ -394,14 +394,14 @@ class AccountController extends BaseController
             $auditStatus . ' ' . $displayRole . ' account "' . (string) ($user['username'] ?? '') . '" (#' . $userId . ').'
         );
 
-        return redirect()->to(site_url('admin/accounts'))->with('success', 'Account status updated successfully.');
+        return redirect()->to(site_url('accounts'))->with('success', 'Account status updated successfully.');
     }
 
     /**
      * Admin/Developer: disable an Encoder, Viewer, or Scanner account via POST
-     * `admin/accounts/disable`; self-disable is blocked. Administrator targets are
+     * `accounts/disable`; self-disable is blocked. Administrator targets are
      * intentionally reserved for updateStatus(), which is Developer-only.
-     * Audits the change and redirects to `admin/accounts`. Frontend: the
+     * Audits the change and redirects to `accounts`. Frontend: the
      * "disable" button in the admin Account Management list.
      */
     public function disableEmployee(): RedirectResponse
@@ -444,14 +444,14 @@ class AccountController extends BaseController
             'Disabled ' . $displayRole . ' account "' . (string) ($user['username'] ?? '') . '" (#' . $userId . ').'
         );
 
-        return redirect()->to(site_url('admin/accounts'))->with('success', $displayRole . ' account disabled successfully.');
+        return redirect()->to(site_url('accounts'))->with('success', $displayRole . ' account disabled successfully.');
     }
 
     /**
      * Admin/Developer: enable an Encoder, Viewer, or Scanner account via POST
-     * `admin/accounts/enable`; self-enable is blocked. Administrator targets are
+     * `accounts/enable`; self-enable is blocked. Administrator targets are
      * intentionally reserved for updateStatus(), which is Developer-only.
-     * Audits the change and redirects to `admin/accounts`. Frontend: the
+     * Audits the change and redirects to `accounts`. Frontend: the
      * "enable" button in the admin Account Management list.
      */
     public function enableEmployee(): RedirectResponse
@@ -494,7 +494,7 @@ class AccountController extends BaseController
             'Enabled ' . $displayRole . ' account "' . (string) ($user['username'] ?? '') . '" (#' . $userId . ').'
         );
 
-        return redirect()->to(site_url('admin/accounts'))->with('success', $displayRole . ' account enabled successfully.');
+        return redirect()->to(site_url('accounts'))->with('success', $displayRole . ' account enabled successfully.');
     }
 
     /**

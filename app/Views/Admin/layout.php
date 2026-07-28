@@ -46,7 +46,7 @@ $canCreateFamily = $canCreateFamily ?? false;
 $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
 // Developers get the "developer" sidebar accent; plain admins get "admin".
 $sidebarRoleClass = $canManageAccounts ? 'developer' : 'admin';
-$sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('admin/dashboard');
+$sidebarUserUrl = $canManageAccounts ? site_url('accounts') : site_url('dashboard');
 ?>
 <?php
 /*
@@ -159,7 +159,7 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                     <div class="dashboard-section-head">
                         <h2><i class="bi bi-people-fill" aria-hidden="true"></i>Family Records</h2>
                         <div class="section-actions">
-                            <a class="btn btn-sm btn-outline-secondary" href="<?= site_url('admin/manage-records') ?>">View All <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+                            <a class="btn btn-sm btn-outline-secondary" href="<?= site_url('records') ?>">View All <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
                         </div>
                     </div>
                     <?php
@@ -227,7 +227,7 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                         ['key' => 'aidtypes', 'label' => 'Subsidy Types'],
                     ],
                     'active' => $referenceTab ?? 'sectors',
-                    'baseUrl' => 'admin/reference-data',
+                    'baseUrl' => 'reference-data',
                 ]) ?>
                 <?php if (($referenceTab ?? 'sectors') === 'sectors'): ?>
                     <?= view('Lookups/sectors', [
@@ -279,7 +279,7 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                         ['key' => 'log', 'label' => 'Distribution Log'],
                     ],
                     'active' => $distributionTab ?? 'batches',
-                    'baseUrl' => 'admin/distribution',
+                    'baseUrl' => 'distribution',
                 ]) ?>
             <?php endif; ?>
 

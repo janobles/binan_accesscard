@@ -17,10 +17,10 @@
                 <div class="modal-content">
                         <form
                                 method="post"
-                                data-create-action="<?= site_url('admin/services/create') ?>"
-                                data-update-action="<?= site_url('admin/services/update') ?>"
-                                data-archive-action="<?= site_url('admin/services/archive') ?>"
-                                data-restore-action="<?= site_url('admin/services/restore') ?>"
+                                data-create-action="<?= site_url('reference-data/services/create') ?>"
+                                data-update-action="<?= site_url('reference-data/services/update') ?>"
+                                data-archive-action="<?= site_url('reference-data/services/archive') ?>"
+                                data-restore-action="<?= site_url('reference-data/services/restore') ?>"
                                 data-next-code-map="<?= esc(json_encode((object) ($serviceNextCodeMap ?? [])), 'attr') ?>"
                                 data-existing-codes="<?= esc(json_encode(array_values($existingShortcodes ?? [])), 'attr') ?>">
                                 <?= csrf_field() ?>

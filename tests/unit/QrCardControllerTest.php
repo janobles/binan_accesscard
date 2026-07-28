@@ -23,7 +23,7 @@ final class QrCardControllerTest extends CIUnitTestCase
 
     public function testLegacyDeveloperSessionCannotBypassDatabaseIdentityCheck(): void
     {
-        $result = $this->withSession($this->legacyDeveloperSession())->get('admin/cards/lookup/notanumber');
+        $result = $this->withSession($this->legacyDeveloperSession())->get('cards/lookup/notanumber');
 
         $result->assertRedirectTo(site_url('login'));
     }
@@ -41,13 +41,13 @@ final class QrCardControllerTest extends CIUnitTestCase
     public function testUnauthenticatedGenerateRedirects(): void
     {
         // No session - guard should redirect to login.
-        $result = $this->post('admin/cards/generate', []);
+        $result = $this->post('cards/generate', []);
         $result->assertRedirect();
     }
 
     public function testHeadsEndpointRejectsUnauthenticated(): void
     {
-        $result = $this->get('admin/cards/heads?q=de');
+        $result = $this->get('cards/heads?q=de');
         $result->assertRedirect();
     }
 

@@ -39,7 +39,7 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
 </head>
 <body class="sb-nav-fixed">
 <?= view('Partials/dashboard-topnav', [
-    'brandUrl' => site_url('viewer/dashboard'),
+    'brandUrl' => site_url('dashboard'),
     'user' => $user,
     'username' => $username,
     'accountLevelLabel' => $accountLevelLabel,
@@ -50,10 +50,10 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
             <div class="sb-sidenav-menu">
                 <div class="nav">
                     <div class="sb-sidenav-menu-heading">Core</div>
-                    <a class="nav-link <?= esc($navActive['dashboard'] ?? '') ?>" href="<?= site_url('viewer/dashboard') ?>"><div class="sb-nav-link-icon"><i class="bi bi-speedometer2" aria-hidden="true"></i></div>Dashboard</a>
+                    <a class="nav-link <?= esc($navActive['dashboard'] ?? '') ?>" href="<?= site_url('dashboard') ?>"><div class="sb-nav-link-icon"><i class="bi bi-speedometer2" aria-hidden="true"></i></div>Dashboard</a>
                     <div class="sb-sidenav-menu-heading">Records</div>
-                    <a class="nav-link <?= esc($navActive['family-manage'] ?? '') ?>" href="<?= site_url('viewer/manage-records') ?>"><div class="sb-nav-link-icon"><i class="bi bi-people-fill" aria-hidden="true"></i></div>Manage Records</a>
-                    <a class="nav-link <?= esc($navActive['reference-data'] ?? '') ?>" href="<?= site_url('viewer/reference-data') ?>"><div class="sb-nav-link-icon"><i class="bi bi-collection" aria-hidden="true"></i></div>Reference Data</a>
+                    <a class="nav-link <?= esc($navActive['family-manage'] ?? '') ?>" href="<?= site_url('records') ?>"><div class="sb-nav-link-icon"><i class="bi bi-people-fill" aria-hidden="true"></i></div>Manage Records</a>
+                    <a class="nav-link <?= esc($navActive['reference-data'] ?? '') ?>" href="<?= site_url('reference-data') ?>"><div class="sb-nav-link-icon"><i class="bi bi-collection" aria-hidden="true"></i></div>Reference Data</a>
                 </div>
             </div>
         </nav>
@@ -131,7 +131,7 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
                         ['key' => 'services', 'label' => 'Services & Programs'],
                     ],
                     'active' => $referenceTab ?? 'sectors',
-                    'baseUrl' => 'viewer/reference-data',
+                    'baseUrl' => 'reference-data',
                 ]) ?>
                 <?php if (($referenceTab ?? 'sectors') === 'sectors'): ?>
                     <?= view('Lookups/sectors', [

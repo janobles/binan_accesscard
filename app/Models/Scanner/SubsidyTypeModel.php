@@ -6,7 +6,7 @@ use CodeIgniter\Model;
 
 /**
  * Subsidy-type reference lookup (Financial/Rice/Grocery, admin-editable) backing
- * the admin/aidtypes page and the batch-open modal. Isolated from the
+ * the reference-data/subsidy-types page and the batch-open modal. Isolated from the
  * `services` table: subsidy types are their own concept, not services/programs.
  */
 class SubsidyTypeModel extends Model

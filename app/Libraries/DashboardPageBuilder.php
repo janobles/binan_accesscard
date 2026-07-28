@@ -48,7 +48,7 @@ class DashboardPageBuilder
         $currentRole = RoleAccess::normalizeRole((string) session()->get('role'));
 
         if ($activePage === 'accounts' && ! in_array($currentRole, ['Developer', 'Admin'], true)) {
-            return redirect()->to(site_url('admin/dashboard'))
+            return redirect()->to(site_url('dashboard'))
             ->with('error', 'Developer or Admin access is required for account management.');
         }
 
@@ -91,7 +91,7 @@ class DashboardPageBuilder
         // Developers. New Developer activity has a real userID like every DB account.
         $includeDeveloperAudits = $currentRole === 'Developer';
         $auditListData = $activePage === 'audit-trails'
-            ? $this->buildAuditListData($includeDeveloperAudits, null, 'admin/audit-trails')
+            ? $this->buildAuditListData($includeDeveloperAudits, null, 'audit-trails')
             : [];
         // Only the Audit Trails page shows audit rows now (the dashboard's
         // Recent Activity panel was retired in the admin reorg).
@@ -109,13 +109,13 @@ class DashboardPageBuilder
         $isReference = $activePage === 'reference-data';
 
         $sectorListData = $isReference && $referenceTab === 'sectors'
-            ? $this->buildLookupListData($sectorModel, 'admin/reference-data', 'sectorID')
+            ? $this->buildLookupListData($sectorModel, 'reference-data', 'sectorID')
             : [];
         $serviceListData = $isReference && $referenceTab === 'services'
-            ? $this->buildLookupListData($serviceModel, 'admin/reference-data', 'serviceID')
+            ? $this->buildLookupListData($serviceModel, 'reference-data', 'serviceID')
             : [];
         $categoryListData = $isReference && $referenceTab === 'categories'
-            ? $this->buildLookupListData(new CategoryModel(), 'admin/reference-data', 'categoryID')
+            ? $this->buildLookupListData(new CategoryModel(), 'reference-data', 'categoryID')
             : [];
 
         // Distribution page: batches and the log share one page, switched by
@@ -480,7 +480,7 @@ class DashboardPageBuilder
         $totalFamilies = $memberModel->countSearchFamilies($searchKeyword, $status, $filters);
         $totalPages = max(1, (int) ceil($totalFamilies / $perPage));
         $page = min($page, $totalPages);
-        $routeBase = 'admin/manage-family';
+        $routeBase = 'records';
 
         return array_merge([
             'canArchive'        => true,
@@ -491,7 +491,7 @@ class DashboardPageBuilder
             'keyword'           => $keyword,
             // Full-page route so both the filter form and deep-search form reload the
             // whole Manage Records page (not the modal/partial list endpoint).
-            'listRoute'         => 'admin/manage-records',
+            'listRoute'         => 'records',
             'page'              => $page,
             'perPage'           => $perPage,
             'routeBase'         => $routeBase,
@@ -594,7 +594,7 @@ class DashboardPageBuilder
             ? $searchModel->families($searchTerm, $searchFilters, 25)
             : $dashboardModel->recentFamilies(10);
         $auditListData = $activePage === 'activity'
-            ? $this->buildAuditListData(false, $userId, 'employee/activity')
+            ? $this->buildAuditListData(false, $userId, 'audit-trails')
             : [];
         $myAudits = $auditListData['rows'] ?? (new AuditTrailsModel())->getByUser($userId, 10);
 
@@ -686,10 +686,10 @@ class DashboardPageBuilder
         $isReference  = $activePage === 'reference-data';
 
         $sectorListData = $isReference && $referenceTab === 'sectors'
-            ? $this->buildLookupListData(new SectorModel(), 'viewer/reference-data', 'sectorID')
+            ? $this->buildLookupListData(new SectorModel(), 'reference-data', 'sectorID')
             : [];
         $serviceListData = $isReference && $referenceTab === 'services'
-            ? $this->buildLookupListData(new ServiceModel(), 'viewer/reference-data', 'serviceID')
+            ? $this->buildLookupListData(new ServiceModel(), 'reference-data', 'serviceID')
             : [];
 
         return view('Viewer/layout', [
@@ -766,10 +766,10 @@ class DashboardPageBuilder
             'families'           => $memberModel->searchFamilies($searchKeyword, $perPage, ($page - 1) * $perPage, $status, $filters),
             'fromRecord'         => $totalFamilies === 0 ? 0 : (($page - 1) * $perPage) + 1,
             'keyword'            => $keyword,
-            'listRoute'          => 'viewer/manage-records',
+            'listRoute'          => 'records',
             'page'               => $page,
             'perPage'            => $perPage,
-            'routeBase'          => 'viewer/manage-family',
+            'routeBase'          => 'records',
             'status'             => $status,
             'toRecord'           => min($totalFamilies, $page * $perPage),
             'totalFamilies'      => $totalFamilies,
@@ -850,10 +850,10 @@ class DashboardPageBuilder
             'families' => $memberModel->searchFamilies($searchKeyword, $perPage, ($page - 1) * $perPage, $status, $filters),
             'fromRecord' => $totalFamilies === 0 ? 0 : (($page - 1) * $perPage) + 1,
             'keyword' => $keyword,
-            'listRoute' => 'employee/manage-records',
+            'listRoute' => 'records',
             'page' => $page,
             'perPage' => $perPage,
-            'routeBase' => 'employee/manage-family',
+            'routeBase' => 'records',
             'status' => $status,
             'toRecord' => min($totalFamilies, $page * $perPage),
             'totalFamilies' => $totalFamilies,

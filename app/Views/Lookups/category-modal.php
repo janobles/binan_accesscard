@@ -16,10 +16,10 @@
 		<div class="modal-content">
 			<form
 				method="post"
-				data-create-action="<?= site_url('admin/categories/create') ?>"
-				data-update-action="<?= site_url('admin/categories/update') ?>"
-				data-archive-action="<?= site_url('admin/categories/archive') ?>"
-				data-restore-action="<?= site_url('admin/categories/restore') ?>"
+				data-create-action="<?= site_url('reference-data/categories/create') ?>"
+				data-update-action="<?= site_url('reference-data/categories/update') ?>"
+				data-archive-action="<?= site_url('reference-data/categories/archive') ?>"
+				data-restore-action="<?= site_url('reference-data/categories/restore') ?>"
 				data-existing-codes="<?= esc(json_encode(array_values($existingCodes ?? [])), 'attr') ?>">
 				<?= csrf_field() ?>
 				<div class="modal-header">

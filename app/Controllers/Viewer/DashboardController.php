@@ -26,11 +26,11 @@ class DashboardController extends BaseController
     /** Entry point for GET `viewer`: redirects to the canonical viewer dashboard URL. */
     public function index(): RedirectResponse
     {
-        return redirect()->to(site_url('viewer/dashboard'));
+        return redirect()->to(site_url('dashboard'));
     }
 
     /**
-     * GET `viewer/dashboard`. Renders the viewer shell on the read-only overview
+     * GET `dashboard` (viewer). Renders the viewer shell on the read-only overview
      * tab (stats + recently added records).
      */
     public function dashboard(): string|RedirectResponse
@@ -39,7 +39,7 @@ class DashboardController extends BaseController
     }
 
     /**
-     * GET `viewer/manage-records`. Renders the read-only records list page, or
+     * GET `records` (viewer). Renders the read-only records list page, or
      * the list fragment for AJAX search/pagination.
      */
     public function manageRecords(): string|RedirectResponse
@@ -51,7 +51,7 @@ class DashboardController extends BaseController
         return $this->pageBuilder()->renderViewerPage('family-manage');
     }
 
-    /** GET `viewer/reference-data`. Read-only Sectors and Services lists, switched by ?tab=. */
+    /** GET `reference-data` (viewer). Read-only Sectors and Services lists, switched by ?tab=. */
     public function referenceData(): string|RedirectResponse
     {
         return $this->pageBuilder()->renderViewerPage('reference-data');

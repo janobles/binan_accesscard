@@ -32,7 +32,7 @@ $showDistDetail = $reportsBatchOpen || $hasScanData;
 <div class="dashboard-section-head">
   <h2><i class="bi bi-clipboard-check-fill" aria-hidden="true"></i>Subsidy Distribution</h2>
   <div class="section-actions">
-    <form class="reports-filter" method="get" action="<?= site_url('admin/dashboard') ?>">
+    <form class="reports-filter" method="get" action="<?= site_url('dashboard') ?>">
       <label for="batchPick" class="form-label mb-0 visually-hidden">Batch</label>
       <select class="form-select" id="batchPick" name="batch" onchange="this.form.submit()">
         <?php foreach ($reportsBatches as $b): ?>
@@ -43,7 +43,7 @@ $showDistDetail = $reportsBatchOpen || $hasScanData;
       </select>
     </form>
     <button type="button" class="btn btn-outline-secondary" id="refreshNow"><i class="bi bi-arrow-clockwise" aria-hidden="true"></i><span>Refresh</span></button>
-    <a class="btn btn-primary reports-download-btn" href="<?= site_url('admin/reports/pdf') . '?batch=' . (int) $reportsBatchId ?>"><i class="bi bi-file-earmark-arrow-down" aria-hidden="true"></i><span>Download Report</span></a>
+    <a class="btn btn-primary reports-download-btn" href="<?= site_url('distribution/reports/pdf') . '?batch=' . (int) $reportsBatchId ?>"><i class="bi bi-file-earmark-arrow-down" aria-hidden="true"></i><span>Download Report</span></a>
   </div>
 </div>
 <p class="text-muted small mb-3"><?= $rangeLabel ?> &middot; Last updated <span id="lastUpdated">-</span></p>
@@ -132,7 +132,7 @@ foreach ($reportsByBarangay as $b) {
 (function () {
   // Live poll: fetch fresh stats for the selected batch and repaint the chart +
   // KPI tiles in place (no page reload, so the batch selector and scroll stay put).
-  var statsUrl = '<?= site_url('admin/reports/stats') ?>';
+  var statsUrl = '<?= site_url('distribution/reports/stats') ?>';
   var batchId = <?= (int) ($reportsBatchId ?? 0) ?>;
   var batchOpen = <?= $reportsBatchOpen ? 'true' : 'false' ?>;
   if (batchId > 0) { statsUrl += '?batch=' + batchId; }

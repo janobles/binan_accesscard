@@ -31,7 +31,7 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
 </head>
 <body class="sb-nav-fixed">
 <?= view('Partials/dashboard-topnav', [
-    'brandUrl' => site_url('employee/workspace'),
+    'brandUrl' => site_url('dashboard'),
     'user' => $user,
     'username' => $username,
     'accountLevelLabel' => $accountLevelLabel,
@@ -42,11 +42,11 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
             <div class="sb-sidenav-menu">
                 <div class="nav">
                     <div class="sb-sidenav-menu-heading">Core</div>
-                    <a class="nav-link <?= esc($navActive['dashboard'] ?? '') ?>" href="<?= site_url('employee/workspace') ?>"><div class="sb-nav-link-icon"><i class="bi bi-speedometer2" aria-hidden="true"></i></div>Dashboard</a>
+                    <a class="nav-link <?= esc($navActive['dashboard'] ?? '') ?>" href="<?= site_url('dashboard') ?>"><div class="sb-nav-link-icon"><i class="bi bi-speedometer2" aria-hidden="true"></i></div>Dashboard</a>
                     <div class="sb-sidenav-menu-heading">Records</div>
-                    <a class="nav-link <?= esc($navActive['family-manage'] ?? '') ?>" href="<?= site_url('employee/manage-records') ?>"><div class="sb-nav-link-icon"><i class="bi bi-people-fill" aria-hidden="true"></i></div>Manage Records</a>
+                    <a class="nav-link <?= esc($navActive['family-manage'] ?? '') ?>" href="<?= site_url('records') ?>"><div class="sb-nav-link-icon"><i class="bi bi-people-fill" aria-hidden="true"></i></div>Manage Records</a>
                     <div class="sb-sidenav-menu-heading">Activity</div>
-                    <a class="nav-link <?= esc($navActive['activity'] ?? '') ?>" href="<?= site_url('employee/activity') ?>"><div class="sb-nav-link-icon"><i class="bi bi-clock-history" aria-hidden="true"></i></div>My Activity</a>
+                    <a class="nav-link <?= esc($navActive['activity'] ?? '') ?>" href="<?= site_url('audit-trails') ?>"><div class="sb-nav-link-icon"><i class="bi bi-clock-history" aria-hidden="true"></i></div>My Activity</a>
                 </div>
             </div>
         </nav>
@@ -139,7 +139,7 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
                 <?php if ($activePage === 'activity'): ?>
                     <?php
                     $auditListData = $auditListData ?? [];
-                    $listRoute = (string) ($auditListData['listRoute'] ?? 'employee/activity');
+                    $listRoute = (string) ($auditListData['listRoute'] ?? 'audit-trails');
                     $auditAction = trim((string) ($searchFilters['action'] ?? ''));
                     $perPage = (int) ($auditListData['perPage'] ?? 25);
                     $perPageOptions = ($auditListData['perPageOptions'] ?? []) ?: [10, 25, 50, 100];

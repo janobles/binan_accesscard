@@ -108,7 +108,7 @@ final class FamilyDataTableTest extends TestCase
     {
         $routes = (string) file_get_contents(APPPATH . 'Config/Routes.php');
 
-        $this->assertSame(3, substr_count($routes, "'data', 'Families\\FamilyDataTableController::dataTable'"));
+        $this->assertSame(1, substr_count($routes, "'data', 'Families\\FamilyDataTableController::dataTable'"));
     }
 
     public function testQrColumnRendersPlainControlNumberText(): void

@@ -10,7 +10,7 @@
  * other list pages are matched against.
  */
 
-$routeBase = (string) ($routeBase ?? 'admin/manage-family');
+$routeBase = (string) ($routeBase ?? 'records');
 $keyword = trim((string) ($keyword ?? ''));
 $status = in_array((string) ($status ?? 'all'), ['all', 'active', 'archived'], true) ? (string) $status : 'all';
 $filters = (array) ($filters ?? []);
@@ -87,7 +87,7 @@ $statusGroup = [
 
 $actionsHtml = '';
 if ($canEdit) {
-    $actionsHtml .= '<button class="' . btn('add') . ' flex-fill js-open-family-add-modal" type="button" data-family-add-record data-modal-url="' . esc(site_url($routeBase . '/create?partial=1'), 'attr') . '" data-modal-title="New Family Record">Add</button>';
+    $actionsHtml .= '<button class="' . btn('add') . ' flex-fill js-open-family-add-modal" type="button" data-family-add-record data-modal-url="' . esc(site_url($routeBase . '/entry?partial=1'), 'attr') . '" data-modal-title="New Family Record">Add</button>';
     $actionsHtml .= '<button class="' . btn('import') . ' flex-fill js-open-family-import-modal" type="button" data-modal-url="' . esc(site_url($routeBase . '/import'), 'attr') . '" data-modal-title="Import from Excel" title="Bulk-import families from an Excel file">Import</button>';
 }
 ?>

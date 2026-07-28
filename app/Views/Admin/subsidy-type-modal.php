@@ -1,9 +1,9 @@
 <?php
-/** Add Subsidy Type modal: single name field, posts to admin/aidtypes/create. */
+/** Add Subsidy Type modal: single name field, posts to reference-data/subsidy-types/create. */
 ?>
 <div class="modal fade" id="addSubsidyTypeModal" tabindex="-1" aria-labelledby="addSubsidyTypeModalLabel" aria-hidden="true">
   <div class="modal-dialog">
-    <form class="modal-content" method="post" action="<?= site_url('admin/aidtypes/create') ?>">
+    <form class="modal-content" method="post" action="<?= site_url('reference-data/subsidy-types/create') ?>">
       <?= csrf_field() ?>
       <div class="modal-header">
         <h5 class="modal-title" id="addSubsidyTypeModalLabel">Add Subsidy Type</h5>

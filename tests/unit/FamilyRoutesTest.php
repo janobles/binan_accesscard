@@ -16,16 +16,13 @@ final class FamilyRoutesTest extends CIUnitTestCase
         $postRoutes = $routes->getRoutes('POST');
 
         $expected = [
-            ['admin/manage-family/import', $getRoutes, 'FamilyImportController::importForm'],
-            ['admin/manage-family/template', $getRoutes, 'FamilyImportController::downloadTemplate'],
-            ['employee/manage-family/import', $postRoutes, 'FamilyImportController::import'],
-            ['admin/manage-family/data', $getRoutes, 'FamilyDataTableController::dataTable'],
-            ['employee/manage-family/data', $getRoutes, 'FamilyDataTableController::dataTable'],
-            ['viewer/manage-family/data', $getRoutes, 'FamilyDataTableController::dataTable'],
-            ['admin/manage-family/view/([0-9]+)', $getRoutes, 'FamilyController::viewFamily'],
-            ['admin/manage-family/qr-check', $getRoutes, 'FamilyController::qrAvailability'],
-            ['employee/manage-family/qr-check', $getRoutes, 'FamilyController::qrAvailability'],
-            ['families', $postRoutes, 'FamilyController::store'],
+            ['records/import', $getRoutes, 'FamilyImportController::importForm'],
+            ['records/import', $postRoutes, 'FamilyImportController::import'],
+            ['records/template', $getRoutes, 'FamilyImportController::downloadTemplate'],
+            ['records/data', $getRoutes, 'FamilyDataTableController::dataTable'],
+            ['records/qr-check', $getRoutes, 'FamilyController::qrAvailability'],
+            ['records/([0-9]+)', $getRoutes, 'FamilyController::viewFamily'],
+            ['records', $postRoutes, 'FamilyController::store'],
         ];
 
         foreach ($expected as [$path, $routes, $handler]) {

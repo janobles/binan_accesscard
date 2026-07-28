@@ -9,7 +9,7 @@
 //
 // Connected to:
 //   - dashboard-modal-loader.js : window.registerDashboardModal()
-//   - Backend : POST admin/services/create|update|archive|restore
+//   - Backend : POST reference-data/services/create|update|archive|restore
 //               (Lookups\ServiceController, via the modal's data-*-action attributes)
 //   - Views   : Views/Lookups/service-modal.php - #serviceActionModal, .js-service-modal-open
 //               buttons carry data-service-mode, data-service-id, data-service-name, etc.

@@ -130,9 +130,9 @@ class FamilyDataTablePresenter
             'canEdit'        => $canEdit,
             'canArchive'     => $canArchive,
             'displayName'    => $displayName,
-            'viewUrl'        => $archived ? '' : site_url($routeBase . '/view/' . $headId . '?partial=1'),
-            'updateUrl'      => (! $archived && $canEdit) ? site_url($routeBase . '/create?partial=1&mode=update&id=' . $headId) : '',
-            'formAction'     => $canArchive ? site_url($routeBase . '/' . ($archived ? 'restore' : 'archive') . '/' . $headId) : '',
+            'viewUrl'        => $archived ? '' : site_url($routeBase . '/' . $headId . '?partial=1'),
+            'updateUrl'      => (! $archived && $canEdit) ? site_url($routeBase . '/entry?partial=1&mode=update&id=' . $headId) : '',
+            'formAction'     => $canArchive ? site_url($routeBase . '/' . $headId . '/' . ($archived ? 'restore' : 'archive')) : '',
             'actionLabel'    => $archived ? 'Restore' : 'Archive',
             'actionPast'     => $archived ? 'restored' : 'archived',
             'confirmMessage' => $archived

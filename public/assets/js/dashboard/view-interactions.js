@@ -7,7 +7,7 @@
 // Connected to:
 //   - Views  : Admin/layout.php (audit tab, accounts tab),
 //              Accounts/status-confirm-modal.php - #accountStatusModal
-//   - Backend: GET admin/audit-trails, POST admin/accounts/disable|enable
+//   - Backend: GET audit-trails, POST accounts/disable|enable
 //   - Exposes: window.initViewInteractions(rootElement) for re-init after
 //              AJAX-loaded content replaces the DOM
 (function (window, document) {

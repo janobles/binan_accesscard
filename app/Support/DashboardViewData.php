@@ -172,7 +172,7 @@ class DashboardViewData
     {
         $families = self::arrayValue($data['families'] ?? []);
         $keyword = (string) ($data['keyword'] ?? '');
-        $routeBase = (string) ($data['routeBase'] ?? 'admin/manage-family');
+        $routeBase = (string) ($data['routeBase'] ?? 'records');
         $formatDate = self::formatDateCallback();
         $formatTime = self::formatTimeCallback();
 
@@ -237,7 +237,7 @@ class DashboardViewData
                 'canRestore',
                 'existingShortcodes'
             ),
-            self::lookupListVars($bundle, 'admin/reference-data')
+            self::lookupListVars($bundle, 'reference-data')
         );
     }
 
@@ -287,7 +287,7 @@ class DashboardViewData
 
         return array_merge(
             compact('services', 'canRestore', 'serviceCategoryOptions', 'serviceNextCodeMap', 'existingShortcodes'),
-            self::lookupListVars($bundle, 'admin/reference-data')
+            self::lookupListVars($bundle, 'reference-data')
         );
     }
 
@@ -307,7 +307,7 @@ class DashboardViewData
 
         return array_merge(
             compact('categories', 'canRestore', 'existingCodes'),
-            self::lookupListVars($bundle, 'admin/reference-data')
+            self::lookupListVars($bundle, 'reference-data')
         );
     }
 

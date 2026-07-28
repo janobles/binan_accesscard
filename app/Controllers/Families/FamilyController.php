@@ -239,7 +239,7 @@ class FamilyController extends BaseController
             return $guard;
         }
 
-        return redirect()->to(site_url($this->isEmployeeContext() ? 'employee/manage-records' : 'admin/manage-records'));
+        return redirect()->to(site_url('records'));
     }
 
     /**
@@ -465,7 +465,7 @@ class FamilyController extends BaseController
             ]);
         }
 
-        return redirect()->to(site_url($this->isEmployeeContext() ? 'employee/manage-records' : 'admin/manage-records'))
+        return redirect()->to(site_url('records'))
             ->with('success', $successMessage);
     }
 
@@ -566,7 +566,7 @@ class FamilyController extends BaseController
      */
     private function listUrlWithoutDeepSearch(): string
     {
-        $fallback = site_url($this->isEmployeeContext() ? 'employee/manage-records' : 'admin/manage-records');
+        $fallback = site_url('records');
         $referer  = (string) ($this->request->getServer('HTTP_REFERER') ?? '');
 
         if ($referer === '') {
@@ -1119,7 +1119,7 @@ class FamilyController extends BaseController
                 $viewData,
                 $modalData->updateData($head, $serviceIdsByMember[$headId] ?? []),
                 [
-                    'action' => site_url($this->currentRouteBase() . '/update/' . $headId),
+                    'action' => site_url($this->currentRouteBase() . '/' . $headId . '/update'),
                     'fieldPrefix' => 'family-update',
                     'modalTitle' => 'Update Family Record',
                     'modalMode' => 'update',
@@ -1137,7 +1137,7 @@ class FamilyController extends BaseController
         return view('Family/family-modal', array_merge(
             $viewData,
             [
-                'action' => site_url('families'),
+                'action' => site_url('records'),
                 'fieldPrefix' => 'family-add',
                 'modalTitle' => 'New Family Record',
                 'modalMode' => 'create',

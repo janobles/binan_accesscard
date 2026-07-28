@@ -1,7 +1,7 @@
 <?php
 /**
  * New Batch modal: name + subsidy type pick. Subsidy types come from the
- * subsidy reference table (admin/aidtypes page).
+ * subsidy reference table (reference-data/subsidy-types page).
  *
  * Variables:
  * - $activeSubsidyTypes list of subsidy type rows (subsidy_type_id, name)
@@ -10,7 +10,7 @@ $activeSubsidyTypes = $activeSubsidyTypes ?? [];
 ?>
 <div class="modal fade" id="newBatchModal" tabindex="-1" aria-labelledby="newBatchModalLabel" aria-hidden="true">
   <div class="modal-dialog">
-    <form class="modal-content" method="post" action="<?= site_url('admin/batches/open') ?>">
+    <form class="modal-content" method="post" action="<?= site_url('distribution/batches/open') ?>">
       <?= csrf_field() ?>
       <div class="modal-header">
         <h5 class="modal-title" id="newBatchModalLabel">New Batch</h5>

@@ -8,37 +8,22 @@ use CodeIgniter\HTTP\RedirectResponse;
 use Throwable;
 
 /**
- * Request-context helpers shared by the Families controllers: admin/employee
- * route detection, access guards, and modal/JSON error fragments. Relies on
+ * Request-context helpers shared by the Families controllers: family record
+ * route bases, access guards, and modal/JSON error fragments. Relies on
  * BaseController's $this->request / $this->response.
  */
 trait FamilyRequestContext
 {
-    /** True when the current request is under the `employee/` route group. */
-    private function isEmployeeContext(): bool
-    {
-        // uri_string() returns the path relative to baseURL (e.g. "employee/manage-family/
-        // update/5"). Using the URI's getPath() here would include the subfolder the app
-        // is installed in (e.g. "/binan_accesscard/employee/..."), so the str_starts_with
-        // check would fail and an encoder's save would redirect to the admin-only
-        // manage-records page ("You do not have access to that page.").
-        return str_starts_with(uri_string(), 'employee/');
-    }
-
-    /** Route base (`admin/manage-family` or `employee/manage-family`) for the request. */
+    /** Route base (`records`) for family record sub-actions (update, import, qr-check, ...). */
     private function currentRouteBase(): string
     {
-        return $this->isEmployeeContext() ? 'employee/manage-family' : 'admin/manage-family';
+        return 'records';
     }
 
-    /**
-     * The Manage Records landing page for the request. The bare route base
-     * (`{role}/manage-family`) has NO index route - only sub-paths (/list, /import, …) -
-     * so navigations "back to records" must target this page, not the base.
-     */
+    /** The Manage Records landing page for the request. */
     private function recordsUrl(): string
     {
-        return site_url($this->isEmployeeContext() ? 'employee/manage-records' : 'admin/manage-records');
+        return site_url('records');
     }
 
     /**

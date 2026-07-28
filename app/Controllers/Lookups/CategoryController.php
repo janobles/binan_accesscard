@@ -15,7 +15,7 @@ use CodeIgniter\HTTP\RedirectResponse;
  * the admin "Manage Categories" page. After the Phase A restructure a category is a
  * SERVICE category (services link to it by the name stored in `services.category`).
  * Read/listing is done by Admin\DashboardController::categories; every action here is
- * Developer/Admin-only and redirects back to `admin/categories` with a flash message.
+ * Developer/Admin-only and redirects back to `reference-data` with a flash message.
  *
  * Every category is editable, archivable, and restorable; categories are never
  * permanently deleted (archive is the only retirement path). Archiving a category
@@ -27,7 +27,7 @@ class CategoryController extends BaseController
     use LookupControllerTrait;
 
     /**
-     * POST `admin/categories/create`: add a new category. Delegates to saveCategory().
+     * POST `reference-data/categories/create`: add a new category. Delegates to saveCategory().
      */
     public function create(): RedirectResponse
     {
@@ -35,7 +35,7 @@ class CategoryController extends BaseController
     }
 
     /**
-     * POST `admin/categories/update/{id}`: edit an existing category. Delegates to
+     * POST `reference-data/categories/update/{id}`: edit an existing category. Delegates to
      * saveCategory() with the id.
      */
     public function update(int $categoryId): RedirectResponse
@@ -44,7 +44,7 @@ class CategoryController extends BaseController
     }
 
     /**
-     * POST `admin/categories/archive/{id}`: soft-archive a category and cascade the
+     * POST `reference-data/categories/archive/{id}`: soft-archive a category and cascade the
      * archive onto every active service linked to it (matched by the category name in
      * services.category), so a category and its programs retire together.
      */
@@ -82,7 +82,7 @@ class CategoryController extends BaseController
     }
 
     /**
-     * POST `admin/categories/restore/{id}`: un-archive a category and cascade the
+     * POST `reference-data/categories/restore/{id}`: un-archive a category and cascade the
      * restore onto the services its archive retired (matched by category name + the
      * shared archive timestamp), so the pair comes back together. Services archived
      * separately keep their archived state.
@@ -198,7 +198,7 @@ class CategoryController extends BaseController
     /** Redirect back to the categories page with a typed flash message. */
     private function redirect(string $type, string $message): RedirectResponse
     {
-        return $this->redirectAdmin('admin/reference-data?tab=categories', $type, $message);
+        return $this->redirectAdmin('reference-data?tab=categories', $type, $message);
     }
 
     /** Human-readable category label for audit descriptions, e.g. "category SC (Senior Citizen) #3". */

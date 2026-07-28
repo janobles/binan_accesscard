@@ -49,7 +49,7 @@
                         <i class="bi bi-three-dots" aria-hidden="true"></i>
                       </button>
                       <div class="dropdown-menu dropdown-menu-end">
-                        <form method="post" action="<?= esc(site_url('admin/distributions/void/' . $d['distribution_id']), 'attr') ?>"
+                        <form method="post" action="<?= esc(site_url('distribution/void/' . $d['distribution_id']), 'attr') ?>"
                               onsubmit="return confirm('Void this distribution? This permanently removes the record.');">
                           <?= csrf_field() ?>
                           <button class="dropdown-item text-danger" type="submit"><i class="bi bi-x-circle" aria-hidden="true"></i>Void</button>

@@ -10,7 +10,7 @@ final class FamilyRequestContextTest extends CIUnitTestCase
     {
         $this->assertTrue(trait_exists(\App\Controllers\Families\FamilyRequestContext::class));
 
-        foreach (['isEmployeeContext', 'currentRouteBase', 'partialGuard', 'recordMissing', 'jsonError', 'requireFamilyEntryAccess', 'requireFamilyViewAccess'] as $method) {
+        foreach (['currentRouteBase', 'partialGuard', 'recordMissing', 'jsonError', 'requireFamilyEntryAccess', 'requireFamilyViewAccess'] as $method) {
             $this->assertTrue(method_exists(\App\Controllers\Families\FamilyRequestContext::class, $method), $method);
         }
     }

@@ -16,9 +16,9 @@ use CodeIgniter\HTTP\ResponseInterface;
  * QR access cards for family heads. Decides which heads to render and streams
  * the result; the PDF/ZIP is built by App\Libraries\Qr\QrCardPdfGenerator.
  *
- * - batch():  POST admin/cards/generate  -> PDF or ZIP of cards for a filter.
- * - card():   GET  admin/cards/card/{id} -> single-head card (reprint).
- * - lookup(): GET  admin/cards/lookup/{control} -> redirect to the head record.
+ * - batch():  POST cards/generate  -> PDF or ZIP of cards for a filter.
+ * - card():   GET  cards/card/{id} -> single-head card (reprint).
+ * - lookup(): GET  cards/lookup/{control} -> redirect to the head record.
  *
  * The control number is the head's paper QR number, stored in qr_control (the
  * same source the scanner reads), so a printed card always resolves on scan.
@@ -28,7 +28,7 @@ use CodeIgniter\HTTP\ResponseInterface;
 class QrCardController extends BaseController
 {
     /**
-     * POST admin/cards/generate: prints a batch of QR access cards (PDF for one
+     * POST cards/generate: prints a batch of QR access cards (PDF for one
      * card, ZIP for several) for every active head of family matching the
      * barangay/control-number filter. Developer/Admin only. Writes one audit
      * trail row for the whole batch, not one per card.
@@ -80,7 +80,7 @@ class QrCardController extends BaseController
     }
 
     /**
-     * GET admin/cards/heads. JSON feed for the Control Numbers page: powers both
+     * GET cards/heads. JSON feed for the Control Numbers page: powers both
      * the Batch preview table and the Single-card head autocomplete. Returns the
      * full match count plus one page of rows, drawn from the same MemberModel
      * selection the printed PDF uses so preview and output never diverge.
@@ -155,7 +155,7 @@ class QrCardController extends BaseController
     }
 
     /**
-     * GET admin/cards/card/{id}: reprints a single head of family's QR access
+     * GET cards/card/{id}: reprints a single head of family's QR access
      * card as a PDF. Developer/Admin only. Writes an audit trail row for the
      * reprint.
      */
@@ -215,7 +215,7 @@ class QrCardController extends BaseController
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound('Unknown control number.');
         }
 
-        return redirect()->to(site_url('admin/manage-family/view/' . $headId));
+        return redirect()->to(site_url('records/' . $headId));
     }
 
     private function streamDownload(array $result): ResponseInterface

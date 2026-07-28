@@ -12,7 +12,7 @@ use CodeIgniter\HTTP\RedirectResponse;
 use Throwable;
 
 /**
- * Server-side DataTables list (GET {role}/manage-family/data).
+ * Server-side DataTables list (GET records/data).
  *
  * Powers the Manage Records DataTable (assets/js/dashboard/family-datatable.js).
  * Reuses the existing, untouched search models: MemberModel::searchFamilies()
@@ -140,17 +140,9 @@ class FamilyDataTableController extends BaseController
         return [$orderKey, $direction];
     }
 
-    /** Role-aware route base for the DataTable action URLs. */
+    /** Route base for the DataTable action URLs. One flat URI for every role. */
     private function dataTableRouteBase(): string
     {
-        if (str_starts_with(uri_string(), 'employee/')) {
-            return 'employee/manage-family';
-        }
-
-        if (str_starts_with(uri_string(), 'viewer/')) {
-            return 'viewer/manage-family';
-        }
-
-        return 'admin/manage-family';
+        return 'records';
     }
 }

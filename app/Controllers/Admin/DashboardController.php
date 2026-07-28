@@ -36,11 +36,11 @@ class DashboardController extends BaseController
      */
     public function index(): RedirectResponse
     {
-        return redirect()->to(site_url('admin/dashboard'));
+        return redirect()->to(site_url('dashboard'));
     }
 
     /**
-     * GET `admin/dashboard`. Delegates to DashboardPageBuilder to assemble stats
+     * GET `dashboard`. Delegates to DashboardPageBuilder to assemble stats
      * and render the admin shell on the "dashboard" tab. Frontend: full-page load
      * of `Admin/layout`.
      */
@@ -50,7 +50,7 @@ class DashboardController extends BaseController
     }
 
     /**
-     * GET `admin/accounts`. Renders the full accounts page, or-when the request
+     * GET `accounts`. Renders the full accounts page, or-when the request
      * is an AJAX/partial fetch from the dashboard-just the accounts fragment.
      */
     public function accounts(): string|RedirectResponse
@@ -63,7 +63,7 @@ class DashboardController extends BaseController
     }
 
     /**
-     * GET `admin/manage-records`. Renders the family records list page, or the
+     * GET `records`. Renders the family records list page, or the
      * list fragment for AJAX search/pagination.
      */
     public function manageRecords(): string|RedirectResponse
@@ -76,7 +76,7 @@ class DashboardController extends BaseController
     }
 
     /**
-     * GET `admin/audit-trails`. Renders the audit log page, or the audit fragment
+     * GET `audit-trails`. Renders the audit log page, or the audit fragment
      * for AJAX search/filtering.
      */
     public function auditTrails(): string|RedirectResponse
@@ -89,7 +89,7 @@ class DashboardController extends BaseController
     }
 
     /**
-     * GET `admin/reference-data`. One page for the four lookup tables
+     * GET `reference-data`. One page for the four lookup tables
      * (Sectors, Services, Categories, Subsidy Types), switched by ?tab=.
      * Mutations still post to the Lookups\* and SubsidyTypes controllers.
      */
@@ -99,7 +99,7 @@ class DashboardController extends BaseController
     }
 
     /**
-     * GET `admin/cards`. Renders the QR access-card batch page in the admin
+     * GET `cards`. Renders the QR access-card batch page in the admin
      * shell. Generation/lookup are handled by Cards\QrCardController.
      */
     public function cards(): string|RedirectResponse

@@ -13,7 +13,7 @@ use CodeIgniter\Config\BaseConfig;
  * number (empty prefix = bare number). Every value is .env-overridable with the
  * "qrcardsettings." prefix, e.g.:
  *
- *   qrcardsettings.qrUrlPrefix = "https://app.binan.gov.ph/admin/cards/lookup/"
+ *   qrcardsettings.qrUrlPrefix = "https://app.binan.gov.ph/cards/lookup/"
  */
 class QrCardSettings extends BaseConfig
 {

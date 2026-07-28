@@ -490,7 +490,7 @@ $renderMemberRow = static function ($index, array $m = [], bool $open = true) us
                 <button class="btn btn-danger" type="reset" data-family-clear>Clear</button>
                 <?php if ($headId > 0): ?>
                     <a class="btn btn-link btn-sm px-1"
-                       href="<?= site_url('admin/cards/card/' . $headId) ?>"
+                       href="<?= site_url('cards/card/' . $headId) ?>"
                        target="_blank" rel="noopener">Print QR card</a>
                 <?php endif; ?>
             </div>

@@ -76,7 +76,7 @@ if (! function_exists('family_modal_prepare')) {
         ];
 
         return [
-            'action' => (string) ($data['action'] ?? site_url('families')),
+            'action' => (string) ($data['action'] ?? site_url('records')),
             'fieldPrefix' => (string) ($data['fieldPrefix'] ?? 'family-add'),
             'modalTitle' => (string) ($data['modalTitle'] ?? 'New Family Record'),
             'modalMode' => (string) ($data['modalMode'] ?? 'create'),

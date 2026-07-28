@@ -89,13 +89,12 @@ final class DashboardControllerRoutingTest extends TestCase
 
         foreach ([
             "'dashboard', 'Admin\\DashboardController::dashboard'",
-            "'workspace', 'Employee\\DashboardController::dashboard'",
-            "'activity', 'Employee\\DashboardController::activity'",
-            "'accounts/disable', 'Accounts\\AccountController::disableEmployee'",
-            "'list', 'Families\\FamilyController::listFamilies'",
-            "'create', 'Lookups\\SectorController::create'",
-            "'create', 'Lookups\\ServiceController::create'",
-            "'families', 'Families\\FamilyController::store'",
+            "'records', 'Admin\\DashboardController::manageRecords'",
+            "'disable', 'Accounts\\AccountController::disableEmployee'",
+            "'entry', 'Families\\FamilyController::createFamily'",
+            "'sectors/create', 'Lookups\\SectorController::create'",
+            "'services/create', 'Lookups\\ServiceController::create'",
+            "'', 'Families\\FamilyController::store'",
         ] as $expectedRoute) {
             $this->assertStringContainsString($expectedRoute, $routes);
         }

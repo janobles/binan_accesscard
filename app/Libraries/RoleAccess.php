@@ -120,30 +120,20 @@ class RoleAccess
     }
 
     /**
-     * Returns a redirect to the dashboard matching the role: encoders to
-     * `employee/workspace`, admins/developers to `admin/dashboard`; an invalid
-     * role destroys the session and sends back to login. Used after login and by
-     * requireRole() to bounce users to where they belong.
+     * Returns a redirect to the landing page for a role. Every staff role lands on
+     * the shared dashboard; only Scanner has a different home, the kiosk. An
+     * invalid role destroys the session and sends back to login.
      */
     public static function redirectByRole(string $role): RedirectResponse
     {
         $normalizedRole = self::normalizeRole($role);
 
-        if ($normalizedRole === 'Encoder') {
-            return redirect()->to(site_url('employee/workspace'));
-        }
-
-        if ($normalizedRole === 'Admin' || $normalizedRole === 'Developer') {
-            return redirect()->to(site_url('admin/dashboard'));
-        }
-
-        // Viewer has a read-only dashboard (Viewer\DashboardController).
-        if ($normalizedRole === 'Viewer') {
-            return redirect()->to(site_url('viewer/dashboard'));
-        }
-
         if ($normalizedRole === 'Scanner') {
             return redirect()->to(site_url('scanner/scan'));
+        }
+
+        if ($normalizedRole !== null) {
+            return redirect()->to(site_url('dashboard'));
         }
 
         session()->destroy();

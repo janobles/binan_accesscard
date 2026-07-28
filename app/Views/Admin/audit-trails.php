@@ -16,7 +16,7 @@ $auditListData      = $auditListData ?? [];
 $hasSearchFilters   = $searchTerm !== '' || array_filter($searchFilters, static fn ($value): bool => trim((string) $value) !== '') !== [];
 
 // Pagination + page-size bundle (from DashboardPageBuilder::buildAuditListData).
-$listRoute      = (string) ($auditListData['listRoute'] ?? 'admin/audit-trails');
+$listRoute      = (string) ($auditListData['listRoute'] ?? 'audit-trails');
 $auditAction    = trim((string) ($searchFilters['action'] ?? ''));
 $perPage        = (int) ($auditListData['perPage'] ?? 25);
 $perPageOptions = ($auditListData['perPageOptions'] ?? []) ?: [10, 25, 50, 100];

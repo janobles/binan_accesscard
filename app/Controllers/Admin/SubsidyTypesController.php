@@ -21,60 +21,60 @@ class SubsidyTypesController extends BaseController
         return $g instanceof RedirectResponse ? $g : null;
     }
 
-    /** POST admin/aidtypes/create - add a subsidy type. */
+    /** POST reference-data/subsidy-types/create - add a subsidy type. */
     public function create(): RedirectResponse
     {
         if ($g = $this->guard()) { return $g; }
         $name = trim((string) $this->request->getPost('name'));
         if ($name === '') {
-            return redirect()->to('admin/reference-data?tab=aidtypes')->with('error', 'Subsidy type name is required.');
+            return redirect()->to('reference-data?tab=aidtypes')->with('error', 'Subsidy type name is required.');
         }
         $id = model(SubsidyTypeModel::class)->create($name);
         if ($id <= 0) {
-            return redirect()->to('admin/reference-data?tab=aidtypes')->with('error', 'Unable to add subsidy type.');
+            return redirect()->to('reference-data?tab=aidtypes')->with('error', 'Unable to add subsidy type.');
         }
         $this->audit('Created subsidy type "' . $name . '" #' . $id);
-        return redirect()->to('admin/reference-data?tab=aidtypes')->with('success', 'Subsidy type added.');
+        return redirect()->to('reference-data?tab=aidtypes')->with('success', 'Subsidy type added.');
     }
 
-    /** POST admin/aidtypes/archive/{id} - soft-archive (drops out of new-batch picks). */
+    /** POST reference-data/subsidy-types/archive/{id} - soft-archive (drops out of new-batch picks). */
     public function archive(int $id): RedirectResponse
     {
         if ($g = $this->guard()) { return $g; }
         $type = model(SubsidyTypeModel::class)->find($id);
         if (! model(SubsidyTypeModel::class)->archive($id)) {
-            return redirect()->to('admin/reference-data?tab=aidtypes')->with('error', 'Unable to archive subsidy type.');
+            return redirect()->to('reference-data?tab=aidtypes')->with('error', 'Unable to archive subsidy type.');
         }
         $this->audit('Archived subsidy type "' . (string) ($type['name'] ?? '') . '" #' . $id);
-        return redirect()->to('admin/reference-data?tab=aidtypes')->with('success', 'Subsidy type archived.');
+        return redirect()->to('reference-data?tab=aidtypes')->with('success', 'Subsidy type archived.');
     }
 
-    /** POST admin/aidtypes/restore/{id} - un-archive. */
+    /** POST reference-data/subsidy-types/restore/{id} - un-archive. */
     public function restore(int $id): RedirectResponse
     {
         if ($g = $this->guard()) { return $g; }
         $type = model(SubsidyTypeModel::class)->find($id);
         if (! model(SubsidyTypeModel::class)->restore($id)) {
-            return redirect()->to('admin/reference-data?tab=aidtypes')->with('error', 'Unable to restore subsidy type.');
+            return redirect()->to('reference-data?tab=aidtypes')->with('error', 'Unable to restore subsidy type.');
         }
         $this->audit('Restored subsidy type "' . (string) ($type['name'] ?? '') . '" #' . $id);
-        return redirect()->to('admin/reference-data?tab=aidtypes')->with('success', 'Subsidy type restored.');
+        return redirect()->to('reference-data?tab=aidtypes')->with('success', 'Subsidy type restored.');
     }
 
-    /** POST admin/aidtypes/delete/{id} - permanent delete, blocked while referenced. */
+    /** POST reference-data/subsidy-types/delete/{id} - permanent delete, blocked while referenced. */
     public function deleteType(int $id): RedirectResponse
     {
         if ($g = $this->guard()) { return $g; }
         $type   = model(SubsidyTypeModel::class)->find($id);
         $result = model(SubsidyTypeModel::class)->deleteIfUnused($id);
         if ($result > 0) {
-            return redirect()->to('admin/reference-data?tab=aidtypes')->with('error', 'This subsidy type is used by ' . $result . ' distribution(s) and cannot be deleted. Archive it instead.');
+            return redirect()->to('reference-data?tab=aidtypes')->with('error', 'This subsidy type is used by ' . $result . ' distribution(s) and cannot be deleted. Archive it instead.');
         }
         if ($result < 0) {
-            return redirect()->to('admin/reference-data?tab=aidtypes')->with('error', 'Unable to delete subsidy type.');
+            return redirect()->to('reference-data?tab=aidtypes')->with('error', 'Unable to delete subsidy type.');
         }
         $this->audit('Permanently deleted subsidy type "' . (string) ($type['name'] ?? '') . '" #' . $id);
-        return redirect()->to('admin/reference-data?tab=aidtypes')->with('success', 'Subsidy type deleted.');
+        return redirect()->to('reference-data?tab=aidtypes')->with('success', 'Subsidy type deleted.');
     }
 
     private function audit(string $action): void

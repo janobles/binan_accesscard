@@ -146,7 +146,50 @@ every PR.
 Split by what is mechanically checkable. Linters are deterministic about structure and
 blind to prose quality; the written standard covers the rest, checked by review.
 
-### Layer 1: Formatter (php-cs-fixer)
+### Layer 1: Formatter (php-cs-fixer) - INSTALLED BUT NOT APPLIED
+
+**Outcome, recorded after attempting it.** The repo-wide reformat was attempted and
+then abandoned on evidence. It is not part of this branch.
+
+Running the fixer under the token-identity gate forced **18 rules off**, because each
+moved executable tokens: `ordered_imports`, `no_unused_imports`,
+`single_import_per_statement`, `global_namespace_import`, `fully_qualified_strict_types`,
+`ordered_types`, `ordered_class_elements`, `nullable_type_declaration`, `single_quote`,
+`modernize_strpos`, `random_api_migration`, `fopen_flags`, `trailing_comma_in_multiline`,
+`return_assignment`, `use_arrow_functions`, `static_lambda`, `control_structure_braces`,
+`assign_null_coalescing_to_coalesce_equal`.
+
+What survived produced 2,616 added and 1,662 deleted lines across 128 files, consisting
+of docblock expansion and alignment padding:
+
+```php
+-    /** @return array<string, mixed> */
++    /**
++     * @return array<string, mixed>
++     */
+```
+
+Three reasons it was dropped:
+
+1. **The gate proved the goals are contradictory.** Meaningful PHP formatting moves
+   tokens. A branch that forbids moving tokens cannot meaningfully reformat. Asking for
+   both, as the first draft of this spec did, was incoherent.
+2. **What remained works against this branch.** Expanding a compact, readable
+   `/** @return array<string, mixed> */` into three lines makes the codebase more
+   verbose, which is the opposite of the standard being introduced.
+3. **It broke two tests for no gain.** `FamilyDataTableTest` asserts against literal
+   source text (`"'qr' => \$this->qrCell(\$controlNo)"`), so alignment padding fails it.
+   Those assertions are brittle by design, but repairing them is not this branch's job.
+
+php-cs-fixer and `.php-cs-fixer.dist.php` stay installed and configured for a future
+formatting branch, where changing behavior is permitted and those two tests can be
+fixed alongside.
+
+**Consequence for CI:** `composer lint` must NOT include `lint:format`, since the tree
+is deliberately unformatted. `composer lint` is `lint:sniff` plus `lint:comments`.
+`lint:fix` and `lint:format` remain available to run by hand.
+
+The original scope, kept for the record:
 
 Config `.php-cs-fixer.dist.php`, based on `codeigniter/coding-standard`.
 
@@ -426,9 +469,11 @@ One branch, `chore/doc-standard`, one commit per tranche.
 
    Gates: C, and the fixture acceptance test.
 
-3. **`style: apply formatter repo-wide`**
-   `composer lint:fix`. Mechanical only, no prose changes.
-   Gates: A, C.
+3. ~~**`style: apply formatter repo-wide`**~~ **DROPPED.** Attempted, then abandoned on
+   evidence: the token gate forced 18 rules off, and what remained was docblock
+   expansion and alignment padding across 128 files that broke two tests and made
+   comments more verbose. See the Layer 1 section. The branch ships no formatting
+   commit.
 
 4. **`docs: bring Libraries to standard`** - 22 files.
    Gates: A, C, G.

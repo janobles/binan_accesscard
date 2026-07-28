@@ -50,7 +50,6 @@
     "scripts": {
         "test": "phpunit",
         "lint": [
-            "@lint:format",
             "@lint:sniff",
             "@lint:comments"
         ],

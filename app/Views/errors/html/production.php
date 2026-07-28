@@ -1,3 +1,12 @@
+<?php
+/**
+ * The page a visitor sees for an uncaught exception in production.
+ *
+ * Stock CodeIgniter, unmodified. Deliberately says nothing about what failed: the
+ * detail goes to the log, never to the browser. Shown whenever CI_ENVIRONMENT is
+ * production, so the debug template never reaches a live user.
+ */
+?>
 <!doctype html>
 <html>
 <head>

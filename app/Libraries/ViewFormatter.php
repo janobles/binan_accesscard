@@ -3,9 +3,6 @@
 namespace App\Libraries;
 
 /**
- * Shared presentation formatting and normalization for view templates.
- */
-/**
  * Static presentation helpers called from the view templates (and mirrored by the
  * closures DashboardPageBuilder passes in) to format and normalize display data.
  * Pure functions with no DB or session access.

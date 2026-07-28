@@ -1,3 +1,12 @@
+<?php
+/**
+ * Stylesheet for the distribution report PDF, included by Scanner/pdf/report.php.
+ *
+ * A view rather than a .css file because dompdf resolves no external assets and needs
+ * the rules inlined into the document it renders. DejaVu Sans is dompdf's built-in
+ * font, chosen so the report needs no embedded font file.
+ */
+?>
 <style>
   body { font-family: DejaVu Sans, sans-serif; font-size: 11px; color: #222; }
   h1 { font-size: 18px; margin: 0 0 2px; }

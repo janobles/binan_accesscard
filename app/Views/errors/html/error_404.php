@@ -1,3 +1,12 @@
+<?php
+/**
+ * The 404 page, shown for any route that does not resolve.
+ *
+ * Diverges from stock CodeIgniter in one way: the inline CSS block was lifted into
+ * _error_styles.php, which error_400.php shares. Outside production the page names
+ * the missing route; in production it stays vague on purpose.
+ */
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>

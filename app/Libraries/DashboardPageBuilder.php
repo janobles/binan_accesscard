@@ -367,9 +367,8 @@ class DashboardPageBuilder
      * action filter reuses searchFilters(). Frontend: the audit views' database
      * search bar, show-entries selector and pagination controls.
      *
-     * @param bool     $includeDeveloper Whether Developer (NULL-userID) rows are visible (admin only).
-     * @param int|null $userId           Scopes to one user's own rows (employee Activity), or null for all users.
-     * @param string   $listRoute        Full-page route the search/pagination forms post to.
+     * $includeDeveloper shows Developer (NULL-userID) rows (admin only); $userId scopes
+     * to one user's own rows (employee Activity), or null for all users.
      */
     private function buildAuditListData(bool $includeDeveloper, ?int $userId, string $listRoute): array
     {

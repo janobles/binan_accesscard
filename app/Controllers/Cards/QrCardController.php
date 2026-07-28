@@ -27,6 +27,12 @@ use CodeIgniter\HTTP\ResponseInterface;
  */
 class QrCardController extends BaseController
 {
+    /**
+     * POST admin/cards/generate: prints a batch of QR access cards (PDF for one
+     * card, ZIP for several) for every active head of family matching the
+     * barangay/control-number filter. Developer/Admin only. Writes one audit
+     * trail row for the whole batch, not one per card.
+     */
     public function batch(): ResponseInterface
     {
         $guard = RoleAccess::requireRole(['Developer', 'Admin']);
@@ -81,6 +87,7 @@ class QrCardController extends BaseController
      *
      * The preview pages server-side (page + per_page, matching the standard
      * footer); the autocomplete (mode=search) always takes the first 15.
+     * Developer/Admin only.
      */
     public function heads(): ResponseInterface
     {
@@ -147,6 +154,11 @@ class QrCardController extends BaseController
         ]);
     }
 
+    /**
+     * GET admin/cards/card/{id}: reprints a single head of family's QR access
+     * card as a PDF. Developer/Admin only. Writes an audit trail row for the
+     * reprint.
+     */
     public function card(int $memberID): ResponseInterface
     {
         $guard = RoleAccess::requireRole(['Developer', 'Admin']);

@@ -1,4 +1,13 @@
 <?php
+/**
+ * Family record detail page (Manage Records > a record > View).
+ *
+ * Rendered by FamilyController::viewFamily for all three roles. Rows arrive already
+ * shaped by FamilyRecordPresenter rather than through the dashboard view helper, so
+ * the head and each member are presentation-ready here and this view only formats and
+ * lays them out. Read-only: every edit path leaves through the edit route.
+ */
+
 use App\Libraries\ViewFormatter;
 
 $headView = (array) ($headView ?? []);

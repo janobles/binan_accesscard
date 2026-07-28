@@ -1,4 +1,14 @@
 <?php
+/**
+ * Family record Add and Update form, rendered as a full-screen modal from the
+ * Manage Records page.
+ *
+ * Data comes from family_modal_prepare(). One form serves both modes: Update
+ * pre-renders the existing members server side because FamilyController::update()
+ * rebuilds the member list from what is submitted, so a member left out of the post
+ * would be dropped from the record.
+ */
+
 helper('family_modal');
 extract(family_modal_prepare(get_defined_vars()), EXTR_OVERWRITE);
 

@@ -11,7 +11,10 @@ use CodeIgniter\HTTP\RedirectResponse;
 use Config\IdleTimeout;
 
 /**
- * Handles login, logout, session keep-alive, and role-based redirects.
+ * Signs a user in and out and keeps the login session alive: the login form,
+ * the "already signed in elsewhere" confirmation, logout, and the idle-timeout
+ * heartbeat. On success it sends the user to the dashboard for their role and
+ * writes a login/logout row to the audit trail.
  */
 class AuthController extends BaseController
 {

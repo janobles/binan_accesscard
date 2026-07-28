@@ -1,5 +1,7 @@
 <?php
-/*
+/**
+ * Session conflict page, shown between the login form and the dashboard.
+ *
  * Shown by AuthController::login() when the credentials are valid but the same
  * account already holds an active session on another browser/device. Reuses the
  * login page's card styling. Both buttons POST to `login/confirm`, which reads the

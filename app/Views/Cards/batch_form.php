@@ -1,13 +1,19 @@
 <?php
-// Self-contained (the layout includes this with no data). Barangay picker comes
-// from the canonical source so filter values always match what headsForCards()
-// compares against. Two modes: Batch (barangay + control-number range, live
-// preview table) and Single card (searchable head or exact control number).
-//
-// Markup follows the house design system: segmented tabs (components/page_tabs
-// style) at the top level, then a standard `card mb-4` per mode with the shared
-// manage-record-table. The tabs must NOT sit inside a flex wrapper such as
-// .records-scroll-panel, or the inline-flex tab track stretches full width.
+/**
+ * QR access card issuing page (Admin > Cards).
+ *
+ * Self-contained: the layout includes it with no data, and the barangay list is read
+ * from FamilyProfilingFormV2 so the filter values always match what headsForCards()
+ * compares against. Two modes share the page: Batch, which takes a barangay and a
+ * control-number range and previews the heads it would print, and Single card, which
+ * takes one searchable head or an exact control number. The PDF is the real output;
+ * the table only previews who lands in it.
+ *
+ * Layout constraint worth knowing before editing: the segmented tabs must not sit
+ * inside a flex wrapper such as .records-scroll-panel, or the inline-flex tab track
+ * stretches to full width.
+ */
+
 helper('ui');
 $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
 ?>

@@ -1,4 +1,13 @@
 <?php
+/**
+ * Sector list page (Admin > Reference Data > Sectors).
+ *
+ * Data comes from sector_management_view_data(); this view never touches a model.
+ * Counts are whole-table, not the current page. Sectors are flat classifications,
+ * so there is no category column here. Reuses the Manage Records .records-* layout
+ * (managerecord.css) plus the shared lookup badge and action styles
+ * (lookupmanagement.css).
+ */
 helper('dashboard_view');
 // sector_management_view_data() also supplies the Add-Sector modal data
 // ($existingShortcodes, for the inline duplicate check) so this view never

@@ -23,8 +23,8 @@ class FamilyDataTablePresenter
      * Shapes one member row into the DataTables cell map the client expects
      * (name HTML, sector shortcodes, address, birthday, actions dropdown).
      *
-     * @param array<int, string> $sectorShortcodes
-     * @param array<int, int>    $controlNumbers   [headID => qr_control.control_no]
+     * @param array<int, string> $sectorShortcodes sectorID => display shortcode
+     * @param array<int, int>    $controlNumbers   headID => qr_control.control_no
      */
     public function row(array $row, bool $allMembersScope, array $sectorShortcodes, array $controlNumbers = []): array
     {

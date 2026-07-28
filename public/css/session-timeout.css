@@ -1,3 +1,10 @@
+/* Idle-session warning overlay, shown by the session countdown before a user is
+   logged out. Loaded via the `admin`, `employee`, and `viewer` manifest contexts
+   (asset_helper.php).
+   Scope: .session-timeout-* only, six rules. The overlay is hand-rolled rather
+   than a Bootstrap modal, because it must appear without Bootstrap's JS having
+   to still be alive on an idle page. */
+
 .session-timeout-modal {
     position: fixed;
     inset: 0;

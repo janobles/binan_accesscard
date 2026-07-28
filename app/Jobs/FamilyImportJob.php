@@ -43,8 +43,12 @@ class FamilyImportJob implements JobHandlerInterface
             : $this->handleReview($payload, $job);
     }
 
-    // -- review phase: parse + stage, write nothing ----------------------------
-
+    /**
+     * Review phase. Parses and validates the uploaded file, then hands the whole
+     * row set plus every error to ImportStagingStore, so the browser can show the
+     * reviewer what needs fixing. A file that cannot be parsed at all fails here
+     * and is never staged. Touches no family table.
+     */
     private function handleReview(array $payload, array $job): JobOutcome
     {
         $path = (string) ($payload['storedPath'] ?? '');
@@ -116,8 +120,13 @@ class FamilyImportJob implements JobHandlerInterface
         return JobOutcome::done($message, $summary);
     }
 
-    // -- write phase: persist the reviewed rows --------------------------------
-
+    /**
+     * Write phase. Loads the reviewed rows from the review job's staging file and
+     * re-validates them against the live tables rather than trusting the staged
+     * snapshot, since another operator may have added one of these families in the
+     * meantime. Refuses the whole batch while any blocking error remains. Each
+     * family is its own transaction, so one bad family cannot take the rest with it.
+     */
     private function handleWrite(array $payload, array $job, JobReporter $reporter): JobOutcome
     {
         $memberModel = new MemberModel();

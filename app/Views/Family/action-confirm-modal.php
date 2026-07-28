@@ -1,7 +1,15 @@
-<?php /* Confirmation modal for family record archive/restore. Lives outside the
-         AJAX-replaced records panel so it survives panel re-renders. Populated and
-         shown by family-list.js, which reads the clicked row form's data-* (title,
-         message, action flavour) and re-submits that form on confirm. */ ?>
+<?php
+/**
+ * Confirmation modal for archiving or restoring a family record, included by the
+ * Manage Records page and the import review page.
+ *
+ * Deliberately sits outside the records panel, because that panel is replaced
+ * wholesale on every AJAX search or page change and a modal inside it would be
+ * destroyed mid-interaction. Populated and shown by family-list.js, which reads the
+ * clicked row form's data attributes for the title, message and action wording, then
+ * re-submits that form on confirm.
+ */
+?>
 <div class="modal fade" id="familyActionModal" tabindex="-1" aria-labelledby="familyActionModalLabel" aria-hidden="true">
 	<div class="modal-dialog modal-dialog-centered">
 		<div class="modal-content">

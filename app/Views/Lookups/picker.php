@@ -1,9 +1,16 @@
 <?php
+/**
+ * Flat sector and service picker: every sector and service shown up front, grouped by
+ * category, with no category-filter step. Posts `sector_ids[]` and `service_ids[]`,
+ * which is what FamilyController::store and ::memberPayload read.
+ *
+ * Nothing renders this view. The family form uses the picker built into
+ * family-modal.php instead; this file is the older standalone version, kept because
+ * removing it is out of scope for a documentation pass.
+ */
+
 use App\Libraries\ViewFormatter;
 
-// Flat sector/service picker (jade design): every sector and service is shown up
-// front, grouped by category. Posts `sector_ids[]` / `service_ids[]`, exactly what
-// FamilyController::store / ::memberPayload read. No category-filter step.
 $servicesByCategory = $servicesByCategory ?? [];
 $sectorCatalog      = (array) ($sectorCatalog ?? []);
 $selectedSectorIds  = ViewFormatter::integerList($selectedSectorIds ?? [], true);

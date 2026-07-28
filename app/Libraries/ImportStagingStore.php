@@ -75,11 +75,9 @@ class ImportStagingStore
      *
      * $protectedIds MUST carry JobQueueModel::activeStagingIds(): a queued write job can
      * wait hours for a stopped worker, and sweeping its rows out from under it kills the
-     * import.
+     * import. Returns the number of files removed.
      *
      * @param list<int> $protectedIds staging IDs a pending/running job still needs
-     *
-     * @return int files removed
      */
     public function sweep(array $protectedIds = [], int $ttlHours = self::TTL_HOURS): int
     {

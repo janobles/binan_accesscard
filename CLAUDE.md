@@ -45,7 +45,19 @@ php spark routes        # confirm every route resolves to a controller
 php spark serve         # dev server (or use XAMPP at app.baseURL)
 vendor/bin/phpunit      # full test suite
 composer test           # alias for phpunit
+composer lint           # docblock sniff + comment-style check (required before a PR)
+composer lint:sniff     # phpcs only (phpcs.xml.dist)
+composer lint:comments  # view/CSS headers, banned patterns (scripts/check-comment-style.sh)
 ```
+
+`composer lint` and `composer test` also run on every PR to `main`
+(`.github/workflows/ci.yml`), so a red lint blocks the merge, not just review.
+
+`composer lint:format` / `lint:fix` (php-cs-fixer) exist but are **not** part of
+`composer lint` and are not in CI. The repo is deliberately unformatted: a
+whole-repo reformat produces a diff nobody can review and moves executable
+tokens. Do not run `lint:fix` across the repo. See
+`docs/knowledge/php-practices/comments.md`.
 
 DB: MySQL `accesscard` @ localhost:3306, user `root` (see `.env`).
 
@@ -130,3 +142,20 @@ decision table + grep index over `docs/knowledge/`:
 
 `DashboardPageBuilder` assembles all dashboard view data - start debugging
 there. Full file map: `PROJECT_STRUCTURE.md`.
+
+## Comments and docblocks
+
+Every class, view, and stylesheet carries a docblock. A method carries one
+only when it says something the signature cannot. Prose
+first: what it is, who calls it, why it exists. `@param`/`@return` only when
+the native type is not enough (array shapes, what a null means, units).
+`@param string $id The id.` is a lint error, not a style preference.
+
+Views state purpose and data source, no variable list. The data contracts
+live on the `*_view_data()` functions in `app/Helpers/dashboard_view_helper.php`.
+
+Banned: em dashes, `---- ----` dividers, `@author`/`@created`/`@version`,
+comments recording a change someone wanted, AI-slop register.
+
+Run `composer lint` before any PR. Full standard:
+`docs/knowledge/php-practices/comments.md`.

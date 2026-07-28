@@ -6,7 +6,6 @@ if (! function_exists('family_modal_prepare')) {
      * Bootstrap Family Add modal view.
      *
      * @param array<string, mixed> $data
-     *
      * @return array<string, mixed>
      */
     function family_modal_prepare(array $data): array

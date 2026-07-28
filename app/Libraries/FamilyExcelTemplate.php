@@ -413,8 +413,8 @@ class FamilyExcelTemplate
     // -- low-level helpers -----------------------------------------------------
 
     /**
-     * Writes a header at row 1 and the given values down a column, returning the
-     * absolute range for use as a dropdown source.
+     * Writes a header at row 1 and the given list of values down a column,
+     * returning the absolute range for use as a dropdown source.
      *
      * @param list<string> $values
      */

@@ -19,7 +19,7 @@ class FamilyModalDataBuilder
      * the Update modal. Splits the stored "address, barangay" back into the two
      * separate inputs via MemberFieldNormalizer::splitAddressBarangay().
      *
-     * @param list<int> $headServiceIds
+     * @param list<int> $headServiceIds the head's currently assigned service IDs
      */
     public function updateData(array $head, array $headServiceIds): array
     {

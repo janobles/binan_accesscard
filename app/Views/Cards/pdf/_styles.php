@@ -1,3 +1,13 @@
+<?php
+/**
+ * Stylesheet for the QR access card PDF, included by the card PDF templates.
+ *
+ * A view rather than a .css file because dompdf needs the font files addressed by
+ * absolute path through APPPATH, and because it must be inlined into the document
+ * dompdf renders. Fonts are embedded for the same reason: dompdf resolves no
+ * external assets.
+ */
+?>
 <style>
     @font-face { font-family: 'Roboto'; font-style: normal; font-weight: normal; src: url('<?= APPPATH ?>Fonts/Roboto-Regular.ttf') format('truetype'); }
     @font-face { font-family: 'Roboto Mono'; font-style: normal; font-weight: normal; src: url('<?= APPPATH ?>Fonts/RobotoMono-Regular.ttf') format('truetype'); }

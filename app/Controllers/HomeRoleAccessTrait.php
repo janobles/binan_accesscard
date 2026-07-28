@@ -7,7 +7,10 @@ use CodeIgniter\HTTP\RedirectResponse;
 use Config\IdleTimeout;
 
 /**
- * Shared session/role helpers used by the Auth and Admin\DashboardController controllers.
+ * Shared session/role helpers used by Auth\AuthController and
+ * Admin\DashboardController: checking whether the current login is still
+ * valid, clearing it, and sending a user to the dashboard that matches
+ * their role.
  */
 trait HomeRoleAccessTrait
 {

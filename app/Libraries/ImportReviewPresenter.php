@@ -136,7 +136,6 @@ class ImportReviewPresenter
      * @param array<int, array<string, string>> $byRow   [sheet row => cell values]
      * @param list<array>                       $errors
      * @param array<string, string>             $columns [field => Excel column letter]
-     *
      * @return list<array>
      */
     private function familiesToFix(array $byQr, array $byRow, array $errors, array $columns): array
@@ -395,7 +394,6 @@ class ImportReviewPresenter
      * @param array<string, list<int>>          $byQr   [qr => sheet rows]
      * @param array<int, array<string, string>> $byRow  [sheet row => cell values]
      * @param list<array>                       $errors
-     *
      * @return list<array>
      */
     private function readyFamilies(array $byQr, array $byRow, array $errors): array

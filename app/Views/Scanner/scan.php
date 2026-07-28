@@ -1,3 +1,13 @@
+<?php
+/**
+ * Scan page (Scanner kiosk > Scan), the screen the distribution kiosk sits on.
+ *
+ * Refuses to scan at all when no distribution batch is open, because a scan with no
+ * batch to record against has nowhere to go. Built for a keyboard-wedge scanner gun
+ * rather than a mouse: the input stays focused and a scan completes in one action, so
+ * anything added here that steals focus breaks the whole flow.
+ */
+?>
 <?= $this->extend('Scanner/kiosk-layout') ?>
 <?= $this->section('content') ?>
 

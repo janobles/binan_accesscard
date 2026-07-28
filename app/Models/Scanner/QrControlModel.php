@@ -61,7 +61,6 @@ class QrControlModel extends Model
      * on a 10k-row file is thousands of IDs, far too many for one IN (...).
      *
      * @param int[] $headIds
-     *
      * @return array<int, int> [headID => control_no]; heads without a mapping are absent.
      */
     public function controlsForHeads(array $headIds): array

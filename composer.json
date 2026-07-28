@@ -17,9 +17,13 @@
         "phpoffice/phpspreadsheet": "^5.8"
     },
     "require-dev": {
+        "codeigniter/coding-standard": "^1.9",
         "fakerphp/faker": "^1.9",
+        "friendsofphp/php-cs-fixer": "^3.95",
         "mikey179/vfsstream": "^1.6",
-        "phpunit/phpunit": "^10.5.16"
+        "phpunit/phpunit": "^10.5.16",
+        "slevomat/coding-standard": "^8.31",
+        "squizlabs/php_codesniffer": "^4.0.1"
     },
     "autoload": {
         "psr-4": {
@@ -38,9 +42,21 @@
     "config": {
         "optimize-autoloader": true,
         "preferred-install": "dist",
-        "sort-packages": true
+        "sort-packages": true,
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true
+        }
     },
     "scripts": {
-        "test": "phpunit"
+        "test": "phpunit",
+        "lint": [
+            "@lint:format",
+            "@lint:sniff",
+            "@lint:comments"
+        ],
+        "lint:format": "php-cs-fixer fix --dry-run --diff",
+        "lint:sniff": "phpcs",
+        "lint:comments": "bash scripts/check-comment-style.sh",
+        "lint:fix": "php-cs-fixer fix"
     }
 }

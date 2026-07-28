@@ -1,9 +1,9 @@
-# MVC Cleanup & FamilyController Split — Design Spec
+# MVC Cleanup & FamilyController Split - Design Spec
 
 **Date:** 2026-07-07
 **Branch:** `refactor/mvc-cleanup` (off freshly synced `main`)
 **Goal:** Tick all five items in `docs/knowledge/violations.md`. No behavior, URL,
-or schema changes — pure extraction, relocation, and deletion.
+or schema changes - pure extraction, relocation, and deletion.
 
 ## Baseline
 
@@ -18,7 +18,7 @@ All five violations.md items in one branch, one concern per commit:
 
 1. 🟠 Split 1750-line `app/Controllers/Families/FamilyController.php`.
 2. 🟡 Move raw `$db->table()` queries out of `ServiceController` (lines
-   181–216) and `SectorController` (line 234) into `ServiceModel` /
+   181-216) and `SectorController` (line 234) into `ServiceModel` /
    `SectorModel` methods.
 3. ⚪ Delete dead `shapeExistingMembers()` (FamilyController:824).
 4. 🟡 Move inline styles: `app/Views/Family/list.php:47,69` →
@@ -55,7 +55,7 @@ Target layout (URLs unchanged; `Routes.php` retargets only):
   `requireFamilyViewAccess`, `isEmployeeContext`, `currentRouteBase`,
   `partialGuard`, `recordMissing`, JSON error helpers) → new trait
   `Controllers/Families/FamilyRequestContext`, since all three
-  controllers need them. Behavior must be byte-identical — employee vs
+  controllers need them. Behavior must be byte-identical - employee vs
   admin route context (`currentRouteBase`) is the sensitive path.
 
 ### Invariants
@@ -63,7 +63,7 @@ Target layout (URLs unchanged; `Routes.php` retargets only):
 - **Audit trail:** every mutation path (store, update, archive, restore,
   import) keeps its `Audit/AuditTrailsModel` write. Verified per commit.
 - **JSON contracts:** `dataTable` response shape and `importStatus` polling
-  payload are consumed by front-end JS — signatures and shapes relocated,
+  payload are consumed by front-end JS - signatures and shapes relocated,
   never changed.
 - **URLs:** all routes keep their current paths and names; only controller
   targets in `Routes.php` change. `php spark routes` confirms resolution
@@ -86,7 +86,7 @@ Each commit: `vendor/bin/phpunit` green (≥ baseline) + `php spark routes` clea
 ## Testing
 
 - Existing phpunit suite before/after every commit; suite must be green
-  (87+ tests, 0 failures) at branch end — merge blocker.
+  (87+ tests, 0 failures) at branch end - merge blocker.
 - New unit tests for the extracted libraries: `FamilyDataTablePresenter`
   and `FamilyModalDataBuilder` (they become testable units).
 - Manual smoke before PR: login, role redirect, family create/update,
@@ -96,9 +96,9 @@ Each commit: `vendor/bin/phpunit` green (≥ baseline) + `php spark routes` clea
 ## Review Gate (CodeRabbit)
 
 - Run `coderabbit review --base main --agent` on the finished branch
-  (background; wait for completion — large diffs take minutes; retry on
+  (background; wait for completion - large diffs take minutes; retry on
   transient `TRPCClientError`).
-- Triage every finding per `superpowers:receiving-code-review` — verify
+- Triage every finding per `superpowers:receiving-code-review` - verify
   against code and CLAUDE.md non-negotiables; **no blind-apply**.
 - Fix in-scope genuine bugs, re-run phpunit; park pre-existing /
   out-of-scope findings in a GitHub issue citing PR # and branch.
@@ -108,7 +108,7 @@ Each commit: `vendor/bin/phpunit` green (≥ baseline) + `php spark routes` clea
 
 The refactor must leave `docs/knowledge/` truthful (commit 8):
 
-- `violations.md`: tick items 1–5 `[x]` with `*(Fixed: <commit/PR>)*`.
+- `violations.md`: tick items 1-5 `[x]` with `*(Fixed: <commit/PR>)*`.
 - `binan-conventions/` (esp. `mvc-boundaries.md`): update any references to
   FamilyController's old shape; record the new controllers/libraries as the
   worked example of the controllers-decide/libraries-build boundary.
@@ -117,12 +117,12 @@ The refactor must leave `docs/knowledge/` truthful (commit 8):
 
 ## Risks
 
-- Modal rendering depends on employee vs admin route context — trait
+- Modal rendering depends on employee vs admin route context - trait
   extraction must preserve exact `currentRouteBase()` behavior.
 - Diff size: mitigated by one-concern-per-commit; CodeRabbit (not Copilot)
   reviews it, per CLAUDE.md.
 - 5 skipped DB/session tests (no sqlite3) reduce automated coverage of
-  session-dependent paths — covered by the manual smoke list instead.
+  session-dependent paths - covered by the manual smoke list instead.
 
 ## Out of Scope
 

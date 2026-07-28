@@ -1,4 +1,4 @@
-# Control Numbers page + Aid→Subsidy relabel — design
+# Control Numbers page + Aid→Subsidy relabel - design
 
 **Date:** 2026-07-20
 **Status:** Approved (brainstorming)
@@ -6,8 +6,8 @@
 
 This spec covers two related relabeling changes shipped together:
 
-1. **Control Numbers page** — rebuild the "Generate Cards" page (below).
-2. **Aid → Subsidy relabel** — rename the user-facing word "aid" to "subsidy"
+1. **Control Numbers page** - rebuild the "Generate Cards" page (below).
+2. **Aid → Subsidy relabel** - rename the user-facing word "aid" to "subsidy"
    across the app (see the final section). Display text only; no DB/schema.
 
 ## Goal
@@ -34,7 +34,7 @@ the audit behavior are unchanged except where noted.
 ## Non-goals
 
 - No schema/migration changes (SQL dump is source of truth).
-- No edit/archive/row actions in the preview table — it is read-only.
+- No edit/archive/row actions in the preview table - it is read-only.
 - No change to the scanner, `qr_control` semantics, or `ControlNumber`.
 
 ## UI
@@ -58,7 +58,7 @@ Control Numbers                         (heading + one-line help)
    [ Generate cards ]  (btn-primary)     status →
 
  SINGLE:
-   [ Head — searchable (col-8) ] [ Control # (col-4) ]
+   [ Head - searchable (col-8) ] [ Control # (col-4) ]
    help: "Pick a head OR type an exact control number."
    [ Generate card ]  (btn-primary)      status →
 └───────────────────────────────────────────────────────┘
@@ -74,9 +74,9 @@ Control Numbers                         (heading + one-line help)
 - **Preview table** (read-only): columns Control # · Head name · Barangay.
   - Live-updates on filter change (debounced ~300 ms) via the shared heads
     endpoint. Shows the total count in the header ("N cards will be generated").
-  - DOM cap: render first ~50 rows, then "…and N more" — never dump a 500-row
+  - DOM cap: render first ~50 rows, then "…and N more" - never dump a 500-row
     table.
-  - Empty state: "No heads match — adjust filters." Generate disabled.
+  - Empty state: "No heads match - adjust filters." Generate disabled.
   - Over `QrCardSettings->maxQuantity`: inline warning, Generate disabled (mirror
     the server-side guard so the client fails early with the same message).
 - **Generate cards** posts the same barangay + range filter to `batch()`. What the
@@ -85,7 +85,7 @@ Control Numbers                         (heading + one-line help)
 ### Single card mode
 
 - **Head** searchable field: type ≥2 chars → autocomplete list of matching active
-  heads (name — #controlNo — barangay); pick one.
+  heads (name - #controlNo - barangay); pick one.
 - **Control #** exact input as an alternative. Head pick and exact number are
   mutually exclusive; whichever is set resolves to one head.
 - Resolve control → memberID client-side, then reuse the existing
@@ -95,7 +95,7 @@ Control Numbers                         (heading + one-line help)
 
 ## Backend
 
-### New endpoint — heads search / preview
+### New endpoint - heads search / preview
 
 `GET admin/cards/heads` → `Cards\QrCardController::heads()`, role-guarded
 (`Developer`, `Admin`) like its siblings. Returns JSON:
@@ -118,9 +118,9 @@ Control Numbers                         (heading + one-line help)
 - Add optional `keyword` filter (name LIKE) for the Single-card autocomplete.
 - Add `limit` support (autocomplete/preview caps); return an accurate total count
   separately for the preview header (either a sibling count method or a `count`
-  return — decided in the plan).
+  return - decided in the plan).
 - Keep `memberID` and `barangay`. The `sectorID` branch is no longer exercised by
-  the UI; keep the parameter for now (no caller passes it) — removal is optional
+  the UI; keep the parameter for now (no caller passes it) - removal is optional
   cleanup, deferred to the plan to keep the diff surgical.
 
 ### `QrCardController::batch()`
@@ -161,14 +161,14 @@ vaguer. Preserve the surrounding phrasing and capitalization, e.g.:
 
 | Before                 | After                     |
 |------------------------|---------------------------|
-| Aid Distribution       | Subsidy Distribution      |
-| Aid Type / Aid Types   | Subsidy Type / Subsidy Types |
+| Subsidy Distribution       | Subsidy Distribution      |
+| Subsidy Type / Subsidy Types   | Subsidy Type / Subsidy Types |
 | Received Aid           | Received Subsidy          |
 | Aid Coverage           | Subsidy Coverage          |
 | Aid History            | Subsidy History           |
-| Aid Distribution Report| Subsidy Distribution Report |
+| Subsidy Distribution Report| Subsidy Distribution Report |
 | "aid already recorded" | "subsidy already recorded" |
-| "Choose an aid type…"  | "Choose a subsidy type…"  |
+| "Choose a subsidy type…"  | "Choose a subsidy type…"  |
 
 ### In scope (display text only)
 
@@ -177,25 +177,25 @@ vaguer. Preserve the surrounding phrasing and capitalization, e.g.:
   output.
 - **KPI / nav labels built in code**: `app/Views/Admin/layout.php` label arrays,
   `DashboardPageBuilder` and any controller/library that assembles a user-visible
-  label or flash/error message (e.g. "Choose an aid type for this batch.").
+  label or flash/error message (e.g. "Choose a subsidy type for this batch.").
 - **Audit-trail strings** passed to `AuditTrailsModel::logAction()` (e.g.
-  "Logged aid distribution", "Voided aid distribution #N"). New rows will read
+  "Logged subsidy distribution", "Voided subsidy distribution #N"). New rows will read
   "subsidy"; old rows keep "aid" (mixed history is acceptable). Update any test
   asserting the old wording.
 
 ### Explicitly NOT touched (per "don't touch DB", surgical scope)
 
 - DB schema, table names (`aid_distribution`, `aid_type`), column names, enum
-  values — the SQL dump is the source of truth.
-- Route URLs / segments (`admin/aidtypes`, `admin/distribution`) — visible label
+  values - the SQL dump is the source of truth.
+- Route URLs / segments (`admin/aidtypes`, `admin/distribution`) - visible label
   changes, the URL does not.
 - PHP identifiers: class/method/variable names, model names (`AidStatsModel`,
   `AidDistributionModel`), `$aid*` vars, `getAid*()`, config keys.
-- Code comments — mechanical, not user-facing; leave unless trivially adjacent.
+- Code comments - mechanical, not user-facing; leave unless trivially adjacent.
 
 ### Approach
 
-Not a blind global sed — each hit is triaged: relabel only strings a user reads,
+Not a blind global sed - each hit is triaged: relabel only strings a user reads,
 leave every identifier/URL/schema reference. Grep surface to work through:
 
 ```

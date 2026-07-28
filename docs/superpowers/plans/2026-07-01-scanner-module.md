@@ -1,8 +1,8 @@
-# Scanner Module (Aid Distribution Tracker) Implementation Plan
+# Scanner Module (Subsidy Distribution Tracker) Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add a mobile-first Scanner module where scanner-role users scan a paper QR control number, view the family head + members, see that QR's aid history, and log a new aid distribution.
+**Goal:** Add a mobile-first Scanner module where scanner-role users scan a paper QR control number, view the family head + members, see that QR's subsidy history, and log a new subsidy distribution.
 
 **Architecture:** Three new tables hand-written into the SQL dump (no CI4 migrations): `qr_control` (control_no→head), `aid_type` (seeded dropdown), `aid_distribution` (aid log). A new `scanner` role routed to a dedicated Bootstrap/SB-Admin shell. `ScanController` resolves scans via new Models and reuses `MemberModel`/`AuditTrailsModel`. Camera scanning uses vendored `html5-qrcode`; hardware-scanner and manual entry are a plain text input.
 
@@ -17,24 +17,24 @@
 - **UI: Bootstrap + SB Admin only.** The single exception is vendored `html5-qrcode` for camera decode.
 - **PHP 8.2+**, strict namespaces matching existing files.
 - **Roles:** `RoleAccess::normalizeRole()` is the single DB-enum↔label translation point. Scanner label = `'Scanner'`.
-- **Run `vendor/bin/phpunit` before and after each task.** DB/ext-dependent tests skip gracefully — do not "fix" pre-existing `ExampleDatabaseTest`/`FamilyDataTableTest` failures.
+- **Run `vendor/bin/phpunit` before and after each task.** DB/ext-dependent tests skip gracefully - do not "fix" pre-existing `ExampleDatabaseTest`/`FamilyDataTableTest` failures.
 
 ---
 
 ## File Structure
 
-- Modify: `accesscardV13.sql` — add `qr_control`, `aid_type` (+seed), `aid_distribution`.
-- Modify: `app/Libraries/RoleAccess.php` — map `scanner`→`Scanner`; redirect to `scanner/scan`.
-- Create: `app/Models/Scanner/QrControlModel.php` — resolve control_no→head.
-- Create: `app/Models/Scanner/AidTypeModel.php` — active aid types.
-- Create: `app/Models/Scanner/AidDistributionModel.php` — log + history.
-- Modify: `app/Models/Families/MemberModel.php` — add `familyMembers(int $headId)`.
-- Create: `app/Controllers/Scanner/ScanController.php` — scan/lookup/logAid.
-- Modify: `app/Config/Routes.php` — new `scanner` group.
-- Create: `app/Views/Scanner/layout.php` — mobile-first shell + tabs.
-- Create: `app/Views/Scanner/scan.php` — input, result, history, log form.
-- Create: `public/vendor/html5-qrcode/html5-qrcode.min.js` — vendored lib.
-- Modify: `app/Views/Admin/layout.php` — add "Scanner" sidebar link.
+- Modify: `accesscardV13.sql` - add `qr_control`, `aid_type` (+seed), `aid_distribution`.
+- Modify: `app/Libraries/RoleAccess.php` - map `scanner`→`Scanner`; redirect to `scanner/scan`.
+- Create: `app/Models/Scanner/QrControlModel.php` - resolve control_no→head.
+- Create: `app/Models/Scanner/AidTypeModel.php` - active subsidy types.
+- Create: `app/Models/Scanner/AidDistributionModel.php` - log + history.
+- Modify: `app/Models/Families/MemberModel.php` - add `familyMembers(int $headId)`.
+- Create: `app/Controllers/Scanner/ScanController.php` - scan/lookup/logAid.
+- Modify: `app/Config/Routes.php` - new `scanner` group.
+- Create: `app/Views/Scanner/layout.php` - mobile-first shell + tabs.
+- Create: `app/Views/Scanner/scan.php` - input, result, history, log form.
+- Create: `public/vendor/html5-qrcode/html5-qrcode.min.js` - vendored lib.
+- Modify: `app/Views/Admin/layout.php` - add "Scanner" sidebar link.
 - Create tests: `tests/unit/ScannerRoleTest.php`, `tests/unit/QrControlModelTest.php`, `tests/unit/AidTypeModelTest.php`, `tests/unit/AidDistributionModelTest.php`, `tests/unit/ScanControllerTest.php`.
 
 ---
@@ -53,7 +53,7 @@ Append before the final `COMMIT;`/end of file (place near the other `CREATE TABL
 
 ```sql
 --
--- Scanner module: QR control mapping, aid types, aid distribution log
+-- Scanner module: QR control mapping, subsidy types, subsidy distribution log
 --
 DROP TABLE IF EXISTS `qr_control`;
 CREATE TABLE `qr_control` (
@@ -205,7 +205,7 @@ git commit -m "feat(scanner): add scanner role mapping and login redirect"
 - Test: `tests/unit/QrControlModelTest.php`
 
 **Interfaces:**
-- Produces: `QrControlModel::headForControl(int $controlNo): ?int` — returns `headID` for a mapped control number, else `null`.
+- Produces: `QrControlModel::headForControl(int $controlNo): ?int` - returns `headID` for a mapped control number, else `null`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -294,7 +294,7 @@ git commit -m "feat(scanner): add QrControlModel control_no->head resolver"
 - Test: `tests/unit/AidTypeModelTest.php`
 
 **Interfaces:**
-- Produces: `AidTypeModel::active(): array` — non-archived aid types as `[['aid_type_id'=>int,'name'=>string], ...]` ordered by name.
+- Produces: `AidTypeModel::active(): array` - non-archived subsidy types as `[['aid_type_id'=>int,'name'=>string], ...]` ordered by name.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -346,7 +346,7 @@ class AidTypeModel extends Model
     protected $allowedFields = ['name', 'dt_deleted'];
     protected $useTimestamps = false;
 
-    /** Non-archived aid types, ordered by name, for the dropdown. */
+    /** Non-archived subsidy types, ordered by name, for the dropdown. */
     public function active(): array
     {
         try {
@@ -383,8 +383,8 @@ git commit -m "feat(scanner): add AidTypeModel active() for the aid dropdown"
 **Interfaces:**
 - Consumes: nothing external.
 - Produces:
-  - `AidDistributionModel::logAid(array $data): int` — inserts one row (`control_no`, `memberID`, `aid_type_id`, `claim_date`, `userID`), returns the new `aidID`.
-  - `AidDistributionModel::historyFor(int $controlNo): array` — rows for a control number joined to `aid_type.name` and claimant name, newest first: `[['aidID','claim_date','aid_type','claimant'], ...]`.
+  - `AidDistributionModel::logAid(array $data): int` - inserts one row (`control_no`, `memberID`, `aid_type_id`, `claim_date`, `userID`), returns the new `aidID`.
+  - `AidDistributionModel::historyFor(int $controlNo): array` - rows for a control number joined to `aid_type.name` and claimant name, newest first: `[['aidID','claim_date','aid_type','claimant'], ...]`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -460,8 +460,8 @@ class AidDistributionModel extends Model
     }
 
     /**
-     * Chronological (newest-first) aid history for a control number, with the
-     * aid-type name and the claimant's full name resolved via joins.
+     * Chronological (newest-first) subsidy history for a control number, with the
+     * subsidy-type name and the claimant's full name resolved via joins.
      */
     public function historyFor(int $controlNo): array
     {
@@ -507,7 +507,7 @@ git commit -m "feat(scanner): add AidDistributionModel logAid + historyFor"
 
 **Interfaces:**
 - Consumes: existing `MemberModel` table `member`.
-- Produces: `MemberModel::familyMembers(int $headId): array` — all active members of a family (head + relatives), each `['memberID','firstname','lastname','relationship']`, head first.
+- Produces: `MemberModel::familyMembers(int $headId): array` - all active members of a family (head + relatives), each `['memberID','firstname','lastname','relationship']`, head first.
 
 - [ ] **Step 1: Add the method**
 
@@ -624,7 +624,7 @@ use CodeIgniter\HTTP\ResponseInterface;
 
 /**
  * Scanner module: resolve a paper QR control number to a family, show its aid
- * history, and log a new aid distribution. Scanner/Admin/Developer only.
+ * history, and log a new subsidy distribution. Scanner/Admin/Developer only.
  *
  * - scan():   GET  scanner/scan          -> the mobile-first scan page.
  * - lookup(): GET  scanner/lookup/{num}  -> JSON {head, members, history}.
@@ -718,11 +718,11 @@ class ScanController extends BaseController
         (new AuditTrailsModel())->logAction(
             $userId,
             $memberId,
-            'Logged aid distribution',
+            'Logged subsidy distribution',
             'Control #' . $controlNo,
             $this->request->getIPAddress(),
             (string) $this->request->getUserAgent(),
-            'Aid type ID ' . (int) $this->request->getPost('aid_type_id') . ' on ' . $this->request->getPost('claim_date')
+            'Subsidy type ID ' . (int) $this->request->getPost('aid_type_id') . ' on ' . $this->request->getPost('claim_date')
         );
 
         return $this->response->setJSON([
@@ -739,7 +739,7 @@ In `app/Config/Routes.php`, after the `viewer` group's closing `});`, add:
 
 ```php
 /**
- * Scanner module (aid distribution). Scanner/Admin/Developer only — each action
+ * Scanner module (subsidy distribution). Scanner/Admin/Developer only - each action
  * calls RoleAccess::requireRole() internally (mirrors the Cards controller).
  */
 $routes->group('scanner', static function (RouteCollection $routes): void {
@@ -796,7 +796,7 @@ Create `app/Views/Scanner/layout.php` (SB Admin / Bootstrap; `renderSection('con
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-    <title>Scanner — Biñan Access Card</title>
+    <title>Scanner - Biñan Access Card</title>
     <link href="<?= $base ?>/assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
     <link href="<?= $base ?>/assets/css/sb-admin-2.min.css" rel="stylesheet">
 </head>
@@ -811,7 +811,7 @@ Create `app/Views/Scanner/layout.php` (SB Admin / Bootstrap; `renderSection('con
         <li class="nav-item"><a class="nav-link active" href="<?= $base ?>/scanner/scan">Scan</a></li>
         <li class="nav-item"><span class="nav-link disabled" title="Later spec">Reports</span></li>
         <li class="nav-item"><span class="nav-link disabled" title="Later spec">History</span></li>
-        <li class="nav-item"><span class="nav-link disabled" title="Later spec">Aid Types</span></li>
+        <li class="nav-item"><span class="nav-link disabled" title="Later spec">Subsidy Types</span></li>
     </ul>
     <main class="container-fluid py-3" style="max-width:640px;">
         <?= $this->renderSection('content') ?>
@@ -863,7 +863,7 @@ Create `app/Views/Scanner/scan.php`:
   </div>
 
   <div class="card shadow-sm mb-3">
-    <div class="card-header fw-bold">Log Aid Distribution</div>
+    <div class="card-header fw-bold">Log Subsidy Distribution</div>
     <div class="card-body">
       <form id="logForm">
         <input type="hidden" name="control_no" id="logControl">
@@ -872,7 +872,7 @@ Create `app/Views/Scanner/scan.php`:
           <input type="date" class="form-control" name="claim_date" id="claimDate" required>
         </div>
         <div class="mb-2">
-          <label class="form-label">Aid type</label>
+          <label class="form-label">Subsidy type</label>
           <select class="form-select" name="aid_type_id" required>
             <?php foreach ($aidTypes as $t): ?>
               <option value="<?= esc($t['aid_type_id'], 'attr') ?>"><?= esc($t['name']) ?></option>
@@ -922,7 +922,7 @@ async function lookup(control) {
 function renderHistory(rows) {
   $('historyList').innerHTML = rows.length
     ? rows.map(r => `<li class="list-group-item d-flex justify-content-between">
-        <span>${r.aid_type ?? ''} — ${r.claimant ?? ''}</span><span class="text-muted">${r.claim_date}</span></li>`).join('')
+        <span>${r.aid_type ?? ''} - ${r.claimant ?? ''}</span><span class="text-muted">${r.claim_date}</span></li>`).join('')
     : '<li class="list-group-item text-muted">No aid received yet.</li>';
 }
 
@@ -1032,12 +1032,12 @@ git commit -m "feat(scanner): add Scanner link to admin sidebar"
 
 Document, matching the detail of `2026-06-29-qr-access-cards-summary.md`:
 - **What's new:** every new file (models, controller, views, vendored lib, tests) with its purpose.
-- **What was modified:** `accesscardV13.sql` (3 tables + enum), `RoleAccess.php`, `MemberModel.php`, `Routes.php`, `Admin/layout.php` — one row each, what changed and why.
+- **What was modified:** `accesscardV13.sql` (3 tables + enum), `RoleAccess.php`, `MemberModel.php`, `Routes.php`, `Admin/layout.php` - one row each, what changed and why.
 - **Seed data:** `aid_type` = Financial, Rice, Grocery.
 - **Custom component:** vendored `html5-qrcode` (only non-Bootstrap/SB-Admin piece) and why (client-side camera decode).
 - **Core decision:** control_no decoupled from memberID via `qr_control` (resolves the shared-ID concern).
 - **Tests:** list new test files + the skip-without-DB posture.
-- **Deferred:** reports, history management, aid-type CRUD.
+- **Deferred:** reports, history management, subsidy-type CRUD.
 
 - [ ] **Step 2: Commit**
 
@@ -1050,6 +1050,6 @@ git commit -m "docs(scanner): add implementation summary"
 
 ## Self-Review Notes
 
-- **Spec coverage:** data model (Task 1), role+shell (Tasks 2, 8), scan flow input/resolve/display/history/log (Tasks 3–8), backend controller/models/routes (Tasks 3–7), views Bootstrap+SB-Admin (Task 8), html5-qrcode flagged (Task 8), admin link (Task 9), tests (Tasks 2–7), summary requirement (Task 10). All spec sections mapped.
+- **Spec coverage:** data model (Task 1), role+shell (Tasks 2, 8), scan flow input/resolve/display/history/log (Tasks 3-8), backend controller/models/routes (Tasks 3-7), views Bootstrap+SB-Admin (Task 8), html5-qrcode flagged (Task 8), admin link (Task 9), tests (Tasks 2-7), summary requirement (Task 10). All spec sections mapped.
 - **Type consistency:** `headForControl(int):?int`, `historyFor(int):array`, `logAid(array):int`, `active():array`, `familyMembers(int):array`, `requireRole(['Scanner','Admin','Developer'])` used consistently across tasks.
 - **DB-dependent tests** kept to contract/guard assertions so the suite still skips gracefully without a DB, matching the existing suite posture.

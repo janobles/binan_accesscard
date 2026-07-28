@@ -76,7 +76,7 @@ class FamilyImportJob implements JobHandlerInterface
         $fileName = (string) ($payload['originalName'] ?? 'import.xlsx');
 
         // TINY summary for job_queue.result_json. The staged rows themselves can be many
-        // MB (a 10k-member import) and MUST NOT go in the DB column — that blob exceeds
+        // MB (a 10k-member import) and MUST NOT go in the DB column - that blob exceeds
         // MySQL's max_allowed_packet, the UPDATE fails (error 1153/2006), and the worker
         // crashes after parsing but before marking the job done (endless re-claim loop).
         $summary = [
@@ -90,7 +90,7 @@ class FamilyImportJob implements JobHandlerInterface
         ];
 
         // A hard parse failure (unreadable / wrong sheet / missing columns) has nothing
-        // to review — surface it as a failed job with the single reason.
+        // to review - surface it as a failed job with the single reason.
         if (! $staged['ok']) {
             return JobOutcome::failed((string) ($staged['errors'][0]['message'] ?? 'The file could not be imported.'), $summary);
         }
@@ -110,8 +110,8 @@ class FamilyImportJob implements JobHandlerInterface
         ]);
 
         $message = $blocking > 0
-            ? 'Ready to review — ' . $families . ' family group(s), ' . $blocking . ' issue(s) to fix before importing.'
-            : 'Ready to review — ' . $families . ' family group(s), no issues found. Confirm to import.';
+            ? 'Ready to review - ' . $families . ' family group(s), ' . $blocking . ' issue(s) to fix before importing.'
+            : 'Ready to review - ' . $families . ' family group(s), no issues found. Confirm to import.';
 
         return JobOutcome::done($message, $summary);
     }
@@ -210,7 +210,7 @@ class FamilyImportJob implements JobHandlerInterface
                 $errors[] = [
                     'sheetRow' => null,
                     'familyNo' => (string) ($family['familyNo'] ?? ''),
-                    'message'  => 'Skipped — a family for ' . ($headName !== '' ? $headName : 'this head') . ' already exists.',
+                    'message'  => 'Skipped - a family for ' . ($headName !== '' ? $headName : 'this head') . ' already exists.',
                 ];
 
                 if ((($i - $start + 1) % $this->batch) === 0) {
@@ -291,13 +291,13 @@ class FamilyImportJob implements JobHandlerInterface
 
             if ($headId === null || $headId <= 0) {
                 $failed++;
-                $errors[] = ['sheetRow' => $append['sheetRow'] ?? null, 'familyNo' => (string) $qr, 'message' => 'Could not add a member — family ' . $qr . ' no longer exists.'];
+                $errors[] = ['sheetRow' => $append['sheetRow'] ?? null, 'familyNo' => (string) $qr, 'message' => 'Could not add a member - family ' . $qr . ' no longer exists.'];
                 continue;
             }
 
             if ($memberModel->memberExistsUnderHead($headId, (string) ($payload['firstname'] ?? ''), (string) ($payload['lastname'] ?? ''), $payload['birthday'] ?? null)) {
                 $skipped++;
-                $errors[] = ['sheetRow' => $append['sheetRow'] ?? null, 'familyNo' => (string) $qr, 'message' => 'Skipped — that member is already in family ' . $qr . '.'];
+                $errors[] = ['sheetRow' => $append['sheetRow'] ?? null, 'familyNo' => (string) $qr, 'message' => 'Skipped - that member is already in family ' . $qr . '.'];
                 continue;
             }
 
@@ -321,7 +321,7 @@ class FamilyImportJob implements JobHandlerInterface
 
         $reporter->checkpoint($done + $failed + $skipped, $total, $snapshot());
 
-        // The batch is fully processed — the staging file is no longer needed.
+        // The batch is fully processed - the staging file is no longer needed.
         $store->delete($stageJobId);
 
         $skipNote   = $skipped > 0 ? ' Skipped ' . $skipped . ' already on file.' : '';

@@ -15,7 +15,7 @@
         </select>
       </div>
       <div class="col-md-6 text-md-end">
-        <div class="text-muted small">Last updated <span id="lastUpdated">&mdash;</span></div>
+        <div class="text-muted small">Last updated <span id="lastUpdated">-</span></div>
         <button class="btn btn-outline-secondary btn-sm" id="refreshNow" type="button">Refresh</button>
       </div>
     </div>
@@ -44,7 +44,7 @@
   ]) ?>
   <?= view('components/stat_card', [
       'label' => 'Busiest window',
-      'value' => ($pace['busiest'] ?? '') !== '' ? $pace['busiest'] : '—',
+      'value' => ($pace['busiest'] ?? '') !== '' ? $pace['busiest'] : '-',
       'icon' => 'clock-history',
       'variant' => 'stat-card--services',
   ]) ?>
@@ -52,7 +52,7 @@
 
 <div class="card border-0 rounded-3 mb-3">
   <div class="card-body">
-    <div class="fw-bold mb-2">Throughput &mdash; families served per 15 minutes</div>
+    <div class="fw-bold mb-2">Throughput - families served per 15 minutes</div>
     <div style="position:relative;height:260px"><canvas id="chartThroughput"></canvas></div>
     <p class="text-muted small mb-0" id="throughputEmpty" hidden>No scans logged yet for this batch.</p>
   </div>
@@ -121,7 +121,7 @@
     setTile('stat-card--members', d.handouts);
     if (d.pace) {
       setTile('stat-card--sectors', d.pace.perHour);
-      setTile('stat-card--services', d.pace.busiest || '—');
+      setTile('stat-card--services', d.pace.busiest || '-');
     }
     if (Array.isArray(d.timeline)) { draw(d.timeline); }
     document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString();

@@ -52,8 +52,8 @@ class DashboardController extends BaseController
     }
 
     /**
-     * GET `admin/accounts`. Renders the full accounts page, or—when the request
-     * is an AJAX/partial fetch from the dashboard—just the accounts fragment.
+     * GET `admin/accounts`. Renders the full accounts page, or-when the request
+     * is an AJAX/partial fetch from the dashboard-just the accounts fragment.
      */
     public function accounts(): string|RedirectResponse
     {
@@ -92,7 +92,7 @@ class DashboardController extends BaseController
 
     /**
      * GET `admin/reference-data`. One page for the four lookup tables
-     * (Sectors, Services, Categories, Aid Types), switched by ?tab=.
+     * (Sectors, Services, Categories, Subsidy Types), switched by ?tab=.
      * Mutations still post to the Lookups\* and AidTypes controllers.
      */
     public function referenceData(): string|RedirectResponse

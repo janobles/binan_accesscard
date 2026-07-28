@@ -75,7 +75,7 @@ class ViewFormatter
     }
 
     /**
-     * Unpacks the labeled `users.full_description` string back into form fields —
+     * Unpacks the labeled `users.full_description` string back into form fields -
      * the inverse of AccountController::buildFullDescription. Returns every key
      * (last_name/first_name/middle_name/suffix/address/contact_no/birthday) with
      * '' for any segment that was absent, so edit/My-Account forms can prefill
@@ -160,7 +160,7 @@ class ViewFormatter
 
     /**
      * Given the grouped sector catalog and the IDs a member has, returns which
-     * category keys are selected — used to pre-expand the right sector groups in
+     * category keys are selected - used to pre-expand the right sector groups in
      * the family form.
      */
     public static function selectedSectorCategories(array $sectorCatalog, array $selectedSectorIds): array

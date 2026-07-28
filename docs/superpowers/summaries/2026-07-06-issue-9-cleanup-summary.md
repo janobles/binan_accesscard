@@ -1,4 +1,4 @@
-# Issue #9 Cleanup — Fix Summary
+# Issue #9 Cleanup - Fix Summary
 
 **Branch:** `chore/issue-9-cleanup` (off `main`)
 **Spec:** `docs/superpowers/specs/2026-07-06-issue-9-cleanup-design.md`
@@ -7,7 +7,7 @@
 
 Resolves all 13 items from issue #9 (post-PR#8 dead code + CodeRabbit re-review
 backlog). Each fix was implemented, task-reviewed (spec + quality), and verified
-against the full PHPUnit suite (baseline 72 tests, 0 fail, 4 skip — held green
+against the full PHPUnit suite (baseline 72 tests, 0 fail, 4 skip - held green
 throughout).
 
 ## Fixes applied
@@ -29,7 +29,7 @@ throughout).
 
 ## Custom CSS kept (intentional)
 
-**`.topbar-account-*` in `css/sb-admin-adapter.css`** — retained, not deleted. The
+**`.topbar-account-*` in `css/sb-admin-adapter.css`** - retained, not deleted. The
 adopted account-menu partial renders a summary header (avatar + full uppercase
 name + account-level label) that has **no SB-Admin/Bootstrap component
 equivalent**, so the custom CSS is required. The rest of the partial uses standard
@@ -38,23 +38,23 @@ Bootstrap dropdown classes. This is a deliberate, minimal exception to the
 
 ## Won't-fix (with rationale)
 
-**P2-12 — `manage-family-modal.js:805` `box.scrollTop = 0`.** Kept as-is.
+**P2-12 - `manage-family-modal.js:805` `box.scrollTop = 0`.** Kept as-is.
 Deliberate "jump to updated suggestion" behavior: it is `prefers-reduced-motion`-
 guarded, fires only when the suggestion set actually changes, and pairs with the
 `is-updated` flash to surface the top match. Preserving a manual scroll position
 would add state-tracking for a low-value edge case, and a smooth-scroll would feel
 janky mid-typing. Product decision: keep.
 
-**P2-9 — `card h-100` on stat cards.** Kept as-is (not a demo leftover). `.stat-card.card`
+**P2-9 - `card h-100` on stat cards.** Kept as-is (not a demo leftover). `.stat-card.card`
 is a compound CSS selector that only fires when the `card` class is present (it
 drives `overflow:hidden`), and `Family/list.php:26`'s `card` class is its sole
 source of border/background/radius. `h-100` provides equal-height cards in a
 Bootstrap row. Stripping either risks silent overflow/layout regressions for no
-visual gain — so the classes are functional, not SB-Admin-Pro demo residue.
+visual gain - so the classes are functional, not SB-Admin-Pro demo residue.
 
 ## Verification
 
 - Full PHPUnit suite green at every task (72 tests, 0 fail, 4 skip).
 - **Deferred to reviewer/user:** browser visual smoke of the new topbar account
-  menu across all three roles (Admin/Employee/Viewer) — the partial adoption is a
+  menu across all three roles (Admin/Employee/Viewer) - the partial adoption is a
   UI change; tests don't render it.

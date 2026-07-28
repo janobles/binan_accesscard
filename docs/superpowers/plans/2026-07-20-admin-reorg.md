@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - No migrations; no schema changes. SQL dump (`accesscardV18.sql`) is schema truth.
-- Every family mutation writes an audit trail — this plan touches none of that code; keep it that way.
+- Every family mutation writes an audit trail - this plan touches none of that code; keep it that way.
 - Controllers decide, libraries build: page data assembly stays in `DashboardPageBuilder`.
 - Valid Bootstrap 5 markup only; match the Manage Records design system (`components/toolbar`, `components/card`, `btn()` helper, pills).
 - Typed PHP signatures; no `declare(strict_types=1)`.
@@ -129,7 +129,7 @@ git commit -m "test: route contract for admin workspace reorg"
 
 ---
 
-### Task 2: Reference Data page (merges Sectors, Services, Categories, Aid Types)
+### Task 2: Reference Data page (merges Sectors, Services, Categories, Subsidy Types)
 
 **Files:**
 - Modify: `app/Config/Routes.php` (admin group)
@@ -157,7 +157,7 @@ $routes->get('reference-data', 'Admin\DashboardController::referenceData');
 ```php
 /**
  * GET `admin/reference-data`. One page for the four lookup tables
- * (Sectors, Services, Categories, Aid Types), switched by ?tab=.
+ * (Sectors, Services, Categories, Subsidy Types), switched by ?tab=.
  * Mutations still post to the Lookups\* and AidTypes controllers.
  */
 public function referenceData(): string|RedirectResponse
@@ -248,7 +248,7 @@ $baseUrl = $baseUrl ?? '';
             ['key' => 'sectors', 'label' => 'Sectors', 'icon' => 'diagram-3-fill'],
             ['key' => 'services', 'label' => 'Services & Programs', 'icon' => 'grid-fill'],
             ['key' => 'categories', 'label' => 'Categories', 'icon' => 'tags-fill'],
-            ['key' => 'aidtypes', 'label' => 'Aid Types', 'icon' => 'box-seam'],
+            ['key' => 'aidtypes', 'label' => 'Subsidy Types', 'icon' => 'box-seam'],
         ],
         'active' => $referenceTab ?? 'sectors',
         'baseUrl' => 'admin/reference-data',
@@ -292,8 +292,8 @@ Then pass `'tabParam' => 'sectors'` (respectively `services`, `categories`) from
 
 Run: `vendor/bin/phpunit tests/unit/AdminReorgRoutesTest.php`
 Expected: `testMergedPagesResolve` still fails only on `admin/distribution` and `viewer/reference-data`; `testRemovedRoutesAreGone` still fails only on batches/distributions/reports/aliases/viewer entries; sectors/services/categories/aidtypes assertions now pass.
-Run: `vendor/bin/phpunit` (full) — no new failures.
-Run: `php spark routes | grep -i "reference-data\|sectors\|services\|categories\|aidtypes"` — one GET page route, POST groups intact.
+Run: `vendor/bin/phpunit` (full) - no new failures.
+Run: `php spark routes | grep -i "reference-data\|sectors\|services\|categories\|aidtypes"` - one GET page route, POST groups intact.
 Manual: log in as developer, load `admin/reference-data`, click all 4 tabs, search + paginate inside Sectors tab, confirm URL keeps `tab=sectors`, create a sector via modal, confirm redirect returns to the Sectors tab with flash message.
 
 - [ ] **Step 11: Commit**
@@ -349,9 +349,9 @@ $isBatches       = $activePage === 'distribution' && $distributionTab === 'batch
 $isDistributions = $activePage === 'distribution' && $distributionTab === 'log';
 ```
 
-(`$isBatches`/`$isDistributions` already gate `batches`, `activeBatch`, `activeAidTypes`, `distributions` — no other change.) Add `'distributionTab' => $distributionTab,` to the return array; replace navActive keys `batches`/`distributions` with `'distribution' => $layoutModel->navActive($activePage, 'distribution'),`.
+(`$isBatches`/`$isDistributions` already gate `batches`, `activeBatch`, `activeAidTypes`, `distributions` - no other change.) Add `'distributionTab' => $distributionTab,` to the return array; replace navActive keys `batches`/`distributions` with `'distribution' => $layoutModel->navActive($activePage, 'distribution'),`.
 
-- [ ] **Step 4: Titles.** `ViewLayoutModel::pageTitle()`: remove `batches` and `distributions` arms; add `'distribution' => 'Aid Distribution',`.
+- [ ] **Step 4: Titles.** `ViewLayoutModel::pageTitle()`: remove `batches` and `distributions` arms; add `'distribution' => 'Subsidy Distribution',`.
 
 - [ ] **Step 5: Layout pane.** In `Admin/layout.php`: delete the `batches` and `distributions` blocks; add one `distribution` block with the tab strip and the two former blocks' content as panes:
 
@@ -404,11 +404,11 @@ git commit -m "feat(admin): merge batches and distributions into tabbed Distribu
 - Modify: `app/Views/Admin/reports-body.php`
 - Modify: `public/assets/js/dashboard/scanner-reports.js`
 - Modify: `app/Views/components/dashboard_sidebar.php`
-- Modify: `app/Models/ViewLayoutModel.php` (if a `reports` arm exists — check; otherwise no change)
+- Modify: `app/Models/ViewLayoutModel.php` (if a `reports` arm exists - check; otherwise no change)
 
 **Interfaces:**
 - Consumes: `buildReportsData()` (existing, `DashboardPageBuilder.php:406`), keys `reportsBatches`, `reportsBatchId`, `reportsBatchName`, `reportsSummary` (`total|received|notReceived|coverage`), `reportsByBarangay`, `reportsByAidType`, `reportsPerScanner`.
-- Produces: builder view-data key `reportsBatchOpen` (bool — selected batch still open, controls live polling).
+- Produces: builder view-data key `reportsBatchOpen` (bool - selected batch still open, controls live polling).
 
 - [ ] **Step 1: Routes + controller.** Delete `$routes->get('reports', 'Admin\ReportsController::index');` (keep `reports/stats` and `reports/pdf`). In `ReportsController` delete the `index()` method (page renders via dashboard now); `stats()` and `pdf()` untouched.
 
@@ -448,7 +448,7 @@ In `buildReportsData()`, set it from the selected batch row (`closed_at === null
 
 - [ ] **Step 4: Rework `Admin/reports-body.php`.** Keep: batch selector toolbar (form `action` changes from `site_url('admin/reports')` to `site_url('admin/dashboard')`), Refresh + Download PDF buttons, per-kiosk table, coverage-by-barangay bar chart card. Change/cut:
 
-  - KPI tiles: replace the four tiles with two that join the dashboard's Total Records + Registered Members row (move these two INTO the dashboard's `overview-stats` section is not needed — keep them in `reports-stats` directly below, same `stat_card` component):
+  - KPI tiles: replace the four tiles with two that join the dashboard's Total Records + Registered Members row (move these two INTO the dashboard's `overview-stats` section is not needed - keep them in `reports-stats` directly below, same `stat_card` component):
 
 ```php
 <?= view('components/stat_card', [
@@ -465,8 +465,8 @@ In `buildReportsData()`, set it from the selected batch row (`closed_at === null
 ]) ?>
 ```
 
-  - Delete the received-vs-waiting pie card (`chartReceived`) and the aid-type chart card (`chartAidType`).
-  - Replace the aid-type chart with a small table (same `data_table` component):
+  - Delete the received-vs-waiting pie card (`chartReceived`) and the subsidy-type chart card (`chartAidType`).
+  - Replace the subsidy-type chart with a small table (same `data_table` component):
 
 ```php
 <?php
@@ -477,8 +477,8 @@ foreach ($reportsByAidType as $t) {
 ?>
 <?= view('components/data_table', [
     'icon' => 'box-seam',
-    'title' => 'Handouts by aid type',
-    'columns' => ['Aid type', 'Handouts'],
+    'title' => 'Handouts by subsidy type',
+    'columns' => ['Subsidy type', 'Handouts'],
     'rows' => $aidTypeRows,
     'emptyMessage' => 'No handouts in this batch yet.',
     'tableClass' => 'table manage-record-table align-middle w-100 mb-0',
@@ -512,14 +512,14 @@ if (d.received) {
 }
 ```
 
-- [ ] **Step 5: Chart JS guards.** In `public/assets/js/dashboard/scanner-reports.js`: make each chart init conditional on its canvas existing (`document.getElementById('chartBarangay')` etc.) and make `ReportsCharts.update()` skip absent charts. Read the file first; add null guards only where missing — the pie/aid-type canvases are gone from the admin dashboard but this file may also serve the scanner kiosk stats page, so guards (not deletions) are the correct change.
+- [ ] **Step 5: Chart JS guards.** In `public/assets/js/dashboard/scanner-reports.js`: make each chart init conditional on its canvas existing (`document.getElementById('chartBarangay')` etc.) and make `ReportsCharts.update()` skip absent charts. Read the file first; add null guards only where missing - the pie/subsidy-type canvases are gone from the admin dashboard but this file may also serve the scanner kiosk stats page, so guards (not deletions) are the correct change.
 
 - [ ] **Step 6: Sidebar.** Delete the Reports link (line 39 of `dashboard_sidebar.php`).
 
 - [ ] **Step 7: Verify**
 
-Run: `vendor/bin/phpunit` — route test's `admin/reports` removal now passes; no other failures.
-Manual: load `admin/dashboard`. Confirm: 4 tiles total (Records, Members, Received-of-total, Coverage), batch selector switches batches via reload, barangay chart renders, aid-type table renders, per-kiosk table renders, Recent Records shows with View All, no Recent Activity, no pie. Select a CLOSED batch: no network polling in devtools. Download PDF works. Scanner kiosk stats page (`scanner/performance`) still renders its charts.
+Run: `vendor/bin/phpunit` - route test's `admin/reports` removal now passes; no other failures.
+Manual: load `admin/dashboard`. Confirm: 4 tiles total (Records, Members, Received-of-total, Coverage), batch selector switches batches via reload, barangay chart renders, subsidy-type table renders, per-kiosk table renders, Recent Records shows with View All, no Recent Activity, no pie. Select a CLOSED batch: no network polling in devtools. Download PDF works. Scanner kiosk stats page (`scanner/performance`) still renders its charts.
 
 - [ ] **Step 8: Commit**
 
@@ -560,7 +560,7 @@ Expected: zero hits in views/JS. Fix any stragglers (nav links in `Employee/layo
 <div class="sb-sidenav-menu-heading">Records</div>
 <a class="nav-link <?= esc($navActive['family-manage'] ?? '') ?>" href="<?= site_url('admin/manage-records') ?>"><div class="sb-nav-link-icon"><i class="bi bi-people-fill" aria-hidden="true"></i></div>Manage Records</a>
 <a class="nav-link <?= esc($navActive['reference-data'] ?? '') ?>" href="<?= site_url('admin/reference-data') ?>"><div class="sb-nav-link-icon"><i class="bi bi-collection" aria-hidden="true"></i></div>Reference Data</a>
-<div class="sb-sidenav-menu-heading">Aid Distribution</div>
+<div class="sb-sidenav-menu-heading">Subsidy Distribution</div>
 <a class="nav-link <?= esc($navActive['cards'] ?? '') ?>" href="<?= site_url('admin/cards') ?>"><div class="sb-nav-link-icon"><i class="bi bi-qr-code" aria-hidden="true"></i></div>Generate Cards</a>
 <a class="nav-link <?= esc($navActive['distribution'] ?? '') ?>" href="<?= site_url('admin/distribution') ?>"><div class="sb-nav-link-icon"><i class="bi bi-clipboard-check-fill" aria-hidden="true"></i></div>Distribution</a>
 <div class="sb-sidenav-menu-heading">Administration</div>
@@ -574,7 +574,7 @@ Expected: zero hits in views/JS. Fix any stragglers (nav links in `Employee/layo
 
 Run: `vendor/bin/phpunit tests/unit/AdminReorgRoutesTest.php`
 Expected: all removal assertions except `viewer/sectors`/`viewer/services` now pass.
-Run: `php spark routes` — resolves cleanly, no orphaned handlers.
+Run: `php spark routes` - resolves cleanly, no orphaned handlers.
 
 - [ ] **Step 6: Commit**
 
@@ -619,7 +619,7 @@ public function referenceData(): string|RedirectResponse
 
 - [ ] **Step 5: Verify**
 
-Run: `vendor/bin/phpunit` — full suite green, ALL AdminReorgRoutesTest assertions pass.
+Run: `vendor/bin/phpunit` - full suite green, ALL AdminReorgRoutesTest assertions pass.
 Manual: log in as a viewer account, open `viewer/reference-data`, both tabs render read-only (no Add/Edit buttons).
 
 - [ ] **Step 6: Commit**
@@ -645,7 +645,7 @@ Expected: every route resolves; none of the removed URIs listed.
 - [ ] **Step 2: Reference sweep (final)**
 
 Run: `grep -rn "admin/sectors'\|admin/services'\|admin/categories'\|admin/aidtypes'\|admin/batches'\|admin/distributions'\|admin/reports'" app/ public/assets/js`
-Expected: hits only inside POST endpoint paths (`admin/sectors/create` etc.) and JS comments describing those POSTs. Anything else is a missed link — fix it.
+Expected: hits only inside POST endpoint paths (`admin/sectors/create` etc.) and JS comments describing those POSTs. Anything else is a missed link - fix it.
 
 - [ ] **Step 3: Playwright visual pass** (dev server at `app.baseURL`, e.g. `http://localhost:8090`; start with `php spark serve` if down; login developer/developer123). Snapshot/screenshot at desktop and 390px widths:
 
@@ -657,7 +657,7 @@ Expected: hits only inside POST endpoint paths (`admin/sectors/create` etc.) and
 
 Compare against Manage Records (design source of truth): toolbar placement, card anatomy, pill styling, no horizontal scroll at 390px.
 
-- [ ] **Step 4: Smoke flows** — login, role redirects (admin → dashboard, viewer → viewer dashboard), family create/update writes audit trail, sector create from Reference Data tab, batch open/close from Distribution tab, account disable/enable, PDF download.
+- [ ] **Step 4: Smoke flows** - login, role redirects (admin → dashboard, viewer → viewer dashboard), family create/update writes audit trail, sector create from Reference Data tab, batch open/close from Distribution tab, account disable/enable, PDF download.
 
 - [ ] **Step 5: Commit any fixes**
 
@@ -666,4 +666,4 @@ git add -A
 git commit -m "fix: reorg verification follow-ups"
 ```
 
-- [ ] **Step 6: CodeRabbit review** (repo rule before merging): `coderabbit review --base main --agent`, triage per `superpowers:receiving-code-review` — verify each finding against the code and CLAUDE.md non-negotiables, fix genuine in-scope bugs, re-run `vendor/bin/phpunit`, park the rest in a GitHub issue citing the PR and branch.
+- [ ] **Step 6: CodeRabbit review** (repo rule before merging): `coderabbit review --base main --agent`, triage per `superpowers:receiving-code-review` - verify each finding against the code and CLAUDE.md non-negotiables, fix genuine in-scope bugs, re-run `vendor/bin/phpunit`, park the rest in a GitHub issue citing the PR and branch.

@@ -14,10 +14,10 @@
 
 - No controller/model/route/schema changes. No migrations.
 - No inline `style="..."` attributes; Bootstrap utilities + page CSS only (`docs/knowledge/binan-conventions/views-bootstrap.md` Rule 4).
-- New CSS goes through the `asset_styles('scanner')` manifest in `app/Helpers/asset_helper.php` — never a hand-added `<link>`.
-- Aid type picker persists across scans (session behavior, by design).
+- New CSS goes through the `asset_styles('scanner')` manifest in `app/Helpers/asset_helper.php` - never a hand-added `<link>`.
+- Subsidy type picker persists across scans (session behavior, by design).
 - Existing `evaluateDuplicate` green/yellow Confirm semantics kept.
-- Work on a feature branch off freshly synced `main` (`git fetch origin && git reset --hard origin/main` first — local main lags).
+- Work on a feature branch off freshly synced `main` (`git fetch origin && git reset --hard origin/main` first - local main lags).
 
 ---
 
@@ -48,7 +48,7 @@ Expected: PASS (DB/session tests may skip without sqlite3 ext).
 - Test: `tests/unit/ScanViewTest.php` (created here, extended in later tasks)
 
 **Interfaces:**
-- Produces: CSS classes `scan-steps`, `scan-step`, `scan-step--active`, `scan-step--done`, `scan-receipt`, `scan-dimmed`, `scan-history-flash` consumed by Tasks 2–4.
+- Produces: CSS classes `scan-steps`, `scan-step`, `scan-step--active`, `scan-step--done`, `scan-receipt`, `scan-dimmed`, `scan-history-flash` consumed by Tasks 2-4.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -88,7 +88,7 @@ final class ScanViewTest extends CIUnitTestCase
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `vendor/bin/phpunit --filter ScanViewTest`
-Expected: FAIL — `css/scanner-scan.css` not in manifest.
+Expected: FAIL - `css/scanner-scan.css` not in manifest.
 
 - [ ] **Step 3: Add to manifest and create CSS**
 
@@ -233,14 +233,14 @@ Expected: FAIL on the four new tests.
 
 - [ ] **Step 3: Replace the content section of `scan.php`**
 
-Replace everything between `<?= $this->section('content') ?>` and `<?= $this->endSection() ?>` (lines 2–80) with:
+Replace everything between `<?= $this->section('content') ?>` and `<?= $this->endSection() ?>` (lines 2-80) with:
 
 ```php
 <?= $this->extend('Scanner/layout') ?>
 <?= $this->section('content') ?>
 
 <nav class="scan-steps" aria-label="Scan progress">
-  <span class="scan-step" id="stepAid"><span class="scan-step-num">1</span> Aid type</span>
+  <span class="scan-step" id="stepAid"><span class="scan-step-num">1</span> Subsidy type</span>
   <span class="scan-step-sep" aria-hidden="true">&rsaquo;</span>
   <span class="scan-step" id="stepScan"><span class="scan-step-num">2</span> Scan QR</span>
   <span class="scan-step-sep" aria-hidden="true">&rsaquo;</span>
@@ -252,16 +252,16 @@ Replace everything between `<?= $this->section('content') ?>` and `<?= $this->en
     <div class="card border-0 shadow-sm rounded-3 h-100">
       <div class="card-body">
         <label for="sessionAidType" class="form-label fw-bold">
-          <i class="bi bi-box-seam me-1" aria-hidden="true"></i> Aid type to distribute
+          <i class="bi bi-box-seam me-1" aria-hidden="true"></i> Subsidy type to distribute
         </label>
         <select class="form-select form-select-lg mb-1" id="sessionAidType">
-          <option value="">-- Choose aid type before scanning --</option>
+          <option value="">-- Choose subsidy type before scanning --</option>
           <?php foreach ($aidTypes as $type): ?>
             <option value="<?= esc($type['aid_type_id']) ?>"><?= esc($type['name']) ?></option>
           <?php endforeach; ?>
         </select>
         <div id="aidTypeHint" class="small text-danger" hidden>
-          Choose an aid type first, then scan.
+          Choose a subsidy type first, then scan.
         </div>
       </div>
     </div>
@@ -362,7 +362,7 @@ git commit -m "feat(scanner): two-column responsive scan layout with step indica
 
 ---
 
-### Task 3: Scan-loop JS — auto-clear, empty-Enter confirm, focus guard, step states
+### Task 3: Scan-loop JS - auto-clear, empty-Enter confirm, focus guard, step states
 
 **Files:**
 - Modify: `app/Views/Scanner/scan.php` (scripts section)
@@ -389,7 +389,7 @@ Add to `tests/unit/ScanViewTest.php`:
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `vendor/bin/phpunit --filter ScanViewTest`
-Expected: FAIL — needles absent.
+Expected: FAIL - needles absent.
 
 - [ ] **Step 3: Replace the scripts section**
 
@@ -405,7 +405,7 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&
 let lastHistory = [];
 let lastLoggedAidId = null;
 
-// Passive step indicator: 1 = pick aid type, 2 = scan, 3 = confirm.
+// Passive step indicator: 1 = pick subsidy type, 2 = scan, 3 = confirm.
 function setStep(n) {
   const steps = [[1, 'stepAid'], [2, 'stepScan'], [3, 'stepConfirm']];
   for (const [num, id] of steps) {
@@ -455,7 +455,7 @@ async function lookup(control) {
   $('membersList').innerHTML = data.members
     .map(m => `<li class="list-group-item">
         <div>${esc(m.firstname)} ${esc(m.lastname)} <span class="text-muted">(${esc(m.relationship || 'Member')})</span></div>
-        <div class="small text-muted">${esc(m.sex || '—')} · ${esc(m.birthday || '—')}</div>
+        <div class="small text-muted">${esc(m.sex || '-')} · ${esc(m.birthday || '-')}</div>
       </li>`).join('');
   renderHistory(data.history);
   $('memberID').innerHTML = '<option value="">-- Select claimant --</option>' +
@@ -624,18 +624,18 @@ git commit -m "feat(scanner): auto-clear scan loop, empty-Enter confirm, receipt
 
 Run: `php spark serve --port 8090` (use the intl-enabled `php`, not XAMPP's). Log in as a Scanner-role account, open `scanner/scan`, and verify against the spec's testing checklist:
 
-1. No aid type → step 1 highlighted; choosing one moves highlight to step 2.
+1. No subsidy type → step 1 highlighted; choosing one moves highlight to step 2.
 2. Type a valid control number + Enter → family loads, input is EMPTY and focused, step 3 active.
 3. Immediately type another control + Enter → replaces family, no concatenation.
 4. With family loaded and input empty, press bare Enter → distribution logs; receipt card shows "{aid} → {claimant} (Family #{n}), {date}"; family column dims; history shows new row with green flash; step back to 2.
 5. Invalid control → alert shows, value restored and selected in input.
-6. Same family + same aid type again → yellow Confirm + duplicate warning.
+6. Same family + same subsidy type again → yellow Confirm + duplicate warning.
 7. Click somewhere on the page body, then scan → input refocuses, flow unbroken.
 8. Resize below 992px → single column, order: scan input → family → confirm/receipt → history.
 
 - [ ] **Step 2: CodeRabbit review**
 
-Run: `coderabbit review --base main --agent` (background; wait for completion). Triage per `superpowers:receiving-code-review` — verify each finding before applying.
+Run: `coderabbit review --base main --agent` (background; wait for completion). Triage per `superpowers:receiving-code-review` - verify each finding before applying.
 
 - [ ] **Step 3: Full suite + finish**
 

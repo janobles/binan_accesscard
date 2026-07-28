@@ -11,7 +11,7 @@ use CodeIgniter\Model;
 /**
  * Manages the citizen sectors used for classifying members. After the Phase A
  * restructure a sector is a flat classification (SC, PWD, SP, B, LGBT, OFW, IP,
- * IDP, PDL, OTHER) — it is no longer linked to a category (programs moved into the
+ * IDP, PDL, OTHER) - it is no longer linked to a category (programs moved into the
  * `services` table). Shared CRUD and management-search behaviour lives in
  * LookupModelTrait; this class adds the sector-specific catalog and shortcode logic.
  */

@@ -4,7 +4,7 @@
 
 **Goal:** Store worker-typed names and addresses in UPPERCASE everywhere, and render picked dropdown values as uppercase without changing what is stored.
 
-**Architecture:** All name/address cleaning already funnels through one class, `App\Support\MemberFieldNormalizer` — both the manual Add/Edit form (`FamilyController`) and the Excel importer (`FamilyExcelImporter`) delegate to it. Changing two methods there changes both entry paths. The display layer then stops re-casing (`FamilyDataTablePresenter`), CSS renders picked values as caps, and a one-time SQL patch brings existing rows into line.
+**Architecture:** All name/address cleaning already funnels through one class, `App\Support\MemberFieldNormalizer` - both the manual Add/Edit form (`FamilyController`) and the Excel importer (`FamilyExcelImporter`) delegate to it. Changing two methods there changes both entry paths. The display layer then stops re-casing (`FamilyDataTablePresenter`), CSS renders picked values as caps, and a one-time SQL patch brings existing rows into line.
 
 **Tech Stack:** PHP 8.2+, CodeIgniter 4, PHPUnit, MySQL, vanilla JS (no jQuery in this file).
 
@@ -13,7 +13,7 @@
 Copied verbatim from `CLAUDE.md` and the spec. Every task's requirements implicitly include this section.
 
 - **No migrations.** DB schema source of truth is the SQL dump (`accesscardV18.sql`). Never add migrations or alter schema in code. This branch adds a `sql/patches/` data patch, which is not a migration.
-- **Dump stays V18.** No schema or seed change is triggered by this branch. If one becomes necessary, stop and flag it — do not silently cut V19.
+- **Dump stays V18.** No schema or seed change is triggered by this branch. If one becomes necessary, stop and flag it - do not silently cut V19.
 - **PHP 8.2+.** Typed signatures everywhere; no `declare(strict_types=1)` (matches CI4 appstarter).
 - **Uppercase applies to typed fields only.** Names, address, and "Other" freetext are stored UPPERCASE. Dropdown-picked values (sex, civil status, education, job, religion, relationship, suffix, barangay) keep their canonical stored form and are rendered uppercase via CSS.
 - **Do not touch** `in_list[Male,Female]` rules (`FamilyController:817,826`, `MemberModel:29`), `FamilyExcelImporter:1107`, `FamilyExcelTemplate:144`, or the option lists in `FamilyProfilingFormV2` / `FamilyFormOptionsModel::getOptions()`. Changing any of these breaks saves or the import round-trip.
@@ -94,7 +94,7 @@ Expected: PASS, 2 tests.
 
 Run: `vendor/bin/phpunit`
 
-Expected: FAIL. `tests/unit/FamilyExcelImporterTest.php` and `tests/unit/MemberFieldNormalizerSplitTest.php` assert `'Dela Cruz'`-style values in many places. Do not fix them yet — Task 2 does that. Record the failing test names; you will need the list.
+Expected: FAIL. `tests/unit/FamilyExcelImporterTest.php` and `tests/unit/MemberFieldNormalizerSplitTest.php` assert `'Dela Cruz'`-style values in many places. Do not fix them yet - Task 2 does that. Record the failing test names; you will need the list.
 
 - [ ] **Step 6: Commit**
 
@@ -115,7 +115,7 @@ git commit -m "feat: store typed names and addresses in uppercase"
 - Consumes: `MemberFieldNormalizer::cleanName()` / `cleanAddress()` from Task 1, now uppercase.
 - Produces: a green suite. No production code changes in this task.
 
-These are assertion updates, not behavior changes. Input fixtures stay mixed-case on purpose — that is what proves normalization happens. Only *expected* values change.
+These are assertion updates, not behavior changes. Input fixtures stay mixed-case on purpose - that is what proves normalization happens. Only *expected* values change.
 
 - [ ] **Step 1: Run the suite and capture the failures**
 
@@ -138,14 +138,14 @@ Example, in `tests/unit/FamilyExcelImporterTest.php:451`:
 
 Rules while editing:
 - Row-builder fixtures such as `$this->headRow(3, '6001', ['lastname' => 'Dela Cruz'])` are **inputs**. Leave them as `'Dela Cruz'`.
-- `$this->existingPerson('Juan', 'Dela Cruz', ...)` stands in for a row already in the DB. Leave it Title Case — name matching is case-insensitive on both sides (`FamilyExcelImporter::normalizeText`, `MemberModel` uses `LOWER(...)`), so a Title Case fixture still matching after the change is exactly the behavior you want to keep proving.
+- `$this->existingPerson('Juan', 'Dela Cruz', ...)` stands in for a row already in the DB. Leave it Title Case - name matching is case-insensitive on both sides (`FamilyExcelImporter::normalizeText`, `MemberModel` uses `LOWER(...)`), so a Title Case fixture still matching after the change is exactly the behavior you want to keep proving.
 - Only change an assertion's expected string when the value passed through `cleanName()` or `cleanAddress()`.
 
 - [ ] **Step 3: Run the full suite**
 
 Run: `vendor/bin/phpunit`
 
-Expected: PASS. If a test about duplicate detection still fails, do not "fix" it by uppercasing a fixture — that would mask a real regression. Stop and investigate.
+Expected: PASS. If a test about duplicate detection still fails, do not "fix" it by uppercasing a fixture - that would mask a real regression. Stop and investigate.
 
 - [ ] **Step 4: Commit**
 
@@ -251,7 +251,7 @@ Line 57:
             'address' => esc((string) ($row['address'] ?? '')),
 ```
 
-Note: `$relationship` is a picked value, so after this change the table shows it in its stored canonical form (`Head`, `Child`). That is intended — the table is not the entry form, and the CSS in Task 5 is scoped to the form.
+Note: `$relationship` is a picked value, so after this change the table shows it in its stored canonical form (`Head`, `Child`). That is intended - the table is not the entry form, and the CSS in Task 5 is scoped to the form.
 
 - [ ] **Step 2: Run the suite**
 
@@ -294,13 +294,13 @@ Append to `public/css/familymodal.css`:
 }
 ```
 
-Do not add `::placeholder` uppercasing — placeholders are instructions to the worker, not data.
+Do not add `::placeholder` uppercasing - placeholders are instructions to the worker, not data.
 
 - [ ] **Step 2: Verify in the browser**
 
 Open the Add form. Type `dela cruz` into Last Name: it displays as `DELA CRUZ`. Pick a Civil Status: it displays in caps.
 
-Then save the record and reopen it for editing. Every dropdown must still show its selected value — not "Select". This is the round-trip check that proves picked values were left alone.
+Then save the record and reopen it for editing. Every dropdown must still show its selected value - not "Select". This is the round-trip check that proves picked values were left alone.
 
 - [ ] **Step 3: Commit**
 
@@ -326,7 +326,7 @@ The code change only affects records saved from now on. Without this, families e
 
 Run: `grep -A 20 'CREATE TABLE `member`' accesscardV18.sql`
 
-Confirm the spelling of the name and address columns before writing anything. Do not guess from this plan — read the dump.
+Confirm the spelling of the name and address columns before writing anything. Do not guess from this plan - read the dump.
 
 - [ ] **Step 2: Read the existing patch for house style**
 
@@ -432,13 +432,13 @@ Expected: the record saves, and the records table shows `DELA CRUZ, JUAN` with a
 
 Reopen that record for editing.
 
-Expected: name and address fields show uppercase, **and every dropdown still shows its selected value**. A dropdown reading "Select" means a picked value was uppercased somewhere it should not have been. That is a bug — find it before continuing.
+Expected: name and address fields show uppercase, **and every dropdown still shows its selected value**. A dropdown reading "Select" means a picked value was uppercased somewhere it should not have been. That is a bug - find it before continuing.
 
 - [ ] **Step 5: Check the import path still normalizes**
 
 Import a small Excel file with mixed-case names through Manage Records → Import.
 
-Expected: imported names land uppercase, since the importer shares `MemberFieldNormalizer`. Duplicate detection must still flag a person who already exists in the database with Title Case storage — this proves the case-insensitive matching held.
+Expected: imported names land uppercase, since the importer shares `MemberFieldNormalizer`. Duplicate detection must still flag a person who already exists in the database with Title Case storage - this proves the case-insensitive matching held.
 
 - [ ] **Step 6: Report**
 

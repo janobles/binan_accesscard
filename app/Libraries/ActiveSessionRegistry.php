@@ -8,7 +8,7 @@ use Config\Session as SessionConfig;
 /**
  * File-backed registry of the single active login per account, used to enforce one
  * concurrent session per user WITHOUT touching the database schema (CLAUDE.md: no
- * migrations — the SQL dump owns the schema).
+ * migrations - the SQL dump owns the schema).
  *
  * Storage is writable/active_sessions/sessions.json: a map of identity key =>
  * { token, username, ip, user_agent, updated_at }.
@@ -53,7 +53,7 @@ class ActiveSessionRegistry
     /**
      * Records $token as the sole active session for $identity, capturing the
      * request's IP/user-agent for the "logged in elsewhere" prompt. Overwrites any
-     * prior entry — that is how a confirmed new login evicts the old one.
+     * prior entry - that is how a confirmed new login evicts the old one.
      */
     public static function put(string $identity, string $token, string $username, ?RequestInterface $request = null): bool
     {

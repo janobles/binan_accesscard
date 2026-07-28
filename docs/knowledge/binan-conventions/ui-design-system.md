@@ -19,7 +19,7 @@ source of truth. Never hardcode a `btn-*` color class on a toolbar action.
 | import   | btn btn-warning            | bulk import                   |
 | filter   | btn btn-outline-secondary  | open a filter panel           |
 
-Buttons use stock Bootstrap colors only — theme.css must NOT re-tint
+Buttons use stock Bootstrap colors only - theme.css must NOT re-tint
 `.btn-primary` to Biñan green (that made Search and Add two competing
 greens). Green buttons are Bootstrap's `#198754` success. Biñan green stays
 on the shell (topnav/sidenav/links), never on buttons.
@@ -63,7 +63,7 @@ Toolbar input searches the whole database server-side; its placeholder names
 the entity so the scope is obvious per tab: "Search all family records...",
 "Search all sectors...", "Search all services...", "Search all categories...",
 "Search all audit logs...", "Search all my activity...". The in-card input
-only searches what is already loaded — placeholder "Search this page..."
+only searches what is already loaded - placeholder "Search this page..."
 everywhere (single-source pages like accounts say "Search accounts...").
 
 ## Rule 6: In-card controls row
@@ -78,18 +78,18 @@ select; default page size is **25** everywhere (options 10/25/50/100). Server
 pages read it from `DashboardPageBuilder::recordsPerPage()` (default 25) and the
 `table_controls` component defaults `perPage` to 25 too; view sentinels that
 strip `per_page` from URLs compare against 25. Manage Records is a DataTables
-grid, not the shared component — its native `.dt-length` label is forced to
+grid, not the shared component - its native `.dt-length` label is forced to
 small/muted in `managerecord.css` so it reads identically (pageLength 25).
 
 ## Rule 7: List page anatomy (Manage Records is the source of truth)
 
-Every list tab is the SAME composition as `Family/list.php` — no hand-rolled
+Every list tab is the SAME composition as `Family/list.php` - no hand-rolled
 layout markup, no page-specific layout CSS:
 
 1. Toolbar ABOVE the card: `components/records_toolbar` (family, AJAX) or
    `components/records_toolbar_server` (everything else). Pills row renders
    with it.
-2. `components/card` with stock `.card` chrome — page CSS must never override
+2. `components/card` with stock `.card` chrome - page CSS must never override
    the card border/radius/background, re-pad the card-body, or set
    `height: 100%` (that caused the dead space under short tables).
 3. First thing inside the body: `components/table_controls` (page search
@@ -108,20 +108,20 @@ pages, it goes in the shared layer.
 ## Retrofit status
 
 - The toolbar always renders ABOVE the page's card (never inside it), pills
-  row directly under it — see `Family/list.php` for the standard.
+  row directly under it - see `Family/list.php` for the standard.
 - manage-records: done (feat/manage-records-ui). AJAX flavor: filter panel +
   pills wired by `assets/js/dashboard/family-datatable.js`.
 - lookups (sectors/services/categories), audit-trails, employee activity:
   done (feat/retrofit-toolbar-conventions) via
-  `components/records_toolbar_server.php` — same Bootstrap-grid anatomy as
+  `components/records_toolbar_server.php` - same Bootstrap-grid anatomy as
   records_toolbar, wired by the shared
   `assets/js/dashboard/records-filter-panel.js` (radios inside the GET form,
   change = submit, pills from server state). Options that mean "no filter"
   (Active default, All) get no pill label, so they never render pills.
-- accounts: done, client mode — the list is fully loaded, so the panel radios
+- accounts: done, client mode - the list is fully loaded, so the panel radios
   carry `data-records-client` wiring (no submit; accounts-modal.js filters
   rows, records-filter-panel.js renders pills).
 - distribution tabs: btn() roles + placeholder wording done; the
-  distributions log keeps its client-side aid-type select (no server search
-  to live-apply against). Batches tab has plain form buttons, not a toolbar —
+  distributions log keeps its client-side subsidy-type select (no server search
+  to live-apply against). Batches tab has plain form buttons, not a toolbar -
   out of scope.

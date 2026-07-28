@@ -4,7 +4,9 @@
  * styled by theme.css .segmented-tabs). Each tab is a plain link that reloads
  * the page with ?tab=<key>; only the active pane is rendered by the caller.
  *
- * Params: $tabs array of ['key' => string, 'label' => string, 'icon' => string],
+ * Tabs are text only, no icons.
+ *
+ * Params: $tabs array of ['key' => string, 'label' => string],
  *         $active string, $baseUrl string (page URL without query).
  */
 $tabs = $tabs ?? [];
@@ -17,7 +19,6 @@ $baseUrl = $baseUrl ?? '';
         <a class="nav-link <?= $tab['key'] === $active ? 'active' : '' ?>"
            <?= $tab['key'] === $active ? 'aria-current="page"' : '' ?>
            href="<?= site_url($baseUrl) ?>?tab=<?= esc($tab['key'], 'attr') ?>">
-            <i class="bi bi-<?= esc($tab['icon'], 'attr') ?>" aria-hidden="true"></i>
             <?= esc($tab['label']) ?>
         </a>
     </li>

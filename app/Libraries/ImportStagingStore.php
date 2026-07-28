@@ -5,7 +5,7 @@ namespace App\Libraries;
 /**
  * File-backed staging for a family import under review.
  *
- * A 10k-member import stages to ~7 MB+ of JSON — far past MySQL's max_allowed_packet,
+ * A 10k-member import stages to ~7 MB+ of JSON - far past MySQL's max_allowed_packet,
  * so it CANNOT live in job_queue.result_json (a single UPDATE with that blob fails with
  * error 1153 / 2006 and crashes the worker). Instead the parsed rows + errors are written
  * to writable/import-staging/job-<id>.json, and job_queue.result_json keeps only a tiny
@@ -69,7 +69,7 @@ class ImportStagingStore
     /**
      * Deletes staging files older than $ttlHours, skipping any an unfinished job still
      * reads. Commit and cancel already clean up after themselves; this is the backstop for
-     * the review nobody finished — the operator closed the tab, fixed the spreadsheet, and
+     * the review nobody finished - the operator closed the tab, fixed the spreadsheet, and
      * uploaded it as a NEW job. That first file is orphaned, and it holds family PII, so it
      * must not sit on disk forever.
      *

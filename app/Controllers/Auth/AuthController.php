@@ -106,7 +106,7 @@ class AuthController extends BaseController
     /**
      * Completes a login the user confirmed from the "already signed in elsewhere"
      * prompt (POST `login/confirm`). Reads the server-side pending_login stashed by
-     * login(), re-checks it is fresh, then establishes the session — which overwrites
+     * login(), re-checks it is fresh, then establishes the session - which overwrites
      * the account's active-session token so the previous instance is logged out on
      * its next request (App\Filters\SingleSessionFilter). A `cancel` field, or an
      * expired/missing pending_login, aborts back to the login screen.
@@ -245,7 +245,7 @@ class AuthController extends BaseController
     /**
      * Guard used by index(): confirms the session points at a real user, has a
      * recognized role, and has not exceeded the IdleTimeout window. No frontend
-     * connection — internal session validation only.
+     * connection - internal session validation only.
      */
     private function hasValidLoginSession(): bool
     {

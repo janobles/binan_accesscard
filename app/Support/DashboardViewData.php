@@ -302,7 +302,7 @@ class DashboardViewData
         $canRestore = (bool) ($data['canRestore'] ?? false);
 
         // All codes (incl. archived, across every page) for the modal's duplicate
-        // check — fetched here so the categories view stays model-free.
+        // check - fetched here so the categories view stays model-free.
         $existingCodes = array_values(array_unique(array_filter(array_map(
             static fn (array $category): string => strtoupper(trim((string) ($category['code'] ?? ''))),
             (new CategoryModel())->getAllIncluding()

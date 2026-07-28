@@ -14,15 +14,16 @@ $accounts = array_merge($adminAccounts, $employeeAccounts, $viewerAccounts, $sca
 
 <div class="accounts-page" data-account-management>
     <?php /* Toolbar above the card, Manage Records standard. Client mode: the account list is
-             fully loaded, so the keyword and the panel radios filter rows in the browser
-             (accounts-modal.js) and records-filter-panel.js renders the pills — no reload. */ ?>
+             fully loaded, so the keyword and the panel checkboxes filter rows in the browser
+             (accounts-modal.js) and records-filter-panel.js renders the pills - no reload.
+             Checkbox groups, like Manage Records: nothing checked means no filter, so there
+             is no "All" choice and no pill for the default state. */ ?>
     <?php
     $accountLevelsGroup = [
         'name' => 'account_level',
         'label' => 'Level',
-        'type' => 'radio',
+        'type' => 'checkbox',
         'options' => [
-            ['value' => '', 'label' => 'All levels', 'pill' => 'All levels', 'checked' => true, 'default' => true],
             ['value' => 'administrator', 'label' => 'Administrator', 'pill' => 'Administrator', 'checked' => false],
             ['value' => 'encoder', 'label' => 'Encoder', 'pill' => 'Encoder', 'checked' => false],
             ['value' => 'viewer', 'label' => 'Viewer', 'pill' => 'Viewer', 'checked' => false],
@@ -34,9 +35,8 @@ $accounts = array_merge($adminAccounts, $employeeAccounts, $viewerAccounts, $sca
     $accountStatusesGroup = [
         'name' => 'account_status',
         'label' => 'Status',
-        'type' => 'radio',
+        'type' => 'checkbox',
         'options' => [
-            ['value' => '', 'label' => 'All statuses', 'pill' => 'All statuses', 'checked' => true, 'default' => true],
             ['value' => 'active', 'label' => 'Active', 'pill' => 'Active', 'checked' => false],
             ['value' => 'inactive', 'label' => 'Inactive', 'pill' => 'Inactive', 'checked' => false],
         ],
@@ -59,13 +59,12 @@ $accounts = array_merge($adminAccounts, $employeeAccounts, $viewerAccounts, $sca
         'actionsHtml' => $actionsHtml,
         'filterGroups' => [$accountLevelsGroup, $accountStatusesGroup],
     ]) ?>
-    <?= view('components/filter_pills', ['id' => 'accountFilterPills']) ?>
 
     <?= view('components/card', [
         'icon' => 'people-fill',
         'title' => 'Account Management',
         'cardClass' => 'account-card',
-        'attrs' => 'aria-labelledby="accounts-title"',
+        'attrs' => 'aria-labelledby="accounts-title" data-table-paginate data-paginate-key="accounts" data-paginate-label="accounts"',
         'bodyView' => 'Admin/accounts-body',
         'bodyData' => [
             'accounts' => $accounts,
@@ -73,6 +72,6 @@ $accounts = array_merge($adminAccounts, $employeeAccounts, $viewerAccounts, $sca
             'isDeveloper' => $isDeveloper,
             'isAdmin' => $isAdmin,
         ],
-        'footer' => view('components/table_footer', ['leftContent' => '<span id="accountsCount">Loading...</span>']),
+        'footer' => view('components/table_footer', ['clientKey' => 'accounts', 'entityLabel' => 'accounts']),
     ]) ?>
 </div>

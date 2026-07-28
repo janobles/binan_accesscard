@@ -1,7 +1,7 @@
-# Scanner Scan Page Redesign — Design Spec
+# Scanner Scan Page Redesign - Design Spec
 
 **Date:** 2026-07-07
-**Scope:** `app/Views/Scanner/scan.php` (+ `public/css/scanner.css`). View/JS only —
+**Scope:** `app/Views/Scanner/scan.php` (+ `public/css/scanner.css`). View/JS only -
 no controller, model, route, or schema changes. Reports/manage pages are out of
 scope this round (parked: Apply and Download buttons share `btn-primary`, weak
 differentiation).
@@ -10,14 +10,14 @@ differentiation).
 
 Scanner-role staff log aid distributions on desktop/laptop with a USB QR gun
 (keyboard wedge: types the control number, then sends Enter). The backend IPO is
-sound — lookup JSON, claimant-in-family guard, transaction-wrapped insert +
-audit trail, duplicate-claim warning — and is untouched. The current UI is a
+sound - lookup JSON, claimant-in-family guard, transaction-wrapped insert +
+audit trail, duplicate-claim warning - and is untouched. The current UI is a
 temporary single-column card stack with two problems:
 
 1. **Auto-clear bug:** after a scan triggers lookup, `controlInput` keeps its
    value; the next gun burst appends to it (e.g. "42" + "57" → "4257").
 2. **Post-log feedback:** a 2.5s "logged successfully" banner while the whole
-   family panel vanishes — no proof of what was logged.
+   family panel vanishes - no proof of what was logged.
 
 ## Goals
 
@@ -33,25 +33,25 @@ temporary single-column card stack with two problems:
 
 ### Layout (responsive)
 
-Full-width top strip: step indicator, then aid-type picker + scan input side by
+Full-width top strip: step indicator, then subsidy-type picker + scan input side by
 side. Below, Bootstrap grid: `col-lg-7` family panel (head, members),
-`col-lg-5` confirm panel + aid history. Below the `lg` breakpoint the grid
+`col-lg-5` confirm panel + subsidy history. Below the `lg` breakpoint the grid
 stacks in DOM order: scan input → family → confirm → history. Bootstrap
 utilities + adapter classes only (no inline styles); page-specific rules go in
 the scanner page CSS registered via `asset_helper.php` lists.
 
-Aid type is chosen once per session and persists across scans (existing
-behavior, by design — time and motion).
+Subsidy type is chosen once per session and persists across scans (existing
+behavior, by design - time and motion).
 
 ### Step indicator (passive)
 
-Three-step strip: `1 Aid type → 2 Scan QR → 3 Confirm`. Highlight follows
+Three-step strip: `1 Subsidy type → 2 Scan QR → 3 Confirm`. Highlight follows
 state automatically:
 
-- No aid type → step 1 active; scan input visually de-emphasized with hint.
-- Aid type set → step 2 active, input armed.
+- No subsidy type → step 1 active; scan input visually de-emphasized with hint.
+- Subsidy type set → step 2 active, input armed.
 - Family loaded → step 3 active; Confirm button gains emphasis.
-- After logging → back to step 2 (aid type persists).
+- After logging → back to step 2 (subsidy type persists).
 
 Purely visual state reflection. It never intercepts input or adds a keypress.
 
@@ -66,7 +66,7 @@ Purely visual state reflection. It never intercepts input or adds a keypress.
   Enter = lookup; empty input + Enter = confirm. Confirm button label:
   "Confirm (Enter)".
 - **Focus guard:** a `window` keydown handler refocuses `controlInput` when an
-  alphanumeric key is pressed and focus is not in an input/select/textarea — a
+  alphanumeric key is pressed and focus is not in an input/select/textarea - a
   stray click can never break the gun flow.
 - A new scan at any moment replaces the currently loaded family.
 
@@ -75,10 +75,10 @@ Purely visual state reflection. It never intercepts input or adds a keypress.
 Replace the vanish-and-banner with a **success receipt card** in place of the
 confirm panel:
 
-> ✓ Logged: {aid type} → {claimant} (Family #{control}), {date}
+> ✓ Logged: {subsidy type} → {claimant} (Family #{control}), {date}
 > Ready for next scan…
 
-- Family panel stays visible (slightly dimmed) with the refreshed history —
+- Family panel stays visible (slightly dimmed) with the refreshed history -
   the new row is the proof (optional brief green highlight on that row).
 - Input already cleared and focused.
 - Receipt persists until the next scan; no timeout race.
@@ -86,7 +86,7 @@ confirm panel:
 ### Button semantics (kept)
 
 Green Confirm; switches to warning-yellow with duplicate alert when the same
-aid type was already claimed today (existing `evaluateDuplicate` logic
+subsidy type was already claimed today (existing `evaluateDuplicate` logic
 unchanged).
 
 ## Error handling

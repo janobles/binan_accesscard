@@ -1,12 +1,12 @@
-/* Import Review — read-only report (Views/Family/import-review.php + import-review.js). */
+/* Import Review - read-only report (Views/Family/import-review.php + import-review.js). */
 
-/* Green shell header — matches the dashboard topnav (theme.css .sb-topnav.bg-dark).
+/* Green shell header - matches the dashboard topnav (theme.css .sb-topnav.bg-dark).
    This standalone page has no dashboard layout, so it tints its own navbar. */
 .import-review-topbar {
     background-color: var(--binan-green-deep) !important;
 }
 
-/* Flat action bar — the dashboard uses no drop shadows, only borders. */
+/* Flat action bar - the dashboard uses no drop shadows, only borders. */
 .import-review-actionbar {
     position: sticky;
     bottom: 0;
@@ -32,7 +32,7 @@
     text-align: right;
 }
 
-/* The "these are correct" panel — set apart from the problem cards. */
+/* The "these are correct" panel - set apart from the problem cards. */
 .import-review-ready {
     border-color: rgba(25, 135, 84, 0.35);
 }
@@ -42,7 +42,7 @@
 }
 
 /* Show every column and wrap long values (grow vertically) instead of an x-scrollbar.
-   The Manage Records skin sets a min-width that forces horizontal scroll — drop it here. */
+   The Manage Records skin sets a min-width that forces horizontal scroll - drop it here. */
 #importReviewGroups .manage-record-table {
     min-width: 0;
     width: 100%;
@@ -53,7 +53,7 @@
     word-break: break-word;
 }
 
-/* Headers stay on one line — the wrap rule above is for data cells only, and
+/* Headers stay on one line - the wrap rule above is for data cells only, and
    was breaking short labels mid-word (e.g. "MEMBE RS", "RO W"). */
 #importReviewGroups .import-review-table thead th {
     white-space: nowrap;
@@ -64,14 +64,14 @@
     max-width: 260px;
 }
 
-/* Bulk-remove checkbox column — kept tight so it doesn't steal width from the data. */
+/* Bulk-remove checkbox column - kept tight so it doesn't steal width from the data. */
 .import-review-select-col {
     width: 1%;
     white-space: nowrap;
     text-align: center;
 }
 
-/* Inline cell editor in the review tables (hybrid fix-in-place) — flat, tinted by severity to
+/* Inline cell editor in the review tables (hybrid fix-in-place) - flat, tinted by severity to
    echo the dashboard alert styling; no shadows. Green focus ring comes from theme.css. */
 .import-cell-edit {
     max-width: 22rem;
@@ -134,7 +134,7 @@
     text-overflow: ellipsis;
 }
 
-/* background-color only — the `background` shorthand would wipe .form-select's caret image. */
+/* background-color only - the `background` shorthand would wipe .form-select's caret image. */
 .import-cell-input {
     background-color: #fff;
 }

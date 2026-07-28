@@ -4,7 +4,7 @@
 
 **Goal:** Add a Reports/Statistics tab to the QR Code (Scanner) module with chart.js visualizations and a PDF summary export, then merge the Excel family-import feature from `Mel-import-branch` and fix any breakage.
 
-**Architecture:** A read-only `AidStatsModel` produces three date-scoped datasets (received-vs-not, by-barangay, by-aid-type). `ReportsController` routes the tab + PDF; the view renders `.stat-card` KPI tiles plus chart.js canvases (data passed as JSON), with plain summary tables as the no-JS/print fallback. `ReportsPdfGenerator` (dompdf, mirroring `QrCardPdfGenerator`) renders those same tables to a one-page PDF. The Excel import arrives via a full git merge, resolved and repaired last.
+**Architecture:** A read-only `AidStatsModel` produces three date-scoped datasets (received-vs-not, by-barangay, by-subsidy-type). `ReportsController` routes the tab + PDF; the view renders `.stat-card` KPI tiles plus chart.js canvases (data passed as JSON), with plain summary tables as the no-JS/print fallback. `ReportsPdfGenerator` (dompdf, mirroring `QrCardPdfGenerator`) renders those same tables to a one-page PDF. The Excel import arrives via a full git merge, resolved and repaired last.
 
 **Tech Stack:** CodeIgniter 4, PHP 8.2+, chart.js (vendored UMD), dompdf (installed), phpoffice/phpspreadsheet (arrives with merge), Bootstrap 5 + SB-Admin adapter, Bootstrap Icons, PHPUnit.
 
@@ -35,7 +35,7 @@ Deviations from the plan:
 - **Controllers decide, libraries/models build.** All querying lives in models/libraries.
 - **PHP 8.2+**, strict existing namespace/style conventions.
 - **UI house style only** (spec "UI style contract"): `stat-card`, `sector-management records-scroll-panel`, `records-search-panel`, `records-search-row records-lookup-search`, `table-meta records-table-controls`, `nav nav-tabs manage-tabs`, `badge bg-light text-dark border`, `.btn .records-search-action`, Bootstrap Icons (`bi-*`). **NEVER** `border-left-*`, `card h-100`, `text-xs text-uppercase` (SB-Admin-Pro demo-only, forbidden).
-- **Assets load through the manifest** `app/Helpers/asset_helper.php` — no hardcoded `<script>`/`<link>` in layouts.
+- **Assets load through the manifest** `app/Helpers/asset_helper.php` - no hardcoded `<script>`/`<link>` in layouts.
 - **Role guard** literal `['Scanner', 'Admin', 'Developer']` inline per-action (test-pinned convention).
 - **No-DB test posture:** model methods try/catch → safe empty shape; tests are contract/route/grep, no live-DB round-trips.
 - **Run `vendor/bin/phpunit` before and after each task.** Baseline: 55 tests, 4 skipped. (Final suite after implementation + Mel import merge: 72 tests, 4 skipped, all green.)
@@ -45,28 +45,28 @@ Deviations from the plan:
 ## File structure
 
 **§A/§B create:**
-- `app/Models/Scanner/AidStatsModel.php` — three read-only stat queries.
-- `app/Controllers/Scanner/ReportsController.php` — `index` (tab) + `pdf` (export).
-- `app/Views/Scanner/reports.php` — Reports tab.
-- `app/Views/Scanner/pdf/report.php` — PDF body.
-- `app/Views/Scanner/pdf/_styles.php` — PDF inline styles.
-- `app/Libraries/Scanner/ReportsPdfGenerator.php` — dompdf render + stream bytes.
-- `public/vendor/chart.js/chart.umd.min.js` — vendored chart.js (`git add -f`).
-- `public/assets/js/dashboard/scanner-reports.js` — builds the three charts.
-- `public/css/scanner-reports.css` — chart-card grid sizing only.
+- `app/Models/Scanner/AidStatsModel.php` - three read-only stat queries.
+- `app/Controllers/Scanner/ReportsController.php` - `index` (tab) + `pdf` (export).
+- `app/Views/Scanner/reports.php` - Reports tab.
+- `app/Views/Scanner/pdf/report.php` - PDF body.
+- `app/Views/Scanner/pdf/_styles.php` - PDF inline styles.
+- `app/Libraries/Scanner/ReportsPdfGenerator.php` - dompdf render + stream bytes.
+- `public/vendor/chart.js/chart.umd.min.js` - vendored chart.js (`git add -f`).
+- `public/assets/js/dashboard/scanner-reports.js` - builds the three charts.
+- `public/css/scanner-reports.css` - chart-card grid sizing only.
 - Tests: `tests/unit/AidStatsModelTest.php`, `ReportsControllerTest.php`, `ReportsViewTest.php`, and manifest assertions in an existing/new test.
 
 **§A/§B modify:**
-- `app/Config/Routes.php` — 2 new scanner routes.
-- `app/Helpers/asset_helper.php` — `scanner` context (styles + scripts).
-- `app/Views/Scanner/layout.php` — merge `scanner` asset context.
-- `app/Views/components/dashboard_sidebar.php` — Reports link.
+- `app/Config/Routes.php` - 2 new scanner routes.
+- `app/Helpers/asset_helper.php` - `scanner` context (styles + scripts).
+- `app/Views/Scanner/layout.php` - merge `scanner` asset context.
+- `app/Views/components/dashboard_sidebar.php` - Reports link.
 
 **§C:** git merge of `origin/Mel-import-branch` (files listed in spec §C).
 
 ---
 
-## Task 1: AidStatsModel — date-scoped stat queries
+## Task 1: AidStatsModel - date-scoped stat queries
 
 **Files:**
 - Create: `app/Models/Scanner/AidStatsModel.php`
@@ -122,7 +122,7 @@ final class AidStatsModelTest extends CIUnitTestCase
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `vendor/bin/phpunit tests/unit/AidStatsModelTest.php`
-Expected: FAIL — `Class "App\Models\Scanner\AidStatsModel" not found`.
+Expected: FAIL - `Class "App\Models\Scanner\AidStatsModel" not found`.
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -134,7 +134,7 @@ namespace App\Models\Scanner;
 use CodeIgniter\Model;
 
 /**
- * Read-only aid-distribution statistics for the Reports tab. Every method is
+ * Read-only subsidy-distribution statistics for the Reports tab. Every method is
  * scoped to an optional [from, to] claim_date window and returns a safe empty
  * shape on any DB error, matching the scanner module's no-DB test posture.
  * "Received" is defined at the family (head) level: a family counts as having
@@ -232,7 +232,7 @@ class AidStatsModel extends Model
         }
     }
 
-    /** Handout counts per aid type, within the date window, busiest first. */
+    /** Handout counts per subsidy type, within the date window, busiest first. */
     public function byAidType(?string $from = null, ?string $to = null): array
     {
         try {
@@ -258,7 +258,7 @@ class AidStatsModel extends Model
 
 Note: `applyRange` on the `byAidType` left-join narrows the join via `where`;
 because the outer table is `aid_type`, a type with zero in-range handouts still
-appears with `count = 0` only if no date filter drops the NULL side — acceptable
+appears with `count = 0` only if no date filter drops the NULL side - acceptable
 for the chart (zero-count types are harmless). Do not "fix" by moving the date
 predicate into the join condition; keep it a `where`.
 
@@ -271,7 +271,7 @@ Expected: PASS (4 tests). Without a DB, methods return the safe empty shapes and
 
 ```bash
 git add app/Models/Scanner/AidStatsModel.php tests/unit/AidStatsModelTest.php
-git commit -m "feat(scanner): AidStatsModel date-scoped aid-distribution stats"
+git commit -m "feat(scanner): AidStatsModel date-scoped subsidy-distribution stats"
 ```
 
 ---
@@ -288,7 +288,7 @@ git commit -m "feat(scanner): AidStatsModel date-scoped aid-distribution stats"
 - Produces:
   - `ReportsController::index(): ResponseInterface|string`
   - `ReportsController::pdf(): ResponseInterface` (body added in Task 6; stub here returns a 200 placeholder so the route resolves).
-  - `private normalizeDates(): array{0:?string,1:?string}` — reads `from`/`to`, validates `YYYY-MM-DD`, swaps if `from > to`.
+  - `private normalizeDates(): array{0:?string,1:?string}` - reads `from`/`to`, validates `YYYY-MM-DD`, swaps if `from > to`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -338,7 +338,7 @@ final class ReportsControllerTest extends CIUnitTestCase
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `vendor/bin/phpunit tests/unit/ReportsControllerTest.php`
-Expected: FAIL — `file_get_contents(...ReportsController.php): Failed to open stream`.
+Expected: FAIL - `file_get_contents(...ReportsController.php): Failed to open stream`.
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -356,13 +356,13 @@ use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
 
 /**
- * Scanner Reports tab: read-only aid-distribution statistics with chart.js
+ * Scanner Reports tab: read-only subsidy-distribution statistics with chart.js
  * visualizations and a one-page PDF summary export. No mutations, no audit.
  * Scanner/Admin/Developer only, guarded per action.
  */
 class ReportsController extends BaseController
 {
-    /** GET scanner/reports — the statistics dashboard. */
+    /** GET scanner/reports - the statistics dashboard. */
     public function index(): ResponseInterface|string
     {
         $guard = RoleAccess::requireRole(['Scanner', 'Admin', 'Developer']);
@@ -396,7 +396,7 @@ class ReportsController extends BaseController
         ]);
     }
 
-    /** GET scanner/reports/pdf — one-page summary (body added in Task 6). */
+    /** GET scanner/reports/pdf - one-page summary (body added in Task 6). */
     public function pdf(): ResponseInterface
     {
         $guard = RoleAccess::requireRole(['Scanner', 'Admin', 'Developer']);
@@ -433,7 +433,7 @@ class ReportsController extends BaseController
 }
 ```
 
-Modify `app/Config/Routes.php` — inside the `scanner` group, after the `distributions/void` line, add:
+Modify `app/Config/Routes.php` - inside the `scanner` group, after the `distributions/void` line, add:
 
 ```php
     $routes->get('reports', 'Scanner\ReportsController::index');
@@ -446,7 +446,7 @@ Run: `vendor/bin/phpunit tests/unit/ReportsControllerTest.php`
 Expected: PASS (4 tests).
 
 Run: `php spark routes | grep reports`
-Expected: two rows — `scanner/reports` and `scanner/reports/pdf`.
+Expected: two rows - `scanner/reports` and `scanner/reports/pdf`.
 
 - [ ] **Step 5: Commit**
 
@@ -516,7 +516,7 @@ final class ReportsViewTest extends CIUnitTestCase
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `vendor/bin/phpunit tests/unit/ReportsViewTest.php`
-Expected: FAIL — cannot open `Views/Scanner/reports.php`.
+Expected: FAIL - cannot open `Views/Scanner/reports.php`.
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -582,7 +582,7 @@ $rangeLabel = ($from || $to)
     </div>
     <div class="col-lg-12">
       <div class="sector-management reports-chart-card">
-        <h6>Number of handouts by aid type</h6>
+        <h6>Number of handouts by subsidy type</h6>
         <canvas id="chartAidType" height="180"></canvas>
       </div>
     </div>
@@ -688,7 +688,7 @@ final class ReportsAssetsTest extends CIUnitTestCase
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `vendor/bin/phpunit tests/unit/ReportsAssetsTest.php`
-Expected: FAIL — `scanner` context returns `[]`; vendored file missing.
+Expected: FAIL - `scanner` context returns `[]`; vendored file missing.
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -833,7 +833,7 @@ Create `public/assets/js/dashboard/scanner-reports.js`:
 Run: `vendor/bin/phpunit tests/unit/ReportsAssetsTest.php`
 Expected: PASS (4 tests).
 
-Run: `php spark serve` and open `scanner/reports` as a Scanner user — three charts render, or empty charts + "No data" without seeded data. Check the browser console: no `Chart is not defined`.
+Run: `php spark serve` and open `scanner/reports` as a Scanner user - three charts render, or empty charts + "No data" without seeded data. Check the browser console: no `Chart is not defined`.
 
 - [ ] **Step 5: Commit**
 
@@ -894,7 +894,7 @@ git commit -m "feat(scanner): Reports link in scanner sidebar"
 
 **Interfaces:**
 - Consumes: `AidStatsModel` datasets, same shapes as Task 1.
-- Produces: `ReportsPdfGenerator::generate(array $summary, array $byBarangay, array $byAidType, ?string $from, ?string $to): string` — returns PDF bytes.
+- Produces: `ReportsPdfGenerator::generate(array $summary, array $byBarangay, array $byAidType, ?string $from, ?string $to): string` - returns PDF bytes.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -925,7 +925,7 @@ final class ReportsPdfGeneratorTest extends CIUnitTestCase
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `vendor/bin/phpunit tests/unit/ReportsPdfGeneratorTest.php`
-Expected: FAIL — class not found.
+Expected: FAIL - class not found.
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -957,7 +957,7 @@ $window = ($from || $to)
     : 'All dates';
 ?>
 <?= $this->include('Scanner/pdf/_styles') ?>
-<h1>Aid Distribution Report</h1>
+<h1>Subsidy Distribution Report</h1>
 <p class="sub">City of Bi&ntilde;an CSWD &middot; <?= esc($window) ?> &middot; Generated <?= esc(date('Y-m-d H:i')) ?></p>
 
 <table class="kpis" style="width:100%; border-collapse:collapse;">
@@ -987,9 +987,9 @@ $window = ($from || $to)
   </tbody>
 </table>
 
-<h2>Handouts by aid type</h2>
+<h2>Handouts by subsidy type</h2>
 <table class="data">
-  <thead><tr><th>Aid type</th><th>Handouts</th></tr></thead>
+  <thead><tr><th>Subsidy type</th><th>Handouts</th></tr></thead>
   <tbody>
   <?php foreach ($byAidType as $a): ?>
     <tr><td><?= esc($a['aid_type']) ?></td><td><?= esc((string) $a['count']) ?></td></tr>
@@ -1012,7 +1012,7 @@ use Dompdf\Dompdf;
 use Dompdf\Options;
 
 /**
- * Renders the Scanner Reports summary (KPIs + per-barangay + per-aid-type
+ * Renders the Scanner Reports summary (KPIs + per-barangay + per-subsidy-type
  * tables) into a one-page US-Letter PDF. Server-side, no chart.js: the barangay
  * coverage is drawn as CSS bars. Mirrors Qr\QrCardPdfGenerator's dompdf setup.
  */
@@ -1049,7 +1049,7 @@ final class ReportsPdfGenerator
 Replace the `pdf()` body in `app/Controllers/Scanner/ReportsController.php`:
 
 ```php
-    /** GET scanner/reports/pdf — one-page summary of the current date window. */
+    /** GET scanner/reports/pdf - one-page summary of the current date window. */
     public function pdf(): ResponseInterface
     {
         $guard = RoleAccess::requireRole(['Scanner', 'Admin', 'Developer']);
@@ -1082,7 +1082,7 @@ Replace the `pdf()` body in `app/Controllers/Scanner/ReportsController.php`:
 Run: `vendor/bin/phpunit tests/unit/ReportsPdfGeneratorTest.php tests/unit/ReportsControllerTest.php`
 Expected: PASS.
 
-Run: `php spark serve`, visit `scanner/reports/pdf` as a Scanner — a PDF downloads and opens with the KPIs + two tables.
+Run: `php spark serve`, visit `scanner/reports/pdf` as a Scanner - a PDF downloads and opens with the KPIs + two tables.
 
 - [ ] **Step 5: Commit**
 
@@ -1100,7 +1100,7 @@ Expected: all green, 4 skipped, count = baseline 55 + new tests. Fix any regress
 
 ## Task 7: Merge Mel-import-branch (Excel family import) + fix breakage
 
-This task is a git merge, not new code. Do NOT hand-copy files — merge the branch
+This task is a git merge, not new code. Do NOT hand-copy files - merge the branch
 so history is preserved. Work on a checkpoint so a bad merge is recoverable.
 
 **Files:** whole-branch merge; conflicts expected in `app/Config/Routes.php`,
@@ -1125,8 +1125,8 @@ Expected: conflicts in `app/Config/Routes.php`, `composer.json`, `composer.lock`
 
 - [ ] **Step 3: Resolve conflicts**
 
-- `app/Config/Routes.php` — keep BOTH route groups: the `scanner` group (scan/lookup/log/manage/aid-types/distributions/reports) AND the families import routes from Mel. Union, no deletions.
-- `composer.json` `require` — union all deps:
+- `app/Config/Routes.php` - keep BOTH route groups: the `scanner` group (scan/lookup/log/manage/aid-types/distributions/reports) AND the families import routes from Mel. Union, no deletions.
+- `composer.json` `require` - union all deps:
 
 ```json
         "chillerlan/php-qrcode": "^6.0",
@@ -1136,7 +1136,7 @@ Expected: conflicts in `app/Config/Routes.php`, `composer.json`, `composer.lock`
         "php": "^8.2"
 ```
 
-- `composer.lock` — do not hand-merge. After the json is resolved:
+- `composer.lock` - do not hand-merge. After the json is resolved:
 
 ```bash
 git checkout --theirs composer.lock   # take Mel's lock as a base
@@ -1174,7 +1174,7 @@ vendor/bin/phpunit
 
 If red:
 - The lookups refactor (`a2f44fb`) may break `SectorModel`/`ServiceModel`/`CategoryModel` tests or `MemberModel` expectations. For each failure, read the failing assertion, reconcile the model/view against the SQL dump's exact column/enum names (per non-negotiables the dump wins), and update the test only if the behavior legitimately changed.
-- `FamilyDataTableTest` was already updated to inspect the manifest — confirm the merged `asset_helper.php` still wires the merged helper calls.
+- `FamilyDataTableTest` was already updated to inspect the manifest - confirm the merged `asset_helper.php` still wires the merged helper calls.
 Fix until green. Commit the merge only when the suite passes:
 
 ```bash
@@ -1189,14 +1189,14 @@ drain so an import completes without PowerShell.
 - Verify the importer's write path (`FamilyRecordWriter`) writes an `audit_trails`
   row per created family (grep for `AuditTrailsModel`/`logAction` in
   `app/Libraries/FamilyExcelImporter.php` and `FamilyRecordWriter.php`). If it
-  does not, wire it through the same audit call `FamilyController` uses — this is
+  does not, wire it through the same audit call `FamilyController` uses - this is
   a non-negotiable.
 > **Superseded at implementation:** the Mel-import merge shipped a full generic
 > background worker, `app/Commands/QueueWork.php` (`php spark queue:work`), which
 > drains `job_queue` and resumes crashed `processing` jobs via the handler
 > registered in `Config\Queue`. Use `php spark queue:work` for the in-process
 > drain instead of the placeholder `jobs:drain` command below. The
-> `DrainJobQueue`/`jobs:drain` code was NOT created — it is retained here only as
+> `DrainJobQueue`/`jobs:drain` code was NOT created - it is retained here only as
 > the original design intent.
 
 - Add a spark command to drain the queue in-process. Create
@@ -1234,7 +1234,7 @@ class DrainJobQueue extends BaseCommand
 }
 ```
 
-Note: use the ACTUAL method names on the merged `JobQueueModel` (inspect it first —
+Note: use the ACTUAL method names on the merged `JobQueueModel` (inspect it first -
 `reserveNext`/`runJob` above are placeholders for whatever the merged model
 exposes; wire to the real reserve + execute methods). If the model already has a
 one-shot runner, call that instead of reimplementing the loop.
@@ -1252,7 +1252,7 @@ php spark serve
 
 - [ ] **Step 9: Commit the dev drain command**
 
-Superseded — no separate commit. The generic `QueueWork` worker arrived with the
+Superseded - no separate commit. The generic `QueueWork` worker arrived with the
 Mel-import merge (`php spark queue:work`); no `DrainJobQueue` was added.
 
 - [ ] **Step 10: Final full-suite checkpoint**
@@ -1268,7 +1268,7 @@ Expected: all green; every route resolves. Reports tab + PDF + import all work.
 
 ## Self-review notes
 
-- **Spec coverage:** §A → Tasks 1–5; §B → Task 6; §C → Task 7. UI style contract → enforced by `ReportsViewTest` (Task 3) + manifest test (Task 4). Audit-on-import → Task 7 Step 7. No-migration → Task 7 Step 5 loads `job_queue.sql` as a dump.
-- **Placeholders:** the only intentional "inspect the real method names" note is Task 7 Step 7 (`JobQueueModel` API is unknown until the merge lands — cannot be pinned pre-merge); every other step ships complete code.
+- **Spec coverage:** §A → Tasks 1-5; §B → Task 6; §C → Task 7. UI style contract → enforced by `ReportsViewTest` (Task 3) + manifest test (Task 4). Audit-on-import → Task 7 Step 7. No-migration → Task 7 Step 5 loads `job_queue.sql` as a dump.
+- **Placeholders:** the only intentional "inspect the real method names" note is Task 7 Step 7 (`JobQueueModel` API is unknown until the merge lands - cannot be pinned pre-merge); every other step ships complete code.
 - **Type consistency:** `receivedVsNot/byBarangay/byAidType` shapes are identical across model (Task 1), controller (Task 2), view (Task 3), and PDF (Task 6). `coverage` is int percent everywhere. Chart anchors `chartReceived/chartBarangay/chartAidType` + `reportsData` match between view (Task 3) and JS (Task 4).
 ```

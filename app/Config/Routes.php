@@ -135,7 +135,7 @@ $routes->group('employee', static function (RouteCollection $routes): void {
 });
 
 /*
- * Viewer workspace (read-only). GET routes only — no mutation endpoints are
+ * Viewer workspace (read-only). GET routes only - no mutation endpoints are
  * exposed. The read-only family detail fragment reuses FamilyController::viewFamily,
  * which permits the Viewer role via requireFamilyViewAccess().
  */
@@ -151,7 +151,7 @@ $routes->group('viewer', static function (RouteCollection $routes): void {
 });
 
 /**
- * Scanner module (aid distribution). Scanner/Admin/Developer only — each action
+ * Scanner module (subsidy distribution). Scanner/Admin/Developer only - each action
  * calls RoleAccess::requireRole() internally (mirrors the Cards controller).
  */
 $routes->group('scanner', static function (RouteCollection $routes): void {

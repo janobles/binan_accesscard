@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Batch-scoped aid distribution with per-scanner performance stats, a distribution-setting page before scanning, and a minimal kiosk shell for the scan flow.
+**Goal:** Batch-scoped subsidy distribution with per-scanner performance stats, a distribution-setting page before scanning, and a minimal kiosk shell for the scan flow.
 
-**Architecture:** New `distribution_batch` table (SQL dump bump V14→V15, no migrations) with a single-open-batch invariant enforced in a new `DistributionBatchModel`. `aid_distribution` gains `batch_id`. Admin opens/closes batches from `scanner/manage` (audited). The scan flow splits into `scanner/setting` (aid-type pick) → `scanner/scan` (kiosk shell, live personal counter). Reports gain a batch selector and role-aware per-scanner performance.
+**Architecture:** New `distribution_batch` table (SQL dump bump V14→V15, no migrations) with a single-open-batch invariant enforced in a new `DistributionBatchModel`. `aid_distribution` gains `batch_id`. Admin opens/closes batches from `scanner/manage` (audited). The scan flow splits into `scanner/setting` (subsidy-type pick) → `scanner/scan` (kiosk shell, live personal counter). Reports gain a batch selector and role-aware per-scanner performance.
 
 **Tech Stack:** CodeIgniter 4, PHP 8.2+, MySQL, Bootstrap 5 (SB Admin 1 house style), PHPUnit.
 
@@ -16,7 +16,7 @@
 - Stats/model methods return safe empty shapes on any DB error (`try/catch \Throwable`).
 - Valid Bootstrap 5 components/utilities only; scan pages fit viewport without scrolling; zero added per-scan keypresses.
 - Role guard literal for scanner pages: `RoleAccess::requireRole(['Scanner', 'Admin', 'Developer'])`. Batch open/close: `RoleAccess::requireRole(['Admin', 'Developer'])`.
-- Run `vendor/bin/phpunit` before starting and after every task (DB/session tests skip without sqlite3 — that is normal).
+- Run `vendor/bin/phpunit` before starting and after every task (DB/session tests skip without sqlite3 - that is normal).
 - Consult `.claude/skills/binan-conventions/SKILL.md` before controller/view/route edits.
 
 ---
@@ -100,12 +100,12 @@ git commit -m "feat(db): dump V15 adds distribution_batch table and aid_distribu
 
 **Interfaces:**
 - Produces:
-  - `activeBatch(): ?array` — the single open row (`closed_at IS NULL`) or null.
-  - `open(string $name, int $userId): int` — new batch_id, 0 on failure/blank name/already-open.
-  - `close(int $batchId): bool` — stamps `closed_at`; false if id ≤ 0 or already closed.
-  - `allBatches(): array` — newest first.
+  - `activeBatch(): ?array` - the single open row (`closed_at IS NULL`) or null.
+  - `open(string $name, int $userId): int` - new batch_id, 0 on failure/blank name/already-open.
+  - `close(int $batchId): bool` - stamps `closed_at`; false if id ≤ 0 or already closed.
+  - `allBatches(): array` - newest first.
 
-- [ ] **Step 1: Write the failing test** — `tests/unit/DistributionBatchModelTest.php`:
+- [ ] **Step 1: Write the failing test** - `tests/unit/DistributionBatchModelTest.php`:
 
 ```php
 <?php
@@ -143,9 +143,9 @@ final class DistributionBatchModelTest extends CIUnitTestCase
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `vendor/bin/phpunit --filter DistributionBatchModelTest`
-Expected: FAIL/ERROR — class `App\Models\Scanner\DistributionBatchModel` not found.
+Expected: FAIL/ERROR - class `App\Models\Scanner\DistributionBatchModel` not found.
 
-- [ ] **Step 3: Implement** — `app/Models/Scanner/DistributionBatchModel.php`:
+- [ ] **Step 3: Implement** - `app/Models/Scanner/DistributionBatchModel.php`:
 
 ```php
 <?php
@@ -157,7 +157,7 @@ use CodeIgniter\Model;
 /**
  * Distribution batches: one row per giving event (e.g. one day of handouts).
  * At most one batch may be open (closed_at IS NULL) at a time; open() enforces
- * that invariant. Closing a batch is the manual "reset" — the next batch's
+ * that invariant. Closing a batch is the manual "reset" - the next batch's
  * statistics start from zero. All methods keep the scanner module's no-DB
  * test posture: safe empty shapes on any DB error.
  */
@@ -260,9 +260,9 @@ git commit -m "feat(scanner): DistributionBatchModel with single-open-batch inva
 - Consumes: `batch_id` column from Task 1.
 - Produces:
   - `logAid(array $data): int` now also stores optional `batch_id` (int > 0 or NULL).
-  - `familiesForUserInBatch(int $userId, int $batchId): int` — COUNT(DISTINCT control_no) by this user in this batch. Task 5's `myBatchCount` and the kiosk counter use this.
+  - `familiesForUserInBatch(int $userId, int $batchId): int` - COUNT(DISTINCT control_no) by this user in this batch. Task 5's `myBatchCount` and the kiosk counter use this.
 
-- [ ] **Step 1: Write the failing tests** — append to `tests/unit/AidDistributionModelTest.php`:
+- [ ] **Step 1: Write the failing tests** - append to `tests/unit/AidDistributionModelTest.php`:
 
 ```php
     public function testFamiliesForUserInBatchRejectsNonPositiveIds(): void
@@ -284,7 +284,7 @@ git commit -m "feat(scanner): DistributionBatchModel with single-open-batch inva
 - [ ] **Step 2: Run to verify failure**
 
 Run: `vendor/bin/phpunit --filter AidDistributionModelTest`
-Expected: FAIL — `familiesForUserInBatch` undefined.
+Expected: FAIL - `familiesForUserInBatch` undefined.
 
 - [ ] **Step 3: Implement.** In `AidDistributionModel.php`:
 
@@ -342,14 +342,14 @@ git commit -m "feat(scanner): aid_distribution rows carry batch_id; per-user fam
 - Modify: `app/Controllers/Scanner/ManageController.php`
 - Modify: `app/Config/Routes.php` (scanner group, after the `distributions/void` line)
 - Create: `app/Views/Scanner/manage-batches-body.php`
-- Modify: `app/Views/Scanner/manage.php` (include the new body partial; follow how `manage-aidtypes-body.php` is included — read the file first)
+- Modify: `app/Views/Scanner/manage.php` (include the new body partial; follow how `manage-aidtypes-body.php` is included - read the file first)
 - Test: `tests/unit/ManageControllerTest.php` (append)
 
 **Interfaces:**
 - Consumes: `DistributionBatchModel::open/close/activeBatch/allBatches` (Task 2).
 - Produces: routes `POST scanner/batches/open` → `openBatch()`, `POST scanner/batches/close/(:num)` → `closeBatch($1)`; view data keys `batches` (array) and `activeBatch` (?array) passed to `Scanner/manage`.
 
-- [ ] **Step 1: Write the failing tests** — append to `tests/unit/ManageControllerTest.php`:
+- [ ] **Step 1: Write the failing tests** - append to `tests/unit/ManageControllerTest.php`:
 
 ```php
     public function testBatchRoutesResolve(): void
@@ -384,7 +384,7 @@ Expected: FAIL on both new tests.
 - [ ] **Step 4: Add controller actions.** In `ManageController.php` add `use App\Models\Scanner\DistributionBatchModel;` and:
 
 ```php
-    /** POST scanner/batches/open — Admin/Developer only. */
+    /** POST scanner/batches/open - Admin/Developer only. */
     public function openBatch(): RedirectResponse
     {
         $guard = RoleAccess::requireRole(['Admin', 'Developer']);
@@ -407,7 +407,7 @@ Expected: FAIL on both new tests.
         return redirect()->to('scanner/manage')->with('success', 'Batch opened. Scanning is now live.');
     }
 
-    /** POST scanner/batches/close/{id} — Admin/Developer only. Manual reset. */
+    /** POST scanner/batches/close/{id} - Admin/Developer only. Manual reset. */
     public function closeBatch(int $id): RedirectResponse
     {
         $guard = RoleAccess::requireRole(['Admin', 'Developer']);
@@ -447,7 +447,7 @@ $canManageBatches = in_array($currentRole ?? '', ['Admin', 'Developer'], true);
 
     <?php if (($activeBatch ?? null) !== null): ?>
       <div class="alert alert-success d-flex justify-content-between align-items-center">
-        <span><strong><?= esc($activeBatch['name']) ?></strong> — open since <?= esc($activeBatch['started_at']) ?></span>
+        <span><strong><?= esc($activeBatch['name']) ?></strong> - open since <?= esc($activeBatch['started_at']) ?></span>
         <?php if ($canManageBatches): ?>
         <form method="post" action="<?= site_url('scanner/batches/close/' . (int) $activeBatch['batch_id']) ?>"
               onsubmit="return confirm('Close this batch? Statistics reset for the next batch.');">
@@ -464,7 +464,7 @@ $canManageBatches = in_array($currentRole ?? '', ['Admin', 'Developer'], true);
         <div class="col-auto flex-grow-1">
           <label for="batchName" class="form-label mb-0">Batch name</label>
           <input class="form-control" type="text" id="batchName" name="name" maxlength="100"
-                 placeholder="e.g. Rice Distribution — <?= esc(date('M j, Y')) ?>" required>
+                 placeholder="e.g. Rice Distribution - <?= esc(date('M j, Y')) ?>" required>
         </div>
         <div class="col-auto">
           <button class="btn btn-primary" type="submit">Open batch</button>
@@ -497,7 +497,7 @@ Include it in `manage.php` above the aid-types section, mirroring how the other 
 - [ ] **Step 6: Run tests**
 
 Run: `vendor/bin/phpunit --filter ManageControllerTest`
-Expected: PASS. Then full suite: `vendor/bin/phpunit` — no new failures.
+Expected: PASS. Then full suite: `vendor/bin/phpunit` - no new failures.
 
 - [ ] **Step 7: Commit**
 
@@ -508,7 +508,7 @@ git commit -m "feat(scanner): admin batch open/close on manage page, audited"
 
 ---
 
-### Task 5: ScanController — setting page, guards, batch stamping
+### Task 5: ScanController - setting page, guards, batch stamping
 
 **Files:**
 - Modify: `app/Controllers/Scanner/ScanController.php`
@@ -518,11 +518,11 @@ git commit -m "feat(scanner): admin batch open/close on manage page, audited"
 **Interfaces:**
 - Consumes: `DistributionBatchModel::activeBatch()`, `AidDistributionModel::familiesForUserInBatch()`, `AidTypeModel::active()`.
 - Produces:
-  - `GET scanner/setting` → `setting()` — renders `Scanner/setting` (kiosk shell) with `activeBatch`, `aidTypes`, `myBatchCount`.
-  - `scan()` now requires `?aid_type=N` (must be an active aid type) AND an open batch; otherwise redirects to `scanner/setting`. Passes `aidType` (row), `activeBatch`, `myBatchCount` to the view.
+  - `GET scanner/setting` → `setting()` - renders `Scanner/setting` (kiosk shell) with `activeBatch`, `aidTypes`, `myBatchCount`.
+  - `scan()` now requires `?aid_type=N` (must be an active subsidy type) AND an open batch; otherwise redirects to `scanner/setting`. Passes `aidType` (row), `activeBatch`, `myBatchCount` to the view.
   - `logAid()` returns 409 `{errors:{general:...}}` when no open batch; stamps `batch_id`; JSON response gains `myBatchCount` (int).
 
-- [ ] **Step 1: Write the failing tests** — `tests/unit/ScanControllerBatchTest.php`:
+- [ ] **Step 1: Write the failing tests** - `tests/unit/ScanControllerBatchTest.php`:
 
 ```php
 <?php
@@ -559,7 +559,7 @@ final class ScanControllerBatchTest extends CIUnitTestCase
 - [ ] **Step 2: Run to verify failure**
 
 Run: `vendor/bin/phpunit --filter ScanControllerBatchTest`
-Expected: FAIL — route missing, source assertions fail.
+Expected: FAIL - route missing, source assertions fail.
 
 - [ ] **Step 3: Add route.** In the scanner group, before the `scan` line:
 
@@ -570,7 +570,7 @@ Expected: FAIL — route missing, source assertions fail.
 - [ ] **Step 4: Rework `ScanController`.** Add `use App\Models\Scanner\DistributionBatchModel;`. Add:
 
 ```php
-    /** GET scanner/setting — pick the aid type for this scanning session. */
+    /** GET scanner/setting - pick the subsidy type for this scanning session. */
     public function setting(): ResponseInterface|string
     {
         $guard = RoleAccess::requireRole(['Scanner', 'Admin', 'Developer']);
@@ -595,7 +595,7 @@ Expected: FAIL — route missing, source assertions fail.
     }
 ```
 
-Rework `scan()` — replace the body after the guard with:
+Rework `scan()` - replace the body after the guard with:
 
 ```php
         $activeBatch = model(DistributionBatchModel::class)->activeBatch();
@@ -628,7 +628,7 @@ Rework `scan()` — replace the body after the guard with:
         ]);
 ```
 
-(The dashboard-shell keys — `activeTab`, `currentRole`, `canManageAccounts`, `sidebarRoleClass`, `sidebarUserUrl`, `navActive` — are no longer needed by the kiosk views; drop them from these two actions only.)
+(The dashboard-shell keys - `activeTab`, `currentRole`, `canManageAccounts`, `sidebarRoleClass`, `sidebarUserUrl`, `navActive` - are no longer needed by the kiosk views; drop them from these two actions only.)
 
 In `logAid()`, after the member-guard block and before `$userId = ...`, add:
 
@@ -654,7 +654,7 @@ Update the class docblock: setting() line, kiosk shell note, 409 semantics.
 
 - [ ] **Step 5: Run tests**
 
-Run: `vendor/bin/phpunit --filter ScanControllerBatchTest` → PASS. Full suite: `vendor/bin/phpunit` — fix any test still asserting the old scan() view keys.
+Run: `vendor/bin/phpunit --filter ScanControllerBatchTest` → PASS. Full suite: `vendor/bin/phpunit` - fix any test still asserting the old scan() view keys.
 
 - [ ] **Step 6: Commit**
 
@@ -676,7 +676,7 @@ git commit -m "feat(scanner): setting action, batch guards, 409 without batch, l
 - Consumes: view data from Task 5 (`activeBatch`, `aidTypes`, `myBatchCount`, `pageTitle`, `username`).
 - Produces: kiosk layout with sections `content` and `scripts`; header element `#myBatchCount` (the live counter Task 7's JS updates). No sidebar, no topnav partials.
 
-- [ ] **Step 1: Write the failing test** — `tests/unit/KioskViewTest.php`:
+- [ ] **Step 1: Write the failing test** - `tests/unit/KioskViewTest.php`:
 
 ```php
 <?php
@@ -708,7 +708,7 @@ final class KioskViewTest extends CIUnitTestCase
 - [ ] **Step 2: Run to verify failure**
 
 Run: `vendor/bin/phpunit --filter KioskViewTest`
-Expected: ERROR — files missing.
+Expected: ERROR - files missing.
 
 - [ ] **Step 3: Create `kiosk-layout.php`:**
 
@@ -716,8 +716,8 @@ Expected: ERROR — files missing.
 <?php
 /**
  * Kiosk shell for the scan flow (setting + scan pages): full-viewport, no
- * sidebar/topbar. Deliberately minimal for time-and-motion — one slim header
- * bar (batch · aid type · live personal counter · change-type · logout) and
+ * sidebar/topbar. Deliberately minimal for time-and-motion - one slim header
+ * bar (batch · subsidy type · live personal counter · change-type · logout) and
  * the page content. Reports and Manage stay in Scanner/layout (dashboard shell).
  */
 $pageTitle    = $pageTitle ?? 'Scan';
@@ -768,7 +768,7 @@ $myBatchCount = (int) ($myBatchCount ?? 0);
 </html>
 ```
 
-**Before committing:** open `Scanner/layout.php` and copy its exact script-loading loop (function names/groups may differ from `asset_scripts('foot')` — mirror whatever it does, including the idle-timeout script if present). Verify the logout route exists in `Routes.php` (`grep -n "logout" app/Config/Routes.php`) and use the actual path.
+**Before committing:** open `Scanner/layout.php` and copy its exact script-loading loop (function names/groups may differ from `asset_scripts('foot')` - mirror whatever it does, including the idle-timeout script if present). Verify the logout route exists in `Routes.php` (`grep -n "logout" app/Config/Routes.php`) and use the actual path.
 
 - [ ] **Step 4: Create `setting.php`:**
 
@@ -790,9 +790,9 @@ $myBatchCount = (int) ($myBatchCount ?? 0);
           <div class="fw-bold fs-4 mb-1"><?= esc($activeBatch['name']) ?></div>
           <div class="text-muted small mb-4">Open since <?= esc($activeBatch['started_at']) ?></div>
           <form method="get" action="<?= site_url('scanner/scan') ?>">
-            <label for="aidTypePick" class="form-label fw-bold">Aid type to distribute</label>
+            <label for="aidTypePick" class="form-label fw-bold">Subsidy type to distribute</label>
             <select class="form-select form-select-lg mb-3" id="aidTypePick" name="aid_type" required autofocus>
-              <option value="">Choose aid type&hellip;</option>
+              <option value="">Choose subsidy type&hellip;</option>
               <?php foreach ($aidTypes as $type): ?>
                 <option value="<?= esc($type['aid_type_id'], 'attr') ?>"><?= esc($type['name']) ?></option>
               <?php endforeach; ?>
@@ -835,7 +835,7 @@ git commit -m "feat(scanner): kiosk shell and distribution-setting page"
 
 **Interfaces:**
 - Consumes: `aidType` row + `activeBatch` + `myBatchCount` from Task 5; `#myBatchCount` element from kiosk header (Task 6); `myBatchCount` field in `logAid` JSON.
-- Produces: scan page with no aid-type dropdown; fixed aid type from server.
+- Produces: scan page with no subsidy-type dropdown; fixed subsidy type from server.
 
 - [ ] **Step 1: Append failing test** to `KioskViewTest.php`:
 
@@ -854,7 +854,7 @@ Run: `vendor/bin/phpunit --filter KioskViewTest` → new test FAILS.
 - [ ] **Step 2: Rework `scan.php`.** Precise changes to the existing file:
 
 1. Line 1: `<?= $this->extend('Scanner/kiosk-layout') ?>`.
-2. Delete the whole `col-md-4` aid-type block (label + `#sessionAidType` select + `#aidTypeHint`); widen the control-input column to `col-12` (single-row toolbar — scan input only).
+2. Delete the whole `col-md-4` subsidy-type block (label + `#sessionAidType` select + `#aidTypeHint`); widen the control-input column to `col-12` (single-row toolbar - scan input only).
 3. Hidden input keeps working but is server-filled:
    ```php
    <input type="hidden" id="aid_type_id" name="aid_type_id" value="<?= esc($aidType['aid_type_id'], 'attr') ?>">
@@ -873,7 +873,7 @@ Run: `vendor/bin/phpunit --filter KioskViewTest` → new test FAILS.
        document.getElementById('myBatchCount').textContent = String(data.myBatchCount);
      }
      ```
-   - In the submit handler's error branch, surface a 409 like other errors (it already renders `data.errors` — no change needed, just verify).
+   - In the submit handler's error branch, surface a 409 like other errors (it already renders `data.errors` - no change needed, just verify).
 
 Everything else (camera, focus guard, receipt, duplicate warning, bare-Enter confirm) stays byte-identical.
 
@@ -889,12 +889,12 @@ Full flow: setting → pick type → scan page → type a registered control num
 
 ```bash
 git add app/Views/Scanner/scan.php tests/unit/KioskViewTest.php
-git commit -m "feat(scanner): scan page on kiosk shell, server-fixed aid type, live counter"
+git commit -m "feat(scanner): scan page on kiosk shell, server-fixed subsidy type, live counter"
 ```
 
 ---
 
-### Task 8: AidStatsModel — batch scope + perScanner
+### Task 8: AidStatsModel - batch scope + perScanner
 
 **Files:**
 - Modify: `app/Models/Scanner/AidStatsModel.php`
@@ -903,8 +903,8 @@ git commit -m "feat(scanner): scan page on kiosk shell, server-fixed aid type, l
 **Interfaces:**
 - Produces:
   - `receivedVsNot(?string $from = null, ?string $to = null, ?int $batchId = null): array` (same keys).
-  - `byBarangay(...same...): array`, `byAidType(...same...): array` — each gains trailing `?int $batchId = null`.
-  - `perScanner(int $batchId, ?int $onlyUserId = null): array` — rows `['userID' => int, 'scanner' => string, 'handouts' => int, 'families' => int]`, most families first. `$onlyUserId` filters to one user (scanner-role view — server-side, not hidden client-side).
+  - `byBarangay(...same...): array`, `byAidType(...same...): array` - each gains trailing `?int $batchId = null`.
+  - `perScanner(int $batchId, ?int $onlyUserId = null): array` - rows `['userID' => int, 'scanner' => string, 'handouts' => int, 'families' => int]`, most families first. `$onlyUserId` filters to one user (scanner-role view - server-side, not hidden client-side).
 
 - [ ] **Step 1: Append failing tests** to `AidStatsModelTest.php`:
 
@@ -1005,7 +1005,7 @@ git commit -m "feat(scanner): batch-scoped stats and per-scanner performance"
 
 ---
 
-### Task 9: Reports — batch selector + role-aware performance section
+### Task 9: Reports - batch selector + role-aware performance section
 
 **Files:**
 - Modify: `app/Controllers/Scanner/ReportsController.php`
@@ -1016,7 +1016,7 @@ git commit -m "feat(scanner): batch-scoped stats and per-scanner performance"
 - Consumes: `AidStatsModel` batch params + `perScanner()` (Task 8); `DistributionBatchModel::allBatches()/activeBatch()` (Task 2).
 - Produces: `GET scanner/reports?batch=N` scopes all numbers to batch N (date inputs ignored when batch set); new view data `batches`, `batchId` (?int), `batchName` (?string), `perScanner` (array), `isScannerRole` (bool).
 
-- [ ] **Step 1: Write failing test** — `tests/unit/ReportsBatchTest.php`:
+- [ ] **Step 1: Write failing test** - `tests/unit/ReportsBatchTest.php`:
 
 ```php
 <?php
@@ -1031,7 +1031,7 @@ final class ReportsBatchTest extends CIUnitTestCase
     {
         $src = file_get_contents(APPPATH . 'Controllers/Scanner/ReportsController.php');
         $this->assertStringContainsString('perScanner', $src);
-        // Scanner role sees only its own row — filtered server-side.
+        // Scanner role sees only its own row - filtered server-side.
         $this->assertStringContainsString("'Scanner'", $src);
         $this->assertStringContainsString('getGet(\'batch\')', $src);
     }
@@ -1095,11 +1095,11 @@ and extend the view-data array with:
             'isScannerRole' => $isScannerRole,
 ```
 
-Apply the same batch resolution in `pdf()` (parse `batch` param, clear dates when set, pass `$scope` as the third arg to the three stats calls, compute `$perScanner` only when `! $isScannerRole`), and pass `$perScanner` + `$batch['name'] ?? null` to the generator (Task 10 extends its signature — do Tasks 9 and 10 together before running the full suite, or temporarily keep `pdf()` unchanged until Task 10; prefer doing 9 then 10 then one shared verification).
+Apply the same batch resolution in `pdf()` (parse `batch` param, clear dates when set, pass `$scope` as the third arg to the three stats calls, compute `$perScanner` only when `! $isScannerRole`), and pass `$perScanner` + `$batch['name'] ?? null` to the generator (Task 10 extends its signature - do Tasks 9 and 10 together before running the full suite, or temporarily keep `pdf()` unchanged until Task 10; prefer doing 9 then 10 then one shared verification).
 
 - [ ] **Step 3: Rework `reports.php`.** Three additions, house style (`components/card`, `components/data_table`, `components/stat_card`):
 
-1. Batch selector — inside the existing `.reports-filter` form, before the From input:
+1. Batch selector - inside the existing `.reports-filter` form, before the From input:
 
 ```php
     <label for="batchPick" class="form-label mb-0">Batch</label>
@@ -1113,7 +1113,7 @@ Apply the same batch resolution in `pdf()` (parse `batch` param, clear dates whe
     </select>
 ```
 
-2. Range label — replace the `$rangeLabel` computation's first line so a batch wins:
+2. Range label - replace the `$rangeLabel` computation's first line so a batch wins:
 
 ```php
  <?php $rangeLabel = ($batchName ?? null) !== null
@@ -1123,7 +1123,7 @@ Apply the same batch resolution in `pdf()` (parse `batch` param, clear dates whe
          : 'Showing all dates'); ?>
 ```
 
-3. Performance section — after the KPI tiles (`</section>`), render only when a batch is selected:
+3. Performance section - after the KPI tiles (`</section>`), render only when a batch is selected:
 
 ```php
 <?php if (($batchId ?? null) !== null): ?>
@@ -1149,13 +1149,13 @@ foreach ($perScanner as $p) {
 <?php endif; ?>
 ```
 
-4. Download link — append the batch param so the PDF matches the screen: extend the existing query-string expression with `($batchId ?? null ? '&batch=' . (int) $batchId : '')` (and make it produce `?batch=N` when only batch is set — mirror the existing from/to conditional structure).
+4. Download link - append the batch param so the PDF matches the screen: extend the existing query-string expression with `($batchId ?? null ? '&batch=' . (int) $batchId : '')` (and make it produce `?batch=N` when only batch is set - mirror the existing from/to conditional structure).
 
 - [ ] **Step 4: Run tests**
 
-Run: `vendor/bin/phpunit --filter ReportsBatchTest` → PASS. Full suite clean (pdf() may still be pre-Task-10 — keep it compiling).
+Run: `vendor/bin/phpunit --filter ReportsBatchTest` → PASS. Full suite clean (pdf() may still be pre-Task-10 - keep it compiling).
 
-- [ ] **Step 5: Manual smoke test** — as Admin: reports show batch dropdown; picking the open batch shows per-scanner table + batch-scoped tiles. As Scanner (seed account): same page shows only own row and title "My performance this batch".
+- [ ] **Step 5: Manual smoke test** - as Admin: reports show batch dropdown; picking the open batch shows per-scanner table + batch-scoped tiles. As Scanner (seed account): same page shows only own row and title "My performance this batch".
 
 - [ ] **Step 6: Commit**
 
@@ -1177,7 +1177,7 @@ git commit -m "feat(scanner): batch selector and role-aware performance on repor
 - Consumes: `perScanner` rows (Task 8), batch resolution (Task 9).
 - Produces: `generate()` gains two trailing optional params: `array $perScanner = []`, `?string $batchName = null`. Per-scanner table renders only when `$perScanner !== []` (controller passes it only for Admin/Developer).
 
-- [ ] **Step 1: Read the generator + pdf view first** (`app/Libraries/Scanner/ReportsPdfGenerator.php`, `app/Views/Scanner/pdf/report.php`) — mirror their existing table/heading style exactly.
+- [ ] **Step 1: Read the generator + pdf view first** (`app/Libraries/Scanner/ReportsPdfGenerator.php`, `app/Views/Scanner/pdf/report.php`) - mirror their existing table/heading style exactly.
 
 - [ ] **Step 2: Extend `generate()` signature** with `array $perScanner = [], ?string $batchName = null`, pass both into the view data. In the pdf view: when `$batchName` is set, use it in the heading/range line instead of the date range; when `$perScanner` is non-empty, render a "Scanner performance" table (Scanner / Families served / Handouts logged) in the same table style as the barangay section.
 
@@ -1187,7 +1187,7 @@ git commit -m "feat(scanner): batch selector and role-aware performance on repor
         $name = 'aid-report-' . ($batchId > 0 ? 'batch' . $batchId : (($from ?: 'start') . '_' . ($to ?: 'today'))) . '.pdf';
 ```
 
-- [ ] **Step 4: Verify** — full suite `vendor/bin/phpunit` clean; manual: download PDF with batch selected (admin) → contains batch name + per-scanner table; as scanner → no per-scanner table.
+- [ ] **Step 4: Verify** - full suite `vendor/bin/phpunit` clean; manual: download PDF with batch selected (admin) → contains batch name + per-scanner table; as scanner → no per-scanner table.
 
 - [ ] **Step 5: Commit**
 
@@ -1203,12 +1203,12 @@ git commit -m "feat(scanner): PDF export honors batch scope with admin per-scann
 **Files:**
 - Create: `docs/knowledge/binan-conventions/scanner-batches.md`
 - Modify: `docs/knowledge/violations.md` (only if items were fixed/found)
-- Modify: `.claude/skills/binan-conventions/SKILL.md` (grep index — read it first; add entries pointing at the new doc)
+- Modify: `.claude/skills/binan-conventions/SKILL.md` (grep index - read it first; add entries pointing at the new doc)
 
 - [ ] **Step 1: Write `scanner-batches.md`.** Read one existing doc in `docs/knowledge/binan-conventions/` first and copy its format. Content must cover:
   - Batch concept: `distribution_batch`, single-open invariant lives in `DistributionBatchModel::open()`, close = manual stats reset, `aid_distribution.batch_id` NULL = pre-batch history.
   - Shell convention: **kiosk shell** (`Views/Scanner/kiosk-layout.php`) for setting + scan pages; **dashboard shell** (`Views/Scanner/layout.php`) for reports + manage. New scanner-facing scan-flow pages go in the kiosk shell.
-  - Flow: `scanner/setting` (aid-type pick) → `scanner/scan?aid_type=N`; scan/log blocked without an open batch (redirect / 409).
+  - Flow: `scanner/setting` (subsidy-type pick) → `scanner/scan?aid_type=N`; scan/log blocked without an open batch (redirect / 409).
   - Role rules: batch open/close = Admin/Developer only, audited; reports per-scanner table filtered server-side for Scanner role.
 
 - [ ] **Step 2: Update the binan-conventions grep index** so "batch", "kiosk", "scanner shell", "perScanner" route to the new doc.
@@ -1216,8 +1216,8 @@ git commit -m "feat(scanner): PDF export honors batch scope with admin per-scann
 - [ ] **Step 3: Update `violations.md`** only for items this branch actually fixed or verified-new items.
 
 - [ ] **Step 4: Final verification**
-  - `vendor/bin/phpunit` — full suite green (sqlite3-skips OK).
-  - `php spark routes` — every new route resolves.
+  - `vendor/bin/phpunit` - full suite green (sqlite3-skips OK).
+  - `php spark routes` - every new route resolves.
   - End-to-end smoke: open batch (admin) → setting → scan → counter increments → reports batch view (admin + scanner) → PDF → close batch → scan blocked (409 / setting paused state).
 
 - [ ] **Step 5: Commit**

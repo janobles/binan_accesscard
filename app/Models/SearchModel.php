@@ -263,7 +263,7 @@ class SearchModel
      * by the callers.
      *
      * @param int|null $userId When set, scopes to that user's own rows (employee
-     *                         Activity) — the Developer guard is then skipped.
+     *                         Activity) - the Developer guard is then skipped.
      */
     private function auditSearchBuilder(string $keyword, array $filters, bool $includeDeveloper, ?int $userId = null): BaseBuilder
     {

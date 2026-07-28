@@ -8,8 +8,8 @@ use CodeIgniter\Database\BaseBuilder;
  * Shared CRUD + management-search machinery for the lookup models
  * (SectorModel, ServiceModel, CategoryModel). They differ only in their
  * searchable columns and sort order, supplied by lookupSearchColumns() and
- * applyLookupOrder(); everything else — soft archive/restore, status-filtered
- * search/count, find/create/update, existence checks — is identical and lives
+ * applyLookupOrder(); everything else - soft archive/restore, status-filtered
+ * search/count, find/create/update, existence checks - is identical and lives
  * here. Hosting models extend CodeIgniter\Model, so $db, $table and $primaryKey
  * are available.
  */

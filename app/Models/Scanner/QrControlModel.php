@@ -57,7 +57,7 @@ class QrControlModel extends Model
 
     /**
      * Batch lookup: the control numbers mapped to a set of heads. Chunked at 1000 like
-     * existingControlNos() — the importer feeds this every head it matched in a batch, which
+     * existingControlNos() - the importer feeds this every head it matched in a batch, which
      * on a 10k-row file is thousands of IDs, far too many for one IN (...).
      *
      * @param int[] $headIds

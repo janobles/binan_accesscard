@@ -1,4 +1,4 @@
-# Scanner Reports/Statistics + PDF Export + Excel Import — Design
+# Scanner Reports/Statistics + PDF Export + Excel Import - Design
 
 **Branch:** `feat/qr-access-cards`
 **Date:** 2026-07-02
@@ -12,10 +12,10 @@ spec picks those up.
 
 ## Goal
 
-Add a third surface to the QR Code (Scanner) module — a read-only
+Add a third surface to the QR Code (Scanner) module - a read-only
 **Reports/Statistics** tab that shows, in plain non-technical language, how aid
 distribution is going: how many families received aid vs still waiting, coverage
-by barangay, and handouts by aid type, all scoped to a from–to date range. From
+by barangay, and handouts by subsidy type, all scoped to a from-to date range. From
 that tab the user can **download a one-page PDF summary report**. Separately,
 **merge the Excel family-import feature** from `Mel-import-branch` into this
 branch and repair any breakage.
@@ -36,7 +36,7 @@ whose fallout is isolated from the chart work by doing it last.
 
 ---
 
-## UI style contract (READ FIRST — do not invent components)
+## UI style contract (READ FIRST - do not invent components)
 
 The previous session's recurring failure was inventing SB-Admin-Pro components
 (e.g. `border-left-*` KPI cards) that **do not exist anywhere in this system**.
@@ -52,7 +52,7 @@ This tab MUST reuse the existing house style, verbatim:
 | Badge | `<span class="badge bg-light text-dark border">` | `Scanner/manage.php:72` |
 | Status badge | `.sector-status-badge .sector-status-active|archived` | `Scanner/manage.php:125` |
 | Primary action button | `.btn .btn-primary .records-search-action` + `<i class="bi bi-…">` | `Scanner/manage.php:111` |
-| Icons | **Bootstrap Icons** (`bi-*`) only — project ships **no Font Awesome** | scanner-module summary "Deviations" |
+| Icons | **Bootstrap Icons** (`bi-*`) only - project ships **no Font Awesome** | scanner-module summary "Deviations" |
 
 Rules:
 - **No SB-Admin-Pro `border-left-*`, `card h-100`, `text-xs text-uppercase`
@@ -60,13 +60,13 @@ Rules:
   real view.
 - New CSS goes in a small dedicated file (`public/css/scanner-reports.css`) and
   reuses existing custom properties/spacing; it does not restyle shared classes.
-- Assets load through the **manifest** (`app/Helpers/asset_helper.php`) — no
+- Assets load through the **manifest** (`app/Helpers/asset_helper.php`) - no
   hardcoded `<script>`/`<link>` in the layout (scanner-module summary,
   "Asset loading centralized").
 
 ---
 
-## §A — Reports tab + charts
+## §A - Reports tab + charts
 
 ### A1. Route + sidebar
 
@@ -79,7 +79,7 @@ Rules:
 
 ### A2. Controller
 
-`Scanner\ReportsController::index` — mirrors `ManageController::index`:
+`Scanner\ReportsController::index` - mirrors `ManageController::index`:
 - Guard `RoleAccess::requireRole(['Scanner','Admin','Developer'])` (inline
   literal, test-pinned, matching module convention).
 - Read `from`/`to` from query (`?from=YYYY-MM-DD&to=YYYY-MM-DD`). Validate/normalize:
@@ -94,7 +94,7 @@ Rules:
 Controller decides + routes; **all querying lives in the model** (per
 "controllers decide, libraries build").
 
-### A3. Model — `app/Models/Scanner/AidStatsModel.php` (new)
+### A3. Model - `app/Models/Scanner/AidStatsModel.php` (new)
 
 `returnType array`, `useTimestamps false`, no writes. Every method takes
 `?string $from = null, ?string $to = null` and applies the range to
@@ -106,51 +106,51 @@ match the suite's no-DB posture (`allDistributions()` precedent).
   `total` = distinct `qr_control.headID` count (families issued a QR).
   `received` = distinct `qr_control.headID` that have ≥1 `aid_distribution` row
   in range (join `aid_distribution.control_no = qr_control.control_no`).
-  "Received" is defined at the **family (head) level** — any member scan under
+  "Received" is defined at the **family (head) level** - any member scan under
   the family's `control_no` counts for the family.
-- `byBarangay($from,$to): array` — list of
+- `byBarangay($from,$to): array` - list of
   `['barangay' => str, 'total' => N, 'received' => R, 'coverage' => pct]`,
   ordered by barangay. Families grouped by `member(head).barangay`
   (`qr_control.headID → member.memberID → member.barangay`); blank barangay
   bucketed as `"Unspecified"`.
-- `byAidType($from,$to): array` — list of
+- `byAidType($from,$to): array` - list of
   `['aid_type' => name, 'count' => N]` over `aid_type` joined to in-range
   `aid_distribution`, active + archived types that have any handout, ordered by
   count desc.
 
-### A4. View — `app/Views/Scanner/reports.php` (new)
+### A4. View - `app/Views/Scanner/reports.php` (new)
 
 Extends `Scanner/layout`, `activeTab => 'reports'`. Compact dashboard layout:
 
-1. **Date-range band** — top, inside a `.records-search-panel` band: two
+1. **Date-range band** - top, inside a `.records-search-panel` band: two
    `<input type="date">` (From / To), an **Apply** button (`.records-search-action`),
    and a **Clear** button (`bi-x-lg`). Plain GET form to `scanner/reports`
    (server re-queries; no AJAX). Shows the active window as text
    ("Showing Jan 1 to Jan 31" / "Showing all dates").
-2. **KPI row** — four `.stat-card` tiles: **Families with a QR**,
+2. **KPI row** - four `.stat-card` tiles: **Families with a QR**,
    **Received aid**, **Still waiting**, **Coverage** (percent). Plain literal
    labels, no jargon, no em dashes.
-3. **Charts grid** — compact, responsive Bootstrap `.row`/`.col` grid of chart
+3. **Charts grid** - compact, responsive Bootstrap `.row`/`.col` grid of chart
    cards, each a `.sector-management` panel with a short `<h?>`/caption:
-   - **Doughnut** — "Families that received aid vs still waiting."
-   - **Horizontal bar** — "Coverage by barangay (percent)."
-   - **Bar** — "Number of handouts by aid type."
+   - **Doughnut** - "Families that received aid vs still waiting."
+   - **Horizontal bar** - "Coverage by barangay (percent)."
+   - **Bar** - "Number of handouts by subsidy type."
    Each `<canvas>` carries its dataset via a `data-…` JSON attribute or an inline
    `<script type="application/json">` block that `scanner-reports.js` reads.
-4. **No-JS / print fallback** — under each canvas (or in a `<noscript>`-adjacent
+4. **No-JS / print fallback** - under each canvas (or in a `<noscript>`-adjacent
    collapsible), a small `.manage-record-table` summary table with the same
    numbers, so the page is meaningful without JS and reusable by the PDF (§B).
 
 All server data through PHP `esc()`. No inline event handlers.
 
-### A5. chart.js — vendored, manifest-loaded
+### A5. chart.js - vendored, manifest-loaded
 
 - Download chart.js UMD build to
   `public/vendor/html5-qrcode/`-style location: `public/vendor/chart.js/chart.umd.min.js`
   (real file; the only ref today is the demo `index.html` CDN line, unused).
   Commit with `git add -f` (the bare `vendor/` `.gitignore` rule swallows
   `public/vendor/`, same as the html5-qrcode precedent).
-- New JS: `public/assets/js/dashboard/scanner-reports.js` — reads the datasets
+- New JS: `public/assets/js/dashboard/scanner-reports.js` - reads the datasets
   from the DOM and builds the three charts. Guards on `typeof Chart` and on the
   canvas existing (no-ops on Scan/Manage pages).
 - **Manifest**: add a `scanner` context to `asset_styles` (→ `css/scanner-reports.css`)
@@ -159,25 +159,25 @@ All server data through PHP `esc()`. No inline event handlers.
   `Scanner/layout.php` to merge `asset_styles('scanner')` / `asset_scripts('scanner')`
   alongside the existing `admin` context. chart.js loading on Scan/Manage too is
   acceptable (small, guarded no-op).
-- New CSS: `public/css/scanner-reports.css` — only chart-card sizing / grid gaps,
+- New CSS: `public/css/scanner-reports.css` - only chart-card sizing / grid gaps,
   reusing existing spacing tokens. Does not touch shared classes.
 
 ---
 
-## §B — PDF export
+## §B - PDF export
 
 - Button on the Reports tab: **"Download PDF report"** (`.btn` +
   `bi-file-earmark-pdf`), a link to `scanner/reports/pdf?from=&to=` carrying the
   same date window as the screen.
-- `ReportsController::pdf` — same guard + date handling as `index`; builds the
+- `ReportsController::pdf` - same guard + date handling as `index`; builds the
   same three `AidStatsModel` datasets; hands them to a new library.
-- Library `app/Libraries/Scanner/ReportsPdfGenerator.php` — mirrors
+- Library `app/Libraries/Scanner/ReportsPdfGenerator.php` - mirrors
   `app/Libraries/Qr/QrCardPdfGenerator.php` (Dompdf setup + `loadHtml` +
   `render` + stream). Renders a **new print view**
   `app/Views/Scanner/pdf/report.php`.
-- `Scanner/pdf/report.php` — header (title, "City of Biñan CSWD", date window,
+- `Scanner/pdf/report.php` - header (title, "City of Biñan CSWD", date window,
   generated timestamp), the four KPI numbers, and the three **summary tables**
-  (received/waiting, by-barangay coverage, by-aid-type). **No chart.js** — dompdf
+  (received/waiting, by-barangay coverage, by-subsidy-type). **No chart.js** - dompdf
   runs server-side with no JS; visualize with simple CSS bar rows (a filled div
   proportional to percent) reusing the same numbers. Styles inline / in
   `Scanner/pdf/_styles.php` sibling, matching the `Cards/pdf/_styles.php` pattern.
@@ -186,7 +186,7 @@ All server data through PHP `esc()`. No inline event handlers.
 
 ---
 
-## §C — Excel import merge (full merge + fix)
+## §C - Excel import merge (full merge + fix)
 
 ### Situation (verified)
 
@@ -202,30 +202,30 @@ commits bundle two concerns:
   `public/assets/js/dashboard/family-import.js`, `phpoffice/phpspreadsheet` dep.
   Import runs **async via a job queue** drained by a worker.
 - **Lookups refactor** (`a2f44fb`): realigns sectors/services/categories to the
-  CSWD form — rides along, not import-related; touches Lookups models/views.
+  CSWD form - rides along, not import-related; touches Lookups models/views.
 
 ### Plan
 
-1. `git merge origin/Mel-import-branch` (full merge, no squash — preserves the
+1. `git merge origin/Mel-import-branch` (full merge, no squash - preserves the
    4-commit history). Resolve the 3 conflicts by hand:
-   - `Routes.php` — union both route groups (scanner + families import).
-   - `composer.json` — union deps (dompdf/qrcode + phpspreadsheet).
-   - `composer.lock` — regenerate via `composer update --lock` after json merge.
-2. `composer install` — pull phpspreadsheet.
+   - `Routes.php` - union both route groups (scanner + families import).
+   - `composer.json` - union deps (dompdf/qrcode + phpspreadsheet).
+   - `composer.lock` - regenerate via `composer update --lock` after json merge.
+2. `composer install` - pull phpspreadsheet.
 3. **Fix breakage** (this is the "fix if something breaks" part):
-   - `php spark routes` — every route resolves.
-   - `vendor/bin/phpunit` — full suite green (baseline pre-merge: 55 tests,
+   - `php spark routes` - every route resolves.
+   - `vendor/bin/phpunit` - full suite green (baseline pre-merge: 55 tests,
      4 skipped). Repair whatever the lookups refactor / schema drift breaks in
      `MemberModel` / Lookups models / their tests.
    - Verify Lookups pages (sectors/services/categories) still render and CRUD.
-   - Confirm imported rows still write `audit_trails` (non-negotiable) — if the
+   - Confirm imported rows still write `audit_trails` (non-negotiable) - if the
      importer bypasses the audit path, wire it through `FamilyRecordWriter` →
      the same audit call `FamilyController` uses.
 4. **Async worker fallback for Mac dev.** The bundled worker is a PowerShell
    script (Windows). On this macOS dev box, provide a synchronous path or a
    PHP/spark drain command so an import can complete without PowerShell. Decision:
    add a `spark` command (or a "run now" synchronous mode in the importer) that
-   drains `job_queue` in-process; document it. Do **not** add a DB migration —
+   drains `job_queue` in-process; document it. Do **not** add a DB migration -
    `sql/job_queue.sql` is applied the same way as the main dump.
 5. **Dry-run** `family-import-template_filled_500.xlsx` end to end (upload →
    queue → drain → 500 member rows present, audited). Note the known dump-v13 5x
@@ -234,14 +234,14 @@ commits bundle two concerns:
 ### Merge risks / notes
 
 - `job_queue` table is new schema delivered as `sql/job_queue.sql` (not a
-  migration) — must be loaded into the dev DB before import works.
+  migration) - must be loaded into the dev DB before import works.
 - The lookups refactor may conflict semantically with any lookups work already
   on this branch; if the branch's Lookups tests fail, the refactor's version
-  generally wins (it's the newer CSWD-form alignment) — verify against the SQL
+  generally wins (it's the newer CSWD-form alignment) - verify against the SQL
   dump enum/column names.
 - `.xlsx`/backup artifacts already sitting untracked in the working tree
   (`family-import-template_filled_500.xlsx`, `~$…xlsx`, `writable/backups/*`) are
-  **not** part of this spec — leave them; do not commit stray binaries.
+  **not** part of this spec - leave them; do not commit stray binaries.
 
 ---
 
@@ -250,15 +250,15 @@ commits bundle two concerns:
 Run `vendor/bin/phpunit` before and after each part. New tests, matching the
 suite's **no-DB contract/route-resolution posture** (no live-DB round-trips):
 
-- `AidStatsModelTest` — method contracts + return-shape keys for the three stat
+- `AidStatsModelTest` - method contracts + return-shape keys for the three stat
   methods (safe-empty on no DB).
-- `ReportsControllerTest` — route guard literal, `index`/`pdf` exist, pass the
+- `ReportsControllerTest` - route guard literal, `index`/`pdf` exist, pass the
   expected view-vars; date-range normalization (swap, one-sided, invalid).
-- `ReportsViewTest` — grep the view for the mandated house classes
+- `ReportsViewTest` - grep the view for the mandated house classes
   (`stat-card`, `sector-management`, `records-search-panel`, `nav-tabs`,
   `bi-` icons) and assert **absence** of `border-left-` (guards against the
   invent-a-component regression).
-- Manifest test — `scanner` context returns chart.js before `scanner-reports.js`.
+- Manifest test - `scanner` context returns chart.js before `scanner-reports.js`.
 - §C: keep the existing suite green; add an importer row-mapping unit test if the
   merged code ships without one.
 

@@ -3,7 +3,7 @@ helper('family_modal');
 extract(family_modal_prepare(get_defined_vars()), EXTR_OVERWRITE);
 
 // Members already on the record (Update mode); empty for a new record. Rendered
-// server-side so an edit re-posts them — FamilyController::update() rebuilds the
+// server-side so an edit re-posts them - FamilyController::update() rebuilds the
 // member list from the submission, so omitting them would drop existing members.
 $existingMembers = (array) ($existingMembers ?? []);
 $personFieldOptions = compact(
@@ -331,7 +331,7 @@ $renderMemberRow = static function ($index, array $m = [], bool $open = true) us
             <?php endif; ?>
             <?php if ($warningIssues !== []): ?>
                 <div class="alert alert-warning">
-                    <div class="fw-semibold mb-1"><i class="bi bi-exclamation-triangle me-1" aria-hidden="true"></i><?= count($warningIssues) ?> warning<?= count($warningIssues) === 1 ? '' : 's' ?> — imports as typed unless you change it</div>
+                    <div class="fw-semibold mb-1"><i class="bi bi-exclamation-triangle me-1" aria-hidden="true"></i><?= count($warningIssues) ?> warning<?= count($warningIssues) === 1 ? '' : 's' ?> - imports as typed unless you change it</div>
                     <ul class="mb-0 ps-3"><?php foreach ($warningIssues as $issue): ?><?= $renderIssue($issue) ?><?php endforeach; ?></ul>
                 </div>
             <?php endif; ?>
@@ -490,7 +490,7 @@ $renderMemberRow = static function ($index, array $m = [], bool $open = true) us
             <button class="btn btn-primary" type="submit" data-family-save <?= $saveDisabled ? 'disabled aria-disabled="true"' : '' ?>><?= esc($submitLabel) ?></button>
         </footer>
 
-        <?php /* Truncation sentinel — MUST stay the last named field in the form. A POST
+        <?php /* Truncation sentinel - MUST stay the last named field in the form. A POST
                  clipped by PHP's max_input_vars drops trailing vars first, so if this does
                  not arrive the server knows member data was cut and refuses to save. */ ?>
         <input type="hidden" name="_form_end" value="1">

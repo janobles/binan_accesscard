@@ -20,7 +20,7 @@ class AidDistributionModel extends Model
     public function logAid(array $data): int
     {
         // Guard against a malformed handout: control number, claimant, and
-        // aid type must all be positive ids and a claim date must be present.
+        // subsidy type must all be positive ids and a claim date must be present.
         if ((int) ($data['control_no'] ?? 0) <= 0
             || (int) ($data['memberID'] ?? 0) <= 0
             || (int) ($data['subsidy_type_id'] ?? 0) <= 0
@@ -52,8 +52,8 @@ class AidDistributionModel extends Model
     }
 
     /**
-     * Chronological (newest-first) aid history for a control number, with the
-     * aid type name and the claimant's full name resolved via joins.
+     * Chronological (newest-first) subsidy history for a control number, with the
+     * subsidy type name and the claimant's full name resolved via joins.
      */
     public function historyFor(int $controlNo): array
     {
@@ -78,7 +78,7 @@ class AidDistributionModel extends Model
     }
 
     /**
-     * Every distribution, newest first, with aid type name, claimant name,
+     * Every distribution, newest first, with subsidy type name, claimant name,
      * family-head name, and the scanning user's username resolved via joins.
      * Drives the all-distributions table.
      */

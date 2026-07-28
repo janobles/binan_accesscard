@@ -191,7 +191,7 @@ class FamilyController extends BaseController
             // assignment, audit, or an unexpected DB error). Catch them all so the
             // transaction is always rolled back and the request fails gracefully.
             if (! $exception instanceof FamilyRecordWriteException) {
-                // Unexpected failure — record it like import()/changeFamilyState()
+                // Unexpected failure - record it like import()/changeFamilyState()
                 // do, so silent write failures surface on the audit page.
                 $this->auditSystemError('saving a family record', $exception);
             }
@@ -609,8 +609,8 @@ class FamilyController extends BaseController
     /**
      * Validates and links a set of selected service IDs to one member inside the
      * update transaction. A service is accepted when it is an active service, OR it
-     * is in $grandfatheredServiceIds — the set the family already held before this
-     * edit — so archived-but-assigned services are preserved rather than dropped.
+     * is in $grandfatheredServiceIds - the set the family already held before this
+     * edit - so archived-but-assigned services are preserved rather than dropped.
      * Other invalid/non-existent services are skipped; returns false only when a
      * valid service fails to link (so the caller can roll back).
      *
@@ -766,7 +766,7 @@ class FamilyController extends BaseController
      * posts a trailing `_form_end` sentinel (the first field dropped when the limit
      * is hit, since it is last in the body) and an early `members_meta_count` the
      * client sets to its live member-row count. If the sentinel is missing, or fewer
-     * member rows arrived than the client promised, the submission was cut short —
+     * member rows arrived than the client promised, the submission was cut short -
      * the caller must reject it so no partial family record is ever saved.
      */
     private function submissionWasTruncated(): bool

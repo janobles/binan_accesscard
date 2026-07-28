@@ -2,7 +2,7 @@
 helper('dashboard_view');
 // sector_management_view_data() also supplies the Add-Sector modal data
 // ($existingShortcodes, for the inline duplicate check) so this view never
-// instantiates a model itself. Sectors are flat classifications — no category.
+// instantiates a model itself. Sectors are flat classifications - no category.
 extract(sector_management_view_data(get_defined_vars()), EXTR_OVERWRITE);
 
 // Counts come from the server bundle (whole table), not the current page below.
@@ -75,8 +75,7 @@ $sectorFooter = ($totalRows ?? 0) > 0 ? view('components/table_footer', [
     'totalRows' => $totalRows,
     'page' => $page,
     'totalPages' => $totalPages,
-    'prevUrl' => $sectorPageUrl(max(1, $page - 1)),
-    'nextUrl' => $sectorPageUrl(min($totalPages, $page + 1)),
+    'pageUrl' => $sectorPageUrl,
 ]) : null;
 ?>
 <?= view('components/card', [

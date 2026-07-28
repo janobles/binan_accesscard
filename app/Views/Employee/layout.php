@@ -198,8 +198,7 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
                         'totalRows' => $totalRows,
                         'page' => $page,
                         'totalPages' => $totalPages,
-                        'prevUrl' => $auditPageUrl(max(1, $page - 1)),
-                        'nextUrl' => $auditPageUrl(min($totalPages, $page + 1)),
+                        'pageUrl' => $auditPageUrl,
                     ]) : null;
                     ?>
                     <?= view('components/card', [

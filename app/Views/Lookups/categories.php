@@ -1,7 +1,7 @@
 <?php
 /*
  * "Manage Categories" management page. Lists the standalone SERVICE categories from
- * the `category` table (FA/SWPS/EDA — the ones with no matching sector; a sector acts
+ * the `category` table (FA/SWPS/EDA - the ones with no matching sector; a sector acts
  * as its own service category) and lets an admin add/rename/archive/restore them via
  * the shared #categoryActionModal (see category-modal.php + categories-modal.js).
  *
@@ -80,8 +80,7 @@ $categoryFooter = ($totalRows ?? 0) > 0 ? view('components/table_footer', [
     'totalRows' => $totalRows,
     'page' => $page,
     'totalPages' => $totalPages,
-    'prevUrl' => $categoryPageUrl(max(1, $page - 1)),
-    'nextUrl' => $categoryPageUrl(min($totalPages, $page + 1)),
+    'pageUrl' => $categoryPageUrl,
 ]) : null;
 ?>
 <?= view('components/card', [

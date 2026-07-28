@@ -7,7 +7,7 @@ use CodeIgniter\Test\CIUnitTestCase;
 
 /**
  * Unit coverage for the Import Review change-log diff (App\Libraries\ImportReviewChangeLog).
- * Pure — no DB.
+ * Pure - no DB.
  *
  * @internal
  */

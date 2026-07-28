@@ -4,7 +4,7 @@ namespace App\Models\Concerns;
 
 /**
  * Batched user-name/role lookup, shared by AuditTrailsModel and SearchModel.
- * Hosting classes must also use NormalizesIds — userMap() calls
+ * Hosting classes must also use NormalizesIds - userMap() calls
  * positiveUniqueIds().
  */
 trait ResolvesUserNames

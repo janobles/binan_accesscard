@@ -10,7 +10,7 @@ namespace App\Support;
  *     whose private cleaners now delegate here), and
  *   - the Excel bulk importer (App\Libraries\FamilyExcelImporter).
  *
- * Pure functions: no DB, session, or request access — the same input always
+ * Pure functions: no DB, session, or request access - the same input always
  * produces the same stored value regardless of which path called it.
  */
 class MemberFieldNormalizer

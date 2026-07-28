@@ -212,7 +212,7 @@ final class ImportFamilyModalBuilderTest extends CIUnitTestCase
         // The modal now presents the demoted extra head with a BLANK relationship
         // (see testSplitHeadAndMembersBlanksTheDemotedExtraHead), so a Save leaves exactly one
         // Head. The blank relationship then raises the normal "Relationship is required"
-        // prompt, guiding the operator to pick a real one — no silent HEAD-MULTI loop.
+        // prompt, guiding the operator to pick a real one - no silent HEAD-MULTI loop.
         $post = $this->headPost('42') + [
             'members' => [
                 ['firstname' => 'Pedro', 'lastname' => 'Cruz', 'relationship' => ''],
@@ -246,8 +246,8 @@ final class ImportFamilyModalBuilderTest extends CIUnitTestCase
 
     public function testSplitHeadAndMembersPromotesTheAddressCarrierWhenNoExplicitHead(): void
     {
-        // No Head row: the modal promotes the row carrying the address (Maria) — the same
-        // person the review report names as the likely head — not blindly row 0 (Jose).
+        // No Head row: the modal promotes the row carrying the address (Maria) - the same
+        // person the review report names as the likely head - not blindly row 0 (Jose).
         $rows = [
             ['sheetRow' => 5, 'data' => ['familyno' => '42', 'relationship' => 'Child', 'firstname' => 'Jose', 'address' => '']],
             ['sheetRow' => 6, 'data' => ['familyno' => '42', 'relationship' => 'Spouse', 'firstname' => 'Maria', 'address' => '123 Rizal St']],

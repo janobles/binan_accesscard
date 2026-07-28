@@ -126,7 +126,7 @@ git commit -m "feat(db): dump V18 - batches bind services, aid_type dropped, tes
 
 ---
 
-### Task 2: Models — batch and distribution speak service_id
+### Task 2: Models - batch and distribution speak service_id
 
 **Files:**
 - Modify: `app/Models/Scanner/DistributionBatchModel.php`
@@ -206,7 +206,7 @@ git rm app/Models/Scanner/AidTypeModel.php
 grep -rn "AidTypeModel\|aid_type" app tests --include="*.php"
 ```
 
-Remaining hits should only be in files owned by Tasks 3–6 (ScanController, DashboardPageBuilder, DistributionController, AidStatsModel, views, other tests). Note them; do not fix here.
+Remaining hits should only be in files owned by Tasks 3-6 (ScanController, DashboardPageBuilder, DistributionController, AidStatsModel, views, other tests). Note them; do not fix here.
 
 - [ ] **Step 6: Run model tests, commit**
 
@@ -217,7 +217,7 @@ git add -A && git commit -m "feat(models): batches and distributions bind servic
 
 ---
 
-### Task 3: Stats + reports pipeline — byAidType → byService
+### Task 3: Stats + reports pipeline - byAidType → byService
 
 **Files:**
 - Modify: `app/Models/Scanner/AidStatsModel.php:110-129`
@@ -276,9 +276,9 @@ public function byService(?int $batchId = null): array
 
 - [ ] **Step 4: Rename through the pipeline**
 
-- `ReportsController.php:66`: `'aidType' => $stats->byAidType($scope)` → `'byService' => $stats->byService($scope)` (and mirror the key change where the JSON/stats endpoint or view consumes it — follow the variable to `reports-body.php`).
+- `ReportsController.php:66`: `'aidType' => $stats->byAidType($scope)` → `'byService' => $stats->byService($scope)` (and mirror the key change where the JSON/stats endpoint or view consumes it - follow the variable to `reports-body.php`).
 - `ReportsPdfGenerator::generate()`: param `array $byAidType` → `array $byService`; docblock shape `list<array{service:string,service_code:string,count:int}>`; view data key `'byService'`.
-- `pdf/report.php`: loop `$byService`; cell renders `<?= esc($a['service_code'] !== '' ? $a['service_code'] . ' — ' . $a['service'] : $a['service']) ?>`; table heading "Service".
+- `pdf/report.php`: loop `$byService`; cell renders `<?= esc($a['service_code'] !== '' ? $a['service_code'] . ' - ' . $a['service'] : $a['service']) ?>`; table heading "Service".
 - `reports-body.php`: `$reportsByAidType` → `$reportsByService`; chart id `chartAidType` → `chartService`; chart labels use `service_code ?: service`; heading text "By Service".
 - `DashboardPageBuilder::buildReportsData()` (line ~404): rename the corresponding data key it passes (grep `reportsByAidType` and `byAidType` across `app/`).
 
@@ -286,12 +286,12 @@ public function byService(?int $batchId = null): array
 
 ```bash
 vendor/bin/phpunit --filter ReportsPdfGeneratorTest && vendor/bin/phpunit
-git add -A && git commit -m "feat(reports): stats and PDF report count by service instead of aid type"
+git add -A && git commit -m "feat(reports): stats and PDF report count by service instead of subsidy type"
 ```
 
 ---
 
-### Task 4: ScanController + kiosk — stamp service, show code
+### Task 4: ScanController + kiosk - stamp service, show code
 
 **Files:**
 - Modify: `app/Controllers/Scanner/ScanController.php`
@@ -330,11 +330,11 @@ Expected: FAIL.
 ```
 
 - Line ~155 JSON: `'aid_type' => ...aid_type_name...` becomes `'service' => (string) ($activeBatch['service_name'] ?? ''), 'service_code' => (string) ($activeBatch['service_code'] ?? '')`.
-- Lines ~229–244: `$aidTypeId = (int) $activeBatch['aid_type_id']` → `$serviceId = (int) $activeBatch['service_id']`; `logAid([... 'service_id' => $serviceId ...])`. Update the audit-detail string to say `service ID`.
+- Lines ~229-244: `$aidTypeId = (int) $activeBatch['aid_type_id']` → `$serviceId = (int) $activeBatch['service_id']`; `logAid([... 'service_id' => $serviceId ...])`. Update the audit-detail string to say `service ID`.
 
 - [ ] **Step 4: Update kiosk views**
 
-In `kiosk-layout.php` / `scan.php`, the header badge that rendered the aid-type name now renders `<code> — <name>` (e.g. `EDA8 — Relief Food Pack`; omit the dash when code empty), with the category code as small muted text when present. No new keystrokes, page must still fit the viewport.
+In `kiosk-layout.php` / `scan.php`, the header badge that rendered the subsidy-type name now renders `<code> - <name>` (e.g. `EDA8 - Relief Food Pack`; omit the dash when code empty), with the category code as small muted text when present. No new keystrokes, page must still fit the viewport.
 
 - [ ] **Step 5: Run tests, commit**
 
@@ -345,12 +345,12 @@ git add -A && git commit -m "feat(scanner): scans stamp the batch's service; kio
 
 ---
 
-### Task 5: Controller + routes — split into batches / distributions pages
+### Task 5: Controller + routes - split into batches / distributions pages
 
 **Files:**
 - Modify: `app/Controllers/Admin/DistributionController.php`
 - Modify: `app/Config/Routes.php:83-94`
-- Modify: `app/Libraries/DashboardPageBuilder.php` (distribution data block ~113–199, `navActive` ~174)
+- Modify: `app/Libraries/DashboardPageBuilder.php` (distribution data block ~113-199, `navActive` ~174)
 - Modify: `app/Views/components/dashboard_sidebar.php:36`
 
 **Interfaces:**
@@ -362,7 +362,7 @@ git add -A && git commit -m "feat(scanner): scans stamp the batch's service; kio
 Delete `createAidType/archiveAidType/restoreAidType/deleteAidType` and the `AidTypeModel` import. Replace `index()` with two page actions; retarget redirects:
 
 ```php
-/** GET admin/batches — batch control page (create modal, open/close). */
+/** GET admin/batches - batch control page (create modal, open/close). */
 public function batches(): ResponseInterface|string
 {
     if ($g = $this->guard()) { return $g; }
@@ -370,7 +370,7 @@ public function batches(): ResponseInterface|string
     return (new \App\Libraries\DashboardPageBuilder($this->request))->renderAdminPage('batches');
 }
 
-/** GET admin/distributions — every handout, searchable log. */
+/** GET admin/distributions - every handout, searchable log. */
 public function distributions(): ResponseInterface|string
 {
     if ($g = $this->guard()) { return $g; }
@@ -413,13 +413,13 @@ $routes->group('distributions', static function (RouteCollection $routes): void 
 'distributions'    => $isDistributions ? model(AidDistributionModel::class)->allDistributions() : [],
 ```
 
-(If `ServiceModel` has no `getActive()`, use its existing active/not-deleted listing method — check `app/Models/Lookups/ServiceModel.php` and reuse, don't invent.)
+(If `ServiceModel` has no `getActive()`, use its existing active/not-deleted listing method - check `app/Models/Lookups/ServiceModel.php` and reuse, don't invent.)
 - `navActive`: replace the `'distribution'` entry with `'batches'` and `'distributions'` keys.
 - Page title/heading map: add entries for both pages ("Distribution Batches", "All Distributions") wherever `'distribution'` was mapped.
 
 - [ ] **Step 4: Update sidebar**
 
-`dashboard_sidebar.php:36` — replace the single Distribution link with:
+`dashboard_sidebar.php:36` - replace the single Distribution link with:
 
 ```php
 <a class="nav-link <?= esc($navActive['batches'] ?? '') ?>" href="<?= site_url('admin/batches') ?>"><div class="sb-nav-link-icon"><i class="bi bi-collection" aria-hidden="true"></i></div>Batches</a>
@@ -438,10 +438,10 @@ Expected: `admin/batches` GET/POSTs and `admin/distributions` GET/POST listed; n
 
 ---
 
-### Task 6: Views — batches page with create modal, distributions page
+### Task 6: Views - batches page with create modal, distributions page
 
 **Files:**
-- Modify: `app/Views/Admin/layout.php` (replace the whole `$activePage === 'distribution'` block, ~lines 247–330+)
+- Modify: `app/Views/Admin/layout.php` (replace the whole `$activePage === 'distribution'` block, ~lines 247-330+)
 - Modify: `app/Views/Admin/distribution-batches-body.php`
 - Modify: `app/Views/Admin/distribution-distributions-body.php`
 - Create: `app/Views/Admin/batch-create-modal.php`
@@ -453,7 +453,7 @@ Expected: `admin/batches` GET/POSTs and `admin/distributions` GET/POST listed; n
 
 - [ ] **Step 1: Replace the layout block**
 
-Remove the `'distribution'` tab markup, the `#addAidTypeModal`, and the aid-type filter wiring in the inline script. Add two blocks:
+Remove the `'distribution'` tab markup, the `#addAidTypeModal`, and the subsidy-type filter wiring in the inline script. Add two blocks:
 
 ```php
 <?php if ($activePage === 'batches'): ?>
@@ -486,7 +486,7 @@ Remove the `'distribution'` tab markup, the `#addAidTypeModal`, and the aid-type
 <?php endif; ?>
 ```
 
-Keep the existing distributions search/paging script but scope it to `$activePage === 'distributions'` and delete the `distAidFilter` control references (the aid-type filter select dies; a service filter returns in PR 2 if wanted).
+Keep the existing distributions search/paging script but scope it to `$activePage === 'distributions'` and delete the `distAidFilter` control references (the subsidy-type filter select dies; a service filter returns in PR 2 if wanted).
 
 - [ ] **Step 2: Create `batch-create-modal.php`**
 
@@ -514,14 +514,14 @@ $activeServices   = $activeServices ?? [];
       <div class="modal-body">
         <div class="mb-3">
           <label for="batchName" class="form-label">Batch name</label>
-          <input type="text" class="form-control" id="batchName" name="name" required maxlength="100" placeholder="e.g. July 2026 Relief — Brgy. Canlalay">
+          <input type="text" class="form-control" id="batchName" name="name" required maxlength="100" placeholder="e.g. July 2026 Relief - Brgy. Canlalay">
         </div>
         <div class="mb-3">
           <label for="batchCategory" class="form-label">Category</label>
           <select class="form-select" id="batchCategory" required>
             <option value="" selected disabled>Choose a category...</option>
             <?php foreach ($activeCategories as $c): ?>
-              <option value="<?= esc($c['name'], 'attr') ?>"><?= esc($c['code']) ?> — <?= esc($c['name']) ?></option>
+              <option value="<?= esc($c['name'], 'attr') ?>"><?= esc($c['code']) ?> - <?= esc($c['name']) ?></option>
             <?php endforeach; ?>
           </select>
         </div>
@@ -554,7 +554,7 @@ document.addEventListener('DOMContentLoaded', () => {
     services.filter(s => s.category === catSel.value).forEach(s => {
       const o = document.createElement('option');
       o.value = s.id;
-      o.textContent = s.code ? s.code + ' — ' + s.name : s.name;
+      o.textContent = s.code ? s.code + ' - ' + s.name : s.name;
       svcSel.appendChild(o);
     });
     svcSel.disabled = false;
@@ -563,17 +563,17 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 ```
 
-Check `btn()` roles in `app/Helpers/ui_helper.php` first and use its real role names (per ui-design-system: add = `#198754` role; use whatever role string maps to it, e.g. `btn('add')` / `btn('cancel')` — do NOT hardcode classes).
+Check `btn()` roles in `app/Helpers/ui_helper.php` first and use its real role names (per ui-design-system: add = `#198754` role; use whatever role string maps to it, e.g. `btn('add')` / `btn('cancel')` - do NOT hardcode classes).
 
 - [ ] **Step 3: Rework `distribution-batches-body.php`**
 
-- Delete the old inline open-batch `<form>` (name + aid-type select); replace with a "New Batch" button: `<button type="button" class="<?= btn('add') ?>" data-bs-toggle="modal" data-bs-target="#newBatchModal"><i class="bi bi-plus-lg" aria-hidden="true"></i> New Batch</button>`.
-- Active-batch panel: show `service_code — service_name` and `category_code` badge instead of aid-type name; keep the Close Batch button/POST unchanged (action `admin/batches/close/<id>`).
-- Batch table columns: Batch, Service (`service_code — service_name`), Category (`category_code`), Opened, Closed, Status. Rows come from `$batches` (Task 2 keys).
+- Delete the old inline open-batch `<form>` (name + subsidy-type select); replace with a "New Batch" button: `<button type="button" class="<?= btn('add') ?>" data-bs-toggle="modal" data-bs-target="#newBatchModal"><i class="bi bi-plus-lg" aria-hidden="true"></i> New Batch</button>`.
+- Active-batch panel: show `service_code - service_name` and `category_code` badge instead of subsidy-type name; keep the Close Batch button/POST unchanged (action `admin/batches/close/<id>`).
+- Batch table columns: Batch, Service (`service_code - service_name`), Category (`category_code`), Opened, Closed, Status. Rows come from `$batches` (Task 2 keys).
 
 - [ ] **Step 4: Rework `distribution-distributions-body.php`**
 
-Replace the `aid_type` column with Service rendering `<?= esc($d['service_code'] !== '' ? $d['service_code'] . ' — ' . $d['service'] : $d['service']) ?>`; remove the aid-type filter `<select id="distAidFilter">`. Keep search, per-page, void button (action now `admin/distributions/void/<id>`).
+Replace the `aid_type` column with Service rendering `<?= esc($d['service_code'] !== '' ? $d['service_code'] . ' - ' . $d['service'] : $d['service']) ?>`; remove the subsidy-type filter `<select id="distAidFilter">`. Keep search, per-page, void button (action now `admin/distributions/void/<id>`).
 
 - [ ] **Step 5: Delete the aid-types body**
 
@@ -582,7 +582,7 @@ git rm app/Views/Admin/distribution-aidtypes-body.php
 grep -rn "aidtypes\|aidTypes\|aid_type" app/Views app/Libraries app/Controllers --include="*.php"
 ```
 
-Expected: zero hits (anything left is a missed edit — fix it).
+Expected: zero hits (anything left is a missed edit - fix it).
 
 - [ ] **Step 6: Manual smoke via dev server, run suite, commit**
 
@@ -609,7 +609,7 @@ git add -A && git commit -m "feat(admin): batches page with category->service cr
 
 - [ ] **Step 1: Rewrite `scanner-batches.md`**
 
-Update Rules 1–5: batch binds `service_id` (services/category reference data, V18); aid-type CRUD is gone; pages are `admin/batches` + `admin/distributions` (no tabs); kiosk badge shows service shortcode + name; stats method is `byService()`. Keep the developer-account caveat but note the login is now a real `users` row (`developer`/`developer123`).
+Update Rules 1-5: batch binds `service_id` (services/category reference data, V18); subsidy-type CRUD is gone; pages are `admin/batches` + `admin/distributions` (no tabs); kiosk badge shows service shortcode + name; stats method is `byService()`. Keep the developer-account caveat but note the login is now a real `users` row (`developer`/`developer123`).
 
 - [ ] **Step 2: Update CLAUDE.md dump line**
 
@@ -662,14 +662,14 @@ git commit -m "chore(db): drop V17 dump; V18 verified end-to-end"
 coderabbit auth status && coderabbit review --base main --agent
 ```
 
-If the CLI refuses (trial ended), fall back to `/code-review` on the branch. Triage per `superpowers:receiving-code-review` — verify each finding, fix in-scope bugs, park the rest in a GitHub issue citing the PR.
+If the CLI refuses (trial ended), fall back to `/code-review` on the branch. Triage per `superpowers:receiving-code-review` - verify each finding, fix in-scope bugs, park the rest in a GitHub issue citing the PR.
 
 - [ ] **Step 5: PR**
 
 ```bash
 git push -u origin feat/v18-batch-service
 gh pr create --repo janobles/binan_accesscard --base main \
-  --title "feat: V18 — batches bind services/programs; distribution hub split" \
+  --title "feat: V18 - batches bind services/programs; distribution hub split" \
   --body "$(cat <<'EOF'
 Replaces the aid_type table with the existing services/programs reference data (spec: docs/superpowers/specs/2026-07-13-batches-service-refactor-design.md).
 

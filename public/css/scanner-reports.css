@@ -1,7 +1,7 @@
 /* Reports page: toolbar, KPI tiles, chart cards. Cards sit directly on the page
    background (no outer container) and reuse the admin dashboard stat-card style. */
 
-/* Toolbar: date filter on the left, actions on the right — flex, not grid, so
+/* Toolbar: date filter on the left, actions on the right - flex, not grid, so
    From/To/Apply keep their natural widths instead of stretching. */
 .reports-toolbar {
     display: flex;

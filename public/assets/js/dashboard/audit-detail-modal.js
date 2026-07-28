@@ -11,7 +11,7 @@
 
     function text(value) {
         var str = (value === null || value === undefined) ? '' : String(value).trim();
-        return str === '' ? '—' : str;
+        return str === '' ? '-' : str;
     }
 
     function setField(modal, id, value) {

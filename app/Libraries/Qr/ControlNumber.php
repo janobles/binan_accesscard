@@ -7,7 +7,7 @@ namespace App\Libraries\Qr;
  *
  * With $controlNumberWidth = 1, the control number is the head's bare memberID
  * with no leading zeros (e.g. memberID 42 → "42"). format()/parse() are a true
- * bijection for all positive memberIDs up to PHP_INT_MAX — there is no width-based
+ * bijection for all positive memberIDs up to PHP_INT_MAX - there is no width-based
  * ceiling. Because memberID is the unique primary key of the `member` table, one
  * head maps to exactly one control number and vice-versa.
  *
@@ -28,7 +28,7 @@ final class ControlNumber
 
     /**
      * Returns the memberID encoded by $control, or null when $control is not a
-     * positive all-digits string. Accepts any length — there is no width ceiling,
+     * positive all-digits string. Accepts any length - there is no width ceiling,
      * so format()/parse() are bijective for all positive memberIDs.
      */
     public static function parse(string $control): ?int

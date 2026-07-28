@@ -12,8 +12,8 @@ use CodeIgniter\HTTP\ResponseInterface;
 /**
  * Enforces one active session per account. Registered AFTER IdleTimeoutFilter on the
  * protected routes (so an already-expired session is cleared first): if this
- * session's auth token no longer matches the account's registered active token —
- * because the user confirmed a login elsewhere — it audits and clears this session,
+ * session's auth token no longer matches the account's registered active token -
+ * because the user confirmed a login elsewhere - it audits and clears this session,
  * then returns a 401 JSON for AJAX or redirects normal requests to login.
  */
 class SingleSessionFilter implements FilterInterface
@@ -63,7 +63,7 @@ class SingleSessionFilter implements FilterInterface
 
         // For the keep-alive/AJAX poll, hand the frontend an explicit redirect to the
         // login page (with the reason flashed) so session-timeout.js does NOT fall
-        // through to its default logout?timeout=1 path — that would wrongly show the
+        // through to its default logout?timeout=1 path - that would wrongly show the
         // "due to inactivity" message for a displaced-login logout.
         if ($request->isAJAX()) {
             session()->setFlashdata('error', $message);

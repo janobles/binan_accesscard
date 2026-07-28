@@ -408,8 +408,8 @@ class DashboardPageBuilder
 
     /**
      * Batch-scoped data for the admin overall Reports page: combined totals,
-     * per-barangay/aid-type breakdowns, and the per-kiosk table (all scanners,
-     * no self-scoping — admin sees every kiosk). The scoping batch defaults to
+     * per-barangay/subsidy-type breakdowns, and the per-kiosk table (all scanners,
+     * no self-scoping - admin sees every kiosk). The scoping batch defaults to
      * the active batch, else the most recent batch, and honors ?batch= when it
      * matches a known batch (mirrors Admin\ReportsController::resolveBatch()).
      */
@@ -737,7 +737,7 @@ class DashboardPageBuilder
 
     /**
      * Viewer counterpart of buildEmployeeRecordListData(): the same paginated
-     * family list, but strictly read-only — no add, edit, archive, or restore.
+     * family list, but strictly read-only - no add, edit, archive, or restore.
      * Frontend: the viewer Manage Records view (`Family/list`).
      */
     private function buildViewerRecordListData(): array

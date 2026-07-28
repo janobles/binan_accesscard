@@ -151,7 +151,7 @@ class MemberModel extends Model
      * (already Title-cased) first/last name and exact on the stored Y-m-d birthday.
      *
      * Only live heads block a re-import: an archived (retired) family is treated as
-     * gone, so re-importing it re-creates the record — matching the archive
+     * gone, so re-importing it re-creates the record - matching the archive
      * grandfather semantics used elsewhere.
      */
     public function activeHeadExists(string $firstname, string $lastname, ?string $birthday): bool
@@ -217,7 +217,7 @@ class MemberModel extends Model
     }
 
     /**
-     * ACTIVE people already on file whose surname appears in the batch — the candidate set
+     * ACTIVE people already on file whose surname appears in the batch - the candidate set
      * for "this person is already in the system". Filtering by surname (instead of one
      * query per row) keeps a 10k-row import to a handful of queries; the importer does the
      * exact first+last+birthday match on the result in PHP.
@@ -477,8 +477,8 @@ class MemberModel extends Model
      * generation. Each row: memberID, control number, a display fullname, and
      * barangay. Optional $filter narrows by 'memberID' (int), 'barangay'
      * (string), 'controlFrom'/'controlTo' (int, inclusive control-number bounds),
-     * 'keyword' (string, name match), 'sectorID' (int), and caps rows with
-     * 'limit' (int).
+     * 'keyword' (string, name match), 'sectorID' (int), and pages with
+     * 'limit' (int) + 'offset' (int).
      *
      * @return list<array{memberID:int, controlNo:int, fullname:string, barangay:string}>
      */
@@ -491,7 +491,7 @@ class MemberModel extends Model
             ->orderBy('member.memberID', 'asc');
 
         if (isset($filter['limit']) && (int) $filter['limit'] > 0) {
-            $builder->limit((int) $filter['limit']);
+            $builder->limit((int) $filter['limit'], max(0, (int) ($filter['offset'] ?? 0)));
         }
 
         $rows = $builder->get()->getResultArray();

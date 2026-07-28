@@ -7,11 +7,11 @@ namespace App\Libraries;
  * App\Jobs\FamilyImportJob) into a report.
  *
  * Every issue names the EXACT Excel cell (e.g. "H42"), the column, the current value, and
- * what to do — so the operator can fix it in the spreadsheet and upload again. A flagged
+ * what to do - so the operator can fix it in the spreadsheet and upload again. A flagged
  * family can also be fixed in place: familiesToFix() drives the per-family Edit/Remove
  * actions on the review screen, which restage the corrected group without a re-upload.
  *
- * Pure presentation — no DB, request, or session.
+ * Pure presentation - no DB, request, or session.
  */
 class ImportReviewPresenter
 {
@@ -26,7 +26,7 @@ class ImportReviewPresenter
         'EMPTY'      => ['label' => 'Empty file',                  'hint' => 'No family rows were found.'],
         'QR-11'      => ['label' => 'Merged QR cells',             'hint' => 'Unmerge the QR column and repeat the QR number on every row of the family.'],
         'QR-01'      => ['label' => 'Missing QR Number',           'hint' => 'Every person needs their family QR number.'],
-        'QR-FORMAT'  => ['label' => 'Invalid QR Number',           'hint' => 'Must be a whole number — no letters, decimals, or commas.'],
+        'QR-FORMAT'  => ['label' => 'Invalid QR Number',           'hint' => 'Must be a whole number - no letters, decimals, or commas.'],
         'QR-05'      => ['label' => 'QR Number is zero',           'hint' => 'The QR number must be greater than zero.'],
         'QR-07'      => ['label' => 'QR Number too large',         'hint' => 'Above the allowed maximum.'],
         'QR-08'      => ['label' => 'QR Number is an error cell',  'hint' => 'The cell holds an Excel error value. Retype the number.'],
@@ -41,16 +41,16 @@ class ImportReviewPresenter
         'INCOME'     => ['label' => 'Invalid monthly income',      'hint' => 'Use a bracket label or a number.'],
         'SERVICE'    => ['label' => 'Unknown service code',        'hint' => 'Use a code from the Reference sheet.'],
         'LENGTH'     => ['label' => 'Value too long',              'hint' => 'Shorten it to fit the database limit.'],
-        'ADD-MEMBER' => ['label' => 'Will be added to an existing family', 'hint' => 'The QR already belongs to a family. These people are ADDED to it on import — to skip one, delete the row from the file.'],
+        'ADD-MEMBER' => ['label' => 'Will be added to an existing family', 'hint' => 'The QR already belongs to a family. These people are ADDED to it on import - to skip one, delete the row from the file.'],
         'DUP-EXISTS' => ['label' => 'Already in the system',       'hint' => 'Same QR, same head (name + birthday) as a family already on file. SKIPPED on import.'],
-        'DUP-DB'     => ['label' => 'Person already in the system','hint' => 'This person is already on file under another family. A HEAD already on file means the whole group is skipped — check the QR.'],
-        'DUP-DIFF'   => ['label' => 'Details differ from the system', 'hint' => 'Same family, but the file disagrees with what is stored. The import skips it, so nothing here is saved — edit the record in Manage Family.'],
-        'DUP-PERSON' => ['label' => 'Possible duplicate person',   'hint' => 'Same name, birthday and address as another row. Imports anyway — delete a row if it really is a duplicate.'],
+        'DUP-DB'     => ['label' => 'Person already in the system','hint' => 'This person is already on file under another family. A HEAD already on file means the whole group is skipped - check the QR.'],
+        'DUP-DIFF'   => ['label' => 'Details differ from the system', 'hint' => 'Same family, but the file disagrees with what is stored. The import skips it, so nothing here is saved - edit the record in Manage Family.'],
+        'DUP-PERSON' => ['label' => 'Possible duplicate person',   'hint' => 'Same name, birthday and address as another row. Imports anyway - delete a row if it really is a duplicate.'],
         'BRGY'       => ['label' => 'Barangay not recognised',     'hint' => 'Not an official Biñan barangay. Imports as typed.'],
         'CONTACT'    => ['label' => 'Contact number format',       'hint' => 'Should start with 09 and be 11 digits. Imports as typed.'],
         'SUFFIX'     => ['label' => 'Suffix adjusted',             'hint' => 'Changed to the matching dropdown value, or left blank if it matches none.'],
         'BDAY-RANGE' => ['label' => 'Birthday out of range',       'hint' => 'Over 150 years old or in the future. Imports anyway.'],
-        'QR-CONTIG'  => ['label' => 'Family rows not together',    'hint' => 'Warning only — the family imports, but check the grouping.'],
+        'QR-CONTIG'  => ['label' => 'Family rows not together',    'hint' => 'Warning only - the family imports, but check the grouping.'],
     ];
 
     /**
@@ -99,7 +99,7 @@ class ImportReviewPresenter
         return [
             'file'   => (string) ($result['file'] ?? 'import.xlsx'),
             'counts' => [
-                // What is in the file — every person row and QR group, broken ones included.
+                // What is in the file - every person row and QR group, broken ones included.
                 'rows'        => (int) ($counts['rows'] ?? count($rows)),
                 'groups'      => (int) ($counts['groups'] ?? $families),
                 // What the importer could build (a head-less or bad-QR group builds nothing).
@@ -118,18 +118,18 @@ class ImportReviewPresenter
             // they changed before they commit.
             'changes'    => is_array($result['changes'] ?? null) ? array_values($result['changes']) : [],
             'families'   => $this->familiesToFix($byQr, $byRow, $errors, $columns),
-            // Rows with a blank QR are never grouped into a family — surfaced so the operator
+            // Rows with a blank QR are never grouped into a family - surfaced so the operator
             // can give them a QR and fix them in place.
             'unassigned' => $this->unassignedRows($rows, $errors, $byRow, $columns),
-            // Whole-file problems (unreadable / empty) — nothing to edit; upload a fixed file.
+            // Whole-file problems (unreadable / empty) - nothing to edit; upload a fixed file.
             'fileNotices' => $this->fileNotices($errors),
         ];
     }
 
     /**
-     * One entry per QR group that has any blocking error OR warning — the families the
+     * One entry per QR group that has any blocking error OR warning - the families the
      * operator can open in the Edit modal (or Remove). Clean, warning-free groups are
-     * omitted; they need no attention. Groups with a blank QR are omitted too — with no QR
+     * omitted; they need no attention. Groups with a blank QR are omitted too - with no QR
      * there is nothing to key the in-app fix on (fix those in the file).
      *
      * @param array<string, list<int>>          $byQr    [qr => sheet rows]
@@ -146,8 +146,8 @@ class ImportReviewPresenter
 
         $blocking = [];
         $warnings = [];
-        $types    = [];   // [qr => [code => severity]] — distinct issue kinds per family
-        $existing = [];   // [qr => true] — already in the system
+        $types    = [];   // [qr => [code => severity]] - distinct issue kinds per family
+        $existing = [];   // [qr => true] - already in the system
 
         foreach ($errors as $error) {
             $qr = trim((string) ($error['familyNo'] ?? ''));
@@ -228,7 +228,7 @@ class ImportReviewPresenter
 
     /**
      * The inline-editable cells for a set of sheet rows: one input per field-level error (an
-     * error carrying a non-null `field`). Structural errors (head / address / grouping — field
+     * error carrying a non-null `field`). Structural errors (head / address / grouping - field
      * null) are excluded; those still need the Edit modal. Keyed to the exact staged cell so the
      * screen can render an input and POST {sheetRow, field, value}.
      *
@@ -241,7 +241,7 @@ class ImportReviewPresenter
     private function editableCells(array $sheetRows, array $byRow, array $errors, array $columns): array
     {
         $wanted = array_fill_keys(array_map('intval', $sheetRows), true);
-        $out    = [];   // [sheetRow|field => cell] — one input per cell
+        $out    = [];   // [sheetRow|field => cell] - one input per cell
 
         foreach ($errors as $error) {
             $field    = $error['field'] ?? null;
@@ -270,7 +270,7 @@ class ImportReviewPresenter
                 'cell'     => $letter !== '' ? $letter . $sheetRow : '',
                 'label'    => self::FIELD_LABELS[$field] ?? $field,
                 'value'    => (string) ($data[$field] ?? ''),
-                // Whose cell this is — so the editor names the person to fix, not just a cell ref.
+                // Whose cell this is - so the editor names the person to fix, not just a cell ref.
                 'person'   => trim((string) ($data['firstname'] ?? '') . ' ' . (string) ($data['lastname'] ?? '')),
                 'role'     => $this->isHeadRow($data) ? 'head' : 'member',
                 'code'     => (string) ($error['code'] ?? ''),
@@ -308,7 +308,7 @@ class ImportReviewPresenter
     }
 
     /**
-     * Every staged row with a blank QR — the importer never groups these into a family, so
+     * Every staged row with a blank QR - the importer never groups these into a family, so
      * they carry no QR to Edit by. Each is listed with its own issue types so the operator can
      * open it, type a QR, and fix it in place (keyed by sheet row, not QR).
      *
@@ -360,7 +360,7 @@ class ImportReviewPresenter
     }
 
     /**
-     * Whole-file problems (unreadable / empty) — there is nothing to edit, so these surface as
+     * Whole-file problems (unreadable / empty) - there is nothing to edit, so these surface as
      * a single page notice rather than an editable row.
      *
      * @param list<array> $errors
@@ -380,7 +380,7 @@ class ImportReviewPresenter
     }
 
     /**
-     * The families that are CORRECT — what the import will actually create.
+     * The families that are CORRECT - what the import will actually create.
      *
      * The rest of this report is nothing but bad news, which leaves the operator no way to
      * see that the other 300 families are fine, or to eyeball a head and address before
@@ -389,7 +389,7 @@ class ImportReviewPresenter
      * A family is ready when nothing in its group blocks, it is not already on file
      * (DUP-EXISTS / a head caught by DUP-DB are SKIPPED, never written), and it is not an
      * add-to-an-existing-family group (those are listed under ADD-MEMBER). Warning-only
-     * families ARE ready — they import as typed — but their warning count rides along so
+     * families ARE ready - they import as typed - but their warning count rides along so
      * nothing is quietly glossed over.
      *
      * @param array<string, list<int>>          $byQr   [qr => sheet rows]

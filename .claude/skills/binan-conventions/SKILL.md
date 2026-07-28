@@ -23,7 +23,7 @@ a scan.
 **Context7 caveat:** the CI4 library (`/codeigniter4/userguide`) serves
 LATEST docs, not this repo's pinned versions. Cross-check version-sensitive
 answers against the pins in `docs/knowledge/sources.md` (CI4 v4.7.3,
-Bootstrap v5.3.3 — Bootstrap's `/websites/getbootstrap_5_3` is
+Bootstrap v5.3.3 - Bootstrap's `/websites/getbootstrap_5_3` is
 version-pinned, so it's safe). PHP floor: 8.2.
 
 ## Grep index (keyword → file)
@@ -57,5 +57,5 @@ All paths relative to `docs/knowledge/`.
    `docs/knowledge/violations.md` immediately.
 5. Fix a listed violation → tick it `[x]` + `*(Fixed: <PR/commit>)*`.
 6. After editing docs under `docs/knowledge/`, run
-   `bash scripts/check-knowledge-cites.sh` — every `path:line` cite must
+   `bash scripts/check-knowledge-cites.sh` - every `path:line` cite must
    resolve.

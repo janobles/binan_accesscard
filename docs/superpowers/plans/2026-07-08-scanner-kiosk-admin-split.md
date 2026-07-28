@@ -1,21 +1,21 @@
-# Scanner Kiosk / Admin-Server Split — Implementation Plan
+# Scanner Kiosk / Admin-Server Split - Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Split the scanner module by URL prefix — `/admin/*` owns aid-types, batch control (incl. aid selection), and overall reports; `/scanner/*` becomes a pure green-themed kiosk (scan + own performance) — with aid type bound to the batch and batch-only report scope.
+**Goal:** Split the scanner module by URL prefix - `/admin/*` owns aid-types, batch control (incl. aid selection), and overall reports; `/scanner/*` becomes a pure green-themed kiosk (scan + own performance) - with subsidy type bound to the batch and batch-only report scope.
 
-**Architecture:** Aid type moves onto `distribution_batch` (one aid type per batch, chosen at open). The kiosk logs against the active batch's aid type — no picker. Management surfaces move into the admin dashboard shell; the kiosk keeps only scan + a self-scoped performance page that polls a JSON stats endpoint every 5s. The old Scanner dashboard shell (`Scanner/layout.php`) and aid-picker (`scanner/setting`) are retired.
+**Architecture:** Subsidy type moves onto `distribution_batch` (one subsidy type per batch, chosen at open). The kiosk logs against the active batch's subsidy type - no picker. Management surfaces move into the admin dashboard shell; the kiosk keeps only scan + a self-scoped performance page that polls a JSON stats endpoint every 5s. The old Scanner dashboard shell (`Scanner/layout.php`) and aid-picker (`scanner/setting`) are retired.
 
 **Tech Stack:** CodeIgniter 4 (PHP 8.2+), MySQL/InnoDB, Bootstrap 5 + SB Admin 1, Chart.js, html5-qrcode, PHPUnit.
 
 ## Global Constraints
 
 - **No migrations.** Schema changes ship as a new SQL dump `accesscardV16.sql` (copy of V15 + the batch column). Never add CI4 migrations or alter schema in code.
-- **Match the dump exactly** — column names, enum values, role names. Employee accounts store as `User`.
-- **Every family mutation writes an audit trail** via `Audit/AuditTrailsModel`. Batch open/close and aid logging already do — keep it.
+- **Match the dump exactly** - column names, enum values, role names. Employee accounts store as `User`.
+- **Every family mutation writes an audit trail** via `Audit/AuditTrailsModel`. Batch open/close and aid logging already do - keep it.
 - **Controllers decide, libraries build.** Dashboard view-data assembly stays in controllers/`DashboardPageBuilder`; do not move logic into views.
 - **PHP 8.2+**, typed signatures everywhere, **no** `declare(strict_types=1)`. Match existing namespace conventions.
-- **No-DB test posture:** scanner models return safe empty shapes on any `\Throwable` — preserve this in every model edit.
+- **No-DB test posture:** scanner models return safe empty shapes on any `\Throwable` - preserve this in every model edit.
 - Run `vendor/bin/phpunit` before and after each task; `php spark routes` after any route change.
 
 ---
@@ -23,22 +23,22 @@
 ## File Structure
 
 **New:**
-- `accesscardV16.sql` — V15 + `distribution_batch.aid_type_id`.
-- `app/Controllers/Admin/DistributionController.php` — admin aid-types + batches (moved from `Scanner\ManageController`).
-- `app/Controllers/Admin/ReportsController.php` — admin overall reports (moved from `Scanner\ReportsController`).
-- `app/Views/Admin/distribution.php` — admin aid-types + batches page (admin shell).
-- `app/Views/Admin/reports.php` — admin reports page (admin shell).
-- `app/Views/Scanner/performance.php` — kiosk own-stats page (kiosk shell).
+- `accesscardV16.sql` - V15 + `distribution_batch.aid_type_id`.
+- `app/Controllers/Admin/DistributionController.php` - admin aid-types + batches (moved from `Scanner\ManageController`).
+- `app/Controllers/Admin/ReportsController.php` - admin overall reports (moved from `Scanner\ReportsController`).
+- `app/Views/Admin/distribution.php` - admin aid-types + batches page (admin shell).
+- `app/Views/Admin/reports.php` - admin reports page (admin shell).
+- `app/Views/Scanner/performance.php` - kiosk own-stats page (kiosk shell).
 
 **Modified:**
 - `accesscardV15.sql` reference in memory/docs → point demos at V16.
-- `app/Models/Scanner/DistributionBatchModel.php` — `open()` takes aid type; `allowedFields` + joins expose it.
-- `app/Models/Scanner/AidStatsModel.php` — drop date params, batch-only scope.
-- `app/Controllers/Scanner/ScanController.php` — drop `setting()`; `scan()` no aid param; `logAid()` reads aid from batch; add `stats()` JSON; add `performance()`.
-- `app/Config/Routes.php` — new admin routes; slim scanner group.
-- `app/Views/components/dashboard_sidebar.php` — admin nav points to new admin routes; retire scanner-only variant links.
-- `app/Views/Scanner/kiosk-layout.php` — green theme; remove "Change type"; aid badge from batch.
-- `app/Views/Scanner/scan.php` — no-batch empty state; aid from batch.
+- `app/Models/Scanner/DistributionBatchModel.php` - `open()` takes subsidy type; `allowedFields` + joins expose it.
+- `app/Models/Scanner/AidStatsModel.php` - drop date params, batch-only scope.
+- `app/Controllers/Scanner/ScanController.php` - drop `setting()`; `scan()` no aid param; `logAid()` reads aid from batch; add `stats()` JSON; add `performance()`.
+- `app/Config/Routes.php` - new admin routes; slim scanner group.
+- `app/Views/components/dashboard_sidebar.php` - admin nav points to new admin routes; retire scanner-only variant links.
+- `app/Views/Scanner/kiosk-layout.php` - green theme; remove "Change type"; aid badge from batch.
+- `app/Views/Scanner/scan.php` - no-batch empty state; aid from batch.
 
 **Deleted (after moves land):**
 - `app/Controllers/Scanner/ManageController.php`, `app/Controllers/Scanner/ReportsController.php`
@@ -52,7 +52,7 @@
 - Create: `accesscardV16.sql` (copy of `accesscardV15.sql` with the column added)
 
 **Interfaces:**
-- Produces: `distribution_batch.aid_type_id INT(11) NOT NULL` — consumed by all later tasks.
+- Produces: `distribution_batch.aid_type_id INT(11) NOT NULL` - consumed by all later tasks.
 
 - [ ] **Step 1: Copy V15 to V16**
 
@@ -102,18 +102,18 @@ git commit -m "feat(db): V16 dump adds distribution_batch.aid_type_id"
 
 ---
 
-### Task 2: Batch model carries aid type
+### Task 2: Batch model carries subsidy type
 
 **Files:**
 - Modify: `app/Models/Scanner/DistributionBatchModel.php`
-- Test: `tests/Scanner/DistributionBatchModelTest.php` (create if absent; skips without sqlite3 — mirror existing scanner model tests)
+- Test: `tests/Scanner/DistributionBatchModelTest.php` (create if absent; skips without sqlite3 - mirror existing scanner model tests)
 
 **Interfaces:**
 - Consumes: `distribution_batch.aid_type_id` (Task 1).
 - Produces:
   - `open(string $name, int $aidTypeId, int $userId): int`
-  - `activeBatch(): ?array` — now includes `aid_type_id` and `aid_type_name` (joined).
-  - `allBatches(): array` — each row includes `aid_type_id`, `aid_type_name`.
+  - `activeBatch(): ?array` - now includes `aid_type_id` and `aid_type_name` (joined).
+  - `allBatches(): array` - each row includes `aid_type_id`, `aid_type_name`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -135,7 +135,7 @@ final class DistributionBatchModelTest extends CIUnitTestCase
             $this->markTestSkipped('sqlite3 not available');
         }
         $m = new DistributionBatchModel();
-        $this->assertSame(0, $m->open('Batch A', 0, 1), 'aid type 0 must refuse');
+        $this->assertSame(0, $m->open('Batch A', 0, 1), 'subsidy type 0 must refuse');
     }
 }
 ```
@@ -152,7 +152,7 @@ In `DistributionBatchModel.php`:
 - Change `open()`:
 
 ```php
-    /** Opens a batch; refuses when name blank, aid type missing, or a batch is open. */
+    /** Opens a batch; refuses when name blank, subsidy type missing, or a batch is open. */
     public function open(string $name, int $aidTypeId, int $userId): int
     {
         $name = trim($name);
@@ -176,7 +176,7 @@ In `DistributionBatchModel.php`:
     }
 ```
 
-- Change `activeBatch()` and `allBatches()` to join the aid type name. Replace the query bodies:
+- Change `activeBatch()` and `allBatches()` to join the subsidy type name. Replace the query bodies:
 
 ```php
     public function activeBatch(): ?array
@@ -210,12 +210,12 @@ In `DistributionBatchModel.php`:
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `vendor/bin/phpunit --filter testOpenRequiresAidType`
-Expected: PASS (or SKIP without sqlite3 — acceptable).
+Expected: PASS (or SKIP without sqlite3 - acceptable).
 
 - [ ] **Step 5: Run the full suite**
 
 Run: `vendor/bin/phpunit`
-Expected: green (existing `open()` 2-arg callers will still fail to compile — they are updated in Task 5/6; if any test calls `open()` with 2 args, update it in the same commit).
+Expected: green (existing `open()` 2-arg callers will still fail to compile - they are updated in Task 5/6; if any test calls `open()` with 2 args, update it in the same commit).
 
 - [ ] **Step 6: Commit**
 
@@ -226,7 +226,7 @@ git commit -m "feat(scanner): batch carries aid_type_id; open() requires it"
 
 ---
 
-### Task 3: `AidStatsModel` — batch-only scope, drop date params
+### Task 3: `AidStatsModel` - batch-only scope, drop date params
 
 **Files:**
 - Modify: `app/Models/Scanner/AidStatsModel.php`
@@ -257,7 +257,7 @@ public function testReceivedVsNotTakesBatchOnly(): void
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `vendor/bin/phpunit --filter testReceivedVsNotTakesBatchOnly`
-Expected: FAIL (arg mismatch — current signature is `($from, $to, $batchId)`).
+Expected: FAIL (arg mismatch - current signature is `($from, $to, $batchId)`).
 
 - [ ] **Step 3: Update the model**
 
@@ -325,8 +325,8 @@ use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
 
 /**
- * Admin server: aid-type catalogue + distribution-batch control. Admin/Developer
- * only. Batch open binds the aid type for the whole batch. Every mutation writes
+ * Admin server: subsidy-type catalogue + distribution-batch control. Admin/Developer
+ * only. Batch open binds the subsidy type for the whole batch. Every mutation writes
  * an audit_trails row. Rendered in the admin dashboard shell.
  */
 class DistributionController extends BaseController
@@ -337,7 +337,7 @@ class DistributionController extends BaseController
         return $g instanceof RedirectResponse ? $g : null;
     }
 
-    /** GET admin/distribution — aid types + batches hub. */
+    /** GET admin/distribution - subsidy types + batches hub. */
     public function index(): ResponseInterface|string
     {
         if ($g = $this->guard()) { return $g; }
@@ -366,14 +366,14 @@ class DistributionController extends BaseController
         if ($g = $this->guard()) { return $g; }
         $name = trim((string) $this->request->getPost('name'));
         if ($name === '') {
-            return redirect()->to('admin/distribution')->with('error', 'Aid type name is required.');
+            return redirect()->to('admin/distribution')->with('error', 'Subsidy type name is required.');
         }
         $id = model(AidTypeModel::class)->create($name);
         if ($id <= 0) {
-            return redirect()->to('admin/distribution')->with('error', 'Unable to add aid type.');
+            return redirect()->to('admin/distribution')->with('error', 'Unable to add subsidy type.');
         }
-        $this->audit('Created aid type "' . $name . '" #' . $id);
-        return redirect()->to('admin/distribution')->with('success', 'Aid type added.');
+        $this->audit('Created subsidy type "' . $name . '" #' . $id);
+        return redirect()->to('admin/distribution')->with('success', 'Subsidy type added.');
     }
 
     public function archiveAidType(int $id): RedirectResponse
@@ -381,10 +381,10 @@ class DistributionController extends BaseController
         if ($g = $this->guard()) { return $g; }
         $type = model(AidTypeModel::class)->find($id);
         if (! model(AidTypeModel::class)->archive($id)) {
-            return redirect()->to('admin/distribution')->with('error', 'Unable to archive aid type.');
+            return redirect()->to('admin/distribution')->with('error', 'Unable to archive subsidy type.');
         }
-        $this->audit('Archived aid type "' . (string) ($type['name'] ?? '') . '" #' . $id);
-        return redirect()->to('admin/distribution')->with('success', 'Aid type archived.');
+        $this->audit('Archived subsidy type "' . (string) ($type['name'] ?? '') . '" #' . $id);
+        return redirect()->to('admin/distribution')->with('success', 'Subsidy type archived.');
     }
 
     public function restoreAidType(int $id): RedirectResponse
@@ -392,10 +392,10 @@ class DistributionController extends BaseController
         if ($g = $this->guard()) { return $g; }
         $type = model(AidTypeModel::class)->find($id);
         if (! model(AidTypeModel::class)->restore($id)) {
-            return redirect()->to('admin/distribution')->with('error', 'Unable to restore aid type.');
+            return redirect()->to('admin/distribution')->with('error', 'Unable to restore subsidy type.');
         }
-        $this->audit('Restored aid type "' . (string) ($type['name'] ?? '') . '" #' . $id);
-        return redirect()->to('admin/distribution')->with('success', 'Aid type restored.');
+        $this->audit('Restored subsidy type "' . (string) ($type['name'] ?? '') . '" #' . $id);
+        return redirect()->to('admin/distribution')->with('success', 'Subsidy type restored.');
     }
 
     public function deleteAidType(int $id): RedirectResponse
@@ -404,14 +404,14 @@ class DistributionController extends BaseController
         $used = model(AidDistributionModel::class)->where('aid_type_id', $id)->countAllResults();
         if ($used > 0) {
             return redirect()->to('admin/distribution')
-                ->with('error', 'Cannot delete: aid type is used by ' . $used . ' distribution(s). Archive it instead.');
+                ->with('error', 'Cannot delete: subsidy type is used by ' . $used . ' distribution(s). Archive it instead.');
         }
         $type = model(AidTypeModel::class)->find($id);
         if (! model(AidTypeModel::class)->delete($id)) {
-            return redirect()->to('admin/distribution')->with('error', 'Unable to delete aid type.');
+            return redirect()->to('admin/distribution')->with('error', 'Unable to delete subsidy type.');
         }
-        $this->audit('Deleted aid type "' . (string) ($type['name'] ?? '') . '" #' . $id);
-        return redirect()->to('admin/distribution')->with('success', 'Aid type deleted.');
+        $this->audit('Deleted subsidy type "' . (string) ($type['name'] ?? '') . '" #' . $id);
+        return redirect()->to('admin/distribution')->with('success', 'Subsidy type deleted.');
     }
 
     public function voidDistribution(int $id): RedirectResponse
@@ -425,14 +425,14 @@ class DistributionController extends BaseController
             return redirect()->to('admin/distribution')->with('error', 'Unable to void distribution.');
         }
         $this->audit(
-            'Voided aid distribution #' . $id,
+            'Voided subsidy distribution #' . $id,
             (int) ($row['memberID'] ?? 0),
-            'Control #' . (int) ($row['control_no'] ?? 0) . ', aid type ID ' . (int) ($row['aid_type_id'] ?? 0) . ', claim date ' . (string) ($row['claim_date'] ?? '')
+            'Control #' . (int) ($row['control_no'] ?? 0) . ', subsidy type ID ' . (int) ($row['aid_type_id'] ?? 0) . ', claim date ' . (string) ($row['claim_date'] ?? '')
         );
         return redirect()->to('admin/distribution')->with('success', 'Distribution voided.');
     }
 
-    /** POST admin/batches/open — name + aid type. */
+    /** POST admin/batches/open - name + subsidy type. */
     public function openBatch(): RedirectResponse
     {
         if ($g = $this->guard()) { return $g; }
@@ -442,13 +442,13 @@ class DistributionController extends BaseController
             return redirect()->to('admin/distribution')->with('error', 'Batch name is required.');
         }
         if ($aidTypeId <= 0) {
-            return redirect()->to('admin/distribution')->with('error', 'Choose an aid type for this batch.');
+            return redirect()->to('admin/distribution')->with('error', 'Choose a subsidy type for this batch.');
         }
         $id = model(DistributionBatchModel::class)->open($name, $aidTypeId, (int) (session('user_id') ?? 0));
         if ($id <= 0) {
             return redirect()->to('admin/distribution')->with('error', 'Unable to open batch. Close the active batch first.');
         }
-        $this->audit('Opened distribution batch "' . $name . '" #' . $id . ' (aid type ID ' . $aidTypeId . ')');
+        $this->audit('Opened distribution batch "' . $name . '" #' . $id . ' (subsidy type ID ' . $aidTypeId . ')');
         return redirect()->to('admin/distribution')->with('success', 'Batch opened. Scanning is now live.');
     }
 
@@ -482,7 +482,7 @@ class DistributionController extends BaseController
 
 Create `app/Views/Admin/distribution.php` extending the admin dashboard layout that other admin pages use (open an existing admin view such as `app/Views/Admin/cards.php` to copy its `extend`/`section` wrapper exactly). Inside `content`, render two cards, reusing the old scanner partial markup as the starting point:
 - **Aid types** card: port the table + create/archive/restore/delete forms from `app/Views/Scanner/manage-aidtypes-body.php`, changing every `site_url('scanner/aid-types/...')` to `site_url('admin/aid-types/...')`.
-- **Batches** card: port from `app/Views/Scanner/manage-batches-body.php`, change `scanner/batches/...` → `admin/batches/...`, and add a **required aid-type `<select name="aid_type_id">`** to the open-batch form populated from `$activeAidTypes` (each `<option value="<?= aid_type_id ?>">name</option>`). Show each batch row's `aid_type_name`.
+- **Batches** card: port from `app/Views/Scanner/manage-batches-body.php`, change `scanner/batches/...` → `admin/batches/...`, and add a **required subsidy-type `<select name="aid_type_id">`** to the open-batch form populated from `$activeAidTypes` (each `<option value="<?= aid_type_id ?>">name</option>`). Show each batch row's `aid_type_name`.
 
 Match the flash-message and card conventions already used in the admin views (verify against `app/Views/Admin/cards.php`).
 
@@ -513,9 +513,9 @@ In `app/Config/Routes.php`, inside the `admin` group, add:
 Run: `php spark routes | grep -E "admin/(distribution|aid-types|batches|distributions)"`
 Expected: each route maps to `Admin\DistributionController::*`.
 
-- [ ] **Step 5: Manual smoke — open a batch with an aid type**
+- [ ] **Step 5: Manual smoke - open a batch with a subsidy type**
 
-Run `php spark serve`, log in as admin, go to `/admin/distribution`, open a batch selecting an aid type. Expected: success flash, batch row shows the aid type name, second open blocked while active.
+Run `php spark serve`, log in as admin, go to `/admin/distribution`, open a batch selecting a subsidy type. Expected: success flash, batch row shows the subsidy type name, second open blocked while active.
 
 - [ ] **Step 6: Commit**
 
@@ -526,7 +526,7 @@ git commit -m "feat(admin): distribution control (aid-types + batches) in admin 
 
 ---
 
-### Task 5: Kiosk `ScanController` — aid from batch, no setting, add stats + performance
+### Task 5: Kiosk `ScanController` - aid from batch, no setting, add stats + performance
 
 **Files:**
 - Modify: `app/Controllers/Scanner/ScanController.php`
@@ -538,12 +538,12 @@ git commit -m "feat(admin): distribution control (aid-types + batches) in admin 
 - Consumes: `DistributionBatchModel::activeBatch()` (now has `aid_type_id`, `aid_type_name`), `AidStatsModel::perScanner($batchId, $userId)`, `AidDistributionModel::familiesForUserInBatch()`.
 - Produces routes: `scanner/scan`, `scanner/performance`, `scanner/stats` (JSON), `scanner/lookup/(:num)`, `scanner/log`. Removes `scanner/setting`.
 
-- [ ] **Step 1: Rewrite `scan()` — no aid param, aid from batch**
+- [ ] **Step 1: Rewrite `scan()` - no aid param, aid from batch**
 
 Replace `setting()` and `scan()` with a single `scan()`:
 
 ```php
-    /** GET scanner/scan — kiosk lookup UI. Aid type comes from the active batch. */
+    /** GET scanner/scan - kiosk lookup UI. Subsidy type comes from the active batch. */
     public function scan(): ResponseInterface|string
     {
         $guard = RoleAccess::requireRole(['Scanner', 'Admin', 'Developer']);
@@ -572,7 +572,7 @@ Replace `setting()` and `scan()` with a single `scan()`:
 
 Delete the `setting()` method entirely.
 
-- [ ] **Step 2: `logAid()` reads aid type from the batch, not POST**
+- [ ] **Step 2: `logAid()` reads subsidy type from the batch, not POST**
 
 In `logAid()`, remove `'aid_type_id' => 'required|is_natural_no_zero',` from `$rules`. After resolving `$activeBatch` (the existing 409-on-null block), set:
 
@@ -585,7 +585,7 @@ and in the `logAid([...])` array use `'aid_type_id' => $aidTypeId,`. In the audi
 - [ ] **Step 3: Add `stats()` JSON endpoint (kiosk poll)**
 
 ```php
-    /** GET scanner/stats — JSON own-performance snapshot for kiosk polling. */
+    /** GET scanner/stats - JSON own-performance snapshot for kiosk polling. */
     public function stats(): ResponseInterface
     {
         $guard = RoleAccess::requireRole(['Scanner', 'Admin', 'Developer']);
@@ -615,7 +615,7 @@ and in the `logAid([...])` array use `'aid_type_id' => $aidTypeId,`. In the audi
 - [ ] **Step 4: Add `performance()` page (kiosk shell)**
 
 ```php
-    /** GET scanner/performance — this kiosk's own live metrics. */
+    /** GET scanner/performance - this kiosk's own live metrics. */
     public function performance(): ResponseInterface|string
     {
         $guard = RoleAccess::requireRole(['Scanner', 'Admin', 'Developer']);
@@ -650,7 +650,7 @@ and in the `logAid([...])` array use `'aid_type_id' => $aidTypeId,`. In the audi
 
 - [ ] **Step 5: Create `app/Views/Scanner/performance.php`**
 
-Extend `Scanner/kiosk-layout` (`<?= $this->extend('Scanner/kiosk-layout') ?>`). In the `content` section render: big stat tiles (families, handouts) bound to ids `#statFamilies` / `#statHandouts`, a batch `<select>` (reload on change → `?batch=`), a Chart.js canvas for `byAidType`, a "Last updated <span id='lastUpdated'>—</span>" line, and a `<button id="refreshNow">Refresh</button>`. In the `scripts` section add the poll:
+Extend `Scanner/kiosk-layout` (`<?= $this->extend('Scanner/kiosk-layout') ?>`). In the `content` section render: big stat tiles (families, handouts) bound to ids `#statFamilies` / `#statHandouts`, a batch `<select>` (reload on change → `?batch=`), a Chart.js canvas for `byAidType`, a "Last updated <span id='lastUpdated'>-</span>" line, and a `<button id="refreshNow">Refresh</button>`. In the `scripts` section add the poll:
 
 ```php
 <?= $this->section('scripts') ?>
@@ -671,11 +671,11 @@ Extend `Scanner/kiosk-layout` (`<?= $this->extend('Scanner/kiosk-layout') ?>`). 
 <?= $this->endSection() ?>
 ```
 
-(Use the existing Chart.js include pattern from `app/Views/Scanner/reports.php` for the aid-type chart.)
+(Use the existing Chart.js include pattern from `app/Views/Scanner/reports.php` for the subsidy-type chart.)
 
-- [ ] **Step 6: Update `scan.php` — no-batch empty state, aid from batch**
+- [ ] **Step 6: Update `scan.php` - no-batch empty state, aid from batch**
 
-In `app/Views/Scanner/scan.php`, wrap the scan UI so that when `$activeBatch === null` it shows an alert: *"No active distribution batch. Ask an administrator to start one."* and hides the scan input. Remove any hidden `aid_type` input that posted the aid type; `logAid` now derives it server-side. Keep posting `control_no`, `memberID`, `claim_date`.
+In `app/Views/Scanner/scan.php`, wrap the scan UI so that when `$activeBatch === null` it shows an alert: *"No active distribution batch. Ask an administrator to start one."* and hides the scan input. Remove any hidden `aid_type` input that posted the subsidy type; `logAid` now derives it server-side. Keep posting `control_no`, `memberID`, `claim_date`.
 
 - [ ] **Step 7: Update routes**
 
@@ -702,14 +702,14 @@ Expected: routes show only scan/performance/stats/lookup/log; grep returns nothi
 
 - [ ] **Step 9: Manual smoke**
 
-With a batch open (aid type set in Task 4), `/scanner/scan` logs against that aid type; `/scanner/performance` shows live tiles that tick up ~5s after a scan; with no batch open, `/scanner/scan` shows the empty state (no redirect loop).
+With a batch open (subsidy type set in Task 4), `/scanner/scan` logs against that subsidy type; `/scanner/performance` shows live tiles that tick up ~5s after a scan; with no batch open, `/scanner/scan` shows the empty state (no redirect loop).
 
 - [ ] **Step 10: Run suite + commit**
 
 ```bash
 vendor/bin/phpunit
 git add app/Controllers/Scanner/ScanController.php app/Views/Scanner/scan.php app/Views/Scanner/performance.php app/Config/Routes.php
-git commit -m "feat(scanner): kiosk logs against batch aid type; add stats poll + performance page"
+git commit -m "feat(scanner): kiosk logs against batch subsidy type; add stats poll + performance page"
 ```
 
 ---
@@ -743,7 +743,7 @@ use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
 
 /**
- * Admin overall aid-distribution reports: combined totals + per-kiosk table,
+ * Admin overall subsidy-distribution reports: combined totals + per-kiosk table,
  * batch-scoped (no date filter). PDF export. Admin/Developer only.
  */
 class ReportsController extends BaseController
@@ -829,11 +829,11 @@ class ReportsController extends BaseController
 }
 ```
 
-(Note: `ReportsPdfGenerator::generate()` still accepts the two date args; passing `null, null` keeps its signature untouched — verify by opening `app/Libraries/Scanner/ReportsPdfGenerator.php`. If it renders a date line, it already handles null.)
+(Note: `ReportsPdfGenerator::generate()` still accepts the two date args; passing `null, null` keeps its signature untouched - verify by opening `app/Libraries/Scanner/ReportsPdfGenerator.php`. If it renders a date line, it already handles null.)
 
 - [ ] **Step 2: Create `app/Views/Admin/reports.php`**
 
-Port `app/Views/Scanner/reports.php` into the **admin** layout wrapper (copy the `extend`/`section` header from `app/Views/Admin/cards.php`). Remove the date-range form entirely; keep the batch `<select>` (reload on change → `?batch=`). Keep the Chart.js charts and the per-kiosk table (`$perScanner`, always shown for admin). Change the PDF link to `site_url('admin/reports/pdf') . '?batch=' . batchId`. Add the poll block targeting a JSON refresh of the summary tiles — for the first cut, a **Refresh** button that reloads the page with the current `?batch=` plus a 5s auto-reload is acceptable:
+Port `app/Views/Scanner/reports.php` into the **admin** layout wrapper (copy the `extend`/`section` header from `app/Views/Admin/cards.php`). Remove the date-range form entirely; keep the batch `<select>` (reload on change → `?batch=`). Keep the Chart.js charts and the per-kiosk table (`$perScanner`, always shown for admin). Change the PDF link to `site_url('admin/reports/pdf') . '?batch=' . batchId`. Add the poll block targeting a JSON refresh of the summary tiles - for the first cut, a **Refresh** button that reloads the page with the current `?batch=` plus a 5s auto-reload is acceptable:
 
 ```php
 <?= $this->section('scripts') ?>
@@ -892,7 +892,7 @@ In `app/Views/components/dashboard_sidebar.php`, in the admin nav (the `else` br
                 <a class="nav-link <?= esc($navActive['reports'] ?? '') ?>" href="<?= site_url('admin/reports') ?>"><div class="sb-nav-link-icon"><i class="bi bi-bar-chart-fill" aria-hidden="true"></i></div>Reports</a>
 ```
 
-(The kiosk `Scan` link is intentionally dropped from the admin sidebar — scanning is a kiosk activity. Admin/Dev can still reach `/scanner/scan` directly for testing.)
+(The kiosk `Scan` link is intentionally dropped from the admin sidebar - scanning is a kiosk activity. Admin/Dev can still reach `/scanner/scan` directly for testing.)
 
 - [ ] **Step 2: Remove the scanner-only sidebar variant**
 
@@ -901,7 +901,7 @@ The `if ($sidebarScannerOnly)` branch served the old scanner dashboard shell (ma
 - [ ] **Step 3: Green-theme the kiosk header + fix aid badge**
 
 In `app/Views/Scanner/kiosk-layout.php`:
-- Change `<nav class="navbar navbar-dark bg-dark px-3">` to the Biñan green: `<nav class="navbar navbar-dark px-3" style="background-color:#1f7a3d;">` (or a `bg-success`/theme class if one exists — check `docs/knowledge/sbadmin/` for the green token; use the documented value).
+- Change `<nav class="navbar navbar-dark bg-dark px-3">` to the Biñan green: `<nav class="navbar navbar-dark px-3" style="background-color:#1f7a3d;">` (or a `bg-success`/theme class if one exists - check `docs/knowledge/sbadmin/` for the green token; use the documented value).
 - Remove the `Change type` link (aid picker is gone):
 
 ```php
@@ -954,9 +954,9 @@ Update the dump reference (memory `dump-v15-batches` successor / `docs`): demo i
 - [ ] **Step 3: End-to-end smoke (the spec's Test focus)**
 
 Fresh DB from V16, then verify:
-- `php spark routes` — every route resolves.
+- `php spark routes` - every route resolves.
 - Login redirects: Scanner → `/scanner/scan`; Admin → admin shell.
-- Admin opens a batch with aid type; kiosk scan logs that aid type; audit rows written (check `/admin/audit-trails`).
+- Admin opens a batch with subsidy type; kiosk scan logs that subsidy type; audit rows written (check `/admin/audit-trails`).
 - Kiosk `/scanner/scan` with no open batch → empty state, no redirect loop.
 - `/admin/reports` batch scoping works; no date inputs anywhere.
 - Per-kiosk attribution: log scans from two distinct Scanner accounts → `/admin/reports` per-kiosk table shows two rows; each `/scanner/performance` shows only its own.
@@ -985,7 +985,7 @@ git commit -m "docs(scanner): kiosk/admin split route map + V16 demo workflow"
 
 ## Self-Review
 
-- **Spec coverage:** shell-by-prefix (Tasks 4-7); aid bound to batch + V16 (Tasks 1-2); aid selection moved to admin (Task 4); kiosk pure scan + green (Tasks 5,7); performance emphasis + per-kiosk (Tasks 5,6); 5s polling + refresh + last-updated (Tasks 5,6); date filter removed (Tasks 3,6); single-session note (docs, Task 8); concurrency (no code needed — documented). All covered.
+- **Spec coverage:** shell-by-prefix (Tasks 4-7); aid bound to batch + V16 (Tasks 1-2); aid selection moved to admin (Task 4); kiosk pure scan + green (Tasks 5,7); performance emphasis + per-kiosk (Tasks 5,6); 5s polling + refresh + last-updated (Tasks 5,6); date filter removed (Tasks 3,6); single-session note (docs, Task 8); concurrency (no code needed - documented). All covered.
 - **Type consistency:** `open($name,$aidTypeId,$userId)` used consistently (Tasks 2,4); `AidStatsModel` batch-only signatures used in Tasks 5,6 match Task 3; `activeBatch()['aid_type_id'|'aid_type_name']` produced in Task 2, consumed in 5,6; nav keys `distribution`/`reports` set in Tasks 4/6 and read in Task 7.
-- **Placeholders:** none — view-porting steps name the exact source file, target layout, and the exact URL substitutions.
+- **Placeholders:** none - view-porting steps name the exact source file, target layout, and the exact URL substitutions.
 - **Open verification during exec:** confirm `ReportsPdfGenerator::generate()` tolerates `null` dates (Task 6 Step 1) and the green theme token from `docs/knowledge/sbadmin/` (Task 7 Step 3).

@@ -1,4 +1,4 @@
-# Family Entry Form — Bootstrap Rework, Layout, Validation (Branch 2) Implementation Plan
+# Family Entry Form - Bootstrap Rework, Layout, Validation (Branch 2) Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -7,12 +7,12 @@ system with one scrolling Bootstrap 5.3 form: standard controls, standard
 validation, flattened sector/service panels, and footer buttons that match the app
 button standard.
 
-**Architecture:** Four files change together — the view
+**Architecture:** Four files change together - the view
 (`app/Views/Family/family-modal.php`), its render helper
 (`app/Helpers/family_modal_helper.php`), the page CSS
 (`public/css/familymodal.css`), and the behaviour
 (`public/assets/js/dashboard/manage-family-modal.js`). The view is the contract:
-a new `tests/unit/FamilyModalViewTest.php` renders it in PHPUnit (proved to work —
+a new `tests/unit/FamilyModalViewTest.php` renders it in PHPUnit (proved to work -
 `family_modal_prepare()` defaults every input) and asserts the DOM hooks the JS
 depends on. Each task writes the failing view assertion first, then makes it pass.
 
@@ -30,7 +30,7 @@ MCP for visual verification.
 - **No migrations, no schema change.** Dump stays `accesscardV18.sql`. This branch
   touches no DB.
 - **No jQuery in this file.** `manage-family-modal.js` stays vanilla; it already
-  uses `window.fetch`. Style is ES5-flavoured (`var`, `function`) — match it.
+  uses `window.fetch`. Style is ES5-flavoured (`var`, `function`) - match it.
 - **Bootstrap markup comes from Context7 `/websites/getbootstrap_5_3`**, pinned in
   `docs/knowledge/sources.md:25` to the vendored 5.3.3 copy. Already retrieved for
   this plan: `needs-validation`/`novalidate` + `.invalid-feedback`,
@@ -52,7 +52,7 @@ MCP for visual verification.
   fields by `[name="…"]` and insert a note after the field or its `.js-other-input`.
 - **Preserve the truncation guard.** `members_meta_count` (`:188`) and the
   `_form_end` sentinel (`:406`, MUST stay the last named field in the form).
-- **Deferred to Branch 3 — do not build here:** read-only collapsed member rows,
+- **Deferred to Branch 3 - do not build here:** read-only collapsed member rows,
   member `idPrefix`/label association, "No middle name", the contact-number pattern,
   the age display, the `FamilyAgeEligibility` threshold accessor, and stopping
   `refreshAgeEligibility()` from silently unchecking.
@@ -85,7 +85,7 @@ the unclassed controls only render correctly because of the CSS being deleted.
 
 ---
 
-### Task 1: Remove the wizard — tabs, panes, head summary, redundant headings
+### Task 1: Remove the wizard - tabs, panes, head summary, redundant headings
 
 **Files:**
 - Create: `tests/unit/FamilyModalViewTest.php`
@@ -225,14 +225,14 @@ final class FamilyModalViewTest extends CIUnitTestCase
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `vendor/bin/phpunit --filter FamilyModalViewTest`
-Expected: FAIL — `testRendersOneScrollingFormWithNoStepWizard` fails on
+Expected: FAIL - `testRendersOneScrollingFormWithNoStepWizard` fails on
 `data-family-step-target` still being present.
 
 - [ ] **Step 3: Delete the wizard chrome from the view**
 
 In `app/Views/Family/family-modal.php`:
 
-Delete the `.family-entry-header` block (`:141-145`) entirely — the modal header
+Delete the `.family-entry-header` block (`:141-145`) entirely - the modal header
 already shows the title. Keep the `<div class="family-entry-form" …>` opening tag
 above it.
 
@@ -325,7 +325,7 @@ replace them with one head-validation function that no longer looks up a pane:
 
 Delete `renderHeadSummary()` (`:761-787`), `setSummary()` (`:716-722`),
 `setSummaryList()` (`:724-739`), and `checkedLabels()` (`:708-714`). `escapeHtml()`
-(`:38`) stays — `showFormError()` uses it. Keep `fieldDisplayValue()` for now; it is
+(`:38`) stays - `showFormError()` uses it. Keep `fieldDisplayValue()` for now; it is
 unused after this deletion, so delete it too (`:742-759`) along with the
 `// ---- summary ---` banner comment.
 
@@ -357,21 +357,21 @@ In `initFamilyEntryModal()` delete the step-trigger loop (`:1358-1363`), the
 
 In `public/css/familymodal.css` delete these rules, which now match nothing:
 
-- `:483-489` — the `.modal-footer` and `.family-entry-header` hiding hack.
-- `:506-525` — `.family-entry-header`, `.family-entry-kicker`, `.family-entry-title`.
-- `:527-562` — `.family-entry-steps`, its `.btn` rules, `.family-step-number`.
-- `:580-586` — change the selector list to drop `.family-summary-title`, keeping
+- `:483-489` - the `.modal-footer` and `.family-entry-header` hiding hack.
+- `:506-525` - `.family-entry-header`, `.family-entry-kicker`, `.family-entry-title`.
+- `:527-562` - `.family-entry-steps`, its `.btn` rules, `.family-step-number`.
+- `:580-586` - change the selector list to drop `.family-summary-title`, keeping
   `.family-section-title` (still used by nothing after this task; delete the whole
   rule).
-- `:588-595` — drop `.family-summary-label` from the selector list, keep
+- `:588-595` - drop `.family-summary-label` from the selector list, keep
   `.family-entry-form .form-label`.
-- `:597-611`, `:636-639` — drop `.family-summary-value, .family-summary-list` from
-  the selector lists. **Do not delete the input/select/textarea rules yet — Task 3
+- `:597-611`, `:636-639` - drop `.family-summary-value, .family-summary-list` from
+  the selector lists. **Do not delete the input/select/textarea rules yet - Task 3
   owns that, atomically with adding the Bootstrap classes.**
-- `:641-647` — drop `.family-head-summary` from the selector list, keep
+- `:641-647` - drop `.family-head-summary` from the selector list, keep
   `.family-sector-service`.
-- `:813-824` — `.is-family-entry-modal .family-entry-steps` rules.
-- `:830-849`, `:851-854`, `:871-873` — drop every `.family-summary-*` and
+- `:813-824` - `.is-family-entry-modal .family-entry-steps` rules.
+- `:830-849`, `:851-854`, `:871-873` - drop every `.family-summary-*` and
   `.family-head-summary` selector from these compact-mode lists, keeping the rest.
 
 Keep `.family-entry-content` (`:564-569`); it is now the single scroll region.
@@ -409,7 +409,7 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
 
 **Interfaces:**
 - Consumes: the single-form view from Task 1.
-- Produces: `[data-family-draft-status]` — a `<span>` in the footer that
+- Produces: `[data-family-draft-status]` - a `<span>` in the footer that
   `saveDraftNow(form)` updates. `[data-family-save]`, `[data-family-clear]` keep
   their existing selectors so the JS bindings are untouched.
 
@@ -459,7 +459,7 @@ Append to `tests/unit/FamilyModalViewTest.php`:
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `vendor/bin/phpunit --filter FamilyModalViewTest`
-Expected: FAIL — Save currently renders `hidden` and Close is `btn btn-secondary`.
+Expected: FAIL - Save currently renders `hidden` and Close is `btn btn-secondary`.
 
 - [ ] **Step 3: Rewrite the footer**
 
@@ -486,7 +486,7 @@ geometry.
         </footer>
 ```
 
-Note the `hidden` attribute is gone from Save — with no tabs it is always shown.
+Note the `hidden` attribute is gone from Save - with no tabs it is always shown.
 
 - [ ] **Step 4: Fill the indicator on draft save**
 
@@ -606,7 +606,7 @@ deleted. Splitting this task ships a broken form.
 - Produces: every control in the form carries a Bootstrap class
   (`form-control`, `form-select`, or `form-check-input`). Checkbox markup becomes
   `<div class="form-check"><input class="form-check-input" id="…"><label class="form-check-label" for="…">`,
-  so `input.closest('.family-choice')` in JS resolves to that wrapper — the
+  so `input.closest('.family-choice')` in JS resolves to that wrapper - the
   `.family-choice` class stays on the wrapper as the JS hook.
 
 - [ ] **Step 1: Write the failing test**
@@ -637,12 +637,12 @@ Append to `tests/unit/FamilyModalViewTest.php`:
 
 Note: the test asserts on attribute order, so write the view attributes in the
 order the regex expects (`name` before `class` on the inputs, `name` before
-`class` on the select) or relax the regex — prefer writing the markup to match.
+`class` on the select) or relax the regex - prefer writing the markup to match.
 
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `vendor/bin/phpunit --filter FamilyModalViewTest`
-Expected: FAIL — `qr_control_no` carries no `class` attribute at all.
+Expected: FAIL - `qr_control_no` carries no `class` attribute at all.
 
 - [ ] **Step 3: Class the three unclassed controls**
 
@@ -659,7 +659,7 @@ Address:
                             <input id="<?= esc($fieldPrefix, 'attr') ?>HeadAddress" name="head_address" class="form-control" type="text" value="<?= esc($oldValue('head_address'), 'attr') ?>" minlength="2" required>
 ```
 
-(`data-summary="address"` is dropped — the summary reader it fed was deleted in
+(`data-summary="address"` is dropped - the summary reader it fed was deleted in
 Task 1. Same for `data-summary` on barangay below. The `data-summary` attributes
 inside `family_modal_render_person_fields()` are left alone: Branch 3's closed-row
 rendering will reuse them.)
@@ -679,7 +679,7 @@ services). Give each input a stable id built from its field name and value, so t
 `<template>`'s `__INDEX__` substitution (`js:1104`) rewrites member ids along with
 member names.
 
-Head sectors — replace the `<label class="form-check family-choice…">` block with:
+Head sectors - replace the `<label class="form-check family-choice…">` block with:
 
 ```php
                                                 <?php $choiceId = $fieldPrefix . 'HeadSector' . $sectorId; ?>
@@ -689,10 +689,10 @@ Head sectors — replace the `<label class="form-check family-choice…">` block
                                                 </div>
 ```
 
-Head services — same shape, with `$choiceId = $fieldPrefix . 'HeadService' . $serviceId;`
+Head services - same shape, with `$choiceId = $fieldPrefix . 'HeadService' . $serviceId;`
 and `name="service_ids[]"`.
 
-Member sectors, inside `$renderMemberRow` — the id must carry the row index so
+Member sectors, inside `$renderMemberRow` - the id must carry the row index so
 rows do not collide:
 
 ```php
@@ -721,7 +721,7 @@ In `app/Views/Family/family-modal.php`, the relationship "Other" input:
                 <input class="form-control mt-2 js-other-input d-none" data-other-for="relationship" placeholder="Enter relationship">
 ```
 
-In `manage-family-modal.js`, `setHidden()` (`:32`) is the single toggle point —
+In `manage-family-modal.js`, `setHidden()` (`:32`) is the single toggle point -
 point it at `d-none`:
 
 ```javascript
@@ -737,7 +737,7 @@ and convert each hit; delete the CSS rule at `:1283-1285`.
 
 - [ ] **Step 6: Delete the custom control CSS and scope the theme to custom properties**
 
-In `public/css/familymodal.css`, delete `:597-634` outright — the
+In `public/css/familymodal.css`, delete `:597-634` outright - the
 `input/select/textarea` block, its `:focus` block, the
 `.family-entry-form .is-invalid { … !important }` rule, `.family-field-error`, and
 `.family-entry-form select { cursor: pointer }`. Delete `.family-choice input[type="checkbox"]`
@@ -773,7 +773,7 @@ route to variable-based theming:
 }
 ```
 
-Keep the uppercase rule at the end of the file (`:1334-1338`) — it is Branch 1's,
+Keep the uppercase rule at the end of the file (`:1334-1338`) - it is Branch 1's,
 and its bare-element selectors still match. Keep `.family-choice` (`:687-699`) as
 the layout hook, but drop `display: flex; align-items: center; gap` from it, since
 `.form-check` now owns that layout:
@@ -787,7 +787,7 @@ the layout hook, but drop `display: flex; align-items: center; gap` from it, sin
 }
 ```
 
-Keep `.import-field-error` / `.import-field-warn` (`:1306-1314`) untouched — they
+Keep `.import-field-error` / `.import-field-warn` (`:1306-1314`) untouched - they
 use `!important` on `border-color` and work against `.form-control` unchanged.
 
 - [ ] **Step 7: Run the tests**
@@ -819,7 +819,7 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
 
 Four containers deep becomes two: the section card holds a two-column sector grid
 and a services accordion. Services are deliberately **not** gated behind a sector
-tick — Financial Assistance, Social Welfare Programs, and Emergency / Disaster
+tick - Financial Assistance, Social Welfare Programs, and Emergency / Disaster
 apply regardless of sector, and a person may have no sector at all.
 
 **Files:**
@@ -831,14 +831,14 @@ apply regardless of sector, and a person may have no sector at all.
 **Interfaces:**
 - Consumes: the `form-check` markup from Task 3.
 - Produces:
-  - `$renderSectorGrid(callable $fieldName, array $selectedIds, string $idPrefix): string` — a
+  - `$renderSectorGrid(callable $fieldName, array $selectedIds, string $idPrefix): string` - a
     `.row.row-cols-2` of `.form-check` cells, no scroll container.
-  - `$renderServiceAccordion(callable $fieldName, array $selectedIds, string $accordionId, string $idPrefix): string` —
+  - `$renderServiceAccordion(callable $fieldName, array $selectedIds, string $accordionId, string $idPrefix): string` -
     `.accordion` with one `.accordion-item` per category, `data-bs-parent` omitted so
     several stay open, each `.accordion-collapse` carrying
     `data-service-category` (the hook `refreshAgeEligibility` already reads) and
     `data-family-service-panel`.
-  - `[data-family-service-filter]` — the filter input above each accordion.
+  - `[data-family-service-filter]` - the filter input above each accordion.
   - JS: `refreshServiceCategories(scopeEl)` replaces `refreshSuggestions(scopeEl)`,
     same call sites, same single argument.
 
@@ -909,7 +909,7 @@ Append to `tests/unit/FamilyModalViewTest.php`:
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `vendor/bin/phpunit --filter FamilyModalViewTest`
-Expected: FAIL — `family-option-box` is still in the markup.
+Expected: FAIL - `family-option-box` is still in the markup.
 
 - [ ] **Step 3: Add the two render closures to the view**
 
@@ -1133,7 +1133,7 @@ Rename every `refreshSuggestions(` call site to `refreshServiceCategories(`:
 `:879` (end of `refreshAgeEligibility`), `:1423`, `:1432`.
 
 `refreshAgeEligibility()` (`:830-880`) needs one change: it read the category from
-`input.closest('[data-service-category]')`, which still resolves — the attribute
+`input.closest('[data-service-category]')`, which still resolves - the attribute
 moved from `.family-option-group` to `.accordion-collapse`, and the inputs are
 inside it. No edit needed. Verify by reading the selector at `:851`.
 
@@ -1229,7 +1229,7 @@ init beside `refreshAllAgeEligibility(root)`.
 In `public/css/familymodal.css` delete `.family-option-box` (`:656-663`), the whole
 `.family-suggested*` block including the keyframes (`:714-759`), the compact
 `.family-option-box` override (`:861-864`), and `.family-option-box--sm` (`:1250`).
-Keep `.family-option-group*` only if a selector still uses it after this task —
+Keep `.family-option-group*` only if a selector still uses it after this task -
 grep first (`grep -rn "family-option-group" app public`) and delete the rules if
 nothing matches. Add one rule so a long accordion cannot outgrow the modal:
 
@@ -1266,7 +1266,7 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
 
 ---
 
-### Task 5: Bootstrap validation — needs-validation, invalid-feedback, QR status addon
+### Task 5: Bootstrap validation - needs-validation, invalid-feedback, QR status addon
 
 **Files:**
 - Modify: `app/Views/Family/family-modal.php` (form tag, QR field)
@@ -1281,9 +1281,9 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
     and the control carries `aria-describedby="<fieldId>Feedback"`. Fields with no id
     (member rows, until Branch 3) get the div with `data-family-field-error` only;
     `setFieldError()` finds it by that attribute either way.
-  - `MEMBER_REQUIRED_FIELDS` — JS constant mirroring `firstIncompleteMember()`:
+  - `MEMBER_REQUIRED_FIELDS` - JS constant mirroring `firstIncompleteMember()`:
     `['birthday', 'sex', 'civilstatus', 'education', 'job', 'salary']`.
-  - `[data-family-qr-status]` — the QR input-group addon element.
+  - `[data-family-qr-status]` - the QR input-group addon element.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1326,7 +1326,7 @@ Note `assertStringNotContainsString('family-field-error', …)` also matches
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `vendor/bin/phpunit --filter FamilyModalViewTest`
-Expected: FAIL — the `<form>` has no `needs-validation` class.
+Expected: FAIL - the `<form>` has no `needs-validation` class.
 
 - [ ] **Step 3: Opt the form into Bootstrap validation**
 
@@ -1337,7 +1337,7 @@ In `app/Views/Family/family-modal.php`:
 ```
 
 `novalidate` suppresses the browser's own bubbles so Bootstrap's feedback styling
-is what the worker sees. It is not load-bearing for the submit hang — removing the
+is what the worker sees. It is not load-bearing for the submit hang - removing the
 tabs handled that in Task 1.
 
 - [ ] **Step 4: Emit a feedback div per field in the helper**
@@ -1375,7 +1375,7 @@ then, after the `<?php endif; ?>` that closes the select/input branch:
 Bootstrap only shows `.invalid-feedback` next to an `.is-invalid` control, so an
 empty div renders as nothing.
 
-Add the same feedback div by hand to the four fields the helper does not render —
+Add the same feedback div by hand to the four fields the helper does not render -
 QR (inside the input group, see Step 5), address, barangay, and the member
 relationship select:
 
@@ -1414,7 +1414,7 @@ group (Bootstrap 5.3 validation docs).
 
 - [ ] **Step 6: Point setFieldError at the Bootstrap feedback element**
 
-Replace `setFieldError()` (`js:265-289`). It keeps its logic — it now writes into
+Replace `setFieldError()` (`js:265-289`). It keeps its logic - it now writes into
 the server-rendered div instead of creating a `.family-field-error`:
 
 ```javascript
@@ -1644,7 +1644,7 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
 
 ---
 
-### Task 6: Set as Head — confirm, then show the result
+### Task 6: Set as Head - confirm, then show the result
 
 Under tabs this happened across a tab boundary and was effectively invisible. On
 one scrolling page it happens in front of the worker.
@@ -1797,7 +1797,7 @@ With the Playwright MCP: navigate to `http://localhost:8090`, log in as
 
 Clear the QR field and press Save. Expected: focus lands on the QR field with a
 visible message under it, and the modal does not sit silently. This is the specific
-regression Branch 2 exists to fix — today it hangs with no feedback.
+regression Branch 2 exists to fix - today it hangs with no feedback.
 
 Then type into the head fields and confirm "Draft saved" appears in the footer.
 
@@ -1813,7 +1813,7 @@ overflow.
 
 Open an existing record from Manage Records. Assert the head's Sectors and Programs
 block renders **collapsed** (edit mode), expands on click, and that every dropdown
-still shows its stored value — Branch 1's round-trip guarantee must survive the
+still shows its stored value - Branch 1's round-trip guarantee must survive the
 markup change.
 
 - [ ] **Step 7: Verify the import-fix flow**

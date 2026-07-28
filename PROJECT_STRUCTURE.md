@@ -11,76 +11,76 @@ Lookups, Audit, Admin, Employee) is self-contained and easy to navigate. Routes 
 
 ### Controllers (`app/Controllers/`)
 
-- `Auth/AuthController.php` — login, logout, and session keep-alive.
-- `Workspace/Home.php` — role-based dashboard routing and page dispatch for both
+- `Auth/AuthController.php` - login, logout, and session keep-alive.
+- `Workspace/Home.php` - role-based dashboard routing and page dispatch for both
   admin and employee shells. Page rendering is delegated to
   `app/Libraries/DashboardPageBuilder.php`; this controller only decides which
   page/role to show. Uses `HomeRoleAccessTrait` for session/role helpers.
-- `Accounts/AccountController.php` — Developer-only staff account creation and
+- `Accounts/AccountController.php` - Developer-only staff account creation and
   enable/disable. Employee accounts are stored as `User` role to match the SQL dump.
-- `Families/FamilyController.php` — validates and saves head/member records to
+- `Families/FamilyController.php` - validates and saves head/member records to
   `member`, selected services to `member_services`, and audit logs to `audit_trails`.
-- `Families/FamilyImportController.php` — Excel template download and queued
+- `Families/FamilyImportController.php` - Excel template download and queued
   bulk import (form, submission, status polling).
-- `Families/FamilyDataTableController.php` — server-side DataTables endpoint for
+- `Families/FamilyDataTableController.php` - server-side DataTables endpoint for
   Manage Records; row/envelope shaping delegated to `FamilyDataTablePresenter`.
-- `Families/FamilyRequestContext.php` — trait with the shared access guards,
+- `Families/FamilyRequestContext.php` - trait with the shared access guards,
   admin/employee route detection, and JSON/modal error helpers for the three
   Families controllers.
-- `Lookups/SectorController.php`, `Lookups/ServiceController.php` — create/update/
+- `Lookups/SectorController.php`, `Lookups/ServiceController.php` - create/update/
   archive/restore/delete mutations for the `sector` and `services` lookup tables.
   These back the live `admin/sectors` and `admin/services` management screens.
-- `Admin/DistributionController.php` — Admin/Developer-only batch open/close
+- `Admin/DistributionController.php` - Admin/Developer-only batch open/close
   (aid type is chosen when a batch is opened) and distribution void. Serves
   `admin/batches` and `admin/distributions` (+ `admin/batches/open|close`,
   `admin/distributions/void/(:num)`), rendered via
   `DashboardPageBuilder::renderAdminPage()` in the shared `Admin/layout.php` shell.
-- `Admin/AidTypesController.php` — Admin/Developer-only aid-type CRUD on the
+- `Admin/AidTypesController.php` - Admin/Developer-only aid-type CRUD on the
   `admin/aidtypes` Reference Data page (+ `admin/aidtypes/create|archive|
   restore|delete`), same admin shell.
-- `Admin/ReportsController.php` — overall distribution reports (combined totals +
+- `Admin/ReportsController.php` - overall distribution reports (combined totals +
   per-kiosk drilldown + PDF export), batch-scoped only (no date-range filter).
   Serves `admin/reports` and `admin/reports/pdf`, same admin shell.
-- `Scanner/ScanController.php` — kiosk-only one-action scan flow: `scanner/scan`
+- `Scanner/ScanController.php` - kiosk-only one-action scan flow: `scanner/scan`
   (scan = log: `POST scanner/log` resolves the family, guards one handout per
   family per batch, and records the head with today's date against the open
   batch's aid type), `scanner/performance` (self-scoped stats page),
   `scanner/stats` (JSON poll, 5s). Rendered
   in the green kiosk shell (`Scanner/kiosk-layout.php`), not the admin/dashboard
   shell. The former `Scanner\ManageController` and `Scanner\ReportsController`
-  (and `scanner/manage`, `scanner/reports`, `scanner/setting` routes) are removed —
+  (and `scanner/manage`, `scanner/reports`, `scanner/setting` routes) are removed -
   that surface moved to `Admin\DistributionController`/`Admin\ReportsController`.
-- `BaseController.php`, `HomeRoleAccessTrait.php`, `Concerns/` — cross-cutting base
+- `BaseController.php`, `HomeRoleAccessTrait.php`, `Concerns/` - cross-cutting base
   class and shared traits.
 
 ### Models (`app/Models/`)
 
-- `Auth/UserModel.php` — user login, password hashing, and account creation.
-- `Families/MemberModel.php` — head of family and family member records.
-- `Families/MemberServiceModel.php` — rows in the `member_services` table.
-- `Families/FamilyFormOptionsModel.php` — form dropdown options from `sector`,
+- `Auth/UserModel.php` - user login, password hashing, and account creation.
+- `Families/MemberModel.php` - head of family and family member records.
+- `Families/MemberServiceModel.php` - rows in the `member_services` table.
+- `Families/FamilyFormOptionsModel.php` - form dropdown options from `sector`,
   `services`, and the exact allowed table values.
-- `Audit/AuditTrailsModel.php` — audit trail inserts and audit list queries.
-- `Lookups/SectorModel.php` — the `sector` lookup table.
-- `Lookups/ServiceModel.php` — the `services` lookup table: admin CRUD/archival and
+- `Audit/AuditTrailsModel.php` - audit trail inserts and audit list queries.
+- `Lookups/SectorModel.php` - the `sector` lookup table.
+- `Lookups/ServiceModel.php` - the `services` lookup table: admin CRUD/archival and
   per-member/sector eligibility lookups (the single model for `services`).
-- `DashboardModel.php`, `SearchModel.php`, `ViewLayoutModel.php` — shared
+- `DashboardModel.php`, `SearchModel.php`, `ViewLayoutModel.php` - shared
   cross-feature query/data-assembly helpers (kept in the root namespace).
 - `Scanner/AidTypeModel.php`, `Scanner/DistributionBatchModel.php`,
   `Scanner/AidDistributionModel.php`, `Scanner/AidStatsModel.php`,
-  `Scanner/QrControlModel.php` — aid types, the single-open-batch invariant
+  `Scanner/QrControlModel.php` - aid types, the single-open-batch invariant
   (`distribution_batch.aid_type_id` binds an aid type to the batch at open),
   handout logging, and batch-scoped/per-kiosk performance stats.
 
 ### Shared libraries (`app/Libraries/`)
 
-- `DashboardPageBuilder.php` — assembles all dashboard view data; the main entry
+- `DashboardPageBuilder.php` - assembles all dashboard view data; the main entry
   point when debugging what a page renders.
-- `FamilyDataTablePresenter.php` — shapes Manage Records rows into the
+- `FamilyDataTablePresenter.php` - shapes Manage Records rows into the
   DataTables cell map and JSON envelope.
-- `FamilyModalDataBuilder.php` — assembles the family Add/Update modal and
+- `FamilyModalDataBuilder.php` - assembles the family Add/Update modal and
   detail-fragment view data (head prefill, member rows, label maps).
-- `SessionAuditLogger.php`, `RoleAccess.php`, `SectorIds.php` — auth/audit and
+- `SessionAuditLogger.php`, `RoleAccess.php`, `SectorIds.php` - auth/audit and
   domain helpers used across slices.
 
 ## Views
@@ -100,7 +100,7 @@ Lookups, Audit, Admin, Employee) is self-contained and easy to navigate. Routes 
   Green-themed, full-viewport kiosk shell (no admin sidebar/topbar) used only by
   `scan.php` and `performance.php`. The old scanner dashboard shell
   (`Scanner/layout.php`) and its back-office views (`manage.php`, `reports.php`,
-  `setting.php`) are deleted — that surface now lives in the admin shell above.
+  `setting.php`) are deleted - that surface now lives in the admin shell above.
 
 - `app/Views/Employee/layout.php`  
   Employee workspace shell.

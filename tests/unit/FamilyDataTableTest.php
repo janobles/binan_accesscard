@@ -124,7 +124,7 @@ final class FamilyDataTableTest extends TestCase
         $this->assertStringContainsString('return esc(ControlNumber::format($controlNo));', $presenter);
         $this->assertStringNotContainsString('badge bg-light text-dark border fw-semibold fs-6 text-nowrap', $presenter);
         $this->assertStringNotContainsString(" . '#'", $presenter);
-        $this->assertStringContainsString('&mdash;', $presenter);
+        $this->assertStringContainsString('-', $presenter);
     }
 
     public function testControllerUsesWhitelistedDataTablesParametersWithoutDateFilter(): void

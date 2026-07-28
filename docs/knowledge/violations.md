@@ -2,7 +2,7 @@
 
 Canonical punch-list for code-mess items (dead code, non-conforming views,
 redundant helpers, boundary leaks). GitHub issues track QA/feature work, not
-code mess — this file is the single home to avoid drifting lists.
+code mess - this file is the single home to avoid drifting lists.
 
 Maintenance: cleanup PRs tick items `[x]` + `*(Fixed: <PR/commit>)*`. New
 violations spotted mid-task get appended immediately, verified first.
@@ -12,37 +12,37 @@ unchecked item was already moved to issue #9 (UX decision, not code mess).
 
 ## Findings
 
-- [x] 🟠 Major: `app/Controllers/Families/FamilyController.php:1` — 1723-line
+- [x] 🟠 Major: `app/Controllers/Families/FamilyController.php:1` - 1723-line
   controller mixes family CRUD, Excel import, QR control-number handling, and
   modal partial rendering. Candidates for extraction into libraries per the
   controllers-decide/libraries-build boundary (see
   `binan-conventions/mvc-boundaries.md`).
   *(Fixed: split into FamilyController (~1000 lines, CRUD) +
   FamilyImportController + FamilyDataTableController + FamilyRequestContext
-  trait, with FamilyDataTablePresenter and FamilyModalDataBuilder libraries —
+  trait, with FamilyDataTablePresenter and FamilyModalDataBuilder libraries -
   a8edb59, b11cbe7, 6f8562c, f9d7df7, refactor/mvc-cleanup)*
 - [x] 🟡 Minor: `app/Views/Family/list.php` (filter dropdowns; markup since moved
-  to `app/Views/Family/list-body.php`) — inline `style="max-height: 14rem;"`
+  to `app/Views/Family/list-body.php`) - inline `style="max-height: 14rem;"`
   on dropdown menu (also line 69). Move to a page-CSS rule in
   `public/css/managerecord.css` or a utility class.
-  *(Fixed: `.family-filter-field .dropdown-menu` rule in managerecord.css — 05556ae)*
-- [x] 🟡 Minor: `app/Views/Accounts/account-form-modal.php:44` — inline
+  *(Fixed: `.family-filter-field .dropdown-menu` rule in managerecord.css - 05556ae)*
+- [x] 🟡 Minor: `app/Views/Accounts/account-form-modal.php:44` - inline
   `style="border:0;background:transparent;padding:0 0 0.5rem;"` on header;
   belongs in `public/css/accounts.css` next to the other
   `.account-card-header` rules.
-  *(Fixed: `.edit-account-modal > .account-card-header` rule in accounts.css — 05556ae)*
-- [x] ⚪ Cleanup: `app/Controllers/Families/FamilyController.php:824` —
+  *(Fixed: `.edit-account-modal > .account-card-header` rule in accounts.css - 05556ae)*
+- [x] ⚪ Cleanup: `app/Controllers/Families/FamilyController.php:824` -
   `shapeExistingMembers()` is defined but never called anywhere in the repo
   (verified by grep). Dead code; remove.
-  *(Fixed: removed; splitAddressBarangay also moved to MemberFieldNormalizer — 65173fd)*
-- [x] 🔵 Needs-decision: `app/Libraries/DashboardPageBuilder.php:1` — CLAUDE.md
+  *(Fixed: removed; splitAddressBarangay also moved to MemberFieldNormalizer - 65173fd)*
+- [x] 🔵 Needs-decision: `app/Libraries/DashboardPageBuilder.php:1` - CLAUDE.md
   says "respect existing strict-type conventions" but **zero** files under
   `app/` declare `declare(strict_types=1)` (typed signatures are used, the
   declare is not). Decide: adopt the declare repo-wide (one mechanical PR) or
   reword the convention to "typed signatures, no strict_types declare".
   `php-practices/idioms.md` documents current reality.
   *(Fixed: reworded CLAUDE.md convention to typed-signatures-only, refactor/mvc-cleanup)*
-- [ ] 🟠 Major: `app/Views/components/dashboard_sidebar.php:1` — sidebar exists
+- [ ] 🟠 Major: `app/Views/components/dashboard_sidebar.php:1` - sidebar exists
   three times: this component (used only by `Admin/layout.php:83`, all links
   hardcoded to `admin/*` despite the "role-aware" doc comment) plus hand-rolled
   inline copies in `Employee/layout.php:41` and `Viewer/layout.php:48`. Also
@@ -51,7 +51,7 @@ unchecked item was already moved to issue #9 (UX decision, not code mess).
   relocate to `Partials/` per the views-bootstrap.md taxonomy (it is a page
   fragment, not a props-only component). Cross-role regression surface; own
   branch.
-- [x] 🟠 Major: `app/Controllers/Families/FamilyController.php:862` — when a
+- [x] 🟠 Major: `app/Controllers/Families/FamilyController.php:862` - when a
   member posted no sector checkbox, `memberPayloadFromArray()` silently copied
   the head's sectors, contradicting the per-person sector controls and allowing
   an age-ineligible classification to be stored on the member.

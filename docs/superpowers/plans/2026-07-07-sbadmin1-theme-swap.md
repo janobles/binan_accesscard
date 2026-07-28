@@ -4,15 +4,15 @@
 
 **Goal:** Replace the homegrown `sb-admin-adapter.css` dashboard shell with the genuine vendored SB Admin 1 theme (startbootstrap-sb-admin v7, Bootstrap 5) at pure upstream defaults.
 
-**Architecture:** Vendor upstream compiled `styles.css` + `scripts.js` as static files under `public/assets/sb-admin/` (repo convention — no npm/composer for frontend). Swap the `head` CSS manifest entry from `bootstrap.min.css` to `styles.css` (upstream bundles Bootstrap), migrate the 4 dashboard layout shells and shared sidebar to SB Admin 1's `#layoutSidenav` frame, delete the adapter, and strip drop shadows (SB Admin 1 uses flat borders).
+**Architecture:** Vendor upstream compiled `styles.css` + `scripts.js` as static files under `public/assets/sb-admin/` (repo convention - no npm/composer for frontend). Swap the `head` CSS manifest entry from `bootstrap.min.css` to `styles.css` (upstream bundles Bootstrap), migrate the 4 dashboard layout shells and shared sidebar to SB Admin 1's `#layoutSidenav` frame, delete the adapter, and strip drop shadows (SB Admin 1 uses flat borders).
 
-**Tech Stack:** CodeIgniter 4 views/helpers, SB Admin 1 v7.x (Bootstrap 5), bootstrap-icons (kept — no Font Awesome).
+**Tech Stack:** CodeIgniter 4 views/helpers, SB Admin 1 v7.x (Bootstrap 5), bootstrap-icons (kept - no Font Awesome).
 
 **Spec:** `docs/superpowers/specs/2026-07-07-sbadmin1-theme-swap-design.md`
 
 ## Global Constraints
 
-- No migrations, no schema changes, no composer/npm frontend packages — assets are committed static files under `public/assets/`.
+- No migrations, no schema changes, no composer/npm frontend packages - assets are committed static files under `public/assets/`.
 - Pure upstream SB Admin 1 defaults: dark sidenav, no Biñan green re-skin, no new custom chrome CSS.
 - Icons stay `bi-*` (bootstrap-icons). Do NOT vendor Font Awesome.
 - Page CSS files keep all functional rules; remove ONLY elevation drop shadows. KEEP focus-ring `box-shadow` rules (accessibility) and `box-shadow: none` overrides.
@@ -77,7 +77,7 @@ git add public/assets/sb-admin && git commit -m "chore(assets): vendor SB Admin 
 
 **Interfaces:**
 - Consumes: `assets/sb-admin/css/styles.css`, `assets/sb-admin/js/scripts.js` (Task 1).
-- Produces: `asset_styles('head')` returns styles.css first; `asset_scripts('core')` includes scripts.js. Layouts (Tasks 3–5) rely on these — no layout changes needed to load the theme.
+- Produces: `asset_styles('head')` returns styles.css first; `asset_scripts('core')` includes scripts.js. Layouts (Tasks 3-5) rely on these - no layout changes needed to load the theme.
 
 - [ ] **Step 1: Swap `head` context CSS**
 
@@ -99,7 +99,7 @@ to:
 ],
 ```
 
-(`head` is consumed only by the 4 dashboard shells; `login` context keeps its own `assets/bootstrap/css/bootstrap.min.css` — leave it.)
+(`head` is consumed only by the 4 dashboard shells; `login` context keeps its own `assets/bootstrap/css/bootstrap.min.css` - leave it.)
 
 - [ ] **Step 2: Remove adapter from role contexts**
 
@@ -150,7 +150,7 @@ git add -A && git commit -m "feat(theme): load SB Admin 1 styles/scripts, drop h
 
 - [ ] **Step 1: Rewrite `dashboard_sidebar.php`**
 
-Keep the PHP defaults block (lines 1–23) verbatim. Replace ALL markup below it with the SB Admin 1 sidenav. Brand moves to the topnav (Task 3 Step 2), so the sidebar has no brand/toggle anymore:
+Keep the PHP defaults block (lines 1-23) verbatim. Replace ALL markup below it with the SB Admin 1 sidenav. Brand moves to the topnav (Task 3 Step 2), so the sidebar has no brand/toggle anymore:
 
 ```php
 <?php if ($sidebarScannerOnly): ?>
@@ -192,7 +192,7 @@ Keep the PHP defaults block (lines 1–23) verbatim. Replace ALL markup below it
 <?php endif; ?>
 ```
 
-Also update the doc-comment variable list: `$sidebarUserUrl` is no longer used here (brand moved to topnav) — note that in the comment but keep accepting/defaulting it so callers don't break.
+Also update the doc-comment variable list: `$sidebarUserUrl` is no longer used here (brand moved to topnav) - note that in the comment but keep accepting/defaulting it so callers don't break.
 
 - [ ] **Step 2: Create `app/Views/Partials/dashboard-topnav.php`**
 
@@ -233,7 +233,7 @@ if (isset($accountSettingsMode)) {
 Run: `php -l app/Views/components/dashboard_sidebar.php && php -l app/Views/Partials/dashboard-topnav.php`
 Expected: `No syntax errors detected` twice.
 
-(Pages will render broken until Task 4 migrates the layouts — that's expected mid-branch; do NOT try to keep old and new frames working simultaneously.)
+(Pages will render broken until Task 4 migrates the layouts - that's expected mid-branch; do NOT try to keep old and new frames working simultaneously.)
 
 - [ ] **Step 4: Commit**
 
@@ -285,7 +285,7 @@ Each of the 4 layouts currently has this frame (identical pattern; only the side
 
 - [ ] **Step 1: Migrate `app/Views/Admin/layout.php`**
 
-Replace the opening frame (`<body>` through the end of the old `<nav class="navbar ...topbar...">...</nav>` block, i.e. lines 66–91) with:
+Replace the opening frame (`<body>` through the end of the old `<nav class="navbar ...topbar...">...</nav>` block, i.e. lines 66-91) with:
 
 ```php
 <body class="sb-nav-fixed">
@@ -315,9 +315,9 @@ Then change the `<main>` opener (old line 93) to:
             <h1 class="mt-4" id="dashboard-page-title"><?= esc($pageTitle) ?></h1>
 ```
 
-(The page-title `<h1>` moves from the old topbar into the content column, SB Admin 1 style. Keep the `id` — do not drop it.)
+(The page-title `<h1>` moves from the old topbar into the content column, SB Admin 1 style. Keep the `id` - do not drop it.)
 
-And replace the frame closers (old lines 263–266):
+And replace the frame closers (old lines 263-266):
 
 ```php
             </main>
@@ -334,7 +334,7 @@ with:
 </div>
 ```
 
-(one wrapper div fewer: old frame had `#wrapper > #content-wrapper > #content`; new frame is `#layoutSidenav > #layoutSidenav_content` — `</main>` closes, then `#layoutSidenav_content`, then `#layoutSidenav`.)
+(one wrapper div fewer: old frame had `#wrapper > #content-wrapper > #content`; new frame is `#layoutSidenav > #layoutSidenav_content` - `</main>` closes, then `#layoutSidenav_content`, then `#layoutSidenav`.)
 
 Everything between `<main>` and `</main>` (flash alerts, `$activePage` switch, sub-view calls) stays byte-identical. Modals and script tags after the frame stay where they are.
 
@@ -347,11 +347,11 @@ Expected: no syntax errors; first grep ≥ 4; second grep = 0.
 
 Same transformation, with per-layout specifics:
 
-- `app/Views/Employee/layout.php` — brand URL: `site_url('employee/dashboard')`; sidebar args unchanged from its current `view('components/dashboard_sidebar', ...)` call.
-- `app/Views/Viewer/layout.php` — brand URL: `site_url('viewer/dashboard')`; sidebar args unchanged.
-- `app/Views/Scanner/layout.php` — brand URL: `site_url('scanner/scan')`; sidebar args unchanged (`'sidebarScannerOnly' => true` variant passes `activeTab`). If a layout passes `accountSettingsUrl`/`accountSettingsMode` to `topbar-account-menu` today, pass the same keys through to `Partials/dashboard-topnav`.
+- `app/Views/Employee/layout.php` - brand URL: `site_url('employee/dashboard')`; sidebar args unchanged from its current `view('components/dashboard_sidebar', ...)` call.
+- `app/Views/Viewer/layout.php` - brand URL: `site_url('viewer/dashboard')`; sidebar args unchanged.
+- `app/Views/Scanner/layout.php` - brand URL: `site_url('scanner/scan')`; sidebar args unchanged (`'sidebarScannerOnly' => true` variant passes `activeTab`). If a layout passes `accountSettingsUrl`/`accountSettingsMode` to `topbar-account-menu` today, pass the same keys through to `Partials/dashboard-topnav`.
 
-Read each file first — the topbar/account-menu argument lists differ slightly per role; preserve exactly what each currently passes.
+Read each file first - the topbar/account-menu argument lists differ slightly per role; preserve exactly what each currently passes.
 
 - [ ] **Step 4: Verify all four + tests**
 
@@ -384,14 +384,14 @@ git add app/Views && git commit -m "feat(theme): migrate dashboard shells to SB 
 Delete ONLY these `box-shadow` declaration lines (elevation shadows):
 `login.css:50`, `lookupmanagement.css:251`, `lookupmanagement.css:336`, `accounts.css:9`, `accounts.css:414`, `familymodal.css:95`, `familymodal.css:899`, `familymodal.css:1267`, `session-timeout.css:20`.
 
-KEEP these (focus rings / resets — do not touch): `login.css:97`, `login.css:123`, `scanner-scan.css:6`, `familymodal.css:619`, `lookupmanagement.css:266`, `accounts.css:106`.
+KEEP these (focus rings / resets - do not touch): `login.css:97`, `login.css:123`, `scanner-scan.css:6`, `familymodal.css:619`, `lookupmanagement.css:266`, `accounts.css:106`.
 
 Verify: `grep -rn 'box-shadow' public/css/ | grep -v '0 0 0' | grep -v 'none'`
 Expected: no output.
 
 - [ ] **Step 2: Strip Bootstrap shadow utility classes from views**
 
-In the 6 view files listed above, remove `shadow-sm`, `shadow`, and `shadow-lg` tokens from `class="..."` attributes (~30 occurrences; e.g. `class="stat-card ... card shadow-sm h-100 py-2"` → `class="stat-card ... card h-100 py-2"`). Cards keep their default Bootstrap border — that's the SB Admin 1 flat look.
+In the 6 view files listed above, remove `shadow-sm`, `shadow`, and `shadow-lg` tokens from `class="..."` attributes (~30 occurrences; e.g. `class="stat-card ... card shadow-sm h-100 py-2"` → `class="stat-card ... card h-100 py-2"`). Cards keep their default Bootstrap border - that's the SB Admin 1 flat look.
 
 Verify: `grep -rn 'shadow' app/Views | grep -v '\.css'`
 Expected: no output.
@@ -399,7 +399,7 @@ Expected: no output.
 - [ ] **Step 3: Remove `bindDashboardSidebar()` from view-interactions.js**
 
 Upstream `scripts.js` now handles the toggle (`#sidebarToggle` click → `sb-sidenav-toggled` on body, persisted in localStorage). In `public/assets/js/dashboard/view-interactions.js`:
-- Delete the whole `bindDashboardSidebar` function (lines 21–94).
+- Delete the whole `bindDashboardSidebar` function (lines 21-94).
 - Delete its call `bindDashboardSidebar();` (line 227).
 - Update the file's header comment: drop any sidebar mention.
 
@@ -419,7 +419,7 @@ Expected: phpunit green, `ROUTES-OK`, `CLEAN`.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add -A && git commit -m "feat(theme): flat SB Admin 1 look — drop shadows and legacy sidebar toggle"
+git add -A && git commit -m "feat(theme): flat SB Admin 1 look - drop shadows and legacy sidebar toggle"
 ```
 
 ---
@@ -428,7 +428,7 @@ git add -A && git commit -m "feat(theme): flat SB Admin 1 look — drop shadows 
 
 - [ ] **Step 1: Serve and report**
 
-Start `php spark serve` (use the intl-enabled `php`, not XAMPP's — see repo memory) and tell the user the branch is ready for visual triage. Checklist for the user (executor cannot see rendered pages):
+Start `php spark serve` (use the intl-enabled `php`, not XAMPP's - see repo memory) and tell the user the branch is ready for visual triage. Checklist for the user (executor cannot see rendered pages):
 
 - login → role redirect (login page should look unchanged)
 - admin, employee, viewer dashboards: dark sidenav, dark topnav with brand, flat cards

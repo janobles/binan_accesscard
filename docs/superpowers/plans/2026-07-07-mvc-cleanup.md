@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Tick all five `docs/knowledge/violations.md` items — split the 1750-line FamilyController into three controllers + two libraries, move raw queries into models, delete dead code, move inline styles to CSS, reword the strict_types convention — with zero behavior/URL/schema change.
+**Goal:** Tick all five `docs/knowledge/violations.md` items - split the 1750-line FamilyController into three controllers + two libraries, move raw queries into models, delete dead code, move inline styles to CSS, reword the strict_types convention - with zero behavior/URL/schema change.
 
 **Architecture:** Pure extraction. Public method bodies move verbatim from `FamilyController` into `FamilyImportController`, `FamilyDataTableController`, and libraries `FamilyDataTablePresenter` / `FamilyModalDataBuilder`; shared guards move to a `FamilyRequestContext` trait. `Routes.php` retargets the same URLs.
 
@@ -13,9 +13,9 @@
 ## Global Constraints
 
 - No migrations; schema source of truth is the SQL dump. No new tables/columns.
-- Every family mutation keeps its `Audit/AuditTrailsModel` write — verify per task.
+- Every family mutation keeps its `Audit/AuditTrailsModel` write - verify per task.
 - URLs unchanged; only controller targets in `app/Config/Routes.php` change.
-- JSON response shapes for `dataTable` and `importStatus` are frontend contracts — relocate, never alter.
+- JSON response shapes for `dataTable` and `importStatus` are frontend contracts - relocate, never alter.
 - Baseline: 87 tests, 281 assertions, 5 skipped, 0 failures. Every commit ≥ this.
 - After each task: `vendor/bin/phpunit` green AND `php spark routes` exits clean.
 - Method bodies move **verbatim** (copy-paste, adjust only `$this->request`/`$this->response` access where a library needs them injected). No opportunistic rewrites.
@@ -71,7 +71,7 @@ final class LookupModelUsageTest extends CIUnitTestCase
 }
 ```
 
-- [ ] **Step 2: Run to verify fail** — `vendor/bin/phpunit --filter LookupModelUsageTest` → FAIL (methods missing).
+- [ ] **Step 2: Run to verify fail** - `vendor/bin/phpunit --filter LookupModelUsageTest` → FAIL (methods missing).
 
 - [ ] **Step 3: Implement.** In `ServiceModel` add (mirroring the controller code at `ServiceController.php:181-188` and `:208-219`):
 
@@ -138,8 +138,8 @@ if ($saved) {
 
 delete private `serviceIsUsed()` and replace its call site(s) with `$model->isInUse($serviceId)` (grep `serviceIsUsed(` for call sites). In `SectorController`: delete private `sectorIsUsed()`, replace call site(s) with `$model->isInUse($sectorId)`; remove the now-unused `SectorIds` import from the controller **only if** grep shows no other use in that file.
 
-- [ ] **Step 4: Verify** — `vendor/bin/phpunit` green (88+ tests), `php spark routes` clean.
-- [ ] **Step 5: Commit** — `refactor(lookups): move usage/insert queries from controllers to models`
+- [ ] **Step 4: Verify** - `vendor/bin/phpunit` green (88+ tests), `php spark routes` clean.
+- [ ] **Step 5: Commit** - `refactor(lookups): move usage/insert queries from controllers to models`
 
 ---
 
@@ -173,8 +173,8 @@ In `list.php` lines 47 and 69 drop ` style="max-height: 14rem;"` from both `drop
 
 In `account-form-modal.php:44` drop the `style="..."` attribute.
 
-- [ ] **Step 3: Verify** — `grep -n 'style="' app/Views/Family/list.php app/Views/Accounts/account-form-modal.php` returns nothing; phpunit green; load Manage Records + account modal in browser, dropdowns still scroll at 14rem, header unchanged.
-- [ ] **Step 4: Commit** — `refactor(views): move inline styles to page CSS`
+- [ ] **Step 3: Verify** - `grep -n 'style="' app/Views/Family/list.php app/Views/Accounts/account-form-modal.php` returns nothing; phpunit green; load Manage Records + account modal in browser, dropdowns still scroll at 14rem, header unchanged.
+- [ ] **Step 4: Commit** - `refactor(views): move inline styles to page CSS`
 
 ---
 
@@ -194,12 +194,12 @@ to
 
 ```
 - **PHP 8.2+.** Typed signatures everywhere; no `declare(strict_types=1)`
-  (matches CI4 appstarter — see `docs/knowledge/php-practices/idioms.md`).
+  (matches CI4 appstarter - see `docs/knowledge/php-practices/idioms.md`).
   Respect existing namespace conventions.
 ```
 
 - [ ] **Step 2:** Tick violations.md item 5 `[x]` + `*(Fixed: reworded convention, this commit)*`.
-- [ ] **Step 3: Commit** — `docs: resolve strict_types convention as typed-signatures-only`
+- [ ] **Step 3: Commit** - `docs: resolve strict_types convention as typed-signatures-only`
 
 ---
 
@@ -273,7 +273,7 @@ trait FamilyRequestContext
 ```
 
 - [ ] **Step 4:** `vendor/bin/phpunit` green; `php spark routes` clean.
-- [ ] **Step 5: Commit** — `refactor(families): extract FamilyRequestContext trait`
+- [ ] **Step 5: Commit** - `refactor(families): extract FamilyRequestContext trait`
 
 ---
 
@@ -287,7 +287,7 @@ trait FamilyRequestContext
 
 **Interfaces:**
 - Consumes: `FamilyRequestContext` trait (Task 4).
-- Produces: `FamilyImportController` with public `downloadTemplate()`, `importForm(): string|RedirectResponse`, `import()`, `importStatus(int $jobId)` — bodies verbatim from `FamilyController.php:222-419`.
+- Produces: `FamilyImportController` with public `downloadTemplate()`, `importForm(): string|RedirectResponse`, `import()`, `importStatus(int $jobId)` - bodies verbatim from `FamilyController.php:222-419`.
 
 - [ ] **Step 1: Write failing route test**
 
@@ -328,7 +328,7 @@ final class FamilyRoutesTest extends CIUnitTestCase
 }
 ```
 
-(Adjust the key format after first failing run if CI4 normalizes route keys differently — the assertion intent is fixed: same URLs, new handlers. dataTable keys will fail until Task 6; mark those two lines in with the others now and expect this test fully green only after Task 6 — alternatively split assertions across the two tasks. **Decision: include only import + unchanged rows now; append the dataTable rows in Task 6 Step 1.**)
+(Adjust the key format after first failing run if CI4 normalizes route keys differently - the assertion intent is fixed: same URLs, new handlers. dataTable keys will fail until Task 6; mark those two lines in with the others now and expect this test fully green only after Task 6 - alternatively split assertions across the two tasks. **Decision: include only import + unchanged rows now; append the dataTable rows in Task 6 Step 1.**)
 
 - [ ] **Step 2:** Run → FAIL (`FamilyImportController` unknown).
 - [ ] **Step 3:** Create controller:
@@ -355,15 +355,15 @@ class FamilyImportController extends BaseController
 {
     use FamilyRequestContext;
 
-    // downloadTemplate(), importForm(), import(), importStatus() — bodies
+    // downloadTemplate(), importForm(), import(), importStatus() - bodies
     // moved VERBATIM from FamilyController.php:222-419.
 }
 ```
 
-Move the four methods, plus any private helper used **only** by them (check with grep before moving: e.g. `auditSystemError` is used by other actions — if shared, keep it in FamilyController and duplicate-check; if it turns out shared by both controllers, move it into the trait instead). Update `Routes.php` lines 40-43 and 97-100 to `Families\FamilyImportController::...` (same paths). Remove imports from FamilyController that no longer resolve (`FamilyExcelTemplate`, `JobQueueModel`, `Xlsx`) only if unused after the move.
+Move the four methods, plus any private helper used **only** by them (check with grep before moving: e.g. `auditSystemError` is used by other actions - if shared, keep it in FamilyController and duplicate-check; if it turns out shared by both controllers, move it into the trait instead). Update `Routes.php` lines 40-43 and 97-100 to `Families\FamilyImportController::...` (same paths). Remove imports from FamilyController that no longer resolve (`FamilyExcelTemplate`, `JobQueueModel`, `Xlsx`) only if unused after the move.
 
 - [ ] **Step 4:** `vendor/bin/phpunit` green; `php spark routes` clean; manual: import form loads, template downloads.
-- [ ] **Step 5: Commit** — `refactor(families): extract FamilyImportController`
+- [ ] **Step 5: Commit** - `refactor(families): extract FamilyImportController`
 
 ---
 
@@ -377,14 +377,14 @@ Move the four methods, plus any private helper used **only** by them (check with
 - Test: `tests/unit/FamilyDataTablePresenterTest.php` (create); extend `FamilyRoutesTest` with the dataTable rows from Task 5.
 
 **Interfaces:**
-- Consumes: `FamilyRequestContext` (for route base), `SearchModel`, `SectorModel`, QR control numbers (see how `dataTable()` at `:1322` fetches them — keep the same collaborators).
+- Consumes: `FamilyRequestContext` (for route base), `SearchModel`, `SectorModel`, QR control numbers (see how `dataTable()` at `:1322` fetches them - keep the same collaborators).
 - Produces:
-  - `FamilyDataTableController::dataTable()` — same JSON envelope (`draw`, `recordsTotal`, `recordsFiltered`, `data`, optional `error`) via presenter.
-  - `FamilyDataTablePresenter` (constructor: `__construct(private string $routeBase, private bool $allMembersScope, ...)` — final shape decided from what the moved helpers actually need; no request/session access inside the library, values passed in) with public methods:
+  - `FamilyDataTableController::dataTable()` - same JSON envelope (`draw`, `recordsTotal`, `recordsFiltered`, `data`, optional `error`) via presenter.
+  - `FamilyDataTablePresenter` (constructor: `__construct(private string $routeBase, private bool $allMembersScope, ...)` - final shape decided from what the moved helpers actually need; no request/session access inside the library, values passed in) with public methods:
     - `row(array $row, array $sectorShortcodes, array $controlNumbers = []): array` (from `dataTableRow`)
     - `payload(int $draw, int $total, int $filtered, array $data, ?string $error = null): array` (from `dataTablePayload`)
-    - private: `qrCell`, `displayName`, `actions` (from `dataTableQrCell`, `dataTableDisplayName`, `dataTableActions` — HTML output byte-identical).
-  - Ordering/shortcode helpers (`dataTableOrder`, `dataTableSectorShortcodes`, `dataTableRouteBase`) stay in the controller — they read the request/session.
+    - private: `qrCell`, `displayName`, `actions` (from `dataTableQrCell`, `dataTableDisplayName`, `dataTableActions` - HTML output byte-identical).
+  - Ordering/shortcode helpers (`dataTableOrder`, `dataTableSectorShortcodes`, `dataTableRouteBase`) stay in the controller - they read the request/session.
 
 - [ ] **Step 1: Write failing presenter test**
 
@@ -415,7 +415,7 @@ final class FamilyDataTablePresenterTest extends CIUnitTestCase
 }
 ```
 
-(Adjust constructor args in the test to the final signature chosen in Step 3 — then keep test and class in sync.)
+(Adjust constructor args in the test to the final signature chosen in Step 3 - then keep test and class in sync.)
 
 - [ ] **Step 2:** Run → FAIL (class missing). Also append dataTable rows to `FamilyRoutesTest` (Task 5 list) → FAIL.
 - [ ] **Step 3:** Create presenter (move `dataTableRow`, `dataTableQrCell`, `dataTableDisplayName`, `dataTableActions`, `dataTablePayload` verbatim; replace `$this->currentRouteBase()` / request reads inside moved code with constructor-injected values). Create controller:
@@ -431,7 +431,7 @@ use App\Libraries\FamilyDataTablePresenter;
 /**
  * Server-side DataTables endpoint for the Manage Records family list
  * (admin, employee, viewer route groups). JSON envelope is consumed by
- * assets/js DataTables init — shape must not change.
+ * assets/js DataTables init - shape must not change.
  */
 class FamilyDataTableController extends BaseController
 {
@@ -447,7 +447,7 @@ class FamilyDataTableController extends BaseController
 Retarget `Routes.php` lines 39, 96, 123 to `Families\FamilyDataTableController::dataTable`. Delete moved code from FamilyController.
 
 - [ ] **Step 4:** phpunit green; `spark routes` clean; manual: Manage Records table loads for admin + employee + viewer, search/sort/paging work, QR cell + action buttons render identically (compare a row's HTML before/after via browser dev tools).
-- [ ] **Step 5: Commit** — `refactor(families): extract dataTable controller and presenter`
+- [ ] **Step 5: Commit** - `refactor(families): extract dataTable controller and presenter`
 
 ---
 
@@ -492,10 +492,10 @@ final class FamilyModalDataBuilderTest extends CIUnitTestCase
 }
 ```
 
-(Before writing, read `shapeModalMembers` at `:1725` and assert the **actual** key it sets — fix the assertion to the real key, don't chain `??`.)
+(Before writing, read `shapeModalMembers` at `:1725` and assert the **actual** key it sets - fix the assertion to the real key, don't chain `??`.)
 
 - [ ] **Step 2:** Run → FAIL. **Step 3:** Create builder, move the four methods verbatim, update `renderFamilyModal` call sites. **Step 4:** phpunit green; manual: view/edit family modals open for admin + employee, create form loads, saving an edit still writes a `FAMILY_UPDATED` audit row.
-- [ ] **Step 5: Commit** — `refactor(families): extract FamilyModalDataBuilder`
+- [ ] **Step 5: Commit** - `refactor(families): extract FamilyModalDataBuilder`
 
 ---
 
@@ -507,7 +507,7 @@ final class FamilyModalDataBuilderTest extends CIUnitTestCase
 - Test: `tests/unit/FamilyRequestShaperTest.php` (create)
 
 **Interfaces:**
-- Produces: `FamilyRequestShaper` (stateless; request values passed in as arrays/scalars — no `$this->request` inside) with public methods, bodies verbatim from FamilyController:
+- Produces: `FamilyRequestShaper` (stateless; request values passed in as arrays/scalars - no `$this->request` inside) with public methods, bodies verbatim from FamilyController:
   - `memberPayloadFromArray(array $member): array` (from `:1236`)
   - `hasMemberData(array $member): bool` (`:1264`)
   - `moneyOrNull(mixed $value): ?float` (`:1274`)
@@ -517,8 +517,8 @@ final class FamilyModalDataBuilderTest extends CIUnitTestCase
   - `combineAddressBarangay(mixed $address, mixed $barangay): ?string` (`:1120`)
   - `splitAddressBarangay(mixed $combined): array` (`:1133`)
   - `rulesForEntryType(string $entryType): array` (`:1198`)
-- Stays in controller (request-bound): `memberPayload(string $prefix)` (reads POST — now delegates to `memberPayloadFromArray`), `entryType()`, `submissionWasTruncated()`, `splitHeadAndMembers()`.
-- Delete: `shapeExistingMembers()` (`:824`) — dead, grep-verified.
+- Stays in controller (request-bound): `memberPayload(string $prefix)` (reads POST - now delegates to `memberPayloadFromArray`), `entryType()`, `submissionWasTruncated()`, `splitHeadAndMembers()`.
+- Delete: `shapeExistingMembers()` (`:824`) - dead, grep-verified.
 
 - [ ] **Step 1: Write failing test**
 
@@ -562,11 +562,11 @@ final class FamilyRequestShaperTest extends CIUnitTestCase
 }
 ```
 
-(Same rule as Task 7: read the real bodies first — `moneyOrNull` may not strip commas, `splitAddressBarangay` return keys must be asserted as implemented. Pin **current** behavior, not wished-for behavior.)
+(Same rule as Task 7: read the real bodies first - `moneyOrNull` may not strip commas, `splitAddressBarangay` return keys must be asserted as implemented. Pin **current** behavior, not wished-for behavior.)
 
 - [ ] **Step 2:** Run → FAIL. **Step 3:** Create library, move methods verbatim, controller delegates via a single `private FamilyRequestShaper $shaper` (instantiate in `initController` or lazily). Delete `shapeExistingMembers()`. Re-grep `shapeExistingMembers` repo-wide → zero hits.
 - [ ] **Step 4:** phpunit green; manual: family create (head + 1 member + services) and update succeed, audit rows written for both.
-- [ ] **Step 5: Commit** — `refactor(families): extract FamilyRequestShaper, drop dead shapeExistingMembers`
+- [ ] **Step 5: Commit** - `refactor(families): extract FamilyRequestShaper, drop dead shapeExistingMembers`
 
 ---
 
@@ -577,9 +577,9 @@ final class FamilyRequestShaperTest extends CIUnitTestCase
 - Modify: `docs/knowledge/binan-conventions/mvc-boundaries.md` (new controllers/libraries as the worked example of controllers-decide/libraries-build; fix stale FamilyController references)
 - Modify: `PROJECT_STRUCTURE.md` (add the 6 new files, adjust FamilyController description/line counts)
 
-- [ ] **Step 1:** Grep docs for stale references: `grep -rn "FamilyController" docs/ PROJECT_STRUCTURE.md CLAUDE.md` — update every hit that describes the old shape.
+- [ ] **Step 1:** Grep docs for stale references: `grep -rn "FamilyController" docs/ PROJECT_STRUCTURE.md CLAUDE.md` - update every hit that describes the old shape.
 - [ ] **Step 2:** Tick violations.md items 1-4 `[x]` + `*(Fixed: <commit>)*` each.
-- [ ] **Step 3:** phpunit green (final count recorded in PR body). Commit — `docs(knowledge): record FamilyController split, tick violations`
+- [ ] **Step 3:** phpunit green (final count recorded in PR body). Commit - `docs(knowledge): record FamilyController split, tick violations`
 
 ---
 

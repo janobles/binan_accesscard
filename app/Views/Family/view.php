@@ -12,7 +12,7 @@ $familyInitials = static function (string $name): string {
     $parts = array_values(array_filter($parts, static fn ($p) => $p !== ''));
 
     if ($parts === []) {
-        return '–';
+        return '-';
     }
 
     $first = mb_substr($parts[0], 0, 1);

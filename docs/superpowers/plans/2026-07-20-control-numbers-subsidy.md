@@ -1,10 +1,10 @@
-# Control Numbers page + Aid→Subsidy relabel — Implementation Plan
+# Control Numbers page + Aid→Subsidy relabel - Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Rebuild the "Generate Cards" page as a comprehensive **Control Numbers** page (Batch + Single-card modes, control-number range filter, live preview table, searchable head picker, blue Generate buttons), and relabel the user-facing word "aid" → "subsidy" across the app.
 
-**Architecture:** Extend `MemberModel::headsForCards()` (the single source both the preview table and the printed PDF read from) with control-number range, name-keyword, and limit filters plus a count method. Add one JSON endpoint (`admin/cards/heads`) that serves both the Batch preview and the Single-card autocomplete. Rebuild `Cards/batch_form.php` as a two-mode Bootstrap-grid view with vanilla-JS mode switching and a debounced preview fetch. Relabel is display-text-only: views, code-built labels, flash/error strings, and audit-trail strings — never schema, routes, or PHP identifiers.
+**Architecture:** Extend `MemberModel::headsForCards()` (the single source both the preview table and the printed PDF read from) with control-number range, name-keyword, and limit filters plus a count method. Add one JSON endpoint (`admin/cards/heads`) that serves both the Batch preview and the Single-card autocomplete. Rebuild `Cards/batch_form.php` as a two-mode Bootstrap-grid view with vanilla-JS mode switching and a debounced preview fetch. Relabel is display-text-only: views, code-built labels, flash/error strings, and audit-trail strings - never schema, routes, or PHP identifiers.
 
 **Tech Stack:** CodeIgniter 4, PHP 8.2+, Bootstrap 5 (SB Admin 1 theme), PHPUnit, Playwright (MCP) for UI verification.
 
@@ -13,7 +13,7 @@
 - **No migrations / no schema changes.** SQL dump (`accesscardV18.sql`) is the source of truth. Do not alter tables, columns, or enum values.
 - **Match the SQL dump** for column/enum/role names. Employee accounts are `User` role.
 - **PHP 8.2+**, typed signatures everywhere; **no** `declare(strict_types=1)` (matches CI4 appstarter).
-- **Every family mutation writes an audit trail** — do not bypass; batch card generation writes exactly ONE audit row.
+- **Every family mutation writes an audit trail** - do not bypass; batch card generation writes exactly ONE audit row.
 - **Controllers decide, libraries build.** Dashboard page data lives in `DashboardPageBuilder`; the Cards controller only routes/streams.
 - **Comments** are plain-language for human readers; no em dashes, no AI-slop.
 - **Aid→Subsidy is display text only.** Never change: table names (`aid_distribution`, `aid_type`), column/enum values, route URLs (`admin/aidtypes`, `admin/distribution`), or PHP identifiers (`AidStatsModel`, `AidDistributionModel`, `$aid*`, `getAid*`, DOM ids like `addAidTypeModal`/`aidTypeName`).
@@ -25,17 +25,17 @@
 
 ## File Structure
 
-**Part A — Control Numbers page**
-- Modify `app/Models/Families/MemberModel.php` — range/keyword/limit filters on `headsForCards()`; new `countHeadsForCards()`.
-- Modify `app/Controllers/Cards/QrCardController.php` — new `heads()` JSON endpoint; `batch()` reads range, drops sector.
-- Modify `app/Config/Routes.php` — add `GET admin/cards/heads`.
-- Modify `app/Helpers/ui_helper.php` — add `'generate'` button role.
-- Modify `docs/knowledge/binan-conventions/ui-design-system.md` — document the `generate` role.
-- Rewrite `app/Views/Cards/batch_form.php` — two-mode grid view, preview table, autocomplete, JS.
-- Modify `app/Views/components/dashboard_sidebar.php` — label "Generate Cards" → "Control Numbers".
+**Part A - Control Numbers page**
+- Modify `app/Models/Families/MemberModel.php` - range/keyword/limit filters on `headsForCards()`; new `countHeadsForCards()`.
+- Modify `app/Controllers/Cards/QrCardController.php` - new `heads()` JSON endpoint; `batch()` reads range, drops sector.
+- Modify `app/Config/Routes.php` - add `GET admin/cards/heads`.
+- Modify `app/Helpers/ui_helper.php` - add `'generate'` button role.
+- Modify `docs/knowledge/binan-conventions/ui-design-system.md` - document the `generate` role.
+- Rewrite `app/Views/Cards/batch_form.php` - two-mode grid view, preview table, autocomplete, JS.
+- Modify `app/Views/components/dashboard_sidebar.php` - label "Generate Cards" → "Control Numbers".
 - Tests: `tests/unit/MemberHeadsForCardsTest.php`, `tests/unit/QrCardControllerTest.php`.
 
-**Part B — Aid→Subsidy relabel** (display text only)
+**Part B - Aid→Subsidy relabel** (display text only)
 - Views: `app/Views/Admin/layout.php`, `distribution-distributions-body.php`, `distribution-batches-body.php`, `batch-create-modal.php`, `aidtypes-body.php`, `aidtype-create-modal.php`, `reports-body.php`, `Family/family-modal.php`, `Scanner/scan.php`, `Scanner/pdf/report.php`, `components/dashboard_sidebar.php`.
 - Code-built strings: `app/Controllers/Admin/ReportsController.php`, `app/Controllers/Admin/DistributionController.php`, `app/Controllers/Scanner/ScanController.php`.
 - JS: `public/assets/js/dashboard/scanner-reports.js`.
@@ -51,13 +51,13 @@
 **Interfaces:**
 - Consumes: nothing new.
 - Produces:
-  - `MemberModel::headsForCards(array $filter = []): array` — now also honors
+  - `MemberModel::headsForCards(array $filter = []): array` - now also honors
     `controlFrom` (int, inclusive lower bound on `qr_control.control_no`),
     `controlTo` (int, inclusive upper bound), `keyword` (string, name LIKE across
     lastname/firstname/middlename), `limit` (int > 0, row cap). Existing keys
     (`memberID`, `barangay`, `sectorID`) unchanged. Row shape unchanged:
     `['memberID'=>int, 'controlNo'=>int, 'fullname'=>string, 'barangay'=>string]`.
-  - `MemberModel::countHeadsForCards(array $filter = []): int` — total matches for
+  - `MemberModel::countHeadsForCards(array $filter = []): int` - total matches for
     the same filter, ignoring `limit`.
 
 - [ ] **Step 1: Write the failing tests**
@@ -138,7 +138,7 @@ Append to `tests/unit/MemberHeadsForCardsTest.php` (inside the class):
 - [ ] **Step 2: Run the tests to verify they fail**
 
 Run: `vendor/bin/phpunit --filter MemberHeadsForCards`
-Expected: FAIL — `countHeadsForCards` not defined (fatal) / new assertions error. (If the suite reports "skipped" for lack of DB, run against the local MySQL DB per CLAUDE.md so the assertions actually execute.)
+Expected: FAIL - `countHeadsForCards` not defined (fatal) / new assertions error. (If the suite reports "skipped" for lack of DB, run against the local MySQL DB per CLAUDE.md so the assertions actually execute.)
 
 - [ ] **Step 3: Refactor `headsForCards()` to share a filtered builder**
 
@@ -340,7 +340,7 @@ Append to `tests/unit/QrCardControllerTest.php` (inside the class):
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `vendor/bin/phpunit --filter QrCardController`
-Expected: FAIL — `heads(` not found in source; route assertion fails.
+Expected: FAIL - `heads(` not found in source; route assertion fails.
 
 - [ ] **Step 3: Add the route**
 
@@ -461,7 +461,7 @@ Append to `tests/unit/QrCardControllerTest.php`:
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `vendor/bin/phpunit --filter QrCardController`
-Expected: FAIL — `from`/`controlFrom` absent; `sectorID` still present.
+Expected: FAIL - `from`/`controlFrom` absent; `sectorID` still present.
 
 - [ ] **Step 3: Update `batch()` filter assembly**
 
@@ -505,7 +505,7 @@ Claude-Session: https://claude.ai/code/session_013u6vLadUgaJ61755C2UW65"
 **Files:**
 - Modify: `app/Helpers/ui_helper.php:20-26`
 - Modify: `docs/knowledge/binan-conventions/ui-design-system.md`
-- Test: `tests/unit/QrCardControllerTest.php` (helper is trivial; assert via a tiny new test file is overkill — fold a source assert here)
+- Test: `tests/unit/QrCardControllerTest.php` (helper is trivial; assert via a tiny new test file is overkill - fold a source assert here)
 
 **Interfaces:**
 - Produces: `btn('generate')` → `'btn btn-primary'` (blue). Used by the Control
@@ -545,7 +545,7 @@ final class UiHelperTest extends CIUnitTestCase
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `vendor/bin/phpunit --filter UiHelper`
-Expected: FAIL — `InvalidArgumentException: Unknown button role: generate`.
+Expected: FAIL - `InvalidArgumentException: Unknown button role: generate`.
 
 - [ ] **Step 3: Add the role**
 
@@ -757,8 +757,8 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
             const rows = data.rows || [];
 
             if (count === 0) {
-                countEl.textContent = 'No heads match — adjust filters.';
-                bodyEl.innerHTML = '<tr><td colspan="3" class="sector-empty-state">No heads match — adjust filters.</td></tr>';
+                countEl.textContent = 'No heads match - adjust filters.';
+                bodyEl.innerHTML = '<tr><td colspan="3" class="sector-empty-state">No heads match - adjust filters.</td></tr>';
                 batchBtn.disabled = true;
                 return;
             }
@@ -900,7 +900,7 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
 </script>
 ```
 
-Note: the `keyword` filter matches names, not control numbers, so the exact-control lookup narrows by typing the number into `q` and then matches on `controlNo` client-side. This works because `q` shorter than a real name still returns the small candidate set; the client picks the exact `controlNo`. If a control number returns no name match (heads whose name does not contain the digits), fall back is covered in Task 9 verification — if it proves flaky, the plan's open item is to add a dedicated `control=` param to `heads()`. Prefer verifying first.
+Note: the `keyword` filter matches names, not control numbers, so the exact-control lookup narrows by typing the number into `q` and then matches on `controlNo` client-side. This works because `q` shorter than a real name still returns the small candidate set; the client picks the exact `controlNo`. If a control number returns no name match (heads whose name does not contain the digits), fall back is covered in Task 9 verification - if it proves flaky, the plan's open item is to add a dedicated `control=` param to `heads()`. Prefer verifying first.
 
 - [ ] **Step 2: Sanity-check the view parses**
 
@@ -949,7 +949,7 @@ Claude-Session: https://claude.ai/code/session_013u6vLadUgaJ61755C2UW65"
 
 ---
 
-## Task 7: Aid→Subsidy — views
+## Task 7: Aid→Subsidy - views
 
 **Files (display text only; keep ids/urls/enums):**
 - `app/Views/components/dashboard_sidebar.php:31`
@@ -970,27 +970,27 @@ Claude-Session: https://claude.ai/code/session_013u6vLadUgaJ61755C2UW65"
 
 | File:line | From → To |
 |---|---|
-| `dashboard_sidebar.php:31` | `Aid Distribution` → `Subsidy Distribution` |
+| `dashboard_sidebar.php:31` | `Subsidy Distribution` → `Subsidy Distribution` |
 | `layout.php:142` | `'label' => 'Received Aid',` → `'label' => 'Received Subsidy',` |
 | `layout.php:148` | `'label' => 'Aid Coverage',` → `'label' => 'Subsidy Coverage',` |
-| `layout.php:257` | `'title' => 'Aid Types',` → `'title' => 'Subsidy Types',` |
-| `distribution-distributions-body.php:31` | `<th>Aid Type</th>` → `<th>Subsidy Type</th>` |
+| `layout.php:257` | `'title' => 'Subsidy Types',` → `'title' => 'Subsidy Types',` |
+| `distribution-distributions-body.php:31` | `<th>Subsidy Type</th>` → `<th>Subsidy Type</th>` |
 | `distribution-distributions-body.php:62` | `No aid distributions logged yet.` → `No subsidy distributions logged yet.` |
-| `distribution-batches-body.php:39` | `<th>Aid Type</th>` → `<th>Subsidy Type</th>` |
-| `batch-create-modal.php:28` | `Choose an aid type...` → `Choose a subsidy type...` |
-| `aidtypes-body.php:11` | ` Add Aid Type` → ` Add Subsidy Type` (button text only; keep `data-bs-target="#addAidTypeModal"`) |
-| `aidtypes-body.php:27` | `aria-label="Aid type actions"` → `aria-label="Subsidy type actions"` |
-| `aidtypes-body.php:55` | `No aid types defined.` → `No subsidy types defined.` |
-| `aidtype-create-modal.php:9` | `>Add Aid Type<` → `>Add Subsidy Type<` (keep `id="addAidTypeModalLabel"`) |
-| `aidtype-create-modal.php:21` | `>Add Aid Type<` → `>Add Subsidy Type<` |
-| `reports-body.php:29` | `>Aid Distribution<` → `>Subsidy Distribution<` (heading text after the icon) |
+| `distribution-batches-body.php:39` | `<th>Subsidy Type</th>` → `<th>Subsidy Type</th>` |
+| `batch-create-modal.php:28` | `Choose a subsidy type...` → `Choose a subsidy type...` |
+| `aidtypes-body.php:11` | ` Add Subsidy Type` → ` Add Subsidy Type` (button text only; keep `data-bs-target="#addAidTypeModal"`) |
+| `aidtypes-body.php:27` | `aria-label="Subsidy type actions"` → `aria-label="Subsidy type actions"` |
+| `aidtypes-body.php:55` | `No subsidy types defined.` → `No subsidy types defined.` |
+| `aidtype-create-modal.php:9` | `>Add Subsidy Type<` → `>Add Subsidy Type<` (keep `id="addAidTypeModalLabel"`) |
+| `aidtype-create-modal.php:21` | `>Add Subsidy Type<` → `>Add Subsidy Type<` |
+| `reports-body.php:29` | `>Subsidy Distribution<` → `>Subsidy Distribution<` (heading text after the icon) |
 | `family-modal.php:202` | `Locked: aid already recorded under this number.` → `Locked: subsidy already recorded under this number.` |
 | `scan.php:83` | `Aid History` → `Subsidy History` |
 | `scan.php:163` | `No aid received yet.` → `No subsidy received yet.` |
-| `pdf/report.php:11` | `<h1>Aid Distribution Report</h1>` → `<h1>Subsidy Distribution Report</h1>` |
+| `pdf/report.php:11` | `<h1>Subsidy Distribution Report</h1>` → `<h1>Subsidy Distribution Report</h1>` |
 | `pdf/report.php:17` | `Received aid<br>` → `Received subsidy<br>` |
-| `pdf/report.php:57` | `<h2>Handouts by aid type</h2>` → `<h2>Handouts by subsidy type</h2>` |
-| `pdf/report.php:59` | `<th>Aid Type</th>` → `<th>Subsidy Type</th>` |
+| `pdf/report.php:57` | `<h2>Handouts by subsidy type</h2>` → `<h2>Handouts by subsidy type</h2>` |
+| `pdf/report.php:59` | `<th>Subsidy Type</th>` → `<th>Subsidy Type</th>` |
 
 Do NOT change the comment at `reports-body.php:52-54` (not user-facing).
 
@@ -1011,7 +1011,7 @@ Claude-Session: https://claude.ai/code/session_013u6vLadUgaJ61755C2UW65"
 
 ---
 
-## Task 8: Aid→Subsidy — controllers, filename, JS, audit strings
+## Task 8: Aid→Subsidy - controllers, filename, JS, audit strings
 
 **Files:**
 - `app/Controllers/Admin/ReportsController.php:85`
@@ -1026,11 +1026,11 @@ Claude-Session: https://claude.ai/code/session_013u6vLadUgaJ61755C2UW65"
 | File:line | From → To |
 |---|---|
 | `ReportsController.php:85` | `'aid-report-'` → `'subsidy-report-'` (downloaded PDF filename) |
-| `DistributionController.php:49` | `'Voided aid distribution #' . $id,` → `'Voided subsidy distribution #' . $id,` |
-| `DistributionController.php:66` | `'Choose an aid type for this batch.'` → `'Choose a subsidy type for this batch.'` |
-| `ScanController.php:271` | `'Logged aid distribution',` → `'Logged subsidy distribution',` |
-| `ScanController.php:281` | `'Failed to log the aid distribution.'` → `'Failed to log the subsidy distribution.'` |
-| `ScanController.php:287` | `'Failed to log the aid distribution.'` → `'Failed to log the subsidy distribution.'` |
+| `DistributionController.php:49` | `'Voided subsidy distribution #' . $id,` → `'Voided subsidy distribution #' . $id,` |
+| `DistributionController.php:66` | `'Choose a subsidy type for this batch.'` → `'Choose a subsidy type for this batch.'` |
+| `ScanController.php:271` | `'Logged subsidy distribution',` → `'Logged subsidy distribution',` |
+| `ScanController.php:281` | `'Failed to log the subsidy distribution.'` → `'Failed to log the subsidy distribution.'` |
+| `ScanController.php:287` | `'Failed to log the subsidy distribution.'` → `'Failed to log the subsidy distribution.'` |
 | `scanner-reports.js:55` | `labels: ['Received aid', 'Still waiting'],` → `labels: ['Received subsidy', 'Still waiting'],` |
 
 - [ ] **Step 2: Confirm no user-facing "aid" string literals remain**
@@ -1071,9 +1071,9 @@ Expected: `admin/cards`, `admin/cards/generate`, `admin/cards/card/(:num)`, `adm
 
 - [ ] **Step 3: Start the dev server (if down)**
 
-Run: `PHP_CLI_SERVER_WORKERS=8 php spark serve --port 8090` (use the intl-enabled `php`, not XAMPP's — see the local-dev memory).
+Run: `PHP_CLI_SERVER_WORKERS=8 php spark serve --port 8090` (use the intl-enabled `php`, not XAMPP's - see the local-dev memory).
 
-- [ ] **Step 4: Playwright — Control Numbers page**
+- [ ] **Step 4: Playwright - Control Numbers page**
 
 Log in (developer / developer123), navigate to `admin/cards`. Verify at desktop and 390px:
 - Sidebar link reads **Control Numbers**.
@@ -1083,7 +1083,7 @@ Log in (developer / developer123), navigate to `admin/cards`. Verify at desktop 
 - Single card: typing ≥2 chars shows the head autocomplete; picking one then Generate downloads a single card. Typing an exact control number then Generate downloads that head's card; a bogus number shows a clear message (no silent 404).
 - Layout matches the Manage Records house style (toolbar/controls above the card, grid stacks cleanly at 390px).
 
-- [ ] **Step 5: Playwright — Subsidy relabel sweep**
+- [ ] **Step 5: Playwright - Subsidy relabel sweep**
 
 Verify "Subsidy" (not "Aid") reads correctly and no URL 404s on:
 - Sidebar heading **Subsidy Distribution**.
@@ -1107,5 +1107,5 @@ Note pass/fail per checkpoint. Fix any failure in the owning task's file, re-run
 
 ## Open decisions (resolved)
 
-1. **Preview count:** dedicated `countHeadsForCards()` (chosen — clearer than folding a count into the row method).
+1. **Preview count:** dedicated `countHeadsForCards()` (chosen - clearer than folding a count into the row method).
 2. **`headsForCards` `sectorID` param:** kept (no caller passes it now; removal is unneeded churn). The batch controller simply stops reading `sectorID` (Task 3).

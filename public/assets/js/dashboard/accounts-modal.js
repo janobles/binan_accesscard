@@ -10,7 +10,7 @@
 //
 // Connected to:
 //   - dashboard-modal-loader.js : window.registerDashboardModal()
-//   - Views  : Admin/accounts.php — .js-account-status-form buttons,
+//   - Views  : Admin/accounts.php - .js-account-status-form buttons,
 //              .js-open-account-edit-modal buttons
 //   - Backend: POST admin/accounts/disable|enable
 //              (Accounts\AccountController::disableEmployee, ::enableEmployee)
@@ -92,49 +92,46 @@
         }
     });
 
+    function checkedValues(panel, selector) {
+        return Array.from(panel.querySelectorAll(selector + ':checked')).map(function (input) {
+            return input.value;
+        });
+    }
+
     function filterAccountRows(root) {
         var panel = root || document;
         var searchInput = panel.querySelector('[data-account-search]');
-        // Level and status are radio groups inside the Filters dropdown panel
+        // Level and status are checkbox groups inside the Filters dropdown panel
         // (Admin/accounts.php); records-filter-panel.js renders their pills.
-        var levelFilter = panel.querySelector('[data-account-level-filter]:checked');
-        var statusFilter = panel.querySelector('[data-account-status-filter]:checked');
+        // Nothing checked in a group means that group filters nothing.
+        var levels = checkedValues(panel, '[data-account-level-filter]');
+        var statuses = checkedValues(panel, '[data-account-status-filter]');
 
         if (!searchInput) {
             return;
         }
 
+        var pageSearch = panel.querySelector('[data-account-page-search]');
         var keyword = searchInput.value.trim().toLowerCase();
-        var level = levelFilter ? levelFilter.value : '';
-        var status = statusFilter ? statusFilter.value : '';
+        var pageKeyword = pageSearch ? pageSearch.value.trim().toLowerCase() : '';
         var rows = Array.from(panel.querySelectorAll('[data-account-row]'));
-        var visibleCount = 0;
 
+        // Rows are only marked here; table-paginate.js owns row.hidden so the
+        // filtered set can be paged. The footer count comes from it too.
         rows.forEach(function (row) {
             var username = row.dataset.accountUsername || '';
             var role = row.dataset.accountRole || '';
             var rowStatus = row.dataset.accountStatus || '';
             var matchesKeyword = keyword === '' || username.indexOf(keyword) !== -1;
-            var matchesLevel = level === '' || role === level;
-            var matchesStatus = status === '' || rowStatus === status;
-            var shouldShow = matchesKeyword && matchesLevel && matchesStatus;
+            var matchesPageKeyword = pageKeyword === '' || row.textContent.toLowerCase().indexOf(pageKeyword) !== -1;
+            var matchesLevel = levels.length === 0 || levels.indexOf(role) !== -1;
+            var matchesStatus = statuses.length === 0 || statuses.indexOf(rowStatus) !== -1;
 
-            row.hidden = !shouldShow;
-
-            if (shouldShow) {
-                visibleCount += 1;
-            }
+            row.dataset.filtered = (matchesKeyword && matchesPageKeyword && matchesLevel && matchesStatus) ? '' : 'out';
         });
 
-        var emptyRow = panel.querySelector('[data-account-filter-empty]');
-
-        if (emptyRow) {
-            emptyRow.hidden = visibleCount !== 0;
-        }
-
-        var countLabel = document.getElementById('accountsCount');
-        if (countLabel) {
-            countLabel.textContent = 'Showing ' + visibleCount + ' account' + (visibleCount !== 1 ? 's' : '');
+        if (typeof window.refreshTablePagination === 'function') {
+            window.refreshTablePagination('accounts', true);
         }
     }
 
@@ -149,7 +146,7 @@
     }
 
     document.addEventListener('input', function (event) {
-        if (!event.target.matches('[data-account-search]')) {
+        if (!event.target.matches('[data-account-search], [data-account-page-search]')) {
             return;
         }
 
@@ -172,17 +169,15 @@
         }
 
         var panel = button.closest('[data-account-management]') || document;
-        var searchInput = panel.querySelector('[data-account-search]');
+        panel.querySelectorAll('[data-account-search], [data-account-page-search]').forEach(function (input) {
+            input.value = '';
+        });
 
-        if (searchInput) {
-            searchInput.value = '';
-        }
-
-        // Re-check each group's "All" radio; the bubbling change event lets
+        // Uncheck every filter box; the bubbling change event lets
         // records-filter-panel.js clear the pills.
-        panel.querySelectorAll('[data-account-level-filter][data-records-default], [data-account-status-filter][data-records-default]').forEach(function (radio) {
-            radio.checked = true;
-            radio.dispatchEvent(new Event('change', { bubbles: true }));
+        panel.querySelectorAll('[data-account-level-filter]:checked, [data-account-status-filter]:checked').forEach(function (box) {
+            box.checked = false;
+            box.dispatchEvent(new Event('change', { bubbles: true }));
         });
 
         filterAccountRows(panel);

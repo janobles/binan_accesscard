@@ -76,8 +76,7 @@ $serviceFooter = ($totalRows ?? 0) > 0 ? view('components/table_footer', [
     'totalRows' => $totalRows,
     'page' => $page,
     'totalPages' => $totalPages,
-    'prevUrl' => $servicePageUrl(max(1, $page - 1)),
-    'nextUrl' => $servicePageUrl(min($totalPages, $page + 1)),
+    'pageUrl' => $servicePageUrl,
 ]) : null;
 ?>
 <?= view('components/card', [

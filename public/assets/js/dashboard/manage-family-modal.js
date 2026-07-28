@@ -500,12 +500,12 @@
     }
 
     // Shown when the server reports a max_input_vars cutoff (code FORM_TRUNCATED):
-    // nothing was saved, but the draft holds everything. Both buttons just dismiss —
+    // nothing was saved, but the draft holds everything. Both buttons just dismiss -
     // the modal stays open with the data intact either way.
     function askTruncationNotice(form) {
         return askModalDialog(form, {
             title: 'Form too large to send',
-            message: 'There were too many entries to send all at once, so nothing was saved yet. Don\'t worry — all your entries are kept on this computer. Remove a few members and Save again, or close and reopen Add Family to restore everything.',
+            message: 'There were too many entries to send all at once, so nothing was saved yet. Don\'t worry - all your entries are kept on this computer. Remove a few members and Save again, or close and reopen Add Family to restore everything.',
             iconClass: 'bi bi-exclamation-triangle',
             tone: 'warning',
             cancelLabel: 'Close',
@@ -1548,7 +1548,7 @@
 
         // Persist the exact state we are about to send so nothing is lost even if the
         // request dies mid-flight (browser/tab crash) before the 400ms auto-save fires.
-        // Create mode only — edit mode keeps no draft (the draft key is global).
+        // Create mode only - edit mode keeps no draft (the draft key is global).
         if (isCreateForm(root)) {
             saveDraftNow(form);
         }
@@ -1589,7 +1589,7 @@
                 }
 
                 // Import-fix context (Review Import screen): the save returns a fresh review
-                // report — hand it back so the screen re-renders without a reload.
+                // report - hand it back so the screen re-renders without a reload.
                 if (data.review && typeof window.importReviewApply === 'function') {
                     window.importReviewApply(data.review, data.csrf);
                 }
@@ -1605,7 +1605,7 @@
 
             if (data.code === 'FORM_TRUNCATED') {
                 // Cutoff: the server saved nothing. Guarantee the typed data is in the
-                // draft (create mode) and reassure the worker — their entries are safe
+                // draft (create mode) and reassure the worker - their entries are safe
                 // and the resume prompt will rebuild them on reopen. Not a normal error.
                 if (isCreateForm(root)) {
                     saveDraftNow(form);
@@ -2043,7 +2043,7 @@
         note.className = 'small import-field-note ' + (blocking ? 'import-field-note-error' : 'import-field-note-warn');
         note.textContent = issue.message || '';
 
-        // Sit the note below the field — or below its "Other" freetext input when there is one.
+        // Sit the note below the field - or below its "Other" freetext input when there is one.
         var anchor = field;
         var other = field.parentNode ? field.parentNode.querySelector('.js-other-input') : null;
         if (other) {

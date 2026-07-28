@@ -1,8 +1,8 @@
 <?php
 /**
  * Kiosk shell for the scan flow (setting + scan pages): full-viewport, no
- * sidebar/topbar. Deliberately minimal for time-and-motion — one slim header
- * bar (batch · aid type · live personal counter · logout) and the page
+ * sidebar/topbar. Deliberately minimal for time-and-motion - one slim header
+ * bar (batch · subsidy type · live personal counter · logout) and the page
  * content. Reports and stats stay in the admin dashboard shell.
  */
 $pageTitle          = $pageTitle ?? 'Scan';

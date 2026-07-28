@@ -10,7 +10,7 @@ use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
 
 /**
- * Admin overall aid-distribution reports: combined totals + per-kiosk table,
+ * Admin overall subsidy-distribution reports: combined totals + per-kiosk table,
  * batch-scoped (no date filter). PDF export. Admin/Developer only. The index
  * page is assembled by DashboardPageBuilder and rendered in the admin shell
  * (mirrors Admin\DistributionController); pdf() streams bytes directly.
@@ -38,7 +38,7 @@ class ReportsController extends BaseController
         return [0, null];
     }
 
-    /** GET admin/reports/stats — JSON snapshot for the live poll (no reload). */
+    /** GET admin/reports/stats - JSON snapshot for the live poll (no reload). */
     public function stats(): ResponseInterface
     {
         $g = RoleAccess::requireRole(['Admin', 'Developer']);
@@ -61,7 +61,7 @@ class ReportsController extends BaseController
         ]);
     }
 
-    /** GET admin/reports/pdf — streams the same report as a downloadable PDF. */
+    /** GET admin/reports/pdf - streams the same report as a downloadable PDF. */
     public function pdf(): ResponseInterface
     {
         if ($g = $this->guard()) { return $g; }

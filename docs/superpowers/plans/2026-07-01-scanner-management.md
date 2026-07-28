@@ -4,7 +4,7 @@
 
 **Goal:** Split the Scanner module into a point-of-service **Scan** tab (verify + log a claim inline, with identity fields) and a global **Manage** tab (search/void all distributions + aid-types CRUD).
 
-**Architecture:** No schema change. Extend three existing models (`AidTypeModel`, `AidDistributionModel`, `MemberModel`). Move the log form out of `manage.php` into `scan.php`. Repurpose `manage.php` into a two-section back-office hub. Add a `Scanner\ManageController` for aid-type CRUD + distribution void; leave `ScanController` handling scan/lookup/log.
+**Architecture:** No schema change. Extend three existing models (`AidTypeModel`, `AidDistributionModel`, `MemberModel`). Move the log form out of `manage.php` into `scan.php`. Repurpose `manage.php` into a two-section back-office hub. Add a `Scanner\ManageController` for subsidy-type CRUD + distribution void; leave `ScanController` handling scan/lookup/log.
 
 **Tech Stack:** CodeIgniter 4, PHP 8.2+, Bootstrap 5 / SB-Admin 2, DataTables (already wired via `asset_helper.php`), PHPUnit.
 
@@ -13,12 +13,12 @@
 - **No migrations, no schema changes.** DB schema source of truth is `accesscardV13.sql`. Aid types are name-only; `aid_type` already has `aid_type_id`, `name`, `dt_created`, `dt_deleted`.
 - **Bootstrap / SB-Admin components only** for UI. No new JS libraries.
 - **Every data mutation writes `audit_trails`** via `App\Models\Audit\AuditTrailsModel::logAction(int $userId, ?int $memberId, string $action, ?string $description, ?string $ipAddress, ?string $userAgent, ?string $detail)`.
-- **Every Scanner action guarded** with `RoleAccess::requireRole(['Scanner', 'Admin', 'Developer'])` (exact literal — tests grep for it).
-- **Tests are no-DB contract/guard tests** (assert return types are arrays, grep controller source for guard literals, grep view/model source for expected strings). Match the existing suite posture — no live-DB round trips.
-- `aid_distribution` columns: `aidID` (PK), `control_no`, `memberID`, `aid_type_id`, `claim_date`, `userID`, `dt_created`. **No `dt_deleted`** — void is a hard delete + audit.
+- **Every Scanner action guarded** with `RoleAccess::requireRole(['Scanner', 'Admin', 'Developer'])` (exact literal - tests grep for it).
+- **Tests are no-DB contract/guard tests** (assert return types are arrays, grep controller source for guard literals, grep view/model source for expected strings). Match the existing suite posture - no live-DB round trips.
+- `aid_distribution` columns: `aidID` (PK), `control_no`, `memberID`, `aid_type_id`, `claim_date`, `userID`, `dt_created`. **No `dt_deleted`** - void is a hard delete + audit.
 - `member` has `birthday` (date) and `sex` (enum `Male`/`Female`).
 - `users`: `userID` PK, `username`. `qr_control`: `control_no` PK, `headID`.
-- Run `vendor/bin/phpunit` — baseline is **46 tests, 0 failures, 4 skipped**.
+- Run `vendor/bin/phpunit` - baseline is **46 tests, 0 failures, 4 skipped**.
 
 ---
 
@@ -30,7 +30,7 @@
 - Test: `tests/unit/MemberFamilyFieldsTest.php` (create)
 
 **Interfaces:**
-- Produces: `MemberModel::familyMembers(int $headId): array` — each row now also has keys `birthday`, `sex` (in addition to `memberID`, `firstname`, `lastname`, `relationship`).
+- Produces: `MemberModel::familyMembers(int $headId): array` - each row now also has keys `birthday`, `sex` (in addition to `memberID`, `firstname`, `lastname`, `relationship`).
 
 - [ ] **Step 1: Write the failing test**
 
@@ -57,7 +57,7 @@ final class MemberFamilyFieldsTest extends CIUnitTestCase
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `vendor/bin/phpunit --filter testFamilyMembersSelectsIdentityFields`
-Expected: FAIL — `birthday`/`sex` not yet in the select.
+Expected: FAIL - `birthday`/`sex` not yet in the select.
 
 - [ ] **Step 3: Widen the select**
 
@@ -77,7 +77,7 @@ In `app/Views/Scanner/scan.php`, replace the `membersList` render (lines ~63-64)
   $('membersList').innerHTML = data.members
     .map(m => `<li class="list-group-item">
         <div>${esc(m.firstname)} ${esc(m.lastname)} <span class="text-muted">(${esc(m.relationship || 'Member')})</span></div>
-        <div class="small text-muted">${esc(m.sex || '—')} · ${esc(m.birthday || '—')}</div>
+        <div class="small text-muted">${esc(m.sex || '-')} · ${esc(m.birthday || '-')}</div>
       </li>`).join('');
 ```
 
@@ -124,9 +124,9 @@ In `tests/unit/ScanControllerTest.php`, add:
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `vendor/bin/phpunit --filter testScanViewLogsInline`
-Expected: FAIL — `scan.php` still links to `scanner/manage?control_no=`.
+Expected: FAIL - `scan.php` still links to `scanner/manage?control_no=`.
 
-- [ ] **Step 3: Pass aid types to the scan view**
+- [ ] **Step 3: Pass subsidy types to the scan view**
 
 In `app/Controllers/Scanner/ScanController.php`, add `'aidTypes'` to the `scan()` view payload (mirroring `manage()`):
 
@@ -162,9 +162,9 @@ In `app/Views/Scanner/scan.php`, replace the `logDistLink` anchor block (lines ~
           <input type="date" class="form-control" id="claim_date" name="claim_date" required>
         </div>
         <div class="mb-3">
-          <label for="aid_type_id" class="form-label">Aid Type</label>
+          <label for="aid_type_id" class="form-label">Subsidy Type</label>
           <select class="form-select" id="aid_type_id" name="aid_type_id" required>
-            <option value="">-- Select aid type --</option>
+            <option value="">-- Select subsidy type --</option>
             <?php foreach ($aidTypes as $type): ?>
               <option value="<?= esc($type['aid_type_id']) ?>"><?= esc($type['name']) ?></option>
             <?php endforeach; ?>
@@ -244,11 +244,11 @@ git commit -m "feat(scanner): log distribution inline in Scan tab (point-of-serv
 
 **Interfaces:**
 - Produces:
-  - `AidTypeModel::all(): array` — active + archived, active first then by name.
-  - `AidTypeModel::create(string $name): int` — insert with `dt_created`, returns new id (0 on failure).
-  - `AidTypeModel::archive(int $id): bool` — sets `dt_deleted = now()`.
-  - `AidTypeModel::restore(int $id): bool` — sets `dt_deleted = null`.
-  - `AidTypeModel::delete(int $id): bool` — hard delete (base Model method; callers must gate on no references).
+  - `AidTypeModel::all(): array` - active + archived, active first then by name.
+  - `AidTypeModel::create(string $name): int` - insert with `dt_created`, returns new id (0 on failure).
+  - `AidTypeModel::archive(int $id): bool` - sets `dt_deleted = now()`.
+  - `AidTypeModel::restore(int $id): bool` - sets `dt_deleted = null`.
+  - `AidTypeModel::delete(int $id): bool` - hard delete (base Model method; callers must gate on no references).
 
 - [ ] **Step 1: Write the failing test**
 
@@ -273,7 +273,7 @@ In `tests/unit/AidTypeModelTest.php`, add:
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `vendor/bin/phpunit --filter AidTypeModelTest`
-Expected: FAIL — `all()` undefined.
+Expected: FAIL - `all()` undefined.
 
 - [ ] **Step 3: Implement the methods**
 
@@ -292,7 +292,7 @@ In `app/Models/Scanner/AidTypeModel.php`, add after `active()`:
         }
     }
 
-    /** Insert a new aid type; returns the new id (0 on failure). */
+    /** Insert a new subsidy type; returns the new id (0 on failure). */
     public function create(string $name): int
     {
         $this->insert(['name' => $name, 'dt_deleted' => null]);
@@ -313,7 +313,7 @@ In `app/Models/Scanner/AidTypeModel.php`, add after `active()`:
     }
 ```
 
-Note: `dt_created` is DB-defaulted (`current_timestamp()` per the dump) and is not in `allowedFields`, so `create()` does not set it. `delete()` is inherited from `CodeIgniter\Model` — no override needed.
+Note: `dt_created` is DB-defaulted (`current_timestamp()` per the dump) and is not in `allowedFields`, so `create()` does not set it. `delete()` is inherited from `CodeIgniter\Model` - no override needed.
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -337,8 +337,8 @@ git commit -m "feat(scanner): AidTypeModel CRUD (all/create/archive/restore)"
 
 **Interfaces:**
 - Produces:
-  - `AidDistributionModel::allDistributions(): array` — every claim, newest first, each row: `aidID`, `claim_date`, `aid_type` (name), `claimant` (member full name), `head` (family head full name), `scanned_by` (username or `''`).
-  - `AidDistributionModel::void(int $aidId): bool` — hard-delete one distribution row.
+  - `AidDistributionModel::allDistributions(): array` - every claim, newest first, each row: `aidID`, `claim_date`, `aid_type` (name), `claimant` (member full name), `head` (family head full name), `scanned_by` (username or `''`).
+  - `AidDistributionModel::void(int $aidId): bool` - hard-delete one distribution row.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -359,7 +359,7 @@ In `tests/unit/AidDistributionModelTest.php`, add:
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `vendor/bin/phpunit --filter AidDistributionModelTest`
-Expected: FAIL — `allDistributions()` undefined.
+Expected: FAIL - `allDistributions()` undefined.
 
 - [ ] **Step 3: Implement the methods**
 
@@ -367,7 +367,7 @@ In `app/Models/Scanner/AidDistributionModel.php`, add after `historyFor()`:
 
 ```php
     /**
-     * Every distribution, newest first, with aid-type name, claimant name,
+     * Every distribution, newest first, with subsidy-type name, claimant name,
      * family-head name, and the scanning user's username resolved via joins.
      * Drives the Manage-tab global table.
      */
@@ -417,11 +417,11 @@ git commit -m "feat(scanner): AidDistributionModel global list + void"
 
 ---
 
-### Task 5: ManageController + routes (aid-type CRUD, distribution void, Manage page)
+### Task 5: ManageController + routes (subsidy-type CRUD, distribution void, Manage page)
 
 **Files:**
 - Create: `app/Controllers/Scanner/ManageController.php`
-- Modify: `app/Controllers/Scanner/ScanController.php` (remove `manage()` — moves to the new controller)
+- Modify: `app/Controllers/Scanner/ScanController.php` (remove `manage()` - moves to the new controller)
 - Modify: `app/Config/Routes.php:122-127` (scanner group routes)
 - Test: `tests/unit/ManageControllerTest.php` (create)
 
@@ -468,7 +468,7 @@ final class ManageControllerTest extends CIUnitTestCase
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `vendor/bin/phpunit --filter ManageControllerTest`
-Expected: FAIL — controller/routes missing.
+Expected: FAIL - controller/routes missing.
 
 - [ ] **Step 3: Create the controller**
 
@@ -489,12 +489,12 @@ use CodeIgniter\HTTP\ResponseInterface;
 
 /**
  * Scanner Manage tab: global back-office. Renders the aid-types + all-distributions
- * hub and handles their mutations (aid-type CRUD, distribution void). Every action
+ * hub and handles their mutations (subsidy-type CRUD, distribution void). Every action
  * is Scanner/Admin/Developer-only and writes an audit_trails row.
  */
 class ManageController extends BaseController
 {
-    /** GET scanner/manage — the two-section hub page. */
+    /** GET scanner/manage - the two-section hub page. */
     public function index(): ResponseInterface|string
     {
         $guard = RoleAccess::requireRole(['Scanner', 'Admin', 'Developer']);
@@ -529,17 +529,17 @@ class ManageController extends BaseController
 
         $name = trim((string) $this->request->getPost('name'));
         if ($name === '') {
-            return redirect()->to('scanner/manage')->with('error', 'Aid type name is required.');
+            return redirect()->to('scanner/manage')->with('error', 'Subsidy type name is required.');
         }
 
         $id = model(AidTypeModel::class)->create($name);
         if ($id <= 0) {
-            return redirect()->to('scanner/manage')->with('error', 'Unable to add aid type.');
+            return redirect()->to('scanner/manage')->with('error', 'Unable to add subsidy type.');
         }
 
-        $this->audit('Created aid type "' . $name . '" #' . $id);
+        $this->audit('Created subsidy type "' . $name . '" #' . $id);
 
-        return redirect()->to('scanner/manage')->with('success', 'Aid type added.');
+        return redirect()->to('scanner/manage')->with('success', 'Subsidy type added.');
     }
 
     /** POST scanner/aid-types/archive/{id} */
@@ -552,12 +552,12 @@ class ManageController extends BaseController
 
         $type = model(AidTypeModel::class)->find($id);
         if (! model(AidTypeModel::class)->archive($id)) {
-            return redirect()->to('scanner/manage')->with('error', 'Unable to archive aid type.');
+            return redirect()->to('scanner/manage')->with('error', 'Unable to archive subsidy type.');
         }
 
-        $this->audit('Archived aid type "' . (string) ($type['name'] ?? '') . '" #' . $id);
+        $this->audit('Archived subsidy type "' . (string) ($type['name'] ?? '') . '" #' . $id);
 
-        return redirect()->to('scanner/manage')->with('success', 'Aid type archived.');
+        return redirect()->to('scanner/manage')->with('success', 'Subsidy type archived.');
     }
 
     /** POST scanner/aid-types/restore/{id} */
@@ -570,15 +570,15 @@ class ManageController extends BaseController
 
         $type = model(AidTypeModel::class)->find($id);
         if (! model(AidTypeModel::class)->restore($id)) {
-            return redirect()->to('scanner/manage')->with('error', 'Unable to restore aid type.');
+            return redirect()->to('scanner/manage')->with('error', 'Unable to restore subsidy type.');
         }
 
-        $this->audit('Restored aid type "' . (string) ($type['name'] ?? '') . '" #' . $id);
+        $this->audit('Restored subsidy type "' . (string) ($type['name'] ?? '') . '" #' . $id);
 
-        return redirect()->to('scanner/manage')->with('success', 'Aid type restored.');
+        return redirect()->to('scanner/manage')->with('success', 'Subsidy type restored.');
     }
 
-    /** POST scanner/aid-types/delete/{id} — only when never referenced. */
+    /** POST scanner/aid-types/delete/{id} - only when never referenced. */
     public function deleteAidType(int $id): RedirectResponse
     {
         $guard = RoleAccess::requireRole(['Scanner', 'Admin', 'Developer']);
@@ -590,20 +590,20 @@ class ManageController extends BaseController
             ->where('aid_type_id', $id)->countAllResults();
         if ($used > 0) {
             return redirect()->to('scanner/manage')
-                ->with('error', 'Cannot delete: aid type is used by ' . $used . ' distribution(s). Archive it instead.');
+                ->with('error', 'Cannot delete: subsidy type is used by ' . $used . ' distribution(s). Archive it instead.');
         }
 
         $type = model(AidTypeModel::class)->find($id);
         if (! model(AidTypeModel::class)->delete($id)) {
-            return redirect()->to('scanner/manage')->with('error', 'Unable to delete aid type.');
+            return redirect()->to('scanner/manage')->with('error', 'Unable to delete subsidy type.');
         }
 
-        $this->audit('Deleted aid type "' . (string) ($type['name'] ?? '') . '" #' . $id);
+        $this->audit('Deleted subsidy type "' . (string) ($type['name'] ?? '') . '" #' . $id);
 
-        return redirect()->to('scanner/manage')->with('success', 'Aid type deleted.');
+        return redirect()->to('scanner/manage')->with('success', 'Subsidy type deleted.');
     }
 
-    /** POST scanner/distributions/void/{id} — hard-delete a wrong claim. */
+    /** POST scanner/distributions/void/{id} - hard-delete a wrong claim. */
     public function voidDistribution(int $id): RedirectResponse
     {
         $guard = RoleAccess::requireRole(['Scanner', 'Admin', 'Developer']);
@@ -621,9 +621,9 @@ class ManageController extends BaseController
         }
 
         $this->audit(
-            'Voided aid distribution #' . $id,
+            'Voided subsidy distribution #' . $id,
             (int) ($row['memberID'] ?? 0),
-            'Control #' . (int) ($row['control_no'] ?? 0) . ', aid type ID ' . (int) ($row['aid_type_id'] ?? 0)
+            'Control #' . (int) ($row['control_no'] ?? 0) . ', subsidy type ID ' . (int) ($row['aid_type_id'] ?? 0)
         );
 
         return redirect()->to('scanner/manage')->with('success', 'Distribution voided.');
@@ -674,25 +674,25 @@ $routes->group('scanner', static function (RouteCollection $routes): void {
 Run: `vendor/bin/phpunit --filter ManageControllerTest`
 Expected: PASS
 Run: `vendor/bin/phpunit --filter ScanControllerTest`
-Expected: PASS (`scanner/manage` still resolves — now to `ManageController::index`).
+Expected: PASS (`scanner/manage` still resolves - now to `ManageController::index`).
 
 - [ ] **Step 7: Commit**
 
 ```bash
 git add app/Controllers/Scanner/ManageController.php app/Controllers/Scanner/ScanController.php app/Config/Routes.php tests/unit/ManageControllerTest.php
-git commit -m "feat(scanner): ManageController for aid-type CRUD + distribution void"
+git commit -m "feat(scanner): ManageController for subsidy-type CRUD + distribution void"
 ```
 
 ---
 
-### Task 6: Manage view — aid-types table + all-distributions table
+### Task 6: Manage view - aid-types table + all-distributions table
 
 **Files:**
 - Rewrite: `app/Views/Scanner/manage.php`
 - Test: `tests/unit/ManageViewTest.php` (create)
 
 **Interfaces:**
-- Consumes: `$aidTypes` (from `AidTypeModel::all()`), `$distributions` (from `allDistributions()`), the aid-type/void POST routes from Task 5.
+- Consumes: `$aidTypes` (from `AidTypeModel::all()`), `$distributions` (from `allDistributions()`), the subsidy-type/void POST routes from Task 5.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -722,7 +722,7 @@ final class ManageViewTest extends CIUnitTestCase
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `vendor/bin/phpunit --filter ManageViewTest`
-Expected: FAIL — old log-form `manage.php` still present.
+Expected: FAIL - old log-form `manage.php` still present.
 
 - [ ] **Step 3: Rewrite the view**
 
@@ -740,7 +740,7 @@ Replace the entire contents of `app/Views/Scanner/manage.php`:
 
 <ul class="nav nav-pills mb-3" role="tablist">
   <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#tab-dist" type="button">All Distributions</button></li>
-  <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-types" type="button">Aid Types</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-types" type="button">Subsidy Types</button></li>
 </ul>
 
 <div class="tab-content">
@@ -751,7 +751,7 @@ Replace the entire contents of `app/Views/Scanner/manage.php`:
       <div class="card-body">
         <table class="table table-striped table-bordered w-100" id="distTable">
           <thead>
-            <tr><th>Date</th><th>Family Head</th><th>Claimant</th><th>Aid Type</th><th>Scanned By</th><th></th></tr>
+            <tr><th>Date</th><th>Family Head</th><th>Claimant</th><th>Subsidy Type</th><th>Scanned By</th><th></th></tr>
           </thead>
           <tbody>
             <?php foreach ($distributions as $d): ?>
@@ -779,7 +779,7 @@ Replace the entire contents of `app/Views/Scanner/manage.php`:
   <div class="tab-pane fade" id="tab-types">
     <div class="card shadow-sm mb-3">
       <div class="card-header fw-bold d-flex justify-content-between align-items-center">
-        <span>Aid Types</span>
+        <span>Subsidy Types</span>
         <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addAidTypeModal">Add</button>
       </div>
       <div class="card-body">
@@ -815,12 +815,12 @@ Replace the entire contents of `app/Views/Scanner/manage.php`:
   </div>
 </div>
 
-<!-- Add aid type modal -->
+<!-- Add subsidy type modal -->
 <div class="modal fade" id="addAidTypeModal" tabindex="-1">
   <div class="modal-dialog">
     <form class="modal-content" method="post" action="<?= site_url('scanner/aid-types/create') ?>">
       <div class="modal-header">
-        <h5 class="modal-title">Add Aid Type</h5>
+        <h5 class="modal-title">Add Subsidy Type</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
@@ -868,7 +868,7 @@ git commit -m "feat(scanner): Manage tab view (all distributions + aid-types CRU
 - [ ] **Step 1: Run the full suite**
 
 Run: `vendor/bin/phpunit`
-Expected: all green — at least the prior **46** plus the new tests, **0 failures, 0 errors**, 4 skipped unchanged.
+Expected: all green - at least the prior **46** plus the new tests, **0 failures, 0 errors**, 4 skipped unchanged.
 
 - [ ] **Step 2: Confirm routes resolve**
 
@@ -878,9 +878,9 @@ Expected: `scanner/scan`, `scanner/lookup/(:num)`, `scanner/log`, `scanner/manag
 - [ ] **Step 3: Manual smoke test (dev server / XAMPP)**
 
 Log in as a Scanner-role account and verify:
-1. **Scan tab:** scan/enter a registered control number → member rows show sex + birthday → aid-type + claimant dropdowns populate → submit logs the claim → this-family history updates in place (no redirect).
-2. **Manage tab → Aid Types:** Add "Medicine" → appears Active → shows in the Scan tab's aid-type dropdown → Archive it → drops from the Scan dropdown but stays (Archived) in the Manage table → Restore.
-3. **Manage tab → All Distributions:** the claim from step 1 appears (head, claimant, aid type, date, scanned-by) → Void it → row disappears.
+1. **Scan tab:** scan/enter a registered control number → member rows show sex + birthday → subsidy-type + claimant dropdowns populate → submit logs the claim → this-family history updates in place (no redirect).
+2. **Manage tab → Subsidy Types:** Add "Medicine" → appears Active → shows in the Scan tab's subsidy-type dropdown → Archive it → drops from the Scan dropdown but stays (Archived) in the Manage table → Restore.
+3. **Manage tab → All Distributions:** the claim from step 1 appears (head, claimant, subsidy type, date, scanned-by) → Void it → row disappears.
 4. Confirm each Manage action wrote an `audit_trails` row (check the admin Audit Trails page).
 
 - [ ] **Step 4: Commit any fixes, then write the summary**

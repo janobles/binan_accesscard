@@ -2,8 +2,8 @@
 /**
  * Distribution Batches pane: active-batch banner + close control + past list.
  * Opening a batch happens through the New Batch modal
- * (Admin/batch-create-modal.php), which binds an aid type from the aid_type
- * reference table. Each batch row shows its bound aid type. Lifecycle
+ * (Admin/batch-create-modal.php), which binds a subsidy type from the subsidy
+ * reference table. Each batch row shows its bound subsidy type. Lifecycle
  * buttons render only for Admin/Developer. Rendered inside components/card
  * by Admin/layout.php's batches block.
  */
@@ -14,7 +14,7 @@ $canManageBatches = in_array($currentRole ?? '', ['Admin', 'Developer'], true);
     <span>
       <strong><?= esc($activeBatch['name']) ?></strong>
       <span class="badge bg-light text-dark border"><?= esc((string) ($activeBatch['aid_type_name'] ?? '')) ?></span>
-      — open since <?= esc($activeBatch['started_at']) ?>
+      open since <?= esc($activeBatch['started_at']) ?>
     </span>
     <?php if ($canManageBatches): ?>
     <form method="post" action="<?= site_url('admin/batches/close/' . (int) $activeBatch['batch_id']) ?>"
@@ -35,11 +35,23 @@ $canManageBatches = in_array($currentRole ?? '', ['Admin', 'Developer'], true);
   </div>
 <?php endif; ?>
 
+<?= view('components/table_controls', [
+    'searchId' => 'batchesLocalSearch',
+    'searchAria' => 'Search shown batches',
+    'searchFormAttrs' => 'onsubmit="return false;"',
+    'searchInputAttrs' => 'data-paginate-search="batches"',
+    'sizeId' => 'batchesPerPage',
+    'sizeAction' => null,
+    'perPage' => 25,
+    'perPageOptions' => [10 => '10', 25 => '25', 50 => '50', 100 => '100', 0 => 'All'],
+    'sizeAttrs' => 'data-paginate-size="batches"',
+]) ?>
+
 <table class="table manage-record-table align-middle w-100 mb-0">
   <thead><tr><th>Batch</th><th>Subsidy Type</th><th>Started</th><th>Closed</th></tr></thead>
   <tbody>
     <?php foreach (($batches ?? []) as $b): ?>
-      <tr>
+      <tr data-paginate-row>
         <td><?= esc($b['name']) ?></td>
         <td><?= esc((string) ($b['aid_type_name'] ?? '')) ?></td>
         <td><?= esc($b['started_at']) ?></td>

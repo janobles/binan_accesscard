@@ -1,14 +1,14 @@
-# Aid Type Restore + One-Action Scan + Kiosk Member Details Implementation Plan
+# Subsidy Type Restore + One-Action Scan + Kiosk Member Details Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Rebind batches/scans to `aid_type_id` (undoing the service binding), give Aid Types its own Reference Data page, make the kiosk scan a single action with success/duplicate banners, and show per-member sector/service/category badges on the kiosk.
+**Goal:** Rebind batches/scans to `aid_type_id` (undoing the service binding), give Subsidy Types its own Reference Data page, make the kiosk scan a single action with success/duplicate banners, and show per-member sector/service/category badges on the kiosk.
 
 **Architecture:** Forward-fix on the unmerged `feat/v18-batch-service` branch. The V18 dump/patch are rewritten in place (V17 already has the right batch schema). Code changes are renames/reverts in the scanner + admin distribution stack, one new reference page (`admin/aidtypes`), and a rewritten kiosk scan flow where `POST scanner/log` does lookup + duplicate check + insert in one call.
 
 **Tech Stack:** CodeIgniter 4, PHP 8.2+, MySQL (schema = SQL dump, NO migrations), Bootstrap 5 / SB Admin 1, PHPUnit.
 
-**Spec:** `docs/superpowers/specs/2026-07-13-aid-type-restore-one-action-scan-design.md`
+**Spec:** `docs/superpowers/specs/2026-07-13-subsidy-type-restore-one-action-scan-design.md`
 
 ## Global Constraints
 
@@ -22,7 +22,7 @@
 - Duplicate scope: **one logged distribution per family (control_no) per batch**, regardless of date.
 - One-action scan: claimant = family head, claim date = today, always. No override.
 - Restore-from-git refs used below: `dc2b7cf^` (pre-branch models), `main` (pre-branch controller/routes). Both exist on this repo.
-- Run tests with: `vendor/bin/phpunit` (DB/session tests skip without sqlite3 ext — that's fine).
+- Run tests with: `vendor/bin/phpunit` (DB/session tests skip without sqlite3 ext - that's fine).
 
 ---
 
@@ -34,11 +34,11 @@
 - Create: `sql/patches/v18-refdata-cleanup.sql`
 
 **Interfaces:**
-- Produces: DB schema where `distribution_batch.aid_type_id` and `aid_distribution.aid_type_id` exist (V17 shape), `aid_type` table exists with Financial/Rice/Grocery, test reference rows (services 47–48, category 8, sector 11) are gone, developer login exists.
+- Produces: DB schema where `distribution_batch.aid_type_id` and `aid_distribution.aid_type_id` exist (V17 shape), `aid_type` table exists with Financial/Rice/Grocery, test reference rows (services 47-48, category 8, sector 11) are gone, developer login exists.
 
 - [ ] **Step 1: Rewrite the dump from V17**
 
-`accesscardV18.sql` was generated from V17 by dropping `aid_type` and renaming columns. Rebuild it the correct way — start from V17 and apply ONLY the cleanup:
+`accesscardV18.sql` was generated from V17 by dropping `aid_type` and renaming columns. Rebuild it the correct way - start from V17 and apply ONLY the cleanup:
 
 ```bash
 cp accesscardV17.sql accesscardV18.sql
@@ -52,7 +52,7 @@ Then edit `accesscardV18.sql`:
    - In `INSERT INTO category ...` delete the row with `categoryID` 8 (`'TSC'`).
    - In `INSERT INTO services ...` delete rows with `serviceID` 47 and 48 (`'TS1'`, `'TSC1'`).
    Fix trailing commas/semicolons so each INSERT stays valid SQL.
-3. Confirm the `users` INSERT contains the developer row (`developer`, argon2id hash, `account_level 'developer'`, `isactive 'Enable'`). V17 already has it — keep as-is.
+3. Confirm the `users` INSERT contains the developer row (`developer`, argon2id hash, `account_level 'developer'`, `isactive 'Enable'`). V17 already has it - keep as-is.
 4. Confirm `aid_type`, `distribution_batch` (with `aid_type_id` + `idx_db_aidtype`), and `aid_distribution` (with `aid_type_id` + `idx_ad_type`) are present unchanged from V17.
 
 - [ ] **Step 2: Replace the patch**
@@ -94,7 +94,7 @@ UPDATE users SET
 WHERE username = 'developer';
 ```
 
-(TRUNCATEs wipe demo scan data logged under service ids — approved in the spec. No FOREIGN_KEY_CHECKS toggle needed: nothing references these tables.)
+(TRUNCATEs wipe demo scan data logged under service ids - approved in the spec. No FOREIGN_KEY_CHECKS toggle needed: nothing references these tables.)
 
 - [ ] **Step 3: Reimport and verify**
 
@@ -128,7 +128,7 @@ git commit -m "fix(db): V18 keeps aid_type binding; patch only cleans test rows"
   - `AidTypeModel::active(): array`, `all(): array`, `create(string $name): int`, `archive(int $id): bool`, `restore(int $id): bool`, `deleteIfUnused(int $id): int`
   - `DistributionBatchModel::open(string $name, int $aidTypeId, int $userId): int`; `activeBatch()`/`allBatches()` rows carry `aid_type_id` + `aid_type_name`
   - `AidDistributionModel::logAid(array $data)` expects `aid_type_id` key; `historyFor()` rows carry `aid_type` (name) instead of `service`/`service_code`; `allDistributions()` rows carry `aid_type`
-  - `AidDistributionModel::inBatch(int $controlNo, int $batchId): ?array` — the per-batch duplicate probe (row with `claim_date`, `dt_created`, `scanned_by`), null when none/error
+  - `AidDistributionModel::inBatch(int $controlNo, int $batchId): ?array` - the per-batch duplicate probe (row with `claim_date`, `dt_created`, `scanned_by`), null when none/error
 
 - [ ] **Step 1: Restore AidTypeModel + its test from git**
 
@@ -143,7 +143,7 @@ In the restored `AidTypeModel.php`, update the class docblock first line to refl
 /**
  * Aid-type reference lookup (Financial/Rice/Grocery, admin-editable) backing
  * the admin/aidtypes page and the batch-open modal. Isolated from the
- * `services` table: aid types are their own concept, not services/programs.
+ * `services` table: subsidy types are their own concept, not services/programs.
  */
 ```
 
@@ -162,7 +162,7 @@ $this->select('distribution_batch.*, aid_type.name AS aid_type_name')
 - `open()` signature and body:
 
 ```php
-/** Opens a batch; refuses when name blank, aid type missing, or a batch is open. */
+/** Opens a batch; refuses when name blank, subsidy type missing, or a batch is open. */
 public function open(string $name, int $aidTypeId, int $userId): int
 {
     $name = trim($name);
@@ -256,7 +256,7 @@ foreach (['control_no', 'memberID', 'aid_type_id', 'claim_date', 'userID'] as $c
 vendor/bin/phpunit --filter 'AidTypeModelTest|AidDistributionModelTest|DistributionBatchModelTest'
 ```
 
-Expected: PASS (DB-backed ones may skip without sqlite3 — source-assertion ones must pass).
+Expected: PASS (DB-backed ones may skip without sqlite3 - source-assertion ones must pass).
 
 - [ ] **Step 6: Commit**
 
@@ -267,7 +267,7 @@ git commit -m "feat(models): restore AidTypeModel; batches and scans bind aid_ty
 
 ---
 
-### Task 3: Admin batches/distributions pages rebind to aid type
+### Task 3: Admin batches/distributions pages rebind to subsidy type
 
 **Files:**
 - Modify: `app/Controllers/Admin/DistributionController.php`
@@ -291,30 +291,30 @@ if ($name === '') {
     return redirect()->to('admin/batches')->with('error', 'Batch name is required.');
 }
 if ($aidTypeId <= 0) {
-    return redirect()->to('admin/batches')->with('error', 'Choose an aid type for this batch.');
+    return redirect()->to('admin/batches')->with('error', 'Choose a subsidy type for this batch.');
 }
 $batchModel = model(DistributionBatchModel::class);
 $id         = $batchModel->open($name, $aidTypeId, (int) (session('user_id') ?? 0));
 ```
 
-Audit line: `'Opened distribution batch "' . $name . '" #' . $id . ' (aid type ID ' . $aidTypeId . ')'`.
+Audit line: `'Opened distribution batch "' . $name . '" #' . $id . ' (subsidy type ID ' . $aidTypeId . ')'`.
 
-In `voidDistribution()`, the audit detail swaps `'service ID ' . (int) ($row['service_id'] ?? 0)` for `'aid type ID ' . (int) ($row['aid_type_id'] ?? 0)`.
+In `voidDistribution()`, the audit detail swaps `'service ID ' . (int) ($row['service_id'] ?? 0)` for `'subsidy type ID ' . (int) ($row['aid_type_id'] ?? 0)`.
 
-Update the class docblock ("Batch open binds an aid type...").
+Update the class docblock ("Batch open binds a subsidy type...").
 
-- [ ] **Step 2: Batch modal = name + aid-type select**
+- [ ] **Step 2: Batch modal = name + subsidy-type select**
 
-Replace `app/Views/Admin/batch-create-modal.php` body (keep the modal shell, csrf, footer) with a single select — the category→service cascade and its script are deleted entirely:
+Replace `app/Views/Admin/batch-create-modal.php` body (keep the modal shell, csrf, footer) with a single select - the category→service cascade and its script are deleted entirely:
 
 ```php
 <?php
 /**
- * New Batch modal: name + aid type pick. Aid types come from the aid_type
+ * New Batch modal: name + subsidy type pick. Aid types come from the subsidy
  * reference table (admin/aidtypes page).
  *
  * Variables:
- * - $activeAidTypes list of aid type rows (aid_type_id, name)
+ * - $activeAidTypes list of subsidy type rows (aid_type_id, name)
  */
 $activeAidTypes = $activeAidTypes ?? [];
 ?>
@@ -330,12 +330,12 @@ $activeAidTypes = $activeAidTypes ?? [];
         <div class="mb-3">
           <label for="batchName" class="form-label">Batch name</label>
           <input type="text" class="form-control" id="batchName" name="name" required maxlength="100"
-                 placeholder="e.g. Relief Distribution — <?= esc(date('M j, Y')) ?>">
+                 placeholder="e.g. Relief Distribution - <?= esc(date('M j, Y')) ?>">
         </div>
         <div class="mb-3">
-          <label for="batchAidType" class="form-label">Aid type</label>
+          <label for="batchAidType" class="form-label">Subsidy type</label>
           <select class="form-select" id="batchAidType" name="aid_type_id" required>
-            <option value="" selected disabled>Choose an aid type...</option>
+            <option value="" selected disabled>Choose a subsidy type...</option>
             <?php foreach ($activeAidTypes as $t): ?>
               <option value="<?= (int) $t['aid_type_id'] ?>"><?= esc($t['name']) ?></option>
             <?php endforeach; ?>
@@ -351,22 +351,22 @@ $activeAidTypes = $activeAidTypes ?? [];
 </div>
 ```
 
-- [ ] **Step 3: Batches body shows aid type**
+- [ ] **Step 3: Batches body shows subsidy type**
 
 In `app/Views/Admin/distribution-batches-body.php`:
 
 - Replace the `$serviceLabel` closure with nothing; where it was used, print `esc((string) ($row['aid_type_name'] ?? ''))`.
 - Active-batch banner badge: `<span class="badge bg-light text-dark border"><?= esc((string) ($activeBatch['aid_type_name'] ?? '')) ?></span>`; delete the category_code badge block.
-- Table header: `<th>Batch</th><th>Aid Type</th><th>Started</th><th>Closed</th>` (4 columns); the row prints `$b['aid_type_name']`; empty-state colspan becomes 4.
+- Table header: `<th>Batch</th><th>Subsidy Type</th><th>Started</th><th>Closed</th>` (4 columns); the row prints `$b['aid_type_name']`; empty-state colspan becomes 4.
 - Update the file docblock.
 
-- [ ] **Step 4: Distributions body shows aid type**
+- [ ] **Step 4: Distributions body shows subsidy type**
 
 In `app/Views/Admin/distribution-distributions-body.php`:
 
-- Column header `Service` → `Aid Type`.
+- Column header `Service` → `Subsidy Type`.
 - Cell: `<td><span class="badge bg-light text-dark border"><?= esc((string) $d['aid_type']) ?></span></td>`
-- Update the docblock ("Each row shows the aid type the batch handed out").
+- Update the docblock ("Each row shows the subsidy type the batch handed out").
 
 - [ ] **Step 5: DashboardPageBuilder supplies activeAidTypes**
 
@@ -378,7 +378,7 @@ In `app/Libraries/DashboardPageBuilder.php` (admin data array, around line 197):
   with
   `'activeAidTypes'   => $isBatches ? model(AidTypeModel::class)->active() : [],`
 - Add `use App\Models\Scanner\AidTypeModel;` to the imports.
-- If `ServiceModel`/`CategoryModel` imports were only used for those two lines, they're still used elsewhere in the file (sector/service/category list bundles) — leave them.
+- If `ServiceModel`/`CategoryModel` imports were only used for those two lines, they're still used elsewhere in the file (sector/service/category list bundles) - leave them.
 
 In `app/Views/Admin/layout.php` batches block, the modal include becomes:
 
@@ -396,14 +396,14 @@ and add `$activeAidTypes = $activeAidTypes ?? [];` next to the other defensive d
 php spark routes | grep -E "admin/batches|admin/distributions"
 vendor/bin/phpunit
 git add app/Controllers/Admin/DistributionController.php app/Views/Admin app/Libraries/DashboardPageBuilder.php
-git commit -m "feat(admin): batches bind aid type; modal is name + aid-type select"
+git commit -m "feat(admin): batches bind subsidy type; modal is name + subsidy-type select"
 ```
 
-Expected: routes resolve; suite green (scan-related tests still reference service — they are fixed in Tasks 5–6; if any fail here on service strings in ADMIN files only, fix; kiosk failures wait for their task. Run the full suite again at the end of Task 6.)
+Expected: routes resolve; suite green (scan-related tests still reference service - they are fixed in Tasks 5-6; if any fail here on service strings in ADMIN files only, fix; kiosk failures wait for their task. Run the full suite again at the end of Task 6.)
 
 ---
 
-### Task 4: Aid Types reference page (admin/aidtypes)
+### Task 4: Subsidy Types reference page (admin/aidtypes)
 
 **Files:**
 - Create: `app/Controllers/Admin/AidTypesController.php`
@@ -411,7 +411,7 @@ Expected: routes resolve; suite green (scan-related tests still reference servic
 - Create: `app/Views/Admin/aidtype-create-modal.php`
 - Modify: `app/Config/Routes.php`
 - Modify: `app/Libraries/DashboardPageBuilder.php`
-- Modify: `app/Models/ViewLayoutModel.php` (only if page titles live there — see Step 4)
+- Modify: `app/Models/ViewLayoutModel.php` (only if page titles live there - see Step 4)
 - Modify: `app/Views/Admin/layout.php`
 - Modify: `app/Views/components/dashboard_sidebar.php`
 - Test: `tests/unit/DashboardControllerRoutingTest.php` (add route assertions if the file covers admin pages; follow its existing style)
@@ -436,7 +436,7 @@ $routes->group('aidtypes', static function (RouteCollection $routes): void {
 
 - [ ] **Step 2: Controller**
 
-`app/Controllers/Admin/AidTypesController.php` — the CRUD bodies are ports of the pre-branch methods (see `git show main:app/Controllers/Admin/DistributionController.php`, methods `createAidType`/`archiveAidType`/`restoreAidType`/`deleteAidType`), rehomed and redirecting to `admin/aidtypes`:
+`app/Controllers/Admin/AidTypesController.php` - the CRUD bodies are ports of the pre-branch methods (see `git show main:app/Controllers/Admin/DistributionController.php`, methods `createAidType`/`archiveAidType`/`restoreAidType`/`deleteAidType`), rehomed and redirecting to `admin/aidtypes`:
 
 ```php
 <?php
@@ -451,8 +451,8 @@ use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
 
 /**
- * Aid Types reference page (Reference Data group): list + add/archive/
- * restore/delete for the aid_type table. Admin/Developer only. Every
+ * Subsidy Types reference page (Reference Data group): list + add/archive/
+ * restore/delete for the subsidy table. Admin/Developer only. Every
  * mutation writes an audit_trails row. Rendered in the admin dashboard shell.
  */
 class AidTypesController extends BaseController
@@ -463,7 +463,7 @@ class AidTypesController extends BaseController
         return $g instanceof RedirectResponse ? $g : null;
     }
 
-    /** GET admin/aidtypes — aid-type management page. */
+    /** GET admin/aidtypes - subsidy-type management page. */
     public function index(): ResponseInterface|string
     {
         if ($g = $this->guard()) { return $g; }
@@ -471,60 +471,60 @@ class AidTypesController extends BaseController
         return (new \App\Libraries\DashboardPageBuilder($this->request))->renderAdminPage('aidtypes');
     }
 
-    /** POST admin/aidtypes/create — add an aid type. */
+    /** POST admin/aidtypes/create - add a subsidy type. */
     public function create(): RedirectResponse
     {
         if ($g = $this->guard()) { return $g; }
         $name = trim((string) $this->request->getPost('name'));
         if ($name === '') {
-            return redirect()->to('admin/aidtypes')->with('error', 'Aid type name is required.');
+            return redirect()->to('admin/aidtypes')->with('error', 'Subsidy type name is required.');
         }
         $id = model(AidTypeModel::class)->create($name);
         if ($id <= 0) {
-            return redirect()->to('admin/aidtypes')->with('error', 'Unable to add aid type.');
+            return redirect()->to('admin/aidtypes')->with('error', 'Unable to add subsidy type.');
         }
-        $this->audit('Created aid type "' . $name . '" #' . $id);
-        return redirect()->to('admin/aidtypes')->with('success', 'Aid type added.');
+        $this->audit('Created subsidy type "' . $name . '" #' . $id);
+        return redirect()->to('admin/aidtypes')->with('success', 'Subsidy type added.');
     }
 
-    /** POST admin/aidtypes/archive/{id} — soft-archive (drops out of new-batch picks). */
+    /** POST admin/aidtypes/archive/{id} - soft-archive (drops out of new-batch picks). */
     public function archive(int $id): RedirectResponse
     {
         if ($g = $this->guard()) { return $g; }
         $type = model(AidTypeModel::class)->find($id);
         if (! model(AidTypeModel::class)->archive($id)) {
-            return redirect()->to('admin/aidtypes')->with('error', 'Unable to archive aid type.');
+            return redirect()->to('admin/aidtypes')->with('error', 'Unable to archive subsidy type.');
         }
-        $this->audit('Archived aid type "' . (string) ($type['name'] ?? '') . '" #' . $id);
-        return redirect()->to('admin/aidtypes')->with('success', 'Aid type archived.');
+        $this->audit('Archived subsidy type "' . (string) ($type['name'] ?? '') . '" #' . $id);
+        return redirect()->to('admin/aidtypes')->with('success', 'Subsidy type archived.');
     }
 
-    /** POST admin/aidtypes/restore/{id} — un-archive. */
+    /** POST admin/aidtypes/restore/{id} - un-archive. */
     public function restore(int $id): RedirectResponse
     {
         if ($g = $this->guard()) { return $g; }
         $type = model(AidTypeModel::class)->find($id);
         if (! model(AidTypeModel::class)->restore($id)) {
-            return redirect()->to('admin/aidtypes')->with('error', 'Unable to restore aid type.');
+            return redirect()->to('admin/aidtypes')->with('error', 'Unable to restore subsidy type.');
         }
-        $this->audit('Restored aid type "' . (string) ($type['name'] ?? '') . '" #' . $id);
-        return redirect()->to('admin/aidtypes')->with('success', 'Aid type restored.');
+        $this->audit('Restored subsidy type "' . (string) ($type['name'] ?? '') . '" #' . $id);
+        return redirect()->to('admin/aidtypes')->with('success', 'Subsidy type restored.');
     }
 
-    /** POST admin/aidtypes/delete/{id} — permanent delete, blocked while referenced. */
+    /** POST admin/aidtypes/delete/{id} - permanent delete, blocked while referenced. */
     public function deleteType(int $id): RedirectResponse
     {
         if ($g = $this->guard()) { return $g; }
         $type   = model(AidTypeModel::class)->find($id);
         $result = model(AidTypeModel::class)->deleteIfUnused($id);
         if ($result > 0) {
-            return redirect()->to('admin/aidtypes')->with('error', 'This aid type is used by ' . $result . ' distribution(s) and cannot be deleted. Archive it instead.');
+            return redirect()->to('admin/aidtypes')->with('error', 'This subsidy type is used by ' . $result . ' distribution(s) and cannot be deleted. Archive it instead.');
         }
         if ($result < 0) {
-            return redirect()->to('admin/aidtypes')->with('error', 'Unable to delete aid type.');
+            return redirect()->to('admin/aidtypes')->with('error', 'Unable to delete subsidy type.');
         }
-        $this->audit('Permanently deleted aid type "' . (string) ($type['name'] ?? '') . '" #' . $id);
-        return redirect()->to('admin/aidtypes')->with('success', 'Aid type deleted.');
+        $this->audit('Permanently deleted subsidy type "' . (string) ($type['name'] ?? '') . '" #' . $id);
+        return redirect()->to('admin/aidtypes')->with('success', 'Subsidy type deleted.');
     }
 
     private function audit(string $action): void
@@ -544,9 +544,9 @@ class AidTypesController extends BaseController
 
 - [ ] **Step 3: Views**
 
-`app/Views/Admin/aidtypes-body.php` — the pre-branch aid-types table, re-pointed at the new routes. Base it on `git show 3c6a17c^:app/Views/Admin/distribution-aidtypes-body.php` with these changes:
+`app/Views/Admin/aidtypes-body.php` - the pre-branch aid-types table, re-pointed at the new routes. Base it on `git show 3c6a17c^:app/Views/Admin/distribution-aidtypes-body.php` with these changes:
 
-- Docblock: "Aid Types reference body: Add button + aid-type table. Rendered inside components/card by Admin/layout.php's aidtypes block (vars: aidTypes, currentRole)."
+- Docblock: "Subsidy Types reference body: Add button + subsidy-type table. Rendered inside components/card by Admin/layout.php's aidtypes block (vars: aidTypes, currentRole)."
 - All four form actions change from `admin/aid-types/...` to `admin/aidtypes/...`.
 - Variable `$canManageAidTypes` logic stays (`in_array($currentRole ?? '', ['Admin', 'Developer'], true)`).
 
@@ -554,14 +554,14 @@ class AidTypesController extends BaseController
 
 ```php
 <?php
-/** Add Aid Type modal: single name field, posts to admin/aidtypes/create. */
+/** Add Subsidy Type modal: single name field, posts to admin/aidtypes/create. */
 ?>
 <div class="modal fade" id="addAidTypeModal" tabindex="-1" aria-labelledby="addAidTypeModalLabel" aria-hidden="true">
   <div class="modal-dialog">
     <form class="modal-content" method="post" action="<?= site_url('admin/aidtypes/create') ?>">
       <?= csrf_field() ?>
       <div class="modal-header">
-        <h5 class="modal-title" id="addAidTypeModalLabel">Add Aid Type</h5>
+        <h5 class="modal-title" id="addAidTypeModalLabel">Add Subsidy Type</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
@@ -573,7 +573,7 @@ class AidTypesController extends BaseController
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="submit" class="<?= btn('add') ?>">Add Aid Type</button>
+        <button type="submit" class="<?= btn('add') ?>">Add Subsidy Type</button>
       </div>
     </form>
   </div>
@@ -586,7 +586,7 @@ In `app/Views/Admin/layout.php`, add a block next to the batches block (and defa
 <?php if ($activePage === 'aidtypes'): ?>
     <?= view('components/card', [
         'icon' => 'box-seam',
-        'title' => 'Aid Types',
+        'title' => 'Subsidy Types',
         'cardClass' => 'sector-management',
         'bodyView' => 'Admin/aidtypes-body',
         'bodyData' => [
@@ -605,12 +605,12 @@ In `app/Views/Admin/layout.php`, add a block next to the batches block (and defa
 - Add to the returned admin array: `'aidTypes' => $activePage === 'aidtypes' ? model(AidTypeModel::class)->all() : [],`
 - navActive map: add `'aidtypes' => $layoutModel->navActive($activePage, 'aidtypes'),`
 
-Check `app/Models/ViewLayoutModel.php` `pageTitle()`: if it maps page keys to titles, add `'aidtypes' => 'Aid Types'` following its pattern; if it falls back to a default, skip.
+Check `app/Models/ViewLayoutModel.php` `pageTitle()`: if it maps page keys to titles, add `'aidtypes' => 'Subsidy Types'` following its pattern; if it falls back to a default, skip.
 
-`app/Views/components/dashboard_sidebar.php` — add under the Reference Data heading, after Manage Categories:
+`app/Views/components/dashboard_sidebar.php` - add under the Reference Data heading, after Manage Categories:
 
 ```php
-<a class="nav-link <?= esc($navActive['aidtypes'] ?? '') ?>" href="<?= site_url('admin/aidtypes') ?>"><div class="sb-nav-link-icon"><i class="bi bi-box-seam" aria-hidden="true"></i></div>Aid Types</a>
+<a class="nav-link <?= esc($navActive['aidtypes'] ?? '') ?>" href="<?= site_url('admin/aidtypes') ?>"><div class="sb-nav-link-icon"><i class="bi bi-box-seam" aria-hidden="true"></i></div>Subsidy Types</a>
 ```
 
 - [ ] **Step 5: Verify + commit**
@@ -619,14 +619,14 @@ Check `app/Models/ViewLayoutModel.php` `pageTitle()`: if it maps page keys to ti
 php spark routes | grep aidtypes
 vendor/bin/phpunit
 git add app/Controllers/Admin/AidTypesController.php app/Views/Admin app/Config/Routes.php app/Libraries/DashboardPageBuilder.php app/Views/components/dashboard_sidebar.php app/Models/ViewLayoutModel.php
-git commit -m "feat(admin): Aid Types reference page under Reference Data"
+git commit -m "feat(admin): Subsidy Types reference page under Reference Data"
 ```
 
 Expected: 5 aidtypes routes listed; suite state no worse than Task 3.
 
 ---
 
-### Task 5: Reports count by aid type again
+### Task 5: Reports count by subsidy type again
 
 **Files:**
 - Modify: `app/Models/Scanner/AidStatsModel.php`
@@ -647,7 +647,7 @@ Replace `AidStatsModel::byService()` with:
 
 ```php
 /**
- * Handout counts per aid type, within the batch scope, busiest first.
+ * Handout counts per subsidy type, within the batch scope, busiest first.
  * Aid types with zero handouts are omitted.
  */
 public function byAidType(?int $batchId = null): array
@@ -688,12 +688,12 @@ grep -rn "byService\|reportsByService" app/ public/assets/js tests/
 
 `reports-body.php`:
 - `$reportsByService` default → `$reportsByAidType = $reportsByAidType ?? [];`
-- Chart card title: `'Number of handouts by aid type'`; canvas id stays `chartService` only if the JS keeps it — rename BOTH to `chartAidType` (see JS below).
+- Chart card title: `'Number of handouts by subsidy type'`; canvas id stays `chartService` only if the JS keeps it - rename BOTH to `chartAidType` (see JS below).
 - JSON payload: `'byAidType' => $reportsByAidType,`
 
-`scanner-reports.js` (lines ~102–142): rename `data.byService` → `data.byAidType`, `charts.byService` → `charts.byAidType`, `ctx('chartService')` → `ctx('chartAidType')`, and the `serviceLabel` mapper becomes `function (a) { return a.aid_type; }` (aid types have no shortcode).
+`scanner-reports.js` (lines ~102-142): rename `data.byService` → `data.byAidType`, `charts.byService` → `charts.byAidType`, `ctx('chartService')` → `ctx('chartAidType')`, and the `serviceLabel` mapper becomes `function (a) { return a.aid_type; }` (subsidy types have no shortcode).
 
-`Scanner/pdf/report.php`: heading `Handouts by aid type`; loop over `$byAidType`; cell prints `esc($a['aid_type'])`; empty check `$byAidType === []`.
+`Scanner/pdf/report.php`: heading `Handouts by subsidy type`; loop over `$byAidType`; cell prints `esc($a['aid_type'])`; empty check `$byAidType === []`.
 
 `ReportsPdfGenerator.php`: rename the `$byService` parameter to `$byAidType` (and the `'byService'` view-data key to `'byAidType'`), update the `@param` shape to `list<array{aid_type:string,count:int}>`.
 
@@ -701,7 +701,7 @@ grep -rn "byService\|reportsByService" app/ public/assets/js tests/
 
 `tests/unit/ReportsPdfGeneratorTest.php`: the byAidType fixture row becomes `[['aid_type' => 'Rice', 'count' => 5]]` and assert the PDF/HTML contains `Rice` (follow the file's existing assertion style).
 
-`tests/unit/AidStatsModelTest.php`: rename byService references to byAidType (this test was renamed in commit 411576e — reverse that mapping).
+`tests/unit/AidStatsModelTest.php`: rename byService references to byAidType (this test was renamed in commit 411576e - reverse that mapping).
 
 - [ ] **Step 5: Run + commit**
 
@@ -709,12 +709,12 @@ grep -rn "byService\|reportsByService" app/ public/assets/js tests/
 vendor/bin/phpunit --filter 'AidStatsModelTest|ReportsPdfGeneratorTest'
 grep -rn "byService" app/ public/ tests/   # expect: no hits
 git add -A app/ public/assets/js/dashboard/scanner-reports.js tests/
-git commit -m "feat(reports): stats, charts and PDF count by aid type"
+git commit -m "feat(reports): stats, charts and PDF count by subsidy type"
 ```
 
 ---
 
-### Task 6: One-action scan (kiosk) + aid-type badge
+### Task 6: One-action scan (kiosk) + subsidy-type badge
 
 **Files:**
 - Modify: `app/Controllers/Scanner/ScanController.php`
@@ -731,7 +731,7 @@ git commit -m "feat(reports): stats, charts and PDF count by aid type"
 
 - [ ] **Step 1: Update the source-assertion tests first (TDD on the contract)**
 
-`tests/unit/ScanControllerBatchTest.php` — `testScanGuardsServiceAndBatch()` becomes:
+`tests/unit/ScanControllerBatchTest.php` - `testScanGuardsServiceAndBatch()` becomes:
 
 ```php
 public function testScanGuardsAidTypeBatchAndDuplicates(): void
@@ -739,7 +739,7 @@ public function testScanGuardsAidTypeBatchAndDuplicates(): void
     $src = file_get_contents(APPPATH . 'Controllers/Scanner/ScanController.php');
     // logAid() must refuse with 409 when no batch is open.
     $this->assertStringContainsString('setStatusCode(409)', $src);
-    // The aid type comes from the active batch, not POST.
+    // The subsidy type comes from the active batch, not POST.
     $this->assertStringContainsString("(int) \$activeBatch['aid_type_id']", $src);
     // One-action scan: claimant is the family head, claim date is today.
     $this->assertStringContainsString("(int) \$head['memberID']", $src);
@@ -753,7 +753,7 @@ public function testScanGuardsAidTypeBatchAndDuplicates(): void
 }
 ```
 
-`tests/unit/ScanViewTest.php` — update the flagged assertions (keep the file's setup):
+`tests/unit/ScanViewTest.php` - update the flagged assertions (keep the file's setup):
 
 ```php
 $this->assertStringContainsString('AID_TYPE_NAME', $this->html);
@@ -767,7 +767,7 @@ $this->assertStringContainsString('Duplicate Entry', $this->html);
 
 Read both files fully before editing; keep their other assertions unless they reference the removed form/service constants.
 
-Run: `vendor/bin/phpunit --filter 'ScanViewTest|ScanControllerBatchTest'` — expected: FAIL (contract not implemented yet).
+Run: `vendor/bin/phpunit --filter 'ScanViewTest|ScanControllerBatchTest'` - expected: FAIL (contract not implemented yet).
 
 - [ ] **Step 2: Routes**
 
@@ -779,7 +779,7 @@ $routes->get('lookup/(:num)', 'Scanner\ScanController::lookup/$1');
 
 (`POST scanner/log` stays.)
 
-- [ ] **Step 3: ScanController — merge lookup into logAid, rebind to aid type**
+- [ ] **Step 3: ScanController - merge lookup into logAid, rebind to subsidy type**
 
 In `app/Controllers/Scanner/ScanController.php`:
 
@@ -802,7 +802,7 @@ In `app/Controllers/Scanner/ScanController.php`:
 
 ```php
 /**
- * POST scanner/log — the whole scan in one action. Resolves the control
+ * POST scanner/log - the whole scan in one action. Resolves the control
  * number to a family, refuses when the family was already logged in the
  * open batch (Duplicate Entry), otherwise inserts a distribution for the
  * family HEAD dated today and audits it. The response always carries the
@@ -881,21 +881,21 @@ public function logAid(): ResponseInterface
     $audited = $aidId > 0 && (new AuditTrailsModel())->logAction(
         $userId,
         (int) $head['memberID'],
-        'Logged aid distribution',
+        'Logged subsidy distribution',
         'Control #' . $controlNo,
         $this->request->getIPAddress(),
         (string) $this->request->getUserAgent(),
-        'Aid type ID ' . $aidTypeId . ' on ' . $claimDate
+        'Subsidy type ID ' . $aidTypeId . ' on ' . $claimDate
     );
 
     if (! $audited) {
         $db->transRollback();
-        return $this->response->setStatusCode(500)->setJSON(['error' => 'Failed to log the aid distribution.']);
+        return $this->response->setStatusCode(500)->setJSON(['error' => 'Failed to log the subsidy distribution.']);
     }
 
     $db->transComplete();
     if ($db->transStatus() === false) {
-        return $this->response->setStatusCode(500)->setJSON(['error' => 'Failed to log the aid distribution.']);
+        return $this->response->setStatusCode(500)->setJSON(['error' => 'Failed to log the subsidy distribution.']);
     }
 
     return $this->response->setJSON($familyPayload + [
@@ -924,7 +924,7 @@ $aidType = $aidType ?? null;
 <?php endif; ?>
 ```
 
-Also update the shell docblock ("batch · aid type · live personal counter · logout").
+Also update the shell docblock ("batch · subsidy type · live personal counter · logout").
 
 - [ ] **Step 5: Rewrite scan.php**
 
@@ -1058,7 +1058,7 @@ function renderFamily(data) {
   $('membersList').innerHTML = data.members
     .map(m => `<li class="list-group-item">
         <div>${esc(m.firstname)} ${esc(m.lastname)} <span class="text-muted">(${esc(m.relationship || 'Member')})</span></div>
-        <div class="small text-muted">${esc(m.sex || '—')} · ${esc(m.birthday || '—')}</div>
+        <div class="small text-muted">${esc(m.sex || '-')} · ${esc(m.birthday || '-')}</div>
         <div class="mt-1">${badgeList(m.badges)}</div>
       </li>`).join('');
   renderHistory(data.history);
@@ -1169,11 +1169,11 @@ $('cameraBtn').addEventListener('click', () => {
 <?= $this->endSection() ?>
 ```
 
-Notes: `h.badges` / `m.badges` render empty until Task 7 adds them to the payload — `badgeList(undefined)` returns `''`, so this is safe. The `<template id="dupTitleText">` keeps the "Duplicate Entry" copy in markup so `ScanViewTest` can assert it.
+Notes: `h.badges` / `m.badges` render empty until Task 7 adds them to the payload - `badgeList(undefined)` returns `''`, so this is safe. The `<template id="dupTitleText">` keeps the "Duplicate Entry" copy in markup so `ScanViewTest` can assert it.
 
 - [ ] **Step 6: KioskViewTest + ScanControllerTest**
 
-Read `tests/unit/KioskViewTest.php` and `tests/unit/ScanControllerTest.php`; update any `service`/`SERVICE_`/`lookup` expectations to the new contract (aid type badge var `$aidType`, no `scanner/lookup` route). If `ScanControllerTest` asserts the lookup route resolves, change it to assert the route is GONE:
+Read `tests/unit/KioskViewTest.php` and `tests/unit/ScanControllerTest.php`; update any `service`/`SERVICE_`/`lookup` expectations to the new contract (subsidy type badge var `$aidType`, no `scanner/lookup` route). If `ScanControllerTest` asserts the lookup route resolves, change it to assert the route is GONE:
 
 ```php
 $this->assertArrayNotHasKey('scanner/lookup/([0-9]+)', $routes->getRoutes('GET'));
@@ -1201,7 +1201,7 @@ Expected: whole suite green (all earlier service-string stragglers resolved by n
 
 **Interfaces:**
 - Consumes: `SectorIds::normalize()`, `member.sectorID` JSON, `member_services` ↔ `services` (`services.category` holds the category NAME).
-- Produces: `MemberModel::referenceBadges(array $memberIds): array` — map of memberID → `list<string>` of badge labels: sector shortcodes, then category names (deduped), then service shortcodes. ScanController attaches `badges` to `head` and each member row.
+- Produces: `MemberModel::referenceBadges(array $memberIds): array` - map of memberID → `list<string>` of badge labels: sector shortcodes, then category names (deduped), then service shortcodes. ScanController attaches `badges` to `head` and each member row.
 
 - [ ] **Step 1: Failing test**
 
@@ -1233,11 +1233,11 @@ final class MemberBadgesTest extends CIUnitTestCase
 }
 ```
 
-Run: `vendor/bin/phpunit --filter MemberBadgesTest` — expected: FAIL (method missing).
+Run: `vendor/bin/phpunit --filter MemberBadgesTest` - expected: FAIL (method missing).
 
 - [ ] **Step 2: MemberModel::referenceBadges()**
 
-Add to `app/Models/Families/MemberModel.php` (near `familyMembers()`), and note `familyMembers()`'s select must also include `sectorID` — change its select to `'memberID, firstname, lastname, relationship, birthday, sex, sectorID'`:
+Add to `app/Models/Families/MemberModel.php` (near `familyMembers()`), and note `familyMembers()`'s select must also include `sectorID` - change its select to `'memberID, firstname, lastname, relationship, birthday, sex, sectorID'`:
 
 ```php
 /**
@@ -1322,7 +1322,7 @@ foreach ($memberRows as $i => $m) {
 $familyPayload['members'] = $memberRows;
 ```
 
-(The scan.php from Task 6 already renders `badges` — nothing to change client-side.)
+(The scan.php from Task 6 already renders `badges` - nothing to change client-side.)
 
 - [ ] **Step 4: Run + commit**
 
@@ -1365,11 +1365,11 @@ vendor/bin/phpunit          # green
 
 Smoke test against the dev server (start `php spark serve` on app.baseURL if down; login developer/developer123), using the Playwright MCP:
 
-1. `admin/aidtypes`: page renders, add an aid type, archive/restore it.
-2. `admin/batches`: New Batch modal shows name + aid-type select; open a batch.
-3. `scanner/scan`: kiosk badge shows the aid type name. (Scanning needs family/QR data — if the DB has none, import a demo family via the UI first per the V14 workflow, generate a card, then:) scan a control number → big green "Logged" banner, history updated, member collapse works, badges visible; scan the SAME number → big red "Duplicate Entry" banner and `SELECT COUNT(*) FROM aid_distribution` unchanged.
+1. `admin/aidtypes`: page renders, add a subsidy type, archive/restore it.
+2. `admin/batches`: New Batch modal shows name + subsidy-type select; open a batch.
+3. `scanner/scan`: kiosk badge shows the subsidy type name. (Scanning needs family/QR data - if the DB has none, import a demo family via the UI first per the V14 workflow, generate a card, then:) scan a control number → big green "Logged" banner, history updated, member collapse works, badges visible; scan the SAME number → big red "Duplicate Entry" banner and `SELECT COUNT(*) FROM aid_distribution` unchanged.
 4. Close the batch, open a new one, scan the same card → logs again (green).
-5. `admin/distributions`: rows show Aid Type column. `admin/reports`: renders, chart titled by aid type, PDF downloads.
+5. `admin/distributions`: rows show Subsidy Type column. `admin/reports`: renders, chart titled by subsidy type, PDF downloads.
 
 - [ ] **Step 4: Delete V17 and commit**
 
@@ -1378,7 +1378,7 @@ Only after Step 3 passes:
 ```bash
 git rm accesscardV17.sql
 git add -A docs/ CLAUDE.md PROJECT_STRUCTURE.md
-git commit -m "docs: scanner-batches doc follows aid-type restore; drop V17 dump"
+git commit -m "docs: scanner-batches doc follows subsidy-type restore; drop V17 dump"
 ```
 
 ---

@@ -140,7 +140,7 @@ function renderFamily(data) {
     $('membersList').innerHTML = data.members
       .map(m => `<li class="list-group-item">
           <div>${esc(m.firstname)} ${esc(m.lastname)} <span class="text-muted">(${esc(m.relationship || 'Member')})</span></div>
-          <div class="small text-muted">${esc(m.sex || '—')} · ${esc(m.birthday || '—')}</div>
+          <div class="small text-muted">${esc(m.sex || '-')} · ${esc(m.birthday || '-')}</div>
           <div class="mt-1">${badgeList(m.badges)}</div>
         </li>`).join('');
   }
@@ -189,7 +189,7 @@ async function scanLog(control) {
   renderFamily(data);
   const headName = `${data.head.firstname} ${data.head.lastname}`;
   if (data.logged) {
-    // Prefer the server-returned aid type: the batch (and its aid type) may
+    // Prefer the server-returned subsidy type: the batch (and its subsidy type) may
     // have changed since this page loaded.
     showBanner(true, `${data.aid_type_name || AID_TYPE_NAME} → ${headName} (Family #${data.control_no})`);
   } else {

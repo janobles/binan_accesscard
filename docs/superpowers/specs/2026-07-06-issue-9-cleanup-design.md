@@ -1,7 +1,7 @@
-# Issue #9 Cleanup — Design Spec
+# Issue #9 Cleanup - Design Spec
 
 **Date:** 2026-07-06
-**Issue:** [#9](https://github.com/daki-crypto/binan_accesscard/issues/9) — Post-PR #8 cleanup (dead code + CodeRabbit re-review backlog)
+**Issue:** [#9](https://github.com/daki-crypto/binan_accesscard/issues/9) - Post-PR #8 cleanup (dead code + CodeRabbit re-review backlog)
 **Branch:** `chore/issue-9-cleanup` off `main`
 **Deliverable:** Code PR to `main` + summary file. Closes issue #9.
 
@@ -38,9 +38,9 @@ mutations, controllers-decide/libraries-build, PHP 8.2+).
 
 ## Work items
 
-### Part 1 — Dead code / topbar
+### Part 1 - Dead code / topbar
 
-**P1-1 · `app/Helpers/asset_helper.php` — dead `family-form` manifest entry**
+**P1-1 · `app/Helpers/asset_helper.php` - dead `family-form` manifest entry**
 Delete the `'family-form' => ['css/familyform.css']` key. Verified dead:
 `public/css/familyform.css` was removed in the reusable-modal refactor and no code
 calls `asset_styles('family-form')`. `asset_helper.php` is the app's single asset
@@ -61,52 +61,52 @@ pattern.
   `app/Libraries/DashboardPageBuilder.php` (admin ~172, employee ~542, viewer
   ~631). Derive the label from the session role using existing helpers
   (`RoleAccess::normalizeRole()` / the role-label logic in `SessionAuditLogger`).
-  Controllers decide, library builds — the label belongs in the builder.
-- Keep the `.topbar-account-*` CSS in `css/sb-admin-adapter.css` — the summary
+  Controllers decide, library builds - the label belongs in the builder.
+- Keep the `.topbar-account-*` CSS in `css/sb-admin-adapter.css` - the summary
   header (avatar + name block) has no SB-Admin/Bootstrap equivalent, so the custom
   CSS is required. Document this in the summary file.
 - The avatar asset `public/assets/image/default-profile.svg` exists.
 - Verify each role's menu renders and the "My Account" modal + logout still work.
 
-### Part 2 — CodeRabbit findings
+### Part 2 - CodeRabbit findings
 
-**P2-1 · `FamilyController::importFile()` (~:277) — spoofable extension check**
+**P2-1 · `FamilyController::importFile()` (~:277) - spoofable extension check**
 Replace `strtolower($file->getClientExtension())` with server-side
 `$file->guessExtension()` when gating the `xlsx` upload. Client extension is
 attacker-controlled.
 
-**P2-2 · `FamilyController::store()` (~:138-201) — swallowed Throwable**
+**P2-2 · `FamilyController::store()` (~:138-201) - swallowed Throwable**
 A non-`FamilyRecordWriteException` `Throwable` is currently caught with no
 log/audit, unlike `import()`/`changeFamilyState()`. Add the same failure logging
 and audit path so silent failures are observable.
 
-**P2-3 · `ServiceModel::nextServiceId()` (~:199) — id race**
+**P2-3 · `ServiceModel::nextServiceId()` (~:199) - id race**
 Wrap the `SELECT MAX(id)+1` and the dependent insert in a single transaction and
 take a `FOR UPDATE` lock so concurrent creates can't allocate the same id. No
 schema change.
 
-**P2-4 · `app/Views/Lookups/services.php` (~:89) — empty-state colspan**
+**P2-4 · `app/Views/Lookups/services.php` (~:89) - empty-state colspan**
 The empty-row `colspan` is hardcoded and miscounts when the Actions column is
 hidden. Compute it from `$canManage` (mirror the header column count).
 
-**P2-5 · `JobQueueModel::ensureTable()` — runtime CREATE TABLE**
+**P2-5 · `JobQueueModel::ensureTable()` - runtime CREATE TABLE**
 Remove `ensureTable()` and its `CREATE TABLE`. Add the `job_queue` table
 definition to the SQL dump (`accesscardV14.sql`) so schema stays dump-sourced.
 Remove callers of `ensureTable()`. Keep `sql/job_queue.sql` as reference or fold
 it into the dump.
 
-**P2-6 · `ModelQueryHelpers` trait — duplicated logic**
+**P2-6 · `ModelQueryHelpers` trait - duplicated logic**
 Investigate during implementation. Compare `app/Models/Concerns/ModelQueryHelpers.php`
 against the smaller traits (`LookupModelTrait`, `NormalizesIds`, `RecordStatus`,
 `Resolves*`, `MemberQueryFilters`). If it genuinely duplicates them, remove the
 duplication and repoint callers to the smaller traits; if it is a thin aggregator
 with unique logic, keep it and note why. Do not change behavior.
 
-**P2-7 · `scripts/README.md` — SYSTEM queue worker**
+**P2-7 · `scripts/README.md` - SYSTEM queue worker**
 Change the documented Windows scheduled-task guidance to run the queue worker
 under a least-privilege service account, not `SYSTEM`.
 
-**P2-8 · `ProfileController::updateDeveloper()` — stale docblock**
+**P2-8 · `ProfileController::updateDeveloper()` - stale docblock**
 Update the docblock: the real flow is `credentials.json` + an editable username,
 not a `password` field.
 
@@ -119,16 +119,16 @@ Remove SB-Admin-Pro demo classes from stat cards/panels in
 Wrap `asset_url()` output in `esc(..., 'attr')` inside `img`/`link` tags in
 `app/Views/Auth/login.php`, `Employee/layout.php`, `Viewer/layout.php`.
 
-**P2-11 · `FamilyFormOptionsModel` — relationship label**
+**P2-11 · `FamilyFormOptionsModel` - relationship label**
 Rename the relationship label "Children" → "Child".
 
-**P2-12 · `manage-family-modal.js:805` scrollTop — won't-fix**
+**P2-12 · `manage-family-modal.js:805` scrollTop - won't-fix**
 No code change. Document the rationale (see Decisions) in the summary file and
 close the item.
 
 ## Verification
 
-- `vendor/bin/phpunit` (or `composer test`) before and after — must stay green.
+- `vendor/bin/phpunit` (or `composer test`) before and after - must stay green.
 - Smoke test: login → each role redirect → new topbar account menu (render +
   My Account modal + logout) → family create (audit row written) → family import
   of an `.xlsx` (accepted) and a renamed non-xlsx (rejected) → service create.

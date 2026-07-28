@@ -12,7 +12,7 @@ use CodeIgniter\HTTP\ResponseInterface;
 
 /**
  * Admin server: distribution-batch control and the all-distributions log.
- * Admin/Developer only. Batch open binds an aid type (from the aid_type
+ * Admin/Developer only. Batch open binds a subsidy type (from the subsidy
  * reference table) for the whole batch. Every mutation writes an
  * audit_trails row. Rendered in the admin dashboard shell.
  */
@@ -25,7 +25,7 @@ class DistributionController extends BaseController
     }
 
     /**
-     * GET admin/distribution — batches and the distribution log share one
+     * GET admin/distribution - batches and the distribution log share one
      * page, switched by ?tab= (batches|log).
      */
     public function distribution(): ResponseInterface|string
@@ -53,7 +53,7 @@ class DistributionController extends BaseController
         return redirect()->to('admin/distribution?tab=log')->with('success', 'Distribution voided.');
     }
 
-    /** POST admin/batches/open — name + aid type. */
+    /** POST admin/batches/open - name + subsidy type. */
     public function openBatch(): RedirectResponse
     {
         if ($g = $this->guard()) { return $g; }

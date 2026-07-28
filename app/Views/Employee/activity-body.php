@@ -1,7 +1,7 @@
 <?php
 /**
  * Employee "My Activity" body: search/filter rows + activity table.
- * Rendered inside components/card by Employee/layout.php (activity page) —
+ * Rendered inside components/card by Employee/layout.php (activity page) -
  * vars: listRoute, searchTerm, auditAction, auditActionOptions, perPage,
  * perPageOptions, myAudits, hasSearchFilters, formatAuditMember, auditClearUrl.
  */

@@ -1,10 +1,10 @@
-# Pre-set Aid Type + Fast-Scan Distribution Implementation Plan
+# Pre-set Subsidy Type + Fast-Scan Distribution Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Let a scanner set the aid type once before scanning, then log each family's handout with a single Confirm tap.
+**Goal:** Let a scanner set the subsidy type once before scanning, then log each family's handout with a single Confirm tap.
 
-**Architecture:** Move aid-type selection out of the per-family form into a sticky "Distributing: [aid type]" selector at the top of the Scan screen. Each scan resolves the family, defaults the claimant to the head, and needs one Confirm tap. Duplicate claims (same aid type, same day) show a warning but can be overridden. Almost all changes live in one view; the only backend change adds `aid_type_id` to the history query so duplicate detection is id-based.
+**Architecture:** Move subsidy-type selection out of the per-family form into a sticky "Distributing: [subsidy type]" selector at the top of the Scan screen. Each scan resolves the family, defaults the claimant to the head, and needs one Confirm tap. Duplicate claims (same subsidy type, same day) show a warning but can be overridden. Almost all changes live in one view; the only backend change adds `aid_type_id` to the history query so duplicate detection is id-based.
 
 **Tech Stack:** CodeIgniter 4 (PHP 8.2+), SB-Admin frame, Bootstrap 5, Bootstrap Icons, vanilla JS, `html5-qrcode`.
 
@@ -12,17 +12,17 @@
 
 - **No DB migration / no schema change.** Source of truth is `accesscardV14.sql`.
 - **Match the SQL dump** for column names / enum / role names exactly.
-- **Every family mutation writes an audit trail** — the existing `logAid()` audit path is preserved, not bypassed.
+- **Every family mutation writes an audit trail** - the existing `logAid()` audit path is preserved, not bypassed.
 - **No new UI framework, CDN, or JS library.** Reuse SB-Admin + Bootstrap 5 + Bootstrap Icons (`bi-*`) and vanilla JS already in `scan.php`.
 - **Roles:** Scan actions are Scanner/Admin/Developer only (existing `RoleAccess::requireRole`), unchanged.
 - **PHP 8.2+**, respect existing strict-type / namespace conventions.
-- Run `vendor/bin/phpunit` before and after changes — it must stay green.
+- Run `vendor/bin/phpunit` before and after changes - it must stay green.
 
 ---
 
 ### Task 1: Expose `aid_type_id` in per-QR history (backend, id-based duplicate detection)
 
-Aid-type **names are not unique** (`AidTypeModel::create()` has no uniqueness check and the `aid_type` table has no unique index). Client-side duplicate detection must therefore compare the pre-set aid type's **id**, not its name. `historyFor()` currently returns the joined `name` only; add the id.
+Aid-type **names are not unique** (`AidTypeModel::create()` has no uniqueness check and the `aid_type` table has no unique index). Client-side duplicate detection must therefore compare the pre-set subsidy type's **id**, not its name. `historyFor()` currently returns the joined `name` only; add the id.
 
 **Files:**
 - Modify: `app/Models/Scanner/AidDistributionModel.php` (`historyFor()`, around lines 53-62)
@@ -71,9 +71,9 @@ git commit -m "feat(scanner): expose aid_type_id in per-QR history for duplicate
 
 ---
 
-### Task 2: Sticky pre-set aid-type selector + fast-scan Confirm flow (view)
+### Task 2: Sticky pre-set subsidy-type selector + fast-scan Confirm flow (view)
 
-Rework `Scanner/scan.php`: pre-set aid type at the top, remove the per-scan aid-type dropdown, default the claimant to the head, replace "Log Distribution" with a one-tap Confirm, add an id-based duplicate warning, and reset+refocus after each log.
+Rework `Scanner/scan.php`: pre-set subsidy type at the top, remove the per-scan subsidy-type dropdown, default the claimant to the head, replace "Log Distribution" with a one-tap Confirm, add an id-based duplicate warning, and reset+refocus after each log.
 
 **Files:**
 - Modify: `app/Views/Scanner/scan.php` (markup in the `content` section, JS in the `scripts` section)
@@ -82,24 +82,24 @@ Rework `Scanner/scan.php`: pre-set aid type at the top, remove the per-scan aid-
 - Consumes: `$aidTypes` (already passed by `ScanController::scan()`), each row `['aid_type_id' => int, 'name' => string]`. The `scanner/lookup/{num}` JSON `history` rows now carry `aid_type_id` (Task 1). `scanner/log` POST contract is unchanged: `control_no`, `memberID`, `aid_type_id`, `claim_date`.
 - Produces: nothing consumed by later tasks (final task).
 
-- [ ] **Step 1: Add the sticky pre-set aid-type card and move the input under it**
+- [ ] **Step 1: Add the sticky pre-set subsidy-type card and move the input under it**
 
-Replace the first card (the "Scan or enter QR control number" card) with a setup card that carries the aid-type selector, then the control input:
+Replace the first card (the "Scan or enter QR control number" card) with a setup card that carries the subsidy-type selector, then the control input:
 
 ```php
 <div class="card border-0 shadow-sm rounded-3 mb-3">
   <div class="card-body">
     <label for="sessionAidType" class="form-label fw-bold">
-      <i class="bi bi-box-seam me-1" aria-hidden="true"></i> Aid type to distribute
+      <i class="bi bi-box-seam me-1" aria-hidden="true"></i> Subsidy type to distribute
     </label>
     <select class="form-select form-select-lg mb-1" id="sessionAidType">
-      <option value="">-- Choose aid type before scanning --</option>
+      <option value="">-- Choose subsidy type before scanning --</option>
       <?php foreach ($aidTypes as $type): ?>
         <option value="<?= esc($type['aid_type_id']) ?>"><?= esc($type['name']) ?></option>
       <?php endforeach; ?>
     </select>
     <div id="aidTypeHint" class="small text-danger" hidden>
-      Choose an aid type first, then scan.
+      Choose a subsidy type first, then scan.
     </div>
   </div>
 </div>
@@ -121,9 +121,9 @@ Replace the first card (the "Scan or enter QR control number" card) with a setup
 </div>
 ```
 
-- [ ] **Step 2: Remove the per-scan aid-type dropdown and add the duplicate banner + Confirm button**
+- [ ] **Step 2: Remove the per-scan subsidy-type dropdown and add the duplicate banner + Confirm button**
 
-In the `#logPanel` form, delete the entire aid-type `<div class="mb-3">…</div>` block (the `<label for="aid_type_id">` + its `<select id="aid_type_id">`). Add a hidden `aid_type_id` input, a duplicate warning banner above the fields, and change the submit button. The form becomes:
+In the `#logPanel` form, delete the entire subsidy-type `<div class="mb-3">…</div>` block (the `<label for="aid_type_id">` + its `<select id="aid_type_id">`). Add a hidden `aid_type_id` input, a duplicate warning banner above the fields, and change the submit button. The form becomes:
 
 ```php
       <form id="logForm">
@@ -147,9 +147,9 @@ In the `#logPanel` form, delete the entire aid-type `<div class="mb-3">…</div>
       </form>
 ```
 
-- [ ] **Step 3: Guard lookup on a chosen aid type**
+- [ ] **Step 3: Guard lookup on a chosen subsidy type**
 
-At the top of `lookup(control)` (before the `fetch`), block when no aid type is set:
+At the top of `lookup(control)` (before the `fetch`), block when no subsidy type is set:
 
 ```javascript
 async function lookup(control) {
@@ -174,7 +174,7 @@ After the block that builds `#memberID` options, auto-select the head:
 
 - [ ] **Step 5: Run id-based duplicate detection on lookup**
 
-After `$('control_no').value = data.control_no;` and before `$('familyPanel').hidden = false;`, set the hidden aid-type field and evaluate duplicates:
+After `$('control_no').value = data.control_no;` and before `$('familyPanel').hidden = false;`, set the hidden subsidy-type field and evaluate duplicates:
 
 ```javascript
   $('aid_type_id').value = $('sessionAidType').value;
@@ -227,7 +227,7 @@ Replace the success branch of the `logForm` submit handler so it surfaces succes
 
 - [ ] **Step 7: Confirm duplicate styling resets per lookup**
 
-`evaluateDuplicate` runs every lookup and sets the button class in both branches — no stale warning leaks. Confirmation checkpoint, no code change.
+`evaluateDuplicate` runs every lookup and sets the button class in both branches - no stale warning leaks. Confirmation checkpoint, no code change.
 
 - [ ] **Step 8: Lint the view**
 
@@ -243,10 +243,10 @@ Expected: `scanner/scan`, `scanner/lookup/(:num)`, `scanner/log` still resolve t
 
 Start the dev server and:
 1. Login as Scanner → Scan tab.
-2. Without an aid type, click Go/camera → red hint shows, no lookup.
-3. Choose aid type; enter a known control number → family card, claimant defaults to head, date today, button "Confirm".
-4. Click Confirm → success, panel clears, input refocuses, aid type stays. Check `aid_distribution` + `audit_trails` rows.
-5. Re-scan same family + same aid type → yellow "Already claimed … today" banner, Confirm turns yellow; still logs on override.
+2. Without a subsidy type, click Go/camera → red hint shows, no lookup.
+3. Choose subsidy type; enter a known control number → family card, claimant defaults to head, date today, button "Confirm".
+4. Click Confirm → success, panel clears, input refocuses, subsidy type stays. Check `aid_distribution` + `audit_trails` rows.
+5. Re-scan same family + same subsidy type → yellow "Already claimed … today" banner, Confirm turns yellow; still logs on override.
 6. Scan a different family → no stale banner, button green.
 7. Change claimant to a non-head member and Confirm → logs against that member.
 
@@ -254,5 +254,5 @@ Start the dev server and:
 
 ```bash
 git add app/Views/Scanner/scan.php
-git commit -m "feat(scanner): pre-set aid type with one-tap confirm fast-scan flow"
+git commit -m "feat(scanner): pre-set subsidy type with one-tap confirm fast-scan flow"
 ```

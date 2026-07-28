@@ -17,7 +17,7 @@
 - **PHP 8.2+.** Respect existing strict-type / namespace conventions.
 - **CSS:** Prefer vendored Bootstrap + SB-Admin components; add custom CSS only where no component exists, and document it in the summary file.
 - **Branch:** `chore/issue-9-cleanup` (already created off updated `main`, holds only the spec commit).
-- **Run `vendor/bin/phpunit` before and after each task — the suite must stay green.**
+- **Run `vendor/bin/phpunit` before and after each task - the suite must stay green.**
 
 ---
 
@@ -119,7 +119,7 @@ git commit -m "fix(import): validate upload via server-side guessExtension (#9)"
 - Modify: `app/Controllers/Families/FamilyController.php:170-180` (the `store()` catch block)
 
 **Interfaces:**
-- Consumes: `FamilyController::auditSystemError(string $context, Throwable $exception): void` (existing private helper, ~line 690 — writes a `SYSTEM_ERROR` audit row, best-effort).
+- Consumes: `FamilyController::auditSystemError(string $context, Throwable $exception): void` (existing private helper, ~line 690 - writes a `SYSTEM_ERROR` audit row, best-effort).
 - Produces: nothing.
 
 - [ ] **Step 1: Add the audit call for the non-domain exception**
@@ -151,7 +151,7 @@ Change it to audit the unexpected (non-domain) case, matching `import()`/`change
             // assignment, audit, or an unexpected DB error). Catch them all so the
             // transaction is always rolled back and the request fails gracefully.
             if (! $exception instanceof FamilyRecordWriteException) {
-                // Unexpected failure — record it like import()/changeFamilyState()
+                // Unexpected failure - record it like import()/changeFamilyState()
                 // do, so silent write failures surface on the audit page.
                 $this->auditSystemError('saving a family record', $exception);
             }
@@ -185,9 +185,9 @@ git commit -m "fix(family): audit unexpected store() failures like import (#9)"
 
 **Interfaces:**
 - Consumes: CodeIgniter model `$this->db` connection (transactions + raw builder lock).
-- Produces: `nextServiceId(): int` — same signature, now race-safe.
+- Produces: `nextServiceId(): int` - same signature, now race-safe.
 
-**Context:** `serviceID` is not AUTO_INCREMENT (schema is dump-sourced; can't change it). Callers assign the id explicitly, so two concurrent creates can both read the same MAX. Wrap the read in a transaction with a `FOR UPDATE` row lock so allocation serializes. The caller (`ServiceController` create flow) must run the insert inside the same transaction for the lock to hold — verify and adjust in Step 3.
+**Context:** `serviceID` is not AUTO_INCREMENT (schema is dump-sourced; can't change it). Callers assign the id explicitly, so two concurrent creates can both read the same MAX. Wrap the read in a transaction with a `FOR UPDATE` row lock so allocation serializes. The caller (`ServiceController` create flow) must run the insert inside the same transaction for the lock to hold - verify and adjust in Step 3.
 
 - [ ] **Step 1: Add the lock to `nextServiceId()`**
 
@@ -330,7 +330,7 @@ In the class docblock, replace:
 with:
 
 ```php
- * No CI4 migrations exist in this project — the `job_queue` table ships in the
+ * No CI4 migrations exist in this project - the `job_queue` table ships in the
  * schema dump (accesscardV14.sql); sql/job_queue.sql holds the standalone DDL for
  * reference. Callers guard on hasTable() rather than creating it at runtime.
 ```
@@ -384,7 +384,7 @@ with:
             }
 ```
 
-(Confirm `EXIT_ERROR` and `CLI` are already available in this command — CI4 commands import both. If `EXIT_ERROR` is undefined, use `EXIT_SUCCESS` to exit quietly, matching the existing "already running" early return above.)
+(Confirm `EXIT_ERROR` and `CLI` are already available in this command - CI4 commands import both. If `EXIT_ERROR` is undefined, use `EXIT_SUCCESS` to exit quietly, matching the existing "already running" early return above.)
 
 - [ ] **Step 4: Verify no `ensureTable` references remain**
 
@@ -413,7 +413,7 @@ git commit -m "refactor(jobs): drop runtime CREATE TABLE; job_queue ships in dum
 
 **Interfaces:**
 - Consumes: existing trait methods.
-- Produces: no behavior change — only removes duplication if genuinely present.
+- Produces: no behavior change - only removes duplication if genuinely present.
 
 **Context:** The finding claims `ModelQueryHelpers` duplicates logic already in the smaller traits and will drift. This is an investigate-first task; do not restructure blindly.
 
@@ -436,7 +436,7 @@ Note every model that `use`s it.
 - [ ] **Step 4: Verify behavior unchanged**
 
 Run: `vendor/bin/phpunit`
-Expected: OK. Pay attention to `FamilyDataTableTest`, `SectorIdsTest`, `ViewFormatterTest` — they exercise model query paths.
+Expected: OK. Pay attention to `FamilyDataTableTest`, `SectorIdsTest`, `ViewFormatterTest` - they exercise model query paths.
 
 - [ ] **Step 5: Commit**
 
@@ -445,7 +445,7 @@ git add app/Models/Concerns/
 git commit -m "refactor(models): dedupe ModelQueryHelpers against smaller traits (#9)"
 ```
 
-(If Step 3 concluded "no change needed — pure aggregator", commit only the docblock note, or skip the commit and record the finding as won't-fix with the reason for the CodeRabbit triage.)
+(If Step 3 concluded "no change needed - pure aggregator", commit only the docblock note, or skip the commit and record the finding as won't-fix with the reason for the CodeRabbit triage.)
 
 ---
 
@@ -462,7 +462,7 @@ Run: `grep -n "SYSTEM\|schtasks\|RunLevel\|/RU\|highest" scripts/README.md`
 
 - [ ] **Step 2: Rewrite for a least-privilege account**
 
-Change the documented scheduled-task setup so the queue worker runs under a dedicated low-privilege service account instead of `SYSTEM`. Update any `schtasks` example to pass `/RU <serviceAccount>` (not `SYSTEM`) and note the account only needs: read/write to `writable/` and `writable/uploads/`, and network access to MySQL. Add one sentence explaining why (least privilege — the worker parses untrusted uploaded files).
+Change the documented scheduled-task setup so the queue worker runs under a dedicated low-privilege service account instead of `SYSTEM`. Update any `schtasks` example to pass `/RU <serviceAccount>` (not `SYSTEM`) and note the account only needs: read/write to `writable/` and `writable/uploads/`, and network access to MySQL. Add one sentence explaining why (least privilege - the worker parses untrusted uploaded files).
 
 - [ ] **Step 3: Commit**
 
@@ -480,7 +480,7 @@ git commit -m "docs(scripts): run queue worker under least-privilege account (#9
 
 **Interfaces:** none (docblock only).
 
-**Context:** Verify the finding before editing — the method still processes an optional `new_password` (lines ~111-127) alongside username and personal fields, and the developer credentials live in `credentials.json` (`DeveloperProfile`). The docblock is "stale" only where it misstates the storage/flow. Read the method body first, then correct the docblock to match what the code actually does — do not delete accurate password wording.
+**Context:** Verify the finding before editing - the method still processes an optional `new_password` (lines ~111-127) alongside username and personal fields, and the developer credentials live in `credentials.json` (`DeveloperProfile`). The docblock is "stale" only where it misstates the storage/flow. Read the method body first, then correct the docblock to match what the code actually does - do not delete accurate password wording.
 
 - [ ] **Step 1: Read the actual flow**
 
@@ -514,7 +514,7 @@ git commit -m "docs(profile): correct updateDeveloper docblock to match flow (#9
 
 **Interfaces:** none.
 
-**Context:** Four `asset_url()` outputs are emitted raw into `src`/`href` attributes. Wrap each in `esc(..., 'attr')`. (The issue lists ×3; the login file has two occurrences — fix all four for consistency.)
+**Context:** Four `asset_url()` outputs are emitted raw into `src`/`href` attributes. Wrap each in `esc(..., 'attr')`. (The issue lists ×3; the login file has two occurrences - fix all four for consistency.)
 
 - [ ] **Step 1: Wrap each occurrence**
 
@@ -564,7 +564,7 @@ git commit -m "fix(views): escape asset_url() in img/link attributes (#9)"
 - [ ] **Step 1: Check for dependents on the exact string**
 
 Run: `grep -rn "'Children'\|\"Children\"" app/ public/`
-If any JS/PHP compares against the literal `Children` for this relationship, note it — the rename must stay consistent. (Relationship labels are display values; confirm no stored data keys off the literal.)
+If any JS/PHP compares against the literal `Children` for this relationship, note it - the rename must stay consistent. (Relationship labels are display values; confirm no stored data keys off the literal.)
 
 - [ ] **Step 2: Rename the label**
 
@@ -591,13 +591,13 @@ git commit -m "fix(family-form): relationship label Children -> Child (#9)"
 - Modify: `app/Views/Employee/layout.php` (inline account dropdown, ~:71)
 - Modify: `app/Views/Viewer/layout.php` (inline account dropdown, ~:81)
 - Modify: `app/Libraries/DashboardPageBuilder.php` (admin ~:172, employee ~:542, viewer ~:631 view-data arrays)
-- Reference (do not change): `app/Views/Partials/topbar-account-menu.php`, `css/sb-admin-adapter.css` (`.topbar-account-*` — keep)
+- Reference (do not change): `app/Views/Partials/topbar-account-menu.php`, `css/sb-admin-adapter.css` (`.topbar-account-*` - keep)
 
 **Interfaces:**
 - Consumes: `RoleAccess::normalizeRole(string $role): ?string` → 'Admin'|'Employee'|'Viewer'|'Developer'|'Scanner' (for the account-level label). The partial reads `$user`, `$username`, `$accountLevelLabel`, `$accountSettingsUrl` (defaults to `site_url('account/profile')`), `$accountSettingsMode` (defaults `'modal'`).
 - Produces: identical account menu markup in all three layouts, driven by one partial.
 
-**Context:** The branch kept inline dropdowns; main's richer partial (avatar + full name + account-level label) is orphaned. Decision: adopt the partial. `$user` (`currentSessionUser()`) is already passed to all three layouts; only `accountLevelLabel` is missing. Keep the `.topbar-account-*` custom CSS (no SB-Admin equivalent for the summary header) — document in the summary file.
+**Context:** The branch kept inline dropdowns; main's richer partial (avatar + full name + account-level label) is orphaned. Decision: adopt the partial. `$user` (`currentSessionUser()`) is already passed to all three layouts; only `accountLevelLabel` is missing. Keep the `.topbar-account-*` custom CSS (no SB-Admin equivalent for the summary header) - document in the summary file.
 
 - [ ] **Step 1: Add `accountLevelLabel` to the three view-data arrays**
 
@@ -646,7 +646,7 @@ git commit -m "refactor(topbar): adopt shared account-menu partial across layout
 
 ---
 
-### Task 13: Demo `card h-100` classes on stat cards (P2-9) — verify then trim
+### Task 13: Demo `card h-100` classes on stat cards (P2-9) - verify then trim
 
 **Files:**
 - Inspect: `app/Views/Admin/layout.php:138-162`, `app/Views/Viewer/layout.php:111-135`, `app/Views/Family/list.php:26`
@@ -654,7 +654,7 @@ git commit -m "refactor(topbar): adopt shared account-menu partial across layout
 
 **Interfaces:** none.
 
-**Context:** The finding calls `card h-100` an SB-Admin-Pro demo leftover. But the stat cards use `stat-card ... card shadow-sm h-100 py-2`, where `h-100` gives equal-height cards in a Bootstrap row — that is functional, not demo. Do not blindly strip it. Determine whether `card` (the Bootstrap component class) is redundant given the custom `.stat-card` styling, and whether removing `card`/`h-100` changes rendering.
+**Context:** The finding calls `card h-100` an SB-Admin-Pro demo leftover. But the stat cards use `stat-card ... card shadow-sm h-100 py-2`, where `h-100` gives equal-height cards in a Bootstrap row - that is functional, not demo. Do not blindly strip it. Determine whether `card` (the Bootstrap component class) is redundant given the custom `.stat-card` styling, and whether removing `card`/`h-100` changes rendering.
 
 - [ ] **Step 1: Check what `.stat-card` provides vs the Bootstrap `.card`**
 
@@ -691,9 +691,9 @@ git commit -m "chore(views): trim redundant demo card classes on stat cards (#9)
 - [ ] **Step 1: Write the summary**
 
 Document, concisely:
-- **Custom CSS kept:** `.topbar-account-*` in `css/sb-admin-adapter.css` — the account-menu summary header (avatar + name block) has no SB-Admin/Bootstrap component equivalent, so the custom CSS is required and intentional.
-- **Won't-fix #1 — scrollTop (P2-12):** `manage-family-modal.js:805` `box.scrollTop = 0` is deliberate. It is `prefers-reduced-motion`-guarded, only fires when the suggestion set changes, and pairs with the `is-updated` flash to surface the top match. Preserving manual scroll would add state-tracking for a low-value edge; smooth-scroll would feel janky mid-typing. Kept as-is.
-- **Won't-fix #2 (if applicable) — P2-9 stat-card classes:** if Task 13 kept `h-100`, record that it's functional (equal-height rows), not a demo leftover.
+- **Custom CSS kept:** `.topbar-account-*` in `css/sb-admin-adapter.css` - the account-menu summary header (avatar + name block) has no SB-Admin/Bootstrap component equivalent, so the custom CSS is required and intentional.
+- **Won't-fix #1 - scrollTop (P2-12):** `manage-family-modal.js:805` `box.scrollTop = 0` is deliberate. It is `prefers-reduced-motion`-guarded, only fires when the suggestion set changes, and pairs with the `is-updated` flash to surface the top match. Preserving manual scroll would add state-tracking for a low-value edge; smooth-scroll would feel janky mid-typing. Kept as-is.
+- **Won't-fix #2 (if applicable) - P2-9 stat-card classes:** if Task 13 kept `h-100`, record that it's functional (equal-height rows), not a demo leftover.
 - **JobQueue (P2-5):** runtime `CREATE TABLE` removed; `job_queue` already ships in `accesscardV14.sql`; callers now guard on `hasTable()`.
 - **P2-6 outcome:** state whether `ModelQueryHelpers` was deduped or kept as an aggregator, with the reason.
 
@@ -723,7 +723,7 @@ Expected: signed in. (If not, ask the user to run `coderabbit auth login` in a r
 - [ ] **Step 3: Run the review (background, wait)**
 
 Run: `coderabbit review --base main --agent`
-Wait for completion (large diffs take a few minutes). Triage every finding per `superpowers:receiving-code-review` — do not blind-apply. Fix in-scope genuine bugs introduced by this branch; re-run `vendor/bin/phpunit`. Park pre-existing/out-of-scope findings back into issue #9 (or a new issue) with the PR # + branch as a receipt.
+Wait for completion (large diffs take a few minutes). Triage every finding per `superpowers:receiving-code-review` - do not blind-apply. Fix in-scope genuine bugs introduced by this branch; re-run `vendor/bin/phpunit`. Park pre-existing/out-of-scope findings back into issue #9 (or a new issue) with the PR # + branch as a receipt.
 
 - [ ] **Step 4: Smoke-test key flows**
 
@@ -734,7 +734,7 @@ Login → each role redirect (admin/employee/viewer) → new topbar account menu
 ```bash
 git push -u origin chore/issue-9-cleanup
 gh pr create --base main --title "Cleanup: resolve issue #9 (dead code + CodeRabbit re-review backlog)" --body "$(cat <<'EOF'
-Resolves all 13 items in #9 — post-PR#8 dead code + CodeRabbit re-review findings.
+Resolves all 13 items in #9 - post-PR#8 dead code + CodeRabbit re-review findings.
 
 See `docs/superpowers/specs/2026-07-06-issue-9-cleanup-design.md` and
 `docs/superpowers/summaries/2026-07-06-issue-9-cleanup-summary.md` for scope,
@@ -755,7 +755,7 @@ Check off resolved items in the issue body (mark won't-fix items with their rati
 
 ## Self-Review
 
-**Spec coverage:** All 13 issue items map to tasks — P1-1→T1, P2-1→T2, P2-2→T3, P2-3→T4, P2-4→T5, P2-5→T6, P2-6→T7, P2-7→T8, P2-8→T9, P2-10→T10, P2-11→T11, P1-2/3→T12, P2-9→T13, P2-12→T14 (documented won't-fix). Summary + review/PR in T14/T15. Covered.
+**Spec coverage:** All 13 issue items map to tasks - P1-1→T1, P2-1→T2, P2-2→T3, P2-3→T4, P2-4→T5, P2-5→T6, P2-6→T7, P2-7→T8, P2-8→T9, P2-10→T10, P2-11→T11, P1-2/3→T12, P2-9→T13, P2-12→T14 (documented won't-fix). Summary + review/PR in T14/T15. Covered.
 
 **Placeholder scan:** No TBD/TODO. The two investigate-tasks (T7, T13) carry explicit decision rules and concrete grep commands, not vague "handle it" language.
 

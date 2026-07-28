@@ -1,9 +1,9 @@
 <?php
 /**
- * Import Review — full-page screen where an operator resolves import problems before any
+ * Import Review - full-page screen where an operator resolves import problems before any
  * data is written. The staged rows + grouped errors are rendered by import-review.js from
  * the JSON island below. A flagged family can be fixed two ways: in the spreadsheet (every
- * issue names the exact cell), or in place via the Edit modal — which POSTs to
+ * issue names the exact cell), or in place via the Edit modal - which POSTs to
  * import/review/:id/family/:qr/save, re-validates server-side, and re-renders without a
  * re-upload. Confirm queues the write job.
  *
@@ -111,7 +111,7 @@ $fieldOptionsJson = json_encode($fieldOptions, JSON_HEX_TAG | JSON_HEX_AMP | JSO
 <script src="<?= esc(asset_url('assets/js/dashboard/dashboard-modal-loader.js'), 'attr') ?>"></script>
 <script src="<?= esc(asset_url('assets/js/dashboard/manage-family-modal.js'), 'attr') ?>"></script>
 <script src="<?= esc(asset_url('assets/js/dashboard/import-review.js'), 'attr') ?>"></script>
-<?php /* Idle-timeout logout — this page is its own shell, so it wires the same
+<?php /* Idle-timeout logout - this page is its own shell, so it wires the same
          session-timeout script the dashboard layouts render. */ ?>
 <script src="<?= esc(asset_url('assets/js/session-timeout.js'), 'attr') ?>"
         data-timeout-seconds="<?= esc((string) $idleTimeoutSeconds) ?>"

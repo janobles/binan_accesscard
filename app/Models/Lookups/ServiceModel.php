@@ -337,7 +337,7 @@ class ServiceModel extends Model
     /**
      * Soft-archive every active service whose category label equals $name (exact
      * match on services.category, how services store their category), stamping each
-     * with $archivedAt — the parent category/sector's own dt_deleted. Sharing that
+     * with $archivedAt - the parent category/sector's own dt_deleted. Sharing that
      * exact timestamp is what lets restoreByCategoryArchivedAt() later un-archive only
      * the services THIS cascade retired, leaving independently-archived ones alone.
      * Returns the number of services archived.
@@ -364,7 +364,7 @@ class ServiceModel extends Model
      * Reverse of archiveByCategory(): restore only the services whose category equals
      * $name AND whose dt_deleted exactly matches $archivedAt (the parent's archive
      * timestamp). The timestamp match ensures a category/sector restore un-archives
-     * only the programs its own archive cascaded onto — services archived separately
+     * only the programs its own archive cascaded onto - services archived separately
      * (different timestamp) stay archived. Returns the number of services restored.
      */
     public function restoreByCategoryArchivedAt(string $name, string $archivedAt): int

@@ -1,4 +1,4 @@
-# Family Data Entry Form — Uppercase, Bootstrap Rework, Member UX
+# Family Data Entry Form - Uppercase, Bootstrap Rework, Member UX
 
 **Date:** 2026-07-27
 **Scope:** the CSWD family profiling form (`app/Views/Family/family-modal.php` and its
@@ -44,7 +44,7 @@ Line references are as of commit `c6ecdb4`.
 `FamilyProfilingFormV2` as PHP constants, in Title Case.
 
 **Consequence for this work:** these four are free-text *columns* but are populated from
-dropdowns — the worker picks, never types. They are therefore out of scope for stored
+dropdowns - the worker picks, never types. They are therefore out of scope for stored
 uppercasing (see the "Uppercase applies to typed fields" decision). Had they been included,
 the option lists would have had to change in lockstep: the option-selected check is an exact
 string compare (`family_modal_helper.php:58`), so a stored `ELEMENTARY GRADUATE` matching no
@@ -111,7 +111,7 @@ canonical return (`FamilyExcelImporter:1107`), and is a dropdown list in the Exc
 ### Redundant labels
 
 The modal already carries a CSS band-aid for this: `familymodal.css:483-489` hides both the
-modal footer and `.family-entry-header` — the form's own `<h2>` title (`:141-145`) — because
+modal footer and `.family-entry-header` - the form's own `<h2>` title (`:141-145`) - because
 the modal header already says the same thing. It is rendered by PHP, then hidden by CSS.
 
 | Redundant element | Why | Action |
@@ -131,7 +131,7 @@ scope here; worth its own pass.
 - **Salary is not lossy.** The select posts `value`, not `label`
   (`FamilyFormOptionsModel:49-62`), so `moneyOrNull('13000')` yields `13000.0` cleanly. Noted
   for elsewhere: the stored number is the bracket's *upper bound*, so `Salary` means "top of
-  declared bracket", not actual income — reports summing it will overstate. Out of scope.
+  declared bracket", not actual income - reports summing it will overstate. Out of scope.
 - **Age eligibility is already enforced client-side.** `refreshAgeEligibility()`
   (`js:831-881`) computes each person's age from their own birthday and disables ineligible
   sector and service checkboxes with an explanatory tooltip. An earlier draft of this spec
@@ -163,10 +163,10 @@ scope here; worth its own pass.
 **Dump version.** The option lists are PHP constants in `FamilyProfilingFormV2`, not DB
 reference tables, and the backfill is an `UPDATE` of `member` row data, not schema. So
 `accesscardV18.sql` is untouched. If any later step does change schema or seeded reference
-rows, cut V19 and update the memory note — flag it before doing so, do not decide silently.
+rows, cut V19 and update the memory note - flag it before doing so, do not decide silently.
 
 **Uppercase applies to typed fields.** On Philippine government forms the all-caps convention
-exists for hand-printing legibility and record matching — it governs the boxes where a person
+exists for hand-printing legibility and record matching - it governs the boxes where a person
 writes a surname, first name, middle name, and address. Choice fields have no caps tradition
 because nothing is typed into them; `Male ☐ Female ☐` is pre-printed form text and the encoder
 ticks a box. Where caps appear on printed output (a PSA certificate rendering `MALE`), that is
@@ -187,14 +187,14 @@ Excel-template changes, and shrinks the backfill to the columns workers type.
 **Reference data casing.** Uppercasing applies to what a worker types, not to system-provided
 labels. Sector and service names and the service category headings come from DB reference
 tables and stay Title Case; `sectorLabel()` and `serviceLabel()` already uppercase the code
-portion, giving `SC - Senior Citizen`. The distinction is useful — reference labels read as
-system-provided rather than worker-entered — and it keeps the work clear of seed changes.
+portion, giving `SC - Senior Citizen`. The distinction is useful - reference labels read as
+system-provided rather than worker-entered - and it keeps the work clear of seed changes.
 
 **Ordering.** The code change and the backfill can land separately without risk: the importer
 lowercases its duplicate-comparison keys (`FamilyExcelImporter::normalizeText`, `:1652-1655`)
 and every DB name lookup uses `LOWER(member.firstname)` (`MemberModel:164,251,278`), so
 duplicate detection is case-insensitive on both sides throughout the window. (Those `LOWER()`
-calls prevent index usage — pre-existing, unchanged by this work.)
+calls prevent index usage - pre-existing, unchanged by this work.)
 
 **Tests.** `MemberFieldNormalizerTest` and `FamilyExcelImporterTest` assert Title Case
 (`'Dela Cruz'`) in a dozen-plus places. Updating them is part of Branch 1.
@@ -214,13 +214,13 @@ pinned in `docs/knowledge/sources.md:25` to match the vendored 5.3.3 copy.
 
 ---
 
-## Branch 1 — Uppercase
+## Branch 1 - Uppercase
 
 **Goal:** one casing everywhere, sourced from storage.
 
 - `MemberFieldNormalizer::cleanName()` and `cleanAddress()`: swap
   `mb_convert_case(…, MB_CASE_TITLE)` for `mb_strtoupper(…, 'UTF-8')`. Character allowlists
-  and whitespace collapsing are unchanged. This is the single choke point — the manual form
+  and whitespace collapsing are unchanged. This is the single choke point - the manual form
   and the Excel importer both delegate here, so one edit covers both paths.
 - `manage-family-modal.js:71-80`: `cleanOtherValue()` drops its title-case regex for
   `.toUpperCase()`, covering the "Other" freetext on religion, job, education, civil status,
@@ -232,25 +232,25 @@ pinned in `docs/knowledge/sources.md:25` to match the vendored 5.3.3 copy.
   calls. Storage becomes authoritative.
 - `familymodal.css`: `text-transform: uppercase` on the form's text inputs **and selects**, so
   typed text shows caps while typing and picked values render caps without changing what is
-  stored. Visual only — the server value is what counts.
+  stored. Visual only - the server value is what counts.
 - `sql/patches/v18-uppercase-names.sql`: one-time `UPDATE … SET col = UPPER(col)` across the
   name and address columns only, following the `sql/patches/v17-indexes.sql` convention. Not
   a migration; the no-migrations rule holds. The exact column list is confirmed against
   `accesscardV18.sql` before writing, and the patch is reviewed with the user before it runs.
 
-`mb_strtoupper` handles ñ→Ñ correctly under UTF-8. Barangay needs no special handling —
+`mb_strtoupper` handles ñ→Ñ correctly under UTF-8. Barangay needs no special handling -
 `splitAddressBarangay` already compares with `strcasecmp`.
 
 **Verification:** `vendor/bin/phpunit`; create a family with lowercase input through the UI
 and confirm the DB row, records table, QR card, and edit form all agree; then **reopen a
-saved record and confirm every dropdown still shows its stored value** — picked values must
+saved record and confirm every dropdown still shows its stored value** - picked values must
 survive the round-trip untouched.
 
 **Audit trail:** unaffected. Values change before write, not the write path.
 
 ---
 
-## Branch 2 — Bootstrap rework, layout, and client-side validation
+## Branch 2 - Bootstrap rework, layout, and client-side validation
 
 ### Remove the tabs
 
@@ -266,21 +266,21 @@ pane, so no required field is ever unreachable at submit time.
 
 ### Head card
 
-Personal fields always visible in a compact card. The sector and service checkbox lists —
-the single longest block in the form — collapse to a text summary
+Personal fields always visible in a compact card. The sector and service checkbox lists -
+the single longest block in the form - collapse to a text summary
 (`Sectors: SC, PWD (2 selected)`) with an expand control. Same interaction the member rows
 use, for consistency.
 
 **Default state depends on mode:** expanded on create, collapsed on edit. During new entry
 the worker is reading a paper form and ticking boxes, so sectors and services are the primary
 task and collapsing them costs a click at the worst moment. When editing an existing record
-they are reference information. The view already knows which mode it is in — `$modalMode` is
+they are reference information. The view already knows which mode it is in - `$modalMode` is
 `'create'` or `'update'` (`family_modal_helper.php:83`).
 
 ### Redundant headings
 
 Delete the labels listed in the audit's "Redundant labels" table, including the `<h2>` that
-`familymodal.css:483-489` currently hides — remove both the element and the CSS rule rather
+`familymodal.css:483-489` currently hides - remove both the element and the CSS rule rather
 than leaving a hidden element in the DOM.
 
 ### Set as Head
@@ -289,7 +289,7 @@ than leaving a hidden element in the DOM.
 happened across a tab boundary and was effectively invisible. On one scrolling page it
 happens in front of the worker, so it needs defined behavior:
 
-- Confirm before swapping — it rewrites who holds the QR card, which is the record's identity.
+- Confirm before swapping - it rewrites who holds the QR card, which is the record's identity.
 - The promoted member's row collapses out of the member list as the head card takes its values.
 - The previous head becomes a member row, appended to the list, expanded so the worker can set
   its relationship (which the head record does not carry).
@@ -304,7 +304,7 @@ Atomic with the CSS deletion, since the unclassed controls depend on the CSS bei
 - Delete `familymodal.css:597-634` and the `:621` `!important`.
 - Preserve the theme via CSS custom properties scoped to `.family-entry-form`
   (`--bs-border-color`, `--bs-body-color`, `--bs-form-control-bg`) rather than re-declaring
-  the components. There is no Sass build — `bootstrap.min.css` is vendored — so custom
+  the components. There is no Sass build - `bootstrap.min.css` is vendored - so custom
   properties are the closest available route to variable-based customization.
 - Checkboxes become `.form-check-input` / `.form-check-label` with `for`/`id`; delete
   `:701-712`. Accent moves to `--bs-form-check-checked-bg-color`.
@@ -313,7 +313,7 @@ Atomic with the CSS deletion, since the unclassed controls depend on the CSS bei
 
 ### Validation
 
-The form becomes `class="needs-validation" novalidate`, per Bootstrap's documented pattern —
+The form becomes `class="needs-validation" novalidate`, per Bootstrap's documented pattern -
 `novalidate` suppresses the browser's own bubbles so Bootstrap's feedback styling is what the
 worker sees. It is no longer load-bearing for the submit-hang; removing the tabs handles that.
 
@@ -334,7 +334,7 @@ worker sees. It is no longer load-bearing for the submit-hang; removing the tabs
   or cross after), making the async check legible.
 - Contact → `.input-group` with a `+63` addon.
 - Sector and service lists get a filter input.
-- No `.form-floating` — it fights the dense four-column grid.
+- No `.form-floating` - it fights the dense four-column grid.
 
 ### Sector and service panels: flatten the nesting
 
@@ -345,7 +345,7 @@ area. In practice about four checkboxes are visible at a time.
 
 - Drop `.family-option-box` as a bordered container. The section card is the container; the
   list does not need a second border and its own scrollbar.
-- **Sectors** is a fixed list of 10. It needs no scroll region at all — render it as a
+- **Sectors** is a fixed list of 10. It needs no scroll region at all - render it as a
   two-column `.form-check` grid (`col-6`), fully visible.
 - **Services** become a Bootstrap accordion, one `.accordion-item` per category, with no
   `data-bs-parent` so several can stay open. Categories matching the ticked sectors
@@ -388,27 +388,27 @@ The six-button `.btn-group` (`:389-400`) splits into left (`Close`, `Clear`) and
 (`Save`), also fixing the `btn-sm`-inside-default-group geometry break on the Print QR link.
 
 **Close stays neutral, not yellow.** Yellow is `btn-warning`, which already means Import in
-this app, and warning-yellow reads as "this is risky" — the opposite of the intent, since
+this app, and warning-yellow reads as "this is risky" - the opposite of the intent, since
 closing is safe precisely because the draft is kept. To communicate that directly, add a
 small "Draft saved" indicator beside the footer, updated when `saveDraftNow()` fires
 (`js:617`). That states the guarantee instead of asking the worker to infer it from a color.
 
 ### Verification
 
-`vendor/bin/phpunit`; then Playwright against the dev server — log in as
+`vendor/bin/phpunit`; then Playwright against the dev server - log in as
 `developer/developer123`, snapshot at desktop and 390px, compare against Manage Records.
 Assert specifically that submitting with an empty head field now surfaces an error at that
 field (today it hangs silently).
 
 ---
 
-## Branch 3 — Member rows and field guards
+## Branch 3 - Member rows and field guards
 
 ### Read-only member rows
 
 Each saved member renders as a compact read-only row: joined full name
 (`DELA CRUZ, JUAN P. JR.`), relationship, age, and sector badges, with Edit and Remove.
-Clicking Edit expands that row — and only that row — into the full field set inline;
+Clicking Edit expands that row - and only that row - into the full field set inline;
 collapsing returns it to text.
 
 Closed rows render **no inputs**. Their values ride along as hidden inputs so the existing
@@ -417,7 +417,7 @@ unchanged.
 
 This is the main DOM reduction: today every member carries 13 inputs plus both complete
 checkbox lists. The `max_input_vars` pressure that the truncation guard exists to survive
-largely disappears. Keep the guard and the `_form_end` sentinel anyway — cheap insurance —
+largely disappears. Keep the guard and the `_form_end` sentinel anyway - cheap insurance -
 but they stop being load-bearing.
 
 Redundant label/input pairs go the same way: closed rows show values, not labels.
@@ -453,7 +453,7 @@ along with the field names. The relationship select (`:64`) gains an id and a re
 
 ### Verification
 
-`vendor/bin/phpunit`; Playwright at desktop and 390px with a multi-member household —
+`vendor/bin/phpunit`; Playwright at desktop and 390px with a multi-member household -
 confirm rows read as text when closed, expand to edit one at a time, auto-expand on invalid
 submit, Set as Head swaps visibly and confirms first, and that a household large enough to
 have previously tripped the truncation guard now saves.
@@ -472,7 +472,7 @@ Add/Edit path:
 
 - Duplicate-person detection across QR numbers. Only QR uniqueness is checked today. Real
   gap, separate spec.
-- `Salary` storing bracket upper bounds rather than actual income — affects reporting, not
+- `Salary` storing bracket upper bounds rather than actual income - affects reporting, not
   entry.
 - The Excel import review screen, beyond what Branch 1's normalizer change reaches.
 - Pre-existing dead code noted during the audit but not created by this work.

@@ -15,8 +15,8 @@
 - Pinned versions (source of truth, verified 2026-07-06): **CodeIgniter v4.7.3** (`composer.lock`), **PHP 8.2.30**, **Bootstrap v5.3.3** (vendored at `public/assets/bootstrap/css/bootstrap.min.css`, version string in file header).
 - Every rule in a convention doc **must cite a real `path:line`** that resolves (checked by `scripts/check-knowledge-cites.sh`).
 - Convention docs: **one concern per file, ≤ ~150 lines**, structure = Rule → canonical snippet (path:line) → anti-pattern seen in repo → why.
-- `violations.md` format matches CLAUDE.md issue convention: `- [ ] 🟠 Major: \`path:line\` — description.` (🔴 Critical, 🟠 Major, 🟡 Minor, ⚪ Cleanup, 🔵 UX/needs-decision).
-- CLAUDE.md slimming: **no rule lost, only relocated** — non-negotiables stay verbatim.
+- `violations.md` format matches CLAUDE.md issue convention: `- [ ] 🟠 Major: \`path:line\` - description.` (🔴 Critical, 🟠 Major, 🟡 Minor, ⚪ Cleanup, 🔵 UX/needs-decision).
+- CLAUDE.md slimming: **no rule lost, only relocated** - non-negotiables stay verbatim.
 - UI target theme is **SB Admin 1** (startbootstrap-sb-admin v7+, Bootstrap 5-based). SB Admin 2 rejected (Bootstrap 4.6). Do not reopen this decision.
 - Context7 serves **latest** docs, not pinned versions. Every doc plane that mentions Context7 must carry the cross-check-against-`sources.md` caveat.
 - Commit message convention: conventional commits (`docs:`, `chore:`, `feat:`), body only when "why" isn't obvious.
@@ -47,7 +47,7 @@ git checkout -b feat/rag-pipeline
 Run: `claude mcp list`
 Expected: `context7 ✔ Connected` (or equivalent connected status).
 
-If not connected: check `CONTEXT7_API_KEY` is exported in the shell (`echo ${CONTEXT7_API_KEY:+set}`); keyless mode also works (rate-limited) — a missing key is not a blocker.
+If not connected: check `CONTEXT7_API_KEY` is exported in the shell (`echo ${CONTEXT7_API_KEY:+set}`); keyless mode also works (rate-limited) - a missing key is not a blocker.
 
 - [ ] **Step 3: Verify Context7 answers for Bootstrap 5**
 
@@ -55,14 +55,14 @@ Using the MCP tools in-session:
 1. `resolve-library-id` with libraryName `Bootstrap`, query "Bootstrap 5.3 card and table component classes".
 2. `query-docs` against the returned ID (expect something like `/twbs/bootstrap`) with query "card component markup and utility classes".
 
-Expected: relevant Bootstrap 5.3 doc snippets returned. (CI4 already verified 2026-07-06 via `/codeigniter4/userguide` — do not re-verify.)
+Expected: relevant Bootstrap 5.3 doc snippets returned. (CI4 already verified 2026-07-06 via `/codeigniter4/userguide` - do not re-verify.)
 
-Record the resolved Bootstrap library ID — Task 2 writes it into `sources.md`.
+Record the resolved Bootstrap library ID - Task 2 writes it into `sources.md`.
 
 - [ ] **Step 4: Baseline test run**
 
 Run: `vendor/bin/phpunit`
-Expected: green (some DB/session tests skip without `sqlite3` ext — skips are fine). Record the pass/skip counts; the final task compares against them.
+Expected: green (some DB/session tests skip without `sqlite3` ext - skips are fine). Record the pass/skip counts; the final task compares against them.
 
 No commit (no file changes).
 
@@ -109,7 +109,7 @@ exit $fail
 
 Then: `chmod +x scripts/check-knowledge-cites.sh`
 
-- [ ] **Step 2: Run it — expect trivially green (no docs yet)**
+- [ ] **Step 2: Run it - expect trivially green (no docs yet)**
 
 Run: `bash scripts/check-knowledge-cites.sh`
 Expected: `OK: 0 unique cites resolve.` exit 0.
@@ -158,11 +158,11 @@ Replace `<ID recorded in Task 1>` with the actual Bootstrap library ID from Task
 mkdir -p docs/knowledge/binan-conventions docs/knowledge/sbadmin docs/knowledge/php-practices
 ```
 
-(Dirs stay empty until their tasks; git tracks them once files land — no `.gitkeep` needed since each dir gets files in Tasks 3–7.)
+(Dirs stay empty until their tasks; git tracks them once files land - no `.gitkeep` needed since each dir gets files in Tasks 3-7.)
 
 - [ ] **Step 5: Verify and commit**
 
-Run: `bash scripts/check-knowledge-cites.sh` — Expected: exit 0.
+Run: `bash scripts/check-knowledge-cites.sh` - Expected: exit 0.
 
 ```bash
 git add scripts/check-knowledge-cites.sh docs/knowledge/sources.md
@@ -178,7 +178,7 @@ git commit -m "docs(rag): scaffold docs/knowledge with sources.md and cite-check
 
 **Interfaces:**
 - Consumes: severity/checkbox format from Global Constraints.
-- Produces: `docs/knowledge/violations.md` — the diagnostic punch-list later convention docs cite as "anti-pattern seen in repo" evidence.
+- Produces: `docs/knowledge/violations.md` - the diagnostic punch-list later convention docs cite as "anti-pattern seen in repo" evidence.
 
 - [ ] **Step 1: Mine closed issue #7 for still-unfixed items**
 
@@ -187,9 +187,9 @@ gh issue view 7 --json body -q .body > /tmp/issue7-body.md
 grep -E '^\s*-\s*\[ \]' /tmp/issue7-body.md
 ```
 
-For each still-unchecked item, verify against current code (Read the cited `path:line`) — the fix may have landed without the box being ticked. Keep only items still true.
+For each still-unchecked item, verify against current code (Read the cited `path:line`) - the fix may have landed without the box being ticked. Keep only items still true.
 
-- [ ] **Step 2: Audit sweep — dead code, non-Bootstrap views, redundant helpers**
+- [ ] **Step 2: Audit sweep - dead code, non-Bootstrap views, redundant helpers**
 
 Run each probe; each hit is a *candidate*, verify by reading before listing:
 
@@ -201,7 +201,7 @@ grep -rln '<html' app/Views --include='*.php'
 # Redundant helpers: custom helpers duplicating CI4 built-ins
 ls app/Helpers/ 2>/dev/null && grep -rn 'function ' app/Helpers/ | head -20
 # Dead code: private methods never called within their class
-# (manual pass over app/Libraries/ and app/Controllers/ — check each private
+# (manual pass over app/Libraries/ and app/Controllers/ - check each private
 # method name has a second hit in its own file)
 grep -rn 'private function' app/Libraries app/Controllers --include='*.php'
 # View-data assembly leaking outside DashboardPageBuilder (controllers building arrays for views)
@@ -217,7 +217,7 @@ Header + verified findings, grouped by severity, exactly this shape:
 
 Canonical punch-list for code-mess items (dead code, non-conforming views,
 redundant helpers, boundary leaks). GitHub issues track QA/feature work, not
-code mess — this file is the single home to avoid drifting lists.
+code mess - this file is the single home to avoid drifting lists.
 
 Maintenance: cleanup PRs tick items `[x]` + `*(Fixed: <PR/commit>)*`. New
 violations spotted mid-task get appended immediately, verified first.
@@ -227,15 +227,15 @@ issue #7.
 
 ## Findings
 
-- [ ] 🟠 Major: `app/...:NN` — description of verified violation.
-- [ ] ⚪ Cleanup: `app/...:NN` — description.
+- [ ] 🟠 Major: `app/...:NN` - description of verified violation.
+- [ ] ⚪ Cleanup: `app/...:NN` - description.
 ```
 
 Every entry must be a violation you verified by reading the code, with the real `path:line`. Empty severity groups are omitted.
 
 - [ ] **Step 4: Verify cites and commit**
 
-Run: `bash scripts/check-knowledge-cites.sh` — Expected: exit 0, count > 0.
+Run: `bash scripts/check-knowledge-cites.sh` - Expected: exit 0, count > 0.
 
 ```bash
 git add docs/knowledge/violations.md
@@ -244,7 +244,7 @@ git commit -m "docs(rag): seed violations punch-list from audit pass and issue #
 
 ---
 
-### Task 4: Convention docs — `mvc-boundaries.md` + `audit-trail.md`
+### Task 4: Convention docs - `mvc-boundaries.md` + `audit-trail.md`
 
 **Files:**
 - Create: `docs/knowledge/binan-conventions/mvc-boundaries.md`
@@ -254,7 +254,7 @@ git commit -m "docs(rag): seed violations punch-list from audit pass and issue #
 - Consumes: `violations.md` entries (anti-pattern evidence), cite-check script.
 - Produces: two ≤150-line convention docs; SKILL.md grep index (Task 8) keys on their filenames.
 
-Extraction method for BOTH docs (and Tasks 5–7): **extract from the best existing code, don't invent.** For each rule: (1) grep the real code, (2) pick the canonical example matching CLAUDE.md intent, cite `path:line`, (3) write Rule → canonical snippet → anti-pattern seen in repo (cite, or reference the `violations.md` entry) → why.
+Extraction method for BOTH docs (and Tasks 5-7): **extract from the best existing code, don't invent.** For each rule: (1) grep the real code, (2) pick the canonical example matching CLAUDE.md intent, cite `path:line`, (3) write Rule → canonical snippet → anti-pattern seen in repo (cite, or reference the `violations.md` entry) → why.
 
 - [ ] **Step 1: Gather canonical examples for MVC boundaries**
 
@@ -277,7 +277,7 @@ Required sections (fill snippets from Step 1 greps, real code only):
 `DashboardPageBuilder` owns dashboard view-data assembly; models own queries.
 
 ## Rule 1: Controllers decide, libraries build
-Canonical: `app/Controllers/Admin/DashboardController.php:NN` — dispatches to
+Canonical: `app/Controllers/Admin/DashboardController.php:NN` - dispatches to
 `DashboardPageBuilder`:
 ```php
 <real snippet>
@@ -302,11 +302,11 @@ grep -rn 'SessionAuditLogger' app/Libraries app/Controllers --include='*.php' | 
 
 - [ ] **Step 4: Write `audit-trail.md`**
 
-Same Rule/canonical/anti-pattern/why structure. Must cover: (a) every family mutation (create/update/member/service changes) writes `audit_trails` via `Audit/AuditTrailsModel` — non-negotiable, never bypass; (b) the canonical call shape from `FamilyController` with real snippet + `path:line`; (c) session-level audit via `SessionAuditLogger` and when each applies.
+Same Rule/canonical/anti-pattern/why structure. Must cover: (a) every family mutation (create/update/member/service changes) writes `audit_trails` via `Audit/AuditTrailsModel` - non-negotiable, never bypass; (b) the canonical call shape from `FamilyController` with real snippet + `path:line`; (c) session-level audit via `SessionAuditLogger` and when each applies.
 
 - [ ] **Step 5: Verify and commit**
 
-Run: `bash scripts/check-knowledge-cites.sh` — Expected: exit 0.
+Run: `bash scripts/check-knowledge-cites.sh` - Expected: exit 0.
 Check both files ≤ ~150 lines: `wc -l docs/knowledge/binan-conventions/*.md`
 
 ```bash
@@ -316,7 +316,7 @@ git commit -m "docs(rag): add mvc-boundaries and audit-trail convention docs"
 
 ---
 
-### Task 5: Convention docs — `routing-subnamespaces.md` + `models.md`
+### Task 5: Convention docs - `routing-subnamespaces.md` + `models.md`
 
 **Files:**
 - Create: `docs/knowledge/binan-conventions/routing-subnamespaces.md`
@@ -338,7 +338,7 @@ head -40 tests/unit/DashboardControllerRoutingTest.php   # the guard test to cit
 - [ ] **Step 2: Write `routing-subnamespaces.md`**
 
 Must cover, each as Rule → canonical `path:line` snippet → anti-pattern → why:
-(a) feature subnamespaces (Auth, Accounts, Families, Lookups, Audit, Admin, Employee, Viewer) and routes targeting namespaces directly in `app/Config/Routes.php`; (b) where a new controller goes and how its route is declared; (c) the guard test `tests/unit/DashboardControllerRoutingTest.php` — cite it as the enforcement mechanism; (d) verification command `php spark routes`.
+(a) feature subnamespaces (Auth, Accounts, Families, Lookups, Audit, Admin, Employee, Viewer) and routes targeting namespaces directly in `app/Config/Routes.php`; (b) where a new controller goes and how its route is declared; (c) the guard test `tests/unit/DashboardControllerRoutingTest.php` - cite it as the enforcement mechanism; (d) verification command `php spark routes`.
 
 - [ ] **Step 3: Gather model-layer evidence**
 
@@ -350,11 +350,11 @@ grep -n 'public function' app/Models/DashboardModel.php | head
 
 - [ ] **Step 4: Write `models.md`**
 
-Must cover: (a) model responsibilities and feature grouping (`Auth/`, `Families/`, `Audit/`, `Lookups/` + shared `DashboardModel`/`SearchModel`/`ViewLayoutModel`); (b) query placement — queries in models, not controllers/libraries (cross-reference rule 3 of `mvc-boundaries.md` by filename, don't duplicate its snippets); (c) schema truth: **no migrations — schema source of truth is the SQL dump; column names/enums/roles match the dump exactly; employee accounts store as `User` role**; (d) canonical model shape with real `path:line` snippet.
+Must cover: (a) model responsibilities and feature grouping (`Auth/`, `Families/`, `Audit/`, `Lookups/` + shared `DashboardModel`/`SearchModel`/`ViewLayoutModel`); (b) query placement - queries in models, not controllers/libraries (cross-reference rule 3 of `mvc-boundaries.md` by filename, don't duplicate its snippets); (c) schema truth: **no migrations - schema source of truth is the SQL dump; column names/enums/roles match the dump exactly; employee accounts store as `User` role**; (d) canonical model shape with real `path:line` snippet.
 
 - [ ] **Step 5: Verify and commit**
 
-Run: `bash scripts/check-knowledge-cites.sh` — Expected: exit 0.
+Run: `bash scripts/check-knowledge-cites.sh` - Expected: exit 0.
 
 ```bash
 git add docs/knowledge/binan-conventions/
@@ -386,7 +386,7 @@ grep -rln 'class="card\|class="table' app/Views --include='*.php' | head
 
 - [ ] **Step 2: Write `views-bootstrap.md`**
 
-Must cover: (a) layout shells — `app/Views/Admin/layout.php` and `Employee/layout.php` swap per-page views; new pages plug into a shell, never standalone `<html>`; (b) shared partials in `app/Views/components/`; (c) Bootstrap 5.3.3 vendored at `public/assets/bootstrap/` — use its classes, not inline styles (cite a conforming view and a `violations.md` offender); (d) page CSS pattern (`public/css/<page>.css` + `sb-admin-adapter.css`).
+Must cover: (a) layout shells - `app/Views/Admin/layout.php` and `Employee/layout.php` swap per-page views; new pages plug into a shell, never standalone `<html>`; (b) shared partials in `app/Views/components/`; (c) Bootstrap 5.3.3 vendored at `public/assets/bootstrap/` - use its classes, not inline styles (cite a conforming view and a `violations.md` offender); (d) page CSS pattern (`public/css/<page>.css` + `sb-admin-adapter.css`).
 
 - [ ] **Step 3: Write `sbadmin/adapter.md`**
 
@@ -394,11 +394,11 @@ Documents current reality: Bootstrap 5 + homegrown `public/css/sb-admin-adapter.
 
 - [ ] **Step 4: Write `sbadmin/target-theme.md`**
 
-Documents the decided migration target: **SB Admin 1 (startbootstrap-sb-admin v7+, Bootstrap 5-based); SB Admin 2 rejected (pinned to Bootstrap 4.6, fights the BS5 base).** Cheatsheet of SB Admin 1 conventions (card/table/sidebar/topbar markup shapes, from the canonical URL in `sources.md`) + which existing views are migration targets (reference `violations.md` entries by their cites). This doc is forward-looking — its SB Admin 1 markup examples come from the upstream template, so they carry URLs, not repo `path:line` cites; repo cites appear only for current-state references.
+Documents the decided migration target: **SB Admin 1 (startbootstrap-sb-admin v7+, Bootstrap 5-based); SB Admin 2 rejected (pinned to Bootstrap 4.6, fights the BS5 base).** Cheatsheet of SB Admin 1 conventions (card/table/sidebar/topbar markup shapes, from the canonical URL in `sources.md`) + which existing views are migration targets (reference `violations.md` entries by their cites). This doc is forward-looking - its SB Admin 1 markup examples come from the upstream template, so they carry URLs, not repo `path:line` cites; repo cites appear only for current-state references.
 
 - [ ] **Step 5: Verify and commit**
 
-Run: `bash scripts/check-knowledge-cites.sh` — Expected: exit 0.
+Run: `bash scripts/check-knowledge-cites.sh` - Expected: exit 0.
 
 ```bash
 git add docs/knowledge/binan-conventions/views-bootstrap.md docs/knowledge/sbadmin/
@@ -427,11 +427,11 @@ grep -rn 'readonly\|enum \|match (' app --include='*.php' | head -10
 
 - [ ] **Step 2: Write `idioms.md`**
 
-Must cover, Rule/canonical/anti-pattern/why structure: (a) `declare(strict_types=1)` + namespace header on every file (cite a canonical header; list non-conformers via `violations.md`); (b) constructor patterns as used here (promoted properties if present — only document what the greps actually show); (c) typed signatures (param + return types); (d) PHP 8.2 floor. Close with: deep language questions → PHP manual / Context7, cross-check `sources.md` pins.
+Must cover, Rule/canonical/anti-pattern/why structure: (a) `declare(strict_types=1)` + namespace header on every file (cite a canonical header; list non-conformers via `violations.md`); (b) constructor patterns as used here (promoted properties if present - only document what the greps actually show); (c) typed signatures (param + return types); (d) PHP 8.2 floor. Close with: deep language questions → PHP manual / Context7, cross-check `sources.md` pins.
 
 - [ ] **Step 3: Verify and commit**
 
-Run: `bash scripts/check-knowledge-cites.sh` — Expected: exit 0.
+Run: `bash scripts/check-knowledge-cites.sh` - Expected: exit 0.
 
 ```bash
 git add docs/knowledge/php-practices/
@@ -440,13 +440,13 @@ git commit -m "docs(rag): add php-practices idioms doc"
 
 ---
 
-### Task 8: Router skill — `.claude/skills/binan-conventions/SKILL.md`
+### Task 8: Router skill - `.claude/skills/binan-conventions/SKILL.md`
 
 **Files:**
 - Create: `.claude/skills/binan-conventions/SKILL.md`
 
 **Interfaces:**
-- Consumes: all `docs/knowledge/` filenames from Tasks 2–7 (grep index must hit real files).
+- Consumes: all `docs/knowledge/` filenames from Tasks 2-7 (grep index must hit real files).
 - Produces: the retrieval router that CLAUDE.md (Task 9) and AGENTS.md (Task 10) point at.
 
 - [ ] **Step 1: Write SKILL.md**
@@ -531,7 +531,7 @@ git commit -m "docs(rag): add binan-conventions retrieval router skill"
 
 **Interfaces:**
 - Consumes: SKILL.md path from Task 8; `docs/knowledge/` corpus.
-- Produces: slimmed CLAUDE.md. **No rule lost, only relocated** — verify by diff.
+- Produces: slimmed CLAUDE.md. **No rule lost, only relocated** - verify by diff.
 
 - [ ] **Step 1: Relocation map (what moves where)**
 
@@ -541,7 +541,7 @@ git commit -m "docs(rag): add binan-conventions retrieval router skill"
 | Non-Negotiables | **Stays verbatim** |
 | Commands, CodeRabbit workflow, GitHub issue format | **Stays** (operational, needed most sessions) |
 | Tests section | **Stays**, trimmed to the run commands + "smoke-test key flows" line; per-test descriptions already live in the test files |
-| Architecture section (controllers/models/libraries/views inventory) | **Moves** — covered by `docs/knowledge/binan-conventions/` + existing `PROJECT_STRUCTURE.md`; replaced by the router |
+| Architecture section (controllers/models/libraries/views inventory) | **Moves** - covered by `docs/knowledge/binan-conventions/` + existing `PROJECT_STRUCTURE.md`; replaced by the router |
 
 - [ ] **Step 2: Apply the edit**
 
@@ -557,11 +557,11 @@ create/update, audit log creation.
 ## Retrieval (before editing app code)
 
 Before editing `app/Controllers|Models|Views|Libraries` or routes, use the
-`binan-conventions` skill (`.claude/skills/binan-conventions/SKILL.md`) —
+`binan-conventions` skill (`.claude/skills/binan-conventions/SKILL.md`) -
 decision table + grep index over `docs/knowledge/`:
 
 - Framework API (CI4 / Bootstrap 5) → Context7 MCP (`.mcp.json`); serves
-  LATEST docs — cross-check pins in `docs/knowledge/sources.md`.
+  LATEST docs - cross-check pins in `docs/knowledge/sources.md`.
 - Repo conventions → `docs/knowledge/binan-conventions/`
 - UI / SBAdmin → `docs/knowledge/sbadmin/` (target theme: SB Admin 1)
 - PHP idioms → `docs/knowledge/php-practices/`
@@ -594,7 +594,7 @@ git commit -m "docs(rag): slim CLAUDE.md to non-negotiables + retrieval router"
 - Create: `AGENTS.md` (repo root)
 
 **Interfaces:**
-- Consumes: decision-table routing from Task 8 (mirrored inline — external agents don't execute Claude skills).
+- Consumes: decision-table routing from Task 8 (mirrored inline - external agents don't execute Claude skills).
 - Produces: entry point for Cursor/Codex/Copilot.
 
 - [ ] **Step 1: Write `AGENTS.md`**
@@ -603,14 +603,14 @@ git commit -m "docs(rag): slim CLAUDE.md to non-negotiables + retrieval router"
 # Agent Instructions
 
 Read `CLAUDE.md` for rules and non-negotiables. Do not duplicate or override
-them — this file only routes retrieval.
+them - this file only routes retrieval.
 
 Before editing code under `app/` (controllers, models, views, libraries,
 routes), retrieve:
 
 | Question | Source |
 |----------|--------|
-| Framework API (CodeIgniter 4 / Bootstrap 5) | Context7 MCP (`.mcp.json`); serves LATEST docs — cross-check pins in `docs/knowledge/sources.md` |
+| Framework API (CodeIgniter 4 / Bootstrap 5) | Context7 MCP (`.mcp.json`); serves LATEST docs - cross-check pins in `docs/knowledge/sources.md` |
 | Repo conventions ("how does THIS repo do X") | `docs/knowledge/binan-conventions/` |
 | UI markup / SBAdmin styling | `docs/knowledge/sbadmin/` |
 | PHP idioms | `docs/knowledge/php-practices/` |
@@ -661,7 +661,7 @@ Expected: each prints the filename.
 
 - [ ] **Step 3: CLAUDE.md diff review (second pass)**
 
-`git diff main -- CLAUDE.md` — confirm again: non-negotiables intact, every relocated rule findable in `docs/knowledge/`.
+`git diff main -- CLAUDE.md` - confirm again: non-negotiables intact, every relocated rule findable in `docs/knowledge/`.
 
 - [ ] **Step 4: Push and open PR**
 
@@ -683,4 +683,4 @@ EOF
 )"
 ```
 
-Then run the repo's CodeRabbit review workflow per CLAUDE.md (`coderabbit review --base main --agent`, triage — don't blind-apply).
+Then run the repo's CodeRabbit review workflow per CLAUDE.md (`coderabbit review --base main --agent`, triage - don't blind-apply).

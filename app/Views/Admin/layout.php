@@ -152,7 +152,7 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                         ]) ?>
                     </section>
 
-                    <?php /* Aid Distribution section (header + charts/tables);
+                    <?php /* Subsidy Distribution section (header + charts/tables);
                              variables come from buildReportsData(). */ ?>
                     <?= view('Admin/reports-body') ?>
 
@@ -169,7 +169,7 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                         $recentFamilyRows[] = [
                             esc(trim(($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? ''))),
                             esc((string) ($family['sector_name'] ?? '-')),
-                            $contact === '' ? '<span class="text-muted">—</span>' : esc($contact),
+                            $contact === '' ? '<span class="text-muted">-</span>' : esc($contact),
                             esc($formatDate($family['dt_created'] ?? '')),
                         ];
                     }
@@ -221,10 +221,10 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
             <?php if ($activePage === 'reference-data'): ?>
                 <?= view('components/page_tabs', [
                     'tabs' => [
-                        ['key' => 'sectors', 'label' => 'Sectors', 'icon' => 'diagram-3-fill'],
-                        ['key' => 'services', 'label' => 'Services & Programs', 'icon' => 'grid-fill'],
-                        ['key' => 'categories', 'label' => 'Categories', 'icon' => 'tags-fill'],
-                        ['key' => 'aidtypes', 'label' => 'Subsidy Types', 'icon' => 'box-seam'],
+                        ['key' => 'sectors', 'label' => 'Sectors'],
+                        ['key' => 'services', 'label' => 'Services & Programs'],
+                        ['key' => 'categories', 'label' => 'Categories'],
+                        ['key' => 'aidtypes', 'label' => 'Subsidy Types'],
                     ],
                     'active' => $referenceTab ?? 'sectors',
                     'baseUrl' => 'admin/reference-data',
@@ -256,11 +256,13 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                         'icon' => 'box-seam',
                         'title' => 'Subsidy Types',
                         'cardClass' => 'sector-management',
+                        'attrs' => 'data-table-paginate data-paginate-key="aidtypes" data-paginate-label="subsidy types"',
                         'bodyView' => 'Admin/aidtypes-body',
                         'bodyData' => [
                             'aidTypes' => $aidTypes,
                             'currentRole' => $currentRole,
                         ],
+                        'footer' => view('components/table_footer', ['clientKey' => 'aidtypes', 'entityLabel' => 'subsidy types']),
                     ]) ?>
                     <?= view('Admin/aidtype-create-modal') ?>
                 <?php endif; ?>
@@ -273,8 +275,8 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
             <?php if ($activePage === 'distribution'): ?>
                 <?= view('components/page_tabs', [
                     'tabs' => [
-                        ['key' => 'batches', 'label' => 'Batches', 'icon' => 'collection'],
-                        ['key' => 'log', 'label' => 'Distribution Log', 'icon' => 'clipboard-check-fill'],
+                        ['key' => 'batches', 'label' => 'Batches'],
+                        ['key' => 'log', 'label' => 'Distribution Log'],
                     ],
                     'active' => $distributionTab ?? 'batches',
                     'baseUrl' => 'admin/distribution',
@@ -286,12 +288,14 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                     'icon' => 'collection',
                     'title' => 'Distribution Batches',
                     'cardClass' => 'sector-management',
+                    'attrs' => 'data-table-paginate data-paginate-key="batches" data-paginate-label="batches"',
                     'bodyView' => 'Admin/distribution-batches-body',
                     'bodyData' => [
                         'batches' => $batches,
                         'activeBatch' => $activeBatch,
                         'currentRole' => $currentRole,
                     ],
+                    'footer' => view('components/table_footer', ['clientKey' => 'batches', 'entityLabel' => 'batches']),
                 ]) ?>
                 <?= view('Admin/batch-create-modal', [
                     'activeAidTypes' => $activeAidTypes,
@@ -310,47 +314,38 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                     'icon' => 'clipboard-check-fill',
                     'title' => 'All Distributions',
                     'cardClass' => 'sector-management',
+                    'attrs' => 'data-table-paginate data-paginate-key="distributions" data-paginate-label="distributions"',
                     'bodyView' => 'Admin/distribution-distributions-body',
                     'bodyData' => ['distributions' => $distributions],
-                    'footer' => view('components/table_footer', ['leftContent' => '<span id="distCount"></span>']),
+                    'footer' => view('components/table_footer', ['clientKey' => 'distributions', 'entityLabel' => 'distributions']),
                 ]) ?>
 
+                <?php /* The toolbar keyword narrows the rows; paging and the page
+                         search are table-paginate.js (data-paginate-* above). */ ?>
                 <script>
                 document.addEventListener('DOMContentLoaded', () => {
-                  const table   = document.getElementById('distTable');
-                  const search  = document.getElementById('distSearch');
-                  const clear   = document.getElementById('distClear');
-                  const perPage = document.getElementById('distPerPage');
-                  const local   = document.getElementById('distLocalSearch');
-                  const count   = document.getElementById('distCount');
+                  const table  = document.getElementById('distTable');
+                  const search = document.getElementById('distSearch');
+                  const clear  = document.getElementById('distClear');
+                  const local  = document.getElementById('distLocalSearch');
                   if (!table) return;
-                  const rows = Array.from(table.tBodies[0].rows).filter(r => !r.querySelector('.sector-empty-state'));
+                  const rows = Array.from(table.querySelectorAll('[data-paginate-row]'));
 
-                  const render = () => {
-                    const q     = (search.value || '').trim().toLowerCase();
-                    const q2    = (local.value || '').trim().toLowerCase();
-                    const limit = parseInt(perPage.value, 10) || 0;
-                    let matched = 0;
-                    let shown = 0;
+                  const applyKeyword = () => {
+                    const q = (search.value || '').trim().toLowerCase();
                     rows.forEach(r => {
-                      const text = r.textContent.toLowerCase();
-                      const ok = (q === '' || text.includes(q))
-                              && (q2 === '' || text.includes(q2));
-                      let visible = ok;
-                      if (ok) {
-                        matched++;
-                        if (limit > 0 && matched > limit) visible = false;
-                      }
-                      r.hidden = !visible;
-                      if (visible) shown++;
+                      r.dataset.filtered = (q === '' || r.textContent.toLowerCase().includes(q)) ? '' : 'out';
                     });
-                    if (count) count.textContent = 'Showing ' + shown + ' of ' + rows.length + ' distribution' + (rows.length === 1 ? '' : 's');
+                    window.refreshTablePagination('distributions', true);
                   };
 
-                  [search, local, perPage].forEach(el => el && el.addEventListener('input', render));
-                  if (perPage) perPage.addEventListener('change', render);
-                  if (clear) clear.addEventListener('click', () => { search.value = ''; local.value = ''; perPage.value = '25'; render(); });
-                  render();
+                  search.addEventListener('input', applyKeyword);
+                  if (clear) clear.addEventListener('click', () => {
+                    search.value = '';
+                    if (local) local.value = '';
+                    applyKeyword();
+                  });
+                  applyKeyword();
                 });
                 </script>
             <?php endif; ?>
@@ -386,7 +381,7 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
     'size' => 'modal-lg',
     'title' => 'Audit Entry Details',
     'titleId' => 'auditDetailTitle',
-    'bodyHtml' => '<p class="audit-detail-full" id="auditDetailFull">&mdash;</p>',
+    'bodyHtml' => '<p class="audit-detail-full" id="auditDetailFull">-</p>',
     'footerHtml' => '<button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>',
 ]) ?>
 

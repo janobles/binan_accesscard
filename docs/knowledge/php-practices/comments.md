@@ -112,6 +112,38 @@ it correctly.
 - Historical residue (`the old records-multiselect widget was retired...`).
 - AI-slop register. Plain language, matching `docs/knowledge/` house style.
 
+## Enforcement
+
+Three layers. Run `composer lint` before any PR; CI runs the same two commands on
+every PR to `main` (`.github/workflows/ci.yml`).
+
+| Layer | Command | Catches |
+|-------|---------|---------|
+| 1. Docblock sniff | `composer lint:sniff` (`phpcs.xml.dist`) | Missing class docblock, a tag naming a parameter that does not exist, a return tag the code contradicts, a docblock that is nothing but restated tags, `@author`/`@created`/`@version`/`@package` |
+| 2. Comment style | `composer lint:comments` (`scripts/check-comment-style.sh`) | Missing view header, missing stylesheet header, em dashes, `---- ----` dividers |
+| 3. Review | a human | Whether a method earns a docblock, and whether what it says is true |
+
+Layer 3 is not a gap in the tooling, it is the design. A linter can see that a
+docblock exists but never that it is accurate, so requiring one on every method
+buys filler, not documentation. `Squiz.Commenting.FunctionComment.Missing` is
+excluded on purpose.
+
+`app/Config`, `app/Language`, `app/Common.php` and `public/assets` are stock or
+vendored and are excluded from all of it.
+
+### Gates for a documentation-only change
+
+A branch that claims to touch only comments should prove it, not assert it:
+
+```bash
+php scripts/assert-tokens-unchanged.php <base-ref>   # PHP: same executable tokens
+bash scripts/assert-css-unchanged.sh <base-ref>      # CSS: only comments moved
+```
+
+Both compare against a git ref, fail on added or deleted files, and compare
+inline HTML verbatim so a markup edit in a view cannot slip through. They are
+not in `composer lint` because they only apply to a docs-only branch.
+
 ## Written for the manual
 
 - View headers name the page by **UI path** (`Admin > Reference Data > Sectors`), not

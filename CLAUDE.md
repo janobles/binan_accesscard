@@ -45,7 +45,19 @@ php spark routes        # confirm every route resolves to a controller
 php spark serve         # dev server (or use XAMPP at app.baseURL)
 vendor/bin/phpunit      # full test suite
 composer test           # alias for phpunit
+composer lint           # docblock sniff + comment-style check (required before a PR)
+composer lint:sniff     # phpcs only (phpcs.xml.dist)
+composer lint:comments  # view/CSS headers, banned patterns (scripts/check-comment-style.sh)
 ```
+
+`composer lint` and `composer test` also run on every PR to `main`
+(`.github/workflows/ci.yml`), so a red lint blocks the merge, not just review.
+
+`composer lint:format` / `lint:fix` (php-cs-fixer) exist but are **not** part of
+`composer lint` and are not in CI. The repo is deliberately unformatted: a
+whole-repo reformat produces a diff nobody can review and moves executable
+tokens. Do not run `lint:fix` across the repo. See
+`docs/knowledge/php-practices/comments.md`.
 
 DB: MySQL `accesscard` @ localhost:3306, user `root` (see `.env`).
 

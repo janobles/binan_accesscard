@@ -16,7 +16,8 @@ a scan.
 | CI4 / Bootstrap 5 framework API      | Context7 MCP (see caveat below)              |
 | "How does THIS repo do X"            | `docs/knowledge/binan-conventions/`          |
 | UI markup / SBAdmin styling          | `docs/knowledge/sbadmin/`                    |
-| PHP idiom / language practice        | `docs/knowledge/php-practices/`              |
+| PHP idiom / language practice        | `docs/knowledge/php-practices/idioms.md`     |
+| Comment / docblock style, lint gates | `docs/knowledge/php-practices/comments.md`   |
 | "Is there existing mess here"        | `docs/knowledge/violations.md`               |
 | Version pins / canonical URLs        | `docs/knowledge/sources.md`                  |
 
@@ -40,7 +41,8 @@ version-pinned, so it's safe). PHP floor: 8.2.
 | index, EXPLAIN, slow, performance, cache, TTL, patch script, benchmark, dump version | `binan-conventions/performance.md` |
 | adapter, sb-admin-adapter, sidebar css, theme token | `sbadmin/adapter.md` |
 | sb admin, target theme, sidenav, topnav, migration | `sbadmin/target-theme.md` |
-| strict_types, constructor, typed, match, docblock, php idiom | `php-practices/idioms.md` |
+| strict_types, constructor, typed, match, php idiom | `php-practices/idioms.md` |
+| comment, docblock, header, `@param`, view header, css header, lint, phpcs, composer lint | `php-practices/comments.md` |
 | dead code, cleanup, violation, mess, punch-list | `violations.md` |
 | version, pin, url, context7 | `sources.md` |
 

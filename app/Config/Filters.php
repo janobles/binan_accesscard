@@ -3,6 +3,7 @@
 namespace Config;
 
 use App\Filters\IdleTimeoutFilter;
+use App\Filters\RoleNavFilter;
 use App\Filters\SingleSessionFilter;
 use CodeIgniter\Config\Filters as BaseFilters;
 use CodeIgniter\Filters\Cors;
@@ -38,6 +39,7 @@ class Filters extends BaseFilters
         'performance'   => PerformanceMetrics::class,
         'idleTimeout'   => IdleTimeoutFilter::class,
         'singleSession' => SingleSessionFilter::class,
+        'roleNav'       => RoleNavFilter::class,
     ];
 
     /**

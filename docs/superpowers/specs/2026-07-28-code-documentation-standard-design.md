@@ -227,7 +227,32 @@ against the real codebase rather than reasoning about it:
 |---|---|---|
 | `Missing` on methods | 60 | Excluded. 8 are `__construct`; the rest are terse helpers (`pct`, `norm`, `pick`, `width`). A forced docblock here is filler. |
 | Tag punctuation and alignment (`ParamCommentFullStop`, `ParamCommentNotCapital`, `SpacingAfterParamName`, `SpacingAfterParamType`, `ThrowsNotCapital`) | 89 | Excluded. Whether a tag description ends in a period is not a documentation question, and none were auto-fixable. |
-| Contradiction codes (`IncorrectTypeHint`, `WrongStyle`, `IncorrectParamVarName`, `InvalidReturn`) | 61 | Kept. Each flags a docblock that is actively wrong, which is what a tool can genuinely judge. |
+| `IncorrectTypeHint` | 37 | **Excluded, after being wrongly kept.** See below. |
+| Contradiction codes (`WrongStyle`, `IncorrectParamVarName`, `InvalidReturn`) | 24 | Kept. Each flags a docblock that is actively wrong, which is what a tool can genuinely judge. |
+
+**`IncorrectTypeHint` was a false positive factory, and this spec previously misjudged
+it.** The sniff pairs `@param` tags with parameters **positionally**. Document only the
+one argument that needs explaining out of four, and it reads your tag against the first
+parameter and reports a type mismatch that does not exist:
+
+```php
+/**
+ * @param list<array{row: int, data: array<string, string>}> $rows
+ */
+public function selective(string $name, int $count, array $rows, bool $flag): void
+// ERROR: Expected type hint "array"; found "string" for $rows
+```
+
+Selective tagging is the entire point of decision 2, so a sniff demanding all-or-nothing
+`@param` coverage is incompatible with the standard. It cost real work before being
+caught: the first documentation tranche deleted valid array-shape tags, rewriting
+`@param list<array{row: int, data: array<string, string>}> $rows` as prose, to silence
+complaints that were never real. Prose cannot be read by an IDE or by static analysis.
+
+Excluding it dropped repo-wide violations from 56 to 18 with nothing genuine lost.
+Accuracy is still covered by `IncorrectParamVarName` (a tag naming a parameter that is
+gone) and `InvalidReturn` (a return tag the code contradicts), neither of which depends
+on complete coverage.
 
 This is the layer's governing principle, and it is narrower than the first draft of this
 spec claimed: **a linter can see that a docblock exists, but never that it is true.**

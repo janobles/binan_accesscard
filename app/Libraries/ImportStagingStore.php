@@ -73,10 +73,11 @@ class ImportStagingStore
      * uploaded it as a NEW job. That first file is orphaned, and it holds family PII, so it
      * must not sit on disk forever.
      *
-     * $protectedIds MUST carry JobQueueModel::activeStagingIds() (the staging IDs a
-     * pending/running job still needs): a queued write job can wait hours for a stopped
-     * worker, and sweeping its rows out from under it kills the import. Returns the
-     * number of files removed.
+     * $protectedIds MUST carry JobQueueModel::activeStagingIds(): a queued write job can
+     * wait hours for a stopped worker, and sweeping its rows out from under it kills the
+     * import. Returns the number of files removed.
+     *
+     * @param list<int> $protectedIds staging IDs a pending/running job still needs
      */
     public function sweep(array $protectedIds = [], int $ttlHours = self::TTL_HOURS): int
     {

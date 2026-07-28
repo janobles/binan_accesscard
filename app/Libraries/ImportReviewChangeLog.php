@@ -89,6 +89,8 @@ class ImportReviewChangeLog
     }
 
     /**
+     * @param list<array{sheetRow:int,data:array<string,string>}> $rows
+     * @param list<string>                                        $lines
      * @return array{at:string,action:string,qr:string,head:string,lines:list<string>}
      */
     private static function entry(string $action, array $rows, array $lines): array

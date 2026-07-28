@@ -452,8 +452,9 @@ class FamilyExcelImporter
      * Builds the "add this member to an existing family" entries for a head-less group
      * whose QR is already on file - the classic "worker forgot a member last batch" case.
      * These are ADDED automatically on import and listed in the review; to skip someone,
-     * the operator deletes that row from the spreadsheet and re-uploads. $rows is a list of
-     * `{row: int, data: array<string, string>}`.
+     * the operator deletes that row from the spreadsheet and re-uploads.
+     *
+     * @param list<array{row: int, data: array<string, string>}> $rows
      */
     private function collectAppends(string $familyNo, string $headName, array $rows, array $sectorByCode, array $serviceByCode, array $incomeByLabel): void
     {
@@ -637,6 +638,7 @@ class FamilyExcelImporter
      * Reads every non-empty data row into the interchange shape used by
      * validateAndBuild.
      *
+     * @param array<string, string> $columnMap
      * @return list<array{sheetRow: int, data: array<string, string>}>
      */
     private function readRows(Worksheet $sheet, array $columnMap, int $headerRow): array
@@ -662,6 +664,7 @@ class FamilyExcelImporter
      * date-aware (a real Excel date becomes "MM-DD-YYYY"). The QR cell is kept verbatim
      * (no no-data blanking) so placeholders surface as a format error, not "missing".
      *
+     * @param array<string, string> $columnMap
      * @return array<string, string>
      */
     private function readRow(Worksheet $sheet, array $columnMap, int $row): array
@@ -697,7 +700,11 @@ class FamilyExcelImporter
      * fingerprint, contiguity) AND validates every row's own fields, so all problems
      * surface at once. Only a coherent (exactly-one-head) family is appended as
      * persist-ready; field errors on it still block the import via the reviewer's gate.
-     * $rows is a list of `{row: int, data: array<string, string>}`.
+     *
+     * @param list<array{row: int, data: array<string, string>}> $rows
+     * @param array<string, int>    $sectorByCode
+     * @param array<string, int>    $serviceByCode
+     * @param array<string, string> $incomeByLabel
      */
     private function processFamily(string $familyNo, array $rows, array $sectorByCode, array $serviceByCode, array $incomeByLabel): void
     {
@@ -814,6 +821,7 @@ class FamilyExcelImporter
      * Relationship = Head). Point the error straight at that person. Anchors on the same rule
      * as likelyHeadIndex(), so the report and the Edit modal name the same person.
      *
+     * @param list<array{row: int, data: array<string, string>}> $rows
      * @return array{0: int, 1: string} [anchor sheet row, message]
      */
     private function headlessDiagnosis(string $familyNo, array $rows): array
@@ -881,6 +889,8 @@ class FamilyExcelImporter
      * more than one non-blank barangay or address (the signature of a copy-pasted block
      * or an off-by-one row shift). Surname is deliberately NOT part of the fingerprint -
      * a real household legitimately holds mixed surnames.
+     *
+     * @param list<array{row: int, data: array<string, string>}> $rows
      */
     private function checkFingerprint(string $familyNo, array $rows): void
     {
@@ -909,6 +919,8 @@ class FamilyExcelImporter
     /**
      * QR-30: a family's rows should sit next to each other. Non-contiguous rows are a
      * warning (a sort/paste accident) - informational, does not block the import.
+     *
+     * @param list<array{row: int, data: array<string, string>}> $rows
      */
     private function checkContiguity(string $familyNo, array $rows): void
     {
@@ -927,7 +939,10 @@ class FamilyExcelImporter
     /**
      * Validates and shapes one person into a `member` row payload, recording field
      * errors. Civil status and education accept short codes (translated to full values).
-     * $entry is `{row: int, data: array<string, string>}`.
+     *
+     * @param array{row: int, data: array<string, string>} $entry
+     * @param array<string, int>    $sectorByCode
+     * @param array<string, string> $incomeByLabel
      */
     private function buildPersonPayload(array $entry, string $familyNo, bool $isHead, array $sectorByCode, array $incomeByLabel): array
     {
@@ -1104,6 +1119,8 @@ class FamilyExcelImporter
     /**
      * Resolves a monthly-income cell (a bracket label or a number) to its stored value.
      * Required for heads.
+     *
+     * @param array<string, string> $incomeByLabel
      */
     private function resolveIncome(int $row, string $familyNo, string $value, bool $required, array $incomeByLabel): ?string
     {
@@ -1138,6 +1155,8 @@ class FamilyExcelImporter
      * Maps a row's comma-separated sector codes to IDs. An unrecognized code is filed
      * under the "Other Sectors" catch-all rather than aborting (mirrors the form).
      *
+     * @param array{row: int, data: array<string, string>} $entry
+     * @param array<string, int> $sectorByCode
      * @return int[]
      */
     private function mapSectors(array $entry, string $familyNo, array $sectorByCode): array
@@ -1165,6 +1184,8 @@ class FamilyExcelImporter
      * Maps a row's comma-separated service codes to IDs, recording an error for any
      * unknown code.
      *
+     * @param array{row: int, data: array<string, string>} $entry
+     * @param array<string, int> $serviceByCode
      * @return int[]
      */
     private function mapServices(array $entry, string $familyNo, array $serviceByCode): array
@@ -1598,8 +1619,9 @@ class FamilyExcelImporter
 
     /**
      * Translates a civil-status / education cell to its full stored value. Accepts a
-     * bare code, a "CODE - Name" pick, or the full name (returned unchanged). $codeMap
-     * is code => full value.
+     * bare code, a "CODE - Name" pick, or the full name (returned unchanged).
+     *
+     * @param array<string,string> $codeMap code => full value
      */
     private function fullValueFromCode(string $value, array $codeMap): string
     {

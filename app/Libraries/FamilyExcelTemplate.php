@@ -415,6 +415,8 @@ class FamilyExcelTemplate
     /**
      * Writes a header at row 1 and the given list of values down a column,
      * returning the absolute range for use as a dropdown source.
+     *
+     * @param list<string> $values
      */
     private function writeList(Worksheet $sheet, string $column, string $header, array $values): string
     {
@@ -433,8 +435,8 @@ class FamilyExcelTemplate
      * Builds "CODE - Name" option strings for a code map, in $allValues order.
      *
      * @param array<string,string> $codeMap   code => full value
-     * @param string[]              $allValues full values in display order
-     * @return string[]
+     * @param list<string>         $allValues full values in display order
+     * @return list<string>
      */
     private function codeNameList(array $codeMap, array $allValues): array
     {

@@ -36,12 +36,13 @@ class FamilyRecordWriter
 
     /**
      * Persists a single family. Caller must already be inside a transaction.
+     * $headPayload is the `member` row for the head (relationship forced to
+     * 'Head'). $controlNo is the paper QR control number for the head, taken
+     * from the import's "QR Number" column; null for manual entry. Returns the
+     * new head member ID.
      *
-     * $memberPayloads is a list of `['payload' => array, 'serviceIds' => int[]]`,
-     * one entry per additional member. $controlNo is the paper QR control number
-     * for the head, taken from the import's "QR Number" column; null for manual
-     * entry. Returns the new head member ID.
-     *
+     * @param list<array{payload: array, serviceIds: int[]}> $memberPayloads One entry per additional member.
+     * @param int[] $headServiceIds Service IDs to assign to the head.
      * @throws FamilyRecordWriteException on any insert/assignment failure.
      */
     public function persistFamily(
@@ -98,6 +99,7 @@ class FamilyRecordWriter
      * services, and writes a FAMILY_UPDATED audit row. Caller must already be inside a
      * transaction and must have confirmed the head exists. Returns the new member ID.
      *
+     * @param int[] $serviceIds Services to assign to the added member.
      * @throws FamilyRecordWriteException on any insert/assignment failure.
      */
     public function appendMember(
@@ -138,6 +140,8 @@ class FamilyRecordWriter
      * Assigns a list of service IDs to a member, skipping IDs that don't exist
      * (matches the manual form's tolerant behavior). Throws only when an existing
      * service genuinely fails to link.
+     *
+     * @param int[] $serviceIds
      */
     private function assignServices(int $memberId, array $serviceIds, string $who): void
     {

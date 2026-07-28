@@ -231,7 +231,7 @@ class ImportReviewPresenter
      * null) are excluded; those still need the Edit modal. Keyed to the exact staged cell so the
      * screen can render an input and POST {sheetRow, field, value}.
      *
-     * @param int[]                             $sheetRows the group's sheet rows
+     * @param list<int>                         $sheetRows the group's sheet rows
      * @param array<int, array<string, string>> $byRow     [sheet row => cell values]
      * @param list<array>                       $errors
      * @param array<string, string>             $columns   [field => Excel column letter]

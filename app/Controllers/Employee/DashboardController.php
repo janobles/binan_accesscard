@@ -14,8 +14,8 @@ use CodeIgniter\HTTP\RedirectResponse;
  * delegated to App\Libraries\DashboardPageBuilder::renderEmployeePage(); this
  * controller only decides which tab to show and serves the AJAX fragments.
  *
- * The Employee role is stored in the DB as the legacy enum value 'User' but is
- * referred to as 'Employee' throughout the app (see RoleAccess::normalizeRole).
+ * The role handled here is stored in the DB as 'encoder' and referred to as
+ * 'Encoder' throughout the app (see RoleAccess::normalizeRole).
  */
 class DashboardController extends BaseController
 {
@@ -63,7 +63,7 @@ class DashboardController extends BaseController
      */
     private function renderRecordListPartial(): string|RedirectResponse
     {
-        $guard = RoleAccess::requireRole(['Developer', 'Admin', 'Employee']);
+        $guard = RoleAccess::requireRole(['Developer', 'Admin', 'Encoder']);
 
         if ($guard instanceof RedirectResponse) {
             return $guard;

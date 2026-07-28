@@ -564,9 +564,9 @@ class AccountController extends BaseController
 
     /**
      * Normalizes a raw account-level string to the app's canonical 'Developer'/
-     * 'Admin'/'Employee'/'Viewer' (or null) so guards can compare the session role
-     * reliably. The DB enum values 'administrator'/'encoder'/'viewer' map to
-     * 'Admin'/'Employee'/'Viewer'; legacy 'User'/'Admin' are still accepted.
+     * 'Admin'/'Encoder'/'Viewer' (or null) so guards can compare the session role
+     * reliably. The DB enum values map straight to these labels, so no aliasing
+     * is needed.
      */
     private function normalizeRole(string $role): ?string
     {
@@ -575,7 +575,7 @@ class AccountController extends BaseController
         return match ($normalizedRole) {
             'developer' => 'Developer',
             'admin', 'administrator' => 'Admin',
-            'user', 'encoder', 'employee' => 'Employee',
+            'encoder' => 'Encoder',
             'viewer' => 'Viewer',
             'scanner' => 'Scanner',
             default => null,

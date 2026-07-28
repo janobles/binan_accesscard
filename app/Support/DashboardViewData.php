@@ -71,7 +71,7 @@ class DashboardViewData
     public static function employee(array $data): array
     {
         $user = self::arrayValue($data['user'] ?? []);
-        $username = $user['username'] ?? 'Employee';
+        $username = $user['username'] ?? 'Encoder';
         $activePage = (string) ($data['activePage'] ?? 'dashboard');
         $pageTitle = (string) ($data['pageTitle'] ?? ($activePage === 'dashboard' ? 'Workspace' : ucwords(str_replace('-', ' ', $activePage))));
         $navActive = self::arrayValue($data['navActive'] ?? []);

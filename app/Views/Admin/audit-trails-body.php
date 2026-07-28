@@ -78,7 +78,7 @@
                         $auditUa = trim((string) ($audit['user_agent'] ?? ''));
                         $auditUsername = trim((string) ($audit['username'] ?? $audit['userID'] ?? ''));
                         $auditRole = trim((string) ($audit['user_role'] ?? ''));
-                        $auditRole = \App\Libraries\RoleAccess::auditRoleLabel($auditRole) ?? $auditRole;
+                        $auditRole = \App\Libraries\RoleAccess::normalizeRole($auditRole) ?? $auditRole;
                     ?>
                     <?php /* The whole row is the detail trigger (js-audit-detail) - audit-detail-modal.js
                              reads data-full and surfaces the narrative in that modal. */ ?>

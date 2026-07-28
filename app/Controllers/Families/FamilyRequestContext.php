@@ -111,7 +111,7 @@ trait FamilyRequestContext
     }
 
     /**
-     * Access guard for family entry: allows Developer/Admin/User, otherwise
+     * Access guard for family entry: allows Developer/Admin/Encoder, otherwise
      * returns a redirect. store() converts this to a 403 JSON for AJAX requests.
      */
     private function requireFamilyEntryAccess(): ?RedirectResponse
@@ -122,7 +122,7 @@ trait FamilyRequestContext
 
         $role = RoleAccess::normalizeRole((string) session()->get('role'));
 
-        if (in_array($role, ['Developer', 'Admin', 'Employee'], true)) {
+        if (in_array($role, ['Developer', 'Admin', 'Encoder'], true)) {
             return null;
         }
 
@@ -143,7 +143,7 @@ trait FamilyRequestContext
 
         $role = RoleAccess::normalizeRole((string) session()->get('role'));
 
-        if (in_array($role, ['Developer', 'Admin', 'Employee', 'Viewer'], true)) {
+        if (in_array($role, ['Developer', 'Admin', 'Encoder', 'Viewer'], true)) {
             return null;
         }
 

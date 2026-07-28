@@ -104,7 +104,7 @@ class FamilyDataTablePresenter
 
     /**
      * Builds the per-row Actions dropdown HTML for the DataTable. View is shown to
-     * any viewer; Update only to entry-access roles (Developer/Admin/Employee);
+     * any viewer; Update only to entry-access roles (Developer/Admin/Encoder);
      * Archive/Restore only to Developer/Admin. Empty string hides the menu.
      */
     private function actions(array $row, int $headId, string $displayName): string
@@ -113,7 +113,7 @@ class FamilyDataTablePresenter
             return '';
         }
 
-        $canEdit = in_array($this->role, ['Developer', 'Admin', 'Employee'], true);
+        $canEdit = in_array($this->role, ['Developer', 'Admin', 'Encoder'], true);
         $canArchive = in_array($this->role, ['Developer', 'Admin'], true);
         $archived = trim((string) ($row['dt_deleted'] ?? '')) !== '';
 

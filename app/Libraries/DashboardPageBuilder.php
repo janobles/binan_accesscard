@@ -567,13 +567,13 @@ class DashboardPageBuilder
     }
 
     /**
-     * Guards Developer/Admin/User access, then assembles the employee view data
+     * Guards Developer/Admin/Encoder access, then assembles the employee view data
      * (own activity instead of all audits, no account management) and renders the
      * employee shell (`Employee/layout`). Frontend: returns the full employee page.
      */
     public function renderEmployeePage(string $activePage): string|RedirectResponse
     {
-        $guard = RoleAccess::requireRole(['Developer', 'Admin', 'Employee']);
+        $guard = RoleAccess::requireRole(['Developer', 'Admin', 'Encoder']);
 
         if ($guard instanceof RedirectResponse) {
             return $guard;
@@ -617,7 +617,7 @@ class DashboardPageBuilder
             'searchFilters'      => $searchFilters,
             'auditActionOptions' => $searchModel->auditActions(),
             'idleTimeoutSeconds' => (new IdleTimeout())->seconds,
-            'username'           => (string) (session()->get('username') ?? 'Employee'),
+            'username'           => (string) (session()->get('username') ?? 'Encoder'),
             'accountLevelLabel'  => SessionAccount::levelLabel(),
             'sectorOptions'      => $sectorOptions,
             'selectedFilterDate' => (string) ($searchFilters['date'] ?? $searchFilters['date_from'] ?? ''),

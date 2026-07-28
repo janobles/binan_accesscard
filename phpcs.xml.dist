@@ -45,6 +45,16 @@
         <exclude name="Squiz.Commenting.FunctionComment.TypeHintMissing"/>
         <exclude name="Squiz.Commenting.FunctionComment.InvalidReturnNotVoid"/>
         <exclude name="Squiz.Commenting.FunctionComment.InvalidNoReturn"/>
+
+        <!-- Tag punctuation and alignment are not part of this standard. A tag
+             either earns its place by saying something the signature does not,
+             or it gets deleted. Whether its description ends in a period is not
+             a documentation question. -->
+        <exclude name="Squiz.Commenting.FunctionComment.ParamCommentFullStop"/>
+        <exclude name="Squiz.Commenting.FunctionComment.ParamCommentNotCapital"/>
+        <exclude name="Squiz.Commenting.FunctionComment.SpacingAfterParamName"/>
+        <exclude name="Squiz.Commenting.FunctionComment.SpacingAfterParamType"/>
+        <exclude name="Squiz.Commenting.FunctionComment.ThrowsNotCapital"/>
     </rule>
 
     <!-- The rule that makes "tags only when useful" enforceable rather than

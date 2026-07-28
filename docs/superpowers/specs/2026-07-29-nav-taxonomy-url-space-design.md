@@ -149,7 +149,9 @@ the manifest withholds the mutation routes and the views render fields `disabled
 
 ## 4. Sidebar taxonomy
 
-Six links, four headings. Grouping follows the lifecycle the office actually works in
+Seven links in four headings, the same count as the 2026-07-20 reorg left behind but
+regrouped, and holding that count while adding three new pages. Grouping follows the
+lifecycle the office actually works in
 (profile, then card, then distribute), which is a real sequence here: a family cannot
 be carded before it is profiled, nor receive a subsidy before it is carded.
 
@@ -169,8 +171,8 @@ operational data an encoder needs weekly, not administrative data.
 
 Data Entry and Bulk Import are **pages but not sidebar links**. Nobody sets out to
 visit "Data Entry"; they set out to add a family, which begins at Family Records. Both
-are reached from that page's toolbar. This also keeps the link count at six, below the
-seven that the 2026-07-20 reorg established.
+are reached from that page's toolbar. This is what holds the count at seven: Data
+Entry, Import, and Family Profile are three new pages that add no sidebar links.
 
 Per-role visibility:
 
@@ -185,7 +187,7 @@ Per-role visibility:
 | Audit Trails | yes | yes | own actions only | no |
 
 Future distribution features (calendar, announcements) fold into `/distribution` as
-tabs rather than new sidebar links, so the count holds.
+tabs rather than new sidebar links, so seven remains the ceiling.
 
 ## 5. Family Records - `/records`
 
@@ -333,7 +335,7 @@ Routes `manage-family/view/{id}` and `manage-family/edit/{id}` are removed.
   `AdminReorgRoutesTest` is rewritten against the new table. Model tests renamed with
   their models (`AidTypeModelTest`, `AidDistributionModelTest`, `AidStatsModelTest`).
 - `composer lint` (docblock sniff plus comment-style check) before the PR.
-- Playwright against the dev server at desktop and 390px: all six sidebar pages plus
+- Playwright against the dev server at desktop and 390px: all seven sidebar pages plus
   `/records/entry`, `/records/import`, and `/records/{id}`, logged in as each of
   Developer, Admin, Encoder, and Viewer. Compare against the PR #23 design system.
 - Smoke: login and per-role landing, family create through the entry page, family
@@ -353,5 +355,5 @@ Routes `manage-family/view/{id}` and `manage-family/edit/{id}` are removed.
   reviewer as usual. Mitigation: commits are ordered plumbing first (terminology
   rename, then URL space, then layout and manifest), then one commit per page, so the
   branch stays bisectable even though it merges as a unit.
-- **Link count discipline.** Six links only holds if later distribution features land as
+- **Link count discipline.** Seven links only holds if later distribution features land as
   tabs inside `/distribution`. Recorded here so the next spec inherits the constraint.

@@ -1,138 +1,180 @@
 # Code Documentation Standard and Lint Tooling
 
 **Date:** 2026-07-28
-**Status:** Approved, ready for planning
+**Status:** Approved
+**Branch:** `chore/doc-standard`
 
-## Problem
+Pure cleanup. No logic is created, changed, or removed. Every behavior that exists
+before this branch exists identically after it, and that is proven mechanically
+rather than asserted.
 
-The codebase has no documentation standard. Three symptoms:
+## Measured baseline
 
-1. **Inconsistent PHP docblocks.** 68 of 69 files in `Controllers`/`Models`/`Libraries`
-   carry some docblock, but there is no agreed shape. Some are three sentences of
-   prose, some are one line, none use tags. Nothing enforces any of it.
-2. **Comments written to request a change rather than explain code**, concentrated in
-   `app/Views`. These read as notes-to-self, not documentation.
-3. **`// ---- section ----` dividers** used as ad-hoc structure. 284 occurrences, but
-   276 of them are in stock CI4 `app/Config` files that must not be touched. Only 8
-   non-Config files actually carry them.
+Every number below was measured on 2026-07-28 and is a gate value: the plan asserts
+these exact numbers again at the end.
 
-No linter exists. No CI workflow exists. `vendor/bin` holds only `phpunit` and
-`php-parse`.
-
-Measured baseline as of 2026-07-28:
-
-| Location | PHP files |
+| Fact | Value |
 |---|---|
+| PHP files in `app/` | 205 |
 | `app/Controllers` | 22 |
 | `app/Models` | 25 |
 | `app/Libraries` | 22 |
 | `app/Support` | 5 |
+| `app/Helpers` | 5 |
 | `app/Jobs` | 4 |
-| `app/Views` | 65 |
-| `app/Config` (excluded, stock CI4) | 46 |
-| `app/Helpers`, `Validation`, `Database` | 8 |
+| `app/Commands` | 4 (991 lines) |
+| `app/Validation` | 2 |
+| `app/Filters` | 2 |
+| `app/Database` | 1 |
+| `app/Views` | 65 (32 already have a `/**` header) |
+| `app/Config` | 46 (stock CI4, excluded from all layers) |
+| `app/Common.php` | 1 (15 lines, 1 non-comment line; stock, excluded) |
+| `app/Language/en/Validation.php` | 1 (4-line data array, excluded) |
+| Custom CSS in `public/css` | 11 files, ~3,589 lines (7 already have a header) |
+| Em dashes in `app/` | 0 |
+| `---- ----` dividers | 284 total, 276 in `app/Config`, 8 elsewhere |
+| Test suite | 268 tests, 970 assertions |
+| **Tests passing** | **267** |
+| **Known failure** | **1** - `ScanViewTest::testNoInlineStyles`, pre-existing |
+| Skipped | 8 (DB/session tests, no `sqlite3` ext) |
+| PHPUnit warnings | 1 |
 
-Em dashes in `app/`: **0**. Already clean, so the standard only has to keep them out.
+`ScanViewTest::testNoInlineStyles` fails because `app/Views/Scanner/scan.php` carries
+inline `style="` attributes. This predates the branch and is out of scope. The gate is
+that this stays the **only** failure. Fixing it is not permitted here; it goes to
+`docs/knowledge/violations.md`.
+
+## Problem
+
+No documentation standard exists. Three symptoms:
+
+1. **Inconsistent PHP docblocks.** 68 of 69 files in `Controllers`/`Models`/`Libraries`
+   carry some docblock, but with no agreed shape and no tags. Nothing enforces any of it.
+2. **Comments that record a requested change rather than explain code.** Concentrated
+   in `app/Views` and `public/css`. These read as notes-to-self.
+3. **Ad-hoc section dividers.** `// ---- x ----` in PHP, both `/* ==== */` and
+   `/* ---- */` in CSS.
+
+No linter. No CI workflow. `vendor/bin` holds only `phpunit` and `php-parse`.
 
 ## Goals
 
-- One documented comment standard, enforced by tooling rather than by memory.
-- Every class, public method, and view carries a docblock that helps a developer.
+- One written standard, enforced by tooling rather than memory.
+- Every class, public method, view, and stylesheet carries a docblock that helps a developer.
 - No docblock that merely restates the signature.
-- **Zero behavior change.** This is a cleanup. Executable tokens must be identical
-  before and after, and that must be proven, not asserted.
-- Docblocks written so a user manual can later be harvested from them.
+- Zero behavior change, proven by a token-identity gate.
+- Docblocks written so a user manual can be harvested from them later.
 
-## Non-Goals
+## Locked decisions
 
-- PHPStan or any static type analysis. Deferred; would surface hundreds of
-  pre-existing errors and needs its own triage effort.
-- Rewriting, refactoring, or simplifying any logic.
-- Touching `app/Config` (stock CI4) or `vendor`.
-- Deleting pre-existing dead code discovered along the way. Log it in
-  `docs/knowledge/violations.md` per CLAUDE.md.
+These are settled. They are recorded with their reasoning so they are not reopened.
+
+| # | Decision | Reasoning |
+|---|---|---|
+| 1 | Format + required docblocks. No PHPStan. | PHPStan on 205 unanalyzed files buries the cleanup under unrelated type errors. Separate effort. |
+| 2 | Prose docblocks; `@param`/`@return` only when the native type is insufficient. | PHP 8.2 signatures already carry types. Restating them is the ritual commenting being removed. |
+| 3 | View headers state purpose only. No variable list. | Views receive data via `extract(*_view_data(get_defined_vars()))`. A variable list in the view cannot be verified and would rot. |
+| 4 | Data contracts live on the 10 `*_view_data()` functions as `@return array{...}` shapes. | That is the real interface, it is ordinary PHP, phpcs covers it, and it sits beside the code that changes it. |
+| 5 | `public/css/` structure is **not** changed. No renames, no moves, no `components/`+`pages/` split. | The cascade layering already works and `asset_helper.php` encodes load order deliberately. Reorganizing touches the manifest for no benefit. |
+| 6 | CSS gets headers, one divider format, and pruning. No per-rule commenting requirement. | A selector describes itself. There is no hidden contract to document, unlike a view. |
+| 7 | JS is out of scope. | 27 files whose comment edits cannot be mechanically proven safe (comment markers occur inside strings and regex literals). Gets its own branch. |
+| 8 | No custom PHPCS sniff. | Stock `Squiz.Commenting.*` sniffs with tag-level message codes excluded produce exactly the required rule. Writing a sniff would add the only new code in a cleanup branch. |
+| 9 | Big-bang single branch, one commit per tranche. | User's call. Per-tranche commits are the review mitigation. |
+| 10 | Review by `cavecrew-reviewer`, not CodeRabbit. | Deliberate deviation from CLAUDE.md, recorded so it is not later "corrected". The review question is narrow and the token gate has already proven no logic changed. |
+| 11 | `docs/superpowers/specs/` kept; `plans/`, `summaries/`, `summary/` deleted. | Specs record why decisions were made. Plans are spent execution checklists. |
 
 ## Tooling
 
-Versions verified against Packagist on 2026-07-28. All require PHP ^8.2 or looser and
-are mutually compatible.
+Versions verified against Packagist on 2026-07-28. Mutually compatible.
 
 | Package | Version | Role |
 |---|---|---|
-| `friendsofphp/php-cs-fixer` | v3.95.17 | Formatting, auto-fix |
-| `codeigniter/coding-standard` | v1.9.2 | CodeIgniter's own php-cs-fixer ruleset |
-| `squizlabs/php_codesniffer` | 4.0.1 | Sniff engine |
-| `slevomat/coding-standard` | 8.31.0 | Docblock sniffs (requires phpcs ^4.0.1) |
+| `friendsofphp/php-cs-fixer` | ^3.95 | Formatting, auto-fix |
+| `codeigniter/coding-standard` | ^1.9 | CodeIgniter's own php-cs-fixer ruleset |
+| `squizlabs/php_codesniffer` | ^4.0.1 | Sniff engine |
+| `slevomat/coding-standard` | ^8.31 | Docblock sniffs |
 
-All four go in `require-dev`.
+All go in `require-dev`. `nexusphp/cs-config` arrives transitively via
+`codeigniter/coding-standard` and is not declared directly.
 
-### Why slevomat
+CodeIgniter 4 v4.7.4's own `require-dev` is php-cs-fixer + codeigniter/coding-standard
++ nexusphp/cs-config. Layer 1 therefore matches the toolchain the framework lints
+itself with.
 
 `SlevomatCodingStandard.Commenting.UselessFunctionDocComment` errors on any
-`@param`/`@return` that only restates what the native signature already says. That is
-the "no commenting for the sake of commenting" rule, machine-enforced. Without it,
-the useful-tags-only standard would be unenforceable and would decay.
+`@param`/`@return` that only restates the native signature. That sniff is what makes
+decision 2 enforceable instead of aspirational.
 
-## Architecture: three enforcement layers
+## Enforcement: three layers
 
-Split by what is actually checkable. A linter is deterministic about structure and
-blind to prose quality, so the layers cover structure and a written standard covers
-the rest.
+Split by what is mechanically checkable. Linters are deterministic about structure and
+blind to prose quality; the written standard covers the rest, checked by review.
 
 ### Layer 1: Formatter (php-cs-fixer)
 
-Config: `.php-cs-fixer.dist.php`, based on `codeigniter/coding-standard`.
+Config `.php-cs-fixer.dist.php`, based on `codeigniter/coding-standard`.
 
-- **Scope:** `app/` (excluding `app/Views` and `app/Config`), `tests/`, `tools/`.
-- **`app/Views` excluded** because php-cs-fixer behaves unpredictably on files that
-  are majority inline HTML.
-- **`app/Config` excluded** because those are stock CI4 files.
-- **Ruleset constraint:** only rules affecting whitespace, comments, and import
-  order. Any rule that reorders or rewrites executable tokens is dropped, because it
-  would fail the token-identity gate below.
+- **Includes:** `app/` except `app/Views` and `app/Config`; plus `tests/`, `tools/`.
+- **`app/Views` excluded:** php-cs-fixer behaves unpredictably on majority-inline-HTML files.
+- **`app/Config` excluded:** stock CI4 files.
+- **Ruleset constraint:** only rules affecting whitespace, comments, and import order.
+  Any rule that fails the token gate is removed from the ruleset. The gate is never
+  relaxed to accommodate a rule.
 
 ### Layer 2: Sniffer (phpcs + slevomat)
 
-Config: `phpcs.xml.dist`.
+Config `phpcs.xml.dist`.
 
 - **Scope:** `app/Controllers`, `app/Models`, `app/Libraries`, `app/Support`,
-  `app/Jobs`, `app/Helpers`, `app/Validation`. Not Views, not Config.
+  `app/Jobs`, `app/Commands`, `app/Helpers`, `app/Validation`, `app/Filters`,
+  `app/Database`.
+- **Excluded:** `app/Views` (Layer 3 instead), `app/Config` (stock CI4),
+  `app/Common.php` (stock, one non-comment line), `app/Language` (data arrays, no
+  classes or functions to document).
 - **Sniffs:**
-  - `SlevomatCodingStandard.Commenting.UselessFunctionDocComment` — bans tags that
+  - `Squiz.Commenting.ClassComment` - requires a class docblock. Exclude message codes
+    `TagNotAllowed`, and any `@author`/`@copyright` requirements.
+  - `Squiz.Commenting.FunctionComment` - requires a method docblock. Exclude message
+    codes `MissingParamTag`, `MissingParamComment`, `MissingReturn`, and any other
+    tag-requiring code, so presence is required but tags are not.
+  - `SlevomatCodingStandard.Commenting.UselessFunctionDocComment` - bans tags that
     restate the signature.
-  - `SlevomatCodingStandard.Commenting.DocCommentSpacing` — uniform docblock layout.
-  - `SlevomatCodingStandard.Commenting.ForbiddenAnnotations` — bans `@author`,
+  - `SlevomatCodingStandard.Commenting.DocCommentSpacing` - uniform layout.
+  - `SlevomatCodingStandard.Commenting.ForbiddenAnnotations` - bans `@author`,
     `@created`, `@version`.
-  - `Generic.Commenting.DocComment` — docblock formatting.
-  - Custom `BinanStandard.Commenting.RequiredDocComment` — see below.
+
+The exact exclusion list is finalized in commit 2 against a fixture file, not guessed
+here. See the commit-2 acceptance test.
+
+### File accounting
+
+Every PHP file in `app/` is assigned to exactly one layer or to the exclusion list:
+
+```
+Layer 2 (docblocks required)   92   Controllers 22 + Models 25 + Libraries 22
+                                    + Support 5 + Helpers 5 + Jobs 4
+                                    + Commands 4 + Validation 2 + Filters 2
+                                    + Database 1
+Layer 3 (view headers)         65   Views
+Excluded                       48   Config 46 + Common.php 1 + Language 1
+                              ----
+                              205
+```
+
+Tranche sizes in the rollout below sum to 92 + 65 = 157 touched files.
 
 ### Layer 3: Repo check (`scripts/check-comment-style.sh`)
 
-Grep-based, covers what the other two cannot reach.
+Grep-based; covers what neither tool reaches. Exit non-zero on any hit.
 
-- View files in `app/Views` must open with a docblock.
-- No em dashes anywhere in `app/`.
-- No `// ---- ... ----` dividers outside `app/Config`.
-
-Shell rather than PHP because the checks are pattern matches over text, and Views
-cannot be sniffed usefully.
-
-### The one piece of new code
-
-PHPCS's stock `Squiz.Commenting.FunctionComment` requires `@param` for *every*
-argument, which directly contradicts the standard. Presence-without-required-tags
-therefore needs a custom sniff:
-
-`tools/phpcs/BinanStandard/Sniffs/Commenting/RequiredDocCommentSniff.php`
-
-Roughly 60 lines. Responsibility: every `class`, `interface`, `trait`, and every
-`public` method must be preceded by a doc comment. It checks presence only; slevomat
-handles content quality. It must not inspect or require tags.
+- Every file in `app/Views` opens with a `/**` docblock.
+- Every file in `public/css` opens with a `/*` header.
+- No em dashes anywhere in `app/` or `public/css`.
+- No `----` or `====` divider comments outside `app/Config` and `public/assets`.
 
 ## The standard
 
-Written in full to `docs/knowledge/php-practices/comments.md`, summarized in
-`CLAUDE.md`.
+Written in full to `docs/knowledge/php-practices/comments.md`, summarized in `CLAUDE.md`.
 
 ### Class and file docblocks
 
@@ -149,9 +191,9 @@ class DashboardPageBuilder
 
 ### Method docblocks
 
-What it does, plus anything surprising. `@param` and `@return` **only** when the
-native type is insufficient: array shapes, what a null means, units, enum-ish
-strings, side effects.
+What it does, plus anything surprising. `@param`/`@return` **only** when the native
+type is insufficient: array shapes, what a null means, units, enum-ish strings, side
+effects.
 
 ```php
 /**
@@ -163,16 +205,15 @@ strings, side effects.
 public function renderAdminPage(string $activePage): string|RedirectResponse
 ```
 
-`@param string $id The id.` is a lint error, not a style preference.
+`@param string $id The id.` is a lint error.
 
 ### Inline comments
 
-Explain *why*, never *what*. A comment that restates the line below it gets deleted.
+Explain *why*, never *what*. A comment restating the line below it is deleted.
 
 ### View headers
 
-Every file in `app/Views` opens with a block naming the page, its data source, and
-the variables it expects.
+Purpose, data source, and any non-obvious rendering constraint. No variable list.
 
 ```php
 <?php
@@ -181,116 +222,194 @@ the variables it expects.
  *
  * Data comes from sector_management_view_data(); this view never touches a
  * model. Counts are whole-table, not the current page.
- *
- * Expects: $sectors, $existingShortcodes, $pager, $canManage
  */
-?>
 ```
 
-### Banned
+### View data contracts
+
+The 10 `*_view_data()` functions in `app/Helpers/dashboard_view_helper.php` each get an
+array-shape return docblock:
+
+```php
+/**
+ * Builds the Sectors page bundle: the paged list plus the Add-Sector modal data.
+ *
+ * @return array{
+ *     sectors: list<array<string, mixed>>,
+ *     existingShortcodes: list<string>,
+ *     activeCount: int,
+ *     archivedCount: int,
+ *     canManage: bool
+ * }
+ */
+```
+
+Shapes are read off the producing code, never guessed. Where a shape cannot be
+determined with certainty from the source, prose describes the keys instead of an
+invented `array{}`.
+
+### CSS headers
+
+`public/css/theme.css` already carries the model header. Every stylesheet matches its
+form: what it styles, which manifest context loads it, and the scope boundary.
+
+```css
+/* Biñan green skin + house component rules layered over the vendored
+   SB Admin 1 theme (assets/sb-admin/css/styles.css). Loaded via the `head`
+   manifest context (asset_helper.php) so every dashboard shell gets it.
+   Scope: theme tokens, shell colors, card tables, pagination, stat cards,
+   topbar account menu. Page-specific rules stay in their page CSS files. */
+```
+
+Bootstrap 5.3 CSS-variable overrides stay exactly as they are, at both levels:
+`:root` tokens in `theme.css`, and component-scoped `--bs-btn-*` blocks in page CSS.
+That is Bootstrap's documented no-build customization path and the repo already uses
+it correctly.
+
+### Banned everywhere
 
 - Em dashes.
-- `// ---- section ----` dividers. Replace with a blank line and a short prose
-  sentence, or split the method.
+- `// ---- section ----` and `/* ==== section ==== */` dividers. Replace with a blank
+  line and a short prose sentence, or split the unit.
 - `@author`, `@created`, `@version`.
 - Comments describing a change someone wanted rather than what the code does.
-- AI-slop register. Plain language for human readers, matching
-  `docs/knowledge/` house style.
+- Historical residue (`the old records-multiselect widget was retired...`).
+- AI-slop register. Plain language, matching `docs/knowledge/` house style.
 
 ### Written for the manual
 
-Docblocks are the future source material for a user manual, so:
+- View headers name the page by **UI path** (`Admin > Reference Data > Sectors`), not
+  file path.
+- Controller docblocks state the **user-facing action**, not HTTP mechanics.
 
-- View headers name the page by its **UI path** (`Admin > Reference Data > Sectors`),
-  not its file path.
-- Controller docblocks state the **user-facing action**, not the HTTP mechanics.
+## Verification gates
 
-Costs nothing now; means a manual outline can be harvested rather than rewritten.
+Each gate is a command with a pass criterion. A tranche is not complete until its
+gates pass.
 
-## Verification
+### Gate A: token identity
 
-### Token-identity gate
+`scripts/assert-tokens-unchanged.php <ref> <path>...` runs `token_get_all()` on each
+file at both revisions, strips `T_WHITESPACE`, `T_COMMENT`, `T_DOC_COMMENT`, and
+compares the remaining sequences.
 
-The primary control. `scripts/assert-tokens-unchanged.php` runs `token_get_all()` on
-every touched file at both revisions, strips `T_WHITESPACE`, `T_COMMENT`, and
-`T_DOC_COMMENT`, and compares the remaining token sequences. Any difference fails.
+**Pass:** zero differing files. Applies to commits 3, 4, 5, 6, 7.
 
-- Commits 4 through 7 (all docblock and comment work): must pass exactly. This is the
-  deterministic proof of zero behavior change.
-- Commit 3 (formatter): the gate applies too. If a php-cs-fixer rule trips it, that
-  rule is rewriting executable tokens and gets dropped from the ruleset. The gate is
-  not relaxed to accommodate a rule.
+`T_INLINE_HTML` is **not** stripped, so markup outside `<?php` is compared verbatim.
+A view header inserted inside a PHP block cannot alter it.
 
-### Test suite
+### Gate B: CSS comment identity
 
-`vendor/bin/phpunit` after every commit. `php spark routes` after commit 5.
+`scripts/assert-css-unchanged.sh <ref>` strips `/* ... */` and blank lines from each
+stylesheet at both revisions and compares. **Pass:** zero differing files. Applies to
+commit 8.
 
-### Playwright
+### Gate C: test suite
+
+`vendor/bin/phpunit`. **Pass:** exactly `Tests: 268 ... Failures: 1`, and the one
+failure is `ScanViewTest::testNoInlineStyles`. Any other count fails the tranche. Run
+after every commit.
+
+### Gate D: routes
+
+`php spark routes`. **Pass:** every route resolves, no errors. Run after commit 5.
+
+### Gate E: Playwright
 
 Per CLAUDE.md, against `php spark serve`, logged in as developer/developer123, at
-desktop and 390px widths.
+desktop and 390px.
 
-- **Baseline captured before any commit**, saved to the session scratchpad.
-- **Re-captured after commit 7** and diffed against the baseline. Views are the only
-  commits that can change rendered output; a diff means a header block broke markup.
-- Flows smoke-tested: login, role redirect, family create/update, audit trail write,
-  scanner scan, reference-data tabs.
+- **Baseline captured before commit 1**, saved to the session scratchpad:
+  `browser_snapshot` of every dashboard tab, plus login and the scanner scan page.
+- **Re-captured after commit 7 and after commit 8**, diffed against baseline.
+- **Pass:** accessibility-tree diff is empty.
+- Flows smoke-tested at both points: login, role redirect, family create, family
+  update, audit trail row written, scanner scan, each reference-data tab.
 
-### Review
+Commits 7 and 8 are the only ones that can move rendered output.
 
-`cavecrew-reviewer` subagent per tranche.
+### Gate F: lint clean
 
-This is a **deliberate deviation** from CLAUDE.md's CodeRabbit-first rule, recorded
-here so it is not later "corrected". Reasoning: the review question in this branch is
-narrow (does this docblock match the code, is this comment noise), the diff provably
-contains no logic changes, and one-line-per-finding output suits a 65-file comment
-sweep. CodeRabbit would spend minutes hunting logic bugs in a diff that the token
-gate has already proven has none.
+`composer lint`. **Pass:** zero errors across all three layers. Required from commit 8
+onward.
+
+### Gate G: review
+
+`cavecrew-reviewer` on each tranche's diff. **Pass:** no finding at Critical or Major
+that survives triage.
 
 ## Rollout
 
-One branch, `chore/doc-standard`, one commit per tranche so review can proceed
-commit-by-commit rather than against a single multi-thousand-line diff.
+One branch, `chore/doc-standard`, one commit per tranche.
+
+**Commit 0 (pre-work, not a commit):** capture the Gate E Playwright baseline.
 
 1. **`chore: remove spent superpowers plans and summaries`**
-   Delete `docs/superpowers/plans/` (22 files), `summaries/` (1), `summary/` (3).
-   Keep `specs/` (20) — specs record why decisions were made, which git history does
-   not capture well. `.superpowers/` is already gitignored (`.gitignore:161`); add
-   `docs/superpowers/plans/` and the summary directories alongside it.
+   Delete `docs/superpowers/plans/` (22), `summaries/` (1), `summary/` (3). Keep
+   `specs/` (20). Add those three paths to `.gitignore` beside the existing
+   `.superpowers/` entry at line 161.
+   Gates: C.
 
 2. **`chore: add lint tooling and comment standard`**
-   composer dev dependencies, `.php-cs-fixer.dist.php`, `phpcs.xml.dist`, the custom
-   sniff, `scripts/check-comment-style.sh`,
-   `scripts/assert-tokens-unchanged.php`, `docs/knowledge/php-practices/comments.md`,
-   CLAUDE.md summary, and `composer lint` / `composer lint:fix` scripts.
+   composer dev dependencies; `.php-cs-fixer.dist.php`; `phpcs.xml.dist`;
+   `scripts/check-comment-style.sh`; `scripts/assert-tokens-unchanged.php`;
+   `scripts/assert-css-unchanged.sh`; `docs/knowledge/php-practices/comments.md`;
+   CLAUDE.md summary; `composer lint` and `composer lint:fix` scripts.
+
+   **Acceptance test for the sniff config.** Create a throwaway fixture in the
+   scratchpad containing: a class with no docblock, a method with no docblock, a
+   method whose docblock is only `@param string $id The id.`, and a correctly
+   documented method. Run phpcs against it. The config is done when it reports
+   exactly three errors and passes the fourth case. Adjust the exclusion list until
+   that holds. This resolves the Layer 2 exclusion list deterministically rather than
+   by guesswork.
+
+   Gates: C, and the fixture acceptance test.
 
 3. **`style: apply formatter repo-wide`**
-   Purely mechanical. No prose changes. Token gate plus phpunit.
+   `composer lint:fix`. Mechanical only, no prose changes.
+   Gates: A, C.
 
-4. **`docs: bring Libraries to standard`** — 22 files.
+4. **`docs: bring Libraries to standard`** - 22 files.
+   Gates: A, C, G.
 
-5. **`docs: bring Controllers to standard`** — 22 files.
+5. **`docs: bring Controllers to standard`** - 22 files.
+   Gates: A, C, D, G.
 
-6. **`docs: bring Models, Support, and remaining app code to standard`** — 42 files:
-   `app/Models` (25), `app/Support` (5), `app/Jobs` (4), `app/Helpers` (5),
-   `app/Validation` (2), `app/Database` (1). Everything left in the Layer 2 scope, so
-   that the sniffer runs clean before commit 8 turns it into a build failure.
+6. **`docs: bring remaining app code to standard`** - 48 files: `Models` (25),
+   `Support` (5), `Helpers` (5), `Jobs` (4), `Commands` (4), `Validation` (2),
+   `Filters` (2), `Database` (1). Includes the 10 `*_view_data()` array-shape
+   contracts in `app/Helpers/dashboard_view_helper.php`. This closes the whole Layer 2
+   scope, so phpcs runs clean from here.
+   Gates: A, C, G.
 
-7. **`docs: add data-contract headers to Views`** — 65 files. Largest and riskiest
-   tranche; the only one touching live markup.
+7. **`docs: add purpose headers to views`** - 65 files, 33 of which have no header today.
+   Gates: A, C, E, G.
 
-8. **`ci: run lint and tests on pull requests`**
+8. **`docs: add headers and prune comments in custom css`** - 11 files, 4 of which have
+   no header today. Standardize dividers, delete historical residue.
+   Gates: B, C, E, G.
+
+9. **`ci: run lint and tests on pull requests`**
    `.github/workflows/ci.yml` (new; no workflows exist today) running `composer lint`
-   and `vendor/bin/phpunit` on PRs to `main`. Lint is set to fail the build only at
-   this point, once the repo is already clean.
+   and `vendor/bin/phpunit` on PRs to `main`. Lint becomes build-failing only here,
+   once the repo is already clean.
+   Gates: C, F.
 
-## Risks
+## Out of scope
 
-- **Commit 7 is 65 files of view edits.** Mitigated by the token gate (proves no PHP
-  behavior change) and the Playwright baseline diff (catches broken markup, which the
-  token gate cannot see since HTML outside `<?php` is `T_INLINE_HTML` and is compared
-  as-is).
-- **The custom sniff is new code** and the only place a bug can originate. It is
-  read-only over the token stream and cannot alter source.
-- **Big-bang rollout was chosen over phased.** Accepted by the user with the review
-  burden understood; per-tranche commits are the mitigation.
+Recorded so they are not attempted, and so their absence is not mistaken for an
+oversight.
+
+- PHPStan, Psalm, Rector.
+- Any logic change, refactor, or simplification.
+- `app/Config` (stock CI4), `vendor/`, `public/assets/` (vendored Bootstrap, SB Admin,
+  DataTables).
+- `public/css/` file structure: no renames, no moves, no new directories.
+- The 27 JS files in `public/js`.
+- Fixing `ScanViewTest::testNoInlineStyles` or the inline styles in `scan.php`.
+- The two conflicting brand greens (`--binan-green: #145c3b` in `theme.css` vs
+  `--login-green: #176b4d` in `login.css`).
+- Any pre-existing dead code found along the way.
+
+The last three go to `docs/knowledge/violations.md` as appended entries, per CLAUDE.md.

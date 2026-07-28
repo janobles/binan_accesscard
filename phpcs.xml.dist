@@ -60,6 +60,15 @@
         <exclude name="Squiz.Commenting.FunctionComment.SpacingAfterParamType"/>
         <exclude name="Squiz.Commenting.FunctionComment.ThrowsNotCapital"/>
 
+        <!-- Positional matching. This sniff pairs the first @param tag with the
+             first parameter, so documenting only the one argument that needs
+             explaining makes it report a type mismatch that does not exist.
+             Selective tagging is the standard here, so this code has to go.
+             Accuracy is still covered: IncorrectParamVarName catches a tag
+             naming a parameter that is gone, and InvalidReturn catches a return
+             tag the code contradicts. -->
+        <exclude name="Squiz.Commenting.FunctionComment.IncorrectTypeHint"/>
+
         <!-- Presence is a judgment call, not a lint error. A linter can see
              that a docblock exists but never that it is true, so requiring one
              on every method buys filler, not documentation. Whether a method

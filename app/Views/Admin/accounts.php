@@ -1,4 +1,12 @@
 <?php
+/**
+ * Account Management page (Admin > Accounts).
+ *
+ * Rendered inside Admin/layout.php. The four role lists arrive separately and are
+ * merged into one table here, so role is a column rather than a section. Whether the
+ * Add and Edit controls appear is decided server side and passed in, because Admin
+ * and Developer differ in what they may change; this view only honours the flags.
+ */
 
 $adminAccounts = $adminAccounts ?? [];
 $employeeAccounts = $employeeAccounts ?? [];

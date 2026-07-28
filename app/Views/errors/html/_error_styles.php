@@ -1,3 +1,13 @@
+<?php
+/**
+ * Shared styling for the 400 and 404 error pages.
+ *
+ * Not part of stock CodeIgniter. Both pages shipped with the same block of inline CSS
+ * duplicated; it lives here instead so the two cannot drift apart. Still inline rather
+ * than a stylesheet in public/css because an error page must render even when asset
+ * routing is what broke.
+ */
+?>
     <style>
         div.logo {
             height: 200px;

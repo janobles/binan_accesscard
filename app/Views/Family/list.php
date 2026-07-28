@@ -1,4 +1,15 @@
 <?php
+/**
+ * Manage Records list (Admin, Employee and Viewer > Manage Records).
+ *
+ * One view serves all three roles: $routeBase carries the role's URL prefix and the
+ * read-only flags decide which controls render, so there is no per-role copy of this
+ * page. The rows themselves are not rendered here; the table is loaded over AJAX from
+ * the dataTable endpoint, and row actions are gated again server side in
+ * FamilyController::dataTableActions(). This page is the layout source of truth the
+ * other list pages are matched against.
+ */
+
 $routeBase = (string) ($routeBase ?? 'admin/manage-family');
 $keyword = trim((string) ($keyword ?? ''));
 $status = in_array((string) ($status ?? 'all'), ['all', 'active', 'archived'], true) ? (string) $status : 'all';

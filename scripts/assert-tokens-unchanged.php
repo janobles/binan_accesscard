@@ -50,11 +50,17 @@ if ($paths === []) {
 /**
  * Reduces source to the tokens that actually run.
  *
+ * The open and close tags are dropped along with whitespace and comments. A view
+ * whose file is pure markup can only carry its header inside a `<?php ... ?>`
+ * prologue, and that pair executes nothing. Nothing else is loosened: inline HTML
+ * is still compared verbatim chunk by chunk, so splitting or editing markup around
+ * a tag still fails.
+ *
  * @return list<string> One entry per token, safe to compare with ===.
  */
 function significantTokens(string $source): array
 {
-    $ignored = [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT];
+    $ignored = [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT, T_OPEN_TAG, T_CLOSE_TAG];
     $out     = [];
 
     foreach (token_get_all($source) as $token) {

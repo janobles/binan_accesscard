@@ -1,3 +1,15 @@
+<?php
+/**
+ * Shared Add, Edit, Archive and Restore modal for services and programs, included
+ * once by the service list page (Admin > Reference Data > Services).
+ *
+ * One form serves all four actions: services-modal.js swaps the form action between
+ * the four data-*-action URLs. Two maps ride along on the form: data-existing-codes
+ * for the browser-side duplicate check, and data-next-code-map so picking a category
+ * can prefill the next free service code for that category's prefix. Both are
+ * conveniences; Lookups\ServiceController re-checks server side.
+ */
+?>
 <div class="modal fade" id="serviceActionModal" tabindex="-1" aria-labelledby="serviceActionModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">

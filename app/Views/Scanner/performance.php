@@ -1,3 +1,12 @@
+<?php
+/**
+ * Scanner performance page (Scanner kiosk > Performance).
+ *
+ * Per-batch throughput figures for the operator running the kiosk, scoped by the
+ * batch selector at the top. Numbers are fetched from the stats endpoint rather than
+ * rendered server side, so the page can refresh without reloading mid-distribution.
+ */
+?>
 <?= $this->extend('Scanner/kiosk-layout') ?>
 <?= $this->section('content') ?>
 

@@ -1,3 +1,15 @@
+<?php
+/**
+ * Shared Add, Edit, Archive and Restore modal for categories, included once by the
+ * category list page (Admin > Reference Data > Categories).
+ *
+ * One form serves all four actions: categories-modal.js swaps the form action between
+ * the four data-*-action URLs. The existing codes ride along in data-existing-codes so
+ * the duplicate check runs in the browser before a post, which is a convenience only;
+ * Lookups\CategoryController re-checks server side, including that a category may not
+ * duplicate a sector.
+ */
+?>
 <div class="modal fade" id="categoryActionModal" tabindex="-1" aria-labelledby="categoryActionModalLabel" aria-hidden="true">
 	<div class="modal-dialog modal-dialog-centered">
 		<div class="modal-content">

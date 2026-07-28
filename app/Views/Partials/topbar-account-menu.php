@@ -1,4 +1,13 @@
 <?php
+/**
+ * Account dropdown in the top bar, included by the dashboard and kiosk layouts.
+ *
+ * The display name is assembled here from the account's packed full_description
+ * field rather than read from a column, which is why this partial reaches for
+ * ViewFormatter. $accountSettingsMode decides whether the settings entry opens the
+ * profile modal or navigates, since the kiosk layout has no modal to open.
+ */
+
 $user = $user ?? [];
 $username = (string) ($user['username'] ?? 'User');
 $accountLevelLabel = (string) ($accountLevelLabel ?? 'Account');

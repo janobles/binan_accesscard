@@ -37,14 +37,10 @@ class FamilyRecordWriter
     /**
      * Persists a single family. Caller must already be inside a transaction.
      *
-     * @param array                                          $headPayload    `member` row for the head (relationship forced to 'Head').
-     * @param list<array{payload: array, serviceIds: int[]}> $memberPayloads One entry per additional member: its row + its service IDs.
-     * @param int[]                                          $headServiceIds Service IDs to assign to the head.
-     * @param int                                            $operatorUserId users.userID of the operator (for the audit row).
-     * @param string                                         $auditSuffix    Optional note appended to the audit full_description (e.g. " via Excel import").
-     * @param int|null                                       $controlNo      Paper QR control number for the head (from the import's "QR Number" column); null for manual entry.
-     *
-     * @return int The new head member ID.
+     * $memberPayloads is a list of `['payload' => array, 'serviceIds' => int[]]`,
+     * one entry per additional member. $controlNo is the paper QR control number
+     * for the head, taken from the import's "QR Number" column; null for manual
+     * entry. Returns the new head member ID.
      *
      * @throws FamilyRecordWriteException on any insert/assignment failure.
      */
@@ -100,13 +96,8 @@ class FamilyRecordWriter
     /**
      * Appends ONE member to an existing family (its head already on file), with its
      * services, and writes a FAMILY_UPDATED audit row. Caller must already be inside a
-     * transaction and must have confirmed the head exists.
+     * transaction and must have confirmed the head exists. Returns the new member ID.
      *
-     * @param int   $headId       existing head member ID
-     * @param array $memberPayload `member` row for the person being added
-     * @param int[] $serviceIds    services to assign to the added member
-     *
-     * @return int the new member ID
      * @throws FamilyRecordWriteException on any insert/assignment failure.
      */
     public function appendMember(
@@ -147,8 +138,6 @@ class FamilyRecordWriter
      * Assigns a list of service IDs to a member, skipping IDs that don't exist
      * (matches the manual form's tolerant behavior). Throws only when an existing
      * service genuinely fails to link.
-     *
-     * @param int[] $serviceIds
      */
     private function assignServices(int $memberId, array $serviceIds, string $who): void
     {

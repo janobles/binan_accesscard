@@ -13,10 +13,9 @@ use Dompdf\Options;
 final class ReportsPdfGenerator
 {
     /**
-     * @param array{total:int,received:int,notReceived:int,coverage:int} $summary
-     * @param list<array{barangay:string,total:int,received:int,coverage:int}> $byBarangay
-     * @param list<array{aid_type:string,count:int}> $byAidType
-     * @param list<array{userID:int,scanner:string,handouts:int,families:int}> $perScanner
+     * $summary is `{total, received, notReceived, coverage}`; $byBarangay is a list of
+     * `{barangay, total, received, coverage}`; $byAidType is a list of `{aid_type, count}`;
+     * $perScanner is a list of `{userID, scanner, handouts, families}`.
      */
     public function generate(array $summary, array $byBarangay, array $byAidType, ?string $from, ?string $to, array $perScanner = [], ?string $batchName = null): string
     {

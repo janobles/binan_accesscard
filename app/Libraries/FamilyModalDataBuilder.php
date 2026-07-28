@@ -18,8 +18,7 @@ class FamilyModalDataBuilder
      * Builds the head prefill block (formValues + selected sector/service IDs) for
      * the Update modal. Splits the stored "address, barangay" back into the two
      * separate inputs via MemberFieldNormalizer::splitAddressBarangay().
-     *
-     * @param list<int> $headServiceIds
+     * $headServiceIds is the head's currently assigned service IDs.
      */
     public function updateData(array $head, array $headServiceIds): array
     {

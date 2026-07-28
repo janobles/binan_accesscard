@@ -584,9 +584,8 @@ class ImportFamilyModalBuilder
 
     /**
      * A code / "CODE - Name" / full value -> the full stored value (mirrors the importer's
-     * fullValueFromCode so the modal's select pre-selects correctly).
-     *
-     * @param array<string,string> $codeMap
+     * fullValueFromCode so the modal's select pre-selects correctly). $codeMap is code => full
+     * value.
      */
     private function fullFromCode(string $value, array $codeMap): string
     {
@@ -655,7 +654,6 @@ class ImportFamilyModalBuilder
     /**
      * One raw person row from posted field values, reversing viewData()'s mapping.
      *
-     * @param array<string,mixed> $fields
      * @return array<string,string>
      */
     private function personData(string $qr, string $relationship, array $fields): array

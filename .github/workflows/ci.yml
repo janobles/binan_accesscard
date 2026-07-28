@@ -39,5 +39,12 @@ jobs:
       # because the fix moves markup, which the branch that added this workflow
       # was not allowed to do. Delete this filter once that view is cleaned up.
       # PHPUnit 10.5 has no --exclude-filter, hence the negative lookahead.
+      #
+      # --no-coverage is required, not cosmetic. phpunit.xml.dist configures
+      # coverage and sets failOnWarning="true", so on a runner with no coverage
+      # driver PHPUnit emits "No code coverage driver available" and exits 1
+      # even when every test passed. Disabling collection removes the warning
+      # rather than the failOnWarning guard, which still has to catch real
+      # warnings.
       - name: Run tests
-        run: vendor/bin/phpunit --filter '/^(?!.*ScanViewTest::testNoInlineStyles).*$/'
+        run: vendor/bin/phpunit --no-coverage --filter '/^(?!.*ScanViewTest::testNoInlineStyles).*$/'

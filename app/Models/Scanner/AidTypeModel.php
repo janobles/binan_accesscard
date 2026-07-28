@@ -70,9 +70,9 @@ class AidTypeModel extends Model
 
     /**
      * Delete a subsidy type only when no distribution references it, checking and
-     * deleting in one transaction to close the check-then-delete race.
-     *
-     * @return int 0 = deleted, -1 = delete failed, >0 = still referenced (count)
+     * deleting in one transaction to close the check-then-delete race. Returns 0
+     * when the row was deleted, -1 when the delete failed, and the referencing
+     * distribution count when it is still in use.
      */
     public function deleteIfUnused(int $id): int
     {

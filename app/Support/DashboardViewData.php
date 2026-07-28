@@ -7,9 +7,6 @@ use App\Models\Lookups\SectorModel;
 use App\Models\Lookups\ServiceModel;
 
 /**
- * Prepares dashboard view variables before templates render markup.
- */
-/**
  * Normalizes raw controller data into the exact variables each dashboard view/
  * partial expects (with safe defaults). Called from the dashboard view helper just
  * before templates render, so views never deal with missing keys.

@@ -44,9 +44,10 @@ class FamilyImportJob implements JobHandlerInterface
     }
 
     /**
-     * Review phase. Parses and validates the uploaded file and hands the whole row
-     * set plus every error to ImportStagingStore, so the browser can show the
-     * reviewer what needs fixing. Touches no family table.
+     * Review phase. Parses and validates the uploaded file, then hands the whole
+     * row set plus every error to ImportStagingStore, so the browser can show the
+     * reviewer what needs fixing. A file that cannot be parsed at all fails here
+     * and is never staged. Touches no family table.
      */
     private function handleReview(array $payload, array $job): JobOutcome
     {

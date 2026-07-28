@@ -79,11 +79,21 @@ function significantTokens(string $source): array
     return $out;
 }
 
+// The exit status is checked because a gate that cannot run must not report
+// success. Without it, an unresolvable ref makes git print nothing, exit
+// non-zero, and leave $rawChanged empty, which reads as "no file changed" and
+// passes.
 exec(
     'git diff --no-renames --name-status ' . escapeshellarg($ref)
     . ' -- ' . implode(' ', array_map('escapeshellarg', $paths)),
-    $rawChanged
+    $rawChanged,
+    $gitStatus
 );
+
+if ($gitStatus !== 0) {
+    fwrite(STDERR, "unable to diff against {$ref}: git exited {$gitStatus}\n");
+    exit(2);
+}
 
 $changed = [];
 

@@ -92,6 +92,29 @@ rendering needs inline styles), layout shells + `Auth/login.php` (standalone
   props-only component has no `*_view_data()` function to hold the contract, so
   deleting the list would lose it with nowhere to put it. Resolve by deciding
   where a component's props contract lives.
+- [ ] 🟡 Minor: `scripts/check-comment-style.sh` - the em-dash and divider scans
+  match on raw text, so an em dash or a `----` run inside a PHP string, a regex,
+  or inline HTML would be reported as a comment violation. A false positive fails
+  the build rather than passing it, so this is loud, not silent. Fixing it means
+  parsing comments with `token_get_all()` for PHP and a quote-aware scan for CSS,
+  which is its own branch. Raised by CodeRabbit on PR #42.
+- [ ] 🟡 Minor: `scripts/assert-css-unchanged.sh:19` - `strip()` removes anything
+  between `/*` and `*/` with a regex, so a comment-like sequence inside a quoted
+  string or a `url()` is stripped from both sides and an edit there would not be
+  seen. This one fails open, unlike the check above. No stylesheet in `public/css`
+  contains such a string today. A real fix needs a CSS-aware lexer. Raised by
+  CodeRabbit on PR #42.
+- [ ] 🟡 Minor: `scripts/assert-tokens-unchanged.php` - `--allow-added` waives the
+  token comparison for an added file entirely, so a new executable PHP file passes
+  the gate unread. Intended as an escape hatch for the rare docs-only branch that
+  adds a file; not used by the branch that added the script. Tighten it to allow
+  an added file only when `significantTokens()` comes back empty. Raised by
+  CodeRabbit on PR #42.
+- [ ] 🟡 Minor: `app/Views/Cards/pdf/batch_page.php:10` - the header carries `@var`
+  tags for `$cells` and `$isFirstPage`, which the comment standard bans for views.
+  Same shape as the `table_controls.php` item above: a partial rendered by the PDF
+  builder has no `*_view_data()` function to hold the contract, so deleting the
+  tags loses it with nowhere to put it. Resolve with that item, not separately.
 - [ ] 🟡 Minor: `scripts/check-comment-style.sh` - the em-dash scan still covers
   inline `<script>` blocks, which the divider scan now skips. No file hits it
   today, so nothing was changed; an em dash written into a view's inline JS would

@@ -1,7 +1,8 @@
 <?php
 /**
  * Shared Add, Edit, Archive and Restore modal for sectors, included once by the
- * sector list page (Admin > Reference Data > Sectors).
+ * sector list page (Admin > Reference Data > Sectors). The values it renders come
+ * from that page's scope, built by sector_management_view_data().
  *
  * One form serves all four actions: sectors-modal.js swaps the form action between
  * the four data-*-action URLs. The existing shortcodes ride along in

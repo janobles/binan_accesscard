@@ -337,7 +337,7 @@ class MemberModel extends Model
     /**
      * FIRST (quick) search bar of the Manage Records tab. Lists family HEADS only;
      * an exact QR number also resolves to its mapped head. $filters carries the
-     * Manage Records filter controls (sectorID + date); see
+     * Manage Records filter controls (sectorID, barangay, date); see
      * App\Libraries\DashboardPageBuilder::buildMemberListData() which supplies them.
      *
      * $orderKey/$orderDirection are an optional, append-only addition used by the

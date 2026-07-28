@@ -86,8 +86,8 @@ invented `array{}`.
 
 ## CSS headers
 
-`public/css/theme.css` already carries the model header. Every stylesheet matches its
-form: what it styles, which manifest context loads it, and the scope boundary.
+`public/css/theme.css` carries the header every other stylesheet is matched against:
+what it styles, which manifest context loads it, and the scope boundary.
 
 ```css
 /* Biñan green skin + house component rules layered over the vendored
@@ -107,7 +107,7 @@ it correctly.
 - Em dashes (like the one you would have used to join this clause to the last).
 - `// ---- section ----` and `/* ==== section ==== */` dividers. Replace with a blank
   line and a short prose sentence, or split the unit.
-- `@author`, `@created`, `@version`.
+- `@author`, `@created`, `@version`, `@package`.
 - Comments describing a change someone wanted rather than what the code does.
 - Historical residue (`the old records-multiselect widget was retired...`).
 - AI-slop register. Plain language, matching `docs/knowledge/` house style.

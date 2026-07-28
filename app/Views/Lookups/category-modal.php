@@ -1,7 +1,8 @@
 <?php
 /**
  * Shared Add, Edit, Archive and Restore modal for categories, included once by the
- * category list page (Admin > Reference Data > Categories).
+ * category list page (Admin > Reference Data > Categories). The values it renders
+ * come from that page's scope, built by category_management_view_data().
  *
  * One form serves all four actions: categories-modal.js swaps the form action between
  * the four data-*-action URLs. The existing codes ride along in data-existing-codes so

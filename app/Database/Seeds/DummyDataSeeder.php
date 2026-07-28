@@ -21,8 +21,9 @@ class DummyDataSeeder extends Seeder
     private const TRUNCATE_BEFORE_SEED = false;
 
     /**
-     * Name, job, education and religion pools the generator draws from. Filipino
-     * surnames and given names so the seeded data reads like the real register.
+     * First of the name, job, education and religion pools the generator draws
+     * from. Filipino surnames and given names, so the seeded data reads like the
+     * real register.
      */
     private array $lastNames = [
         'Dela Cruz', 'Reyes', 'Santos', 'Garcia', 'Torres', 'Flores', 'Lopez',

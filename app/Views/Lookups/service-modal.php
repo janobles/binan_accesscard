@@ -1,7 +1,9 @@
 <?php
 /**
  * Shared Add, Edit, Archive and Restore modal for services and programs, included
- * once by the service list page (Admin > Reference Data > Services).
+ * once by the service list page (Admin > Reference Data > Services). The category
+ * options and code maps come from that page's scope, built by
+ * service_management_view_data().
  *
  * One form serves all four actions: services-modal.js swaps the form action between
  * the four data-*-action URLs. Two maps ride along on the form: data-existing-codes

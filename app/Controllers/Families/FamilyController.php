@@ -25,9 +25,12 @@ use Throwable;
  * Family records for the admin and employee Manage Family screens: creating,
  * viewing, editing, archiving, restoring, and deleting.
  *
- * Validates the request and hands database writes to MemberModel and
- * MemberServiceModel. View and edit screens load into the dashboard modal as
- * `?partial=1` fragments via assets/js/dashboard/manage-family-modal.js; the
+ * Validates the request, then hands creation to FamilyRecordWriter, which is the
+ * single write path the Excel importer also goes through. The remaining screens
+ * work through MemberModel and MemberServiceModel directly.
+ *
+ * View and edit screens load into the dashboard modal as `?partial=1`
+ * fragments via assets/js/dashboard/manage-family-modal.js; the
  * archive, restore, and delete forms in `Family/list` post here and redirect
  * back to the list.
  */

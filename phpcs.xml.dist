@@ -37,8 +37,10 @@
         <exclude name="Squiz.Commenting.ClassComment.TagNotAllowed"/>
     </rule>
 
-    <!-- A method must be documented, but @param/@return are only required when
-         they add something the signature does not already say. -->
+    <!-- A method docblock is validated when one is present; whether a method
+         needs one at all is decided at review (see the Missing exclusion at the
+         end of this block). @param/@return are only required when they add
+         something the signature does not already say. -->
     <rule ref="Squiz.Commenting.FunctionComment">
         <exclude name="Squiz.Commenting.FunctionComment.MissingParamTag"/>
         <exclude name="Squiz.Commenting.FunctionComment.MissingParamComment"/>

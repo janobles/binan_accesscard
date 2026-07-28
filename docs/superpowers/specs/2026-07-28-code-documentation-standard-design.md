@@ -78,7 +78,7 @@ These are settled. They are recorded with their reasoning so they are not reopen
 | 5 | `public/css/` structure is **not** changed. No renames, no moves, no `components/`+`pages/` split. | The cascade layering already works and `asset_helper.php` encodes load order deliberately. Reorganizing touches the manifest for no benefit. |
 | 6 | CSS gets headers, one divider format, and pruning. No per-rule commenting requirement. | A selector describes itself. There is no hidden contract to document, unlike a view. |
 | 7 | JS is out of scope. | 27 files whose comment edits cannot be mechanically proven safe (comment markers occur inside strings and regex literals). Gets its own branch. |
-| 8 | No custom PHPCS sniff. | Stock `Squiz.Commenting.*` sniffs with tag-level message codes excluded produce exactly the required rule. Writing a sniff would add the only new code in a cleanup branch. |
+| 8 | No custom PHPCS sniff. | Stock `Squiz.Commenting.*` sniffs with tag-level message codes excluded give the presence half of the rule exactly. They do not give the whole of it: see the UselessFunctionDocComment limit under Tooling. Reaffirmed after that limit was measured, because writing a sniff would put the only new executable code into a branch whose premise is that it adds none, and would need test coverage no task plans for. The uncovered case goes to review. |
 | 9 | Big-bang single branch, one commit per tranche. | User's call. Per-tranche commits are the review mitigation. |
 | 10 | Review by `cavecrew-reviewer`, not CodeRabbit. | Deliberate deviation from CLAUDE.md, recorded so it is not later "corrected". The review question is narrow and the token gate has already proven no logic changed. |
 | 11 | `docs/superpowers/specs/` kept; `plans/`, `summaries/`, `summary/` deleted. | Specs record why decisions were made. Plans are spent execution checklists. |
@@ -101,9 +101,43 @@ CodeIgniter 4 v4.7.4's own `require-dev` is php-cs-fixer + codeigniter/coding-st
 + nexusphp/cs-config. Layer 1 therefore matches the toolchain the framework lints
 itself with.
 
-`SlevomatCodingStandard.Commenting.UselessFunctionDocComment` errors on any
-`@param`/`@return` that only restates the native signature. That sniff is what makes
-decision 2 enforceable instead of aspirational.
+`SlevomatCodingStandard.Commenting.UselessFunctionDocComment` errors on a docblock
+that consists *only* of tags restating the native signature. It is what gives decision
+2 a machine-enforced floor.
+
+**Its limit, measured against slevomat 8.31 rather than assumed.** The sniff bails out
+as soon as a docblock carries any summary prose, and it treats a non-empty tag
+description as evidence the tag is wanted. So this errors:
+
+```php
+/**
+ * @param string $id
+ */
+```
+
+and this does not:
+
+```php
+/**
+ * Fetches a thing.
+ *
+ * @param string $id The id.
+ */
+```
+
+No stock sniff in phpcs or slevomat compares tag text against the signature, so the
+second case cannot be caught mechanically without writing one. Decision 8 declined to
+write a custom sniff, and that stands, so the split is:
+
+- **Machine-enforced:** a docblock is required everywhere, and a docblock that is
+  nothing but signature-restating tags is an error.
+- **Review-enforced (Gate G):** a redundant tag sitting inside an otherwise useful
+  docblock.
+
+This is a real reduction from what an earlier draft of this spec claimed. It is
+recorded rather than papered over because the codebase carries essentially no tags
+today, which makes the gap a question of future drift, covered by review and by CI on
+every PR.
 
 ## Enforcement: three layers
 

@@ -15,19 +15,19 @@ final class ReportsPdfGenerator
     /**
      * @param array{total:int,received:int,notReceived:int,coverage:int} $summary
      * @param list<array{barangay:string,total:int,received:int,coverage:int}> $byBarangay
-     * @param list<array{aid_type:string,count:int}> $byAidType
+     * @param list<array{subsidy_type:string,count:int}> $bySubsidyType
      * @param list<array{userID:int,scanner:string,handouts:int,families:int}> $perScanner
      */
-    public function generate(array $summary, array $byBarangay, array $byAidType, ?string $from, ?string $to, array $perScanner = [], ?string $batchName = null): string
+    public function generate(array $summary, array $byBarangay, array $bySubsidyType, ?string $from, ?string $to, array $perScanner = [], ?string $batchName = null): string
     {
         $html = view('Scanner/pdf/report', [
-            'summary'    => $summary,
-            'byBarangay' => $byBarangay,
-            'byAidType'  => $byAidType,
-            'from'       => $from,
-            'to'         => $to,
-            'perScanner' => $perScanner,
-            'batchName'  => $batchName,
+            'summary'       => $summary,
+            'byBarangay'    => $byBarangay,
+            'bySubsidyType' => $bySubsidyType,
+            'from'          => $from,
+            'to'            => $to,
+            'perScanner'    => $perScanner,
+            'batchName'     => $batchName,
         ]);
 
         $options = new Options();

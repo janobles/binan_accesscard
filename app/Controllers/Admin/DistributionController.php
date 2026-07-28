@@ -5,8 +5,8 @@ namespace App\Controllers\Admin;
 use App\Controllers\BaseController;
 use App\Libraries\RoleAccess;
 use App\Models\Audit\AuditTrailsModel;
-use App\Models\Scanner\AidDistributionModel;
 use App\Models\Scanner\DistributionBatchModel;
+use App\Models\Scanner\SubsidyDistributionModel;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
 
@@ -44,11 +44,11 @@ class DistributionController extends BaseController
     public function voidDistribution(int $id): RedirectResponse
     {
         if ($g = $this->guard()) { return $g; }
-        $row = model(AidDistributionModel::class)->find($id);
+        $row = model(SubsidyDistributionModel::class)->find($id);
         if ($row === null) {
             return redirect()->to('admin/distribution?tab=log')->with('error', 'Distribution not found.');
         }
-        if (! model(AidDistributionModel::class)->void($id)) {
+        if (! model(SubsidyDistributionModel::class)->void($id)) {
             return redirect()->to('admin/distribution?tab=log')->with('error', 'Unable to void distribution.');
         }
         $this->audit(
@@ -64,15 +64,15 @@ class DistributionController extends BaseController
     {
         if ($g = $this->guard()) { return $g; }
         $name      = trim((string) $this->request->getPost('name'));
-        $aidTypeId = (int) $this->request->getPost('subsidy_type_id');
+        $subsidyTypeId = (int) $this->request->getPost('subsidy_type_id');
         if ($name === '') {
             return redirect()->to('admin/distribution?tab=batches')->with('error', 'Batch name is required.');
         }
-        if ($aidTypeId <= 0) {
+        if ($subsidyTypeId <= 0) {
             return redirect()->to('admin/distribution?tab=batches')->with('error', 'Choose a subsidy type for this batch.');
         }
         $batchModel = model(DistributionBatchModel::class);
-        $id         = $batchModel->open($name, $aidTypeId, (int) (session('user_id') ?? 0));
+        $id         = $batchModel->open($name, $subsidyTypeId, (int) (session('user_id') ?? 0));
         if ($id <= 0) {
             $message = $batchModel->activeBatch() !== null
                 ? 'A batch is already open. Close the active batch before opening a new one.'
@@ -80,7 +80,7 @@ class DistributionController extends BaseController
 
             return redirect()->to('admin/distribution?tab=batches')->with('error', $message);
         }
-        $this->audit('Opened distribution batch "' . $name . '" #' . $id . ' (subsidy type ID ' . $aidTypeId . ')');
+        $this->audit('Opened distribution batch "' . $name . '" #' . $id . ' (subsidy type ID ' . $subsidyTypeId . ')');
         return redirect()->to('admin/distribution?tab=batches')->with('success', 'Batch opened. Scanning is now live.');
     }
 

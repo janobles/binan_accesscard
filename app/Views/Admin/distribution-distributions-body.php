@@ -41,7 +41,7 @@
                   <td><?= esc($d['control_no']) ?></td>
                   <td><span class="sector-name"><?= esc($d['head']) ?></span></td>
                   <td><?= esc($d['claimant']) ?></td>
-                  <td><span class="badge bg-light text-dark border"><?= esc((string) $d['aid_type']) ?></span></td>
+                  <td><span class="badge bg-light text-dark border"><?= esc((string) $d['subsidy_type']) ?></span></td>
                   <td><?= esc($d['scanned_by']) ?></td>
                   <td class="text-end">
                     <div class="dropdown actions-menu">
@@ -49,7 +49,7 @@
                         <i class="bi bi-three-dots" aria-hidden="true"></i>
                       </button>
                       <div class="dropdown-menu dropdown-menu-end">
-                        <form method="post" action="<?= esc(site_url('admin/distributions/void/' . $d['aidID']), 'attr') ?>"
+                        <form method="post" action="<?= esc(site_url('admin/distributions/void/' . $d['distribution_id']), 'attr') ?>"
                               onsubmit="return confirm('Void this distribution? This permanently removes the record.');">
                           <?= csrf_field() ?>
                           <button class="dropdown-item text-danger" type="submit"><i class="bi bi-x-circle" aria-hidden="true"></i>Void</button>

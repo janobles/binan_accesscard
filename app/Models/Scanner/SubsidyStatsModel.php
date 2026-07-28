@@ -11,18 +11,18 @@ use CodeIgniter\Model;
  * "Received" is defined at the family (head) level: a family counts as having
  * received aid when any scan under its control_no produced a distribution row.
  */
-class AidStatsModel extends Model
+class SubsidyStatsModel extends Model
 {
     protected $table         = 'qr_control';
     protected $primaryKey    = 'control_no';
     protected $returnType    = 'array';
     protected $useTimestamps = false;
 
-    /** Applies the optional batch scope to aid_distribution. */
+    /** Applies the optional batch scope to subsidy_distribution. */
     private function applyScope($builder, ?int $batchId)
     {
         if ($batchId !== null && $batchId > 0) {
-            $builder->where('aid_distribution.batch_id', $batchId);
+            $builder->where('subsidy_distribution.batch_id', $batchId);
         }
 
         return $builder;
@@ -44,7 +44,7 @@ class AidStatsModel extends Model
 
             $b = $this->db->table('qr_control')
                 ->select('qr_control.headID')
-                ->join('aid_distribution', 'aid_distribution.control_no = qr_control.control_no')
+                ->join('subsidy_distribution', 'subsidy_distribution.control_no = qr_control.control_no')
                 ->groupBy('qr_control.headID');
             $this->applyScope($b, $batchId);
             $received = count($b->get()->getResultArray());
@@ -81,7 +81,7 @@ class AidStatsModel extends Model
                 ->select($barangayExpr . ' AS barangay,'
                     . ' COUNT(DISTINCT qr_control.headID) AS received')
                 ->join('member', 'member.memberID = qr_control.headID', 'left')
-                ->join('aid_distribution', 'aid_distribution.control_no = qr_control.control_no');
+                ->join('subsidy_distribution', 'subsidy_distribution.control_no = qr_control.control_no');
             $this->applyScope($rb, $batchId);
             $recv = [];
             foreach ($rb->groupBy('barangay')->get()->getResultArray() as $r) {
@@ -108,15 +108,15 @@ class AidStatsModel extends Model
 
     /**
      * Handout counts per subsidy type, within the batch scope, busiest first.
-     * Aid types with zero handouts are omitted.
+     * Subsidy types with zero handouts are omitted.
      */
-    public function byAidType(?int $batchId = null): array
+    public function bySubsidyType(?int $batchId = null): array
     {
         try {
             $b = $this->db->table('subsidy')
-                ->select('subsidy.name AS aid_type,'
-                    . ' COUNT(aid_distribution.aidID) AS count')
-                ->join('aid_distribution', 'aid_distribution.subsidy_type_id = subsidy.subsidy_type_id', 'left');
+                ->select('subsidy.name AS subsidy_type,'
+                    . ' COUNT(subsidy_distribution.distribution_id) AS count')
+                ->join('subsidy_distribution', 'subsidy_distribution.subsidy_type_id = subsidy.subsidy_type_id', 'left');
             $this->applyScope($b, $batchId);
             $rows = $b->groupBy('subsidy.subsidy_type_id')
                 ->having('count >', 0)
@@ -125,7 +125,7 @@ class AidStatsModel extends Model
                 ->get()->getResultArray();
 
             return array_map(static fn ($r) => [
-                'aid_type' => (string) $r['aid_type'],
+                'subsidy_type' => (string) $r['subsidy_type'],
                 'count'    => (int) $r['count'],
             ], $rows);
         } catch (\Throwable $e) {
@@ -145,18 +145,18 @@ class AidStatsModel extends Model
         }
 
         try {
-            $b = $this->db->table('aid_distribution')
-                ->select('aid_distribution.userID,'
+            $b = $this->db->table('subsidy_distribution')
+                ->select('subsidy_distribution.userID,'
                     . " COALESCE(users.username, 'Unknown') AS scanner,"
-                    . ' COUNT(aid_distribution.aidID) AS handouts,'
-                    . ' COUNT(DISTINCT aid_distribution.control_no) AS families')
-                ->join('users', 'users.userID = aid_distribution.userID', 'left')
-                ->where('aid_distribution.batch_id', $batchId)
-                ->groupBy('aid_distribution.userID')
+                    . ' COUNT(subsidy_distribution.distribution_id) AS handouts,'
+                    . ' COUNT(DISTINCT subsidy_distribution.control_no) AS families')
+                ->join('users', 'users.userID = subsidy_distribution.userID', 'left')
+                ->where('subsidy_distribution.batch_id', $batchId)
+                ->groupBy('subsidy_distribution.userID')
                 ->orderBy('families', 'DESC')
                 ->orderBy('scanner', 'ASC');
             if ($onlyUserId !== null) {
-                $b->where('aid_distribution.userID', $onlyUserId);
+                $b->where('subsidy_distribution.userID', $onlyUserId);
             }
 
             return array_map(static fn ($r) => [
@@ -186,11 +186,11 @@ class AidStatsModel extends Model
         $seconds = max(60, $bucketMinutes * 60);
 
         try {
-            $rows = $this->db->table('aid_distribution')
+            $rows = $this->db->table('subsidy_distribution')
                 ->select('FLOOR(UNIX_TIMESTAMP(dt_created) / ' . $seconds . ') AS bucket,'
                     . ' MIN(dt_created) AS ts,'
                     . ' COUNT(DISTINCT control_no) AS families,'
-                    . ' COUNT(aidID) AS handouts')
+                    . ' COUNT(distribution_id) AS handouts')
                 ->where('batch_id', $batchId)
                 ->where('userID', $userId)
                 ->groupBy('bucket')

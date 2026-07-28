@@ -91,7 +91,7 @@ class DashboardController extends BaseController
     /**
      * GET `admin/reference-data`. One page for the four lookup tables
      * (Sectors, Services, Categories, Subsidy Types), switched by ?tab=.
-     * Mutations still post to the Lookups\* and AidTypes controllers.
+     * Mutations still post to the Lookups\* and SubsidyTypes controllers.
      */
     public function referenceData(): string|RedirectResponse
     {

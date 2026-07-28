@@ -10,9 +10,9 @@ use App\Models\Lookups\CategoryModel;
 use App\Models\Lookups\SectorModel;
 use App\Models\Lookups\ServiceModel;
 use App\Models\Auth\UserModel;
-use App\Models\Scanner\AidDistributionModel;
-use App\Models\Scanner\AidTypeModel;
-use App\Models\Scanner\AidStatsModel;
+use App\Models\Scanner\SubsidyDistributionModel;
+use App\Models\Scanner\SubsidyTypeModel;
+use App\Models\Scanner\SubsidyStatsModel;
 use App\Models\Scanner\DistributionBatchModel;
 use App\Support\FamilyProfilingFormV2;
 use App\Libraries\RoleAccess;
@@ -138,7 +138,7 @@ class DashboardPageBuilder
                 'reportsBatchOpen'  => false,
                 'reportsSummary'    => ['total' => 0, 'received' => 0, 'notReceived' => 0, 'coverage' => 0],
                 'reportsByBarangay' => [],
-                'reportsByAidType'  => [],
+                'reportsBySubsidyType' => [],
                 'reportsPerScanner' => [],
             ];
 
@@ -205,16 +205,16 @@ class DashboardPageBuilder
             'categoryListData'   => $categoryListData,
             'batches'            => $isBatches ? $batchModel->allBatches() : [],
             'activeBatch'        => $isBatches ? $batchModel->activeBatch() : null,
-            'activeAidTypes'     => $isBatches ? model(AidTypeModel::class)->active() : [],
-            'aidTypes'           => $isReference && $referenceTab === 'aidtypes' ? model(AidTypeModel::class)->all() : [],
-            'distributions'      => $isDistributions ? model(AidDistributionModel::class)->allDistributions() : [],
+            'activeSubsidyTypes' => $isBatches ? model(SubsidyTypeModel::class)->active() : [],
+            'subsidyTypes'       => $isReference && $referenceTab === 'aidtypes' ? model(SubsidyTypeModel::class)->all() : [],
+            'distributions'      => $isDistributions ? model(SubsidyDistributionModel::class)->allDistributions() : [],
             'reportsBatches'     => $reportsData['reportsBatches'],
             'reportsBatchId'     => $reportsData['reportsBatchId'],
             'reportsBatchName'   => $reportsData['reportsBatchName'],
             'reportsBatchOpen'   => $reportsData['reportsBatchOpen'],
             'reportsSummary'     => $reportsData['reportsSummary'],
             'reportsByBarangay'  => $reportsData['reportsByBarangay'],
-            'reportsByAidType'   => $reportsData['reportsByAidType'],
+            'reportsBySubsidyType' => $reportsData['reportsBySubsidyType'],
             'reportsPerScanner'  => $reportsData['reportsPerScanner'],
             'stats'              => $dashboardModel->stats(),
             'canCreateFamily'    => true,
@@ -433,7 +433,7 @@ class DashboardPageBuilder
         }
 
         $scope = $batchId > 0 ? $batchId : null;
-        $stats = model(AidStatsModel::class);
+        $stats = model(SubsidyStatsModel::class);
 
         return [
             'reportsBatches'    => $batches,
@@ -442,7 +442,7 @@ class DashboardPageBuilder
             'reportsBatchOpen'  => $batch !== null && ($batch['closed_at'] ?? null) === null,
             'reportsSummary'    => $stats->receivedVsNot($scope),
             'reportsByBarangay' => $stats->byBarangay($scope),
-            'reportsByAidType'  => $stats->byAidType($scope),
+            'reportsBySubsidyType' => $stats->bySubsidyType($scope),
             'reportsPerScanner' => $batchId > 0 ? $stats->perScanner($batchId) : [],
         ];
     }

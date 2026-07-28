@@ -76,10 +76,10 @@ $routes->group('admin', static function (RouteCollection $routes): void {
     });
 
     $routes->group('aidtypes', static function (RouteCollection $routes): void {
-        $routes->post('create', 'Admin\AidTypesController::create');
-        $routes->post('archive/(:num)', 'Admin\AidTypesController::archive/$1');
-        $routes->post('restore/(:num)', 'Admin\AidTypesController::restore/$1');
-        $routes->post('delete/(:num)', 'Admin\AidTypesController::deleteType/$1');
+        $routes->post('create', 'Admin\SubsidyTypesController::create');
+        $routes->post('archive/(:num)', 'Admin\SubsidyTypesController::archive/$1');
+        $routes->post('restore/(:num)', 'Admin\SubsidyTypesController::restore/$1');
+        $routes->post('delete/(:num)', 'Admin\SubsidyTypesController::deleteType/$1');
     });
 
     $routes->group('cards', static function (RouteCollection $routes): void {

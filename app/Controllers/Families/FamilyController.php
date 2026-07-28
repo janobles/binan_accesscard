@@ -362,7 +362,7 @@ class FamilyController extends BaseController
         $qrModel        = model(\App\Models\Scanner\QrControlModel::class);
         $currentControl = $qrModel->controlForHead($headId);
         $locked         = $currentControl !== null
-            && model(\App\Models\Scanner\AidDistributionModel::class)->hasClaims($currentControl);
+            && model(\App\Models\Scanner\SubsidyDistributionModel::class)->hasClaims($currentControl);
 
         // Locked heads keep their number: ignore any submitted change (defense in
         // depth in case the readonly field was tampered with).
@@ -1087,7 +1087,7 @@ class FamilyController extends BaseController
 
             $currentControl = model(\App\Models\Scanner\QrControlModel::class)->controlForHead($headId);
             $qrLocked = $currentControl !== null
-                && model(\App\Models\Scanner\AidDistributionModel::class)->hasClaims($currentControl);
+                && model(\App\Models\Scanner\SubsidyDistributionModel::class)->hasClaims($currentControl);
 
             $serviceIdsByMember = (new MemberServiceModel())
                 ->getServiceIdsByMemberIds(array_map(static fn (array $row): int => (int) $row['memberID'], $rows));

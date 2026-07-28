@@ -16,7 +16,7 @@ $reportsBatchName  = $reportsBatchName ?? null;
 $reportsBatchOpen  = $reportsBatchOpen ?? false;
 $reportsSummary    = $reportsSummary ?? ['total' => 0, 'received' => 0, 'notReceived' => 0, 'coverage' => 0];
 $reportsByBarangay = $reportsByBarangay ?? [];
-$reportsByAidType  = $reportsByAidType ?? [];
+$reportsBySubsidyType = $reportsBySubsidyType ?? [];
 $reportsPerScanner = $reportsPerScanner ?? [];
 
 $rangeLabel = $reportsBatchName !== null
@@ -119,9 +119,9 @@ foreach ($reportsByBarangay as $b) {
 
 <script id="reportsData" type="application/json"><?= json_encode(
     [
-        'received' => $reportsSummary,
-        'barangay'  => $reportsByBarangay,
-        'byAidType' => $reportsByAidType,
+        'received'      => $reportsSummary,
+        'barangay'      => $reportsByBarangay,
+        'bySubsidyType' => $reportsBySubsidyType,
     ],
     JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT,
 ) ?></script>

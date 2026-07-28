@@ -5,7 +5,7 @@ namespace App\Controllers\Admin;
 use App\Controllers\BaseController;
 use App\Libraries\RoleAccess;
 use App\Models\Audit\AuditTrailsModel;
-use App\Models\Scanner\AidTypeModel;
+use App\Models\Scanner\SubsidyTypeModel;
 use CodeIgniter\HTTP\RedirectResponse;
 
 /**
@@ -13,7 +13,7 @@ use CodeIgniter\HTTP\RedirectResponse;
  * restore/delete for the subsidy table. Admin/Developer only. Every
  * mutation writes an audit_trails row. Rendered in the admin dashboard shell.
  */
-class AidTypesController extends BaseController
+class SubsidyTypesController extends BaseController
 {
     private function guard(): ?RedirectResponse
     {
@@ -29,7 +29,7 @@ class AidTypesController extends BaseController
         if ($name === '') {
             return redirect()->to('admin/reference-data?tab=aidtypes')->with('error', 'Subsidy type name is required.');
         }
-        $id = model(AidTypeModel::class)->create($name);
+        $id = model(SubsidyTypeModel::class)->create($name);
         if ($id <= 0) {
             return redirect()->to('admin/reference-data?tab=aidtypes')->with('error', 'Unable to add subsidy type.');
         }
@@ -41,8 +41,8 @@ class AidTypesController extends BaseController
     public function archive(int $id): RedirectResponse
     {
         if ($g = $this->guard()) { return $g; }
-        $type = model(AidTypeModel::class)->find($id);
-        if (! model(AidTypeModel::class)->archive($id)) {
+        $type = model(SubsidyTypeModel::class)->find($id);
+        if (! model(SubsidyTypeModel::class)->archive($id)) {
             return redirect()->to('admin/reference-data?tab=aidtypes')->with('error', 'Unable to archive subsidy type.');
         }
         $this->audit('Archived subsidy type "' . (string) ($type['name'] ?? '') . '" #' . $id);
@@ -53,8 +53,8 @@ class AidTypesController extends BaseController
     public function restore(int $id): RedirectResponse
     {
         if ($g = $this->guard()) { return $g; }
-        $type = model(AidTypeModel::class)->find($id);
-        if (! model(AidTypeModel::class)->restore($id)) {
+        $type = model(SubsidyTypeModel::class)->find($id);
+        if (! model(SubsidyTypeModel::class)->restore($id)) {
             return redirect()->to('admin/reference-data?tab=aidtypes')->with('error', 'Unable to restore subsidy type.');
         }
         $this->audit('Restored subsidy type "' . (string) ($type['name'] ?? '') . '" #' . $id);
@@ -65,8 +65,8 @@ class AidTypesController extends BaseController
     public function deleteType(int $id): RedirectResponse
     {
         if ($g = $this->guard()) { return $g; }
-        $type   = model(AidTypeModel::class)->find($id);
-        $result = model(AidTypeModel::class)->deleteIfUnused($id);
+        $type   = model(SubsidyTypeModel::class)->find($id);
+        $result = model(SubsidyTypeModel::class)->deleteIfUnused($id);
         if ($result > 0) {
             return redirect()->to('admin/reference-data?tab=aidtypes')->with('error', 'This subsidy type is used by ' . $result . ' distribution(s) and cannot be deleted. Archive it instead.');
         }

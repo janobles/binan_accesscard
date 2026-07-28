@@ -26,9 +26,9 @@ final class ScanViewTest extends CIUnitTestCase
         $this->assertStringNotContainsString('style="', $this->html);
     }
 
-    public function testAidTypeFixedByServer(): void
+    public function testSubsidyTypeFixedByServer(): void
     {
-        // The aid type comes from the active batch; the scan page carries it
+        // The subsidy type comes from the active batch; the scan page carries it
         // as a server-filled JS constant - no in-page dropdown, and it is
         // never posted (logAid derives it server-side from the batch).
         $this->assertStringNotContainsString('sessionAidType', $this->html);

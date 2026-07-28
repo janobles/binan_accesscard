@@ -4,8 +4,8 @@ namespace App\Controllers\Admin;
 
 use App\Controllers\BaseController;
 use App\Libraries\RoleAccess;
-use App\Models\Scanner\AidStatsModel;
 use App\Models\Scanner\DistributionBatchModel;
+use App\Models\Scanner\SubsidyStatsModel;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
 
@@ -50,14 +50,14 @@ class ReportsController extends BaseController
         $batches           = $batchModel->allBatches();
         [$batchId]         = $this->resolveBatch($batches, $batchModel->activeBatch());
         $scope             = $batchId > 0 ? $batchId : null;
-        $stats             = model(AidStatsModel::class);
+        $stats             = model(SubsidyStatsModel::class);
 
         return $this->response->setJSON([
-            'received'   => $stats->receivedVsNot($scope),
-            'barangay'   => $stats->byBarangay($scope),
-            'byAidType'  => $stats->byAidType($scope),
-            'perScanner' => $batchId > 0 ? $stats->perScanner($batchId) : [],
-            'updated'    => date('c'),
+            'received'      => $stats->receivedVsNot($scope),
+            'barangay'      => $stats->byBarangay($scope),
+            'bySubsidyType' => $stats->bySubsidyType($scope),
+            'perScanner'    => $batchId > 0 ? $stats->perScanner($batchId) : [],
+            'updated'       => date('c'),
         ]);
     }
 
@@ -70,12 +70,12 @@ class ReportsController extends BaseController
         $batches           = $batchModel->allBatches();
         [$batchId, $batch] = $this->resolveBatch($batches, $batchModel->activeBatch());
         $scope             = $batchId > 0 ? $batchId : null;
-        $stats             = model(AidStatsModel::class);
+        $stats             = model(SubsidyStatsModel::class);
 
         $bytes = (new \App\Libraries\Scanner\ReportsPdfGenerator())->generate(
             $stats->receivedVsNot($scope),
             $stats->byBarangay($scope),
-            $stats->byAidType($scope),
+            $stats->bySubsidyType($scope),
             null,
             null,
             $batchId > 0 ? $stats->perScanner($batchId) : [],

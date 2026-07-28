@@ -5,11 +5,11 @@ namespace App\Models\Scanner;
 use CodeIgniter\Model;
 
 /**
- * Aid-type reference lookup (Financial/Rice/Grocery, admin-editable) backing
+ * Subsidy-type reference lookup (Financial/Rice/Grocery, admin-editable) backing
  * the admin/aidtypes page and the batch-open modal. Isolated from the
  * `services` table: subsidy types are their own concept, not services/programs.
  */
-class AidTypeModel extends Model
+class SubsidyTypeModel extends Model
 {
     protected $table         = 'subsidy';
     protected $primaryKey    = 'subsidy_type_id';
@@ -79,7 +79,7 @@ class AidTypeModel extends Model
         try {
             $this->db->transStart();
 
-            $used = $this->db->table('aid_distribution')
+            $used = $this->db->table('subsidy_distribution')
                 ->where('subsidy_type_id', $id)
                 ->countAllResults();
             if ($used > 0) {

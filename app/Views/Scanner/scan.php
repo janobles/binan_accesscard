@@ -103,7 +103,7 @@
 <?php if ($activeBatch !== null): ?>
 <script>
 const BASE = '<?= rtrim(base_url(), '/') ?>';
-const AID_TYPE_NAME = <?= json_encode((string) $aidType['name'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+const AID_TYPE_NAME = <?= json_encode((string) $subsidyType['name'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
@@ -169,7 +169,7 @@ function renderFamily(data) {
 function renderHistory(rows) {
   $('historyList').innerHTML = rows.length
     ? rows.map(r => `<li class="list-group-item d-flex justify-content-between">
-        <span><span class="badge bg-light text-dark border me-1">${esc(r.aid_type)}</span>${esc(r.claimant)}</span><span class="text-muted">${esc(r.claim_date)}</span></li>`).join('')
+        <span><span class="badge bg-light text-dark border me-1">${esc(r.subsidy_type)}</span>${esc(r.claimant)}</span><span class="text-muted">${esc(r.claim_date)}</span></li>`).join('')
     : '<li class="list-group-item text-muted">No subsidy received yet.</li>';
 }
 
@@ -201,7 +201,7 @@ async function scanLog(control) {
   if (data.logged) {
     // Prefer the server-returned subsidy type: the batch (and its subsidy type) may
     // have changed since this page loaded.
-    showBanner(true, `${data.aid_type_name || AID_TYPE_NAME} → ${headName} (Family #${data.control_no})`);
+    showBanner(true, `${data.subsidy_type_name || AID_TYPE_NAME} → ${headName} (Family #${data.control_no})`);
   } else {
     const d = data.duplicate || {};
     const by = d.scanned_by ? ` by ${d.scanned_by}` : '';

@@ -27,8 +27,8 @@ $adminAccounts = $adminAccounts ?? [];
 $employeeAccounts = $employeeAccounts ?? [];
 $recordListData = $recordListData ?? [];
 $categories = $categories ?? [];
-$activeAidTypes = $activeAidTypes ?? [];
-$aidTypes = $aidTypes ?? [];
+$activeSubsidyTypes = $activeSubsidyTypes ?? [];
+$subsidyTypes = $subsidyTypes ?? [];
 $sectorShortcodeOptions = $sectorShortcodeOptions ?? [];
 $searchTerm = $searchTerm ?? '';
 $searchFilters = $searchFilters ?? [];
@@ -257,14 +257,14 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                         'title' => 'Subsidy Types',
                         'cardClass' => 'sector-management',
                         'attrs' => 'data-table-paginate data-paginate-key="aidtypes" data-paginate-label="subsidy types"',
-                        'bodyView' => 'Admin/aidtypes-body',
+                        'bodyView' => 'Admin/subsidy-types-body',
                         'bodyData' => [
-                            'aidTypes' => $aidTypes,
+                            'subsidyTypes' => $subsidyTypes,
                             'currentRole' => $currentRole,
                         ],
                         'footer' => view('components/table_footer', ['clientKey' => 'aidtypes', 'entityLabel' => 'subsidy types']),
                     ]) ?>
-                    <?= view('Admin/aidtype-create-modal') ?>
+                    <?= view('Admin/subsidy-type-modal') ?>
                 <?php endif; ?>
             <?php endif; ?>
 
@@ -298,7 +298,7 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                     'footer' => view('components/table_footer', ['clientKey' => 'batches', 'entityLabel' => 'batches']),
                 ]) ?>
                 <?= view('Admin/batch-create-modal', [
-                    'activeAidTypes' => $activeAidTypes,
+                    'activeSubsidyTypes' => $activeSubsidyTypes,
                 ]) ?>
             <?php endif; ?>
 

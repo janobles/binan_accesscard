@@ -5,18 +5,18 @@ namespace App\Models\Scanner;
 use CodeIgniter\Model;
 
 /**
- * Aid-distribution log: one row per handout against a QR control number.
+ * Subsidy-distribution log: one row per handout against a QR control number.
  * historyFor() drives the per-QR chronological history panel.
  */
-class AidDistributionModel extends Model
+class SubsidyDistributionModel extends Model
 {
-    protected $table         = 'aid_distribution';
-    protected $primaryKey    = 'aidID';
+    protected $table         = 'subsidy_distribution';
+    protected $primaryKey    = 'distribution_id';
     protected $returnType    = 'array';
     protected $allowedFields = ['control_no', 'memberID', 'subsidy_type_id', 'claim_date', 'userID', 'batch_id'];
     protected $useTimestamps = false;
 
-    /** Inserts one distribution row and returns its aidID. */
+    /** Inserts one distribution row and returns its distribution_id. */
     public function logAid(array $data): int
     {
         // Guard against a malformed handout: control number, claimant, and
@@ -41,7 +41,7 @@ class AidDistributionModel extends Model
         return (int) $this->getInsertID();
     }
 
-    /** True when at least one aid claim has been recorded under this control number. */
+    /** True when at least one subsidy claim has been recorded under this control number. */
     public function hasClaims(int $controlNo): bool
     {
         if ($controlNo <= 0) {
@@ -62,15 +62,15 @@ class AidDistributionModel extends Model
         }
 
         try {
-            return $this->select('aid_distribution.aidID, aid_distribution.claim_date,'
-                    . ' aid_distribution.subsidy_type_id,'
-                    . " subsidy.name AS aid_type,"
+            return $this->select('subsidy_distribution.distribution_id, subsidy_distribution.claim_date,'
+                    . ' subsidy_distribution.subsidy_type_id,'
+                    . " subsidy.name AS subsidy_type,"
                     . " TRIM(CONCAT(member.firstname, ' ', member.lastname)) AS claimant")
-                ->join('subsidy', 'subsidy.subsidy_type_id = aid_distribution.subsidy_type_id', 'left')
-                ->join('member', 'member.memberID = aid_distribution.memberID', 'left')
-                ->where('aid_distribution.control_no', $controlNo)
-                ->orderBy('aid_distribution.claim_date', 'DESC')
-                ->orderBy('aid_distribution.aidID', 'DESC')
+                ->join('subsidy', 'subsidy.subsidy_type_id = subsidy_distribution.subsidy_type_id', 'left')
+                ->join('member', 'member.memberID = subsidy_distribution.memberID', 'left')
+                ->where('subsidy_distribution.control_no', $controlNo)
+                ->orderBy('subsidy_distribution.claim_date', 'DESC')
+                ->orderBy('subsidy_distribution.distribution_id', 'DESC')
                 ->findAll();
         } catch (\Throwable $e) {
             return [];
@@ -85,18 +85,18 @@ class AidDistributionModel extends Model
     public function allDistributions(): array
     {
         try {
-            return $this->select('aid_distribution.aidID, aid_distribution.control_no, aid_distribution.claim_date,'
-                    . " subsidy.name AS aid_type,"
+            return $this->select('subsidy_distribution.distribution_id, subsidy_distribution.control_no, subsidy_distribution.claim_date,'
+                    . " subsidy.name AS subsidy_type,"
                     . " TRIM(CONCAT(member.firstname, ' ', member.lastname)) AS claimant,"
                     . " TRIM(CONCAT(head.firstname, ' ', head.lastname)) AS head,"
                     . " COALESCE(users.username, '') AS scanned_by")
-                ->join('subsidy', 'subsidy.subsidy_type_id = aid_distribution.subsidy_type_id', 'left')
-                ->join('member', 'member.memberID = aid_distribution.memberID', 'left')
-                ->join('qr_control', 'qr_control.control_no = aid_distribution.control_no', 'left')
+                ->join('subsidy', 'subsidy.subsidy_type_id = subsidy_distribution.subsidy_type_id', 'left')
+                ->join('member', 'member.memberID = subsidy_distribution.memberID', 'left')
+                ->join('qr_control', 'qr_control.control_no = subsidy_distribution.control_no', 'left')
                 ->join('member head', 'head.memberID = qr_control.headID', 'left')
-                ->join('users', 'users.userID = aid_distribution.userID', 'left')
-                ->orderBy('aid_distribution.claim_date', 'DESC')
-                ->orderBy('aid_distribution.aidID', 'DESC')
+                ->join('users', 'users.userID = subsidy_distribution.userID', 'left')
+                ->orderBy('subsidy_distribution.claim_date', 'DESC')
+                ->orderBy('subsidy_distribution.distribution_id', 'DESC')
                 ->findAll();
         } catch (\Throwable $e) {
             return [];
@@ -115,12 +115,12 @@ class AidDistributionModel extends Model
         }
 
         try {
-            $row = $this->select('aid_distribution.aidID, aid_distribution.claim_date,'
-                    . ' aid_distribution.dt_created,'
+            $row = $this->select('subsidy_distribution.distribution_id, subsidy_distribution.claim_date,'
+                    . ' subsidy_distribution.dt_created,'
                     . " COALESCE(users.username, '') AS scanned_by")
-                ->join('users', 'users.userID = aid_distribution.userID', 'left')
-                ->where('aid_distribution.control_no', $controlNo)
-                ->where('aid_distribution.batch_id', $batchId)
+                ->join('users', 'users.userID = subsidy_distribution.userID', 'left')
+                ->where('subsidy_distribution.control_no', $controlNo)
+                ->where('subsidy_distribution.batch_id', $batchId)
                 ->first();
 
             return is_array($row) ? $row : null;
@@ -148,12 +148,12 @@ class AidDistributionModel extends Model
     }
 
     /** Hard-delete one distribution (void a wrong entry). Audited by the caller. */
-    public function void(int $aidId): bool
+    public function void(int $distributionId): bool
     {
-        if ($aidId <= 0) {
+        if ($distributionId <= 0) {
             return false;
         }
 
-        return $this->delete($aidId) !== false;
+        return $this->delete($distributionId) !== false;
     }
 }

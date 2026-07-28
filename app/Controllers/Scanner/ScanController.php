@@ -7,10 +7,10 @@ use App\Libraries\RoleAccess;
 use App\Libraries\SessionAccount;
 use App\Models\Audit\AuditTrailsModel;
 use App\Models\Families\MemberModel;
-use App\Models\Scanner\AidDistributionModel;
-use App\Models\Scanner\AidStatsModel;
 use App\Models\Scanner\DistributionBatchModel;
 use App\Models\Scanner\QrControlModel;
+use App\Models\Scanner\SubsidyDistributionModel;
+use App\Models\Scanner\SubsidyStatsModel;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
 
@@ -49,14 +49,14 @@ class ScanController extends BaseController
             'user'         => SessionAccount::user(),
             'accountLevelLabel' => SessionAccount::levelLabel(),
             'activeBatch'  => $activeBatch,
-            'aidType'      => $activeBatch !== null
+            'subsidyType'  => $activeBatch !== null
                 ? [
                     'subsidy_type_id' => (int) $activeBatch['subsidy_type_id'],
-                    'name'            => (string) ($activeBatch['aid_type_name'] ?? 'Subsidy'),
+                    'name'            => (string) ($activeBatch['subsidy_type_name'] ?? 'Subsidy'),
                 ]
                 : null,
             'myBatchCount' => $activeBatch !== null
-                ? model(AidDistributionModel::class)->familiesForUserInBatch($userId, (int) $activeBatch['batch_id'])
+                ? model(SubsidyDistributionModel::class)->familiesForUserInBatch($userId, (int) $activeBatch['batch_id'])
                 : 0,
         ]);
     }
@@ -107,7 +107,7 @@ class ScanController extends BaseController
      */
     private function kioskSnapshot(int $batchId, int $userId, ?array $batchRow): array
     {
-        $stats    = model(AidStatsModel::class);
+        $stats    = model(SubsidyStatsModel::class);
         $mineRow  = $batchId > 0 ? ($stats->perScanner($batchId, $userId)[0] ?? null) : null;
         $mine     = ['families' => (int) ($mineRow['families'] ?? 0), 'handouts' => (int) ($mineRow['handouts'] ?? 0)];
         $timeline = $batchId > 0 ? $stats->timelineForUserInBatch($batchId, $userId) : [];
@@ -158,7 +158,7 @@ class ScanController extends BaseController
             'batch'    => [
                 'id'       => $batchId,
                 'name'     => (string) $activeBatch['name'],
-                'aid_type' => (string) ($activeBatch['aid_type_name'] ?? ''),
+                'subsidy_type' => (string) ($activeBatch['subsidy_type_name'] ?? ''),
             ],
             'families' => $snapshot['mine']['families'],
             'handouts' => $snapshot['mine']['handouts'],
@@ -214,7 +214,7 @@ class ScanController extends BaseController
             'qr_code_image' => (new \App\Libraries\Qr\QrImageGenerator())->dataUri(
                 config('QrCardSettings')->qrUrlPrefix . \App\Libraries\Qr\ControlNumber::format($controlNo)
             ),
-            'aid_type_name' => (string) ($activeBatch['aid_type_name'] ?? 'Subsidy'),
+            'subsidy_type_name' => (string) ($activeBatch['subsidy_type_name'] ?? 'Subsidy'),
             'head'          => [
                 'memberID'  => (int) $head['memberID'],
                 'firstname' => (string) ($head['firstname'] ?? ''),
@@ -236,18 +236,18 @@ class ScanController extends BaseController
         // One handout per family per batch: a repeat scan reports the original
         // entry instead of logging again. The check is server-side so a stale
         // kiosk page can never double-log.
-        $existing = model(AidDistributionModel::class)->inBatch($controlNo, $batchId);
+        $existing = model(SubsidyDistributionModel::class)->inBatch($controlNo, $batchId);
         if ($existing !== null) {
             return $this->response->setJSON($familyPayload + [
                 'ok'           => true,
                 'logged'       => false,
                 'duplicate'    => $existing,
-                'history'      => model(AidDistributionModel::class)->historyFor($controlNo),
-                'myBatchCount' => model(AidDistributionModel::class)->familiesForUserInBatch($userId, $batchId),
+                'history'      => model(SubsidyDistributionModel::class)->historyFor($controlNo),
+                'myBatchCount' => model(SubsidyDistributionModel::class)->familiesForUserInBatch($userId, $batchId),
             ]);
         }
 
-        $aidTypeId = (int) $activeBatch['subsidy_type_id'];
+        $subsidyTypeId = (int) $activeBatch['subsidy_type_id'];
         $claimDate = date('Y-m-d');
 
         // The insert and its audit row must land together: without a shared
@@ -256,23 +256,23 @@ class ScanController extends BaseController
         $db = db_connect();
         $db->transStart();
 
-        $aidId = model(AidDistributionModel::class)->logAid([
+        $distributionId = model(SubsidyDistributionModel::class)->logAid([
             'control_no'  => $controlNo,
             'memberID'        => (int) $head['memberID'],
-            'subsidy_type_id' => $aidTypeId,
+            'subsidy_type_id' => $subsidyTypeId,
             'claim_date'      => $claimDate,
             'userID'      => $userId,
             'batch_id'    => $batchId,
         ]);
 
-        $audited = $aidId > 0 && (new AuditTrailsModel())->logAction(
+        $audited = $distributionId > 0 && (new AuditTrailsModel())->logAction(
             $userId,
             (int) $head['memberID'],
             'Logged subsidy distribution',
             'Control #' . $controlNo,
             $this->request->getIPAddress(),
             (string) $this->request->getUserAgent(),
-            'Subsidy type ID ' . $aidTypeId . ' on ' . $claimDate
+            'Subsidy type ID ' . $subsidyTypeId . ' on ' . $claimDate
         );
 
         if (! $audited) {
@@ -291,8 +291,8 @@ class ScanController extends BaseController
             'ok'           => true,
             'logged'       => true,
             'duplicate'    => null,
-            'history'      => model(AidDistributionModel::class)->historyFor($controlNo),
-            'myBatchCount' => model(AidDistributionModel::class)->familiesForUserInBatch($userId, $batchId),
+            'history'      => model(SubsidyDistributionModel::class)->historyFor($controlNo),
+            'myBatchCount' => model(SubsidyDistributionModel::class)->familiesForUserInBatch($userId, $batchId),
         ]);
     }
 }

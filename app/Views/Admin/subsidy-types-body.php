@@ -1,22 +1,22 @@
 <?php
 /**
  * Subsidy Types reference body: Add button + subsidy-type table. Rendered inside
- * components/card by Admin/layout.php's aidtypes block (vars: aidTypes,
+ * components/card by Admin/layout.php's aidtypes block (vars: subsidyTypes,
  * currentRole). Lifecycle buttons render only for Admin/Developer.
  */
-$canManageAidTypes = in_array($currentRole ?? '', ['Admin', 'Developer'], true);
+$canManageSubsidyTypes = in_array($currentRole ?? '', ['Admin', 'Developer'], true);
 ?>
 <?php /* Action row: Bootstrap utilities inside the card-body's own padding. */ ?>
 <div class="d-flex justify-content-end mb-3">
-          <button class="<?= btn('add') ?>" type="button" data-bs-toggle="modal" data-bs-target="#addAidTypeModal"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add Subsidy Type</button>
+          <button class="<?= btn('add') ?>" type="button" data-bs-toggle="modal" data-bs-target="#addSubsidyTypeModal"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add Subsidy Type</button>
         </div>
 
         <?= view('components/table_controls', [
-            'searchId' => 'aidTypesLocalSearch',
+            'searchId' => 'subsidyTypesLocalSearch',
             'searchAria' => 'Search shown subsidy types',
             'searchFormAttrs' => 'onsubmit="return false;"',
             'searchInputAttrs' => 'data-paginate-search="aidtypes"',
-            'sizeId' => 'aidTypesPerPage',
+            'sizeId' => 'subsidyTypesPerPage',
             'sizeAction' => null,
             'perPage' => 25,
             'perPageOptions' => [10 => '10', 25 => '25', 50 => '50', 100 => '100', 0 => 'All'],
@@ -29,7 +29,7 @@ $canManageAidTypes = in_array($currentRole ?? '', ['Admin', 'Developer'], true);
               <tr><th>Name</th><th>Status</th><th class="text-end">Actions</th></tr>
             </thead>
             <tbody>
-              <?php foreach ($aidTypes as $t): ?>
+              <?php foreach ($subsidyTypes as $t): ?>
                 <?php $archived = ! empty($t['dt_deleted']); ?>
                 <tr data-paginate-row data-row-archived="<?= $archived ? '1' : '0' ?>">
                   <td><span class="sector-name"><?= esc($t['name']) ?></span></td>
@@ -40,7 +40,7 @@ $canManageAidTypes = in_array($currentRole ?? '', ['Admin', 'Developer'], true);
                         <i class="bi bi-three-dots" aria-hidden="true"></i>
                       </button>
                       <div class="dropdown-menu dropdown-menu-end">
-                        <?php if ($canManageAidTypes): ?>
+                        <?php if ($canManageSubsidyTypes): ?>
                         <?php if ($archived): ?>
                           <form method="post" action="<?= esc(site_url('admin/aidtypes/restore/' . $t['subsidy_type_id']), 'attr') ?>">
                             <?= csrf_field() ?>
@@ -63,7 +63,7 @@ $canManageAidTypes = in_array($currentRole ?? '', ['Admin', 'Developer'], true);
                   </td>
                 </tr>
               <?php endforeach; ?>
-              <?php if ($aidTypes === []): ?>
+              <?php if ($subsidyTypes === []): ?>
                 <tr><td colspan="3" class="sector-empty-state">No subsidy types defined.</td></tr>
               <?php endif; ?>
             </tbody>

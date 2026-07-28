@@ -1,9 +1,13 @@
 <?xml version="1.0"?>
 <ruleset name="Binan">
     <description>
-        Requires a docblock on every class and public method, and rejects
-        docblocks whose tags only restate the signature. Presence is required;
-        tags are not. See docs/knowledge/php-practices/comments.md.
+        Catches documentation that contradicts the code: a docblock type that
+        disagrees with the signature, a tag naming a parameter that does not
+        exist, a return tag the code contradicts, and a docblock that is nothing
+        but restated tags. Classes must be documented. Whether a given method
+        earns a docblock is decided at review, not here, because a linter can
+        see that a docblock exists but never that it is true. See
+        docs/knowledge/php-practices/comments.md.
     </description>
 
     <arg name="extensions" value="php"/>
@@ -55,6 +59,13 @@
         <exclude name="Squiz.Commenting.FunctionComment.SpacingAfterParamName"/>
         <exclude name="Squiz.Commenting.FunctionComment.SpacingAfterParamType"/>
         <exclude name="Squiz.Commenting.FunctionComment.ThrowsNotCapital"/>
+
+        <!-- Presence is a judgment call, not a lint error. A linter can see
+             that a docblock exists but never that it is true, so requiring one
+             on every method buys filler, not documentation. Whether a method
+             earns a docblock is decided at review. What stays enforced below is
+             documentation that contradicts the code. -->
+        <exclude name="Squiz.Commenting.FunctionComment.Missing"/>
     </rule>
 
     <!-- The rule that makes "tags only when useful" enforceable rather than

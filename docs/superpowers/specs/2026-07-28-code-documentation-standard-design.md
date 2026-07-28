@@ -60,8 +60,9 @@ No linter. No CI workflow. `vendor/bin` holds only `phpunit` and `php-parse`.
 ## Goals
 
 - One written standard, enforced by tooling rather than memory.
-- Every class, public method, view, and stylesheet carries a docblock that helps a developer.
-- No docblock that merely restates the signature.
+- Every class, view, and stylesheet carries a docblock that helps a developer.
+- A method carries one when it adds something the signature does not. Not otherwise.
+- No docblock that merely restates the signature, and none that contradicts the code.
 - Zero behavior change, proven by a token-identity gate.
 - Docblocks written so a user manual can be harvested from them later.
 
@@ -71,7 +72,8 @@ These are settled. They are recorded with their reasoning so they are not reopen
 
 | # | Decision | Reasoning |
 |---|---|---|
-| 1 | Format + required docblocks. No PHPStan. | PHPStan on 205 unanalyzed files buries the cleanup under unrelated type errors. Separate effort. |
+| 1 | Format + accurate docblocks. No PHPStan. | PHPStan on 205 unanalyzed files buries the cleanup under unrelated type errors. Separate effort. |
+| 1b | **The linter catches documentation that lies. Humans decide what deserves documenting.** Class docblocks are required; per-method presence is not. | Revised mid-execution once the real numbers were visible. A linter can see that a docblock exists but never that it says anything true, so mandating presence buys a green check plus 60 chances to write filler. The missing-docblock list was 8 `__construct` plus terse helpers (`pct`, `norm`, `pick`) where a forced docblock adds nothing. Only 1 class lacked a docblock, so that half costs nothing to enforce. |
 | 2 | Prose docblocks; `@param`/`@return` only when the native type is insufficient. | PHP 8.2 signatures already carry types. Restating them is the ritual commenting being removed. |
 | 3 | View headers state purpose only. No variable list. | Views receive data via `extract(*_view_data(get_defined_vars()))`. A variable list in the view cannot be verified and would rot. |
 | 4 | Data contracts live on the 10 `*_view_data()` functions as `@return array{...}` shapes. | That is the real interface, it is ordinary PHP, phpcs covers it, and it sits beside the code that changes it. |
@@ -168,9 +170,26 @@ Config `phpcs.xml.dist`.
 - **Sniffs:**
   - `Squiz.Commenting.ClassComment` - requires a class docblock. Exclude message codes
     `TagNotAllowed`, and any `@author`/`@copyright` requirements.
-  - `Squiz.Commenting.FunctionComment` - requires a method docblock. Exclude message
-    codes `MissingParamTag`, `MissingParamComment`, `MissingReturn`, and any other
-    tag-requiring code, so presence is required but tags are not.
+  - `Squiz.Commenting.FunctionComment` - kept only for the codes that catch a docblock
+    contradicting the code: `IncorrectTypeHint` (the documented type disagrees with the
+    signature), `IncorrectParamVarName` (the tag names a parameter that is gone),
+    `InvalidReturn`, and `WrongStyle` (a plain comment where a docblock belongs).
+    Excluded: every tag-requiring code, every tag punctuation and alignment code, and
+    `Missing` itself.
+
+**Why `Missing` is excluded.** Three exclusion groups came out of running the sniffer
+against the real codebase rather than reasoning about it:
+
+| Group | Count | Verdict |
+|---|---|---|
+| `Missing` on methods | 60 | Excluded. 8 are `__construct`; the rest are terse helpers (`pct`, `norm`, `pick`, `width`). A forced docblock here is filler. |
+| Tag punctuation and alignment (`ParamCommentFullStop`, `ParamCommentNotCapital`, `SpacingAfterParamName`, `SpacingAfterParamType`, `ThrowsNotCapital`) | 89 | Excluded. Whether a tag description ends in a period is not a documentation question, and none were auto-fixable. |
+| Contradiction codes (`IncorrectTypeHint`, `WrongStyle`, `IncorrectParamVarName`, `InvalidReturn`) | 61 | Kept. Each flags a docblock that is actively wrong, which is what a tool can genuinely judge. |
+
+This is the layer's governing principle, and it is narrower than the first draft of this
+spec claimed: **a linter can see that a docblock exists, but never that it is true.**
+Enforcing presence therefore produces coverage metrics, not documentation. Enforcing
+contradiction produces something real.
   - `SlevomatCodingStandard.Commenting.UselessFunctionDocComment` - bans tags that
     restate the signature.
   - `SlevomatCodingStandard.Commenting.DocCommentSpacing` - uniform layout.
@@ -225,9 +244,16 @@ class DashboardPageBuilder
 
 ### Method docblocks
 
-What it does, plus anything surprising. `@param`/`@return` **only** when the native
-type is insufficient: array shapes, what a null means, units, enum-ish strings, side
-effects.
+Not required. Write one when it carries something the signature cannot, and skip it
+otherwise. A docblock on `__construct(private IncomingRequest $request)` or on a
+self-describing `encodeToPng()` is noise, and no tool will ask you for it.
+
+Write one when there is a non-obvious side effect (writes an audit row, returns a
+redirect instead of HTML), an invariant (rows are archived, never deleted), an array
+shape, a unit, or a meaning a bare type cannot carry (what a null signifies).
+
+When you do write one: what it does, plus anything surprising. `@param`/`@return`
+**only** when the native type is insufficient.
 
 ```php
 /**

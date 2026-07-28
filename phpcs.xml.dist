@@ -1,0 +1,70 @@
+<?xml version="1.0"?>
+<ruleset name="Binan">
+    <description>
+        Requires a docblock on every class and public method, and rejects
+        docblocks whose tags only restate the signature. Presence is required;
+        tags are not. See docs/knowledge/php-practices/comments.md.
+    </description>
+
+    <arg name="extensions" value="php"/>
+    <arg name="colors"/>
+    <arg value="sp"/>
+
+    <file>app/Controllers</file>
+    <file>app/Models</file>
+    <file>app/Libraries</file>
+    <file>app/Support</file>
+    <file>app/Helpers</file>
+    <file>app/Jobs</file>
+    <file>app/Commands</file>
+    <file>app/Validation</file>
+    <file>app/Filters</file>
+    <file>app/Database</file>
+
+    <!-- Stock framework files and data-only files carry no documentation duty. -->
+    <exclude-pattern>*/app/Config/*</exclude-pattern>
+    <exclude-pattern>*/app/Language/*</exclude-pattern>
+    <exclude-pattern>*/app/Common.php</exclude-pattern>
+    <exclude-pattern>*/app/Views/*</exclude-pattern>
+
+    <!-- A class must be documented. The tag requirements are dropped: this repo
+         does not use @author or @copyright. -->
+    <rule ref="Squiz.Commenting.ClassComment">
+        <exclude name="Squiz.Commenting.ClassComment.TagNotAllowed"/>
+    </rule>
+
+    <!-- A method must be documented, but @param/@return are only required when
+         they add something the signature does not already say. -->
+    <rule ref="Squiz.Commenting.FunctionComment">
+        <exclude name="Squiz.Commenting.FunctionComment.MissingParamTag"/>
+        <exclude name="Squiz.Commenting.FunctionComment.MissingParamComment"/>
+        <exclude name="Squiz.Commenting.FunctionComment.MissingParamName"/>
+        <exclude name="Squiz.Commenting.FunctionComment.MissingReturn"/>
+        <exclude name="Squiz.Commenting.FunctionComment.ParamNameNoMatch"/>
+        <exclude name="Squiz.Commenting.FunctionComment.ScalarTypeHintMissing"/>
+        <exclude name="Squiz.Commenting.FunctionComment.TypeHintMissing"/>
+        <exclude name="Squiz.Commenting.FunctionComment.InvalidReturnNotVoid"/>
+        <exclude name="Squiz.Commenting.FunctionComment.InvalidNoReturn"/>
+    </rule>
+
+    <!-- The rule that makes "tags only when useful" enforceable rather than
+         aspirational: a docblock that only restates the signature is an error. -->
+    <!-- Catches a docblock that is nothing but tags restating the signature.
+         It does NOT catch a redundant tag inside a docblock that also has
+         prose: the sniff bails out once any summary text is present. That
+         narrower case is a review matter. See
+         docs/knowledge/php-practices/comments.md. -->
+    <rule ref="SlevomatCodingStandard.Commenting.UselessFunctionDocComment"/>
+    <rule ref="SlevomatCodingStandard.Commenting.DocCommentSpacing"/>
+
+    <rule ref="SlevomatCodingStandard.Commenting.ForbiddenAnnotations">
+        <properties>
+            <property name="forbiddenAnnotations" type="array">
+                <element value="@author"/>
+                <element value="@created"/>
+                <element value="@version"/>
+                <element value="@package"/>
+            </property>
+        </properties>
+    </rule>
+</ruleset>

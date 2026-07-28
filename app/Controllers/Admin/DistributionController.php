@@ -35,6 +35,12 @@ class DistributionController extends BaseController
         return (new \App\Libraries\DashboardPageBuilder($this->request))->renderAdminPage('distribution');
     }
 
+    /**
+     * POST admin/distribution/void/{id} - voids a logged subsidy distribution
+     * (a mistaken or duplicate scan) so it no longer counts in the reports, and
+     * writes an audit trail row recording the control number, subsidy type, and
+     * claim date that were voided.
+     */
     public function voidDistribution(int $id): RedirectResponse
     {
         if ($g = $this->guard()) { return $g; }
@@ -78,6 +84,11 @@ class DistributionController extends BaseController
         return redirect()->to('admin/distribution?tab=batches')->with('success', 'Batch opened. Scanning is now live.');
     }
 
+    /**
+     * POST admin/batches/close/{id} - closes an open distribution batch, ending
+     * scanning for it and resetting the live kiosk statistics for the next
+     * batch. Writes an audit trail row.
+     */
     public function closeBatch(int $id): RedirectResponse
     {
         if ($g = $this->guard()) { return $g; }

@@ -22,14 +22,14 @@ use CodeIgniter\HTTP\ResponseInterface;
 use Throwable;
 
 /**
- * Handles family records for the admin and employee Manage Family screens:
- * creating (store), viewing, editing/updating, and archiving/restoring/deleting.
+ * Family records for the admin and employee Manage Family screens: creating,
+ * viewing, editing, archiving, restoring, and deleting.
  *
- * The controller validates the request and delegates database writes to models
- * (MemberModel, MemberServiceModel). The view/edit screens are loaded into the
- * dashboard modal as `?partial=1` HTML fragments by
- * assets/js/dashboard/manage-family-modal.js; the archive/restore/delete forms in
- * `Family/list` post here and redirect back to the list.
+ * Validates the request and hands database writes to MemberModel and
+ * MemberServiceModel. View and edit screens load into the dashboard modal as
+ * `?partial=1` fragments via assets/js/dashboard/manage-family-modal.js; the
+ * archive, restore, and delete forms in `Family/list` post here and redirect
+ * back to the list.
  */
 class FamilyController extends BaseController
 {
@@ -1012,10 +1012,6 @@ class FamilyController extends BaseController
     {
         return MemberFieldNormalizer::cleanAddress($value);
     }
-
-    // ---------------------------------------------------------------------------
-    // Bootstrap Add / Update modal (GET {role}/manage-family/create[?mode=update&id=])
-    // ---------------------------------------------------------------------------
 
     /**
      * GET `{admin|employee}/manage-family/create`: returns the Bootstrap family

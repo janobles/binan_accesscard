@@ -13,7 +13,7 @@ $canManageBatches = in_array($currentRole ?? '', ['Admin', 'Developer'], true);
   <div class="alert alert-success d-flex justify-content-between align-items-center">
     <span>
       <strong><?= esc($activeBatch['name']) ?></strong>
-      <span class="badge bg-light text-dark border"><?= esc((string) ($activeBatch['aid_type_name'] ?? '')) ?></span>
+      <span class="badge bg-light text-dark border"><?= esc((string) ($activeBatch['subsidy_type_name'] ?? '')) ?></span>
       open since <?= esc($activeBatch['started_at']) ?>
     </span>
     <?php if ($canManageBatches): ?>
@@ -53,7 +53,7 @@ $canManageBatches = in_array($currentRole ?? '', ['Admin', 'Developer'], true);
     <?php foreach (($batches ?? []) as $b): ?>
       <tr data-paginate-row>
         <td><?= esc($b['name']) ?></td>
-        <td><?= esc((string) ($b['aid_type_name'] ?? '')) ?></td>
+        <td><?= esc((string) ($b['subsidy_type_name'] ?? '')) ?></td>
         <td><?= esc($b['started_at']) ?></td>
         <td><?= $b['closed_at'] === null ? '<span class="badge bg-success">Open</span>' : esc($b['closed_at']) ?></td>
       </tr>

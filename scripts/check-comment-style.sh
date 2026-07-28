@@ -14,16 +14,57 @@ report() {
     failed=1
 }
 
-# Every view opens with a docblock naming the page and its data source.
+# A view's docblock must actually open the file: the first non-blank line is
+# either the docblock itself, or a bare `<?php` immediately followed by the
+# docblock on the next non-blank line. A `/**` merely present somewhere in
+# the first few lines (e.g. after real code) does not count. This only
+# proves a header is present and first; it cannot verify the header names
+# the right page or the right data source, which is a review matter.
+opens_with_docblock() {
+    awk '
+    {
+        line = $0
+        gsub(/^[ \t]+|[ \t]+$/, "", line)
+        if (line == "") next
+        if (state == "") {
+            if (line == "<?php") { state = "afterphp"; next }
+            print (line ~ /^\/\*\*/) ? "OK" : "FAIL"
+            found = 1
+            exit
+        }
+        print (line ~ /^\/\*\*/) ? "OK" : "FAIL"
+        found = 1
+        exit
+    }
+    END { if (!found) print "FAIL" }
+    ' "$1"
+}
+
 while IFS= read -r file; do
-    if ! head -5 "$file" | grep -q '/\*\*'; then
+    if [ "$(opens_with_docblock "$file")" != "OK" ]; then
         report "MISSING VIEW HEADER: $file"
     fi
 done < <(find app/Views -name '*.php')
 
-# Every custom stylesheet opens with a header naming what it styles.
+# A stylesheet's header must be the first non-blank line, not merely present
+# on line 1 in some other sense. This proves presence and position only, not
+# that the header describes the right thing; that is a review matter.
+opens_with_css_header() {
+    awk '
+    {
+        line = $0
+        gsub(/^[ \t]+|[ \t]+$/, "", line)
+        if (line == "") next
+        print (line ~ /^\/\*/) ? "OK" : "FAIL"
+        found = 1
+        exit
+    }
+    END { if (!found) print "FAIL" }
+    ' "$1"
+}
+
 for file in public/css/*.css; do
-    if ! head -1 "$file" | grep -q '/\*'; then
+    if [ "$(opens_with_css_header "$file")" != "OK" ]; then
         report "MISSING CSS HEADER: $file"
     fi
 done

@@ -4,8 +4,12 @@
 # Usage: bash scripts/assert-css-unchanged.sh <git-ref>
 #
 # Strips /* ... */ comments and blank lines from each custom stylesheet at
-# <git-ref> and in the working tree, then compares. Exits 0 when every file
-# matches, 1 otherwise.
+# <git-ref> and in the working tree, then compares. The file list is the
+# union of what public/css held at <ref> and what it holds now, so a
+# stylesheet deleted (or added) since <ref> is not silently skipped by a
+# working-tree-only glob; it is reported as a failure, same reasoning as
+# an added or deleted PHP file failing the token gate. Exits 0 when every
+# file matches and none were added or deleted, 1 otherwise.
 
 set -uo pipefail
 
@@ -16,7 +20,30 @@ strip() {
     perl -0777 -pe 's{/\*.*?\*/}{}gs' | grep -v '^[[:space:]]*$' || true
 }
 
-for file in public/css/*.css; do
+files=$( { git ls-tree -r --name-only "$ref" -- public/css 2>/dev/null | grep '\.css$'
+           ls public/css/*.css 2>/dev/null; } | sort -u )
+
+while IFS= read -r file; do
+    [ -n "$file" ] || continue
+
+    oldExists=0
+    git cat-file -e "${ref}:${file}" 2>/dev/null && oldExists=1
+
+    newExists=0
+    [ -f "$file" ] && newExists=1
+
+    if [ "$oldExists" -eq 1 ] && [ "$newExists" -eq 0 ]; then
+        echo "DELETED: $file" >&2
+        failed=1
+        continue
+    fi
+
+    if [ "$oldExists" -eq 0 ] && [ "$newExists" -eq 1 ]; then
+        echo "ADDED (not permitted on this branch): $file" >&2
+        failed=1
+        continue
+    fi
+
     old=$(git show "${ref}:${file}" 2>/dev/null | strip)
     new=$(strip < "$file")
 
@@ -26,7 +53,7 @@ for file in public/css/*.css; do
         echo "CSS RULES CHANGED: $file" >&2
         failed=1
     fi
-done
+done <<< "$files"
 
 if [ "$failed" -ne 0 ]; then
     echo "" >&2

@@ -55,6 +55,22 @@ class DashboardPageBuilder
     }
 
     /**
+     * Manage Records row-action flags for a role: Add/Edit for the entry roles,
+     * Archive/Restore for managers, none of it for a Viewer. Pulled out of
+     * buildMemberListData() so it can be unit tested without a database. Row
+     * actions are gated again server side in FamilyDataTablePresenter.
+     *
+     * @return array{0: bool, 1: bool, 2: bool} [canEdit, canArchive, canRestoreArchived]
+     */
+    private function recordListRoleFlags(?string $role): array
+    {
+        $canEdit = in_array($role, ['Developer', 'Admin', 'Encoder'], true);
+        $canArchive = in_array($role, ['Developer', 'Admin'], true);
+
+        return [$canEdit, $canArchive, $canArchive];
+    }
+
+    /**
      * Renders the dashboard shell (`layout`) on the given manifest page for
      * whatever role the session holds. Who may reach the page is the `roleNav`
      * route filter's decision (see app/Config/Navigation.php), not this class's.
@@ -84,9 +100,12 @@ class DashboardPageBuilder
         $isDeveloper = $currentRole === 'Developer';
         $isAdmin = $currentRole === 'Admin';
         $canManageAccounts = $isDeveloper || $isAdmin;
-        // Whoever may open the Distribution page may also see the dashboard's
-        // distribution numbers. One manifest, one answer.
-        $seesDistribution = in_array($currentRole, Navigation::pageRoles('distribution'), true);
+        // Manager-only, even though the `distribution` PAGE is Viewer-reachable via
+        // the manifest: this section's Download Report button and stats poll hit
+        // reports endpoints guarded to Developer/Admin, and its per-scanner table
+        // surfaces kiosk usernames, not aggregate data. Do not re-key this to
+        // Navigation::pageRoles('distribution').
+        $seesDistribution = $isDeveloper || $isAdmin;
         $isAccounts = $activePage === 'accounts' && $canManageAccounts;
         $isDashboard = $activePage === 'dashboard';
 
@@ -489,10 +508,7 @@ class DashboardPageBuilder
     private function buildMemberListData(): array
     {
         $role = $this->currentRole();
-        // Add/Edit for the entry roles, Archive/Restore for managers. The row
-        // actions are gated again server side in FamilyDataTablePresenter.
-        $canEdit = in_array($role, ['Developer', 'Admin', 'Encoder'], true);
-        $canArchive = in_array($role, ['Developer', 'Admin'], true);
+        [$canEdit, $canArchive, $canRestoreArchived] = $this->recordListRoleFlags($role);
 
         $keyword = trim((string) $this->request->getGet('q'));
         $status = strtolower(trim((string) $this->request->getGet('status')));
@@ -517,7 +533,7 @@ class DashboardPageBuilder
         return array_merge([
             'canEdit'           => $canEdit,
             'canArchive'        => $canArchive,
-            'canRestoreArchived' => $canArchive,
+            'canRestoreArchived' => $canRestoreArchived,
             'families'          => $memberModel->searchFamilies($searchKeyword, $perPage, ($page - 1) * $perPage, $status, $filters),
             'fromRecord'        => $totalFamilies === 0 ? 0 : (($page - 1) * $perPage) + 1,
             'isFullPage'        => true,

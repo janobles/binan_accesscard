@@ -5,9 +5,10 @@
  * Rendered inside layout.php as the `dashboard` page body; data comes from
  * DashboardPageBuilder::buildViewData(). Two role differences survive here and
  * both are decided by the builder, not by this view: the distribution tiles and
- * section only render for roles the navigation manifest lets into Distribution,
- * and the activity panel only renders for an Encoder, who has no Audit Trails
- * page of their own.
+ * section only render for Developer/Admin (narrower than the Distribution
+ * *page*, which the navigation manifest also opens to Viewer - see
+ * DashboardPageBuilder::buildViewData() for why), and the activity panel only
+ * renders for an Encoder, who has no Audit Trails page of their own.
  */
 
 $stats = $stats ?? ['families' => 0, 'members' => 0, 'sectors' => 0, 'assistance' => 0];

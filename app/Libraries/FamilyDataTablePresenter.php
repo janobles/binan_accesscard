@@ -17,27 +17,18 @@ class FamilyDataTablePresenter
     public function __construct(private readonly string $role) {}
 
     /**
-     * Shapes one member row into the DataTables cell map the client expects
-     * (name HTML, sector shortcodes, address, birthday, actions dropdown).
+     * Shapes one household into the DataTables cell map the client expects. One row
+     * is one head of family; members are reached through the profile page, so the
+     * table never flattens a household into several rows.
      *
      * @param array<int, string> $sectorShortcodes sectorID => display shortcode
      * @param array<int, int>    $controlNumbers   headID => qr_control.control_no
+     * @param integer             $memberCount     household size including the head
      */
-    public function row(array $row, bool $allMembersScope, array $sectorShortcodes, array $controlNumbers = []): array
+    public function row(array $row, array $sectorShortcodes, array $controlNumbers, int $memberCount): array
     {
-        $memberId = (int) ($row['memberID'] ?? 0);
-        $headId = $allMembersScope ? (int) ($row['headID'] ?? $memberId) : $memberId;
+        $headId = (int) ($row['headID'] ?? $row['memberID'] ?? 0);
         $name = $this->displayName($row);
-        $relationship = trim((string) ($row['relationship'] ?? ''));
-        // Names are stored uppercase, so show them as stored. Re-casing here would
-        // hide a casing bug rather than surface it.
-        $nameHtml = '<span class="entity-title">' . esc($name) . '</span>';
-
-        if ($allMembersScope && $relationship !== '') {
-            $nameHtml .= '<small class="text-muted d-block">' . esc($relationship) . '</small>';
-        }
-
-        $controlNo = (int) ($controlNumbers[$headId] ?? 0);
 
         $sectors = [];
 
@@ -47,14 +38,14 @@ class FamilyDataTablePresenter
             }
         }
 
-        $birthday = strtotime((string) ($row['birthday'] ?? ''));
-
         return [
-            'qr' => $this->qrCell($controlNo),
-            'name' => $nameHtml,
+            'qr' => $this->qrCell((int) ($controlNumbers[$headId] ?? 0)),
+            // Names are stored uppercase, so show them as stored. Re-casing here
+            // would hide a casing bug rather than surface it.
+            'name' => '<span class="entity-title">' . esc($name) . '</span>',
+            'members' => (string) $memberCount,
             'sector' => esc(implode(', ', array_values(array_unique($sectors)))),
             'address' => esc((string) ($row['address'] ?? '')),
-            'birthday' => $birthday === false ? '-' : date('Y-m-d', $birthday),
             'actions' => $this->actions($row, $headId, $name),
         ];
     }

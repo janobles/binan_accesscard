@@ -15,9 +15,9 @@
         <tr>
             <th class="fw-semibold small text-center">QR NO.</th>
             <th class="fw-semibold small">HEAD/MEMBER NAME</th>
+            <th class="fw-semibold small text-center">MEMBERS</th>
             <th class="fw-semibold small">SECTOR</th>
             <th class="fw-semibold small">ADDRESS</th>
-            <th class="fw-semibold small">BIRTHDAY</th>
             <th class="fw-semibold small text-end">ACTIONS</th>
         </tr>
         </thead>

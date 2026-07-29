@@ -18,13 +18,13 @@
     </button>
     <div class="dropdown-menu dropdown-menu-end">
         <?php if (! $archived): ?>
-        <button type="button" class="dropdown-item js-open-family-view-modal" data-modal-url="<?= esc($viewUrl, 'attr') ?>" data-modal-title="View Record">VIEW</button>
+        <button type="button" class="dropdown-item js-open-family-view-modal" data-modal-url="<?= esc($viewUrl) ?>" data-modal-title="View Record">VIEW</button>
             <?php if ($canEdit): ?>
-        <button type="button" class="dropdown-item js-open-family-add-modal" data-modal-url="<?= esc($updateUrl, 'attr') ?>" data-modal-title="Update Family Record">UPDATE</button>
+        <button type="button" class="dropdown-item js-open-family-add-modal" data-modal-url="<?= esc($updateUrl) ?>" data-modal-title="Update Family Record">UPDATE</button>
             <?php endif; ?>
         <?php endif; ?>
         <?php if ($canArchive): ?>
-        <form class="js-family-record-action-form" method="post" action="<?= esc($formAction, 'attr') ?>" data-confirm-message="<?= esc($confirmMessage, 'attr') ?>" data-action-label="<?= esc($actionLabel, 'attr') ?>" data-action-past="<?= esc($actionPast, 'attr') ?>" data-family-name="<?= esc($displayName, 'attr') ?>">
+        <form class="js-family-record-action-form" method="post" action="<?= esc($formAction) ?>" data-confirm-message="<?= esc($confirmMessage, 'attr') ?>" data-action-label="<?= esc($actionLabel, 'attr') ?>" data-action-past="<?= esc($actionPast, 'attr') ?>" data-family-name="<?= esc($displayName, 'attr') ?>">
             <?= csrf_field() ?>
             <button type="submit" class="dropdown-item <?= $archived ? 'text-success' : 'text-danger' ?>"><?= esc(mb_strtoupper($actionLabel)) ?></button>
         </form>

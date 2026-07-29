@@ -34,7 +34,7 @@ final class FamilyDataTableTest extends TestCase
         $script = (string) file_get_contents(FCPATH . 'assets/js/dashboard/family-datatable.js');
 
         $this->assertStringContainsString('id="familyRecordsTable"', $view);
-        // QR NO. + HEAD/MEMBER NAME + SECTOR + ADDRESS + BIRTHDAY + ACTIONS.
+        // QR NO. + HEAD/MEMBER NAME + MEMBERS + SECTOR + ADDRESS + ACTIONS.
         $this->assertSame(6, preg_match_all('/<th(?:\s|>)/', $view));
         $this->assertStringContainsString('<th class="fw-semibold small text-center">QR NO.</th>', $view);
         // QR is sortable and the table's default order (manage-records UI
@@ -51,7 +51,8 @@ final class FamilyDataTableTest extends TestCase
         $this->assertStringContainsString("topStart: 'search'", $script);
         $this->assertStringContainsString("topEnd: 'pageLength'", $script);
         $this->assertStringContainsString("order: [[0, 'asc']]", $script);
-        $this->assertSame(4, substr_count($script, "orderSequence: ['asc', 'desc']"));
+        // qr, name, address are sortable; members and sector are not.
+        $this->assertSame(3, substr_count($script, "orderSequence: ['asc', 'desc']"));
         $this->assertStringNotContainsString('request.date', $script);
     }
 
@@ -111,7 +112,7 @@ final class FamilyDataTableTest extends TestCase
         // dataTable() batch-loads the heads' control numbers in one query...
         $this->assertStringContainsString('controlsForHeads(', $controller);
         // ...the row exposes a dedicated 'qr' cell built by the presenter's qrCell()...
-        $this->assertStringContainsString("'qr' => \$this->qrCell(\$controlNo)", $presenter);
+        $this->assertStringContainsString("'qr' => \$this->qrCell((int) (\$controlNumbers[\$headId] ?? 0))", $presenter);
         // ...which renders escaped plain text that inherits the row typography.
         $this->assertStringContainsString('return esc(ControlNumber::format($controlNo));', $presenter);
         $this->assertStringNotContainsString('badge bg-light text-dark border fw-semibold fs-6 text-nowrap', $presenter);

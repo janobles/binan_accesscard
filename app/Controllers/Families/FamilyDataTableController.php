@@ -19,6 +19,8 @@ use Throwable;
  * for the family-heads scope and SearchModel::allMembers() for the whole-database
  * scope. Both are called with the optional, append-only $orderKey/$orderDirection
  * arguments for column sorting; everything else is the same query used elsewhere.
+ * The table always shows one row per household: a whole-database match on a
+ * non-head member is resolved to that member's head before the row is built.
  * Row/envelope shaping lives in FamilyDataTablePresenter.
  */
 class FamilyDataTableController extends BaseController
@@ -70,7 +72,28 @@ class FamilyDataTableController extends BaseController
                 $searchFilters = array_merge(['status' => $status], $filters);
                 $total = $searchModel->countAllMembers('', ['status' => 'all']);
                 $filtered = $searchModel->countAllMembers($keyword, $searchFilters);
-                $rows = $searchModel->allMembers($keyword, $searchFilters, $length, $start, $orderKey, $orderDirection);
+                $matchedRows = $searchModel->allMembers($keyword, $searchFilters, $length, $start, $orderKey, $orderDirection);
+
+                // A keyword match on a non-head member still has to surface that
+                // member's household, not the member's own row: resolve every match
+                // to its head and de-duplicate before the table ever sees it.
+                $headIds = [];
+                foreach ($matchedRows as $matchedRow) {
+                    $headId = (int) ($matchedRow['headID'] ?? 0);
+                    if ($headId > 0 && ! in_array($headId, $headIds, true)) {
+                        $headIds[] = $headId;
+                    }
+                }
+
+                $headsById = [];
+                foreach ((new MemberModel())->whereIn('memberID', $headIds)->findAll() as $head) {
+                    $headsById[(int) $head['memberID']] = $head;
+                }
+
+                $rows = array_values(array_filter(array_map(
+                    static fn (int $headId): ?array => $headsById[$headId] ?? null,
+                    $headIds
+                )));
             } else {
                 $memberModel = new MemberModel();
                 $searchKeyword = $keyword === '' ? null : $keyword;
@@ -80,12 +103,26 @@ class FamilyDataTableController extends BaseController
             }
 
             $sectorShortcodes = (new SectorModel())->shortcodeMap();
-            $headIdKey = $scope === 'all' ? 'headID' : 'memberID';
-            $controlNumbers = model(\App\Models\Scanner\QrControlModel::class)->controlsForHeads(
-                array_map(static fn (array $row): int => (int) ($row[$headIdKey] ?? 0), $rows)
-            );
+            $headIds = array_map(static fn (array $row): int => (int) ($row['memberID'] ?? 0), $rows);
+            $controlNumbers = model(\App\Models\Scanner\QrControlModel::class)->controlsForHeads($headIds);
+
+            // One grouped query for every head on the page instead of a per-row
+            // count. A head with no member rows still counts as one person, itself.
+            $counts = db_connect()->table('member')
+                ->select('headID, COUNT(*) AS total')
+                ->whereIn('headID', $headIds)
+                ->groupBy('headID')
+                ->get()
+                ->getResultArray();
+            $memberCounts = array_column($counts, 'total', 'headID');
+
             $data = array_map(
-                static fn (array $row): array => $presenter->row($row, $scope === 'all', $sectorShortcodes, $controlNumbers),
+                static fn (array $row): array => $presenter->row(
+                    $row,
+                    $sectorShortcodes,
+                    $controlNumbers,
+                    (int) ($memberCounts[(int) $row['memberID']] ?? 1)
+                ),
                 $rows
             );
 
@@ -101,9 +138,9 @@ class FamilyDataTableController extends BaseController
 
     /**
      * Reads the DataTables order[] request into a [columnKey, direction] pair.
-     * Sortable columns: qr (default, ascending), name, address, birthday;
-     * everything else falls back to the name column. The `date` parameter is
-     * intentionally NOT consulted.
+     * Sortable columns: qr (default, ascending), name, address; everything else
+     * falls back to the name column. The `date` parameter is intentionally NOT
+     * consulted.
      *
      * @return array{0: string, 1: string}
      */
@@ -127,12 +164,11 @@ class FamilyDataTableController extends BaseController
         }
 
         $direction = $requestedDirection === 'desc' ? 'desc' : 'asc';
-        // Column order: 0=QR, 1=name, 2=sector, 3=address, 4=birthday, 5=actions.
-        // Sector and actions are non-orderable; unknown columns fall back to name.
+        // Column order: 0=QR, 1=name, 2=members, 3=sector, 4=address, 5=actions.
+        // Members and sector are non-orderable; unknown columns fall back to name.
         $orderKey = match ($column) {
             0 => 'qr',
-            3 => 'address',
-            4 => 'birthday',
+            4 => 'address',
             default => 'name',
         };
 

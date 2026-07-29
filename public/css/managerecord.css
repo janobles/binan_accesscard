@@ -470,19 +470,6 @@
     border-radius: 0.35rem;
 }
 
-#familyDataTableFilters .js-open-family-import-modal {
-    color: #212529;
-    border-color: #ffc107;
-    background-color: #ffc107;
-}
-
-#familyDataTableFilters .js-open-family-import-modal:hover,
-#familyDataTableFilters .js-open-family-import-modal:focus {
-    color: #212529;
-    border-color: #ffca2c;
-    background-color: #ffca2c;
-}
-
 div.dt-container div.dt-paging {
     max-width: 100%;
     overflow-x: auto;

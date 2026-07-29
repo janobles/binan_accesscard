@@ -22,23 +22,38 @@ final class FamilyDataTablePresenterTest extends CIUnitTestCase
         $this->assertSame('boom', $withError['error']);
     }
 
-    public function testRowShapesHeadScopeCells(): void
+    public function testRowIsOneHouseholdWithItsMemberCount(): void
     {
-        $presenter = new FamilyDataTablePresenter('Viewer');
-        // Deliberately mixed-case input: the presenter must render what it is given.
-        // Storage is uppercase in practice, but an uppercase fixture here could not tell
-        // pass-through apart from re-casing, so it would not catch a reintroduced
-        // mb_strtoupper.
-        $row       = $presenter->row(
-            ['memberID' => 5, 'firstname' => 'Ana', 'middlename' => 'Reyes', 'lastname' => 'Cruz', 'suffix' => '', 'address' => '123 St', 'birthday' => '1990-01-02', 'sectorID' => null],
-            false,
-            []
+        $presenter = new FamilyDataTablePresenter('Admin');
+
+        $cells = $presenter->row(
+            ['memberID' => 7, 'headID' => 7, 'lastname' => 'DELA CRUZ',
+             'firstname' => 'JUAN', 'address' => 'CANLALAY', 'sectorID' => '1'],
+            [1 => 'SC'],
+            [7 => 142],
+            4
         );
 
-        $this->assertSame(['qr', 'name', 'sector', 'address', 'birthday', 'actions'], array_keys($row));
-        $this->assertStringContainsString('Cruz, Ana R.', $row['name']);
-        $this->assertSame('123 St', $row['address']);
-        $this->assertSame('1990-01-02', $row['birthday']);
-        $this->assertStringContainsString('-', $row['qr']);
+        $this->assertSame(['qr', 'name', 'members', 'sector', 'address', 'actions'],
+            array_keys($cells));
+        $this->assertSame('4', $cells['members']);
+        $this->assertStringContainsString('DELA CRUZ', $cells['name']);
+        $this->assertStringNotContainsString('text-muted d-block', $cells['name'],
+            'A head row carries no relationship subline.');
+    }
+
+    public function testRowLinksToTheFlatProfileUri(): void
+    {
+        $presenter = new FamilyDataTablePresenter('Admin');
+
+        $cells = $presenter->row(
+            ['memberID' => 7, 'headID' => 7, 'lastname' => 'SANTOS', 'firstname' => 'PEDRO'],
+            [],
+            [7 => 143],
+            3
+        );
+
+        $this->assertStringContainsString('records/7', $cells['actions']);
+        $this->assertStringNotContainsString('manage-family', $cells['actions']);
     }
 }

@@ -85,8 +85,8 @@ $statusGroup = [
 
 $actionsHtml = '';
 if ($canEdit) {
-    $actionsHtml .= '<button class="' . btn('add') . ' flex-fill js-open-family-add-modal" type="button" data-family-add-record data-modal-url="' . esc(site_url('records/entry?partial=1'), 'attr') . '" data-modal-title="New Family Record">Add</button>';
-    $actionsHtml .= '<button class="' . btn('import') . ' flex-fill js-open-family-import-modal" type="button" data-modal-url="' . esc(site_url('records/import'), 'attr') . '" data-modal-title="Import from Excel" title="Bulk-import families from an Excel file">Import</button>';
+    $actionsHtml .= '<a class="' . btn('add') . ' flex-fill" href="' . esc(site_url('records/entry')) . '"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Add Family</a>';
+    $actionsHtml .= '<a class="' . btn('import') . ' flex-fill" href="' . esc(site_url('records/import')) . '" title="Bulk-import families from an Excel file"><i class="bi bi-file-earmark-arrow-up me-1" aria-hidden="true"></i>Import Excel</a>';
 }
 ?>
 

@@ -1080,10 +1080,10 @@ class FamilyExcelImporter
      *   future date  -> BLOCKING. MemberModel's `not_future_date` rule rejects the row on write,
      *                   and one bad member rolls back its whole family (one family = one
      *                   transaction). Passing it as a warning let entire families vanish on
-     *                   import with only a generic "could not save" — so block it in review and
+     *                   import with only a generic "could not save" - so block it in review and
      *                   name the exact cell to fix.
      *   over 150 yrs -> warning. The DB stores it fine (150 is past the ~122-year record, so it
-     *                   can't be a real person — only a typo), so flag but allow.
+     *                   can't be a real person - only a typo), so flag but allow.
      *
      * Both bounds track today automatically.
      */
@@ -1093,14 +1093,14 @@ class FamilyExcelImporter
 
         if ($date > $today) {
             $this->addError($row, $familyNo, 'BDAY-FUTURE', 'birthday',
-                'Birthday "' . $raw . '" is in the future — please check the year.');
+                'Birthday "' . $raw . '" is in the future - please check the year.');
 
             return;
         }
 
         if ($date < $today->modify('-150 years')) {
             $this->addError($row, $familyNo, 'BDAY-RANGE', 'birthday',
-                'Birthday "' . $raw . '" is over 150 years ago — please check the year.', 'warning');
+                'Birthday "' . $raw . '" is over 150 years ago - please check the year.', 'warning');
         }
     }
 

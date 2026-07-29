@@ -34,7 +34,7 @@ final class FamilyDataTableTest extends TestCase
         $script = (string) file_get_contents(FCPATH . 'assets/js/dashboard/family-datatable.js');
 
         $this->assertStringContainsString('id="familyRecordsTable"', $view);
-        // QR NO. + HEAD/MEMBER NAME + MEMBERS + SECTOR + ADDRESS + ACTIONS.
+        // QR NO. + HEAD NAME + MEMBERS + SECTOR + ADDRESS + ACTIONS.
         $this->assertSame(6, preg_match_all('/<th(?:\s|>)/', $view));
         $this->assertStringContainsString('<th class="fw-semibold small text-center">QR NO.</th>', $view);
         // QR is sortable and the table's default order (manage-records UI
@@ -118,6 +118,28 @@ final class FamilyDataTableTest extends TestCase
         $this->assertStringNotContainsString('badge bg-light text-dark border fw-semibold fs-6 text-nowrap', $presenter);
         $this->assertStringNotContainsString(" . '#'", $presenter);
         $this->assertStringContainsString('-', $presenter);
+    }
+
+    public function testEmptyHeadIdsNeverReachWhereIn(): void
+    {
+        $controller = (string) file_get_contents(APPPATH . 'Controllers/Families/FamilyDataTableController.php');
+
+        // whereIn() on an empty PHP array compiles to invalid SQL ("... IN ()"),
+        // which the DB rejects. Both call sites build a whereIn() from a head-ID
+        // list computed earlier in the request, so a search or a page past the
+        // end - either one leaves that list empty - must skip the query rather
+        // than reach whereIn() with nothing in it.
+        $wholeDatabaseGuard = strpos($controller, "if (\$headIds !== [])");
+        $wholeDatabaseWhereIn = strpos($controller, "whereIn('memberID', \$headIds)->findAll()");
+        $this->assertNotFalse($wholeDatabaseGuard, 'missing the whole-database head-lookup guard');
+        $this->assertNotFalse($wholeDatabaseWhereIn, 'missing the whole-database head lookup');
+        $this->assertLessThan($wholeDatabaseWhereIn, $wholeDatabaseGuard);
+
+        $countGuard = strpos($controller, "if (\$pageHeadIds !== [])");
+        $countWhereIn = strpos($controller, "whereIn('headID', \$pageHeadIds)");
+        $this->assertNotFalse($countGuard, 'missing the member-count guard');
+        $this->assertNotFalse($countWhereIn, 'missing the member-count query');
+        $this->assertLessThan($countWhereIn, $countGuard);
     }
 
     public function testControllerUsesWhitelistedDataTablesParametersWithoutDateFilter(): void

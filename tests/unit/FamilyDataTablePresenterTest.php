@@ -53,7 +53,12 @@ final class FamilyDataTablePresenterTest extends CIUnitTestCase
             3
         );
 
-        $this->assertStringContainsString('records/7', $cells['actions']);
-        $this->assertStringNotContainsString('manage-family', $cells['actions']);
+        // The URLs sit in esc(..., 'attr') attributes, which percent-encodes '/'
+        // to &#x2F; - decode before asserting so the test checks the head ID
+        // reaching the flat route, not an escaping implementation detail.
+        $actionsHtml = html_entity_decode($cells['actions'], ENT_QUOTES | ENT_HTML5);
+
+        $this->assertStringContainsString('records/7', $actionsHtml);
+        $this->assertStringNotContainsString('manage-family', $actionsHtml);
     }
 }

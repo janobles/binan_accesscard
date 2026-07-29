@@ -19,11 +19,11 @@ class FamilyDataTablePresenter
     /**
      * Shapes one household into the DataTables cell map the client expects. One row
      * is one head of family; members are reached through the profile page, so the
-     * table never flattens a household into several rows.
+     * table never flattens a household into several rows. $memberCount is the
+     * household size including the head.
      *
      * @param array<int, string> $sectorShortcodes sectorID => display shortcode
      * @param array<int, int>    $controlNumbers   headID => qr_control.control_no
-     * @param integer             $memberCount     household size including the head
      */
     public function row(array $row, array $sectorShortcodes, array $controlNumbers, int $memberCount): array
     {

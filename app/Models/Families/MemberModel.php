@@ -365,8 +365,8 @@ class MemberModel extends Model
      * Applies a DataTables column sort to a member query, or the default
      * newest-first ordering when $orderKey is null/unrecognized. Column keys map
      * to the visible Manage Records columns: qr (qr_control join, no-control
-     * heads last), name (lastname, firstname), address, birthday. Used only by
-     * the server-side DataTables path.
+     * heads last), name (lastname, firstname), address. Used only by the
+     * server-side DataTables path.
      */
     private function applyMemberOrder($builder, ?string $orderKey, string $orderDirection): void
     {

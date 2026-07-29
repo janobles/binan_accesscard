@@ -15,13 +15,15 @@ use Throwable;
  * Server-side DataTables list (GET records/data).
  *
  * Powers the Manage Records DataTable (assets/js/dashboard/family-datatable.js).
- * Reuses the existing, untouched search models: MemberModel::searchFamilies()
- * for the family-heads scope and SearchModel::allMembers() for the whole-database
- * scope. Both are called with the optional, append-only $orderKey/$orderDirection
- * arguments for column sorting; everything else is the same query used elsewhere.
- * The table always shows one row per household: a whole-database match on a
- * non-head member is resolved to that member's head before the row is built.
- * Row/envelope shaping lives in FamilyDataTablePresenter.
+ * Reuses MemberModel::searchFamilies() (unchanged) for the family-heads scope,
+ * and SearchModel::allMembersHeadIds()/countAllMembersHeads() for the whole-
+ * database scope; both are called with the optional, append-only
+ * $orderKey/$orderDirection arguments for column sorting. The table always
+ * shows one row per household: allMembersHeadIds() groups the whole-database
+ * search by headID, so a keyword match on a non-head member surfaces that
+ * member's household, and LIMIT/OFFSET/recordsFiltered all operate on
+ * households rather than the members that matched. Row/envelope shaping lives
+ * in FamilyDataTablePresenter.
  */
 class FamilyDataTableController extends BaseController
 {
@@ -70,24 +72,20 @@ class FamilyDataTableController extends BaseController
             if ($scope === 'all') {
                 $searchModel = new SearchModel();
                 $searchFilters = array_merge(['status' => $status], $filters);
-                $total = $searchModel->countAllMembers('', ['status' => 'all']);
-                $filtered = $searchModel->countAllMembers($keyword, $searchFilters);
-                $matchedRows = $searchModel->allMembers($keyword, $searchFilters, $length, $start, $orderKey, $orderDirection);
-
-                // A keyword match on a non-head member still has to surface that
-                // member's household, not the member's own row: resolve every match
-                // to its head and de-duplicate before the table ever sees it.
-                $headIds = [];
-                foreach ($matchedRows as $matchedRow) {
-                    $headId = (int) ($matchedRow['headID'] ?? 0);
-                    if ($headId > 0 && ! in_array($headId, $headIds, true)) {
-                        $headIds[] = $headId;
-                    }
-                }
+                // Households, not members: allMembersHeadIds()/countAllMembersHeads()
+                // group the same search by headID, so a keyword match on a non-head
+                // member still surfaces that member's household, LIMIT/OFFSET slice
+                // whole households, and recordsFiltered counts households too.
+                $total = $searchModel->countAllMembersHeads('', ['status' => 'all']);
+                $filtered = $searchModel->countAllMembersHeads($keyword, $searchFilters);
+                $headIds = $searchModel->allMembersHeadIds($keyword, $searchFilters, $length, $start, $orderKey, $orderDirection);
 
                 $headsById = [];
-                foreach ((new MemberModel())->whereIn('memberID', $headIds)->findAll() as $head) {
-                    $headsById[(int) $head['memberID']] = $head;
+
+                if ($headIds !== []) {
+                    foreach ((new MemberModel())->whereIn('memberID', $headIds)->findAll() as $head) {
+                        $headsById[(int) $head['memberID']] = $head;
+                    }
                 }
 
                 $rows = array_values(array_filter(array_map(
@@ -103,18 +101,24 @@ class FamilyDataTableController extends BaseController
             }
 
             $sectorShortcodes = (new SectorModel())->shortcodeMap();
-            $headIds = array_map(static fn (array $row): int => (int) ($row['memberID'] ?? 0), $rows);
-            $controlNumbers = model(\App\Models\Scanner\QrControlModel::class)->controlsForHeads($headIds);
+            $pageHeadIds = array_map(static fn (array $row): int => (int) ($row['memberID'] ?? 0), $rows);
+            $controlNumbers = model(\App\Models\Scanner\QrControlModel::class)->controlsForHeads($pageHeadIds);
 
             // One grouped query for every head on the page instead of a per-row
             // count. A head with no member rows still counts as one person, itself.
-            $counts = db_connect()->table('member')
-                ->select('headID, COUNT(*) AS total')
-                ->whereIn('headID', $headIds)
-                ->groupBy('headID')
-                ->get()
-                ->getResultArray();
-            $memberCounts = array_column($counts, 'total', 'headID');
+            // whereIn() on an empty array is not valid SQL, so skip the query
+            // entirely when the page has no rows (no match, or past the last page).
+            $memberCounts = [];
+
+            if ($pageHeadIds !== []) {
+                $counts = db_connect()->table('member')
+                    ->select('headID, COUNT(*) AS total')
+                    ->whereIn('headID', $pageHeadIds)
+                    ->groupBy('headID')
+                    ->get()
+                    ->getResultArray();
+                $memberCounts = array_column($counts, 'total', 'headID');
+            }
 
             $data = array_map(
                 static fn (array $row): array => $presenter->row(

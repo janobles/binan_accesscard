@@ -6,7 +6,7 @@
 // effortless - every issue names the exact Excel cell (e.g. "H42"), the column, what is
 // there now, and what to do. Fix the file, upload it again.
 //
-// Backend: POST {role}/manage-family/import/review/:id/commit|cancel
+// Backend: POST records/import/review/:id/commit|cancel
 (function (window, document) {
     'use strict';
 

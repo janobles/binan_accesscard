@@ -34,7 +34,7 @@ class AccountController extends BaseController
     }
 
     /**
-     * Creates a staff account from POST `developer/accounts`. Admin/Developer;
+     * Creates a staff account from POST `accounts`. Admin/Developer;
      * validates the username/password/role, delegates persistence to
      * UserModel::createAccount, writes an audit row, then redirects to
      * `accounts` with a flash message. Frontend: the account-creation
@@ -340,7 +340,7 @@ class AccountController extends BaseController
 
     /**
      * Developer-only: enable/disable Administrator or lower-level accounts via POST
-     * `developer/accounts/status`. Blocks self-changes, verifies the target is an
+     * `accounts/status`. Blocks self-changes, verifies the target is an
      * account, updates status through UserModel, and audits the change.
      * Frontend: the enable/disable controls on the admin accounts page.
      */

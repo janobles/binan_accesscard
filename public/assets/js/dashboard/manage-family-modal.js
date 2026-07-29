@@ -14,7 +14,7 @@
 //   - dashboard-modal-loader.js : window.registerDashboardModal()
 //   - family-datatable.js       : window.reloadFamilyDataTable()
 //   - Views  : Family/family-modal.php, Family/view.php, the #familyModal shell
-//   - Backend: POST families (store), POST {role}/manage-family/update/:id
+//   - Backend: POST records (store), POST records/:id/update
 (function (window, document) {
     'use strict';
 

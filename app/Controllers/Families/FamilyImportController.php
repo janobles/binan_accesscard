@@ -28,7 +28,7 @@ class FamilyImportController extends BaseController
     use FamilyRequestContext;
 
     /**
-     * GET `{admin|employee}/manage-family/template`: streams the blank, fillable
+     * GET `records/template`: streams the blank, fillable
      * .xlsx template (App\Libraries\FamilyExcelTemplate) workers use to collect
      * family records offline. Same entry-access guard as the Add form.
      */
@@ -54,7 +54,7 @@ class FamilyImportController extends BaseController
     }
 
     /**
-     * GET `{admin|employee}/manage-family/import`: returns the Excel import modal
+     * GET `records/import`: returns the Excel import modal
      * fragment (file upload + results area) loaded by family-import.js into the
      * shared dashboard modal.
      */
@@ -73,7 +73,7 @@ class FamilyImportController extends BaseController
     }
 
     /**
-     * POST `{admin|employee}/manage-family/import`: QUEUES a filled .xlsx of
+     * POST `records/import`: QUEUES a filled .xlsx of
      * families for background import. The file is only validated as an upload here
      * (a valid .xlsx), moved to writable/uploads, and recorded as a `pending`
      * job_queue row (type 'family_import'). A scheduled worker (php spark queue:work) parses,
@@ -186,7 +186,7 @@ class FamilyImportController extends BaseController
     }
 
     /**
-     * GET `{admin|employee}/manage-family/import/status/(:num)`: JSON progress for a
+     * GET `records/import/status/(:num)`: JSON progress for a
      * queued import job, polled by family-import.js. Returns the job's status, a human
      * message, progress counters, and (once finished) any validation/per-family write
      * errors so the modal can render them exactly as the old synchronous flow did.
@@ -264,7 +264,7 @@ class FamilyImportController extends BaseController
     }
 
     /**
-     * GET `{admin|employee}/manage-family/import/review/(:num)`: the full-page Import
+     * GET `records/import/review/(:num)`: the full-page Import
      * Review screen for a staged job - grouped errors the operator fixes inline before
      * confirming the import.
      */
@@ -301,7 +301,7 @@ class FamilyImportController extends BaseController
     }
 
     /**
-     * POST `{admin|employee}/manage-family/import/review/(:num)/commit`: re-validates the
+     * POST `records/import/review/(:num)/commit`: re-validates the
      * staged batch and, only when no blocking issues remain, queues the write job that
      * persists the families. Returns that job's status URL for the progress toast.
      *
@@ -372,7 +372,7 @@ class FamilyImportController extends BaseController
     }
 
     /**
-     * POST `{admin|employee}/manage-family/import/review/(:num)/cancel`: discards a
+     * POST `records/import/review/(:num)/cancel`: discards a
      * staged import without writing anything.
      */
     public function reviewCancel(int $jobId)
@@ -399,7 +399,7 @@ class FamilyImportController extends BaseController
     }
 
     /**
-     * GET `{admin|employee}/manage-family/import/review/(:num)/family?fno=<qr>`: the shared
+     * GET `records/import/review/(:num)/family?fno=<qr>`: the shared
      * Add/Update family modal, prefilled from the staged rows of one QR group so the operator
      * fixes it in the browser instead of editing the .xlsx and re-uploading. The QR group is a
      * query param (a raw QR cell is not URL-path-safe). Posts to reviewFamilySave().
@@ -441,7 +441,7 @@ class FamilyImportController extends BaseController
     }
 
     /**
-     * POST `{admin|employee}/manage-family/import/review/(:num)/family/save`: replaces one QR
+     * POST `records/import/review/(:num)/family/save`: replaces one QR
      * group (from the POST's import_family_no) with the modal's submitted values, re-validates
      * the whole batch, re-stages it, and returns the refreshed review report. Mirrors
      * store()/update()'s JSON success contract so the shared modal submit handler reuses it.
@@ -505,7 +505,7 @@ class FamilyImportController extends BaseController
     }
 
     /**
-     * POST `{admin|employee}/manage-family/import/review/(:num)/family/cell`: patches ONE field
+     * POST `records/import/review/(:num)/family/cell`: patches ONE field
      * of ONE staged row (the review screen's inline cell edit), re-validates the whole batch,
      * re-stages, logs the change, and returns the refreshed report. Structural problems (no
      * single cell to blame) are not editable this way - they go through reviewFamilySave.
@@ -619,7 +619,7 @@ class FamilyImportController extends BaseController
     }
 
     /**
-     * POST `{admin|employee}/manage-family/import/review/(:num)/family/remove`: drops one QR
+     * POST `records/import/review/(:num)/family/remove`: drops one QR
      * group (from the POST's import_family_no) from the staged batch, re-validates the rest,
      * re-stages, and returns the refreshed report.
      */

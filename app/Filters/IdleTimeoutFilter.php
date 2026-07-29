@@ -15,8 +15,9 @@ use Config\IdleTimeout;
 class IdleTimeoutFilter implements FilterInterface
 {
     /**
-     * Runs before the protected routes listed in Config\Filters (admin/*, employee/*,
-     * etc.). If the logged-in user has been idle past IdleTimeout, it audits and
+     * Runs before the protected routes listed in Config\Filters (dashboard, records/*,
+     * reference-data/*, cards/*, distribution/*, accounts/*, audit-trails, etc.). If
+     * the logged-in user has been idle past IdleTimeout, it audits and
      * clears the session, then returns a 401 JSON for AJAX or a redirect to login
      * for normal requests; otherwise it refreshes the idle timer and continues.
      */

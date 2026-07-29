@@ -3,6 +3,7 @@
 namespace Tests\Unit;
 
 use CodeIgniter\Test\CIUnitTestCase;
+use Config\Navigation;
 use Config\Services;
 
 /**
@@ -92,5 +93,26 @@ final class RouteSpaceTest extends CIUnitTestCase
     {
         $this->assertArrayHasKey('scanner/scan', $this->getRoutes);
         $this->assertArrayHasKey('scanner/log', $this->postRoutes);
+    }
+
+    /**
+     * Every `roleNav:<key>` filter argument in Routes.php must be a key
+     * Navigation::pageRoles() recognizes. A typo'd key resolves to an empty
+     * roles list, which fails closed to a 404 for everyone - silently, with
+     * nothing else catching it - so this walks the route file for every such
+     * argument instead of spot-checking a handful of known-good keys.
+     */
+    public function testEveryRoleNavFilterArgumentIsAKnownManifestKey(): void
+    {
+        $routesSource = (string) file_get_contents(APPPATH . 'Config/Routes.php');
+
+        preg_match_all('/roleNav:([a-z0-9-]+)/', $routesSource, $matches);
+        $keys = array_unique($matches[1]);
+
+        $this->assertNotEmpty($keys, 'expected to find roleNav: filter arguments in Routes.php');
+
+        foreach ($keys as $key) {
+            $this->assertNotSame([], Navigation::pageRoles($key), $key . ' is not a known manifest key');
+        }
     }
 }

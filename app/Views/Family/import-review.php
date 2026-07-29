@@ -17,9 +17,7 @@
 $jobId     = (int) ($jobId ?? 0);
 $routeBase = (string) ($routeBase ?? 'records');
 $review    = $review ?? ['file' => '', 'counts' => ['families' => 0, 'members' => 0, 'blocking' => 0, 'warnings' => 0], 'groups' => []];
-// Back / post-commit redirect must hit the Manage Records page: the bare route base
-// (`{role}/manage-family`) has no index route and 404s.
-$backUrl   = (string) ($recordsUrl ?? site_url(str_replace('/manage-family', '/manage-records', $routeBase)));
+$backUrl   = (string) ($recordsUrl ?? site_url('records'));
 $idleTimeoutSeconds = (int) ($idleTimeoutSeconds ?? 900);
 $fieldOptions = $fieldOptions ?? [];
 

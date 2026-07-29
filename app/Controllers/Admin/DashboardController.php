@@ -10,9 +10,9 @@ use App\Libraries\RoleAccess;
 use CodeIgniter\HTTP\RedirectResponse;
 
 /**
- * Renders the admin/developer dashboard pages and their AJAX partials (the
- * `admin/*` routes). The sibling Employee\DashboardController owns the
- * `employee/*` pages.
+ * Renders the dashboard pages and their AJAX partials behind the flat routes
+ * (`dashboard`, `records`, `reference-data`, `cards`, `distribution`, `accounts`,
+ * `audit-trails`), guarded per page by the `roleNav` route filter.
  *
  * Page rendering is delegated to App\Libraries\DashboardPageBuilder: this
  * controller only decides WHICH page to show, the builder assembles the view data

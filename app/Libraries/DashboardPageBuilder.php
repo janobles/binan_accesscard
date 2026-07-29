@@ -39,7 +39,9 @@ class DashboardPageBuilder
      */
     public function renderAdminPage(string $activePage): string|RedirectResponse
     {
-        $guard = RoleAccess::requireRole(['Developer', 'Admin']);
+        // Per-page role access is the roleNav filter's job now (app/Config/Navigation.php).
+        // This re-guard is redundant with it and Task 6 deletes it outright.
+        $guard = RoleAccess::requireRole(['Developer', 'Admin', 'Encoder', 'Viewer']);
 
         if ($guard instanceof RedirectResponse) {
             return $guard;

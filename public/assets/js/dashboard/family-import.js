@@ -11,8 +11,8 @@
 //   - dashboard-modal-loader.js : window.registerDashboardModal()
 //   - family-datatable.js       : window.reloadFamilyDataTable()
 //   - Views   : Family/import-modal.php, the #familyModal shell, Family/list.php button
-//   - Backend : POST {role}/manage-family/import   -> { status:'queued', statusUrl }
-//               GET  {role}/manage-family/import/status/(:num)
+//   - Backend : POST records/import   -> { status:'queued', statusUrl }
+//               GET  records/import/status/(:num)
 (function (window, document) {
     'use strict';
 

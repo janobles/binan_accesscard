@@ -104,7 +104,7 @@ final class FamilyDataTableTest extends TestCase
         }
     }
 
-    public function testEveryRoleHasADataTablesEndpoint(): void
+    public function testThereIsExactlyOneDataTablesEndpoint(): void
     {
         $routes = (string) file_get_contents(APPPATH . 'Config/Routes.php');
 

@@ -29,7 +29,7 @@ trait LookupControllerTrait
     }
 
     /**
-     * Builds a redirect back to an admin path carrying a typed flash message
+     * Builds a redirect back to a flat dashboard path carrying a typed flash message
      * (e.g. 'success'/'error').
      */
     private function redirectAdmin(string $path, string $type, string $message): RedirectResponse

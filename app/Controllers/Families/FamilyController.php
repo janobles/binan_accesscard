@@ -227,7 +227,7 @@ class FamilyController extends BaseController
     }
 
     /**
-     * GET `{admin|employee}/manage-family/list`: the "Manage Family" sidebar entry.
+     * GET `records/list`: the "Manage Family" sidebar entry.
      * The list itself (with search/filter/pagination) is rendered by the manage-records
      * page, so this redirects to that canonical URL for the caller's role context.
      */
@@ -243,7 +243,7 @@ class FamilyController extends BaseController
     }
 
     /**
-     * GET `{admin|employee}/manage-family/view/{id}`: returns the read-only family
+     * GET `records/{id}`: returns the read-only family
      * detail fragment for the dashboard modal. Loaded via AJAX with `?partial=1` by
      * manage-family-modal.js; renders `Family/view`.
      */
@@ -287,7 +287,7 @@ class FamilyController extends BaseController
     }
 
     /**
-     * GET `{admin|employee}/manage-family/edit/{id}`: returns the family record
+     * GET `records/edit/{id}`: returns the family record
      * modal prefilled for editing. Delegates to renderFamilyModal(), the same
      * Bootstrap modal served by createFamily() in update mode.
      */
@@ -303,7 +303,7 @@ class FamilyController extends BaseController
     }
 
     /**
-     * POST `{admin|employee}/manage-family/update/{id}`: saves edits to a family.
+     * POST `records/{id}/update`: saves edits to a family.
      * Runs in one transaction: updates the head, replaces the member list, re-syncs
      * service assignments, and logs a FAMILY_UPDATED audit row. Mirrors store()'s
      * AJAX/non-AJAX response handling.
@@ -470,7 +470,7 @@ class FamilyController extends BaseController
     }
 
     /**
-     * POST `{admin|employee}/manage-family/archive/{id}`: soft-archives an entire
+     * POST `records/{id}/archive`: soft-archives an entire
      * family (Developer/Admin/Employee) and audits it. Frontend: the "Archive"
      * action in the records list; redirects back with a flash message.
      */
@@ -488,7 +488,7 @@ class FamilyController extends BaseController
     }
 
     /**
-     * POST `{admin|employee}/manage-family/restore/{id}`: restores a soft-archived
+     * POST `records/{id}/restore`: restores a soft-archived
      * family (Developer/Admin/Employee) and audits it. Frontend: the "Restore"
      * action on the archived records view.
      */
@@ -1017,7 +1017,7 @@ class FamilyController extends BaseController
     }
 
     /**
-     * GET `{admin|employee}/manage-family/create`: returns the Bootstrap family
+     * GET `records/entry`: returns the Bootstrap family
      * record modal fragment loaded by manage-family-modal.js. `?mode=update&id=`
      * prefills it for editing; otherwise it is a blank Add form. The form posts to
      * the existing, untouched store()/update() endpoints.

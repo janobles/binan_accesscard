@@ -18,6 +18,7 @@ source of truth. Never hardcode a `btn-*` color class on a toolbar action.
 | add      | btn btn-success            | create a record (modal)       |
 | import   | btn btn-warning            | bulk import                   |
 | filter   | btn btn-outline-secondary  | open a filter panel           |
+| save     | btn btn-primary            | commit a full-page form (e.g. Data Entry) |
 
 Buttons use stock Bootstrap colors only - theme.css must NOT re-tint
 `.btn-primary` to Biñan green (that made Search and Add two competing

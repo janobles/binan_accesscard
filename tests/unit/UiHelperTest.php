@@ -26,6 +26,7 @@ final class UiHelperTest extends CIUnitTestCase
         $this->assertSame('btn btn-success', btn('add'));
         $this->assertSame('btn btn-warning', btn('import'));
         $this->assertSame('btn btn-outline-secondary', btn('filter'));
+        $this->assertSame('btn btn-primary', btn('save'));
     }
 
     public function testUnknownRoleThrows(): void

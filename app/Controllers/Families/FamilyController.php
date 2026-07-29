@@ -29,8 +29,9 @@ use Throwable;
  * single write path the Excel importer also goes through. The remaining screens
  * work through MemberModel and MemberServiceModel directly.
  *
- * View and edit screens load into the dashboard modal as `?partial=1`
- * fragments via assets/js/dashboard/manage-family-modal.js; the
+ * The view screen loads into the dashboard modal as a `?partial=1` fragment via
+ * assets/js/dashboard/manage-family-modal.js; createFamily() renders the Data
+ * Entry page (create only - editing moves to the Family Profile page); the
  * archive, restore, and delete forms in `Family/list` post here and redirect
  * back to the list.
  */
@@ -985,10 +986,9 @@ class FamilyController extends BaseController
     }
 
     /**
-     * GET `records/entry`: returns the Bootstrap family
-     * record modal fragment loaded by manage-family-modal.js. `?mode=update&id=`
-     * prefills it for editing; otherwise it is a blank Add form. The form posts to
-     * the existing, untouched store()/update() endpoints.
+     * GET `records/entry`: the Data Entry page for a new family, posting to the
+     * existing, untouched store() endpoint. Editing moves to the Family Profile
+     * page in a later task; this method only ever renders a blank Add form.
      */
     public function createFamily(): string|RedirectResponse
     {
@@ -998,10 +998,21 @@ class FamilyController extends BaseController
             return $this->partialGuard($guard, 'You do not have permission to open the family record form.');
         }
 
-        $isUpdateMode = strtolower(trim((string) $this->request->getGet('mode'))) === 'update';
-        $headId = max(0, (int) $this->request->getGet('id'));
+        $options = (new FamilyFormOptionsModel())->getViewData();
 
-        return $this->renderFamilyModal($isUpdateMode ? 'update' : 'create', $headId);
+        return view('layout', [
+            'activePage' => 'records-entry',
+            'role'       => RoleAccess::normalizeRole((string) session()->get('role')),
+            'bodyView'   => 'Family/entry',
+            'bodyData'   => [
+                'head'       => [],
+                'members'    => [],
+                'readOnly'   => false,
+                'sectors'    => $options['sectorOptions'],
+                'services'   => $options['serviceOptions'],
+                'categories' => array_keys($options['servicesByCategory']),
+            ],
+        ]);
     }
 
     /** Returns whether a QR number is available to the current Add/Update form. */
@@ -1034,89 +1045,6 @@ class FamilyController extends BaseController
                 ? 'QR Number ' . $controlNo . ' already exists in the records and is assigned to another family.'
                 : '',
         ]);
-    }
-
-    /**
-     * Shared renderer for the Add/Update family modal. In create mode it serves a
-     * blank form pointed at `families` (store). In update mode it prefills the head,
-     * existing members, and selected (incl. grandfathered/archived) sectors/services,
-     * pointed at the role's update/{id} endpoint.
-     */
-    private function renderFamilyModal(string $mode, int $headId): string|RedirectResponse
-    {
-        if ($mode === 'update') {
-            $memberModel = new MemberModel();
-            $rows = $memberModel->getFamilyMembers($headId, 'all');
-            [$head, $members] = $this->splitHeadAndMembers($rows, $headId);
-
-            if ($head === null) {
-                return $this->recordMissing();
-            }
-
-            $currentControl = model(\App\Models\Scanner\QrControlModel::class)->controlForHead($headId);
-            $qrLocked = $currentControl !== null
-                && model(\App\Models\Scanner\SubsidyDistributionModel::class)->hasClaims($currentControl);
-
-            $serviceIdsByMember = (new MemberServiceModel())
-                ->getServiceIdsByMemberIds(array_map(static fn (array $row): int => (int) $row['memberID'], $rows));
-
-            // Gather assigned sectors/services so archived-but-assigned items stay
-            // visible/checked on the form (grandfathering), matching the old editFamily().
-            $assignedSectorIds = [];
-            foreach ($rows as $row) {
-                foreach (SectorIds::normalize($row['sectorID'] ?? null) as $sectorId) {
-                    $assignedSectorIds[] = (int) $sectorId;
-                }
-            }
-
-            $assignedServiceIds = [];
-            foreach ($serviceIdsByMember as $ids) {
-                foreach ($ids as $id) {
-                    $assignedServiceIds[] = (int) $id;
-                }
-            }
-
-            $viewData = (new FamilyFormOptionsModel())->getViewDataForEdit(
-                array_values(array_unique($assignedSectorIds)),
-                array_values(array_unique($assignedServiceIds))
-            );
-
-            $modalData = new FamilyModalDataBuilder();
-
-            return view('Family/family-modal', array_merge(
-                $viewData,
-                $modalData->updateData($head, $serviceIdsByMember[$headId] ?? []),
-                [
-                    'action' => site_url($this->currentRouteBase() . '/' . $headId . '/update'),
-                    'fieldPrefix' => 'family-update',
-                    'modalTitle' => 'Update Family Record',
-                    'modalMode' => 'update',
-                    'qrCheckUrl' => site_url($this->currentRouteBase() . '/qr-check'),
-                    'submitLabel' => 'Update',
-                    'saveDisabled' => false,
-                    'qrLocked' => $qrLocked,
-                    'existingMembers' => $modalData->shapeMembers($members, $serviceIdsByMember),
-                ]
-            ));
-        }
-
-        $viewData = (new FamilyFormOptionsModel())->getViewData();
-
-        return view('Family/family-modal', array_merge(
-            $viewData,
-            [
-                'action' => site_url('records'),
-                'fieldPrefix' => 'family-add',
-                'modalTitle' => 'New Family Record',
-                'modalMode' => 'create',
-                'qrCheckUrl' => site_url($this->currentRouteBase() . '/qr-check'),
-                'submitLabel' => 'Save',
-                'headId' => 0,
-                'saveDisabled' => false,
-                'qrLocked' => false,
-                'existingMembers' => [],
-            ]
-        ));
     }
 
 }

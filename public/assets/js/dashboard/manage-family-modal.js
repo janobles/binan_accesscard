@@ -1,20 +1,25 @@
-// Registers the family record modals (View + Add/Update) with the shared
-// dashboard loader, drives the single-page Bootstrap entry form (head card plus
-// member rows), captures repeatable family members, and submits Add/Update over AJAX to the
-// existing FamilyController::store()/update() endpoints, refreshing the
-// server-side DataTable on success.
+// Registers the family record modals (View + Import-fix) with the shared
+// dashboard loader, drives the standalone Data Entry page (Family/entry) and the
+// shared field set it and the modals render (head card plus member rows),
+// captures repeatable family members, and submits over AJAX to the existing
+// FamilyController::store() endpoint, refreshing the server-side DataTable on
+// success.
 //
-// Modal behavior:
+// Shared form behavior:
 //   - "Other" freetext selects (reveal + submit-time option swap)
 //   - Contact number digits-only / exactly-11 validation
 //   - Archived (grandfather) badge un-tick warning
 //   - localStorage draft auto-save + restore-on-reopen + keep/discard-on-close
 //
+// Data Entry page only: the control-number gate ([data-control-number-gate])
+// checks the number before anything else renders; [data-entry-body] loses
+// d-none only once it comes back available.
+//
 // Connected to:
 //   - dashboard-modal-loader.js : window.registerDashboardModal()
 //   - family-datatable.js       : window.reloadFamilyDataTable()
-//   - Views  : Family/family-modal.php, Family/view.php, the #familyModal shell
-//   - Backend: POST records (store), POST records/:id/update
+//   - Views  : Family/entry.php, Family/_fields.php, Family/family-modal.php, Family/view.php
+//   - Backend: POST records (store), GET records/qr-check
 (function (window, document) {
     'use strict';
 
@@ -1957,10 +1962,100 @@
         });
     }
 
+    // ---- standalone Data Entry page (Family/entry) -------------------------
+    // The entry page is a normal navigation, not a modal load, so nothing ever
+    // fires registerDashboardModal's onLoaded callback for it. It wires itself
+    // up on page load instead, then drives the control-number gate: the rest of
+    // the form stays hidden ([data-entry-body] keeps d-none) until the number
+    // checks out available.
+
+    function setGateStatus(field, status, text, isError) {
+        field.classList.toggle('is-invalid', !!isError);
+
+        if (status) {
+            status.textContent = text;
+            status.classList.toggle('text-danger', !!isError);
+        }
+    }
+
+    function bindControlNumberGate(gate) {
+        var field = gate.querySelector('#controlNumber');
+        var status = gate.querySelector('[data-control-number-status]');
+        var body = document.querySelector('[data-entry-body]');
+        var timer = null;
+        var sequence = 0;
+
+        if (!field || !body) {
+            return;
+        }
+
+        field.addEventListener('input', function () {
+            body.classList.add('d-none');
+            setGateStatus(field, status, '', false);
+            window.clearTimeout(timer);
+
+            var value = String(field.value || '').trim();
+            var mySequence = ++sequence;
+
+            if (value === '' || !field.checkValidity()) {
+                return;
+            }
+
+            timer = window.setTimeout(function () {
+                var url = new URL(gate.dataset.qrCheckUrl, window.location.href);
+                url.searchParams.set('control_no', value);
+                url.searchParams.set('head_id', '0');
+
+                window.fetch(url.toString(), {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    credentials: 'same-origin'
+                }).then(function (response) {
+                    return response.json().then(function (data) {
+                        return { ok: response.ok, data: data };
+                    });
+                }).then(function (result) {
+                    if (mySequence !== sequence) {
+                        return;
+                    }
+
+                    if (result.ok && result.data.available) {
+                        setGateStatus(field, status, 'Control number is available.', false);
+                        body.classList.remove('d-none');
+
+                        var realField = body.querySelector('[data-entry-control-number], [name="qr_control_no"]');
+
+                        if (realField) {
+                            realField.value = value;
+                        }
+                    } else {
+                        setGateStatus(field, status, (result.data && result.data.message) || 'The control number could not be validated.', true);
+                    }
+                }).catch(function () {
+                    if (mySequence === sequence) {
+                        setGateStatus(field, status, 'A network error occurred. Please try again.', true);
+                    }
+                });
+            }, 350);
+        });
+    }
+
+    function initFamilyEntryPage() {
+        var gate = document.querySelector('[data-control-number-gate]');
+
+        if (!gate) {
+            return;
+        }
+
+        initFamilyEntryModal(document);
+        bindControlNumberGate(gate);
+    }
+
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', bindCloseGuard);
+        document.addEventListener('DOMContentLoaded', initFamilyEntryPage);
     } else {
         bindCloseGuard();
+        initFamilyEntryPage();
     }
 
     window.registerDashboardModal({

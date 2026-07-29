@@ -22,6 +22,7 @@ if (! function_exists('btn')) {
             'generate' => 'btn btn-primary',
             'clear'    => 'btn btn-danger',
             'add'      => 'btn btn-success',
+            'save'     => 'btn btn-primary',
             'import'   => 'btn btn-warning',
             'filter'   => 'btn btn-outline-secondary',
         ];

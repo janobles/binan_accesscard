@@ -1,6 +1,6 @@
 <?php
 /**
- * SB Admin 1 card shell — the one card anatomy every panel uses:
+ * SB Admin 1 card shell - the one card anatomy every panel uses:
  * card-header (icon + title) > card-body > optional card-footer.
  *
  * Deterministic, props-only component: same args, same markup. Body content

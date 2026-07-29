@@ -1,4 +1,16 @@
-<?php /** @var array $cells  @var bool $isFirstPage */ ?>
+<?php
+/**
+ * One printed page of QR access cards, rendered repeatedly by the card PDF build.
+ *
+ * Nine cards to a page, laid out three per row. Short rows are padded with blank
+ * cells so the CSS table keeps its shape, and every page after the first carries a
+ * page break. Rendered through dompdf, not a browser, which is why the grid is a CSS
+ * table rather than flex or grid.
+ *
+ * @var array $cells       The cards on this page, already ordered.
+ * @var bool  $isFirstPage Suppresses the leading page break.
+ */
+?>
 <div class="page <?= $isFirstPage ? '' : 'page-break' ?>">
     <div class="grid">
         <?php foreach (array_chunk($cells, 3) as $rowCells): ?>

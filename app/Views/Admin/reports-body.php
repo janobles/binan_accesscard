@@ -1,10 +1,14 @@
 <?php
-/* Aid Distribution section of the admin dashboard (no doctype/html/head shell,
-   rendered inline by Admin/layout.php's dashboard block). Section header carries
-   the batch selector + Refresh/PDF actions (global actions live outside the
-   cards, house style). KPI numbers sit in the dashboard's unified top tile row;
-   data comes from DashboardPageBuilder::buildReportsData(). All server data
-   esc()'d. */
+/**
+ * Subsidy Distribution section of the admin dashboard (Admin > Dashboard).
+ *
+ * A fragment, not a page: no doctype or head shell, rendered inline by
+ * Admin/layout.php's dashboard block. Data comes from
+ * DashboardPageBuilder::buildReportsData(). The section header carries the batch
+ * selector and the Refresh and PDF actions, because global actions belong outside
+ * the cards. KPI numbers are not rendered here; they sit in the dashboard's unified
+ * top tile row. All server data is escaped.
+ */
 
 $reportsBatches    = $reportsBatches ?? [];
 $reportsBatchId    = $reportsBatchId ?? null;
@@ -49,9 +53,9 @@ $showDistDetail = $reportsBatchOpen || $hasScanData;
   No scans were logged in this batch. Pick another batch above to see its breakdown.</p>
 <?php else: ?>
 
-<!-- Barangay chart + kiosk column (standard card anatomy). No aid-type
-     breakdown: a batch binds one aid type for its whole run (DistributionController::
-     openBatch), so "handouts by aid type" is always a single row here — dead weight. -->
+<!-- Barangay chart + kiosk column (standard card anatomy). No subsidy-type
+     breakdown: a batch binds one subsidy type for its whole run (DistributionController::
+     openBatch), so "handouts by subsidy type" is always a single row here - dead weight. -->
 <div class="row g-3 reports-charts">
   <div class="col-lg-8">
     <?= view('components/card', [

@@ -6,6 +6,10 @@ use chillerlan\QRCode\QRCode;
 use chillerlan\QRCode\QROptions;
 use chillerlan\QRCode\Common\EccLevel;
 
+/**
+ * Renders a QR payload to a base64 PNG data URI, used by QrCardPdfGenerator to
+ * embed the code on a printed access card.
+ */
 final class QrImageGenerator
 {
     private QROptions $pngOptions;

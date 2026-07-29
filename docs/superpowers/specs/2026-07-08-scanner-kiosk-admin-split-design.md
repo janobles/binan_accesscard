@@ -1,4 +1,4 @@
-# Scanner Kiosk / Admin-Server Split — Design
+# Scanner Kiosk / Admin-Server Split - Design
 
 **Date:** 2026-07-08
 **Status:** Approved (design), pending implementation plan
@@ -8,8 +8,8 @@
 
 The scanner module mixes two audiences under one URL prefix. When an
 Admin-level user opens `/scanner/manage` or `/scanner/reports`, they land in a
-"frankenshell" — kiosk pages that borrow the admin sidebar (`sidebarUserUrl =>
-admin/dashboard`). Meanwhile aid-type selection happens on the kiosk itself
+"frankenshell" - kiosk pages that borrow the admin sidebar (`sidebarUserUrl =>
+admin/dashboard`). Meanwhile subsidy-type selection happens on the kiosk itself
 (`/scanner/setting`), even though choosing what aid to hand out and controlling
 when distribution starts/stops is an administrative decision.
 
@@ -22,7 +22,7 @@ a QR-code gun. Admin is the overview/server; each kiosk is a scan station.
 1. **Clean shell boundary by URL prefix.** `/admin/*` always renders the admin
    shell (topbar + sidebar). `/scanner/*` always renders the kiosk shell (green
    theme, no chrome). No page mixes the two.
-2. **Aid selection + batch control are admin-owned.** Admin picks the aid type
+2. **Aid selection + batch control are admin-owned.** Admin picks the subsidy type
    when opening a batch and starts/ends batches. The kiosk never picks aid.
 3. **Kiosk is pure scan + its own performance.** Green-themed, minimal.
 4. **Performance is emphasized**, not a lone `families: n` badge. Admin sees
@@ -34,17 +34,17 @@ a QR-code gun. Admin is the overview/server; each kiosk is a scan station.
 Non-goals: websocket push, cross-batch "all-time" aggregate views, any change to
 the QR card generation flow (already correctly under `/admin/cards`).
 
-## Core model decision: aid type is bound to the batch
+## Core model decision: subsidy type is bound to the batch
 
-Chosen over a separate "active aid type" switch for simplicity. **One batch =
-one aid type, locked at open time.** To hand out a different aid, admin closes
+Chosen over a separate "active subsidy type" switch for simplicity. **One batch =
+one subsidy type, locked at open time.** To hand out a different aid, admin closes
 the batch and opens a new one. This gives clean audit semantics ("Batch 5 =
-Rice") and means the kiosk needs no aid picker — every scan logs against the
-active batch's aid type.
+Rice") and means the kiosk needs no aid picker - every scan logs against the
+active batch's subsidy type.
 
 ### Schema change → new dump `accesscardV16.sql`
 
-`distribution_batch` gains an aid-type column. Per the non-negotiables, this is
+`distribution_batch` gains a subsidy-type column. Per the non-negotiables, this is
 done by **producing a new SQL dump version**, not a code migration.
 
 ```sql
@@ -54,7 +54,7 @@ ALTER TABLE `distribution_batch`
 ```
 
 `aid_distribution.aid_type_id` stays (per-row, denormalized from the batch at
-log time) — no change; it keeps historic rows self-describing and avoids a join
+log time) - no change; it keeps historic rows self-describing and avoids a join
 on every history lookup.
 
 ## Target route / shell map
@@ -64,15 +64,15 @@ on every history lookup.
 | Route | Purpose | Origin |
 |-------|---------|--------|
 | `/admin/cards` | QR card generation | unchanged |
-| `/admin/aid-types` | aid-type CRUD (create/archive/restore/delete) | moved from `scanner/manage` |
-| `/admin/batches` | open/close batch **+ pick aid type at open**; void distributions | moved from `scanner/manage` |
+| `/admin/aid-types` | subsidy-type CRUD (create/archive/restore/delete) | moved from `scanner/manage` |
+| `/admin/batches` | open/close batch **+ pick subsidy type at open**; void distributions | moved from `scanner/manage` |
 | `/admin/reports` | overall stats: combined totals + per-kiosk drilldown + PDF | moved from `scanner/reports` |
 
 **Kiosk shell (`/scanner/*`, green, no chrome, Scanner + Admin/Dev for testing):**
 
 | Route | Purpose | Change |
 |-------|---------|--------|
-| `/scanner/scan` | scan a QR, log aid against active batch's aid type | aid type no longer a query param; taken from active batch |
+| `/scanner/scan` | scan a QR, log aid against active batch's subsidy type | subsidy type no longer a query param; taken from active batch |
 | `/scanner/performance` | this kiosk's own live metrics/visualizations | replaces the `families: n` badge; new emphasis |
 | `/scanner/lookup/{n}`, `/scanner/log` | JSON endpoints backing scan | unchanged behavior |
 | `/scanner/stats` (new) | JSON endpoint for kiosk poll (own counts) | new |
@@ -87,7 +87,7 @@ server can test a station).
 ## Behavior details
 
 ### Batch open (admin)
-`/admin/batches` open form: name + **aid-type dropdown (required)**.
+`/admin/batches` open form: name + **subsidy-type dropdown (required)**.
 `DistributionBatchModel::open()` signature extends to accept `aidTypeId`.
 Single-open-batch invariant unchanged (`activeBatch()` = the row with
 `closed_at IS NULL`). Opening is blocked while a batch is open. Every
@@ -95,7 +95,7 @@ open/close writes an audit row (unchanged).
 
 ### Scan (kiosk)
 `/scanner/scan` no longer reads `?aid_type`. It resolves the active batch; if
-none is open, it shows a clear "no active batch — ask admin to start one" state
+none is open, it shows a clear "no active batch - ask admin to start one" state
 instead of redirecting to a (now-removed) setting page. `logAid()` reads the aid
 type from the active batch, not from POST. Existing family-membership guard,
 transaction, and audit stay intact. Scan-response still returns the refreshed
@@ -108,7 +108,7 @@ own-count so the kiosk updates instantly on its own scan.
   timestamp and a manual **Refresh** button. Metrics: families served, over
   time / by aid, whatever the existing `perScanner` + counts support, rendered
   with the existing Chart.js setup.
-- **Admin `/admin/reports`**: overall — combined totals across all kiosks +
+- **Admin `/admin/reports`**: overall - combined totals across all kiosks +
   per-kiosk table (`AidStatsModel::perScanner($batchId)` with no user filter),
   batch selector (existing), PDF export (existing). Same 5s poll + timestamp +
   refresh button.
@@ -136,19 +136,19 @@ Batch dropdown switches to any past batch. No cross-batch aggregate.
 **One Scanner account per kiosk device.** Per-kiosk metrics are keyed on the
 distinct `userID` written to each `aid_distribution` row. This is already
 enforced in practice: `ActiveSessionRegistry` allows only one active session per
-account and evicts the prior one on a new login — so a shared Scanner account
+account and evicts the prior one on a new login - so a shared Scanner account
 cannot run two kiosks at once (kiosk B's login kicks kiosk A off). Per-kiosk
 accounts are therefore the natural setup, not a new guard to build. Document it
 as a deployment expectation. The Developer account still logs `userID` NULL
 (existing behavior) and is excluded from per-kiosk attribution.
 
-The single-session **auth UX** ("already signed in elsewhere — sign the other
+The single-session **auth UX** ("already signed in elsewhere - sign the other
 out to continue?", OWASP posture of that flow) is a **separate concern, out of
-scope here** — this spec neither depends on nor changes it.
+scope here** - this spec neither depends on nor changes it.
 
 ## Theme
 
-Kiosk shell (`Scanner/kiosk-layout.php`) restyled to the Biñan green theme —
+Kiosk shell (`Scanner/kiosk-layout.php`) restyled to the Biñan green theme -
 aligned to the app's SB Admin 1 target where sensible, but kiosk keeps its
 chrome-less full-screen layout. Green primary surfaces/accents; large,
 gun-friendly scan target and legible live counters.
@@ -163,7 +163,7 @@ gun-friendly scan target and legible live counters.
 
 - Route resolution (`php spark routes`) for every renamed/moved route.
 - Login → role redirect: Scanner lands on `/scanner/scan`; Admin on admin shell.
-- Batch open with aid type; scan logs that aid type; audit rows written.
+- Batch open with subsidy type; scan logs that subsidy type; audit rows written.
 - Scan with no open batch → graceful empty state (no redirect loop).
 - Reports batch scoping with date params fully removed.
 - Per-kiosk attribution across two distinct Scanner accounts.

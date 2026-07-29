@@ -1,10 +1,10 @@
 <?php
 /**
- * New Batch modal: name + aid type pick. Aid types come from the aid_type
+ * New Batch modal: name + subsidy type pick. Aid types come from the subsidy
  * reference table (admin/aidtypes page).
  *
  * Variables:
- * - $activeAidTypes list of aid type rows (subsidy_type_id, name)
+ * - $activeAidTypes list of subsidy type rows (subsidy_type_id, name)
  */
 $activeAidTypes = $activeAidTypes ?? [];
 ?>
@@ -20,12 +20,12 @@ $activeAidTypes = $activeAidTypes ?? [];
         <div class="mb-3">
           <label for="batchName" class="form-label">Batch name</label>
           <input type="text" class="form-control" id="batchName" name="name" required maxlength="100"
-                 placeholder="e.g. Relief Distribution — <?= esc(date('M j, Y')) ?>">
+                 placeholder="e.g. Relief Distribution - <?= esc(date('M j, Y')) ?>">
         </div>
         <div class="mb-3">
-          <label for="batchAidType" class="form-label">Aid type</label>
+          <label for="batchAidType" class="form-label">Subsidy type</label>
           <select class="form-select" id="batchAidType" name="subsidy_type_id" required>
-            <option value="" selected disabled>Choose an aid type...</option>
+            <option value="" selected disabled>Choose a subsidy type...</option>
             <?php foreach ($activeAidTypes as $t): ?>
               <option value="<?= (int) $t['subsidy_type_id'] ?>"><?= esc($t['name']) ?></option>
             <?php endforeach; ?>

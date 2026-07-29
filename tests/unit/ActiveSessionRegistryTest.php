@@ -6,7 +6,7 @@ use App\Libraries\ActiveSessionRegistry;
 use CodeIgniter\Test\CIUnitTestCase;
 
 /**
- * ActiveSessionRegistry unit tests — the file-backed single-session store behind
+ * ActiveSessionRegistry unit tests - the file-backed single-session store behind
  * App\Filters\SingleSessionFilter. No DB dependency (pure writable/ JSON), so these
  * run without the sqlite3 extension. Each test uses a high, unlikely-to-collide
  * userID and forgets it in tearDown so the shared registry file is left clean.

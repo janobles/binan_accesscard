@@ -5,7 +5,7 @@ namespace App\Models\Concerns;
 /**
  * Batched member-name lookup + display formatting, shared by the models that
  * label rows with member names (AuditTrailsModel, SearchModel). Hosting classes
- * must also use NormalizesIds — memberNameMap() calls positiveUniqueIds().
+ * must also use NormalizesIds - memberNameMap() calls positiveUniqueIds().
  */
 trait ResolvesMemberNames
 {

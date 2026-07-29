@@ -39,6 +39,6 @@ final class FamilyDataTablePresenterTest extends CIUnitTestCase
         $this->assertStringContainsString('Cruz, Ana R.', $row['name']);
         $this->assertSame('123 St', $row['address']);
         $this->assertSame('1990-01-02', $row['birthday']);
-        $this->assertStringContainsString('&mdash;', $row['qr']);
+        $this->assertStringContainsString('-', $row['qr']);
     }
 }

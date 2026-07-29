@@ -4,15 +4,15 @@
 performance stats, and the kiosk-vs-dashboard shell split in the scanner
 module.
 
-## Rule 1: Batch = one giving event; at most one open; aid type bound at open
+## Rule 1: Batch = one giving event; at most one open; subsidy type bound at open
 
 `distribution_batch` (dump V18) holds one row per giving event, including the
-aid type distributed in it (`aid_type_id` -> the `aid_type` reference table).
+subsidy type distributed in it (`aid_type_id` -> the `aid_type` reference table).
 `closed_at IS NULL` marks the single open batch; the invariant is enforced in
 `App\Models\Scanner\DistributionBatchModel::open()` (refuses when one is
 already open), not by a DB constraint. Closing a batch is the manual
-statistics reset — the next batch starts from zero. The admin picks the aid
-type when opening the batch; the kiosk never picks one — every scan during
+statistics reset - the next batch starts from zero. The admin picks the aid
+type when opening the batch; the kiosk never picks one - every scan during
 that batch logs against the batch's `aid_type_id`.
 
 Aid types are their own concept, unrelated to the `services`/`category`
@@ -22,16 +22,16 @@ reference data (which describe member program enrollment, not handouts).
 open when it was logged. `batch_id NULL` = pre-batch history; batch-scoped
 views never include it.
 
-## Rule 2: Batch and aid-type lifecycle is Admin/Developer only, and audited
+## Rule 2: Batch and subsidy-type lifecycle is Admin/Developer only, and audited
 
 - Batch open/close: `Admin\DistributionController::openBatch()/closeBatch()`
   (`POST admin/batches/open`, `POST admin/batches/close/{id}`). The Batches
-  page is `admin/batches` (New Batch modal = name + aid-type select); the
+  page is `admin/batches` (New Batch modal = name + subsidy-type select); the
   all-handouts log is `admin/distributions`.
 - Aid-type CRUD: `Admin\AidTypesController` on the `admin/aidtypes` page
   (Reference Data sidebar group), routes `admin/aidtypes/create|archive|
   restore|delete`. Delete is blocked while any distribution references the
-  aid type (`AidTypeModel::deleteIfUnused()`); archive is the safe retire.
+  subsidy type (`AidTypeModel::deleteIfUnused()`); archive is the safe retire.
 
 Both controllers sit behind `RoleAccess::requireRole(['Admin', 'Developer'])`
 and write `audit_trails` rows for every mutation, rendered through the shared
@@ -40,7 +40,7 @@ The kiosk has no back-office pages.
 
 ## Rule 3: One-action scan; duplicates refused per batch
 
-The scan IS the log — there is no confirm step and no claimant/date form:
+The scan IS the log - there is no confirm step and no claimant/date form:
 
 - `POST scanner/log` takes only `control_no`. The server resolves the family,
   then inserts a distribution for the **family head** dated **today**, with
@@ -61,28 +61,28 @@ The scan IS the log — there is no confirm step and no claimant/date form:
 
 ## Rule 4: Kiosk shell vs admin shell
 
-- **Kiosk shell** — `app/Views/Scanner/kiosk-layout.php`: full-viewport,
-  green-themed, no sidebar/topbar; slim header (batch name · aid-type badge ·
+- **Kiosk shell** - `app/Views/Scanner/kiosk-layout.php`: full-viewport,
+  green-themed, no sidebar/topbar; slim header (batch name · subsidy-type badge ·
   live `#myBatchCount` counter · logout). Used by `scan.php` and
-  `performance.php` — the kiosk's only two pages. Time-and-motion rules apply:
+  `performance.php` - the kiosk's only two pages. Time-and-motion rules apply:
   no per-scan keypresses added, page fits viewport without scrolling.
-- **Family panel details** — the head card always shows the head's badges
+- **Family panel details** - the head card always shows the head's badges
   (sector shortcodes, service category names, service shortcodes, from
   `MemberModel::referenceBadges()`); the members list sits in a Bootstrap
   collapse, collapsed by default, so the kiosk stays uncluttered. Expanding
   is optional and never part of the scan flow.
-- **Admin shell** — `Admin/layout.php`: the SB-Admin dashboard frame. Owns
-  aid types (`admin/aidtypes`), batches (`admin/batches`), the distributions
+- **Admin shell** - `Admin/layout.php`: the SB-Admin dashboard frame. Owns
+  subsidy types (`admin/aidtypes`), batches (`admin/batches`), the distributions
   log (`admin/distributions`), and overall reports (`admin/reports`).
 
 ## Rule 5: Performance stats are batch-scoped and role-filtered
 
-`AidStatsModel` methods take a trailing `?int $batchId` (batch-scoped only —
+`AidStatsModel` methods take a trailing `?int $batchId` (batch-scoped only -
 the date-range filter is removed entirely, not just superseded).
 `perScanner(int $batchId, ?int $onlyUserId)` returns
-`{userID, scanner, handouts, families}` rows — `families` =
+`{userID, scanner, handouts, families}` rows - `families` =
 `COUNT(DISTINCT control_no)`. `byAidType(?int $batchId)` drives the
-handouts-per-aid-type chart/PDF table. The Scanner role only ever sees its
+handouts-per-subsidy-type chart/PDF table. The Scanner role only ever sees its
 own row on `scanner/performance` (`ScanController` passes `$onlyUserId`
 server-side, never hides rows client-side). `admin/reports` shows the full
 per-kiosk table (Admin/Developer only), including the PDF export.

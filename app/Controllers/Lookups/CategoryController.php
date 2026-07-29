@@ -163,9 +163,9 @@ class CategoryController extends BaseController
         }
 
         // A sector already acts as its own service category, so a category may not
-        // duplicate one — keep the two lists disjoint (Phase B).
+        // duplicate one - keep the two lists disjoint (Phase B).
         if ((new SectorModel())->activeCodeOrNameExists($code, $name)) {
-            return $this->redirect('error', 'A sector already uses this code or name. A sector acts as its own service category — assign programs to it in Sector Management instead of adding a duplicate category here.');
+            return $this->redirect('error', 'A sector already uses this code or name. A sector acts as its own service category - assign programs to it in Sector Management instead of adding a duplicate category here.');
         }
 
         $data = [

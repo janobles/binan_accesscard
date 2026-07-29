@@ -1,9 +1,19 @@
 <?php
+/**
+ * Family record Add and Update form, rendered as a full-screen modal from the
+ * Manage Records page.
+ *
+ * Data comes from family_modal_prepare(). One form serves both modes: Update
+ * pre-renders the existing members server side because FamilyController::update()
+ * rebuilds the member list from what is submitted, so a member left out of the post
+ * would be dropped from the record.
+ */
+
 helper('family_modal');
 extract(family_modal_prepare(get_defined_vars()), EXTR_OVERWRITE);
 
 // Members already on the record (Update mode); empty for a new record. Rendered
-// server-side so an edit re-posts them — FamilyController::update() rebuilds the
+// server-side so an edit re-posts them - FamilyController::update() rebuilds the
 // member list from the submission, so omitting them would drop existing members.
 $existingMembers = (array) ($existingMembers ?? []);
 $personFieldOptions = compact(
@@ -16,12 +26,22 @@ $personFieldOptions = compact(
     'incomeOptions'
 );
 
+/** Renders the age bounds of an age-restricted choice as data attributes, or nothing. */
+$ageBoundsAttrs = static function (?array $bounds): string {
+    if ($bounds === null) {
+        return '';
+    }
+
+    return ($bounds['min'] !== null ? ' data-min-age="' . (int) $bounds['min'] . '"' : '')
+        . ($bounds['max'] !== null ? ' data-max-age="' . (int) $bounds['max'] . '"' : '');
+};
+
 /**
  * Sectors is a fixed list of ten, so it needs no scroll region: a two-column grid
  * shows all of them at once. $fieldName is the posted name (head vs member row) and
  * $idPrefix keeps checkbox ids unique between the head and each member row.
  */
-$renderSectorGrid = static function (string $fieldName, array $selectedIds, string $idPrefix) use ($sectorCatalog, $sectorLabel): string {
+$renderSectorGrid = static function (string $fieldName, array $selectedIds, string $idPrefix) use ($sectorCatalog, $sectorLabel, $ageBoundsAttrs): string {
     ob_start();
     ?>
     <div class="row row-cols-1 row-cols-sm-2 g-1" data-family-sector-grid>
@@ -44,7 +64,7 @@ $renderSectorGrid = static function (string $fieldName, array $selectedIds, stri
                 ?>
                 <div class="col">
                     <div class="form-check family-choice<?= $isArchived ? ' family-choice--archived' : '' ?>">
-                        <input class="form-check-input" type="checkbox" id="<?= esc($choiceId, 'attr') ?>" name="<?= esc($fieldName, 'attr') ?>" value="<?= esc($sectorId, 'attr') ?>" data-label="<?= esc($label, 'attr') ?>" data-sector-code="<?= esc((string) ($sector['shortcode'] ?? $sector['code'] ?? ''), 'attr') ?>" data-sector-name="<?= esc((string) ($sector['name'] ?? ''), 'attr') ?>"<?= $isArchived ? ' data-archived="1"' : '' ?> <?= in_array($sectorId, $selectedIds, true) ? 'checked' : '' ?>>
+                        <input class="form-check-input" type="checkbox" id="<?= esc($choiceId, 'attr') ?>" name="<?= esc($fieldName, 'attr') ?>" value="<?= esc($sectorId, 'attr') ?>" data-label="<?= esc($label, 'attr') ?>" data-sector-code="<?= esc((string) ($sector['shortcode'] ?? $sector['code'] ?? ''), 'attr') ?>" data-sector-name="<?= esc((string) ($sector['name'] ?? ''), 'attr') ?>"<?= $isArchived ? ' data-archived="1"' : '' ?><?= $ageBoundsAttrs(\App\Support\FamilyAgeEligibility::sectorAgeBounds((string) ($sector['shortcode'] ?? $sector['code'] ?? ''))) ?> <?= in_array($sectorId, $selectedIds, true) ? 'checked' : '' ?>>
                         <label class="form-check-label" for="<?= esc($choiceId, 'attr') ?>"><?= esc($label) ?><?php if ($isArchived): ?> <span class="family-choice-badge">Archived</span><?php endif; ?></label>
                     </div>
                 </div>
@@ -63,7 +83,7 @@ $renderSectorGrid = static function (string $fieldName, array $selectedIds, stri
  * is hidden: a category matching no sector stays collapsed but present, because
  * programs like Financial Assistance apply regardless of sector.
  */
-$renderServiceAccordion = static function (string $fieldName, array $selectedIds, string $accordionId, string $idPrefix) use ($servicesByCategory, $serviceLabel): string {
+$renderServiceAccordion = static function (string $fieldName, array $selectedIds, string $accordionId, string $idPrefix) use ($servicesByCategory, $serviceLabel, $ageBoundsAttrs): string {
     ob_start();
     ?>
     <div class="mb-2">
@@ -83,7 +103,7 @@ $renderServiceAccordion = static function (string $fieldName, array $selectedIds
                 <h2 class="accordion-header">
                     <button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#<?= esc($panelId, 'attr') ?>" aria-expanded="false" aria-controls="<?= esc($panelId, 'attr') ?>"><?= esc((string) $category) ?></button>
                 </h2>
-                <div id="<?= esc($panelId, 'attr') ?>" class="accordion-collapse collapse" data-family-service-panel data-service-category="<?= esc((string) $category, 'attr') ?>">
+                <div id="<?= esc($panelId, 'attr') ?>" class="accordion-collapse collapse" data-family-service-panel data-service-category="<?= esc((string) $category, 'attr') ?>"<?= $ageBoundsAttrs(\App\Support\FamilyAgeEligibility::serviceCategoryAgeBounds((string) $category)) ?>>
                     <div class="accordion-body py-2">
                         <div class="row row-cols-1 row-cols-sm-2 g-1">
                             <?php foreach ((array) $services as $service): ?>
@@ -158,36 +178,125 @@ $renderChoicesBlock = static function (
 };
 
 /**
- * Renders one repeatable family-member row. $index is an int for a pre-filled
- * existing member, or the literal '__INDEX__' placeholder in the <template>;
- * manage-family-modal.js swaps the placeholder for the next counter on Add.
+ * The editable field set for one member row. It is mounted into the row shell:
+ * inline for a row that opens with the form, or by manage-family-modal.js when the
+ * worker opens a closed row. $index is an int for an existing member, or the
+ * literal '__INDEX__' placeholder inside the <template>, which the JS swaps for the
+ * row's own index (names and ids alike).
  * Field names post as members[$index][...] to match FamilyController::store()/update().
  */
-$renderMemberRow = static function ($index, array $m = []) use (
+$renderMemberEditor = static function ($index, array $m = []) use (
     $personFields,
     $personFieldOptions,
     $selectOptions,
     $relationshipOptions,
     $renderChoicesBlock,
+    $fieldPrefix,
     $modalMode
 ): string {
     $i = (string) $index;
     $field = static fn (string $name): string => 'members[' . $i . '][' . $name . ']';
     $val = static fn (string $key): string => (string) ($m[$key] ?? '');
+    $idPrefix = $fieldPrefix . 'Member' . $i;
     $selectedSectors = array_map('strval', (array) ($m['sector_ids'] ?? []));
     $selectedServices = array_map('strval', (array) ($m['service_ids'] ?? []));
 
     ob_start();
     ?>
-    <div class="family-person-card" data-family-member-row>
-        <div class="family-person-card-header">
-            <?php /* manage-family-modal.js keeps the number and name current as rows are
-                     added, removed, or renamed. */ ?>
-            <h3 class="family-person-card-title" data-family-member-title>Member</h3>
-            <?php /* Row actions live in the same actions menu the records table uses, rather
-                     than two competing outline buttons in colors that carry no role. */ ?>
-            <div class="dropdown">
-                <button class="btn btn-outline-secondary btn-sm actions-menu-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Member actions">
+    <div class="row g-3">
+        <?= family_modal_render_person_fields([
+            'personFields' => $personFields,
+            'optionsByKey' => $personFieldOptions,
+            'selectOptions' => $selectOptions,
+            'field' => $field,
+            'value' => $val,
+            // Members require the same personal fields as the head (Address/Barangay are
+            // head-only, members inherit them, so they are not part of this component).
+            'idPrefix' => $idPrefix,
+            'required' => true,
+        ]) ?>
+        <div class="col-12 col-md-6 col-xl-3">
+            <label class="form-label" for="<?= esc($idPrefix . 'Relationship', 'attr') ?>">Relationship</label>
+            <select id="<?= esc($idPrefix . 'Relationship', 'attr') ?>" class="form-select js-other-select" data-other-field="relationship<?= esc($i, 'attr') ?>" data-initial-value="<?= esc($val('relationship'), 'attr') ?>" name="<?= esc($field('relationship'), 'attr') ?>" aria-describedby="<?= esc($idPrefix . 'RelationshipFeedback', 'attr') ?>" required><?= $selectOptions($relationshipOptions, $val('relationship'), 'Select') ?></select>
+            <input class="form-control mt-2 js-other-input d-none" data-other-for="relationship<?= esc($i, 'attr') ?>" placeholder="Enter relationship" aria-label="Other relationship">
+            <div class="invalid-feedback" id="<?= esc($idPrefix . 'RelationshipFeedback', 'attr') ?>" data-family-field-error></div>
+        </div>
+    </div>
+
+    <?= $renderChoicesBlock(
+        'familyMember' . $i . 'Choices',
+        $field('sector_ids') . '[]',
+        $selectedSectors,
+        $field('service_ids') . '[]',
+        $selectedServices,
+        $idPrefix,
+        $modalMode !== 'update'
+    ) ?>
+    <?php
+    return (string) ob_get_clean();
+};
+
+/**
+ * The hidden inputs that stand in for a closed row's editor. Same names as the
+ * controls they replace, so FormData and every [name$="[key]"] lookup are unaffected.
+ * Sector ids carry their full name so the row summary can name them without
+ * re-rendering the checkbox list.
+ */
+$renderMemberValues = static function ($index, array $m) use ($sectorCatalog): string {
+    $i = (string) $index;
+    $scalarKeys = ['lastname', 'firstname', 'middlename', 'suffix', 'birthday', 'sex',
+        'civilstatus', 'contactnumber', 'religion', 'education', 'job', 'salary', 'relationship'];
+    $names = [];
+
+    foreach ($sectorCatalog as $sectorGroup) {
+        foreach (array_values((array) $sectorGroup) as $sector) {
+            $sector = (array) $sector;
+            $names[(string) ($sector['sectorID'] ?? $sector['id'] ?? '')] = (string) ($sector['name'] ?? $sector['sector_name'] ?? $sector['shortcode'] ?? $sector['code'] ?? '');
+        }
+    }
+
+    ob_start();
+    foreach ($scalarKeys as $key): ?>
+        <input type="hidden" name="<?= esc('members[' . $i . '][' . $key . ']', 'attr') ?>" value="<?= esc((string) ($m[$key] ?? ''), 'attr') ?>">
+    <?php endforeach; ?>
+    <?php foreach (array_map('strval', (array) ($m['sector_ids'] ?? [])) as $sectorId): ?>
+        <input type="hidden" name="<?= esc('members[' . $i . '][sector_ids][]', 'attr') ?>" value="<?= esc($sectorId, 'attr') ?>" data-sector-name="<?= esc($names[$sectorId] ?? '', 'attr') ?>">
+    <?php endforeach; ?>
+    <?php foreach (array_map('strval', (array) ($m['service_ids'] ?? [])) as $serviceId): ?>
+        <input type="hidden" name="<?= esc('members[' . $i . '][service_ids][]', 'attr') ?>" value="<?= esc($serviceId, 'attr') ?>">
+    <?php endforeach; ?>
+    <?php
+    return (string) ob_get_clean();
+};
+
+/**
+ * The persistent shell of one member row: header, summary line, and the two mount
+ * points. The editor is rendered inline when the row opens with the form; a closed
+ * row leaves the mount empty and carries its values as hidden inputs instead.
+ */
+$renderMemberRow = static function ($index, array $m = [], bool $open = true) use ($renderMemberEditor, $renderMemberValues): string {
+    ob_start();
+    ?>
+    <div class="list-group-item p-0<?= $open ? ' bg-body-tertiary' : '' ?>" data-family-member-row data-family-member-open="<?= $open ? '1' : '0' ?>">
+        <?php /* A household is a list of people, so it is a Bootstrap list group: the
+                 row itself is the control that opens it (list-group-item-action gives
+                 the hover and focus states), and the kebab beside it is the same
+                 actions menu the records table uses. */ ?>
+        <div class="d-flex align-items-center">
+<?php /* flex-grow-1 + overflow-hidden: the toggle takes the room that is left and
+             shrinks below its text, so the kebab beside it stays inside the card on a
+             narrow screen instead of being pushed past the edge. */ ?>
+            <button class="list-group-item-action btn btn-link text-decoration-none text-reset text-start d-flex align-items-center gap-3 px-3 py-2 border-0 rounded-0 flex-grow-1 overflow-hidden" type="button" data-family-member-toggle aria-expanded="<?= $open ? 'true' : 'false' ?>">
+                <span class="small fw-semibold text-body-secondary font-monospace" data-family-member-title></span>
+                <?php /* Name over muted detail, the same shape as the name cell in
+                         Manage Records. Filled by manage-family-modal.js. */ ?>
+                <span class="d-flex flex-column overflow-hidden" data-family-member-summary></span>
+                <i class="bi bi-chevron-<?= $open ? 'up' : 'down' ?> ms-auto text-body-secondary" aria-hidden="true" data-family-member-chevron></i>
+            </button>
+            <div class="dropdown pe-2">
+                <?php /* Borderless: the row's own name is the heaviest thing in it, and a
+                         boxed kebab out-shouted it. */ ?>
+                <button class="btn btn-link btn-sm text-body-secondary actions-menu-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Member actions">
                     <i class="bi bi-three-dots" aria-hidden="true"></i>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end">
@@ -196,34 +305,8 @@ $renderMemberRow = static function ($index, array $m = []) use (
                 </ul>
             </div>
         </div>
-        <div class="row g-3">
-            <?= family_modal_render_person_fields([
-                'personFields' => $personFields,
-                'optionsByKey' => $personFieldOptions,
-                'selectOptions' => $selectOptions,
-                'field' => $field,
-                'value' => $val,
-                // Members require the same personal fields as the head (Address/Barangay are
-                // head-only — members inherit them, so they are not part of this component).
-                'required' => true,
-            ]) ?>
-            <div class="col-12 col-md-6 col-xl-3">
-                <label class="form-label">Relationship</label>
-                <select class="form-select js-other-select" data-other-field="relationship" data-initial-value="<?= esc($val('relationship'), 'attr') ?>" name="<?= esc($field('relationship'), 'attr') ?>"><?= $selectOptions($relationshipOptions, $val('relationship'), 'Select') ?></select>
-                <input class="form-control mt-2 js-other-input d-none" data-other-for="relationship" placeholder="Enter relationship">
-                <div class="invalid-feedback" data-family-field-error></div>
-            </div>
-        </div>
-
-        <?= $renderChoicesBlock(
-            'familyMember' . $i . 'Choices',
-            $field('sector_ids') . '[]',
-            $selectedSectors,
-            $field('service_ids') . '[]',
-            $selectedServices,
-            'familyMember' . $i,
-            $modalMode !== 'update'
-        ) ?>
+        <div class="<?= $open ? 'px-3 pb-3' : '' ?>" data-family-member-editor><?= $open ? $renderMemberEditor($index, $m) : '' ?></div>
+        <div data-family-member-values><?= $open ? '' : $renderMemberValues($index, $m) ?></div>
     </div>
     <?php
     return (string) ob_get_clean();
@@ -258,7 +341,7 @@ $renderMemberRow = static function ($index, array $m = []) use (
             <?php endif; ?>
             <?php if ($warningIssues !== []): ?>
                 <div class="alert alert-warning">
-                    <div class="fw-semibold mb-1"><i class="bi bi-exclamation-triangle me-1" aria-hidden="true"></i><?= count($warningIssues) ?> warning<?= count($warningIssues) === 1 ? '' : 's' ?> — imports as typed unless you change it</div>
+                    <div class="fw-semibold mb-1"><i class="bi bi-exclamation-triangle me-1" aria-hidden="true"></i><?= count($warningIssues) ?> warning<?= count($warningIssues) === 1 ? '' : 's' ?> - imports as typed unless you change it</div>
                     <ul class="mb-0 ps-3"><?php foreach ($warningIssues as $issue): ?><?= $renderIssue($issue) ?><?php endforeach; ?></ul>
                 </div>
             <?php endif; ?>
@@ -358,26 +441,43 @@ $renderMemberRow = static function ($index, array $m = []) use (
                     ) ?>
                 </div>
 
-                <section class="family-members-section">
-                    <div class="alert alert-info d-flex align-items-center gap-2 py-2" role="alert">
-                        <i class="bi bi-people" aria-hidden="true"></i>
-                        <span>Family members in this household. Leave empty if there are none.</span>
+                <section class="family-members-section family-person-card">
+                    <?php /* Same header as the head card, so the two sections read as the
+                             same kind of thing. The count sits with the title; the hint is
+                             quiet helper text rather than an alert, because nothing here
+                             is a warning. */ ?>
+                    <div class="family-person-card-header">
+                        <h3 class="family-person-card-title">Family Members</h3>
+                        <span class="badge rounded-pill text-bg-light border" data-family-members-count>0 members</span>
                     </div>
+                    <p class="small text-body-secondary mb-2">Everyone else in this household. Leave empty if there are none.</p>
 
-                    <div data-family-members>
+                    <div class="list-group list-group-flush" data-family-members>
                         <?php foreach (array_values($existingMembers) as $i => $member): ?>
-                            <?= $renderMemberRow($i, (array) $member) ?>
+                            <?= $renderMemberRow($i, (array) $member, false) ?>
                         <?php endforeach; ?>
                     </div>
 
+                    <?php /* Stands in for the list while it is empty, so the section is never
+                             a blank gap between its header and the Add button. */ ?>
+                    <p class="small text-body-secondary fst-italic border rounded py-3 text-center mb-0<?= $existingMembers === [] ? '' : ' d-none' ?>" data-family-members-empty>No members added yet.</p>
+
+                    <?php /* The shell of a new row. Its editor mount arrives empty; the JS
+                             fills it from the editor template below. */ ?>
                     <template data-family-member-template>
-                        <?= $renderMemberRow('__INDEX__') ?>
+                        <?= $renderMemberRow('__INDEX__', [], false) ?>
                     </template>
 
-                    <?php /* Full width: adding the next member is the only action in this section
-                             and the one the worker reaches for on every household. */ ?>
+                    <?php /* The field set for one row, mounted on Add and on Edit. The JS
+                             swaps __INDEX__ for the row's index across names and ids. */ ?>
+                    <template data-family-member-editor-template>
+                        <?= $renderMemberEditor('__INDEX__') ?>
+                    </template>
+
+                    <?php /* Sized to its label, not to the modal: a full-width green bar
+                             outweighed the list of people it belongs to. */ ?>
                     <div class="family-member-toolbar">
-                        <button class="btn btn-success w-100" type="button" data-family-add-member data-next-index="<?= esc((string) count($existingMembers), 'attr') ?>">
+                        <button class="btn btn-success" type="button" data-family-add-member data-next-index="<?= esc((string) count($existingMembers), 'attr') ?>">
                             <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Add Member
                         </button>
                     </div>
@@ -400,7 +500,7 @@ $renderMemberRow = static function ($index, array $m = []) use (
             <button class="btn btn-primary" type="submit" data-family-save <?= $saveDisabled ? 'disabled aria-disabled="true"' : '' ?>><?= esc($submitLabel) ?></button>
         </footer>
 
-        <?php /* Truncation sentinel — MUST stay the last named field in the form. A POST
+        <?php /* Truncation sentinel - MUST stay the last named field in the form. A POST
                  clipped by PHP's max_input_vars drops trailing vars first, so if this does
                  not arrive the server knows member data was cut and refuses to save. */ ?>
         <input type="hidden" name="_form_end" value="1">

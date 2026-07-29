@@ -1,4 +1,13 @@
 <?php
+/**
+ * Audit Trails page (Admin > Audit Trails).
+ *
+ * Rendered inside Admin/layout.php. Rows and their pagination bundle come from
+ * DashboardPageBuilder::buildAuditListData(); the counts describe the whole filtered
+ * set, not the rows on screen. Paging and filtering are server side, so every control
+ * here is a link or a form rather than a client-side table filter.
+ */
+
 $recentAudits       = $recentAudits ?? [];
 $searchTerm         = $searchTerm ?? '';
 $searchFilters      = $searchFilters ?? [];
@@ -83,8 +92,7 @@ $auditFooter = $totalRows > 0 ? view('components/table_footer', [
     'totalRows' => $totalRows,
     'page' => $page,
     'totalPages' => $totalPages,
-    'prevUrl' => $auditPageUrl(max(1, $page - 1)),
-    'nextUrl' => $auditPageUrl(min($totalPages, $page + 1)),
+    'pageUrl' => $auditPageUrl,
 ]) : null;
 ?>
 <?= view('components/card', [

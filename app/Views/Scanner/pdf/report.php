@@ -1,6 +1,11 @@
 <?php
-/* Server-side PDF body (dompdf, no JS). Same numbers as the Reports tab; the
-   barangay coverage is drawn as CSS bars in lieu of a chart. */
+/**
+ * Subsidy Distribution report PDF body, rendered by the admin Reports PDF action.
+ *
+ * Built by dompdf, so no JavaScript runs and the barangay coverage is drawn as CSS
+ * bars rather than a chart. The figures are the same ones the on-screen report shows;
+ * only the presentation differs.
+ */
 $window = ($batchName ?? null) !== null
     ? 'Batch: ' . $batchName
     : (($from || $to)

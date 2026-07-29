@@ -1,6 +1,6 @@
 # Target Theme: SB Admin 1
 
-**Decision (spec 2026-07-06): SB Admin 1** — startbootstrap-sb-admin v7+,
+**Decision (spec 2026-07-06): SB Admin 1** - startbootstrap-sb-admin v7+,
 Bootstrap 5-based. https://startbootstrap.com/template/sb-admin •
 https://github.com/StartBootstrap/startbootstrap-sb-admin
 
@@ -41,7 +41,7 @@ Page frame (upstream `dist/index.html`):
 Content patterns:
 - Page header: `<h1 class="mt-4">` + `<ol class="breadcrumb mb-4">`.
 - Cards: stock BS5 `card` with `card-header` (`<i>` icon + title), `mb-4`.
-- Tables: plain `<table>` inside a card body, enhanced by DataTables —
+- Tables: plain `<table>` inside a card body, enhanced by DataTables -
   matches the repo's existing DataTables bootstrap5 build
   (`app/Helpers/asset_helper.php:38`).
 - Theming via `sb-sidenav-dark` / `sb-sidenav-light` variants + SCSS
@@ -58,7 +58,7 @@ Content patterns:
 | `#sidebarToggle` | `#sidebarToggle` button in topnav (`sb-sidenav-toggled` on body) |
 | custom topbar markup in shells | `.sb-topnav` |
 
-Keep the `--sb-*` token approach when porting — map SB Admin 1's SCSS
+Keep the `--sb-*` token approach when porting - map SB Admin 1's SCSS
 variables onto the existing tokens rather than scattering colors.
 
 ## Status
@@ -68,5 +68,5 @@ The swap SHIPPED on branch `feature/sbadmin1-theme-swap`: shells use
 the adapter is deleted (`adapter.md`), and panels render through the
 card/data_table components
 (`docs/knowledge/binan-conventions/views-bootstrap.md`). The inline-style
-non-conformers previously listed here were fixed — see
+non-conformers previously listed here were fixed - see
 `docs/knowledge/violations.md`.

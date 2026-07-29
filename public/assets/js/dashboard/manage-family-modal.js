@@ -233,7 +233,7 @@
 
         refreshAllAgeEligibility(root);
         refreshAllServiceCategories(root);
-        refreshChoicesSummary(root);
+        refreshAllChoicesSummaries(root);
         renumberMembers(root);
 
         // The swap rewrites who holds the QR card, so put the result in front of the
@@ -271,12 +271,25 @@
         return el && (el.name === 'head_contactnumber' || /\[contactnumber\]$/.test(el.name || ''));
     }
 
+    // An 11-digit mobile (09XXXXXXXXX) or a Binan landline (7 to 8 digits, with the
+    // 049 area code optional). The looser rule is deliberate: a mobile-only pattern
+    // would block an edit to an older record whose landline nobody touched.
+    var CONTACT_PATTERN = /^(09\d{9}|(049)?\d{7,8})$/;
+    var CONTACT_MESSAGE = 'Enter an 11-digit mobile number (09XXXXXXXXX) or a Binan landline (7 to 8 digits, optional 049 prefix).';
+
     function enforceContactDigits(el) {
         el.value = String(el.value || '').replace(/[^0-9]/g, '').slice(0, 11);
 
-        if (el.value === '' || el.value.length === 11) {
+        if (contactValueIsValid(el.value)) {
             setFieldError(el, '');
         }
+    }
+
+    // The value test on its own, so a closed row can be checked without a control.
+    function contactValueIsValid(value) {
+        var digits = String(value || '').trim();
+
+        return digits === '' || CONTACT_PATTERN.test(digits);
     }
 
     function validateContact(el) {
@@ -284,10 +297,8 @@
             return true;
         }
 
-        var value = String(el.value || '').trim();
-
-        if (value !== '' && value.length !== 11) {
-            setFieldError(el, 'Contact number must be exactly 11 digits.');
+        if (!contactValueIsValid(el.value)) {
+            setFieldError(el, CONTACT_MESSAGE);
 
             return false;
         }
@@ -489,12 +500,12 @@
     }
 
     // Shown when the server reports a max_input_vars cutoff (code FORM_TRUNCATED):
-    // nothing was saved, but the draft holds everything. Both buttons just dismiss —
+    // nothing was saved, but the draft holds everything. Both buttons just dismiss -
     // the modal stays open with the data intact either way.
     function askTruncationNotice(form) {
         return askModalDialog(form, {
             title: 'Form too large to send',
-            message: 'There were too many entries to send all at once, so nothing was saved yet. Don\'t worry — all your entries are kept on this computer. Remove a few members and Save again, or close and reopen Add Family to restore everything.',
+            message: 'There were too many entries to send all at once, so nothing was saved yet. Don\'t worry - all your entries are kept on this computer. Remove a few members and Save again, or close and reopen Add Family to restore everything.',
             iconClass: 'bi bi-exclamation-triangle',
             tone: 'warning',
             cancelLabel: 'Close',
@@ -572,6 +583,206 @@
         });
     }
 
+    // One reader for both row states. An open row is read from its controls, a closed
+    // row from the hidden inputs that replaced them; the names are the same either way.
+    function readMemberData(row) {
+        var data = { sector_ids: [], service_ids: [], sector_labels: [] };
+
+        Array.from(row.querySelectorAll('input, select')).forEach(function (field) {
+            var match = /members\[\d+\]\[([a-z_]+)\](\[\])?$/.exec(field.name || '');
+
+            if (!match) {
+                return;
+            }
+
+            var key = match[1];
+
+            if (key === 'sector_ids' || key === 'service_ids') {
+                if (field.type === 'hidden' || field.checked) {
+                    data[key].push(field.value);
+
+                    if (key === 'sector_ids') {
+                        // The full sector name, not the shortcode: "Bata (Children)"
+                        // tells a worker what the row is, "B" does not.
+                        data.sector_labels.push(String(field.dataset.sectorName || field.dataset.sectorCode || field.dataset.label || '').trim());
+                    }
+                }
+
+                return;
+            }
+
+            data[key] = field.classList.contains('js-other-select') ? selectedFieldValue(field) : field.value;
+        });
+
+        return data;
+    }
+
+    function writeMemberData(row, data) {
+        Object.keys(data).forEach(function (key) {
+            if (key === 'sector_ids' || key === 'service_ids') {
+                checkBoxes(row, row.dataset.memberFieldPrefix + '[' + key + '][]', data[key]);
+
+                return;
+            }
+
+            if (key === 'sector_labels') {
+                return;
+            }
+
+            var field = row.querySelector('[name="' + row.dataset.memberFieldPrefix + '[' + key + ']"]');
+
+            if (!field) {
+                return;
+            }
+
+            if (field.classList.contains('js-other-select')) {
+                setSelectValueWithOther(field, data[key]);
+            } else {
+                field.value = data[key];
+            }
+        });
+    }
+
+    function hiddenInput(name, value, sectorName) {
+        var input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = name;
+        input.value = value;
+
+        if (sectorName) {
+            input.dataset.sectorName = sectorName;
+        }
+
+        return input;
+    }
+
+    var MEMBER_VALUE_KEYS = ['lastname', 'firstname', 'middlename', 'suffix', 'birthday', 'sex',
+        'civilstatus', 'contactnumber', 'religion', 'education', 'job', 'salary', 'relationship'];
+
+    // Closed rows read as text, so a household of six is a list instead of six full
+    // forms. The values move into hidden inputs under the same names, which is what
+    // keeps FormData and the server contract unchanged.
+    function collapseMemberRow(row) {
+        var editor = row.querySelector('[data-family-member-editor]');
+        var values = row.querySelector('[data-family-member-values]');
+
+        if (!editor || !values || row.dataset.familyMemberOpen === '0') {
+            return;
+        }
+
+        var data = readMemberData(row);
+        var prefix = row.dataset.memberFieldPrefix;
+
+        values.innerHTML = '';
+
+        MEMBER_VALUE_KEYS.forEach(function (key) {
+            values.appendChild(hiddenInput(prefix + '[' + key + ']', data[key] || ''));
+        });
+
+        data.sector_ids.forEach(function (id, position) {
+            values.appendChild(hiddenInput(prefix + '[sector_ids][]', id, data.sector_labels[position]));
+        });
+
+        data.service_ids.forEach(function (id) {
+            values.appendChild(hiddenInput(prefix + '[service_ids][]', id));
+        });
+
+        editor.innerHTML = '';
+        row.dataset.familyMemberOpen = '0';
+        setMemberToggleState(row, false);
+        renderMemberSummary(row);
+        renumberMembers(row.closest('[data-family-entry-form]') || row.parentElement);
+    }
+
+    function expandMemberRow(root, row) {
+        if (!row || row.dataset.familyMemberOpen === '1') {
+            return;
+        }
+
+        // Read before mounting: the editor replaces the hidden inputs these come from.
+        var data = readMemberData(row);
+
+        if (!buildMemberEditor(root, row)) {
+            return;
+        }
+
+        row.dataset.familyMemberOpen = '1';
+        writeMemberData(row, data);
+        setMemberToggleState(row, true);
+        renderMemberSummary(row);
+        renumberMembers(root);
+        refreshAgeEligibility(row);
+        refreshServiceCategories(row);
+        refreshChoicesSummary(row);
+    }
+
+    function setMemberToggleState(row, open) {
+        var toggle = row.querySelector('[data-family-member-toggle]');
+        var chevron = row.querySelector('[data-family-member-chevron]');
+        var editor = row.querySelector('[data-family-member-editor]');
+
+        if (toggle) {
+            toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        }
+
+        // Swapping the icon keeps the open/closed state in Bootstrap Icons rather
+        // than in a CSS transform of our own.
+        if (chevron) {
+            chevron.classList.toggle('bi-chevron-up', open);
+            chevron.classList.toggle('bi-chevron-down', !open);
+        }
+
+        // The open row is the one being worked on, and its fields need the padding
+        // the closed row has no use for.
+        row.classList.toggle('bg-body-tertiary', open);
+
+        if (editor) {
+            editor.classList.toggle('px-3', open);
+            editor.classList.toggle('pb-3', open);
+        }
+    }
+
+    // The closed row has to say who it is: name, relationship, age, and the sector
+    // codes, which is everything the worker scans a household list for.
+    function renderMemberSummary(row) {
+        var target = row.querySelector('[data-family-member-summary]');
+
+        if (!target) {
+            return;
+        }
+
+        var data = readMemberData(row);
+        var middle = String(data.middlename || '').trim();
+        var given = [String(data.firstname || '').trim(), middle !== '' ? middle.charAt(0) + '.' : '', String(data.suffix || '').trim()]
+            .filter(Boolean).join(' ');
+        var last = String(data.lastname || '').trim();
+        var name = last !== '' && given !== '' ? last + ', ' + given : (last || given);
+        var age = completedAge(data.birthday);
+        var sectors = data.sector_labels.filter(Boolean).join(', ');
+        // One muted line under the name, in the order a worker scans a household:
+        // how they relate to the head, how old they are, what they are classified
+        // as, how much aid they draw. Empty facts drop out rather than leaving
+        // stray separators behind.
+        var meta = [
+            String(data.relationship || '').trim(),
+            age === null ? '' : age + ' yrs',
+            sectors,
+            data.service_ids.length ? data.service_ids.length + ' program' + (data.service_ids.length === 1 ? '' : 's') : ''
+        ].filter(Boolean).join(' · ');
+
+        target.innerHTML = '';
+
+        var nameEl = document.createElement('span');
+        nameEl.className = 'fw-semibold text-truncate';
+        nameEl.textContent = name !== '' ? name : 'Unnamed member';
+        target.appendChild(nameEl);
+
+        var metaEl = document.createElement('span');
+        metaEl.className = 'small text-body-secondary text-truncate';
+        metaEl.textContent = meta !== '' ? meta : 'No details yet';
+        target.appendChild(metaEl);
+    }
+
     function snapshotForm(form) {
         var head = {};
 
@@ -580,27 +791,9 @@
         });
 
         var members = Array.from(form.querySelectorAll('[data-family-member-row]')).map(function (row) {
-            var data = { sector_ids: [], service_ids: [] };
+            var data = readMemberData(row);
 
-            Array.from(row.querySelectorAll('input, select')).forEach(function (field) {
-                var match = /members\[\d+\]\[([a-z_]+)\](\[\])?$/.exec(field.name || '');
-
-                if (!match) {
-                    return;
-                }
-
-                var key = match[1];
-
-                if (key === 'sector_ids' || key === 'service_ids') {
-                    if (field.checked) {
-                        data[key].push(field.value);
-                    }
-
-                    return;
-                }
-
-                data[key] = field.classList.contains('js-other-select') ? selectedFieldValue(field) : field.value;
-            });
+            delete data.sector_labels;
 
             return data;
         });
@@ -714,32 +907,42 @@
         });
         refreshAllAgeEligibility(root);
         refreshAllServiceCategories(root);
-        refreshChoicesSummary(root);
+        refreshAllChoicesSummaries(root);
         renumberMembers(root);
     }
 
     // ---- member row headers -------------------------------------------------
 
-    // Each row says which person it is, so the head card and the member cards are
-    // never confused for each other. Numbering is recomputed rather than baked into
-    // the markup, because removing a row renumbers everything after it.
+    // The header states the position in the household and nothing else: the name
+    // sits beside it in the summary, and printing it in both places made a closed
+    // row two lines saying the same thing twice. Numbering is recomputed rather
+    // than baked into the markup, because removing a row renumbers everything after it.
     function renumberMembers(root) {
-        Array.from(root.querySelectorAll('[data-family-member-row]')).forEach(function (row, index) {
+        var rows = Array.from(root.querySelectorAll('[data-family-member-row]'));
+
+        rows.forEach(function (row, index) {
             var title = row.querySelector('[data-family-member-title]');
 
-            if (!title) {
-                return;
+            if (title) {
+                // Just the position, and the same in both states: the row header does
+                // not move or re-word when it opens, so an open row stays lined up
+                // with the closed ones above and below it.
+                title.textContent = String(index + 1);
             }
-
-            var last = row.querySelector('[name$="[lastname]"]');
-            var first = row.querySelector('[name$="[firstname]"]');
-            var name = [
-                last ? String(last.value || '').trim() : '',
-                first ? String(first.value || '').trim() : ''
-            ].filter(Boolean).join(', ');
-
-            title.textContent = 'Member ' + (index + 1) + (name !== '' ? ' — ' + name : '');
         });
+
+        // The section header carries the count, and the empty state stands in for the
+        // list until there is a first member, so the section is never a blank gap.
+        var count = root.querySelector('[data-family-members-count]');
+        var empty = root.querySelector('[data-family-members-empty]');
+
+        if (count) {
+            count.textContent = rows.length === 1 ? '1 member' : rows.length + ' members';
+        }
+
+        if (empty) {
+            empty.classList.toggle('d-none', rows.length > 0);
+        }
     }
 
     // ---- sectors and services ------------------------------------------------
@@ -778,6 +981,54 @@
         return age;
     }
 
+    // Where a choice's age limits come from: the view stamps them from
+    // FamilyAgeEligibility, so 18 / 60 / B / SC live in exactly one place.
+    function ageBoundsFor(input) {
+        var source = input.matches(SERVICE_INPUT_SELECTOR)
+            ? input.closest('[data-service-category]')
+            : input;
+
+        if (!source) {
+            return null;
+        }
+
+        var min = source.dataset.minAge;
+        var max = source.dataset.maxAge;
+
+        if (typeof min === 'undefined' && typeof max === 'undefined') {
+            return null;
+        }
+
+        return {
+            min: typeof min === 'undefined' ? null : parseInt(min, 10),
+            max: typeof max === 'undefined' ? null : parseInt(max, 10)
+        };
+    }
+
+    function ageBoundsMessage(bounds) {
+        if (bounds.max !== null) {
+            return 'Available only to persons below ' + (bounds.max + 1) + ' years old.';
+        }
+
+        return 'Available only to persons ' + bounds.min + ' years old and above.';
+    }
+
+    function refreshAgeNote(scopeEl) {
+        var row = scopeEl.matches && scopeEl.matches('[data-family-member-row]') ? scopeEl : null;
+        var birthday = row
+            ? scopeEl.querySelector('input[name$="[birthday]"]')
+            : scopeEl.querySelector('input[name="head_birthday"]');
+        var note = birthday ? birthday.parentElement.querySelector('[data-family-age-note]') : null;
+
+        if (!note) {
+            return;
+        }
+
+        var age = completedAge(birthday.value);
+
+        note.textContent = age === null ? '' : 'Age: ' + age;
+    }
+
     // A person's birthday controls only that person's age-specific choices.
     function refreshAgeEligibility(scopeEl) {
         if (!scopeEl || !scopeEl.querySelectorAll) {
@@ -794,40 +1045,47 @@
             : 'input[name="sector_ids[]"], input[name="service_ids[]"]';
 
         scopeEl.querySelectorAll(selector).forEach(function (input) {
-            var group = '';
-
-            if (input.matches(SECTOR_INPUT_SELECTOR)) {
-                var code = String(input.dataset.sectorCode || '').trim().toUpperCase();
-                group = code === 'B' ? 'child' : (code === 'SC' ? 'senior' : '');
-            } else if (input.matches(SERVICE_INPUT_SELECTOR)) {
-                var serviceGroup = input.closest('[data-service-category]');
-                var category = normName(serviceGroup ? serviceGroup.dataset.serviceCategory : '');
-                group = category === 'bata (children)' ? 'child' : (category === 'senior citizen' ? 'senior' : '');
-            }
-
-            if (group === '') {
+            // A closed row carries its ticks as hidden inputs under the same names.
+            // Disabling one would drop it from the POST, so eligibility only ever
+            // touches a real checkbox the worker can see.
+            if (input.type !== 'checkbox') {
                 return;
             }
 
-            var allowed = age !== null && (group === 'child' ? age < 18 : age >= 60);
+            var bounds = ageBoundsFor(input);
+
+            if (bounds === null) {
+                return;
+            }
+
+            var allowed = age !== null
+                && (bounds.min === null || age >= bounds.min)
+                && (bounds.max === null || age <= bounds.max);
             var message = age === null
                 ? 'Enter a valid date of birth to determine eligibility.'
-                : (group === 'child'
-                    ? 'Available only to persons below 18 years old.'
-                    : 'Available only to persons 60 years old and above.');
+                : ageBoundsMessage(bounds);
             var choice = input.closest('.family-choice');
 
-            input.disabled = !allowed;
-
-            if (!allowed) {
-                input.checked = false;
-            }
+            // A ticked box is never cleared on the worker's behalf: a mistyped birth year
+            // used to wipe the ticks with no message and no way back. The tick stays,
+            // says why it is wrong, and resolves itself when the date is corrected.
+            // FamilyAgeEligibility::selectionError() still blocks a genuinely bad save.
+            input.disabled = !allowed && !input.checked;
+            input.classList.toggle('is-invalid', !allowed && input.checked);
 
             if (choice) {
                 choice.title = allowed ? '' : message;
+
+                var label = choice.querySelector('.form-check-label');
+
+                if (label) {
+                    label.classList.toggle('text-danger', !allowed && input.checked);
+                    label.setAttribute('title', allowed ? '' : message);
+                }
             }
         });
 
+        refreshAgeNote(scopeEl);
     }
 
     function refreshAllAgeEligibility(root) {
@@ -959,17 +1217,21 @@
 
     // The collapse toggle doubles as the summary of what is ticked, so a collapsed
     // block (edit mode) still says what this person is categorised as.
-    function refreshChoicesSummary(root) {
-        var target = root.querySelector('[data-family-choices-summary]');
+    // Scoped, so a member row summarises its own ticks instead of the head's.
+    function refreshChoicesSummary(scopeEl) {
+        var target = scopeEl.querySelector('[data-family-choices-summary]');
 
         if (!target) {
             return;
         }
 
-        var codes = Array.from(root.querySelectorAll('input[name="sector_ids[]"]:checked')).map(function (input) {
-            return String(input.dataset.sectorCode || input.dataset.label || '').trim();
+        var row = scopeEl.matches && scopeEl.matches('[data-family-member-row]') ? scopeEl : null;
+        var sectorSelector = row ? 'input[name$="[sector_ids][]"]:checked' : 'input[name="sector_ids[]"]:checked';
+        var serviceSelector = row ? 'input[name$="[service_ids][]"]:checked' : 'input[name="service_ids[]"]:checked';
+        var codes = Array.from(scopeEl.querySelectorAll(sectorSelector)).map(function (input) {
+            return String(input.dataset.sectorName || input.dataset.sectorCode || input.dataset.label || '').trim();
         }).filter(Boolean);
-        var services = root.querySelectorAll('input[name="service_ids[]"]:checked').length;
+        var services = scopeEl.querySelectorAll(serviceSelector).length;
 
         if (codes.length === 0 && services === 0) {
             target.textContent = 'Nothing selected yet';
@@ -978,6 +1240,14 @@
 
         target.textContent = 'Sectors: ' + (codes.length ? codes.join(', ') : 'none')
             + ' (' + services + ' program' + (services === 1 ? '' : 's') + ')';
+    }
+
+    function refreshAllChoicesSummaries(root) {
+        refreshChoicesSummary(root);
+        root.querySelectorAll('[data-family-member-row]').forEach(function (row) {
+            refreshChoicesSummary(row);
+            renderMemberSummary(row);
+        });
     }
 
     // ---- head validation ---------------------------------------------------
@@ -1027,6 +1297,37 @@
 
     // ---- repeatable members ------------------------------------------------
 
+    function memberIndex(row) {
+        var match = /^members\[(\d+)\]$/.exec((row && row.dataset.memberFieldPrefix) || '');
+
+        return match ? match[1] : null;
+    }
+
+    // Mounts the field set into a row's editor slot. The template still carries the
+    // __INDEX__ placeholder, so one replace covers both the posted names and the ids
+    // the labels point at. A mounted editor and the hidden values are mutually
+    // exclusive: they share field names, so leaving both would post each key twice.
+    function buildMemberEditor(root, row) {
+        var template = root.querySelector('[data-family-member-editor-template]');
+        var mount = row ? row.querySelector('[data-family-member-editor]') : null;
+        var values = row ? row.querySelector('[data-family-member-values]') : null;
+        var index = memberIndex(row);
+
+        if (!template || !mount || index === null) {
+            return null;
+        }
+
+        mount.innerHTML = (template.innerHTML || '').replace(/__INDEX__/g, index).trim();
+
+        if (values) {
+            values.innerHTML = '';
+        }
+
+        initOtherSelects(mount);
+
+        return mount;
+    }
+
     function addMemberRow(root) {
         var button = root.querySelector('[data-family-add-member]');
         var container = root.querySelector('[data-family-members]');
@@ -1051,8 +1352,10 @@
         container.appendChild(row);
         button.dataset.nextIndex = String(nextIndex + 1);
 
-        initOtherSelects(row);
+        buildMemberEditor(root, row);
+        row.dataset.familyMemberOpen = '1';
         refreshAgeEligibility(row);
+        refreshServiceCategories(row);
 
         return row;
     }
@@ -1145,49 +1448,76 @@
     // an incomplete one. The server keeps its own copy and stays authoritative.
     var MEMBER_REQUIRED_FIELDS = ['birthday', 'sex', 'civilstatus', 'education', 'job', 'salary'];
 
-    function memberHasData(row) {
-        return ['lastname', 'firstname'].some(function (key) {
-            var field = row.querySelector('[name$="[' + key + ']"]');
+    // Relationship is required on this form but NOT server-side: the Excel importer and
+    // older records legitimately arrive without one, so the server keeps defaulting it
+    // rather than rejecting them. Held apart from the list above so that stays an
+    // honest mirror of firstIncompleteMember().
+    var MEMBER_CLIENT_REQUIRED_FIELDS = MEMBER_REQUIRED_FIELDS.concat(['relationship']);
 
-            return field && String(field.value || '').trim() !== '';
-        });
+    function memberField(row, key) {
+        return row.querySelector('[name="' + row.dataset.memberFieldPrefix + '[' + key + ']"]');
     }
 
-    function validateMembers(form) {
-        var firstInvalid = null;
+    function validateMembers(root, form) {
+        var first = null;
 
         Array.from(form.querySelectorAll('[data-family-member-row]')).forEach(function (row) {
-            var named = memberHasData(row);
+            var data = readMemberData(row);
+            var named = ['lastname', 'firstname'].some(function (key) {
+                return String(data[key] || '').trim() !== '';
+            });
 
-            MEMBER_REQUIRED_FIELDS.forEach(function (key) {
-                var field = row.querySelector('[name$="[' + key + ']"]');
+            MEMBER_CLIENT_REQUIRED_FIELDS.forEach(function (key) {
+                var empty = named && String(data[key] || '').trim() === '';
 
-                if (!field) {
-                    return;
+                if (row.dataset.familyMemberOpen === '1') {
+                    setFieldError(memberField(row, key), empty ? 'This field is required.' : '');
                 }
 
-                var empty = named && String(field.value || '').trim() === '';
-                setFieldError(field, empty ? 'This field is required.' : '');
-
-                if (empty && !firstInvalid) {
-                    firstInvalid = field;
+                if (empty && !first) {
+                    first = { row: row, key: key };
                 }
             });
         });
 
-        return firstInvalid;
+        if (!first) {
+            return null;
+        }
+
+        // A complaint about a field the worker cannot see is useless, so the row opens.
+        expandMemberRow(root, first.row);
+
+        var field = memberField(first.row, first.key);
+        setFieldError(field, 'This field is required.');
+
+        return field;
     }
 
-    function validateMemberContacts(form) {
-        var firstInvalid = null;
+    function validateMemberContacts(root, form) {
+        var firstRow = null;
 
-        Array.from(form.querySelectorAll('[name$="[contactnumber]"]')).forEach(function (field) {
-            if (!validateContact(field) && !firstInvalid) {
-                firstInvalid = field;
+        Array.from(form.querySelectorAll('[data-family-member-row]')).forEach(function (row) {
+            var value = String(readMemberData(row).contactnumber || '').trim();
+
+            if (row.dataset.familyMemberOpen === '1') {
+                validateContact(memberField(row, 'contactnumber'));
+            }
+
+            if (!contactValueIsValid(value) && !firstRow) {
+                firstRow = row;
             }
         });
 
-        return firstInvalid;
+        if (!firstRow) {
+            return null;
+        }
+
+        expandMemberRow(root, firstRow);
+
+        var field = memberField(firstRow, 'contactnumber');
+        validateContact(field);
+
+        return field;
     }
 
     function submitFamilyForm(root, form) {
@@ -1198,7 +1528,7 @@
             return;
         }
 
-        var badMember = validateMembers(form) || validateMemberContacts(form);
+        var badMember = validateMembers(root, form) || validateMemberContacts(root, form);
 
         if (badMember) {
             badMember.focus();
@@ -1218,7 +1548,7 @@
 
         // Persist the exact state we are about to send so nothing is lost even if the
         // request dies mid-flight (browser/tab crash) before the 400ms auto-save fires.
-        // Create mode only — edit mode keeps no draft (the draft key is global).
+        // Create mode only - edit mode keeps no draft (the draft key is global).
         if (isCreateForm(root)) {
             saveDraftNow(form);
         }
@@ -1259,7 +1589,7 @@
                 }
 
                 // Import-fix context (Review Import screen): the save returns a fresh review
-                // report — hand it back so the screen re-renders without a reload.
+                // report - hand it back so the screen re-renders without a reload.
                 if (data.review && typeof window.importReviewApply === 'function') {
                     window.importReviewApply(data.review, data.csrf);
                 }
@@ -1275,7 +1605,7 @@
 
             if (data.code === 'FORM_TRUNCATED') {
                 // Cutoff: the server saved nothing. Guarantee the typed data is in the
-                // draft (create mode) and reassure the worker — their entries are safe
+                // draft (create mode) and reassure the worker - their entries are safe
                 // and the resume prompt will rebuild them on reopen. Not a normal error.
                 if (isCreateForm(root)) {
                     saveDraftNow(form);
@@ -1327,6 +1657,9 @@
             if (!row.dataset.memberFieldPrefix) {
                 row.dataset.memberFieldPrefix = 'members[' + index + ']';
             }
+
+            setMemberToggleState(row, row.dataset.familyMemberOpen === '1');
+            renderMemberSummary(row);
         });
 
         initOtherSelects(root);
@@ -1391,6 +1724,27 @@
                 syncOtherControl(target);
             }
 
+            // Blank is a real answer for a middle name, so it gets said outright
+            // instead of being typed as a placeholder. A disabled input posts
+            // nothing, which is what an empty box would have posted anyway.
+            if (target && target.matches('[data-family-no-middlename]')) {
+                var middleColumn = target.closest('[class*="col-"]');
+                // A member field is members[i][middlename], so it ends in a bracket:
+                // matching on "middlename" alone finds the head field only.
+                var middleName = middleColumn
+                    ? middleColumn.querySelector('input[name="head_middlename"], input[name$="[middlename]"]')
+                    : null;
+
+                if (middleName) {
+                    middleName.disabled = target.checked;
+
+                    if (target.checked) {
+                        middleName.value = '';
+                        setFieldError(middleName, '');
+                    }
+                }
+            }
+
             // Archived (grandfather) un-tick warning.
             if (target && target.matches('input[type="checkbox"][data-archived="1"]') && !target.checked) {
                 askRemoveArchivedItem(formEl || root, target.dataset.label || 'this item').then(function (remove) {
@@ -1400,7 +1754,7 @@
 
                     // "Keep" re-checks asynchronously, after the sync refresh below already ran.
                     refreshServiceCategories(target.closest('[data-family-member-row]') || root);
-                    refreshChoicesSummary(root);
+                    refreshAllChoicesSummaries(root);
                     renumberMembers(root);
                     scheduleSave(root);
                 });
@@ -1414,7 +1768,7 @@
                 refreshServiceCategories(target.closest('[data-family-member-row]') || root);
             }
 
-            refreshChoicesSummary(root);
+            refreshAllChoicesSummaries(root);
             renumberMembers(root);
             scheduleSave(root);
         });
@@ -1444,6 +1798,25 @@
 
         // Add / remove repeatable family members.
         root.addEventListener('click', function (event) {
+            var toggleButton = event.target.closest('[data-family-member-toggle]');
+
+            if (toggleButton) {
+                event.preventDefault();
+                var toggleRow = toggleButton.closest('[data-family-member-row]');
+
+                if (toggleRow) {
+                    if (toggleRow.dataset.familyMemberOpen === '1') {
+                        collapseMemberRow(toggleRow);
+                    } else {
+                        expandMemberRow(root, toggleRow);
+                    }
+
+                    scheduleSave(root);
+                }
+
+                return;
+            }
+
             if (event.target.closest('[data-family-add-member]')) {
                 event.preventDefault();
                 addMemberRow(root);
@@ -1489,6 +1862,7 @@
                         return;
                     }
 
+                    expandMemberRow(root, headRow);
                     promoteMemberToHead(root, headRow);
                     scheduleSave(root);
                 });
@@ -1502,7 +1876,7 @@
                     initOtherSelects(root);
                     refreshAllAgeEligibility(root);
                     refreshAllServiceCategories(root);
-                    refreshChoicesSummary(root);
+                    refreshAllChoicesSummaries(root);
                     renumberMembers(root);
 
                     if (isCreateForm(root)) {
@@ -1519,7 +1893,7 @@
         }
         refreshAllAgeEligibility(root);
         refreshAllServiceCategories(root);
-        refreshChoicesSummary(root);
+        refreshAllChoicesSummaries(root);
         renumberMembers(root);
 
         // Restore-on-reopen prompt (create mode only).
@@ -1643,7 +2017,16 @@
                 return;
             }
 
-            var field = form.querySelector('[name="' + String(issue.name).replace(/(["\\])/g, '\\$1') + '"]');
+            var selector = '[name="' + String(issue.name).replace(/(["\\])/g, '\\$1') + '"]';
+            var field = form.querySelector(selector);
+            var row = field ? field.closest('[data-family-member-row]') : null;
+
+            // A flagged field inside a closed row is a hidden input: the note would be
+            // invisible and the box uneditable, so the row opens to show what to fix.
+            if (row && row.dataset.familyMemberOpen === '0') {
+                expandMemberRow(root, row);
+                field = form.querySelector(selector);
+            }
 
             if (field) {
                 markImportField(field, issue);
@@ -1660,7 +2043,7 @@
         note.className = 'small import-field-note ' + (blocking ? 'import-field-note-error' : 'import-field-note-warn');
         note.textContent = issue.message || '';
 
-        // Sit the note below the field — or below its "Other" freetext input when there is one.
+        // Sit the note below the field - or below its "Other" freetext input when there is one.
         var anchor = field;
         var other = field.parentNode ? field.parentNode.querySelector('.js-other-input') : null;
         if (other) {

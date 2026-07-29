@@ -9,9 +9,9 @@ use Config\Database;
 
 /**
  * One-time backfill: rebuilds audit_trails.full_description into the clean
- * labeled-line narrative the app now stores —
+ * labeled-line narrative the app now stores -
  *
- *   What: <action> — <summary> — <detail>
+ *   What: <action> - <summary> - <detail>
  *   Who: <username> (<role>, #id)
  *   When: <timestamp>
  *   Where: <ip>
@@ -20,11 +20,11 @@ use Config\Database;
  * The six facets are reconstructed from the row's own columns (userID, dt_created,
  * ip_address, user_agent) plus the "What" clause recovered from whatever the
  * full_description currently holds (an earlier clean WHAT sentence, a legacy
- * "WHO: … · WHAT: …" dump, or — for pre-narrative NULLs — the action/description
+ * "WHO: … · WHAT: …" dump, or - for pre-narrative NULLs - the action/description
  * columns). Formatting is delegated to AuditTrailsModel::assembleNarrative() so
  * historical rows match newly written ones exactly.
  *
- * Deliberately bypasses the append-only AuditTrailsModel write path — an
+ * Deliberately bypasses the append-only AuditTrailsModel write path - an
  * intentional, audited one-time data migration. Idempotent: re-running re-derives
  * the same value and reports zero changes.
  *
@@ -105,7 +105,7 @@ class AuditReformatDescriptions extends BaseCommand
         if (! $dryRun) {
             if ($db->transStatus() === false) {
                 $db->transRollback();
-                CLI::error('Transaction failed — rolled back. No rows changed.');
+                CLI::error('Transaction failed - rolled back. No rows changed.');
 
                 return EXIT_ERROR;
             }
@@ -124,7 +124,7 @@ class AuditReformatDescriptions extends BaseCommand
             $dryRun ? 'Would reformat' : 'Reformatted',
             $changed,
             count($rows),
-            $dryRun ? ' (dry run — no writes)' : ''
+            $dryRun ? ' (dry run - no writes)' : ''
         ), 'green');
 
         return EXIT_SUCCESS;
@@ -167,7 +167,7 @@ class AuditReformatDescriptions extends BaseCommand
         $summary = trim($description);
 
         if ($summary !== '') {
-            $what .= ' — ' . $summary;
+            $what .= ' - ' . $summary;
         }
 
         return $what;

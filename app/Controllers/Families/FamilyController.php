@@ -22,14 +22,17 @@ use CodeIgniter\HTTP\ResponseInterface;
 use Throwable;
 
 /**
- * Handles family records for the admin and employee Manage Family screens:
- * creating (store), viewing, editing/updating, and archiving/restoring/deleting.
+ * Family records for the admin and employee Manage Family screens: creating,
+ * viewing, editing, archiving, restoring, and deleting.
  *
- * The controller validates the request and delegates database writes to models
- * (MemberModel, MemberServiceModel). The view/edit screens are loaded into the
- * dashboard modal as `?partial=1` HTML fragments by
- * assets/js/dashboard/manage-family-modal.js; the archive/restore/delete forms in
- * `Family/list` post here and redirect back to the list.
+ * Validates the request, then hands creation to FamilyRecordWriter, which is the
+ * single write path the Excel importer also goes through. The remaining screens
+ * work through MemberModel and MemberServiceModel directly.
+ *
+ * View and edit screens load into the dashboard modal as `?partial=1`
+ * fragments via assets/js/dashboard/manage-family-modal.js; the
+ * archive, restore, and delete forms in `Family/list` post here and redirect
+ * back to the list.
  */
 class FamilyController extends BaseController
 {
@@ -191,7 +194,7 @@ class FamilyController extends BaseController
             // assignment, audit, or an unexpected DB error). Catch them all so the
             // transaction is always rolled back and the request fails gracefully.
             if (! $exception instanceof FamilyRecordWriteException) {
-                // Unexpected failure — record it like import()/changeFamilyState()
+                // Unexpected failure - record it like import()/changeFamilyState()
                 // do, so silent write failures surface on the audit page.
                 $this->auditSystemError('saving a family record', $exception);
             }
@@ -609,8 +612,8 @@ class FamilyController extends BaseController
     /**
      * Validates and links a set of selected service IDs to one member inside the
      * update transaction. A service is accepted when it is an active service, OR it
-     * is in $grandfatheredServiceIds — the set the family already held before this
-     * edit — so archived-but-assigned services are preserved rather than dropped.
+     * is in $grandfatheredServiceIds - the set the family already held before this
+     * edit - so archived-but-assigned services are preserved rather than dropped.
      * Other invalid/non-existent services are skipped; returns false only when a
      * valid service fails to link (so the caller can roll back).
      *
@@ -766,7 +769,7 @@ class FamilyController extends BaseController
      * posts a trailing `_form_end` sentinel (the first field dropped when the limit
      * is hit, since it is last in the body) and an early `members_meta_count` the
      * client sets to its live member-row count. If the sentinel is missing, or fewer
-     * member rows arrived than the client promised, the submission was cut short —
+     * member rows arrived than the client promised, the submission was cut short -
      * the caller must reject it so no partial family record is ever saved.
      */
     private function submissionWasTruncated(): bool
@@ -1012,10 +1015,6 @@ class FamilyController extends BaseController
     {
         return MemberFieldNormalizer::cleanAddress($value);
     }
-
-    // ---------------------------------------------------------------------------
-    // Bootstrap Add / Update modal (GET {role}/manage-family/create[?mode=update&id=])
-    // ---------------------------------------------------------------------------
 
     /**
      * GET `{admin|employee}/manage-family/create`: returns the Bootstrap family

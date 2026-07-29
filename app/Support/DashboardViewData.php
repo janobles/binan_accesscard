@@ -7,9 +7,6 @@ use App\Models\Lookups\SectorModel;
 use App\Models\Lookups\ServiceModel;
 
 /**
- * Prepares dashboard view variables before templates render markup.
- */
-/**
  * Normalizes raw controller data into the exact variables each dashboard view/
  * partial expects (with safe defaults). Called from the dashboard view helper just
  * before templates render, so views never deal with missing keys.
@@ -302,7 +299,7 @@ class DashboardViewData
         $canRestore = (bool) ($data['canRestore'] ?? false);
 
         // All codes (incl. archived, across every page) for the modal's duplicate
-        // check — fetched here so the categories view stays model-free.
+        // check - fetched here so the categories view stays model-free.
         $existingCodes = array_values(array_unique(array_filter(array_map(
             static fn (array $category): string => strtoupper(trim((string) ($category['code'] ?? ''))),
             (new CategoryModel())->getAllIncluding()

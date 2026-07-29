@@ -29,7 +29,7 @@ final class ScanViewTest extends CIUnitTestCase
     public function testAidTypeFixedByServer(): void
     {
         // The aid type comes from the active batch; the scan page carries it
-        // as a server-filled JS constant — no in-page dropdown, and it is
+        // as a server-filled JS constant - no in-page dropdown, and it is
         // never posted (logAid derives it server-side from the batch).
         $this->assertStringNotContainsString('sessionAidType', $this->html);
         $this->assertStringContainsString('AID_TYPE_NAME', $this->html);

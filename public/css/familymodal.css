@@ -1,6 +1,8 @@
-/* ===========================================================================
- * Bootstrap record/detail modal, Add/Update Family modal, and action-dialog styles.
- * ========================================================================= */
+/* Record and detail modals, the Add/Update Family modal, and the action dialogs.
+   Loaded via the `admin`, `employee`, and `viewer` manifest contexts
+   (asset_helper.php).
+   Scope: the modal shells and their contents. The list screens behind them come
+   from managerecord.css. */
 
 .floating-family-modal {
     --modal-window-gap: clamp(0.5rem, 2vw, 1.5rem);
@@ -437,10 +439,8 @@
     }
 }
 
-/* ===========================================================================
- * Jade Bootstrap Add/Update modal styles (Family/family-modal.php).
- * Loaded after the legacy block so the new modal wins any shared selector.
- * ========================================================================= */
+/* Add/Update modal styles (Family/family-modal.php). Deliberately placed after
+   the block above so this modal wins any selector the two share. */
 /* Shared Bootstrap modal window used by record, lookup, account, and audit fragments. */
 
 .floating-family-modal {
@@ -1091,9 +1091,7 @@
     }
 }
 
-/* ---------------------------------------------------------------------------
- * Repeatable family-member capture (Members step) + save toast.
- * ------------------------------------------------------------------------- */
+/* Repeatable family-member capture (the Members step) and the save toast. */
 .family-members-section { margin-top: 1rem; }
 .family-toast { position: fixed; top: 1rem; right: 1rem; z-index: 1080; max-width: 22rem; margin: 0; }
 
@@ -1123,9 +1121,7 @@
 .family-import-toast .fit-errors table { margin-bottom: 0; font-size: .66rem; }
 .family-import-toast.fit-hide    { opacity: 0; transition: opacity .25s ease; }
 
-/* ---------------------------------------------------------------------------
- * Shared modal utilities: archived badge and archived-row tint.
- * ------------------------------------------------------------------------- */
+/* Shared modal utilities: the archived badge and the archived-row tint. */
 .family-choice-badge {
     display: inline-block;
     margin-left: 6px;

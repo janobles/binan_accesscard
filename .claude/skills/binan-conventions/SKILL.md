@@ -16,14 +16,15 @@ a scan.
 | CI4 / Bootstrap 5 framework API      | Context7 MCP (see caveat below)              |
 | "How does THIS repo do X"            | `docs/knowledge/binan-conventions/`          |
 | UI markup / SBAdmin styling          | `docs/knowledge/sbadmin/`                    |
-| PHP idiom / language practice        | `docs/knowledge/php-practices/`              |
+| PHP idiom / language practice        | `docs/knowledge/php-practices/idioms.md`     |
+| Comment / docblock style, lint gates | `docs/knowledge/php-practices/comments.md`   |
 | "Is there existing mess here"        | `docs/knowledge/violations.md`               |
 | Version pins / canonical URLs        | `docs/knowledge/sources.md`                  |
 
 **Context7 caveat:** the CI4 library (`/codeigniter4/userguide`) serves
 LATEST docs, not this repo's pinned versions. Cross-check version-sensitive
 answers against the pins in `docs/knowledge/sources.md` (CI4 v4.7.3,
-Bootstrap v5.3.3 — Bootstrap's `/websites/getbootstrap_5_3` is
+Bootstrap v5.3.3 - Bootstrap's `/websites/getbootstrap_5_3` is
 version-pinned, so it's safe). PHP floor: 8.2.
 
 ## Grep index (keyword → file)
@@ -40,7 +41,8 @@ version-pinned, so it's safe). PHP floor: 8.2.
 | index, EXPLAIN, slow, performance, cache, TTL, patch script, benchmark, dump version | `binan-conventions/performance.md` |
 | adapter, sb-admin-adapter, sidebar css, theme token | `sbadmin/adapter.md` |
 | sb admin, target theme, sidenav, topnav, migration | `sbadmin/target-theme.md` |
-| strict_types, constructor, typed, match, docblock, php idiom | `php-practices/idioms.md` |
+| strict_types, constructor, typed, match, php idiom | `php-practices/idioms.md` |
+| comment, docblock, header, `@param`, view header, css header, lint, phpcs, composer lint | `php-practices/comments.md` |
 | dead code, cleanup, violation, mess, punch-list | `violations.md` |
 | version, pin, url, context7 | `sources.md` |
 
@@ -57,5 +59,5 @@ All paths relative to `docs/knowledge/`.
    `docs/knowledge/violations.md` immediately.
 5. Fix a listed violation → tick it `[x]` + `*(Fixed: <PR/commit>)*`.
 6. After editing docs under `docs/knowledge/`, run
-   `bash scripts/check-knowledge-cites.sh` — every `path:line` cite must
+   `bash scripts/check-knowledge-cites.sh` - every `path:line` cite must
    resolve.

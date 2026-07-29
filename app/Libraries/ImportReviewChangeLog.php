@@ -8,7 +8,7 @@ namespace App\Libraries;
  * Remove. Entries are appended to the staged bundle so they survive re-staging and a page
  * reload, and are shown so the worker can double-check their edits before committing.
  *
- * Pure — no DB, request, or session — so it is unit-testable and reused by
+ * Pure - no DB, request, or session - so it is unit-testable and reused by
  * FamilyImportController.
  */
 class ImportReviewChangeLog

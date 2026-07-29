@@ -5,7 +5,7 @@ namespace App\Models\Scanner;
 use CodeIgniter\Model;
 
 /**
- * Read-only aid-distribution statistics for the Reports tab. Every method is
+ * Read-only subsidy-distribution statistics for the Reports tab. Every method is
  * scoped to an optional distribution batch only, and returns a safe empty shape
  * on any DB error, matching the scanner module's no-DB test posture.
  * "Received" is defined at the family (head) level: a family counts as having
@@ -107,7 +107,7 @@ class AidStatsModel extends Model
     }
 
     /**
-     * Handout counts per aid type, within the batch scope, busiest first.
+     * Handout counts per subsidy type, within the batch scope, busiest first.
      * Aid types with zero handouts are omitted.
      */
     public function byAidType(?int $batchId = null): array

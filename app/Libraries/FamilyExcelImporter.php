@@ -26,8 +26,8 @@ use Throwable;
  *
  * Two-step pipeline so the SAME validators run on an uploaded file AND on rows a
  * reviewer has edited in the browser:
- *   1. parseFile()       — PhpSpreadsheet read -> a normalized row set (+ file-level errors)
- *   2. validateAndBuild() — runs every validator over a row set -> families + errors
+ *   1. parseFile() - PhpSpreadsheet read -> a normalized row set (+ file-level errors)
+ *   2. validateAndBuild() - runs every validator over a row set -> families + errors
  * stage() runs both and returns a review-ready bundle. Unlike the old all-or-nothing
  * flow, validateAndBuild reports EVERY row's problems (it does not stop at the first bad
  * family), so the reviewer sees the whole picture up front.
@@ -39,11 +39,11 @@ use Throwable;
  */
 class FamilyExcelImporter
 {
-    /** MySQL signed INT max — the QR control number ceiling. */
+    /** MySQL signed INT max - the QR control number ceiling. */
     public const QR_MAX = 2147483647;
 
     /**
-     * Common suffix spellings → the canonical dropdown value (Jr/Sr/I–V). Keys are
+     * Common suffix spellings → the canonical dropdown value (Jr/Sr/I-V). Keys are
      * lowercased with dots removed. Lets "Junior", "the 3rd", "2nd" map to a valid enum
      * value instead of being dropped, so the DB never sees an out-of-enum suffix.
      */
@@ -63,11 +63,11 @@ class FamilyExcelImporter
     /** @var list<array{sheetRow: ?int, familyNo: string, field: ?string, code: string, message: string, severity: string}> */
     private array $errors = [];
 
-    /** Members whose QR already belongs to a family — added to it on import. */
+    /** Members whose QR already belongs to a family - added to it on import. */
     private array $appends = [];
 
     /**
-     * QRs already in the DB, with the head stored under each — NOT just a name: the review
+     * QRs already in the DB, with the head stored under each - NOT just a name: the review
      * has to check the incoming head IS that person before it can call a group a duplicate.
      *
      * @var array<int, array{headID: int, name: string, record: array<string, string|null>}>
@@ -76,7 +76,7 @@ class FamilyExcelImporter
 
     /**
      * People already on file, keyed by identity (see identityKey()). Catches the person
-     * re-entered under a NEW QR — which the write step silently skips — and the member
+     * re-entered under a NEW QR - which the write step silently skips - and the member
      * re-added to a family that already has them.
      *
      * @var array<string, array{name: string, qr: int, headID: int, isHead: bool}>
@@ -88,7 +88,7 @@ class FamilyExcelImporter
     /**
      * What was actually IN the last validated file: every non-empty person row, and the QR
      * groups they formed. Deliberately separate from the families/members counts, which only
-     * ever describe families the importer could BUILD — a row in a head-less or bad-QR group
+     * ever describe families the importer could BUILD - a row in a head-less or bad-QR group
      * builds nothing, so counting people that way silently hides the very rows with problems.
      */
     private int $rowCount = 0;
@@ -198,7 +198,7 @@ class FamilyExcelImporter
         }
 
         // The column map is carried through so the review can print the EXACT Excel cell
-        // to fix (e.g. "H42") — the operator fixes the file, not a copy of it.
+        // to fix (e.g. "H42") - the operator fixes the file, not a copy of it.
         return ['ok' => true, 'rows' => $rows, 'errors' => $errors, 'columns' => $columnMap];
     }
 
@@ -277,12 +277,12 @@ class FamilyExcelImporter
      * Order matters: the strict regex runs BEFORE the int cast, so "5880.0" (a dot) is
      * rejected instead of silently becoming 5880 and filing a person into a stranger's
      * family. (A purely numeric whole-number cell reads back as that int and is accepted
-     * — 5880.0 and 5880 are the same value in xlsx and cannot be told apart; the regex
+     * - 5880.0 and 5880 are the same value in xlsx and cannot be told apart; the regex
      * only rescues the text-formatted ".0" case, which the template's text column gives.)
      */
     public function validateQr(string $raw): array
     {
-        // Excel error literal (#REF!, #N/A) — poisons helper formulas if trusted.
+        // Excel error literal (#REF!, #N/A) - poisons helper formulas if trusted.
         if (str_starts_with($raw, '#')) {
             return ['ok' => false, 'code' => 'QR-08', 'msg' => 'The QR Number cell holds an Excel error value (like #REF!). Retype the number.'];
         }
@@ -292,7 +292,7 @@ class FamilyExcelImporter
             return ['ok' => false, 'code' => 'QR-12', 'msg' => 'The QR Number cell holds a formula. Type the number itself, not a formula.'];
         }
 
-        // STAGE 2 — normalise: strip NBSP + zero-width, trim. Do NOT strip commas.
+        // STAGE 2 - normalise: strip NBSP + zero-width, trim. Do NOT strip commas.
         $s = str_replace(["\u{00A0}", "\u{200B}"], '', $raw);
         $s = trim($s);
 
@@ -300,20 +300,20 @@ class FamilyExcelImporter
             return ['ok' => false, 'code' => 'QR-01', 'msg' => 'QR Number is required (use the same number for everyone in one family).'];
         }
 
-        // STAGE 3 — strict format. Rejects letters, placeholders, negatives, decimals,
+        // STAGE 3 - strict format. Rejects letters, placeholders, negatives, decimals,
         // integral-float text ("5880.0" has a dot), commas, scientific notation.
         if (! preg_match('/^[0-9]{1,10}$/', $s)) {
-            return ['ok' => false, 'code' => 'QR-FORMAT', 'msg' => 'QR Number "' . $s . '" must be a whole number — no letters, symbols, decimals, or commas.'];
+            return ['ok' => false, 'code' => 'QR-FORMAT', 'msg' => 'QR Number "' . $s . '" must be a whole number - no letters, symbols, decimals, or commas.'];
         }
 
-        // QR-14 — leading zeros are accepted but logged (may signal a card convention).
+        // QR-14 - leading zeros are accepted but logged (may signal a card convention).
         if (strlen($s) > 1 && $s[0] === '0') {
             log_message('warning', 'Import: QR Number had leading zeros: ' . $s);
         }
 
         $qr = (int) $s;
 
-        // STAGE 4 — range.
+        // STAGE 4 - range.
         if ($qr < 1) {
             return ['ok' => false, 'code' => 'QR-05', 'msg' => 'QR Number must be greater than zero.'];
         }
@@ -436,7 +436,7 @@ class FamilyExcelImporter
 
             $headId = (int) ($row['headID'] ?? 0);
 
-            // First match wins — a person filed twice is the DB's problem, not the import's.
+            // First match wins - a person filed twice is the DB's problem, not the import's.
             $index[$key] ??= [
                 'name'   => $this->personName($row),
                 'qr'     => $qrByHead[$headId] ?? 0,
@@ -450,7 +450,7 @@ class FamilyExcelImporter
 
     /**
      * Builds the "add this member to an existing family" entries for a head-less group
-     * whose QR is already on file — the classic "worker forgot a member last batch" case.
+     * whose QR is already on file - the classic "worker forgot a member last batch" case.
      * These are ADDED automatically on import and listed in the review; to skip someone,
      * the operator deletes that row from the spreadsheet and re-uploads.
      *
@@ -472,12 +472,12 @@ class FamilyExcelImporter
             $match = $key !== '' ? ($this->existingPeople[$key] ?? null) : null;
 
             // Already in this very family: the write step skips them (memberExistsUnderHead),
-            // so promising an ADD would be a lie. Don't queue the append — report the truth.
+            // so promising an ADD would be a lie. Don't queue the append - report the truth.
             if ($match !== null && (int) $match['qr'] === (int) $familyNo) {
                 $this->addError((int) $entry['row'], $familyNo, 'DUP-DB', null,
                     ($memberName !== '' ? $memberName : 'This person') . ' is already in family ' . $familyNo
                     . ($headName !== '' ? ' (' . $headName . ')' : '')
-                    . ' — this row will be skipped, nothing is added twice.', 'warning');
+                    . ' - this row will be skipped, nothing is added twice.', 'warning');
 
                 continue;
             }
@@ -501,10 +501,10 @@ class FamilyExcelImporter
      * Builds the review counts from a family set, its errors, and the append list.
      *
      * TWO different populations here, and mixing them up misleads the operator:
-     *   rows / groups     — what is IN THE FILE. Every person row, and every QR group they
+     *   rows / groups - what is IN THE FILE. Every person row, and every QR group they
      *                       form, INCLUDING the broken ones.
      *   families / members / people
-     *                     — only what the importer could BUILD. A head-less group, a group
+     * - only what the importer could BUILD. A head-less group, a group
      *                       with two heads, or a row with an unusable QR builds nothing, so
      *                       its people are absent from these. Never label them as a file
      *                       total: they hide exactly the rows that need attention.
@@ -621,7 +621,7 @@ class FamilyExcelImporter
             }
         }
 
-        // Drop the template's helper column(s) — they hold Excel formulas, not data.
+        // Drop the template's helper column(s) - they hold Excel formulas, not data.
         foreach (['check', 'status', 'validation', 'notes'] as $helper) {
             unset($map[$helper]);
         }
@@ -723,7 +723,7 @@ class FamilyExcelImporter
         $existsInDb       = $existing !== null;
         $existingHeadName = (string) ($existing['name'] ?? '');
 
-        // Family-level coherence (does not early-return — fields are still validated).
+        // Family-level coherence (does not early-return - fields are still validated).
         $this->checkFingerprint($familyNo, $rows);
         $this->checkContiguity($familyNo, $rows);
 
@@ -758,7 +758,7 @@ class FamilyExcelImporter
         $headPayload    = $this->buildPersonPayload($heads[0], $familyNo, true, $sectorByCode, $incomeByLabel);
         $headServiceIds = $this->mapServices($heads[0], $familyNo, $serviceByCode);
 
-        // A QR already on file proves only that SOME family owns it — never that it is this
+        // A QR already on file proves only that SOME family owns it - never that it is this
         // one. Check the incoming head IS the stored head before calling the group a
         // duplicate, otherwise a single mistyped digit reports someone else's family as
         // "already in the system" and the row is written against the wrong household.
@@ -770,7 +770,7 @@ class FamilyExcelImporter
 
         foreach ($members as $memberEntry) {
             $memberPayload = $this->buildPersonPayload($memberEntry, $familyNo, false, $sectorByCode, $incomeByLabel);
-            // Members share the head's address — auto-fill so workers never retype it.
+            // Members share the head's address - auto-fill so workers never retype it.
             $memberPayload['address'] = $headPayload['address'];
 
             $memberPayloads[] = [
@@ -815,7 +815,7 @@ class FamilyExcelImporter
     /**
      * Works out WHO the missing Head probably is, for a family with no Head row.
      *
-     * In the template only the Head fills Address/Barangay — members leave them blank and
+     * In the template only the Head fills Address/Barangay - members leave them blank and
      * inherit the head's. So in a head-less family, the row that carries an address is
      * almost certainly the intended Head (the worker filled it like a head but never set
      * Relationship = Head). Point the error straight at that person. Anchors on the same rule
@@ -846,7 +846,7 @@ class FamilyExcelImporter
                 (int) $candidate['row'],
                 'Family ' . $familyNo . ' has no Head. Row ' . $candidate['row']
                     . ($name !== '' ? ' (' . $name . ')' : '')
-                    . ' is the only person with an address, so they are most likely the Head — set their relationship to Head.',
+                    . ' is the only person with an address, so they are most likely the Head - set their relationship to Head.',
             ];
         }
 
@@ -859,7 +859,7 @@ class FamilyExcelImporter
         }
 
         // Several rows carry an address. If it is the SAME address it is one household
-        // (the worker just repeated it) — the operator only has to pick who the Head is.
+        // (the worker just repeated it) - the operator only has to pick who the Head is.
         // Different addresses mean two households sharing one QR.
         $distinct = [];
 
@@ -873,21 +873,21 @@ class FamilyExcelImporter
             return [
                 (int) $withAddress[0]['row'],
                 'Family ' . $familyNo . ' has no Head. ' . count($withAddress) . ' people carry the same address, '
-                    . 'so this is one household — set exactly one of them as Head.',
+                    . 'so this is one household - set exactly one of them as Head.',
             ];
         }
 
         return [
             (int) $withAddress[0]['row'],
             'Family ' . $familyNo . ' has no Head, and ' . count($distinct) . ' different addresses appear. '
-                . 'This looks like two households sharing one QR — give each household its own QR, then set one Head in each.',
+                . 'This looks like two households sharing one QR - give each household its own QR, then set one Head in each.',
         ];
     }
 
     /**
      * QR-29 / fingerprint: one QR must be one household. Flags a group whose rows carry
      * more than one non-blank barangay or address (the signature of a copy-pasted block
-     * or an off-by-one row shift). Surname is deliberately NOT part of the fingerprint —
+     * or an off-by-one row shift). Surname is deliberately NOT part of the fingerprint -
      * a real household legitimately holds mixed surnames.
      *
      * @param list<array{row: int, data: array<string, string>}> $rows
@@ -912,13 +912,13 @@ class FamilyExcelImporter
 
         if (count($barangays) > 1 || count($addresses) > 1) {
             $this->addError($rows[0]['row'], $familyNo, 'FP-ADDR', 'address',
-                'Family ' . $familyNo . ' has rows with different addresses or barangays. One QR Number must be one household — check for a copied block or a shifted row.');
+                'Family ' . $familyNo . ' has rows with different addresses or barangays. One QR Number must be one household - check for a copied block or a shifted row.');
         }
     }
 
     /**
      * QR-30: a family's rows should sit next to each other. Non-contiguous rows are a
-     * warning (a sort/paste accident) — informational, does not block the import.
+     * warning (a sort/paste accident) - informational, does not block the import.
      *
      * @param list<array{row: int, data: array<string, string>}> $rows
      */
@@ -932,7 +932,7 @@ class FamilyExcelImporter
 
         if (max($nums) - min($nums) + 1 !== count($nums)) {
             $this->addError(min($nums), $familyNo, 'QR-CONTIG', null,
-                'Family ' . $familyNo . ' rows are not next to each other. This can happen after sorting or pasting — check the grouping.', 'warning');
+                'Family ' . $familyNo . ' rows are not next to each other. This can happen after sorting or pasting - check the grouping.', 'warning');
         }
     }
 
@@ -956,7 +956,7 @@ class FamilyExcelImporter
         $this->requireField($row, $familyNo, 'lastname', 'Last name', $lastName);
 
         // Personal-profile fields are required for EVERY person (head and member), mirroring
-        // the Add/Edit family form. Only the head carries Address/Barangay — members inherit
+        // the Add/Edit family form. Only the head carries Address/Barangay - members inherit
         // the head's, so those stay head-only.
         $birthday = $this->validateBirthday($row, $familyNo, (string) ($data['birthday'] ?? ''), true);
         $sex      = $this->validateSex($row, $familyNo, (string) ($data['sex'] ?? ''), true);
@@ -971,7 +971,7 @@ class FamilyExcelImporter
         if ($isHead) {
             $this->requireField($row, $familyNo, 'address', 'Address', (string) ($data['address'] ?? ''));
             $this->requireField($row, $familyNo, 'barangay', 'Barangay', (string) ($data['barangay'] ?? ''));
-            // Barangay has no "Other" option — it must be one of the official barangays
+            // Barangay has no "Other" option - it must be one of the official barangays
             // (tolerant match). A mismatch is a warning: it still imports as typed.
             $this->validateBarangay($row, $familyNo, (string) ($data['barangay'] ?? ''));
         } else {
@@ -1241,7 +1241,7 @@ class FamilyExcelImporter
     }
 
     /**
-     * Maps a name suffix to a valid dropdown value (Jr, Sr, I–V) so the DB enum is always
+     * Maps a name suffix to a valid dropdown value (Jr, Sr, I-V) so the DB enum is always
      * satisfied. Blank stays blank. A trivial cleanup (case / trailing dot) is applied
      * silently; a real change ("Junior" -> "Jr", "the 3rd" -> "III") is coerced with a
      * warning. Anything that maps to nothing is left blank (also enum-safe) with a warning.
@@ -1271,7 +1271,7 @@ class FamilyExcelImporter
         }
 
         $this->addError($row, $familyNo, 'SUFFIX', 'suffix',
-            'Suffix "' . $value . '" is not a valid option (Jr, Sr, I–V) — it will be left blank.', 'warning');
+            'Suffix "' . $value . '" is not a valid option (Jr, Sr, I-V) - it will be left blank.', 'warning');
 
         return null;
     }
@@ -1279,7 +1279,7 @@ class FamilyExcelImporter
     /**
      * Warns when a head's barangay isn't one of the official Biñan barangays. The match is
      * tolerant (case, ñ, dots and the "(...)" alias are ignored) so "Biñan"/"Sto. Tomas"
-     * still pass; only a genuine non-barangay is flagged. Warning — imports as typed.
+     * still pass; only a genuine non-barangay is flagged. Warning - imports as typed.
      */
     private function validateBarangay(int $row, string $familyNo, string $value): void
     {
@@ -1291,13 +1291,13 @@ class FamilyExcelImporter
 
         if (! isset($this->barangayLookup()[$this->normalizeBarangay($value)])) {
             $this->addError($row, $familyNo, 'BRGY', 'barangay',
-                'Barangay "' . $value . '" is not an official Biñan barangay — please check the spelling.', 'warning');
+                'Barangay "' . $value . '" is not an official Biñan barangay - please check the spelling.', 'warning');
         }
     }
 
     /**
      * The 1:1 check behind "Already in the system". An existing QR proves only that SOME
-     * family owns that number — never that it is this one. So compare the incoming head
+     * family owns that number - never that it is this one. So compare the incoming head
      * against the stored head:
      *
      *   same person  -> DUP-EXISTS. A genuine re-upload; the write step skips it. Stored
@@ -1307,7 +1307,7 @@ class FamilyExcelImporter
      *                   neither skips (this head is new to the DB) nor inserts (qr_control
      *                   already owns the number), and the family dies mid-import.
      *
-     * Identity is first + last + birthday — the same test MemberModel::activeHeadExists
+     * Identity is first + last + birthday - the same test MemberModel::activeHeadExists
      * applies at write time, so the review predicts the write exactly.
      */
     private function checkExistingFamily(string $familyNo, array $headEntry, array $headPayload, array $existing): void
@@ -1325,7 +1325,7 @@ class FamilyExcelImporter
             $this->addError($row, $familyNo, 'QR-TAKEN', 'familyno',
                 'QR ' . $familyNo . ' already belongs to ' . $stored . ' in the system, but this row is '
                 . ($incoming !== '' ? $incoming : 'someone else')
-                . '. Check the QR number — if this really is a different family, give it its own QR.');
+                . '. Check the QR number - if this really is a different family, give it its own QR.');
 
             return;
         }
@@ -1338,7 +1338,7 @@ class FamilyExcelImporter
                 'QR ' . $familyNo . ' belongs to ' . $stored . ', whose birthday on file is '
                 . ($storedBirthday !== '' ? $storedBirthday : 'not set') . ', but this row says '
                 . ($fileBirthday !== '' ? $fileBirthday : 'not set')
-                . '. Fix whichever is wrong — as it stands the import cannot save this family.');
+                . '. Fix whichever is wrong - as it stands the import cannot save this family.');
 
             return;
         }
@@ -1353,7 +1353,7 @@ class FamilyExcelImporter
             $this->addError($row, $familyNo, 'DUP-DIFF', null,
                 'Family ' . $familyNo . ' (' . $stored . ') is already in the system, but the file does not match what is stored: '
                 . implode('; ', $differences)
-                . '. Families already on file are SKIPPED, so these changes will NOT be saved — edit the record in Manage Family instead.', 'warning');
+                . '. Families already on file are SKIPPED, so these changes will NOT be saved - edit the record in Manage Family instead.', 'warning');
         }
     }
 
@@ -1386,7 +1386,7 @@ class FamilyExcelImporter
                 continue;
             }
 
-            $differences[] = $label . ' — file has ' . ($file !== '' ? '"' . $file . '"' : '(blank)')
+            $differences[] = $label . ' - file has ' . ($file !== '' ? '"' . $file . '"' : '(blank)')
                 . ', system has ' . ($stored !== '' ? '"' . $stored . '"' : '(blank)');
         }
 
@@ -1397,7 +1397,7 @@ class FamilyExcelImporter
      * Flags people in the batch who are ALREADY on file, matched on the same first + last +
      * birthday the write step uses. This is the gap that hurt most: a head re-entered under
      * a NEW QR reviews perfectly clean, then activeHeadExists silently skips the whole
-     * family — members and all — and the operator is never told.
+     * family - members and all - and the operator is never told.
      *
      * A person matched to the family they are already in is skipped here: that is the
      * DUP-EXISTS re-upload (or the already-a-member append), both reported elsewhere.
@@ -1432,7 +1432,7 @@ class FamilyExcelImporter
                 $this->addError((int) $entry['row'], (string) $qr, 'DUP-DB', null,
                     $match['name'] . ' is already in the system under ' . $where
                     . ($isHead
-                        ? '. A family whose head is already on file is SKIPPED on import — this whole group, members and all, will NOT be saved. Check the QR number, or delete these rows from the file.'
+                        ? '. A family whose head is already on file is SKIPPED on import - this whole group, members and all, will NOT be saved. Check the QR number, or delete these rows from the file.'
                         : '. If this is the same person, delete this row; if it is a different person who happens to share the name and birthday, they will both be kept.'),
                     'warning');
             }
@@ -1461,8 +1461,8 @@ class FamilyExcelImporter
 
     /**
      * Identity for matching a person against the DB: first + last + birthday, folded.
-     * Mirrors MemberModel::activeHeadExists — the very test that decides the write-time
-     * skip — so the review predicts the write instead of guessing. '' when unusable
+     * Mirrors MemberModel::activeHeadExists - the very test that decides the write-time
+     * skip - so the review predicts the write instead of guessing. '' when unusable
      * (a blank name is already reported as REQUIRED; it must not match anything).
      */
     private function identityKey(string $first, string $last, ?string $birthday): string
@@ -1484,7 +1484,7 @@ class FamilyExcelImporter
     }
 
     /**
-     * QR-31 refinement: warns when two rows look like the SAME person — identical first +
+     * QR-31 refinement: warns when two rows look like the SAME person - identical first +
      * middle + last + suffix + birthday AND the same household address (members inherit the
      * head's). Never skipped or blocked, so a genuine coincidence still imports. Only runs
      * per family with exactly one head (address is unambiguous there).

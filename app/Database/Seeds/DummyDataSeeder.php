@@ -20,10 +20,11 @@ class DummyDataSeeder extends Seeder
     private const BATCH_SIZE          = 500;
     private const TRUNCATE_BEFORE_SEED = false;
 
-    // -------------------------------------------------------------------------
-    // Data pools
-    // -------------------------------------------------------------------------
-
+    /**
+     * First of the name, job, education and religion pools the generator draws
+     * from. Filipino surnames and given names, so the seeded data reads like the
+     * real register.
+     */
     private array $lastNames = [
         'Dela Cruz', 'Reyes', 'Santos', 'Garcia', 'Torres', 'Flores', 'Lopez',
         'Gonzales', 'Ramos', 'Mendoza', 'Castro', 'Bautista', 'Aquino', 'Rivera',
@@ -114,10 +115,11 @@ class DummyDataSeeder extends Seeder
     private array $scServices    = [0, 1, 2, 3, 4, 5, 6, 7];
     private array $generalServices = [11, 12, 20, 23, 28, 32];
 
-    // -------------------------------------------------------------------------
-    // Entry point
-    // -------------------------------------------------------------------------
-
+    /**
+     * Builds families until TARGET_COUNT members exist, inserting in BATCH_SIZE
+     * chunks inside one transaction. memberID is assigned by hand from the table's
+     * current AUTO_INCREMENT so a head can reference itself as its own headID.
+     */
     public function run(): void
     {
         if (self::TRUNCATE_BEFORE_SEED) {
@@ -154,7 +156,7 @@ class DummyDataSeeder extends Seeder
             $headSectors = $this->assignHeadSectors($headAge, $headSex);
             $address    = $this->randomAddress();
 
-            // --- Head row ---
+            // The head references itself as its own headID.
             $memberBatch[] = $this->buildMember(
                 id:           $id,
                 headID:       $headID,
@@ -173,7 +175,7 @@ class DummyDataSeeder extends Seeder
             $id++;
             $totalMembers++;
 
-            // --- Family members ---
+            // The rest of the family hangs off that head.
             $spouseAdded  = false;
             $remaining    = $familySize - 1;
 
@@ -235,10 +237,12 @@ class DummyDataSeeder extends Seeder
         }
     }
 
-    // -------------------------------------------------------------------------
-    // Builders
-    // -------------------------------------------------------------------------
-
+    /**
+     * Assembles one member row. Age gates the job and salary, so nobody under 18
+     * carries either. Education is only floored at the bottom of the range: under 7
+     * becomes No Formal Education and under 13 becomes Elementary, while a teenager
+     * still draws at random from the full pool.
+     */
     private function buildMember(
         int    $id,
         int    $headID,
@@ -325,10 +329,12 @@ class DummyDataSeeder extends Seeder
         }
     }
 
-    // -------------------------------------------------------------------------
-    // Sector assignment
-    // -------------------------------------------------------------------------
-
+    /**
+     * Picks a head's sector IDs and returns them in the JSON-array string form the
+     * member.sectorID column stores. Age decides first: 60 and over always lands in
+     * the senior-citizen sectors. Everyone else rolls for PWD (12%) or solo parent
+     * (10%), and most heads end up in no sector at all.
+     */
     private function assignHeadSectors(int $age, string $sex): string
     {
         $sectors = [];
@@ -376,10 +382,13 @@ class DummyDataSeeder extends Seeder
         return '[]';
     }
 
-    // -------------------------------------------------------------------------
-    // Family role logic
-    // -------------------------------------------------------------------------
-
+    /**
+     * Chooses the next non-head member's relationship, sex and age so a family reads
+     * plausibly: a spouse first when the head is old enough, an occasional
+     * grandparent after that, children otherwise.
+     *
+     * @return array{0: string, 1: string, 2: int} relationship, sex, age
+     */
     private function pickFamilyRole(int $headAge, string $headSex, bool $spouseAdded, int $index): array
     {
         $oppositeSex = ($headSex === 'Male') ? 'Female' : 'Male';
@@ -404,10 +413,10 @@ class DummyDataSeeder extends Seeder
         return ['Anak', $childSex, $childAge];
     }
 
-    // -------------------------------------------------------------------------
-    // Helpers
-    // -------------------------------------------------------------------------
-
+    /**
+     * The memberID the next insert would receive. Read from information_schema
+     * because run() assigns IDs itself instead of letting MySQL do it.
+     */
     private function getNextAutoIncrement(): int
     {
         $row = $this->db->query(

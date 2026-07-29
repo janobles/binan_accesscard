@@ -8,7 +8,7 @@ use App\Libraries\Qr\ControlNumber;
  * Shapes Manage Records rows into the server-side DataTables cell map consumed
  * by assets/js/dashboard/family-datatable.js. Pure presentation: the caller
  * (FamilyDataTableController) resolves the route base and the session role and
- * passes them in — this class never reads the request or session. The output
+ * passes them in - this class never reads the request or session. The output
  * HTML and the payload() envelope are frontend contracts.
  */
 class FamilyDataTablePresenter
@@ -23,8 +23,8 @@ class FamilyDataTablePresenter
      * Shapes one member row into the DataTables cell map the client expects
      * (name HTML, sector shortcodes, address, birthday, actions dropdown).
      *
-     * @param array<int, string> $sectorShortcodes
-     * @param array<int, int>    $controlNumbers   [headID => qr_control.control_no]
+     * @param array<int, string> $sectorShortcodes sectorID => display shortcode
+     * @param array<int, int>    $controlNumbers   headID => qr_control.control_no
      */
     public function row(array $row, bool $allMembersScope, array $sectorShortcodes, array $controlNumbers = []): array
     {
@@ -83,7 +83,7 @@ class FamilyDataTablePresenter
     private function qrCell(int $controlNo): string
     {
         if ($controlNo <= 0) {
-            return '<span class="text-muted">&mdash;</span>';
+            return '<span class="text-muted">-</span>';
         }
 
         return esc(ControlNumber::format($controlNo));

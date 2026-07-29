@@ -9,7 +9,7 @@ use App\Support\MemberFieldNormalizer;
 /**
  * Assembles view data for the family Add/Update modal and detail fragment:
  * head prefill values, existing-member rows, and the service/income label
- * maps. Pure assembly from rows the controller fetched — decisions (guards,
+ * maps. Pure assembly from rows the controller fetched - decisions (guards,
  * which record, which view) stay in FamilyController.
  */
 class FamilyModalDataBuilder
@@ -19,7 +19,7 @@ class FamilyModalDataBuilder
      * the Update modal. Splits the stored "address, barangay" back into the two
      * separate inputs via MemberFieldNormalizer::splitAddressBarangay().
      *
-     * @param list<int> $headServiceIds
+     * @param list<int> $headServiceIds the head's currently assigned service IDs
      */
     public function updateData(array $head, array $headServiceIds): array
     {
@@ -52,7 +52,7 @@ class FamilyModalDataBuilder
 
     /**
      * Shapes existing family-member rows for the Update modal so they pre-render
-     * (and re-post) — otherwise update()'s member replace would drop them.
+     * (and re-post) - otherwise update()'s member replace would drop them.
      *
      * @param array<int, list<int>> $serviceIdsByMember
      * @return list<array<string, mixed>>

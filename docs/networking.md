@@ -1,6 +1,6 @@
 # Exposing the app to the internet
 
-Sometimes localhost isn't enough — a field tester on another network needs to hit
+Sometimes localhost isn't enough - a field tester on another network needs to hit
 your machine, or you want to demo the QR scanner from a phone that isn't on your
 Wi-Fi. Two ways to do it, from easiest to most involved.
 
@@ -11,10 +11,10 @@ bounce, and QR links point at `localhost`.
 
 ---
 
-## Option 1 — Cloudflare Quick Tunnel (`trycloudflare`)
+## Option 1 - Cloudflare Quick Tunnel (`trycloudflare`)
 
 Best for: a quick share, a demo, testing on a phone. No router access needed, no
-account, HTTPS for free. The catch: the URL is **random and temporary** — it dies
+account, HTTPS for free. The catch: the URL is **random and temporary** - it dies
 when you Ctrl-C, and you get a new one next time.
 
 You need [`cloudflared`](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/)
@@ -44,7 +44,7 @@ Leave the tunnel running in its own terminal. Share the URL. Done.
 
 ### Windows
 
-Same idea — install `cloudflared` (`winget install --id Cloudflare.cloudflared`
+Same idea - install `cloudflared` (`winget install --id Cloudflare.cloudflared`
 or grab the `.exe`), then in PowerShell:
 
 ```powershell
@@ -56,11 +56,11 @@ Copy the printed `*.trycloudflare.com` URL into `.env`'s `app.baseURL`.
 > **Gotcha:** every restart mints a new URL, so you'll be editing `baseURL` each
 > time. That's the price of the free quick tunnel. If you need a URL that sticks,
 > set up a [named tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/)
-> with a Cloudflare account and your own domain — out of scope here.
+> with a Cloudflare account and your own domain - out of scope here.
 
 ---
 
-## Option 2 — Port forwarding (the "normal" way)
+## Option 2 - Port forwarding (the "normal" way)
 
 Best for: a semi-permanent setup on a network you control (office router, a box
 that stays on). You expose your machine's port through the router so the public
@@ -79,11 +79,11 @@ The shape is the same on both OSes:
 5. **Set `baseURL`** to `http://<your-public-IP>:<port>/`. Find your public IP at
    [ifconfig.me](https://ifconfig.me) or `curl ifconfig.me`.
 
-### macOS — allow the port through the firewall
+### macOS - allow the port through the firewall
 
 macOS's application firewall is per-app, not per-port. Easiest path: when you
 first run `php spark serve` (or Apache), macOS pops "Do you want the application
-`php` to accept incoming connections?" — click **Allow**. To check/re-add:
+`php` to accept incoming connections?" - click **Allow**. To check/re-add:
 
 ```bash
 # List current rules
@@ -94,7 +94,7 @@ sudo /usr/libexec/ApplicationFirewall/socketfilterfw --add /opt/local/bin/php
 sudo /usr/libexec/ApplicationFirewall/socketfilterfw --unblockapp /opt/local/bin/php
 ```
 
-### Windows — open the port in Windows Defender Firewall
+### Windows - open the port in Windows Defender Firewall
 
 ```powershell
 # Run as Administrator. Opens inbound TCP 8090.
@@ -103,7 +103,7 @@ New-NetFirewallRule -DisplayName "Binan AccessCard 8090" `
 ```
 
 For XAMPP/Apache on port 80, swap `8090` for `80` (and expect your ISP may block
-inbound 80 on residential lines — many do).
+inbound 80 on residential lines - many do).
 
 > **Security reality check:** port forwarding puts your dev box on the open
 > internet. Only do it on a network you're allowed to, prefer a high non-standard

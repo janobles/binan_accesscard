@@ -1,13 +1,19 @@
 <?php
-// Self-contained (the layout includes this with no data). Barangay picker comes
-// from the canonical source so filter values always match what headsForCards()
-// compares against. Two modes: Batch (barangay + control-number range, live
-// preview table) and Single card (searchable head or exact control number).
-//
-// Markup follows the house design system: segmented tabs (components/page_tabs
-// style) at the top level, then a standard `card mb-4` per mode with the shared
-// manage-record-table. The tabs must NOT sit inside a flex wrapper such as
-// .records-scroll-panel, or the inline-flex tab track stretches full width.
+/**
+ * QR access card issuing page (Admin > Cards).
+ *
+ * Self-contained: the layout includes it with no data, and the barangay list is read
+ * from FamilyProfilingFormV2 so the filter values always match what headsForCards()
+ * compares against. Two modes share the page: Batch, which takes a barangay and a
+ * control-number range and previews the heads it would print, and Single card, which
+ * takes one searchable head or an exact control number. The PDF is the real output;
+ * the table only previews who lands in it.
+ *
+ * Layout constraint worth knowing before editing: the segmented tabs must not sit
+ * inside a flex wrapper such as .records-scroll-panel, or the inline-flex tab track
+ * stretches to full width.
+ */
+
 helper('ui');
 $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
 ?>
@@ -16,12 +22,12 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
 <ul class="nav nav-pills segmented-tabs mb-3" id="cn-modes" role="tablist">
     <li class="nav-item">
         <button class="nav-link active" type="button" data-mode="batch" aria-current="page">
-            <i class="bi bi-collection" aria-hidden="true"></i> Batch
+            Batch
         </button>
     </li>
     <li class="nav-item">
         <button class="nav-link" type="button" data-mode="single">
-            <i class="bi bi-person-vcard" aria-hidden="true"></i> Single card
+            Single card
         </button>
     </li>
 </ul>
@@ -62,7 +68,20 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
             <span id="cn-batch-status" class="small text-muted" aria-live="polite"></span>
         </div>
 
-        <div class="table-responsive mt-3">
+        <div class="mt-3">
+            <?php /* No page search here: Generate cards prints the whole
+                     barangay + range selection, so a keyword that narrowed only
+                     the preview would misstate what gets printed. */ ?>
+            <?= view('components/table_controls', [
+                'showSearch' => false,
+                'sizeId' => 'cn-per-page',
+                'sizeAction' => null,
+                'perPage' => 25,
+                'perPageOptions' => [10 => '10', 25 => '25', 50 => '50', 100 => '100'],
+            ]) ?>
+        </div>
+
+        <div class="table-responsive">
             <table class="table manage-record-table align-middle w-100 mb-0" id="cn-preview-table">
                 <thead>
                     <tr><th scope="col">Control #</th><th scope="col">Head name</th><th scope="col">Barangay</th></tr>
@@ -74,7 +93,10 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
         </div>
     </div>
     <div class="card-footer small text-muted">
-        <span id="cn-preview-count" aria-live="polite">Loading preview&hellip;</span>
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 w-100">
+            <div class="table-footer-left"><span id="cn-preview-count" aria-live="polite">Loading preview&hellip;</span></div>
+            <div class="table-footer-right" id="cn-preview-paging"></div>
+        </div>
     </div>
 </div>
 
@@ -155,13 +177,20 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
     const bodyEl = document.getElementById('cn-preview-body');
     const batchBtn = document.getElementById('cn-batch-btn');
     const batchStatus = document.getElementById('cn-batch-status');
+    const pagingEl = document.getElementById('cn-preview-paging');
+    const perPageEl = document.getElementById('cn-per-page');
     let debounce;
+    // The preview is paged by the server (admin/cards/heads), so the whole
+    // selection stays available without shipping every row to the browser.
+    let previewPage = 1;
 
     async function refreshPreview() {
         const params = new URLSearchParams({
             barangay: document.getElementById('cn-barangay').value,
             from: document.getElementById('cn-from').value,
             to: document.getElementById('cn-to').value,
+            page: String(previewPage),
+            per_page: perPageEl ? perPageEl.value : '25',
         });
         try {
             const resp = await fetch(headsUrl + '?' + params.toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
@@ -169,37 +198,62 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
             const data = await resp.json();
             const count = data.count || 0;
             const rows = data.rows || [];
+            const page = data.page || 1;
+            const totalPages = data.totalPages || 1;
+            previewPage = page;
+            const perPage = data.perPage || 25;
+            const from = (page - 1) * perPage;
 
             if (count === 0) {
-                countEl.textContent = 'No heads match — adjust filters.';
+                countEl.textContent = 'No heads match. Adjust the filters.';
                 bodyEl.innerHTML = '<tr><td colspan="3" class="text-muted">No heads match the current filters.</td></tr>';
+                pagingEl.textContent = '';
                 batchBtn.disabled = true;
                 return;
             }
             if (count > maxQuantity) {
-                countEl.textContent = count + ' cards match, over the max of ' + maxQuantity + ' per batch. Narrow the filters.';
+                batchStatus.textContent = count + ' cards match, over the max of ' + maxQuantity + ' per batch. Narrow the filters.';
                 batchBtn.disabled = true;
             } else {
-                countEl.textContent = count + (count === 1 ? ' card will be generated.' : ' cards will be generated.');
+                batchStatus.textContent = count + (count === 1 ? ' card will be generated.' : ' cards will be generated.');
                 batchBtn.disabled = false;
             }
-            let html = rows.map((r) =>
+            countEl.textContent = 'Showing ' + (from + 1) + ' to ' + (from + rows.length) + ' of ' + count + ' cards';
+            bodyEl.innerHTML = rows.map((r) =>
                 '<tr><td>' + esc(String(r.controlNo)) + '</td><td>' + esc(r.name) + '</td><td>' + esc(r.barangay) + '</td></tr>'
             ).join('');
-            if (count > rows.length) {
-                html += '<tr><td colspan="3" class="text-muted">…and ' + (count - rows.length) + ' more</td></tr>';
-            }
-            bodyEl.innerHTML = html;
+            // Same footer markup as every other list (table-paginate.js).
+            window.renderTablePaging(pagingEl, page, totalPages);
         } catch (e) {
             countEl.textContent = 'Preview unavailable.';
             bodyEl.innerHTML = '<tr><td colspan="3" class="text-muted">Preview unavailable.</td></tr>';
+            pagingEl.textContent = '';
             batchBtn.disabled = true;
         }
     }
 
+    function reloadFromFirstPage() {
+        previewPage = 1;
+        refreshPreview();
+    }
+
+    pagingEl.addEventListener('click', function (event) {
+        const link = event.target.closest('[data-paginate-page]');
+        event.preventDefault();
+        if (!link || link.closest('.page-item').classList.contains('disabled')) {
+            return;
+        }
+        previewPage = parseInt(link.dataset.paginatePage, 10) || 1;
+        refreshPreview();
+    });
+
+    if (perPageEl) {
+        perPageEl.addEventListener('change', reloadFromFirstPage);
+    }
+
     ['cn-barangay', 'cn-from', 'cn-to'].forEach((id) => {
         document.getElementById(id).addEventListener('input', function () {
-            clearTimeout(debounce); debounce = setTimeout(refreshPreview, 300);
+            clearTimeout(debounce); debounce = setTimeout(reloadFromFirstPage, 300);
         });
     });
     refreshPreview();

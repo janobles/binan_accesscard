@@ -10,7 +10,7 @@ use CodeIgniter\Test\CIUnitTestCase;
  *
  * That list tells the operator their data is CORRECT and will be saved, so a family must
  * only appear on it if the import would really write it. A family that is blocked, already
- * on file (skipped), or being appended to an existing family must never show up as ready —
+ * on file (skipped), or being appended to an existing family must never show up as ready -
  * that would be a promise the import does not keep.
  *
  * @internal
@@ -44,7 +44,7 @@ final class ImportReviewPresenterTest extends CIUnitTestCase
 
     public function testAWarningOnlyFamilyIsReadyAndCarriesItsWarningCount(): void
     {
-        // BRGY / CONTACT / DUP-PERSON etc. import as typed — they must not hide the family.
+        // BRGY / CONTACT / DUP-PERSON etc. import as typed - they must not hide the family.
         $ready = $this->ready(
             [$this->row(3, '6001', 'Head')],
             [$this->error(3, '6001', 'BRGY', 'warning'), $this->error(3, '6001', 'CONTACT', 'warning')],
@@ -79,7 +79,7 @@ final class ImportReviewPresenterTest extends CIUnitTestCase
     public function testAFamilyWhoseMEMBERIsAlreadyOnFileIsStillReady(): void
     {
         // Only a duplicated HEAD skips the family. A duplicated member is inserted as a
-        // second record, so the family still imports — with the warning attached.
+        // second record, so the family still imports - with the warning attached.
         $ready = $this->ready(
             [$this->row(3, '7777', 'Head'), $this->row(4, '7777', 'Child')],
             [$this->error(4, '7777', 'DUP-DB', 'warning')],
@@ -204,7 +204,7 @@ final class ImportReviewPresenterTest extends CIUnitTestCase
     public function testAFamilyWithANonNumericQrIsStillListedToFixWithItsQrIntact(): void
     {
         // "-1", "N/A", "5880.0" etc. reach the review as raw QR text. They must still be
-        // editable — the Edit action carries the QR as data, not a numeric URL segment.
+        // editable - the Edit action carries the QR as data, not a numeric URL segment.
         foreach (['-1', 'N/A', '5880.0'] as $qr) {
             $families = $this->families(
                 [$this->row(3, $qr, 'Head')],
@@ -253,7 +253,7 @@ final class ImportReviewPresenterTest extends CIUnitTestCase
 
     public function testAStructuralErrorHasNoEditableCell(): void
     {
-        // HEAD-NONE carries no field, so it is not an inline cell — it is fixed via the modal.
+        // HEAD-NONE carries no field, so it is not an inline cell - it is fixed via the modal.
         $families = $this->families(
             [$this->row(3, '6001', 'Child'), $this->row(4, '6001', 'Child')],
             [$this->error(3, '6001', 'HEAD-NONE', 'blocking')],   // field => null

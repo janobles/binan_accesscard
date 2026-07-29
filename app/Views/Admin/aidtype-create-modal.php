@@ -1,5 +1,5 @@
 <?php
-/** Add Aid Type modal: single name field, posts to admin/aidtypes/create. */
+/** Add Subsidy Type modal: single name field, posts to admin/aidtypes/create. */
 ?>
 <div class="modal fade" id="addAidTypeModal" tabindex="-1" aria-labelledby="addAidTypeModalLabel" aria-hidden="true">
   <div class="modal-dialog">

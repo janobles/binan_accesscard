@@ -6,7 +6,6 @@ if (! function_exists('family_modal_prepare')) {
      * Bootstrap Family Add modal view.
      *
      * @param array<string, mixed> $data
-     *
      * @return array<string, mixed>
      */
     function family_modal_prepare(array $data): array
@@ -64,12 +63,12 @@ if (! function_exists('family_modal_prepare')) {
         $personFields = [
             ['name' => 'lastname', 'label' => 'Last Name', 'type' => 'text', 'idSuffix' => 'Lastname', 'summary' => 'name-last', 'required' => true],
             ['name' => 'firstname', 'label' => 'First Name', 'type' => 'text', 'idSuffix' => 'Firstname', 'summary' => 'name-first', 'required' => true],
-            ['name' => 'middlename', 'label' => 'Middle Name', 'type' => 'text', 'idSuffix' => 'Middlename', 'summary' => 'name-middle'],
+            ['name' => 'middlename', 'label' => 'Middle Name', 'type' => 'text', 'idSuffix' => 'Middlename', 'summary' => 'name-middle', 'noneToggle' => 'No middle name'],
             ['name' => 'suffix', 'label' => 'Suffix', 'type' => 'select', 'options' => 'suffixOptions', 'idSuffix' => 'Suffix', 'summary' => 'name-suffix'],
-            ['name' => 'birthday', 'label' => 'Date of birth', 'type' => 'date', 'idSuffix' => 'Birthday', 'summary' => 'birthday', 'required' => true, 'max' => date('Y-m-d')],
+            ['name' => 'birthday', 'label' => 'Date of birth', 'type' => 'date', 'idSuffix' => 'Birthday', 'summary' => 'birthday', 'required' => true, 'max' => date('Y-m-d'), 'ageNote' => true],
             ['name' => 'sex', 'label' => 'Sex', 'type' => 'select', 'options' => 'sexOptions', 'idSuffix' => 'Sex', 'summary' => 'sex', 'required' => true],
             ['name' => 'civilstatus', 'label' => 'Civil status', 'type' => 'select', 'options' => 'civilOptions', 'other' => true, 'otherMinlength' => 2, 'otherPattern' => '.*[^\d\s].*', 'idSuffix' => 'CivilStatus', 'summary' => 'civil', 'required' => true],
-            ['name' => 'contactnumber', 'label' => 'Contact number', 'type' => 'tel', 'maxlength' => '30', 'idSuffix' => 'Contact', 'summary' => 'contact'],
+            ['name' => 'contactnumber', 'label' => 'Contact number', 'type' => 'tel', 'maxlength' => '11', 'inputmode' => 'numeric', 'pattern' => '09\d{9}|(049)?\d{7,8}', 'title' => 'Enter an 11-digit mobile number (09XXXXXXXXX) or a Binan landline (7 to 8 digits, optional 049 prefix).', 'idSuffix' => 'Contact', 'summary' => 'contact'],
             ['name' => 'religion', 'label' => 'Religion', 'type' => 'select', 'options' => 'religionOptions', 'other' => true, 'otherMinlength' => 2, 'otherPattern' => '.*[^\d\s].*', 'idSuffix' => 'Religion', 'summary' => 'religion'],
             ['name' => 'education', 'label' => 'Education', 'type' => 'select', 'options' => 'educationOptions', 'other' => true, 'otherMinlength' => 2, 'otherPattern' => '.*[^\d\s].*', 'idSuffix' => 'Education', 'summary' => 'education', 'required' => true],
             ['name' => 'job', 'label' => 'Job', 'type' => 'select', 'options' => 'jobOptions', 'other' => true, 'otherMinlength' => 2, 'otherPattern' => '.*[^\d\s].*', 'idSuffix' => 'Job', 'summary' => 'job', 'required' => true],
@@ -211,9 +210,25 @@ if (! function_exists('family_modal_render_person_fields')) {
                         'required' => $required,
                         'maxlength' => $personField['maxlength'] ?? '',
                         'max' => $personField['max'] ?? '',
+                        'inputmode' => $personField['inputmode'] ?? '',
+                        'pattern' => $personField['pattern'] ?? '',
+                        'title' => $personField['title'] ?? '',
                     ]) ?>>
                 <?php endif; ?>
                 <div class="invalid-feedback"<?= $attrs(['id' => $feedbackId]) ?> data-family-field-error></div>
+                <?php if (! empty($personField['noneToggle'])): ?>
+                    <?php /* Workers type placeholders into blanks (see NO_DATA_TOKENS in
+                             MemberFieldNormalizer), so blank gets an explicit affordance. */ ?>
+                    <div class="form-check mt-1">
+                        <input class="form-check-input" type="checkbox" data-family-no-middlename<?= $attrs(['id' => $id !== '' ? $id . 'None' : '']) ?>>
+                        <label class="form-check-label"<?= $attrs(['for' => $id !== '' ? $id . 'None' : '']) ?>><?= esc((string) $personField['noneToggle']) ?></label>
+                    </div>
+                <?php endif; ?>
+                <?php if (! empty($personField['ageNote'])): ?>
+                    <?php /* A checkbox disabled on age grounds reads as broken unless the age
+                             it was judged on is on screen. manage-family-modal.js fills it. */ ?>
+                    <div class="form-text" data-family-age-note></div>
+                <?php endif; ?>
             </div>
         <?php endforeach;
 

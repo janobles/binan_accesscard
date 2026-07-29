@@ -27,6 +27,12 @@ use CodeIgniter\HTTP\ResponseInterface;
  */
 class QrCardController extends BaseController
 {
+    /**
+     * POST admin/cards/generate: prints a batch of QR access cards (PDF for one
+     * card, ZIP for several) for every active head of family matching the
+     * barangay/control-number filter. Developer/Admin only. Writes one audit
+     * trail row for the whole batch, not one per card.
+     */
     public function batch(): ResponseInterface
     {
         $guard = RoleAccess::requireRole(['Developer', 'Admin']);
@@ -76,8 +82,12 @@ class QrCardController extends BaseController
     /**
      * GET admin/cards/heads. JSON feed for the Control Numbers page: powers both
      * the Batch preview table and the Single-card head autocomplete. Returns the
-     * full match count plus a capped row list, drawn from the same MemberModel
+     * full match count plus one page of rows, drawn from the same MemberModel
      * selection the printed PDF uses so preview and output never diverge.
+     *
+     * The preview pages server-side (page + per_page, matching the standard
+     * footer); the autocomplete (mode=search) always takes the first 15.
+     * Developer/Admin only.
      */
     public function heads(): ResponseInterface
     {
@@ -86,10 +96,18 @@ class QrCardController extends BaseController
             return $guard;
         }
 
-        $mode  = (string) $this->request->getGet('mode');
-        $limit = $mode === 'search' ? 15 : 50;
+        $mode = (string) $this->request->getGet('mode');
 
-        $filter = ['limit' => $limit];
+        if ($mode === 'search') {
+            $perPage = 15;
+            $page    = 1;
+        } else {
+            $perPage = (int) $this->request->getGet('per_page');
+            $perPage = in_array($perPage, [10, 25, 50, 100], true) ? $perPage : 25;
+            $page    = max(1, (int) $this->request->getGet('page'));
+        }
+
+        $filter = ['limit' => $perPage, 'offset' => ($page - 1) * $perPage];
         if (($keyword = trim((string) $this->request->getGet('q'))) !== '') {
             $filter['keyword'] = $keyword;
         }
@@ -104,22 +122,43 @@ class QrCardController extends BaseController
         }
 
         $model = model(MemberModel::class);
-        $rows  = array_map(static fn (array $h): array => [
+        $shape = static fn (array $h): array => [
             'memberID'  => $h['memberID'],
             'controlNo' => $h['controlNo'],
             'name'      => $h['fullname'],
             'barangay'  => $h['barangay'],
-        ], $model->headsForCards($filter));
+        ];
+        $rows = array_map($shape, $model->headsForCards($filter));
 
         $countFilter = $filter;
-        unset($countFilter['limit']);
+        unset($countFilter['limit'], $countFilter['offset']);
+
+        $count = $model->countHeadsForCards($countFilter);
+        $totalPages = max(1, (int) ceil($count / $perPage));
+
+        // A page can fall past the end when the filters narrow the selection;
+        // re-query the last page instead of answering with an empty table.
+        if ($page > $totalPages && $count > 0) {
+            $page = $totalPages;
+            $rows = array_map($shape, $model->headsForCards(
+                ['limit' => $perPage, 'offset' => ($page - 1) * $perPage] + $countFilter
+            ));
+        }
 
         return $this->response->setJSON([
-            'count' => $model->countHeadsForCards($countFilter),
-            'rows'  => $rows,
+            'count'      => $count,
+            'rows'       => $rows,
+            'page'       => $page,
+            'perPage'    => $perPage,
+            'totalPages' => $totalPages,
         ]);
     }
 
+    /**
+     * GET admin/cards/card/{id}: reprints a single head of family's QR access
+     * card as a PDF. Developer/Admin only. Writes an audit trail row for the
+     * reprint.
+     */
     public function card(int $memberID): ResponseInterface
     {
         $guard = RoleAccess::requireRole(['Developer', 'Admin']);

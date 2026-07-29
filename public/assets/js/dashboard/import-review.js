@@ -1,9 +1,9 @@
-// Import Review — a READ-ONLY report.
+// Import Review - a READ-ONLY report.
 //
 // Nothing is edited here. The spreadsheet is the single source of truth: if fixes were
 // applied in the browser the file would still hold the mistakes, and the next person to
 // re-use it would import them again. So this screen's only job is to make fixing the FILE
-// effortless — every issue names the exact Excel cell (e.g. "H42"), the column, what is
+// effortless - every issue names the exact Excel cell (e.g. "H42"), the column, what is
 // there now, and what to do. Fix the file, upload it again.
 //
 // Backend: POST {role}/manage-family/import/review/:id/commit|cancel
@@ -66,7 +66,7 @@
     }
 
     // Dropdown option lists (field => [option strings]) for the columns that are dropdowns in
-    // the Excel template — so an inline cell edit on those offers the same choices as the sheet.
+    // the Excel template - so an inline cell edit on those offers the same choices as the sheet.
     var fieldOptions = (function () {
         var node = document.getElementById('importReviewFieldOptions');
 
@@ -188,13 +188,13 @@
         return group;
     }
 
-    // "Showing A–B of C" + Previous / Page N of M / Next. onGoto(n) navigates to page n.
+    // "Showing A-B of C" + Previous / Page N of M / Next. onGoto(n) navigates to page n.
     function paintPager(footer, state, onGoto) {
         footer.textContent = '';
 
         var row = el('div', 'd-flex flex-wrap justify-content-between align-items-center gap-2 w-100');
         row.appendChild(el('div', 'table-footer-left', state.total
-            ? 'Showing ' + state.from + '–' + state.to + ' of ' + state.total
+            ? 'Showing ' + state.from + '-' + state.to + ' of ' + state.total
             : 'Showing 0 of 0'));
 
         var right = el('div', 'table-footer-right');
@@ -309,7 +309,7 @@
         var existing = Number(counts.existing || 0);
         var ready = Number(counts.ready || 0);
 
-        // These two describe the FILE — every person and every QR group in it, broken ones
+        // These two describe the FILE - every person and every QR group in it, broken ones
         // included. They must never fall back to the families/members counts, which only
         // describe what the importer could BUILD: those omit head-less groups, two-head
         // groups and bad-QR rows, i.e. precisely the people the operator has to go fix.
@@ -327,7 +327,7 @@
     function renderBody(counts) {
         groupsEl.textContent = '';
 
-        // Whole-file problems (unreadable / empty) — nothing to edit; upload a corrected file.
+        // Whole-file problems (unreadable / empty) - nothing to edit; upload a corrected file.
         var notices = review.fileNotices || [];
         if (notices.length) {
             var alert = el('div', 'alert alert-danger');
@@ -336,7 +336,7 @@
             groupsEl.appendChild(alert);
         }
 
-        // Truly nothing to act on and nothing to save — show one clear empty state instead of
+        // Truly nothing to act on and nothing to save - show one clear empty state instead of
         // an empty "Needs a QR" / "Ready" scaffold.
         var hasProblems = notices.length || (review.unassigned || []).length || (review.families || []).length;
         var ready = Number(counts.ready || 0);
@@ -348,26 +348,26 @@
             return;
         }
 
-        // Rows with no QR number can't be grouped into a family — surface them first so the
+        // Rows with no QR number can't be grouped into a family - surface them first so the
         // operator can give them a QR and fix them in place.
         var needsQr = renderNeedsQr();
         if (needsQr) {
             groupsEl.appendChild(needsQr);
         }
 
-        // The flagged families, each with Edit (fix in place), Remove, and — once edited —
+        // The flagged families, each with Edit (fix in place), Remove, and - once edited -
         // a per-family "View changes" button (history lives in a modal, not a global list).
         var families = renderFamiliesToFix();
         if (families) {
             groupsEl.appendChild(families);
         }
 
-        // What is CORRECT and will be saved — behind its own Show button so the screen leads
+        // What is CORRECT and will be saved - behind its own Show button so the screen leads
         // with the problems.
         groupsEl.appendChild(renderReady(counts));
     }
 
-    // Empty state — the file held nothing to fix and nothing new to save.
+    // Empty state - the file held nothing to fix and nothing new to save.
     function renderEmptyState() {
         var card = el('div', 'card mb-3');
         var body = el('div', 'card-body text-center py-5');
@@ -433,7 +433,7 @@
         title.appendChild(document.createTextNode('Needs a QR number'));
         header.appendChild(title);
         header.appendChild(el('small', 'text-muted d-block mt-1',
-            'These rows have no QR, so they are not part of any family yet. Edit to give each a QR — rows with the same QR join one family — or Remove.'));
+            'These rows have no QR, so they are not part of any family yet. Edit to give each a QR - rows with the same QR join one family - or Remove.'));
         card.appendChild(header);
 
         var body = el('div', 'card-body');
@@ -497,8 +497,8 @@
     function renderNeedsQrRow(row) {
         var tr = el('tr');
 
-        tr.appendChild(el('td', 'text-nowrap', row.sheetRow != null ? row.sheetRow : '—'));
-        tr.appendChild(el('td', null, row.person || '—'));
+        tr.appendChild(el('td', 'text-nowrap', row.sheetRow != null ? row.sheetRow : '-'));
+        tr.appendChild(el('td', null, row.person || '-'));
 
         // Editable cells (e.g. the missing QR itself) inline; structural issues as badges.
         tr.appendChild(renderIssueCell(row.editableCells, row.types, null));
@@ -508,7 +508,7 @@
         var edit = el('button', 'btn btn-sm btn-primary me-1 js-import-fix-edit', 'Edit');
         edit.type = 'button';
         edit.dataset.modalUrl = familyBaseUrl + '?row=' + encodeURIComponent(row.sheetRow);
-        edit.dataset.modalTitle = 'Assign a QR — Row ' + (row.sheetRow || '');
+        edit.dataset.modalTitle = 'Assign a QR - Row ' + (row.sheetRow || '');
         actions.appendChild(edit);
 
         var remove = el('button', 'btn btn-sm btn-outline-danger js-import-fix-remove', 'Remove');
@@ -532,7 +532,7 @@
 
         var card = el('div', 'card mb-3 import-review-families');
 
-        // Header — Manage Records style: icon + title + total badge.
+        // Header - Manage Records style: icon + title + total badge.
         var header = el('div', 'card-header');
         var title = el('span', 'fw-semibold');
         var icon = el('i', 'bi bi-tools me-2');
@@ -712,13 +712,13 @@
         bulkRemoveBtn.appendChild(document.createTextNode(n > 0 ? 'Remove selected (' + n + ')' : 'Remove selected'));
     }
 
-    // "Showing A–B of C" + Previous / Page N of M / Next — Manage Records footer markup.
+    // "Showing A-B of C" + Previous / Page N of M / Next - Manage Records footer markup.
     function paintFamilyFooter(footer, state, repaint) {
         footer.textContent = '';
 
         var row = el('div', 'd-flex flex-wrap justify-content-between align-items-center gap-2 w-100');
         row.appendChild(el('div', 'table-footer-left', state.total
-            ? 'Showing ' + state.from + '–' + state.to + ' of ' + state.total
+            ? 'Showing ' + state.from + '-' + state.to + ' of ' + state.total
             : 'Showing 0 of 0'));
 
         var right = el('div', 'table-footer-right');
@@ -844,7 +844,7 @@
             });
         });
 
-        // A previously-picked issue may no longer exist after edits — fall back to "all".
+        // A previously-picked issue may no longer exist after edits - fall back to "all".
         if (familyFilter.code !== 'all' && !seen[familyFilter.code]) {
             familyFilter.code = 'all';
         }
@@ -857,7 +857,7 @@
         });
         leftGroup.appendChild(select);
 
-        // Bulk remove — disabled until at least one family is ticked.
+        // Bulk remove - disabled until at least one family is ticked.
         bulkRemoveBtn = el('button', 'btn btn-sm btn-outline-danger');
         bulkRemoveBtn.type = 'button';
         bulkRemoveBtn.addEventListener('click', bulkRemove);
@@ -942,7 +942,7 @@
         }
         head.appendChild(labelWrap);
 
-        // Name whose cell this is (head / member) instead of a bare Excel ref — the operator
+        // Name whose cell this is (head / member) instead of a bare Excel ref - the operator
         // needs to know WHO to fix. The Excel cell (e.g. "P4") stays reachable on hover.
         var who = cell.person ? (cell.person + ' (' + (cell.role || 'member') + ')') : cell.cell;
         if (who) {
@@ -979,7 +979,7 @@
         control.dataset.field = cell.field;
         control.dataset.original = cell.value || '';
         control.title = cell.message || '';
-        control.setAttribute('aria-label', cell.label + (cell.message ? ' — ' + cell.message : ''));
+        control.setAttribute('aria-label', cell.label + (cell.message ? ' - ' + cell.message : ''));
     }
 
     function buildCellInput(cell) {
@@ -998,7 +998,7 @@
         var select = el('select', 'form-select form-select-sm import-cell-input');
         var current = cell.value || '';
 
-        var blank = el('option', null, '— choose —');
+        var blank = el('option', null, '- choose -');
         blank.value = '';
         select.appendChild(blank);
 
@@ -1026,7 +1026,7 @@
     }
 
     // Persists one inline cell edit (only when its value actually changed), then re-renders from
-    // the fresh, re-validated report — so the stat tiles and issue lists update live.
+    // the fresh, re-validated report - so the stat tiles and issue lists update live.
     function saveCell(input) {
         if (!cellUrl) {
             return;
@@ -1078,12 +1078,12 @@
         selectTd.appendChild(box);
         tr.appendChild(selectTd);
 
-        tr.appendChild(el('td', 'text-nowrap', family.sheetRow != null ? family.sheetRow : '—'));
-        tr.appendChild(el('td', 'text-nowrap fw-semibold', family.qr || '—'));
+        tr.appendChild(el('td', 'text-nowrap', family.sheetRow != null ? family.sheetRow : '-'));
+        tr.appendChild(el('td', 'text-nowrap fw-semibold', family.qr || '-'));
 
-        // Head of family. "Already in system" is not shown here — the Issues column
+        // Head of family. "Already in system" is not shown here - the Issues column
         // already carries that badge, so repeating it beside the name is noise.
-        tr.appendChild(el('td', null, family.head || '—'));
+        tr.appendChild(el('td', null, family.head || '-'));
 
         tr.appendChild(el('td', 'text-nowrap', family.members));
 
@@ -1158,7 +1158,7 @@
         var dialog = el('div', 'import-changes-dialog');
 
         var header = el('div', 'import-changes-header');
-        header.appendChild(el('h5', 'mb-0', 'Changes to family ' + (qr || '—')));
+        header.appendChild(el('h5', 'mb-0', 'Changes to family ' + (qr || '-')));
         var close = el('button', 'btn-close');
         close.type = 'button';
         close.setAttribute('aria-label', 'Close');
@@ -1266,7 +1266,7 @@
         if (!ready.length) {
             var body = el('div', 'card-body');
             body.appendChild(el('p', 'text-muted small mb-0', appends > 0
-                ? 'No NEW families — but ' + appends + ' member(s) will be added to families already in the system (see the list above).'
+                ? 'No NEW families - but ' + appends + ' member(s) will be added to families already in the system (see the list above).'
                 : 'No new families are ready. Every group either has an issue to fix, or is already in the system.'));
             content.appendChild(body);
             card.appendChild(content);
@@ -1359,14 +1359,14 @@
     function renderReadyRow(family) {
         var tr = el('tr');
 
-        tr.appendChild(el('td', 'text-nowrap', family.sheetRow != null ? family.sheetRow : '—'));
-        tr.appendChild(el('td', 'text-nowrap fw-semibold', family.qr || '—'));
-        tr.appendChild(el('td', null, family.head || '—'));
+        tr.appendChild(el('td', 'text-nowrap', family.sheetRow != null ? family.sheetRow : '-'));
+        tr.appendChild(el('td', 'text-nowrap fw-semibold', family.qr || '-'));
+        tr.appendChild(el('td', null, family.head || '-'));
         tr.appendChild(el('td', 'text-nowrap', family.members));
-        tr.appendChild(el('td', 'small', family.barangay || '—'));
-        tr.appendChild(el('td', 'small import-review-addr', family.address || '—'));
+        tr.appendChild(el('td', 'small', family.barangay || '-'));
+        tr.appendChild(el('td', 'small import-review-addr', family.address || '-'));
 
-        // Warning-only families still import — say so plainly instead of leaving a blank.
+        // Warning-only families still import - say so plainly instead of leaving a blank.
         var notes = el('td', 'small');
         if (Number(family.warnings) > 0) {
             notes.appendChild(el('span', 'badge bg-warning text-dark',
@@ -1377,7 +1377,7 @@
         }
 
         // Every ready family gets the same Edit modal as Families-to-fix, so the operator can
-        // tweak any record before committing — warning-only or perfectly clean.
+        // tweak any record before committing - warning-only or perfectly clean.
         if (familyBaseUrl) {
             var edit = el('button', 'btn btn-sm btn-outline-primary ms-2 js-import-fix-edit', 'Edit');
             edit.type = 'button';
@@ -1438,7 +1438,7 @@
 
     // -- actions ---------------------------------------------------------------
 
-    // Recap what the write job will do, then commit only on confirm — the write is not
+    // Recap what the write job will do, then commit only on confirm - the write is not
     // reversible from this screen.
     function confirmImport() {
         var counts = review.counts || {};
@@ -1458,7 +1458,7 @@
             list.appendChild(el('li', null, skipped + ' already in the system (skipped)'));
         }
         if (warnings > 0) {
-            list.appendChild(el('li', null, warnings + ' warning(s) — imported as typed'));
+            list.appendChild(el('li', null, warnings + ' warning(s) - imported as typed'));
         }
         node.appendChild(list);
         node.appendChild(el('p', 'mb-0 text-muted small', 'This cannot be undone from here.'));
@@ -1507,7 +1507,7 @@
     }
 
     // Applies a fresh review report (returned by a save/remove) and re-renders. Also called
-    // by manage-family-modal.js after the Edit modal saves — hence the global handle.
+    // by manage-family-modal.js after the Edit modal saves - hence the global handle.
     function applyReview(freshReview, csrfHash) {
         if (freshReview) {
             review = freshReview;
@@ -1648,7 +1648,7 @@
             }
 
             window.localStorage.setItem(IMPORT_TRACK_KEY, JSON.stringify(list));
-        } catch (e) { /* private mode / quota — the import still runs, just no toast */ }
+        } catch (e) { /* private mode / quota - the import still runs, just no toast */ }
     }
 
     // -- wire up ---------------------------------------------------------------
@@ -1666,7 +1666,7 @@
         }
     });
 
-    // Bulk-remove checkbox ticks + inline cell edits (delegated — rows re-render on repaint).
+    // Bulk-remove checkbox ticks + inline cell edits (delegated - rows re-render on repaint).
     groupsEl.addEventListener('change', function (event) {
         var target = event.target;
 

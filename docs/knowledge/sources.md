@@ -21,7 +21,7 @@ affected cheatsheets and update this file.
 
 ## Context7 (live framework docs)
 
-- CodeIgniter 4: `/codeigniter4/userguide` (latest docs — no version-pinned ID)
+- CodeIgniter 4: `/codeigniter4/userguide` (latest docs - no version-pinned ID)
 - Bootstrap 5.3: `/websites/getbootstrap_5_3` (version-pinned, matches the 5.3.3 vendor copy)
 
 **Caveat: the CodeIgniter Context7 library serves the LATEST docs, not the

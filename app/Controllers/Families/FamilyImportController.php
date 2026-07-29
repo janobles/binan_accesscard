@@ -168,7 +168,7 @@ class FamilyImportController extends BaseController
      * Discards the staging files of this user's earlier, never-committed reviews and marks
      * those jobs terminal, so they can no longer be re-opened or committed.
      *
-     * $keepJobId is the upload that just queued — it is still `pending`, so it is never
+     * $keepJobId is the upload that just queued - it is still `pending`, so it is never
      * returned as a staged review, but it is excluded explicitly all the same.
      */
     private function retirePreviousReviews(JobQueueModel $jobs, int $userId, int $keepJobId): void
@@ -265,7 +265,7 @@ class FamilyImportController extends BaseController
 
     /**
      * GET `{admin|employee}/manage-family/import/review/(:num)`: the full-page Import
-     * Review screen for a staged job — grouped errors the operator fixes inline before
+     * Review screen for a staged job - grouped errors the operator fixes inline before
      * confirming the import.
      */
     public function reviewPage(int $jobId): string|RedirectResponse
@@ -294,7 +294,7 @@ class FamilyImportController extends BaseController
             'fieldOptions' => (new FamilyExcelTemplate())->dropdownOptions(),
             'username'   => (string) (session()->get('username') ?? ''),
             // This page is a standalone shell (not a dashboard layout), so it has to wire
-            // up the idle-timeout logout itself — otherwise sitting on the review screen
+            // up the idle-timeout logout itself - otherwise sitting on the review screen
             // never times out.
             'idleTimeoutSeconds' => (new IdleTimeout())->seconds,
         ]);
@@ -305,7 +305,7 @@ class FamilyImportController extends BaseController
      * staged batch and, only when no blocking issues remain, queues the write job that
      * persists the families. Returns that job's status URL for the progress toast.
      *
-     * Nothing is edited in the browser — the spreadsheet is the source of truth — so this
+     * Nothing is edited in the browser - the spreadsheet is the source of truth - so this
      * only ever confirms or refuses what was uploaded.
      */
     public function reviewCommit(int $jobId)
@@ -508,7 +508,7 @@ class FamilyImportController extends BaseController
      * POST `{admin|employee}/manage-family/import/review/(:num)/family/cell`: patches ONE field
      * of ONE staged row (the review screen's inline cell edit), re-validates the whole batch,
      * re-stages, logs the change, and returns the refreshed report. Structural problems (no
-     * single cell to blame) are not editable this way — they go through reviewFamilySave.
+     * single cell to blame) are not editable this way - they go through reviewFamilySave.
      *
      * POST: import_row (sheet row, int), field (a FIELD_LABELS key), value (the new cell text).
      */
@@ -598,7 +598,7 @@ class FamilyImportController extends BaseController
     /**
      * Reuses Manage Records' QR-uniqueness rule (QrControlModel::takenByOtherHead, with headID 0
      * = "belongs to anyone") so an in-review edit can't assign a QR already owned by a DIFFERENT
-     * family in the system. Enforced only when the QR actually CHANGES to a new whole number — a
+     * family in the system. Enforced only when the QR actually CHANGES to a new whole number - a
      * family keeping its own QR (including a legitimate already-in-system re-upload) is left
      * alone, and non-numeric QRs fall to the importer's format check. Returns the error message,
      * or null when the QR is fine.
@@ -682,8 +682,8 @@ class FamilyImportController extends BaseController
      * logs each removal, re-stages, and returns the refreshed report. Backs the review
      * screen's "Remove selected" action.
      *
-     * @param mixed $familyNos POSTed import_family_nos[] (QR strings) — may be null/non-array
-     * @param mixed $rowsPost  POSTed import_rows[] (blank-QR sheet rows) — may be null/non-array
+     * @param mixed $familyNos POSTed import_family_nos[] (QR strings) - may be null/non-array
+     * @param mixed $rowsPost  POSTed import_rows[] (blank-QR sheet rows) - may be null/non-array
      */
     private function removeManyFamilies(int $jobId, array $bundle, mixed $familyNos, mixed $rowsPost)
     {
@@ -808,7 +808,7 @@ class FamilyImportController extends BaseController
 
     /**
      * The bundle rows belonging to the edit/remove target (a whole QR group `['fno' => qr]`
-     * or a single blank-QR sheet row `['row' => n]`) — the "before" snapshot for the diff.
+     * or a single blank-QR sheet row `['row' => n]`) - the "before" snapshot for the diff.
      *
      * @param array{fno?: string, row?: int} $key
      * @return list<array>

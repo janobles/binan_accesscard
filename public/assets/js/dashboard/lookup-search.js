@@ -1,5 +1,5 @@
 // Client-side "local" quick filter for the Sector / Services / Categories lookup
-// lists — the controls-row "Search:" box. It filters only the rows the server already
+// lists - the controls-row "Search:" box. It filters only the rows the server already
 // rendered on this page by hiding non-matching rows (inline display:none); it does NOT
 // hit the database. The top [method=get] database-search form and the status filter
 // (Filters dropdown panel, wired by records-filter-panel.js) are server-driven
@@ -36,7 +36,7 @@
 
     // Mirrors Manage Records' table filter (manage-family-modal.js filterTableRows):
     // split the keyword into tokens (every token must be present) and match against
-    // row.textContent — which works regardless of the row's current visibility, so
+    // row.textContent - which works regardless of the row's current visibility, so
     // deleting characters correctly re-shows rows. Show/hide via inline display.
     function applyFilter(form) {
         const input = form.querySelector('[data-lookup-search-input]');

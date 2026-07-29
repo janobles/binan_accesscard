@@ -7,7 +7,7 @@ use CodeIgniter\Model;
 /**
  * Aid-type reference lookup (Financial/Rice/Grocery, admin-editable) backing
  * the admin/aidtypes page and the batch-open modal. Isolated from the
- * `services` table: aid types are their own concept, not services/programs.
+ * `services` table: subsidy types are their own concept, not services/programs.
  */
 class AidTypeModel extends Model
 {
@@ -17,7 +17,7 @@ class AidTypeModel extends Model
     protected $allowedFields = ['name', 'dt_deleted'];
     protected $useTimestamps = false;
 
-    /** Non-archived aid types, ordered by name, for the dropdown. */
+    /** Non-archived subsidy types, ordered by name, for the dropdown. */
     public function active(): array
     {
         try {
@@ -41,7 +41,7 @@ class AidTypeModel extends Model
         }
     }
 
-    /** Insert a new aid type; returns the new id (0 on failure or a blank name). */
+    /** Insert a new subsidy type; returns the new id (0 on failure or a blank name). */
     public function create(string $name): int
     {
         $name = trim($name);
@@ -69,10 +69,10 @@ class AidTypeModel extends Model
     }
 
     /**
-     * Delete an aid type only when no distribution references it, checking and
-     * deleting in one transaction to close the check-then-delete race.
-     *
-     * @return int 0 = deleted, -1 = delete failed, >0 = still referenced (count)
+     * Delete a subsidy type only when no distribution references it, checking and
+     * deleting in one transaction to close the check-then-delete race. Returns 0
+     * when the row was deleted, -1 when the delete failed, and the referencing
+     * distribution count when it is still in use.
      */
     public function deleteIfUnused(int $id): int
     {

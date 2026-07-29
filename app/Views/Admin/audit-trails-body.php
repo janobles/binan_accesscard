@@ -1,7 +1,7 @@
 <?php
 /**
  * Audit trails body: dual search bars + audit table.
- * Rendered inside components/card by Admin/audit-trails.php — see that file
+ * Rendered inside components/card by Admin/audit-trails.php - see that file
  * for the variable contract (listRoute, searchTerm, auditAction,
  * auditActionOptions, perPage, perPageOptions, recentAudits,
  * hasSearchFilters, auditClearUrl).
@@ -80,7 +80,7 @@
                         $auditRole = trim((string) ($audit['user_role'] ?? ''));
                         $auditRole = \App\Libraries\RoleAccess::auditRoleLabel($auditRole) ?? $auditRole;
                     ?>
-                    <?php /* The whole row is the detail trigger (js-audit-detail) — audit-detail-modal.js
+                    <?php /* The whole row is the detail trigger (js-audit-detail) - audit-detail-modal.js
                              reads data-full and surfaces the narrative in that modal. */ ?>
                     <tr class="audit-row js-audit-detail" tabindex="0" role="button" aria-label="View audit log details"
                         data-full="<?= esc((string) ($audit['full_description'] ?? ''), 'attr') ?>">
@@ -90,8 +90,8 @@
                         </td>
                         <td><span class="audit-action-pill" title="<?= esc($formatActionLabel((string) ($audit['user_action'] ?? '')), 'attr') ?>"><?= esc($formatActionLabel((string) ($audit['user_action'] ?? ''))) ?></span></td>
                         <td class="audit-desc"><?= esc((string) ($audit['description'] ?? '')) ?></td>
-                        <td class="audit-ua"><?= $auditUa === '' ? '<span class="text-muted">—</span>' : '<span title="' . esc($auditUa, 'attr') . '">' . esc($formatUaShort($auditUa)) . '</span>' ?></td>
-                        <td class="audit-when"><?= $auditTs ? esc(date('M j, Y h:i A', $auditTs)) : '—' ?></td>
+                        <td class="audit-ua"><?= $auditUa === '' ? '<span class="text-muted">-</span>' : '<span title="' . esc($auditUa, 'attr') . '">' . esc($formatUaShort($auditUa)) . '</span>' ?></td>
+                        <td class="audit-when"><?= $auditTs ? esc(date('M j, Y h:i A', $auditTs)) : '-' ?></td>
                     </tr>
                 <?php endforeach; ?>
                 <?php if ($recentAudits === []): ?> 

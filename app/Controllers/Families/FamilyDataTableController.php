@@ -25,7 +25,12 @@ class FamilyDataTableController extends BaseController
 {
     use FamilyRequestContext;
 
-    /** Returns the server-side DataTables payload for Manage Records. */
+    /**
+     * Returns one page of the Manage Records table as a DataTables JSON payload:
+     * search, sort, and paginate either the family heads or the whole database,
+     * depending on the requested scope. Returns a 403 payload instead of HTML
+     * when the viewer lacks family-view access.
+     */
     public function dataTable()
     {
         $presenter = new FamilyDataTablePresenter(

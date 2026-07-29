@@ -8,7 +8,7 @@ use CodeIgniter\Test\CIUnitTestCase;
 /**
  * Unit coverage for the import staging store, with the emphasis on sweep(): it DELETES
  * files holding family PII, so every guard that keeps it from eating a live import is
- * pinned down here. Runs against a throwaway directory — no database, no writable/.
+ * pinned down here. Runs against a throwaway directory - no database, no writable/.
  *
  * @internal
  */

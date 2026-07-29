@@ -12,7 +12,7 @@ use CodeIgniter\HTTP\RedirectResponse;
  * Handles the read-only Viewer workspace (the `viewer/*` routes); the sibling
  * Admin\DashboardController and Employee\DashboardController own the editable
  * dashboards. A Viewer may look at family records, sectors and services but can
- * never add, edit, archive, restore, or delete — those endpoints live under the
+ * never add, edit, archive, restore, or delete - those endpoints live under the
  * admin/employee route groups and reject the Viewer role.
  *
  * Page rendering is delegated to DashboardPageBuilder::renderViewerPage(); this

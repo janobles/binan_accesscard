@@ -1,13 +1,24 @@
 <?php
 /**
  * Account management body: accounts table (the filter toolbar lives in
- * Admin/accounts.php). Rendered inside components/card by Admin/accounts.php —
+ * Admin/accounts.php). Rendered inside components/card by Admin/accounts.php -
  * see that file for the variable contract (accounts, canEditAccounts,
  * isDeveloper, isAdmin).
  */
 use App\Libraries\ViewFormatter;
 ?>
         <?php /* Filter toolbar lives in accounts.php, above this card (Manage Records standard). */ ?>
+        <?= view('components/table_controls', [
+            'searchId' => 'accountsLocalSearch',
+            'searchAria' => 'Search shown accounts',
+            'searchFormAttrs' => 'onsubmit="return false;"',
+            'searchInputAttrs' => 'data-account-page-search',
+            'sizeId' => 'accountsPerPage',
+            'sizeAction' => null,
+            'perPage' => 25,
+            'perPageOptions' => [10 => '10', 25 => '25', 50 => '50', 100 => '100', 0 => 'All'],
+            'sizeAttrs' => 'data-paginate-size="accounts"',
+        ]) ?>
         <div class="table-responsive">
             <table class="table account-table align-middle">
                 <thead>
@@ -36,7 +47,7 @@ use App\Libraries\ViewFormatter;
                         $canAdminToggle = $isAdmin && in_array($rawRole, ['encoder', 'viewer', 'scanner'], true);
                         $hasRowActions = $canEditRow || $canDeveloperToggle || $canAdminToggle;
                         ?>
-                        <tr data-account-row data-account-username="<?= esc(mb_strtolower((string) ($account['username'] ?? '')), 'attr') ?>" data-account-role="<?= esc(mb_strtolower($rawRole), 'attr') ?>" data-account-status="<?= esc($statusFilter, 'attr') ?>">
+                        <tr data-account-row data-paginate-row data-account-username="<?= esc(mb_strtolower((string) ($account['username'] ?? '')), 'attr') ?>" data-account-role="<?= esc(mb_strtolower($rawRole), 'attr') ?>" data-account-status="<?= esc($statusFilter, 'attr') ?>">
                             <td><?= esc((string) ($account['username'] ?? '')) ?></td>
                             <td><?= esc($roleLabel) ?></td>
                             <td><span class="account-status-badge <?= esc($statusClass) ?>"><?= esc($statusLabel) ?></span></td>
@@ -91,7 +102,7 @@ use App\Libraries\ViewFormatter;
                             <td colspan="4" class="account-empty-state">No accounts found.</td>
                         </tr>
                     <?php else: ?>
-                        <tr data-account-filter-empty hidden>
+                        <tr data-account-filter-empty data-paginate-empty hidden>
                             <td colspan="4" class="account-empty-state">No matching accounts found.</td>
                         </tr>
                     <?php endif; ?>

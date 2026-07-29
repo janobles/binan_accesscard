@@ -2,8 +2,8 @@
 /**
  * Per-row Actions dropdown for the Manage Records DataTable. Server-side rendered:
  * returned as the `actions` cell by FamilyController::dataTableActions(). This holds
- * the modal "callers" — the VIEW/UPDATE trigger buttons and the archive/restore
- * confirm form — so they live in the view layer, not the controller. The controller
+ * the modal "callers" - the VIEW/UPDATE trigger buttons and the archive/restore
+ * confirm form - so they live in the view layer, not the controller. The controller
  * passes pre-computed permission flags + URLs; this template only renders markup.
  *
  * Expected vars:

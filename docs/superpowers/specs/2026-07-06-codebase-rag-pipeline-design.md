@@ -1,4 +1,4 @@
-# Codebase RAG Pipeline — Design
+# Codebase RAG Pipeline - Design
 
 **Date:** 2026-07-06
 **Status:** Approved (design)
@@ -15,7 +15,7 @@ know *this repo's* intended patterns. Result: new edits perpetuate the inconsist
 
 Goal: a retrieval layer that grounds any agent's edits in **current framework knowledge** and
 **this repo's intended conventions**, plus a **diagnostic index** that drives cleanup of the
-existing mess — without a runtime service, vector store, or embedding cost.
+existing mess - without a runtime service, vector store, or embedding cost.
 
 ## Non-goals
 
@@ -65,7 +65,7 @@ A **grep index** in SKILL.md maps keywords → file so retrieval is one Grep, no
 
 ### 1. `.mcp.json` (Context7)
 
-Project-scoped, committed. Uses `${CONTEXT7_API_KEY}` env expansion — no secret in git. Key
+Project-scoped, committed. Uses `${CONTEXT7_API_KEY}` env expansion - no secret in git. Key
 lives in the developer's shell env (`~/.zshrc`). Context7 supplies live docs for CodeIgniter4
 and Bootstrap 5, removing the need to hand-curate framework cheatsheets. Keyless mode works
 (rate-limited) as a fallback.
@@ -78,7 +78,7 @@ caveat; SKILL.md instructs agents to cross-check Context7 answers against the pi
 
 ### 2. `docs/knowledge/binan-conventions/*.md`
 
-**Extracted from the best existing code, not invented** — the repo is inconsistent, so each
+**Extracted from the best existing code, not invented** - the repo is inconsistent, so each
 doc names the *canonical* example and contrasts the anti-pattern actually present. Per file:
 
 1. Grep the real code for the pattern.
@@ -86,12 +86,12 @@ doc names the *canonical* example and contrasts the anti-pattern actually presen
 3. Write: **Rule → canonical snippet (path:line) → anti-pattern seen in repo → why.**
 
 Planned files (each ≤ ~150 lines, one concern):
-- `mvc-boundaries.md` — controllers decide / libraries build / `DashboardPageBuilder` owns
+- `mvc-boundaries.md` - controllers decide / libraries build / `DashboardPageBuilder` owns
   view-data assembly.
-- `audit-trail.md` — every family mutation writes `audit_trails` via `AuditTrailsModel`.
-- `routing-subnamespaces.md` — feature-subnamespace routing convention.
-- `models.md` — model responsibilities, query placement.
-- `views-bootstrap.md` — layout shells, component partials, Bootstrap 5 usage.
+- `audit-trail.md` - every family mutation writes `audit_trails` via `AuditTrailsModel`.
+- `routing-subnamespaces.md` - feature-subnamespace routing convention.
+- `models.md` - model responsibilities, query placement.
+- `views-bootstrap.md` - layout shells, component partials, Bootstrap 5 usage.
 
 Every rule cites a real `path:line` so it is verifiable and self-policing.
 
@@ -100,7 +100,7 @@ Every rule cites a real `path:line` so it is verifiable and self-policing.
 Documents the reality found: **Bootstrap 5 + a homegrown adapter** (`public/css/sb-admin-adapter.css`),
 not a stock vendored theme. Captures the intended UI target as an open decision:
 
-**Target theme decided: SB Admin 1** (startbootstrap-sb-admin v7+, Bootstrap 5-based) — chosen
+**Target theme decided: SB Admin 1** (startbootstrap-sb-admin v7+, Bootstrap 5-based) - chosen
 for customizability and alignment with the repo's Bootstrap 5 base. SB Admin 2 rejected (pinned
 to Bootstrap 4.6, fights the BS5 base). The cheatsheet documents SB Admin 1 conventions + the
 migration target for existing non-conforming views.
@@ -116,14 +116,14 @@ Diagnostic punch-list seeded by one audit pass: dead code, non-Bootstrap/SBAdmin
 redundant helpers. Format matches CLAUDE.md's issue convention:
 
 ```
-- [ ] 🟠 Major: `path:line` — description.
-- [ ] ⚪ Cleanup: `path:line` — description.
+- [ ] 🟠 Major: `path:line` - description.
+- [ ] ⚪ Cleanup: `path:line` - description.
 ```
 
 Maintenance: every cleanup PR checks items off (`[x]` + `*(Fixed: ...)*`); any new violation
 spotted mid-task is appended immediately.
 
-**Single punch-list rule:** `violations.md` is the canonical punch-list for code-mess items —
+**Single punch-list rule:** `violations.md` is the canonical punch-list for code-mess items -
 GitHub issues stay for QA/feature work, not code-mess tracking (avoids two drifting lists).
 Issue #7 (deferred CodeRabbit findings) is already closed; the audit pass mines its body for
 any still-unfixed items and seeds them into `violations.md`.
@@ -140,8 +140,8 @@ protocol (including the Context7 version cross-check). Instructs the agent to re
 editing.
 
 **Trigger wording:** skills fire on description matching, not path watching. The description
-must name concrete actions — "editing controllers, models, views, or libraries; adding routes;
-styling pages; writing queries" — not just "edits under `app/`".
+must name concrete actions - "editing controllers, models, views, or libraries; adding routes;
+styling pages; writing queries" - not just "edits under `app/`".
 
 ### 8. `CLAUDE.md` (slimmed)
 
@@ -152,7 +152,7 @@ always-loaded token cost every session while keeping a single source of truth fo
 ### 9. `AGENTS.md` (new, repo root)
 
 Thin stub so non-Claude agents inherit the pipeline. External agents (Cursor/Codex) read
-AGENTS.md but do not execute Claude skills — so the stub **inlines the decision table**
+AGENTS.md but do not execute Claude skills - so the stub **inlines the decision table**
 (~5 lines) rather than only pointing at SKILL.md, otherwise retrieval never happens:
 
 ```
@@ -166,7 +166,7 @@ Before editing app/ code, retrieve:
 Grep index: .claude/skills/binan-conventions/SKILL.md
 ```
 
-No *rule* duplication — rules stay in CLAUDE.md; only the routing table is mirrored.
+No *rule* duplication - rules stay in CLAUDE.md; only the routing table is mirrored.
 
 ## Data flow
 
@@ -193,7 +193,7 @@ Tooling-and-docs change, no runtime surface. Verification is behavioral:
 - Every convention doc's `path:line` cite resolves to real code (grep check).
 - SKILL.md grep index keywords each hit an existing file.
 - CLAUDE.md slimming preserves all non-negotiables (diff review; no rule lost, only relocated).
-- `vendor/bin/phpunit` still green (no app code touched — sanity only).
+- `vendor/bin/phpunit` still green (no app code touched - sanity only).
 
 ## Build order (for the plan)
 
@@ -209,5 +209,5 @@ Tooling-and-docs change, no runtime surface. Verification is behavioral:
 
 ## Open items
 
-- ~~UI target theme (SB Admin 1 vs 2)~~ — **Decided: SB Admin 1.**
+- ~~UI target theme (SB Admin 1 vs 2)~~ - **Decided: SB Admin 1.**
 - Context7 API key rotation (prior key exposed in session transcript).

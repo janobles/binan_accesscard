@@ -1,6 +1,6 @@
 <?php
 /**
- * Aid Types reference body: Add button + aid-type table. Rendered inside
+ * Subsidy Types reference body: Add button + subsidy-type table. Rendered inside
  * components/card by Admin/layout.php's aidtypes block (vars: aidTypes,
  * currentRole). Lifecycle buttons render only for Admin/Developer.
  */
@@ -11,6 +11,18 @@ $canManageAidTypes = in_array($currentRole ?? '', ['Admin', 'Developer'], true);
           <button class="<?= btn('add') ?>" type="button" data-bs-toggle="modal" data-bs-target="#addAidTypeModal"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add Subsidy Type</button>
         </div>
 
+        <?= view('components/table_controls', [
+            'searchId' => 'aidTypesLocalSearch',
+            'searchAria' => 'Search shown subsidy types',
+            'searchFormAttrs' => 'onsubmit="return false;"',
+            'searchInputAttrs' => 'data-paginate-search="aidtypes"',
+            'sizeId' => 'aidTypesPerPage',
+            'sizeAction' => null,
+            'perPage' => 25,
+            'perPageOptions' => [10 => '10', 25 => '25', 50 => '50', 100 => '100', 0 => 'All'],
+            'sizeAttrs' => 'data-paginate-size="aidtypes"',
+        ]) ?>
+
         <div class="table-responsive">
           <table class="table manage-record-table align-middle w-100">
             <thead>
@@ -19,7 +31,7 @@ $canManageAidTypes = in_array($currentRole ?? '', ['Admin', 'Developer'], true);
             <tbody>
               <?php foreach ($aidTypes as $t): ?>
                 <?php $archived = ! empty($t['dt_deleted']); ?>
-                <tr data-row-archived="<?= $archived ? '1' : '0' ?>">
+                <tr data-paginate-row data-row-archived="<?= $archived ? '1' : '0' ?>">
                   <td><span class="sector-name"><?= esc($t['name']) ?></span></td>
                   <td><span class="sector-status-badge <?= $archived ? 'sector-status-archived' : 'sector-status-active' ?>"><?= $archived ? 'Archived' : 'Active' ?></span></td>
                   <td class="text-end">

@@ -2,7 +2,6 @@
 
 use App\Controllers\Accounts\AccountController;
 use App\Controllers\Admin\DashboardController as AdminDashboardController;
-use App\Controllers\Employee\DashboardController as EmployeeDashboardController;
 use App\Controllers\Families\FamilyController;
 use App\Controllers\Lookups\SectorController;
 use App\Controllers\Lookups\ServiceController;
@@ -11,8 +10,8 @@ use PHPUnit\Framework\TestCase;
 /**
  * Guards the feature-subnamespace layout of the backend.
  *
- * Admin/developer dashboard pages live in App\Controllers\Admin\DashboardController,
- * the employee workspace in App\Controllers\Employee\DashboardController,
+ * Every dashboard page lives in App\Controllers\Admin\DashboardController (one
+ * controller for one URL space),
  * authentication in App\Controllers\Auth, family flows in App\Controllers\Families,
  * lookup mutations in App\Controllers\Lookups, and account management in
  * App\Controllers\Accounts. These assertions fail loudly if a controller is moved
@@ -20,25 +19,15 @@ use PHPUnit\Framework\TestCase;
  */
 final class DashboardControllerRoutingTest extends TestCase
 {
-    public function testAdminDashboardExposesExpectedPageActions(): void
+    public function testDashboardExposesExpectedPageActions(): void
     {
         $this->assertPublicMethods(AdminDashboardController::class, [
-            // Admin / Developer pages
-            'index',
             'dashboard',
             'accounts',
             'manageRecords',
             'auditTrails',
             'referenceData',
-        ]);
-    }
-
-    public function testEmployeeDashboardExposesExpectedPageActions(): void
-    {
-        $this->assertPublicMethods(EmployeeDashboardController::class, [
-            'dashboard',
-            'manageRecords',
-            'activity',
+            'cards',
         ]);
     }
 
@@ -46,9 +35,7 @@ final class DashboardControllerRoutingTest extends TestCase
     {
         $this->assertPublicMethods(FamilyController::class, [
             'store',
-            'listFamilies',
             'viewFamily',
-            'editFamily',
             'qrAvailability',
             'update',
             'archive',

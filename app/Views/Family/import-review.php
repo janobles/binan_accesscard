@@ -8,14 +8,12 @@
  * re-upload. Confirm queues the write job.
  *
  * @var int    $jobId
- * @var string $routeBase   records
  * @var string $recordsUrl  Manage Records landing page (the bare route base has no index route)
  * @var array  $review      ImportReviewPresenter::build() output
  * @var string $username
  * @var int    $idleTimeoutSeconds
  */
 $jobId     = (int) ($jobId ?? 0);
-$routeBase = (string) ($routeBase ?? 'records');
 $review    = $review ?? ['file' => '', 'counts' => ['families' => 0, 'members' => 0, 'blocking' => 0, 'warnings' => 0], 'groups' => []];
 $backUrl   = (string) ($recordsUrl ?? site_url('records'));
 $idleTimeoutSeconds = (int) ($idleTimeoutSeconds ?? 900);
@@ -49,10 +47,10 @@ $fieldOptionsJson = json_encode($fieldOptions, JSON_HEX_TAG | JSON_HEX_AMP | JSO
 
 <main class="container-fluid px-4 py-4"
       id="importReview"
-      data-commit-url="<?= esc(site_url($routeBase . '/import/review/' . $jobId . '/commit'), 'attr') ?>"
-      data-cancel-url="<?= esc(site_url($routeBase . '/import/review/' . $jobId . '/cancel'), 'attr') ?>"
-      data-family-base-url="<?= esc(site_url($routeBase . '/import/review/' . $jobId . '/family'), 'attr') ?>"
-      data-cell-url="<?= esc(site_url($routeBase . '/import/review/' . $jobId . '/family/cell'), 'attr') ?>"
+      data-commit-url="<?= esc(site_url('records/import/review/' . $jobId . '/commit'), 'attr') ?>"
+      data-cancel-url="<?= esc(site_url('records/import/review/' . $jobId . '/cancel'), 'attr') ?>"
+      data-family-base-url="<?= esc(site_url('records/import/review/' . $jobId . '/family'), 'attr') ?>"
+      data-cell-url="<?= esc(site_url('records/import/review/' . $jobId . '/family/cell'), 'attr') ?>"
       data-redirect-url="<?= esc($backUrl, 'attr') ?>">
 
     <input type="hidden" id="reviewCsrf" name="<?= csrf_token() ?>" value="<?= csrf_hash() ?>">

@@ -9,7 +9,7 @@ final class FamilyDataTablePresenterTest extends CIUnitTestCase
 {
     public function testPayloadEnvelopeShape(): void
     {
-        $presenter = new FamilyDataTablePresenter('records', 'Admin');
+        $presenter = new FamilyDataTablePresenter('Admin');
         $payload   = $presenter->payload(3, 10, 2, [['x']]);
 
         $this->assertSame(3, $payload['draw']);
@@ -24,7 +24,7 @@ final class FamilyDataTablePresenterTest extends CIUnitTestCase
 
     public function testRowShapesHeadScopeCells(): void
     {
-        $presenter = new FamilyDataTablePresenter('records', 'Viewer');
+        $presenter = new FamilyDataTablePresenter('Viewer');
         // Deliberately mixed-case input: the presenter must render what it is given.
         // Storage is uppercase in practice, but an uppercase fixture here could not tell
         // pass-through apart from re-casing, so it would not catch a reintroduced

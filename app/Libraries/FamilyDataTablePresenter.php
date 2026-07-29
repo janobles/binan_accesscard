@@ -7,17 +7,14 @@ use App\Libraries\Qr\ControlNumber;
 /**
  * Shapes Manage Records rows into the server-side DataTables cell map consumed
  * by assets/js/dashboard/family-datatable.js. Pure presentation: the caller
- * (FamilyDataTableController) resolves the route base and the session role and
- * passes them in - this class never reads the request or session. The output
- * HTML and the payload() envelope are frontend contracts.
+ * (FamilyDataTableController) resolves the session role and passes it in - this
+ * class never reads the request or session. Every record URL is the one flat
+ * `records` path. The output HTML and the payload() envelope are frontend
+ * contracts.
  */
 class FamilyDataTablePresenter
 {
-    public function __construct(
-        private readonly string $routeBase,
-        private readonly string $role,
-    ) {
-    }
+    public function __construct(private readonly string $role) {}
 
     /**
      * Shapes one member row into the DataTables cell map the client expects
@@ -121,8 +118,6 @@ class FamilyDataTablePresenter
             return '';
         }
 
-        $routeBase = $this->routeBase;
-
         // The trigger markup (modal callers + archive/restore form) lives in the
         // view; this class only supplies the permission flags and URLs.
         return view('Family/row-actions', [
@@ -130,9 +125,9 @@ class FamilyDataTablePresenter
             'canEdit'        => $canEdit,
             'canArchive'     => $canArchive,
             'displayName'    => $displayName,
-            'viewUrl'        => $archived ? '' : site_url($routeBase . '/' . $headId . '?partial=1'),
-            'updateUrl'      => (! $archived && $canEdit) ? site_url($routeBase . '/entry?partial=1&mode=update&id=' . $headId) : '',
-            'formAction'     => $canArchive ? site_url($routeBase . '/' . $headId . '/' . ($archived ? 'restore' : 'archive')) : '',
+            'viewUrl'        => $archived ? '' : site_url('records/' . $headId . '?partial=1'),
+            'updateUrl'      => (! $archived && $canEdit) ? site_url('records/entry?partial=1&mode=update&id=' . $headId) : '',
+            'formAction'     => $canArchive ? site_url('records/' . $headId . '/' . ($archived ? 'restore' : 'archive')) : '',
             'actionLabel'    => $archived ? 'Restore' : 'Archive',
             'actionPast'     => $archived ? 'restored' : 'archived',
             'confirmMessage' => $archived

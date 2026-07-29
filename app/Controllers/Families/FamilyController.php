@@ -227,22 +227,6 @@ class FamilyController extends BaseController
     }
 
     /**
-     * GET `records/list`: the "Manage Family" sidebar entry.
-     * The list itself (with search/filter/pagination) is rendered by the manage-records
-     * page, so this redirects to that canonical URL for the caller's role context.
-     */
-    public function listFamilies(): RedirectResponse
-    {
-        $guard = $this->requireFamilyEntryAccess();
-
-        if ($guard instanceof RedirectResponse) {
-            return $guard;
-        }
-
-        return redirect()->to(site_url('records'));
-    }
-
-    /**
      * GET `records/{id}`: returns the read-only family
      * detail fragment for the dashboard modal. Loaded via AJAX with `?partial=1` by
      * manage-family-modal.js; renders `Family/view`.
@@ -284,22 +268,6 @@ class FamilyController extends BaseController
             'headView'    => FamilyRecordPresenter::head($head, $namesFor($headId), $incomeLabels),
             'memberViews' => $memberViews,
         ]);
-    }
-
-    /**
-     * GET `records/edit/{id}`: returns the family record
-     * modal prefilled for editing. Delegates to renderFamilyModal(), the same
-     * Bootstrap modal served by createFamily() in update mode.
-     */
-    public function editFamily(int $headId): string|RedirectResponse
-    {
-        $guard = $this->requireFamilyEntryAccess();
-
-        if ($guard instanceof RedirectResponse) {
-            return $this->partialGuard($guard, 'You do not have permission to edit family records.');
-        }
-
-        return $this->renderFamilyModal('update', $headId);
     }
 
     /**

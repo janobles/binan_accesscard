@@ -91,7 +91,11 @@ $bodyView = $bodyView ?? null;
                 <span id="familyDraftSavedMarker" hidden></span>
             <?php endif; ?>
 
-            <?= view($bodyView, $bodyData ?? []) ?>
+            <?php /* components/card takes its own $bodyView/$bodyData, and CI4 shares
+                     view data between view() calls, so clear this shell's pair on the
+                     way down or every card without an explicit body renders the page
+                     body again. */ ?>
+            <?= view($bodyView, array_merge(['bodyView' => null, 'bodyData' => []], $bodyData ?? [])) ?>
 
             </main>
     </div>

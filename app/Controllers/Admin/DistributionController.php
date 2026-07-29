@@ -11,13 +11,15 @@ use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
 
 /**
- * Admin server: distribution-batch control and the all-distributions log.
- * Admin/Developer only. Batch open binds a subsidy type (from the subsidy
- * reference table) for the whole batch. Every mutation writes an
- * audit_trails row. Rendered in the admin dashboard shell.
+ * Distribution-batch control and the all-distributions log. Who may open the
+ * page is the roleNav filter's decision (Config\Navigation lists Viewer there
+ * too); the batch and void actions below stay Admin/Developer only. Batch open
+ * binds a subsidy type (from the subsidy reference table) for the whole batch.
+ * Every mutation writes an audit_trails row. Rendered in the dashboard shell.
  */
 class DistributionController extends BaseController
 {
+    /** Write guard for the batch/void actions, which are stricter than the page. */
     private function guard(): ?RedirectResponse
     {
         $g = RoleAccess::requireRole(['Admin', 'Developer']);
@@ -30,9 +32,7 @@ class DistributionController extends BaseController
      */
     public function distribution(): ResponseInterface|string
     {
-        if ($g = $this->guard()) { return $g; }
-
-        return (new \App\Libraries\DashboardPageBuilder($this->request))->renderAdminPage('distribution');
+        return (new \App\Libraries\DashboardPageBuilder($this->request))->renderPage('distribution');
     }
 
     /**

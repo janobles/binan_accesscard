@@ -34,8 +34,7 @@ class FamilyDataTableController extends BaseController
     public function dataTable()
     {
         $presenter = new FamilyDataTablePresenter(
-            $this->dataTableRouteBase(),
-            RoleAccess::normalizeRole((string) session()->get('role'))
+            (string) RoleAccess::normalizeRole((string) session()->get('role'))
         );
         $draw = max(0, (int) $this->request->getGet('draw'));
         $guard = $this->requireFamilyViewAccess();
@@ -138,11 +137,5 @@ class FamilyDataTableController extends BaseController
         };
 
         return [$orderKey, $direction];
-    }
-
-    /** Route base for the DataTable action URLs. One flat URI for every role. */
-    private function dataTableRouteBase(): string
-    {
-        return 'records';
     }
 }

@@ -286,7 +286,6 @@ class FamilyImportController extends BaseController
 
         return view('Family/import-review', [
             'jobId'      => $jobId,
-            'routeBase'  => $this->currentRouteBase(),
             'recordsUrl' => $this->recordsUrl(),
             'review'     => (new ImportReviewPresenter())->build($loaded['result']),
             // Dropdown columns (Sex, Barangay, Civil Status, …) so an inline cell edit offers the

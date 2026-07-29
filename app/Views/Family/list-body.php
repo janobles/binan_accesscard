@@ -2,14 +2,14 @@
 /**
  * Family records list body: the AJAX DataTable only. The search/filter toolbar
  * moved to components/records_toolbar (rendered above this card by
- * Family/list.php). Variable contract: routeBase.
+ * Family/list.php). The DataTable endpoint is the flat records/data route.
  */
 ?>
 <div class="table-responsive flex-grow-1 overflow-auto">
     <table
         class="table table-hover align-middle w-100"
         id="familyRecordsTable"
-        data-ajax-url="<?= esc(site_url($routeBase . '/data'), 'attr') ?>"
+        data-ajax-url="<?= esc(site_url('records/data'), 'attr') ?>"
     >
         <thead class="table-light">
         <tr>

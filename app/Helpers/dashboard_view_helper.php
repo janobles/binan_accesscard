@@ -135,8 +135,7 @@ if (! function_exists('family_list_view_data')) {
      *     families: list<array<string, mixed>>,
      *     formatDate: callable,
      *     formatTime: callable,
-     *     keyword: string,
-     *     routeBase: string
+     *     keyword: string
      * }
      */
     function family_list_view_data(array $data): array

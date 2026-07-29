@@ -172,7 +172,6 @@ class DashboardViewData
     {
         $families = self::arrayValue($data['families'] ?? []);
         $keyword = (string) ($data['keyword'] ?? '');
-        $routeBase = (string) ($data['routeBase'] ?? 'records');
         $formatDate = self::formatDateCallback();
         $formatTime = self::formatTimeCallback();
 
@@ -180,8 +179,7 @@ class DashboardViewData
             'families',
             'formatDate',
             'formatTime',
-            'keyword',
-            'routeBase'
+            'keyword'
         );
     }
 

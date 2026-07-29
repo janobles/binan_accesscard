@@ -2,7 +2,7 @@
 /**
  * Distributions log body: client-side filter toolbar + distributions table.
  * Rendered inside components/card by Admin/layout.php's distributions block
- * (vars: distributions). Each row shows the aid type the batch handed out.
+ * (vars: distributions). Each row shows the subsidy type the batch handed out.
  * Filtering/paging handled by the inline script in
  * Admin/layout.php's distributions block.
  */
@@ -13,11 +13,12 @@
             'searchId' => 'distLocalSearch',
             'searchAria' => 'Search shown distributions',
             'searchFormAttrs' => 'onsubmit="return false;"',
-            'searchButtonAttrs' => 'onclick="document.getElementById(\'distLocalSearch\').dispatchEvent(new Event(\'input\'))"',
+            'searchInputAttrs' => 'data-paginate-search="distributions"',
             'sizeId' => 'distPerPage',
             'sizeAction' => null,
             'perPage' => 25,
             'perPageOptions' => [10 => '10', 25 => '25', 50 => '50', 100 => '100', 0 => 'All'],
+            'sizeAttrs' => 'data-paginate-size="distributions"',
         ]) ?>
 
         <div class="table-responsive">
@@ -35,7 +36,7 @@
             </thead>
             <tbody>
               <?php foreach ($distributions as $d): ?>
-                <tr>
+                <tr data-paginate-row>
                   <td><?= esc($d['claim_date']) ?></td>
                   <td><?= esc($d['control_no']) ?></td>
                   <td><span class="sector-name"><?= esc($d['head']) ?></span></td>

@@ -86,7 +86,7 @@ final class FamilyExcelImporterTest extends CIUnitTestCase
     public function testMembersRequireTheSamePersonalFieldsAsTheHead(): void
     {
         // A member missing the personal fields (birthday, sex, civil status, education, job,
-        // monthly income) is now blocking — the same rule the head has, matching the form.
+        // monthly income) is now blocking - the same rule the head has, matching the form.
         $result = $this->importer()->validateAndBuild([
             $this->headRow(3, '6001'),
             $this->memberRow(4, '6001', [
@@ -101,7 +101,7 @@ final class FamilyExcelImporterTest extends CIUnitTestCase
 
     public function testMemberBlankAddressAndBarangayStayAllowed(): void
     {
-        // Address/Barangay remain head-only — a member leaving them blank (inherited) is fine.
+        // Address/Barangay remain head-only - a member leaving them blank (inherited) is fine.
         $result = $this->importer()->validateAndBuild([
             $this->headRow(3, '6001'),
             $this->memberRow(4, '6001', ['address' => '', 'barangay' => '']),
@@ -151,7 +151,7 @@ final class FamilyExcelImporterTest extends CIUnitTestCase
     {
         // The spec's secondary bug: field validation was skipped for rows whose family
         // already failed a family-level check. Here a headless family also has a member
-        // missing a first name — BOTH errors must surface.
+        // missing a first name - BOTH errors must surface.
         $result = $this->importer()->validateAndBuild([
             $this->memberRow(3, '6001', ['firstname' => '']),
             $this->memberRow(4, '6001'),
@@ -189,7 +189,7 @@ final class FamilyExcelImporterTest extends CIUnitTestCase
         ]);
         $this->assertNotContains('BRGY', $this->codes($ok));
 
-        // "Santa Rosa" is a different city — flagged (warning).
+        // "Santa Rosa" is a different city - flagged (warning).
         $bad = $this->importer()->validateAndBuild([
             $this->headRow(3, '6003', ['barangay' => 'Santa Rosa']),
         ]);
@@ -215,7 +215,7 @@ final class FamilyExcelImporterTest extends CIUnitTestCase
 
     public function testSuffixNormalisesDotSilently(): void
     {
-        // "Jr." is just a trailing dot — accepted silently, stored as "Jr".
+        // "Jr." is just a trailing dot - accepted silently, stored as "Jr".
         $ok = $this->importer()->validateAndBuild([
             $this->headRow(3, '6001', ['suffix' => 'Jr.']),
         ]);
@@ -225,7 +225,7 @@ final class FamilyExcelImporterTest extends CIUnitTestCase
 
     public function testSuffixMapsVariantsToDropdownValueWithWarning(): void
     {
-        // "the 3rd" and "Junior" are real changes — coerced to the dropdown value + warned.
+        // "the 3rd" and "Junior" are real changes - coerced to the dropdown value + warned.
         $map = ['the 3rd' => 'III', 'Junior' => 'Jr', '2nd' => 'II'];
 
         foreach ($map as $typed => $expected) {
@@ -239,7 +239,7 @@ final class FamilyExcelImporterTest extends CIUnitTestCase
 
     public function testUnmappableSuffixIsLeftBlank(): void
     {
-        // Genuine junk maps to nothing — left blank (enum-safe) with a warning.
+        // Genuine junk maps to nothing - left blank (enum-safe) with a warning.
         $result = $this->importer()->validateAndBuild([
             $this->headRow(3, '6001', ['suffix' => 'Bogus']),
         ]);
@@ -247,23 +247,38 @@ final class FamilyExcelImporterTest extends CIUnitTestCase
         $this->assertNull($result['families'][0]['headPayload']['suffix']);
     }
 
-    public function testBirthdayRangeWarnsButStillImports(): void
+    public function testFutureBirthdayIsBlockingNotAWarning(): void
     {
-        // In the future, or an age over 150 → flagged (still imports).
-        foreach (['01-01-2050', '05-14-1870'] as $bad) {
-            $result = $this->importer()->validateAndBuild([
-                $this->headRow(3, '6001', ['birthday' => $bad]),
-            ]);
-            $codes = $this->codes($result);
-            $this->assertContains('BDAY-RANGE', $codes, "expected '{$bad}' to warn");
-            $this->assertNotContains('BDAY', $codes); // valid format, just implausible
-            $this->assertSame(1, $result['counts']['families']); // still built/imported
-        }
+        // A future birthday is rejected by MemberModel's not_future_date rule on write, so the
+        // review must block it (BDAY-FUTURE) — not warn — or the whole family silently fails to
+        // import. See FamilyExcelImporter::checkBirthdayRange().
+        $result = $this->importer()->validateAndBuild([
+            $this->headRow(3, '6001', ['birthday' => '01-01-2050']),
+        ]);
+        $future = $this->errorsFor($result, 'BDAY-FUTURE');
+        $this->assertCount(1, $future, 'a future birthday must be flagged BDAY-FUTURE');
+        $this->assertSame('blocking', $future[0]['severity']);
+        $this->assertSame('birthday', $future[0]['field']);
+        $this->assertNotContains('BDAY', $this->codes($result)); // valid format, just future
+    }
 
-        // Plausible ages — including a centenarian (~100) — raise nothing.
+    public function testOver150YearsWarnsButStillImports(): void
+    {
+        // Over 150 years old is stored fine (the DB accepts it), so it stays a warning.
+        $result = $this->importer()->validateAndBuild([
+            $this->headRow(3, '6001', ['birthday' => '05-14-1870']),
+        ]);
+        $range = $this->errorsFor($result, 'BDAY-RANGE');
+        $this->assertCount(1, $range, 'an over-150-year birthday must warn');
+        $this->assertSame('warning', $range[0]['severity']);
+        $this->assertSame(1, $result['counts']['families']); // still built/imported
+
+        // Plausible ages - including a centenarian (~100) - raise nothing.
         foreach (['05-14-1980', '05-14-1926'] as $good) {
             $ok = $this->importer()->validateAndBuild([$this->headRow(3, '6002', ['birthday' => $good])]);
-            $this->assertNotContains('BDAY-RANGE', $this->codes($ok), "expected '{$good}' to pass");
+            $codes = $this->codes($ok);
+            $this->assertNotContains('BDAY-RANGE', $codes, "expected '{$good}' to pass");
+            $this->assertNotContains('BDAY-FUTURE', $codes, "expected '{$good}' to pass");
         }
     }
 
@@ -300,7 +315,7 @@ final class FamilyExcelImporterTest extends CIUnitTestCase
 
     public function testHeadlessFamilyPointsAtTheRowCarryingTheAddress(): void
     {
-        // Only the Head fills Address/Barangay — so the row that has one IS the head.
+        // Only the Head fills Address/Barangay - so the row that has one IS the head.
         $result = $this->importer()->validateAndBuild([
             $this->memberRow(3, '6001', ['firstname' => 'Maria', 'address' => '', 'barangay' => '']),
             $this->memberRow(4, '6001', ['firstname' => 'Juan', 'address' => '12 Rizal St', 'barangay' => 'Poblacion']),
@@ -350,7 +365,7 @@ final class FamilyExcelImporterTest extends CIUnitTestCase
 
     public function testHeadlessFamilyWithTheSameAddressRepeatedIsOneHousehold(): void
     {
-        // The worker repeated the same address on several rows — one household, so the
+        // The worker repeated the same address on several rows - one household, so the
         // operator only has to pick who the Head is (NOT a two-household split).
         $result = $this->importer()->validateAndBuild([
             $this->memberRow(3, '6001', ['address' => '12 Rizal St', 'barangay' => 'Poblacion']),
@@ -438,7 +453,7 @@ final class FamilyExcelImporterTest extends CIUnitTestCase
     public function testExistingQrHeldByADifferentPersonIsBlocked(): void
     {
         // The mistyped-QR case: 6001 is Juan's, but this row is Maria's new family. Left
-        // alone the write step neither skips nor inserts — it dies on the qr_control clash.
+        // alone the write step neither skips nor inserts - it dies on the qr_control clash.
         $result = $this->importer()->validateAndBuild(
             [$this->headRow(3, '6001', ['firstname' => 'Maria', 'lastname' => 'Santos'])],
             $this->existingHead(6001, $this->storedHead()),
@@ -448,15 +463,15 @@ final class FamilyExcelImporterTest extends CIUnitTestCase
 
         $this->assertCount(1, $taken);
         $this->assertSame('blocking', $taken[0]['severity']);
-        $this->assertStringContainsString('Juan Dela Cruz', $taken[0]['message']);
-        $this->assertStringContainsString('Maria Santos', $taken[0]['message']);
+        $this->assertStringContainsString('JUAN DELA CRUZ', $taken[0]['message']);
+        $this->assertStringContainsString('MARIA SANTOS', $taken[0]['message']);
         $this->assertNotContains('DUP-EXISTS', $this->codes($result));
         $this->assertSame(0, $result['counts']['existing']);
     }
 
     public function testExistingQrWithTheSameNameButADifferentBirthdayIsBlocked(): void
     {
-        // activeHeadExists matches on birthday too, so this would NOT be skipped — it would
+        // activeHeadExists matches on birthday too, so this would NOT be skipped - it would
         // be inserted, and then fail on the QR. Block it in review instead.
         $result = $this->importer()->validateAndBuild(
             [$this->headRow(3, '6001', ['birthday' => '06-14-1980'])],
@@ -473,7 +488,7 @@ final class FamilyExcelImporterTest extends CIUnitTestCase
 
     public function testDuplicateFamilyWhoseStoredDetailsDifferIsReported(): void
     {
-        // Same person, same family — but the file carries a newer contact number. The import
+        // Same person, same family - but the file carries a newer contact number. The import
         // SKIPS the family, so that edit would be silently lost. Say so.
         $result = $this->importer()->validateAndBuild(
             [$this->headRow(3, '6001', ['contactnumber' => '09171234567'])],
@@ -494,7 +509,7 @@ final class FamilyExcelImporterTest extends CIUnitTestCase
     public function testHeadAlreadyInTheSystemUnderAnotherQrIsFlagged(): void
     {
         // The silent-skip case: Juan is already a head under QR 6001, and the batch re-enters
-        // him under a brand-new QR 7777. The QR is free, so nothing else catches it — but the
+        // him under a brand-new QR 7777. The QR is free, so nothing else catches it - but the
         // write step skips his whole family and says nothing.
         $result = $this->importer()->validateAndBuild(
             [$this->headRow(3, '7777'), $this->memberRow(4, '7777')],
@@ -548,7 +563,7 @@ final class FamilyExcelImporterTest extends CIUnitTestCase
     {
         // 6 people: one buildable family (2), a head-less group (2), and 2 rows whose QR is
         // unusable. families/members only ever describe what could be BUILT, so they see 2
-        // of these people — the counts the review shows the operator must see all 6, or the
+        // of these people - the counts the review shows the operator must see all 6, or the
         // tile quietly hides exactly the rows that need fixing.
         $result = $this->importer()->validateAndBuild([
             $this->headRow(3, '6001'),
@@ -565,7 +580,7 @@ final class FamilyExcelImporterTest extends CIUnitTestCase
         $this->assertSame(2, $counts['groups']);    // 6001 and 6002 (the bad QRs form none)
         $this->assertSame(1, $counts['families']);  // only 6001 could be built
         $this->assertSame(1, $counts['members']);
-        $this->assertSame(2, $counts['people']);    // buildable only — NOT a file total
+        $this->assertSame(2, $counts['people']);    // buildable only - NOT a file total
     }
 
     public function testBlankRowsAreNotCountedAsPeople(): void
@@ -611,7 +626,7 @@ final class FamilyExcelImporterTest extends CIUnitTestCase
     }
 
     /**
-     * The stored DB record for the default head — taken from what the importer itself would
+     * The stored DB record for the default head - taken from what the importer itself would
      * write, so the fixture can't drift from the real normalisation (name cleaning, birthday
      * to Y-m-d, address+barangay combined).
      *
@@ -625,7 +640,7 @@ final class FamilyExcelImporterTest extends CIUnitTestCase
     }
 
     /**
-     * [qr => stored head] — the shape existingHeadsForRows() returns.
+     * [qr => stored head] - the shape existingHeadsForRows() returns.
      *
      * @param array<string, string|null> $record
      */
@@ -638,7 +653,7 @@ final class FamilyExcelImporterTest extends CIUnitTestCase
         ]];
     }
 
-    /** [identity => person on file] — the shape existingPeopleForRows() returns. */
+    /** [identity => person on file] - the shape existingPeopleForRows() returns. */
     private function existingPerson(string $first, string $last, string $birthday, int $qr, bool $isHead = true): array
     {
         return [mb_strtolower($first) . '|' . mb_strtolower($last) . '|' . $birthday => [
@@ -664,7 +679,7 @@ final class FamilyExcelImporterTest extends CIUnitTestCase
     /**
      * A complete member row by default: members now require the same personal fields as the
      * head (birthday, sex, civil status, education, job, monthly income). Address/Barangay
-     * stay blank — members inherit the head's. Tests that need a gap override the key.
+     * stay blank - members inherit the head's. Tests that need a gap override the key.
      *
      * @param array<string,string> $overrides
      */

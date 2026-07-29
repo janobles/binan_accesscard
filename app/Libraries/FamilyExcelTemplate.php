@@ -22,7 +22,7 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
  *
  * Design: a colored group-banner row (row 1) over the column headers (row 2), required
  * markers, per-column hover tooltips, fixed widths, zebra-striped entry rows, frozen
- * name columns and colored tabs — so the sheet reads like a form, not a raw grid.
+ * name columns and colored tabs - so the sheet reads like a form, not a raw grid.
  *
  * Sectors and services are entered as CODES (comma-separated) in single Sector/Services
  * columns; civil status and education dropdowns carry the form's short codes. The
@@ -71,10 +71,10 @@ class FamilyExcelTemplate
         'Job', 'MonthlyIncome', 'Address', 'Barangay', 'Sector', 'Services',
     ];
 
-    /** Always-required columns (every person) — marked with " *". */
+    /** Always-required columns (every person) - marked with " *". */
     private const ALWAYS_REQUIRED = ['QR Number', 'Relationship', 'FirstName', 'LastName', 'Birthday', 'Sex', 'CivilStatus', 'Education', 'Job', 'MonthlyIncome'];
 
-    /** Columns required only on the Head row (members inherit) — flagged via a header comment. */
+    /** Columns required only on the Head row (members inherit) - flagged via a header comment. */
     private const HEAD_REQUIRED = ['Address', 'Barangay'];
 
     /** Per-column entry widths (display only). */
@@ -93,8 +93,8 @@ class FamilyExcelTemplate
         'ContactNumber' => '11 digits, e.g. 09171234567.',
         'CivilStatus'   => 'Pick a code: S, M, W, H, N.',
         'Education'     => 'Pick a code: E, HS, UG, Voc, CG, PG.',
-        'Address'       => 'Head: full house/street address. Members: leave blank — they use the head\'s address.',
-        'Barangay'      => 'Head: pick the barangay. Members: leave blank — they use the head\'s.',
+        'Address'       => 'Head: full house/street address. Members: leave blank - they use the head\'s address.',
+        'Barangay'      => 'Head: pick the barangay. Members: leave blank - they use the head\'s.',
         'Sector'        => 'WHO they are. Sector code(s), comma-separated: SC, PWD, SP, B, LGBT, OFW, IP, IDP, PDL. Use OTHER if none apply. See Reference.',
         'Services'      => 'Programs RECEIVED. Service code(s), comma-separated (e.g. SC1, FA6, 4PS, EDA5). See Reference.',
     ];
@@ -105,8 +105,8 @@ class FamilyExcelTemplate
         [3, 6, 'NAME', 'DDEBF7'],
         [7, 14, 'PERSONAL DETAILS', 'E2EFDA'],
         [15, 16, 'ADDRESS', 'FCE4D6'],
-        [17, 17, 'SECTOR (who) — codes', 'E4DFEC'],
-        [18, 18, 'SERVICES (programs) — codes', 'E4DFEC'],
+        [17, 17, 'SECTOR (who) - codes', 'E4DFEC'],
+        [18, 18, 'SERVICES (programs) - codes', 'E4DFEC'],
     ];
 
     /** Builds the populated template workbook ready to stream/save. */
@@ -262,7 +262,7 @@ class FamilyExcelTemplate
 
         $lastColumn = $this->columnLetter(count(self::COLUMNS));
         $noteRow = 8;
-        $sheet->setCellValue('A' . $noteRow, 'Examples only — enter real data on the "' . self::DATA_SHEET . '" sheet. One row per person. Name order is Last Name, First Name, Middle Name. Birthday is MM-DD-YYYY. Mark each head of family with Relationship = Head. Put as many families as you like in one file: each family gets its own QR number, shared by its members. Members leave Address and Barangay blank — they automatically use the head\'s address. SECTOR = WHO the person is (SC, PWD, SP, B, LGBT, OFW, IP, IDP, PDL, or OTHER) and SERVICES = the programs they RECEIVED (e.g. SC1, FA6, EDA5, 4PS) — both take CODES separated by commas; see the Reference sheet. " * " marks columns required for EVERY person (incl. Birthday, Sex, Civil Status, Education, Job and Monthly Income); the Head row also needs Address and Barangay.');
+        $sheet->setCellValue('A' . $noteRow, 'Examples only - enter real data on the "' . self::DATA_SHEET . '" sheet. One row per person. Name order is Last Name, First Name, Middle Name. Birthday is MM-DD-YYYY. Mark each head of family with Relationship = Head. Put as many families as you like in one file: each family gets its own QR number, shared by its members. Members leave Address and Barangay blank - they automatically use the head\'s address. SECTOR = WHO the person is (SC, PWD, SP, B, LGBT, OFW, IP, IDP, PDL, or OTHER) and SERVICES = the programs they RECEIVED (e.g. SC1, FA6, EDA5, 4PS) - both take CODES separated by commas; see the Reference sheet. " * " marks columns required for EVERY person (incl. Birthday, Sex, Civil Status, Education, Job and Monthly Income); the Head row also needs Address and Barangay.');
         $sheet->mergeCells('A' . $noteRow . ':' . $lastColumn . $noteRow);
         $sheet->getStyle('A' . $noteRow)->getAlignment()->setWrapText(true)->setVertical(Alignment::VERTICAL_TOP);
         $sheet->getStyle('A' . $noteRow)->getFont()->setBold(true);
@@ -279,7 +279,7 @@ class FamilyExcelTemplate
     /**
      * Adds a helper "Check" column after the data columns: a per-row formula that flags
      * problems live in Excel (duplicate Head, missing Head, missing required fields),
-     * colored red/green by conditional formatting. The importer ignores this column —
+     * colored red/green by conditional formatting. The importer ignores this column -
      * it is convenience feedback only; the server-side import still validates everything.
      */
     private function addCheckColumn(Worksheet $sheet): void
@@ -299,7 +299,7 @@ class FamilyExcelTemplate
         $sheet->setCellValue($headerCell, 'Check');
         $this->styleFlatHeader($sheet, $headerCell . ':' . $headerCell);
         $sheet->getStyle($headerCell)->getAlignment()->setWrapText(true)->setVertical(Alignment::VERTICAL_CENTER);
-        $sheet->getComment($headerCell)->getText()->createTextRun('Automatic check — fix any row that is not "OK" before importing. This column is ignored on import.');
+        $sheet->getComment($headerCell)->getText()->createTextRun('Automatic check - fix any row that is not "OK" before importing. This column is ignored on import.');
         $sheet->getColumnDimension($col)->setWidth(26);
 
         // Per-row validation formula.
@@ -385,11 +385,36 @@ class FamilyExcelTemplate
             ->getAlignment()->setWrapText(true)->setVertical(Alignment::VERTICAL_CENTER);
     }
 
+    /**
+     * The dropdown option lists the data sheet attaches to each column, keyed by the importer's
+     * normalized field. Single source of truth for BOTH the Excel data-validation dropdowns and
+     * the import reviewer's inline <select> cells, so the two always offer the same choices.
+     * Sector/Services are omitted - they are comma-separated code lists, not single dropdowns.
+     *
+     * @return array<string, list<string>>
+     */
+    public function dropdownOptions(): array
+    {
+        $relationships = array_merge(['Head'], (new FamilyFormOptionsModel())->getOptions()['relationships'] ?? []);
+
+        return [
+            'relationship'  => $relationships,
+            'suffix'        => FamilyProfilingFormV2::suffixes(),
+            'sex'           => ['Male', 'Female'],
+            'civilstatus'   => $this->codeNameList(self::CIVIL_STATUS_CODES, FamilyProfilingFormV2::civilStatuses()),
+            'religion'      => FamilyProfilingFormV2::religions(),
+            'education'     => $this->codeNameList(self::EDUCATION_CODES, FamilyProfilingFormV2::educationLevels()),
+            'job'           => FamilyProfilingFormV2::jobOptions(),
+            'monthlyincome' => $this->incomeLabels(),
+            'barangay'      => FamilyProfilingFormV2::barangays(),
+        ];
+    }
+
     // -- low-level helpers -----------------------------------------------------
 
     /**
-     * Writes a header at row 1 and the given values down a column, returning the
-     * absolute range for use as a dropdown source.
+     * Writes a header at row 1 and the given list of values down a column,
+     * returning the absolute range for use as a dropdown source.
      *
      * @param list<string> $values
      */

@@ -1,20 +1,20 @@
-# Scanner Module — Aid Distribution Tracker — Design
+# Scanner Module - Subsidy Distribution Tracker - Design
 
 **Date:** 2026-07-01
 **Branch:** `feat/qr-access-cards`
 **Builds on:** `docs/superpowers/specs/2026-06-29-qr-access-cards-design.md`
-(QR card generation). This spec adds the **scanning / aid-distribution** side.
+(QR card generation). This spec adds the **scanning / subsidy-distribution** side.
 
 Biñan Access Card (CodeIgniter 4, City of Biñan CSWD). A mobile-first module that
-lets **scanner-role** users record government-aid distribution against the paper QR
-control numbers (1–100,000) handed to family heads.
+lets **scanner-role** users record government-subsidy distribution against the paper QR
+control numbers (1-100,000) handed to family heads.
 
 ## Goal
 
 - Give the Scanner module its own sidebar label and shell with tabs.
 - Scan a paper QR (hardware scanner, phone camera, or manual entry) → resolve the
   control number to the family head → show head + member details → show that QR's
-  chronological aid history → log a new aid distribution (date, aid type, claimant).
+  chronological subsidy history → log a new subsidy distribution (date, subsidy type, claimant).
 - **No CI4 migrations.** New tables are hand-written into the SQL dump
   (`accesscardV13.sql`) and imported directly (per supervisor directive: the ban is
   on `php spark migrate` files, not on new tables existing). Code reads/writes them
@@ -22,22 +22,22 @@ control numbers (1–100,000) handed to family heads.
 
 ## Scope
 
-**In scope (this spec):** the scan flow — input, resolve, display, history view,
+**In scope (this spec):** the scan flow - input, resolve, display, history view,
 log a distribution.
 
 **Deferred (later spec):** reports generation, history-log management screens, and
-CRUD of aid types. This spec seeds aid types as fixed rows and only *reads* them.
+CRUD of subsidy types. This spec seeds subsidy types as fixed rows and only *reads* them.
 
 ## Why the old "control_no == memberID" trick does not apply
 
 The QR-card feature (2026-06-29) derived the control number from the head's
 `memberID` (a bijection, no stored mapping). That works when the system *mints* the
-QR. Here the QRs are **pre-printed paper codes 1–100,000** physically handed to
+QR. Here the QRs are **pre-printed paper codes 1-100,000** physically handed to
 families, and an encoder later pairs *whatever code a family holds* to their profile
-in Excel. A control number is therefore an **arbitrary external assignment** —
+in Excel. A control number is therefore an **arbitrary external assignment** -
 control_no 55 is not family #55. This requires an explicit mapping table, and it
 cleanly decouples the control number from `member.memberID` (which is shared by a
-head and its members — the concern raised at kickoff).
+head and its members - the concern raised at kickoff).
 
 ## Data Model
 
@@ -53,7 +53,7 @@ CREATE TABLE `qr_control` (
   PRIMARY KEY (`control_no`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Isolated scanner-module lookup for the aid-type dropdown. Seeded now; CRUD is a
+-- Isolated scanner-module lookup for the subsidy-type dropdown. Seeded now; CRUD is a
 -- later spec. Kept separate from the existing `services` table per supervisor's
 -- isolation directive (scanner role cannot reach the services/lookups tabs).
 CREATE TABLE `aid_type` (
@@ -92,53 +92,53 @@ CREATE TABLE `aid_distribution` (
   `RoleAccess::redirectByRole()` sends a `Scanner` login to `scanner/scan`.
 - **Dedicated mobile-first shell** `app/Views/Scanner/layout.php`, built with
   Bootstrap + SB Admin components only. Sidebar tabs: **Scan** (this spec);
-  **Reports**, **History**, **Aid Types** rendered as disabled/stub links for the
+  **Reports**, **History**, **Subsidy Types** rendered as disabled/stub links for the
   later spec.
 - Scanner-role users see **only** this shell. Admin/Developer additionally get a
   "Scanner" sidebar link into the same module (oversight/testing).
 
-## Scan Flow — `scanner/scan`
+## Scan Flow - `scanner/scan`
 
 Single mobile-first page:
 
-1. **Input** — one auto-focused text field. Accepts:
+1. **Input** - one auto-focused text field. Accepts:
    - **Hardware scanner** (keyboard-wedge): types the number + Enter → submit.
    - **Manual entry**: type the number → submit.
    - **Camera**: "Scan with camera" button opens an html5-qrcode viewfinder; a
      decoded code fills the field and submits.
    All three collapse to a single integer control number.
-2. **Resolve** — `QrControlModel` looks up `control_no` → `headID`. Unknown code →
+2. **Resolve** - `QrControlModel` looks up `control_no` → `headID`. Unknown code →
    inline Bootstrap alert ("QR not registered"), no record shown.
-3. **Display** — read-only panel: family head + members, reusing the field layout
+3. **Display** - read-only panel: family head + members, reusing the field layout
    from the manage-records detail view, laid out in SB Admin cards.
-4. **History** — `aid_distribution` list for this `control_no` (SB Admin list-group
-   / table): date, aid type, claimant name. Empty → "No aid received yet."
-5. **Log distribution** — form:
-   - **claim_date** — date input, defaults to today.
-   - **aid type** — dropdown from `aid_type` (non-archived).
-   - **claimant** — dropdown of the head + each family member.
+4. **History** - `aid_distribution` list for this `control_no` (SB Admin list-group
+   / table): date, subsidy type, claimant name. Empty → "No aid received yet."
+5. **Log distribution** - form:
+   - **claim_date** - date input, defaults to today.
+   - **subsidy type** - dropdown from `aid_type` (non-archived).
+   - **claimant** - dropdown of the head + each family member.
    On submit → insert `aid_distribution` + one `audit_trails` row → history section
    refreshes (AJAX) with the new entry.
 
 ## Backend
 
 **Controller** `App\Controllers\Scanner\ScanController`
-- `scan()` — GET, renders the shell + scan page.
-- `lookup(int $controlNo)` — GET, JSON: `{head, members, history}` or 404 for an
+- `scan()` - GET, renders the shell + scan page.
+- `lookup(int $controlNo)` - GET, JSON: `{head, members, history}` or 404 for an
   unregistered code.
-- `logAid()` — POST: validates control_no / aid_type / claimant / date, inserts an
+- `logAid()` - POST: validates control_no / aid_type / claimant / date, inserts an
   `aid_distribution` row, writes an `audit_trails` entry, returns the refreshed
   history JSON.
 - All actions guarded: `RoleAccess::requireRole(['Scanner','Admin','Developer'])`.
 
 **Models** (`app/Models/Scanner/`)
-- `QrControlModel` — `headForControl(int $controlNo): ?int`, plus a helper to fetch
+- `QrControlModel` - `headForControl(int $controlNo): ?int`, plus a helper to fetch
   head + members for display (delegating to `MemberModel`).
-- `AidDistributionModel` — `historyFor(int $controlNo): array`, `logAid(array)`.
-- `AidTypeModel` — `active(): array` for the dropdown.
+- `AidDistributionModel` - `historyFor(int $controlNo): array`, `logAid(array)`.
+- `AidTypeModel` - `active(): array` for the dropdown.
 - Reuse `MemberModel` (family/member detail) and `Audit\AuditTrailsModel` (trail).
 
-**Routes** — new `scanner` group in `app/Config/Routes.php`:
+**Routes** - new `scanner` group in `app/Config/Routes.php`:
 ```
 scanner/scan                 GET  -> Scanner\ScanController::scan
 scanner/lookup/(:num)        GET  -> Scanner\ScanController::lookup/$1
@@ -147,20 +147,20 @@ scanner/log                  POST -> Scanner\ScanController::logAid
 
 ## Views (Bootstrap + SB Admin only)
 
-- `app/Views/Scanner/layout.php` — mobile-first shell + tab sidebar.
-- `app/Views/Scanner/scan.php` — input, result panel, history, log form.
+- `app/Views/Scanner/layout.php` - mobile-first shell + tab sidebar.
+- `app/Views/Scanner/scan.php` - input, result panel, history, log form.
 - Reuse the manage-records detail field arrangement for the read-only head/member
   display (referenced from `app/Views/Family/family-modal.php`).
 
 ## Custom / Non-Bootstrap Components (flagged per request)
 
-- **html5-qrcode** — a vendored MIT-licensed JS library, the **only** component
+- **html5-qrcode** - a vendored MIT-licensed JS library, the **only** component
   beyond Bootstrap + SB Admin. Required because live phone-camera QR decoding must
   run client-side in the browser; PHP/CI4 runs server-side and cannot access the
   camera (a PHP QR lib only *generates* codes or decodes an *uploaded* image). The
   viewfinder is wrapped in a standard Bootstrap modal/card so the surrounding UI
   stays within the design system.
-- Hardware-scanner and manual entry need **no** library — a plain text input.
+- Hardware-scanner and manual entry need **no** library - a plain text input.
 
 ## Error Handling
 
@@ -173,13 +173,13 @@ scanner/log                  POST -> Scanner\ScanController::logAid
 
 ## Testing (`vendor/bin/phpunit` before and after)
 
-- `QrControlModelTest` — resolve control→head; unknown code → null.
-- `AidDistributionModelTest` — `logAid` inserts; `historyFor` orders chronologically;
+- `QrControlModelTest` - resolve control→head; unknown code → null.
+- `AidDistributionModelTest` - `logAid` inserts; `historyFor` orders chronologically;
   empty history for an unclaimed QR.
-- `AidTypeModelTest` — `active()` excludes archived rows; seeded rows present.
-- `ScanControllerTest` — `lookup` JSON shape + 404; `logAid` inserts + writes audit;
+- `AidTypeModelTest` - `active()` excludes archived rows; seeded rows present.
+- `ScanControllerTest` - `lookup` JSON shape + 404; `logAid` inserts + writes audit;
   role guard rejects non-scanner/admin.
-- `RoleAccess` — `scanner` normalizes to `Scanner`; `redirectByRole` targets
+- `RoleAccess` - `scanner` normalizes to `Scanner`; `redirectByRole` targets
   `scanner/scan`.
 - DB- and ext-dependent tests skip gracefully, consistent with the existing suite.
 
@@ -188,11 +188,11 @@ scanner/log                  POST -> Scanner\ScanController::logAid
 Scanner users see the family head + full member details on a successful scan. This
 is intentional and required to pick the claimant. Access is gated to the Scanner /
 Admin / Developer roles; unregistered codes reveal nothing. (App-wide: the global
-CSRF filter remains commented out — pre-existing posture, flagged for awareness.)
+CSRF filter remains commented out - pre-existing posture, flagged for awareness.)
 
 ## Out of Scope (YAGNI)
 
-- Reports generation, history-management screens, aid-type CRUD (later spec).
+- Reports generation, history-management screens, subsidy-type CRUD (later spec).
 - Editing/voiding a logged distribution.
 - The Excel→`qr_control` data migration tooling (operational, separate task).
 
@@ -212,9 +212,9 @@ CSRF filter remains commented out — pre-existing posture, flagged for awarenes
 
 When this module is built, the implementation summary
 (`docs/superpowers/summary/2026-07-01-scanner-module-summary.md`) must thoroughly
-document **what was added, what was modified, and what is new** — every new file,
+document **what was added, what was modified, and what is new** - every new file,
 every touched existing file (Routes, RoleAccess, dump, sidebar/layout), the seeded
-data, the vendored library, and the test coverage — matching the detail level of the
+data, the vendored library, and the test coverage - matching the detail level of the
 2026-06-29 QR-cards summary.
 
 ---
@@ -225,20 +225,20 @@ After manual e2e testing, the user reversed two earlier decisions:
 
 1. **No standalone mobile-first shell.** The bespoke `Scanner/layout.php` mobile
    shell (navbar + nav-pills) is a consistency violation. The Scanner module must
-   render inside the **dashboard shell** — reusing the same SB-Admin frame as
+   render inside the **dashboard shell** - reusing the same SB-Admin frame as
    `Admin/layout.php` (`#wrapper` sidebar `navbar-nav bg-gradient-primary` +
    `#content-wrapper` topbar + `main.dashboard-content`, same `asset_styles`/
    `asset_scripts` helpers). Only the *content* of the scan tab is simplified for
    scan use. Scanner-role users get a **scanner-only sidebar** (Scan, Manage
-   Distributions) and can never reach admin tabs — the role isolation is a
+   Distributions) and can never reach admin tabs - the role isolation is a
    security boundary.
 
 2. **Scan is read-only; logging is a separate tab.** The scan tab resolves a QR
-   to family head + members + chronological aid history — **read-only, no log
-   form**. Logging an aid distribution moves to its own sidebar tab, the
-   relabeled former "Aid Types" stub → **"Manage Distributions"**. That tab
+   to family head + members + chronological subsidy history - **read-only, no log
+   form**. Logging a subsidy distribution moves to its own sidebar tab, the
+   relabeled former "Subsidy Types" stub → **"Manage Distributions"**. That tab
    captures QR (prefillable from the scan view via `?control_no=`), claimant,
-   date, and aid type, and POSTs to `scanner/log` (unchanged). Aid-type CRUD and
+   date, and subsidy type, and POSTs to `scanner/log` (unchanged). Aid-type CRUD and
    Reports/History remain deferred stubs.
 
 Backend deltas: `ScanController::manage()` (GET `scanner/manage`) renders the log

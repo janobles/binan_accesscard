@@ -86,12 +86,12 @@ class SearchModel
      *
      * Called from App\Libraries\DashboardPageBuilder::buildMemberListData() and
      * Employee\WorkspaceModel::recordListData() when the deep search box (deep_q) is used.
+     *
+     * $orderKey/$orderDirection are an optional, append-only addition for the
+     * server-side DataTables endpoint (FamilyController::dataTable). When $orderKey
+     * is null the original ordering (lastname, firstname ASC) is preserved, so the
+     * deep-search callers are unaffected.
      */
-    //
-    // $orderKey/$orderDirection are an OPTIONAL, append-only addition for the
-    // server-side DataTables endpoint (FamilyController::dataTable). When $orderKey
-    // is null the original ordering (lastname, firstname ASC) is preserved, so the
-    // deep-search callers are unaffected.
     public function allMembers(string $keyword = '', array $filters = [], int $limit = 50, int $offset = 0, ?string $orderKey = null, string $orderDirection = 'asc'): array
     {
         if (! $this->db->tableExists('member')) {
@@ -260,10 +260,8 @@ class SearchModel
      * page's row set and its total always match. Applies (in order): the optional
      * per-user scope, the Developer-visibility guard (admin views only), the
      * keyword search, and the action/date filters. Ordering/limit/offset are added
-     * by the callers.
-     *
-     * @param int|null $userId When set, scopes to that user's own rows (employee
-     *                         Activity) — the Developer guard is then skipped.
+     * by the callers. Passing a $userId scopes the query to that user's own rows
+     * (the employee Activity page); the Developer guard is then skipped.
      */
     private function auditSearchBuilder(string $keyword, array $filters, bool $includeDeveloper, ?int $userId = null): BaseBuilder
     {
@@ -468,7 +466,7 @@ class SearchModel
             && $this->db->tableExists('member');
     }
 
-    // Service/program IDs whose name or category matches the keyword (for deep search).
+    /** Service/program IDs whose name or category matches the keyword (for deep search). */
     private function serviceIdsForKeyword(string $keyword): array
     {
         if (! $this->db->tableExists('services')) {
@@ -488,7 +486,7 @@ class SearchModel
         );
     }
 
-    // Member IDs assigned any service matching the keyword (services -> member_services).
+    /** Member IDs assigned any service matching the keyword (services -> member_services). */
     private function memberIdsForServiceKeyword(string $keyword): array
     {
         $serviceIds = $this->serviceIdsForKeyword($keyword);
@@ -507,8 +505,10 @@ class SearchModel
         )));
     }
 
-    // Adds a comma-separated 'service_name' to each deep-search row, reusing the
-    // member_services junction (MemberServiceModel) and the services name map (ServiceModel).
+    /**
+     * Adds a comma-separated 'service_name' to each deep-search row, reusing the
+     * member_services junction (MemberServiceModel) and the services name map (ServiceModel).
+     */
     private function withServiceNames(array $rows): array
     {
         if ($rows === [] || ! $this->db->tableExists('member_services')) {

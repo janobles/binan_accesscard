@@ -16,11 +16,11 @@ use CodeIgniter\HTTP\ResponseInterface;
 
 /**
  * Scanner module: resolve a paper QR control number to a family, show its aid
- * history, and log a new aid distribution. Scanner/Admin/Developer only.
+ * history, and log a new subsidy distribution. Scanner/Admin/Developer only.
  *
  * The kiosk (scan + performance) renders in the kiosk shell
  * (Scanner/kiosk-layout): no sidebar/topbar, one slim header with the live
- * personal counter. The aid type comes from the active distribution batch
+ * personal counter. The subsidy type comes from the active distribution batch
  * (set by an admin when the batch is opened).
  *
  * - scan():        GET  scanner/scan        -> one-action scan UI; empty state when no batch is open.
@@ -32,7 +32,7 @@ use CodeIgniter\HTTP\ResponseInterface;
  */
 class ScanController extends BaseController
 {
-    /** GET scanner/scan — kiosk lookup UI. Aid type comes from the active batch. */
+    /** GET scanner/scan - kiosk lookup UI. Subsidy type comes from the active batch. */
     public function scan(): ResponseInterface|string
     {
         $guard = RoleAccess::requireRole(['Scanner', 'Admin', 'Developer']);
@@ -52,7 +52,7 @@ class ScanController extends BaseController
             'aidType'      => $activeBatch !== null
                 ? [
                     'subsidy_type_id' => (int) $activeBatch['subsidy_type_id'],
-                    'name'            => (string) ($activeBatch['aid_type_name'] ?? 'Aid'),
+                    'name'            => (string) ($activeBatch['aid_type_name'] ?? 'Subsidy'),
                 ]
                 : null,
             'myBatchCount' => $activeBatch !== null
@@ -61,7 +61,7 @@ class ScanController extends BaseController
         ]);
     }
 
-    /** GET scanner/performance — this kiosk's own live metrics. */
+    /** GET scanner/performance - this kiosk's own live metrics. */
     public function performance(): ResponseInterface|string
     {
         $guard = RoleAccess::requireRole(['Scanner', 'Admin', 'Developer']);
@@ -137,7 +137,7 @@ class ScanController extends BaseController
         ];
     }
 
-    /** GET scanner/stats — JSON own-performance snapshot for kiosk polling. */
+    /** GET scanner/stats - JSON own-performance snapshot for kiosk polling. */
     public function stats(): ResponseInterface
     {
         $guard = RoleAccess::requireRole(['Scanner', 'Admin', 'Developer']);
@@ -169,7 +169,7 @@ class ScanController extends BaseController
     }
 
     /**
-     * POST scanner/log — the whole scan in one action. Resolves the control
+     * POST scanner/log - the whole scan in one action. Resolves the control
      * number to a family, refuses when the family was already logged in the
      * open batch (Duplicate Entry), otherwise inserts a distribution for the
      * family HEAD dated today and audits it. The response always carries the
@@ -214,7 +214,7 @@ class ScanController extends BaseController
             'qr_code_image' => (new \App\Libraries\Qr\QrImageGenerator())->dataUri(
                 config('QrCardSettings')->qrUrlPrefix . \App\Libraries\Qr\ControlNumber::format($controlNo)
             ),
-            'aid_type_name' => (string) ($activeBatch['aid_type_name'] ?? 'Aid'),
+            'aid_type_name' => (string) ($activeBatch['aid_type_name'] ?? 'Subsidy'),
             'head'          => [
                 'memberID'  => (int) $head['memberID'],
                 'firstname' => (string) ($head['firstname'] ?? ''),

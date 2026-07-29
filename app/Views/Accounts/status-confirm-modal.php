@@ -1,7 +1,14 @@
-<?php /* Confirmation modal for enabling/disabling an account on the Account
-         Management page. Populated and shown by view-interactions.js, which reads
-         the clicked .js-account-status-form's data-confirm-message (same wording as
-         the old native dialog) and re-submits that form on confirm. */ ?>
+<?php
+/**
+ * Confirmation modal for enabling or disabling an account, included once by
+ * Admin/layout.php for the Account Management page (Admin > Accounts).
+ *
+ * Populated and shown by view-interactions.js, which reads the clicked
+ * .js-account-status-form's data-confirm-message and re-submits that form on
+ * confirm. The message is per-form rather than fixed here, so one modal serves both
+ * the enable and the disable wording.
+ */
+?>
 <div class="modal fade" id="accountStatusModal" tabindex="-1" aria-labelledby="accountStatusModalLabel" aria-hidden="true">
 	<div class="modal-dialog modal-dialog-centered">
 		<div class="modal-content">

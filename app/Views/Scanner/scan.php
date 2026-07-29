@@ -1,3 +1,13 @@
+<?php
+/**
+ * Scan page (Scanner kiosk > Scan), the screen the distribution kiosk sits on.
+ *
+ * Refuses to scan at all when no distribution batch is open, because a scan with no
+ * batch to record against has nowhere to go. Built for a keyboard-wedge scanner gun
+ * rather than a mouse: the input stays focused and a scan completes in one action, so
+ * anything added here that steals focus breaks the whole flow.
+ */
+?>
 <?= $this->extend('Scanner/kiosk-layout') ?>
 <?= $this->section('content') ?>
 
@@ -49,10 +59,10 @@
     <div class="col-lg-7">
       <div class="card border-0 rounded-3 mb-3 bg-white py-4 px-4">
         <div class="card-body d-flex flex-row align-items-center">
-          <img id="qrImage" src="" alt="QR Code" class="rounded-3 shadow-sm border bg-white me-5" style="width: 240px; height: 240px; object-fit: contain; image-rendering: pixelated; display: none;">
+          <img id="qrImage" src="" alt="QR Code" class="rounded-3 shadow-sm border bg-white me-5">
           <div class="flex-grow-1 text-center">
             <div class="text-muted text-uppercase fw-bold mb-2 fs-4">Scanned QR Code</div>
-            <div id="qrHeadline" class="fw-bold text-primary mb-0" style="font-size: 6rem; line-height: 1;"></div>
+            <div id="qrHeadline" class="fw-bold text-primary mb-0"></div>
           </div>
         </div>
       </div>
@@ -140,7 +150,7 @@ function renderFamily(data) {
     $('membersList').innerHTML = data.members
       .map(m => `<li class="list-group-item">
           <div>${esc(m.firstname)} ${esc(m.lastname)} <span class="text-muted">(${esc(m.relationship || 'Member')})</span></div>
-          <div class="small text-muted">${esc(m.sex || '—')} · ${esc(m.birthday || '—')}</div>
+          <div class="small text-muted">${esc(m.sex || '-')} · ${esc(m.birthday || '-')}</div>
           <div class="mt-1">${badgeList(m.badges)}</div>
         </li>`).join('');
   }
@@ -189,7 +199,7 @@ async function scanLog(control) {
   renderFamily(data);
   const headName = `${data.head.firstname} ${data.head.lastname}`;
   if (data.logged) {
-    // Prefer the server-returned aid type: the batch (and its aid type) may
+    // Prefer the server-returned subsidy type: the batch (and its subsidy type) may
     // have changed since this page loaded.
     showBanner(true, `${data.aid_type_name || AID_TYPE_NAME} → ${headName} (Family #${data.control_no})`);
   } else {

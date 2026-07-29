@@ -11,7 +11,7 @@
 //   - dashboard-modal-loader.js : window.registerDashboardModal()
 //   - Backend : POST admin/services/create|update|archive|restore
 //               (Lookups\ServiceController, via the modal's data-*-action attributes)
-//   - Views   : Views/Lookups/service-modal.php — #serviceActionModal, .js-service-modal-open
+//   - Views   : Views/Lookups/service-modal.php - #serviceActionModal, .js-service-modal-open
 //               buttons carry data-service-mode, data-service-id, data-service-name, etc.
 //   - Data    : PHP embeds data-existing-codes on the <form>
 (function (window) {
@@ -41,7 +41,7 @@
 
     // Auto-fills the Code from the selected category's next suggested code
     // (data-next-code-map is keyed by category NAME, e.g. "Bata (Children)" => "B4").
-    // Only while ADDING — never renumbers an existing service on edit. Picking the
+    // Only while ADDING - never renumbers an existing service on edit. Picking the
     // blank/"Others" option clears the code so a custom category code can be typed.
     function autofillServiceCode(select, modal) {
         const form = modal ? modal.querySelector('form') : null;
@@ -278,6 +278,6 @@
     });
 })(window, document);
 
-// NOTE: the Active/Archived row toggle that used to live here is gone — status is
+// NOTE: the Active/Archived row toggle that used to live here is gone - status is
 // now server-driven (the Filters panel radios reload the page via
 // records-filter-panel.js, and the server renders only the matching 50-row page).

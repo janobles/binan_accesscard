@@ -1,3 +1,11 @@
+/* Account management screens: the account cards and empty state, the create and
+   edit account modal, and the reset-password callout. Loaded via the `admin`,
+   `employee`, and `viewer` manifest contexts (asset_helper.php).
+   Scope: .accounts-*, .account-*, .edit-account-modal and
+   .reset-password-callout, plus two .floating-family-modal rules narrowed by
+   :has(.edit-account-modal), which size the shared modal shell for this screen
+   only. The surrounding page chrome comes from managerecord.css. */
+
 .accounts-page {
     display: grid;
     gap: 0.75rem;

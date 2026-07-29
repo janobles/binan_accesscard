@@ -1,4 +1,4 @@
-# Manual QR Control Numbers — Design
+# Manual QR Control Numbers - Design
 
 **Date:** 2026-07-06
 **Status:** Approved (pending spec review)
@@ -25,8 +25,8 @@ Only two paths write `qr_control`:
 - Nothing else.
 
 **Manual "Add family"** (`FamilyController::store()` → `persistFamily()` with no
-`controlNo`) never creates a mapping. Such a head still prints a card — using its
-`memberID` as a fake control number — that the scanner cannot resolve.
+`controlNo`) never creates a mapping. Such a head still prints a card - using its
+`memberID` as a fake control number - that the scanner cannot resolve.
 
 Observed data fits exactly:
 - TIBAY (control 1, real import) → has `qr_control` row → scans fine.
@@ -55,10 +55,10 @@ and maintain the number.
     result set is filtered to mapped heads.
   - Remove the `?? (int) $row['memberID']` fallback at line 417; `controlNo` is
     always the real `control_no`.
-- `QrCardPdfGenerator` — remove the now-dead `['controlNo'] ?? ['memberID']`
+- `QrCardPdfGenerator` - remove the now-dead `['controlNo'] ?? ['memberID']`
   fallbacks (lines 33, 34, 62, 63, 119). `controlNo` is always present.
 - Consequence: `QrCardController::card($memberID)` reprint of an unmapped head
-  returns 404 (correct — there is nothing scannable to print yet). Batch
+  returns 404 (correct - there is nothing scannable to print yet). Batch
   generation silently excludes unmapped heads; the printed count matches the
   scannable set.
 
@@ -83,7 +83,7 @@ and maintain the number.
 
 ### 4. Aid-history safety: lock after first claim
 
-`aid_distribution.control_no` is a **denormalized int with no foreign key** —
+`aid_distribution.control_no` is a **denormalized int with no foreign key** -
 written at claim time and queried by value (`AidDistributionModel::historyFor()`).
 Editing a head's number does **not** cascade; old aid rows keep the old number and
 become orphaned from both the new number and the head.
@@ -121,19 +121,19 @@ rendering and when validating the edit.
 - Manual Add rejects a blank, non-digit, or already-taken number.
 - Manual Edit backfills an orphan head's number; the head becomes scannable.
 - Manual Edit rejects a number owned by another head.
-- Manual Edit locks the field (server-side rejects a change) when aid history
+- Manual Edit locks the field (server-side rejects a change) when subsidy history
   exists under the current number.
 - Smoke: login → add family with QR number → generate card → scan → resolves to
   the family.
 
 ## Files touched
 
-- `app/Models/Families/MemberModel.php` — `headsForCards()` filter + fallback removal.
-- `app/Libraries/Qr/QrCardPdfGenerator.php` — remove dead fallbacks.
-- `app/Models/Scanner/QrControlModel.php` — upsert-for-head method; helper to
-  check aid history / current mapping.
-- `app/Controllers/Families/FamilyController.php` — `store()` wires `controlNo`;
+- `app/Models/Families/MemberModel.php` - `headsForCards()` filter + fallback removal.
+- `app/Libraries/Qr/QrCardPdfGenerator.php` - remove dead fallbacks.
+- `app/Models/Scanner/QrControlModel.php` - upsert-for-head method; helper to
+  check subsidy history / current mapping.
+- `app/Controllers/Families/FamilyController.php` - `store()` wires `controlNo`;
   `update()` upserts; `editFamily()` supplies current number + lock flag;
   validation rules.
-- `app/Views/Family/family-modal.php` — QR Number field (add + edit, lock state).
+- `app/Views/Family/family-modal.php` - QR Number field (add + edit, lock state).
 - Tests under `tests/`.

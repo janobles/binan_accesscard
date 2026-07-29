@@ -1,14 +1,14 @@
-# SB Admin 1 Theme Swap — Design
+# SB Admin 1 Theme Swap - Design
 
 **Date:** 2026-07-07
 **Status:** Approved (experimental branch)
-**Context:** `docs/knowledge/sbadmin/target-theme.md` (decision 2026-07-06: target = SB Admin 1; SB Admin 2 rejected — Bootstrap 4.6 conflicts with repo's 5.3.3 base) and `docs/knowledge/sbadmin/adapter.md` (current reality: homegrown adapter, not a vendored theme).
+**Context:** `docs/knowledge/sbadmin/target-theme.md` (decision 2026-07-06: target = SB Admin 1; SB Admin 2 rejected - Bootstrap 4.6 conflicts with repo's 5.3.3 base) and `docs/knowledge/sbadmin/adapter.md` (current reality: homegrown adapter, not a vendored theme).
 
 ## Goal
 
 Replace the homegrown `public/css/sb-admin-adapter.css` shell with the genuine
 vendored SB Admin 1 theme (startbootstrap-sb-admin v7.x, Bootstrap 5), at
-**pure upstream defaults** — no Biñan green re-skin, no custom chrome — so the
+**pure upstream defaults** - no Biñan green re-skin, no custom chrome - so the
 baseline is visible and customization needs can be quantified afterward.
 
 ## Decisions
@@ -35,7 +35,7 @@ baseline is visible and customization needs can be quantified afterward.
      functional/layout rules, **except**: remove all `box-shadow` rules
      (~15 across `accounts.css`, `login.css`, `familymodal.css`,
      `lookupmanagement.css`, `session-timeout.css`, `scanner-scan.css`).
-     SB Admin 1's live demo uses clean borders, not elevation — match that.
+     SB Admin 1's live demo uses clean borders, not elevation - match that.
    - No tokens stub needed: only 2 page-CSS references to adapter variables
      (`managerecord.css:569,598`, `var(--ui-font-sm, 0.8rem)`) and both carry
      fallbacks.
@@ -43,8 +43,8 @@ baseline is visible and customization needs can be quantified afterward.
 ## Changes
 
 ### 1. Vendor assets
-- `public/assets/sb-admin/css/styles.css` — upstream compiled theme.
-- `public/assets/sb-admin/js/scripts.js` — sidebar-toggle behavior.
+- `public/assets/sb-admin/css/styles.css` - upstream compiled theme.
+- `public/assets/sb-admin/js/scripts.js` - sidebar-toggle behavior.
 - Source: latest v7.x release of
   https://github.com/StartBootstrap/startbootstrap-sb-admin (`dist/`).
 
@@ -57,7 +57,7 @@ Files: `app/Views/Admin/layout.php`, `app/Views/Employee/layout.php`,
   `#layoutSidenav` / `#layoutSidenav_nav` / `#layoutSidenav_content`.
 - Brand moves from sidebar (`.sidebar-brand*`) to `.sb-topnav .navbar-brand`.
 - `.sidebar` + `.bg-gradient-primary` → `.sb-sidenav accordion sb-sidenav-dark`
-  (upstream dark default — no re-skin).
+  (upstream dark default - no re-skin).
 - `.sidebar-heading` → `.sb-sidenav-menu-heading`; nav links become
   `.nav-link` with `bi-*` icons inside `<div class="sb-nav-link-icon">`.
 - `#sidebarToggle` becomes the topnav button; upstream `scripts.js` toggles
@@ -80,11 +80,11 @@ Files: `app/Views/Admin/layout.php`, `app/Views/Employee/layout.php`,
 
 ## Risks & rollback
 
-- Experimental branch off freshly synced `main` (fetch/reset first — local
+- Experimental branch off freshly synced `main` (fetch/reset first - local
   main is known to lag).
 - DataTables bootstrap5 build should style fine against upstream `styles.css`
   (Bootstrap-5-compatible); verify tables visually.
-- Pages will look plain/upstream-default by design — visual triage of what to
+- Pages will look plain/upstream-default by design - visual triage of what to
   re-customize is the point of the exercise.
 
 ## Verification

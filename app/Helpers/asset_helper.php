@@ -80,7 +80,7 @@ if (! function_exists('asset_scripts')) {
      * app loads. Views iterate the returned relative paths and wrap each with
      * asset_url(). Load order is significant (dependencies first).
      *
-     * `session-timeout.js` is intentionally absent — each layout renders it
+     * `session-timeout.js` is intentionally absent - each layout renders it
      * inline because its data-* attributes differ per role.
      *
      * Contexts: core (jQuery + Bootstrap bundle, shared), admin|employee|viewer
@@ -105,6 +105,7 @@ if (! function_exists('asset_scripts')) {
                 'assets/js/dashboard/lookup-search.js',
                 'assets/js/dashboard/audit-filters.js',
                 'assets/js/dashboard/records-filter-panel.js',
+                'assets/js/dashboard/table-paginate.js',
                 'assets/js/dashboard/dashboard-modal-loader.js',
                 'assets/js/dashboard/manage-family-modal.js',
                 'assets/js/dashboard/family-import.js',
@@ -126,6 +127,7 @@ if (! function_exists('asset_scripts')) {
                 'assets/js/dashboard/audit-filters.js',
                 'assets/js/dashboard/lookup-search.js',
                 'assets/js/dashboard/records-filter-panel.js',
+                'assets/js/dashboard/table-paginate.js',
                 'assets/js/dashboard/dashboard-modal-loader.js',
                 'assets/js/dashboard/manage-family-modal.js',
                 'assets/js/dashboard/family-import.js',
@@ -139,6 +141,7 @@ if (! function_exists('asset_scripts')) {
                 'assets/js/dashboard/family-list.js',
                 'assets/js/dashboard/lookup-search.js',
                 'assets/js/dashboard/records-filter-panel.js',
+                'assets/js/dashboard/table-paginate.js',
                 'assets/js/dashboard/dashboard-modal-loader.js',
                 'assets/js/dashboard/manage-family-modal.js',
                 'assets/js/dashboard/account-form-modal.js',

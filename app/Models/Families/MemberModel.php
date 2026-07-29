@@ -7,6 +7,7 @@ use App\Models\Concerns\MemberQueryFilters;
 use App\Models\Concerns\NormalizesIds;
 use App\Models\Concerns\RecordStatus;
 use App\Models\Concerns\ResolvesSectorNames;
+use App\Support\MemberFieldNormalizer;
 use CodeIgniter\Model;
 
 /**
@@ -150,7 +151,7 @@ class MemberModel extends Model
      * (already Title-cased) first/last name and exact on the stored Y-m-d birthday.
      *
      * Only live heads block a re-import: an archived (retired) family is treated as
-     * gone, so re-importing it re-creates the record — matching the archive
+     * gone, so re-importing it re-creates the record - matching the archive
      * grandfather semantics used elsewhere.
      */
     public function activeHeadExists(string $firstname, string $lastname, ?string $birthday): bool
@@ -216,7 +217,7 @@ class MemberModel extends Model
     }
 
     /**
-     * ACTIVE people already on file whose surname appears in the batch — the candidate set
+     * ACTIVE people already on file whose surname appears in the batch - the candidate set
      * for "this person is already in the system". Filtering by surname (instead of one
      * query per row) keeps a 10k-row import to a handful of queries; the importer does the
      * exact first+last+birthday match on the result in PHP.
@@ -333,15 +334,17 @@ class MemberModel extends Model
         return $this->withSectorNames($rows);
     }
 
-    // FIRST (quick) search bar of the Manage Records tab. Lists family HEADS only;
-    // an exact QR number also resolves to its mapped head.
-    // $filters carries the Manage Records filter controls (sectorID + date); see
-    // App\Libraries\DashboardPageBuilder::buildMemberListData() which supplies them.
-    //
-    // $orderKey/$orderDirection are an OPTIONAL, append-only addition used by the
-    // server-side DataTables endpoint (FamilyController::dataTable) for column
-    // sorting. When $orderKey is null the original ordering (newest first, by
-    // memberID DESC) is preserved, so existing callers are unaffected.
+    /**
+     * FIRST (quick) search bar of the Manage Records tab. Lists family HEADS only;
+     * an exact QR number also resolves to its mapped head. $filters carries the
+     * Manage Records filter controls (sectorID, barangay, date); see
+     * App\Libraries\DashboardPageBuilder::buildMemberListData() which supplies them.
+     *
+     * $orderKey/$orderDirection are an optional, append-only addition used by the
+     * server-side DataTables endpoint (FamilyController::dataTable) for column
+     * sorting. When $orderKey is null the original ordering (newest first, by
+     * memberID DESC) is preserved, so existing callers are unaffected.
+     */
     public function searchFamilies(?string $keyword = null, int $limit = 50, int $offset = 0, string $status = RecordStatus::ALL, array $filters = [], ?string $orderKey = null, string $orderDirection = 'asc'): array
     {
         if (! $this->hasTable()) {
@@ -411,10 +414,12 @@ class MemberModel extends Model
         return $this->familySearchBuilder($keyword, $status, $filters)->countAllResults();
     }
 
-    // Builds the head-only records query. $filters (optional) applies the Manage Records
-    // filter controls: 'sectorID' (exact match inside the JSON array), 'barangay',
-    // and 'date'
-    // (single-day match on member.dt_created). Empty $filters = original behavior unchanged.
+    /**
+     * Builds the head-only records query. $filters (optional) applies the Manage Records
+     * filter controls: 'sectorID' (exact match inside the JSON array), 'barangay',
+     * and 'date' (single-day match on member.dt_created). Empty $filters = original
+     * behavior unchanged.
+     */
     private function familySearchBuilder(?string $keyword = null, string $status = RecordStatus::ALL, array $filters = [])
     {
         if ($status === '1') {
@@ -445,8 +450,10 @@ class MemberModel extends Model
         return $builder;
     }
 
-    // Applies the Manage Records filter controls to a member query builder.
-    // Connects to: family-list.php filter form -> DashboardPageBuilder -> here.
+    /**
+     * Applies the Manage Records filter controls to a member query builder.
+     * Connects to: family-list.php filter form -> DashboardPageBuilder -> here.
+     */
     private function applyRecordFilters($builder, array $filters): void
     {
         $this->applySectorIdFilter($builder, $filters['sectorID'] ?? [], 'member.sectorID');
@@ -476,8 +483,8 @@ class MemberModel extends Model
      * generation. Each row: memberID, control number, a display fullname, and
      * barangay. Optional $filter narrows by 'memberID' (int), 'barangay'
      * (string), 'controlFrom'/'controlTo' (int, inclusive control-number bounds),
-     * 'keyword' (string, name match), 'sectorID' (int), and caps rows with
-     * 'limit' (int).
+     * 'keyword' (string, name match), 'sectorID' (int), and pages with
+     * 'limit' (int) + 'offset' (int).
      *
      * @return list<array{memberID:int, controlNo:int, fullname:string, barangay:string}>
      */
@@ -490,17 +497,12 @@ class MemberModel extends Model
             ->orderBy('member.memberID', 'asc');
 
         if (isset($filter['limit']) && (int) $filter['limit'] > 0) {
-            $builder->limit((int) $filter['limit']);
+            $builder->limit((int) $filter['limit'], max(0, (int) ($filter['offset'] ?? 0)));
         }
 
         $rows = $builder->get()->getResultArray();
 
-        // Barangay is stored at the tail of the combined address; match it against the
-        // canonical list (longest first) so it prints on the QR card.
-        $barangays = \App\Support\FamilyProfilingFormV2::barangays();
-        usort($barangays, static fn (string $a, string $b): int => mb_strlen($b) <=> mb_strlen($a));
-
-        return array_map(static function (array $row) use ($barangays): array {
+        return array_map(static function (array $row): array {
             $name = trim(sprintf(
                 '%s, %s %s %s',
                 $row['lastname'] ?? '',
@@ -512,13 +514,11 @@ class MemberModel extends Model
             $barangay = trim((string) ($row['barangay'] ?? ''));
 
             if ($barangay === '') {
-                $address = trim((string) ($row['address'] ?? ''));
-                foreach ($barangays as $candidate) {
-                    if (str_ends_with($address, ', ' . $candidate) || strcasecmp($address, $candidate) === 0) {
-                        $barangay = $candidate;
-                        break;
-                    }
-                }
+                // Barangay lives at the tail of the combined address. Use the shared
+                // splitter rather than matching here: addresses are stored uppercase,
+                // and the local copy of this logic compared case-sensitively against
+                // the Title Case list, so the card printed a blank barangay.
+                $barangay = MemberFieldNormalizer::splitAddressBarangay($row['address'] ?? '')['barangay'];
             }
 
             return [

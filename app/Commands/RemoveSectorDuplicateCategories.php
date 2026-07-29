@@ -14,7 +14,7 @@ use Config\Database;
  * This deletes every `category` row whose code OR name matches an active sector,
  * leaving only the standalone service categories that have no sector (FA/SWPS/EDA).
  *
- * `services.category` is a NAME string and is not touched — SC programs keep the
+ * `services.category` is a NAME string and is not touched - SC programs keep the
  * "Senior Citizen" label, now backed by the sector instead of a category row. Safe:
  * dumps `category` (+ services, sector) to writable/backups first, and is idempotent
  * (a second run finds nothing to delete).
@@ -38,7 +38,7 @@ class RemoveSectorDuplicateCategories extends BaseCommand
 
         foreach (['category', 'sector'] as $table) {
             if (! $db->tableExists($table)) {
-                CLI::error("Table {$table} not found — aborting.");
+                CLI::error("Table {$table} not found - aborting.");
 
                 return EXIT_ERROR;
             }
@@ -68,7 +68,7 @@ class RemoveSectorDuplicateCategories extends BaseCommand
         }
 
         if ($doomed === []) {
-            CLI::write('No sector-duplicate categories found — nothing to do.', 'green');
+            CLI::write('No sector-duplicate categories found - nothing to do.', 'green');
 
             return EXIT_SUCCESS;
         }
@@ -79,7 +79,7 @@ class RemoveSectorDuplicateCategories extends BaseCommand
         }
 
         if ($dryRun) {
-            CLI::write('Dry run — no backup taken and nothing deleted.', 'yellow');
+            CLI::write('Dry run - no backup taken and nothing deleted.', 'yellow');
 
             return EXIT_SUCCESS;
         }
@@ -87,7 +87,7 @@ class RemoveSectorDuplicateCategories extends BaseCommand
         $backup = $this->backup($db);
 
         if ($backup === null) {
-            CLI::error('Backup failed — aborting without deleting anything.');
+            CLI::error('Backup failed - aborting without deleting anything.');
 
             return EXIT_ERROR;
         }

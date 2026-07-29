@@ -11,7 +11,7 @@
 //   - dashboard-modal-loader.js : window.registerDashboardModal()
 //   - Backend : POST admin/sectors/create|update|archive|restore
 //               (Lookups\SectorController, via the modal's data-*-action attributes)
-//   - Views   : Views/Lookups/sector-modal.php — #sectorActionModal, .js-sector-modal-open
+//   - Views   : Views/Lookups/sector-modal.php - #sectorActionModal, .js-sector-modal-open
 //               buttons carry data-sector-mode, data-sector-id, data-sector-name, etc.
 //   - Data    : PHP embeds data-existing-codes on the <form>
 (function (window) {
@@ -183,6 +183,6 @@
     });
 })(window, document);
 
-// NOTE: the Active/Archived row toggle that used to live here is gone — status is
+// NOTE: the Active/Archived row toggle that used to live here is gone - status is
 // now server-driven (the Filters panel radios reload the page via
 // records-filter-panel.js, and the server renders only the matching 50-row page).

@@ -33,7 +33,7 @@ trait FamilyRequestContext
 
     /**
      * The Manage Records landing page for the request. The bare route base
-     * (`{role}/manage-family`) has NO index route — only sub-paths (/list, /import, …) —
+     * (`{role}/manage-family`) has NO index route - only sub-paths (/list, /import, …) -
      * so navigations "back to records" must target this page, not the base.
      */
     private function recordsUrl(): string
@@ -84,7 +84,7 @@ trait FamilyRequestContext
 
     /**
      * Records a SYSTEM_ERROR audit row for an unexpected failure during a family
-     * action, so it surfaces on the audit page (visible to admins). Best-effort —
+     * action, so it surfaces on the audit page (visible to admins). Best-effort -
      * a failure here must never mask the original error.
      */
     private function auditSystemError(string $context, Throwable $exception): void
@@ -131,7 +131,7 @@ trait FamilyRequestContext
 
     /**
      * Access guard for the READ-ONLY family detail fragment (viewFamily). Same as
-     * requireFamilyEntryAccess but also permits the Viewer role — viewers may look
+     * requireFamilyEntryAccess but also permits the Viewer role - viewers may look
      * at a record but never reach the edit/update/archive/restore actions, which
      * keep the stricter requireFamilyEntryAccess guard.
      */

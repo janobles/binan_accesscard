@@ -1,9 +1,12 @@
 <?php
-/*
- * "Manage Categories" management page. Lists the standalone SERVICE categories from
- * the `category` table (FA/SWPS/EDA — the ones with no matching sector; a sector acts
- * as its own service category) and lets an admin add/rename/archive/restore them via
- * the shared #categoryActionModal (see category-modal.php + categories-modal.js).
+/**
+ * Category list page (Admin > Reference Data > Categories).
+ *
+ * Data comes from category_management_view_data(); this view never touches a model.
+ * Lists the standalone SERVICE categories from the `category` table (FA/SWPS/EDA, the
+ * ones with no matching sector, since a sector acts as its own service category) and
+ * lets an admin add, rename, archive or restore them through the shared
+ * #categoryActionModal (see category-modal.php and categories-modal.js).
  *
  * Server-side guards (Lookups\CategoryController): a category may not duplicate a sector
  * (code or name), and one still used by an active service cannot be archived. Reuses the
@@ -80,8 +83,7 @@ $categoryFooter = ($totalRows ?? 0) > 0 ? view('components/table_footer', [
     'totalRows' => $totalRows,
     'page' => $page,
     'totalPages' => $totalPages,
-    'prevUrl' => $categoryPageUrl(max(1, $page - 1)),
-    'nextUrl' => $categoryPageUrl(min($totalPages, $page + 1)),
+    'pageUrl' => $categoryPageUrl,
 ]) : null;
 ?>
 <?= view('components/card', [

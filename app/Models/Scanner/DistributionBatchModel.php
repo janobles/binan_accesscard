@@ -7,7 +7,7 @@ use CodeIgniter\Model;
 /**
  * Distribution batches: one row per giving event (e.g. one day of handouts).
  * At most one batch may be open (closed_at IS NULL) at a time; open() enforces
- * that invariant. Closing a batch is the manual "reset" — the next batch's
+ * that invariant. Closing a batch is the manual "reset" - the next batch's
  * statistics start from zero. All methods keep the scanner module's no-DB
  * test posture: safe empty shapes on any DB error.
  */
@@ -35,7 +35,7 @@ class DistributionBatchModel extends Model
         }
     }
 
-    /** Opens a batch; refuses when name blank, aid type missing, or a batch is open. */
+    /** Opens a batch; refuses when name blank, subsidy type missing, or a batch is open. */
     public function open(string $name, int $aidTypeId, int $userId): int
     {
         $name = trim($name);

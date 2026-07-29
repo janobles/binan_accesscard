@@ -2,12 +2,12 @@
 // create / update / archive / restore in a single shared modal, blocks
 // submission when the typed code already exists (data-existing-codes), and
 // manages the Active / Archived row toggle. Categories are never permanently
-// deleted — archive is the only retirement path.
+// deleted - archive is the only retirement path.
 //
 // Connected to:
 //   - Backend : POST admin/categories/create|update|archive|restore
 //               (Lookups\CategoryController, via the modal's data-*-action attributes)
-//   - Views   : Views/Lookups/category-modal.php — #categoryActionModal,
+//   - Views   : Views/Lookups/category-modal.php - #categoryActionModal,
 //               .js-category-modal-open buttons carry data-category-mode,
 //               data-category-id, data-category-code, data-category-name, etc.
 (function (window, document) {
@@ -167,6 +167,6 @@
     });
 })(window, document);
 
-// NOTE: the Active/Archived row toggle that used to live here is gone — status is
+// NOTE: the Active/Archived row toggle that used to live here is gone - status is
 // now server-driven (the Filters panel radios reload the page via
 // records-filter-panel.js, and the server renders only the matching 50-row page).

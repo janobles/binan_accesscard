@@ -1,15 +1,15 @@
-# QR Access Cards for Family Heads — Design
+# QR Access Cards for Family Heads - Design
 
 Biñan Access Card (CodeIgniter 4). Absorb the standalone `cswd-qr` prototype into
 this system so every registered head of family has a printable QR access card used
-for relief-goods / aid distribution.
+for relief-goods / subsidy distribution.
 
 ## Goal
 
 - Generate printable QR cards for registered family heads (batch PDF/ZIP and
   single-card reprint).
 - Resolve a scanned QR back to the head's record ("vice-versa" lookup).
-- **No database schema change. No migrations.** (Per project Non-Negotiables —
+- **No database schema change. No migrations.** (Per project Non-Negotiables -
   schema source of truth is the external `accesscardV3.0.sql` dump.)
 
 ## Core Invariant: One Head ⇄ One QR
@@ -19,7 +19,7 @@ The control number is **derived from the head's `memberID`**, not stored. Becaus
 bijective:
 
 - One head = one `memberID` = one control number = one QR code.
-- Reprinting a card produces the **same** QR — never a new or duplicate code.
+- Reprinting a card produces the **same** QR - never a new or duplicate code.
 - No path exists to mint a second code for a head, or to share one code across
   heads.
 
@@ -43,27 +43,27 @@ decide, libraries build (per project guideline).
 
 Copied from prototype, namespace-adjusted to `App\Libraries\Qr`:
 
-- `QrImageGenerator`, `QrPngOutput` — pure-PHP QR rendered as PNG data URI
+- `QrImageGenerator`, `QrPngOutput` - pure-PHP QR rendered as PNG data URI
   (requires `ext-gd`). A fresh `QRCode` instance per control number (reusing one
-  overflows capacity — documented prototype gotcha).
-- `QrBatchPlanner` — **adapted**: takes a list of heads (id, name, barangay)
+  overflows capacity - documented prototype gotcha).
+- `QrBatchPlanner` - **adapted**: takes a list of heads (id, name, barangay)
   instead of a start/end range; chunks for large batches.
-- `QrBatchPdfGenerator` — dompdf renderer, fixed CSS-table 3×4 grid (12 cards /
+- `QrBatchPdfGenerator` - dompdf renderer, fixed CSS-table 3×4 grid (12 cards /
   US-Letter page). Card now prints head **name + barangay** (prototype left these
   blank) plus the QR and control number. Single chunk → one PDF; multiple → ZIP
   via `ZipArchive` (temp file cleaned in `finally`).
-- `ControlNumber` — new; the bijection above.
+- `ControlNumber` - new; the bijection above.
 
 ### Controller (`app/Controllers/Cards/QrCardController`)
 
-- `batch()` — POST. Accepts filter (all heads / by barangay / by sektor;
+- `batch()` - POST. Accepts filter (all heads / by barangay / by sektor;
   archived excluded). Queries heads, streams PDF or ZIP with
   `Content-Disposition: attachment`. Writes **one** `audit_trails` entry per
   batch (not per head): "Generated N QR cards, filter=X". Printing is not a data
   mutation, so a single accountability log suffices.
-- `card(int $memberID)` — GET. Single head → one-card PDF (reprint; same QR as
+- `card(int $memberID)` - GET. Single head → one-card PDF (reprint; same QR as
   always).
-- `lookup(string $control)` — GET, behind the `admin` auth gate.
+- `lookup(string $control)` - GET, behind the `admin` auth gate.
   `ControlNumber::resolve()` → redirect to the
   existing record page `admin/manage-family/view/{memberID}`. Invalid / non-head
   control → 404 + flash.
@@ -72,16 +72,16 @@ Copied from prototype, namespace-adjusted to `App\Libraries\Qr`:
 
 Reuse `App\Models\Families\MemberModel`. Add one read method:
 
-- `headsForCards(array $filter): array` — returns `memberID`, name parts,
+- `headsForCards(array $filter): array` - returns `memberID`, name parts,
   `barangay` for heads only (`headID = memberID`), honoring filter and excluding
   archived rows.
 
 ### Views
 
-- `app/Views/Cards/batch_form.php` — filter + generate page, rendered inside the
+- `app/Views/Cards/batch_form.php` - filter + generate page, rendered inside the
   admin shell. AJAX submit with `responseType: 'blob'`, synthetic-anchor download,
   blob-read error handling (ported from prototype `home.php`).
-- `app/Views/Cards/pdf/*` — card grid + styles (ported `pdf/batch_page.php`,
+- `app/Views/Cards/pdf/*` - card grid + styles (ported `pdf/batch_page.php`,
   `pdf/_styles.php`).
 - A **"Print QR"** button on the existing manage-family view page → `card(:num)`.
 
@@ -96,7 +96,7 @@ chunk size, `controlNumberWidth = 6`, `maxQuantity`, file-name patterns. All
 Add to this app: `chillerlan/php-qrcode:^6`, `dompdf/dompdf:^3` (already proven
 in prototype).
 
-## Routes (under existing `admin` group — same auth gate)
+## Routes (under existing `admin` group - same auth gate)
 
 ```
 admin/cards               GET  -> Admin\DashboardController::cards   (shell page)
@@ -126,7 +126,7 @@ admin/cards/lookup/(:any) GET  -> Cards\QrCardController::lookup/$1
 
 - Port prototype tests (planner, QR generation, PDF render, 12-cards/page
   pagination, chunk orchestration, HTTP endpoint).
-- `ControlNumberTest` — `format`/`resolve` round-trip, leading-zero handling,
+- `ControlNumberTest` - `format`/`resolve` round-trip, leading-zero handling,
   non-head and missing-row rejection.
 - `headsForCards` filter (barangay/sektor/all, archived excluded).
 - `lookup` redirect-on-valid and 404-on-invalid.

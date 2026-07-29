@@ -7,7 +7,7 @@ namespace App\Support;
  */
 class FamilyProfilingFormV2
 {
-    /** The sectors (a person's classification) — code => display name. */
+    /** The sectors (a person's classification) - code => display name. */
     public const SECTOR_CATEGORIES = [
         'SC' => 'Senior Citizen',
         'PWD' => 'Person with Disability',
@@ -36,7 +36,7 @@ class FamilyProfilingFormV2
     // Profiling Form v2. They have no DB/session dependency and feed the family
     // form dropdowns (via FamilyFormOptionsModel).
 
-    /** Name-suffix options (Jr, Sr, I–V) for the family form. */
+    /** Name-suffix options (Jr, Sr, I-V) for the family form. */
     public static function suffixes(): array
     {
         return ['Jr', 'Sr', 'I', 'II', 'III', 'IV', 'V'];

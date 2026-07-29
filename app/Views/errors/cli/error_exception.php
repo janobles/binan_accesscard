@@ -1,4 +1,12 @@
 <?php
+/**
+ * The exception report printed by a failing spark command or other CLI run.
+ *
+ * Diverges from stock CodeIgniter in one way: formatting a backtrace argument moved
+ * out of an inline closure into ViewFormatter::debugArgument, so the same rendering
+ * can be reused and tested. Also stands in for the CLI production page, since a
+ * console operator is a developer and wants the detail.
+ */
 
 use CodeIgniter\CLI\CLI;
 use App\Libraries\ViewFormatter;

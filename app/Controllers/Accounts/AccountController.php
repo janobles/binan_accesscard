@@ -658,7 +658,7 @@ class AccountController extends BaseController
                 $exception->getMessage()
             );
         } catch (Throwable $ignored) {
-            // Swallow — the caller already handles the originating error.
+            // Swallow - the caller already handles the originating error.
         }
     }
 }

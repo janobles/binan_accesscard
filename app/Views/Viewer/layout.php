@@ -123,8 +123,8 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
             <?php if ($activePage === 'reference-data'): ?>
                 <?= view('components/page_tabs', [
                     'tabs' => [
-                        ['key' => 'sectors', 'label' => 'Sectors', 'icon' => 'diagram-3-fill'],
-                        ['key' => 'services', 'label' => 'Services & Programs', 'icon' => 'grid-fill'],
+                        ['key' => 'sectors', 'label' => 'Sectors'],
+                        ['key' => 'services', 'label' => 'Services & Programs'],
                     ],
                     'active' => $referenceTab ?? 'sectors',
                     'baseUrl' => 'viewer/reference-data',

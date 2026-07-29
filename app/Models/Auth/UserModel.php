@@ -108,7 +108,7 @@ class UserModel extends Model
     /**
      * Resolves a username to its userID for audit attribution (e.g. a failed login
      * against a known account), or null when no such account exists. Read-only and
-     * password-agnostic — never use this for authentication.
+     * password-agnostic - never use this for authentication.
      */
     public function userIdByUsername(string $username): ?int
     {
@@ -160,7 +160,7 @@ class UserModel extends Model
     }
 
     /**
-     * Confirms a plaintext password matches the stored hash for a user — used for
+     * Confirms a plaintext password matches the stored hash for a user - used for
      * the "current password" check in self change-password. Mirrors the legacy
      * plaintext fallback in verifyLogin so old rows still verify.
      */

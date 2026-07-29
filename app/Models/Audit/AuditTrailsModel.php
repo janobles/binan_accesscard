@@ -10,7 +10,7 @@ use CodeIgniter\Model;
  *
  * Append-only (WORM at the app level): this model only ever inserts and selects.
  * There is intentionally no update or delete path for audit rows, and no caller
- * should add one — an audit trail must not be editable or erasable from the app.
+ * should add one - an audit trail must not be editable or erasable from the app.
  *
  * Each row carries two narratives: `description` is a short one-line summary, and
  * `full_description` is the composed who/what/when/where detail (see
@@ -79,8 +79,8 @@ class AuditTrailsModel extends Model
             'memberID' => $memberId,
             'user_action' => $action,
             'description' => $description,
-            // Clean labeled-line narrative carrying all six facets — What / Who /
-            // When / Where (IP) / Device (UA) — built from the same data logAction
+            // Clean labeled-line narrative carrying all six facets - What / Who /
+            // When / Where (IP) / Device (UA) - built from the same data logAction
             // already has. Rendered as-is in the per-row Details modal.
             'full_description' => $this->composeFullDescription(
                 $userId,
@@ -192,11 +192,11 @@ class AuditTrailsModel extends Model
         $summary = trim((string) $description);
 
         if ($summary !== '') {
-            $what .= ' — ' . $summary;
+            $what .= ' - ' . $summary;
         }
 
         if ($detail !== null && trim($detail) !== '') {
-            $what .= ' — ' . trim($detail);
+            $what .= ' - ' . trim($detail);
         }
 
         return $what;

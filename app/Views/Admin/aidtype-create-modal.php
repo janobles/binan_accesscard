@@ -1,8 +1,8 @@
 <?php
-/** Add Aid Type modal: single name field, posts to admin/aidtypes/create. */
+/** Add Subsidy Type modal: single name field, posts to admin/aidtypes/create. */
 ?>
 <div class="modal fade" id="addAidTypeModal" tabindex="-1" aria-labelledby="addAidTypeModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
+  <div class="modal-dialog modal-dialog-centered">
     <form class="modal-content" method="post" action="<?= site_url('admin/aidtypes/create') ?>">
       <?= csrf_field() ?>
       <div class="modal-header">

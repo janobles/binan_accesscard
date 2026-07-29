@@ -17,7 +17,7 @@ use Config\Database;
  *
  * Status lifecycle: pending → processing → done | partial | failed.
  *
- * No CI4 migrations exist in this project — the `job_queue` table ships in the
+ * No CI4 migrations exist in this project - the `job_queue` table ships in the
  * schema dump (accesscardV14.sql); sql/job_queue.sql holds the standalone DDL for
  * reference. Callers guard on hasTable() rather than creating it at runtime.
  */
@@ -75,7 +75,7 @@ class JobQueueModel
      * Atomically claims the oldest runnable job (a due `pending`, or a stale
      * `processing` to resume after a crash) and returns it, or null when nothing is
      * claimable. The claim is a single UPDATE stamped with a unique token, so it is
-     * safe for several drainers to run at once — only one can flip a given row. Each
+     * safe for several drainers to run at once - only one can flip a given row. Each
      * claim is short (a single family transaction), keeping row locks off other users.
      *
      * @param string $worker label of the claiming drainer (for locked_by/debugging)
@@ -171,7 +171,7 @@ class JobQueueModel
     }
 
     /**
-     * IDs of a user's family imports still parked on the review screen — staged, never
+     * IDs of a user's family imports still parked on the review screen - staged, never
      * committed or cancelled. Uploading a new file retires these (see
      * FamilyImportController::retirePreviousReviews), so an abandoned error report does
      * not leave its staging file on disk for good.
@@ -210,7 +210,7 @@ class JobQueueModel
     /**
      * Staging IDs an unfinished import still needs: every queued/running family_import
      * job, plus the review job a queued WRITE job reads its rows from (payload.stageJobId).
-     * The staging janitor must never sweep these — a write job can sit `pending` for hours
+     * The staging janitor must never sweep these - a write job can sit `pending` for hours
      * when the worker is not running, and deleting its rows underneath it kills the import.
      *
      * @return list<int>

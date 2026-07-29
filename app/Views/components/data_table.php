@@ -1,6 +1,6 @@
 <?php
 /**
- * SB Admin 1 data-table card — a table inside the standard card anatomy
+ * SB Admin 1 data-table card - a table inside the standard card anatomy
  * (card-header icon+title > card-body table > optional card-footer),
  * matching the upstream SB Admin "DataTable Example" panel. Composes
  * components/card for that anatomy so there's one card shell in the codebase.

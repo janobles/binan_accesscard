@@ -1,4 +1,4 @@
-# Aid Type Restore + One-Action Scan + Kiosk Member Details (V18 corrected)
+# Subsidy Type Restore + One-Action Scan + Kiosk Member Details (V18 corrected)
 
 **Date:** 2026-07-13
 **Status:** Approved design, pending implementation plan
@@ -9,7 +9,7 @@ was wrong; its page-split and UI decisions survive)
 
 The previous spec assumed `aid_type` (Financial/Rice/Grocery) was superseded by
 the `services`/`category` reference data, so PR 1 dropped the table and rebound
-batches and scans to `service_id`. That premise is wrong: aid types are their
+batches and scans to `service_id`. That premise is wrong: subsidy types are their
 own concept with their own table, unrelated to services and programs. The
 service binding must be reverted while keeping the parts that are still wanted:
 the page split (`admin/batches` / `admin/distributions`), the create-batch
@@ -30,7 +30,7 @@ Two scope additions ride along:
    `aid_type_id` again. Services are not linked to batches at all.
 2. **Forward-fix on this unmerged branch** (no git revert surgery). The V18
    dump and patch are rewritten in place.
-3. **Aid Types gets its own page under the Reference Data sidebar group**
+3. **Subsidy Types gets its own page under the Reference Data sidebar group**
    (`admin/aidtypes`), CRUD styled like Manage Categories / Services and
    Programs. Aid-type CRUD no longer lives on a distribution page.
 4. **One-action scan: claimant is always the family head, date is always
@@ -45,7 +45,7 @@ Two scope additions ride along:
    collapsed Bootstrap collapse/accordion, expanded on demand so the kiosk
    stays uncluttered.
 8. **PR structure unchanged:** this branch is PR 1 (schema + backend + pages,
-   corrected); PR 2 is the UI/UX pass with aid-type columns instead of service
+   corrected); PR 2 is the UI/UX pass with subsidy-type columns instead of service
    codes.
 
 ## Schema (V18 dump rewritten in place)
@@ -57,14 +57,14 @@ Two scope additions ride along:
 - `distribution_batch.aid_type_id` and `aid_distribution.aid_type_id` **kept**
   with their V17 indexes (`idx_db_aidtype`, `idx_ad_type`). No `service_id`
   columns anywhere.
-- Test seed rows removed: sector 11 (`TS`), category 8 (`TSC`), services 47–48
+- Test seed rows removed: sector 11 (`TS`), category 8 (`TSC`), services 47-48
   (`TS1`, `TSC1`).
 - Developer account row (`developer` / `developer123`, argon2id,
   `account_level 'developer'`).
 - No family/QR data (V14 demo-workflow rule).
 
 `sql/patches/v18-batch-service.sql` is replaced by a patch that only removes
-the test reference rows and upserts the developer account (no column changes —
+the test reference rows and upserts the developer account (no column changes -
 V17 schema already matches). Rename the patch to reflect its real content.
 
 Delete `accesscardV17.sql` once V18 import + smoke test pass (rule carried
@@ -79,11 +79,11 @@ over from the previous spec).
 - `ScanController::logAid()` stamps `aid_type_id` from the open batch;
   409-when-no-batch unchanged.
 - `AidStatsModel`, `admin/reports`, `ReportsPdfGenerator`, `pdf/report.php`:
-  back to aid-type columns/counts.
-- Kiosk header badge shows the batch's aid type name.
+  back to subsidy-type columns/counts.
+- Kiosk header badge shows the batch's subsidy type name.
 - Batch open/close remain audited (`audit_trails`), Admin/Developer only.
 
-## Aid Types reference page
+## Subsidy Types reference page
 
 - Route `admin/aidtypes` (+ CRUD POST routes), Admin/Developer only, sidebar
   link in the Reference Data group next to Manage Categories and Services and
@@ -95,9 +95,9 @@ over from the previous spec).
 
 ## Batches and Distributions pages (kept from PR 1, rebound)
 
-- `admin/batches`: create modal = batch name + single aid-type select (the
-  category → service cascade is removed). Tables show aid type name.
-- `admin/distributions`: paged, searchable log; aid type column replaces
+- `admin/batches`: create modal = batch name + single subsidy-type select (the
+  category → service cascade is removed). Tables show subsidy type name.
+- `admin/distributions`: paged, searchable log; subsidy type column replaces
   service/shortcode columns.
 
 ## One-action scan flow
@@ -108,9 +108,9 @@ Client (`app/Views/Scanner/scan.php`):
   family **and logs the distribution in the same call** (claimant = family
   head, `claim_date` = today, `aid_type_id` + `batch_id` from the open batch).
 - Response renders the family panel plus one of two banners:
-  - **Logged:** full-width `alert-success`, large text — aid type, head name,
+  - **Logged:** full-width `alert-success`, large text - subsidy type, head name,
     family control number.
-  - **Duplicate Entry:** full-width `alert-danger`, large text — this family
+  - **Duplicate Entry:** full-width `alert-danger`, large text - this family
     already has a row in the current batch; show when it was logged and by
     whom. Nothing is written.
 - The Log Distribution form (date field, claimant select, Confirm button) and
@@ -138,12 +138,12 @@ Server:
   and service badges (shortcodes, e.g. `SC`, `FA`, `EDA8`).
 - Members list: wrapped in a Bootstrap collapse (collapsed by default) so the
   panel stays compact; expanding reveals member rows, each with their own
-  badges. Expansion is optional and never required for the scan flow — no
+  badges. Expansion is optional and never required for the scan flow - no
   added per-scan keypresses.
 
 ## Out of scope
 
-- Any schema change beyond restoring the V17 batch/aid-type shape and the
+- Any schema change beyond restoring the V17 batch/subsidy-type shape and the
   test-row cleanup.
 - Migrations (repo rule: SQL dump is schema source of truth).
 - Sector/service/category badges in Manage Records family view.
@@ -153,10 +153,10 @@ Server:
 ## Verification
 
 - `php spark routes` resolves; `vendor/bin/phpunit` green before/after.
-- Fresh import of rewritten V18 + smoke test: login, create aid type on the
+- Fresh import of rewritten V18 + smoke test: login, create subsidy type on the
   new page, open batch via modal, kiosk scan auto-logs (success banner),
   re-scan same card shows Duplicate Entry with no new row, close batch, open
-  new batch, same card logs again, reports render by aid type → then delete
+  new batch, same card logs again, reports render by subsidy type → then delete
   V17.
 - Playwright snapshots/screenshots for every touched page at desktop and
   390px (PR 2), Manage Records as design source of truth.

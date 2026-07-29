@@ -10,7 +10,7 @@ namespace App\Support;
  *     whose private cleaners now delegate here), and
  *   - the Excel bulk importer (App\Libraries\FamilyExcelImporter).
  *
- * Pure functions: no DB, session, or request access — the same input always
+ * Pure functions: no DB, session, or request access - the same input always
  * produces the same stored value regardless of which path called it.
  */
 class MemberFieldNormalizer
@@ -56,21 +56,21 @@ class MemberFieldNormalizer
     /**
      * Cleans a person-name field: keeps only letters (incl. ñ/Ñ and accents),
      * spaces and the - ' . punctuation real names use, collapses repeated
-     * whitespace, then applies Title Case. Workers may type freely; the stored
-     * value is normalized here. Used for first/middle/last names.
+     * whitespace, then uppercases. Workers may type freely; the stored value is
+     * normalized here. Used for first/middle/last names.
      */
     public static function cleanName(mixed $value): string
     {
         $value = preg_replace("/[^\\p{L}\\s.'-]/u", '', (string) $value);
         $value = trim((string) preg_replace('/\\s+/u', ' ', (string) $value));
 
-        return mb_convert_case($value, MB_CASE_TITLE, 'UTF-8');
+        return mb_strtoupper($value, 'UTF-8');
     }
 
     /**
      * Cleans an address/barangay field: address-safe allowlist of letters, digits,
      * spaces and # , . - / ' ( ) & (so house/block numbers survive), collapses
-     * repeated whitespace, then applies Title Case. Strips odd symbols such as
+     * repeated whitespace, then uppercases. Strips odd symbols such as
      * < > | \ " : ] [.
      */
     public static function cleanAddress(mixed $value): string
@@ -78,7 +78,7 @@ class MemberFieldNormalizer
         $value = preg_replace("/[^\\p{L}\\p{N}\\s#,.\\-\\/'()&]/u", '', (string) $value);
         $value = trim((string) preg_replace('/\\s+/u', ' ', (string) $value));
 
-        return mb_convert_case($value, MB_CASE_TITLE, 'UTF-8');
+        return mb_strtoupper($value, 'UTF-8');
     }
 
     /**

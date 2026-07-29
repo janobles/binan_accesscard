@@ -26,12 +26,10 @@ class DashboardController extends BaseController
     use HomeRoleAccessTrait;
     use DashboardPartialsTrait;
 
-    // ---------------------------------------------------------------------
-    // Admin / Developer pages (full page loads).
-    // Each maps to a route in Config\Routes and an $activePage the admin shell
-    // (Views/Admin/layout.php) switches on. Routes are guarded for
-    // Developer/Admin inside DashboardPageBuilder::renderAdminPage().
-    // ---------------------------------------------------------------------
+    // The full-page Admin/Developer routes below each map to a route in
+    // Config\Routes and an $activePage the admin shell (Views/Admin/layout.php)
+    // switches on; the Developer/Admin guard lives inside
+    // DashboardPageBuilder::renderAdminPage().
 
     /**
      * Entry point for GET `admin`: redirects to the canonical admin dashboard URL.
@@ -52,8 +50,8 @@ class DashboardController extends BaseController
     }
 
     /**
-     * GET `admin/accounts`. Renders the full accounts page, or—when the request
-     * is an AJAX/partial fetch from the dashboard—just the accounts fragment.
+     * GET `admin/accounts`. Renders the full accounts page, or-when the request
+     * is an AJAX/partial fetch from the dashboard-just the accounts fragment.
      */
     public function accounts(): string|RedirectResponse
     {
@@ -92,7 +90,7 @@ class DashboardController extends BaseController
 
     /**
      * GET `admin/reference-data`. One page for the four lookup tables
-     * (Sectors, Services, Categories, Aid Types), switched by ?tab=.
+     * (Sectors, Services, Categories, Subsidy Types), switched by ?tab=.
      * Mutations still post to the Lookups\* and AidTypes controllers.
      */
     public function referenceData(): string|RedirectResponse
@@ -109,14 +107,11 @@ class DashboardController extends BaseController
         return (new DashboardPageBuilder($this->request))->renderAdminPage('cards');
     }
 
-    // ---------------------------------------------------------------------
-    // AJAX partial rendering.
-    // The dashboard shell loads some sections (accounts, family form, audit,
-    // sectors, services) into a modal/panel via fetch. When ?partial=1 or an
-    // XHR header is present we return just the inner view fragment instead of
-    // the whole page. Front-end loader: assets/js/dashboard/*-modal.js.
-    // isPartialRequest() comes from DashboardPartialsTrait.
-    // ---------------------------------------------------------------------
+    // The AJAX partial methods below back the dashboard shell's fetch-loaded
+    // sections (accounts, family list, audit, and so on): when ?partial=1 or an
+    // XHR header is present (isPartialRequest(), from DashboardPartialsTrait),
+    // they return just the inner view fragment instead of the whole page.
+    // Front-end loader: assets/js/dashboard/*-modal.js.
 
     /**
      * Role guard for admin partial fetches; returns a RedirectResponse to block

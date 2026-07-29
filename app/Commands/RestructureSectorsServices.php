@@ -60,7 +60,7 @@ class RestructureSectorsServices extends BaseCommand
 
     /**
      * Service category names by code. Used to LABEL the migrated SC/PWD/SP/B programs
-     * (services.category). SC/PWD/SP/B are backed by sectors — see STANDALONE_CATEGORIES
+     * (services.category). SC/PWD/SP/B are backed by sectors - see STANDALONE_CATEGORIES
      * for what actually gets seeded into the `category` table.
      */
     private const SERVICE_CATEGORIES = [
@@ -74,7 +74,7 @@ class RestructureSectorsServices extends BaseCommand
     ];
 
     /**
-     * The standalone service categories the `category` table is seeded with — only the
+     * The standalone service categories the `category` table is seeded with - only the
      * ones with NO matching sector (a sector doubles as its own service category, so
      * SC/PWD/SP/B are intentionally excluded here). Phase B.
      */
@@ -95,7 +95,7 @@ class RestructureSectorsServices extends BaseCommand
 
         foreach (['sector', 'services', 'category', 'member', 'member_services'] as $table) {
             if (! $db->tableExists($table)) {
-                CLI::error("Table {$table} not found — aborting.");
+                CLI::error("Table {$table} not found - aborting.");
 
                 return EXIT_ERROR;
             }
@@ -163,7 +163,7 @@ class RestructureSectorsServices extends BaseCommand
         $this->reportPlan($snapshot, $newServices, count($members));
 
         if ($dryRun) {
-            CLI::write('Dry run — no backup taken and no changes written.', 'yellow');
+            CLI::write('Dry run - no backup taken and no changes written.', 'yellow');
 
             return EXIT_SUCCESS;
         }
@@ -172,7 +172,7 @@ class RestructureSectorsServices extends BaseCommand
         $backup = $this->backup($db);
 
         if ($backup === null) {
-            CLI::error('Backup failed — aborting without writing anything.');
+            CLI::error('Backup failed - aborting without writing anything.');
 
             return EXIT_ERROR;
         }
@@ -187,7 +187,7 @@ class RestructureSectorsServices extends BaseCommand
         }
 
         // 5. Rebuild category as the standalone service categories only (sector-backed
-        //    categories SC/PWD/SP/B are represented by their sectors — Phase B).
+        //    categories SC/PWD/SP/B are represented by their sectors - Phase B).
         // DELETE, not TRUNCATE: TRUNCATE implicit-commits in MySQL even inside a
         // transaction, so a later failure couldn't roll it back. Neither table's
         // rows are referenced by hardcoded id elsewhere (only by shortcode/code/
@@ -226,7 +226,7 @@ class RestructureSectorsServices extends BaseCommand
                 $s = $snapshot[$oldId] ?? null;
 
                 if ($s === null) {
-                    continue; // references a sector that no longer exists — drop
+                    continue; // references a sector that no longer exists - drop
                 }
 
                 // The program becomes a service this member received.
@@ -259,7 +259,7 @@ class RestructureSectorsServices extends BaseCommand
 
         if ($db->transStatus() === false) {
             $db->transRollback();
-            CLI::error('Transaction failed — rolled back. Restore from the backup if needed: ' . $backup);
+            CLI::error('Transaction failed - rolled back. Restore from the backup if needed: ' . $backup);
 
             return EXIT_ERROR;
         }

@@ -1,8 +1,11 @@
 <?php
-/*
- * Jade-style reskin of the login page (jadebranch's login-card design + jade
- * css/login.css). The POST target, CSRF field, input names, old() repopulation,
- * and login.js (idle-timer reset) are melbranch's and unchanged.
+/**
+ * Login page (the site root and /login).
+ *
+ * Rendered by Auth\AuthController for both the GET form and the redisplay after a
+ * failed POST, so the fields repopulate from old(). Standalone: this is one of the
+ * few views with its own doctype rather than a dashboard layout. Styling is
+ * public/css/login.css; login.js resets the idle timer.
  */
 ?>
 <!DOCTYPE html>

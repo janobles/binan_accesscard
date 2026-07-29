@@ -1,4 +1,14 @@
 <?php
+/**
+ * The debug exception page, shown outside production: stack trace, request and
+ * response detail, and the environment dump.
+ *
+ * Diverges from stock CodeIgniter in one way: the debug toggle script is served from
+ * public/assets/js/error-debug.js instead of the framework's own debug.js beside this
+ * file, so the asset ships with the rest of the app's JavaScript. Never reachable in
+ * production, where production.php takes over.
+ */
+
 use CodeIgniter\HTTP\Header;
 use CodeIgniter\CodeIgniter;
 

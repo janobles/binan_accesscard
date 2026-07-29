@@ -1,9 +1,9 @@
 <?php
 /**
- * Import Review — full-page screen where an operator resolves import problems before any
+ * Import Review - full-page screen where an operator resolves import problems before any
  * data is written. The staged rows + grouped errors are rendered by import-review.js from
  * the JSON island below. A flagged family can be fixed two ways: in the spreadsheet (every
- * issue names the exact cell), or in place via the Edit modal — which POSTs to
+ * issue names the exact cell), or in place via the Edit modal - which POSTs to
  * import/review/:id/family/:qr/save, re-validates server-side, and re-renders without a
  * re-upload. Confirm queues the write job.
  *
@@ -21,10 +21,13 @@ $review    = $review ?? ['file' => '', 'counts' => ['families' => 0, 'members' =
 // (`{role}/manage-family`) has no index route and 404s.
 $backUrl   = (string) ($recordsUrl ?? site_url(str_replace('/manage-family', '/manage-records', $routeBase)));
 $idleTimeoutSeconds = (int) ($idleTimeoutSeconds ?? 900);
+$fieldOptions = $fieldOptions ?? [];
 
 // JSON island: HEX_TAG/HEX_AMP keep any "</script>" or "&" inside a spreadsheet cell
 // from breaking out of the <script> tag (defence against a crafted .xlsx).
 $reviewJson = json_encode($review, JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE);
+// Dropdown option lists for inline <select> cells (mirrors the Excel template dropdowns).
+$fieldOptionsJson = json_encode($fieldOptions, JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -39,7 +42,7 @@ $reviewJson = json_encode($review, JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_
     <link rel="stylesheet" href="<?= esc(asset_url('css/import-review.css'), 'attr') ?>">
 </head>
 <body class="bg-light">
-<nav class="navbar navbar-dark bg-dark px-4">
+<nav class="navbar navbar-dark bg-dark px-4 import-review-topbar">
     <span class="navbar-brand mb-0 h1"><i class="bi bi-clipboard-check me-2" aria-hidden="true"></i>Review Import</span>
     <a class="btn btn-sm btn-outline-light" href="<?= esc($backUrl, 'attr') ?>">
         <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Back to Records
@@ -51,6 +54,7 @@ $reviewJson = json_encode($review, JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_
       data-commit-url="<?= esc(site_url($routeBase . '/import/review/' . $jobId . '/commit'), 'attr') ?>"
       data-cancel-url="<?= esc(site_url($routeBase . '/import/review/' . $jobId . '/cancel'), 'attr') ?>"
       data-family-base-url="<?= esc(site_url($routeBase . '/import/review/' . $jobId . '/family'), 'attr') ?>"
+      data-cell-url="<?= esc(site_url($routeBase . '/import/review/' . $jobId . '/family/cell'), 'attr') ?>"
       data-redirect-url="<?= esc($backUrl, 'attr') ?>">
 
     <input type="hidden" id="reviewCsrf" name="<?= csrf_token() ?>" value="<?= csrf_hash() ?>">
@@ -98,6 +102,7 @@ $reviewJson = json_encode($review, JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_
 <?= view('Family/action-confirm-modal') ?>
 
 <script id="importReviewData" type="application/json"><?= $reviewJson ?></script>
+<script id="importReviewFieldOptions" type="application/json"><?= $fieldOptionsJson ?></script>
 <?php foreach (asset_scripts('core') as $scriptPath): ?>
 <script src="<?= esc(asset_url($scriptPath), 'attr') ?>"></script>
 <?php endforeach; ?>
@@ -106,7 +111,7 @@ $reviewJson = json_encode($review, JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_
 <script src="<?= esc(asset_url('assets/js/dashboard/dashboard-modal-loader.js'), 'attr') ?>"></script>
 <script src="<?= esc(asset_url('assets/js/dashboard/manage-family-modal.js'), 'attr') ?>"></script>
 <script src="<?= esc(asset_url('assets/js/dashboard/import-review.js'), 'attr') ?>"></script>
-<?php /* Idle-timeout logout — this page is its own shell, so it wires the same
+<?php /* Idle-timeout logout - this page is its own shell, so it wires the same
          session-timeout script the dashboard layouts render. */ ?>
 <script src="<?= esc(asset_url('assets/js/session-timeout.js'), 'attr') ?>"
         data-timeout-seconds="<?= esc((string) $idleTimeoutSeconds) ?>"

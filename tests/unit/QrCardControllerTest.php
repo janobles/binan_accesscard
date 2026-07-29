@@ -40,7 +40,7 @@ final class QrCardControllerTest extends CIUnitTestCase
 
     public function testUnauthenticatedGenerateRedirects(): void
     {
-        // No session — guard should redirect to login.
+        // No session - guard should redirect to login.
         $result = $this->post('admin/cards/generate', []);
         $result->assertRedirect();
     }

@@ -371,9 +371,8 @@ class DashboardPageBuilder
      * action filter reuses searchFilters(). Frontend: the audit views' database
      * search bar, show-entries selector and pagination controls.
      *
-     * @param bool     $includeDeveloper Whether Developer (NULL-userID) rows are visible (admin only).
-     * @param int|null $userId           Scopes to one user's own rows (employee Activity), or null for all users.
-     * @param string   $listRoute        Full-page route the search/pagination forms post to.
+     * $includeDeveloper shows Developer (NULL-userID) rows (admin only); $userId scopes
+     * to one user's own rows (employee Activity), or null for all users.
      */
     private function buildAuditListData(bool $includeDeveloper, ?int $userId, string $listRoute): array
     {
@@ -412,8 +411,8 @@ class DashboardPageBuilder
 
     /**
      * Batch-scoped data for the admin overall Reports page: combined totals,
-     * per-barangay/aid-type breakdowns, and the per-kiosk table (all scanners,
-     * no self-scoping — admin sees every kiosk). The scoping batch defaults to
+     * per-barangay/subsidy-type breakdowns, and the per-kiosk table (all scanners,
+     * no self-scoping - admin sees every kiosk). The scoping batch defaults to
      * the active batch, else the most recent batch, and honors ?batch= when it
      * matches a known batch (mirrors Admin\ReportsController::resolveBatch()).
      */
@@ -741,7 +740,7 @@ class DashboardPageBuilder
 
     /**
      * Viewer counterpart of buildEmployeeRecordListData(): the same paginated
-     * family list, but strictly read-only — no add, edit, archive, or restore.
+     * family list, but strictly read-only - no add, edit, archive, or restore.
      * Frontend: the viewer Manage Records view (`Family/list`).
      */
     private function buildViewerRecordListData(): array

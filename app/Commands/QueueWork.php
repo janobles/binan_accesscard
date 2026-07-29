@@ -118,7 +118,7 @@ class QueueWork extends BaseCommand
      * Housekeeping: drops import staging files nobody will finish reviewing (the operator
      * closed the tab). Commit/cancel/upload-again all clean up on their own; this catches
      * what none of them can see. Files an unfinished job still needs are protected, and a
-     * failure here must never take the worker down — its jobs already ran.
+     * failure here must never take the worker down - its jobs already ran.
      */
     private function sweepImportStaging(JobQueueModel $model): void
     {
@@ -135,7 +135,7 @@ class QueueWork extends BaseCommand
 
     /**
      * Dispatches one claimed job to its handler and records the outcome. Never
-     * throws — an unexpected handler error is retried (up to the job's
+     * throws - an unexpected handler error is retried (up to the job's
      * max_attempts) or, once exhausted, marked failed.
      *
      * @param array<string, class-string> $handlers
@@ -193,7 +193,7 @@ class QueueWork extends BaseCommand
 
         // finish() runs OUTSIDE the handle() try/catch above. If storing the result
         // throws (classically: an oversized result_json past MySQL's max_allowed_packet),
-        // an unguarded throw here leaves the job stuck 'processing' — re-claimed and
+        // an unguarded throw here leaves the job stuck 'processing' - re-claimed and
         // re-run every STALE_MINUTES forever. Guard it: fall back to a resultless 'failed'
         // so the job reaches a terminal state instead of looping.
         try {

@@ -19,7 +19,7 @@ use DateTime;
  *   - toStagedRows(): the modal's POST -> raw staged rows the importer re-validates,
  *                     reversing the field/code mapping viewData() applied.
  *
- * The modal reuses store()/update()'s field names, so nothing about the form changes —
+ * The modal reuses store()/update()'s field names, so nothing about the form changes -
  * only its `action` (a staging-save endpoint) and its prefill source differ.
  */
 class ImportFamilyModalBuilder
@@ -92,7 +92,7 @@ class ImportFamilyModalBuilder
             ];
         }
 
-        // The QR the operator is fixing — editable (it may be the very thing that's wrong).
+        // The QR the operator is fixing - editable (it may be the very thing that's wrong).
         $formValues = $this->headFormValues($headData, (string) ($headData['familyno'] ?? $familyNo));
 
         $options = (new FamilyFormOptionsModel())->getViewDataForEdit(
@@ -145,7 +145,7 @@ class ImportFamilyModalBuilder
         return array_merge($options, [
             'action'             => $action,
             'fieldPrefix'        => 'family-import',
-            'modalTitle'         => 'Assign a QR — Row ' . $sheetRow,
+            'modalTitle'         => 'Assign a QR - Row ' . $sheetRow,
             'modalMode'          => 'update',
             'submitLabel'        => 'Save fixes',
             'headId'             => 0,
@@ -386,7 +386,7 @@ class ImportFamilyModalBuilder
             ];
         }
 
-        // Blocking issues first — those are what stops the import.
+        // Blocking issues first - those are what stops the import.
         usort($out, static fn (array $a, array $b): int =>
             (($a['severity'] === 'blocking') ? 0 : 1) <=> (($b['severity'] === 'blocking') ? 0 : 1));
 
@@ -510,8 +510,8 @@ class ImportFamilyModalBuilder
             }
         }
 
-        // No explicit Head (HEAD-NONE): promote the same candidate the review report names —
-        // the row carrying an address — so the modal's Head pane matches the report's guidance
+        // No explicit Head (HEAD-NONE): promote the same candidate the review report names -
+        // the row carrying an address - so the modal's Head pane matches the report's guidance
         // instead of blindly taking row 0.
         if ($headIndex === null) {
             $headIndex = FamilyExcelImporter::likelyHeadIndex($rows);
@@ -586,7 +586,7 @@ class ImportFamilyModalBuilder
      * A code / "CODE - Name" / full value -> the full stored value (mirrors the importer's
      * fullValueFromCode so the modal's select pre-selects correctly).
      *
-     * @param array<string,string> $codeMap
+     * @param array<string,string> $codeMap code => full value
      */
     private function fullFromCode(string $value, array $codeMap): string
     {

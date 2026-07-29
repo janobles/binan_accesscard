@@ -1,10 +1,10 @@
 # Views & Bootstrap
 
 **Scope:** layout shells, partials, styling rules. Bootstrap **v5.3.3**
-vendored at `public/assets/bootstrap/css/bootstrap.min.css:1` — pins in
+vendored at `public/assets/bootstrap/css/bootstrap.min.css:1` - pins in
 `docs/knowledge/sources.md`.
 
-## Rule 1: Pages plug into a role layout shell — never standalone `<html>`
+## Rule 1: Pages plug into a role layout shell - never standalone `<html>`
 
 Shells: `app/Views/Admin/layout.php:68`, `Employee/layout.php`,
 `Viewer/layout.php`. Each shell owns `<html>`, head assets, sidebar, topbar,
@@ -22,10 +22,10 @@ Standalone `<html>` is correct ONLY for the shells themselves,
 
 ## Rule 2: Shared UI fragments are partials
 
-- `app/Views/components/dashboard_sidebar.php:1` — sidebar, consumed by shells
+- `app/Views/components/dashboard_sidebar.php:1` - sidebar, consumed by shells
   (`app/Views/Admin/layout.php:68`).
 - `app/Views/Partials/topbar-account-menu.php:1`,
-  `Partials/sector-label-list.php:1` — cross-role fragments
+  `Partials/sector-label-list.php:1` - cross-role fragments
   (`app/Views/Admin/layout.php:89`).
 
 Repeated markup across two views = extract a partial, render with
@@ -34,21 +34,21 @@ Repeated markup across two views = extract a partial, render with
 **Card/table panels use the props-only components** (SB Admin 1 card
 anatomy: card-header icon+title > card-body > optional card-footer):
 
-- `app/Views/components/card.php:1` — generic shell; body content comes
+- `app/Views/components/card.php:1` - generic shell; body content comes
   from a named view (`bodyView` + `bodyData`) or `bodyHtml`. JS scope
   hooks (e.g. `data-*-management-root`) pass through `attrs`.
-- `app/Views/components/data_table.php:1` — columns/rows table card;
+- `app/Views/components/data_table.php:1` - columns/rows table card;
   cell values are RAW HTML, caller esc()'s every dynamic part.
-- `app/Views/components/table_footer.php:1` — shared "Showing X–Y of Z"
+- `app/Views/components/table_footer.php:1` - shared "Showing X-Y of Z"
   + Previous/Next pagination row, passed as `card`'s `footer`.
 
 Canonical consumers: `app/Views/Family/list.php:26` (card + body
 partial), `app/Views/Admin/reports-body.php:79` (chart cards + data_table).
 New panels MUST use these components, not hand-rolled card markup.
 
-## Rule 3: CSS loads via `asset_styles()` — Bootstrap first, adapter, then page CSS
+## Rule 3: CSS loads via `asset_styles()` - Bootstrap first, adapter, then page CSS
 
-Canonical chain — `app/Views/Admin/layout.php:62`:
+Canonical chain - `app/Views/Admin/layout.php:62`:
 
 ```php
 <?php foreach (array_merge(asset_styles('head'), asset_styles('admin')) as $stylePath): ?>
@@ -59,7 +59,7 @@ with the lists defined in `app/Helpers/asset_helper.php:34`: vendored
 SB Admin 1 theme (`assets/sb-admin/css/styles.css`, Bootstrap compiled in)
 → bootstrap-icons → DataTables (bootstrap5 build) → per-page CSS
 (`public/css/<page>.css`, e.g. `accounts.css`, `managerecord.css`). New
-page styles go in a page CSS file registered there — never a new `<link>`
+page styles go in a page CSS file registered there - never a new `<link>`
 hand-added to a shell.
 
 ## Rule 4: Style with Bootstrap utilities/components, not inline styles
@@ -76,17 +76,17 @@ and fixed in `docs/knowledge/violations.md`). Exceptions: PDF views
 to Bootstrap + component classes migrate for free, inline styles have to
 be hunted down.
 
-## Rule 5: Components Bootstrap does NOT ship — build from utilities, not fake classes
+## Rule 5: Components Bootstrap does NOT ship - build from utilities, not fake classes
 
 Bootstrap 5.3 has **no stepper/wizard and no empty-state component**. When a
 page needs one:
 
-- **Empty state:** compose utilities — centered `py-5` block, big muted
+- **Empty state:** compose utilities - centered `py-5` block, big muted
   bootstrap-icon (`display-3 text-secondary`), bold title, `text-muted small`
   hint. Canonical: `app/Views/Scanner/scan.php:39` (`#emptyState`, which also
   doubles as the lookup-error surface by swapping icon/text).
 - **Stepper:** prefer NOT building one. Numbered field labels
-  ("1. Aid type…", "2. Scan…") plus an attention state on the pending field
+  ("1. Subsidy type…", "2. Scan…") plus an attention state on the pending field
   read just as well without a custom component
   (`app/Views/Scanner/scan.php:8`, `.scan-attn` / `.scan-muted` in
   `public/css/scanner-scan.css:4`).

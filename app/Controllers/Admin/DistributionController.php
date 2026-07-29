@@ -12,7 +12,7 @@ use CodeIgniter\HTTP\ResponseInterface;
 
 /**
  * Admin server: distribution-batch control and the all-distributions log.
- * Admin/Developer only. Batch open binds an aid type (from the aid_type
+ * Admin/Developer only. Batch open binds a subsidy type (from the subsidy
  * reference table) for the whole batch. Every mutation writes an
  * audit_trails row. Rendered in the admin dashboard shell.
  */
@@ -25,7 +25,7 @@ class DistributionController extends BaseController
     }
 
     /**
-     * GET admin/distribution — batches and the distribution log share one
+     * GET admin/distribution - batches and the distribution log share one
      * page, switched by ?tab= (batches|log).
      */
     public function distribution(): ResponseInterface|string
@@ -35,6 +35,12 @@ class DistributionController extends BaseController
         return (new \App\Libraries\DashboardPageBuilder($this->request))->renderAdminPage('distribution');
     }
 
+    /**
+     * POST admin/distribution/void/{id} - voids a logged subsidy distribution
+     * (a mistaken or duplicate scan) so it no longer counts in the reports, and
+     * writes an audit trail row recording the control number, subsidy type, and
+     * claim date that were voided.
+     */
     public function voidDistribution(int $id): RedirectResponse
     {
         if ($g = $this->guard()) { return $g; }
@@ -53,7 +59,7 @@ class DistributionController extends BaseController
         return redirect()->to('admin/distribution?tab=log')->with('success', 'Distribution voided.');
     }
 
-    /** POST admin/batches/open — name + aid type. */
+    /** POST admin/batches/open - name + subsidy type. */
     public function openBatch(): RedirectResponse
     {
         if ($g = $this->guard()) { return $g; }
@@ -78,6 +84,11 @@ class DistributionController extends BaseController
         return redirect()->to('admin/distribution?tab=batches')->with('success', 'Batch opened. Scanning is now live.');
     }
 
+    /**
+     * POST admin/batches/close/{id} - closes an open distribution batch, ending
+     * scanning for it and resetting the live kiosk statistics for the next
+     * batch. Writes an audit trail row.
+     */
     public function closeBatch(int $id): RedirectResponse
     {
         if ($g = $this->guard()) { return $g; }

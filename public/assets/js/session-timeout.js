@@ -7,7 +7,7 @@
 //   - Backend : GET  session/keep-alive  (Auth\AuthController::keepAlive)
 //   - Backend : GET  logout?timeout=1    (Auth\AuthController::logout)
 //   - login.js: clears the shared localStorage key on the login page
-//   - Views   : admin_layout.php / Employee/layout.php — the <script> tag sets
+//   - Views   : admin_layout.php / Employee/layout.php - the <script> tag sets
 //               data-timeout-seconds, data-logout-url, data-keep-alive-url,
 //               and data-home-url on the script element itself
 (function () {
@@ -164,7 +164,7 @@
             if (event.newValue === null) {
                 // Another tab logged out (or timed out) and cleared the shared
                 // session. Follow it to the login page WITHOUT calling the logout
-                // endpoint again — that other tab already recorded the logout, so
+                // endpoint again - that other tab already recorded the logout, so
                 // re-hitting it here would log a duplicate/spurious entry.
                 if (! isLoggingOut) {
                     isLoggingOut = true;

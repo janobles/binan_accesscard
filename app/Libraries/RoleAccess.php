@@ -50,7 +50,7 @@ class RoleAccess
     /**
      * The auth session keys set at login. Centralized so every clear path (the
      * idle-timeout filter and the controllers' logout/invalid-session handling)
-     * removes exactly the same set — no drift between copies.
+     * removes exactly the same set - no drift between copies.
      */
     public const SESSION_KEYS = [
         'is_logged_in',
@@ -64,7 +64,7 @@ class RoleAccess
 
     /**
      * Removes the auth session keys (SESSION_KEYS). Pass $regenerate = true to also
-     * rotate the session ID — the controller-side clear regenerates; the idle filter
+     * rotate the session ID - the controller-side clear regenerates; the idle filter
      * clears without regenerating.
      */
     public static function forgetLoginSession(bool $regenerate = false): void
@@ -98,7 +98,7 @@ class RoleAccess
 
     /**
      * The main access gate: returns null when the current user may proceed, or a
-     * RedirectResponse otherwise — to login if not authenticated / session invalid,
+     * RedirectResponse otherwise - to login if not authenticated / session invalid,
      * or to their own dashboard with an error if their role isn't in $allowedRoles.
      * Called at the top of guarded controller actions and the page builder.
      */

@@ -1,3 +1,15 @@
+<?php
+/**
+ * Shared Add, Edit, Archive and Restore modal for sectors, included once by the
+ * sector list page (Admin > Reference Data > Sectors). The values it renders come
+ * from that page's scope, built by sector_management_view_data().
+ *
+ * One form serves all four actions: sectors-modal.js swaps the form action between
+ * the four data-*-action URLs. The existing shortcodes ride along in
+ * data-existing-codes so the duplicate check runs in the browser before a post,
+ * which is a convenience only; Lookups\SectorController re-checks server side.
+ */
+?>
 <div class="modal fade" id="sectorActionModal" tabindex="-1" aria-labelledby="sectorActionModalLabel" aria-hidden="true">
 	<div class="modal-dialog modal-dialog-centered">
 		<div class="modal-content">

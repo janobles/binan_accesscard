@@ -1,13 +1,13 @@
 // Filter panel + pills for the retrofit tabs (lookups, audit trails, employee
 // activity, accounts). The panel's radios live inside the page's search form;
-// changing one applies immediately (live-apply, no Apply/Reset buttons — see
+// changing one applies immediately (live-apply, no Apply/Reset buttons - see
 // docs/knowledge/binan-conventions/ui-design-system.md). Manage Records has
 // its own AJAX version of this in family-datatable.js.
 //
 // Two modes:
 //   - server (default): change submits the GET form; pills render once from
 //     the server-checked state.
-//   - client (form has [data-records-client]): nothing is submitted — pills
+//   - client (form has [data-records-client]): nothing is submitted - pills
 //     re-render in place, and the page's own filter JS reacts to the radios'
 //     bubbling change events (see accounts-modal.js).
 //

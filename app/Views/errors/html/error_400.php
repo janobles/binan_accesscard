@@ -1,3 +1,12 @@
+<?php
+/**
+ * The 400 page, shown when a request is rejected as malformed.
+ *
+ * Diverges from stock CodeIgniter in one way: the inline CSS block was lifted into
+ * _error_styles.php, which error_404.php shares. Outside production the page names
+ * the reason; in production it stays vague on purpose.
+ */
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>

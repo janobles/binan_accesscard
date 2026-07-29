@@ -137,7 +137,7 @@ class SectorController extends BaseController
         $sector = $model->find($sectorId);
 
         // A sector doubles as a service category; block deleting one that still backs a
-        // service's category label (archive stays allowed — it only retires new picks).
+        // service's category label (archive stays allowed - it only retires new picks).
         if ($sector !== null && $model->usedAsServiceCategory((string) ($sector['name'] ?? ''))) {
             return $this->redirectAdmin('admin/reference-data?tab=sectors', 'error', 'This sector is used as a service category by one or more services and cannot be deleted. Reassign or archive those services first.');
         }

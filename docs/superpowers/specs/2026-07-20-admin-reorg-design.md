@@ -1,4 +1,4 @@
-# Admin Workspace Reorganization — Design
+# Admin Workspace Reorganization - Design
 
 **Date:** 2026-07-20
 **Scope:** Admin workspace (full reorg) + minimal ripple into Employee/Viewer (dead-alias removal, Viewer reference-data merge). Scanner kiosk untouched.
@@ -6,7 +6,7 @@
 ## Problem
 
 The admin sidebar has 11 links under 5 headings. Four of them are near-identical
-lookup CRUD pages (Sectors, Services, Categories, Aid Types). Batches and
+lookup CRUD pages (Sectors, Services, Categories, Subsidy Types). Batches and
 Distributions split one workflow across two pages. Reports duplicates the
 Dashboard's "stats landing page" role. The routes file carries dead aliases
 (`manage-families`, `manage-members`, `family-entry`) that all resolve to the
@@ -28,7 +28,7 @@ same Manage Records page. Several pages show content nobody acts on.
 | Core | Dashboard | `admin/dashboard` |
 | Records | Manage Records | `admin/manage-records` |
 | | Reference Data | `admin/reference-data` |
-| Aid Distribution | Generate Cards | `admin/cards` |
+| Subsidy Distribution | Generate Cards | `admin/cards` |
 | | Distribution | `admin/distribution` |
 | Administration | Account Management | `admin/accounts` |
 | | Audit Trails | `admin/audit-trails` |
@@ -39,25 +39,25 @@ same Manage Records page. Several pages show content nobody acts on.
 `admin/reports` GET page dies; `ReportsController::stats` and `::pdf` remain as
 AJAX/PDF endpoints under `admin/reports/*`.
 
-**Content (curated — see Content Cuts):**
+**Content (curated - see Content Cuts):**
 
 1. Stat tile row (4 tiles): Total Records, Registered Members,
-   Received aid ("1,204 of 3,410" — QR-holder total folded into the subtitle),
+   Received aid ("1,204 of 3,410" - QR-holder total folded into the subtitle),
    Coverage %.
 2. Distribution analytics section: batch selector + Refresh + Download PDF
    toolbar (from `reports-body.php`), coverage-by-barangay bar chart,
-   handouts-by-aid-type small table, per-kiosk performance table.
+   handouts-by-subsidy-type small table, per-kiosk performance table.
 3. Recent Records table (5 rows, each row links to the family view).
 
 **Cut from the merged page:**
 
-- "Active Sectors" and "Services and Programs" stat cards — counts of static
+- "Active Sectors" and "Services and Programs" stat cards - counts of static
   reference rows; nobody acts on them.
-- Recent Activity table — duplicates the Audit Trails page one click away.
-- Received-vs-waiting pie chart — repeats the KPI tiles as a two-value pie.
-- Handouts-by-aid-type bar chart — replaced by a small table (few aid types;
+- Recent Activity table - duplicates the Audit Trails page one click away.
+- Received-vs-waiting pie chart - repeats the KPI tiles as a two-value pie.
+- Handouts-by-subsidy-type bar chart - replaced by a small table (few subsidy types;
   a table reads faster).
-- On-screen coverage-by-barangay fallback table — kept for print/no-JS only
+- On-screen coverage-by-barangay fallback table - kept for print/no-JS only
   (`d-none d-print-table` on screen).
 
 **Behavior:** the 5-second live poll runs only while the selected batch is
@@ -67,7 +67,7 @@ open; closed batches are static data. `buildReportsData()` runs when
 ## 2. Reference Data page (merges 4 pages)
 
 New GET `admin/reference-data` renders Bootstrap `nav-tabs`:
-Sectors | Services | Categories | Aid Types. Tab panes reuse the existing
+Sectors | Services | Categories | Subsidy Types. Tab panes reuse the existing
 body fragments (`Lookups/sectors-body.php`, `services-body.php`,
 `categories-body.php`, `Admin/aidtypes-body.php`).
 
@@ -91,7 +91,7 @@ reuse `Admin/distribution-batches-body.php` and
   right tab.
 - Old GET routes `admin/batches` and `admin/distributions` are removed.
 
-## 4. Account Management: one table — already implemented
+## 4. Account Management: one table - already implemented
 
 Verified during planning: `Admin/accounts.php` already merges the four role
 arrays into a single table with client-side role/status filter pills
@@ -101,7 +101,7 @@ builder keeps exposing the four arrays (`adminAccounts`, `employeeAccounts`,
 
 ## 5. Route cleanup
 
-Delete (no redirects — internal tool, canonical URLs only):
+Delete (no redirects - internal tool, canonical URLs only):
 
 - `admin/manage-families`, `admin/manage-family` (bare GET),
   `admin/family-entry`, `admin/manage-members`
@@ -124,7 +124,7 @@ Viewer layout changes.
 
 - `DashboardPageBuilder`: new `activePage` cases `reference-data` and
   `distribution`; reports data builds under `dashboard`; account list merged;
-  per-page data gating preserved (only the active page's heavy queries run —
+  per-page data gating preserved (only the active page's heavy queries run -
   lookup tabs may all build on page load, tables are small).
 - `ViewLayoutModel`: `pageTitle()` and `navActive()` maps updated to the new
   page keys.
@@ -139,7 +139,7 @@ unknown.
 
 ## Testing / verification
 
-- `php spark routes` — every route resolves; removed routes gone.
+- `php spark routes` - every route resolves; removed routes gone.
 - `vendor/bin/phpunit` before and after; update tests referencing removed
   routes.
 - Playwright against dev server: log in, screenshot Dashboard,

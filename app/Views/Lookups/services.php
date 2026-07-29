@@ -1,4 +1,14 @@
 <?php
+/**
+ * Service and program list page (Admin > Reference Data > Services).
+ *
+ * Data comes from service_management_view_data(); this view never touches a model.
+ * Counts are whole-table, not the current page. A service's category can be either a
+ * sector name or a standalone Manage-Categories row, which is why the dropdown options
+ * arrive pre-merged rather than being read from one table here. Reuses the Manage
+ * Records .records-* layout (managerecord.css) plus the shared lookup badge and action
+ * styles (lookupmanagement.css).
+ */
 helper('dashboard_view');
 // service_management_view_data() supplies $serviceCategoryOptions (managed category
 // names from the Manage Categories page + any categories already on services) for the
@@ -76,8 +86,7 @@ $serviceFooter = ($totalRows ?? 0) > 0 ? view('components/table_footer', [
     'totalRows' => $totalRows,
     'page' => $page,
     'totalPages' => $totalPages,
-    'prevUrl' => $servicePageUrl(max(1, $page - 1)),
-    'nextUrl' => $servicePageUrl(min($totalPages, $page + 1)),
+    'pageUrl' => $servicePageUrl,
 ]) : null;
 ?>
 <?= view('components/card', [

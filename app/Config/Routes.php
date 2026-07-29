@@ -42,6 +42,7 @@ $routes->group('admin', static function (RouteCollection $routes): void {
         $routes->post('import/review/(:num)/cancel', 'Families\FamilyImportController::reviewCancel/$1');
         $routes->get('import/review/(:num)/family', 'Families\FamilyImportController::reviewFamilyModal/$1');
         $routes->post('import/review/(:num)/family/save', 'Families\FamilyImportController::reviewFamilySave/$1');
+        $routes->post('import/review/(:num)/family/cell', 'Families\FamilyImportController::reviewCellSave/$1');
         $routes->post('import/review/(:num)/family/remove', 'Families\FamilyImportController::reviewFamilyRemove/$1');
         $routes->get('create', 'Families\FamilyController::createFamily');
         $routes->get('view/(:num)', 'Families\FamilyController::viewFamily/$1');
@@ -122,6 +123,7 @@ $routes->group('employee', static function (RouteCollection $routes): void {
         $routes->post('import/review/(:num)/cancel', 'Families\FamilyImportController::reviewCancel/$1');
         $routes->get('import/review/(:num)/family', 'Families\FamilyImportController::reviewFamilyModal/$1');
         $routes->post('import/review/(:num)/family/save', 'Families\FamilyImportController::reviewFamilySave/$1');
+        $routes->post('import/review/(:num)/family/cell', 'Families\FamilyImportController::reviewCellSave/$1');
         $routes->post('import/review/(:num)/family/remove', 'Families\FamilyImportController::reviewFamilyRemove/$1');
         $routes->get('create', 'Families\FamilyController::createFamily');
         $routes->get('view/(:num)', 'Families\FamilyController::viewFamily/$1');
@@ -133,7 +135,7 @@ $routes->group('employee', static function (RouteCollection $routes): void {
 });
 
 /*
- * Viewer workspace (read-only). GET routes only — no mutation endpoints are
+ * Viewer workspace (read-only). GET routes only - no mutation endpoints are
  * exposed. The read-only family detail fragment reuses FamilyController::viewFamily,
  * which permits the Viewer role via requireFamilyViewAccess().
  */
@@ -149,7 +151,7 @@ $routes->group('viewer', static function (RouteCollection $routes): void {
 });
 
 /**
- * Scanner module (aid distribution). Scanner/Admin/Developer only — each action
+ * Scanner module (subsidy distribution). Scanner/Admin/Developer only - each action
  * calls RoleAccess::requireRole() internally (mirrors the Cards controller).
  */
 $routes->group('scanner', static function (RouteCollection $routes): void {

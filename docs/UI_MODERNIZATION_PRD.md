@@ -8,7 +8,13 @@ The design explicitly rejects trends like glassmorphism or heavy shadows in favo
 
 A core objective is to enforce **deterministic component rules** so that future developers and AI agents produce 100% consistent interfaces, eliminating the ad-hoc inconsistencies (e.g., varying button styles, stray icons) seen in previous iterations.
 
-## 2. Tokenized Design System
+## 2. Target Audience: LGU Users & Information Density
+
+When adopting a compact, high-data-density design (similar to advanced map-based routing tools), we must balance the UI for LGU (Local Government Unit) employees. LGU users often span a wide demographic, including older users who may struggle with very small text or cramped touch targets.
+- **Data-Heavy Views (Tables/Dashboards)**: A compact layout (reduced padding, 13px-14px font size) is highly encouraged for data grids and map overlays to minimize scrolling and maximize data visibility for power users.
+- **Accessibility Floor**: Even in compact views, primary interactive elements (Buttons, Inputs) must maintain strict accessible touch targets (minimum 44px height) to prevent misclicks and user fatigue. 
+
+## 3. Tokenized Design System
 
 The application will use native CSS Custom Properties (Variables) to strictly define the allowed design tokens. Ad-hoc hex codes and inline styles are strictly prohibited.
 
@@ -23,7 +29,7 @@ The application will use native CSS Custom Properties (Variables) to strictly de
 - Strict spacing multipliers (e.g., `--space-sm`, `--space-md`, `--space-lg`) must be used for all margins and paddings.
 - Standardized border radii for all containers.
 
-## 3. Deterministic Component Rules (Non-Negotiables)
+## 4. Deterministic Component Rules (Non-Negotiables)
 
 To ensure absolute consistency, components must adhere to rigid, lintable constraints.
 
@@ -42,14 +48,14 @@ To ensure absolute consistency, components must adhere to rigid, lintable constr
 ### Cards, Modals & Panels
 - **Surface**: Solid white backgrounds only.
 - **Elevation**: Use crisp 1px light gray borders (`var(--token-border-light)`) to separate content. Drop shadows should be completely eliminated or restricted to an ultra-flat, subtle state for floating elements (like dropdowns).
-- **Padding**: Generous, uniform internal whitespace to lower cognitive load.
+- **Padding**: Generous, uniform internal whitespace to lower cognitive load. (Note: Internal padding can be tightened explicitly for data-dense power-user cards).
 
 ### Inputs & Forms
 - **Background**: Solid white or ultra-light gray.
 - **Borders**: 1px solid gray, snapping to Primary Green on focus.
 - **Structure**: Clear separation between label and input.
 
-## 4. Implementation Strategy
+## 5. Implementation Strategy
 
 ### Phase 1: Establish Tokens
 - Create `public/css/design-tokens.css` that maps all allowed colors, spacings, and sizes to CSS variables (`:root`).
@@ -63,7 +69,7 @@ To ensure absolute consistency, components must adhere to rigid, lintable constr
 - Document these exact deterministic rules in `docs/knowledge/binan-conventions/ui-design-system.md`.
 - Ensure any future CSS linting prevents the usage of raw color values or invalid paddings in component classes.
 
-## 5. Verification Plan
+## 6. Verification Plan
 - Code review to ensure zero usage of `backdrop-filter` or complex `box-shadow` properties.
 - Visual audit against the reference platforms (Grab, PayMaya) to ensure the interface reads as a flat, high-utility service.
 - DOM inspection to ensure every button strictly follows the "no icon, min-size, centered text, enforced padding" rule.

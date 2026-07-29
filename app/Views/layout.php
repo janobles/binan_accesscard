@@ -1,0 +1,160 @@
+<?php
+/**
+ * Dashboard shell (the ONLY dashboard layout, shared by every staff role).
+ *
+ * Rendered by App\Libraries\DashboardPageBuilder, which passes $role,
+ * $activePage, $bodyView, $bodyData, plus whatever the body view needs. The
+ * sidebar and page title come from Config\Navigation so a new page is one
+ * manifest entry rather than an edit here. The formatDate/formatTime/
+ * formatAuditMember/formatAuditUser helpers are provided by the builder (do
+ * not redefine them here).
+ */
+
+use Config\Navigation;
+
+// Defensive defaults so the layout still renders if a value is ever missing.
+$user = $user ?? [];
+$username = $user['username'] ?? 'Admin';
+$activePage = $activePage ?? 'dashboard';
+$role = $role ?? '';
+$pageTitle = Navigation::titleFor($activePage);
+$modeLabel = $modeLabel ?? 'Admin Console';
+$canManageAccounts = $canManageAccounts ?? false;
+$idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
+$sidebarUserUrl = $canManageAccounts ? site_url('accounts') : site_url('dashboard');
+$bodyView = $bodyView ?? null;
+?>
+<?php
+/*
+ * SB Admin-style shell: a Bootstrap 5-safe responsive frame around the topnav,
+ * sidebar, and a single body view chosen by the caller ($bodyView/$bodyData).
+ */
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?= esc($pageTitle) ?> - Binan Access Card MIS</title>
+    <link rel="icon" type="image/png" href="<?= asset_url('assets/image/binan.png') ?>">
+    <?php
+    // The dashboard's distribution analytics reuse the scanner reports styles
+    // (KPI tiles, chart cards, barangay chart) from the scanner asset group.
+    $layoutStyles = array_merge(asset_styles('head'), asset_styles('admin'));
+    if (($activePage ?? '') === 'dashboard') {
+        $layoutStyles = array_merge($layoutStyles, asset_styles('scanner'));
+    }
+    ?>
+    <?php foreach ($layoutStyles as $stylePath): ?>
+    <link rel="stylesheet" href="<?= esc(asset_url($stylePath), 'attr') ?>">
+    <?php endforeach; ?>
+</head>
+<body class="sb-nav-fixed">
+<?= view('Partials/dashboard-topnav', [
+    'brandUrl' => $sidebarUserUrl,
+    'user' => $user,
+    'username' => $username,
+    'accountLevelLabel' => $accountLevelLabel,
+]) ?>
+<div id="layoutSidenav">
+    <div id="layoutSidenav_nav">
+        <?= view('components/dashboard_sidebar', [
+            'role' => $role,
+            'activePage' => $activePage,
+        ]) ?>
+    </div>
+    <div id="layoutSidenav_content">
+            <main class="container-fluid px-4 dashboard-content">
+            <h1 class="mt-4" id="dashboard-page-title"><?= esc($pageTitle) ?></h1>
+            <?php if (session()->getFlashdata('success')): ?>
+                <div class="alert alert-success" data-auto-dismiss-alert><?= esc(session()->getFlashdata('success')) ?></div>
+            <?php endif; ?>
+            <?php if ($resetInfo = session()->getFlashdata('reset_password')): ?>
+                <div class="reset-password-callout" role="alert">
+                    <div class="reset-password-callout__head">
+                        <i class="bi bi-key-fill" aria-hidden="true"></i>
+                        <span>New password for <strong><?= esc((string) ($resetInfo['username'] ?? '')) ?></strong></span>
+                    </div>
+                    <div class="reset-password-callout__body">
+                        <code class="reset-password-callout__value" id="resetPasswordValue"><?= esc((string) ($resetInfo['password'] ?? '')) ?></code>
+                        <button type="button" class="btn btn-sm btn-outline-success js-copy-password" data-copy-target="#resetPasswordValue">
+                            <i class="bi bi-clipboard" aria-hidden="true"></i><span>Copy</span>
+                        </button>
+                    </div>
+                    <p class="reset-password-callout__hint">Share it with the user and ask them to change it in My Account.</p>
+                </div>
+            <?php endif; ?>
+            <?php if (session()->getFlashdata('error')): ?>
+                <div class="alert alert-danger" data-auto-dismiss-alert><?= esc(session()->getFlashdata('error')) ?></div>
+            <?php endif; ?>
+            <?php if (session()->getFlashdata('family_record_saved')): ?>
+                <span id="familyDraftSavedMarker" hidden></span>
+            <?php endif; ?>
+
+            <?= view($bodyView, $bodyData ?? []) ?>
+
+            </main>
+    </div>
+</div>
+
+<?php /* Shared modal target. The *-modal.js loaders fetch ?partial=1 fragments
+         (add/edit record, accounts, sectors, services, audit) into #familyModalBody. */ ?>
+<?= view('components/modal', [
+    'id' => 'familyModal',
+    'modalClass' => 'floating-family-modal',
+    'attrs' => 'aria-label="Record details" data-bs-backdrop="static" data-bs-keyboard="false"',
+    'size' => 'modal-xl',
+    'title' => 'Record',
+    'titleId' => 'familyModalLabel',
+    'bodyId' => 'familyModalBody',
+    'bodyHtml' => '<div class="family-modal-loading" role="status" aria-live="polite"><div class="spinner-border text-primary" aria-hidden="true"></div><span>Loading...</span></div>',
+    'footerHtml' => '<button type="button" class="btn btn-outline-secondary family-modal-close" data-bs-dismiss="modal">Close</button>',
+]) ?>
+
+<?= view('Family/action-confirm-modal') ?>
+
+<?= view('Accounts/status-confirm-modal') ?>
+
+<?php /* Per-row audit detail modal, populated client-side by audit-detail-modal.js
+         from the clicked row's data-* attributes (no AJAX). */ ?>
+<?= view('components/modal', [
+    'id' => 'auditDetailModal',
+    'modalClass' => 'audit-detail-modal',
+    'attrs' => 'aria-labelledby="auditDetailTitle"',
+    'size' => 'modal-lg',
+    'title' => 'Audit Entry Details',
+    'titleId' => 'auditDetailTitle',
+    'bodyHtml' => '<p class="audit-detail-full" id="auditDetailFull">-</p>',
+    'footerHtml' => '<button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>',
+]) ?>
+
+<?php foreach (array_merge(asset_scripts('core'), asset_scripts('admin')) as $scriptPath): ?>
+<script src="<?= esc(asset_url($scriptPath), 'attr') ?>"></script>
+<?php endforeach; ?>
+<script src="<?= esc(asset_url('assets/js/session-timeout.js'), 'attr') ?>" data-timeout-seconds="<?= esc((string) $idleTimeoutSeconds) ?>" data-logout-url="<?= site_url('logout?timeout=1') ?>" data-home-url="<?= site_url('/') ?>" data-keep-alive-url="<?= site_url('session/keep-alive') ?>"></script>
+
+<?php if (session()->getFlashdata('openModal')): ?>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function() {
+        var modalType = '<?= esc(session()->getFlashdata('openModal')) ?>';
+        var modalId = '<?= esc((string) session()->getFlashdata('openModalId')) ?>';
+        var btn = null;
+        if (modalType === 'account-create') {
+            btn = document.querySelector('.js-open-account-create-modal');
+        } else if (modalType === 'account-profile') {
+            btn = document.querySelector('.js-open-my-account-modal');
+        } else if (modalType === 'account-edit' && modalId) {
+            var urlPart = '/edit/' + modalId;
+            btn = document.querySelector('.js-open-account-edit-modal[data-modal-url*="' + urlPart + '"]');
+        }
+        if (btn) {
+            btn.click();
+        }
+    }, 100);
+});
+</script>
+<?php endif; ?>
+
+</body>
+</html>

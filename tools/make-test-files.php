@@ -11,6 +11,9 @@
  *   family-import-100B.xlsx      — 100 people, clean valid families, no overlap with A.
  *   family-import-ALL-ERRORS.xlsx — every red (blocking) + yellow (warning) code, with
  *                                   COMPLETE head data (no blank required fields).
+ *   family-import-C-10k-clean.xlsx  — 10,000 people, all clean (bulk load test).
+ *   family-import-D-10k-errors.xlsx — 10,000 people, ~1,000 with a seeded field-level error,
+ *                                     the rest clean (bulk load + error-handling test).
  *
  *   php tools/make-test-files.php
  *
@@ -317,6 +320,52 @@ function errorRows(): array
     ];
 }
 
+/**
+ * Seeds field-level errors into $count of an otherwise CLEAN row set, evenly spaced, rotating
+ * through a fixed list of self-contained (non-DB) failures. So the file stays MOSTLY valid with a
+ * known slice of errors — the "10k with ~1000 errors" case. QR (col A) and Relationship (col B)
+ * are never touched, so family grouping stays intact and each seeded row trips exactly one code.
+ * Call this AFTER fillOptional so the corrupt values are not overwritten.
+ *
+ * @param list<array> $rows
+ * @return array{rows: list<array>, seeded: int}
+ */
+function corruptRows(array $rows, int $count): array
+{
+    $longName = str_repeat('Juanito', 16); // 112 chars > 100 -> LENGTH
+
+    // [column index, bad value] — one cell each. Cols: 3=FirstName 5=Suffix 6=Birthday 7=Sex
+    // 9=Contact 13=MonthlyIncome 15=Barangay 17=Services.
+    $corruptions = [
+        [7, 'Malee'],              // SEX invalid
+        [6, '31-31-2000'],         // BDAY invalid date
+        [6, '01-01-1850'],         // BDAY-RANGE (implausibly old) warning
+        [13, 'plenty'],            // INCOME not a bracket/number
+        [9, '12345'],              // CONTACT too short warning
+        [15, 'Barangay Wakanda'],  // BRGY not an official barangay warning
+        [5, 'Junior'],             // SUFFIX not a dropdown code warning
+        [3, $longName],            // LENGTH (first name > 100 chars)
+        [17, 'ZZZ'],               // SERVICE unknown code
+        [3, ''],                   // REQUIRED (blank required first name)
+    ];
+
+    $total  = count($rows);
+    $step   = max(1, intdiv($total, max(1, $count)));
+    $seeded = 0;
+
+    for ($i = 0; $i < $count; $i++) {
+        $idx = $i * $step;
+        if ($idx >= $total) {
+            break;
+        }
+        [$col, $val]      = $corruptions[$i % count($corruptions)];
+        $rows[$idx][$col] = $val;
+        $seeded++;
+    }
+
+    return ['rows' => $rows, 'seeded' => $seeded];
+}
+
 /** Writes a row set onto a fresh template and saves it. Optionally merges the last two A cells. */
 function writeWorkbook(array $rows, string $path, bool $mergeLastPairForQr11 = false): array
 {
@@ -352,23 +401,56 @@ function writeWorkbook(array $rows, string $path, bool $mergeLastPairForQr11 = f
     return ['rows' => count($rows), 'first' => $headerRow + 1, 'last' => $r - 1];
 }
 
-// -- build the three files ----------------------------------------------------
+// -- build ---------------------------------------------------------------------
+// Which files to build. No arg = all. 'small' = A/B/E only. 'C' = 10k clean only.
+// 'D' = 10k with seeded errors only. The 10k files are slow to write, so building one
+// at a time keeps a quick edit/test loop.
+$only = strtolower(trim($argv[1] ?? ''));
+$want = static fn (string $name): bool => $only === '' || $only === $name;
 
-$genA  = generateClean(6, 89, 1950, 0);                            // ref families are QR 1-5, so gen starts at 6
-$fileA = fillOptional(array_merge(referenceRows(), $genA['rows'])); // 11 + 89 = 100 people, QR from 1
-$genB  = generateClean($genA['nextQr'], 100, 1965, 9);             // continues after A (no QR collision)
-$fileB = fillOptional($genB['rows']);
-$fileE = fillOptional(errorRows());
+$outDir = $root . DIRECTORY_SEPARATOR . 'excel';
+if (! is_dir($outDir)) {
+    mkdir($outDir, 0777, true);
+}
 
-$outA = $root . DIRECTORY_SEPARATOR . 'family-import-100A.xlsx';
-$outB = $root . DIRECTORY_SEPARATOR . 'family-import-100B.xlsx';
-$outE = $root . DIRECTORY_SEPARATOR . 'family-import-ALL-ERRORS.xlsx';
+if ($want('small')) {
+    $genA  = generateClean(6, 89, 1950, 0);                             // ref families are QR 1-5, so gen starts at 6
+    $fileA = fillOptional(array_merge(referenceRows(), $genA['rows'])); // 11 + 89 = 100 people, QR from 1
+    $genB  = generateClean($genA['nextQr'], 100, 1965, 9);             // continues after A (no QR collision)
+    $fileB = fillOptional($genB['rows']);
+    $fileE = fillOptional(errorRows());
 
-$a = writeWorkbook($fileA, $outA);
-$b = writeWorkbook($fileB, $outB);
-$e = writeWorkbook($fileE, $outE, true);
+    $outA = $outDir . DIRECTORY_SEPARATOR . 'family-import-100A.xlsx';
+    $outB = $outDir . DIRECTORY_SEPARATOR . 'family-import-100B.xlsx';
+    $outE = $outDir . DIRECTORY_SEPARATOR . 'family-import-ALL-ERRORS.xlsx';
 
-echo 'Wrote ' . $outA . ' — ' . $a['rows'] . " people (rows {$a['first']}-{$a['last']})\n";
-echo 'Wrote ' . $outB . ' — ' . $b['rows'] . " people (rows {$b['first']}-{$b['last']})\n";
-echo 'Wrote ' . $outE . ' — ' . $e['rows'] . " rows (rows {$e['first']}-{$e['last']})\n";
-echo "\nImport 100A first (creates reference families QR 1-5), then ALL-ERRORS.\n";
+    $a = writeWorkbook($fileA, $outA);
+    $b = writeWorkbook($fileB, $outB);
+    $e = writeWorkbook($fileE, $outE, true);
+
+    echo 'Wrote ' . $outA . ' — ' . $a['rows'] . " people (rows {$a['first']}-{$a['last']})\n";
+    echo 'Wrote ' . $outB . ' — ' . $b['rows'] . " people (rows {$b['first']}-{$b['last']})\n";
+    echo 'Wrote ' . $outE . ' — ' . $e['rows'] . " rows (rows {$e['first']}-{$e['last']})\n";
+    echo "Import 100A first (creates reference families QR 1-5), then ALL-ERRORS.\n";
+}
+
+// Bulk load-test files. C: 10,000 clean, valid people, QR continuing at 5741 (right after the
+// 20k members file, whose QRs top out at 5740) so the two import as one contiguous sequence.
+// D: same size but ~800 rows carry a seeded field-level error (rest valid). QR continues at 9741,
+// right after C's 4000 families end at 9740, so 20k -> C -> D import as one contiguous sequence.
+if ($want('c')) {
+    $genC  = generateClean(5741, 10000, 1970, 3);
+    $fileC = fillOptional($genC['rows']);
+    $outC  = $outDir . DIRECTORY_SEPARATOR . 'family-import-C-10k-clean.xlsx';
+    $c     = writeWorkbook($fileC, $outC);
+    echo 'Wrote ' . $outC . ' — ' . $c['rows'] . " people, all clean (rows {$c['first']}-{$c['last']})\n";
+}
+
+if ($want('d')) {
+    $dErrorCount = 800;
+    $genD  = generateClean(9741, 10000, 1975, 7);
+    $corrD = corruptRows(fillOptional($genD['rows']), $dErrorCount);
+    $outD  = $outDir . DIRECTORY_SEPARATOR . 'family-import-D-10k-errors.xlsx';
+    $d     = writeWorkbook($corrD['rows'], $outD);
+    echo 'Wrote ' . $outD . ' — ' . $d['rows'] . ' people, ' . $corrD['seeded'] . " with a seeded error (rows {$d['first']}-{$d['last']})\n";
+}

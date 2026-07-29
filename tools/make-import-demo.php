@@ -162,7 +162,11 @@ foreach ($rows as $row) {
 // The QR-11 demo: merge the QR cells of the last family (the two rows just written).
 $sheet->mergeCells('A' . ($r - 2) . ':A' . ($r - 1));
 
-$out = $root . DIRECTORY_SEPARATOR . 'family-import-DEMO-validations.xlsx';
+$outDir = $root . DIRECTORY_SEPARATOR . 'excel';
+if (! is_dir($outDir)) {
+    mkdir($outDir, 0777, true);
+}
+$out = $outDir . DIRECTORY_SEPARATOR . 'family-import-DEMO-validations.xlsx';
 (new Xlsx($spreadsheet))->save($out);
 
 echo 'Wrote ' . $out . "\n";

@@ -1,59 +1,63 @@
-# Product Requirements Document (PRD): UI Modernization
+# Product Requirements Document (PRD): Deterministic UI Modernization
 
 ## 1. Goal Description
 
-The primary goal is to stylize the Biñan Access Card application to feel significantly more modern, premium, and dynamic, breaking away from the flat, out-of-the-box appearance of Bootstrap 5 and the SB Admin theme. This involves a UI/UX modernization pass over the current application, focusing on layout enhancements, typography improvements, micro-animations, and a unified design system.
+The primary goal is to stylize the Biñan Access Card application to achieve a clean, minimal, and low-cognitive-load aesthetic inspired by modern regional utility platforms like Grab, PayMaya, eGovPH, and PSA Helpline. 
 
-## 2. Current Architecture & CSS Audit
+The design explicitly rejects trends like glassmorphism or heavy shadows in favor of a highly deterministic, strictly tokenized design system that relies effectively on **White, Green, and Gray**. 
 
-A review of the `public/css/` directory reveals the following architecture:
-- **Structure**: The CSS is split into global theme files (`theme.css`) and component/page-specific files (`login.css`, `familymodal.css`, `accounts.css`, etc.). 
-- **Standardization**: The file structure is standard for a buildless PHP application. The `theme.css` smartly layers customizations over SB Admin via Bootstrap's CSS Custom Properties (`var(--bs-primary)`).
-- **PHP Components**: The reusable UI fragments in `app/Views/components/` (e.g., `modal.php`, `card.php`) follow a highly standard "props-only" architecture. Modal contents are injected via `$bodyView`, mirroring modern component-driven development and adhering strictly to the `views-bootstrap.md` conventions.
+A core objective is to enforce **deterministic component rules** so that future developers and AI agents produce 100% consistent interfaces, eliminating the ad-hoc inconsistencies (e.g., varying button styles, stray icons) seen in previous iterations.
 
-## 3. Technology Strategy: CSS Variables over Sass
+## 2. Tokenized Design System
 
-While compiling Bootstrap from source via **Sass (SCSS)** is traditionally the most powerful way to customize the framework, it introduces a build step (Node.js/npm) which is undesirable in this straightforward CodeIgniter 4 repository.
+The application will use native CSS Custom Properties (Variables) to strictly define the allowed design tokens. Ad-hoc hex codes and inline styles are strictly prohibited.
 
-Given that the project uses **Bootstrap v5.3.3**, we will leverage **Native CSS Custom Properties (Variables)**.
-- Bootstrap 5 exposes a massive number of its internal values as CSS variables (e.g., `--bs-primary`, `--bs-border-radius`).
-- We will deeply customize the application by overriding these `:root` variables and utilizing modern native CSS features (like native CSS nesting and `color-scheme`). This achieves maximum modernization without the overhead of a build pipeline.
+### Color Tokens
+- **Primary Green**: The singular brand color used for primary actions, active states, and emphasis.
+- **Grays**: A strict scale of grays (e.g., Gray-50 to Gray-900) used for typography, borders, and secondary surface backgrounds to create subtle hierarchy.
+- **White**: The primary surface color for cards, modals, and the main content area to maximize whitespace and readability.
 
-## 4. Modernization Features
+### Spacing & Sizing Tokens
+- Strict spacing multipliers (e.g., `--space-sm`, `--space-md`, `--space-lg`) must be used for all margins and paddings.
+- Standardized border radii for all containers.
 
-To elevate the UI beyond standard Bootstrap, the following aesthetic upgrades will be implemented:
+## 3. Deterministic Component Rules (Non-Negotiables)
 
-1. **Premium Color Palette & Soft Gradients**:
-   - Replace flat colors with deeper, richer tones (updating `theme.css`).
-   - Introduce subtle background gradients for surfaces and cards to create depth.
-2. **Glassmorphism & Depth**:
-   - Utilize modern `backdrop-filter: blur()` properties for modals, dropdowns, and sticky headers.
-   - Upgrade standard Bootstrap box-shadows to multi-layered, softer shadows that provide a modern "floating" feel.
-3. **Typography Upgrade**:
-   - Adjust letter-spacing and font weights to improve legibility and hierarchy.
-4. **Micro-Animations (Motion)**:
-   - Add subtle transitions for hover states, button presses, and dropdown reveals.
-   - Introduce CSS View Transitions or scroll-driven animations where appropriate to make the interface feel "alive".
-5. **Component Refinements**:
-   - **Cards**: Remove harsh borders, increase border-radius, and use soft shadows.
-   - **Inputs/Forms**: Implement floating labels, focus-within states with dynamic outlines, and softer backgrounds.
-   - **Navigation**: Clean up the sidebar/topnav to feel less rigid and more integrated with the content.
+To ensure absolute consistency, components must adhere to rigid, lintable constraints.
 
-## 5. Proposed Implementation Phases
+### Buttons
+- **Style**: Color-coded flat surfaces (solid fills or outlines). No gradients, no glassmorphism.
+- **Icons**: NO icons inside buttons. Text only.
+- **Alignment**: Text must be perfectly centered.
+- **Sizing**: Must enforce strict minimum dimensions (e.g., `min-height: 44px; min-width: 120px;`) for proper touch targets and visual weight.
+- **Padding**: Enforced, unalterable internal padding (e.g., `padding: 0.75rem 1.5rem;`).
+- **Corners**: Consistent border-radius applied globally to all buttons.
 
-### Phase 1: CSS Architecture Consolidation
-- Reorganize and clean up `public/css/` to establish a clearer hierarchy.
-- Create a `design-tokens.css` to hold all core modern variables, colors, and shadows.
-- Create an `animations.css` for reusable micro-animations.
-- Evolve `theme.css` into the primary entry point for global overrides, pulling in the modern variables and base styling.
+### Cards, Modals & Panels
+- **Surface**: Solid white backgrounds only.
+- **Elevation**: Use crisp 1px light gray borders (`var(--token-border-light)`) to separate content. Drop shadows should be completely eliminated or restricted to an ultra-flat, subtle state for floating elements (like dropdowns).
+- **Padding**: Generous, uniform internal whitespace to lower cognitive load.
 
-### Phase 2: Component & Layout Upgrades
-- Apply glassmorphism and modern gradient backgrounds to the login card (`login.css`).
-- Update the dashboard shell (sidebar and topnav).
-- Refine the PHP components in `app/Views/components/` to ensure they consume the new CSS variables gracefully.
+### Inputs & Forms
+- **Background**: Solid white or ultra-light gray.
+- **Borders**: 1px solid gray, snapping to Primary Green on focus.
+- **Structure**: Clear separation between label and input.
 
-## 6. Verification Plan
+## 4. Implementation Strategy
 
-- Manually verify the Login page and Dashboard shell locally.
-- Ensure all interactive elements (buttons, inputs) trigger the new micro-animations.
-- Verify that standard Bootstrap components inherit the new modern design tokens without breaking responsive layouts.
+### Phase 1: Establish Tokens
+- Create `public/css/design-tokens.css` that maps all allowed colors, spacings, and sizes to CSS variables (`:root`).
+- Override Bootstrap 5's default variables (like `--bs-primary`, `--bs-border-color`) using ONLY our defined design tokens.
+
+### Phase 2: Enforce Component Rules
+- Refactor `public/css/theme.css` to strip out any legacy complex styling.
+- Update `app/Views/components/` (like `modal.php` and `card.php`) to strictly consume the new gray/white flat token system.
+
+### Phase 3: Agentic/Linting Enforcement
+- Document these exact deterministic rules in `docs/knowledge/binan-conventions/ui-design-system.md`.
+- Ensure any future CSS linting prevents the usage of raw color values or invalid paddings in component classes.
+
+## 5. Verification Plan
+- Code review to ensure zero usage of `backdrop-filter` or complex `box-shadow` properties.
+- Visual audit against the reference platforms (Grab, PayMaya) to ensure the interface reads as a flat, high-utility service.
+- DOM inspection to ensure every button strictly follows the "no icon, min-size, centered text, enforced padding" rule.

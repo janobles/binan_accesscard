@@ -208,14 +208,33 @@ After both, an Apply is one in-memory validation pass plus one rows-file write.
 an Apply under 1.5s. Measurement is a numbered step in the plan, run before and
 after, with the numbers recorded.
 
-**If the budget is still missed**, the remaining move is to scope revalidation
-to the affected QR group plus the global uniqueness checks. That is deliberately
-not in this branch: it needs an audit of every rule in `validateAndBuild()` for
-cross-row reach (duplicate-person detection compares across the whole file, QR
-contiguity is positional, head uniqueness is per group), and getting it wrong
-means the review passes a file the write step then mangles. If measurement
-shows it is needed, it goes to `docs/knowledge/violations.md` as its own item
-with the measured numbers as its justification, and gets its own branch.
+The measured numbers go into this section once the plan's measurement step has
+run, so a later reader sees what the file actually costs rather than what it was
+predicted to cost.
+
+## Rejected: scoped revalidation
+
+The obvious next optimization is to stop revalidating the whole batch on Apply
+and rerun only the affected QR group plus the global uniqueness checks. It is
+rejected, not deferred.
+
+Revalidating everything is correct by construction. Scoping it is a
+cache-invalidation problem, and these rules genuinely reach across the file:
+duplicate-person detection compares every row against every other, QR
+contiguity is positional, head uniqueness is per group. A wrong scope does not
+make the review slow, it makes the review pass a file the write step then
+mangles - a data-integrity bug in the one feature whose purpose is data
+integrity.
+
+The payoff does not justify that. Once the lookups are memoized and the staging
+file is split, what remains per Apply is a single in-memory pass with no I/O,
+against a human typing between applies in a batch admin flow. There is little
+left to win.
+
+If an operator reports real slowness, that is a fresh issue with the measured
+numbers attached, which is a better trigger than a guess filed in advance. It
+does not belong in `docs/knowledge/violations.md`: that list tracks verified
+code mess, and every line of it earns its place by being a confirmed defect.
 
 ## Error handling
 

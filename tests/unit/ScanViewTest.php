@@ -44,8 +44,9 @@ final class ScanViewTest extends CIUnitTestCase
 
     public function testTwoColumnResponsiveGrid(): void
     {
-        $this->assertStringContainsString('col-lg-7', $this->html);
-        $this->assertStringContainsString('col-lg-5', $this->html);
+        $this->assertStringContainsString('flex-lg-row', $this->html);
+        $this->assertStringContainsString('flex-lg-grow-1', $this->html);
+        $this->assertStringContainsString('flex-lg-shrink-0', $this->html);
     }
 
     public function testOneActionScanBanner(): void

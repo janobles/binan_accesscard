@@ -59,10 +59,10 @@
     <div class="col-lg-7">
       <div class="card border-0 rounded-3 mb-3 bg-white py-4 px-4">
         <div class="card-body d-flex flex-row align-items-center">
-          <img id="qrImage" src="" alt="QR Code" class="rounded-3 shadow-sm border bg-white me-5" style="width: 240px; height: 240px; object-fit: contain; image-rendering: pixelated; display: none;">
+          <img id="qrImage" src="" alt="QR Code" class="rounded-3 shadow-sm border bg-white me-5">
           <div class="flex-grow-1 text-center">
             <div class="text-muted text-uppercase fw-bold mb-2 fs-4">Scanned QR Code</div>
-            <div id="qrHeadline" class="fw-bold text-primary mb-0" style="font-size: 6rem; line-height: 1;"></div>
+            <div id="qrHeadline" class="fw-bold text-primary mb-0"></div>
           </div>
         </div>
       </div>

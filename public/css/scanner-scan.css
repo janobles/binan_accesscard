@@ -38,3 +38,17 @@
     from { background-color: var(--bs-success-bg-subtle, #d1e7dd); }
     to   { background-color: transparent; }
 }
+
+#qrImage {
+    width: 240px;
+    height: 240px;
+    object-fit: contain;
+    image-rendering: pixelated;
+    display: none;
+}
+
+#qrHeadline {
+    font-size: 6rem;
+    line-height: 1;
+}
+

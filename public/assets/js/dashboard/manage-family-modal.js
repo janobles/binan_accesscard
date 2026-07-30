@@ -1856,7 +1856,10 @@
                 var row = removeButton.closest('[data-family-member-row]');
 
                 if (row) {
-                    row.remove();
+                    // Rows sit in a `col-md-6` grid cell (`[data-member-card]`); drop
+                    // the cell with the row or the grid keeps an empty column.
+                    var memberCard = row.closest('[data-member-card]');
+                    (memberCard || row).remove();
                     renumberMembers(root);
                     scheduleSave(root);
                 }

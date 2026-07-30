@@ -73,9 +73,11 @@ unchecked item was already moved to issue #9 (UX decision, not code mess).
 - [ ] ⚪ Cleanup: `app/Controllers/Families/FamilyImportController.php` -
   `reviewFamilyModal`, `reviewFamilySave`, and `reviewFamilyRemove` (with their
   `records/import/review/{id}/family*` routes, `ImportFamilyModalBuilder`, and the
-  `.js-import-fix-edit` registration in `manage-family-modal.js:2207`) are now
-  unreachable: the per-family Edit/Remove cards they served were replaced by the
-  per-person review table, which fixes a bad value in its own cell. Left in place
+  `.js-import-fix-edit` registration in `manage-family-modal.js:2207`) are no
+  longer linked from any page: the per-family Edit/Remove cards they served were
+  replaced by the per-person review table, which fixes a bad value in its own
+  cell. The routes are still registered and still answer a direct request behind
+  their `roleNav:records-import` filter. Left in place
   because the design spec calls the import backend unchanged, and because a
   structural problem (no head, two addresses under one QR) has no single cell to
   edit, so a decision is owed on whether that case gets a surface here or is

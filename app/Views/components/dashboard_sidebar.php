@@ -18,7 +18,7 @@ $activePage = (string) ($activePage ?? '');
 $links = Navigation::linksFor($role);
 $renderedHeading = null;
 ?>
-    <nav class="sb-sidenav accordion sb-sidenav-dark <?= esc(strtolower($role)) ?>" id="dashboard-sidebar">
+    <nav class="sb-sidenav accordion sb-sidenav-dark <?= esc(strtolower($role), 'attr') ?>" id="dashboard-sidebar">
         <div class="sb-sidenav-menu">
             <div class="nav">
                 <?php foreach ($links as $link): ?>

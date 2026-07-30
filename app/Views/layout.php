@@ -26,7 +26,9 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
 // unset, and dashboard-topnav.php's own `?? 'Account'` fallback takes it from here.
 $accountLevelLabel = $accountLevelLabel ?? null;
 $sidebarUserUrl = $canManageAccounts ? site_url('accounts') : site_url('dashboard');
-$bodyView = $bodyView ?? null;
+// A caller that omits the body view still gets a page rather than a TypeError from
+// view(null): the dashboard body is the safe landing content for any manifest page.
+$bodyView = ($bodyView ?? '') !== '' ? $bodyView : 'Pages/dashboard';
 ?>
 <?php
 /*

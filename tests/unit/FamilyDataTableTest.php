@@ -135,11 +135,19 @@ final class FamilyDataTableTest extends TestCase
         $this->assertNotFalse($wholeDatabaseWhereIn, 'missing the whole-database head lookup');
         $this->assertLessThan($wholeDatabaseWhereIn, $wholeDatabaseGuard);
 
-        $countGuard = strpos($controller, "if (\$pageHeadIds !== [])");
-        $countWhereIn = strpos($controller, "whereIn('headID', \$pageHeadIds)");
+        // The member-count query lives in MemberModel (queries belong in models), so
+        // its own empty-list guard has to sit there, ahead of the whereIn().
+        $model = (string) file_get_contents(APPPATH . 'Models/Families/MemberModel.php');
+        $countGuard = strpos($model, "if (\$headIds === [] || ! \$this->hasTable())");
+        $countWhereIn = strpos($model, "whereIn('headID', \$headIds)");
         $this->assertNotFalse($countGuard, 'missing the member-count guard');
         $this->assertNotFalse($countWhereIn, 'missing the member-count query');
         $this->assertLessThan($countWhereIn, $countGuard);
+        $this->assertStringContainsString(
+            'memberCountsForHeads($pageHeadIds)',
+            $controller,
+            'the data table must read member counts through the model'
+        );
     }
 
     public function testControllerUsesWhitelistedDataTablesParametersWithoutDateFilter(): void

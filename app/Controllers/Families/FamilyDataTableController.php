@@ -104,21 +104,9 @@ class FamilyDataTableController extends BaseController
             $pageHeadIds = array_map(static fn (array $row): int => (int) ($row['memberID'] ?? 0), $rows);
             $controlNumbers = model(\App\Models\Scanner\QrControlModel::class)->controlsForHeads($pageHeadIds);
 
-            // One grouped query for every head on the page instead of a per-row
-            // count. A head with no member rows still counts as one person, itself.
-            // whereIn() on an empty array is not valid SQL, so skip the query
-            // entirely when the page has no rows (no match, or past the last page).
-            $memberCounts = [];
-
-            if ($pageHeadIds !== []) {
-                $counts = db_connect()->table('member')
-                    ->select('headID, COUNT(*) AS total')
-                    ->whereIn('headID', $pageHeadIds)
-                    ->groupBy('headID')
-                    ->get()
-                    ->getResultArray();
-                $memberCounts = array_column($counts, 'total', 'headID');
-            }
+            // One grouped query for every head on the page instead of a per-row count.
+            // A head with no member rows still counts as one person, itself.
+            $memberCounts = (new MemberModel())->memberCountsForHeads($pageHeadIds);
 
             $data = array_map(
                 static fn (array $row): array => $presenter->row(

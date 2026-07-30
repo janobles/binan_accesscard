@@ -7,9 +7,11 @@
 $canManageSubsidyTypes = in_array($currentRole ?? '', ['Admin', 'Developer'], true);
 ?>
 <?php /* Action row: Bootstrap utilities inside the card-body's own padding. */ ?>
+<?php if ($canManageSubsidyTypes): ?>
 <div class="d-flex justify-content-end mb-3">
           <button class="<?= btn('add') ?>" type="button" data-bs-toggle="modal" data-bs-target="#addSubsidyTypeModal"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add Subsidy Type</button>
         </div>
+<?php endif; ?>
 
         <?= view('components/table_controls', [
             'searchId' => 'subsidyTypesLocalSearch',
@@ -35,12 +37,12 @@ $canManageSubsidyTypes = in_array($currentRole ?? '', ['Admin', 'Developer'], tr
                   <td><span class="sector-name"><?= esc($t['name']) ?></span></td>
                   <td><span class="sector-status-badge <?= $archived ? 'sector-status-archived' : 'sector-status-active' ?>"><?= $archived ? 'Archived' : 'Active' ?></span></td>
                   <td class="text-end">
+                    <?php if ($canManageSubsidyTypes): ?>
                     <div class="dropdown actions-menu">
                       <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false" aria-label="Subsidy type actions">
                         <i class="bi bi-three-dots" aria-hidden="true"></i>
                       </button>
                       <div class="dropdown-menu dropdown-menu-end">
-                        <?php if ($canManageSubsidyTypes): ?>
                         <?php if ($archived): ?>
                           <form method="post" action="<?= esc(site_url('reference-data/subsidy-types/restore/' . $t['subsidy_type_id']), 'attr') ?>">
                             <?= csrf_field() ?>
@@ -57,9 +59,9 @@ $canManageSubsidyTypes = in_array($currentRole ?? '', ['Admin', 'Developer'], tr
                             <button class="dropdown-item" type="submit"><i class="bi bi-archive" aria-hidden="true"></i>Archive</button>
                           </form>
                         <?php endif; ?>
-                        <?php endif; ?>
                       </div>
                     </div>
+                    <?php endif; ?>
                   </td>
                 </tr>
               <?php endforeach; ?>

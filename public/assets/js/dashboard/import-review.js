@@ -38,6 +38,12 @@
     var cancelBtn  = document.getElementById('importReviewCancel');
     var problemsOnlyBox = document.getElementById('problemsOnly');
 
+    // The two action buttons are not optional: without them there is no way to finish
+    // or discard the staged import, so a page missing them is not a review page.
+    if (!confirmBtn || !cancelBtn) {
+        return;
+    }
+
     var review = parseJson('importReviewData', { file: '', counts: {}, people: [] });
     // Dropdown option lists (field => [option strings]) for the columns that are dropdowns
     // in the Excel template, so an inline cell edit offers the same choices as the sheet.

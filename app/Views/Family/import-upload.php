@@ -7,8 +7,8 @@
  * driven, so the upload posts over AJAX and its progress toast carries the operator to
  * step 2 when the staging job finishes.
  *
- * @var string $action      POST endpoint that queues the upload.
- * @var string $templateUrl GET endpoint that streams the blank template.
+ * Its endpoints come from FamilyImportController::importForm(), which builds them
+ * from the flat record routes.
  */
 $action      = (string) ($action ?? site_url('records/import'));
 $templateUrl = (string) ($templateUrl ?? site_url('records/template'));

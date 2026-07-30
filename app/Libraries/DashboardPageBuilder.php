@@ -9,7 +9,6 @@ use App\Models\SearchModel;
 use App\Models\Lookups\CategoryModel;
 use App\Models\Lookups\SectorModel;
 use App\Models\Lookups\ServiceModel;
-use App\Models\Auth\UserModel;
 use App\Models\Scanner\SubsidyDistributionModel;
 use App\Models\Scanner\SubsidyTypeModel;
 use App\Models\Scanner\SubsidyStatsModel;
@@ -109,11 +108,10 @@ class DashboardPageBuilder
         $isAccounts = $activePage === 'accounts' && $canManageAccounts;
         $isDashboard = $activePage === 'dashboard';
 
-        $users = $isAccounts
-            ? ($isDeveloper
-                ? $searchModel->staffAccounts($searchTerm, $searchFilters)
-                : (new UserModel())->getStaffAccounts())
-            : [];
+        // Both manager roles read the same list through the search model, so the
+        // page's search box and role/status filters work for an Admin too. Neither
+        // query returns developer accounts.
+        $users = $isAccounts ? $searchModel->staffAccounts($searchTerm, $searchFilters) : [];
         $sectorModel = new SectorModel();
         $serviceModel = new ServiceModel();
 
@@ -224,9 +222,9 @@ class DashboardPageBuilder
             'referenceTabs'      => $referenceTabs,
             'myAudits'           => $myAudits,
             'adminAccounts'      => array_values(array_filter($visibleAccounts, static fn ($account) => $account['role'] === 'administrator')),
-            // 'encoder' is the raw DB enum value for the Employee role (surfaced as
-            // "Employee" in the UI); the rows here come straight from the users table
-            // (account_level aliased back to `role` by UserModel::getStaffAccounts).
+            // 'encoder' is the raw DB enum value for the Encoder role; the rows here
+            // come straight from the users table (account_level aliased back to
+            // `role` by SearchModel::staffAccounts()).
             'employeeAccounts'   => array_values(array_filter($visibleAccounts, static fn ($account) => $account['role'] === 'encoder')),
             'viewerAccounts'     => array_values(array_filter($visibleAccounts, static fn ($account) => $account['role'] === 'viewer')),
             'scannerAccounts'    => array_values(array_filter($visibleAccounts, static fn ($account) => $account['role'] === 'scanner')),

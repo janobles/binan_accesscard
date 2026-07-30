@@ -402,6 +402,35 @@ class MemberModel extends Model
     }
 
     /**
+     * Household size for each of the given heads, in one grouped query rather than a
+     * count per row. Archived members are excluded, so the MEMBERS column on Family
+     * Records counts the people the household currently has.
+     *
+     * @param  list<int>        $headIds
+     * @return array<int, int>  headID => member rows, heads with no rows omitted
+     */
+    public function memberCountsForHeads(array $headIds): array
+    {
+        $headIds = array_values(array_unique(array_filter(array_map('intval', $headIds))));
+
+        // whereIn() on an empty array is not valid SQL, and there is nothing to count.
+        if ($headIds === [] || ! $this->hasTable()) {
+            return [];
+        }
+
+        $builder = $this->db->table($this->table)
+            ->select('headID, COUNT(*) AS total')
+            ->whereIn('headID', $headIds)
+            ->groupBy('headID');
+
+        if ($this->db->fieldExists('dt_deleted', $this->table)) {
+            $builder->where('member.dt_deleted IS NULL', null, false);
+        }
+
+        return array_map('intval', array_column($builder->get()->getResultArray(), 'total', 'headID'));
+    }
+
+    /**
      * Total count for the same query as searchFamilies(), used to drive the Manage
      * Records pagination controls on the frontend.
      */

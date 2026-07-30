@@ -35,7 +35,7 @@
 }
 
 /* .btn-outline-warning keeps its yellow text at rest (transparent bg), but
-   its hover/active states fill solid yellow — same white-text fix there. */
+   its hover/active states fill solid yellow - same white-text fix there. */
 .btn-outline-warning {
     --bs-btn-hover-color: #fff;
     --bs-btn-active-color: #fff;

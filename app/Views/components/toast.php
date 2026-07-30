@@ -2,7 +2,7 @@
 /**
  * Single reusable Bootstrap toast shell (props-only, same pattern as
  * components/modal). Rendered once per layout; assets/js/toast.js targets
- * this one node for every notification on the page — each showToast() call
+ * this one node for every notification on the page - each showToast() call
  * swaps its variant/text and (re)shows it rather than creating a new
  * instance, so only one toast is ever on screen at a time.
  */

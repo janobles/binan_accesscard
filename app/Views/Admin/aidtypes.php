@@ -1,5 +1,5 @@
 <?php
-/*
+/**
  * "Subsidy Types" reference page. Lists the `subsidy` table aid types (Financial/
  * Rice/Grocery) used by distribution batches, and lets an admin add/archive/restore/
  * delete them (Admin\AidTypesController + aidtype-create-modal.php). Mirrors the

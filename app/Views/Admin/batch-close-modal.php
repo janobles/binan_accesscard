@@ -1,7 +1,11 @@
-<?php /* Confirmation modal for closing the active distribution batch. Populated and
-         shown by batch-close-modal.js, which intercepts the .js-batch-close-form
-         submit and re-submits it on confirm. Static single-purpose modal (one batch
-         can be open at a time), unlike the family/account action modals it mirrors. */ ?>
+<?php
+/**
+ * Confirmation modal for closing the active distribution batch. Populated and
+ * shown by batch-close-modal.js, which intercepts the .js-batch-close-form
+ * submit and re-submits it on confirm. Static single-purpose modal (one batch
+ * can be open at a time), unlike the family/account action modals it mirrors.
+ */
+?>
 <div class="modal fade" id="batchCloseModal" tabindex="-1" aria-labelledby="batchCloseModalLabel" aria-hidden="true">
 	<div class="modal-dialog modal-dialog-centered">
 		<div class="modal-content">

@@ -5,7 +5,10 @@
  * Refuses to scan at all when no distribution batch is open, because a scan with no
  * batch to record against has nowhere to go. Built for a keyboard-wedge scanner gun
  * rather than a mouse: the input stays focused and a scan completes in one action, so
- * anything added here that steals focus breaks the whole flow.
+ * anything added here that steals focus breaks the whole flow. After a scan, the
+ * Family Information/Audit Logs tabs (Scanner\ScanController::history()) are
+ * fetched as an AJAX fragment and injected inline - same markup as the
+ * standalone "View all" page, just without leaving this page.
  */
 ?>
 <?= $this->extend('Scanner/kiosk-layout') ?>
@@ -17,36 +20,22 @@
 </div>
 <?php else: ?>
 
-<div class="card border-0 rounded-3 mb-3">
-  <div class="card-body">
-    <div class="row g-3 align-items-end">
-      <div class="col-12">
-        <label for="controlInput" class="form-label fw-bold">Scan or enter QR control number</label>
-        <div class="input-group input-group-lg">
-          <input type="text" inputmode="numeric" autocomplete="off" class="form-control"
-                 id="controlInput" placeholder="e.g. 42" autofocus>
-          <button class="btn btn-outline-secondary" id="cameraBtn" type="button" title="Scan with camera" aria-label="Scan with camera">
-            <i class="bi bi-camera" aria-hidden="true"></i>
-          </button>
-          <button class="btn btn-primary" id="lookupBtn" type="button">Go</button>
-        </div>
-      </div>
+<div class="row g-3 align-items-end mb-3">
+  <div class="col-12">
+    <label for="controlInput" class="form-label fw-bold">Scan or enter QR control number</label>
+    <div class="input-group input-group-lg">
+      <input type="text" inputmode="numeric" autocomplete="off" class="form-control"
+             id="controlInput" placeholder="e.g. 42" autofocus>
+      <button class="btn btn-outline-secondary" id="cameraBtn" type="button" title="Scan with camera" aria-label="Scan with camera">
+        <i class="bi bi-camera" aria-hidden="true"></i>
+      </button>
+      <button class="btn btn-primary" id="lookupBtn" type="button" aria-label="Look up control number">
+        <i class="bi bi-search" aria-hidden="true"></i>
+      </button>
     </div>
-    <div id="reader" class="mt-2" hidden></div>
   </div>
 </div>
-
-<?php /* One-action result banner: scan = log. alert-success when the handout
-         was recorded, alert-danger when the family was already logged in
-         this batch. Big text so it reads from arm's length. */ ?>
-<div id="resultBanner" class="alert d-none align-items-center gap-3 fs-4 py-4" role="alert" aria-live="assertive">
-  <i id="resultIcon" class="bi display-6" aria-hidden="true"></i>
-  <div>
-    <div id="resultTitle" class="fw-bold"></div>
-    <div id="resultText" class="fs-6"></div>
-  </div>
-</div>
-<template id="dupTitleText">Duplicate Entry</template>
+<div id="reader" class="mt-2 mb-3" hidden></div>
 
 <div id="emptyState" class="text-center py-5">
   <i id="emptyIcon" class="bi bi-qr-code-scan display-3 text-secondary" aria-hidden="true"></i>
@@ -55,43 +44,44 @@
 </div>
 
 <div id="familyPanel" hidden>
-  <div class="row g-3">
-    <div class="col-lg-7">
-      <div class="card border-0 rounded-3 mb-3 bg-white py-4 px-4">
-        <div class="card-body d-flex flex-row align-items-center">
-          <img id="qrImage" src="" alt="QR Code" class="rounded-3 shadow-sm border bg-white me-5">
-          <div class="flex-grow-1 text-center">
-            <div class="text-muted text-uppercase fw-bold mb-2 fs-4">Scanned QR Code</div>
-            <div id="qrHeadline" class="fw-bold text-primary mb-0"></div>
-          </div>
-        </div>
-      </div>
-      <!--
-      <div class="card border-0 rounded-3 mb-3">
+  <?php /* Two separate cards, not one shared box - a plain flex layout so
+           neither card can be pushed past the row's own edge (unlike a
+           Bootstrap .row's negative gutter margins). Family card is first in
+           DOM so it stacks above the QR card on mobile (flex-column). */ ?>
+  <div class="d-flex flex-column flex-lg-row gap-3">
+    <div class="flex-lg-grow-1" style="min-width: 0;">
+      <div class="card rounded-3 mb-3 h-100">
+        <div class="card-header"><span id="familyPanelTitle"></span></div>
         <div class="card-body">
-          <div class="fw-bold mb-2">Family Head</div>
-          <div id="headBody"></div>
+          <?php /* One-action result banner: scan = log. alert-success when the
+                   handout was recorded, alert-danger when the family was
+                   already logged in this batch. */ ?>
+          <div id="resultBanner" class="alert d-none align-items-center gap-3 mb-3" role="alert" aria-live="assertive">
+            <i id="resultIcon" class="bi fs-3" aria-hidden="true"></i>
+            <div>
+              <div id="resultTitle" class="fw-bold"></div>
+              <div id="resultText" class="small"></div>
+            </div>
+          </div>
+
+          <?php /* Family Information/Audit Logs tabs, fetched from
+                   scanner/history/{controlNo} as an AJAX fragment and injected
+                   here (Scanner\ScanController::history()'s isAJAX() branch) -
+                   same markup the standalone "View all" page renders. */ ?>
+          <div id="historyFragment"></div>
         </div>
       </div>
-      <div class="card border-0 rounded-3 mb-3">
-        <div class="d-flex justify-content-between align-items-center px-3 pt-3 pb-2">
-          <span class="fw-bold">Members</span>
-          <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse"
-                  data-bs-target="#membersCollapse" aria-expanded="false" aria-controls="membersCollapse">
-            Show members
-          </button>
-        </div>
-        <div class="collapse" id="membersCollapse">
-          <ul class="list-group list-group-flush" id="membersList"></ul>
-        </div>
-      </div>
-      -->
     </div>
 
-    <div class="col-lg-5">
-      <div class="card border-0 rounded-3 mb-3">
-        <div class="fw-bold px-3 pt-3 pb-2">Subsidy History</div>
-        <ul class="list-group list-group-flush" id="historyList"></ul>
+    <div class="flex-lg-shrink-0" style="width: min(100%, 26rem);">
+      <div class="card rounded-3 mb-3 text-center h-100">
+        <div class="card-header"><span>Control No</span></div>
+        <div class="card-body">
+          <div class="d-inline-block border rounded-3 p-3 mb-2 bg-white">
+            <img id="qrImage" src="" alt="QR Code">
+          </div>
+          <div id="qrHeadline" class="font-monospace fw-bold fs-3 text-primary"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -101,11 +91,17 @@
 
 <?= $this->section('scripts') ?>
 <?php if ($activeBatch !== null): ?>
+<?php /* The injected history fragment (loadHistoryFragment()) reuses the
+         "View all" page's toolbar/filter-panel/table-paginate markup, so it
+         needs the same JS those depend on - not part of the kiosk bundle,
+         since scan.php is the only kiosk page that needs it. */ ?>
+<script src="<?= esc(asset_url('assets/js/dashboard/lookup-search.js'), 'attr') ?>"></script>
+<script src="<?= esc(asset_url('assets/js/dashboard/records-filter-panel.js'), 'attr') ?>"></script>
+<script src="<?= esc(asset_url('assets/js/dashboard/table-paginate.js'), 'attr') ?>"></script>
 <script>
 const BASE = '<?= rtrim(base_url(), '/') ?>';
 const AID_TYPE_NAME = <?= json_encode((string) $aidType['name'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 const $ = (id) => document.getElementById(id);
-const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 // Empty-state zone doubles as the error surface: idle prompt by default,
 // warning icon + message when a scan fails.
@@ -125,34 +121,23 @@ function showEmpty(error) {
   }
 }
 
-function showBanner(logged, text) {
+// Result banner: alert-success once Log Distribution records the handout,
+// alert-danger when the family was already logged in this batch.
+function showBanner(logged, title, text) {
   const banner = $('resultBanner');
   banner.classList.remove('d-none', 'alert-success', 'alert-danger');
   banner.classList.add('d-flex', logged ? 'alert-success' : 'alert-danger');
-  $('resultIcon').className = 'bi display-6 ' + (logged ? 'bi-check-circle-fill' : 'bi-x-octagon-fill');
-  $('resultTitle').textContent = logged ? 'Logged' : $('dupTitleText').content.textContent;
+  $('resultIcon').className = 'bi fs-3 ' + (logged ? 'bi-check-circle-fill' : 'bi-x-octagon-fill');
+  $('resultTitle').textContent = title;
   $('resultText').textContent = text;
-}
-
-function badgeList(items) {
-  return (items || []).map(b => `<span class="badge bg-light text-dark border me-1">${esc(b)}</span>`).join('');
 }
 
 function renderFamily(data) {
   const h = data.head;
-  if ($('headBody')) {
-    $('headBody').innerHTML =
-      `<div class="fw-bold">${esc(h.firstname)} ${esc(h.lastname)}</div>` +
-      `<div class="text-muted small">${esc(h.address)}</div>` +
-      `<div class="mt-2">${badgeList(h.badges)}</div>`;
-  }
-  if ($('membersList')) {
-    $('membersList').innerHTML = data.members
-      .map(m => `<li class="list-group-item">
-          <div>${esc(m.firstname)} ${esc(m.lastname)} <span class="text-muted">(${esc(m.relationship || 'Member')})</span></div>
-          <div class="small text-muted">${esc(m.sex || '-')} · ${esc(m.birthday || '-')}</div>
-          <div class="mt-1">${badgeList(m.badges)}</div>
-        </li>`).join('');
+  const fullName = `${h.firstname} ${h.lastname}${h.suffix ? ' ' + h.suffix : ''}`.trim();
+
+  if ($('familyPanelTitle')) {
+    $('familyPanelTitle').textContent = `${fullName} (Family #${data.control_no})`;
   }
   if ($('qrHeadline')) {
     $('qrHeadline').textContent = data.control_no;
@@ -161,16 +146,38 @@ function renderFamily(data) {
     $('qrImage').src = data.qr_code_image;
     $('qrImage').style.display = 'inline-block';
   }
-  renderHistory(data.history);
+  loadHistoryFragment(data.control_no);
   $('emptyState').hidden = true;
   $('familyPanel').hidden = false;
 }
 
-function renderHistory(rows) {
-  $('historyList').innerHTML = rows.length
-    ? rows.map(r => `<li class="list-group-item d-flex justify-content-between">
-        <span><span class="badge bg-light text-dark border me-1">${esc(r.aid_type)}</span>${esc(r.claimant)}</span><span class="text-muted">${esc(r.claim_date)}</span></li>`).join('')
-    : '<li class="list-group-item text-muted">No subsidy received yet.</li>';
+// Fetches the same Family Information/Audit Logs tabs the standalone "View all"
+// page renders (Scanner\ScanController::history()'s isAJAX() branch returns
+// just the fragment, no page shell) and injects it inline. <script> tags
+// don't execute via innerHTML, so they're re-created manually - same trick
+// dashboard-modal-loader.js uses for its AJAX partials.
+async function loadHistoryFragment(controlNo) {
+  const container = $('historyFragment');
+  let html;
+  try {
+    const res = await fetch(`${BASE}/scanner/history/${controlNo}`, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+    html = await res.text();
+  } catch (err) {
+    container.innerHTML = '<div class="text-muted small">History unavailable.</div>';
+    return;
+  }
+  container.innerHTML = html;
+  container.querySelectorAll('script').forEach((oldScript) => {
+    const newScript = document.createElement('script');
+    Array.from(oldScript.attributes).forEach((attr) => newScript.setAttribute(attr.name, attr.value));
+    newScript.textContent = oldScript.textContent;
+    oldScript.replaceWith(newScript);
+  });
+  // These libraries bind on DOMContentLoaded, which already fired before this
+  // fragment existed - re-bind explicitly against just the new content.
+  if (typeof window.initLookupSearch === 'function') { window.initLookupSearch(container); }
+  if (typeof window.initRecordsFilterPanel === 'function') { window.initRecordsFilterPanel(container); }
+  if (typeof window.initTablePagination === 'function') { window.initTablePagination(container); }
 }
 
 // One action: scan = log. The server resolves the family, refuses in-batch
@@ -201,11 +208,11 @@ async function scanLog(control) {
   if (data.logged) {
     // Prefer the server-returned subsidy type: the batch (and its subsidy type) may
     // have changed since this page loaded.
-    showBanner(true, `${data.aid_type_name || AID_TYPE_NAME} → ${headName} (Family #${data.control_no})`);
+    showBanner(true, 'Logged', `${data.aid_type_name || AID_TYPE_NAME} → ${headName} (Family #${data.control_no})`);
   } else {
     const d = data.duplicate || {};
     const by = d.scanned_by ? ` by ${d.scanned_by}` : '';
-    showBanner(false, `Already gave out to Family #${data.control_no} in this batch (${d.dt_created || d.claim_date || ''}${by}). Nothing was logged.`);
+    showBanner(false, 'Duplicate Entry', `Already gave out to Family #${data.control_no} in this batch (${d.dt_created || d.claim_date || ''}${by}). Nothing was logged.`);
   }
   const countEl = document.getElementById('myBatchCount');
   if (countEl && typeof data.myBatchCount === 'number') {

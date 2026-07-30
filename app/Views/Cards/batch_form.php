@@ -33,69 +33,78 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
 </ul>
 
 <!-- BATCH -->
-<div class="card mb-4 sector-management" id="cn-card-batch">
-    <div class="card-header">
-        <span><i class="bi bi-collection me-1" aria-hidden="true"></i>Batch generation</span>
-    </div>
-    <div class="card-body">
-        <form id="cn-batch-form" class="row g-3 align-items-end" autocomplete="off">
-            <?= csrf_field() ?>
-            <div class="col-12 col-md">
-                <label class="form-label" for="cn-barangay">Barangay</label>
-                <select class="form-select" id="cn-barangay" name="barangay">
-                    <option value="">All barangays</option>
-                    <?php foreach ($barangayList as $barangay): ?>
-                        <option value="<?= esc($barangay, 'attr') ?>"><?= esc($barangay) ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <div class="col-6 col-md-2">
-                <label class="form-label" for="cn-from">From #</label>
-                <input type="number" min="1" inputmode="numeric" class="form-control" id="cn-from" name="from" placeholder="e.g. 100">
-            </div>
-            <div class="col-6 col-md-2">
-                <label class="form-label" for="cn-to">To #</label>
-                <input type="number" min="1" inputmode="numeric" class="form-control" id="cn-to" name="to" placeholder="e.g. 150">
-            </div>
-            <div class="col-12 col-md-auto">
-                <button type="submit" class="<?= btn('generate') ?>" id="cn-batch-btn">
-                    <i class="bi bi-printer" aria-hidden="true"></i> Generate cards
-                </button>
-            </div>
-        </form>
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2">
-            <span class="text-muted small">Leave all blank to print every active head. Both range bounds are inclusive.</span>
-            <span id="cn-batch-status" class="small text-muted" aria-live="polite"></span>
+<div id="cn-panel-batch">
+    <div class="card mb-3 sector-management">
+        <div class="card-header">
+            <span><i class="bi bi-collection me-1" aria-hidden="true"></i>Batch generation</span>
         </div>
+        <div class="card-body">
+            <form id="cn-batch-form" class="row g-3 align-items-end" autocomplete="off">
+                <?= csrf_field() ?>
+                <div class="col-12 col-md">
+                    <label class="form-label" for="cn-barangay">Barangay</label>
+                    <select class="form-select" id="cn-barangay" name="barangay">
+                        <option value="">All barangays</option>
+                        <?php foreach ($barangayList as $barangay): ?>
+                            <option value="<?= esc($barangay, 'attr') ?>"><?= esc($barangay) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="form-label" for="cn-from">From #</label>
+                    <input type="number" min="1" inputmode="numeric" class="form-control" id="cn-from" name="from" placeholder="e.g. 100">
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="form-label" for="cn-to">To #</label>
+                    <input type="number" min="1" inputmode="numeric" class="form-control" id="cn-to" name="to" placeholder="e.g. 150">
+                </div>
+                <div class="col-12 col-md-auto">
+                    <button type="submit" class="<?= btn('generate') ?>" id="cn-batch-btn">
+                        <i class="bi bi-printer" aria-hidden="true"></i> Generate cards
+                    </button>
+                </div>
+            </form>
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2">
+                <span class="text-muted small">Leave all blank to print every active head. Both range bounds are inclusive.</span>
+                <span id="cn-batch-status" class="small text-muted" aria-live="polite"></span>
+            </div>
+        </div>
+    </div>
 
-        <div class="mt-3">
-            <?php /* No page search here: Generate cards prints the whole
-                     barangay + range selection, so a keyword that narrowed only
-                     the preview would misstate what gets printed. */ ?>
+    <div class="card mb-4 sector-management" id="cn-card-batch">
+        <div class="card-header">
+            <span><i class="bi bi-table me-1" aria-hidden="true"></i>Cards Preview</span>
+        </div>
+        <div class="card-body">
+            <?php /* The page search only hides non-matching preview rows already on
+                     screen - it never touches the barangay/from/to params, so what
+                     Generate cards prints always matches the full selection. */ ?>
             <?= view('components/table_controls', [
-                'showSearch' => false,
+                'searchId' => 'cn-preview-search',
+                'searchAria' => 'Search this page',
+                'searchFormAttrs' => 'onsubmit="return false;"',
                 'sizeId' => 'cn-per-page',
                 'sizeAction' => null,
                 'perPage' => 25,
                 'perPageOptions' => [10 => '10', 25 => '25', 50 => '50', 100 => '100'],
             ]) ?>
-        </div>
 
-        <div class="table-responsive">
-            <table class="table manage-record-table align-middle w-100 mb-0" id="cn-preview-table">
-                <thead>
-                    <tr><th scope="col">Control #</th><th scope="col">Head name</th><th scope="col">Barangay</th></tr>
-                </thead>
-                <tbody id="cn-preview-body">
-                    <tr><td colspan="3" class="text-muted">Loading&hellip;</td></tr>
-                </tbody>
-            </table>
+            <div class="table-responsive">
+                <table class="table manage-record-table align-middle w-100 mb-0" id="cn-preview-table">
+                    <thead>
+                        <tr><th scope="col">Control #</th><th scope="col">Head name</th><th scope="col">Barangay</th></tr>
+                    </thead>
+                    <tbody id="cn-preview-body">
+                        <tr><td colspan="3" class="text-muted">Loading&hellip;</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
-    </div>
-    <div class="card-footer small text-muted">
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 w-100">
-            <div class="table-footer-left"><span id="cn-preview-count" aria-live="polite">Loading preview&hellip;</span></div>
-            <div class="table-footer-right" id="cn-preview-paging"></div>
+        <div class="card-footer small text-muted">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 w-100">
+                <div class="table-footer-left"><span id="cn-preview-count" aria-live="polite">Loading preview&hellip;</span></div>
+                <div class="table-footer-right" id="cn-preview-paging"></div>
+            </div>
         </div>
     </div>
 </div>
@@ -147,7 +156,7 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
 
     // ---- mode switch ------------------------------------------------------
     const modeBtns = document.querySelectorAll('#cn-modes [data-mode]');
-    const cards = { batch: document.getElementById('cn-card-batch'), single: document.getElementById('cn-card-single') };
+    const cards = { batch: document.getElementById('cn-panel-batch'), single: document.getElementById('cn-card-single') };
     modeBtns.forEach((b) => b.addEventListener('click', function () {
         modeBtns.forEach((x) => { x.classList.remove('active'); x.removeAttribute('aria-current'); });
         b.classList.add('active'); b.setAttribute('aria-current', 'page');
@@ -178,7 +187,20 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
     const batchStatus = document.getElementById('cn-batch-status');
     const pagingEl = document.getElementById('cn-preview-paging');
     const perPageEl = document.getElementById('cn-per-page');
+    const previewSearchInput = document.getElementById('cn-preview-search');
     let debounce;
+
+    // Hides preview rows that don't match the page-search box - display-only,
+    // never touches the barangay/from/to params that Generate cards submits.
+    function applyPreviewFilter() {
+        const q = (previewSearchInput.value || '').trim().toLowerCase();
+        Array.from(bodyEl.rows).forEach((row) => {
+            row.style.display = !q || row.textContent.toLowerCase().includes(q) ? '' : 'none';
+        });
+    }
+    if (previewSearchInput) {
+        previewSearchInput.addEventListener('input', applyPreviewFilter);
+    }
     // The preview is paged by the server (admin/cards/heads), so the whole
     // selection stays available without shipping every row to the browser.
     let previewPage = 1;
@@ -221,6 +243,7 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
             bodyEl.innerHTML = rows.map((r) =>
                 '<tr><td>' + esc(String(r.controlNo)) + '</td><td>' + esc(r.name) + '</td><td>' + esc(r.barangay) + '</td></tr>'
             ).join('');
+            applyPreviewFilter();
             // Same footer markup as every other list (table-paginate.js).
             window.renderTablePaging(pagingEl, page, totalPages);
         } catch (e) {

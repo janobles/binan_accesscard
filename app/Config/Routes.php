@@ -159,6 +159,7 @@ $routes->group('scanner', static function (RouteCollection $routes): void {
     $routes->get('performance', 'Scanner\ScanController::performance');
     $routes->get('stats', 'Scanner\ScanController::stats');
     $routes->post('log', 'Scanner\ScanController::logAid');
+    $routes->get('history/(:num)', 'Scanner\ScanController::history/$1');
 });
 
 /*

@@ -40,15 +40,10 @@
 }
 
 #qrImage {
-    width: 240px;
-    height: 240px;
+    width: 320px;
+    height: 320px;
     object-fit: contain;
     image-rendering: pixelated;
     display: none;
-}
-
-#qrHeadline {
-    font-size: 6rem;
-    line-height: 1;
 }
 

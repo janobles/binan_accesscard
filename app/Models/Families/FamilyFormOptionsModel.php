@@ -78,18 +78,20 @@ class FamilyFormOptionsModel extends Model
 
     /**
      * The sorted static enumeration lists Family/_fields.php needs directly
-     * (suffix, civil status, barangay, relationship, education, job, religion,
-     * income). No DB query: the partial already gets its sector/service lookups
-     * from the controller as $sectors/$services/$categories. Sorted the same way
-     * buildViewData() sorts them for the sector/service-bearing callers ("Other"/
-     * "Others" pinned last), so the Data Entry and Family Profile pages list
-     * these in the same order as the Import Review "Fix family" modal.
+     * (sex, suffix, civil status, barangay, relationship, education, job,
+     * religion, income). No DB query: the partial already gets its sector/
+     * service lookups from the controller as $sectors/$services/$categories.
+     * Sorted the same way buildViewData() sorts them for the sector/service-
+     * bearing callers ("Other"/"Others" pinned last), so the Data Entry and
+     * Family Profile pages list these in the same order as the Import Review
+     * "Fix family" modal.
      */
     public function staticOptionLists(): array
     {
         $options = $this->staticOptions();
 
         return [
+            'sexOptions' => $this->sortLabelOptions($options['sexes']),
             'suffixOptions' => $options['suffixes'],
             'civilOptions' => $this->sortLabelOptions($options['civil_statuses']),
             'barangayOptions' => $this->sortLabelOptions($options['barangays']),

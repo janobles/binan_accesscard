@@ -6,10 +6,10 @@ use App\Models\Families\FamilyFormOptionsModel;
 use CodeIgniter\Test\CIUnitTestCase;
 
 /**
- * staticOptionLists() is the entry point Family/_fields.php uses directly
- * (Task 8 fix round 1, finding 3), so it needs no DB query and its lists must
- * come out sorted and "Other"/"Others" pinned last, the same way
- * buildViewData() sorts them for getViewData()/getViewDataForEdit().
+ * staticOptionLists() needs no DB query, and its lists come out sorted with
+ * "Other"/"Others" pinned last, the same way buildViewData() sorts them for
+ * getViewData()/getViewDataForEdit(), so a form fed by either method shows the
+ * same order.
  */
 final class FamilyFormOptionsModelTest extends CIUnitTestCase
 {
@@ -34,13 +34,21 @@ final class FamilyFormOptionsModelTest extends CIUnitTestCase
         $this->assertSame('Other', end($lists['relationshipOptions']));
     }
 
-    public function testStaticOptionListsDoesNotDuplicateOrDiverge(): void
+    public function testSexOptionsAreSortedLikeBuildViewDataSortsThem(): void
     {
         $lists = (new FamilyFormOptionsModel())->staticOptionLists();
 
-        // Finding 3's diverged pair: the model is the only place the
-        // relationship and income lists are declared now, so a value present in
-        // one has to be present in both - nowhere left for them to drift.
+        // getOptions()'s sexes are declared ['Male', 'Female']; buildViewData()
+        // sorts every caller through sortLabelOptions(), which alphabetizes to
+        // Female-then-Male. staticOptionLists() must match, not fall back to a
+        // caller's own unsorted default.
+        $this->assertSame(['Female', 'Male'], $lists['sexOptions']);
+    }
+
+    public function testRelationshipAndIncomeListsAreDeclaredOnlyHere(): void
+    {
+        $lists = (new FamilyFormOptionsModel())->staticOptionLists();
+
         $this->assertContains('Relative', $lists['relationshipOptions']);
         $this->assertCount(12, $lists['incomeOptions']);
     }

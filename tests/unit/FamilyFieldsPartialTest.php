@@ -2,15 +2,13 @@
 
 namespace Tests\Unit;
 
+use App\Models\Families\FamilyFormOptionsModel;
 use CodeIgniter\Test\CIUnitTestCase;
 
 /**
- * Regression coverage for Task 8 fix round 1 findings 3, 4, and 5:
- * Family/_fields.php must source its static option lists from
- * FamilyFormOptionsModel::staticOptionLists() instead of retyping them out of
- * sorted order, an existing record's control number must stay postable
- * (readonly, never disabled - a disabled control submits nothing), and the
- * edit-mode field id prefix must actually take effect.
+ * Family/_fields.php renders the option lists it is given (formOptions) rather
+ * than sourcing them itself, keeps an existing record's control number postable,
+ * and gives its edit-mode field ids the right prefix.
  */
 final class FamilyFieldsPartialTest extends CIUnitTestCase
 {
@@ -19,27 +17,30 @@ final class FamilyFieldsPartialTest extends CIUnitTestCase
         helper('family_modal');
 
         return view('Family/_fields', [
-            'head'       => $head,
-            'members'    => [],
-            'readOnly'   => false,
-            'sectors'    => [],
-            'services'   => [],
-            'categories' => [],
+            'head'        => $head,
+            'members'     => [],
+            'readOnly'    => false,
+            'sectors'     => [],
+            'services'    => [],
+            'categories'  => [],
+            'formOptions' => (new FamilyFormOptionsModel())->staticOptionLists(),
         ]);
     }
 
-    public function testBarangayOptionsAreAlphabetizedNotDeclarationOrder(): void
+    public function testBarangayOptionsRenderInTheOrderFormOptionsGivesThem(): void
     {
         $html = $this->render();
 
-        // FamilyProfilingFormV2::barangays() declares "Santo Tomas (Calabuso)"
-        // before "Canlalay"; FamilyFormOptionsModel::staticOptionLists() sorts
-        // them alphabetically, so Canlalay must render first once sorted.
-        $this->assertLessThan(
-            (int) strpos($html, 'Santo Tomas'),
-            (int) strpos($html, 'Canlalay'),
-            'Barangay options must be alphabetized via FamilyFormOptionsModel, not left in raw declaration order.'
-        );
+        // FamilyFormOptionsModel::staticOptionLists() alphabetizes barangays, so
+        // "Canlalay" sorts before "Santo Tomas (Calabuso)" - declaration order in
+        // FamilyProfilingFormV2::barangays() has it the other way round, so this
+        // only passes if the partial is actually rendering formOptions's order.
+        $canlalayPos = strpos($html, 'Canlalay');
+        $santoTomasPos = strpos($html, 'Santo Tomas');
+
+        $this->assertNotFalse($canlalayPos, 'Expected "Canlalay" to appear in the rendered barangay options.');
+        $this->assertNotFalse($santoTomasPos, 'Expected "Santo Tomas" to appear in the rendered barangay options.');
+        $this->assertLessThan($santoTomasPos, $canlalayPos);
     }
 
     public function testExistingHeadControlNumberIsReadonlyNotDisabled(): void

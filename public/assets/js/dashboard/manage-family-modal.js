@@ -1921,6 +1921,13 @@
     }
 
     function offerDraftRestoreIfVisible(root) {
+        // Defensive: root must be the [data-family-entry-form] element itself
+        // (it has a classList/dataset to read), never the document it was found
+        // in - a Document has neither and would throw on the check below.
+        if (!root || root.nodeType !== 1) {
+            return;
+        }
+
         var formEl = root.querySelector('form');
 
         if (!formEl || !isCreateForm(root) || root.classList.contains('d-none') || root.dataset.familyDraftOffered === '1') {
@@ -2008,6 +2015,10 @@
     function bindControlNumberGate(gate) {
         var field = gate.querySelector('#controlNumber');
         var status = gate.querySelector('[data-control-number-status]');
+        // [data-entry-body] and [data-family-entry-form] are the same element in
+        // entry.php, so this is the same node initFamilyEntryModal's `root` binds
+        // to - the offerDraftRestoreIfVisible(body) call below and the one inside
+        // initFamilyEntryModal share one familyDraftOffered flag because of that.
         var body = document.querySelector('[data-entry-body]');
         var timer = null;
         var sequence = 0;

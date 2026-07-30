@@ -117,4 +117,18 @@ class FamilyModalDataBuilder
 
         return $map;
     }
+
+    /**
+     * The family form's static enumeration lists (suffix, sex, civil status,
+     * barangay, relationship, education, job, religion, income), sorted the
+     * same way every other family screen sorts them. A thin pass-through to
+     * FamilyFormOptionsModel::staticOptionLists() - kept here, not called
+     * directly from a view, so the option lists stay controller/library data
+     * ("controllers decide, libraries build") rather than a view reaching into
+     * a Model on its own.
+     */
+    public function staticOptionLists(): array
+    {
+        return (new FamilyFormOptionsModel())->staticOptionLists();
+    }
 }

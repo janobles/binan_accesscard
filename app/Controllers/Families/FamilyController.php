@@ -1012,12 +1012,17 @@ class FamilyController extends BaseController
             'role'       => RoleAccess::normalizeRole((string) session()->get('role')),
             'bodyView'   => 'Family/entry',
             'bodyData'   => [
-                'head'       => [],
-                'members'    => [],
-                'readOnly'   => false,
-                'sectors'    => $options['sectorOptions'],
-                'services'   => $options['serviceOptions'],
-                'categories' => array_keys($options['servicesByCategory']),
+                'head'        => [],
+                'members'     => [],
+                'readOnly'    => false,
+                'sectors'     => $options['sectorOptions'],
+                'services'    => $options['serviceOptions'],
+                'categories'  => array_keys($options['servicesByCategory']),
+                // The sorted suffix/civil/barangay/relationship/education/job/
+                // religion/income/sex lists Family/_fields.php renders: built by
+                // FamilyModalDataBuilder (a library), not fetched by the view
+                // itself, so the partial never reaches into a Model on its own.
+                'formOptions' => (new FamilyModalDataBuilder())->staticOptionLists(),
             ],
         ]);
     }

@@ -5,15 +5,13 @@
  * page (Family/entry) and, from Task 9 on, the Family Profile page - never
  * rendered on its own.
  *
- * Its contract is six keys, all from the caller: a head row ([] for a new
- * record), the member rows, a read-only flag that disables every control
- * instead of hiding it, and the active sector/service/category lookups. The
- * remaining option lists a family form needs - suffix, civil status,
- * barangay, relationship, education, job, religion, income - are not part of
- * that contract; this partial sources them itself from
- * FamilyFormOptionsModel::staticOptionLists(), the same sorted lists
- * FamilyController's other family screens use, so a caller never carries them
- * and they cannot drift into a different order or fallback on this screen.
+ * Its contract is a head row ([] for a new record), the member rows, a
+ * read-only flag that disables every control instead of hiding it, the active
+ * sector/service/category lookups, and $formOptions - the sorted sex/suffix/
+ * civil-status/barangay/relationship/education/job/religion/income lists,
+ * from FamilyModalDataBuilder::staticOptionLists() (a library, so the model
+ * call stays out of this view - "controllers decide, libraries build"). The
+ * controller is the one that calls it; this partial only reads the result.
  */
 
 helper('family_modal');
@@ -24,6 +22,7 @@ $readOnly = (bool) ($readOnly ?? false);
 $sectors = (array) ($sectors ?? []);
 $services = (array) ($services ?? []);
 $categories = (array) ($categories ?? []);
+$formOptions = (array) ($formOptions ?? []);
 
 $headId = (int) ($head['headID'] ?? 0);
 $fieldPrefix = $headId > 0 ? 'family-update' : 'family-add';
@@ -49,10 +48,9 @@ foreach ($services as $service) {
     $servicesByCategory[(string) ($service['category'] ?? 'Other')][] = $service;
 }
 
-// The static enumerations (suffix, civil status, barangay, relationship, education,
-// job, religion, income) have no DB dependency, so they come from the model
-// directly rather than being threaded through the controller - the same sorted
-// lists ("Other"/"Others" pinned last) FamilyController's other family screens use.
+// $formOptions (suffix, civil status, barangay, relationship, education, job,
+// religion, income, sex) is the caller's - see this file's docblock - so it is
+// merged in here rather than fetched again.
 extract(family_modal_prepare(array_merge([
     'headId' => $headId,
     'fieldPrefix' => $fieldPrefix,
@@ -64,7 +62,7 @@ extract(family_modal_prepare(array_merge([
     'selectedServiceIds' => $head['service_ids'] ?? [],
     'sectorCatalog' => $sectorCatalog,
     'servicesByCategory' => $servicesByCategory,
-], (new \App\Models\Families\FamilyFormOptionsModel())->staticOptionLists())), EXTR_OVERWRITE);
+], $formOptions)), EXTR_OVERWRITE);
 
 $personFieldOptions = compact(
     'suffixOptions',

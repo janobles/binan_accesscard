@@ -41,12 +41,13 @@
             <form id="familyEntryForm" method="post" action="<?= esc(site_url('records'), 'attr') ?>" novalidate>
                 <?= csrf_field() ?>
                 <?= view('Family/_fields', [
-                    'head'       => $head,
-                    'members'    => $members,
-                    'readOnly'   => $readOnly,
-                    'sectors'    => $sectors,
-                    'services'   => $services,
-                    'categories' => $categories,
+                    'head'        => $head,
+                    'members'     => $members,
+                    'readOnly'    => $readOnly,
+                    'sectors'     => $sectors,
+                    'services'    => $services,
+                    'categories'  => $categories,
+                    'formOptions' => $formOptions,
                 ]) ?>
                 <?php /* Truncation sentinel - MUST stay the last named field in the form. A
                          POST clipped by PHP's max_input_vars drops trailing vars first, so if

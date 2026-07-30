@@ -2,6 +2,7 @@
 
 namespace Tests\Unit;
 
+use App\Models\Families\FamilyFormOptionsModel;
 use CodeIgniter\Test\CIUnitTestCase;
 
 /**
@@ -16,12 +17,13 @@ final class FamilyEntryPageTest extends CIUnitTestCase
         helper(['ui', 'family_modal']);
 
         return view('Family/entry', [
-            'head'       => [],
-            'members'    => [],
-            'readOnly'   => false,
-            'sectors'    => [['sectorID' => 1, 'shortcode' => 'SC', 'name' => 'Senior Citizen']],
-            'services'   => [['serviceID' => 1, 'shortcode' => 'FA2', 'name' => 'Burial Assistance']],
-            'categories' => [],
+            'head'        => [],
+            'members'     => [],
+            'readOnly'    => false,
+            'sectors'     => [['sectorID' => 1, 'shortcode' => 'SC', 'name' => 'Senior Citizen']],
+            'services'    => [['serviceID' => 1, 'shortcode' => 'FA2', 'name' => 'Burial Assistance']],
+            'categories'  => [],
+            'formOptions' => (new FamilyFormOptionsModel())->staticOptionLists(),
         ]);
     }
 

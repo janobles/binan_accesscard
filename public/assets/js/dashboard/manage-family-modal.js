@@ -13,7 +13,8 @@
 //
 // Data Entry page only: the control-number gate ([data-control-number-gate])
 // checks the number before anything else renders; [data-entry-body] loses
-// d-none only once it comes back available.
+// d-none only once it comes back available. A successful save navigates to the
+// `redirect` the server returns (records) rather than staying on a spent form.
 //
 // Connected to:
 //   - dashboard-modal-loader.js : window.registerDashboardModal()
@@ -1587,6 +1588,16 @@
                     clearDraft();
                 }
 
+                // The Data Entry page (records/entry) is a full navigation, not a modal
+                // load: `redirect` is only ever set on that response (store()'s AJAX
+                // branch), so following it is the page's only completion path. The
+                // just-saved record's flash message renders after the navigation, on
+                // the page `redirect` points to.
+                if (data.redirect) {
+                    window.location.href = data.redirect;
+                    return;
+                }
+
                 closeFamilyModal();
 
                 if (typeof window.reloadFamilyDataTable === 'function') {
@@ -1901,21 +1912,37 @@
         refreshAllChoicesSummaries(root);
         renumberMembers(root);
 
-        // Restore-on-reopen prompt (create mode only).
-        if (isCreateForm(root) && formEl) {
-            var draft = readDraft();
+        // Restore-on-reopen prompt (create mode only). Skipped here while root is
+        // still hidden (the entry page's gate, before a control number clears it):
+        // askModalDialog would append into a display:none subtree, where the
+        // dialog can't be answered. bindControlNumberGate calls this again once
+        // the gate opens.
+        offerDraftRestoreIfVisible(root);
+    }
 
-            if (!draftIsEmpty(draft)) {
-                askRestoreDraft(formEl, draft.savedAt).then(function (restore) {
-                    if (restore) {
-                        restoreDraftIntoForm(root, draft);
-                    } else {
-                        clearDraft();
-                        setDraftStatus(formEl, '');
-                    }
-                });
-            }
+    function offerDraftRestoreIfVisible(root) {
+        var formEl = root.querySelector('form');
+
+        if (!formEl || !isCreateForm(root) || root.classList.contains('d-none') || root.dataset.familyDraftOffered === '1') {
+            return;
         }
+
+        var draft = readDraft();
+
+        if (draftIsEmpty(draft)) {
+            return;
+        }
+
+        root.dataset.familyDraftOffered = '1';
+
+        askRestoreDraft(formEl, draft.savedAt).then(function (restore) {
+            if (restore) {
+                restoreDraftIntoForm(root, draft);
+            } else {
+                clearDraft();
+                setDraftStatus(formEl, '');
+            }
+        });
     }
 
     // Intercept modal close: when an Add (create) form has unsaved work, ask the
@@ -2027,6 +2054,8 @@
                         if (realField) {
                             realField.value = value;
                         }
+
+                        offerDraftRestoreIfVisible(body);
                     } else {
                         setGateStatus(field, status, (result.data && result.data.message) || 'The control number could not be validated.', true);
                     }

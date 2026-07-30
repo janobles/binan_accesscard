@@ -3,15 +3,17 @@
  * Shared field set for a family record: the Head card, the Household Members
  * list, and the sector/service checkbox pickers. Included by the Data Entry
  * page (Family/entry) and, from Task 9 on, the Family Profile page - never
- * rendered on its own. Its data contract lives on family_entry_view_data()
- * in app/Helpers/dashboard_view_helper.php.
+ * rendered on its own.
  *
- * $head       array  Existing head row, or [] for a new record.
- * $members    array  Existing member rows (list), or [] for a new record.
- * $readOnly   bool   True disables every control instead of hiding it (Viewer).
- * $sectors    array  Active sector rows (sectorID, shortcode, name).
- * $services   array  Active service rows (serviceID, shortcode/code, name, category).
- * $categories array  Service category rows/names, so an empty category still renders.
+ * Its contract is six keys, all from the caller: a head row ([] for a new
+ * record), the member rows, a read-only flag that disables every control
+ * instead of hiding it, and the active sector/service/category lookups. The
+ * remaining option lists a family form needs - suffix, civil status,
+ * barangay, relationship, education, job, religion, income - are not part of
+ * that contract; this partial sources them itself from
+ * FamilyFormOptionsModel::staticOptionLists(), the same sorted lists
+ * FamilyController's other family screens use, so a caller never carries them
+ * and they cannot drift into a different order or fallback on this screen.
  */
 
 helper('family_modal');
@@ -33,7 +35,8 @@ $sectorCatalog = $sectors === [] ? [] : [$sectors];
 
 // Every known category renders even with no services yet (a category like
 // Financial Assistance applies regardless of sector), then each service files
-// under its own category.
+// under its own category. Uncategorised services file under "Other", matching
+// FamilyFormOptionsModel::groupServicesByCategory()'s fallback.
 $servicesByCategory = [];
 foreach ($categories as $category) {
     $categoryName = is_array($category) ? (string) ($category['name'] ?? '') : (string) $category;
@@ -43,16 +46,16 @@ foreach ($categories as $category) {
     }
 }
 foreach ($services as $service) {
-    $servicesByCategory[(string) ($service['category'] ?? 'Programs')][] = $service;
+    $servicesByCategory[(string) ($service['category'] ?? 'Other')][] = $service;
 }
 
 // The static enumerations (suffix, civil status, barangay, relationship, education,
-// job, religion, income) have no DB dependency, so they are supplied here rather
-// than threaded through the controller. Relationships and income brackets have no
-// home in FamilyProfilingFormV2 yet, so they are listed inline, matching
-// FamilyFormOptionsModel::getOptions() exactly.
-extract(family_modal_prepare([
+// job, religion, income) have no DB dependency, so they come from the model
+// directly rather than being threaded through the controller - the same sorted
+// lists ("Other"/"Others" pinned last) FamilyController's other family screens use.
+extract(family_modal_prepare(array_merge([
     'headId' => $headId,
+    'fieldPrefix' => $fieldPrefix,
     'formValues' => array_combine(
         array_map(static fn (string $key): string => 'head_' . $key, array_keys($head)),
         array_values($head)
@@ -61,30 +64,7 @@ extract(family_modal_prepare([
     'selectedServiceIds' => $head['service_ids'] ?? [],
     'sectorCatalog' => $sectorCatalog,
     'servicesByCategory' => $servicesByCategory,
-    'suffixOptions' => \App\Support\FamilyProfilingFormV2::suffixes(),
-    'civilOptions' => \App\Support\FamilyProfilingFormV2::civilStatuses(),
-    'barangayOptions' => \App\Support\FamilyProfilingFormV2::barangays(),
-    'relationshipOptions' => [
-        'Spouse', 'Child', 'Parent', 'Sibling', 'Grandparent', 'Grandchild', 'In-law', 'Relative', 'Other',
-    ],
-    'educationOptions' => \App\Support\FamilyProfilingFormV2::educationLevels(),
-    'jobOptions' => \App\Support\FamilyProfilingFormV2::jobOptions(),
-    'religionOptions' => \App\Support\FamilyProfilingFormV2::religions(),
-    'incomeOptions' => [
-        ['value' => '', 'label' => 'Select'],
-        ['value' => '0', 'label' => 'No regular income'],
-        ['value' => '8000', 'label' => 'Below PHP 8,000'],
-        ['value' => '13000', 'label' => 'PHP 8,000 - 13,000'],
-        ['value' => '18000', 'label' => 'PHP 13,001 - 18,000'],
-        ['value' => '25000', 'label' => 'PHP 18,001 - 25,000'],
-        ['value' => '40000', 'label' => 'PHP 25,001 - 40,000'],
-        ['value' => '65000', 'label' => 'PHP 40,001 - 65,000'],
-        ['value' => '100000', 'label' => 'PHP 65,001 - 100,000'],
-        ['value' => '150000', 'label' => 'PHP 100,001 - 150,000'],
-        ['value' => '250000', 'label' => 'PHP 150,001 - 250,000'],
-        ['value' => '250001', 'label' => 'Above PHP 250,000'],
-    ],
-]), EXTR_OVERWRITE);
+], (new \App\Models\Families\FamilyFormOptionsModel())->staticOptionLists())), EXTR_OVERWRITE);
 
 $personFieldOptions = compact(
     'suffixOptions',
@@ -388,7 +368,7 @@ $renderMemberRow = static function ($index, array $m = [], bool $open = true) us
                          gate owns the create-mode field instead. */ ?>
                 <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>HeadQr">Control Number</label>
                 <input id="<?= esc($fieldPrefix, 'attr') ?>HeadQr" name="qr_control_no" class="form-control" type="text"
-                    value="<?= esc((string) ($head['qr_control_no'] ?? ''), 'attr') ?>" readonly disabled>
+                    value="<?= esc((string) ($head['qr_control_no'] ?? ''), 'attr') ?>" readonly>
                 <?php if ($qrLocked): ?>
                     <small class="text-muted">Locked: subsidy already recorded under this number.</small>
                 <?php endif; ?>

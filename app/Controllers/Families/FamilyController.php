@@ -43,9 +43,11 @@ class FamilyController extends BaseController
      * Saves a family registration submitted to POST `families` from the family
      * form (admin or employee). Runs in one DB transaction: creates the head in
      * `member`, adds each family member, links chosen services in
-     * `member_services`, and logs a FAMILY_CREATED audit row. Frontend: the form
-     * usually posts via AJAX, so errors/success are returned as JSON (with a
-     * fresh CSRF hash); a non-AJAX fallback redirects back with a flash message.
+     * `member_services`, and logs a FAMILY_CREATED audit row. Frontend: the Data
+     * Entry page posts via fetch(), so success/error come back as JSON (with a
+     * fresh CSRF hash); a success response also carries `redirect` to `/records`,
+     * which is how the page ends - see manage-family-modal.js's submit handler.
+     * A non-AJAX fallback redirects back with the same flash message.
      */
     public function store()
     {
@@ -213,18 +215,23 @@ class FamilyController extends BaseController
             return $this->storeError('The family form was not saved.', 500);
         }
 
+        // Set on a new record save only, never on edit/update.
+        session()->setFlashdata('family_record_saved', '1');
+        session()->setFlashdata('success', $successMessage);
+
         if ($this->request->isAJAX()) {
+            // The Data Entry page always posts through fetch(), so this is the only
+            // response it ever sees: it navigates itself to `redirect` on success
+            // rather than staying on a spent form (manage-family-modal.js).
             return $this->response->setJSON([
-                'status' => 'success',
-                'message' => $successMessage,
-                'csrf' => csrf_hash(),
+                'status'   => 'success',
+                'message'  => $successMessage,
+                'redirect' => site_url('records'),
+                'csrf'     => csrf_hash(),
             ]);
         }
 
-        // Set on a new record save only, never on edit/update.
-        return redirect()->back()
-            ->with('family_record_saved', '1')
-            ->with('success', $successMessage);
+        return redirect()->back();
     }
 
     /**

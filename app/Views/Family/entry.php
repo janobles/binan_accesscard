@@ -12,7 +12,7 @@
  */
 ?>
 <div class="container-fluid px-4 py-4">
-    <div class="row mb-4" data-control-number-gate data-qr-check-url="<?= site_url('records/qr-check') ?>">
+    <div class="row mb-4" data-control-number-gate data-qr-check-url="<?= esc(site_url('records/qr-check'), 'attr') ?>">
         <div class="col-md-6 col-lg-4">
             <label class="form-label" for="controlNumber">Control Number</label>
             <div class="input-group">
@@ -26,7 +26,7 @@
 
     <div class="row d-none" data-entry-body data-family-entry-form>
         <div class="col-lg-3 mb-4">
-            <div class="list-group sticky-top" id="entryRail" style="top: 5rem;">
+            <div class="list-group sticky-top family-entry-rail" id="entryRail">
                 <a class="list-group-item list-group-item-action" href="#section-head">Head of Family</a>
                 <a class="list-group-item list-group-item-action" href="#section-members">Household Members</a>
                 <a class="list-group-item list-group-item-action" href="#section-sectors">Sectors</a>
@@ -38,7 +38,7 @@
         </div>
 
         <div class="col-lg-9" data-bs-spy="scroll" data-bs-target="#entryRail" data-bs-smooth-scroll="true" tabindex="0">
-            <form id="familyEntryForm" method="post" action="<?= site_url('records') ?>" novalidate>
+            <form id="familyEntryForm" method="post" action="<?= esc(site_url('records'), 'attr') ?>" novalidate>
                 <?= csrf_field() ?>
                 <?= view('Family/_fields', [
                     'head'       => $head,

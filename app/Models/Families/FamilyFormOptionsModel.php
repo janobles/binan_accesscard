@@ -18,16 +18,29 @@ class FamilyFormOptionsModel extends Model
 
     /**
      * Returns the raw option lists for the family form: DB-backed sectors and
-     * services plus static enumerations (sexes, suffixes, civil statuses,
-     * relationships, education, jobs, income ranges) from FamilyProfilingFormV2.
+     * services plus the static enumerations from staticOptions().
      */
     public function getOptions(): array
     {
         $sectorModel = new SectorModel();
         $servicesModel = new ServiceModel();
 
-        return [
+        return array_merge($this->staticOptions(), [
             'sectors' => $sectorModel->getActive(),
+            'services' => $servicesModel->getActive(),
+            'family_heads' => [],
+        ]);
+    }
+
+    /**
+     * The static enumerations (sexes, suffixes, civil statuses, barangays,
+     * relationships, education, jobs, religions, income ranges) that need no DB
+     * query. Split out of getOptions() so staticOptionLists() can reuse them
+     * without also querying sectors/services.
+     */
+    private function staticOptions(): array
+    {
+        return [
             'sexes' => ['Male', 'Female'],
             'suffixes' => FamilyProfilingFormV2::suffixes(),
             'civil_statuses' => FamilyProfilingFormV2::civilStatuses(),
@@ -60,8 +73,31 @@ class FamilyFormOptionsModel extends Model
                 ['value' => '250000', 'label' => 'PHP 150,001 - 250,000'],
                 ['value' => '250001', 'label' => 'Above PHP 250,000'],
             ],
-            'services' => $servicesModel->getActive(),
-            'family_heads' => [],
+        ];
+    }
+
+    /**
+     * The sorted static enumeration lists Family/_fields.php needs directly
+     * (suffix, civil status, barangay, relationship, education, job, religion,
+     * income). No DB query: the partial already gets its sector/service lookups
+     * from the controller as $sectors/$services/$categories. Sorted the same way
+     * buildViewData() sorts them for the sector/service-bearing callers ("Other"/
+     * "Others" pinned last), so the Data Entry and Family Profile pages list
+     * these in the same order as the Import Review "Fix family" modal.
+     */
+    public function staticOptionLists(): array
+    {
+        $options = $this->staticOptions();
+
+        return [
+            'suffixOptions' => $options['suffixes'],
+            'civilOptions' => $this->sortLabelOptions($options['civil_statuses']),
+            'barangayOptions' => $this->sortLabelOptions($options['barangays']),
+            'relationshipOptions' => $this->sortLabelOptions($options['relationships']),
+            'educationOptions' => $this->sortLabelOptions($options['education_levels']),
+            'jobOptions' => $this->sortLabelOptions($options['job_options']),
+            'religionOptions' => $this->sortLabelOptions($options['religions']),
+            'incomeOptions' => $options['income_ranges'],
         ];
     }
 

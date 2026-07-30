@@ -17,7 +17,7 @@ $tabLabels = [
     'sectors'    => 'Sectors',
     'services'   => 'Services & Programs',
     'categories' => 'Categories',
-    'aidtypes'   => 'Subsidy Types',
+    'subsidy-types'   => 'Subsidy Types',
 ];
 $tabs = [];
 foreach ($referenceTabs as $tabKey) {
@@ -54,18 +54,18 @@ foreach ($referenceTabs as $tabKey) {
         'canRestore' => $canManageLookups,
         'tabParam' => 'categories',
     ]) ?>
-<?php elseif ($referenceTab === 'aidtypes'): ?>
+<?php elseif ($referenceTab === 'subsidy-types'): ?>
     <?= view('components/card', [
         'icon' => 'box-seam',
         'title' => 'Subsidy Types',
         'cardClass' => 'sector-management',
-        'attrs' => 'data-table-paginate data-paginate-key="aidtypes" data-paginate-label="subsidy types"',
+        'attrs' => 'data-table-paginate data-paginate-key="subsidy-types" data-paginate-label="subsidy types"',
         'bodyView' => 'Admin/subsidy-types-body',
         'bodyData' => [
             'subsidyTypes' => $subsidyTypes ?? [],
             'currentRole' => $currentRole ?? '',
         ],
-        'footer' => view('components/table_footer', ['clientKey' => 'aidtypes', 'entityLabel' => 'subsidy types']),
+        'footer' => view('components/table_footer', ['clientKey' => 'subsidy-types', 'entityLabel' => 'subsidy types']),
     ]) ?>
     <?= view('Admin/subsidy-type-modal') ?>
 <?php endif; ?>

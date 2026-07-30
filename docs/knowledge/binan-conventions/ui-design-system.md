@@ -1,7 +1,7 @@
 # UI Design System
 
 **Scope:** button roles, records toolbar anatomy, filter panel + pills, dual
-search. Reference implementation: `admin/manage-records`
+search. Reference implementation: `/records`
 (`app/Views/Family/list.php` + `components/records_toolbar.php`).
 Spec receipt: `docs/superpowers/specs/2026-07-12-manage-records-ui-design.md`.
 
@@ -112,7 +112,7 @@ pages, it goes in the shared layer.
   row directly under it - see `Family/list.php` for the standard.
 - manage-records: done (feat/manage-records-ui). AJAX flavor: filter panel +
   pills wired by `assets/js/dashboard/family-datatable.js`.
-- lookups (sectors/services/categories), audit-trails, employee activity:
+- lookups (sectors/services/categories), audit-trails, encoder activity:
   done (feat/retrofit-toolbar-conventions) via
   `components/records_toolbar_server.php` - same Bootstrap-grid anatomy as
   records_toolbar, wired by the shared

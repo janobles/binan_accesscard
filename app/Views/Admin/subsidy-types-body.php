@@ -1,8 +1,8 @@
 <?php
 /**
  * Subsidy Types reference body: Add button + subsidy-type table. Rendered inside
- * components/card by Admin/layout.php's aidtypes block (vars: subsidyTypes,
- * currentRole). Lifecycle buttons render only for Admin/Developer.
+ * components/card by the Reference Data page's subsidy-types tab. Lifecycle
+ * buttons render only for Admin/Developer.
  */
 $canManageSubsidyTypes = in_array($currentRole ?? '', ['Admin', 'Developer'], true);
 ?>
@@ -15,12 +15,12 @@ $canManageSubsidyTypes = in_array($currentRole ?? '', ['Admin', 'Developer'], tr
             'searchId' => 'subsidyTypesLocalSearch',
             'searchAria' => 'Search shown subsidy types',
             'searchFormAttrs' => 'onsubmit="return false;"',
-            'searchInputAttrs' => 'data-paginate-search="aidtypes"',
+            'searchInputAttrs' => 'data-paginate-search="subsidy-types"',
             'sizeId' => 'subsidyTypesPerPage',
             'sizeAction' => null,
             'perPage' => 25,
             'perPageOptions' => [10 => '10', 25 => '25', 50 => '50', 100 => '100', 0 => 'All'],
-            'sizeAttrs' => 'data-paginate-size="aidtypes"',
+            'sizeAttrs' => 'data-paginate-size="subsidy-types"',
         ]) ?>
 
         <div class="table-responsive">

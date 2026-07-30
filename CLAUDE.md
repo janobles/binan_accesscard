@@ -25,11 +25,16 @@ verify each step.
 
 ## Non-Negotiables
 
-- **No migrations.** DB schema source of truth is the SQL dump (`accesscardV18.sql`).
+- **No migrations.** DB schema source of truth is the SQL dump (`accesscardV19.sql`).
   Never add migrations or alter schema in code. Seeds (`app/Database/Seeds/`) add
   test login accounts ONLY - never tables/columns.
 - **Match the SQL dump.** Column names, allowed enum values, and role names must
-  match the dump exactly. Employee accounts store as `User` role.
+  match the dump exactly. The encoding role stores as `encoder` and is labeled
+  `Encoder` everywhere: schema, code, and UI.
+- **One page, one URL.** Routes carry no role prefix. A page declares its manifest
+  key (`['filter' => 'roleNav:<key>']`) and `app/Config/Navigation.php` decides
+  which roles reach it. Adding a page means adding a manifest entry, not editing a
+  layout.
 - **Every family mutation writes an audit trail** (`audit_trails` via
   `Audit/AuditTrailsModel`). Don't bypass it.
 - **Controllers decide, libraries build.** Dashboard controllers route pages;

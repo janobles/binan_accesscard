@@ -64,7 +64,7 @@ variables onto the existing tokens rather than scattering colors.
 ## Status
 
 The swap SHIPPED on branch `feature/sbadmin1-theme-swap`: shells use
-`body.sb-nav-fixed` + `#layoutSidenav` (`app/Views/Admin/layout.php:66`),
+the shell uses `body.sb-nav-fixed` + `#layoutSidenav` (`app/Views/layout.php:56`),
 the adapter is deleted (`adapter.md`), and panels render through the
 card/data_table components
 (`docs/knowledge/binan-conventions/views-bootstrap.md`). The inline-style

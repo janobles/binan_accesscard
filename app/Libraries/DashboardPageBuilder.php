@@ -147,7 +147,7 @@ class DashboardPageBuilder
         // and only the active pane renders). Categories and Subsidy Types are
         // managers-only tabs; everyone else gets the two read-only lists.
         $referenceTabs = $canManageAccounts
-            ? ['sectors', 'services', 'categories', 'aidtypes']
+            ? ['sectors', 'services', 'categories', 'subsidy-types']
             : ['sectors', 'services'];
         $referenceTab = (string) $this->request->getGet('tab');
         $referenceTab = in_array($referenceTab, $referenceTabs, true) ? $referenceTab : 'sectors';
@@ -246,7 +246,7 @@ class DashboardPageBuilder
             'batches'            => $isBatches ? $batchModel->allBatches() : [],
             'activeBatch'        => $isBatches ? $batchModel->activeBatch() : null,
             'activeSubsidyTypes' => $isBatches ? model(SubsidyTypeModel::class)->active() : [],
-            'subsidyTypes'       => $isReference && $referenceTab === 'aidtypes' ? model(SubsidyTypeModel::class)->all() : [],
+            'subsidyTypes'       => $isReference && $referenceTab === 'subsidy-types' ? model(SubsidyTypeModel::class)->all() : [],
             'distributions'      => $isDistributions ? model(SubsidyDistributionModel::class)->allDistributions() : [],
             'reportsBatches'     => $reportsData['reportsBatches'],
             'reportsBatchId'     => $reportsData['reportsBatchId'],

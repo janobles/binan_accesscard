@@ -2,9 +2,9 @@
 /**
  * Per-row Actions dropdown for the Manage Records DataTable. Server-side rendered:
  * returned as the `actions` cell by FamilyController::dataTableActions(). This holds
- * the modal "callers" - the VIEW/UPDATE trigger buttons and the archive/restore
- * confirm form - so they live in the view layer, not the controller. The controller
- * passes pre-computed permission flags + URLs; this template only renders markup.
+ * the VIEW modal caller, the UPDATE navigation link, and the archive/restore confirm
+ * form, so they live in the view layer, not the controller. The controller passes
+ * pre-computed permission flags + URLs; this template only renders markup.
  *
  * Expected vars:
  *   bool   $archived, $canEdit, $canArchive
@@ -20,7 +20,11 @@
         <?php if (! $archived): ?>
         <button type="button" class="dropdown-item js-open-family-view-modal" data-modal-url="<?= esc($viewUrl, 'attr') ?>" data-modal-title="View Record">VIEW</button>
             <?php if ($canEdit): ?>
-        <button type="button" class="dropdown-item js-open-family-add-modal" data-modal-url="<?= esc($updateUrl, 'attr') ?>" data-modal-title="Update Family Record">UPDATE</button>
+        <?php /* A plain navigation, not a modal trigger: the target is a full page
+                 (the Family Profile page from Task 9 on), and loading a full page's
+                 response into the shared modal is the bug records/entry used to have
+                 here. */ ?>
+        <a class="dropdown-item" href="<?= esc($updateUrl, 'attr') ?>">UPDATE</a>
             <?php endif; ?>
         <?php endif; ?>
         <?php if ($canArchive): ?>

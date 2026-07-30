@@ -61,4 +61,27 @@ final class FamilyDataTablePresenterTest extends CIUnitTestCase
         $this->assertStringContainsString('records/7', $actionsHtml);
         $this->assertStringNotContainsString('manage-family', $actionsHtml);
     }
+
+    public function testUpdateIsAPlainLinkToTheFlatProfileUriNotTheEntryForm(): void
+    {
+        $presenter = new FamilyDataTablePresenter('Admin');
+
+        $cells = $presenter->row(
+            ['memberID' => 7, 'headID' => 7, 'lastname' => 'SANTOS', 'firstname' => 'PEDRO'],
+            [],
+            [7 => 143],
+            3
+        );
+
+        $actionsHtml = html_entity_decode($cells['actions'], ENT_QUOTES | ENT_HTML5);
+
+        // records/entry ignores mode/id and always opens a blank Add form, so
+        // pointing UPDATE there creates a duplicate household instead of editing
+        // the one clicked. The profile URL is what Task 9 turns into the edit
+        // surface.
+        $this->assertStringContainsString('href="' . site_url('records/7') . '"', $actionsHtml);
+        $this->assertStringNotContainsString('records/entry', $actionsHtml);
+        // A plain navigation, not a modal trigger: the destination is a full page.
+        $this->assertStringNotContainsString('js-open-family-add-modal', $actionsHtml);
+    }
 }

@@ -117,7 +117,12 @@ class FamilyDataTablePresenter
             'canArchive'     => $canArchive,
             'displayName'    => $displayName,
             'viewUrl'        => $archived ? '' : site_url('records/' . $headId . '?partial=1'),
-            'updateUrl'      => (! $archived && $canEdit) ? site_url('records/entry?partial=1&mode=update&id=' . $headId) : '',
+            // The Family Profile page (Task 9) is where editing lives; today this
+            // still resolves to FamilyController::viewFamily()'s read-only fragment,
+            // so the link is a plain navigation rather than a modal load - loading a
+            // full page's response into the shared modal is exactly the bug this URL
+            // used to have (records/entry ignored mode/id and opened a blank Add form).
+            'updateUrl'      => (! $archived && $canEdit) ? site_url('records/' . $headId) : '',
             'formAction'     => $canArchive ? site_url('records/' . $headId . '/' . ($archived ? 'restore' : 'archive')) : '',
             'actionLabel'    => $archived ? 'Restore' : 'Archive',
             'actionPast'     => $archived ? 'restored' : 'archived',

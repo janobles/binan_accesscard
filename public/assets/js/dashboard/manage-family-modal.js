@@ -2066,15 +2066,6 @@
         errorMarkup: '<div class="alert alert-danger mb-0">Unable to load the record. Please try again.</div>'
     });
 
-    window.registerDashboardModal({
-        namespace: 'familyAdd',
-        triggerSelector: '.js-open-family-add-modal',
-        defaultTitle: 'New Family Record',
-        loadingMarkup: '<div class="family-modal-loading" role="status" aria-live="polite"><div class="spinner-border text-primary" aria-hidden="true"></div><span>Loading form...</span></div>',
-        errorMarkup: '<div class="alert alert-danger mb-0">Unable to load the form. Please try again.</div>',
-        onLoaded: initFamilyEntryModal
-    });
-
     // Import Review "Fix family" modal: the SAME family form, prefilled from the staged
     // import rows and pointed at the staging-save endpoint. Reuses initFamilyEntryModal
     // wholesale; the only difference is the form's action (server-rendered) and that its

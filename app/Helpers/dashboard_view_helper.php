@@ -169,9 +169,8 @@ if (! function_exists('family_entry_view_data')) {
      * Builds the Data Entry page (`Family/entry`) bundle for a new family: an
      * empty head/member set, the active sector/service/category lookups, and
      * the static enumeration lists (`formOptions`) Family/_fields.php renders.
-     * No current view calls this helper (FamilyController::createFamily()
-     * assembles this bundle inline); the shape below is only what
-     * DashboardViewData::familyEntry() itself guarantees.
+     * Called by FamilyController::createFamily() to build the `bodyData` it
+     * hands to `layout.php`.
      *
      * @return array{
      *     categories: list<string>,
@@ -195,9 +194,8 @@ if (! function_exists('family_profile_view_data')) {
      * family: the head and member rows (already shaped for the shared
      * Family/_fields partial), the QR control number, the read-only flag a
      * Viewer session sets, and the same sector/service/category/formOptions
-     * lookups the Data Entry page uses. No current view calls this helper
-     * (FamilyController::profile() assembles this bundle inline); the shape
-     * below is only what DashboardViewData::familyProfile() itself guarantees.
+     * lookups the Data Entry page uses. Called by FamilyController::profile()
+     * to build the `bodyData` it hands to `layout.php`.
      *
      * @return array{
      *     categories: list<string>,

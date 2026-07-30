@@ -40,15 +40,30 @@ final class FamilyProfilePageTest extends CIUnitTestCase
 
     public function testMembersUseTheBootstrapGrid(): void
     {
-        $this->assertStringContainsString('col-md-6', $this->render());
+        // The literal wrapper tag, not a bare 'col-md-6' substring check: that class
+        // also appears inside _fields.php's person-field columns (rendered
+        // unconditionally, including in the unused member-editor <template>), so a
+        // bare substring match would still pass with the grid wrapper deleted.
+        $this->assertStringContainsString('<div class="col-md-6" data-member-card>', $this->render());
     }
 
-    public function testThereIsNoReadToEditToggle(): void
+    public function testEditableRenderHasOneSaveButton(): void
     {
-        $html = $this->render();
+        $this->assertStringContainsString('data-family-save', $this->render(false));
+    }
 
-        $this->assertStringNotContainsString('data-edit-toggle', $html);
-        $this->assertStringContainsString('data-family-save', $html);
+    public function testFieldsAreOneRenderPathNotATogglableDisplay(): void
+    {
+        // The same head_lastname input exists in both renders - `disabled` is the
+        // only difference - proving there is one render path for a field, not a
+        // display value plus a button that swaps in an editable one.
+        preg_match('/<input[^>]*name="head_lastname"[^>]*>/', $this->render(false), $editable);
+        preg_match('/<input[^>]*name="head_lastname"[^>]*>/', $this->render(true), $viewerOnly);
+
+        $this->assertNotEmpty($editable, 'Expected a head_lastname input in the editable render.');
+        $this->assertNotEmpty($viewerOnly, 'Expected the same head_lastname input in the read-only render.');
+        $this->assertStringNotContainsString('disabled', $editable[0]);
+        $this->assertStringContainsString('disabled', $viewerOnly[0]);
     }
 
     public function testViewerGetsDisabledControlsAndNoSave(): void

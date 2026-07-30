@@ -1355,7 +1355,15 @@
         }
 
         row.dataset.memberFieldPrefix = 'members[' + nextIndex + ']';
-        container.appendChild(row);
+
+        // Server-rendered rows sit inside a `col-md-6` grid cell (the shared
+        // `.row.g-3` in Family/_fields.php); wrap a JS-added row the same way so it
+        // lines up with them instead of stretching full width.
+        var card = document.createElement('div');
+        card.className = 'col-md-6';
+        card.setAttribute('data-member-card', '');
+        card.appendChild(row);
+        container.appendChild(card);
         button.dataset.nextIndex = String(nextIndex + 1);
 
         buildMemberEditor(root, row);
@@ -2080,14 +2088,25 @@
     }
 
     function initFamilyEntryPage() {
-        var gate = document.querySelector('[data-control-number-gate]');
+        // Keyed on [data-family-entry-form] - the same marker initFamilyEntryModal()
+        // looks for - rather than the control-number gate, so the Family Profile page
+        // (Family/profile.php, which has no gate) wires up the same member-row/Other-
+        // select/AJAX-submit behavior the Data Entry page gets. The gate step itself
+        // only runs when a gate is actually present, so the entry page's gating is
+        // unchanged.
+        var root = document.querySelector('[data-family-entry-form]');
 
-        if (!gate) {
+        if (!root) {
             return;
         }
 
         initFamilyEntryModal(document);
-        bindControlNumberGate(gate);
+
+        var gate = document.querySelector('[data-control-number-gate]');
+
+        if (gate) {
+            bindControlNumberGate(gate);
+        }
     }
 
     if (document.readyState === 'loading') {

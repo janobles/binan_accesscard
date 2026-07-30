@@ -39,12 +39,6 @@ trait FamilyRequestContext
         return $guard;
     }
 
-    /** Inline alert fragment shown in the modal when a family record can't be found. */
-    private function recordMissing(): string
-    {
-        return '<div class="alert alert-warning mb-0">That family record could not be found. It may have been removed.</div>';
-    }
-
     /**
      * JSON error body (with a fresh CSRF hash) used by the AJAX update responses.
      * Optional $code adds a machine-readable tag (e.g. 'FORM_TRUNCATED') the

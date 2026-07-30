@@ -119,12 +119,3 @@ rendering needs inline styles), layout shells + `Auth/login.php` (standalone
   inline `<script>` blocks, which the divider scan now skips. No file hits it
   today, so nothing was changed; an em dash written into a view's inline JS would
   fail a check that cannot be satisfied without failing the token gate.
-- [ ] ⚪ Cleanup: `app/Support/FamilyRecordPresenter.php` - orphaned by Task 9
-  (nav-taxonomy-url-space): its only caller was `FamilyController::viewFamily()`,
-  which became `profile()` and renders `Family/_fields.php` from raw editable
-  member-row data instead of the presenter's label/value display grid (the two
-  shapes are incompatible - `_fields.php` needs `head_firstname` etc. as form
-  values, not a `[{label, value}]` grid). Verified: no controller, view, or test
-  under `app/` or `tests/` references `FamilyRecordPresenter` anymore (grep).
-  Left in place rather than deleted, since removing a whole class was judged
-  outside Task 9's file list; a later cleanup pass should remove it.

@@ -21,6 +21,10 @@ $pageTitle = Navigation::titleFor($activePage);
 $modeLabel = $modeLabel ?? 'Admin Console';
 $canManageAccounts = $canManageAccounts ?? false;
 $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
+// Only DashboardPageBuilder-driven pages supply this (SessionAccount::levelLabel());
+// a caller like createFamily()/profile() that renders 'layout' directly leaves it
+// unset, and dashboard-topnav.php's own `?? 'Account'` fallback takes it from here.
+$accountLevelLabel = $accountLevelLabel ?? null;
 $sidebarUserUrl = $canManageAccounts ? site_url('accounts') : site_url('dashboard');
 $bodyView = $bodyView ?? null;
 ?>

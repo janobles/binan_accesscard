@@ -267,6 +267,11 @@ class FamilyController extends BaseController
         $headData = array_merge($head, [
             'address'       => $addressParts['address'],
             'barangay'      => $addressParts['barangay'],
+            // member.Salary is capitalized in the schema; _fields.php's field name is
+            // the lowercase 'salary', so the auto-prefixed 'head_Salary' the raw $head
+            // row would otherwise produce never matches - the select renders empty on
+            // a required field, blocking Save.
+            'salary'        => (string) ($head['Salary'] ?? ''),
             'qr_control_no' => (string) $controlNumber,
             'sector_ids'    => array_map('strval', SectorIds::normalize($head['sectorID'] ?? null)),
             'service_ids'   => array_map('strval', $serviceIdsByMember[$headId] ?? []),
@@ -274,14 +279,31 @@ class FamilyController extends BaseController
                 && model(\App\Models\Scanner\SubsidyDistributionModel::class)->hasClaims($controlNumber),
         ]);
 
-        $options  = (new FamilyFormOptionsModel())->getViewData();
+        // Every sector/service ID assigned anywhere in the family (head or any
+        // member), so getViewDataForEdit() can grandfather in anything since
+        // archived - otherwise it would render unchecked, post unchecked, and
+        // update() would delete the assignment on save.
+        $assignedSectorIds = SectorIds::normalize($head['sectorID'] ?? null);
+        $assignedServiceIds = $serviceIdsByMember[$headId] ?? [];
+
+        foreach ($members as $member) {
+            $assignedSectorIds = array_merge($assignedSectorIds, SectorIds::normalize($member['sectorID'] ?? null));
+            $assignedServiceIds = array_merge($assignedServiceIds, $serviceIdsByMember[(int) ($member['memberID'] ?? 0)] ?? []);
+        }
+
+        $options = (new FamilyFormOptionsModel())->getViewDataForEdit(
+            array_values(array_unique(array_map('intval', $assignedSectorIds))),
+            array_values(array_unique(array_map('intval', $assignedServiceIds)))
+        );
         $readOnly = RoleAccess::normalizeRole((string) session()->get('role')) === 'Viewer';
+
+        helper('dashboard_view_helper');
 
         return view('layout', [
             'activePage' => 'records-profile',
             'role'       => RoleAccess::normalizeRole((string) session()->get('role')),
             'bodyView'   => 'Family/profile',
-            'bodyData'   => [
+            'bodyData'   => family_profile_view_data([
                 'head'          => $headData,
                 'members'       => $modalData->shapeMembers($members, $serviceIdsByMember),
                 'controlNumber' => $controlNumber,
@@ -290,7 +312,7 @@ class FamilyController extends BaseController
                 'services'      => $options['serviceOptions'],
                 'categories'    => array_keys($options['servicesByCategory']),
                 'formOptions'   => $modalData->staticOptionLists(),
-            ],
+            ]),
         ]);
     }
 
@@ -1024,23 +1046,25 @@ class FamilyController extends BaseController
 
         $options = (new FamilyFormOptionsModel())->getViewData();
 
+        helper('dashboard_view_helper');
+
         return view('layout', [
             'activePage' => 'records-entry',
             'role'       => RoleAccess::normalizeRole((string) session()->get('role')),
             'bodyView'   => 'Family/entry',
-            'bodyData'   => [
+            // The sorted suffix/civil/barangay/relationship/education/job/religion/
+            // income/sex lists Family/_fields.php renders come from
+            // FamilyModalDataBuilder (a library), not a model call the view makes
+            // itself - see family_entry_view_data()'s contract.
+            'bodyData'   => family_entry_view_data([
                 'head'        => [],
                 'members'     => [],
                 'readOnly'    => false,
                 'sectors'     => $options['sectorOptions'],
                 'services'    => $options['serviceOptions'],
                 'categories'  => array_keys($options['servicesByCategory']),
-                // The sorted suffix/civil/barangay/relationship/education/job/
-                // religion/income/sex lists Family/_fields.php renders: built by
-                // FamilyModalDataBuilder (a library), not fetched by the view
-                // itself, so the partial never reaches into a Model on its own.
                 'formOptions' => (new FamilyModalDataBuilder())->staticOptionLists(),
-            ],
+            ]),
         ]);
     }
 

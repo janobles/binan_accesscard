@@ -9,6 +9,12 @@
  * containment the paper profiling form implies. Fields render as controls at all
  * times with one Save at the bottom; a Viewer session gets the same controls
  * disabled and no Save, and its update route is withheld by the manifest.
+ *
+ * `data-family-entry-form` on the outer container is the same marker
+ * manage-family-modal.js's initFamilyEntryModal() looks for on the Data Entry
+ * page, so the shared JS (member row toggle/add/remove, Other-select reveal,
+ * AJAX submit) wires up here too - this page has no control-number gate, so it
+ * skips only that one entry-page-specific step.
  */
 
 use App\Libraries\Qr\ControlNumber;
@@ -17,9 +23,10 @@ $readOnly = (bool) ($readOnly ?? false);
 $headId = (int) ($head['memberID'] ?? 0);
 $formOptions = (array) ($formOptions ?? []);
 ?>
-<div class="container-fluid px-4 py-4">
+<div class="container-fluid px-4 py-4" data-family-entry-form>
     <form method="post" action="<?= esc(site_url('records/' . $headId . '/update'), 'attr') ?>">
         <?= csrf_field() ?>
+        <input type="hidden" name="form_mode" value="update">
 
         <div class="card shadow-sm" data-head-card>
             <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
@@ -47,5 +54,12 @@ $formOptions = (array) ($formOptions ?? []);
             </div>
             <?php endif; ?>
         </div>
+
+        <?php /* Truncation sentinel - MUST stay the last named field in the form. A
+                 POST clipped by PHP's max_input_vars drops trailing vars first, so if
+                 this does not arrive the server knows member data was cut and refuses
+                 to save (FamilyController::submissionWasTruncated()). */ ?>
+        <input type="hidden" name="members_meta_count" value="0" data-members-count>
+        <input type="hidden" name="_form_end" value="1">
     </form>
 </div>

@@ -12,7 +12,7 @@ use CodeIgniter\Test\CIUnitTestCase;
  */
 final class FamilyFieldsPartialTest extends CIUnitTestCase
 {
-    private function render(array $head = []): string
+    private function render(array $head = [], ?array $formOptions = null): string
     {
         helper('family_modal');
 
@@ -23,24 +23,27 @@ final class FamilyFieldsPartialTest extends CIUnitTestCase
             'sectors'     => [],
             'services'    => [],
             'categories'  => [],
-            'formOptions' => (new FamilyFormOptionsModel())->staticOptionLists(),
+            'formOptions' => $formOptions ?? (new FamilyFormOptionsModel())->staticOptionLists(),
         ]);
     }
 
     public function testBarangayOptionsRenderInTheOrderFormOptionsGivesThem(): void
     {
-        $html = $this->render();
+        // A deliberately non-alphabetical, non-model order: if the partial ever
+        // re-sources the barangay list itself (instead of rendering the given
+        // formOptions), FamilyFormOptionsModel's alphabetized order would put
+        // "Aaa Sentinel" first and this assertion would flip.
+        $html = $this->render([], array_merge(
+            (new FamilyFormOptionsModel())->staticOptionLists(),
+            ['barangayOptions' => ['Zzz Sentinel', 'Aaa Sentinel']]
+        ));
 
-        // FamilyFormOptionsModel::staticOptionLists() alphabetizes barangays, so
-        // "Canlalay" sorts before "Santo Tomas (Calabuso)" - declaration order in
-        // FamilyProfilingFormV2::barangays() has it the other way round, so this
-        // only passes if the partial is actually rendering formOptions's order.
-        $canlalayPos = strpos($html, 'Canlalay');
-        $santoTomasPos = strpos($html, 'Santo Tomas');
+        $zzzPos = strpos($html, 'Zzz Sentinel');
+        $aaaPos = strpos($html, 'Aaa Sentinel');
 
-        $this->assertNotFalse($canlalayPos, 'Expected "Canlalay" to appear in the rendered barangay options.');
-        $this->assertNotFalse($santoTomasPos, 'Expected "Santo Tomas" to appear in the rendered barangay options.');
-        $this->assertLessThan($santoTomasPos, $canlalayPos);
+        $this->assertNotFalse($zzzPos, 'Expected "Zzz Sentinel" to appear in the rendered barangay options.');
+        $this->assertNotFalse($aaaPos, 'Expected "Aaa Sentinel" to appear in the rendered barangay options.');
+        $this->assertLessThan($aaaPos, $zzzPos, 'Expected the given formOptions order to survive in the output.');
     }
 
     public function testExistingHeadControlNumberIsReadonlyNotDisabled(): void

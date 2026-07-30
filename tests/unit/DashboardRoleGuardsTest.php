@@ -75,8 +75,8 @@ final class DashboardRoleGuardsTest extends CIUnitTestCase
      * $seesDistribution must stay Developer/Admin only, deliberately narrower
      * than the Distribution *page* (Viewer-reachable via the manifest): the
      * dashboard's Subsidy Distribution section hits reports endpoints guarded
-     * to Developer/Admin and surfaces per-scanner kiosk usernames. Fix round 1
-     * ruled this against re-keying to Navigation::pageRoles('distribution').
+     * to Developer/Admin and surfaces per-scanner kiosk usernames, so it must
+     * not be re-keyed to Navigation::pageRoles('distribution').
      */
     public function testSeesDistributionIsNarrowedToDeveloperAndAdmin(): void
     {

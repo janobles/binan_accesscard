@@ -54,7 +54,7 @@ $routes->group('records', ['filter' => 'roleNav:records-import'], static functio
     $routes->post('import/review/(:num)/family/remove', 'Families\FamilyImportController::reviewFamilyRemove/$1');
 });
 
-$routes->get('records/(:num)', 'Families\FamilyController::viewFamily/$1', ['filter' => 'roleNav:records-profile']);
+$routes->get('records/(:num)', 'Families\FamilyController::profile/$1', ['filter' => 'roleNav:records-profile']);
 
 $routes->group('records', ['filter' => 'roleNav:records-update'], static function (RouteCollection $routes): void {
     $routes->post('(:num)/update', 'Families\FamilyController::update/$1');

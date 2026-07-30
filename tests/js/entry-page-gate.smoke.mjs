@@ -1,11 +1,10 @@
 // Smoke test for public/assets/js/dashboard/manage-family-modal.js's standalone
-// Data Entry page path (Task 8 fix round 2, the Critical regression). This repo
-// has no JS test harness (no package.json, no jsdom) - see the notes at the
-// bottom of this file for what that means for how this runs. Rather than add a
-// new dependency, this builds a minimal DOM by hand, just enough to reproduce
-// the actual bug: `initFamilyEntryModal(document)` used to crash because
-// `offerDraftRestoreIfVisible` read `document.classList`, which does not exist,
-// so `bindControlNumberGate` was never reached and the page never came alive.
+// Data Entry page path: `initFamilyEntryModal(document)` must run to completion
+// without throwing, and `bindControlNumberGate` must actually wire up so typing
+// an available control number reveals the entry body. This repo has no JS test
+// harness (no package.json, no jsdom) - see the notes at the bottom of this file
+// for what that means for how this runs. Rather than add a new dependency, this
+// builds a minimal DOM by hand, just enough to exercise that path.
 //
 // Run with: node tests/js/entry-page-gate.smoke.mjs
 // Exits non-zero (and prints the failure) if the script throws during init, or
@@ -323,7 +322,7 @@ try {
 assert.equal(
     initThrew,
     null,
-    'initFamilyEntryPage() must not throw when the page loads (the Critical regression from a3a448c): ' + (initThrew && initThrew.stack)
+    'initFamilyEntryPage() must not throw when the page loads: ' + (initThrew && initThrew.stack)
 );
 
 // The gate must actually have wired up: typing a control number should trigger

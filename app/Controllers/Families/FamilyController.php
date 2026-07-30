@@ -15,7 +15,6 @@ use App\Models\Families\MemberServiceModel;
 use App\Models\Lookups\SectorModel;
 use App\Models\Lookups\ServiceModel;
 use App\Support\FamilyAgeEligibility;
-use App\Support\FamilyRecordPresenter;
 use App\Support\MemberFieldNormalizer;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
@@ -29,11 +28,10 @@ use Throwable;
  * single write path the Excel importer also goes through. The remaining screens
  * work through MemberModel and MemberServiceModel directly.
  *
- * The view screen loads into the dashboard modal as a `?partial=1` fragment via
- * assets/js/dashboard/manage-family-modal.js; createFamily() renders the Data
- * Entry page (create only - editing moves to the Family Profile page); the
- * archive, restore, and delete forms in `Family/list` post here and redirect
- * back to the list.
+ * createFamily() renders the Data Entry page (create only); profile() renders
+ * the Family Profile page, which both displays and edits an existing record;
+ * the archive, restore, and delete forms in `Family/list` post here and
+ * redirect back to the list.
  */
 class FamilyController extends BaseController
 {
@@ -235,16 +233,18 @@ class FamilyController extends BaseController
     }
 
     /**
-     * GET `records/{id}`: returns the read-only family
-     * detail fragment for the dashboard modal. Loaded via AJAX with `?partial=1` by
-     * manage-family-modal.js; renders `Family/view`.
+     * GET `records/{id}`: the Family Profile page. The one surface for an
+     * existing record - it both displays and edits, reusing the same
+     * Family/_fields partial the Data Entry page renders. A Viewer session
+     * gets `readOnly` true, which the view turns into disabled controls and no
+     * Save button; the manifest already keeps Viewer off the update route.
      */
-    public function viewFamily(int $headId): string|RedirectResponse
+    public function profile(int $headId): string|RedirectResponse
     {
         $guard = $this->requireFamilyViewAccess();
 
         if ($guard instanceof RedirectResponse) {
-            return $this->partialGuard($guard, 'You do not have permission to view family records.');
+            return $guard;
         }
 
         $memberModel = new MemberModel();
@@ -252,29 +252,45 @@ class FamilyController extends BaseController
         [$head, $members] = $this->splitHeadAndMembers($rows, $headId);
 
         if ($head === null) {
-            return $this->recordMissing();
+            return redirect()->to(site_url('records'))->with('error', 'That family record could not be found. It may have been removed.');
         }
 
-        $serviceIdsByMember = (new MemberServiceModel())
+        $memberServiceModel = new MemberServiceModel();
+        $serviceIdsByMember = $memberServiceModel
             ->getServiceIdsByMemberIds(array_map(static fn (array $row): int => (int) $row['memberID'], $rows));
+
         $modalData = new FamilyModalDataBuilder();
-        $serviceNames = $modalData->serviceNameMap($serviceIdsByMember);
-        $incomeLabels = $modalData->incomeLabelMap();
+        $qrModel = model(\App\Models\Scanner\QrControlModel::class);
+        $controlNumber = (int) ($qrModel->controlForHead($headId) ?? 0);
+        $addressParts = MemberFieldNormalizer::splitAddressBarangay((string) ($head['address'] ?? ''));
 
-        $namesFor = static fn (int $memberId): array => array_values(array_filter(array_map(
-            static fn (int $id): string => $serviceNames[$id] ?? '',
-            $serviceIdsByMember[$memberId] ?? []
-        )));
+        $headData = array_merge($head, [
+            'address'       => $addressParts['address'],
+            'barangay'      => $addressParts['barangay'],
+            'qr_control_no' => (string) $controlNumber,
+            'sector_ids'    => array_map('strval', SectorIds::normalize($head['sectorID'] ?? null)),
+            'service_ids'   => array_map('strval', $serviceIdsByMember[$headId] ?? []),
+            'qr_locked'     => $controlNumber > 0
+                && model(\App\Models\Scanner\SubsidyDistributionModel::class)->hasClaims($controlNumber),
+        ]);
 
-        $memberViews = [];
+        $options  = (new FamilyFormOptionsModel())->getViewData();
+        $readOnly = RoleAccess::normalizeRole((string) session()->get('role')) === 'Viewer';
 
-        foreach ($members as $member) {
-            $memberViews[] = FamilyRecordPresenter::member($member, $namesFor((int) $member['memberID']), $incomeLabels);
-        }
-
-        return view('Family/view', [
-            'headView'    => FamilyRecordPresenter::head($head, $namesFor($headId), $incomeLabels),
-            'memberViews' => $memberViews,
+        return view('layout', [
+            'activePage' => 'records-profile',
+            'role'       => RoleAccess::normalizeRole((string) session()->get('role')),
+            'bodyView'   => 'Family/profile',
+            'bodyData'   => [
+                'head'          => $headData,
+                'members'       => $modalData->shapeMembers($members, $serviceIdsByMember),
+                'controlNumber' => $controlNumber,
+                'readOnly'      => $readOnly,
+                'sectors'       => $options['sectorOptions'],
+                'services'      => $options['serviceOptions'],
+                'categories'    => array_keys($options['servicesByCategory']),
+                'formOptions'   => $modalData->staticOptionLists(),
+            ],
         ]);
     }
 
@@ -994,8 +1010,9 @@ class FamilyController extends BaseController
 
     /**
      * GET `records/entry`: the Data Entry page for a new family, posting to the
-     * existing, untouched store() endpoint. Editing moves to the Family Profile
-     * page in a later task; this method only ever renders a blank Add form.
+     * existing, untouched store() endpoint. Editing an existing record happens
+     * on the Family Profile page (profile()); this method only ever renders a
+     * blank Add form.
      */
     public function createFamily(): string|RedirectResponse
     {

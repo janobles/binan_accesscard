@@ -33,8 +33,8 @@ final class FamilyEntryPageTest extends CIUnitTestCase
 
         $this->assertStringContainsString('data-control-number-gate', $html);
         $this->assertStringContainsString('data-entry-body', $html);
-        // esc(..., 'attr') entity-encodes the slashes in the URL (finding 6), so
-        // "qr-check" alone - unaffected by that encoding - is what still identifies it.
+        // esc(..., 'attr') entity-encodes the slashes in the URL, so "qr-check"
+        // alone - unaffected by that encoding - is what still identifies it.
         $this->assertStringContainsString('qr-check', $html);
     }
 

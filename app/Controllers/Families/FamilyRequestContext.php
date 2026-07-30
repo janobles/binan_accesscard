@@ -115,10 +115,11 @@ trait FamilyRequestContext
     }
 
     /**
-     * Access guard for the READ-ONLY family detail fragment (viewFamily). Same as
+     * Access guard for the Family Profile page (profile()). Same as
      * requireFamilyEntryAccess but also permits the Viewer role - viewers may look
-     * at a record but never reach the edit/update/archive/restore actions, which
-     * keep the stricter requireFamilyEntryAccess guard.
+     * at a record (its controls render disabled, with no Save) but never reach
+     * the update/archive/restore actions, which keep the stricter
+     * requireFamilyEntryAccess guard.
      */
     private function requireFamilyViewAccess(): ?RedirectResponse
     {

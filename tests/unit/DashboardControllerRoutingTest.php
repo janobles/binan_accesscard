@@ -35,7 +35,7 @@ final class DashboardControllerRoutingTest extends TestCase
     {
         $this->assertPublicMethods(FamilyController::class, [
             'store',
-            'viewFamily',
+            'profile',
             'qrAvailability',
             'update',
             'archive',

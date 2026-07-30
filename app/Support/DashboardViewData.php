@@ -199,6 +199,55 @@ class DashboardViewData
         );
     }
 
+    /** Prepares variables for the Data Entry page (`Family/entry`, a new family). */
+    public static function familyEntry(array $data): array
+    {
+        $head = self::arrayValue($data['head'] ?? []);
+        $members = self::arrayValue($data['members'] ?? []);
+        $readOnly = (bool) ($data['readOnly'] ?? false);
+        $sectors = self::arrayValue($data['sectors'] ?? []);
+        $services = self::arrayValue($data['services'] ?? []);
+        $categories = self::arrayValue($data['categories'] ?? []);
+        $formOptions = self::arrayValue($data['formOptions'] ?? []);
+
+        return compact(
+            'categories',
+            'formOptions',
+            'head',
+            'members',
+            'readOnly',
+            'sectors',
+            'services'
+        );
+    }
+
+    /**
+     * Prepares variables for the Family Profile page (`Family/profile`, an
+     * existing family - the same surface displays and edits it).
+     */
+    public static function familyProfile(array $data): array
+    {
+        $head = self::arrayValue($data['head'] ?? []);
+        $members = self::arrayValue($data['members'] ?? []);
+        $controlNumber = (int) ($data['controlNumber'] ?? 0);
+        $readOnly = (bool) ($data['readOnly'] ?? false);
+        $sectors = self::arrayValue($data['sectors'] ?? []);
+        $services = self::arrayValue($data['services'] ?? []);
+        $categories = self::arrayValue($data['categories'] ?? []);
+        $formOptions = self::arrayValue($data['formOptions'] ?? []);
+
+        return compact(
+            'categories',
+            'controlNumber',
+            'formOptions',
+            'head',
+            'members',
+            'readOnly',
+            'sectors',
+            'services'
+        );
+    }
+
     /** Prepares the combined sector/service selection data for the family form. */
     public static function sectorAndServices(array $data): array
     {

@@ -21,7 +21,7 @@ final class FamilyRoutesTest extends CIUnitTestCase
             ['records/template', $getRoutes, 'FamilyImportController::downloadTemplate'],
             ['records/data', $getRoutes, 'FamilyDataTableController::dataTable'],
             ['records/qr-check', $getRoutes, 'FamilyController::qrAvailability'],
-            ['records/([0-9]+)', $getRoutes, 'FamilyController::viewFamily'],
+            ['records/([0-9]+)', $getRoutes, 'FamilyController::profile'],
             ['records', $postRoutes, 'FamilyController::store'],
         ];
 

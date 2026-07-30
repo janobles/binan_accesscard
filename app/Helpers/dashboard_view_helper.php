@@ -148,8 +148,7 @@ if (! function_exists('family_details_view_data')) {
     /**
      * Builds the single-family detail (view/edit) bundle: the head row, the
      * rest of the members, and the service ID/name maps used to label them.
-     * No current view calls this helper (family detail rendering goes through
-     * FamilyRecordPresenter instead); the shape below is only what
+     * No current view calls this helper; the shape below is only what
      * DashboardViewData::familyDetails() itself guarantees.
      *
      * @return array{
@@ -162,6 +161,58 @@ if (! function_exists('family_details_view_data')) {
     function family_details_view_data(array $data): array
     {
         return DashboardViewData::familyDetails($data);
+    }
+}
+
+if (! function_exists('family_entry_view_data')) {
+    /**
+     * Builds the Data Entry page (`Family/entry`) bundle for a new family: an
+     * empty head/member set, the active sector/service/category lookups, and
+     * the static enumeration lists (`formOptions`) Family/_fields.php renders.
+     * No current view calls this helper (FamilyController::createFamily()
+     * assembles this bundle inline); the shape below is only what
+     * DashboardViewData::familyEntry() itself guarantees.
+     *
+     * @return array{
+     *     categories: list<string>,
+     *     formOptions: array<string, mixed>,
+     *     head: array<string, mixed>,
+     *     members: list<array<string, mixed>>,
+     *     readOnly: bool,
+     *     sectors: list<array<string, mixed>>,
+     *     services: list<array<string, mixed>>
+     * }
+     */
+    function family_entry_view_data(array $data): array
+    {
+        return DashboardViewData::familyEntry($data);
+    }
+}
+
+if (! function_exists('family_profile_view_data')) {
+    /**
+     * Builds the Family Profile page (`Family/profile`) bundle for an existing
+     * family: the head and member rows (already shaped for the shared
+     * Family/_fields partial), the QR control number, the read-only flag a
+     * Viewer session sets, and the same sector/service/category/formOptions
+     * lookups the Data Entry page uses. No current view calls this helper
+     * (FamilyController::profile() assembles this bundle inline); the shape
+     * below is only what DashboardViewData::familyProfile() itself guarantees.
+     *
+     * @return array{
+     *     categories: list<string>,
+     *     controlNumber: int,
+     *     formOptions: array<string, mixed>,
+     *     head: array<string, mixed>,
+     *     members: list<array<string, mixed>>,
+     *     readOnly: bool,
+     *     sectors: list<array<string, mixed>>,
+     *     services: list<array<string, mixed>>
+     * }
+     */
+    function family_profile_view_data(array $data): array
+    {
+        return DashboardViewData::familyProfile($data);
     }
 }
 

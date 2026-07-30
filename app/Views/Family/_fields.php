@@ -2,7 +2,7 @@
 /**
  * Shared field set for a family record: the Head card, the Household Members
  * list, and the sector/service checkbox pickers. Included by the Data Entry
- * page (Family/entry) and, from Task 9 on, the Family Profile page - never
+ * page (Family/entry) and the Family Profile page (Family/profile) - never
  * rendered on its own.
  *
  * Its contract is a head row ([] for a new record), the member rows, a
@@ -12,6 +12,8 @@
  * from FamilyModalDataBuilder::staticOptionLists() (a library, so the model
  * call stays out of this view - "controllers decide, libraries build"). The
  * controller is the one that calls it; this partial only reads the result.
+ * The shape is documented on family_entry_view_data() and
+ * family_profile_view_data() in app/Helpers/dashboard_view_helper.php.
  */
 
 helper('family_modal');
@@ -424,9 +426,11 @@ $renderMemberRow = static function ($index, array $m = [], bool $open = true) us
     </div>
     <p class="small text-body-secondary mb-2">Everyone else in this household. Leave empty if there are none.</p>
 
-    <div class="list-group list-group-flush" data-family-members>
+    <div class="row g-3" data-family-members>
         <?php foreach (array_values($members) as $i => $member): ?>
-            <?= $renderMemberRow($i, (array) $member, false) ?>
+            <div class="col-md-6" data-member-card>
+                <?= $renderMemberRow($i, (array) $member, false) ?>
+            </div>
         <?php endforeach; ?>
     </div>
 

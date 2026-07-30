@@ -114,6 +114,8 @@ class ImportReviewPresenter
                 'ready'       => count($ready),
             ],
             'ready'      => $ready,
+            // Every staged person, in sheet order: the review table's rows.
+            'people'     => $this->people($rows, $byQr, $byRow, $errors, $columns),
             // The worker's in-review edit history (newest last), so the screen can show what
             // they changed before they commit.
             'changes'    => is_array($result['changes'] ?? null) ? array_values($result['changes']) : [],
@@ -124,6 +126,94 @@ class ImportReviewPresenter
             // Whole-file problems (unreadable / empty) - nothing to edit; upload a fixed file.
             'fileNotices' => $this->fileNotices($errors),
         ];
+    }
+
+    /**
+     * One entry per staged person, in sheet order: what the review table renders.
+     *
+     * The table is per person rather than per family so an error flag sits on the value
+     * that is wrong; the family and role columns carry the household grouping. A row's
+     * flagged cells arrive as a field => cell map so the table can render the same inline
+     * editor the grouped report used, on the same cell endpoint.
+     *
+     * @param list<array>                       $rows    staged rows {sheetRow, data}
+     * @param array<string, list<int>>          $byQr    [qr => sheet rows]
+     * @param array<int, array<string, string>> $byRow   [sheet row => cell values]
+     * @param list<array>                       $errors
+     * @param array<string, string>             $columns [field => Excel column letter]
+     * @return list<array{sheetRow:int, qr:string, family:string, role:string, values:array<string,string>, severity:string, cells:array<string,array>}>
+     */
+    private function people(array $rows, array $byQr, array $byRow, array $errors, array $columns): array
+    {
+        // Worst severity per sheet row, structural errors included: what flags the row.
+        $severityByRow = [];
+
+        foreach ($errors as $error) {
+            $sheetRow = $error['sheetRow'] ?? null;
+
+            if ($sheetRow === null) {
+                continue;
+            }
+
+            $sheetRow = (int) $sheetRow;
+            $sev      = (($error['severity'] ?? 'blocking') === 'blocking') ? 'blocking' : 'warning';
+
+            if (! isset($severityByRow[$sheetRow]) || $sev === 'blocking') {
+                $severityByRow[$sheetRow] = $sev;
+            }
+        }
+
+        // The household label: the head's last name, so the grouping reads as a family
+        // rather than as a number. A group with no head falls back to its QR.
+        $labelByQr = [];
+
+        foreach ($byQr as $qr => $sheetRows) {
+            $label = '';
+
+            foreach ($sheetRows as $sheetRow) {
+                $data = $byRow[$sheetRow] ?? [];
+
+                if ($this->isHeadRow($data)) {
+                    $label = trim((string) ($data['lastname'] ?? ''));
+                    break;
+                }
+            }
+
+            $labelByQr[(string) $qr] = $label !== '' ? $label : 'QR ' . $qr;
+        }
+
+        $out = [];
+
+        foreach ($rows as $entry) {
+            $sheetRow = (int) ($entry['sheetRow'] ?? 0);
+            $data     = is_array($entry['data'] ?? null) ? $entry['data'] : [];
+            $qr       = trim((string) ($data['familyno'] ?? ''));
+
+            $cells = [];
+
+            foreach ($this->editableCells([$sheetRow], $byRow, $errors, $columns) as $cell) {
+                $cells[$cell['field']] = $cell;
+            }
+
+            $out[] = [
+                'sheetRow' => $sheetRow,
+                'qr'       => $qr,
+                'family'   => $qr === '' ? 'No QR' : ($labelByQr[$qr] ?? 'QR ' . $qr),
+                'role'     => $this->isHeadRow($data)
+                    ? 'Head'
+                    : (trim((string) ($data['relationship'] ?? '')) ?: 'Member'),
+                'values'   => [
+                    'lastname'  => (string) ($data['lastname'] ?? ''),
+                    'firstname' => (string) ($data['firstname'] ?? ''),
+                    'birthday'  => (string) ($data['birthday'] ?? ''),
+                    'sex'       => (string) ($data['sex'] ?? ''),
+                ],
+                'severity' => (string) ($severityByRow[$sheetRow] ?? ''),
+                'cells'    => $cells,
+            ];
+        }
+
+        return $out;
     }
 
     /**

@@ -9,6 +9,7 @@ use App\Libraries\ImportFamilyModalBuilder;
 use App\Libraries\ImportReviewChangeLog;
 use App\Libraries\ImportReviewPresenter;
 use App\Libraries\ImportStagingStore;
+use App\Libraries\RoleAccess;
 use App\Models\Families\MemberModel;
 use App\Models\Jobs\JobQueueModel;
 use App\Models\Scanner\QrControlModel;
@@ -54,21 +55,26 @@ class FamilyImportController extends BaseController
     }
 
     /**
-     * GET `records/import`: returns the Excel import modal
-     * fragment (file upload + results area) loaded by family-import.js into the
-     * shared dashboard modal.
+     * GET `records/import`: step 1 of the import wizard, the upload page. The upload
+     * still posts over AJAX (family-import.js), so the page reports queueing and
+     * staging progress without navigating away.
      */
     public function importForm(): string|RedirectResponse
     {
         $guard = $this->requireFamilyEntryAccess();
 
         if ($guard instanceof RedirectResponse) {
-            return $this->partialGuard($guard, 'You do not have permission to import family records.');
+            return $guard;
         }
 
-        return view('Family/import-modal', [
-            'action'      => site_url($this->currentRouteBase() . '/import'),
-            'templateUrl' => site_url($this->currentRouteBase() . '/template'),
+        return view('layout', [
+            'activePage' => 'records-import',
+            'role'       => RoleAccess::normalizeRole((string) session()->get('role')),
+            'bodyView'   => 'Family/import-upload',
+            'bodyData'   => [
+                'action'      => site_url('records/import'),
+                'templateUrl' => site_url('records/template'),
+            ],
         ]);
     }
 
@@ -264,9 +270,9 @@ class FamilyImportController extends BaseController
     }
 
     /**
-     * GET `records/import/review/(:num)`: the full-page Import
-     * Review screen for a staged job - grouped errors the operator fixes inline before
-     * confirming the import.
+     * GET `records/import/review/(:num)`: step 2 of the import wizard, the review table
+     * for a staged job - one row per person, flagged values fixed inline before the
+     * import is confirmed.
      */
     public function reviewPage(int $jobId): string|RedirectResponse
     {
@@ -284,17 +290,17 @@ class FamilyImportController extends BaseController
                 ->with('error', 'That import is no longer available to review.');
         }
 
-        return view('Family/import-review', [
-            'jobId'      => $jobId,
-            'recordsUrl' => $this->recordsUrl(),
-            'review'     => (new ImportReviewPresenter())->build($loaded['result']),
-            // Dropdown columns (Sex, Barangay, Civil Status, …) so an inline cell edit offers the
-            // exact same choices as the Excel template's data-validation lists.
-            'fieldOptions' => (new FamilyExcelTemplate())->dropdownOptions(),
-            'username'   => (string) (session()->get('username') ?? ''),
-            // This page is a standalone shell (not a dashboard layout), so it has to wire
-            // up the idle-timeout logout itself - otherwise sitting on the review screen
-            // never times out.
+        return view('layout', [
+            'activePage' => 'records-import',
+            'role'       => RoleAccess::normalizeRole((string) session()->get('role')),
+            'bodyView'   => 'Family/import-review',
+            'bodyData'   => [
+                'jobId'  => $jobId,
+                'review' => (new ImportReviewPresenter())->build($loaded['result']),
+                // Dropdown columns (Sex, Barangay, Civil Status, …) so an inline cell edit
+                // offers the exact same choices as the Excel template's validation lists.
+                'fieldOptions' => (new FamilyExcelTemplate())->dropdownOptions(),
+            ],
             'idleTimeoutSeconds' => (new IdleTimeout())->seconds,
         ]);
     }

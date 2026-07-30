@@ -1,16 +1,15 @@
-// Registers the "Import from Excel" modal and submits the uploaded .xlsx to
-// FamilyController::import(), which QUEUES a background job. As soon as the job is
-// queued the modal CLOSES and progress is tracked in a small toast in a stack pinned
-// to the bottom-right. Each import gets its OWN toast, so several files can import at
-// once and all show progress while the user keeps working.
+// Drives step 1 of the import wizard (the upload page) and submits the uploaded .xlsx to
+// FamilyImportController::import(), which QUEUES a background job. As soon as the job is
+// queued, progress is tracked in a small toast in a stack pinned to the bottom-right.
+// Each import gets its OWN toast, so several files can import at once and all show
+// progress while the user keeps working.
 //
 // Active jobs are remembered in localStorage, so every in-flight toast resumes polling
 // even if the user navigates to another dashboard page before the imports finish.
 //
 // Connected to:
-//   - dashboard-modal-loader.js : window.registerDashboardModal()
-//   - family-datatable.js       : window.reloadFamilyDataTable()
-//   - Views   : Family/import-modal.php, the #familyModal shell, Family/list.php button
+//   - family-datatable.js : window.reloadFamilyDataTable()
+//   - Views   : Family/import-upload.php ([data-family-import]), Family/list.php button
 //   - Backend : POST records/import   -> { status:'queued', statusUrl }
 //               GET  records/import/status/(:num)
 (function (window, document) {
@@ -40,19 +39,6 @@
 
         if (input) {
             input.value = hash;
-        }
-    }
-
-    function closeImportModal() {
-        var modalEl = document.getElementById('familyModal');
-
-        if (modalEl && window.bootstrap && window.bootstrap.Modal) {
-            modalEl.dataset.familyCloseConfirmed = '1';
-            var instance = window.bootstrap.Modal.getInstance(modalEl);
-
-            if (instance) {
-                instance.hide();
-            }
         }
     }
 
@@ -382,9 +368,9 @@
         });
     }
 
-    // -- the modal form --------------------------------------------------------
+    // -- the upload form -------------------------------------------------------
 
-    function initImportModal(container) {
+    function initImportForm(container) {
         var root = container.querySelector('[data-family-import]');
 
         if (!root || root.dataset.familyImportReady === '1') {
@@ -440,14 +426,15 @@
                     submit.textContent = originalLabel;
                 }
 
-                // Queued: reset the form, close the modal, hand off to its own toast.
+                // Queued: reset the form and hand off to its own toast, which carries the
+                // "Open review" link once staging finishes.
                 // form.reset() must run BEFORE updateCsrfForm(), since reset() would
                 // otherwise wipe the just-refreshed token back to its page-load value.
                 if (result.ok && data.status === 'queued' && data.statusUrl) {
-                    results.innerHTML = '';
+                    results.innerHTML = '<div class="alert alert-info mb-0">' +
+                        'Checking your file. The review opens from the progress toast when it is ready.</div>';
                     form.reset();
                     updateCsrfForm(form, data.csrf);
-                    closeImportModal();
                     startTracking(data.statusUrl);
 
                     return;
@@ -455,8 +442,8 @@
 
                 updateCsrfForm(form, data.csrf);
 
-                // Upload rejected before queuing (bad file, permission, etc.) - keep
-                // the modal open so the user can fix and retry.
+                // Upload rejected before queuing (bad file, permission, etc.) - stay on
+                // the page so the user can fix and retry.
                 results.innerHTML = '<div class="alert alert-danger mb-0">' +
                     escapeHtml(data.message || 'The file could not be queued for import.') + '</div>';
             }).catch(function () {
@@ -470,21 +457,16 @@
         });
     }
 
-    if (typeof window.registerDashboardModal === 'function') {
-        window.registerDashboardModal({
-            namespace: 'familyImport',
-            triggerSelector: '.js-open-family-import-modal',
-            defaultTitle: 'Import from Excel',
-            loadingMarkup: '<div class="family-modal-loading" role="status" aria-live="polite"><div class="spinner-border text-primary" aria-hidden="true"></div><span>Loading...</span></div>',
-            errorMarkup: '<div class="alert alert-danger mb-0">Unable to load the import form. Please try again.</div>',
-            onLoaded: initImportModal
-        });
+    // Wire the upload form when this page carries one, and pick up imports that were
+    // still running when the page loaded (any dashboard page resumes their toasts).
+    function start() {
+        initImportForm(document);
+        resumeTracking();
     }
 
-    // Pick up imports that were still running when this page loaded.
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', resumeTracking);
+        document.addEventListener('DOMContentLoaded', start);
     } else {
-        resumeTracking();
+        start();
     }
 })(window, document);

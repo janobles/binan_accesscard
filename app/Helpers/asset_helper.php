@@ -108,6 +108,7 @@ if (! function_exists('asset_scripts')) {
                 'assets/js/dashboard/dashboard-modal-loader.js',
                 'assets/js/dashboard/manage-family-modal.js',
                 'assets/js/dashboard/family-import.js',
+                'assets/js/dashboard/import-review.js',
                 'assets/js/dashboard/account-form-modal.js',
                 'assets/js/dashboard/accounts-modal.js',
                 'assets/js/dashboard/sectors-modal.js',

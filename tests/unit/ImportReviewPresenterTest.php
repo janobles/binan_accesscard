@@ -116,6 +116,58 @@ final class ImportReviewPresenterTest extends CIUnitTestCase
         $this->assertCount(2, $review['ready']);
     }
 
+    // -- people (the review table's rows) --------------------------------------
+
+    public function testEveryStagedPersonIsARowInSheetOrder(): void
+    {
+        $people = $this->people(
+            [$this->row(3, '6001', 'Head'), $this->row(4, '6001', 'Child'), $this->row(5, '6002', 'Head')],
+            [],
+        );
+
+        $this->assertCount(3, $people);
+        $this->assertSame([3, 4, 5], array_column($people, 'sheetRow'));
+        // The household reads as the head's last name, not as a QR number.
+        $this->assertSame('Cruz', $people[0]['family']);
+        $this->assertSame('Head', $people[0]['role']);
+        $this->assertSame('Child', $people[1]['role']);
+    }
+
+    public function testOnlyTheFlaggedPersonCarriesASeverityAndItsBadCell(): void
+    {
+        $people = $this->people(
+            [$this->row(3, '6001', 'Head'), $this->row(4, '6001', 'Child')],
+            [$this->fieldError(4, '6001', 'SEX', 'sex', 'blocking')],
+        );
+
+        $this->assertSame('', $people[0]['severity']);
+        $this->assertSame('blocking', $people[1]['severity']);
+        $this->assertArrayHasKey('sex', $people[1]['cells']);
+        $this->assertSame([], $people[0]['cells']);
+    }
+
+    public function testAStructuralErrorFlagsTheRowWithNoEditableCell(): void
+    {
+        // HEAD-NONE names no single bad value, so the row flags but offers nothing to type
+        // into; that file is fixed in the spreadsheet.
+        $people = $this->people(
+            [$this->row(3, '6001', 'Child')],
+            [$this->error(3, '6001', 'HEAD-NONE', 'blocking')],
+        );
+
+        $this->assertSame('blocking', $people[0]['severity']);
+        $this->assertSame([], $people[0]['cells']);
+        $this->assertSame('QR 6001', $people[0]['family']);
+    }
+
+    public function testARowWithNoQrIsStillListed(): void
+    {
+        $people = $this->people([$this->row(3, '', 'Head')], []);
+
+        $this->assertCount(1, $people);
+        $this->assertSame('No QR', $people[0]['family']);
+    }
+
     // -- families to fix (in-place Edit / Remove) ------------------------------
 
     public function testAFlaggedFamilyIsListedToFixWithItsIssueCounts(): void
@@ -341,6 +393,17 @@ final class ImportReviewPresenterTest extends CIUnitTestCase
     private function ready(array $rows, array $errors): array
     {
         return (new ImportReviewPresenter())->build(['rows' => $rows, 'errors' => $errors])['ready'];
+    }
+
+    /**
+     * @param list<array> $rows
+     * @param list<array> $errors
+     *
+     * @return list<array>
+     */
+    private function people(array $rows, array $errors): array
+    {
+        return (new ImportReviewPresenter())->build(['rows' => $rows, 'errors' => $errors])['people'];
     }
 
     private function row(int $sheetRow, string $qr, string $relationship): array

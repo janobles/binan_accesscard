@@ -31,7 +31,7 @@ use App\Libraries\ViewFormatter;
                     <tr>
                         <th scope="col">Username</th>
                         <th scope="col">Role</th>
-                        <th scope="col" class="text-end">Status</th>
+                        <th scope="col" class="text-center">Status</th>
                         <th scope="col" class="text-end">Actions</th>
                     </tr>
                 </thead>
@@ -56,7 +56,7 @@ use App\Libraries\ViewFormatter;
                         <tr data-account-row data-paginate-row data-account-username="<?= esc(mb_strtolower((string) ($account['username'] ?? '')), 'attr') ?>" data-account-role="<?= esc(mb_strtolower($rawRole), 'attr') ?>" data-account-status="<?= esc($statusFilter, 'attr') ?>">
                             <td><?= esc((string) ($account['username'] ?? '')) ?></td>
                             <td><?= esc($roleLabel) ?></td>
-                            <td class="text-end"><span class="account-status-badge <?= esc($statusClass) ?>"><?= esc($statusLabel) ?></span></td>
+                            <td class="text-center"><span class="account-status-badge <?= esc($statusClass) ?>"><?= esc($statusLabel) ?></span></td>
                             <td class="text-end">
                                 <div class="account-actions">
                                     <?php if ($hasRowActions): ?>

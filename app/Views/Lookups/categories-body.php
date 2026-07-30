@@ -26,6 +26,7 @@
 					<th class="lookup-col-name">Name</th>
 					<th class="lookup-col-code">Code</th>
 					<th class="lookup-col-description">Description</th>
+					<th class="lookup-col-status">Status</th>
 					<th class="lookup-col-actions text-end">Actions</th>
 				</tr>
 			</thead>
@@ -39,6 +40,7 @@
 						<td><span class="sector-name"><?= esc((string) ($category['name'] ?? '')) ?></span></td>
 						<td><span class="badge bg-light text-dark border"><?= esc((string) ($category['code'] ?? '')) ?></span></td>
 						<td><span class="text-trim d-inline-block"><?= esc((string) ($category['description'] ?? '')) ?></span></td>
+						<td class="lookup-col-status"><span class="sector-status-badge <?= $isArchived ? 'sector-status-archived' : 'sector-status-active' ?>"><?= $isArchived ? 'Archived' : 'Active' ?></span></td>
 						<td class="text-end">
 							<div class="dropdown actions-menu">
 								<button class="btn btn-outline-secondary btn-sm actions-menu-toggle" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false" aria-label="Category actions">
@@ -83,7 +85,7 @@
 				<?php endforeach; ?>
 				<?php if ($categories === []): ?>
 					<tr>
-						<td colspan="4" class="sector-empty-state"><?= $keyword !== '' ? 'No categories match your search.' : 'No category records found.' ?></td>
+						<td colspan="5" class="sector-empty-state"><?= $keyword !== '' ? 'No categories match your search.' : 'No category records found.' ?></td>
 					</tr>
 				<?php endif; ?>
 			</tbody>

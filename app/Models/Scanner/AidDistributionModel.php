@@ -52,8 +52,10 @@ class AidDistributionModel extends Model
     }
 
     /**
-     * Chronological (newest-first) subsidy history for a control number, with the
-     * subsidy type name and the claimant's full name resolved via joins.
+     * Chronological (newest-first) subsidy history for a control number, with
+     * the scan timestamp, batch name, and subsidy type name resolved via
+     * joins. Capped at the 10 most recent claims - drives the scan kiosk's
+     * History tab.
      */
     public function historyFor(int $controlNo): array
     {
@@ -63,15 +65,125 @@ class AidDistributionModel extends Model
 
         try {
             return $this->select('aid_distribution.aidID, aid_distribution.claim_date,'
-                    . ' aid_distribution.subsidy_type_id,'
+                    . ' aid_distribution.dt_created, aid_distribution.subsidy_type_id,'
                     . " subsidy.name AS aid_type,"
+                    . " distribution_batch.name AS batch_name,"
                     . " TRIM(CONCAT(member.firstname, ' ', member.lastname)) AS claimant")
                 ->join('subsidy', 'subsidy.subsidy_type_id = aid_distribution.subsidy_type_id', 'left')
                 ->join('member', 'member.memberID = aid_distribution.memberID', 'left')
+                ->join('distribution_batch', 'distribution_batch.batch_id = aid_distribution.batch_id', 'left')
                 ->where('aid_distribution.control_no', $controlNo)
                 ->orderBy('aid_distribution.claim_date', 'DESC')
                 ->orderBy('aid_distribution.aidID', 'DESC')
+                ->limit(10)
                 ->findAll();
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
+
+    /**
+     * Every audit-log entry for one control number, newest first, joined to
+     * batch name and subsidy type name, optionally keyword/batch/subsidy-type
+     * filtered. Not paginated - one QR control number's scan instances are a
+     * small, bounded set. Powers the scan kiosk's "View all" page Audit Logs
+     * tab: scan control number 1010 and this returns only 1010's scanned
+     * instances; scan a different control number and it returns that one's.
+     */
+    public function historyAllFor(int $controlNo, string $keyword, int $batchId, int $aidTypeId): array
+    {
+        if ($controlNo <= 0) {
+            return [];
+        }
+
+        try {
+            $builder = $this->select('aid_distribution.aidID, aid_distribution.claim_date,'
+                    . ' aid_distribution.dt_created, aid_distribution.subsidy_type_id, aid_distribution.batch_id,'
+                    . " subsidy.name AS aid_type,"
+                    . " distribution_batch.name AS batch_name,"
+                    . " TRIM(CONCAT(member.firstname, ' ', member.lastname)) AS claimant")
+                ->join('subsidy', 'subsidy.subsidy_type_id = aid_distribution.subsidy_type_id', 'left')
+                ->join('member', 'member.memberID = aid_distribution.memberID', 'left')
+                ->join('distribution_batch', 'distribution_batch.batch_id = aid_distribution.batch_id', 'left')
+                ->where('aid_distribution.control_no', $controlNo);
+
+            if ($batchId > 0) {
+                $builder->where('aid_distribution.batch_id', $batchId);
+            }
+            if ($aidTypeId > 0) {
+                $builder->where('aid_distribution.subsidy_type_id', $aidTypeId);
+            }
+            if ($keyword !== '') {
+                $builder->groupStart()
+                    ->like('subsidy.name', $keyword)
+                    ->orLike('distribution_batch.name', $keyword)
+                    ->groupEnd();
+            }
+
+            return $builder
+                ->orderBy('aid_distribution.claim_date', 'DESC')
+                ->orderBy('aid_distribution.aidID', 'DESC')
+                ->findAll();
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
+
+    /**
+     * Distinct batches this family has been logged in, with a claim count
+     * each - drives the "View all" page's Batch filter.
+     *
+     * @return list<array{batch_id:int,name:string,n:int}>
+     */
+    public function batchCountsFor(int $controlNo): array
+    {
+        if ($controlNo <= 0) {
+            return [];
+        }
+
+        try {
+            $rows = $this->select('aid_distribution.batch_id, distribution_batch.name, COUNT(*) AS n')
+                ->join('distribution_batch', 'distribution_batch.batch_id = aid_distribution.batch_id', 'left')
+                ->where('aid_distribution.control_no', $controlNo)
+                ->groupBy('aid_distribution.batch_id, distribution_batch.name')
+                ->orderBy('distribution_batch.name', 'ASC')
+                ->findAll();
+
+            return array_map(static fn (array $r): array => [
+                'batch_id' => (int) $r['batch_id'],
+                'name'     => (string) ($r['name'] ?? 'Unknown batch'),
+                'n'        => (int) $r['n'],
+            ], $rows);
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
+
+    /**
+     * Distinct subsidy types this family has received, with a claim count
+     * each - drives the "View all" page's Subsidy Type filter.
+     *
+     * @return list<array{subsidy_type_id:int,name:string,n:int}>
+     */
+    public function aidTypeCountsFor(int $controlNo): array
+    {
+        if ($controlNo <= 0) {
+            return [];
+        }
+
+        try {
+            $rows = $this->select('aid_distribution.subsidy_type_id, subsidy.name, COUNT(*) AS n')
+                ->join('subsidy', 'subsidy.subsidy_type_id = aid_distribution.subsidy_type_id', 'left')
+                ->where('aid_distribution.control_no', $controlNo)
+                ->groupBy('aid_distribution.subsidy_type_id, subsidy.name')
+                ->orderBy('subsidy.name', 'ASC')
+                ->findAll();
+
+            return array_map(static fn (array $r): array => [
+                'subsidy_type_id' => (int) $r['subsidy_type_id'],
+                'name'            => (string) ($r['name'] ?? 'Subsidy'),
+                'n'               => (int) $r['n'],
+            ], $rows);
         } catch (\Throwable $e) {
             return [];
         }

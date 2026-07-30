@@ -199,7 +199,9 @@
                 { data: 'name', name: 'name', orderSequence: ['asc', 'desc'] },
                 { data: 'sector', name: 'sector', orderable: false },
                 { data: 'address', name: 'address', orderSequence: ['asc', 'desc'] },
-                { data: 'birthday', name: 'birthday', orderSequence: ['asc', 'desc'] },
+                // className overrides DataTables' auto-detected "date" column
+                // type, which right-aligns by default.
+                { data: 'birthday', name: 'birthday', orderSequence: ['asc', 'desc'], className: 'text-start' },
                 { data: 'actions', name: 'actions', orderable: false, searchable: false, className: 'text-end' }
             ],
             layout: {

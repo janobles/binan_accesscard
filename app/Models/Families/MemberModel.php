@@ -729,6 +729,72 @@ class MemberModel extends Model
     }
 
     /**
+     * Same data as referenceBadges(), kept as two separate lists instead of
+     * one merged one: sector shortcodes, and "services and programs" (service
+     * category names + service shortcodes together, same as referenceBadges()
+     * folds them). Drives the scan kiosk's "View all" page, which filters
+     * Sectors and Services/Programs separately.
+     *
+     * @param list<int> $memberIds
+     * @return array<int, array{sectors: list<string>, servicesPrograms: list<string>}>
+     */
+    public function referenceBadgesSplit(array $memberIds): array
+    {
+        $memberIds = array_values(array_filter(array_map('intval', $memberIds), static fn (int $id): bool => $id > 0));
+        if ($memberIds === []) {
+            return [];
+        }
+
+        try {
+            $sectorCodes = [];
+            foreach ($this->db->table('sector')->select('sectorID, shortcode')->get()->getResultArray() as $s) {
+                $sectorCodes[(int) $s['sectorID']] = (string) $s['shortcode'];
+            }
+
+            $sectorJson = [];
+            foreach ($this->db->table('member')->select('memberID, sectorID')->whereIn('memberID', $memberIds)->get()->getResultArray() as $m) {
+                $sectorJson[(int) $m['memberID']] = $m['sectorID'];
+            }
+
+            $serviceRows = $this->db->table('member_services')
+                ->select('member_services.memberID, services.shortcode, services.category')
+                ->join('services', 'services.serviceID = member_services.serviceID')
+                ->whereIn('member_services.memberID', $memberIds)
+                ->where('services.dt_deleted IS NULL', null, false)
+                ->get()->getResultArray();
+
+            $split = [];
+            foreach ($memberIds as $id) {
+                $sectors = [];
+                foreach (\App\Libraries\SectorIds::normalize($sectorJson[$id] ?? '[]') as $sid) {
+                    if (isset($sectorCodes[$sid])) {
+                        $sectors[] = $sectorCodes[$sid];
+                    }
+                }
+                $servicesPrograms = [];
+                foreach ($serviceRows as $r) {
+                    if ((int) $r['memberID'] !== $id) {
+                        continue;
+                    }
+                    $cat = trim((string) ($r['category'] ?? ''));
+                    if ($cat !== '' && ! in_array($cat, $servicesPrograms, true)) {
+                        $servicesPrograms[] = $cat;
+                    }
+                    $code = trim((string) ($r['shortcode'] ?? ''));
+                    if ($code !== '') {
+                        $servicesPrograms[] = $code;
+                    }
+                }
+                $split[$id] = ['sectors' => $sectors, 'servicesPrograms' => $servicesPrograms];
+            }
+
+            return $split;
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
+
+    /**
      * All active members of a family (head + relatives), head first. Drives
      * the kiosk family panel. Returns [] for a non-positive id.
      */
@@ -739,7 +805,7 @@ class MemberModel extends Model
         }
 
         $builder = $this->db->table('member')
-            ->select('memberID, firstname, lastname, relationship, birthday, sex')
+            ->select('memberID, firstname, lastname, suffix, relationship, birthday, sex, civilstatus, contactnumber, job, address')
             ->where('headID', $headId);
 
         if ($this->db->fieldExists('dt_deleted', 'member')) {

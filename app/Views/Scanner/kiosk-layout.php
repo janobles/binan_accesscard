@@ -51,11 +51,13 @@ $accountMenuData = [
   <?= $this->renderSection('content') ?>
 </main>
 
+<?php /* Plain-sized modal (no floating-family-modal - that class is tuned
+         for the admin/employee record-edit view's rich layout, way oversized
+         for the scan panel's simple head + members read-only popup). */ ?>
 <?= view('components/modal', [
     'id' => 'familyModal',
-    'modalClass' => 'floating-family-modal',
-    'attrs' => 'aria-label="Record details" data-bs-backdrop="static" data-bs-keyboard="false"',
-    'size' => 'modal-xl',
+    'attrs' => 'aria-label="Family details"',
+    'size' => 'modal-lg',
     'title' => 'Record',
     'titleId' => 'familyModalLabel',
     'bodyId' => 'familyModalBody',

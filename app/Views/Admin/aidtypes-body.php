@@ -22,16 +22,16 @@ $canManageAidTypes = in_array($currentRole ?? '', ['Admin', 'Developer'], true);
 ]) ?>
 
         <div class="table-responsive">
-          <table class="table manage-record-table align-middle w-100">
+          <table class="table manage-record-table align-middle lookup-management-table lookup-management-table--aidtypes">
             <thead>
-              <tr><th>Name</th><th>Status</th><th class="text-end">Actions</th></tr>
+              <tr><th class="lookup-col-name">Name</th><th class="lookup-col-status">Status</th><th class="lookup-col-actions text-end">Actions</th></tr>
             </thead>
             <tbody>
               <?php foreach ($aidTypes as $t): ?>
                 <?php $archived = ! empty($t['dt_deleted']); ?>
                 <tr data-row-archived="<?= $archived ? '1' : '0' ?>">
                   <td><span class="sector-name"><?= esc($t['name']) ?></span></td>
-                  <td><span class="sector-status-badge <?= $archived ? 'sector-status-archived' : 'sector-status-active' ?>"><?= $archived ? 'Archived' : 'Active' ?></span></td>
+                  <td class="lookup-col-status"><span class="sector-status-badge <?= $archived ? 'sector-status-archived' : 'sector-status-active' ?>"><?= $archived ? 'Archived' : 'Active' ?></span></td>
                   <td class="text-end">
                     <div class="dropdown actions-menu">
                       <button class="btn btn-outline-secondary btn-sm actions-menu-toggle" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false" aria-label="Subsidy type actions">

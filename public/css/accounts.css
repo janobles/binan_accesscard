@@ -192,15 +192,15 @@
     min-width: 0;
 }
 
-.accounts-page .form-label {
+.edit-account-modal .form-label {
     margin: 0;
     color: #10251f;
     font-size: 0.84rem;
     font-weight: 700;
 }
 
-.accounts-page .form-control,
-.accounts-page .form-select {
+.edit-account-modal .form-control,
+.edit-account-modal .form-select {
     min-height: 2.65rem;
     border-color: #c7d8d3;
     border-radius: 0.35rem;
@@ -236,6 +236,7 @@
 .account-table {
     min-width: 36rem;
     margin: 0;
+    table-layout: fixed;
 }
 
 .account-col-username,
@@ -244,7 +245,7 @@
 }
 
 .account-col-status {
-    width: 1%;
+    width: 8rem;
     white-space: nowrap;
 }
 
@@ -381,8 +382,8 @@
         grid-column: auto;
     }
 
-    .accounts-page .form-control,
-    .accounts-page .form-select,
+    .edit-account-modal .form-control,
+    .edit-account-modal .form-select,
     .account-create-actions .btn {
         min-height: 2.35rem;
         font-size: 0.82rem;

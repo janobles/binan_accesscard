@@ -76,7 +76,7 @@ $fieldOptionsJson = json_encode($fieldOptions, JSON_HEX_TAG | JSON_HEX_AMP | JSO
 
     <div class="import-review-actionbar d-flex flex-wrap justify-content-end align-items-center gap-2 mt-4">
         <span id="importReviewStatus" class="text-muted me-auto" role="status" aria-live="polite"></span>
-        <button type="button" class="btn btn-outline-secondary" id="importReviewCancel">
+        <button type="button" class="btn btn-secondary" id="importReviewCancel">
             <i class="bi bi-x-circle me-1" aria-hidden="true"></i>Cancel import
         </button>
         <button type="button" class="btn btn-primary" id="importReviewConfirm" disabled>

@@ -92,9 +92,8 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
     <div id="layoutSidenav_content">
             <main class="container-fluid px-4 dashboard-content">
             <h1 class="mt-4" id="dashboard-page-title"><?= esc($pageTitle) ?></h1>
-            <?php if (session()->getFlashdata('success')): ?>
-                <div class="alert alert-success" data-auto-dismiss-alert><?= esc(session()->getFlashdata('success')) ?></div>
-            <?php endif; ?>
+            <?= view('components/toast') ?>
+            <?= view('Partials/flash-toasts') ?>
             <?php if ($resetInfo = session()->getFlashdata('reset_password')): ?>
                 <div class="reset-password-callout" role="alert">
                     <div class="reset-password-callout__head">
@@ -109,9 +108,6 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                     </div>
                     <p class="reset-password-callout__hint">Share it with the user and ask them to change it in My Account.</p>
                 </div>
-            <?php endif; ?>
-            <?php if (session()->getFlashdata('error')): ?>
-                <div class="alert alert-danger" data-auto-dismiss-alert><?= esc(session()->getFlashdata('error')) ?></div>
             <?php endif; ?>
             <?php if (session()->getFlashdata('family_record_saved')): ?>
                 <span id="familyDraftSavedMarker" hidden></span>
@@ -252,19 +248,13 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                         'tabParam' => 'categories',
                     ]) ?>
                 <?php elseif ($referenceTab === 'aidtypes'): ?>
-                    <?= view('components/card', [
-                        'icon' => 'box-seam',
-                        'title' => 'Subsidy Types',
-                        'cardClass' => 'sector-management',
-                        'attrs' => 'data-table-paginate data-paginate-key="aidtypes" data-paginate-label="subsidy types"',
-                        'bodyView' => 'Admin/aidtypes-body',
-                        'bodyData' => [
-                            'aidTypes' => $aidTypes,
-                            'currentRole' => $currentRole,
-                        ],
-                        'footer' => view('components/table_footer', ['clientKey' => 'aidtypes', 'entityLabel' => 'subsidy types']),
+                    <?= view('Admin/aidtypes', [
+                        'aidTypes' => $aidTypes,
+                        'aidTypeListData' => $aidTypeListData,
+                        'currentRole' => $currentRole,
+                        'canRestore' => $canRestoreLookups ?? false,
+                        'tabParam' => 'aidtypes',
                     ]) ?>
-                    <?= view('Admin/aidtype-create-modal') ?>
                 <?php endif; ?>
             <?php endif; ?>
 
@@ -300,6 +290,7 @@ $sidebarUserUrl = $canManageAccounts ? site_url('admin/accounts') : site_url('ad
                 <?= view('Admin/batch-create-modal', [
                     'activeAidTypes' => $activeAidTypes,
                 ]) ?>
+                <?= view('Admin/batch-close-modal') ?>
             <?php endif; ?>
 
             <?php if ($activePage === 'distribution' && ($distributionTab ?? '') === 'log'): ?>

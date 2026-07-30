@@ -17,8 +17,7 @@ $canManageBatches = in_array($currentRole ?? '', ['Admin', 'Developer'], true);
       open since <?= esc($activeBatch['started_at']) ?>
     </span>
     <?php if ($canManageBatches): ?>
-    <form method="post" action="<?= site_url('admin/batches/close/' . (int) $activeBatch['batch_id']) ?>"
-          onsubmit="return confirm('Close this batch? Statistics reset for the next batch.');">
+    <form method="post" action="<?= site_url('admin/batches/close/' . (int) $activeBatch['batch_id']) ?>" class="js-batch-close-form">
       <?= csrf_field() ?>
       <button class="btn btn-warning btn-sm" type="submit">Close batch</button>
     </form>

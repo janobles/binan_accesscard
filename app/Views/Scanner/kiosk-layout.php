@@ -46,9 +46,8 @@ $accountMenuData = [
 </nav>
 <main class="container-fluid px-4 py-3">
 
-  <?php if (session()->getFlashdata('error')): ?>
-    <div class="alert alert-danger"><?= esc(session()->getFlashdata('error')) ?></div>
-  <?php endif; ?>
+  <?= view('components/toast') ?>
+  <?= view('Partials/flash-toasts') ?>
   <?= $this->renderSection('content') ?>
 </main>
 

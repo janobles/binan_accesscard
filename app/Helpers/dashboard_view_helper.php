@@ -279,3 +279,11 @@ if (! function_exists('category_management_view_data')) {
         return DashboardViewData::categoryManagement($data);
     }
 }
+
+if (! function_exists('aid_type_management_view_data')) {
+    /** View variables for the Subsidy Types management screen. */
+    function aid_type_management_view_data(array $data): array
+    {
+        return DashboardViewData::aidTypeManagement($data);
+    }
+}

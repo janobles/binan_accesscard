@@ -17,26 +17,6 @@
     function accountStatusModalEl() {
         return document.getElementById('accountStatusModal');
     }
-    function bindAutoDismissAlerts(root) {
-        root.querySelectorAll('[data-auto-dismiss-alert]').forEach(function (alert) {
-            if (alert.dataset.autoDismissBound === '1') {
-                return;
-            }
-
-            alert.dataset.autoDismissBound = '1';
-
-            window.setTimeout(function () {
-                alert.style.transition = 'opacity 180ms ease, transform 180ms ease';
-                alert.style.opacity = '0';
-                alert.style.transform = 'translateY(-0.25rem)';
-
-                window.setTimeout(function () {
-                    alert.remove();
-                }, 200);
-            }, 5000);
-        });
-    }
-
     function bindAccountStatusForms(root) {
         root.querySelectorAll('.js-account-status-form').forEach(function (form) {
             if (form.dataset.statusFormBound === '1') {
@@ -123,7 +103,6 @@
     function initViewInteractions(rootElement) {
         const root = rootElement instanceof HTMLElement ? rootElement : document;
 
-        bindAutoDismissAlerts(root);
         bindAccountStatusForms(root);
     }
 

@@ -91,16 +91,16 @@
         if (title) {
             title.textContent = mode === 'update'
                 ? 'Update Category'
-                : (isArchive ? 'Archive Category' : (isRestore ? 'Restore Category' : 'Add Category'));
+                : (isArchive ? 'Archive Category' : (isRestore ? 'Restore Category' : 'Add'));
         }
 
         if (submit) {
-            submit.textContent = mode === 'update'
-                ? 'Update Category'
-                : (isArchive ? 'Archive Category' : (isRestore ? 'Restore Category' : 'Add Category'));
+            submit.textContent = isArchive
+                ? 'Archive Category'
+                : (isRestore ? 'Restore Category' : (mode === 'update' ? 'Update' : 'Add'));
             submit.classList.toggle('btn-danger', isArchive);
-            submit.classList.toggle('btn-success', isRestore);
-            submit.classList.toggle('btn-primary', !isAction);
+            submit.classList.toggle('btn-success', !isArchive);
+            submit.classList.toggle('btn-primary', false);
             submit.disabled = false;
         }
 

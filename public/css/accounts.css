@@ -171,6 +171,10 @@
     min-width: 0;
 }
 
+.account-fields-row + .account-fields-row {
+    margin-top: 0.85rem;
+}
+
 .account-fields-row--credentials {
     grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
 }
@@ -234,6 +238,20 @@
     margin: 0;
 }
 
+.account-col-username,
+.account-col-role {
+    width: 38%;
+}
+
+.account-col-status {
+    width: 1%;
+    white-space: nowrap;
+}
+
+.account-col-actions {
+    width: 9.5rem;
+}
+
 /* Typography mirrors .manage-record-table (managerecord.css). */
 .account-table th {
     padding: 0.8rem 1rem;
@@ -273,7 +291,9 @@
 }
 
 .account-table .account-action-toggle {
-    min-width: 0;
+    min-width: 2.5rem;
+    min-height: 2.5rem;
+    padding: 0;
 }
 
 .account-action-menu {

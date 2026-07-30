@@ -29,8 +29,11 @@ $hasScanData = ((int) $reportsSummary['received']) > 0 || $reportsPerScanner !==
 $showDistDetail = $reportsBatchOpen || $hasScanData;
 ?>
 
-<div class="dashboard-section-head">
-  <h2><i class="bi bi-clipboard-check-fill" aria-hidden="true"></i>Subsidy Distribution</h2>
+<div class="dashboard-section-head dashboard-section-head--subtitled">
+  <div class="dashboard-section-head-title">
+    <h2><i class="bi bi-clipboard-check-fill" aria-hidden="true"></i>Subsidy Distribution</h2>
+    <p class="text-muted small mb-0"><?= $rangeLabel ?> &middot; Last updated <span id="lastUpdated">-</span></p>
+  </div>
   <div class="section-actions">
     <form class="reports-filter" method="get" action="<?= site_url('admin/dashboard') ?>">
       <label for="batchPick" class="form-label mb-0 visually-hidden">Batch</label>
@@ -46,7 +49,6 @@ $showDistDetail = $reportsBatchOpen || $hasScanData;
     <a class="btn btn-primary reports-download-btn" href="<?= site_url('admin/reports/pdf') . '?batch=' . (int) $reportsBatchId ?>"><i class="bi bi-file-earmark-arrow-down" aria-hidden="true"></i><span>Download Report</span></a>
   </div>
 </div>
-<p class="text-muted small mb-3"><?= $rangeLabel ?> &middot; Last updated <span id="lastUpdated">-</span></p>
 
 <?php if (! $showDistDetail): ?>
 <p class="text-muted mb-4"><i class="bi bi-info-circle" aria-hidden="true"></i>

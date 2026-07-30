@@ -108,14 +108,14 @@
         }
 
         if (title) {
-            title.textContent = mode === 'update' ? 'Update Sector' : (isArchive ? 'Archive Sector' : (isRestore ? 'Restore Sector' : 'Add Sector'));
+            title.textContent = mode === 'update' ? 'Update Sector' : (isArchive ? 'Archive Sector' : (isRestore ? 'Restore Sector' : 'Add'));
         }
 
         if (submit) {
-            submit.textContent = mode === 'update' ? 'Update Sector' : (isArchive ? 'Archive Sector' : (isRestore ? 'Restore Sector' : 'Add Sector'));
+            submit.textContent = isArchive ? 'Archive Sector' : (isRestore ? 'Restore Sector' : (mode === 'update' ? 'Update' : 'Add'));
             submit.classList.toggle('btn-danger', isArchive);
-            submit.classList.toggle('btn-success', isRestore);
-            submit.classList.toggle('btn-primary', !isAction);
+            submit.classList.toggle('btn-success', !isArchive);
+            submit.classList.toggle('btn-primary', false);
             submit.disabled = false;
         }
 

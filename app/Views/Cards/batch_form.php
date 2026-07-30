@@ -40,7 +40,7 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
     <div class="card-body">
         <form id="cn-batch-form" class="row g-3 align-items-end" autocomplete="off">
             <?= csrf_field() ?>
-            <div class="col-12 col-md-5">
+            <div class="col-12 col-md">
                 <label class="form-label" for="cn-barangay">Barangay</label>
                 <select class="form-select" id="cn-barangay" name="barangay">
                     <option value="">All barangays</option>
@@ -57,7 +57,7 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
                 <label class="form-label" for="cn-to">To #</label>
                 <input type="number" min="1" inputmode="numeric" class="form-control" id="cn-to" name="to" placeholder="e.g. 150">
             </div>
-            <div class="col-12 col-md-3 d-grid">
+            <div class="col-12 col-md-auto">
                 <button type="submit" class="<?= btn('generate') ?>" id="cn-batch-btn">
                     <i class="bi bi-printer" aria-hidden="true"></i> Generate cards
                 </button>
@@ -107,7 +107,7 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
     </div>
     <div class="card-body">
         <div class="row g-3 align-items-end">
-            <div class="col-12 col-md-6 cn-typeahead">
+            <div class="col-12 col-md cn-typeahead">
                 <label class="form-label" for="cn-head">Head</label>
                 <input type="text" class="form-control" id="cn-head" placeholder="Type a head name&hellip;" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="cn-head-list">
                 <ul class="list-group cn-typeahead-list shadow-sm" id="cn-head-list" hidden></ul>
@@ -116,7 +116,7 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
                 <label class="form-label" for="cn-control">Control #</label>
                 <input type="number" min="1" inputmode="numeric" class="form-control" id="cn-control" placeholder="Exact number">
             </div>
-            <div class="col-6 col-md-3 d-grid">
+            <div class="col-6 col-md-auto">
                 <button type="button" class="<?= btn('generate') ?>" id="cn-single-btn">
                     <i class="bi bi-printer" aria-hidden="true"></i> Generate card
                 </button>
@@ -124,7 +124,6 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
         </div>
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2">
             <span class="text-muted small">Pick a head from the list OR type an exact control number, then Generate.</span>
-            <span id="cn-single-status" class="small text-muted" aria-live="polite"></span>
         </div>
     </div>
 </div>
@@ -260,7 +259,7 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
 
     batchForm.addEventListener('submit', async function (e) {
         e.preventDefault();
-        batchStatus.textContent = 'Generating…';
+        window.showToast('Generating…', 'primary');
         batchBtn.disabled = true;
         try {
             const resp = await fetch(generateUrl, {
@@ -273,13 +272,13 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
                 const text = await resp.text();
                 let msg = 'Generation failed.';
                 try { msg = JSON.parse(text).error || msg; } catch (_) {}
-                batchStatus.textContent = msg;
+                window.showToast(msg, 'danger');
                 return;
             }
             await download(resp, 'binan-qr-cards.pdf');
-            batchStatus.textContent = 'Done.';
+            window.showToast('Cards generated.', 'success');
         } catch (err) {
-            batchStatus.textContent = 'Generation failed. Please try again.';
+            window.showToast('Generation failed. Please try again.', 'danger');
         } finally {
             refreshPreview();
         }
@@ -290,7 +289,6 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
     const headList = document.getElementById('cn-head-list');
     const controlInput = document.getElementById('cn-control');
     const singleBtn = document.getElementById('cn-single-btn');
-    const singleStatus = document.getElementById('cn-single-status');
     let selectedHead = null;
     let acDebounce;
 
@@ -333,7 +331,6 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
     });
 
     singleBtn.addEventListener('click', async function () {
-        singleStatus.textContent = '';
         let memberId = selectedHead;
 
         // Exact control number path: resolve to a head via the heads feed (range
@@ -343,25 +340,25 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
         // must look it up rather than assume control === memberID.
         if (!memberId) {
             const control = controlInput.value.trim();
-            if (!control) { singleStatus.textContent = 'Pick a head or enter a control number.'; return; }
+            if (!control) { window.showToast('Pick a head or enter a control number.', 'warning'); return; }
             try {
                 const resp = await fetch(headsUrl + '?from=' + encodeURIComponent(control) + '&to=' + encodeURIComponent(control), { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
                 const data = await resp.json();
                 const hit = (data.rows || []).find((r) => String(r.controlNo) === control);
-                if (!hit) { singleStatus.textContent = 'No head found for control number ' + control + '.'; return; }
+                if (!hit) { window.showToast('No head found for control number ' + control + '.', 'warning'); return; }
                 memberId = hit.memberID;
-            } catch (e) { singleStatus.textContent = 'Lookup failed. Try again.'; return; }
+            } catch (e) { window.showToast('Lookup failed. Try again.', 'danger'); return; }
         }
 
-        singleStatus.textContent = 'Generating…';
+        window.showToast('Generating…', 'primary');
         singleBtn.disabled = true;
         try {
             const resp = await fetch(cardUrlBase + '/' + memberId, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-            if (!resp.ok) { singleStatus.textContent = 'Generation failed.'; return; }
+            if (!resp.ok) { window.showToast('Generation failed.', 'danger'); return; }
             await download(resp, 'binan-qr-card.pdf');
-            singleStatus.textContent = 'Done.';
+            window.showToast('Card generated.', 'success');
         } catch (e) {
-            singleStatus.textContent = 'Generation failed. Please try again.';
+            window.showToast('Generation failed. Please try again.', 'danger');
         } finally {
             singleBtn.disabled = false;
         }

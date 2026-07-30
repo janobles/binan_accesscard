@@ -16,11 +16,22 @@ columns (`import-review.js`: lastname, firstname, birthday, sex). An error on
 any of the other fourteen importer fields (barangay, contact number, monthly
 income, services, address, relationship, QR number, and the rest) still builds
 a `cells` entry in `ImportReviewPresenter::people()`, but there is no column to
-render it into. The row turns red and nothing editable appears. Structural
-errors (`HEAD-NONE`, `HEAD-MULTI`, `FP-ADDR`, `QR-11`) carry `field === null`
-and so produce no cell at all. The per-family Edit modal that used to serve
-them is no longer linked from any page. Confirm import stays disabled with no
-way to reach the problem.
+render it into. The row turns red and nothing editable appears, so Confirm
+import stays disabled with no way to reach the problem.
+
+This covers the structural problems too. `HEAD-NONE` and `HEAD-MULTI` are
+recorded against `relationship` and `FP-ADDR` against `address`
+(`FamilyExcelImporter::addError()` at lines 742, 744, 914), so they already
+produce an editable cell; they are invisible for exactly the same reason
+barangay is. Widening the fix surface to every errored field is therefore the
+whole fix, with no special-casing.
+
+The codes that really carry `field === null` are `DUP-DB`, `ADD-MEMBER`,
+`DUP-EXISTS`, `DUP-DIFF`, `DUP-PERSON` and `QR-CONTIG`. All are informational:
+they report what the import will do with a row (skip it, append it) rather than
+something to correct, so having no editor is right. They surface as text in the
+row's Issues list. `QR-11` names `familyno` but carries no sheet row, so it
+stays a file-level notice.
 
 **Edits apply themselves.** `saveCell()` posts on every `change` event. There
 is no chance to correct a mistyped fix before it is staged.
@@ -76,21 +87,21 @@ Row shape:
   values: {lastname, firstname, birthday, sex},
   severity: ''|'warning'|'blocking',
   issues: [{code, label, severity, message}],   // every distinct problem
-  fields: [{field, label, cell, value, severity, message, structural}]
+  fields: [{field, label, cell, value, severity, message}]
 }
 ```
 
-`fields` is what the expanded panel renders. It contains every field carrying
-an error, whatever column it belongs to. When the row has a structural problem
-it also contains the fields that cause that class of problem, even when those
-fields carry no error of their own, flagged `structural: true`:
+`fields` is what the expanded panel renders: every field on this row carrying
+an error, whatever column it belongs to, one entry per field with a blocking
+error beating a warning on the same field. That single rule is the whole fix.
+Because `HEAD-NONE` is recorded against `relationship` and `FP-ADDR` against
+`address`, a file missing a Head is corrected by setting one person's
+Relationship to Head rather than by re-uploading, and no structural
+special-casing is needed.
 
-- `HEAD-NONE` / `HEAD-MULTI` offer `relationship`
-- `FP-ADDR` offer `address` and `barangay`
-- `QR-11` / QR-grouping problems offer `familyno`
-
-That is what gives every blocking problem an in-app fix. A file missing a Head
-is corrected by setting one person's Relationship to Head, not by re-uploading.
+`issues` lists every distinct problem on the row including the informational,
+field-less ones, so a row that will be skipped or appended says so even though
+it offers nothing to edit.
 
 ### `FamilyImportController`
 
@@ -129,9 +140,9 @@ and amber for warning. Rows keep the existing `table-danger` /
 `table-warning` tint.
 
 Clicking a flagged row expands a detail `<tr>` beneath it. Inside: a short
-notice for each structural problem, then a `row g-2` of the row's `fields` as
-text inputs or `<select>`s drawn from `fieldOptions`, the same controls the
-inline cells use today. Panel footer carries `Apply` (primary) and `Discard`
+list of the row's issues (including the informational ones that offer no
+editor), then a `row g-2` of the row's `fields` as text inputs or `<select>`s
+drawn from `fieldOptions`, the same controls the inline cells use today. Panel footer carries `Apply` (primary) and `Discard`
 (link). Nothing posts until Apply. Discard collapses the panel and drops the
 typing.
 
@@ -258,7 +269,10 @@ do.
 - A row's `issues` lists every distinct problem, including ones on fields the
   table does not display.
 - A row's `fields` includes every errored field whatever its column.
-- A structural problem contributes its causing fields, marked `structural`.
+- `HEAD-NONE` yields an editable `relationship` field and `FP-ADDR` an
+  editable `address` field, so both are fixable in place.
+- A row whose only problems are field-less (`DUP-EXISTS`, `ADD-MEMBER`) lists
+  them under `issues` and offers no editable field.
 
 `FamilyImportControllerTest`:
 

@@ -83,13 +83,22 @@ class ImportStagingStore
      * Rewrites the errors file and the counts in the meta together, since a fresh
      * validation always produces both and a half-written pair would show the
      * operator a count that disagrees with the flags.
+     *
+     * $changes, when given, replaces the meta's edit-history log in the same write -
+     * an Apply revalidation produces a new counts AND a new log entry together, and
+     * the meta file is small enough (no rows/errors) that folding both into one
+     * rewrite costs nothing extra.
      */
-    public function saveErrors(int $jobId, array $errors, array $counts): bool
+    public function saveErrors(int $jobId, array $errors, array $counts, ?array $changes = null): bool
     {
         $this->ensureDir();
 
         $meta = $this->read($this->path($jobId));
         $meta['counts'] = $counts;
+
+        if ($changes !== null) {
+            $meta['changes'] = $changes;
+        }
 
         $ok = $this->put($this->errorsPath($jobId), $errors);
 

@@ -548,20 +548,24 @@ class FamilyImportController extends BaseController
         return array_slice($changes, -100);
     }
 
-    /** Persists a re-validated review result back to the job's staging file. */
+    /**
+     * Persists a re-validated review result back to the job's staging file.
+     *
+     * Rewrites only the rows and errors/counts/changes files, not the whole ~7 MB
+     * bundle (ImportStagingStore::save()): a one-field Apply must not re-encode
+     * every staged row just to flip one flag.
+     */
     private function restageReview(int $jobId, array $result): void
     {
-        service('importStaging')->save($jobId, [
-            'phase'      => 'review',
-            'file'       => (string) ($result['file'] ?? 'import.xlsx'),
-            'rows'       => $result['rows'] ?? [],
-            'errors'     => $result['errors'] ?? [],
-            'fileErrors' => $result['fileErrors'] ?? [],
-            'columns'    => $result['columns'] ?? [],
-            'counts'     => $result['counts'] ?? [],
-            // The worker's in-review edit history, so it survives a reload.
-            'changes'    => is_array($result['changes'] ?? null) ? $result['changes'] : [],
-        ]);
+        $store = service('importStaging');
+
+        $store->saveRows($jobId, is_array($result['rows'] ?? null) ? $result['rows'] : []);
+        $store->saveErrors(
+            $jobId,
+            is_array($result['errors'] ?? null) ? $result['errors'] : [],
+            is_array($result['counts'] ?? null) ? $result['counts'] : [],
+            is_array($result['changes'] ?? null) ? $result['changes'] : [],
+        );
     }
 
     /**

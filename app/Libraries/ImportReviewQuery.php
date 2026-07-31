@@ -1,0 +1,52 @@
+<?php
+
+namespace App\Libraries;
+
+/**
+ * The import review table's query: which page, how many rows, and how they are
+ * narrowed. Built by FamilyImportController from the request and handed to
+ * ImportReviewPresenter::page(), so the presenter shapes rows without touching
+ * the request.
+ *
+ * Every value here arrives from a URL an operator can edit, so each is clamped
+ * to a known-good value rather than trusted.
+ */
+final class ImportReviewQuery
+{
+    /** Page sizes the table offers. Anything else falls back to the first. */
+    public const PER_PAGE = [25, 50, 100];
+
+    /** Row filters. 'problems' is any flag at all; the other two are exact. */
+    public const SEVERITIES = ['all', 'problems', 'blocking', 'warning'];
+
+    private function __construct(
+        public readonly int $page,
+        public readonly int $per,
+        public readonly string $severity,
+        public readonly string $code,
+        public readonly string $q,
+    ) {
+    }
+
+    /** @param array<string, mixed> $query typically $request->getGet() */
+    public static function fromArray(array $query): self
+    {
+        $per = (int) ($query['per'] ?? 0);
+
+        return new self(
+            max(1, (int) ($query['page'] ?? 1)),
+            in_array($per, self::PER_PAGE, true) ? $per : self::PER_PAGE[0],
+            in_array((string) ($query['severity'] ?? ''), self::SEVERITIES, true)
+                ? (string) $query['severity']
+                : 'all',
+            trim((string) ($query['code'] ?? '')),
+            trim((string) ($query['q'] ?? '')),
+        );
+    }
+
+    /** Rows to skip before this page starts. */
+    public function offset(): int
+    {
+        return ($this->page - 1) * $this->per;
+    }
+}

@@ -5,14 +5,13 @@ namespace App\Controllers\Families;
 use App\Controllers\BaseController;
 use App\Libraries\FamilyExcelImporter;
 use App\Libraries\FamilyExcelTemplate;
-use App\Libraries\ImportFamilyModalBuilder;
+use App\Libraries\ImportLookupCache;
 use App\Libraries\ImportReviewChangeLog;
 use App\Libraries\ImportReviewPresenter;
 use App\Libraries\ImportReviewQuery;
 use App\Libraries\RoleAccess;
 use App\Models\Families\MemberModel;
 use App\Models\Jobs\JobQueueModel;
-use App\Models\Scanner\QrControlModel;
 use CodeIgniter\HTTP\RedirectResponse;
 use Config\IdleTimeout;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -358,7 +357,7 @@ class FamilyImportController extends BaseController
         }
 
         $rows   = is_array($loaded['result']['rows'] ?? null) ? $loaded['result']['rows'] : [];
-        $result = $this->revalidate($loaded['result'], $rows);
+        $result = $this->revalidateStaged($jobId, $loaded['result'], $rows, []);
 
         $blocking = (int) ($result['counts']['blocking'] ?? 0);
 
@@ -432,121 +431,21 @@ class FamilyImportController extends BaseController
         ]);
     }
 
-    /**
-     * GET `records/import/review/(:num)/family?fno=<qr>`: the shared
-     * Add/Update family modal, prefilled from the staged rows of one QR group so the operator
-     * fixes it in the browser instead of editing the .xlsx and re-uploading. The QR group is a
-     * query param (a raw QR cell is not URL-path-safe). Posts to reviewFamilySave().
-     */
-    public function reviewFamilyModal(int $jobId): string|RedirectResponse
-    {
-        $guard = $this->requireFamilyEntryAccess();
-
-        if ($guard instanceof RedirectResponse) {
-            return $this->partialGuard($guard, 'You do not have permission to edit import records.');
-        }
-
-        $jobs   = new JobQueueModel();
-        $loaded = $jobs->hasTable() ? $this->loadReviewJob($jobs, $jobId) : null;
-
-        if ($loaded === null) {
-            return '<div class="alert alert-danger mb-0">That import is no longer available to review.</div>';
-        }
-
-        $builder = new ImportFamilyModalBuilder();
-        $action  = site_url($this->currentRouteBase() . '/import/review/' . $jobId . '/family/save');
-
-        // A blank-QR row is keyed by its sheet row (?row=), since it has no QR to key by.
-        $row = (int) $this->request->getGet('row');
-
-        if ($row > 0) {
-            return view('Family/family-modal', $builder->viewDataForRow($loaded['result'], $row, $action));
-        }
-
-        // The QR group is passed as a query param, not a path segment: a QR cell can hold any
-        // raw text (a negative number, "N/A", "5880.0", a slash) that is not URL-path-safe.
-        $familyNo = trim((string) $this->request->getGet('fno'));
-
-        if ($familyNo === '') {
-            return '<div class="alert alert-danger mb-0">No family was selected to edit.</div>';
-        }
-
-        return view('Family/family-modal', $builder->viewData($loaded['result'], $familyNo, $action));
-    }
+    /** Staged fields whose value can change the validation of OTHER rows. */
+    private const CROSS_ROW_FIELDS = ['familyno', 'relationship', 'address', 'barangay'];
 
     /**
-     * POST `records/import/review/(:num)/family/save`: replaces one QR
-     * group (from the POST's import_family_no) with the modal's submitted values, re-validates
-     * the whole batch, re-stages it, and returns the refreshed review report. Mirrors
-     * store()/update()'s JSON success contract so the shared modal submit handler reuses it.
-     */
-    public function reviewFamilySave(int $jobId)
-    {
-        $guard = $this->requireFamilyEntryAccess();
-
-        if ($guard instanceof RedirectResponse) {
-            return $this->jsonError('You do not have permission to edit import records.', 403);
-        }
-
-        $jobs   = new JobQueueModel();
-        $loaded = $jobs->hasTable() ? $this->loadReviewJob($jobs, $jobId) : null;
-
-        if ($loaded === null) {
-            return $this->jsonError('That import is no longer available to review.', 404);
-        }
-
-        $bundle  = $loaded['result'];
-        $builder = new ImportFamilyModalBuilder();
-        $post    = $this->request->getPost();
-
-        // A blank-QR row is keyed by import_row; a normal family by import_family_no.
-        $row      = (int) ($post['import_row'] ?? 0);
-        $familyNo = trim((string) ($post['import_family_no'] ?? ''));
-
-        if ($row > 0) {
-            $key     = ['row' => $row];
-            $newRows = $builder->toStagedRowsForRow($post, $bundle, $row);
-        } elseif ($familyNo !== '') {
-            $key     = ['fno' => $familyNo];
-            $newRows = $builder->toStagedRows($post, $bundle, $familyNo);
-        } else {
-            return $this->jsonError('No family was selected to edit.', 422);
-        }
-
-        // Reuse Manage Records' QR-uniqueness rule so an edit can't assign a QR already owned by
-        // another family in the system ($familyNo is the group's QR before the edit).
-        $conflict = $this->qrConflictMessage($familyNo, (string) ($post['qr_control_no'] ?? ''));
-        if ($conflict !== null) {
-            return $this->jsonError($conflict, 422);
-        }
-
-        // Diff the group before it is replaced, so the review can show what the worker changed.
-        $oldRows = $this->targetRows($bundle, $key);
-        $rows    = $this->replaceRows($bundle, $key, $newRows);
-
-        $result            = $this->revalidate($bundle, $rows);
-        $result['changes'] = $this->appendChanges($bundle, ImportReviewChangeLog::edited($oldRows, $newRows));
-        $this->restageReview($jobId, $result);
-
-        $newQr = trim((string) ($post['qr_control_no'] ?? ''));
-
-        return $this->response->setJSON([
-            'status'  => 'success',
-            'message' => $newQr !== '' ? 'Saved family ' . $newQr . '.' : 'Changes saved.',
-            'review'  => (new ImportReviewPresenter())->build($result),
-            'csrf'    => csrf_hash(),
-        ]);
-    }
-
-    /**
-     * POST `records/import/review/(:num)/family/cell`: patches ONE field
-     * of ONE staged row (the review screen's inline cell edit), re-validates the whole batch,
-     * re-stages, logs the change, and returns the refreshed report. Structural problems (no
-     * single cell to blame) are not editable this way - they go through reviewFamilySave.
+     * POST `records/import/review/(:num)/apply`: applies one person's corrections.
      *
-     * POST: import_row (sheet row, int), field (a FIELD_LABELS key), value (the new cell text).
+     * Nothing is written until the operator presses Apply, so a mistyped fix can be
+     * discarded without ever reaching staging. The response carries only the row that
+     * changed and the fresh totals: returning the whole report is what made a fix on a
+     * 10,000-row file slow.
+     *
+     * POST: import_row (sheet row, int), fields[<field>] => value for any subset of
+     * ImportReviewPresenter::FIELD_LABELS.
      */
-    public function reviewCellSave(int $jobId)
+    public function reviewRowApply(int $jobId)
     {
         $guard = $this->requireFamilyEntryAccess();
 
@@ -562,306 +461,74 @@ class FamilyImportController extends BaseController
         }
 
         $sheetRow = (int) ($this->request->getPost('import_row') ?? 0);
-        $field    = trim((string) ($this->request->getPost('field') ?? ''));
-        $value    = (string) ($this->request->getPost('value') ?? '');
+        $posted   = $this->request->getPost('fields');
+        $posted   = is_array($posted) ? $posted : [];
 
-        // Only the importer's known fields may be patched (blocks arbitrary staged-row keys).
-        if ($sheetRow <= 0 || ! isset(ImportReviewPresenter::FIELD_LABELS[$field])) {
-            return $this->jsonError('That cell cannot be edited.', 422);
+        if ($sheetRow <= 0 || $posted === []) {
+            return $this->jsonError('There is nothing to apply.', 422);
+        }
+
+        // Only the importer's known fields may be patched. An unknown name is refused
+        // outright rather than skipped, so a typo cannot silently apply half an edit.
+        foreach (array_keys($posted) as $field) {
+            if (! isset(ImportReviewPresenter::FIELD_LABELS[(string) $field])) {
+                return $this->jsonError('That field cannot be edited.', 422);
+            }
         }
 
         $bundle = $loaded['result'];
         $rows   = is_array($bundle['rows'] ?? null) ? $bundle['rows'] : [];
 
-        $oldRow = null;
-        foreach ($rows as $index => $row) {
-            if ((int) ($row['sheetRow'] ?? -1) !== $sheetRow) {
-                continue;
-            }
+        $index = null;
 
-            $oldRow = $row;
-            $data   = is_array($row['data'] ?? null) ? $row['data'] : [];
-            $data[$field]         = trim($value);
-            $rows[$index]['data'] = $data;
-            break;
-        }
-
-        if ($oldRow === null) {
-            return $this->jsonError('That row is no longer part of this import.', 404);
-        }
-
-        // Inline-editing the QR itself: same Manage Records uniqueness rule as the modal edit.
-        if ($field === 'familyno') {
-            $conflict = $this->qrConflictMessage((string) (($oldRow['data'] ?? [])['familyno'] ?? ''), $value);
-            if ($conflict !== null) {
-                return $this->jsonError($conflict, 422);
-            }
-        }
-
-        $newRow = $this->rowBySheetRow($rows, $sheetRow);
-
-        $result            = $this->revalidate($bundle, $rows);
-        $result['changes'] = $this->appendChanges($bundle, ImportReviewChangeLog::edited([$oldRow], [$newRow]));
-        $this->restageReview($jobId, $result);
-
-        return $this->response->setJSON([
-            'status'  => 'success',
-            'message' => 'Saved.',
-            'review'  => (new ImportReviewPresenter())->build($result),
-            'csrf'    => csrf_hash(),
-        ]);
-    }
-
-    /**
-     * The staged row with the given sheet row, or null. Used to snapshot the "after" state for
-     * the change log.
-     *
-     * @param list<array> $rows
-     */
-    private function rowBySheetRow(array $rows, int $sheetRow): ?array
-    {
-        foreach ($rows as $row) {
+        foreach ($rows as $key => $row) {
             if ((int) ($row['sheetRow'] ?? -1) === $sheetRow) {
-                return $row;
+                $index = $key;
+                break;
             }
         }
 
-        return null;
-    }
-
-    /**
-     * Reuses Manage Records' QR-uniqueness rule (QrControlModel::takenByOtherHead, with headID 0
-     * = "belongs to anyone") so an in-review edit can't assign a QR already owned by a DIFFERENT
-     * family in the system. Enforced only when the QR actually CHANGES to a new whole number - a
-     * family keeping its own QR (including a legitimate already-in-system re-upload) is left
-     * alone, and non-numeric QRs fall to the importer's format check. Returns the error message,
-     * or null when the QR is fine.
-     */
-    private function qrConflictMessage(string $oldQr, string $newQr): ?string
-    {
-        $newQr = trim($newQr);
-
-        if ($newQr === '' || ! ctype_digit($newQr) || $newQr === trim($oldQr)) {
-            return null;
+        if ($index === null) {
+            return $this->jsonError('That row is not part of this import.', 422);
         }
 
-        if (model(QrControlModel::class)->takenByOtherHead((int) $newQr, 0)) {
-            return 'QR Number ' . $newQr . ' already exists in the records and is assigned to another family.';
+        $oldRow = $rows[$index];
+        $data   = is_array($oldRow['data'] ?? null) ? $oldRow['data'] : [];
+
+        foreach ($posted as $field => $value) {
+            $data[(string) $field] = trim((string) $value);
         }
 
-        return null;
-    }
+        $rows[$index]['data'] = $data;
+        $newRow               = $rows[$index];
 
-    /**
-     * POST `records/import/review/(:num)/family/remove`: drops one QR
-     * group (from the POST's import_family_no) from the staged batch, re-validates the rest,
-     * re-stages, and returns the refreshed report.
-     */
-    public function reviewFamilyRemove(int $jobId)
-    {
-        $guard = $this->requireFamilyEntryAccess();
+        $fields = array_map('strval', array_keys($posted));
+        $result = $this->revalidateStaged($jobId, $bundle, $rows, $fields);
 
-        if ($guard instanceof RedirectResponse) {
-            return $this->jsonError('You do not have permission to edit import records.', 403);
+        $result['changes'] = $this->appendChanges($bundle, ImportReviewChangeLog::edited([$oldRow], [$newRow]));
+
+        try {
+            $this->restageReview($jobId, $result);
+        } catch (Throwable $exception) {
+            $this->auditSystemError('restaging a reviewed family import', $exception);
+
+            return $this->jsonError('The correction could not be saved. Please try again.', 500);
         }
 
-        $jobs   = new JobQueueModel();
-        $loaded = $jobs->hasTable() ? $this->loadReviewJob($jobs, $jobId) : null;
-
-        if ($loaded === null) {
-            return $this->jsonError('That import is no longer available to review.', 404);
-        }
-
-        $bundle = $loaded['result'];
-
-        // Bulk remove: arrays of QR groups (import_family_nos[]) and/or blank-QR sheet rows
-        // (import_rows[]). Sent by the review screen's "Remove selected" action.
-        $familyNos = $this->request->getPost('import_family_nos');
-        $rowsPost  = $this->request->getPost('import_rows');
-
-        if (is_array($familyNos) || is_array($rowsPost)) {
-            return $this->removeManyFamilies($jobId, $bundle, $familyNos, $rowsPost);
-        }
-
-        $row      = (int) ($this->request->getPost('import_row') ?? 0);
-        $familyNo = trim((string) ($this->request->getPost('import_family_no') ?? ''));
-
-        if ($row > 0) {
-            $key     = ['row' => $row];
-            $message = 'Row ' . $row . ' removed from this import.';
-        } elseif ($familyNo !== '') {
-            $key     = ['fno' => $familyNo];
-            $message = 'Family ' . $familyNo . ' removed from this import.';
-        } else {
-            return $this->jsonError('No family was selected to remove.', 422);
-        }
-
-        $oldRows = $this->targetRows($bundle, $key);
-        $rows    = $this->replaceRows($bundle, $key, []);
-
-        $result            = $this->revalidate($bundle, $rows);
-        $result['changes'] = $this->appendChanges($bundle, ImportReviewChangeLog::removed($oldRows));
-        $this->restageReview($jobId, $result);
+        $presenter = new ImportReviewPresenter();
+        $summary   = $presenter->build($result);
 
         return $this->response->setJSON([
             'status'  => 'success',
-            'message' => $message,
-            'review'  => (new ImportReviewPresenter())->build($result),
+            'message' => 'Applied.',
+            'row'     => $presenter->row($result, $sheetRow),
+            'counts'  => $summary['counts'],
+            'codes'   => $summary['codes'],
+            // These four drive rules that reach across rows, so the table cannot be
+            // trusted to be current after them and the client refetches the page.
+            'refresh' => array_intersect($fields, self::CROSS_ROW_FIELDS) !== [],
             'csrf'    => csrf_hash(),
         ]);
-    }
-
-    /**
-     * Drops many QR groups and/or blank-QR sheet rows at once, re-validates the remainder,
-     * logs each removal, re-stages, and returns the refreshed report. Backs the review
-     * screen's "Remove selected" action.
-     *
-     * @param mixed $familyNos POSTed import_family_nos[] (QR strings) - may be null/non-array
-     * @param mixed $rowsPost  POSTed import_rows[] (blank-QR sheet rows) - may be null/non-array
-     */
-    private function removeManyFamilies(int $jobId, array $bundle, mixed $familyNos, mixed $rowsPost)
-    {
-        $fnos = is_array($familyNos)
-            ? array_values(array_unique(array_filter(array_map(
-                static fn ($v): string => trim((string) $v),
-                $familyNos
-            ), static fn (string $v): bool => $v !== '')))
-            : [];
-
-        $rows = is_array($rowsPost)
-            ? array_values(array_unique(array_filter(array_map(
-                static fn ($v): int => (int) $v,
-                $rowsPost
-            ), static fn (int $v): bool => $v > 0)))
-            : [];
-
-        if ($fnos === [] && $rows === []) {
-            return $this->jsonError('No families were selected to remove.', 422);
-        }
-
-        $keys = [];
-        foreach ($fnos as $fno) {
-            $keys[] = ['fno' => $fno];
-        }
-        foreach ($rows as $sheetRow) {
-            $keys[] = ['row' => $sheetRow];
-        }
-
-        // Snapshot each target before dropping it, so the change log records every removal.
-        $changes = is_array($bundle['changes'] ?? null) ? $bundle['changes'] : [];
-        foreach ($keys as $key) {
-            $old = $this->targetRows($bundle, $key);
-            if ($old === []) {
-                continue;
-            }
-            $changes[] = ImportReviewChangeLog::removed($old);
-        }
-
-        $kept   = $this->removeManyRows($bundle, $keys);
-        $result = $this->revalidate($bundle, $kept);
-        $result['changes'] = array_slice($changes, -100);
-        $this->restageReview($jobId, $result);
-
-        $count = count($keys);
-
-        return $this->response->setJSON([
-            'status'  => 'success',
-            'message' => $count . ' ' . ($count === 1 ? 'family' : 'families') . ' removed from this import.',
-            'review'  => (new ImportReviewPresenter())->build($result),
-            'csrf'    => csrf_hash(),
-        ]);
-    }
-
-    /**
-     * The bundle rows with every targeted QR group / blank-QR sheet row filtered out at once,
-     * ordered by sheet row.
-     *
-     * @param list<array{fno?: string, row?: int}> $keys
-     * @return list<array>
-     */
-    private function removeManyRows(array $bundle, array $keys): array
-    {
-        $rows = is_array($bundle['rows'] ?? null) ? $bundle['rows'] : [];
-
-        $dropRows = [];
-        $dropFnos = [];
-        foreach ($keys as $key) {
-            if (isset($key['row'])) {
-                $dropRows[(int) $key['row']] = true;
-            } elseif (isset($key['fno'])) {
-                $dropFnos[(string) $key['fno']] = true;
-            }
-        }
-
-        $kept = array_values(array_filter($rows, static function (array $row) use ($dropRows, $dropFnos): bool {
-            if (isset($dropRows[(int) ($row['sheetRow'] ?? -1)])) {
-                return false;
-            }
-
-            $fno = trim((string) (($row['data'] ?? [])['familyno'] ?? ''));
-
-            return ! ($fno !== '' && isset($dropFnos[$fno]));
-        }));
-
-        usort($kept, static fn (array $a, array $b): int =>
-            ((int) ($a['sheetRow'] ?? 0)) <=> ((int) ($b['sheetRow'] ?? 0)));
-
-        return $kept;
-    }
-
-    /**
-     * Returns the bundle's rows with the targeted rows swapped for $replacement (an empty
-     * replacement just drops them), ordered by sheet row. The target is either a whole QR
-     * group (`['fno' => qr]`) or a single blank-QR sheet row (`['row' => n]`).
-     *
-     * @param array{fno?: string, row?: int} $key
-     * @param list<array>                    $replacement
-     * @return list<array>
-     */
-    private function replaceRows(array $bundle, array $key, array $replacement): array
-    {
-        $rows = is_array($bundle['rows'] ?? null) ? $bundle['rows'] : [];
-
-        if (isset($key['row'])) {
-            $target = (int) $key['row'];
-            $kept   = array_values(array_filter($rows, static fn (array $row): bool =>
-                (int) ($row['sheetRow'] ?? -1) !== $target));
-        } else {
-            $familyNo = (string) ($key['fno'] ?? '');
-            $kept     = array_values(array_filter($rows, static fn (array $row): bool =>
-                trim((string) (($row['data'] ?? [])['familyno'] ?? '')) !== $familyNo));
-        }
-
-        $merged = array_merge($kept, $replacement);
-
-        usort($merged, static fn (array $a, array $b): int =>
-            ((int) ($a['sheetRow'] ?? 0)) <=> ((int) ($b['sheetRow'] ?? 0)));
-
-        return $merged;
-    }
-
-    /**
-     * The bundle rows belonging to the edit/remove target (a whole QR group `['fno' => qr]`
-     * or a single blank-QR sheet row `['row' => n]`) - the "before" snapshot for the diff.
-     *
-     * @param array{fno?: string, row?: int} $key
-     * @return list<array>
-     */
-    private function targetRows(array $bundle, array $key): array
-    {
-        $rows = is_array($bundle['rows'] ?? null) ? $bundle['rows'] : [];
-
-        if (isset($key['row'])) {
-            $target = (int) $key['row'];
-
-            return array_values(array_filter($rows, static fn (array $r): bool =>
-                (int) ($r['sheetRow'] ?? -1) === $target));
-        }
-
-        $familyNo = (string) ($key['fno'] ?? '');
-
-        return array_values(array_filter($rows, static fn (array $r): bool =>
-            trim((string) (($r['data'] ?? [])['familyno'] ?? '')) === $familyNo));
     }
 
     /**
@@ -929,21 +596,26 @@ class FamilyImportController extends BaseController
 
 
     /**
-     * Re-runs validation over the (edited) staged rows and returns an updated review
-     * result: refreshed rows, errors (file-level errors re-merged) and counts.
+     * Re-runs validation over the staged rows and refreshes the counts.
      *
-     * @param array $result the staged review result
-     * @param array $rows   the current row set (possibly edited)
+     * The two existing-record lookups are memoized per job (ImportLookupCache): they
+     * are derived only from the file's QRs and lastnames, so an edit to any other
+     * field reuses them. Without this, every correction on a 10,000-row file repeats
+     * the heaviest two queries in the import path.
+     *
+     * @param list<string> $editedFields the fields this edit changed, [] to rebuild
      */
-    private function revalidate(array $result, array $rows): array
+    private function revalidateStaged(int $jobId, array $result, array $rows, array $editedFields): array
     {
-        $importer       = new FamilyExcelImporter();
-        $existingHeads  = $importer->existingHeadsForRows($rows);
-        $existingPeople = $importer->existingPeopleForRows($rows);
-        $built          = $importer->validateAndBuild($rows, $existingHeads, $existingPeople);
-        $fileErrors     = is_array($result['fileErrors'] ?? null) ? $result['fileErrors'] : [];
-        $errors         = array_merge($fileErrors, $built['errors']);
-        $counts         = $importer->summarize($built['families'], $errors, $built['appends']);
+        $importer = new FamilyExcelImporter();
+        $cache    = new ImportLookupCache();
+        $rebuild  = $editedFields === [] || ImportLookupCache::invalidatedBy($editedFields);
+        $lookups  = $cache->lookupsFor($jobId, $rows, $importer, $rebuild);
+
+        $built      = $importer->validateAndBuild($rows, $lookups['heads'], $lookups['people']);
+        $fileErrors = is_array($result['fileErrors'] ?? null) ? $result['fileErrors'] : [];
+        $errors     = array_merge($fileErrors, $built['errors']);
+        $counts     = $importer->summarize($built['families'], $errors, $built['appends']);
 
         $result['rows']    = $rows;
         $result['errors']  = $errors;

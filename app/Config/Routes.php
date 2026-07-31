@@ -49,10 +49,7 @@ $routes->group('records', ['filter' => 'roleNav:records-import'], static functio
     $routes->get('import/review/(:num)/rows', 'Families\FamilyImportController::reviewRows/$1');
     $routes->post('import/review/(:num)/commit', 'Families\FamilyImportController::reviewCommit/$1');
     $routes->post('import/review/(:num)/cancel', 'Families\FamilyImportController::reviewCancel/$1');
-    $routes->get('import/review/(:num)/family', 'Families\FamilyImportController::reviewFamilyModal/$1');
-    $routes->post('import/review/(:num)/family/save', 'Families\FamilyImportController::reviewFamilySave/$1');
-    $routes->post('import/review/(:num)/family/cell', 'Families\FamilyImportController::reviewCellSave/$1');
-    $routes->post('import/review/(:num)/family/remove', 'Families\FamilyImportController::reviewFamilyRemove/$1');
+    $routes->post('import/review/(:num)/apply', 'Families\FamilyImportController::reviewRowApply/$1');
 });
 
 $routes->get('records/(:num)', 'Families\FamilyController::profile/$1', ['filter' => 'roleNav:records-profile']);

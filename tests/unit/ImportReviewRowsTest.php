@@ -2,6 +2,7 @@
 
 namespace Tests\Unit;
 
+use App\Libraries\ImportLookupCache;
 use App\Libraries\ImportStagingStore;
 use CodeIgniter\Test\CIUnitTestCase;
 use CodeIgniter\Test\FeatureTestTrait;
@@ -28,6 +29,9 @@ final class ImportReviewRowsTest extends CIUnitTestCase
 
     private string $stagingDir;
 
+    /** Job IDs staged this test, so their ImportLookupCache file can be forgotten after. */
+    private array $stagedJobIds = [];
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -47,6 +51,16 @@ final class ImportReviewRowsTest extends CIUnitTestCase
         }
 
         @rmdir($this->stagingDir);
+
+        // ImportLookupCache (unlike ImportStagingStore) has no service seam to point at the
+        // temp dir above, so the apply endpoint writes its cache to the real writable/
+        // import-staging under the job ID SQLite just handed out. SQLite resets that
+        // auto-increment every test, so without this a later test can read an earlier
+        // test's stale cache under the same ID.
+        foreach ($this->stagedJobIds as $jobId) {
+            (new ImportLookupCache())->forget($jobId);
+        }
+
         \CodeIgniter\Config\Services::reset();
         $this->dropSchema();
         parent::tearDown();
@@ -87,13 +101,23 @@ final class ImportReviewRowsTest extends CIUnitTestCase
         ]);
         $forge->addPrimaryKey('jobID');
         $forge->createTable('job_queue', true);
+
+        // The apply endpoint revalidates through FamilyExcelImporter::existingHeadsForRows(),
+        // which queries qr_control directly with no hasTable() guard once a staged row's
+        // familyno looks like a real QR (accesscardV19.sql's qr_control, unprefixed here).
+        $forge->addField([
+            'control_no' => ['type' => 'INTEGER'],
+            'headID'     => ['type' => 'INTEGER'],
+        ]);
+        $forge->addPrimaryKey('control_no');
+        $forge->createTable('qr_control', true);
     }
 
     private function dropSchema(): void
     {
         $forge = \Config\Database::forge();
 
-        foreach (['job_queue', 'users'] as $table) {
+        foreach (['job_queue', 'users', 'qr_control'] as $table) {
             $forge->dropTable($table, true);
         }
     }
@@ -127,11 +151,15 @@ final class ImportReviewRowsTest extends CIUnitTestCase
                     'familyno' => '6001', 'relationship' => 'Head', 'lastname' => 'Cruz',
                     'firstname' => 'Juan', 'birthday' => '03-03-1980', 'sex' => 'Male',
                     'address' => '1 Street', 'barangay' => 'Canlalay',
+                    'civilstatus' => 'Single', 'education' => 'College', 'job' => 'Driver',
+                    'monthlyincome' => '5000',
                 ]],
                 ['sheetRow' => 4, 'data' => [
                     'familyno' => '6001', 'relationship' => 'Child', 'lastname' => 'Cruz',
                     'firstname' => 'Ana', 'birthday' => '02-02-2010', 'sex' => 'Mail',
                     'address' => '1 Street', 'barangay' => 'Canlalay',
+                    'civilstatus' => 'Single', 'education' => 'Elementary', 'job' => 'None',
+                    'monthlyincome' => '0',
                 ]],
             ],
             'errors' => [[
@@ -140,6 +168,8 @@ final class ImportReviewRowsTest extends CIUnitTestCase
             ]],
             'counts' => ['rows' => 2, 'blocking' => 1, 'warnings' => 0],
         ]);
+
+        $this->stagedJobIds[] = $jobId;
 
         return $jobId;
     }
@@ -223,5 +253,135 @@ final class ImportReviewRowsTest extends CIUnitTestCase
             ->get('records/import/review/' . $jobId . '/rows');
 
         $result->assertStatus(404);
+    }
+
+    public function testApplyPatchesTheRowAndClearsItsFlag(): void
+    {
+        $userId = $this->encoder();
+        $jobId  = $this->stageJob($userId);
+
+        $result = $this->withSession($this->session($userId))
+            ->post('records/import/review/' . $jobId . '/apply', [
+                'import_row' => 4,
+                'fields'     => ['sex' => 'Female'],
+            ]);
+
+        $result->assertStatus(200);
+        $json = json_decode((string) $result->response()->getBody(), true);
+
+        $this->assertSame('', $json['row']['severity']);
+        $this->assertSame([], $json['row']['fields']);
+        $this->assertSame(0, $json['counts']['blocking']);
+
+        $staged = service('importStaging')->load($jobId);
+        $this->assertSame('Female', $staged['rows'][1]['data']['sex']);
+    }
+
+    public function testApplyRejectsAFieldThatIsNotAnImporterField(): void
+    {
+        $userId = $this->encoder();
+        $jobId  = $this->stageJob($userId);
+
+        $before = service('importStaging')->load($jobId);
+
+        $result = $this->withSession($this->session($userId))
+            ->post('records/import/review/' . $jobId . '/apply', [
+                'import_row' => 4,
+                'fields'     => ['password' => 'x'],
+            ]);
+
+        $result->assertStatus(422);
+
+        // Refusing outright, not skipping the bad key: nothing may be written.
+        $this->assertSame($before['rows'], service('importStaging')->load($jobId)['rows']);
+    }
+
+    public function testApplyRejectsAnUnknownSheetRow(): void
+    {
+        $userId = $this->encoder();
+        $jobId  = $this->stageJob($userId);
+
+        $result = $this->withSession($this->session($userId))
+            ->post('records/import/review/' . $jobId . '/apply', [
+                'import_row' => 99999,
+                'fields'     => ['sex' => 'Female'],
+            ]);
+
+        $result->assertStatus(422);
+    }
+
+    public function testApplyAsksForARefreshWhenItTouchesACrossRowField(): void
+    {
+        // familyno / relationship / address / barangay drive rules that reach other
+        // rows, so the client must refetch instead of splicing the one row back in.
+        $userId = $this->encoder();
+        $jobId  = $this->stageJob($userId);
+
+        $result = $this->withSession($this->session($userId))
+            ->post('records/import/review/' . $jobId . '/apply', [
+                'import_row' => 4,
+                'fields'     => ['relationship' => 'Head'],
+            ]);
+
+        $json = json_decode((string) $result->response()->getBody(), true);
+
+        $this->assertTrue($json['refresh']);
+    }
+
+    public function testApplyDoesNotAskForARefreshOnAnOrdinaryField(): void
+    {
+        $userId = $this->encoder();
+        $jobId  = $this->stageJob($userId);
+
+        $result = $this->withSession($this->session($userId))
+            ->post('records/import/review/' . $jobId . '/apply', [
+                'import_row' => 4,
+                'fields'     => ['sex' => 'Female'],
+            ]);
+
+        $json = json_decode((string) $result->response()->getBody(), true);
+
+        $this->assertFalse($json['refresh']);
+    }
+
+    public function testApplyReturns404WhenTheStagingFileIsGone(): void
+    {
+        $userId = $this->encoder();
+        $jobId  = $this->stageJob($userId);
+
+        service('importStaging')->delete($jobId);
+
+        $result = $this->withSession($this->session($userId))
+            ->post('records/import/review/' . $jobId . '/apply', [
+                'import_row' => 4,
+                'fields'     => ['sex' => 'Female'],
+            ]);
+
+        $result->assertStatus(404);
+    }
+
+    public function testApplyStillValidatesAfterANonInvalidatingEditReusesTheCache(): void
+    {
+        // A smoke check that the cached path produces a usable report end to end. The
+        // claim the cache actually rests on - that nothing but familyno and lastname can
+        // stale the lookups - is pinned without a database in
+        // FamilyExcelImporterTest::testLookupKeysDeriveOnlyFromQrAndLastname().
+        $userId = $this->encoder();
+        $jobId  = $this->stageJob($userId);
+
+        $this->withSession($this->session($userId))
+            ->post('records/import/review/' . $jobId . '/apply', [
+                'import_row' => 4, 'fields' => ['sex' => 'Female'],
+            ]);
+
+        $result = $this->withSession($this->session($userId))
+            ->post('records/import/review/' . $jobId . '/apply', [
+                'import_row' => 4, 'fields' => ['birthday' => '02-02-2011'],
+            ]);
+
+        $result->assertStatus(200);
+        $json = json_decode((string) $result->response()->getBody(), true);
+
+        $this->assertSame(0, $json['counts']['blocking']);
     }
 }

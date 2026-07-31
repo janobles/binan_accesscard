@@ -16,8 +16,15 @@ final class ImportWizardViewTest extends CIUnitTestCase
         helper('ui');
 
         return view('Family/import-review', [
-            'jobId' => 5,
-            'step'  => 2,
+            'jobId'   => 5,
+            'summary' => [
+                'file'        => 'import.xlsx',
+                'counts'      => ['rows' => 10, 'blocking' => 1, 'warnings' => 2, 'families' => 3,
+                                  'newFamilies' => 3, 'appends' => 0, 'existing' => 0],
+                'codes'       => [['code' => 'SEX', 'label' => 'Invalid sex', 'severity' => 'blocking']],
+                'fileNotices' => [],
+            ],
+            'fieldOptions' => ['sex' => ['Male', 'Female']],
         ]);
     }
 
@@ -49,7 +56,7 @@ final class ImportWizardViewTest extends CIUnitTestCase
         $this->assertStringNotContainsString('importReviewGroups', $html);
     }
 
-    public function testTheTableIsPerPersonWithAProblemsToggle(): void
+    public function testTheTableIsPerPersonWithSeverityFiltering(): void
     {
         $html = $this->render();
 
@@ -58,9 +65,6 @@ final class ImportWizardViewTest extends CIUnitTestCase
         foreach (['Family', 'Role', 'Last Name', 'First Name'] as $column) {
             $this->assertStringContainsString($column, $html);
         }
-
-        $this->assertStringContainsString('data-problems-only', $html);
-        $this->assertStringContainsString('checked', $html);
     }
 
     public function testTheUploadStepIsAPageNotAModal(): void
@@ -75,5 +79,66 @@ final class ImportWizardViewTest extends CIUnitTestCase
         $this->assertStringContainsString('segmented-tabs', $html);
         $this->assertStringContainsString('data-family-import', $html);
         $this->assertStringNotContainsString('data-bs-dismiss="modal"', $html);
+    }
+
+    public function testItCarriesTheRowsAndApplyEndpoints(): void
+    {
+        $html = $this->render();
+
+        $this->assertStringContainsString('data-rows-url', $html);
+        $this->assertStringContainsString('data-apply-url', $html);
+    }
+
+    public function testItShipsNoPerPersonJsonIsland(): void
+    {
+        // The whole point of the rows endpoint: a 10,000-row file must not be inlined
+        // into the page. Only the summary and the dropdown options travel in the HTML.
+        $html = $this->render();
+
+        $this->assertStringNotContainsString('importReviewData', $html);
+        $this->assertStringContainsString('importReviewSummary', $html);
+        $this->assertStringContainsString('importReviewFieldOptions', $html);
+    }
+
+    public function testItRendersTheToolbarSearchAndPageSize(): void
+    {
+        $html = $this->render();
+
+        $this->assertStringContainsString('id="importReviewSearch"', $html);
+        $this->assertStringContainsString('Search this import', $html);
+        $this->assertStringContainsString('id="importReviewPerPage"', $html);
+    }
+
+    public function testItRendersTheSeverityPillsAndThePager(): void
+    {
+        $html = $this->render();
+
+        $this->assertStringContainsString('segmented-tabs', $html);
+        $this->assertStringContainsString('data-severity="all"', $html);
+        $this->assertStringContainsString('data-severity="problems"', $html);
+        $this->assertStringContainsString('data-severity="blocking"', $html);
+        $this->assertStringContainsString('data-severity="warning"', $html);
+        $this->assertStringContainsString('id="importReviewPager"', $html);
+    }
+
+    public function testItRendersAnIssuesColumn(): void
+    {
+        $html = $this->render();
+
+        $this->assertStringContainsString('>Issues<', $html);
+    }
+
+    public function testItUsesTheSemanticButtonHelperForActions(): void
+    {
+        // btn() is the single source of truth for button colour; a hand-written
+        // btn-primary here would drift from the rest of the app.
+        $html = $this->render();
+
+        $this->assertStringNotContainsString('class="btn btn-primary" id="importReviewConfirm"', $html);
+    }
+
+    public function testItCarriesNoInlineStyles(): void
+    {
+        $this->assertStringNotContainsString('style="', $this->render());
     }
 }

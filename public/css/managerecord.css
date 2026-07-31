@@ -585,3 +585,9 @@ div.dt-container div.dt-search .input-group {
         text-align: start;
     }
 }
+
+/* Caps the search field width on the import review toolbar so it does not
+   stretch to fill the row next to the problem and page-size selects. */
+.import-review-search {
+    max-width: 22rem;
+}

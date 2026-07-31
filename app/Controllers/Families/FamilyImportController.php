@@ -294,8 +294,8 @@ class FamilyImportController extends BaseController
             'role'       => RoleAccess::normalizeRole((string) session()->get('role')),
             'bodyView'   => 'Family/import-review',
             'bodyData'   => [
-                'jobId'  => $jobId,
-                'review' => (new ImportReviewPresenter())->build($loaded['result']),
+                'jobId'   => $jobId,
+                'summary' => (new ImportReviewPresenter())->build($loaded['result']),
                 // Dropdown columns (Sex, Barangay, Civil Status, …) so an inline cell edit
                 // offers the exact same choices as the Excel template's validation lists.
                 'fieldOptions' => (new FamilyExcelTemplate())->dropdownOptions(),

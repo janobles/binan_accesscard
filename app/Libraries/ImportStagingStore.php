@@ -112,7 +112,10 @@ class ImportStagingStore
     /** Removes every staging file for a job (best effort). */
     public function delete(int $jobId): void
     {
-        foreach ([$this->path($jobId), $this->rowsPath($jobId), $this->errorsPath($jobId)] as $path) {
+        $paths   = [$this->path($jobId), $this->rowsPath($jobId), $this->errorsPath($jobId)];
+        $paths[] = (new ImportLookupCache($this->dir))->path($jobId);
+
+        foreach ($paths as $path) {
             if (is_file($path)) {
                 @unlink($path);
             }

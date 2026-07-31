@@ -3,6 +3,7 @@
 namespace Tests\Unit;
 
 use App\Libraries\FamilyExcelImporter;
+use App\Libraries\ImportLookupCache;
 use CodeIgniter\Test\CIUnitTestCase;
 use ReflectionClass;
 
@@ -692,5 +693,67 @@ final class FamilyExcelImporterTest extends CIUnitTestCase
             'job' => 'Student', 'monthlyincome' => '0', 'address' => '', 'barangay' => '',
             'sector' => '', 'services' => '',
         ], $overrides)];
+    }
+
+    public function testLookupKeysDeriveOnlyFromQrAndLastname(): void
+    {
+        // ImportLookupCache reuses the existing-record lookups across a review session
+        // and rebuilds them only when familyno or lastname changes. That is safe only
+        // while those two are the whole input. This walks every other importer field,
+        // changes it, and demands the lookup keys do not move. A failure here means the
+        // cache can serve stale lookups, and a stale lookup lets the review pass a file
+        // the write step then skips.
+        $importer = new FamilyExcelImporter();
+
+        $base = [['sheetRow' => 3, 'data' => [
+            'familyno' => '6001', 'relationship' => 'Head', 'lastname' => 'Cruz',
+            'firstname' => 'Juan', 'middlename' => 'P', 'suffix' => 'Jr',
+            'birthday' => '03-03-1980', 'sex' => 'Male', 'civilstatus' => 'Single',
+            'contactnumber' => '09171234567', 'religion' => 'Catholic',
+            'education' => 'College', 'job' => 'Driver', 'monthlyincome' => '5000',
+            'address' => '1 Street', 'barangay' => 'Canlalay', 'sector' => 'SC',
+            'services' => 'FA2',
+        ]]];
+
+        $qrKeys = $importer->qrKeysForRows($base);
+        $nameKeys = $importer->lastnameKeysForRows($base);
+
+        foreach (array_keys($base[0]['data']) as $field) {
+            if (in_array($field, ImportLookupCache::INVALIDATING_FIELDS, true)) {
+                continue;
+            }
+
+            $mutated = $base;
+            $mutated[0]['data'][$field] = 'CHANGED-' . $field;
+
+            $this->assertSame($qrKeys, $importer->qrKeysForRows($mutated),
+                'Changing ' . $field . ' moved the QR lookup keys, so the cache is unsound.');
+            $this->assertSame($nameKeys, $importer->lastnameKeysForRows($mutated),
+                'Changing ' . $field . ' moved the lastname lookup keys, so the cache is unsound.');
+        }
+    }
+
+    public function testTheInvalidatingFieldsAreExactlyTheOnesThatMoveTheKeys(): void
+    {
+        // The other half: each declared invalidating field must actually change a key.
+        // A field listed there that changes nothing would cost a needless rebuild on
+        // every edit and quietly undo the optimization.
+        $importer = new FamilyExcelImporter();
+
+        $base = [['sheetRow' => 3, 'data' => ['familyno' => '6001', 'lastname' => 'Cruz']]];
+
+        $qrChanged = $base;
+        $qrChanged[0]['data']['familyno'] = '6002';
+        $this->assertNotSame(
+            $importer->qrKeysForRows($base),
+            $importer->qrKeysForRows($qrChanged)
+        );
+
+        $nameChanged = $base;
+        $nameChanged[0]['data']['lastname'] = 'Santos';
+        $this->assertNotSame(
+            $importer->lastnameKeysForRows($base),
+            $importer->lastnameKeysForRows($nameChanged)
+        );
     }
 }

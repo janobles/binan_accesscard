@@ -216,12 +216,34 @@ because they hold PII.
 After both, an Apply is one in-memory validation pass plus one rows-file write.
 
 **Budget, measured against the 10k reference file:** a rows page under 500ms,
-an Apply under 1.5s. Measurement is a numbered step in the plan, run before and
-after, with the numbers recorded.
+an Apply under 1.5s.
 
-The measured numbers go into this section once the plan's measurement step has
-run, so a later reader sees what the file actually costs rather than what it was
-predicted to cost.
+Measured on the developer machine (`Theas-Air-2`, Intel Core i5-5350U @
+1.80GHz, macOS 21.6.0, `php spark serve` + XAMPP MySQL on localhost), against
+job 5, the 10,000-row reference file (479 must-fix, 319 warnings), via the
+browser's own Resource Timing (`performance.getEntriesByType('resource')`)
+for the rows page load and via timed `fetch()` calls from the page (matching
+what DevTools' Network panel reports) for the rest:
+
+- Rows, page 1: 189-202ms across repeated requests (one first-load sample hit
+  485.5ms, load ordered before every other asset on the page; steady-state
+  requests are the representative number).
+- Rows, `severity=blocking`: 197-247ms.
+- Rows, `page=200` (the worst case, filter walks every row before slicing):
+  208-335ms.
+- Apply, `sex` (non-invalidating, cache reused): 758.9ms, 1114.8ms, 1144.8ms
+  across three rows (avg ~1006ms).
+- Apply, `lastname` (invalidating, cache rebuilt): 858.5ms, 868.8ms, 884.5ms,
+  912.6ms across four rows (avg ~881ms).
+
+Both budgets hold: every rows sample is under 500ms and every Apply sample is
+under 1.5s, including the invalidating case. The cache-rebuild path is not
+measurably slower than the cache-reused path in this sample; on this machine,
+both are dominated by the same per-request overhead (PHP process start,
+MySQL round trips through XAMPP) rather than by the memoized-versus-rebuilt
+lookup itself. Since the budget was not missed, the spec's trigger for
+revisiting scoped revalidation was not reached and that option stays
+rejected.
 
 ## Rejected: scoped revalidation
 

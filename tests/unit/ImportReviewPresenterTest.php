@@ -3,442 +3,313 @@
 namespace Tests\Unit;
 
 use App\Libraries\ImportReviewPresenter;
+use App\Libraries\ImportReviewQuery;
 use CodeIgniter\Test\CIUnitTestCase;
 
 /**
- * Unit coverage for the review report, focused on the "Ready to import" list.
+ * Unit coverage for the review table's row shaping.
  *
- * That list tells the operator their data is CORRECT and will be saved, so a family must
- * only appear on it if the import would really write it. A family that is blocked, already
- * on file (skipped), or being appended to an existing family must never show up as ready -
- * that would be a promise the import does not keep.
+ * The screen's job is that no problem in the file is invisible. The old table showed
+ * four columns, so an error on barangay or relationship flagged a row red with nothing
+ * to edit and no way to reach it. These tests pin the replacement rule: a row lists
+ * every distinct issue it has, and offers an editor for every field carrying one,
+ * whatever column that field belongs to.
  *
  * @internal
  */
 final class ImportReviewPresenterTest extends CIUnitTestCase
 {
-    public function testACleanFamilyIsReadyWithNoWarnings(): void
+    public function testAPageCarriesTheSliceAndTheTotals(): void
     {
-        $ready = $this->ready(
-            [$this->row(3, '6001', 'Head'), $this->row(4, '6001', 'Child')],
-            [],
-        );
+        $rows = [];
 
-        $this->assertCount(1, $ready);
-        $this->assertSame('6001', $ready[0]['qr']);
-        $this->assertSame('Juan Cruz', $ready[0]['head']);
-        $this->assertSame(1, $ready[0]['members']);
-        $this->assertSame(0, $ready[0]['warnings']);
-        $this->assertSame(3, $ready[0]['sheetRow']);   // the Head's row
-    }
-
-    public function testAFamilyWithABlockingIssueIsNotReady(): void
-    {
-        $ready = $this->ready(
-            [$this->row(3, '6001', 'Head')],
-            [$this->error(3, '6001', 'SEX', 'blocking')],
-        );
-
-        $this->assertSame([], $ready);
-    }
-
-    public function testAWarningOnlyFamilyIsReadyAndCarriesItsWarningCount(): void
-    {
-        // BRGY / CONTACT / DUP-PERSON etc. import as typed - they must not hide the family.
-        $ready = $this->ready(
-            [$this->row(3, '6001', 'Head')],
-            [$this->error(3, '6001', 'BRGY', 'warning'), $this->error(3, '6001', 'CONTACT', 'warning')],
-        );
-
-        $this->assertCount(1, $ready);
-        $this->assertSame(2, $ready[0]['warnings']);
-    }
-
-    public function testAFamilyAlreadyOnFileIsNotReady(): void
-    {
-        // DUP-EXISTS = the write step SKIPS it. Listing it as "ready to import" would be a lie.
-        $ready = $this->ready(
-            [$this->row(3, '6001', 'Head')],
-            [$this->error(3, '6001', 'DUP-EXISTS', 'warning')],
-        );
-
-        $this->assertSame([], $ready);
-    }
-
-    public function testAFamilyWhoseHeadIsAlreadyOnFileIsNotReady(): void
-    {
-        // DUP-DB on the HEAD = activeHeadExists skips the whole group, members and all.
-        $ready = $this->ready(
-            [$this->row(3, '7777', 'Head'), $this->row(4, '7777', 'Child')],
-            [$this->error(3, '7777', 'DUP-DB', 'warning')],
-        );
-
-        $this->assertSame([], $ready);
-    }
-
-    public function testAFamilyWhoseMEMBERIsAlreadyOnFileIsStillReady(): void
-    {
-        // Only a duplicated HEAD skips the family. A duplicated member is inserted as a
-        // second record, so the family still imports - with the warning attached.
-        $ready = $this->ready(
-            [$this->row(3, '7777', 'Head'), $this->row(4, '7777', 'Child')],
-            [$this->error(4, '7777', 'DUP-DB', 'warning')],
-        );
-
-        $this->assertCount(1, $ready);
-        $this->assertSame(1, $ready[0]['warnings']);
-    }
-
-    public function testAnAddToExistingFamilyGroupIsNotListedAsANewFamily(): void
-    {
-        // ADD-MEMBER groups have no Head and belong to a family already in the system. They
-        // are reported under their own bucket, not as a new family being created.
-        $ready = $this->ready(
-            [$this->row(3, '6001', 'Child')],
-            [$this->error(3, '6001', 'ADD-MEMBER', 'warning')],
-        );
-
-        $this->assertSame([], $ready);
-    }
-
-    public function testTheReadyCountMatchesTheList(): void
-    {
-        $review = (new ImportReviewPresenter())->build([
-            'rows' => [
-                $this->row(3, '6001', 'Head'),
-                $this->row(4, '6002', 'Head'),
-                $this->row(5, '6003', 'Head'),
-            ],
-            'errors' => [$this->error(5, '6003', 'SEX', 'blocking')],
-        ]);
-
-        $this->assertSame(2, $review['counts']['ready']);
-        $this->assertCount(2, $review['ready']);
-    }
-
-    // -- people (the review table's rows) --------------------------------------
-
-    public function testEveryStagedPersonIsARowInSheetOrder(): void
-    {
-        $people = $this->people(
-            [$this->row(3, '6001', 'Head'), $this->row(4, '6001', 'Child'), $this->row(5, '6002', 'Head')],
-            [],
-        );
-
-        $this->assertCount(3, $people);
-        $this->assertSame([3, 4, 5], array_column($people, 'sheetRow'));
-        // The household reads as the head's last name, not as a QR number.
-        $this->assertSame('Cruz', $people[0]['family']);
-        $this->assertSame('Head', $people[0]['role']);
-        $this->assertSame('Child', $people[1]['role']);
-    }
-
-    public function testOnlyTheFlaggedPersonCarriesASeverityAndItsBadCell(): void
-    {
-        $people = $this->people(
-            [$this->row(3, '6001', 'Head'), $this->row(4, '6001', 'Child')],
-            [$this->fieldError(4, '6001', 'SEX', 'sex', 'blocking')],
-        );
-
-        $this->assertSame('', $people[0]['severity']);
-        $this->assertSame('blocking', $people[1]['severity']);
-        $this->assertArrayHasKey('sex', $people[1]['cells']);
-        $this->assertSame([], $people[0]['cells']);
-    }
-
-    public function testAStructuralErrorFlagsTheRowWithNoEditableCell(): void
-    {
-        // HEAD-NONE names no single bad value, so the row flags but offers nothing to type
-        // into; that file is fixed in the spreadsheet.
-        $people = $this->people(
-            [$this->row(3, '6001', 'Child')],
-            [$this->error(3, '6001', 'HEAD-NONE', 'blocking')],
-        );
-
-        $this->assertSame('blocking', $people[0]['severity']);
-        $this->assertSame([], $people[0]['cells']);
-        $this->assertSame('QR 6001', $people[0]['family']);
-    }
-
-    public function testARowWithNoQrIsStillListed(): void
-    {
-        $people = $this->people([$this->row(3, '', 'Head')], []);
-
-        $this->assertCount(1, $people);
-        $this->assertSame('No QR', $people[0]['family']);
-    }
-
-    // -- families to fix (in-place Edit / Remove) ------------------------------
-
-    public function testAFlaggedFamilyIsListedToFixWithItsIssueCounts(): void
-    {
-        $families = $this->families(
-            [$this->row(3, '6001', 'Head'), $this->row(4, '6001', 'Child')],
-            [$this->error(3, '6001', 'SEX', 'blocking'), $this->error(3, '6001', 'BRGY', 'warning')],
-        );
-
-        $this->assertCount(1, $families);
-        $this->assertSame('6001', $families[0]['qr']);
-        $this->assertSame('Juan Cruz', $families[0]['head']);
-        $this->assertSame(1, $families[0]['members']);
-        $this->assertSame(1, $families[0]['blocking']);
-        $this->assertSame(1, $families[0]['warnings']);
-        $this->assertSame(3, $families[0]['sheetRow']);
-    }
-
-    public function testAWarningOnlyFamilyIsListedToFix(): void
-    {
-        $families = $this->families(
-            [$this->row(3, '6001', 'Head')],
-            [$this->error(3, '6001', 'CONTACT', 'warning')],
-        );
-
-        $this->assertCount(1, $families);
-        $this->assertSame(0, $families[0]['blocking']);
-        $this->assertSame(1, $families[0]['warnings']);
-    }
-
-    public function testACleanFamilyIsNotListedToFix(): void
-    {
-        $families = $this->families(
-            [$this->row(3, '6001', 'Head'), $this->row(4, '6001', 'Child')],
-            [],
-        );
-
-        $this->assertSame([], $families);
-    }
-
-    public function testAHeadlessFlaggedFamilyStillListsToFix(): void
-    {
-        // HEAD-NONE blocks; the operator must be able to open it and designate a head, so it
-        // must appear even though no row is marked Head (falls back to the first row).
-        $families = $this->families(
-            [$this->row(3, '6001', 'Child'), $this->row(4, '6001', 'Child')],
-            [$this->error(3, '6001', 'HEAD-NONE', 'blocking')],
-        );
-
-        $this->assertCount(1, $families);
-        $this->assertSame('6001', $families[0]['qr']);
-        $this->assertSame(3, $families[0]['sheetRow']);
-    }
-
-    public function testFamiliesToFixListsEachDistinctIssueTypeBlockingFirst(): void
-    {
-        $families = $this->families(
-            [$this->row(3, '6001', 'Head')],
-            [
-                $this->error(3, '6001', 'SEX', 'blocking'),
-                $this->error(3, '6001', 'BRGY', 'warning'),
-                $this->error(3, '6001', 'SEX', 'blocking'),   // duplicate code -> collapsed
-            ],
-        );
-
-        $labels = array_column($families[0]['types'], 'label');
-
-        $this->assertContains('Invalid sex', $labels);
-        $this->assertContains('Barangay not recognised', $labels);
-        $this->assertCount(2, $labels);                               // SEX de-duplicated
-        $this->assertSame('blocking', $families[0]['types'][0]['severity']); // blocking first
-        $this->assertFalse($families[0]['existing']);
-    }
-
-    public function testAFamilyAlreadyInTheSystemCarriesTheExistingFlag(): void
-    {
-        $families = $this->families(
-            [$this->row(3, '6001', 'Head')],
-            [$this->error(3, '6001', 'DUP-EXISTS', 'warning')],
-        );
-
-        $this->assertCount(1, $families);
-        $this->assertTrue($families[0]['existing']);
-    }
-
-    public function testAFamilyWithANonNumericQrIsStillListedToFixWithItsQrIntact(): void
-    {
-        // "-1", "N/A", "5880.0" etc. reach the review as raw QR text. They must still be
-        // editable - the Edit action carries the QR as data, not a numeric URL segment.
-        foreach (['-1', 'N/A', '5880.0'] as $qr) {
-            $families = $this->families(
-                [$this->row(3, $qr, 'Head')],
-                [$this->error(3, $qr, 'QR-FORMAT', 'blocking')],
-            );
-
-            $this->assertCount(1, $families);
-            $this->assertSame($qr, $families[0]['qr']);
+        for ($i = 3; $i < 13; $i++) {
+            $rows[] = $this->row($i, '6001', $i === 3 ? 'Head' : 'Child');
         }
+
+        $page = $this->page(['rows' => $rows], ['per' => 25]);
+
+        $this->assertCount(10, $page['rows']);
+        $this->assertSame(10, $page['total']);
+        $this->assertSame(10, $page['filtered']);
+        $this->assertSame(1, $page['page']);
+        $this->assertSame(25, $page['per']);
     }
 
-    public function testBlankQrRowsAreListedAsUnassignedWithTheirIssues(): void
+    public function testASecondPageStartsWhereTheFirstEnded(): void
     {
-        $review = (new ImportReviewPresenter())->build([
-            'rows' => [
-                $this->row(12, '', 'Head'),       // blank QR -> unassigned
-                $this->row(13, '6001', 'Head'),   // has a QR -> not unassigned
-            ],
-            'errors' => [$this->error(12, '', 'QR-01', 'blocking')],
+        $rows = [];
+
+        for ($i = 3; $i < 13; $i++) {
+            $rows[] = $this->row($i, '6001', $i === 3 ? 'Head' : 'Child');
+        }
+
+        $page = $this->page(['rows' => $rows], ['per' => 25, 'page' => 2]);
+
+        $this->assertSame([], $page['rows']);
+        $this->assertSame(10, $page['total']);
+
+        $second = $this->page(['rows' => $rows], ['per' => 25, 'page' => 1]);
+        $this->assertSame(3, $second['rows'][0]['sheetRow']);
+    }
+
+    public function testAnErrorOnAnUndisplayedFieldStillOffersAnEditor(): void
+    {
+        // The whole point. Barangay is not a table column; before this change the row
+        // went red and the operator had nothing to click.
+        $page = $this->page([
+            'rows'    => [$this->row(3, '6001', 'Head')],
+            'errors'  => [$this->error(3, '6001', 'BRGY', 'warning', 'barangay')],
+            'columns' => ['barangay' => 'P'],
         ]);
 
-        $this->assertCount(1, $review['unassigned']);
-        $this->assertSame(12, $review['unassigned'][0]['sheetRow']);
-        $this->assertSame('Juan Cruz', $review['unassigned'][0]['person']);
-        $this->assertContains('Missing QR Number', array_column($review['unassigned'][0]['types'], 'label'));
+        $fields = array_column($page['rows'][0]['fields'], 'field');
+
+        $this->assertSame(['barangay'], $fields);
+        $this->assertSame('P3', $page['rows'][0]['fields'][0]['cell']);
+        $this->assertSame('Barangay', $page['rows'][0]['fields'][0]['label']);
     }
 
-    // -- inline-editable cells (hybrid fix-in-place) ---------------------------
-
-    public function testAFieldLevelErrorBecomesAnEditableCell(): void
+    public function testAMissingHeadIsFixableThroughItsRelationshipField(): void
     {
-        $families = $this->families(
-            [$this->row(3, '6001', 'Head')],
-            [$this->fieldError(3, '6001', 'BRGY', 'barangay', 'warning')],
-        );
-
-        $this->assertCount(1, $families);
-        $cells = $families[0]['editableCells'];
-        $this->assertCount(1, $cells);
-        $this->assertSame('barangay', $cells[0]['field']);
-        $this->assertSame('Barangay', $cells[0]['label']);
-        $this->assertSame('Poblacion', $cells[0]['value']);   // the row's current value
-        $this->assertSame('BRGY', $cells[0]['code']);
-        $this->assertSame('warning', $cells[0]['severity']);
-    }
-
-    public function testAStructuralErrorHasNoEditableCell(): void
-    {
-        // HEAD-NONE carries no field, so it is not an inline cell - it is fixed via the modal.
-        $families = $this->families(
-            [$this->row(3, '6001', 'Child'), $this->row(4, '6001', 'Child')],
-            [$this->error(3, '6001', 'HEAD-NONE', 'blocking')],   // field => null
-        );
-
-        $this->assertCount(1, $families);
-        $this->assertSame([], $families[0]['editableCells']);
-    }
-
-    public function testABlockingErrorWinsOverAWarningOnTheSameCell(): void
-    {
-        $families = $this->families(
-            [$this->row(3, '6001', 'Head')],
-            [
-                $this->fieldError(3, '6001', 'BDAY-RANGE', 'birthday', 'warning'),
-                $this->fieldError(3, '6001', 'BDAY', 'birthday', 'blocking'),
-            ],
-        );
-
-        $cells = $families[0]['editableCells'];
-        $this->assertCount(1, $cells);                 // one input per cell
-        $this->assertSame('birthday', $cells[0]['field']);
-        $this->assertSame('blocking', $cells[0]['severity']);
-    }
-
-    public function testAnEditableCellCarriesTheExcelReferenceWhenColumnsAreKnown(): void
-    {
-        $review = (new ImportReviewPresenter())->build([
-            'rows'    => [$this->row(42, '6001', 'Head')],
-            'errors'  => [$this->fieldError(42, '6001', 'SEX', 'sex', 'blocking')],
-            'columns' => ['sex' => 'H'],
+        // HEAD-NONE is recorded against relationship, so it needs no special case:
+        // the operator sets one person's Relationship to Head and the file unblocks.
+        $page = $this->page([
+            'rows'   => [$this->row(3, '6001', 'Child')],
+            'errors' => [$this->error(3, '6001', 'HEAD-NONE', 'blocking', 'relationship')],
         ]);
 
-        $cell = $review['families'][0]['editableCells'][0];
-        $this->assertSame('H42', $cell['cell']);
+        $this->assertSame(['relationship'], array_column($page['rows'][0]['fields'], 'field'));
+        $this->assertSame('blocking', $page['rows'][0]['severity']);
     }
 
-    public function testABlankQrRowExposesTheMissingQrAsAnEditableCell(): void
+    public function testAFieldlessIssueIsListedButOffersNoEditor(): void
     {
-        // "give them a QR" happens inline: the QR-01 error points at the familyno cell.
-        $review = (new ImportReviewPresenter())->build([
-            'rows'    => [$this->row(12, '', 'Head')],
-            'errors'  => [$this->fieldError(12, '', 'QR-01', 'familyno', 'blocking')],
-            'columns' => ['familyno' => 'A'],
+        // DUP-EXISTS reports what the import will do (skip the family). There is
+        // nothing to correct, so it must show up as text and not as an input.
+        $page = $this->page([
+            'rows'   => [$this->row(3, '6001', 'Head')],
+            'errors' => [$this->error(3, '6001', 'DUP-EXISTS', 'warning', null)],
         ]);
 
-        $this->assertCount(1, $review['unassigned']);
-        $cells = $review['unassigned'][0]['editableCells'];
-        $this->assertCount(1, $cells);
-        $this->assertSame('familyno', $cells[0]['field']);
-        $this->assertSame('A12', $cells[0]['cell']);
+        $this->assertSame([], $page['rows'][0]['fields']);
+        $this->assertSame(['DUP-EXISTS'], array_column($page['rows'][0]['issues'], 'code'));
+        $this->assertSame('Already in the system', $page['rows'][0]['issues'][0]['label']);
     }
 
-    public function testFileNoticesSurfaceWholeFileErrors(): void
+    public function testARowListsEveryDistinctIssueItHas(): void
     {
-        $review = (new ImportReviewPresenter())->build([
-            'rows'   => [],
+        $page = $this->page([
+            'rows'   => [$this->row(3, '6001', 'Head')],
             'errors' => [
-                ['sheetRow' => null, 'familyNo' => '', 'field' => null, 'code' => 'EMPTY', 'message' => 'No family rows were found.', 'severity' => 'blocking'],
+                $this->error(3, '6001', 'SEX', 'blocking', 'sex'),
+                $this->error(3, '6001', 'BRGY', 'warning', 'barangay'),
+                $this->error(3, '6001', 'BRGY', 'warning', 'barangay'),
             ],
         ]);
 
-        $this->assertSame(['No family rows were found.'], $review['fileNotices']);
+        $codes = array_column($page['rows'][0]['issues'], 'code');
+        sort($codes);
+
+        $this->assertSame(['BRGY', 'SEX'], $codes);
     }
 
-    // -- helpers ---------------------------------------------------------------
-
-    /**
-     * @param list<array> $rows
-     * @param list<array> $errors
-     *
-     * @return list<array>
-     */
-    private function families(array $rows, array $errors): array
+    public function testABlockingErrorBeatsAWarningOnTheSameField(): void
     {
-        return (new ImportReviewPresenter())->build(['rows' => $rows, 'errors' => $errors])['families'];
+        $page = $this->page([
+            'rows'   => [$this->row(3, '6001', 'Head')],
+            'errors' => [
+                $this->error(3, '6001', 'BDAY-RANGE', 'warning', 'birthday'),
+                $this->error(3, '6001', 'BDAY', 'blocking', 'birthday'),
+            ],
+        ]);
+
+        $this->assertCount(1, $page['rows'][0]['fields']);
+        $this->assertSame('blocking', $page['rows'][0]['fields'][0]['severity']);
     }
 
-    /**
-     * @param list<array> $rows
-     * @param list<array> $errors
-     *
-     * @return list<array>
-     */
-    private function ready(array $rows, array $errors): array
+    public function testTheProblemsFilterKeepsOnlyFlaggedRows(): void
     {
-        return (new ImportReviewPresenter())->build(['rows' => $rows, 'errors' => $errors])['ready'];
+        $page = $this->page([
+            'rows'   => [$this->row(3, '6001', 'Head'), $this->row(4, '6001', 'Child')],
+            'errors' => [$this->error(4, '6001', 'SEX', 'blocking', 'sex')],
+        ], ['severity' => 'problems']);
+
+        $this->assertSame(2, $page['total']);
+        $this->assertSame(1, $page['filtered']);
+        $this->assertSame(4, $page['rows'][0]['sheetRow']);
     }
 
-    /**
-     * @param list<array> $rows
-     * @param list<array> $errors
-     *
-     * @return list<array>
-     */
-    private function people(array $rows, array $errors): array
+    public function testTheBlockingFilterExcludesWarningOnlyRows(): void
     {
-        return (new ImportReviewPresenter())->build(['rows' => $rows, 'errors' => $errors])['people'];
+        $page = $this->page([
+            'rows'   => [$this->row(3, '6001', 'Head'), $this->row(4, '6001', 'Child')],
+            'errors' => [
+                $this->error(3, '6001', 'BRGY', 'warning', 'barangay'),
+                $this->error(4, '6001', 'SEX', 'blocking', 'sex'),
+            ],
+        ], ['severity' => 'blocking']);
+
+        $this->assertSame(1, $page['filtered']);
+        $this->assertSame(4, $page['rows'][0]['sheetRow']);
     }
 
+    public function testTheCodeFilterKeepsOnlyRowsCarryingThatCode(): void
+    {
+        $page = $this->page([
+            'rows'   => [$this->row(3, '6001', 'Head'), $this->row(4, '6001', 'Child')],
+            'errors' => [
+                $this->error(3, '6001', 'BRGY', 'warning', 'barangay'),
+                $this->error(4, '6001', 'SEX', 'blocking', 'sex'),
+            ],
+        ], ['code' => 'SEX']);
+
+        $this->assertSame(1, $page['filtered']);
+        $this->assertSame(4, $page['rows'][0]['sheetRow']);
+    }
+
+    public function testSearchMatchesNameQrAndFamilyLabelCaseInsensitively(): void
+    {
+        $rows = [
+            $this->row(3, '6001', 'Head'),
+            ['sheetRow' => 4, 'data' => [
+                'familyno' => '6002', 'relationship' => 'Head', 'lastname' => 'Santos',
+                'firstname' => 'Maria', 'birthday' => '01-01-1990', 'sex' => 'Female',
+            ]],
+        ];
+
+        $this->assertSame(1, $this->page(['rows' => $rows], ['q' => 'santos'])['filtered']);
+        $this->assertSame(1, $this->page(['rows' => $rows], ['q' => 'MARIA'])['filtered']);
+        $this->assertSame(1, $this->page(['rows' => $rows], ['q' => '6002'])['filtered']);
+        $this->assertSame(2, $this->page(['rows' => $rows], ['q' => ''])['filtered']);
+    }
+
+    public function testAFamilyIsLabelledByItsHeadsLastName(): void
+    {
+        $page = $this->page(['rows' => [
+            $this->row(3, '6001', 'Head'),
+            ['sheetRow' => 4, 'data' => [
+                'familyno' => '6001', 'relationship' => 'Child', 'lastname' => 'Cruz',
+                'firstname' => 'Ana', 'birthday' => '02-02-2010', 'sex' => 'Female',
+            ]],
+        ]]);
+
+        $this->assertSame('Cruz', $page['rows'][0]['family']);
+        $this->assertSame('Cruz', $page['rows'][1]['family']);
+        $this->assertSame('Head', $page['rows'][0]['role']);
+        $this->assertSame('Child', $page['rows'][1]['role']);
+    }
+
+    public function testAGroupWithNoHeadFallsBackToItsQrAsTheLabel(): void
+    {
+        $page = $this->page(['rows' => [$this->row(3, '6001', 'Child')]]);
+
+        $this->assertSame('QR 6001', $page['rows'][0]['family']);
+    }
+
+    public function testARowWithNoQrIsLabelledNoQr(): void
+    {
+        $page = $this->page(['rows' => [$this->row(3, '', 'Head')]]);
+
+        $this->assertSame('No QR', $page['rows'][0]['family']);
+    }
+
+    public function testBuildReturnsTheSummaryOnlyAndNotTheRows(): void
+    {
+        $summary = (new ImportReviewPresenter())->build([
+            'file'   => 'import.xlsx',
+            'rows'   => [$this->row(3, '6001', 'Head')],
+            'errors' => [$this->error(3, '6001', 'SEX', 'blocking', 'sex')],
+            'counts' => ['rows' => 1, 'blocking' => 1, 'warnings' => 0],
+        ]);
+
+        $this->assertSame('import.xlsx', $summary['file']);
+        $this->assertSame(1, $summary['counts']['blocking']);
+        $this->assertArrayNotHasKey('people', $summary);
+        $this->assertArrayNotHasKey('families', $summary);
+        $this->assertArrayNotHasKey('ready', $summary);
+        $this->assertArrayNotHasKey('unassigned', $summary);
+    }
+
+    public function testBuildListsTheIssueCodesPresentSoTheFilterCanOfferThem(): void
+    {
+        $summary = (new ImportReviewPresenter())->build([
+            'rows'   => [$this->row(3, '6001', 'Head')],
+            'errors' => [
+                $this->error(3, '6001', 'SEX', 'blocking', 'sex'),
+                $this->error(3, '6001', 'SEX', 'blocking', 'sex'),
+                $this->error(3, '6001', 'BRGY', 'warning', 'barangay'),
+            ],
+        ]);
+
+        $codes = array_column($summary['codes'], 'code');
+        sort($codes);
+
+        $this->assertSame(['BRGY', 'SEX'], $codes);
+    }
+
+    public function testBuildSurfacesWholeFileProblemsAsNotices(): void
+    {
+        $summary = (new ImportReviewPresenter())->build([
+            'rows'   => [],
+            'errors' => [[
+                'sheetRow' => null, 'familyNo' => '', 'code' => 'EMPTY',
+                'field' => null, 'message' => 'No family rows were found.',
+                'severity' => 'blocking',
+            ]],
+        ]);
+
+        $this->assertSame(['No family rows were found.'], $summary['fileNotices']);
+    }
+
+    public function testRowFetchesOneShapedRowBySheetRow(): void
+    {
+        $result = [
+            'rows'   => [$this->row(3, '6001', 'Head'), $this->row(4, '6001', 'Child')],
+            'errors' => [$this->error(4, '6001', 'SEX', 'blocking', 'sex')],
+        ];
+
+        $row = (new ImportReviewPresenter())->row($result, 4);
+
+        $this->assertNotNull($row);
+        $this->assertSame(4, $row['sheetRow']);
+        $this->assertSame('blocking', $row['severity']);
+        $this->assertNull((new ImportReviewPresenter())->row($result, 999));
+    }
+
+    /** @param array<string, mixed> $query */
+    private function page(array $result, array $query = []): array
+    {
+        return (new ImportReviewPresenter())->page($result, ImportReviewQuery::fromArray($query));
+    }
+
+    /** One staged row in the importer's {sheetRow, data} shape. */
     private function row(int $sheetRow, string $qr, string $relationship): array
-    {
-        return ['sheetRow' => $sheetRow, 'data' => [
-            'familyno'     => $qr,
-            'relationship' => $relationship,
-            'firstname'    => 'Juan',
-            'lastname'     => 'Cruz',
-            'address'      => '123 Rizal St',
-            'barangay'     => 'Poblacion',
-        ]];
-    }
-
-    private function error(int $sheetRow, string $qr, string $code, string $severity): array
     {
         return [
             'sheetRow' => $sheetRow,
-            'familyNo' => $qr,
-            'field'    => null,
-            'code'     => $code,
-            'message'  => $code,
-            'severity' => $severity,
+            'data'     => [
+                'familyno'     => $qr,
+                'relationship' => $relationship,
+                'lastname'     => 'Cruz',
+                'firstname'    => 'Juan',
+                'birthday'     => '03-03-1980',
+                'sex'          => 'Male',
+                'barangay'     => 'Nowhere',
+                'address'      => '1 Street',
+            ],
         ];
     }
 
-    /** A field-level error (carries a `field`), which the presenter turns into an editable cell. */
-    private function fieldError(int $sheetRow, string $qr, string $code, string $field, string $severity): array
+    /** One error in the importer's shape. */
+    private function error(int $sheetRow, string $qr, string $code, string $severity, ?string $field): array
     {
         return [
             'sheetRow' => $sheetRow,
             'familyNo' => $qr,
-            'field'    => $field,
             'code'     => $code,
-            'message'  => $code,
+            'field'    => $field,
+            'message'  => $code . ' on row ' . $sheetRow,
             'severity' => $severity,
         ];
     }

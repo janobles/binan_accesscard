@@ -131,4 +131,91 @@ final class ImportStagingStoreTest extends CIUnitTestCase
 
         $this->assertSame(0, $store->sweep([], 24));
     }
+
+    public function testItRoundTripsABundleThroughTheSplitFiles(): void
+    {
+        $store = new ImportStagingStore($this->dir);
+
+        $store->save(41, [
+            'phase'  => 'review',
+            'file'   => 'import.xlsx',
+            'rows'   => [['sheetRow' => 3, 'data' => ['familyno' => '6001']]],
+            'errors' => [['sheetRow' => 3, 'code' => 'SEX', 'severity' => 'blocking']],
+            'counts' => ['rows' => 1, 'blocking' => 1],
+        ]);
+
+        $loaded = $store->load(41);
+
+        $this->assertSame('import.xlsx', $loaded['file']);
+        $this->assertSame('6001', $loaded['rows'][0]['data']['familyno']);
+        $this->assertSame('SEX', $loaded['errors'][0]['code']);
+        $this->assertSame(1, $loaded['counts']['blocking']);
+    }
+
+    public function testSaveRowsRewritesOnlyTheRowsFile(): void
+    {
+        // The point of the split: an Apply must not re-encode the errors and the meta
+        // just to change one cell.
+        $store = new ImportStagingStore($this->dir);
+
+        $store->save(42, [
+            'phase'  => 'review',
+            'file'   => 'import.xlsx',
+            'rows'   => [['sheetRow' => 3, 'data' => ['sex' => 'Mail']]],
+            'errors' => [['sheetRow' => 3, 'code' => 'SEX', 'severity' => 'blocking']],
+            'counts' => ['blocking' => 1],
+        ]);
+
+        $errorsMtimeBefore = filemtime($this->dir . '/job-42-errors.json');
+
+        $store->saveRows(42, [['sheetRow' => 3, 'data' => ['sex' => 'Male']]]);
+
+        $loaded = $store->load(42);
+
+        $this->assertSame('Male', $loaded['rows'][0]['data']['sex']);
+        $this->assertSame($errorsMtimeBefore, filemtime($this->dir . '/job-42-errors.json'));
+    }
+
+    public function testDeleteRemovesEveryFileForTheJob(): void
+    {
+        $store = new ImportStagingStore($this->dir);
+        $store->save(43, ['phase' => 'review', 'rows' => [], 'errors' => [], 'counts' => []]);
+
+        $store->delete(43);
+
+        $this->assertFileDoesNotExist($this->dir . '/job-43.json');
+        $this->assertFileDoesNotExist($this->dir . '/job-43-rows.json');
+        $this->assertFileDoesNotExist($this->dir . '/job-43-errors.json');
+    }
+
+    public function testSweepRemovesEveryFileForAnAbandonedJob(): void
+    {
+        $store = new ImportStagingStore($this->dir);
+        $store->save(44, ['phase' => 'review', 'rows' => [], 'errors' => [], 'counts' => []]);
+
+        $old = time() - (25 * 3600);
+
+        foreach (['', '-rows', '-errors'] as $suffix) {
+            touch($this->dir . '/job-44' . $suffix . '.json', $old);
+        }
+
+        $this->assertSame(1, $store->sweep([]));
+        $this->assertFileDoesNotExist($this->dir . '/job-44-rows.json');
+        $this->assertFileDoesNotExist($this->dir . '/job-44-errors.json');
+    }
+
+    public function testSweepSpareEveryFileOfAProtectedJob(): void
+    {
+        $store = new ImportStagingStore($this->dir);
+        $store->save(45, ['phase' => 'review', 'rows' => [], 'errors' => [], 'counts' => []]);
+
+        $old = time() - (25 * 3600);
+
+        foreach (['', '-rows', '-errors'] as $suffix) {
+            touch($this->dir . '/job-45' . $suffix . '.json', $old);
+        }
+
+        $this->assertSame(0, $store->sweep([45]));
+        $this->assertFileExists($this->dir . '/job-45-rows.json');
+    }
 }

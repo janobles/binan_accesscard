@@ -230,11 +230,19 @@ what DevTools' Network panel reports) for the rest:
   requests are the representative number).
 - Rows, `severity=blocking`: 197-247ms.
 - Rows, `page=200` (the worst case, filter walks every row before slicing):
-  208-335ms.
+  208-336ms.
 - Apply, `sex` (non-invalidating, cache reused): 758.9ms, 1114.8ms, 1144.8ms
   across three rows (avg ~1006ms).
 - Apply, `lastname` (invalidating, cache rebuilt): 858.5ms, 868.8ms, 884.5ms,
-  912.6ms across four rows (avg ~881ms).
+  912.6ms across four rows (avg ~881ms). The 10k reference file has no row
+  flagged with a lastname error, so this was not driven through a "Fix this
+  person" click; it was sent as the same `multipart/form-data` POST
+  (`import_row` + `fields[lastname]`) the UI's own Apply button sends,
+  confirmed against a real UI-driven Apply's request body, changing an
+  unflagged row's lastname. That still exercises the code path this number
+  is meant to evidence - `existingPeopleForRows()` rebuilding the memoized
+  cache on a lastname edit - so the number stands as evidence for that path,
+  just not as an operator-driven repro.
 
 Both budgets hold: every rows sample is under 500ms and every Apply sample is
 under 1.5s, including the invalidating case. The cache-rebuild path is not

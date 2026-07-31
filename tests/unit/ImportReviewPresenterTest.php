@@ -262,6 +262,24 @@ final class ImportReviewPresenterTest extends CIUnitTestCase
         $this->assertSame(['No family rows were found.'], $summary['fileNotices']);
     }
 
+    public function testAMergedQrCellSurfacesAsAFileNoticeAndNotAsACode(): void
+    {
+        $summary = (new ImportReviewPresenter())->build([
+            'rows'   => [$this->row(3, '6001', 'Head')],
+            'errors' => [[
+                'sheetRow' => null, 'familyNo' => '6001', 'code' => 'QR-11',
+                'field' => null, 'message' => 'Unmerge the QR column and repeat the QR number on every row of the family.',
+                'severity' => 'blocking',
+            ]],
+        ]);
+
+        $this->assertSame(
+            ['Unmerge the QR column and repeat the QR number on every row of the family.'],
+            $summary['fileNotices']
+        );
+        $this->assertNotContains('QR-11', array_column($summary['codes'], 'code'));
+    }
+
     public function testRowFetchesOneShapedRowBySheetRow(): void
     {
         $result = [

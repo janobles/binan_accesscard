@@ -350,7 +350,7 @@ class ImportReviewPresenter
         foreach ($errors as $error) {
             $code = (string) ($error['code'] ?? '');
 
-            if ($code === '' || in_array($code, ['FILE', 'EMPTY'], true)) {
+            if ($code === '' || in_array($code, ['FILE', 'EMPTY', 'QR-11'], true)) {
                 continue;
             }
 
@@ -413,7 +413,7 @@ class ImportReviewPresenter
         $out = [];
 
         foreach ($errors as $error) {
-            if (in_array((string) ($error['code'] ?? ''), ['FILE', 'EMPTY'], true)) {
+            if (in_array((string) ($error['code'] ?? ''), ['FILE', 'EMPTY', 'QR-11'], true)) {
                 $out[] = (string) ($error['message'] ?? '');
             }
         }

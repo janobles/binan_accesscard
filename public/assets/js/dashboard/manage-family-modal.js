@@ -1612,12 +1612,6 @@
                     window.reloadFamilyDataTable();
                 }
 
-                // Import-fix context (Review Import screen): the save returns a fresh review
-                // report - hand it back so the screen re-renders without a reload.
-                if (data.review && typeof window.importReviewApply === 'function') {
-                    window.importReviewApply(data.review, data.csrf);
-                }
-
                 showFamilyToast(data.message || 'Family record saved successfully.', false);
                 return;
             }

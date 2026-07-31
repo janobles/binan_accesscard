@@ -35,8 +35,6 @@
     var table      = document.getElementById('importReviewTable');
     var tbody      = table ? table.querySelector('tbody') : null;
     var countEl    = document.getElementById('importReviewCount');
-    var noticesEl  = document.getElementById('importReviewNotices');
-    var fileEl     = document.getElementById('reviewFileName');
     var statusEl   = document.getElementById('importReviewStatus');
     var confirmBtn = document.getElementById('importReviewConfirm');
     var cancelBtn  = document.getElementById('importReviewCancel');
@@ -476,6 +474,7 @@
             }
 
             updateCounts(data.counts);
+            updateCodeFilter(data.codes);
 
             // These fields drive rules that reach other rows, so the rest of the page
             // cannot be trusted to be current: refetch instead of splicing.
@@ -531,6 +530,39 @@
         confirmBtn.title = blocking > 0
             ? 'Fix the flagged values first, or correct them in the spreadsheet and upload again.'
             : '';
+    }
+
+    // Keeps the Problem dropdown honest after an Apply: a code fixed out of the file
+    // is dropped from the list, a newly introduced one is offered. The current
+    // selection is kept if that code still exists, otherwise the filter resets to All.
+    function updateCodeFilter(codes) {
+        if (!codes) {
+            return;
+        }
+
+        var current = codeFilterEl.value;
+        var stillPresent = false;
+
+        codeFilterEl.innerHTML = '';
+
+        var allOption = document.createElement('option');
+        allOption.value = '';
+        allOption.textContent = 'All problems';
+        codeFilterEl.appendChild(allOption);
+
+        codes.forEach(function (code) {
+            var option = document.createElement('option');
+            option.value = code.code;
+            option.textContent = code.label;
+            codeFilterEl.appendChild(option);
+
+            if (code.code === current) {
+                stillPresent = true;
+            }
+        });
+
+        codeFilterEl.value = stillPresent ? current : '';
+        state.code = codeFilterEl.value;
     }
 
     // One panel at a time: two open editors on one screen invite applying the wrong row.

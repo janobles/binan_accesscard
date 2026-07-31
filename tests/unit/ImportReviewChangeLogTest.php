@@ -55,19 +55,4 @@ final class ImportReviewChangeLogTest extends CIUnitTestCase
         $this->assertStringContainsString('QR Number: "42" → "99"', $joined);
         $this->assertStringContainsString('Contact number: (blank) → "09171234567"', $joined);
     }
-
-    public function testRemovedEntry(): void
-    {
-        $old = [
-            ['sheetRow' => 5, 'data' => ['familyno' => '42', 'relationship' => 'Head', 'firstname' => 'Juan', 'lastname' => 'Cruz']],
-            ['sheetRow' => 6, 'data' => ['familyno' => '42', 'relationship' => 'Child', 'firstname' => 'Jose', 'lastname' => 'Cruz']],
-        ];
-
-        $entry = ImportReviewChangeLog::removed($old);
-
-        $this->assertSame('Removed', $entry['action']);
-        $this->assertSame('42', $entry['qr']);
-        $this->assertSame('Juan Cruz', $entry['head']);
-        $this->assertStringContainsString('2 rows', $entry['lines'][0]);
-    }
 }

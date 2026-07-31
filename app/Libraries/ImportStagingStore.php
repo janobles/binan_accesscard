@@ -33,6 +33,12 @@ class ImportStagingStore
         $this->dir = $dir ?? (WRITEPATH . 'import-staging');
     }
 
+    /** Where the staging files live. ImportLookupCache writes its cache alongside them. */
+    public function dir(): string
+    {
+        return $this->dir;
+    }
+
     /** Absolute path of a job's staging file. */
     public function path(int $jobId): string
     {

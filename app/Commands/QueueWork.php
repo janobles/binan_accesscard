@@ -4,7 +4,6 @@ namespace App\Commands;
 
 use App\Jobs\JobHandlerInterface;
 use App\Jobs\JobReporter;
-use App\Libraries\ImportStagingStore;
 use App\Models\Jobs\JobQueueModel;
 use CodeIgniter\CLI\BaseCommand;
 use CodeIgniter\CLI\CLI;
@@ -123,7 +122,7 @@ class QueueWork extends BaseCommand
     private function sweepImportStaging(JobQueueModel $model): void
     {
         try {
-            $removed = (new ImportStagingStore())->sweep($model->activeStagingIds());
+            $removed = service('importStaging')->sweep($model->activeStagingIds());
 
             if ($removed > 0) {
                 CLI::write('Swept ' . $removed . ' abandoned import staging file(s).', 'dark_gray');

@@ -46,6 +46,7 @@ $routes->group('records', ['filter' => 'roleNav:records-import'], static functio
     $routes->post('import', 'Families\FamilyImportController::import');
     $routes->get('import/status/(:num)', 'Families\FamilyImportController::importStatus/$1');
     $routes->get('import/review/(:num)', 'Families\FamilyImportController::reviewPage/$1');
+    $routes->get('import/review/(:num)/rows', 'Families\FamilyImportController::reviewRows/$1');
     $routes->post('import/review/(:num)/commit', 'Families\FamilyImportController::reviewCommit/$1');
     $routes->post('import/review/(:num)/cancel', 'Families\FamilyImportController::reviewCancel/$1');
     $routes->get('import/review/(:num)/family', 'Families\FamilyImportController::reviewFamilyModal/$1');

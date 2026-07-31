@@ -8,7 +8,7 @@ use App\Libraries\FamilyExcelTemplate;
 use App\Libraries\ImportFamilyModalBuilder;
 use App\Libraries\ImportReviewChangeLog;
 use App\Libraries\ImportReviewPresenter;
-use App\Libraries\ImportStagingStore;
+use App\Libraries\ImportReviewQuery;
 use App\Libraries\RoleAccess;
 use App\Models\Families\MemberModel;
 use App\Models\Jobs\JobQueueModel;
@@ -179,7 +179,7 @@ class FamilyImportController extends BaseController
      */
     private function retirePreviousReviews(JobQueueModel $jobs, int $userId, int $keepJobId): void
     {
-        $store = new ImportStagingStore();
+        $store = service('importStaging');
 
         foreach ($jobs->stagedReviewIds($userId) as $priorId) {
             if ($priorId === $keepJobId) {
@@ -306,6 +306,35 @@ class FamilyImportController extends BaseController
     }
 
     /**
+     * GET `records/import/review/(:num)/rows`: one page of the review table as JSON.
+     *
+     * The review screen asks for a slice at a time rather than carrying every staged
+     * person in its HTML, so a 10,000-row import renders as fast as a 10-row one.
+     *
+     * GET: page, per (25/50/100), severity (all/problems/blocking/warning), code, q.
+     */
+    public function reviewRows(int $jobId)
+    {
+        $guard = $this->requireFamilyEntryAccess();
+
+        if ($guard instanceof RedirectResponse) {
+            return $this->jsonError('You do not have permission to review family imports.', 403);
+        }
+
+        $jobs   = new JobQueueModel();
+        $loaded = $jobs->hasTable() ? $this->loadReviewJob($jobs, $jobId) : null;
+
+        if ($loaded === null) {
+            return $this->jsonError('That import is no longer available to review.', 404);
+        }
+
+        $query = ImportReviewQuery::fromArray($this->request->getGet());
+        $page  = (new ImportReviewPresenter())->page($loaded['result'], $query);
+
+        return $this->response->setJSON(['status' => 'success'] + $page);
+    }
+
+    /**
      * POST `records/import/review/(:num)/commit`: re-validates the
      * staged batch and, only when no blocking issues remain, queues the write job that
      * persists the families. Returns that job's status URL for the progress toast.
@@ -392,7 +421,7 @@ class FamilyImportController extends BaseController
         $loaded = $jobs->hasTable() ? $this->loadReviewJob($jobs, $jobId) : null;
 
         if ($loaded !== null) {
-            (new ImportStagingStore())->delete($jobId);
+            service('importStaging')->delete($jobId);
             $jobs->finish($jobId, 'failed', 'Import cancelled during review.');
         }
 
@@ -855,7 +884,7 @@ class FamilyImportController extends BaseController
     /** Persists a re-validated review result back to the job's staging file. */
     private function restageReview(int $jobId, array $result): void
     {
-        (new ImportStagingStore())->save($jobId, [
+        service('importStaging')->save($jobId, [
             'phase'      => 'review',
             'file'       => (string) ($result['file'] ?? 'import.xlsx'),
             'rows'       => $result['rows'] ?? [],
@@ -889,7 +918,7 @@ class FamilyImportController extends BaseController
         }
 
         // The rows + errors live in the staging file, not the DB (they are too big).
-        $bundle = (new ImportStagingStore())->load($jobId);
+        $bundle = service('importStaging')->load($jobId);
 
         if ($bundle === null) {
             return null;

@@ -5,7 +5,6 @@ namespace App\Jobs;
 use App\Libraries\FamilyExcelImporter;
 use App\Libraries\FamilyRecordWriteException;
 use App\Libraries\FamilyRecordWriter;
-use App\Libraries\ImportStagingStore;
 use App\Models\Audit\AuditTrailsModel;
 use App\Models\Families\MemberModel;
 use App\Models\Families\MemberServiceModel;
@@ -102,7 +101,7 @@ class FamilyImportJob implements JobHandlerInterface
         // Stage the full row set + errors to a file under writable/; the review screen and
         // the eventual write job read it from there.
         $jobId = (int) ($job['jobID'] ?? 0);
-        (new ImportStagingStore())->save($jobId, [
+        service('importStaging')->save($jobId, [
             'phase'      => 'review',
             'file'       => $fileName,
             'rows'       => $staged['rows'],
@@ -137,7 +136,7 @@ class FamilyImportJob implements JobHandlerInterface
 
         // Rows come from the review job's staging file (kept small in the DB, big on disk).
         $stageJobId = (int) ($payload['stageJobId'] ?? 0);
-        $store      = new ImportStagingStore();
+        $store      = service('importStaging');
         $bundle     = $store->load($stageJobId);
 
         if ($bundle === null) {

@@ -1,16 +1,15 @@
 // Import Review, step 2 of the import wizard.
 //
-// One row per staged person. The flag sits on the person whose values are wrong, and the
-// Family and Role columns carry the household grouping, so an operator reads down the
-// column that is broken instead of opening a card per family. A flagged cell edits in
-// place: the save restages the row, the server re-validates, and the table repaints from
-// the fresh report, so a fixed cell loses its flag without a re-upload.
+// One row per staged person, a page at a time from records/import/review/:id/rows, so a
+// 10,000-row file renders as fast as a small one. The Issues column names every problem
+// on a row, including ones on columns the table does not show, and opening the row
+// reveals an editor for each field carrying a problem.
 //
-// The spreadsheet is still the source of truth for a badly structured file (no head, two
-// addresses under one QR). Those problems carry no single bad cell, so they surface as a
-// flagged row with a notice and are fixed in the file.
+// Nothing is staged until Apply, and nothing reaches the member table until Confirm
+// import. An Apply that touches a field driving cross-row rules refetches the page,
+// because other rows' flags can move with it.
 //
-// Backend: POST records/import/review/:id/commit|cancel|family/cell
+// Backend: GET records/import/review/:id/rows, POST records/import/review/:id/apply|commit|cancel
 (function (window, document) {
     'use strict';
 
@@ -25,8 +24,13 @@
 
     var commitUrl   = root.dataset.commitUrl;
     var cancelUrl   = root.dataset.cancelUrl;
-    var cellUrl     = root.dataset.cellUrl;
     var redirectUrl = root.dataset.redirectUrl;
+    var rowsUrl      = root.dataset.rowsUrl;
+    var applyUrl     = root.dataset.applyUrl;
+    var searchEl     = document.getElementById('importReviewSearch');
+    var perPageEl    = document.getElementById('importReviewPerPage');
+    var codeFilterEl = document.getElementById('importReviewCodeFilter');
+    var pagerEl      = document.getElementById('importReviewPager');
 
     var table      = document.getElementById('importReviewTable');
     var tbody      = table ? table.querySelector('tbody') : null;
@@ -36,7 +40,6 @@
     var statusEl   = document.getElementById('importReviewStatus');
     var confirmBtn = document.getElementById('importReviewConfirm');
     var cancelBtn  = document.getElementById('importReviewCancel');
-    var problemsOnlyBox = document.getElementById('problemsOnly');
 
     // The two action buttons are not optional: without them there is no way to finish
     // or discard the staged import, so a page missing them is not a review page.
@@ -44,9 +47,21 @@
         return;
     }
 
-    var review = parseJson('importReviewData', { file: '', counts: {}, people: [] });
+    var state = {
+        page: 1,
+        per: 25,
+        severity: 'all',
+        code: '',
+        q: '',
+        total: 0,
+        filtered: 0
+    };
+
+    var rowsBySheetRow = {};
+
+    var summary = parseJson('importReviewSummary', { file: '', counts: {}, codes: [] });
     // Dropdown option lists (field => [option strings]) for the columns that are dropdowns
-    // in the Excel template, so an inline cell edit offers the same choices as the sheet.
+    // in the Excel template, so an inline field edit offers the same choices as the sheet.
     var fieldOptions = parseJson('importReviewFieldOptions', {});
 
     function parseJson(id, fallback) {
@@ -151,58 +166,82 @@
 
     // -- the table -------------------------------------------------------------
 
-    function render() {
-        var counts = review.counts || {};
-        var people = Array.isArray(review.people) ? review.people : [];
+    function loadRows() {
+        setStatus('Loading...');
 
-        if (fileEl) {
-            fileEl.textContent = review.file || '';
-        }
+        var url = rowsUrl
+            + '?page=' + encodeURIComponent(state.page)
+            + '&per=' + encodeURIComponent(state.per)
+            + '&severity=' + encodeURIComponent(state.severity)
+            + '&code=' + encodeURIComponent(state.code)
+            + '&q=' + encodeURIComponent(state.q);
 
-        renderNotices(review.fileNotices);
-
-        if (tbody) {
-            tbody.textContent = '';
-            people.forEach(function (person) {
-                tbody.appendChild(personRow(person));
+        return window.fetch(url, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            credentials: 'same-origin'
+        }).then(function (response) {
+            return response.json().then(function (data) {
+                return { ok: response.ok, data: data };
             });
-        }
+        }).then(function (result) {
+            if (!result.ok) {
+                setStatus((result.data && result.data.message) || 'The rows could not be loaded.');
+                return;
+            }
 
-        applyProblemsOnly();
-
-        var blocking = Number(counts.blocking || 0);
-        confirmBtn.disabled = blocking > 0;
-        confirmBtn.title = blocking > 0
-            ? 'Fix the flagged values first, or correct them in the spreadsheet and upload again.'
-            : '';
-    }
-
-    // Whole-file problems (unreadable / empty workbook): there is no row to flag.
-    function renderNotices(notices) {
-        if (!noticesEl) {
-            return;
-        }
-
-        noticesEl.textContent = '';
-
-        (notices || []).forEach(function (message) {
-            noticesEl.appendChild(el('div', 'alert alert-danger', message));
+            state.total = Number(result.data.total || 0);
+            state.filtered = Number(result.data.filtered || 0);
+            renderRows(result.data.rows || []);
+            renderPager();
+            setStatus('');
+        }).catch(function () {
+            setStatus('A network error occurred. Please try again.');
         });
     }
 
-    function personRow(person) {
-        var flagged = !!person.severity;
-        var tr = el('tr', flagged ? (person.severity === 'blocking' ? 'table-danger' : 'table-warning') : '');
-        tr.dataset.row = person.sheetRow;
-        tr.dataset.flagged = flagged ? '1' : '0';
+    function renderRows(rows) {
+        tbody.textContent = '';
+        rowsBySheetRow = {};
 
-        tr.appendChild(statusCell(person.severity));
-        tr.appendChild(el('td', null, person.family || ''));
-        tr.appendChild(el('td', null, person.role || ''));
-
-        ['lastname', 'firstname', 'birthday', 'sex'].forEach(function (field) {
-            tr.appendChild(valueCell(person, field));
+        rows.forEach(function (row) {
+            rowsBySheetRow[row.sheetRow] = row;
         });
+
+        if (!rows.length) {
+            var empty = el('tr');
+            var cell = el('td', 'text-center text-muted py-4', 'No people match this filter.');
+            cell.colSpan = 7;
+            empty.appendChild(cell);
+            tbody.appendChild(empty);
+        }
+
+        rows.forEach(function (row) {
+            tbody.appendChild(personRow(row));
+        });
+
+        renderCount();
+    }
+
+    function renderCount() {
+        var first = state.filtered === 0 ? 0 : ((state.page - 1) * state.per) + 1;
+        var last = Math.min(state.page * state.per, state.filtered);
+
+        countEl.textContent = 'Showing ' + first + ' to ' + last + ' of ' + state.filtered
+            + ' people' + (state.filtered !== state.total ? ' (filtered from ' + state.total + ')' : '');
+    }
+
+    function personRow(row) {
+        var flagged = !!row.severity;
+        var tr = el('tr', flagged ? (row.severity === 'blocking' ? 'table-danger' : 'table-warning') : '');
+        tr.dataset.row = row.sheetRow;
+
+        tr.appendChild(statusCell(row.severity));
+        tr.appendChild(el('td', null, row.family || ''));
+        tr.appendChild(el('td', null, row.role || ''));
+        tr.appendChild(el('td', null, (row.values || {}).lastname || ''));
+        tr.appendChild(el('td', null, (row.values || {}).firstname || ''));
+        tr.appendChild(issuesCell(row.issues || []));
+        tr.appendChild(openCell(row));
 
         return tr;
     }
@@ -224,54 +263,118 @@
         return td;
     }
 
-    // A clean value renders as text. A flagged one renders as its own editor, tinted by
-    // severity, carrying the reason: the cell that is wrong is the cell you type into.
-    function valueCell(person, field) {
-        var values = person.values || {};
-        var cell = (person.cells || {})[field];
+    // Every distinct problem on the row, including the informational ones that offer
+    // nothing to edit: a row that will be skipped must say so.
+    function issuesCell(issues) {
+        var td = el('td');
 
-        if (!cell) {
-            return el('td', null, values[field] || '');
-        }
-
-        var td = el('td', cell.severity === 'blocking' ? 'bg-danger-subtle' : 'bg-warning-subtle');
-        var options = fieldOptions[field];
-        td.appendChild((options && options.length) ? buildCellSelect(cell, options) : buildCellInput(cell));
-
-        if (cell.message) {
-            var msg = el('div', 'form-text', cell.message);
-            td.appendChild(msg);
-        }
+        issues.forEach(function (issue) {
+            var badge = el('span',
+                'badge me-1 ' + (issue.severity === 'blocking' ? 'text-bg-danger' : 'text-bg-warning'),
+                issue.label);
+            badge.title = issue.message || '';
+            td.appendChild(badge);
+        });
 
         return td;
     }
 
-    // Shared data-* + a11y wiring for either control kind, plus the class the save handler
-    // watches. data-original keeps a no-op edit from posting.
-    function applyCellControlAttrs(control, cell) {
-        control.classList.add('js-import-cell');
-        control.dataset.row = cell.sheetRow;
-        control.dataset.field = cell.field;
-        control.dataset.original = cell.value || '';
-        control.title = (cell.cell ? 'Cell ' + cell.cell + '. ' : '') + (cell.message || '');
-        control.setAttribute('aria-label', cell.label + (cell.message ? ' - ' + cell.message : ''));
+    // Only a row with something to type into gets a toggle.
+    function openCell(row) {
+        var td = el('td', 'text-end');
+
+        if (!(row.fields || []).length) {
+            return td;
+        }
+
+        var button = el('button', 'btn btn-sm btn-outline-secondary js-import-open');
+        button.type = 'button';
+        button.dataset.row = row.sheetRow;
+        button.setAttribute('aria-expanded', 'false');
+        button.appendChild(el('i', 'bi bi-pencil'));
+        button.appendChild(el('span', 'visually-hidden', 'Fix this person'));
+        td.appendChild(button);
+
+        return td;
     }
 
-    function buildCellInput(cell) {
+    // The editor panel: one control per field carrying a problem, plus Apply/Discard.
+    // Nothing posts until Apply, so a mistyped correction is discardable.
+    function panelRow(row) {
+        var tr = el('tr', 'js-import-panel');
+        tr.dataset.panelFor = row.sheetRow;
+
+        var td = el('td', 'bg-body-tertiary');
+        td.colSpan = 7;
+
+        var wrap = el('div', 'p-3');
+        var grid = el('div', 'row g-2');
+
+        (row.fields || []).forEach(function (field) {
+            grid.appendChild(fieldControl(field, row.sheetRow));
+        });
+
+        wrap.appendChild(grid);
+
+        var actions = el('div', 'd-flex justify-content-end gap-2 mt-3');
+        var discard = el('button', 'btn btn-link js-import-discard', 'Discard');
+        discard.type = 'button';
+        var apply = el('button', 'btn btn-primary js-import-apply', 'Apply');
+        apply.type = 'button';
+        apply.dataset.row = row.sheetRow;
+        actions.appendChild(discard);
+        actions.appendChild(apply);
+        wrap.appendChild(actions);
+
+        td.appendChild(wrap);
+        tr.appendChild(td);
+
+        return tr;
+    }
+
+    function fieldControl(field, sheetRow) {
+        var col = el('div', 'col-12 col-md-6 col-lg-4');
+        var id = 'importField-' + sheetRow + '-' + field.field;
+
+        var label = el('label', 'form-label small mb-1', field.label
+            + (field.cell ? ' (cell ' + field.cell + ')' : ''));
+        label.setAttribute('for', id);
+        col.appendChild(label);
+
+        var options = fieldOptions[field.field];
+        var control = (options && options.length)
+            ? buildSelect(field, options)
+            : buildInput(field);
+
+        control.id = id;
+        control.classList.add('js-import-field');
+        control.dataset.field = field.field;
+        control.dataset.row = sheetRow;
+        col.appendChild(control);
+
+        if (field.message) {
+            col.appendChild(el('div',
+                'form-text ' + (field.severity === 'blocking' ? 'text-danger' : 'text-warning-emphasis'),
+                field.message));
+        }
+
+        return col;
+    }
+
+    function buildInput(field) {
         var input = el('input', 'form-control form-control-sm');
         input.type = 'text';
-        input.value = cell.value || '';
-        applyCellControlAttrs(input, cell);
+        input.value = field.value || '';
 
         return input;
     }
 
     // A <select> mirroring the Excel column's dropdown. A blank first choice lets a
-    // required-but-empty cell start unselected; an off-list current value is kept as its own
-    // option so saving never silently drops what is already there.
-    function buildCellSelect(cell, options) {
+    // required-but-empty field start unselected; an off-list current value is kept as its
+    // own option so saving never silently drops what is already there.
+    function buildSelect(field, options) {
         var select = el('select', 'form-select form-select-sm');
-        var current = cell.value || '';
+        var current = field.value || '';
 
         var blank = el('option', null, '- choose -');
         blank.value = '';
@@ -295,32 +398,7 @@
             select.appendChild(keep);
         }
 
-        applyCellControlAttrs(select, cell);
-
         return select;
-    }
-
-    // The switch defaults to on: with a clean file the operator sees an empty table and
-    // presses Confirm import. The footer always counts both, so an empty table is not
-    // mistaken for an empty file.
-    function applyProblemsOnly() {
-        var only = !problemsOnlyBox || problemsOnlyBox.checked;
-        var rows = tbody ? tbody.querySelectorAll('tr') : [];
-        var shown = 0;
-
-        Array.prototype.forEach.call(rows, function (tr) {
-            var hide = only && tr.dataset.flagged === '0';
-            tr.classList.toggle('d-none', hide);
-
-            if (!hide) {
-                shown += 1;
-            }
-        });
-
-        if (countEl) {
-            countEl.textContent = 'Showing ' + shown + ' of ' + rows.length + ' people'
-                + (only ? ' (rows with problems only)' : '');
-        }
     }
 
     // -- network ---------------------------------------------------------------
@@ -361,65 +439,207 @@
         }
     }
 
-    // Applies a fresh report and repaints. Also called by manage-family-modal.js after an
-    // edit saves, hence the global handle.
-    function applyReview(freshReview, csrfHash) {
-        if (freshReview) {
-            review = freshReview;
-        }
-
-        refreshCsrf(csrfHash);
-        render();
-    }
-
-    window.importReviewApply = applyReview;
-
     // -- actions ---------------------------------------------------------------
 
-    // Persists one inline cell edit (only when its value actually changed), then repaints
-    // from the fresh, re-validated report so the flag clears live.
-    function saveCell(input) {
-        if (!cellUrl) {
+    function applyRow(sheetRow) {
+        var panel = tbody.querySelector('[data-panel-for="' + sheetRow + '"]');
+
+        if (!panel) {
             return;
         }
 
-        var value = input.value;
-        var original = input.dataset.original != null ? input.dataset.original : '';
+        var controls = panel.querySelectorAll('.js-import-field');
+        var payload = { import_row: sheetRow };
+        var any = false;
 
-        if (value === original) {
+        Array.prototype.forEach.call(controls, function (control) {
+            payload['fields[' + control.dataset.field + ']'] = control.value;
+            any = true;
+        });
+
+        if (!any) {
             return;
         }
 
-        input.disabled = true;
-        setStatus('Saving ' + (input.dataset.field || 'cell') + '...');
+        setBusy(panel, true);
+        setStatus('Applying...');
 
-        postForm(cellUrl, {
-            import_row: input.dataset.row,
-            field: input.dataset.field,
-            value: value
-        }).then(function (result) {
+        postForm(applyUrl, payload).then(function (result) {
             var data = result.data || {};
+            refreshCsrf(data.csrf);
 
-            if (result.ok && data.review) {
-                applyReview(data.review, data.csrf);
-                setStatus(data.message || 'Saved.');
+            if (!result.ok) {
+                setBusy(panel, false);
+                setStatus(data.message || 'The correction could not be applied.');
 
                 return;
             }
 
-            input.disabled = false;
-            refreshCsrf(data.csrf);
-            setStatus(data.message || 'Could not save. Please try again.');
+            updateCounts(data.counts);
+
+            // These fields drive rules that reach other rows, so the rest of the page
+            // cannot be trusted to be current: refetch instead of splicing.
+            if (data.refresh) {
+                loadRows();
+                setStatus('Applied.');
+
+                return;
+            }
+
+            replaceRow(sheetRow, data.row);
+            setStatus('Applied.');
         }).catch(function () {
-            input.disabled = false;
+            setBusy(panel, false);
             setStatus('A network error occurred. Please try again.');
         });
+    }
+
+    function replaceRow(sheetRow, row) {
+        var tr = tbody.querySelector('tr[data-row="' + sheetRow + '"]');
+        var panel = tbody.querySelector('[data-panel-for="' + sheetRow + '"]');
+
+        if (panel) {
+            panel.remove();
+        }
+
+        if (!tr || !row) {
+            loadRows();
+
+            return;
+        }
+
+        rowsBySheetRow[sheetRow] = row;
+        tr.replaceWith(personRow(row));
+    }
+
+    function updateCounts(counts) {
+        if (!counts) {
+            return;
+        }
+
+        summary.counts = counts;
+        var blocking = Number(counts.blocking || 0);
+
+        root.querySelectorAll('[data-count="blocking"]').forEach(function (node) {
+            node.textContent = blocking;
+        });
+        root.querySelectorAll('[data-count="warnings"]').forEach(function (node) {
+            node.textContent = Number(counts.warnings || 0);
+        });
+
+        confirmBtn.disabled = blocking > 0;
+        confirmBtn.title = blocking > 0
+            ? 'Fix the flagged values first, or correct them in the spreadsheet and upload again.'
+            : '';
+    }
+
+    // One panel at a time: two open editors on one screen invite applying the wrong row.
+    function togglePanel(button) {
+        var sheetRow = button.dataset.row;
+        var open = tbody.querySelector('[data-panel-for="' + sheetRow + '"]');
+
+        if (open) {
+            closePanel(open);
+
+            return;
+        }
+
+        tbody.querySelectorAll('.js-import-panel').forEach(closePanel);
+
+        var tr = tbody.querySelector('tr[data-row="' + sheetRow + '"]');
+        var row = rowsBySheetRow[sheetRow];
+
+        if (!tr || !row) {
+            return;
+        }
+
+        tr.after(panelRow(row));
+        button.setAttribute('aria-expanded', 'true');
+    }
+
+    function closePanel(panel) {
+        if (!panel) {
+            return;
+        }
+
+        var button = tbody.querySelector('.js-import-open[data-row="' + panel.dataset.panelFor + '"]');
+
+        if (button) {
+            button.setAttribute('aria-expanded', 'false');
+        }
+
+        panel.remove();
+    }
+
+    // Locks the panel while its Apply is in flight, so a double click cannot post twice.
+    function setBusy(panel, busy) {
+        panel.querySelectorAll('input, select, button').forEach(function (node) {
+            node.disabled = busy;
+        });
+    }
+
+    // A windowed pager: first, last, and two either side of the current page, so a
+    // 400-page import does not render 400 links.
+    function renderPager() {
+        pagerEl.textContent = '';
+
+        var pages = Math.max(1, Math.ceil(state.filtered / state.per));
+
+        if (pages < 2) {
+            return;
+        }
+
+        pagerEl.appendChild(pageItem('Previous', state.page - 1, state.page === 1));
+
+        var wanted = {};
+        wanted[1] = true;
+        wanted[pages] = true;
+
+        for (var n = state.page - 2; n <= state.page + 2; n++) {
+            if (n >= 1 && n <= pages) {
+                wanted[n] = true;
+            }
+        }
+
+        var numbers = Object.keys(wanted).map(Number).sort(function (a, b) { return a - b; });
+        var previous = 0;
+
+        numbers.forEach(function (n) {
+            if (previous && n - previous > 1) {
+                var gap = el('li', 'page-item disabled');
+                gap.appendChild(el('span', 'page-link', '...'));
+                pagerEl.appendChild(gap);
+            }
+
+            pagerEl.appendChild(pageItem(String(n), n, false, n === state.page));
+            previous = n;
+        });
+
+        pagerEl.appendChild(pageItem('Next', state.page + 1, state.page === pages));
+    }
+
+    function pageItem(label, page, disabled, active) {
+        var li = el('li', 'page-item' + (disabled ? ' disabled' : '') + (active ? ' active' : ''));
+        var a = el('a', 'page-link', label);
+        a.href = '#';
+
+        if (!disabled) {
+            a.dataset.page = page;
+        }
+
+        if (active) {
+            a.setAttribute('aria-current', 'page');
+        }
+
+        li.appendChild(a);
+
+        return li;
     }
 
     // Recap what the write job will do, then commit only on confirm: the write is not
     // reversible from this screen.
     function confirmImport() {
-        var counts = review.counts || {};
+        var counts = summary.counts || {};
         var newFamilies = Number(counts.newFamilies != null ? counts.newFamilies : (counts.families || 0));
         var appends = Number(counts.appends || 0);
         var skipped = Number(counts.existing || 0);
@@ -467,12 +687,6 @@
                 window.location.href = data.redirect || redirectUrl;
 
                 return;
-            }
-
-            // Refused: the file still has issues. Repaint from the fresh report.
-            if (data.review) {
-                review = data.review;
-                render();
             }
 
             cancelBtn.disabled = false;
@@ -529,31 +743,83 @@
 
     // -- wire up ---------------------------------------------------------------
 
-    // Delegated: every row is repainted after a save, so per-control listeners would die.
-    root.addEventListener('change', function (event) {
-        var target = event.target;
+    root.addEventListener('click', function (event) {
+        var open = event.target.closest ? event.target.closest('.js-import-open') : null;
 
-        if (target && target.classList && target.classList.contains('js-import-cell')) {
-            saveCell(target);
+        if (open) {
+            togglePanel(open);
+
+            return;
         }
-    });
 
-    // Enter commits an inline cell edit (blur fires the change handler above).
-    root.addEventListener('keydown', function (event) {
-        var target = event.target;
+        var apply = event.target.closest ? event.target.closest('.js-import-apply') : null;
 
-        if (event.key === 'Enter' && target && target.classList && target.classList.contains('js-import-cell')) {
+        if (apply) {
+            applyRow(apply.dataset.row);
+
+            return;
+        }
+
+        var discard = event.target.closest ? event.target.closest('.js-import-discard') : null;
+
+        if (discard) {
+            closePanel(discard.closest('.js-import-panel'));
+
+            return;
+        }
+
+        var pageLink = event.target.closest ? event.target.closest('[data-page]') : null;
+
+        if (pageLink) {
             event.preventDefault();
-            target.blur();
+            state.page = Number(pageLink.dataset.page);
+            loadRows();
         }
     });
 
-    if (problemsOnlyBox) {
-        problemsOnlyBox.addEventListener('change', applyProblemsOnly);
-    }
+    root.addEventListener('click', function (event) {
+        var pill = event.target.closest ? event.target.closest('[data-severity]') : null;
+
+        if (!pill) {
+            return;
+        }
+
+        root.querySelectorAll('[data-severity]').forEach(function (node) {
+            node.classList.toggle('active', node === pill);
+        });
+
+        state.severity = pill.dataset.severity;
+        state.page = 1;
+        loadRows();
+    });
+
+    // Debounced so typing does not fire a request per keystroke.
+    var searchTimer = null;
+
+    searchEl.addEventListener('input', function () {
+        window.clearTimeout(searchTimer);
+        searchTimer = window.setTimeout(function () {
+            state.q = searchEl.value;
+            state.page = 1;
+            loadRows();
+        }, 250);
+    });
+
+    perPageEl.addEventListener('change', function () {
+        state.per = Number(perPageEl.value);
+        state.page = 1;
+        loadRows();
+    });
+
+    codeFilterEl.addEventListener('change', function () {
+        state.code = codeFilterEl.value;
+        state.page = 1;
+        loadRows();
+    });
 
     confirmBtn.addEventListener('click', confirmImport);
     cancelBtn.addEventListener('click', cancelImport);
 
-    render();
+    updateCounts(summary.counts);
+    loadRows();
 })(window, document);

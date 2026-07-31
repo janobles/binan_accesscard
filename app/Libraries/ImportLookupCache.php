@@ -92,13 +92,42 @@ class ImportLookupCache
         return (is_array($data) && isset($data['heads'], $data['people'])) ? $data : null;
     }
 
-    /** @param array{heads: array, people: array} $lookups */
+    /**
+     * Writes the cache atomically, so a reader mid-write sees the previous cache
+     * rather than half a JSON document. read() would decode a torn file to null and
+     * silently pay for the two lookups again, which is the cost this class exists
+     * to avoid.
+     *
+     * @param array{heads: array, people: array} $lookups
+     */
     private function write(int $jobId, array $lookups): void
     {
         if (! is_dir($this->dir)) {
             @mkdir($this->dir, 0775, true);
         }
 
-        file_put_contents($this->path($jobId), json_encode($lookups));
+        $json = json_encode($lookups);
+
+        if ($json === false) {
+            return;
+        }
+
+        $path = $this->path($jobId);
+        $tmp  = $path . '.tmp' . bin2hex(random_bytes(4));
+
+        if (file_put_contents($tmp, $json, LOCK_EX) === false) {
+            return;
+        }
+
+        // rename() cannot overwrite on Windows, so clear the target first.
+        if (is_file($path) && ! @unlink($path)) {
+            @unlink($tmp);
+
+            return;
+        }
+
+        if (! @rename($tmp, $path)) {
+            @unlink($tmp);
+        }
     }
 }

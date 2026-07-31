@@ -218,4 +218,41 @@ final class ImportStagingStoreTest extends CIUnitTestCase
         $this->assertSame(0, $store->sweep([45]));
         $this->assertFileExists($this->dir . '/job-45-rows.json');
     }
+
+    public function testAWriteLeavesNoTempFileBehind(): void
+    {
+        // The rows file is written through a temp + rename so a concurrent read never
+        // sees half a JSON document. The temp must not survive the write.
+        $store = $this->store();
+        $store->save(46, ['phase' => 'review', 'rows' => [['sheetRow' => 3]], 'errors' => [], 'counts' => []]);
+        $store->saveRows(46, [['sheetRow' => 4]]);
+
+        $this->assertSame([], glob($this->dir . '/job-46*.tmp*'));
+        $this->assertSame(4, $store->load(46)['rows'][0]['sheetRow']);
+    }
+
+    public function testSweepRemovesAnAbandonedTempFile(): void
+    {
+        // A crash between the temp write and the rename leaves PII on disk under a name
+        // no job owns, so the backstop has to reach it too.
+        $store = $this->store();
+        $temp  = $this->dir . '/job-47-rows.json.tmpdeadbeef';
+
+        file_put_contents($temp, '{}');
+        touch($temp, time() - (25 * 3600));
+
+        $this->assertSame(1, $store->sweep([]));
+        $this->assertFileDoesNotExist($temp);
+    }
+
+    public function testSweepSparesAFreshTempFile(): void
+    {
+        $store = $this->store();
+        $temp  = $this->dir . '/job-48-rows.json.tmpdeadbeef';
+
+        file_put_contents($temp, '{}');
+
+        $this->assertSame(0, $store->sweep([]));
+        $this->assertFileExists($temp);
+    }
 }

@@ -144,10 +144,44 @@ class ImportStagingStore
         }
     }
 
-    /** @param array<mixed> $data */
+    /**
+     * Writes one staging file atomically: temp file + rename, with a Windows-safe
+     * overwrite fallback (rename() cannot overwrite on Windows). Matches
+     * ActiveSessionRegistry's helper.
+     *
+     * A rows file is megabytes, so a plain write leaves a window where a reader sees
+     * half a JSON document: the review polls the same job the Apply is rewriting, and
+     * a truncated read decodes to null and empties the operator's table.
+     *
+     * @param array<mixed> $data
+     */
     private function put(string $path, array $data): bool
     {
-        return file_put_contents($path, json_encode($data)) !== false;
+        $json = json_encode($data);
+
+        if ($json === false) {
+            return false;
+        }
+
+        $tmp = $path . '.tmp' . bin2hex(random_bytes(4));
+
+        if (file_put_contents($tmp, $json, LOCK_EX) === false) {
+            return false;
+        }
+
+        if (is_file($path) && ! @unlink($path)) {
+            @unlink($tmp);
+
+            return false;
+        }
+
+        if (! @rename($tmp, $path)) {
+            @unlink($tmp);
+
+            return false;
+        }
+
+        return true;
     }
 
     /** @return array<mixed> the decoded file, or [] when missing/unreadable */
@@ -206,6 +240,27 @@ class ImportStagingStore
 
             $this->delete($jobId);
             $removed++;
+        }
+
+        return $removed + $this->sweepTempFiles($cutoff);
+    }
+
+    /**
+     * Removes atomic-write temp files left behind by a crash mid-write. They hold the
+     * same family PII as the file they were becoming, so they cannot sit on disk
+     * forever. One older than the TTL is dead whatever job it belonged to: a live
+     * write renames its temp away in milliseconds.
+     */
+    private function sweepTempFiles(int $cutoff): int
+    {
+        $removed = 0;
+
+        foreach ((array) glob($this->dir . DIRECTORY_SEPARATOR . 'job-*.json.tmp*') as $file) {
+            $mtime = @filemtime((string) $file);
+
+            if ($mtime !== false && $mtime <= $cutoff && @unlink((string) $file)) {
+                $removed++;
+            }
         }
 
         return $removed;

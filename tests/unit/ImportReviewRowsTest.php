@@ -360,6 +360,102 @@ final class ImportReviewRowsTest extends CIUnitTestCase
         $result->assertStatus(404);
     }
 
+    /**
+     * A job staged by one user must be invisible to another, on every review endpoint -
+     * the review bundle carries full family PII (names, birthdays, addresses). A mismatch
+     * returns the same 404 as a missing job rather than a 403, so the response cannot be
+     * used to confirm another operator's job ID exists.
+     */
+    public function testReviewPageRefusesAJobStagedByAnotherUser(): void
+    {
+        $owner  = $this->encoder();
+        $other  = $this->encoder();
+        $jobId  = $this->stageJob($owner);
+
+        $result = $this->withSession($this->session($other))
+            ->get('records/import/review/' . $jobId);
+
+        $result->assertRedirectTo(site_url('records'));
+        $this->assertSame('That import is no longer available to review.', session('error'));
+    }
+
+    public function testReviewPageStillWorksForTheOwner(): void
+    {
+        $owner = $this->encoder();
+        $jobId = $this->stageJob($owner);
+
+        $result = $this->withSession($this->session($owner))
+            ->get('records/import/review/' . $jobId);
+
+        $result->assertStatus(200);
+    }
+
+    public function testRowsRefusesAJobStagedByAnotherUser(): void
+    {
+        $owner = $this->encoder();
+        $other = $this->encoder();
+        $jobId = $this->stageJob($owner);
+
+        $result = $this->withSession($this->session($other))
+            ->get('records/import/review/' . $jobId . '/rows');
+
+        $result->assertStatus(404);
+        $this->assertStringContainsString('no longer available', (string) $result->response()->getBody());
+    }
+
+    public function testApplyRefusesAJobStagedByAnotherUser(): void
+    {
+        $owner = $this->encoder();
+        $other = $this->encoder();
+        $jobId = $this->stageJob($owner);
+
+        $result = $this->withSession($this->session($other))
+            ->post('records/import/review/' . $jobId . '/apply', [
+                'import_row' => 4,
+                'fields'     => ['sex' => 'Female'],
+            ]);
+
+        $result->assertStatus(404);
+
+        // The other user's request must not have touched the owner's staged rows.
+        $staged = service('importStaging')->load($jobId);
+        $this->assertSame('Mail', $staged['rows'][1]['data']['sex']);
+    }
+
+    public function testCommitRefusesAJobStagedByAnotherUser(): void
+    {
+        $owner = $this->encoder();
+        $other = $this->encoder();
+        $jobId = $this->stageJob($owner);
+
+        $result = $this->withSession($this->session($other))
+            ->post('records/import/review/' . $jobId . '/commit');
+
+        $result->assertStatus(404);
+
+        // Refused before it could enqueue a write job or flip the review job's phase.
+        $job = db_connect()->table('job_queue')->where('jobID', $jobId)->get()->getRowArray();
+        $this->assertSame('done', $job['status']);
+    }
+
+    public function testCancelRefusesAJobStagedByAnotherUser(): void
+    {
+        $owner = $this->encoder();
+        $other = $this->encoder();
+        $jobId = $this->stageJob($owner);
+
+        $result = $this->withSession($this->session($other))
+            ->post('records/import/review/' . $jobId . '/cancel');
+
+        $result->assertStatus(200);
+
+        // Silently no-ops rather than confirming the job exists: the staging file and
+        // the owner's job status are both left untouched.
+        $this->assertNotNull(service('importStaging')->load($jobId));
+        $job = db_connect()->table('job_queue')->where('jobID', $jobId)->get()->getRowArray();
+        $this->assertSame('done', $job['status']);
+    }
+
     public function testApplyStillValidatesAfterANonInvalidatingEditReusesTheCache(): void
     {
         // A smoke check that the cached path produces a usable report end to end. The

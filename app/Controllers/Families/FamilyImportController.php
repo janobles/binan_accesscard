@@ -569,8 +569,16 @@ class FamilyImportController extends BaseController
     }
 
     /**
-     * Loads a staged review job by ID, or null when it is missing, the wrong type, or no
-     * longer in the review phase (already committed / cancelled).
+     * Loads a staged review job by ID, or null when it is missing, the wrong type, staged
+     * by a different user, or no longer in the review phase (already committed /
+     * cancelled).
+     *
+     * Ownership is the job_queue row's userID (the same column stagedReviewIds() already
+     * keys on), not anything in the staging bundle. A mismatch returns null - the same
+     * "not found" outcome as a missing job - so an operator probing another user's job ID
+     * cannot tell it exists at all. Every review action shares this check; nobody gets a
+     * supervisor override, because none of the surrounding code (or docs) relies on one and
+     * a staged import holds full family PII.
      *
      * @return array{job: array, result: array}|null
      */
@@ -579,6 +587,10 @@ class FamilyImportController extends BaseController
         $job = $jobs->find($jobId);
 
         if ($job === null || ($job['type'] ?? '') !== 'family_import') {
+            return null;
+        }
+
+        if ((int) ($job['userID'] ?? 0) !== (int) session()->get('user_id')) {
             return null;
         }
 

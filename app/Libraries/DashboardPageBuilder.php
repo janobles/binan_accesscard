@@ -16,6 +16,7 @@ use App\Models\Scanner\DistributionBatchModel;
 use App\Support\FamilyProfilingFormV2;
 use App\Libraries\RoleAccess;
 use App\Models\ViewLayoutModel;
+use CodeIgniter\Database\Exceptions\DatabaseException;
 use CodeIgniter\HTTP\IncomingRequest;
 use Config\IdleTimeout;
 use Config\Navigation;
@@ -46,6 +47,38 @@ class DashboardPageBuilder
 
     /** Holds the current request so query params (search/filters/page) are available. */
     public function __construct(private IncomingRequest $request) {}
+
+    /**
+     * The shell's account variables: who the topbar names, and what the sidebar's
+     * user link may reach.
+     *
+     * A controller that renders `layout` directly (the import wizard, the family
+     * entry and profile pages) never runs buildViewData(), so without this it
+     * hands the shell no user at all and the topbar falls back to the word "User"
+     * while the operator is signed in as themselves. Session-only, so it costs
+     * nothing to call from a page that assembles the rest of its data itself.
+     *
+     * @return array{user: array, username: string, accountLevelLabel: string, canManageAccounts: bool}
+     */
+    public static function shellAccountData(): array
+    {
+        $role = RoleAccess::normalizeRole((string) session()->get('role'));
+
+        try {
+            $user = SessionAccount::user();
+        } catch (DatabaseException $e) {
+            // The name in the topbar is not worth a 500. Fall back to the session,
+            // which already carries the username the operator signed in with.
+            $user = (array) session()->get();
+        }
+
+        return [
+            'user'              => $user,
+            'username'          => (string) (session()->get('username') ?? 'Admin'),
+            'accountLevelLabel' => SessionAccount::levelLabel(),
+            'canManageAccounts' => in_array($role, ['Developer', 'Admin'], true),
+        ];
+    }
 
     /** Normalized role label for the session, or null when the role is unknown. */
     private function currentRole(): ?string

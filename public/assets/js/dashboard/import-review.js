@@ -245,7 +245,7 @@
     }
 
     function statusCell(severity) {
-        var td = el('td', 'text-center');
+        var td = el('td', 'text-center import-review-status-col');
 
         if (!severity) {
             return td;
@@ -265,21 +265,24 @@
     // nothing to edit: a row that will be skipped must say so.
     function issuesCell(issues) {
         var td = el('td');
+        var list = el('div', 'import-review-issues');
 
         issues.forEach(function (issue) {
             var badge = el('span',
-                'badge me-1 ' + (issue.severity === 'blocking' ? 'text-bg-danger' : 'text-bg-warning'),
+                'badge ' + (issue.severity === 'blocking' ? 'text-bg-danger' : 'text-bg-warning'),
                 issue.label);
             badge.title = issue.message || '';
-            td.appendChild(badge);
+            list.appendChild(badge);
         });
+
+        td.appendChild(list);
 
         return td;
     }
 
     // Only a row with something to type into gets a toggle.
     function openCell(row) {
-        var td = el('td', 'text-end');
+        var td = el('td', 'text-end import-review-open-col');
 
         if (!(row.fields || []).length) {
             return td;

@@ -176,7 +176,7 @@ if (! function_exists('family_modal_render_person_fields')) {
             $feedbackId = $id !== '' ? $id . 'Feedback' : '';
             ?>
             <div class="col-12 col-md-6 col-xl-3">
-                <label class="form-label"<?= $attrs(['for' => $id]) ?>><?= esc($label) ?></label>
+                <label class="form-label"<?= $attrs(['for' => $id]) ?>><?= esc($label) ?><?= $required ? ' <span class="account-required-marker text-danger" aria-hidden="true">*</span>' : '' ?></label>
                 <?php if ($type === 'select'): ?>
                     <select<?= $attrs([
                         'class' => 'form-select' . ($hasOther ? ' js-other-select' : ''),

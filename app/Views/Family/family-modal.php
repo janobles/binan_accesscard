@@ -450,7 +450,6 @@ $renderMemberRow = static function ($index, array $m = [], bool $open = true) us
                         <h3 class="family-person-card-title">Family Members</h3>
                         <span class="badge rounded-pill text-bg-light border" data-family-members-count>0 members</span>
                     </div>
-                    <p class="small text-body-secondary mb-2">Everyone else in this household. Leave empty if there are none.</p>
 
                     <div class="list-group list-group-flush" data-family-members>
                         <?php foreach (array_values($existingMembers) as $i => $member): ?>

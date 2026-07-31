@@ -3,6 +3,7 @@
 namespace App\Controllers\Families;
 
 use App\Controllers\BaseController;
+use App\Libraries\DashboardPageBuilder;
 use App\Libraries\FamilyExcelImporter;
 use App\Libraries\FamilyExcelTemplate;
 use App\Libraries\ImportLookupCache;
@@ -66,7 +67,7 @@ class FamilyImportController extends BaseController
             return $guard;
         }
 
-        return view('layout', [
+        return view('layout', DashboardPageBuilder::shellAccountData() + [
             'activePage' => 'records-import',
             'role'       => RoleAccess::normalizeRole((string) session()->get('role')),
             'bodyView'   => 'Family/import-upload',
@@ -289,7 +290,7 @@ class FamilyImportController extends BaseController
                 ->with('error', 'That import is no longer available to review.');
         }
 
-        return view('layout', [
+        return view('layout', DashboardPageBuilder::shellAccountData() + [
             'activePage' => 'records-import',
             'role'       => RoleAccess::normalizeRole((string) session()->get('role')),
             'bodyView'   => 'Family/import-review',

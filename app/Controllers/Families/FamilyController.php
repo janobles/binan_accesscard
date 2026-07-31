@@ -3,6 +3,7 @@
 namespace App\Controllers\Families;
 
 use App\Controllers\BaseController;
+use App\Libraries\DashboardPageBuilder;
 use App\Libraries\FamilyModalDataBuilder;
 use App\Libraries\FamilyRecordWriteException;
 use App\Libraries\FamilyRecordWriter;
@@ -299,7 +300,7 @@ class FamilyController extends BaseController
 
         helper('dashboard_view_helper');
 
-        return view('layout', [
+        return view('layout', DashboardPageBuilder::shellAccountData() + [
             'activePage' => 'records-profile',
             'role'       => RoleAccess::normalizeRole((string) session()->get('role')),
             'bodyView'   => 'Family/profile',
@@ -1048,7 +1049,7 @@ class FamilyController extends BaseController
 
         helper('dashboard_view_helper');
 
-        return view('layout', [
+        return view('layout', DashboardPageBuilder::shellAccountData() + [
             'activePage' => 'records-entry',
             'role'       => RoleAccess::normalizeRole((string) session()->get('role')),
             'bodyView'   => 'Family/entry',

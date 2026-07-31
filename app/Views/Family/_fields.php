@@ -270,7 +270,7 @@ $renderMemberEditor = static function ($index, array $m = []) use (
             'disabled' => $readOnly,
         ]) ?>
         <div class="col-12 col-md-6 col-xl-3">
-            <label class="form-label" for="<?= esc($idPrefix . 'Relationship', 'attr') ?>">Relationship</label>
+            <label class="form-label" for="<?= esc($idPrefix . 'Relationship', 'attr') ?>">Relationship <span class="account-required-marker text-danger" aria-hidden="true">*</span></label>
             <select id="<?= esc($idPrefix . 'Relationship', 'attr') ?>" class="form-select js-other-select" data-other-field="relationship<?= esc($i, 'attr') ?>" data-initial-value="<?= esc($val('relationship'), 'attr') ?>" name="<?= esc($field('relationship'), 'attr') ?>" aria-describedby="<?= esc($idPrefix . 'RelationshipFeedback', 'attr') ?>" required<?= $readOnly ? ' disabled' : '' ?>><?= $selectOptions($relationshipOptions, $val('relationship'), 'Select') ?></select>
             <input class="form-control mt-2 js-other-input d-none" data-other-for="relationship<?= esc($i, 'attr') ?>" placeholder="Enter relationship" aria-label="Other relationship"<?= $readOnly ? ' disabled' : '' ?>>
             <div class="invalid-feedback" id="<?= esc($idPrefix . 'RelationshipFeedback', 'attr') ?>" data-family-field-error></div>
@@ -393,12 +393,12 @@ $renderMemberRow = static function ($index, array $m = [], bool $open = true) us
 
         <div class="w-100 d-none d-xl-block"></div>
         <div class="col-12 col-xl-8">
-            <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>HeadAddress">Address</label>
+            <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>HeadAddress">Address <span class="account-required-marker text-danger" aria-hidden="true">*</span></label>
             <input id="<?= esc($fieldPrefix, 'attr') ?>HeadAddress" name="head_address" class="form-control" type="text" value="<?= esc($oldValue('head_address'), 'attr') ?>" aria-describedby="<?= esc($fieldPrefix, 'attr') ?>HeadAddressFeedback" minlength="2" required<?= $readOnly ? ' disabled' : '' ?>>
             <div class="invalid-feedback" id="<?= esc($fieldPrefix, 'attr') ?>HeadAddressFeedback" data-family-field-error></div>
         </div>
         <div class="col-12 col-xl-4">
-            <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>HeadBarangay">Barangay</label>
+            <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>HeadBarangay">Barangay <span class="account-required-marker text-danger" aria-hidden="true">*</span></label>
             <select id="<?= esc($fieldPrefix, 'attr') ?>HeadBarangay" name="head_barangay" class="form-select" aria-describedby="<?= esc($fieldPrefix, 'attr') ?>HeadBarangayFeedback" required<?= $readOnly ? ' disabled' : '' ?>>
                 <?= $selectOptions($barangayOptions, $oldValue('head_barangay'), 'Barangay') ?>
             </select>
@@ -424,7 +424,6 @@ $renderMemberRow = static function ($index, array $m = [], bool $open = true) us
         <h3 class="family-person-card-title">Family Members</h3>
         <span class="badge rounded-pill text-bg-light border" data-family-members-count>0 members</span>
     </div>
-    <p class="small text-body-secondary mb-2">Everyone else in this household. Leave empty if there are none.</p>
 
     <div class="row g-3" data-family-members>
         <?php foreach (array_values($members) as $i => $member): ?>

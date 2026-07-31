@@ -26,15 +26,17 @@
 
     <div class="row d-none" data-entry-body data-family-entry-form>
         <div class="col-lg-3 mb-4">
-            <div class="list-group sticky-top family-entry-rail" id="entryRail">
-                <a class="list-group-item list-group-item-action" href="#section-head">Head of Family</a>
-                <a class="list-group-item list-group-item-action" href="#section-members">Household Members</a>
-                <a class="list-group-item list-group-item-action" href="#section-sectors">Sectors</a>
-                <a class="list-group-item list-group-item-action" href="#section-services">Services and Programs</a>
+            <div class="sticky-top family-entry-rail">
+                <div class="list-group" id="entryRail">
+                    <a class="list-group-item list-group-item-action" href="#section-head">Head of Family</a>
+                    <a class="list-group-item list-group-item-action" href="#section-members">Household Members</a>
+                    <a class="list-group-item list-group-item-action" href="#section-sectors">Sectors</a>
+                    <a class="list-group-item list-group-item-action" href="#section-services">Services and Programs</a>
+                </div>
+                <button class="<?= btn('save') ?> w-100 mt-3" type="submit" form="familyEntryForm" data-family-save>
+                    <i class="bi bi-check2-circle me-1" aria-hidden="true"></i>Save Record
+                </button>
             </div>
-            <button class="<?= btn('save') ?> w-100 mt-3" type="submit" form="familyEntryForm" data-family-save>
-                <i class="bi bi-check2-circle me-1" aria-hidden="true"></i>Save Record
-            </button>
         </div>
 
         <div class="col-lg-9" data-bs-spy="scroll" data-bs-target="#entryRail" data-bs-smooth-scroll="true" tabindex="0">

@@ -130,11 +130,24 @@ final class ImportWizardViewTest extends CIUnitTestCase
 
     public function testItUsesTheSemanticButtonHelperForActions(): void
     {
-        // btn() is the single source of truth for button colour; a hand-written
-        // btn-primary here would drift from the rest of the app.
-        $html = $this->render();
+        // btn() is the single source of truth for button colour. Checked against
+        // the view SOURCE, not the rendered HTML: btn('save') renders to the exact
+        // same string ("btn btn-primary") a hand-written class would, so rendered
+        // output can never tell correct helper use apart from the violation it is
+        // meant to catch.
+        $source = file_get_contents(APPPATH . 'Views/Family/import-review.php');
+        $this->assertIsString($source);
 
-        $this->assertStringNotContainsString('class="btn btn-primary" id="importReviewConfirm"', $html);
+        $this->assertStringContainsString('<?= btn(', $source,
+            'The confirm action should be styled through btn(), not a literal class.');
+
+        // A hand-written role class (what btn() would otherwise produce) must never
+        // appear as source text: it can only get into the rendered HTML through a
+        // btn() call, which does not spell these class names out in the view file.
+        foreach (['btn-primary', 'btn-success', 'btn-danger', 'btn-warning'] as $literal) {
+            $this->assertStringNotContainsString($literal, $source,
+                "Found a hand-written {$literal} class; use btn() instead.");
+        }
     }
 
     public function testItCarriesNoInlineStyles(): void

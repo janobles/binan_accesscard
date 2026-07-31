@@ -118,7 +118,7 @@ $fieldOptionsJson = json_encode($fieldOptions, JSON_HEX_TAG | JSON_HEX_AMP | JSO
         <button type="button" class="btn btn-outline-secondary" id="importReviewCancel">
             <i class="bi bi-x-circle me-1" aria-hidden="true"></i>Cancel import
         </button>
-        <button type="button" id="importReviewConfirm" class="<?= btn('save') ?>" disabled>
+        <button type="button" class="<?= btn('save') ?>" id="importReviewConfirm" disabled>
             <i class="bi bi-check2-circle me-1" aria-hidden="true"></i>Confirm import
         </button>
     </div>

@@ -1,12 +1,15 @@
 // Smoke test for public/assets/js/dashboard/manage-family-modal.js's standalone
 // Data Entry page path: `initFamilyEntryModal(document)` must run to completion
-// without throwing, must bind the form's submit handler, and
-// `bindControlNumberGate` must actually wire up so typing an available control
-// number reveals both gated sections of the spine and offers a draft restore
-// when one is on record. This repo has no JS test harness (no package.json, no
-// jsdom) - see the notes at the bottom of this file for what that means for how
-// this runs. Rather than add a new dependency, this builds a minimal DOM by
-// hand, just enough to exercise that path.
+// without throwing, must bind the form's submit handler, must NOT offer a
+// draft restore while the control-number gate is still shut (the officer has
+// no control number yet to contextualise the draft against - declining would
+// permanently clearDraft() it, accepting could bind it to the wrong record),
+// and `bindControlNumberGate` must actually wire up so typing an available
+// control number reveals both gated sections of the spine and, only then,
+// offers the draft restore. This repo has no JS test harness (no package.json,
+// no jsdom) - see the notes at the bottom of this file for what that means for
+// how this runs. Rather than add a new dependency, this builds a minimal DOM
+// by hand, just enough to exercise that path.
 //
 // The fixture below mirrors app/Views/Family/entry.php's real shape:
 // [data-family-entry-form] sits on the outer <div>, one level above <form>,
@@ -17,9 +20,10 @@
 //
 // Run with: node tests/js/entry-page-gate.smoke.mjs
 // Exits non-zero (and prints the failure) if the script throws during init, if
-// the submit handler never binds, if typing an available control number does
-// not reveal both gated sections, or if an on-record draft is not offered once
-// the gate opens.
+// the submit handler never binds, if a draft gets offered (or destroyed) while
+// the gate is shut, if typing an available control number does not reveal
+// both gated sections, or if an on-record draft is not offered once the gate
+// opens.
 
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
@@ -368,10 +372,11 @@ const existingDraft = JSON.stringify({
     service_ids: [],
     savedAt: Date.now(),
 });
+let draftRemoveCount = 0;
 fakeWindow.localStorage = {
     getItem: (key) => (key === 'binan_family_modal_draft_v1' ? existingDraft : null),
     setItem() {},
-    removeItem() {},
+    removeItem() { draftRemoveCount++; },
 };
 // Instant timers: the gate's real debounce (350ms) and the qr-check hang guard
 // (5000ms) would otherwise make this test slow for no benefit.
@@ -415,17 +420,23 @@ assert.equal(
     'initFamilyEntryModal() must bind a submit handler to the form.'
 );
 
-// Same root cause, different symptom: offerDraftRestoreIfVisible(root) also
-// did root.querySelector('form') and returned early on the same null. With the
-// fix, [data-family-entry-form] is never itself d-none on this page (only the
-// gated sections inside it are), so the restore prompt is offered at init,
-// before the control number gate even opens - see the fixed comment in
-// initFamilyEntryModal(). A draft is seeded in fakeWindow.localStorage above
-// so there is something to offer.
+// The regression this round fixes: offerDraftRestoreIfVisible(root) runs once
+// at page load (from initFamilyEntryModal above), while the gate is still
+// shut. [data-family-entry-form] is never itself d-none on this page (only
+// the gated sections inside it are), so without an explicit gate check this
+// call would offer the draft before a control number is even entered - and a
+// decline in that state permanently clearDraft()s a record the officer had no
+// way to contextualise. Both gated sections are still d-none here, so the
+// offer must not have happened and the draft must not have been touched.
 assert.equal(
     entryRoot.dataset.familyDraftOffered,
-    '1',
-    'A draft on record must be offered for restore once init runs.'
+    undefined,
+    'A draft must not be offered while the control-number gate is still shut.'
+);
+assert.equal(
+    draftRemoveCount,
+    0,
+    'The draft must survive while the gate is shut (no offer means no decline-path clearDraft()).'
 );
 
 // The gate must actually have wired up: typing a control number should trigger
@@ -446,4 +457,13 @@ assert.equal(sectionHead.classList.contains('d-none'), false, 'A control number 
 assert.equal(sectionMembers.classList.contains('d-none'), false, 'A control number the server reports available must reveal the members section.');
 assert.equal(realControlNumberInput.value, '12345', 'The hidden qr_control_no field must be filled once the gate clears.');
 
-console.log('OK: entry page init does not throw, the submit handler binds, a draft on record is offered, and the control-number gate reveals both spine sections.');
+// Only once the gate has actually opened should the draft get offered - this
+// is bindControlNumberGate's own offerDraftRestoreIfVisible(root) call on the
+// available path, matching the page's pre-spine behaviour.
+assert.equal(
+    entryRoot.dataset.familyDraftOffered,
+    '1',
+    'A draft on record must be offered for restore once the gate opens.'
+);
+
+console.log('OK: entry page init does not throw, the submit handler binds, the draft stays untouched while the gate is shut, and it is offered once the gate opens.');

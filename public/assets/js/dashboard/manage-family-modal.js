@@ -1921,12 +1921,14 @@
         refreshAllChoicesSummaries(root);
         renumberMembers(root);
 
-        // Restore-on-reopen prompt (create mode only). [data-family-entry-form]
-        // is never itself d-none on the entry page (only the gated sections
-        // inside it are), so this call runs at page load, before the control
-        // number is entered. bindControlNumberGate calls this again once the
-        // gate opens, but that second call is a no-op by then: the dataset flag
-        // this sets is what stops it firing twice, not visibility.
+        // Restore-on-reopen prompt (create mode only). This call runs at page
+        // load, while the entry page's control-number gate is still shut, so
+        // offerDraftRestoreIfVisible's own gateShut check bails out here - the
+        // officer has no control number yet to contextualise the draft
+        // against. bindControlNumberGate calls this again once the gate
+        // opens, and that call is the one that actually offers it (matching
+        // the page's pre-spine behaviour). On Family/profile.php, which has
+        // no gate, this call is the only one and fires normally.
         offerDraftRestoreIfVisible(root);
     }
 
@@ -1940,7 +1942,25 @@
 
         var formEl = root.querySelector('form');
 
-        if (!formEl || !isCreateForm(root) || root.classList.contains('d-none') || root.dataset.familyDraftOffered === '1') {
+        // The entry page's wrapper is never itself d-none (only the gated
+        // sections inside it are, once the spine replaced the single hidden
+        // body this page used to have), so that classList check no longer
+        // suppresses anything here on its own. A shut control-number gate
+        // does the suppressing instead: root.querySelector('[data-control-
+        // number-gate]') is null on Family/profile.php (the edit page, which
+        // shares this partial but has no gate), so gateShut is always false
+        // there and this still offers a restore normally. Without this, an
+        // officer who declines the prompt before entering a control number
+        // loses the draft for good (askRestoreDraft's decline path calls
+        // clearDraft()), and accepting binds head/member data to whichever
+        // control number they type next - possibly a different record.
+        var gate = root.querySelector('[data-control-number-gate]');
+        var gateSections = root.querySelectorAll('[data-entry-section]');
+        var gateShut = !!gate && gateSections.length > 0 && Array.prototype.every.call(gateSections, function (section) {
+            return section.classList.contains('d-none');
+        });
+
+        if (!formEl || !isCreateForm(root) || root.classList.contains('d-none') || gateShut || root.dataset.familyDraftOffered === '1') {
             return;
         }
 

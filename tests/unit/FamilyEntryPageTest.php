@@ -41,9 +41,14 @@ final class FamilyEntryPageTest extends CIUnitTestCase
 
     public function testTheGateStillCarriesItsCheckEndpoint(): void
     {
-        // The gate's fetch call reads this off the dataset; losing it would leave
-        // the suite green while the gate silently stopped checking anything.
-        $this->assertStringContainsString('data-qr-check-url', $this->render());
+        // The gate's fetch call reads this off the dataset; asserting the
+        // attribute name alone would still pass after a route rename, so this
+        // pins the actual records/qr-check path. esc(..., 'attr') entity-encodes
+        // the slashes, hence the regex rather than a literal substring.
+        $this->assertMatchesRegularExpression(
+            '~data-qr-check-url="[^"]*records&#x2F;qr-check"~',
+            $this->render()
+        );
     }
 
     public function testHeadAndMembersAreBothPresentAndNeverTabbed(): void

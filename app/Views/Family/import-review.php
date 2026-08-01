@@ -40,7 +40,7 @@ $fieldOptionsJson = json_encode($fieldOptions, JSON_HEX_TAG | JSON_HEX_AMP | JSO
             ['label' => 'Upload', 'state' => 'done'],
             ['label' => 'Review and Fix', 'state' => ((int) ($counts['blocking'] ?? 0)) > 0 ? 'error' : 'current'],
         ],
-    ], ['saveData' => false]) ?>
+    ]) ?>
 
     <p class="text-muted">
         File: <strong id="reviewFileName"><?= esc($summary['file'] ?? '') ?></strong>.

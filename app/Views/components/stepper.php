@@ -27,6 +27,11 @@
 $steps = array_values((array) ($steps ?? []));
 
 if ($steps === []) {
+    // No nested view() call here, so this only needs the second leak card.php
+    // documents (the across-renders one): reset before returning too, or the
+    // next unrelated caller inherits this call's data with nothing to override it.
+    service('renderer')->resetData();
+
     return;
 }
 
@@ -58,3 +63,8 @@ $prefixes = ['done' => 'Completed, ', 'error' => 'Needs attention, '];
         <?php endforeach; ?>
     </ol>
 </nav>
+<?php
+// Across-renders leak, same one card.php documents in full: reset so the next
+// unrelated stepper (or anything else calling view()) starts clean.
+service('renderer')->resetData();
+?>

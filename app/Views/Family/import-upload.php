@@ -21,7 +21,7 @@ $templateUrl = (string) ($templateUrl ?? site_url('records/template'));
             ['label' => 'Upload', 'state' => 'current'],
             ['label' => 'Review and Fix'],
         ],
-    ], ['saveData' => false]) ?>
+    ]) ?>
 
     <div class="row">
         <div class="col-lg-7">

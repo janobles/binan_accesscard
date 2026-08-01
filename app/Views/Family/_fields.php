@@ -363,10 +363,9 @@ $renderMemberRow = static function ($index, array $m = [], bool $open = true) us
 };
 ?>
 <?php if ($part !== 'members'): ?>
+<?php /* No heading of its own: both callers already name this section outside the
+         card, the entry spine on its step link and the edit page on its card header. */ ?>
 <div<?= $part === 'all' ? ' id="section-head"' : '' ?> class="family-person-card">
-    <div class="family-person-card-header">
-        <h3 class="family-person-card-title">Head of Family</h3>
-    </div>
     <div class="row g-3">
         <div class="col-12">
             <?php if ($headId > 0): ?>
@@ -428,8 +427,13 @@ $renderMemberRow = static function ($index, array $m = [], bool $open = true) us
 
 <?php if ($part !== 'head'): ?>
 <section<?= $part === 'all' ? ' id="section-members"' : '' ?> class="family-members-section family-person-card">
-    <div class="family-person-card-header">
-        <h3 class="family-person-card-title">Household Members</h3>
+    <?php /* The entry spine names this section on its step link, so the title here
+             would be the same words twice; the edit page has no such label and
+             keeps it. The count rides along in both. */ ?>
+    <div class="family-section-head">
+        <?php if ($part === 'all'): ?>
+            <h3 class="family-person-card-title">Members of the Family</h3>
+        <?php endif; ?>
         <span class="badge rounded-pill text-bg-light border" data-family-members-count>0 members</span>
     </div>
 
@@ -452,7 +456,9 @@ $renderMemberRow = static function ($index, array $m = [], bool $open = true) us
     </template>
 
     <div class="family-member-toolbar">
-        <button class="btn btn-success" type="button" data-family-add-member data-next-index="<?= esc((string) count($members), 'attr') ?>"<?= $readOnly ? ' disabled' : '' ?>>
+        <?php /* Blue, not the add-green of a toolbar: this adds a row inside the form,
+                 the form's own green Save is the page's one committing action. */ ?>
+        <button class="btn btn-primary" type="button" data-family-add-member data-next-index="<?= esc((string) count($members), 'attr') ?>"<?= $readOnly ? ' disabled' : '' ?>>
             <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Add Member
         </button>
     </div>

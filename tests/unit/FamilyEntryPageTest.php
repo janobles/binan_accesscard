@@ -36,7 +36,7 @@ final class FamilyEntryPageTest extends CIUnitTestCase
         $this->assertSame(3, substr_count($html, '<li class="stepper-step"'));
         $this->assertStringContainsString('Control Number', $html);
         $this->assertStringContainsString('Head of Family', $html);
-        $this->assertStringContainsString('Household Members', $html);
+        $this->assertStringContainsString('Members of the Family', $html);
     }
 
     public function testTheGateStillCarriesItsCheckEndpoint(): void

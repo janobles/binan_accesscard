@@ -28,7 +28,9 @@ $fieldData = [
     'formOptions' => $formOptions,
 ];
 ?>
-<div class="container-fluid px-4 py-4" data-family-entry-form>
+<?php /* No bottom padding: the action bar below is sticky and full-bleed, so a
+         padded container would float it above a strip of page background. */ ?>
+<div class="container-fluid px-4 pt-4 pb-0" data-family-entry-form>
     <form id="familyEntryForm" method="post" action="<?= esc(site_url('records'), 'attr') ?>" novalidate>
         <?= csrf_field() ?>
 
@@ -70,7 +72,7 @@ $fieldData = [
                 <li class="stepper-step" data-state="upcoming">
                     <a class="stepper-step-link" href="#section-members" aria-disabled="true">
                         <span class="stepper-step-indicator" aria-hidden="true">3</span>
-                        <span class="stepper-step-label"><span class="visually-hidden" data-step-state-prefix>Locked, </span>Household Members</span>
+                        <span class="stepper-step-label"><span class="visually-hidden" data-step-state-prefix>Locked, </span>Members of the Family</span>
                     </a>
                     <div class="stepper-step-content d-none" id="section-members" data-entry-section>
                         <?= view('Family/_fields', $fieldData + ['part' => 'members']) ?>
@@ -86,12 +88,14 @@ $fieldData = [
         <input type="hidden" name="members_meta_count" value="0" data-members-count>
         <input type="hidden" name="_form_end" value="1">
 
-        <div class="family-entry-actions">
+        <div class="family-entry-actions family-entry-actions-page">
             <p class="mb-0 text-muted" data-entry-blocked role="status" aria-live="polite"></p>
             <div class="d-flex gap-2">
                 <a class="btn btn-outline-secondary" href="<?= esc(site_url('records'), 'attr') ?>">Cancel</a>
-                <button class="<?= btn('save') ?>" type="submit" data-family-save>
-                    <i class="bi bi-check2-circle me-1" aria-hidden="true"></i>Save Record
+                <?php /* Green and named for what it does: this page creates a record,
+                         it does not save an edit to one (that is Family/profile). */ ?>
+                <button class="<?= btn('add') ?>" type="submit" data-family-save>
+                    <i class="bi bi-check2-circle me-1" aria-hidden="true"></i>Add Record
                 </button>
             </div>
         </div>

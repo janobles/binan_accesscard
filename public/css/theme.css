@@ -313,9 +313,9 @@
 }
 
 .stepper-step[data-state="done"] .stepper-step-indicator::before {
-    content: "\F26E"; /* bi-check-lg */
+    content: "\F272"; /* bi-check2: thinner stroke than bi-check, and reads at size */
     font-family: "bootstrap-icons";
-    font-size: 0.9rem;
+    font-size: 1.15rem;
 }
 
 .stepper-step[data-state="error"] .stepper-step-indicator {
@@ -342,6 +342,12 @@
 .stepper-horizontal {
     max-width: 32rem;
     margin-bottom: 1.5rem;
+}
+
+/* Upload step: the strip sits over a centred card, so it centres with it. */
+.family-import-upload .stepper-horizontal {
+    margin-right: auto;
+    margin-left: auto;
 }
 
 .stepper-horizontal .stepper-steps {
@@ -404,6 +410,23 @@
 .stepper-step-content {
     padding-top: 1rem;
     max-width: 60rem;
+    /* The anchors point at the content, not the heading above it, so a bare jump
+       lands with the step's own label already scrolled off. */
+    scroll-margin-top: 4.5rem;
+}
+
+/* A step whose content is reachable but not the one being filled in. Same weight
+   as the current step (it is not locked), only without the halo. */
+.stepper-step[data-state="available"] .stepper-step-indicator {
+    border-color: #a9bcb5;
+    color: #2f3e38;
+}
+
+/* Which form the officer is in. The indicator halo alone was too far from the
+   fields to notice, so the content itself carries the accent. */
+.stepper-vertical .stepper-step[data-state="current"] > .stepper-step-content .family-person-card {
+    border-color: #145c3d;
+    box-shadow: 0 0 0 3px rgba(20, 92, 61, 0.1);
 }
 
 /* Dashboard section headers: title on the left, that section's global actions
@@ -451,4 +474,37 @@
     background: #ffffff;
     border-top: 1px solid #dce5e2;
     box-shadow: 0 -2px 6px rgba(31, 59, 47, 0.06);
+}
+
+/* Page variant (Data Entry), as opposed to the modal footer that shares the class.
+   Two nested px-4 containers sit between the bar and the content column (the
+   layout's <main> and the page's own container-fluid), so the bleed is 3rem, not
+   1.5rem, and the padding is put back so the buttons keep their inset. */
+.family-entry-actions-page {
+    margin-right: -3rem;
+    margin-left: -3rem;
+    padding-right: 3rem;
+    padding-left: 3rem;
+}
+
+/* A short form (the control number alone, before the gate opens) does not fill the
+   viewport, so a sticky bar would stop wherever the content stopped and leave page
+   background beneath it. Stretching the column down to the fold puts the bar on the
+   bottom edge instead, without position: fixed, which would have to hard-code the
+   225px sidenav width and track its collapsed state. */
+#layoutSidenav_content > main:has(.family-entry-actions-page) {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+}
+
+[data-family-entry-form]:has(.family-entry-actions-page),
+[data-family-entry-form]:has(.family-entry-actions-page) > form {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+}
+
+[data-family-entry-form] .family-entry-actions-page {
+    margin-top: auto;
 }

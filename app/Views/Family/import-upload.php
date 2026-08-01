@@ -13,7 +13,10 @@
 $action      = (string) ($action ?? site_url('records/import'));
 $templateUrl = (string) ($templateUrl ?? site_url('records/template'));
 ?>
-<div data-family-import>
+<?php /* Centred: this step is one narrow card on an otherwise empty page, and left
+         against the title it read as a fragment of a wider layout that never
+         arrives. The review step after it stays full width, since it is a table. */ ?>
+<div data-family-import class="family-import-upload">
     <?= view('components/stepper', [
         'orientation' => 'horizontal',
         'label'       => 'Import progress',
@@ -23,8 +26,8 @@ $templateUrl = (string) ($templateUrl ?? site_url('records/template'));
         ],
     ]) ?>
 
-    <div class="row">
-        <div class="col-lg-7">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-xl-7">
             <div class="card shadow-sm">
                 <div class="card-body">
                     <p>

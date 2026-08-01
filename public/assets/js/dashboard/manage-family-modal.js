@@ -2163,9 +2163,13 @@
                 return;
             }
 
+            // Once the gate opens both later steps are editable, so neither may keep
+            // the muted 'upcoming' look: a step you can type into must not read as
+            // locked. 'available' is the unlocked-but-not-focused state, and the
+            // focus tracking below moves 'current' onto whichever one is in use.
             steps[0].setAttribute('data-state', unlocked ? 'done' : 'current');
             steps[1].setAttribute('data-state', unlocked ? 'current' : 'upcoming');
-            steps[2].setAttribute('data-state', 'upcoming');
+            steps[2].setAttribute('data-state', unlocked ? 'available' : 'upcoming');
 
             setStepLink(steps[0], {
                 current: !unlocked,
@@ -2293,7 +2297,52 @@
 
         if (gate) {
             bindControlNumberGate(gate);
+            bindSpineFocusTracking();
         }
+    }
+
+    // Follows the caret down the spine: the step holding the focused control becomes
+    // 'current' (the one with the halo) and its unlocked siblings fall back to
+    // 'available'. A step still marked 'upcoming' is genuinely locked, so it is left
+    // alone - this only reshuffles state among steps the gate has already opened.
+    function bindSpineFocusTracking() {
+        var spine = document.getElementById('entrySpine');
+
+        if (!spine) {
+            return;
+        }
+
+        spine.addEventListener('focusin', function (event) {
+            var content = event.target.closest('.stepper-step-content');
+            var focused = content ? content.closest('.stepper-step') : null;
+
+            if (!focused || focused.getAttribute('data-state') === 'upcoming') {
+                return;
+            }
+
+            Array.prototype.forEach.call(spine.querySelectorAll('.stepper-step'), function (step) {
+                var state = step.getAttribute('data-state');
+
+                if (state === 'upcoming' || state === 'error') {
+                    return;
+                }
+
+                if (step === focused) {
+                    step.setAttribute('data-state', 'current');
+                    step.querySelector('.stepper-step-link').setAttribute('aria-current', 'step');
+
+                    return;
+                }
+
+                // Step 1 stays 'done': its control number is filled in and checked,
+                // which is a different thing from merely being reachable.
+                if (state !== 'done') {
+                    step.setAttribute('data-state', 'available');
+                }
+
+                step.querySelector('.stepper-step-link').removeAttribute('aria-current');
+            });
+        });
     }
 
     if (document.readyState === 'loading') {

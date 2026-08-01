@@ -1168,17 +1168,14 @@ class FamilyController extends BaseController
             ]);
         }
 
-        // The same payload QrCardPdfGenerator prints, so the preview on the entry
-        // page and the code on the card can never encode different strings. Only
-        // an available number gets one: a taken number may already have a card.
-        $control = ControlNumber::format($controlNo);
-
+        // ControlNumber::payload() is the same call QrCardPdfGenerator makes, so
+        // the preview on the entry page and the code on the card are guaranteed
+        // to encode the same string. Only an available number gets one: a taken
+        // number may already have a card.
         return $this->response->setJSON([
             'available' => true,
             'message' => '',
-            'qr' => (new QrImageGenerator())->dataUri(
-                config('QrCardSettings')->qrUrlPrefix . $control
-            ),
+            'qr' => (new QrImageGenerator())->dataUri(ControlNumber::payload($controlNo)),
         ]);
     }
 

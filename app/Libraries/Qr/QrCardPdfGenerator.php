@@ -122,7 +122,7 @@ final class QrCardPdfGenerator
                     'controlNumber' => $control,
                     'fullname'      => $head['fullname'],
                     'barangay'      => $head['barangay'],
-                    'qrDataUri'     => $qr->dataUri($settings->qrUrlPrefix . $control),
+                    'qrDataUri'     => $qr->dataUri(ControlNumber::payload($head['controlNo'])),
                 ];
             }
             // Pad the final page to a full 3x4 grid so cards keep a consistent size.

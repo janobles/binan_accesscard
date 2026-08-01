@@ -71,7 +71,22 @@ $bodyView = ($bodyView ?? '') !== '' ? $bodyView : 'Pages/dashboard';
     </div>
     <div id="layoutSidenav_content">
             <main class="container-fluid px-4 dashboard-content">
+            <?php /* Breadcrumbs sit above the title: they are ancestor context, so
+                     they precede the page name rather than trail it. Only pages that
+                     declare a parent in the manifest get one. */ ?>
+            <?php if (($breadcrumbParent = Navigation::parentFor($activePage)) !== null): ?>
+            <nav class="mt-4" aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item">
+                        <a href="<?= esc(site_url(Navigation::routeFor($breadcrumbParent)), 'attr') ?>"><?= esc(Navigation::titleFor($breadcrumbParent)) ?></a>
+                    </li>
+                    <li class="breadcrumb-item active" aria-current="page"><?= esc($pageTitle) ?></li>
+                </ol>
+            </nav>
+            <h1 class="mb-0" id="dashboard-page-title"><?= esc($pageTitle) ?></h1>
+            <?php else: ?>
             <h1 class="mt-4" id="dashboard-page-title"><?= esc($pageTitle) ?></h1>
+            <?php endif; ?>
             <?php if (session()->getFlashdata('success')): ?>
                 <div class="alert alert-success" data-auto-dismiss-alert><?= esc(session()->getFlashdata('success')) ?></div>
             <?php endif; ?>

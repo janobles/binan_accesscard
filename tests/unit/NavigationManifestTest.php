@@ -67,6 +67,16 @@ final class NavigationManifestTest extends CIUnitTestCase
         $this->assertSame('Account Management', Navigation::titleFor('accounts'));
     }
 
+    public function testEveryUnlistedPageDeclaresAParent(): void
+    {
+        foreach (array_keys(Navigation::UNLISTED) as $key) {
+            $this->assertNotNull(
+                Navigation::parentFor($key),
+                $key . ' has no breadcrumb parent, so it renders with no way back.'
+            );
+        }
+    }
+
     public function testFilterDeniesARoleWithNoEntry(): void
     {
         $filter = new \App\Filters\RoleNavFilter();

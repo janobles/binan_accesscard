@@ -80,6 +80,21 @@ class Navigation
     ];
 
     /**
+     * Breadcrumb ancestry: unlisted page key => the listed page key it hangs off.
+     * A page with no entry here renders no breadcrumb, which is what every
+     * sidebar-listed page wants.
+     *
+     * @var array<string, string>
+     */
+    private const UNLISTED_PARENTS = [
+        'records-entry'   => 'records',
+        'records-import'  => 'records',
+        'records-profile' => 'records',
+        'records-edit'    => 'records',
+        'records-update'  => 'records',
+    ];
+
+    /**
      * Roles allowed on a page key. An unknown key grants nobody, so a typo in a
      * route definition fails closed rather than opening a page to everyone.
      *
@@ -119,5 +134,23 @@ class Navigation
         }
 
         return self::UNLISTED_TITLES[$key] ?? ucwords(str_replace('-', ' ', $key));
+    }
+
+    /** The page key this one hangs off for breadcrumbs, or null when it is top level. */
+    public static function parentFor(string $key): ?string
+    {
+        return self::UNLISTED_PARENTS[$key] ?? null;
+    }
+
+    /** Route for a listed page key; unlisted pages are reached from a page that owns them. */
+    public static function routeFor(string $key): string
+    {
+        foreach (self::LINKS as $link) {
+            if ($link['key'] === $key) {
+                return $link['route'];
+            }
+        }
+
+        return '';
     }
 }

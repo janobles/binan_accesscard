@@ -14,6 +14,11 @@
  * controller is the one that calls it; this partial only reads the result.
  * The shape is documented on family_entry_view_data() and
  * family_profile_view_data() in app/Helpers/dashboard_view_helper.php.
+ *
+ * $part selects which piece to render: 'head', 'members', or 'all' (the
+ * default). The Data Entry spine renders the head and the member list as
+ * separate steps, so it asks for one part per call; the edit page (Family/
+ * profile.php) renders both together and never passes $part.
  */
 
 helper('family_modal');
@@ -25,6 +30,11 @@ $sectors = (array) ($sectors ?? []);
 $services = (array) ($services ?? []);
 $categories = (array) ($categories ?? []);
 $formOptions = (array) ($formOptions ?? []);
+
+// The Data Entry spine renders the head and the member list as separate steps;
+// the edit page renders both in one card, which is what 'all' keeps doing.
+$part = (string) ($part ?? 'all');
+$part = in_array($part, ['head', 'members', 'all'], true) ? $part : 'all';
 
 $headId = (int) ($head['headID'] ?? 0);
 $fieldPrefix = $headId > 0 ? 'family-update' : 'family-add';
@@ -88,13 +98,12 @@ $ageBoundsAttrs = static function (?array $bounds): string {
 
 /**
  * Sectors is a fixed list, so it needs no scroll region: a two-column grid shows
- * all of them at once. $anchorId, when given, marks this instance (the head's) as
- * the rail's scroll target; a member row's grid carries none, so ids never repeat.
+ * all of them at once.
  */
-$renderSectorGrid = static function (string $fieldName, array $selectedIds, string $idPrefix, bool $disabled, ?string $anchorId = null) use ($sectorCatalog, $sectorLabel, $ageBoundsAttrs): string {
+$renderSectorGrid = static function (string $fieldName, array $selectedIds, string $idPrefix, bool $disabled) use ($sectorCatalog, $sectorLabel, $ageBoundsAttrs): string {
     ob_start();
     ?>
-    <div<?= $anchorId !== null ? ' id="' . esc($anchorId, 'attr') . '"' : '' ?> class="row row-cols-1 row-cols-sm-2 g-1" data-family-sector-grid>
+    <div class="row row-cols-1 row-cols-sm-2 g-1" data-family-sector-grid>
         <?php if ($sectorCatalog === []): ?>
             <div class="col"><p class="text-muted mb-0">No sectors available.</p></div>
         <?php endif; ?>
@@ -133,10 +142,10 @@ $renderSectorGrid = static function (string $fieldName, array $selectedIds, stri
  * is hidden: a category matching no sector stays collapsed but present, because
  * programs like Financial Assistance apply regardless of sector.
  */
-$renderServiceAccordion = static function (string $fieldName, array $selectedIds, string $accordionId, string $idPrefix, bool $disabled, ?string $anchorId = null) use ($servicesByCategory, $serviceLabel, $ageBoundsAttrs): string {
+$renderServiceAccordion = static function (string $fieldName, array $selectedIds, string $accordionId, string $idPrefix, bool $disabled) use ($servicesByCategory, $serviceLabel, $ageBoundsAttrs): string {
     ob_start();
     ?>
-    <div<?= $anchorId !== null ? ' id="' . esc($anchorId, 'attr') . '"' : '' ?>>
+    <div>
         <div class="mb-2">
             <input type="search" class="form-control form-control-sm" placeholder="Filter programs..." aria-label="Filter programs" data-family-service-filter<?= $disabled ? ' disabled' : '' ?>>
         </div>
@@ -190,8 +199,6 @@ $renderServiceAccordion = static function (string $fieldName, array $selectedIds
 
 /**
  * The sectors-and-programs block, identical for the head and for every member.
- * $anchors, given only for the head, stamps section-sectors/section-services onto
- * its two columns so the entry page rail can scroll to them.
  */
 $renderChoicesBlock = static function (
     string $blockId,
@@ -201,8 +208,7 @@ $renderChoicesBlock = static function (
     array $selectedServices,
     string $idPrefix,
     bool $open,
-    bool $disabled,
-    ?array $anchors = null
+    bool $disabled
 ) use ($renderSectorGrid, $renderServiceAccordion): string {
     ob_start();
     ?>
@@ -217,11 +223,11 @@ $renderChoicesBlock = static function (
             <div class="row g-3 pt-2">
                 <div class="col-12 col-lg-5">
                     <h5 class="family-column-title">Sectors</h5>
-                    <?= $renderSectorGrid($sectorFieldName, $selectedSectors, $idPrefix, $disabled, $anchors['sectors'] ?? null) ?>
+                    <?= $renderSectorGrid($sectorFieldName, $selectedSectors, $idPrefix, $disabled) ?>
                 </div>
                 <div class="col-12 col-lg-7">
                     <h5 class="family-column-title">Services and Programs</h5>
-                    <?= $renderServiceAccordion($serviceFieldName, $selectedServices, $blockId . 'Services', $idPrefix, $disabled, $anchors['services'] ?? null) ?>
+                    <?= $renderServiceAccordion($serviceFieldName, $selectedServices, $blockId . 'Services', $idPrefix, $disabled) ?>
                 </div>
             </div>
         </div>
@@ -356,7 +362,8 @@ $renderMemberRow = static function ($index, array $m = [], bool $open = true) us
     return (string) ob_get_clean();
 };
 ?>
-<div id="section-head" class="family-person-card">
+<?php if ($part !== 'members'): ?>
+<div<?= $part === 'all' ? ' id="section-head"' : '' ?> class="family-person-card">
     <div class="family-person-card-header">
         <h3 class="family-person-card-title">Head of Family</h3>
     </div>
@@ -414,12 +421,13 @@ $renderMemberRow = static function ($index, array $m = [], bool $open = true) us
         array_map('strval', (array) $selectedServiceIds),
         $fieldPrefix . 'Head',
         true,
-        $readOnly,
-        ['sectors' => 'section-sectors', 'services' => 'section-services']
+        $readOnly
     ) ?>
 </div>
+<?php endif; ?>
 
-<section id="section-members" class="family-members-section family-person-card">
+<?php if ($part !== 'head'): ?>
+<section<?= $part === 'all' ? ' id="section-members"' : '' ?> class="family-members-section family-person-card">
     <div class="family-person-card-header">
         <h3 class="family-person-card-title">Family Members</h3>
         <span class="badge rounded-pill text-bg-light border" data-family-members-count>0 members</span>
@@ -449,3 +457,11 @@ $renderMemberRow = static function ($index, array $m = [], bool $open = true) us
         </button>
     </div>
 </section>
+<?php endif; ?>
+<?php
+// $part (and the rest of this partial's data) would otherwise leak into the
+// next unrelated view() call the way components/card.php documents in full:
+// CI4's view() defaults to $saveData = true, so the next render that omits
+// $part would silently inherit whichever part this call asked for.
+service('renderer')->resetData();
+?>

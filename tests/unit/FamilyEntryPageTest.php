@@ -6,9 +6,10 @@ use App\Models\Families\FamilyFormOptionsModel;
 use CodeIgniter\Test\CIUnitTestCase;
 
 /**
- * The entry page is one page, not a wizard: the control number resolves first and
- * gates the rest, and head and members are then both visible at once because the
- * officer is transcribing from one paper sheet where they both are.
+ * The entry page is a vertical stepper spine, not a wizard: the control number
+ * is step 1 and gates steps 2 and 3, and all three stay reachable at once
+ * (non-linear) because the officer is transcribing from one paper sheet where
+ * head and members are both visible.
  */
 final class FamilyEntryPageTest extends CIUnitTestCase
 {
@@ -27,33 +28,68 @@ final class FamilyEntryPageTest extends CIUnitTestCase
         ]);
     }
 
-    public function testControlNumberGatesTheRestOfTheForm(): void
+    public function testTheSpineHasThreeStepsNotFour(): void
     {
         $html = $this->render();
 
-        $this->assertStringContainsString('data-control-number-gate', $html);
-        $this->assertStringContainsString('data-entry-body', $html);
-        // esc(..., 'attr') entity-encodes the slashes in the URL, so "qr-check"
-        // alone - unaffected by that encoding - is what still identifies it.
-        $this->assertStringContainsString('qr-check', $html);
+        $this->assertStringContainsString('stepper stepper-vertical', $html);
+        $this->assertSame(3, substr_count($html, '<li class="stepper-step"'));
+        $this->assertStringContainsString('Control Number', $html);
+        $this->assertStringContainsString('Head of Family', $html);
+        $this->assertStringContainsString('Household Members', $html);
     }
 
-    public function testHeadAndMembersAreBothPresentOnOnePage(): void
+    public function testSectorsAndServicesAreNoLongerPageSections(): void
     {
         $html = $this->render();
 
-        $this->assertStringContainsString('id="section-head"', $html);
-        $this->assertStringContainsString('id="section-members"', $html);
-        $this->assertStringNotContainsString('tab-pane', $html,
-            'A tab split would hide the head while members are entered.');
+        // They belong to the head and to every member alike, so they are not
+        // steps of the page and carry no page-level anchor.
+        $this->assertStringNotContainsString('id="section-sectors"', $html);
+        $this->assertStringNotContainsString('id="section-services"', $html);
     }
 
-    public function testTheRailIsBootstrapScrollspyNotCustomCss(): void
+    public function testEveryStepIsAnAnchorSoTheSpineIsNonLinear(): void
     {
         $html = $this->render();
 
-        $this->assertStringContainsString('data-bs-spy="scroll"', $html);
-        $this->assertStringContainsString('list-group', $html);
+        $this->assertStringContainsString('href="#section-control"', $html);
+        $this->assertStringContainsString('href="#section-head"', $html);
+        $this->assertStringContainsString('href="#section-members"', $html);
+    }
+
+    public function testTheGatedSectionsAreHiddenAndMarked(): void
+    {
+        $html = $this->render();
+
+        $this->assertSame(2, substr_count($html, 'data-entry-section'));
+        $this->assertSame(2, substr_count($html, 'class="stepper-step-content d-none"'));
+    }
+
+    public function testTheFormIsTheEntryRootSoTheSharedJsStillBinds(): void
+    {
+        $html = $this->render();
+
+        $this->assertMatchesRegularExpression('/<form[^>]*data-family-entry-form/', $html);
+    }
+
+    public function testTheControlNumberFieldDoesNotPost(): void
+    {
+        $html = $this->render();
+
+        // It lives inside the form now, so a name attribute would post a field
+        // the store() action does not expect. The hidden qr_control_no carries it.
+        $this->assertStringNotContainsString('name="control_no"', $html);
+    }
+
+    public function testTheTruncationSentinelIsStillLast(): void
+    {
+        $html = $this->render();
+
+        $this->assertGreaterThan(
+            strrpos($html, 'name="members_meta_count"'),
+            strrpos($html, 'name="_form_end"')
+        );
     }
 
     public function testThereIsExactlyOneSaveButton(): void

@@ -12,9 +12,10 @@
 //   - localStorage draft auto-save + restore-on-reopen + keep/discard-on-close
 //
 // Data Entry page only: the control-number gate ([data-control-number-gate])
-// checks the number before anything else renders; [data-entry-body] loses
-// d-none only once it comes back available. A successful save navigates to the
-// `redirect` the server returns (records) rather than staying on a spent form.
+// checks the number before anything else renders; the spine's later sections
+// ([data-entry-section]) lose d-none only once it comes back available. A
+// successful save navigates to the `redirect` the server returns (records)
+// rather than staying on a spent form.
 //
 // Connected to:
 //   - dashboard-modal-loader.js : window.registerDashboardModal()
@@ -2007,9 +2008,9 @@
     // ---- standalone Data Entry page (Family/entry) -------------------------
     // The entry page is a normal navigation, not a modal load, so nothing ever
     // fires registerDashboardModal's onLoaded callback for it. It wires itself
-    // up on page load instead, then drives the control-number gate: the rest of
-    // the form stays hidden ([data-entry-body] keeps d-none) until the number
-    // checks out available.
+    // up on page load instead, then drives the control-number gate: the spine's
+    // later sections ([data-entry-section]) keep d-none until the number checks
+    // out available.
 
     function setGateStatus(field, status, text, isError) {
         field.classList.toggle('is-invalid', !!isError);
@@ -2023,20 +2024,51 @@
     function bindControlNumberGate(gate) {
         var field = gate.querySelector('#controlNumber');
         var status = gate.querySelector('[data-control-number-status]');
-        // [data-entry-body] and [data-family-entry-form] are the same element in
-        // entry.php, so this is the same node initFamilyEntryModal's `root` binds
-        // to - the offerDraftRestoreIfVisible(body) call below and the one inside
-        // initFamilyEntryModal share one familyDraftOffered flag because of that.
-        var body = document.querySelector('[data-entry-body]');
+        var image = gate.querySelector('[data-control-number-qr]');
+        // The spine interleaves headings with content, so the gated sections are
+        // several nodes rather than one wrapper. [data-family-entry-form] is the
+        // form itself, which is the same node initFamilyEntryModal's `root` binds
+        // to, so offerDraftRestoreIfVisible below and the one inside
+        // initFamilyEntryModal still share one familyDraftOffered flag.
+        var sections = document.querySelectorAll('[data-entry-section]');
+        var root = document.querySelector('[data-family-entry-form]');
         var timer = null;
         var sequence = 0;
 
-        if (!field || !body) {
+        if (!field || !sections.length || !root) {
             return;
         }
 
+        function setSectionsHidden(hidden) {
+            Array.prototype.forEach.call(sections, function (section) {
+                section.classList.toggle('d-none', hidden);
+            });
+        }
+
+        function setStepStates(unlocked) {
+            var steps = document.querySelectorAll('#entrySpine .stepper-step');
+
+            if (steps.length < 3) {
+                return;
+            }
+
+            steps[0].setAttribute('data-state', unlocked ? 'done' : 'current');
+            steps[1].setAttribute('data-state', unlocked ? 'current' : 'upcoming');
+            steps[2].setAttribute('data-state', 'upcoming');
+        }
+
+        function clearQr() {
+            if (image) {
+                image.classList.add('d-none');
+                image.removeAttribute('src');
+                image.setAttribute('alt', '');
+            }
+        }
+
         field.addEventListener('input', function () {
-            body.classList.add('d-none');
+            setSectionsHidden(true);
+            setStepStates(false);
+            clearQr();
             setGateStatus(field, status, '', false);
             window.clearTimeout(timer);
 
@@ -2066,15 +2098,24 @@
 
                     if (result.ok && result.data.available) {
                         setGateStatus(field, status, 'Control number is available.', false);
-                        body.classList.remove('d-none');
+                        setSectionsHidden(false);
+                        setStepStates(true);
 
-                        var realField = body.querySelector('[data-entry-control-number], [name="qr_control_no"]');
+                        // The preview is never a gate: a response without a `qr`
+                        // field still unlocks the form.
+                        if (image && result.data.qr) {
+                            image.setAttribute('src', result.data.qr);
+                            image.setAttribute('alt', 'QR code for control number ' + value);
+                            image.classList.remove('d-none');
+                        }
+
+                        var realField = root.querySelector('[data-entry-control-number], [name="qr_control_no"]');
 
                         if (realField) {
                             realField.value = value;
                         }
 
-                        offerDraftRestoreIfVisible(body);
+                        offerDraftRestoreIfVisible(root);
                     } else {
                         setGateStatus(field, status, (result.data && result.data.message) || 'The control number could not be validated.', true);
                     }

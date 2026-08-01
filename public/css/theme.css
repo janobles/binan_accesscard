@@ -429,3 +429,22 @@
     align-items: center;
     gap: 0.5rem;
 }
+
+/* Data Entry action bar: sticky at the bottom of the form rather than pinned to
+   a rail, because the rail stacked above the form at mobile widths and put Save
+   at the top of a page the officer had to scroll all the way back up. */
+.family-entry-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+    padding: 0.75rem 1rem;
+    background: #ffffff;
+    border-top: 1px solid #dce5e2;
+    box-shadow: 0 -2px 6px rgba(31, 59, 47, 0.06);
+}

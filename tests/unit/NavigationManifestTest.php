@@ -77,6 +77,19 @@ final class NavigationManifestTest extends CIUnitTestCase
         }
     }
 
+    public function testEveryUnlistedPageParentIsARealSidebarPage(): void
+    {
+        foreach (array_keys(Navigation::UNLISTED) as $key) {
+            $parent = Navigation::parentFor($key);
+
+            $this->assertNotSame(
+                '',
+                Navigation::routeFor($parent),
+                $key . "'s breadcrumb parent '" . $parent . "' is not a key in Navigation::LINKS, so the breadcrumb link would point at the site root."
+            );
+        }
+    }
+
     public function testFilterDeniesARoleWithNoEntry(): void
     {
         $filter = new \App\Filters\RoleNavFilter();

@@ -159,6 +159,14 @@ the native type is not enough (array shapes, what a null means, units).
 Views state purpose and data source, no variable list. The data contracts
 live on the `*_view_data()` functions in `app/Helpers/dashboard_view_helper.php`.
 
+Escape every dynamic value in a view with `esc()`. `esc($v, 'attr')` is the
+house default and is required for a value landing in an unquoted attribute or
+assembled into markup by hand. Inside a double-quoted attribute the default
+html context is equally safe, and is the right choice when the attr context
+would mangle a value the markup is read for: it encodes spaces and `#`, which
+turns an anchor href into `&#x23;section-head`. See
+`app/Views/components/stepper.php`.
+
 Banned: em dashes, `---- ----` dividers, `@author`/`@created`/`@version`,
 comments recording a change someone wanted, AI-slop register.
 

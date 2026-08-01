@@ -257,6 +257,151 @@
     box-shadow: 0 1px 2px rgba(31, 59, 47, 0.12);
 }
 
+/* Stepper: the app's own step indicator, since Bootstrap ships none. Indicators
+   stay neutral and the section label carries the emphasis, so colour is spent
+   only where it means something (a finished step, a step needing attention). */
+.stepper-steps {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.stepper-step-link {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    color: #2f3e38;
+    text-decoration: none;
+}
+
+.stepper-step-indicator {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 1.75rem;
+    height: 1.75rem;
+    border: 1px solid #c9d5d0;
+    border-radius: 50%;
+    background: #ffffff;
+    color: #6b7a74;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.stepper-step-label {
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.stepper-step[data-state="upcoming"] .stepper-step-label {
+    color: #6b7a74;
+    font-weight: 500;
+}
+
+.stepper-step[data-state="current"] .stepper-step-indicator {
+    border-color: #145c3d;
+    color: #145c3d;
+    box-shadow: 0 0 0 3px rgba(20, 92, 61, 0.12);
+}
+
+.stepper-step[data-state="done"] .stepper-step-indicator {
+    border-color: #198754;
+    background: #198754;
+    color: #ffffff;
+    font-size: 0;
+}
+
+.stepper-step[data-state="done"] .stepper-step-indicator::before {
+    content: "\F26E"; /* bi-check-lg */
+    font-family: "bootstrap-icons";
+    font-size: 0.9rem;
+}
+
+.stepper-step[data-state="error"] .stepper-step-indicator {
+    border-color: #dc3545;
+    background: #dc3545;
+    color: #ffffff;
+    font-size: 0;
+}
+
+.stepper-step[data-state="error"] .stepper-step-indicator::before {
+    content: "\F33A"; /* bi-exclamation-lg */
+    font-family: "bootstrap-icons";
+    font-size: 0.9rem;
+}
+
+/* Horizontal: indicator centred with its label beneath, connector drawn between
+   indicators at circle-centre height. A narrow viewport scrolls rather than
+   squashing, so there is no mobile-only variant to keep in sync. */
+.stepper-horizontal .stepper-steps {
+    display: flex;
+    overflow-x: auto;
+}
+
+.stepper-horizontal .stepper-step {
+    position: relative;
+    flex: 1 1 0;
+    min-width: 7rem;
+}
+
+.stepper-horizontal .stepper-step-link {
+    flex-direction: column;
+    gap: 0.4rem;
+    text-align: center;
+}
+
+.stepper-horizontal .stepper-step:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    top: 0.875rem;
+    left: calc(50% + 1.15rem);
+    right: calc(-50% + 1.15rem);
+    height: 1px;
+    background: #dce5e2;
+}
+
+.stepper-horizontal .stepper-step[data-state="done"]:not(:last-child)::after {
+    background: #198754;
+}
+
+/* Vertical: a spine. Each step's content is indented to align with its label and
+   the connector runs down behind it, stopping at the last step. */
+.stepper-vertical .stepper-step {
+    position: relative;
+    padding-left: 2.5rem;
+    padding-bottom: 2rem;
+}
+
+.stepper-vertical .stepper-step:last-child {
+    padding-bottom: 0;
+}
+
+.stepper-vertical .stepper-step-link {
+    margin-left: -2.5rem;
+}
+
+.stepper-vertical .stepper-step:not(:last-child)::before {
+    content: "";
+    position: absolute;
+    top: 2rem;
+    bottom: 0;
+    left: 0.875rem;
+    width: 1px;
+    background: #dce5e2;
+}
+
+.stepper-step-content {
+    padding-top: 1rem;
+    max-width: 60rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .stepper-step-indicator {
+        transition: none;
+    }
+}
+
 /* Dashboard section headers: title on the left, that section's global actions
    (batch picker, View All, exports) on the right, outside the cards. */
 .dashboard-section-head {

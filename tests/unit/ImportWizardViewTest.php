@@ -37,15 +37,38 @@ final class ImportWizardViewTest extends CIUnitTestCase
         $this->assertStringNotContainsString('navbar-dark', $html);
     }
 
-    public function testStepsUseTheSegmentedTabsComponent(): void
+    public function testStepsUseTheStepperComponent(): void
     {
         $html = $this->render();
 
-        $this->assertStringContainsString('segmented-tabs', $html);
+        $this->assertStringContainsString('stepper stepper-horizontal', $html);
         $this->assertStringContainsString('Upload', $html);
         $this->assertStringContainsString('Review and Fix', $html);
         $this->assertStringNotContainsString('Column Mapping', $html,
             'The workbook comes from our own template; columns are known.');
+    }
+
+    public function testTheAdvertisedDoneStepIsGone(): void
+    {
+        $html = $this->render();
+
+        $this->assertStringNotContainsString('3. Done', $html);
+        $this->assertStringNotContainsString('>Done<', $html);
+    }
+
+    public function testABlockingCountPutsTheReviewStepInError(): void
+    {
+        // The seeded summary in render() carries blocking => 1.
+        $html = $this->render();
+
+        $this->assertStringContainsString('data-state="error"', $html);
+    }
+
+    public function testTheStepsAreNotLinks(): void
+    {
+        $html = $this->render();
+
+        $this->assertStringNotContainsString('<a class="stepper-step-link"', $html);
     }
 
     public function testTheStatCardRowAndGroupContainersAreGone(): void
@@ -76,7 +99,7 @@ final class ImportWizardViewTest extends CIUnitTestCase
             'templateUrl' => site_url('records/template'),
         ]);
 
-        $this->assertStringContainsString('segmented-tabs', $html);
+        $this->assertStringContainsString('stepper stepper-horizontal', $html);
         $this->assertStringContainsString('data-family-import', $html);
         $this->assertStringNotContainsString('data-bs-dismiss="modal"', $html);
     }

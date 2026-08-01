@@ -30,11 +30,17 @@ $fieldOptionsJson = json_encode($fieldOptions, JSON_HEX_TAG | JSON_HEX_AMP | JSO
 
     <input type="hidden" id="reviewCsrf" name="<?= csrf_token() ?>" value="<?= csrf_hash() ?>">
 
-    <ul class="nav nav-pills segmented-tabs mb-4" role="tablist">
-        <li class="nav-item"><span class="nav-link disabled">1. Upload</span></li>
-        <li class="nav-item"><span class="nav-link active">2. Review and Fix</span></li>
-        <li class="nav-item"><span class="nav-link disabled">3. Done</span></li>
-    </ul>
+    <?php /* The review step reads as an error while blocking rows remain, so a file
+             that cannot be committed says so in the page chrome and not only in the
+             severity pills below. */ ?>
+    <?= view('components/stepper', [
+        'orientation' => 'horizontal',
+        'label'       => 'Import progress',
+        'steps'       => [
+            ['label' => 'Upload', 'state' => 'done'],
+            ['label' => 'Review and Fix', 'state' => ((int) ($counts['blocking'] ?? 0)) > 0 ? 'error' : 'current'],
+        ],
+    ], ['saveData' => false]) ?>
 
     <p class="text-muted">
         File: <strong id="reviewFileName"><?= esc($summary['file'] ?? '') ?></strong>.

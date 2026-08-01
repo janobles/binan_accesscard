@@ -14,11 +14,14 @@ $action      = (string) ($action ?? site_url('records/import'));
 $templateUrl = (string) ($templateUrl ?? site_url('records/template'));
 ?>
 <div data-family-import>
-    <ul class="nav nav-pills segmented-tabs mb-4" role="tablist">
-        <li class="nav-item"><span class="nav-link active">1. Upload</span></li>
-        <li class="nav-item"><span class="nav-link disabled">2. Review and Fix</span></li>
-        <li class="nav-item"><span class="nav-link disabled">3. Done</span></li>
-    </ul>
+    <?= view('components/stepper', [
+        'orientation' => 'horizontal',
+        'label'       => 'Import progress',
+        'steps'       => [
+            ['label' => 'Upload', 'state' => 'current'],
+            ['label' => 'Review and Fix'],
+        ],
+    ], ['saveData' => false]) ?>
 
     <div class="row">
         <div class="col-lg-7">

@@ -1553,10 +1553,14 @@
             return;
         }
 
+        // Skip fields inside a d-none container (the spine's locked sections while
+        // the control-number gate is shut): the worker cannot see or fix them, so
+        // counting them turns "1 field is missing" into a meaningless "23 required
+        // fields are missing."
         var missing = Array.prototype.filter.call(
             form.querySelectorAll('[required]'),
             function (field) {
-                return !field.checkValidity();
+                return !field.checkValidity() && !field.closest('.d-none');
             }
         ).length;
 
@@ -2188,12 +2192,28 @@
             }
         }
 
+        function realControlNumberField() {
+            return root.querySelector('[data-entry-control-number], [name="qr_control_no"]');
+        }
+
         field.addEventListener('input', function () {
             setSectionsHidden(true);
             setStepStates(false);
             clearQr();
             setGateStatus(field, status, '', false);
             window.clearTimeout(timer);
+
+            // A previous available check may have already written this control
+            // number into the hidden field the form actually posts. Editing the
+            // visible input to something else (even an invalid value the browser
+            // still lets through, like a non-numeric string with no pattern to
+            // reject it) must not leave that stale value behind - otherwise Save
+            // stays enabled and the record saves under the abandoned number.
+            var realField = realControlNumberField();
+
+            if (realField) {
+                realField.value = '';
+            }
 
             var value = String(field.value || '').trim();
             var mySequence = ++sequence;
@@ -2228,11 +2248,14 @@
                         // field still unlocks the form.
                         if (image && result.data.qr) {
                             image.setAttribute('src', result.data.qr);
-                            image.setAttribute('alt', 'QR code for control number ' + value);
+                            // The server formats the label the same way the printed card
+                            // does (ControlNumber::format()); falling back to the raw typed
+                            // value only covers an old response shape without the field.
+                            image.setAttribute('alt', 'QR code for control number ' + (result.data.control_no_label || value));
                             image.classList.remove('d-none');
                         }
 
-                        var realField = root.querySelector('[data-entry-control-number], [name="qr_control_no"]');
+                        var realField = realControlNumberField();
 
                         if (realField) {
                             realField.value = value;

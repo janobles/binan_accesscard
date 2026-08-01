@@ -404,12 +404,6 @@
     max-width: 60rem;
 }
 
-@media (prefers-reduced-motion: reduce) {
-    .stepper-step-indicator {
-        transition: none;
-    }
-}
-
 /* Dashboard section headers: title on the left, that section's global actions
    (batch picker, View All, exports) on the right, outside the cards. */
 .dashboard-section-head {

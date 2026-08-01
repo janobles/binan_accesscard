@@ -1176,6 +1176,7 @@ class FamilyController extends BaseController
             'available' => true,
             'message' => '',
             'qr' => (new QrImageGenerator())->dataUri(ControlNumber::payload($controlNo)),
+            'control_no_label' => ControlNumber::format($controlNo),
         ]);
     }
 

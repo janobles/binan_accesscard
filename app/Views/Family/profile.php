@@ -38,7 +38,9 @@ $controlNumberLabel = ControlNumber::format((int) ($controlNumber ?? 0));
                         Control No. <?= esc($controlNumberLabel) ?>
                     </span>
                     <?php if ($qrDataUri !== ''): ?>
-                    <img src="<?= esc($qrDataUri) ?>" width="64" height="64" alt="QR code for control number <?= esc($controlNumberLabel) ?>">
+                    <?php // Decorative: the badge beside it already announces "Control No. N",
+                        // so a label here would repeat the same number a second time. ?>
+                    <img src="<?= esc($qrDataUri) ?>" width="64" height="64" alt="">
                     <?php endif; ?>
                 </div>
             </div>

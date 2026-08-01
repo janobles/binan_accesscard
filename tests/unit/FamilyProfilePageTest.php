@@ -80,7 +80,9 @@ final class FamilyProfilePageTest extends CIUnitTestCase
         $html = $this->render();
 
         $this->assertStringContainsString('data:image/png;base64,', $html);
-        $this->assertStringContainsString('QR code for control number', $html);
+        // Decorative: alt="" so a screen reader does not repeat the number the
+        // adjacent "Control No." badge already announces.
+        $this->assertMatchesRegularExpression('/<img src="data:image\/png;base64,[^"]*" width="64" height="64" alt="">/', $html);
     }
 
     public function testTheCodeIsPlainWithNoCardOrRounding(): void

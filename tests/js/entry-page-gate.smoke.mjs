@@ -319,9 +319,30 @@ const gate = el(
 const sectionHead = el('div', { class: 'stepper-step-content d-none', id: 'section-head', 'data-entry-section': '' });
 const sectionMembers = el('div', { class: 'stepper-step-content d-none', id: 'section-members', 'data-entry-section': '' });
 
+// entry.php's actual spine: three <li class="stepper-step"> under #entrySpine,
+// each carrying a .stepper-step-link (aria-current / aria-disabled) and a
+// [data-step-state-prefix] visually-hidden span. setStepStates() drives these
+// on every gate transition, so the fixture has to nest them the same way the
+// view does, not leave them alongside as flat siblings.
+const step1Link = el('a', { class: 'stepper-step-link', 'aria-current': 'step' });
+const step1Prefix = el('span', { 'data-step-state-prefix': '' });
+const step1 = el('li', { class: 'stepper-step', 'data-state': 'current' }, [step1Link, step1Prefix, gate]);
+
+const step2Link = el('a', { class: 'stepper-step-link', 'aria-disabled': 'true' });
+const step2Prefix = el('span', { 'data-step-state-prefix': '' });
+step2Prefix.textContent = 'Locked, '; // matches entry.php's server-rendered initial markup
+const step2 = el('li', { class: 'stepper-step', 'data-state': 'upcoming' }, [step2Link, step2Prefix, sectionHead]);
+
+const step3Link = el('a', { class: 'stepper-step-link', 'aria-disabled': 'true' });
+const step3Prefix = el('span', { 'data-step-state-prefix': '' });
+step3Prefix.textContent = 'Locked, '; // matches entry.php's server-rendered initial markup
+const step3 = el('li', { class: 'stepper-step', 'data-state': 'upcoming' }, [step3Link, step3Prefix, sectionMembers]);
+
+const entrySpine = el('nav', { id: 'entrySpine' }, [el('ol', {}, [step1, step2, step3])]);
+
 const realControlNumberInput = el('input', { type: 'hidden', name: 'qr_control_no', 'data-entry-control-number': '' });
 const saveButton = el('button', { type: 'submit', 'data-family-save': '' });
-const form = el('form', { id: 'familyEntryForm' }, [gate, sectionHead, sectionMembers, realControlNumberInput, saveButton]);
+const form = el('form', { id: 'familyEntryForm' }, [entrySpine, realControlNumberInput, saveButton]);
 const entryRoot = el('div', { class: 'container-fluid px-4 py-4', 'data-family-entry-form': '' }, [form]);
 
 const documentNode = {
@@ -445,6 +466,20 @@ assert.equal(
 assert.equal(sectionHead.classList.contains('d-none'), true, 'Head section should still be hidden before any input.');
 assert.equal(sectionMembers.classList.contains('d-none'), true, 'Members section should still be hidden before any input.');
 
+// The spine's state machine (setStepStates / setStepLink) is the only
+// non-colour signal a screen reader gets for which step is reachable. With
+// the gate shut, step 1 must read as current and steps 2/3 as locked and
+// unreachable - this is entry.php's server-rendered initial state, which
+// nothing has touched yet.
+assert.equal(step1.getAttribute('data-state'), 'current', 'Step 1 should be current before the gate opens.');
+assert.equal(step1Link.getAttribute('aria-current'), 'step', 'Step 1 link should carry aria-current before the gate opens.');
+assert.equal(step2.getAttribute('data-state'), 'upcoming', 'Step 2 should be upcoming before the gate opens.');
+assert.equal(step2Link.getAttribute('aria-disabled'), 'true', 'Step 2 link should be aria-disabled before the gate opens.');
+assert.equal(step2Prefix.textContent, 'Locked, ', 'Step 2 should announce "Locked, " before the gate opens.');
+assert.equal(step3.getAttribute('data-state'), 'upcoming', 'Step 3 should be upcoming before the gate opens.');
+assert.equal(step3Link.getAttribute('aria-disabled'), 'true', 'Step 3 link should be aria-disabled before the gate opens.');
+assert.equal(step3Prefix.textContent, 'Locked, ', 'Step 3 should announce "Locked, " before the gate opens.');
+
 controlNumberField.value = '12345';
 controlNumberField.dispatch('input');
 
@@ -457,6 +492,18 @@ assert.equal(sectionHead.classList.contains('d-none'), false, 'A control number 
 assert.equal(sectionMembers.classList.contains('d-none'), false, 'A control number the server reports available must reveal the members section.');
 assert.equal(realControlNumberInput.value, '12345', 'The hidden qr_control_no field must be filled once the gate clears.');
 
+// Once the gate opens, step 1 must read as done (not just "not current"), step
+// 2 becomes current and reachable, and the "Locked, " markers on steps 2/3
+// must be gone - deleting setStepStates()'s body would leave every one of
+// these at its shut-gate value and this block would catch it.
+assert.equal(step1.getAttribute('data-state'), 'done', 'Step 1 should be done once the gate opens.');
+assert.equal(step1Prefix.textContent, 'Completed, ', 'Step 1 should announce "Completed, " once the gate opens.');
+assert.equal(step2.getAttribute('data-state'), 'current', 'Step 2 should be current once the gate opens.');
+assert.equal(step2Link.getAttribute('aria-current'), 'step', 'Step 2 link should carry aria-current once the gate opens.');
+assert.equal(step2Link.getAttribute('aria-disabled'), null, 'Step 2 link should no longer be aria-disabled once the gate opens.');
+assert.equal(step2Prefix.textContent, '', 'Step 2 should no longer announce "Locked, " once the gate opens.');
+assert.equal(step3Prefix.textContent, '', 'Step 3 should no longer announce "Locked, " once the gate opens.');
+
 // Only once the gate has actually opened should the draft get offered - this
 // is bindControlNumberGate's own offerDraftRestoreIfVisible(root) call on the
 // available path, matching the page's pre-spine behaviour.
@@ -466,4 +513,20 @@ assert.equal(
     'A draft on record must be offered for restore once the gate opens.'
 );
 
-console.log('OK: entry page init does not throw, the submit handler binds, the draft stays untouched while the gate is shut, and it is offered once the gate opens.');
+// Regression for the stale-carrier bug: #controlNumber has no `pattern`, only
+// `required`, so checkValidity() (always true in this fixture, matching a
+// real text input with nothing to reject "abc") lets an edit through
+// validateHead() while the hidden qr_control_no carrier still holds the
+// previous, already-approved value. Editing the field after a successful
+// check must clear the carrier immediately (before the new check's fetch
+// even resolves) so a stale number can never be the one that posts.
+controlNumberField.value = 'abc';
+controlNumberField.dispatch('input');
+
+assert.equal(
+    realControlNumberInput.value,
+    '',
+    'Editing the control number after a successful check must clear the hidden qr_control_no carrier, not leave the old value postable.'
+);
+
+console.log('OK: entry page init does not throw, the submit handler binds, the draft stays untouched while the gate is shut, it is offered once the gate opens, the stepper spine tracks the gate state, and editing the control number after a check clears the stale carrier.');

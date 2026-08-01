@@ -1538,11 +1538,48 @@
         return field;
     }
 
+    // A save that goes nowhere used to explain itself only by focusing the first
+    // bad field, which is invisible if that field is above the fold or inside a
+    // member row further down. The action bar says how many are left, beside the
+    // button the worker just pressed.
+    //
+    // Only counts once a save has actually been attempted: a fresh form is
+    // entirely empty, and announcing "23 required fields are missing" before the
+    // worker has typed anything is noise, not help.
+    function reportSaveBlocked(form) {
+        var reason = form.querySelector('[data-entry-blocked]');
+
+        if (!reason || form.dataset.familySaveAttempted !== '1') {
+            return;
+        }
+
+        var missing = Array.prototype.filter.call(
+            form.querySelectorAll('[required]'),
+            function (field) {
+                return !field.checkValidity();
+            }
+        ).length;
+
+        if (missing === 0) {
+            reason.textContent = '';
+
+            return;
+        }
+
+        reason.textContent = missing === 1
+            ? '1 required field is missing.'
+            : missing + ' required fields are missing.';
+    }
+
     function submitFamilyForm(root, form) {
+        form.dataset.familySaveAttempted = '1';
+
         // Deliberately not was-validated: that also paints every untouched optional
         // field green, which reads as "confirmed" on a box the worker never filled.
         // setFieldError's .is-invalid toggle is the only signal we want.
         if (!validateHead(root)) {
+            reportSaveBlocked(form);
+
             return;
         }
 
@@ -1551,8 +1588,12 @@
         if (badMember) {
             badMember.focus();
             badMember.scrollIntoView({ block: 'center' });
+            reportSaveBlocked(form);
+
             return;
         }
+
+        reportSaveBlocked(form);
 
         // Swap "Other" selects to their typed value so the custom text posts.
         applyOtherValues(form);
@@ -1914,6 +1955,17 @@
             formEl.addEventListener('submit', function (event) {
                 event.preventDefault();
                 submitFamilyForm(root, formEl);
+            });
+
+            // Keeps the blocked count honest as the worker fills fields in. No
+            // debounce: it is a querySelectorAll over one form, cheaper than the
+            // timer that would manage it.
+            formEl.addEventListener('input', function () {
+                reportSaveBlocked(formEl);
+            });
+
+            formEl.addEventListener('change', function () {
+                reportSaveBlocked(formEl);
             });
         }
         refreshAllAgeEligibility(root);

@@ -122,4 +122,16 @@ final class FamilyEntryPageTest extends CIUnitTestCase
     {
         $this->assertSame(1, substr_count($this->render(), 'data-family-save'));
     }
+
+    public function testTheActionBarCarriesAPlaceForTheBlockedReason(): void
+    {
+        $html = $this->render();
+
+        // reportSaveBlocked() writes the count of missing required fields here.
+        // It has to be a live region, or the count changes silently for anyone
+        // not looking at that corner of the screen.
+        $this->assertStringContainsString('data-entry-blocked', $html);
+        $this->assertStringContainsString('aria-live="polite"', $html);
+        $this->assertStringContainsString('data-family-save', $html);
+    }
 }

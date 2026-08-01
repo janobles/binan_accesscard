@@ -2,10 +2,10 @@
 /**
  * Lightweight shell for Scanner pages that need a real data table (search,
  * filters, pagination) but aren't the kiosk scan flow: same topnav brand and
- * account menu as kiosk-layout, admin table CSS/JS loaded directly here so
- * Admin/layout.php (Admin/Developer-only, wired to its own activePage
- * switch) stays untouched. Scanner\ScanController::history() is the only
- * page that uses it.
+ * account menu as kiosk-layout, dashboard table CSS/JS loaded directly here
+ * rather than going through the dashboard page builder, which is wired to one
+ * big activePage switch a Scanner page cannot join without forking it.
+ * Scanner\ScanController::history() is the only page that uses it.
  */
 $pageTitle          = $pageTitle ?? 'Biñan Access Card MIS';
 $username           = $username ?? 'Scanner';

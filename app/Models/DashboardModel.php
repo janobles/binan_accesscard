@@ -59,9 +59,10 @@ class DashboardModel
     }
 
     /**
-     * Returns the newest family heads with sector names resolved, for the
-     * dashboard's recent-families list. (DashboardModel is a lightweight reporting
-     * model separate from the Eloquent-style MemberModel.)
+     * Returns the newest family heads for the dashboard's recent-families list.
+     * Sector names are not resolved: the list renders sector badges from
+     * shortcodes and never reads sector_name. (DashboardModel is a lightweight
+     * reporting model separate from the Eloquent-style MemberModel.)
      */
     public function recentFamilies(int $limit = 10): array
     {
@@ -69,7 +70,7 @@ class DashboardModel
             return [];
         }
 
-        $rows = $this->db->table('member')
+        return $this->db->table('member')
             ->select('memberID, firstname, lastname, contactnumber, relationship, headID, sectorID, dt_created')
             ->where('memberID = headID', null, false)
             ->where('dt_deleted IS NULL', null, false)
@@ -77,8 +78,6 @@ class DashboardModel
             ->limit($limit)
             ->get()
             ->getResultArray();
-
-        return $this->withSectorNames($rows);
     }
 
     /** Counts active family heads (memberID = headID). */

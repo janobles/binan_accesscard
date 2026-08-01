@@ -1,7 +1,7 @@
 <?php
 /**
  * Confirmation modal for enabling or disabling an account, included once by
- * Admin/layout.php for the Account Management page (Admin > Accounts).
+ * layout.php for the Account Management page (Admin > Accounts).
  *
  * Populated and shown by view-interactions.js, which reads the clicked
  * .js-account-status-form's data-confirm-message and re-submits that form on

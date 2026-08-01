@@ -6,9 +6,9 @@ use App\Libraries\RoleAccess;
 use CodeIgniter\HTTP\RedirectResponse;
 
 /**
- * Shared AJAX-partial helpers for the role-specific dashboard controllers
- * (Admin\DashboardController and Employee\DashboardController). Both expose the
- * same "full page vs. fragment" pattern.
+ * Shared AJAX-partial helper for the dashboard controllers
+ * (Admin\DashboardController, Admin\DistributionController): the "full page vs.
+ * fragment" test their page actions branch on.
  */
 trait DashboardPartialsTrait
 {

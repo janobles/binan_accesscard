@@ -23,7 +23,7 @@ $historyRows = (array) ($historyRows ?? []);
         <tr>
           <td><?= esc((string) $r['dt_created']) ?></td>
           <td><?= esc((string) ($r['batch_name'] ?? '-')) ?></td>
-          <td><span class="badge bg-light text-dark border"><?= esc((string) $r['aid_type']) ?></span></td>
+          <td><span class="badge bg-light text-dark border"><?= esc((string) $r['subsidy_type']) ?></span></td>
         </tr>
       <?php endforeach; ?>
       <?php if ($historyRows === []): ?>

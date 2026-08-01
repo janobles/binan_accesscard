@@ -7,7 +7,7 @@
 // Connected to:
 //   - Views  : Admin/layout.php (audit tab, accounts tab),
 //              Accounts/status-confirm-modal.php - #accountStatusModal
-//   - Backend: GET admin/audit-trails, POST admin/accounts/disable|enable
+//   - Backend: GET audit-trails, POST accounts/disable|enable
 //   - Exposes: window.initViewInteractions(rootElement) for re-init after
 //              AJAX-loaded content replaces the DOM
 (function (window, document) {
@@ -100,13 +100,28 @@
         }
     });
 
+    // Bootstrap tooltips are opt-in. Sector shortcode badges carry the full sector
+    // name as their tooltip, so every page that prints them needs this; tables that
+    // re-render rows call it again for the new markup.
+    function bindTooltips(root) {
+        if (!window.bootstrap || typeof window.bootstrap.Tooltip !== 'function') {
+            return;
+        }
+
+        root.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (element) {
+            window.bootstrap.Tooltip.getOrCreateInstance(element);
+        });
+    }
+
     function initViewInteractions(rootElement) {
         const root = rootElement instanceof HTMLElement ? rootElement : document;
 
         bindAccountStatusForms(root);
+        bindTooltips(root);
     }
 
     window.initViewInteractions = initViewInteractions;
+    window.initTooltips = bindTooltips;
 
     document.addEventListener('DOMContentLoaded', function () {
         initViewInteractions(document);

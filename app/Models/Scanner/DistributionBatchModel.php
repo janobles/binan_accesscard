@@ -23,7 +23,7 @@ class DistributionBatchModel extends Model
     public function activeBatch(): ?array
     {
         try {
-            $row = $this->select('distribution_batch.*, subsidy.name AS aid_type_name')
+            $row = $this->select('distribution_batch.*, subsidy.name AS subsidy_type_name')
                 ->join('subsidy', 'subsidy.subsidy_type_id = distribution_batch.subsidy_type_id', 'left')
                 ->where('distribution_batch.closed_at', null)
                 ->orderBy('distribution_batch.batch_id', 'DESC')
@@ -36,17 +36,17 @@ class DistributionBatchModel extends Model
     }
 
     /** Opens a batch; refuses when name blank, subsidy type missing, or a batch is open. */
-    public function open(string $name, int $aidTypeId, int $userId): int
+    public function open(string $name, int $subsidyTypeId, int $userId): int
     {
         $name = trim($name);
-        if ($name === '' || $aidTypeId <= 0 || $this->activeBatch() !== null) {
+        if ($name === '' || $subsidyTypeId <= 0 || $this->activeBatch() !== null) {
             return 0;
         }
 
         try {
             if ($this->insert([
                 'name'            => $name,
-                'subsidy_type_id' => $aidTypeId,
+                'subsidy_type_id' => $subsidyTypeId,
                 'created_by'  => $userId > 0 ? $userId : null,
             ]) === false) {
                 return 0;
@@ -81,7 +81,7 @@ class DistributionBatchModel extends Model
     public function allBatches(): array
     {
         try {
-            return $this->select('distribution_batch.*, subsidy.name AS aid_type_name')
+            return $this->select('distribution_batch.*, subsidy.name AS subsidy_type_name')
                 ->join('subsidy', 'subsidy.subsidy_type_id = distribution_batch.subsidy_type_id', 'left')
                 ->orderBy('distribution_batch.batch_id', 'DESC')
                 ->findAll();

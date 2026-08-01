@@ -5,7 +5,7 @@
 // deleted - archive is the only retirement path.
 //
 // Connected to:
-//   - Backend : POST admin/categories/create|update|archive|restore
+//   - Backend : POST reference-data/categories/create|update|archive|restore
 //               (Lookups\CategoryController, via the modal's data-*-action attributes)
 //   - Views   : Views/Lookups/category-modal.php - #categoryActionModal,
 //               .js-category-modal-open buttons carry data-category-mode,

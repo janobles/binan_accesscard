@@ -4,8 +4,8 @@ namespace App\Controllers\Admin;
 
 use App\Controllers\BaseController;
 use App\Libraries\RoleAccess;
-use App\Models\Scanner\AidStatsModel;
 use App\Models\Scanner\DistributionBatchModel;
+use App\Models\Scanner\SubsidyStatsModel;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
 
@@ -38,7 +38,7 @@ class ReportsController extends BaseController
         return [0, null];
     }
 
-    /** GET admin/reports/stats - JSON snapshot for the live poll (no reload). */
+    /** GET distribution/reports/stats - JSON snapshot for the live poll (no reload). */
     public function stats(): ResponseInterface
     {
         $g = RoleAccess::requireRole(['Admin', 'Developer']);
@@ -50,18 +50,18 @@ class ReportsController extends BaseController
         $batches           = $batchModel->allBatches();
         [$batchId]         = $this->resolveBatch($batches, $batchModel->activeBatch());
         $scope             = $batchId > 0 ? $batchId : null;
-        $stats             = model(AidStatsModel::class);
+        $stats             = model(SubsidyStatsModel::class);
 
         return $this->response->setJSON([
-            'received'   => $stats->receivedVsNot($scope),
-            'barangay'   => $stats->byBarangay($scope),
-            'byAidType'  => $stats->byAidType($scope),
-            'perScanner' => $batchId > 0 ? $stats->perScanner($batchId) : [],
-            'updated'    => date('c'),
+            'received'      => $stats->receivedVsNot($scope),
+            'barangay'      => $stats->byBarangay($scope),
+            'bySubsidyType' => $stats->bySubsidyType($scope),
+            'perScanner'    => $batchId > 0 ? $stats->perScanner($batchId) : [],
+            'updated'       => date('c'),
         ]);
     }
 
-    /** GET admin/reports/pdf - streams the same report as a downloadable PDF. */
+    /** GET distribution/reports/pdf - streams the same report as a downloadable PDF. */
     public function pdf(): ResponseInterface
     {
         if ($g = $this->guard()) { return $g; }
@@ -70,12 +70,12 @@ class ReportsController extends BaseController
         $batches           = $batchModel->allBatches();
         [$batchId, $batch] = $this->resolveBatch($batches, $batchModel->activeBatch());
         $scope             = $batchId > 0 ? $batchId : null;
-        $stats             = model(AidStatsModel::class);
+        $stats             = model(SubsidyStatsModel::class);
 
         $bytes = (new \App\Libraries\Scanner\ReportsPdfGenerator())->generate(
             $stats->receivedVsNot($scope),
             $stats->byBarangay($scope),
-            $stats->byAidType($scope),
+            $stats->bySubsidyType($scope),
             null,
             null,
             $batchId > 0 ? $stats->perScanner($batchId) : [],

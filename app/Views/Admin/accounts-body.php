@@ -75,7 +75,7 @@ use App\Libraries\ViewFormatter;
                                                 <?php endif; ?>
 
                                                 <?php if ($canDeveloperToggle): ?>
-                                                    <form class="js-account-status-form" method="post" action="<?= site_url('developer/accounts/status') ?>" data-confirm-message="<?= esc(($isActive ? 'Disable' : 'Enable') . ' ' . $roleLabel . ' account "' . (string) ($account['username'] ?? '') . '"?', 'attr') ?>">
+                                                    <form class="js-account-status-form" method="post" action="<?= site_url('accounts/status') ?>" data-confirm-message="<?= esc(($isActive ? 'Disable' : 'Enable') . ' ' . $roleLabel . ' account "' . (string) ($account['username'] ?? '') . '"?', 'attr') ?>">
                                                         <?= csrf_field() ?>
                                                         <input type="hidden" name="userID" value="<?= esc((string) $userId) ?>">
                                                         <input type="hidden" name="status" value="<?= esc($nextStatus) ?>">
@@ -85,7 +85,7 @@ use App\Libraries\ViewFormatter;
                                                         </button>
                                                     </form>
                                                 <?php elseif ($canAdminToggle): ?>
-                                                    <form class="js-account-status-form" method="post" action="<?= site_url($isActive ? 'admin/accounts/disable' : 'admin/accounts/enable') ?>" data-confirm-message="<?= esc(($isActive ? 'Disable' : 'Enable') . ' ' . $roleLabel . ' account "' . (string) ($account['username'] ?? '') . '"?', 'attr') ?>">
+                                                    <form class="js-account-status-form" method="post" action="<?= site_url($isActive ? 'accounts/disable' : 'accounts/enable') ?>" data-confirm-message="<?= esc(($isActive ? 'Disable' : 'Enable') . ' ' . $roleLabel . ' account "' . (string) ($account['username'] ?? '') . '"?', 'attr') ?>">
                                                         <?= csrf_field() ?>
                                                         <input type="hidden" name="userID" value="<?= esc((string) $userId) ?>">
                                                         <button class="dropdown-item <?= $isActive ? 'text-danger' : 'text-success' ?>" type="submit">

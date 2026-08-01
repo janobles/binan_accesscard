@@ -4,29 +4,34 @@
 vendored at `public/assets/bootstrap/css/bootstrap.min.css:1` - pins in
 `docs/knowledge/sources.md`.
 
-## Rule 1: Pages plug into a role layout shell - never standalone `<html>`
+## Rule 1: Pages plug into the one layout shell - never standalone `<html>`
 
-Shells: `app/Views/Admin/layout.php:68`, `Employee/layout.php`,
-`Viewer/layout.php`. Each shell owns `<html>`, head assets, sidebar, topbar,
-and swaps the per-page view in by `$activePage`:
+There is exactly one dashboard shell, `app/Views/layout.php`, shared by every staff
+role. It owns `<html>`, head assets, sidebar, and topbar, and renders the body view
+the caller names:
 
 ```php
-<?= view('Family/list', $recordListData) ?>
+<?= view($bodyView, array_merge(['bodyView' => null, 'bodyData' => []], $bodyData ?? [])) ?>
 ```
 
-(`app/Views/Admin/layout.php:222`; same pattern for accounts `:208`,
-audit-trails `:226`, lookups `:236`.)
+Callers pass `activePage` (the manifest key, which also supplies the page title via
+`Config\Navigation::titleFor()`), `role` (a normalized label), `bodyView`, and
+`bodyData`. The role-prefixed `Admin/`, `Employee/`, and `Viewer/` layouts are
+deleted; a page never branches on the role to pick a shell.
 
-Standalone `<html>` is correct ONLY for the shells themselves,
-`app/Views/Auth/login.php:1`, and `app/Views/errors/html/` pages.
+Standalone `<html>` is correct ONLY for `layout.php`,
+`app/Views/Scanner/kiosk-layout.php`, `app/Views/Auth/login.php:1`, the PDF views,
+and `app/Views/errors/html/` pages. A page that grows its own shell (the import
+review used to) loses the sidebar and every convention below.
 
 ## Rule 2: Shared UI fragments are partials
 
-- `app/Views/components/dashboard_sidebar.php:1` - sidebar, consumed by shells
-  (`app/Views/Admin/layout.php:68`).
-- `app/Views/Partials/topbar-account-menu.php:1`,
-  `Partials/sector-label-list.php:1` - cross-role fragments
-  (`app/Views/Admin/layout.php:89`).
+- `app/Views/components/dashboard_sidebar.php:1` - sidebar, consumed by
+  `layout.php`. It takes `$role` and `$activePage` and renders every link, heading,
+  and active state from `Config\Navigation::linksFor($role)`. Never hand-write a
+  nav item here; add a manifest entry.
+- `app/Views/Partials/dashboard-topnav.php:1`,
+  `Partials/topbar-account-menu.php:1` - cross-role fragments.
 
 Repeated markup across two views = extract a partial, render with
 `view('Partials/...', [...])`.
@@ -48,7 +53,7 @@ New panels MUST use these components, not hand-rolled card markup.
 
 ## Rule 3: CSS loads via `asset_styles()` - Bootstrap first, adapter, then page CSS
 
-Canonical chain - `app/Views/Admin/layout.php:62`:
+Canonical chain - `app/Views/layout.php:52`:
 
 ```php
 <?php foreach (array_merge(asset_styles('head'), asset_styles('admin')) as $stylePath): ?>

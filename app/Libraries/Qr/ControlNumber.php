@@ -27,6 +27,17 @@ final class ControlNumber
     }
 
     /**
+     * The QR payload for a head: qrUrlPrefix followed by the formatted control
+     * number. QrCardPdfGenerator and FamilyController::qrAvailability() both call
+     * this rather than each concatenating the prefix themselves, so the printed
+     * card and the entry-page preview can never encode different strings.
+     */
+    public static function payload(int $memberID): string
+    {
+        return config('QrCardSettings')->qrUrlPrefix . self::format($memberID);
+    }
+
+    /**
      * Returns the memberID encoded by $control, or null when $control is not a
      * positive all-digits string. Accepts any length - there is no width ceiling,
      * so format()/parse() are bijective for all positive memberIDs.

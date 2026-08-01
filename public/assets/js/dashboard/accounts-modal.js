@@ -12,7 +12,7 @@
 //   - dashboard-modal-loader.js : window.registerDashboardModal()
 //   - Views  : Admin/accounts.php - .js-account-status-form buttons,
 //              .js-open-account-edit-modal buttons
-//   - Backend: POST admin/accounts/disable|enable
+//   - Backend: POST accounts/disable|enable
 //              (Accounts\AccountController::disableEmployee, ::enableEmployee)
 //              GET accounts/edit/{id} (Accounts\AccountController::editForm)
 //              POST accounts/update, accounts/reset-password

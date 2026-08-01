@@ -246,12 +246,12 @@ $renderMemberValues = static function ($index, array $m) use ($sectorCatalog): s
     $i = (string) $index;
     $scalarKeys = ['lastname', 'firstname', 'middlename', 'suffix', 'birthday', 'sex',
         'civilstatus', 'contactnumber', 'religion', 'education', 'job', 'salary', 'relationship'];
-    $names = [];
+    $sectorCodes = [];
 
     foreach ($sectorCatalog as $sectorGroup) {
         foreach (array_values((array) $sectorGroup) as $sector) {
             $sector = (array) $sector;
-            $names[(string) ($sector['sectorID'] ?? $sector['id'] ?? '')] = (string) ($sector['name'] ?? $sector['sector_name'] ?? $sector['shortcode'] ?? $sector['code'] ?? '');
+            $sectorCodes[(string) ($sector['sectorID'] ?? $sector['id'] ?? '')] = (string) ($sector['shortcode'] ?? $sector['code'] ?? $sector['name'] ?? $sector['sector_name'] ?? '');
         }
     }
 
@@ -260,7 +260,7 @@ $renderMemberValues = static function ($index, array $m) use ($sectorCatalog): s
         <input type="hidden" name="<?= esc('members[' . $i . '][' . $key . ']', 'attr') ?>" value="<?= esc((string) ($m[$key] ?? ''), 'attr') ?>">
     <?php endforeach; ?>
     <?php foreach (array_map('strval', (array) ($m['sector_ids'] ?? [])) as $sectorId): ?>
-        <input type="hidden" name="<?= esc('members[' . $i . '][sector_ids][]', 'attr') ?>" value="<?= esc($sectorId, 'attr') ?>" data-sector-name="<?= esc($names[$sectorId] ?? '', 'attr') ?>">
+        <input type="hidden" name="<?= esc('members[' . $i . '][sector_ids][]', 'attr') ?>" value="<?= esc($sectorId, 'attr') ?>" data-sector-code="<?= esc($sectorCodes[$sectorId] ?? '', 'attr') ?>">
     <?php endforeach; ?>
     <?php foreach (array_map('strval', (array) ($m['service_ids'] ?? [])) as $serviceId): ?>
         <input type="hidden" name="<?= esc('members[' . $i . '][service_ids][]', 'attr') ?>" value="<?= esc($serviceId, 'attr') ?>">
@@ -450,7 +450,6 @@ $renderMemberRow = static function ($index, array $m = [], bool $open = true) us
                         <h3 class="family-person-card-title">Family Members</h3>
                         <span class="badge rounded-pill text-bg-light border" data-family-members-count>0 members</span>
                     </div>
-                    <p class="small text-body-secondary mb-2">Everyone else in this household. Leave empty if there are none.</p>
 
                     <div class="list-group list-group-flush" data-family-members>
                         <?php foreach (array_values($existingMembers) as $i => $member): ?>
@@ -490,7 +489,7 @@ $renderMemberRow = static function ($index, array $m = [], bool $open = true) us
                 <button class="btn btn-danger" type="reset" data-family-clear>Clear</button>
                 <?php if ($headId > 0): ?>
                     <a class="btn btn-link btn-sm px-1"
-                       href="<?= site_url('admin/cards/card/' . $headId) ?>"
+                       href="<?= site_url('cards/card/' . $headId) ?>"
                        target="_blank" rel="noopener">Print QR card</a>
                 <?php endif; ?>
             </div>

@@ -1,7 +1,7 @@
 # UI Design System
 
 **Scope:** button roles, records toolbar anatomy, filter panel + pills, dual
-search. Reference implementation: `admin/manage-records`
+search. Reference implementation: `/records`
 (`app/Views/Family/list.php` + `components/records_toolbar.php`).
 Spec receipt: `docs/superpowers/specs/2026-07-12-manage-records-ui-design.md`.
 
@@ -18,6 +18,7 @@ source of truth. Never hardcode a `btn-*` color class on a toolbar action.
 | add      | btn btn-success            | create a record (modal)       |
 | import   | btn btn-warning            | bulk import                   |
 | filter   | btn btn-outline-secondary  | open a filter panel           |
+| save     | btn btn-primary            | commit a full-page form (e.g. Data Entry) |
 
 Buttons use stock Bootstrap colors only - theme.css must NOT re-tint
 `.btn-primary` to Biñan green (that made Search and Add two competing
@@ -111,7 +112,7 @@ pages, it goes in the shared layer.
   row directly under it - see `Family/list.php` for the standard.
 - manage-records: done (feat/manage-records-ui). AJAX flavor: filter panel +
   pills wired by `assets/js/dashboard/family-datatable.js`.
-- lookups (sectors/services/categories), audit-trails, employee activity:
+- lookups (sectors/services/categories), audit-trails, encoder activity:
   done (feat/retrofit-toolbar-conventions) via
   `components/records_toolbar_server.php` - same Bootstrap-grid anatomy as
   records_toolbar, wired by the shared

@@ -1,122 +1,139 @@
 <?php
 /**
- * Import Review - full-page screen where an operator resolves import problems before any
- * data is written. The staged rows + grouped errors are rendered by import-review.js from
- * the JSON island below. A flagged family can be fixed two ways: in the spreadsheet (every
- * issue names the exact cell), or in place via the Edit modal - which POSTs to
- * import/review/:id/family/:qr/save, re-validates server-side, and re-renders without a
- * re-upload. Confirm queues the write job.
+ * Import review (Family Records > Import Excel, step 2). The staged rows of an upload
+ * as one paginated row per person, so every problem in the file is reachable and a
+ * 10,000-row import renders as fast as a small one.
  *
- * @var int    $jobId
- * @var string $routeBase   admin/manage-family or employee/manage-family
- * @var string $recordsUrl  Manage Records landing page (the bare route base has no index route)
- * @var array  $review      ImportReviewPresenter::build() output
- * @var string $username
- * @var int    $idleTimeoutSeconds
+ * Rows arrive from records/import/review/:id/rows, a page at a time, and are painted by
+ * import-review.js. Clicking a flagged row expands an editor for every field carrying a
+ * problem; nothing is staged until Apply, and nothing reaches the member table until
+ * Confirm import. Cancel discards staging.
+ *
+ * Renders inside the shared dashboard layout, so it loads no assets of its own.
  */
-$jobId     = (int) ($jobId ?? 0);
-$routeBase = (string) ($routeBase ?? 'admin/manage-family');
-$review    = $review ?? ['file' => '', 'counts' => ['families' => 0, 'members' => 0, 'blocking' => 0, 'warnings' => 0], 'groups' => []];
-// Back / post-commit redirect must hit the Manage Records page: the bare route base
-// (`{role}/manage-family`) has no index route and 404s.
-$backUrl   = (string) ($recordsUrl ?? site_url(str_replace('/manage-family', '/manage-records', $routeBase)));
-$idleTimeoutSeconds = (int) ($idleTimeoutSeconds ?? 900);
+$jobId   = (int) ($jobId ?? 0);
+$summary = $summary ?? ['file' => '', 'counts' => [], 'codes' => [], 'fileNotices' => []];
 $fieldOptions = $fieldOptions ?? [];
+$counts  = is_array($summary['counts'] ?? null) ? $summary['counts'] : [];
 
-// JSON island: HEX_TAG/HEX_AMP keep any "</script>" or "&" inside a spreadsheet cell
+// JSON islands: HEX_TAG/HEX_AMP keep any "</script>" or "&" from a spreadsheet cell
 // from breaking out of the <script> tag (defence against a crafted .xlsx).
-$reviewJson = json_encode($review, JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE);
-// Dropdown option lists for inline <select> cells (mirrors the Excel template dropdowns).
+$summaryJson = json_encode($summary, JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE);
 $fieldOptionsJson = json_encode($fieldOptions, JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE);
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Review Import - Binan Access Card MIS</title>
-    <link rel="icon" type="image/png" href="<?= asset_url('assets/image/binan.png') ?>">
-    <?php foreach (array_merge(asset_styles('head'), asset_styles('admin')) as $stylePath): ?>
-    <link rel="stylesheet" href="<?= esc(asset_url($stylePath), 'attr') ?>">
-    <?php endforeach; ?>
-    <link rel="stylesheet" href="<?= esc(asset_url('css/import-review.css'), 'attr') ?>">
-</head>
-<body class="bg-light">
-<nav class="navbar navbar-dark bg-dark px-4 import-review-topbar">
-    <span class="navbar-brand mb-0 h1"><i class="bi bi-clipboard-check me-2" aria-hidden="true"></i>Review Import</span>
-    <a class="btn btn-sm btn-outline-light" href="<?= esc($backUrl, 'attr') ?>">
-        <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Back to Records
-    </a>
-</nav>
-
-<main class="container-fluid px-4 py-4"
-      id="importReview"
-      data-commit-url="<?= esc(site_url($routeBase . '/import/review/' . $jobId . '/commit'), 'attr') ?>"
-      data-cancel-url="<?= esc(site_url($routeBase . '/import/review/' . $jobId . '/cancel'), 'attr') ?>"
-      data-family-base-url="<?= esc(site_url($routeBase . '/import/review/' . $jobId . '/family'), 'attr') ?>"
-      data-cell-url="<?= esc(site_url($routeBase . '/import/review/' . $jobId . '/family/cell'), 'attr') ?>"
-      data-redirect-url="<?= esc($backUrl, 'attr') ?>">
+<div id="importReview"
+     data-rows-url="<?= esc(site_url('records/import/review/' . $jobId . '/rows'), 'attr') ?>"
+     data-apply-url="<?= esc(site_url('records/import/review/' . $jobId . '/apply'), 'attr') ?>"
+     data-commit-url="<?= esc(site_url('records/import/review/' . $jobId . '/commit'), 'attr') ?>"
+     data-cancel-url="<?= esc(site_url('records/import/review/' . $jobId . '/cancel'), 'attr') ?>"
+     data-redirect-url="<?= esc(site_url('records'), 'attr') ?>">
 
     <input type="hidden" id="reviewCsrf" name="<?= csrf_token() ?>" value="<?= csrf_hash() ?>">
 
-    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
-        <div>
-            <h2 class="h4 mb-1">Check before importing</h2>
-            <p class="text-muted mb-0">
-                File: <strong id="reviewFileName"></strong>. Nothing is saved until you press
-                <strong>Confirm import</strong>. Fix a flagged family right here with
-                <strong>Edit</strong>, or <strong>Remove</strong> it from this import.
-            </p>
+    <?php /* The review step reads as an error while blocking rows remain, so a file
+             that cannot be committed says so in the page chrome and not only in the
+             severity pills below. */ ?>
+    <?= view('components/stepper', [
+        'orientation' => 'horizontal',
+        'label'       => 'Import progress',
+        'steps'       => [
+            ['label' => 'Upload', 'state' => 'done'],
+            ['label' => 'Review and Fix', 'state' => ((int) ($counts['blocking'] ?? 0)) > 0 ? 'error' : 'current'],
+        ],
+    ]) ?>
+
+    <p class="text-muted">
+        File: <strong id="reviewFileName"><?= esc($summary['file'] ?? '') ?></strong>.
+        Nothing is saved until you press <strong>Confirm import</strong>. Open a flagged
+        row to correct it.
+    </p>
+
+    <div id="importReviewNotices">
+        <?php foreach (($summary['fileNotices'] ?? []) as $notice) : ?>
+            <div class="alert alert-danger" role="alert"><?= esc($notice) ?></div>
+        <?php endforeach; ?>
+    </div>
+
+    <ul class="nav nav-pills segmented-tabs mb-3" id="importReviewSeverity" role="tablist">
+        <li class="nav-item"><button type="button" class="nav-link active" data-severity="all">All</button></li>
+        <li class="nav-item"><button type="button" class="nav-link" data-severity="problems">Problems</button></li>
+        <li class="nav-item"><button type="button" class="nav-link" data-severity="blocking">
+            Must fix <span class="badge text-bg-danger" data-count="blocking"><?= (int) ($counts['blocking'] ?? 0) ?></span>
+        </button></li>
+        <li class="nav-item"><button type="button" class="nav-link" data-severity="warning">
+            Warnings <span class="badge text-bg-warning" data-count="warnings"><?= (int) ($counts['warnings'] ?? 0) ?></span>
+        </button></li>
+    </ul>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <span><i class="bi bi-table me-1" aria-hidden="true"></i>Rows to review</span>
+        </div>
+        <div class="card-body">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                <div class="flex-grow-1 import-review-search">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
+                        <input type="search" class="form-control" id="importReviewSearch"
+                               placeholder="Search this import..." aria-label="Search this import">
+                    </div>
+                </div>
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <div class="d-flex align-items-center gap-2 small text-muted">
+                        <label class="mb-0" for="importReviewCodeFilter">Problem</label>
+                        <select class="form-select form-select-sm w-auto" id="importReviewCodeFilter">
+                            <option value="">All problems</option>
+                            <?php foreach (($summary['codes'] ?? []) as $code) : ?>
+                                <option value="<?= esc($code['code'], 'attr') ?>"><?= esc($code['label']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 small text-muted">
+                        <label class="mb-0" for="importReviewPerPage">Show</label>
+                        <select class="form-select form-select-sm w-auto" id="importReviewPerPage">
+                            <option value="25" selected>25</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                        <span>entries</span>
+                    </div>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" id="importReviewTable">
+                    <thead>
+                        <tr>
+                            <th scope="col"><span class="visually-hidden">Status</span></th>
+                            <th scope="col">Family</th>
+                            <th scope="col">Role</th>
+                            <th scope="col">Last Name</th>
+                            <th scope="col">First Name</th>
+                            <th scope="col">Issues</th>
+                            <th scope="col"><span class="visually-hidden">Open</span></th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card-footer small text-muted">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 w-100">
+                <span id="importReviewCount" role="status" aria-live="polite"></span>
+                <nav aria-label="Review pages"><ul class="pagination pagination-sm mb-0" id="importReviewPager"></ul></nav>
+            </div>
         </div>
     </div>
 
-    <div id="importReviewStats" class="row g-3 mb-4"></div>
-
-    <div id="importReviewGroups"></div>
-
-    <div class="import-review-actionbar d-flex flex-wrap justify-content-end align-items-center gap-2 mt-4">
+    <div class="d-flex flex-wrap justify-content-end align-items-center gap-2 mt-4">
         <span id="importReviewStatus" class="text-muted me-auto" role="status" aria-live="polite"></span>
         <button type="button" class="btn btn-secondary" id="importReviewCancel">
             <i class="bi bi-x-circle me-1" aria-hidden="true"></i>Cancel import
         </button>
-        <button type="button" class="btn btn-primary" id="importReviewConfirm" disabled>
+        <button type="button" class="<?= btn('add') ?>" id="importReviewConfirm" disabled>
             <i class="bi bi-check2-circle me-1" aria-hidden="true"></i>Confirm import
         </button>
     </div>
-</main>
 
-<?php /* Shared modal target for the in-place family Edit flow. manage-family-modal.js loads
-         the prefilled family-modal fragment into #familyModalBody (same as Manage Records). */ ?>
-<?= view('components/modal', [
-    'id' => 'familyModal',
-    'modalClass' => 'floating-family-modal',
-    'attrs' => 'aria-label="Fix family record" data-bs-backdrop="static" data-bs-keyboard="false"',
-    'size' => 'modal-xl',
-    'title' => 'Fix Family Record',
-    'titleId' => 'familyModalLabel',
-    'bodyId' => 'familyModalBody',
-    'bodyHtml' => '<div class="family-modal-loading" role="status" aria-live="polite"><div class="spinner-border text-primary" aria-hidden="true"></div><span>Loading...</span></div>',
-    'footerHtml' => '<button type="button" class="btn btn-outline-secondary family-modal-close" data-bs-dismiss="modal">Close</button>',
-]) ?>
-
-<?= view('Family/action-confirm-modal') ?>
-
-<script id="importReviewData" type="application/json"><?= $reviewJson ?></script>
-<script id="importReviewFieldOptions" type="application/json"><?= $fieldOptionsJson ?></script>
-<?php foreach (asset_scripts('core') as $scriptPath): ?>
-<script src="<?= esc(asset_url($scriptPath), 'attr') ?>"></script>
-<?php endforeach; ?>
-<?php /* Dashboard modal infrastructure so the family Edit modal works on this standalone
-         page (the dashboard layouts load these; this page is its own shell). */ ?>
-<script src="<?= esc(asset_url('assets/js/dashboard/dashboard-modal-loader.js'), 'attr') ?>"></script>
-<script src="<?= esc(asset_url('assets/js/dashboard/manage-family-modal.js'), 'attr') ?>"></script>
-<script src="<?= esc(asset_url('assets/js/dashboard/import-review.js'), 'attr') ?>"></script>
-<?php /* Idle-timeout logout - this page is its own shell, so it wires the same
-         session-timeout script the dashboard layouts render. */ ?>
-<script src="<?= esc(asset_url('assets/js/session-timeout.js'), 'attr') ?>"
-        data-timeout-seconds="<?= esc((string) $idleTimeoutSeconds) ?>"
-        data-logout-url="<?= site_url('logout?timeout=1') ?>"
-        data-home-url="<?= site_url('/') ?>"
-        data-keep-alive-url="<?= site_url('session/keep-alive') ?>"></script>
-</body>
-</html>
+    <script id="importReviewSummary" type="application/json"><?= $summaryJson ?></script>
+    <script id="importReviewFieldOptions" type="application/json"><?= $fieldOptionsJson ?></script>
+</div>

@@ -2,6 +2,7 @@
 
 namespace Config;
 
+use App\Libraries\ImportStagingStore;
 use CodeIgniter\Config\BaseService;
 
 /**
@@ -29,4 +30,18 @@ class Services extends BaseService
      *     return new \CodeIgniter\Example();
      * }
      */
+
+    /**
+     * The import staging store. A service rather than a `new` at each call site so a
+     * test can point the review endpoints at a scratch directory, and so the whole
+     * request shares one instance.
+     */
+    public static function importStaging(bool $getShared = true): ImportStagingStore
+    {
+        if ($getShared) {
+            return static::getSharedInstance('importStaging');
+        }
+
+        return new ImportStagingStore();
+    }
 }

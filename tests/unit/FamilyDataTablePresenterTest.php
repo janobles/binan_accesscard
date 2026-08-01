@@ -9,7 +9,7 @@ final class FamilyDataTablePresenterTest extends CIUnitTestCase
 {
     public function testPayloadEnvelopeShape(): void
     {
-        $presenter = new FamilyDataTablePresenter('admin/manage-family', 'Admin');
+        $presenter = new FamilyDataTablePresenter('Admin');
         $payload   = $presenter->payload(3, 10, 2, [['x']]);
 
         $this->assertSame(3, $payload['draw']);
@@ -22,23 +22,73 @@ final class FamilyDataTablePresenterTest extends CIUnitTestCase
         $this->assertSame('boom', $withError['error']);
     }
 
-    public function testRowShapesHeadScopeCells(): void
+    public function testRowIsOneHouseholdWithItsMemberCount(): void
     {
-        $presenter = new FamilyDataTablePresenter('admin/manage-family', 'Viewer');
-        // Deliberately mixed-case input: the presenter must render what it is given.
-        // Storage is uppercase in practice, but an uppercase fixture here could not tell
-        // pass-through apart from re-casing, so it would not catch a reintroduced
-        // mb_strtoupper.
-        $row       = $presenter->row(
-            ['memberID' => 5, 'firstname' => 'Ana', 'middlename' => 'Reyes', 'lastname' => 'Cruz', 'suffix' => '', 'address' => '123 St', 'birthday' => '1990-01-02', 'sectorID' => null],
-            false,
-            []
+        $presenter = new FamilyDataTablePresenter('Admin');
+
+        $cells = $presenter->row(
+            ['memberID' => 7, 'headID' => 7, 'lastname' => 'DELA CRUZ',
+             'firstname' => 'JUAN', 'address' => 'CANLALAY', 'sectorID' => '1'],
+            [1 => ['code' => 'SC', 'name' => 'Senior Citizen']],
+            [7 => 142],
+            4
         );
 
-        $this->assertSame(['qr', 'name', 'sector', 'address', 'birthday', 'actions'], array_keys($row));
-        $this->assertStringContainsString('Cruz, Ana R.', $row['name']);
-        $this->assertSame('123 St', $row['address']);
-        $this->assertSame('1990-01-02', $row['birthday']);
-        $this->assertStringContainsString('-', $row['qr']);
+        $this->assertSame(['qr', 'name', 'members', 'sector', 'address', 'actions'],
+            array_keys($cells));
+        $this->assertSame('4', $cells['members']);
+        $this->assertStringContainsString('DELA CRUZ', $cells['name']);
+        $this->assertStringNotContainsString('text-muted d-block', $cells['name'],
+            'A head row carries no relationship subline.');
+        $this->assertStringContainsString('badge', $cells['sector'],
+            'The sector shows as a shortcode badge, matching Reference Data.');
+        $this->assertStringContainsString('>SC<', $cells['sector']);
+        // esc(..., 'attr') encodes the space, so decode before asserting the label.
+        $this->assertStringContainsString('title="Senior Citizen"',
+            html_entity_decode($cells['sector'], ENT_QUOTES | ENT_HTML5),
+            'The full sector name is the badge tooltip and accessible label.');
+    }
+
+    public function testRowLinksToTheFlatProfileUri(): void
+    {
+        $presenter = new FamilyDataTablePresenter('Admin');
+
+        $cells = $presenter->row(
+            ['memberID' => 7, 'headID' => 7, 'lastname' => 'SANTOS', 'firstname' => 'PEDRO'],
+            [],
+            [7 => 143],
+            3
+        );
+
+        // The URLs sit in esc(..., 'attr') attributes, which percent-encodes '/'
+        // to &#x2F; - decode before asserting so the test checks the head ID
+        // reaching the flat route, not an escaping implementation detail.
+        $actionsHtml = html_entity_decode($cells['actions'], ENT_QUOTES | ENT_HTML5);
+
+        $this->assertStringContainsString('records/7', $actionsHtml);
+        $this->assertStringNotContainsString('manage-family', $actionsHtml);
+    }
+
+    public function testUpdateIsAPlainLinkToTheFlatProfileUriNotTheEntryForm(): void
+    {
+        $presenter = new FamilyDataTablePresenter('Admin');
+
+        $cells = $presenter->row(
+            ['memberID' => 7, 'headID' => 7, 'lastname' => 'SANTOS', 'firstname' => 'PEDRO'],
+            [],
+            [7 => 143],
+            3
+        );
+
+        $actionsHtml = html_entity_decode($cells['actions'], ENT_QUOTES | ENT_HTML5);
+
+        // records/entry ignores mode/id and always opens a blank Add form, so
+        // pointing UPDATE there creates a duplicate household instead of editing
+        // the one clicked. The profile URL is what Task 9 turns into the edit
+        // surface.
+        $this->assertStringContainsString('href="' . site_url('records/7') . '"', $actionsHtml);
+        $this->assertStringNotContainsString('records/entry', $actionsHtml);
+        // A plain navigation, not a modal trigger: the destination is a full page.
+        $this->assertStringNotContainsString('js-open-family-add-modal', $actionsHtml);
     }
 }

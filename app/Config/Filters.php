@@ -3,6 +3,7 @@
 namespace Config;
 
 use App\Filters\IdleTimeoutFilter;
+use App\Filters\RoleNavFilter;
 use App\Filters\SingleSessionFilter;
 use CodeIgniter\Config\Filters as BaseFilters;
 use CodeIgniter\Filters\Cors;
@@ -38,6 +39,7 @@ class Filters extends BaseFilters
         'performance'   => PerformanceMetrics::class,
         'idleTimeout'   => IdleTimeoutFilter::class,
         'singleSession' => SingleSessionFilter::class,
+        'roleNav'       => RoleNavFilter::class,
     ];
 
     /**
@@ -114,28 +116,38 @@ class Filters extends BaseFilters
     public array $filters = [
         'idleTimeout' => [
             'before' => [
-                'admin',
-                'admin/*',
-                'employee/*',
-                'viewer',
-                'viewer/*',
-                'developer/*',
+                'dashboard',
+                'records',
+                'records/*',
+                'reference-data',
+                'reference-data/*',
+                'cards',
+                'cards/*',
+                'distribution',
+                'distribution/*',
+                'accounts',
+                'accounts/*',
+                'audit-trails',
                 'session/keep-alive',
-                'families',
             ],
         ],
         // Runs after idleTimeout (idle sessions are cleared first): logs out any
         // session displaced by a confirmed login elsewhere. Same protected routes.
         'singleSession' => [
             'before' => [
-                'admin',
-                'admin/*',
-                'employee/*',
-                'viewer',
-                'viewer/*',
-                'developer/*',
+                'dashboard',
+                'records',
+                'records/*',
+                'reference-data',
+                'reference-data/*',
+                'cards',
+                'cards/*',
+                'distribution',
+                'distribution/*',
+                'accounts',
+                'accounts/*',
+                'audit-trails',
                 'session/keep-alive',
-                'families',
             ],
         ],
     ];

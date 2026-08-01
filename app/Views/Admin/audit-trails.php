@@ -2,7 +2,7 @@
 /**
  * Audit Trails page (Admin > Audit Trails).
  *
- * Rendered inside Admin/layout.php. Rows and their pagination bundle come from
+ * Rendered inside layout.php. Rows and their pagination bundle come from
  * DashboardPageBuilder::buildAuditListData(); the counts describe the whole filtered
  * set, not the rows on screen. Paging and filtering are server side, so every control
  * here is a link or a form rather than a client-side table filter.
@@ -16,7 +16,7 @@ $auditListData      = $auditListData ?? [];
 $hasSearchFilters   = $searchTerm !== '' || array_filter($searchFilters, static fn ($value): bool => trim((string) $value) !== '') !== [];
 
 // Pagination + page-size bundle (from DashboardPageBuilder::buildAuditListData).
-$listRoute      = (string) ($auditListData['listRoute'] ?? 'admin/audit-trails');
+$listRoute      = (string) ($auditListData['listRoute'] ?? 'audit-trails');
 $auditAction    = trim((string) ($searchFilters['action'] ?? ''));
 $perPage        = (int) ($auditListData['perPage'] ?? 25);
 $perPageOptions = ($auditListData['perPageOptions'] ?? []) ?: [10, 25, 50, 100];

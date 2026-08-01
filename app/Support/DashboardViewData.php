@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use App\Libraries\Qr\ControlNumber;
+use App\Libraries\Qr\QrImageGenerator;
 use App\Models\Lookups\CategoryModel;
 use App\Models\Lookups\SectorModel;
 use App\Models\Lookups\ServiceModel;
@@ -13,7 +15,7 @@ use App\Models\Lookups\ServiceModel;
  */
 class DashboardViewData
 {
-    /** Prepares variables for the admin shell (`Admin/layout`). */
+    /** Prepares variables for the shared dashboard shell (`layout`), admin roles. */
     public static function admin(array $data): array
     {
         $user = self::arrayValue($data['user'] ?? []);
@@ -67,11 +69,11 @@ class DashboardViewData
         );
     }
 
-    /** Prepares variables for the employee shell (`Employee/layout`). */
+    /** Prepares variables for the shared dashboard shell (`layout`), encoder roles. */
     public static function employee(array $data): array
     {
         $user = self::arrayValue($data['user'] ?? []);
-        $username = $user['username'] ?? 'Employee';
+        $username = $user['username'] ?? 'Encoder';
         $activePage = (string) ($data['activePage'] ?? 'dashboard');
         $pageTitle = (string) ($data['pageTitle'] ?? ($activePage === 'dashboard' ? 'Workspace' : ucwords(str_replace('-', ' ', $activePage))));
         $navActive = self::arrayValue($data['navActive'] ?? []);
@@ -172,7 +174,6 @@ class DashboardViewData
     {
         $families = self::arrayValue($data['families'] ?? []);
         $keyword = (string) ($data['keyword'] ?? '');
-        $routeBase = (string) ($data['routeBase'] ?? 'admin/manage-family');
         $formatDate = self::formatDateCallback();
         $formatTime = self::formatTimeCallback();
 
@@ -180,8 +181,7 @@ class DashboardViewData
             'families',
             'formatDate',
             'formatTime',
-            'keyword',
-            'routeBase'
+            'keyword'
         );
     }
 
@@ -198,6 +198,59 @@ class DashboardViewData
             'members',
             'serviceMap',
             'serviceNameMap'
+        );
+    }
+
+    /** Prepares variables for the Data Entry page (`Family/entry`, a new family). */
+    public static function familyEntry(array $data): array
+    {
+        $head = self::arrayValue($data['head'] ?? []);
+        $members = self::arrayValue($data['members'] ?? []);
+        $readOnly = (bool) ($data['readOnly'] ?? false);
+        $sectors = self::arrayValue($data['sectors'] ?? []);
+        $services = self::arrayValue($data['services'] ?? []);
+        $categories = self::arrayValue($data['categories'] ?? []);
+        $formOptions = self::arrayValue($data['formOptions'] ?? []);
+
+        return compact(
+            'categories',
+            'formOptions',
+            'head',
+            'members',
+            'readOnly',
+            'sectors',
+            'services'
+        );
+    }
+
+    /**
+     * Prepares variables for the Family Profile page (`Family/profile`, an
+     * existing family - the same surface displays and edits it).
+     */
+    public static function familyProfile(array $data): array
+    {
+        $head = self::arrayValue($data['head'] ?? []);
+        $members = self::arrayValue($data['members'] ?? []);
+        $controlNumber = (int) ($data['controlNumber'] ?? 0);
+        $readOnly = (bool) ($data['readOnly'] ?? false);
+        $sectors = self::arrayValue($data['sectors'] ?? []);
+        $services = self::arrayValue($data['services'] ?? []);
+        $categories = self::arrayValue($data['categories'] ?? []);
+        $formOptions = self::arrayValue($data['formOptions'] ?? []);
+        $qrDataUri = $controlNumber > 0
+            ? (new QrImageGenerator())->dataUri(ControlNumber::payload($controlNumber))
+            : '';
+
+        return compact(
+            'categories',
+            'controlNumber',
+            'formOptions',
+            'head',
+            'members',
+            'qrDataUri',
+            'readOnly',
+            'sectors',
+            'services'
         );
     }
 
@@ -237,7 +290,7 @@ class DashboardViewData
                 'canRestore',
                 'existingShortcodes'
             ),
-            self::lookupListVars($bundle, 'admin/reference-data')
+            self::lookupListVars($bundle, 'reference-data')
         );
     }
 
@@ -287,7 +340,7 @@ class DashboardViewData
 
         return array_merge(
             compact('services', 'canRestore', 'serviceCategoryOptions', 'serviceNextCodeMap', 'existingShortcodes'),
-            self::lookupListVars($bundle, 'admin/reference-data')
+            self::lookupListVars($bundle, 'reference-data')
         );
     }
 
@@ -307,20 +360,7 @@ class DashboardViewData
 
         return array_merge(
             compact('categories', 'canRestore', 'existingCodes'),
-            self::lookupListVars($bundle, 'admin/reference-data')
-        );
-    }
-
-    /** Prepares variables for the Subsidy Types management view (paginated list + search/status). */
-    public static function aidTypeManagement(array $data): array
-    {
-        $bundle = (array) ($data['aidTypeListData'] ?? []);
-        $aidTypes = self::arrayValue($bundle['rows'] ?? $data['aidTypes'] ?? []);
-        $canRestore = (bool) ($data['canRestore'] ?? false);
-
-        return array_merge(
-            compact('aidTypes', 'canRestore'),
-            self::lookupListVars($bundle, 'admin/reference-data')
+            self::lookupListVars($bundle, 'reference-data')
         );
     }
 

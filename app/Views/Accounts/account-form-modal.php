@@ -31,7 +31,7 @@ $displayRoleLabel = $roleLabel !== '' ? $roleLabel : match ($role) {
     default => $role,
 };
 $fieldPrefix = $isEdit ? 'edit-account' : ($isSelfProfile ? 'my-account' : 'account');
-$action = $isEdit ? site_url('accounts/update') : ($isSelfProfile ? site_url('account/profile/update') : site_url('developer/accounts'));
+$action = $isEdit ? site_url('accounts/update') : ($isSelfProfile ? site_url('account/profile/update') : site_url('accounts'));
 $submitLabel = $isEdit ? 'Save Changes' : ($isSelfProfile ? 'Save Account' : 'Create Account');
 $value = static function (array $details, string $key, bool $isEdit): string {
     return $isEdit ? (string) ($details[$key] ?? '') : (string) old($key);

@@ -365,8 +365,8 @@ class MemberModel extends Model
      * Applies a DataTables column sort to a member query, or the default
      * newest-first ordering when $orderKey is null/unrecognized. Column keys map
      * to the visible Manage Records columns: qr (qr_control join, no-control
-     * heads last), name (lastname, firstname), address, birthday. Used only by
-     * the server-side DataTables path.
+     * heads last), name (lastname, firstname), address. Used only by the
+     * server-side DataTables path.
      */
     private function applyMemberOrder($builder, ?string $orderKey, string $orderDirection): void
     {
@@ -399,6 +399,41 @@ class MemberModel extends Model
         }
 
         $builder->orderBy('member.memberID', 'DESC');
+    }
+
+    /**
+     * Household size for each of the given heads, in one grouped query rather than a
+     * count per row. Counts the same set of people the caller is listing: on the
+     * active tab archived members are excluded, but on the archived tab they are the
+     * rows on screen, so excluding them there would show every household as empty.
+     *
+     * @param  list<int>        $headIds
+     * @param  string           $status  Which rows the list is showing (RecordStatus::*)
+     * @return array<int, int>  headID => member rows, heads with no rows omitted
+     */
+    public function memberCountsForHeads(array $headIds, string $status = RecordStatus::ACTIVE): array
+    {
+        $headIds = array_values(array_unique(array_filter(array_map('intval', $headIds))));
+
+        // whereIn() on an empty array is not valid SQL, and there is nothing to count.
+        if ($headIds === [] || ! $this->hasTable()) {
+            return [];
+        }
+
+        $builder = $this->db->table($this->table)
+            ->select('headID, COUNT(*) AS total')
+            ->whereIn('headID', $headIds)
+            ->groupBy('headID');
+
+        if ($this->db->fieldExists('dt_deleted', $this->table)) {
+            if ($status === RecordStatus::ARCHIVED) {
+                $builder->where('member.dt_deleted IS NOT NULL', null, false);
+            } elseif ($status !== RecordStatus::ALL) {
+                $builder->where('member.dt_deleted IS NULL', null, false);
+            }
+        }
+
+        return array_map('intval', array_column($builder->get()->getResultArray(), 'total', 'headID'));
     }
 
     /**

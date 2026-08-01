@@ -26,6 +26,15 @@
         return row.textContent.toLowerCase().indexOf(searchTerm) !== -1;
     }
 
+    // Sector cells render shortcode badges whose tooltip is the full sector name.
+    // Every draw replaces the tbody, so the new page's badges need binding again
+    // (view-interactions.js owns the binding itself).
+    function initSectorTooltips(tableElement) {
+        if (typeof window.initTooltips === 'function') {
+            window.initTooltips(tableElement);
+        }
+    }
+
     function initializeFamilyDataTable() {
         var tableElement = document.getElementById('familyRecordsTable');
         var filterForm = document.getElementById('familyDataTableFilters');
@@ -197,11 +206,9 @@
             columns: [
                 { data: 'qr', name: 'qr', orderSequence: ['asc', 'desc'], className: 'text-center text-nowrap' },
                 { data: 'name', name: 'name', orderSequence: ['asc', 'desc'] },
+                { data: 'members', name: 'members', orderable: false, className: 'text-center' },
                 { data: 'sector', name: 'sector', orderable: false },
                 { data: 'address', name: 'address', orderSequence: ['asc', 'desc'] },
-                // className overrides DataTables' auto-detected "date" column
-                // type, which right-aligns by default.
-                { data: 'birthday', name: 'birthday', orderSequence: ['asc', 'desc'], className: 'text-start' },
                 { data: 'actions', name: 'actions', orderable: false, searchable: false, className: 'text-end' }
             ],
             layout: {
@@ -223,6 +230,7 @@
                 }
 
                 applyCurrentPageQuickSearch();
+                initSectorTooltips(tableElement);
 
                 // Move DataTables info and paging elements to the card footer
                 var dtInfo = tableElement.closest('.dt-container').querySelector('.dt-info');

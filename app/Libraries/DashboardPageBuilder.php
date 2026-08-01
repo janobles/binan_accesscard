@@ -9,61 +9,123 @@ use App\Models\SearchModel;
 use App\Models\Lookups\CategoryModel;
 use App\Models\Lookups\SectorModel;
 use App\Models\Lookups\ServiceModel;
-use App\Models\Auth\UserModel;
-use App\Models\Scanner\AidDistributionModel;
-use App\Models\Scanner\AidTypeModel;
-use App\Models\Scanner\AidStatsModel;
+use App\Models\Scanner\SubsidyDistributionModel;
+use App\Models\Scanner\SubsidyTypeModel;
+use App\Models\Scanner\SubsidyStatsModel;
 use App\Models\Scanner\DistributionBatchModel;
 use App\Support\FamilyProfilingFormV2;
 use App\Libraries\RoleAccess;
 use App\Models\ViewLayoutModel;
+use CodeIgniter\Database\Exceptions\DatabaseException;
 use CodeIgniter\HTTP\IncomingRequest;
-use CodeIgniter\HTTP\RedirectResponse;
 use Config\IdleTimeout;
+use Config\Navigation;
 
 /**
  * Central view-data assembler for the dashboard. Admin\DashboardController delegates here so
  * controllers only choose WHICH page to show while this class gathers all the
- * models' data and renders the admin/employee shell views. The main place to look
- * when debugging what a dashboard page displays.
+ * models' data and renders the one shell view. The main place to look when
+ * debugging what a dashboard page displays.
  */
 class DashboardPageBuilder
 {
+    /**
+     * Manifest page key => the view the shell renders in its main area. A key
+     * with no entry here falls back to the dashboard body.
+     *
+     * @var array<string, string>
+     */
+    private const BODY_VIEWS = [
+        'dashboard'      => 'Pages/dashboard',
+        'records'        => 'Family/list',
+        'reference-data' => 'Pages/reference-data',
+        'cards'          => 'Cards/batch_form',
+        'distribution'   => 'Pages/distribution',
+        'accounts'       => 'Admin/accounts',
+        'audit-trails'   => 'Admin/audit-trails',
+    ];
+
     /** Holds the current request so query params (search/filters/page) are available. */
     public function __construct(private IncomingRequest $request) {}
 
     /**
-     * Guards Developer/Admin access, then renders the admin shell
-     * (`Admin/layout`) on the given tab. Account management additionally
-     * requires Developer/Admin. Frontend: returns the full admin page HTML.
+     * The shell's account variables: who the topbar names, and what the sidebar's
+     * user link may reach.
+     *
+     * A controller that renders `layout` directly (the import wizard, the family
+     * entry and profile pages) never runs buildViewData(), so without this it
+     * hands the shell no user at all and the topbar falls back to the word "User"
+     * while the operator is signed in as themselves. Session-only, so it costs
+     * nothing to call from a page that assembles the rest of its data itself.
+     *
+     * @return array{user: array, username: string, accountLevelLabel: string, canManageAccounts: bool}
      */
-    public function renderAdminPage(string $activePage): string|RedirectResponse
+    public static function shellAccountData(): array
     {
-        $guard = RoleAccess::requireRole(['Developer', 'Admin']);
+        $role = RoleAccess::normalizeRole((string) session()->get('role'));
 
-        if ($guard instanceof RedirectResponse) {
-            return $guard;
+        try {
+            $user = SessionAccount::user();
+        } catch (DatabaseException $e) {
+            // The name in the topbar is not worth a 500. Fall back to the session,
+            // which already carries the username the operator signed in with -
+            // but only the display fields. Casting the whole session here would
+            // hand auth_token and every other key to the views as $user.
+            $user = [
+                'username' => (string) (session()->get('username') ?? ''),
+                'userID'   => (int) session()->get('user_id'),
+            ];
         }
 
-        $currentRole = RoleAccess::normalizeRole((string) session()->get('role'));
+        return [
+            'user'              => $user,
+            'username'          => (string) (session()->get('username') ?? 'Admin'),
+            'accountLevelLabel' => SessionAccount::levelLabel(),
+            'canManageAccounts' => in_array($role, ['Developer', 'Admin'], true),
+        ];
+    }
 
-        if ($activePage === 'accounts' && ! in_array($currentRole, ['Developer', 'Admin'], true)) {
-            return redirect()->to(site_url('admin/dashboard'))
-            ->with('error', 'Developer or Admin access is required for account management.');
-        }
-
-        return view('Admin/layout', $this->buildAdminViewData($activePage));
+    /** Normalized role label for the session, or null when the role is unknown. */
+    private function currentRole(): ?string
+    {
+        return RoleAccess::normalizeRole((string) session()->get('role'));
     }
 
     /**
-     * Assembles every variable the admin shell and its sub-views need: page title,
-     * role flags/permissions, nav highlighting, account lists, recent
-     * families/audits, member list (on Manage Records), sector/service
-     * lists, dashboard stats, search term/filters, and view formatter closures
-     * (formatDate/Status/etc.). Also reused to build AJAX partials. Frontend:
-     * consumed directly by `Admin/*` views.
+     * Manage Records row-action flags for a role: Add/Edit for the entry roles,
+     * Archive/Restore for managers, none of it for a Viewer. Pulled out of
+     * buildMemberListData() so it can be unit tested without a database. Row
+     * actions are gated again server side in FamilyDataTablePresenter.
+     *
+     * @return array{0: bool, 1: bool, 2: bool} [canEdit, canArchive, canRestoreArchived]
      */
-    public function buildAdminViewData(string $activePage): array
+    private function recordListRoleFlags(?string $role): array
+    {
+        $canEdit = in_array($role, ['Developer', 'Admin', 'Encoder'], true);
+        $canArchive = in_array($role, ['Developer', 'Admin'], true);
+
+        return [$canEdit, $canArchive, $canArchive];
+    }
+
+    /**
+     * Renders the dashboard shell (`layout`) on the given manifest page for
+     * whatever role the session holds. Who may reach the page is the `roleNav`
+     * route filter's decision (see app/Config/Navigation.php), not this class's.
+     * Frontend: returns the full page HTML.
+     */
+    public function renderPage(string $activePage): string
+    {
+        return view('layout', $this->buildViewData($activePage));
+    }
+
+    /**
+     * Assembles every variable the shell and the active page's body view need:
+     * session user and role, the body view plus its data, account lists, recent
+     * families/audits, sector/service lists, dashboard stats, search
+     * term/filters, and view formatter closures (formatDate/Status/etc.). Also
+     * reused to build AJAX partials.
+     */
+    public function buildViewData(string $activePage): array
     {
         $layoutModel    = new ViewLayoutModel();
         $dashboardModel = new DashboardModel();
@@ -71,54 +133,73 @@ class DashboardPageBuilder
         $searchTerm = trim((string) $this->request->getGet('q'));
         $searchFilters = $this->searchFilters();
         $hasSearchFilters = $this->hasSearchFilters($searchFilters);
-        $currentRole = RoleAccess::normalizeRole((string) session()->get('role'));
+        $currentRole = $this->currentRole();
         $isDeveloper = $currentRole === 'Developer';
         $isAdmin = $currentRole === 'Admin';
-        $userModel = new UserModel();
-        $users = $isDeveloper && $activePage === 'accounts'
-            ? $searchModel->staffAccounts($searchTerm, $searchFilters)
-            : $userModel->getStaffAccounts();
+        $canManageAccounts = $isDeveloper || $isAdmin;
+        // Manager-only, even though the `distribution` PAGE is Viewer-reachable via
+        // the manifest: this section's Download Report button and stats poll hit
+        // reports endpoints guarded to Developer/Admin, and its per-scanner table
+        // surfaces kiosk usernames, not aggregate data. Do not re-key this to
+        // Navigation::pageRoles('distribution').
+        $seesDistribution = $isDeveloper || $isAdmin;
+        $isAccounts = $activePage === 'accounts' && $canManageAccounts;
+        $isDashboard = $activePage === 'dashboard';
+
+        // Both manager roles read the same list through the search model, so the
+        // page's search box and role/status filters work for an Admin too. Neither
+        // query returns developer accounts.
+        $users = $isAccounts ? $searchModel->staffAccounts($searchTerm, $searchFilters) : [];
         $sectorModel = new SectorModel();
         $serviceModel = new ServiceModel();
 
         $sectorOptions = $sectorModel->getSectorOptions();
 
-        $recentFamilies = $activePage === 'dashboard' && ($searchTerm !== '' || $hasSearchFilters)
-            ? $searchModel->families($searchTerm, $searchFilters, 25)
-            : $dashboardModel->recentFamilies(10);
+        $recentFamilies = [];
+        if ($isDashboard) {
+            $recentFamilies = $searchTerm !== '' || $hasSearchFilters
+                ? $searchModel->families($searchTerm, $searchFilters, 25)
+                : $dashboardModel->recentFamilies(10);
+        }
 
         // Keep legacy file-backed Developer audit rows (NULL userID) visible only to
         // Developers. New Developer activity has a real userID like every DB account.
         $includeDeveloperAudits = $currentRole === 'Developer';
         $auditListData = $activePage === 'audit-trails'
-            ? $this->buildAuditListData($includeDeveloperAudits, null, 'admin/audit-trails')
+            ? $this->buildAuditListData($includeDeveloperAudits, null, 'audit-trails')
             : [];
-        // Only the Audit Trails page shows audit rows now (the dashboard's
-        // Recent Activity panel was retired in the admin reorg).
+        // Only the Audit Trails page shows every user's audit rows. An Encoder has
+        // no Audit Trails page, so their own recent activity rides the dashboard.
         $recentAudits = $auditListData['rows'] ?? [];
-        $memberListData = $activePage === 'family-manage'
+        $myAudits = $isDashboard && $currentRole === 'Encoder'
+            ? (new AuditTrailsModel())->getByUser((int) session()->get('user_id'), 10)
+            : [];
+        $memberListData = $activePage === 'records'
             ? $this->buildMemberListData()
             : [];
 
-        // Reference Data page: four lookup tables share one page, switched by
-        // ?tab=. Only the active tab's list bundle is built (the tab strip is
-        // server-side and only the active pane renders).
+        // Reference Data page: the lookup tables share one page, switched by ?tab=.
+        // Only the active tab's list bundle is built (the tab strip is server-side
+        // and only the active pane renders). Categories and Subsidy Types are
+        // managers-only tabs; everyone else gets the two read-only lists.
+        $referenceTabs = $canManageAccounts
+            ? ['sectors', 'services', 'categories', 'subsidy-types']
+            : ['sectors', 'services'];
         $referenceTab = (string) $this->request->getGet('tab');
-        $referenceTab = in_array($referenceTab, ['sectors', 'services', 'categories', 'aidtypes'], true)
-            ? $referenceTab : 'sectors';
+        $referenceTab = in_array($referenceTab, $referenceTabs, true) ? $referenceTab : 'sectors';
         $isReference = $activePage === 'reference-data';
 
         $sectorListData = $isReference && $referenceTab === 'sectors'
-            ? $this->buildLookupListData($sectorModel, 'admin/reference-data', 'sectorID')
+            ? $this->buildLookupListData($sectorModel, 'reference-data', 'sectorID')
             : [];
         $serviceListData = $isReference && $referenceTab === 'services'
-            ? $this->buildLookupListData($serviceModel, 'admin/reference-data', 'serviceID')
+            ? $this->buildLookupListData($serviceModel, 'reference-data', 'serviceID')
             : [];
         $categoryListData = $isReference && $referenceTab === 'categories'
-            ? $this->buildLookupListData(new CategoryModel(), 'admin/reference-data', 'categoryID')
+            ? $this->buildLookupListData(new CategoryModel(), 'reference-data', 'categoryID')
             : [];
-        $aidTypeListData = $isReference && $referenceTab === 'aidtypes'
-            ? $this->buildLookupListData(model(AidTypeModel::class), 'admin/reference-data', 'subsidy_type_id')
+        $subsidyTypeListData = $isReference && $referenceTab === 'subsidy-types'
+            ? $this->buildLookupListData(model(SubsidyTypeModel::class), 'reference-data', 'subsidy_type_id')
             : [];
 
         // Distribution page: batches and the log share one page, switched by
@@ -131,8 +212,8 @@ class DashboardPageBuilder
 
         // Distribution analytics now live on the dashboard (combined totals +
         // per-kiosk table), batch-scoped only (no date filter). Gated so other
-        // pages don't run these queries.
-        $reportsData = $activePage === 'dashboard'
+        // pages, and roles with no distribution access, don't run these queries.
+        $reportsData = $isDashboard && $seesDistribution
             ? $this->buildReportsData($batchModel)
             : [
                 'reportsBatches'    => [],
@@ -141,7 +222,7 @@ class DashboardPageBuilder
                 'reportsBatchOpen'  => false,
                 'reportsSummary'    => ['total' => 0, 'received' => 0, 'notReceived' => 0, 'coverage' => 0],
                 'reportsByBarangay' => [],
-                'reportsByAidType'  => [],
+                'reportsBySubsidyType' => [],
                 'reportsPerScanner' => [],
             ];
 
@@ -166,62 +247,64 @@ class DashboardPageBuilder
             return in_array($normalized, ['enable', 'enabled', 'active', '1', 'true', 'yes', 'on'], true);
         };
 
-        return [
+        $viewData = [
             'user' => $this->currentSessionUser(),
             'activePage' => $activePage,
-            'pageTitle' => $layoutModel->pageTitle($activePage),
+            'role' => $currentRole ?? '',
             'modeLabel' => $layoutModel->adminModeLabel($isDeveloper),
             // Developers and admins share account-management features. Developer
             // targets remain protected, and only Developers may toggle Administrators.
-            'canManageAccounts' => $isDeveloper || $isAdmin,
-            'canCreateAccounts' => $isDeveloper || $isAdmin,
-            'canEditAccounts' => $isDeveloper || $isAdmin,
+            'canManageAccounts' => $canManageAccounts,
+            'canCreateAccounts' => $canManageAccounts,
+            'canEditAccounts' => $canManageAccounts,
+            'canManageLookups' => $canManageAccounts,
+            'seesDistribution' => $seesDistribution,
             'currentRole' => $currentRole,
-            'navActive' => [
-                'dashboard'    => $layoutModel->navActive($activePage, 'dashboard'),
-                'accounts'     => $layoutModel->navActive($activePage, 'accounts'),
-                'family-manage' => $layoutModel->navActive($activePage, 'family-manage'),
-                'audit-trails' => $layoutModel->navActive($activePage, 'audit-trails'),
-                'reference-data' => $layoutModel->navActive($activePage, 'reference-data'),
-                'cards'         => $layoutModel->navActive($activePage, 'cards'),
-                'distribution'  => $layoutModel->navActive($activePage, 'distribution'),
-            ],
+            'referenceTabs'      => $referenceTabs,
+            'myAudits'           => $myAudits,
             'adminAccounts'      => array_values(array_filter($visibleAccounts, static fn ($account) => $account['role'] === 'administrator')),
-            // 'encoder' is the raw DB enum value for the Employee role (surfaced as
-            // "Employee" in the UI); the rows here come straight from the users table
-            // (account_level aliased back to `role` by UserModel::getStaffAccounts).
+            // 'encoder' is the raw DB enum value for the Encoder role; the rows here
+            // come straight from the users table (account_level aliased back to
+            // `role` by SearchModel::staffAccounts()).
             'employeeAccounts'   => array_values(array_filter($visibleAccounts, static fn ($account) => $account['role'] === 'encoder')),
             'viewerAccounts'     => array_values(array_filter($visibleAccounts, static fn ($account) => $account['role'] === 'viewer')),
             'scannerAccounts'    => array_values(array_filter($visibleAccounts, static fn ($account) => $account['role'] === 'scanner')),
             'recentFamilies'     => $recentFamilies,
+            // Shortcode + full name per sector, so the Recent Records table can print
+            // the same badges Manage Records and Reference Data print.
+            'sectorShortcodes'   => $isDashboard ? $sectorModel->shortcodeMap() : [],
             'recentAudits'       => $recentAudits,
             'auditListData'      => $auditListData,
             'recordListData'      => $memberListData,
             'memberListData'      => $memberListData,
-            'sectors'            => $sectorListData['rows'] ?? $this->fetchVisibleSectors($sectorModel),
-            'services'           => $serviceListData['rows'] ?? $this->fetchVisibleServices($serviceModel),
-            'categories'         => $categoryListData['rows'] ?? $this->fetchVisibleCategories(new CategoryModel()),
+            'sectors'            => $sectorListData['rows'] ?? ($isReference ? $this->fetchVisibleSectors($sectorModel) : []),
+            'services'           => $serviceListData['rows'] ?? ($isReference ? $this->fetchVisibleServices($serviceModel) : []),
+            'categories'         => $categoryListData['rows'] ?? ($isReference ? $this->fetchVisibleCategories(new CategoryModel()) : []),
             'referenceTab'       => $referenceTab,
             'distributionTab'    => $distributionTab,
             'sectorListData'     => $sectorListData,
             'serviceListData'    => $serviceListData,
             'categoryListData'   => $categoryListData,
-            'aidTypeListData'    => $aidTypeListData,
             'batches'            => $isBatches ? $batchModel->allBatches() : [],
             'activeBatch'        => $isBatches ? $batchModel->activeBatch() : null,
-            'activeAidTypes'     => $isBatches ? model(AidTypeModel::class)->active() : [],
-            'aidTypes'           => $aidTypeListData['rows'] ?? [],
-            'distributions'      => $isDistributions ? model(AidDistributionModel::class)->allDistributions() : [],
+            'activeSubsidyTypes' => $isBatches ? model(SubsidyTypeModel::class)->active() : [],
+            'subsidyTypes'       => $subsidyTypeListData['rows'] ?? [],
+            'subsidyTypeListData' => $subsidyTypeListData,
+            'distributions'      => $isDistributions ? model(SubsidyDistributionModel::class)->allDistributions() : [],
             'reportsBatches'     => $reportsData['reportsBatches'],
             'reportsBatchId'     => $reportsData['reportsBatchId'],
             'reportsBatchName'   => $reportsData['reportsBatchName'],
             'reportsBatchOpen'   => $reportsData['reportsBatchOpen'],
             'reportsSummary'     => $reportsData['reportsSummary'],
             'reportsByBarangay'  => $reportsData['reportsByBarangay'],
-            'reportsByAidType'   => $reportsData['reportsByAidType'],
+            'reportsBySubsidyType' => $reportsData['reportsBySubsidyType'],
             'reportsPerScanner'  => $reportsData['reportsPerScanner'],
-            'stats'              => $dashboardModel->stats(),
-            'canCreateFamily'    => true,
+            'stats'              => $isDashboard
+                ? array_merge(['families' => 0, 'members' => 0, 'sectors' => 0, 'assistance' => 0], $dashboardModel->stats())
+                : ['families' => 0, 'members' => 0, 'sectors' => 0, 'assistance' => 0],
+            // Only the roles that may open the record-entry page get the Add and
+            // Import buttons on the records list (Config\Navigation, records-entry).
+            'canCreateFamily'    => in_array($currentRole, Navigation::pageRoles('records-entry'), true),
             'username'           => (string) (session()->get('username') ?? 'Admin'),
             'accountLevelLabel'  => SessionAccount::levelLabel(),
             'searchTerm'         => $searchTerm,
@@ -270,18 +353,19 @@ class DashboardPageBuilder
                 return $role === '' ? $username : $username . ' (' . $role . ')';
             },
         ];
+
+        // The shell renders one body view. Everything above is already shared view
+        // data, so only the records list needs its own bundle handed over.
+        $viewData['bodyView'] = self::BODY_VIEWS[$activePage] ?? 'Pages/dashboard';
+        $viewData['bodyData'] = $activePage === 'records' ? $memberListData : [];
+
+        return $viewData;
     }
 
-    /** Public entry for the admin records-list AJAX partial (Admin\DashboardController::renderRecordListPartial). */
-    public function buildAdminRecordListViewData(): array
+    /** Public entry for the records-list AJAX partial (DashboardPartialsTrait). */
+    public function buildRecordListViewData(): array
     {
         return $this->buildMemberListData();
-    }
-
-    /** Public entry for the employee records-list AJAX partial. */
-    public function buildEmployeeRecordListViewData(): array
-    {
-        return $this->buildEmployeeRecordListData();
     }
 
     /** All sectors (active + archived) ordered by ID, for the admin sectors view. */
@@ -437,7 +521,7 @@ class DashboardPageBuilder
         }
 
         $scope = $batchId > 0 ? $batchId : null;
-        $stats = model(AidStatsModel::class);
+        $stats = model(SubsidyStatsModel::class);
 
         return [
             'reportsBatches'    => $batches,
@@ -446,7 +530,7 @@ class DashboardPageBuilder
             'reportsBatchOpen'  => $batch !== null && ($batch['closed_at'] ?? null) === null,
             'reportsSummary'    => $stats->receivedVsNot($scope),
             'reportsByBarangay' => $stats->byBarangay($scope),
-            'reportsByAidType'  => $stats->byAidType($scope),
+            'reportsBySubsidyType' => $stats->bySubsidyType($scope),
             'reportsPerScanner' => $batchId > 0 ? $stats->perScanner($batchId) : [],
         ];
     }
@@ -458,13 +542,17 @@ class DashboardPageBuilder
     }
 
     /**
-     * Builds the admin Manage Records list: reads the q/status/page/sector/date
-     * query params, runs the paginated family-head search, and merges in the deep
-     * (whole-database) search results. Frontend: the family-list view + its filter
-     * and pagination controls.
+     * Builds the Manage Records list for whatever role the session holds: reads
+     * the q/status/page/sector/date query params, runs the paginated family-head
+     * search, and merges in the deep (whole-database) search results. The role
+     * only decides which controls the list may offer, never which rows it sees.
+     * Frontend: the family-list view + its filter and pagination controls.
      */
     private function buildMemberListData(): array
     {
+        $role = $this->currentRole();
+        [$canEdit, $canArchive, $canRestoreArchived] = $this->recordListRoleFlags($role);
+
         $keyword = trim((string) $this->request->getGet('q'));
         $status = strtolower(trim((string) $this->request->getGet('status')));
         $status = in_array($status, ['all', 'active', 'archived'], true) ? $status : 'all';
@@ -484,21 +572,20 @@ class DashboardPageBuilder
         $totalFamilies = $memberModel->countSearchFamilies($searchKeyword, $status, $filters);
         $totalPages = max(1, (int) ceil($totalFamilies / $perPage));
         $page = min($page, $totalPages);
-        $routeBase = 'admin/manage-family';
 
         return array_merge([
-            'canArchive'        => true,
-            'canRestoreArchived' => true,
+            'canEdit'           => $canEdit,
+            'canArchive'        => $canArchive,
+            'canRestoreArchived' => $canRestoreArchived,
             'families'          => $memberModel->searchFamilies($searchKeyword, $perPage, ($page - 1) * $perPage, $status, $filters),
             'fromRecord'        => $totalFamilies === 0 ? 0 : (($page - 1) * $perPage) + 1,
             'isFullPage'        => true,
             'keyword'           => $keyword,
             // Full-page route so both the filter form and deep-search form reload the
             // whole Manage Records page (not the modal/partial list endpoint).
-            'listRoute'         => 'admin/manage-records',
+            'listRoute'         => 'records',
             'page'              => $page,
             'perPage'           => $perPage,
-            'routeBase'         => $routeBase,
             'status'            => $status,
             'toRecord'          => min($totalFamilies, $page * $perPage),
             'totalFamilies'     => $totalFamilies,
@@ -570,221 +657,6 @@ class DashboardPageBuilder
         ];
     }
 
-    /**
-     * Guards Developer/Admin/User access, then assembles the employee view data
-     * (own activity instead of all audits, no account management) and renders the
-     * employee shell (`Employee/layout`). Frontend: returns the full employee page.
-     */
-    public function renderEmployeePage(string $activePage): string|RedirectResponse
-    {
-        $guard = RoleAccess::requireRole(['Developer', 'Admin', 'Employee']);
-
-        if ($guard instanceof RedirectResponse) {
-            return $guard;
-        }
-
-        $layoutModel = new ViewLayoutModel();
-        $dashboardModel = new DashboardModel();
-        $searchModel = new SearchModel();
-        $searchTerm = trim((string) $this->request->getGet('q'));
-        $searchFilters = $this->searchFilters();
-        $hasSearchFilters = $this->hasSearchFilters($searchFilters);
-        $userId = (int) session()->get('user_id');
-        $sectorOptions = (new SectorModel())->getSectorOptions();
-        $recordListData = $activePage === 'family-manage'
-            ? $this->buildEmployeeRecordListData()
-            : [];
-        $recentFamilies = $activePage === 'dashboard' && ($searchTerm !== '' || $hasSearchFilters)
-            ? $searchModel->families($searchTerm, $searchFilters, 25)
-            : $dashboardModel->recentFamilies(10);
-        $auditListData = $activePage === 'activity'
-            ? $this->buildAuditListData(false, $userId, 'employee/activity')
-            : [];
-        $myAudits = $auditListData['rows'] ?? (new AuditTrailsModel())->getByUser($userId, 10);
-
-        return view('Employee/layout', [
-            'user' => $this->currentSessionUser(),
-            'activePage' => $activePage,
-            'pageTitle' => $layoutModel->employeePageTitle($activePage),
-            'navActive' => [
-                'dashboard' => $layoutModel->navActive($activePage, 'dashboard'),
-                'family-manage' => $layoutModel->navActive($activePage, 'family-manage'),
-                'activity' => $layoutModel->navActive($activePage, 'activity'),
-            ],
-            'canCreateFamily'    => true,
-            'recordListData'     => $recordListData,
-            'recentFamilies'     => $recentFamilies,
-            'myAudits'           => $myAudits,
-            'auditListData'      => $auditListData,
-            'stats'              => array_merge(['families' => 0, 'members' => 0, 'sectors' => 0, 'assistance' => 0], $dashboardModel->stats()),
-            'searchTerm'         => $searchTerm,
-            'searchFilters'      => $searchFilters,
-            'auditActionOptions' => $searchModel->auditActions(),
-            'idleTimeoutSeconds' => (new IdleTimeout())->seconds,
-            'username'           => (string) (session()->get('username') ?? 'Employee'),
-            'accountLevelLabel'  => SessionAccount::levelLabel(),
-            'sectorOptions'      => $sectorOptions,
-            'selectedFilterDate' => (string) ($searchFilters['date'] ?? $searchFilters['date_from'] ?? ''),
-            'hasSearchFilters'   => $hasSearchFilters,
-            'formatDate'         => static function (mixed $value): string {
-                $timestamp = strtotime((string) $value);
-
-                return $timestamp === false ? '' : date('Y-m-d', $timestamp);
-            },
-            'formatTime'         => static function (mixed $value): string {
-                $timestamp = strtotime((string) $value);
-
-                return $timestamp === false ? '' : date('h:i A', $timestamp);
-            },
-            'formatAuditMember'  => static function (array $audit): string {
-                $memberName = trim((string) ($audit['member_name'] ?? ''));
-
-                if ($memberName === '') {
-                    $memberName = trim((string) ($audit['firstname'] ?? '') . ' ' . (string) ($audit['lastname'] ?? ''));
-                }
-
-                return $memberName === '' ? '-' : $memberName;
-            },
-            'formatAuditUser'    => static function (array $audit): string {
-                $username = trim((string) ($audit['username'] ?? $audit['userID'] ?? ''));
-                $role     = trim((string) ($audit['user_role'] ?? ''));
-                $role     = RoleAccess::normalizeRole($role) ?? $role;
-
-                return $role === '' ? $username : $username . ' (' . $role . ')';
-            },
-        ]);
-    }
-
-    /**
-     * Read-only counterpart of renderAdminPage/renderEmployeePage for the Viewer
-     * role. Guards Viewer access, then renders the viewer shell (`Viewer/layout`)
-     * with view-only data: dashboard stats + recent records, the family records
-     * list (no add/edit/archive), and the read-only Sector/Service lookup lists.
-     * Frontend: returns the full viewer page HTML.
-     */
-    public function renderViewerPage(string $activePage): string|RedirectResponse
-    {
-        $guard = RoleAccess::requireRole(['Viewer']);
-
-        if ($guard instanceof RedirectResponse) {
-            return $guard;
-        }
-
-        $layoutModel = new ViewLayoutModel();
-        $dashboardModel = new DashboardModel();
-        $searchModel = new SearchModel();
-        $searchTerm = trim((string) $this->request->getGet('q'));
-        $searchFilters = $this->searchFilters();
-        $hasSearchFilters = $this->hasSearchFilters($searchFilters);
-
-        $recordListData = $activePage === 'family-manage'
-            ? $this->buildViewerRecordListData()
-            : [];
-        $recentFamilies = $activePage === 'dashboard' && ($searchTerm !== '' || $hasSearchFilters)
-            ? $searchModel->families($searchTerm, $searchFilters, 25)
-            : $dashboardModel->recentFamilies(10);
-        // Read-only Reference Data page: Sectors and Services tabs share one
-        // page, switched by ?tab= (mirrors the admin reference-data page).
-        $referenceTab = (string) $this->request->getGet('tab');
-        $referenceTab = in_array($referenceTab, ['sectors', 'services'], true) ? $referenceTab : 'sectors';
-        $isReference  = $activePage === 'reference-data';
-
-        $sectorListData = $isReference && $referenceTab === 'sectors'
-            ? $this->buildLookupListData(new SectorModel(), 'viewer/reference-data', 'sectorID')
-            : [];
-        $serviceListData = $isReference && $referenceTab === 'services'
-            ? $this->buildLookupListData(new ServiceModel(), 'viewer/reference-data', 'serviceID')
-            : [];
-
-        return view('Viewer/layout', [
-            'user' => $this->currentSessionUser(),
-            'activePage' => $activePage,
-            'pageTitle' => $layoutModel->pageTitle($activePage),
-            'navActive' => [
-                'dashboard' => $layoutModel->navActive($activePage, 'dashboard'),
-                'family-manage' => $layoutModel->navActive($activePage, 'family-manage'),
-                'reference-data' => $layoutModel->navActive($activePage, 'reference-data'),
-            ],
-            'referenceTab'       => $referenceTab,
-            'recordListData'     => $recordListData,
-            'recentFamilies'     => $recentFamilies,
-            'sectorListData'     => $sectorListData,
-            'serviceListData'    => $serviceListData,
-            'sectors'            => $sectorListData['rows'] ?? [],
-            'services'           => $serviceListData['rows'] ?? [],
-            'stats'              => array_merge(['families' => 0, 'members' => 0, 'sectors' => 0, 'assistance' => 0], $dashboardModel->stats()),
-            'searchTerm'         => $searchTerm,
-            'searchFilters'      => $searchFilters,
-            'hasSearchFilters'   => $hasSearchFilters,
-            'idleTimeoutSeconds' => (new IdleTimeout())->seconds,
-            'username'           => (string) (session()->get('username') ?? 'Viewer'),
-            'accountLevelLabel'  => SessionAccount::levelLabel(),
-            'formatDate'         => static function (mixed $value): string {
-                $timestamp = strtotime((string) $value);
-
-                return $timestamp === false ? '' : date('Y-m-d', $timestamp);
-            },
-            'formatTime'         => static function (mixed $value): string {
-                $timestamp = strtotime((string) $value);
-
-                return $timestamp === false ? '' : date('h:i A', $timestamp);
-            },
-        ]);
-    }
-
-    /** Public entry for the viewer records-list AJAX partial (Viewer\DashboardController). */
-    public function buildViewerRecordListViewData(): array
-    {
-        return $this->buildViewerRecordListData();
-    }
-
-    /**
-     * Viewer counterpart of buildEmployeeRecordListData(): the same paginated
-     * family list, but strictly read-only - no add, edit, archive, or restore.
-     * Frontend: the viewer Manage Records view (`Family/list`).
-     */
-    private function buildViewerRecordListData(): array
-    {
-        $keyword = trim((string) $this->request->getGet('q'));
-        $status = strtolower(trim((string) $this->request->getGet('status')));
-        $status = in_array($status, ['all', 'active', 'archived'], true) ? $status : 'all';
-        $page = max(1, (int) $this->request->getGet('page'));
-        $perPage = $this->recordsPerPage();
-
-        $filters = [
-            'sectorID' => $this->request->getGet('sectorID'),
-            'barangay' => $this->request->getGet('barangay'),
-            'date'     => (string) $this->request->getGet('date'),
-        ];
-
-        $memberModel = new MemberModel();
-        $searchKeyword = $keyword === '' ? null : $keyword;
-        $totalFamilies = $memberModel->countSearchFamilies($searchKeyword, $status, $filters);
-        $totalPages = max(1, (int) ceil($totalFamilies / $perPage));
-        $page = min($page, $totalPages);
-
-        return array_merge([
-            'canEdit'            => false,
-            'canArchive'         => false,
-            'canRestoreArchived' => false,
-            'families'           => $memberModel->searchFamilies($searchKeyword, $perPage, ($page - 1) * $perPage, $status, $filters),
-            'fromRecord'         => $totalFamilies === 0 ? 0 : (($page - 1) * $perPage) + 1,
-            'keyword'            => $keyword,
-            'listRoute'          => 'viewer/manage-records',
-            'page'               => $page,
-            'perPage'            => $perPage,
-            'routeBase'          => 'viewer/manage-family',
-            'status'             => $status,
-            'toRecord'           => min($totalFamilies, $page * $perPage),
-            'totalFamilies'      => $totalFamilies,
-            'totalPages'         => $totalPages,
-            // Filter UI data.
-            'sectorOptions'      => (new SectorModel())->getSectorOptions(),
-            'barangayOptions'    => FamilyProfilingFormV2::barangays(),
-            'filters'            => $filters,
-        ], $this->buildDeepSearchData($status));
-    }
-
     /** Collects all supported search/filter query params into one array. */
     private function searchFilters(): array
     {
@@ -820,53 +692,6 @@ class DashboardPageBuilder
         }
 
         return false;
-    }
-
-    /**
-     * Employee counterpart of buildMemberListData(): the paginated family list.
-     * Employees can view and edit records but cannot archive, restore, or delete.
-     * Frontend: the employee Manage Records view.
-     */
-    private function buildEmployeeRecordListData(): array
-    {
-        $keyword = trim((string) $this->request->getGet('q'));
-        $status = strtolower(trim((string) $this->request->getGet('status')));
-        $status = in_array($status, ['all', 'active', 'archived'], true) ? $status : 'all';
-        $page = max(1, (int) $this->request->getGet('page'));
-        $perPage = $this->recordsPerPage();
-
-        // Manage Records FILTER controls (sector + date). Status (active/archived)
-        // is handled separately above. Passed into MemberModel::searchFamilies().
-        $filters = [
-            'sectorID' => $this->request->getGet('sectorID'),
-            'barangay' => $this->request->getGet('barangay'),
-            'date'     => (string) $this->request->getGet('date'),
-        ];
-
-        $memberModel = new MemberModel();
-        $searchKeyword = $keyword === '' ? null : $keyword;
-        $totalFamilies = $memberModel->countSearchFamilies($searchKeyword, $status, $filters);
-        $totalPages = max(1, (int) ceil($totalFamilies / $perPage));
-        $page = min($page, $totalPages);
-
-        return array_merge([
-            'canRestoreArchived' => false,
-            'families' => $memberModel->searchFamilies($searchKeyword, $perPage, ($page - 1) * $perPage, $status, $filters),
-            'fromRecord' => $totalFamilies === 0 ? 0 : (($page - 1) * $perPage) + 1,
-            'keyword' => $keyword,
-            'listRoute' => 'employee/manage-records',
-            'page' => $page,
-            'perPage' => $perPage,
-            'routeBase' => 'employee/manage-family',
-            'status' => $status,
-            'toRecord' => min($totalFamilies, $page * $perPage),
-            'totalFamilies' => $totalFamilies,
-            'totalPages' => $totalPages,
-            // Filter UI data.
-            'sectorOptions' => (new SectorModel())->getSectorOptions(),
-            'barangayOptions' => FamilyProfilingFormV2::barangays(),
-            'filters' => $filters,
-        ], $this->buildDeepSearchData($status));
     }
 
     /** Whitelisted page sizes for Manage Records and deep-search pagination. */

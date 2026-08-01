@@ -7,7 +7,7 @@
  * - $user, $username, $accountLevelLabel  passed through to Partials/topbar-account-menu
  * - $accountSettingsUrl, $accountSettingsMode  optional passthrough (see topbar-account-menu)
  */
-$brandUrl = $brandUrl ?? site_url('admin/dashboard');
+$brandUrl = $brandUrl ?? site_url('dashboard');
 $accountMenuData = ['user' => $user ?? [], 'username' => $username ?? 'User', 'accountLevelLabel' => $accountLevelLabel ?? 'Account'];
 if (isset($accountSettingsUrl)) {
     $accountMenuData['accountSettingsUrl'] = $accountSettingsUrl;

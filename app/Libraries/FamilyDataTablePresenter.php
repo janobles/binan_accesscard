@@ -7,57 +7,37 @@ use App\Libraries\Qr\ControlNumber;
 /**
  * Shapes Manage Records rows into the server-side DataTables cell map consumed
  * by assets/js/dashboard/family-datatable.js. Pure presentation: the caller
- * (FamilyDataTableController) resolves the route base and the session role and
- * passes them in - this class never reads the request or session. The output
- * HTML and the payload() envelope are frontend contracts.
+ * (FamilyDataTableController) resolves the session role and passes it in - this
+ * class never reads the request or session. Every record URL is the one flat
+ * `records` path. The output HTML and the payload() envelope are frontend
+ * contracts.
  */
 class FamilyDataTablePresenter
 {
-    public function __construct(
-        private readonly string $routeBase,
-        private readonly string $role,
-    ) {
-    }
+    public function __construct(private readonly string $role) {}
 
     /**
-     * Shapes one member row into the DataTables cell map the client expects
-     * (name HTML, sector shortcodes, address, birthday, actions dropdown).
+     * Shapes one household into the DataTables cell map the client expects. One row
+     * is one head of family; members are reached through the profile page, so the
+     * table never flattens a household into several rows. $memberCount is the
+     * household size including the head.
      *
-     * @param array<int, string> $sectorShortcodes sectorID => display shortcode
-     * @param array<int, int>    $controlNumbers   headID => qr_control.control_no
+     * @param array<int, array{code: string, name: string}> $sectorShortcodes sectorID => shortcode + full name, from SectorModel::shortcodeMap()
+     * @param array<int, int>                               $controlNumbers   headID => qr_control.control_no
      */
-    public function row(array $row, bool $allMembersScope, array $sectorShortcodes, array $controlNumbers = []): array
+    public function row(array $row, array $sectorShortcodes, array $controlNumbers, int $memberCount): array
     {
-        $memberId = (int) ($row['memberID'] ?? 0);
-        $headId = $allMembersScope ? (int) ($row['headID'] ?? $memberId) : $memberId;
+        $headId = (int) ($row['headID'] ?? $row['memberID'] ?? 0);
         $name = $this->displayName($row);
-        $relationship = trim((string) ($row['relationship'] ?? ''));
-        // Names are stored uppercase, so show them as stored. Re-casing here would
-        // hide a casing bug rather than surface it.
-        $nameHtml = '<span class="entity-title">' . esc($name) . '</span>';
-
-        if ($allMembersScope && $relationship !== '') {
-            $nameHtml .= '<small class="text-muted d-block">' . esc($relationship) . '</small>';
-        }
-
-        $controlNo = (int) ($controlNumbers[$headId] ?? 0);
-
-        $sectors = [];
-
-        foreach (SectorIds::normalize($row['sectorID'] ?? null) as $sectorId) {
-            if (isset($sectorShortcodes[$sectorId])) {
-                $sectors[] = $sectorShortcodes[$sectorId];
-            }
-        }
-
-        $birthday = strtotime((string) ($row['birthday'] ?? ''));
 
         return [
-            'qr' => $this->qrCell($controlNo),
-            'name' => $nameHtml,
-            'sector' => esc(implode(', ', array_values(array_unique($sectors)))),
+            'qr' => $this->qrCell((int) ($controlNumbers[$headId] ?? 0)),
+            // Names are stored uppercase, so show them as stored. Re-casing here
+            // would hide a casing bug rather than surface it.
+            'name' => '<span class="entity-title">' . esc($name) . '</span>',
+            'members' => (string) $memberCount,
+            'sector' => ViewFormatter::sectorBadges($row['sectorID'] ?? null, $sectorShortcodes),
             'address' => esc((string) ($row['address'] ?? '')),
-            'birthday' => $birthday === false ? '-' : date('Y-m-d', $birthday),
             'actions' => $this->actions($row, $headId, $name),
         ];
     }
@@ -104,7 +84,7 @@ class FamilyDataTablePresenter
 
     /**
      * Builds the per-row Actions dropdown HTML for the DataTable. View is shown to
-     * any viewer; Update only to entry-access roles (Developer/Admin/Employee);
+     * any viewer; Edit only to entry-access roles (Developer/Admin/Encoder);
      * Archive/Restore only to Developer/Admin. Empty string hides the menu.
      */
     private function actions(array $row, int $headId, string $displayName): string
@@ -113,7 +93,7 @@ class FamilyDataTablePresenter
             return '';
         }
 
-        $canEdit = in_array($this->role, ['Developer', 'Admin', 'Employee'], true);
+        $canEdit = in_array($this->role, ['Developer', 'Admin', 'Encoder'], true);
         $canArchive = in_array($this->role, ['Developer', 'Admin'], true);
         $archived = trim((string) ($row['dt_deleted'] ?? '')) !== '';
 
@@ -121,18 +101,19 @@ class FamilyDataTablePresenter
             return '';
         }
 
-        $routeBase = $this->routeBase;
-
-        // The trigger markup (modal callers + archive/restore form) lives in the
-        // view; this class only supplies the permission flags and URLs.
+        // The trigger markup (the plain VIEW/EDIT links + archive/restore form)
+        // lives in the view; this class only supplies the permission flags and URLs.
         return view('Family/row-actions', [
             'archived'       => $archived,
             'canEdit'        => $canEdit,
             'canArchive'     => $canArchive,
             'displayName'    => $displayName,
-            'viewUrl'        => $archived ? '' : site_url($routeBase . '/view/' . $headId . '?partial=1'),
-            'updateUrl'      => (! $archived && $canEdit) ? site_url($routeBase . '/create?partial=1&mode=update&id=' . $headId) : '',
-            'formAction'     => $canArchive ? site_url($routeBase . '/' . ($archived ? 'restore' : 'archive') . '/' . $headId) : '',
+            // Two pages, two URLs: the bare record id prints the record read-only,
+            // `/edit` is the form. EDIT is offered only to entry-access roles, and
+            // the records-edit manifest key keeps everyone else off that route.
+            'viewUrl'        => $archived ? '' : site_url('records/' . $headId),
+            'updateUrl'      => (! $archived && $canEdit) ? site_url('records/' . $headId . '/edit') : '',
+            'formAction'     => $canArchive ? site_url('records/' . $headId . '/' . ($archived ? 'restore' : 'archive')) : '',
             'actionLabel'    => $archived ? 'Restore' : 'Archive',
             'actionPast'     => $archived ? 'restored' : 'archived',
             'confirmMessage' => $archived

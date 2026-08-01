@@ -1,12 +1,15 @@
-// Import Review - a READ-ONLY report.
+// Import Review, step 2 of the import wizard.
 //
-// Nothing is edited here. The spreadsheet is the single source of truth: if fixes were
-// applied in the browser the file would still hold the mistakes, and the next person to
-// re-use it would import them again. So this screen's only job is to make fixing the FILE
-// effortless - every issue names the exact Excel cell (e.g. "H42"), the column, what is
-// there now, and what to do. Fix the file, upload it again.
+// One row per staged person, a page at a time from records/import/review/:id/rows, so a
+// 10,000-row file renders as fast as a small one. The Issues column names every problem
+// on a row, including ones on columns the table does not show, and opening the row
+// reveals an editor for each field carrying a problem.
 //
-// Backend: POST {role}/manage-family/import/review/:id/commit|cancel
+// Nothing is staged until Apply, and nothing reaches the member table until Confirm
+// import. An Apply that touches a field driving cross-row rules refetches the page,
+// because other rows' flags can move with it.
+//
+// Backend: GET records/import/review/:id/rows, POST records/import/review/:id/apply|commit|cancel
 (function (window, document) {
     'use strict';
 
@@ -19,65 +22,57 @@
         return;
     }
 
-    var commitUrl     = root.dataset.commitUrl;
-    var cancelUrl     = root.dataset.cancelUrl;
-    var familyBaseUrl = root.dataset.familyBaseUrl;
-    var cellUrl       = root.dataset.cellUrl;
-    var redirectUrl   = root.dataset.redirectUrl;
+    var commitUrl   = root.dataset.commitUrl;
+    var cancelUrl   = root.dataset.cancelUrl;
+    var redirectUrl = root.dataset.redirectUrl;
+    var rowsUrl      = root.dataset.rowsUrl;
+    var applyUrl     = root.dataset.applyUrl;
+    var searchEl     = document.getElementById('importReviewSearch');
+    var perPageEl    = document.getElementById('importReviewPerPage');
+    var codeFilterEl = document.getElementById('importReviewCodeFilter');
+    var pagerEl      = document.getElementById('importReviewPager');
 
-    var statsEl    = document.getElementById('importReviewStats');
-    var groupsEl   = document.getElementById('importReviewGroups');
-    var fileEl     = document.getElementById('reviewFileName');
+    var table      = document.getElementById('importReviewTable');
+    var tbody      = table ? table.querySelector('tbody') : null;
+    var countEl    = document.getElementById('importReviewCount');
     var statusEl   = document.getElementById('importReviewStatus');
     var confirmBtn = document.getElementById('importReviewConfirm');
     var cancelBtn  = document.getElementById('importReviewCancel');
 
-    var review = parseJson();
-
-    // Client-side filter over the "Families to fix" list. Persists across re-renders (Edit /
-    // Remove / Save rebuild the card) so the operator's focus filter survives an action.
-    var familyFilter = { search: '', severity: 'all', code: 'all' };
-    var familyPage = 1;       // current page of the "Families to fix" list
-    var familyPageSize = 25;  // rows per page (Manage Records default)
-    var readyCollapsed = true; // Ready-to-import list starts hidden behind its Show button
-
-    // Search + paging state for the other two lists (same feel as Families to fix).
-    var needsQrFilter = { search: '' };
-    var needsQrPage = 1;
-    var needsQrPageSize = 25;
-    var readyFilter = { search: '' };
-    var readyPage = 1;
-    var readyPageSize = 25;
-
-    // Bulk-remove selection for "Families to fix" (QR string -> true). Reset on every full
-    // render() because the list itself changes after an edit/remove.
-    var selectedFno = {};
-    var bulkRemoveBtn = null;  // "Remove selected" button (lives in the filter bar)
-    var selectAllBox = null;   // header select-all checkbox
-
-    function parseJson() {
-        var node = document.getElementById('importReviewData');
-
-        try {
-            return JSON.parse(node ? node.textContent : '{}');
-        } catch (e) {
-            return { file: '', counts: {} };
-        }
+    // The two action buttons are not optional: without them there is no way to finish
+    // or discard the staged import, so a page missing them is not a review page.
+    if (!confirmBtn || !cancelBtn) {
+        return;
     }
 
-    // Dropdown option lists (field => [option strings]) for the columns that are dropdowns in
-    // the Excel template - so an inline cell edit on those offers the same choices as the sheet.
-    var fieldOptions = (function () {
-        var node = document.getElementById('importReviewFieldOptions');
+    var state = {
+        page: 1,
+        per: 25,
+        severity: 'all',
+        code: '',
+        q: '',
+        total: 0,
+        filtered: 0
+    };
+
+    var rowsBySheetRow = {};
+
+    var summary = parseJson('importReviewSummary', { file: '', counts: {}, codes: [] });
+    // Dropdown option lists (field => [option strings]) for the columns that are dropdowns
+    // in the Excel template, so an inline field edit offers the same choices as the sheet.
+    var fieldOptions = parseJson('importReviewFieldOptions', {});
+
+    function parseJson(id, fallback) {
+        var node = document.getElementById(id);
 
         try {
-            var parsed = JSON.parse(node ? node.textContent : '{}');
+            var parsed = JSON.parse(node ? node.textContent : 'null');
 
-            return (parsed && typeof parsed === 'object') ? parsed : {};
+            return (parsed && typeof parsed === 'object') ? parsed : fallback;
         } catch (e) {
-            return {};
+            return fallback;
         }
-    })();
+    }
 
     // -- small DOM helpers -----------------------------------------------------
 
@@ -105,10 +100,8 @@
         }
     }
 
-    // Promise-based confirm reusing the page's #familyActionModal markup (Bootstrap modal),
-    // so Remove / Cancel / Confirm match the app's dialog instead of a native window.confirm.
-    // Resolves true on confirm, false on dismiss. Falls back to window.confirm if the modal
-    // or Bootstrap is unavailable.
+    // Promise-based confirm reusing the layout's #familyActionModal, so Cancel and Confirm
+    // match the app's dialog instead of a native window.confirm. Resolves true on confirm.
     function confirmAction(opts) {
         opts = opts || {};
 
@@ -121,7 +114,7 @@
 
         var titleEl = modalEl.querySelector('#familyActionModalLabel');
         var msgEl = modalEl.querySelector('.js-family-action-message');
-        var confirmBtn = modalEl.querySelector('.js-family-action-confirm');
+        var okBtn = modalEl.querySelector('.js-family-action-confirm');
 
         if (titleEl) {
             titleEl.textContent = opts.title || 'Please confirm';
@@ -134,9 +127,9 @@
                 msgEl.textContent = opts.message || 'Are you sure?';
             }
         }
-        if (confirmBtn) {
-            confirmBtn.textContent = opts.confirmLabel || 'Confirm';
-            confirmBtn.className = 'btn ' + (opts.confirmClass || 'btn-danger') + ' js-family-action-confirm';
+        if (okBtn) {
+            okBtn.textContent = opts.confirmLabel || 'Confirm';
+            okBtn.className = 'btn ' + (opts.confirmClass || 'btn-danger') + ' js-family-action-confirm';
         }
 
         var modal = bs.Modal.getOrCreateInstance(modalEl);
@@ -145,7 +138,7 @@
             var settled = false;
 
             function cleanup() {
-                confirmBtn.removeEventListener('click', onConfirm);
+                okBtn.removeEventListener('click', onConfirm);
                 modalEl.removeEventListener('hidden.bs.modal', onHidden);
             }
 
@@ -163,840 +156,226 @@
                 }
             }
 
-            confirmBtn.addEventListener('click', onConfirm);
+            okBtn.addEventListener('click', onConfirm);
             modalEl.addEventListener('hidden.bs.modal', onHidden);
             modal.show();
         });
     }
 
-    // A search input group (Manage Records look). onInput gets the current value.
-    function buildSearchBox(placeholder, value, onInput) {
-        var group = el('div', 'input-group input-group-sm import-review-filter-search');
-        var input = el('input', 'form-control');
-        input.type = 'search';
-        input.placeholder = placeholder;
-        input.setAttribute('aria-label', placeholder);
-        input.value = value || '';
-        input.addEventListener('input', function () {
-            onInput(input.value);
-        });
-        var icon = el('span', 'input-group-text');
-        icon.appendChild(el('i', 'bi bi-search'));
-        group.appendChild(input);
-        group.appendChild(icon);
+    // -- the table -------------------------------------------------------------
 
-        return group;
-    }
+    function loadRows() {
+        setStatus('Loading...');
 
-    // "Showing A-B of C" + Previous / Page N of M / Next. onGoto(n) navigates to page n.
-    function paintPager(footer, state, onGoto) {
-        footer.textContent = '';
+        var url = rowsUrl
+            + '?page=' + encodeURIComponent(state.page)
+            + '&per=' + encodeURIComponent(state.per)
+            + '&severity=' + encodeURIComponent(state.severity)
+            + '&code=' + encodeURIComponent(state.code)
+            + '&q=' + encodeURIComponent(state.q);
 
-        var row = el('div', 'd-flex flex-wrap justify-content-between align-items-center gap-2 w-100');
-        row.appendChild(el('div', 'table-footer-left', state.total
-            ? 'Showing ' + state.from + '-' + state.to + ' of ' + state.total
-            : 'Showing 0 of 0'));
-
-        var right = el('div', 'table-footer-right');
-
-        if (state.pages > 1) {
-            var ul = el('ul', 'pagination pagination-sm m-0');
-
-            var prev = el('li', 'page-item' + (state.page <= 1 ? ' disabled' : ''));
-            var prevLink = el('a', 'page-link', 'Previous');
-            prevLink.href = '#';
-            prevLink.addEventListener('click', function (event) {
-                event.preventDefault();
-                if (state.page > 1) {
-                    onGoto(state.page - 1);
-                }
+        return window.fetch(url, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            credentials: 'same-origin'
+        }).then(function (response) {
+            return response.json().then(function (data) {
+                return { ok: response.ok, data: data };
             });
-            prev.appendChild(prevLink);
-            ul.appendChild(prev);
-
-            var info = el('li', 'page-item disabled');
-            info.appendChild(el('span', 'page-link', 'Page ' + state.page + ' of ' + state.pages));
-            ul.appendChild(info);
-
-            var next = el('li', 'page-item' + (state.page >= state.pages ? ' disabled' : ''));
-            var nextLink = el('a', 'page-link', 'Next');
-            nextLink.href = '#';
-            nextLink.addEventListener('click', function (event) {
-                event.preventDefault();
-                if (state.page < state.pages) {
-                    onGoto(state.page + 1);
-                }
-            });
-            next.appendChild(nextLink);
-            ul.appendChild(next);
-
-            right.appendChild(ul);
-        }
-
-        row.appendChild(right);
-        footer.appendChild(row);
-    }
-
-    // -- rendering -------------------------------------------------------------
-
-    function render() {
-        var counts = review.counts || {};
-
-        if (fileEl) {
-            fileEl.textContent = review.file || 'import.xlsx';
-        }
-
-        // The list is rebuilt below, so any prior bulk selection no longer maps cleanly.
-        selectedFno = {};
-        bulkRemoveBtn = null;
-        selectAllBox = null;
-
-        renderStats(counts);
-        renderBody(counts);
-
-        var blocking = Number(counts.blocking || 0);
-        var appends = Number(counts.appends || 0);
-        var newFamilies = Number(counts.newFamilies != null ? counts.newFamilies : (counts.families || 0));
-        var nothingNew = (newFamilies + appends) <= 0;
-
-        confirmBtn.disabled = blocking > 0 || nothingNew;
-        confirmBtn.textContent = '';
-        var icon = el('i', 'bi bi-check2-circle me-1');
-        icon.setAttribute('aria-hidden', 'true');
-        confirmBtn.appendChild(icon);
-
-        var label;
-        if (blocking > 0) {
-            label = 'Fix ' + blocking + ' issue(s) in the file first';
-        } else if (nothingNew) {
-            label = 'Nothing new to import';
-        } else {
-            label = 'Confirm import (' + newFamilies + ' new'
-                + (appends > 0 ? ', ' + appends + ' added to existing' : '') + ')';
-        }
-        confirmBtn.appendChild(document.createTextNode(label));
-    }
-
-    // KPI tile matching the dashboard's house stat card (theme.css .stat-card*):
-    // flat (no shadow), green uppercase label, big value, soft icon. The status
-    // color stays on the value so the operator still spots red "Issues to fix".
-    function statTile(label, value, colorClass, icon) {
-        var col = el('div', 'col-6 col-xl');
-        var card = el('article', 'stat-card card h-100 py-2');
-        var body = el('div', 'card-body');
-        var content = el('div', 'stat-card-content');
-
-        var text = el('div');
-        text.appendChild(el('p', null, label));
-        text.appendChild(el('strong', colorClass || null, String(value)));
-        content.appendChild(text);
-
-        var i = el('i', 'bi bi-' + (icon || 'graph-up') + ' stat-card-icon');
-        i.setAttribute('aria-hidden', 'true');
-        content.appendChild(i);
-
-        body.appendChild(content);
-        card.appendChild(body);
-        col.appendChild(card);
-
-        return col;
-    }
-
-    function renderStats(counts) {
-        statsEl.textContent = '';
-        var blocking = Number(counts.blocking || 0);
-        var warnings = Number(counts.warnings || 0);
-        var existing = Number(counts.existing || 0);
-        var ready = Number(counts.ready || 0);
-
-        // These two describe the FILE - every person and every QR group in it, broken ones
-        // included. They must never fall back to the families/members counts, which only
-        // describe what the importer could BUILD: those omit head-less groups, two-head
-        // groups and bad-QR rows, i.e. precisely the people the operator has to go fix.
-        var people = Number(counts.rows || 0);
-        var groups = Number(counts.groups || 0);
-
-        statsEl.appendChild(statTile('People in file', people, '', 'people'));
-        statsEl.appendChild(statTile('Family groups', groups, '', 'diagram-3'));
-        statsEl.appendChild(statTile('Ready to import', ready, ready > 0 ? 'text-success' : 'text-muted', 'check2-circle'));
-        statsEl.appendChild(statTile('Already in system', existing, existing > 0 ? 'text-warning' : 'text-muted', 'archive'));
-        statsEl.appendChild(statTile('Issues to fix', blocking, blocking > 0 ? 'text-danger' : 'text-success', 'exclamation-triangle'));
-        statsEl.appendChild(statTile('Warnings', warnings, warnings > 0 ? 'text-warning' : 'text-muted', 'exclamation-circle'));
-    }
-
-    function renderBody(counts) {
-        groupsEl.textContent = '';
-
-        // Whole-file problems (unreadable / empty) - nothing to edit; upload a corrected file.
-        var notices = review.fileNotices || [];
-        if (notices.length) {
-            var alert = el('div', 'alert alert-danger');
-            alert.appendChild(el('strong', null, 'This file could not be fully read. '));
-            alert.appendChild(document.createTextNode(notices.join(' ') + ' Upload a corrected file.'));
-            groupsEl.appendChild(alert);
-        }
-
-        // Truly nothing to act on and nothing to save - show one clear empty state instead of
-        // an empty "Needs a QR" / "Ready" scaffold.
-        var hasProblems = notices.length || (review.unassigned || []).length || (review.families || []).length;
-        var ready = Number(counts.ready || 0);
-        var appends = Number(counts.appends || 0);
-
-        if (!hasProblems && ready <= 0 && appends <= 0) {
-            groupsEl.appendChild(renderEmptyState());
-
-            return;
-        }
-
-        // Rows with no QR number can't be grouped into a family - surface them first so the
-        // operator can give them a QR and fix them in place.
-        var needsQr = renderNeedsQr();
-        if (needsQr) {
-            groupsEl.appendChild(needsQr);
-        }
-
-        // The flagged families, each with Edit (fix in place), Remove, and - once edited -
-        // a per-family "View changes" button (history lives in a modal, not a global list).
-        var families = renderFamiliesToFix();
-        if (families) {
-            groupsEl.appendChild(families);
-        }
-
-        // What is CORRECT and will be saved - behind its own Show button so the screen leads
-        // with the problems.
-        groupsEl.appendChild(renderReady(counts));
-    }
-
-    // Empty state - the file held nothing to fix and nothing new to save.
-    function renderEmptyState() {
-        var card = el('div', 'card mb-3');
-        var body = el('div', 'card-body text-center py-5');
-        var icon = el('i', 'bi bi-inbox text-muted');
-        icon.setAttribute('aria-hidden', 'true');
-        icon.style.fontSize = '2.5rem';
-        body.appendChild(icon);
-        body.appendChild(el('p', 'h5 mt-3 mb-1', 'Nothing to import'));
-        body.appendChild(el('p', 'text-muted mb-0',
-            'This file has no new families to save and no issues to fix. Upload a different file to import records.'));
-        card.appendChild(body);
-
-        return card;
-    }
-
-    // Search box (left) + "Show N entries" (right) toolbar for the simple lists.
-    function buildSimpleToolbar(placeholder, filterObj, onSearch, size, onSize) {
-        var bar = el('div', 'd-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 import-review-filterbar');
-        bar.appendChild(buildSearchBox(placeholder, filterObj.search, function (value) {
-            filterObj.search = value;
-            onSearch();
-        }));
-        bar.appendChild(buildSizeSelect(size, onSize));
-
-        return bar;
-    }
-
-    // -- families to fix (in-place edit / remove) -------------------------------
-
-    // -- rows with no QR (edit to assign one) -----------------------------------
-
-    // The blank-QR rows matching the current search (over person name / sheet row).
-    function filteredNeedsQr() {
-        var rows = review.unassigned || [];
-        var query = needsQrFilter.search.trim().toLowerCase();
-
-        if (!query) {
-            return rows;
-        }
-
-        return rows.filter(function (row) {
-            var hay = (String(row.person || '') + ' ' + String(row.sheetRow || '')).toLowerCase();
-
-            return hay.indexOf(query) !== -1;
-        });
-    }
-
-    function renderNeedsQr() {
-        var rows = review.unassigned || [];
-
-        if (!rows.length || !familyBaseUrl) {
-            return null;
-        }
-
-        var card = el('div', 'card mb-3 import-review-needsqr');
-
-        var header = el('div', 'card-header');
-        var title = el('span', 'fw-semibold');
-        var icon = el('i', 'bi bi-question-circle me-2');
-        icon.setAttribute('aria-hidden', 'true');
-        title.appendChild(icon);
-        title.appendChild(el('span', 'badge bg-danger me-2', rows.length));
-        title.appendChild(document.createTextNode('Needs a QR number'));
-        header.appendChild(title);
-        header.appendChild(el('small', 'text-muted d-block mt-1',
-            'These rows have no QR, so they are not part of any family yet. Edit to give each a QR - rows with the same QR join one family - or Remove.'));
-        card.appendChild(header);
-
-        var body = el('div', 'card-body');
-        var wrap = el('div', 'table-responsive');
-        var table = el('table', 'table manage-record-table align-middle mb-0 import-review-table');
-
-        var thead = el('thead');
-        var htr = el('tr');
-        ['Row', 'Person', 'Issues', 'Actions'].forEach(function (h) {
-            htr.appendChild(el('th', null, h));
-        });
-        thead.appendChild(htr);
-        table.appendChild(thead);
-
-        var tbody = el('tbody');
-        table.appendChild(tbody);
-        wrap.appendChild(table);
-
-        var footer = el('div', 'card-footer');
-
-        var repaint = function () {
-            tbody.textContent = '';
-            var matches = filteredNeedsQr();
-            var state = paginate(matches, needsQrPage, needsQrPageSize);
-            needsQrPage = state.page;
-
-            if (!matches.length) {
-                var tr = el('tr');
-                var td = el('td', 'text-center text-muted py-3', 'No rows match this search.');
-                td.colSpan = 4;
-                tr.appendChild(td);
-                tbody.appendChild(tr);
-            } else {
-                state.rows.forEach(function (row) {
-                    tbody.appendChild(renderNeedsQrRow(row));
-                });
+        }).then(function (result) {
+            if (!result.ok) {
+                setStatus((result.data && result.data.message) || 'The rows could not be loaded.');
+                return;
             }
 
-            paintPager(footer, state, function (page) {
-                needsQrPage = page;
-                repaint();
-            });
-        };
-
-        // Only surface the search/size toolbar when the list is long enough to need it.
-        if (rows.length > needsQrPageSize) {
-            body.appendChild(buildSimpleToolbar('Search person or row...', needsQrFilter,
-                function () { needsQrPage = 1; repaint(); },
-                needsQrPageSize,
-                function (size) { needsQrPageSize = size; needsQrPage = 1; repaint(); }));
-        }
-
-        body.appendChild(wrap);
-        card.appendChild(body);
-        card.appendChild(footer);
-        repaint();
-
-        return card;
+            state.total = Number(result.data.total || 0);
+            state.filtered = Number(result.data.filtered || 0);
+            renderRows(result.data.rows || []);
+            renderPager();
+            setStatus('');
+        }).catch(function () {
+            setStatus('A network error occurred. Please try again.');
+        });
     }
 
-    function renderNeedsQrRow(row) {
-        var tr = el('tr');
+    function renderRows(rows) {
+        tbody.textContent = '';
+        rowsBySheetRow = {};
 
-        tr.appendChild(el('td', 'text-nowrap', row.sheetRow != null ? row.sheetRow : '-'));
-        tr.appendChild(el('td', null, row.person || '-'));
+        rows.forEach(function (row) {
+            rowsBySheetRow[row.sheetRow] = row;
+        });
 
-        // Editable cells (e.g. the missing QR itself) inline; structural issues as badges.
-        tr.appendChild(renderIssueCell(row.editableCells, row.types, null));
+        if (!rows.length) {
+            var empty = el('tr');
+            var cell = el('td', 'text-center text-muted py-4', 'No people match this filter.');
+            cell.colSpan = 7;
+            empty.appendChild(cell);
+            tbody.appendChild(empty);
+        }
 
-        var actions = el('td', 'text-nowrap');
+        rows.forEach(function (row) {
+            tbody.appendChild(personRow(row));
+        });
 
-        var edit = el('button', 'btn btn-sm btn-primary me-1 js-import-fix-edit', 'Edit');
-        edit.type = 'button';
-        edit.dataset.modalUrl = familyBaseUrl + '?row=' + encodeURIComponent(row.sheetRow);
-        edit.dataset.modalTitle = 'Assign a QR - Row ' + (row.sheetRow || '');
-        actions.appendChild(edit);
+        renderCount();
+    }
 
-        var remove = el('button', 'btn btn-sm btn-outline-danger js-import-fix-remove', 'Remove');
-        remove.type = 'button';
-        remove.dataset.row = row.sheetRow;
-        actions.appendChild(remove);
+    function renderCount() {
+        var first = state.filtered === 0 ? 0 : ((state.page - 1) * state.per) + 1;
+        var last = Math.min(state.page * state.per, state.filtered);
 
-        tr.appendChild(actions);
+        countEl.textContent = 'Showing ' + first + ' to ' + last + ' of ' + state.filtered
+            + ' people' + (state.filtered !== state.total ? ' (filtered from ' + state.total + ')' : '');
+    }
+
+    function personRow(row) {
+        var flagged = !!row.severity;
+        var tr = el('tr', flagged ? (row.severity === 'blocking' ? 'table-danger' : 'table-warning') : '');
+        tr.dataset.row = row.sheetRow;
+
+        tr.appendChild(statusCell(row.severity));
+        tr.appendChild(el('td', null, row.family || ''));
+        tr.appendChild(el('td', null, row.role || ''));
+        tr.appendChild(el('td', null, (row.values || {}).lastname || ''));
+        tr.appendChild(el('td', null, (row.values || {}).firstname || ''));
+        tr.appendChild(issuesCell(row.issues || []));
+        tr.appendChild(openCell(row));
 
         return tr;
     }
 
-    // -- families to fix --------------------------------------------------------
+    function statusCell(severity) {
+        var td = el('td', 'text-center import-review-status-col');
 
-    function renderFamiliesToFix() {
-        var families = review.families || [];
-
-        if (!families.length || !familyBaseUrl) {
-            return null;
+        if (!severity) {
+            return td;
         }
 
-        var card = el('div', 'card mb-3 import-review-families');
-
-        // Header - Manage Records style: icon + title + total badge.
-        var header = el('div', 'card-header');
-        var title = el('span', 'fw-semibold');
-        var icon = el('i', 'bi bi-tools me-2');
+        var blocking = severity === 'blocking';
+        var icon = el('i', 'bi ' + (blocking ? 'bi-exclamation-triangle-fill text-danger' : 'bi-exclamation-circle-fill text-warning'));
         icon.setAttribute('aria-hidden', 'true');
-        title.appendChild(icon);
-        title.appendChild(el('span', 'badge bg-primary me-2', families.length));
-        title.appendChild(document.createTextNode('Families to fix'));
-        header.appendChild(title);
-        card.appendChild(header);
-
-        var body = el('div', 'card-body');
-
-        var wrap = el('div', 'table-responsive');
-        var table = el('table', 'table manage-record-table align-middle mb-0 import-review-table');
-
-        var thead = el('thead');
-        var htr = el('tr');
-
-        // Select-all for bulk remove: toggles every family in the CURRENT filter (all pages),
-        // so the operator can e.g. filter by "Already in the system" then remove them all.
-        var selectTh = el('th', 'import-review-select-col');
-        selectAllBox = el('input', 'form-check-input');
-        selectAllBox.type = 'checkbox';
-        selectAllBox.setAttribute('aria-label', 'Select all families to fix');
-        selectAllBox.addEventListener('change', function () {
-            filteredFamilies().forEach(function (family) {
-                if (selectAllBox.checked) {
-                    selectedFno[String(family.qr)] = true;
-                } else {
-                    delete selectedFno[String(family.qr)];
-                }
-            });
-            updateBulkButton();
-            repaint();
-        });
-        selectTh.appendChild(selectAllBox);
-        htr.appendChild(selectTh);
-
-        ['Row', 'QR', 'Head of family', 'Members', 'Issues', 'Actions'].forEach(function (h) {
-            htr.appendChild(el('th', null, h));
-        });
-        thead.appendChild(htr);
-        table.appendChild(thead);
-
-        var tbody = el('tbody');
-        table.appendChild(tbody);
-        wrap.appendChild(table);
-
-        var footer = el('div', 'card-footer');
-
-        // Repaint the rows + footer only (never a full render()), so the search box keeps
-        // focus and the current page/filter survive.
-        var repaint = function () {
-            paintFamilyRows(tbody, footer, repaint);
-        };
-
-        body.appendChild(buildFamilyFilterBar(families, repaint));
-        body.appendChild(wrap);
-        card.appendChild(body);
-        card.appendChild(footer);
-
-        repaint();
-
-        return card;
-    }
-
-    // The families matching the current filter (search over QR/name, severity, issue type).
-    function filteredFamilies() {
-        var families = review.families || [];
-        var query = familyFilter.search.trim().toLowerCase();
-
-        return families.filter(function (family) {
-            var blocking = Number(family.blocking || 0);
-            var warnings = Number(family.warnings || 0);
-
-            if (familyFilter.severity === 'blocking' && blocking <= 0) {
-                return false;
-            }
-
-            if (familyFilter.severity === 'warning' && !(warnings > 0 && blocking === 0)) {
-                return false;
-            }
-
-            if (familyFilter.code !== 'all') {
-                var hasCode = (family.types || []).some(function (type) {
-                    return type.code === familyFilter.code;
-                });
-
-                if (!hasCode) {
-                    return false;
-                }
-            }
-
-            if (query) {
-                var hay = (String(family.qr || '') + ' ' + String(family.head || '')).toLowerCase();
-
-                if (hay.indexOf(query) === -1) {
-                    return false;
-                }
-            }
-
-            return true;
-        });
-    }
-
-    // Slices an array into the current page; page is clamped into 1..pages.
-    function paginate(items, page, size) {
-        var total = items.length;
-        var pages = Math.max(1, Math.ceil(total / size));
-        var current = Math.min(Math.max(1, page), pages);
-        var start = (current - 1) * size;
-        var rows = items.slice(start, start + size);
-
-        return {
-            rows: rows,
-            page: current,
-            pages: pages,
-            total: total,
-            from: total ? start + 1 : 0,
-            to: total ? start + rows.length : 0
-        };
-    }
-
-    function paintFamilyRows(tbody, footer, repaint) {
-        tbody.textContent = '';
-
-        var matches = filteredFamilies();
-        var state = paginate(matches, familyPage, familyPageSize);
-        familyPage = state.page; // keep the clamped page (the list may have shrunk)
-
-        if (!matches.length) {
-            var tr = el('tr');
-            var td = el('td', 'text-center text-muted py-3', 'No families match this filter.');
-            td.colSpan = 7;
-            tr.appendChild(td);
-            tbody.appendChild(tr);
-        } else {
-            state.rows.forEach(function (family) {
-                tbody.appendChild(renderFamilyToFixRow(family));
-            });
-        }
-
-        refreshSelectAll();
-        paintFamilyFooter(footer, state, repaint);
-    }
-
-    // Reflects how many of the currently-filtered families are selected on the header box.
-    function refreshSelectAll() {
-        if (!selectAllBox) {
-            return;
-        }
-
-        var matches = filteredFamilies();
-        var selected = 0;
-        matches.forEach(function (family) {
-            if (selectedFno[String(family.qr)]) {
-                selected++;
-            }
-        });
-
-        selectAllBox.checked = matches.length > 0 && selected === matches.length;
-        selectAllBox.indeterminate = selected > 0 && selected < matches.length;
-    }
-
-    // Enables/labels the "Remove selected" button from the current selection size.
-    function updateBulkButton() {
-        if (!bulkRemoveBtn) {
-            return;
-        }
-
-        var n = Object.keys(selectedFno).length;
-        bulkRemoveBtn.disabled = n === 0;
-        bulkRemoveBtn.textContent = '';
-        var ic = el('i', 'bi bi-trash me-1');
-        ic.setAttribute('aria-hidden', 'true');
-        bulkRemoveBtn.appendChild(ic);
-        bulkRemoveBtn.appendChild(document.createTextNode(n > 0 ? 'Remove selected (' + n + ')' : 'Remove selected'));
-    }
-
-    // "Showing A-B of C" + Previous / Page N of M / Next - Manage Records footer markup.
-    function paintFamilyFooter(footer, state, repaint) {
-        footer.textContent = '';
-
-        var row = el('div', 'd-flex flex-wrap justify-content-between align-items-center gap-2 w-100');
-        row.appendChild(el('div', 'table-footer-left', state.total
-            ? 'Showing ' + state.from + '-' + state.to + ' of ' + state.total
-            : 'Showing 0 of 0'));
-
-        var right = el('div', 'table-footer-right');
-
-        if (state.pages > 1) {
-            var ul = el('ul', 'pagination pagination-sm m-0');
-
-            var prev = el('li', 'page-item' + (state.page <= 1 ? ' disabled' : ''));
-            var prevLink = el('a', 'page-link', 'Previous');
-            prevLink.href = '#';
-            prevLink.addEventListener('click', function (event) {
-                event.preventDefault();
-                if (state.page > 1) {
-                    familyPage = state.page - 1;
-                    repaint();
-                }
-            });
-            prev.appendChild(prevLink);
-            ul.appendChild(prev);
-
-            var info = el('li', 'page-item disabled');
-            info.appendChild(el('span', 'page-link', 'Page ' + state.page + ' of ' + state.pages));
-            ul.appendChild(info);
-
-            var next = el('li', 'page-item' + (state.page >= state.pages ? ' disabled' : ''));
-            var nextLink = el('a', 'page-link', 'Next');
-            nextLink.href = '#';
-            nextLink.addEventListener('click', function (event) {
-                event.preventDefault();
-                if (state.page < state.pages) {
-                    familyPage = state.page + 1;
-                    repaint();
-                }
-            });
-            next.appendChild(nextLink);
-            ul.appendChild(next);
-
-            right.appendChild(ul);
-        }
-
-        row.appendChild(right);
-        footer.appendChild(row);
-    }
-
-    // "Show N entries" control (Manage Records look; client-side, no form).
-    function buildSizeSelect(size, onChange) {
-        var wrap = el('div', 'd-flex align-items-center gap-2 small text-muted import-review-size');
-        wrap.appendChild(el('label', 'mb-0', 'Show'));
-
-        var select = el('select', 'form-select form-select-sm w-auto');
-        [10, 25, 50, 100].forEach(function (n) {
-            var opt = el('option', null, String(n));
-            opt.value = String(n);
-            if (n === size) {
-                opt.selected = true;
-            }
-            select.appendChild(opt);
-        });
-        select.addEventListener('change', function () {
-            onChange(parseInt(select.value, 10) || 25);
-        });
-        wrap.appendChild(select);
-        wrap.appendChild(el('span', null, 'entries'));
-
-        return wrap;
-    }
-
-    // Toolbar: search + severity + issue-type filters on the left, "Show N entries" on the
-    // right (Manage Records layout). Every control resets to page 1 and repaints.
-    function buildFamilyFilterBar(families, repaint) {
-        var bar = el('div', 'd-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 import-review-filterbar');
-
-        var leftGroup = el('div', 'd-flex flex-wrap align-items-center gap-2');
-
-        var searchGroup = el('div', 'input-group input-group-sm import-review-filter-search');
-        var search = el('input', 'form-control');
-        search.type = 'search';
-        search.placeholder = 'Search QR or name...';
-        search.setAttribute('aria-label', 'Search families to fix');
-        search.value = familyFilter.search;
-        search.addEventListener('input', function () {
-            familyFilter.search = search.value;
-            familyPage = 1;
-            repaint();
-        });
-        var searchIcon = el('span', 'input-group-text');
-        searchIcon.appendChild(el('i', 'bi bi-search'));
-        searchGroup.appendChild(search);
-        searchGroup.appendChild(searchIcon);
-        leftGroup.appendChild(searchGroup);
-
-        var group = el('div', 'btn-group btn-group-sm');
-        [['all', 'All'], ['blocking', 'Must fix'], ['warning', 'Warnings']].forEach(function (pair) {
-            var btn = el('button', 'btn ' + (familyFilter.severity === pair[0] ? 'btn-primary' : 'btn-outline-primary'), pair[1]);
-            btn.type = 'button';
-            btn.dataset.sev = pair[0];
-            btn.addEventListener('click', function () {
-                familyFilter.severity = pair[0];
-                Array.prototype.forEach.call(group.children, function (sibling) {
-                    sibling.className = 'btn ' + (sibling.dataset.sev === familyFilter.severity ? 'btn-primary' : 'btn-outline-primary');
-                });
-                familyPage = 1;
-                repaint();
-            });
-            group.appendChild(btn);
-        });
-        leftGroup.appendChild(group);
-
-        var select = el('select', 'form-select form-select-sm w-auto import-review-filter-type');
-        var optAll = el('option', null, 'All issue types');
-        optAll.value = 'all';
-        select.appendChild(optAll);
-
-        var seen = {};
-        families.forEach(function (family) {
-            (family.types || []).forEach(function (type) {
-                if (type.code && !seen[type.code]) {
-                    seen[type.code] = true;
-                    var option = el('option', null, type.label || type.code);
-                    option.value = type.code;
-                    select.appendChild(option);
-                }
-            });
-        });
-
-        // A previously-picked issue may no longer exist after edits - fall back to "all".
-        if (familyFilter.code !== 'all' && !seen[familyFilter.code]) {
-            familyFilter.code = 'all';
-        }
-
-        select.value = familyFilter.code;
-        select.addEventListener('change', function () {
-            familyFilter.code = select.value;
-            familyPage = 1;
-            repaint();
-        });
-        leftGroup.appendChild(select);
-
-        // Bulk remove - disabled until at least one family is ticked.
-        bulkRemoveBtn = el('button', 'btn btn-sm btn-outline-danger');
-        bulkRemoveBtn.type = 'button';
-        bulkRemoveBtn.addEventListener('click', bulkRemove);
-        leftGroup.appendChild(bulkRemoveBtn);
-        updateBulkButton();
-
-        bar.appendChild(leftGroup);
-
-        bar.appendChild(buildSizeSelect(familyPageSize, function (size) {
-            familyPageSize = size;
-            familyPage = 1;
-            repaint();
-        }));
-
-        return bar;
-    }
-
-    // The "Issues" cell for a flagged row/group: an inline input per editable field-level cell,
-    // plus badges for any structural issue that has no single cell to fix. ctx (optional) carries
-    // blocking/warnings counts for a defensive fallback when there are no typed issues at all.
-    function renderIssueCell(editableCells, types, ctx) {
-        var td = el('td', 'small import-review-issue-cell');
-        editableCells = editableCells || [];
-        types = types || [];
-
-        var editableCodes = {};
-        editableCells.forEach(function (cell) {
-            editableCodes[cell.code] = true;
-            td.appendChild(buildCellEditor(cell));
-        });
-
-        var badges = 0;
-        types.forEach(function (type) {
-            if (editableCodes[type.code]) {
-                return;   // shown as an editable input above, not a duplicate badge
-            }
-            badges++;
-            var cls = type.severity === 'blocking'
-                ? 'badge bg-danger me-1 mb-1'
-                : 'badge bg-warning text-dark me-1 mb-1';
-            td.appendChild(el('span', cls, type.label || type.code));
-        });
-
-        if (!editableCells.length && !badges && ctx) {
-            var blocking = Number(ctx.blocking || 0);
-            var warnings = Number(ctx.warnings || 0);
-            if (blocking > 0) {
-                td.appendChild(el('span', 'badge bg-danger me-1', blocking + ' to fix'));
-            }
-            if (warnings > 0) {
-                td.appendChild(el('span', 'badge bg-warning text-dark', warnings + ' warning' + (warnings === 1 ? '' : 's')));
-            }
-            if (blocking === 0 && warnings === 0) {
-                td.appendChild(el('span', 'text-success', 'No issues'));
-            }
-        }
+        icon.title = blocking ? 'Must fix' : 'Warning';
+        td.appendChild(icon);
+        td.appendChild(el('span', 'visually-hidden', blocking ? 'Must fix' : 'Warning'));
 
         return td;
     }
 
-    // One labelled inline editor for a flagged cell: a severity-tinted panel (red = must fix,
-    // amber = warning) with the column name, its Excel ref, the input, and the reason. Saves on
-    // blur/Enter (see the groupsEl listeners) by POSTing {import_row, field, value}.
-    function buildCellEditor(cell) {
-        var blocking = cell.severity === 'blocking';
+    // Every distinct problem on the row, including the informational ones that offer
+    // nothing to edit: a row that will be skipped must say so.
+    function issuesCell(issues) {
+        var td = el('td');
+        var list = el('div', 'import-review-issues');
 
-        var wrap = el('div', 'import-cell-edit ' + (blocking ? 'import-cell-edit--blocking' : 'import-cell-edit--warning'));
+        issues.forEach(function (issue) {
+            var badge = el('span',
+                'badge ' + (issue.severity === 'blocking' ? 'text-bg-danger' : 'text-bg-warning'),
+                issue.label);
+            badge.title = issue.message || '';
+            list.appendChild(badge);
+        });
 
-        // A dropdown column (per the Excel template) edits as a <select>; everything else a text input.
-        var options = fieldOptions[cell.field];
-        var isSelect = !!(options && options.length);
+        td.appendChild(list);
 
-        var head = el('div', 'import-cell-edit-head');
-        var labelWrap = el('span', 'import-cell-edit-labelwrap');
-        labelWrap.appendChild(el('span', 'import-cell-edit-label', cell.label));
-        if (isSelect) {
-            // Chevron cue so the cell clearly reads as a dropdown (beside the native <select> caret).
-            var caret = el('i', 'bi bi-caret-down-fill import-cell-edit-caret');
-            caret.setAttribute('aria-hidden', 'true');
-            caret.title = 'Pick a value from the list';
-            labelWrap.appendChild(caret);
-        }
-        head.appendChild(labelWrap);
-
-        // Name whose cell this is (head / member) instead of a bare Excel ref - the operator
-        // needs to know WHO to fix. The Excel cell (e.g. "P4") stays reachable on hover.
-        var who = cell.person ? (cell.person + ' (' + (cell.role || 'member') + ')') : cell.cell;
-        if (who) {
-            var ref = el('span', 'import-cell-edit-ref');
-            var pIcon = el('i', 'bi ' + (cell.role === 'head' ? 'bi-person-badge' : 'bi-person') + ' me-1');
-            pIcon.setAttribute('aria-hidden', 'true');
-            ref.appendChild(pIcon);
-            ref.appendChild(document.createTextNode(who));
-            if (cell.cell) {
-                ref.title = 'Cell ' + cell.cell;
-            }
-            head.appendChild(ref);
-        }
-        wrap.appendChild(head);
-
-        wrap.appendChild(isSelect ? buildCellSelect(cell, options) : buildCellInput(cell));
-
-        if (cell.message) {
-            var msg = el('div', 'import-cell-edit-msg');
-            var icon = el('i', 'bi ' + (blocking ? 'bi-exclamation-triangle-fill' : 'bi-exclamation-circle-fill') + ' me-1');
-            icon.setAttribute('aria-hidden', 'true');
-            msg.appendChild(icon);
-            msg.appendChild(document.createTextNode(cell.message));
-            wrap.appendChild(msg);
-        }
-
-        return wrap;
+        return td;
     }
 
-    // Shared data-* + a11y wiring for either control kind, plus the class the save handlers watch.
-    function applyCellControlAttrs(control, cell) {
-        control.classList.add('js-import-cell');
-        control.dataset.row = cell.sheetRow;
-        control.dataset.field = cell.field;
-        control.dataset.original = cell.value || '';
-        control.title = cell.message || '';
-        control.setAttribute('aria-label', cell.label + (cell.message ? ' - ' + cell.message : ''));
+    // Only a row with something to type into gets a toggle.
+    function openCell(row) {
+        var td = el('td', 'text-end import-review-open-col');
+
+        if (!(row.fields || []).length) {
+            return td;
+        }
+
+        var button = el('button', 'btn btn-sm btn-outline-secondary js-import-open');
+        button.type = 'button';
+        button.dataset.row = row.sheetRow;
+        button.setAttribute('aria-expanded', 'false');
+        button.appendChild(el('i', 'bi bi-pencil'));
+        button.appendChild(el('span', 'visually-hidden', 'Fix this person'));
+        td.appendChild(button);
+
+        return td;
     }
 
-    function buildCellInput(cell) {
-        var input = el('input', 'form-control form-control-sm import-cell-input');
+    // The editor panel: one control per field carrying a problem, plus Apply/Discard.
+    // Nothing posts until Apply, so a mistyped correction is discardable.
+    function panelRow(row) {
+        var tr = el('tr', 'js-import-panel');
+        tr.dataset.panelFor = row.sheetRow;
+
+        var td = el('td', 'bg-body-tertiary');
+        td.colSpan = 7;
+
+        var wrap = el('div', 'p-3');
+        var grid = el('div', 'row g-2');
+
+        (row.fields || []).forEach(function (field) {
+            grid.appendChild(fieldControl(field, row.sheetRow));
+        });
+
+        wrap.appendChild(grid);
+
+        var actions = el('div', 'd-flex justify-content-end gap-2 mt-3');
+        var discard = el('button', 'btn btn-link js-import-discard', 'Discard');
+        discard.type = 'button';
+        var apply = el('button', 'btn btn-primary js-import-apply', 'Apply');
+        apply.type = 'button';
+        apply.dataset.row = row.sheetRow;
+        actions.appendChild(discard);
+        actions.appendChild(apply);
+        wrap.appendChild(actions);
+
+        td.appendChild(wrap);
+        tr.appendChild(td);
+
+        return tr;
+    }
+
+    function fieldControl(field, sheetRow) {
+        var col = el('div', 'col-12 col-md-6 col-lg-4');
+        var id = 'importField-' + sheetRow + '-' + field.field;
+
+        var label = el('label', 'form-label small mb-1', field.label
+            + (field.cell ? ' (cell ' + field.cell + ')' : ''));
+        label.setAttribute('for', id);
+        col.appendChild(label);
+
+        var options = fieldOptions[field.field];
+        var control = (options && options.length)
+            ? buildSelect(field, options)
+            : buildInput(field);
+
+        control.id = id;
+        control.classList.add('js-import-field');
+        control.dataset.field = field.field;
+        control.dataset.row = sheetRow;
+        col.appendChild(control);
+
+        if (field.message) {
+            col.appendChild(el('div',
+                'form-text ' + (field.severity === 'blocking' ? 'text-danger' : 'text-warning-emphasis'),
+                field.message));
+        }
+
+        return col;
+    }
+
+    function buildInput(field) {
+        var input = el('input', 'form-control form-control-sm');
         input.type = 'text';
-        input.value = cell.value || '';
-        applyCellControlAttrs(input, cell);
+        input.value = field.value || '';
 
         return input;
     }
 
     // A <select> mirroring the Excel column's dropdown. A blank first choice lets a
-    // required-but-empty cell start unselected; an off-list current value is kept as its own
-    // option so saving never silently drops what is already there.
-    function buildCellSelect(cell, options) {
-        var select = el('select', 'form-select form-select-sm import-cell-input');
-        var current = cell.value || '';
+    // required-but-empty field start unselected; an off-list current value is kept as its
+    // own option so saving never silently drops what is already there.
+    function buildSelect(field, options) {
+        var select = el('select', 'form-select form-select-sm');
+        var current = field.value || '';
 
         var blank = el('option', null, '- choose -');
         blank.value = '';
@@ -1020,382 +399,7 @@
             select.appendChild(keep);
         }
 
-        applyCellControlAttrs(select, cell);
-
         return select;
-    }
-
-    // Persists one inline cell edit (only when its value actually changed), then re-renders from
-    // the fresh, re-validated report - so the stat tiles and issue lists update live.
-    function saveCell(input) {
-        if (!cellUrl) {
-            return;
-        }
-
-        var value = input.value;
-        var original = input.dataset.original != null ? input.dataset.original : '';
-
-        if (value === original) {
-            return;
-        }
-
-        input.disabled = true;
-        setStatus('Saving ' + (input.dataset.field || 'cell') + '...');
-
-        postForm(cellUrl, {
-            import_row: input.dataset.row,
-            field: input.dataset.field,
-            value: value
-        }).then(function (result) {
-            var data = result.data || {};
-
-            if (result.ok && data.review) {
-                applyReview(data.review, data.csrf);   // rebuilds the tables + stat tiles
-                setStatus(data.message || 'Saved.');
-
-                return;
-            }
-
-            input.disabled = false;
-            refreshCsrf(data.csrf);
-            setStatus(data.message || 'Could not save. Please try again.');
-        }).catch(function () {
-            input.disabled = false;
-            setStatus('A network error occurred. Please try again.');
-        });
-    }
-
-    function renderFamilyToFixRow(family) {
-        var tr = el('tr');
-
-        // Bulk-remove selector (delegated change handler on groupsEl).
-        var selectTd = el('td', 'import-review-select-col');
-        var box = el('input', 'form-check-input js-import-select');
-        box.type = 'checkbox';
-        box.dataset.fno = family.qr;
-        box.checked = !!selectedFno[String(family.qr)];
-        box.setAttribute('aria-label', 'Select family ' + (family.qr || ''));
-        selectTd.appendChild(box);
-        tr.appendChild(selectTd);
-
-        tr.appendChild(el('td', 'text-nowrap', family.sheetRow != null ? family.sheetRow : '-'));
-        tr.appendChild(el('td', 'text-nowrap fw-semibold', family.qr || '-'));
-
-        // Head of family. "Already in system" is not shown here - the Issues column
-        // already carries that badge, so repeating it beside the name is noise.
-        tr.appendChild(el('td', null, family.head || '-'));
-
-        tr.appendChild(el('td', 'text-nowrap', family.members));
-
-        // Field-level problems as inline-editable cells (fix in place); structural problems
-        // (head / address) stay as badges and are fixed via the Edit modal.
-        tr.appendChild(renderIssueCell(family.editableCells, family.types, family));
-
-        var actions = el('td', 'text-nowrap');
-
-        // Per-family history (only after this family was edited/removed in review).
-        var history = changesButton(family.qr);
-        if (history) {
-            actions.appendChild(history);
-        }
-
-        // Opens the shared family modal (registered under the 'importFix' namespace in
-        // manage-family-modal.js) prefilled with this group's staged data.
-        var edit = el('button', 'btn btn-sm btn-primary me-1 js-import-fix-edit', 'Edit');
-        edit.type = 'button';
-        // QR goes in a query param, not the path: a raw QR cell ("-1", "N/A", "5880.0", a
-        // slash) is not URL-path-safe and would 404 against a numeric route segment.
-        edit.dataset.modalUrl = familyBaseUrl + '?fno=' + encodeURIComponent(family.qr);
-        edit.dataset.modalTitle = 'Fix Family ' + (family.qr || '');
-        actions.appendChild(edit);
-
-        var remove = el('button', 'btn btn-sm btn-outline-danger js-import-fix-remove', 'Remove');
-        remove.type = 'button';
-        remove.dataset.familyNo = family.qr;
-        actions.appendChild(remove);
-
-        tr.appendChild(actions);
-
-        return tr;
-    }
-
-    // -- changes made (per-family history, shown in a modal) --------------------
-
-    // The change entries recorded for one QR group (oldest-first, as stored).
-    function changesForQr(qr) {
-        var all = review.changes || [];
-        var key = String(qr == null ? '' : qr);
-
-        return all.filter(function (change) {
-            return String(change.qr || '') === key;
-        });
-    }
-
-    // A "View changes (N)" button for a family row, or null when it has no history yet.
-    function changesButton(qr) {
-        var entries = changesForQr(qr);
-
-        if (!entries.length) {
-            return null;
-        }
-
-        var btn = el('button', 'btn btn-sm btn-outline-secondary me-1 js-import-view-changes');
-        btn.type = 'button';
-        var icon = el('i', 'bi bi-clock-history me-1');
-        icon.setAttribute('aria-hidden', 'true');
-        btn.appendChild(icon);
-        btn.appendChild(document.createTextNode('View changes (' + entries.length + ')'));
-        btn.addEventListener('click', function () {
-            openChangesModal(qr, entries);
-        });
-
-        return btn;
-    }
-
-    // A lightweight, dependency-free modal listing one family's edit history (newest first).
-    function openChangesModal(qr, entries) {
-        var backdrop = el('div', 'import-changes-modal');
-        var dialog = el('div', 'import-changes-dialog');
-
-        var header = el('div', 'import-changes-header');
-        header.appendChild(el('h5', 'mb-0', 'Changes to family ' + (qr || '-')));
-        var close = el('button', 'btn-close');
-        close.type = 'button';
-        close.setAttribute('aria-label', 'Close');
-        header.appendChild(close);
-        dialog.appendChild(header);
-
-        var body = el('div', 'import-changes-body');
-
-        if (!entries.length) {
-            body.appendChild(el('p', 'text-muted mb-0 px-3 py-2', 'No changes recorded for this family.'));
-        } else {
-            var list = el('ul', 'list-group list-group-flush');
-            entries.slice().reverse().forEach(function (change) {
-                var li = el('li', 'list-group-item');
-                var top = el('div', 'd-flex justify-content-between align-items-baseline gap-2');
-                top.appendChild(el('span', 'fw-semibold', (change.action || 'Changed') + (change.head ? ' · ' + change.head : '')));
-                top.appendChild(el('span', 'text-muted small text-nowrap', change.at || ''));
-                li.appendChild(top);
-
-                var lines = change.lines || [];
-                if (lines.length) {
-                    var ul = el('ul', 'small text-muted mb-0 ps-3 mt-1');
-                    lines.forEach(function (line) {
-                        ul.appendChild(el('li', null, line));
-                    });
-                    li.appendChild(ul);
-                }
-
-                list.appendChild(li);
-            });
-            body.appendChild(list);
-        }
-
-        dialog.appendChild(body);
-        backdrop.appendChild(dialog);
-        document.body.appendChild(backdrop);
-
-        function closeModal() {
-            document.removeEventListener('keydown', onKey);
-            if (backdrop.parentNode) {
-                backdrop.parentNode.removeChild(backdrop);
-            }
-        }
-
-        function onKey(event) {
-            if (event.key === 'Escape') {
-                closeModal();
-            }
-        }
-
-        close.addEventListener('click', closeModal);
-        backdrop.addEventListener('click', function (event) {
-            if (event.target === backdrop) {
-                closeModal();
-            }
-        });
-        document.addEventListener('keydown', onKey);
-    }
-
-    // -- ready to import --------------------------------------------------------
-
-    function renderReady(counts) {
-        var ready = review.ready || [];
-        var blocking = Number(counts.blocking || 0);
-        var appends = Number(counts.appends || 0);
-
-        var card = el('div', 'card mb-3 import-review-ready');
-
-        var header = el('div', 'card-header d-flex justify-content-between align-items-center flex-wrap gap-2');
-        var left = el('span', 'fw-semibold');
-        left.appendChild(el('span', 'badge bg-success me-2', ready.length));
-        left.appendChild(document.createTextNode('Ready to import'));
-        header.appendChild(left);
-
-        var right = el('div', 'd-flex align-items-center gap-2 flex-wrap');
-        var hint;
-        if (!ready.length && !appends) {
-            hint = 'Nothing here is ready to save yet.';
-        } else if (blocking > 0) {
-            hint = 'These are correct. They will be saved once the issues above are fixed.';
-        } else {
-            hint = 'These will be saved when you press Confirm import.';
-        }
-        right.appendChild(el('small', 'text-muted', hint));
-
-        // Everything below the header lives in one container so it can be collapsed to let
-        // the operator focus on the problems above.
-        var content = el('div', 'import-review-ready-content');
-
-        if (ready.length) {
-            var showLabel = 'Show ready to import (' + ready.length + ')';
-            var toggle = el('button', 'btn btn-sm btn-outline-success', readyCollapsed ? showLabel : 'Hide ready to import');
-            toggle.type = 'button';
-            toggle.addEventListener('click', function () {
-                readyCollapsed = !readyCollapsed;
-                content.hidden = readyCollapsed;
-                toggle.textContent = readyCollapsed ? showLabel : 'Hide ready to import';
-            });
-            right.appendChild(toggle);
-        }
-
-        header.appendChild(right);
-        card.appendChild(header);
-
-        if (!ready.length) {
-            var body = el('div', 'card-body');
-            body.appendChild(el('p', 'text-muted small mb-0', appends > 0
-                ? 'No NEW families - but ' + appends + ' member(s) will be added to families already in the system (see the list above).'
-                : 'No new families are ready. Every group either has an issue to fix, or is already in the system.'));
-            content.appendChild(body);
-            card.appendChild(content);
-
-            return card;
-        }
-
-        var body2 = el('div', 'card-body');
-
-        if (ready.length > readyPageSize) {
-            body2.appendChild(buildSimpleToolbar('Search QR, name or barangay...', readyFilter,
-                function () { readyPage = 1; repaintReady(); },
-                readyPageSize,
-                function (size) { readyPageSize = size; readyPage = 1; repaintReady(); }));
-        }
-
-        var wrap = el('div', 'table-responsive');
-        var table = el('table', 'table table-sm mb-0 align-middle import-review-table');
-
-        var thead = el('thead');
-        var htr = el('tr');
-        ['Row', 'QR', 'Head of family', 'Members', 'Barangay', 'Address', 'Notes'].forEach(function (h) {
-            htr.appendChild(el('th', null, h));
-        });
-        thead.appendChild(htr);
-        table.appendChild(thead);
-
-        var tbody = el('tbody');
-        table.appendChild(tbody);
-        wrap.appendChild(table);
-        body2.appendChild(wrap);
-        content.appendChild(body2);
-
-        if (appends > 0) {
-            content.appendChild(el('div', 'px-3 pb-2 small text-muted',
-                'Plus ' + appends + ' member(s) being added to families already in the system.'));
-        }
-
-        var readyFooter = el('div', 'card-footer');
-        content.appendChild(readyFooter);
-
-        var repaintReady = function () {
-            tbody.textContent = '';
-            var matches = filteredReady();
-            var state = paginate(matches, readyPage, readyPageSize);
-            readyPage = state.page;
-
-            if (!matches.length) {
-                var tr = el('tr');
-                var td = el('td', 'text-center text-muted py-3', 'No families match this search.');
-                td.colSpan = 7;
-                tr.appendChild(td);
-                tbody.appendChild(tr);
-            } else {
-                state.rows.forEach(function (family) {
-                    tbody.appendChild(renderReadyRow(family));
-                });
-            }
-
-            paintPager(readyFooter, state, function (page) {
-                readyPage = page;
-                repaintReady();
-            });
-        };
-
-        repaintReady();
-
-        content.hidden = readyCollapsed;
-        card.appendChild(content);
-
-        return card;
-    }
-
-    // The ready-to-import families matching the current search (over QR / head / barangay).
-    function filteredReady() {
-        var rows = review.ready || [];
-        var query = readyFilter.search.trim().toLowerCase();
-
-        if (!query) {
-            return rows;
-        }
-
-        return rows.filter(function (family) {
-            var hay = (String(family.qr || '') + ' ' + String(family.head || '') + ' ' + String(family.barangay || '')).toLowerCase();
-
-            return hay.indexOf(query) !== -1;
-        });
-    }
-
-    function renderReadyRow(family) {
-        var tr = el('tr');
-
-        tr.appendChild(el('td', 'text-nowrap', family.sheetRow != null ? family.sheetRow : '-'));
-        tr.appendChild(el('td', 'text-nowrap fw-semibold', family.qr || '-'));
-        tr.appendChild(el('td', null, family.head || '-'));
-        tr.appendChild(el('td', 'text-nowrap', family.members));
-        tr.appendChild(el('td', 'small', family.barangay || '-'));
-        tr.appendChild(el('td', 'small import-review-addr', family.address || '-'));
-
-        // Warning-only families still import - say so plainly instead of leaving a blank.
-        var notes = el('td', 'small');
-        if (Number(family.warnings) > 0) {
-            notes.appendChild(el('span', 'badge bg-warning text-dark',
-                family.warnings + ' warning' + (Number(family.warnings) === 1 ? '' : 's')));
-            notes.appendChild(document.createTextNode(' imports as typed'));
-        } else {
-            notes.appendChild(el('span', 'text-success', 'No issues'));
-        }
-
-        // Every ready family gets the same Edit modal as Families-to-fix, so the operator can
-        // tweak any record before committing - warning-only or perfectly clean.
-        if (familyBaseUrl) {
-            var edit = el('button', 'btn btn-sm btn-outline-primary ms-2 js-import-fix-edit', 'Edit');
-            edit.type = 'button';
-            edit.dataset.modalUrl = familyBaseUrl + '?fno=' + encodeURIComponent(family.qr);
-            edit.dataset.modalTitle = 'Edit Family ' + (family.qr || '');
-            notes.appendChild(edit);
-        }
-
-        // A family fixed into "ready" keeps its edit history reachable here.
-        var readyHistory = changesButton(family.qr);
-        if (readyHistory) {
-            readyHistory.classList.remove('me-1');
-            readyHistory.classList.add('ms-2');
-            notes.appendChild(readyHistory);
-        }
-        tr.appendChild(notes);
-
-        return tr;
     }
 
     // -- network ---------------------------------------------------------------
@@ -1438,10 +442,239 @@
 
     // -- actions ---------------------------------------------------------------
 
-    // Recap what the write job will do, then commit only on confirm - the write is not
+    function applyRow(sheetRow) {
+        var panel = tbody.querySelector('[data-panel-for="' + sheetRow + '"]');
+
+        if (!panel) {
+            return;
+        }
+
+        var controls = panel.querySelectorAll('.js-import-field');
+        var payload = { import_row: sheetRow };
+        var any = false;
+
+        Array.prototype.forEach.call(controls, function (control) {
+            payload['fields[' + control.dataset.field + ']'] = control.value;
+            any = true;
+        });
+
+        if (!any) {
+            return;
+        }
+
+        setBusy(panel, true);
+        setStatus('Applying...');
+
+        postForm(applyUrl, payload).then(function (result) {
+            var data = result.data || {};
+            refreshCsrf(data.csrf);
+
+            if (!result.ok) {
+                setBusy(panel, false);
+                setStatus(data.message || 'The correction could not be applied.');
+
+                return;
+            }
+
+            updateCounts(data.counts);
+            updateCodeFilter(data.codes);
+
+            // These fields drive rules that reach other rows, so the rest of the page
+            // cannot be trusted to be current: refetch instead of splicing.
+            if (data.refresh) {
+                loadRows();
+                setStatus('Applied.');
+
+                return;
+            }
+
+            replaceRow(sheetRow, data.row);
+            setStatus('Applied.');
+        }).catch(function () {
+            setBusy(panel, false);
+            setStatus('A network error occurred. Please try again.');
+        });
+    }
+
+    function replaceRow(sheetRow, row) {
+        var tr = tbody.querySelector('tr[data-row="' + sheetRow + '"]');
+        var panel = tbody.querySelector('[data-panel-for="' + sheetRow + '"]');
+
+        if (panel) {
+            panel.remove();
+        }
+
+        if (!tr || !row) {
+            loadRows();
+
+            return;
+        }
+
+        rowsBySheetRow[sheetRow] = row;
+        tr.replaceWith(personRow(row));
+    }
+
+    function updateCounts(counts) {
+        if (!counts) {
+            return;
+        }
+
+        summary.counts = counts;
+        var blocking = Number(counts.blocking || 0);
+
+        root.querySelectorAll('[data-count="blocking"]').forEach(function (node) {
+            node.textContent = blocking;
+        });
+        root.querySelectorAll('[data-count="warnings"]').forEach(function (node) {
+            node.textContent = Number(counts.warnings || 0);
+        });
+
+        confirmBtn.disabled = blocking > 0;
+        confirmBtn.title = blocking > 0
+            ? 'Fix the flagged values first, or correct them in the spreadsheet and upload again.'
+            : '';
+    }
+
+    // Keeps the Problem dropdown honest after an Apply: a code fixed out of the file
+    // is dropped from the list, a newly introduced one is offered. The current
+    // selection is kept if that code still exists, otherwise the filter resets to All.
+    function updateCodeFilter(codes) {
+        if (!codes) {
+            return;
+        }
+
+        var current = codeFilterEl.value;
+        var stillPresent = false;
+
+        codeFilterEl.innerHTML = '';
+
+        var allOption = document.createElement('option');
+        allOption.value = '';
+        allOption.textContent = 'All problems';
+        codeFilterEl.appendChild(allOption);
+
+        codes.forEach(function (code) {
+            var option = document.createElement('option');
+            option.value = code.code;
+            option.textContent = code.label;
+            codeFilterEl.appendChild(option);
+
+            if (code.code === current) {
+                stillPresent = true;
+            }
+        });
+
+        codeFilterEl.value = stillPresent ? current : '';
+        state.code = codeFilterEl.value;
+    }
+
+    // One panel at a time: two open editors on one screen invite applying the wrong row.
+    function togglePanel(button) {
+        var sheetRow = button.dataset.row;
+        var open = tbody.querySelector('[data-panel-for="' + sheetRow + '"]');
+
+        if (open) {
+            closePanel(open);
+
+            return;
+        }
+
+        tbody.querySelectorAll('.js-import-panel').forEach(closePanel);
+
+        var tr = tbody.querySelector('tr[data-row="' + sheetRow + '"]');
+        var row = rowsBySheetRow[sheetRow];
+
+        if (!tr || !row) {
+            return;
+        }
+
+        tr.after(panelRow(row));
+        button.setAttribute('aria-expanded', 'true');
+    }
+
+    function closePanel(panel) {
+        if (!panel) {
+            return;
+        }
+
+        var button = tbody.querySelector('.js-import-open[data-row="' + panel.dataset.panelFor + '"]');
+
+        if (button) {
+            button.setAttribute('aria-expanded', 'false');
+        }
+
+        panel.remove();
+    }
+
+    // Locks the panel while its Apply is in flight, so a double click cannot post twice.
+    function setBusy(panel, busy) {
+        panel.querySelectorAll('input, select, button').forEach(function (node) {
+            node.disabled = busy;
+        });
+    }
+
+    // A windowed pager: first, last, and two either side of the current page, so a
+    // 400-page import does not render 400 links.
+    function renderPager() {
+        pagerEl.textContent = '';
+
+        var pages = Math.max(1, Math.ceil(state.filtered / state.per));
+
+        if (pages < 2) {
+            return;
+        }
+
+        pagerEl.appendChild(pageItem('Previous', state.page - 1, state.page === 1));
+
+        var wanted = {};
+        wanted[1] = true;
+        wanted[pages] = true;
+
+        for (var n = state.page - 2; n <= state.page + 2; n++) {
+            if (n >= 1 && n <= pages) {
+                wanted[n] = true;
+            }
+        }
+
+        var numbers = Object.keys(wanted).map(Number).sort(function (a, b) { return a - b; });
+        var previous = 0;
+
+        numbers.forEach(function (n) {
+            if (previous && n - previous > 1) {
+                var gap = el('li', 'page-item disabled');
+                gap.appendChild(el('span', 'page-link', '...'));
+                pagerEl.appendChild(gap);
+            }
+
+            pagerEl.appendChild(pageItem(String(n), n, false, n === state.page));
+            previous = n;
+        });
+
+        pagerEl.appendChild(pageItem('Next', state.page + 1, state.page === pages));
+    }
+
+    function pageItem(label, page, disabled, active) {
+        var li = el('li', 'page-item' + (disabled ? ' disabled' : '') + (active ? ' active' : ''));
+        var a = el('a', 'page-link', label);
+        a.href = '#';
+
+        if (!disabled) {
+            a.dataset.page = page;
+        }
+
+        if (active) {
+            a.setAttribute('aria-current', 'page');
+        }
+
+        li.appendChild(a);
+
+        return li;
+    }
+
+    // Recap what the write job will do, then commit only on confirm: the write is not
     // reversible from this screen.
     function confirmImport() {
-        var counts = review.counts || {};
+        var counts = summary.counts || {};
         var newFamilies = Number(counts.newFamilies != null ? counts.newFamilies : (counts.families || 0));
         var appends = Number(counts.appends || 0);
         var skipped = Number(counts.existing || 0);
@@ -1491,120 +724,12 @@
                 return;
             }
 
-            // Refused: the file still has issues. Re-render the fresh report.
-            if (data.review) {
-                review = data.review;
-                render();
-            }
-
             cancelBtn.disabled = false;
             setStatus(data.message || 'The import could not be started.');
         }).catch(function () {
             cancelBtn.disabled = false;
             confirmBtn.disabled = false;
             setStatus('A network error occurred. Please try again.');
-        });
-    }
-
-    // Applies a fresh review report (returned by a save/remove) and re-renders. Also called
-    // by manage-family-modal.js after the Edit modal saves - hence the global handle.
-    function applyReview(freshReview, csrfHash) {
-        if (freshReview) {
-            review = freshReview;
-        }
-
-        refreshCsrf(csrfHash);
-        render();
-    }
-
-    window.importReviewApply = applyReview;
-
-    function removeFamily(familyNo, row) {
-        if (!familyBaseUrl) {
-            return;
-        }
-
-        // A blank-QR row is keyed by its sheet row; a normal family by its QR.
-        var isRow = row != null && row !== '';
-        var label = isRow ? 'row ' + row : 'family ' + familyNo;
-        var extra = isRow ? { import_row: row } : { import_family_no: familyNo };
-
-        if (!isRow && !familyNo) {
-            return;
-        }
-
-        confirmAction({
-            title: 'Remove from import',
-            message: 'Remove ' + label + ' from this import? Its rows will be dropped.',
-            confirmLabel: 'Remove',
-            confirmClass: 'btn-danger'
-        }).then(function (ok) {
-            if (!ok) {
-                return;
-            }
-
-            setStatus('Removing ' + label + '...');
-
-            // Keys travel in the POST body, not the path (raw QR cells are not URL-path-safe).
-            postForm(familyBaseUrl + '/remove', extra).then(function (result) {
-                var data = result.data || {};
-
-                if (result.ok && data.review) {
-                    applyReview(data.review, data.csrf);
-                    setStatus(data.message || 'Removed.');
-
-                    return;
-                }
-
-                refreshCsrf(data.csrf);
-                setStatus(data.message || 'Could not remove. Please try again.');
-            }).catch(function () {
-                setStatus('A network error occurred. Please try again.');
-            });
-        });
-    }
-
-    // Removes every ticked family (QR groups) in one POST. Selection lives in selectedFno.
-    function bulkRemove() {
-        var qrs = Object.keys(selectedFno);
-
-        if (!qrs.length || !familyBaseUrl) {
-            return;
-        }
-
-        confirmAction({
-            title: 'Remove selected',
-            message: 'Remove ' + qrs.length + ' selected famil' + (qrs.length === 1 ? 'y' : 'ies')
-                + ' from this import? Their rows will be dropped.',
-            confirmLabel: 'Remove ' + qrs.length,
-            confirmClass: 'btn-danger'
-        }).then(function (ok) {
-            if (!ok) {
-                return;
-            }
-
-            setStatus('Removing ' + qrs.length + ' famil' + (qrs.length === 1 ? 'y' : 'ies') + '...');
-
-            var extra = {};
-            qrs.forEach(function (qr, index) {
-                extra['import_family_nos[' + index + ']'] = qr;
-            });
-
-            postForm(familyBaseUrl + '/remove', extra).then(function (result) {
-                var data = result.data || {};
-
-                if (result.ok && data.review) {
-                    applyReview(data.review, data.csrf);  // render() clears the selection
-                    setStatus(data.message || 'Removed.');
-
-                    return;
-                }
-
-                refreshCsrf(data.csrf);
-                setStatus(data.message || 'Could not remove. Please try again.');
-            }).catch(function () {
-                setStatus('A network error occurred. Please try again.');
-            });
         });
     }
 
@@ -1653,58 +778,83 @@
 
     // -- wire up ---------------------------------------------------------------
 
-    groupsEl.addEventListener('click', function (event) {
-        var target = event.target;
+    root.addEventListener('click', function (event) {
+        var open = event.target.closest ? event.target.closest('.js-import-open') : null;
 
-        if (!target || !target.closest) {
-            return;
-        }
-
-        var removeBtn = target.closest('.js-import-fix-remove');
-        if (removeBtn) {
-            removeFamily(removeBtn.dataset.familyNo, removeBtn.dataset.row);
-        }
-    });
-
-    // Bulk-remove checkbox ticks + inline cell edits (delegated - rows re-render on repaint).
-    groupsEl.addEventListener('change', function (event) {
-        var target = event.target;
-
-        if (target && target.classList && target.classList.contains('js-import-cell')) {
-            saveCell(target);
+        if (open) {
+            togglePanel(open);
 
             return;
         }
 
-        var box = target && target.closest ? target.closest('.js-import-select') : null;
+        var apply = event.target.closest ? event.target.closest('.js-import-apply') : null;
 
-        if (!box) {
+        if (apply) {
+            applyRow(apply.dataset.row);
+
             return;
         }
 
-        var qr = String(box.dataset.fno);
-        if (box.checked) {
-            selectedFno[qr] = true;
-        } else {
-            delete selectedFno[qr];
+        var discard = event.target.closest ? event.target.closest('.js-import-discard') : null;
+
+        if (discard) {
+            closePanel(discard.closest('.js-import-panel'));
+
+            return;
         }
 
-        updateBulkButton();
-        refreshSelectAll();
-    });
+        var pageLink = event.target.closest ? event.target.closest('[data-page]') : null;
 
-    // Enter commits an inline cell edit (blur fires the change handler above).
-    groupsEl.addEventListener('keydown', function (event) {
-        var target = event.target;
-
-        if (event.key === 'Enter' && target && target.classList && target.classList.contains('js-import-cell')) {
+        if (pageLink) {
             event.preventDefault();
-            target.blur();
+            state.page = Number(pageLink.dataset.page);
+            loadRows();
         }
+    });
+
+    root.addEventListener('click', function (event) {
+        var pill = event.target.closest ? event.target.closest('[data-severity]') : null;
+
+        if (!pill) {
+            return;
+        }
+
+        root.querySelectorAll('[data-severity]').forEach(function (node) {
+            node.classList.toggle('active', node === pill);
+        });
+
+        state.severity = pill.dataset.severity;
+        state.page = 1;
+        loadRows();
+    });
+
+    // Debounced so typing does not fire a request per keystroke.
+    var searchTimer = null;
+
+    searchEl.addEventListener('input', function () {
+        window.clearTimeout(searchTimer);
+        searchTimer = window.setTimeout(function () {
+            state.q = searchEl.value;
+            state.page = 1;
+            loadRows();
+        }, 250);
+    });
+
+    perPageEl.addEventListener('change', function () {
+        state.per = Number(perPageEl.value);
+        state.page = 1;
+        loadRows();
+    });
+
+    codeFilterEl.addEventListener('change', function () {
+        state.code = codeFilterEl.value;
+        state.page = 1;
+        loadRows();
     });
 
     confirmBtn.addEventListener('click', confirmImport);
     cancelBtn.addEventListener('click', cancelImport);
 
-    render();
+    updateCounts(summary.counts);
+    loadRows();
 })(window, document);

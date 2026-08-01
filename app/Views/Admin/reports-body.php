@@ -3,7 +3,7 @@
  * Subsidy Distribution section of the admin dashboard (Admin > Dashboard).
  *
  * A fragment, not a page: no doctype or head shell, rendered inline by
- * Admin/layout.php's dashboard block. Data comes from
+ * Pages/dashboard.php. Data comes from
  * DashboardPageBuilder::buildReportsData(). The section header carries the batch
  * selector and the Refresh and PDF actions, because global actions belong outside
  * the cards. KPI numbers are not rendered here; they sit in the dashboard's unified
@@ -16,7 +16,7 @@ $reportsBatchName  = $reportsBatchName ?? null;
 $reportsBatchOpen  = $reportsBatchOpen ?? false;
 $reportsSummary    = $reportsSummary ?? ['total' => 0, 'received' => 0, 'notReceived' => 0, 'coverage' => 0];
 $reportsByBarangay = $reportsByBarangay ?? [];
-$reportsByAidType  = $reportsByAidType ?? [];
+$reportsBySubsidyType = $reportsBySubsidyType ?? [];
 $reportsPerScanner = $reportsPerScanner ?? [];
 
 $rangeLabel = $reportsBatchName !== null
@@ -35,7 +35,7 @@ $showDistDetail = $reportsBatchOpen || $hasScanData;
     <p class="text-muted small mb-0"><?= $rangeLabel ?> &middot; Last updated <span id="lastUpdated">-</span></p>
   </div>
   <div class="section-actions">
-    <form class="reports-filter" method="get" action="<?= site_url('admin/dashboard') ?>">
+    <form class="reports-filter" method="get" action="<?= site_url('dashboard') ?>">
       <label for="batchPick" class="form-label mb-0 visually-hidden">Batch</label>
       <select class="form-select" id="batchPick" name="batch" onchange="this.form.submit()">
         <?php foreach ($reportsBatches as $b): ?>
@@ -46,7 +46,7 @@ $showDistDetail = $reportsBatchOpen || $hasScanData;
       </select>
     </form>
     <button type="button" class="btn btn-outline-secondary" id="refreshNow"><i class="bi bi-arrow-clockwise" aria-hidden="true"></i><span>Refresh</span></button>
-    <a class="btn btn-primary reports-download-btn" href="<?= site_url('admin/reports/pdf') . '?batch=' . (int) $reportsBatchId ?>"><i class="bi bi-file-earmark-arrow-down" aria-hidden="true"></i><span>Download Report</span></a>
+    <a class="btn btn-primary reports-download-btn" href="<?= site_url('distribution/reports/pdf') . '?batch=' . (int) $reportsBatchId ?>"><i class="bi bi-file-earmark-arrow-down" aria-hidden="true"></i><span>Download Report</span></a>
   </div>
 </div>
 
@@ -121,9 +121,9 @@ foreach ($reportsByBarangay as $b) {
 
 <script id="reportsData" type="application/json"><?= json_encode(
     [
-        'received' => $reportsSummary,
-        'barangay'  => $reportsByBarangay,
-        'byAidType' => $reportsByAidType,
+        'received'      => $reportsSummary,
+        'barangay'      => $reportsByBarangay,
+        'bySubsidyType' => $reportsBySubsidyType,
     ],
     JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT,
 ) ?></script>
@@ -134,7 +134,7 @@ foreach ($reportsByBarangay as $b) {
 (function () {
   // Live poll: fetch fresh stats for the selected batch and repaint the chart +
   // KPI tiles in place (no page reload, so the batch selector and scroll stay put).
-  var statsUrl = '<?= site_url('admin/reports/stats') ?>';
+  var statsUrl = '<?= site_url('distribution/reports/stats') ?>';
   var batchId = <?= (int) ($reportsBatchId ?? 0) ?>;
   var batchOpen = <?= $reportsBatchOpen ? 'true' : 'false' ?>;
   if (batchId > 0) { statsUrl += '?batch=' + batchId; }

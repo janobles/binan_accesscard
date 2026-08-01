@@ -50,13 +50,19 @@ final class FamilyDataTableOrderTest extends CIUnitTestCase
         ]));
     }
 
-    public function testAddressAndBirthdayStillMap(): void
+    public function testAddressStillMaps(): void
     {
         $this->assertSame(['address', 'asc'], $this->orderFor([
-            'order' => [['column' => '3', 'dir' => 'asc']],
+            'order' => [['column' => '4', 'dir' => 'asc']],
         ]));
-        $this->assertSame(['birthday', 'desc'], $this->orderFor([
-            'order' => [['column' => '4', 'dir' => 'desc']],
+    }
+
+    public function testMembersColumnFallsBackToName(): void
+    {
+        // Members (column 2) is not orderable; an unrecognized column falls
+        // back to the name column same as any other non-orderable column.
+        $this->assertSame(['name', 'desc'], $this->orderFor([
+            'order' => [['column' => '2', 'dir' => 'desc']],
         ]));
     }
 }

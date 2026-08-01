@@ -12,14 +12,18 @@ use CodeIgniter\HTTP\RedirectResponse;
 use Throwable;
 
 /**
- * Server-side DataTables list (GET {role}/manage-family/data).
+ * Server-side DataTables list (GET records/data).
  *
  * Powers the Manage Records DataTable (assets/js/dashboard/family-datatable.js).
- * Reuses the existing, untouched search models: MemberModel::searchFamilies()
- * for the family-heads scope and SearchModel::allMembers() for the whole-database
- * scope. Both are called with the optional, append-only $orderKey/$orderDirection
- * arguments for column sorting; everything else is the same query used elsewhere.
- * Row/envelope shaping lives in FamilyDataTablePresenter.
+ * Reuses MemberModel::searchFamilies() (unchanged) for the family-heads scope,
+ * and SearchModel::allMembersHeadIds()/countAllMembersHeads() for the whole-
+ * database scope; both are called with the optional, append-only
+ * $orderKey/$orderDirection arguments for column sorting. The table always
+ * shows one row per household: allMembersHeadIds() groups the whole-database
+ * search by headID, so a keyword match on a non-head member surfaces that
+ * member's household, and LIMIT/OFFSET/recordsFiltered all operate on
+ * households rather than the members that matched. Row/envelope shaping lives
+ * in FamilyDataTablePresenter.
  */
 class FamilyDataTableController extends BaseController
 {
@@ -34,8 +38,7 @@ class FamilyDataTableController extends BaseController
     public function dataTable()
     {
         $presenter = new FamilyDataTablePresenter(
-            $this->dataTableRouteBase(),
-            RoleAccess::normalizeRole((string) session()->get('role'))
+            (string) RoleAccess::normalizeRole((string) session()->get('role'))
         );
         $draw = max(0, (int) $this->request->getGet('draw'));
         $guard = $this->requireFamilyViewAccess();
@@ -69,9 +72,26 @@ class FamilyDataTableController extends BaseController
             if ($scope === 'all') {
                 $searchModel = new SearchModel();
                 $searchFilters = array_merge(['status' => $status], $filters);
-                $total = $searchModel->countAllMembers('', ['status' => 'all']);
-                $filtered = $searchModel->countAllMembers($keyword, $searchFilters);
-                $rows = $searchModel->allMembers($keyword, $searchFilters, $length, $start, $orderKey, $orderDirection);
+                // Households, not members: allMembersHeadIds()/countAllMembersHeads()
+                // group the same search by headID, so a keyword match on a non-head
+                // member still surfaces that member's household, LIMIT/OFFSET slice
+                // whole households, and recordsFiltered counts households too.
+                $total = $searchModel->countAllMembersHeads('', ['status' => 'all']);
+                $filtered = $searchModel->countAllMembersHeads($keyword, $searchFilters);
+                $headIds = $searchModel->allMembersHeadIds($keyword, $searchFilters, $length, $start, $orderKey, $orderDirection);
+
+                $headsById = [];
+
+                if ($headIds !== []) {
+                    foreach ((new MemberModel())->whereIn('memberID', $headIds)->findAll() as $head) {
+                        $headsById[(int) $head['memberID']] = $head;
+                    }
+                }
+
+                $rows = array_values(array_filter(array_map(
+                    static fn (int $headId): ?array => $headsById[$headId] ?? null,
+                    $headIds
+                )));
             } else {
                 $memberModel = new MemberModel();
                 $searchKeyword = $keyword === '' ? null : $keyword;
@@ -81,12 +101,20 @@ class FamilyDataTableController extends BaseController
             }
 
             $sectorShortcodes = (new SectorModel())->shortcodeMap();
-            $headIdKey = $scope === 'all' ? 'headID' : 'memberID';
-            $controlNumbers = model(\App\Models\Scanner\QrControlModel::class)->controlsForHeads(
-                array_map(static fn (array $row): int => (int) ($row[$headIdKey] ?? 0), $rows)
-            );
+            $pageHeadIds = array_map(static fn (array $row): int => (int) ($row['memberID'] ?? 0), $rows);
+            $controlNumbers = model(\App\Models\Scanner\QrControlModel::class)->controlsForHeads($pageHeadIds);
+
+            // One grouped query for every head on the page instead of a per-row count.
+            // A head with no member rows still counts as one person, itself.
+            $memberCounts = (new MemberModel())->memberCountsForHeads($pageHeadIds, $status);
+
             $data = array_map(
-                static fn (array $row): array => $presenter->row($row, $scope === 'all', $sectorShortcodes, $controlNumbers),
+                static fn (array $row): array => $presenter->row(
+                    $row,
+                    $sectorShortcodes,
+                    $controlNumbers,
+                    (int) ($memberCounts[(int) $row['memberID']] ?? 1)
+                ),
                 $rows
             );
 
@@ -102,9 +130,9 @@ class FamilyDataTableController extends BaseController
 
     /**
      * Reads the DataTables order[] request into a [columnKey, direction] pair.
-     * Sortable columns: qr (default, ascending), name, address, birthday;
-     * everything else falls back to the name column. The `date` parameter is
-     * intentionally NOT consulted.
+     * Sortable columns: qr (default, ascending), name, address; everything else
+     * falls back to the name column. The `date` parameter is intentionally NOT
+     * consulted.
      *
      * @return array{0: string, 1: string}
      */
@@ -128,29 +156,14 @@ class FamilyDataTableController extends BaseController
         }
 
         $direction = $requestedDirection === 'desc' ? 'desc' : 'asc';
-        // Column order: 0=QR, 1=name, 2=sector, 3=address, 4=birthday, 5=actions.
-        // Sector and actions are non-orderable; unknown columns fall back to name.
+        // Column order: 0=QR, 1=name, 2=members, 3=sector, 4=address, 5=actions.
+        // Members and sector are non-orderable; unknown columns fall back to name.
         $orderKey = match ($column) {
             0 => 'qr',
-            3 => 'address',
-            4 => 'birthday',
+            4 => 'address',
             default => 'name',
         };
 
         return [$orderKey, $direction];
-    }
-
-    /** Role-aware route base for the DataTable action URLs. */
-    private function dataTableRouteBase(): string
-    {
-        if (str_starts_with(uri_string(), 'employee/')) {
-            return 'employee/manage-family';
-        }
-
-        if (str_starts_with(uri_string(), 'viewer/')) {
-            return 'viewer/manage-family';
-        }
-
-        return 'admin/manage-family';
     }
 }

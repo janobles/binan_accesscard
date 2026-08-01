@@ -15,10 +15,10 @@
 		<div class="modal-content">
 			<form
 				method="post"
-				data-create-action="<?= site_url('admin/sectors/create') ?>"
-				data-update-action="<?= site_url('admin/sectors/update') ?>"
-				data-archive-action="<?= site_url('admin/sectors/archive') ?>"
-				data-restore-action="<?= site_url('admin/sectors/restore') ?>"
+				data-create-action="<?= site_url('reference-data/sectors/create') ?>"
+				data-update-action="<?= site_url('reference-data/sectors/update') ?>"
+				data-archive-action="<?= site_url('reference-data/sectors/archive') ?>"
+				data-restore-action="<?= site_url('reference-data/sectors/restore') ?>"
 				data-existing-codes="<?= esc(json_encode(array_values($existingShortcodes ?? [])), 'attr') ?>">
 				<?= csrf_field() ?>
 				<div class="modal-header">

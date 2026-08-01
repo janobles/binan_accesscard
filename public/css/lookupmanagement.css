@@ -74,15 +74,15 @@
     width: 5.5rem;
 }
 
-.lookup-management-table--aidtypes {
+.lookup-management-table--subsidy-types {
     min-width: 28rem;
 }
 
-.lookup-management-table--aidtypes .lookup-col-name {
+.lookup-management-table--subsidy-types .lookup-col-name {
     width: auto;
 }
 
-.lookup-management-table--aidtypes .lookup-col-actions {
+.lookup-management-table--subsidy-types .lookup-col-actions {
     width: 5.5rem;
 }
 

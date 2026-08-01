@@ -12,39 +12,21 @@ class RoleAccess
 {
     /**
      * Canonicalizes a raw account-level string to the app's role labels
-     * 'Developer'/'Admin'/'Employee'/'Viewer', or null if unrecognized. This is the
-     * single translation point between the database account_level enum and the rest
-     * of the app. The legacy enum
-     * values ('Admin'/'User') and the app labels are still accepted so stale
-     * sessions and pre-migration rows keep resolving: 'administrator'/'Admin' map to
-     * the Admin label, and 'encoder'/'User' map to Employee.
+     * 'Developer'/'Admin'/'Encoder'/'Viewer'/'Scanner', or null if unrecognized.
+     * This is the single translation point between the database account_level enum
+     * and the rest of the app, and the enum values are the same words, so no
+     * aliasing is needed.
      */
     public static function normalizeRole(string $role): ?string
     {
-        $normalizedRole = strtolower(trim($role));
-
-        return match ($normalizedRole) {
-            'developer'                    => 'Developer',
-            'admin', 'administrator'       => 'Admin',
-            'user', 'encoder', 'employee'  => 'Employee',
-            'viewer'                       => 'Viewer',
-            'scanner'                      => 'Scanner',
-            default                        => null,
+        return match (strtolower(trim($role))) {
+            'developer'              => 'Developer',
+            'admin', 'administrator' => 'Admin',
+            'encoder'                => 'Encoder',
+            'viewer'                 => 'Viewer',
+            'scanner'                => 'Scanner',
+            default                  => null,
         };
-    }
-
-    /**
-     * Audit-trail display label for a role. Same as normalizeRole(), except the
-     * encoder/staff role is surfaced as 'Encoder' (the audit trails and account UI
-     * label) instead of the legacy 'Employee'. Returns null for unrecognized values
-     * so callers can fall back to the raw string (e.g. system rows: Login/System).
-     * Kept separate from normalizeRole() so routing/guards still compare 'Employee'.
-     */
-    public static function auditRoleLabel(string $role): ?string
-    {
-        $normalizedRole = self::normalizeRole($role);
-
-        return $normalizedRole === 'Employee' ? 'Encoder' : $normalizedRole;
     }
 
     /**
@@ -138,30 +120,20 @@ class RoleAccess
     }
 
     /**
-     * Returns a redirect to the dashboard matching the role: employees to
-     * `employee/workspace`, admins/developers to `admin/dashboard`; an invalid
-     * role destroys the session and sends back to login. Used after login and by
-     * requireRole() to bounce users to where they belong.
+     * Returns a redirect to the landing page for a role. Every staff role lands on
+     * the shared dashboard; only Scanner has a different home, the kiosk. An
+     * invalid role destroys the session and sends back to login.
      */
     public static function redirectByRole(string $role): RedirectResponse
     {
         $normalizedRole = self::normalizeRole($role);
 
-        if ($normalizedRole === 'Employee') {
-            return redirect()->to(site_url('employee/workspace'));
-        }
-
-        if ($normalizedRole === 'Admin' || $normalizedRole === 'Developer') {
-            return redirect()->to(site_url('admin/dashboard'));
-        }
-
-        // Viewer has a read-only dashboard (Viewer\DashboardController).
-        if ($normalizedRole === 'Viewer') {
-            return redirect()->to(site_url('viewer/dashboard'));
-        }
-
         if ($normalizedRole === 'Scanner') {
             return redirect()->to(site_url('scanner/scan'));
+        }
+
+        if ($normalizedRole !== null) {
+            return redirect()->to(site_url('dashboard'));
         }
 
         session()->destroy();

@@ -3,9 +3,13 @@
 namespace App\Controllers\Families;
 
 use App\Controllers\BaseController;
+use App\Libraries\DashboardPageBuilder;
 use App\Libraries\FamilyModalDataBuilder;
+use App\Libraries\FamilyRecordSummary;
 use App\Libraries\FamilyRecordWriteException;
 use App\Libraries\FamilyRecordWriter;
+use App\Libraries\Qr\ControlNumber;
+use App\Libraries\Qr\QrImageGenerator;
 use App\Libraries\RoleAccess;
 use App\Libraries\SectorIds;
 use App\Models\Audit\AuditTrailsModel;
@@ -15,10 +19,10 @@ use App\Models\Families\MemberServiceModel;
 use App\Models\Lookups\SectorModel;
 use App\Models\Lookups\ServiceModel;
 use App\Support\FamilyAgeEligibility;
-use App\Support\FamilyRecordPresenter;
 use App\Support\MemberFieldNormalizer;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
+use Config\Navigation;
 use Throwable;
 
 /**
@@ -29,10 +33,10 @@ use Throwable;
  * single write path the Excel importer also goes through. The remaining screens
  * work through MemberModel and MemberServiceModel directly.
  *
- * View and edit screens load into the dashboard modal as `?partial=1`
- * fragments via assets/js/dashboard/manage-family-modal.js; the
- * archive, restore, and delete forms in `Family/list` post here and redirect
- * back to the list.
+ * createFamily() renders the Data Entry page (create only); profile() renders an
+ * existing record read-only and edit() renders the same record as a form; the
+ * archive, restore, and delete forms in `Family/list` post here and redirect back
+ * to the list.
  */
 class FamilyController extends BaseController
 {
@@ -42,9 +46,11 @@ class FamilyController extends BaseController
      * Saves a family registration submitted to POST `families` from the family
      * form (admin or employee). Runs in one DB transaction: creates the head in
      * `member`, adds each family member, links chosen services in
-     * `member_services`, and logs a FAMILY_CREATED audit row. Frontend: the form
-     * usually posts via AJAX, so errors/success are returned as JSON (with a
-     * fresh CSRF hash); a non-AJAX fallback redirects back with a flash message.
+     * `member_services`, and logs a FAMILY_CREATED audit row. Frontend: the Data
+     * Entry page posts via fetch(), so success/error come back as JSON (with a
+     * fresh CSRF hash); a success response also carries `redirect` to `/records`,
+     * which is how the page ends - see manage-family-modal.js's submit handler.
+     * A non-AJAX fallback redirects back with the same flash message.
      */
     public function store()
     {
@@ -212,26 +218,64 @@ class FamilyController extends BaseController
             return $this->storeError('The family form was not saved.', 500);
         }
 
+        // Set on a new record save only, never on edit/update.
+        session()->setFlashdata('family_record_saved', '1');
+        session()->setFlashdata('success', $successMessage);
+
         if ($this->request->isAJAX()) {
+            // The Data Entry page always posts through fetch(), so this is the only
+            // response it ever sees: it navigates itself to `redirect` on success
+            // rather than staying on a spent form (manage-family-modal.js).
             return $this->response->setJSON([
-                'status' => 'success',
-                'message' => $successMessage,
-                'csrf' => csrf_hash(),
+                'status'   => 'success',
+                'message'  => $successMessage,
+                'redirect' => site_url('records'),
+                'csrf'     => csrf_hash(),
             ]);
         }
 
-        // Set on a new record save only, never on edit/update.
-        return redirect()->back()
-            ->with('family_record_saved', '1')
-            ->with('success', $successMessage);
+        return redirect()->back();
     }
 
     /**
-     * GET `{admin|employee}/manage-family/list`: the "Manage Family" sidebar entry.
-     * The list itself (with search/filter/pagination) is rendered by the manage-records
-     * page, so this redirects to that canonical URL for the caller's role context.
+     * GET `records/{id}`: the Family Profile page, read-only. It prints the record
+     * as label/value pairs - no controls, no form, nothing to submit - so a reader
+     * cannot edit by accident whatever their role. Editing is its own page,
+     * `records/{id}/edit`, linked from here for the roles that may reach it.
      */
-    public function listFamilies(): RedirectResponse
+    public function profile(int $headId): string|RedirectResponse
+    {
+        $context = $this->familyProfileContext($headId);
+
+        if ($context instanceof RedirectResponse) {
+            return $context;
+        }
+
+        $summary = new FamilyRecordSummary($context['sectors'], $context['services'], $context['incomeLabels']);
+        $role = RoleAccess::normalizeRole((string) session()->get('role'));
+
+        helper('dashboard_view_helper');
+
+        return view('layout', DashboardPageBuilder::shellAccountData() + [
+            'activePage' => 'records-profile',
+            'role'       => $role,
+            'bodyView'   => 'Family/profile-view',
+            'bodyData'   => family_record_view_data([
+                'headId'  => $headId,
+                'head'    => $summary->head($context['head'], $context['controlNumber']),
+                'members' => $summary->members($context['members']),
+                'canEdit' => in_array($role, Navigation::pageRoles('records-edit'), true),
+            ]),
+        ]);
+    }
+
+    /**
+     * GET `records/{id}/edit`: the editable form for an existing record, the same
+     * Family/_fields partial the Data Entry page renders. The manifest keeps
+     * read-only roles off this route entirely, so the page it renders is always
+     * editable and always carries its Save button.
+     */
+    public function edit(int $headId): string|RedirectResponse
     {
         $guard = $this->requireFamilyEntryAccess();
 
@@ -239,20 +283,46 @@ class FamilyController extends BaseController
             return $guard;
         }
 
-        return redirect()->to(site_url($this->isEmployeeContext() ? 'employee/manage-records' : 'admin/manage-records'));
+        $context = $this->familyProfileContext($headId);
+
+        if ($context instanceof RedirectResponse) {
+            return $context;
+        }
+
+        helper('dashboard_view_helper');
+
+        return view('layout', DashboardPageBuilder::shellAccountData() + [
+            'activePage' => 'records-edit',
+            'role'       => RoleAccess::normalizeRole((string) session()->get('role')),
+            'bodyView'   => 'Family/profile',
+            'bodyData'   => family_profile_view_data([
+                'head'          => $context['head'],
+                'members'       => $context['members'],
+                'controlNumber' => $context['controlNumber'],
+                'readOnly'      => false,
+                'sectors'       => $context['sectors'],
+                'services'      => $context['services'],
+                'categories'    => $context['categories'],
+                'formOptions'   => $context['formOptions'],
+            ]),
+        ]);
     }
 
     /**
-     * GET `{admin|employee}/manage-family/view/{id}`: returns the read-only family
-     * detail fragment for the dashboard modal. Loaded via AJAX with `?partial=1` by
-     * manage-family-modal.js; renders `Family/view`.
+     * Loads one family and shapes it for either profile page: the head row with its
+     * address split and sector/service ids attached, the shaped member rows, the QR
+     * control number, and the sector/service/category lookups (which grandfather in
+     * anything archived but still assigned). Returns a redirect when the caller may
+     * not view records or the head does not exist.
+     *
+     * @return array<string, mixed>|RedirectResponse
      */
-    public function viewFamily(int $headId): string|RedirectResponse
+    private function familyProfileContext(int $headId): array|RedirectResponse
     {
         $guard = $this->requireFamilyViewAccess();
 
         if ($guard instanceof RedirectResponse) {
-            return $this->partialGuard($guard, 'You do not have permission to view family records.');
+            return $guard;
         }
 
         $memberModel = new MemberModel();
@@ -260,50 +330,63 @@ class FamilyController extends BaseController
         [$head, $members] = $this->splitHeadAndMembers($rows, $headId);
 
         if ($head === null) {
-            return $this->recordMissing();
+            return redirect()->to(site_url('records'))->with('error', 'That family record could not be found. It may have been removed.');
         }
 
-        $serviceIdsByMember = (new MemberServiceModel())
+        $memberServiceModel = new MemberServiceModel();
+        $serviceIdsByMember = $memberServiceModel
             ->getServiceIdsByMemberIds(array_map(static fn (array $row): int => (int) $row['memberID'], $rows));
+
         $modalData = new FamilyModalDataBuilder();
-        $serviceNames = $modalData->serviceNameMap($serviceIdsByMember);
-        $incomeLabels = $modalData->incomeLabelMap();
+        $qrModel = model(\App\Models\Scanner\QrControlModel::class);
+        $controlNumber = (int) ($qrModel->controlForHead($headId) ?? 0);
+        $addressParts = MemberFieldNormalizer::splitAddressBarangay((string) ($head['address'] ?? ''));
 
-        $namesFor = static fn (int $memberId): array => array_values(array_filter(array_map(
-            static fn (int $id): string => $serviceNames[$id] ?? '',
-            $serviceIdsByMember[$memberId] ?? []
-        )));
+        $headData = array_merge($head, [
+            'address'       => $addressParts['address'],
+            'barangay'      => $addressParts['barangay'],
+            // member.Salary is capitalized in the schema; _fields.php's field name is
+            // the lowercase 'salary', so the auto-prefixed 'head_Salary' the raw $head
+            // row would otherwise produce never matches - the select renders empty on
+            // a required field, blocking Save.
+            'salary'        => (string) ($head['Salary'] ?? ''),
+            'qr_control_no' => (string) $controlNumber,
+            'sector_ids'    => array_map('strval', SectorIds::normalize($head['sectorID'] ?? null)),
+            'service_ids'   => array_map('strval', $serviceIdsByMember[$headId] ?? []),
+            'qr_locked'     => $controlNumber > 0
+                && model(\App\Models\Scanner\SubsidyDistributionModel::class)->hasClaims($controlNumber),
+        ]);
 
-        $memberViews = [];
+        // Every sector/service ID assigned anywhere in the family (head or any
+        // member), so getViewDataForEdit() can grandfather in anything since
+        // archived - otherwise it would render unchecked, post unchecked, and
+        // update() would delete the assignment on save.
+        $assignedSectorIds = SectorIds::normalize($head['sectorID'] ?? null);
+        $assignedServiceIds = $serviceIdsByMember[$headId] ?? [];
 
         foreach ($members as $member) {
-            $memberViews[] = FamilyRecordPresenter::member($member, $namesFor((int) $member['memberID']), $incomeLabels);
+            $assignedSectorIds = array_merge($assignedSectorIds, SectorIds::normalize($member['sectorID'] ?? null));
+            $assignedServiceIds = array_merge($assignedServiceIds, $serviceIdsByMember[(int) ($member['memberID'] ?? 0)] ?? []);
         }
 
-        return view('Family/view', [
-            'headView'    => FamilyRecordPresenter::head($head, $namesFor($headId), $incomeLabels),
-            'memberViews' => $memberViews,
-        ]);
+        $options = (new FamilyFormOptionsModel())->getViewDataForEdit(
+            array_values(array_unique(array_map('intval', $assignedSectorIds))),
+            array_values(array_unique(array_map('intval', $assignedServiceIds)))
+        );
+        return [
+            'head'          => $headData,
+            'members'       => $modalData->shapeMembers($members, $serviceIdsByMember),
+            'controlNumber' => $controlNumber,
+            'sectors'       => $options['sectorOptions'],
+            'services'      => $options['serviceOptions'],
+            'categories'    => array_keys($options['servicesByCategory']),
+            'formOptions'   => $modalData->staticOptionLists(),
+            'incomeLabels'  => $modalData->incomeLabelMap(),
+        ];
     }
 
     /**
-     * GET `{admin|employee}/manage-family/edit/{id}`: returns the family record
-     * modal prefilled for editing. Delegates to renderFamilyModal(), the same
-     * Bootstrap modal served by createFamily() in update mode.
-     */
-    public function editFamily(int $headId): string|RedirectResponse
-    {
-        $guard = $this->requireFamilyEntryAccess();
-
-        if ($guard instanceof RedirectResponse) {
-            return $this->partialGuard($guard, 'You do not have permission to edit family records.');
-        }
-
-        return $this->renderFamilyModal('update', $headId);
-    }
-
-    /**
-     * POST `{admin|employee}/manage-family/update/{id}`: saves edits to a family.
+     * POST `records/{id}/update`: saves edits to a family.
      * Runs in one transaction: updates the head, replaces the member list, re-syncs
      * service assignments, and logs a FAMILY_UPDATED audit row. Mirrors store()'s
      * AJAX/non-AJAX response handling.
@@ -362,7 +445,7 @@ class FamilyController extends BaseController
         $qrModel        = model(\App\Models\Scanner\QrControlModel::class);
         $currentControl = $qrModel->controlForHead($headId);
         $locked         = $currentControl !== null
-            && model(\App\Models\Scanner\AidDistributionModel::class)->hasClaims($currentControl);
+            && model(\App\Models\Scanner\SubsidyDistributionModel::class)->hasClaims($currentControl);
 
         // Locked heads keep their number: ignore any submitted change (defense in
         // depth in case the readonly field was tampered with).
@@ -465,12 +548,12 @@ class FamilyController extends BaseController
             ]);
         }
 
-        return redirect()->to(site_url($this->isEmployeeContext() ? 'employee/manage-records' : 'admin/manage-records'))
+        return redirect()->to(site_url('records'))
             ->with('success', $successMessage);
     }
 
     /**
-     * POST `{admin|employee}/manage-family/archive/{id}`: soft-archives an entire
+     * POST `records/{id}/archive`: soft-archives an entire
      * family (Developer/Admin/Employee) and audits it. Frontend: the "Archive"
      * action in the records list; redirects back with a flash message.
      */
@@ -488,7 +571,7 @@ class FamilyController extends BaseController
     }
 
     /**
-     * POST `{admin|employee}/manage-family/restore/{id}`: restores a soft-archived
+     * POST `records/{id}/restore`: restores a soft-archived
      * family (Developer/Admin/Employee) and audits it. Frontend: the "Restore"
      * action on the archived records view.
      */
@@ -566,7 +649,7 @@ class FamilyController extends BaseController
      */
     private function listUrlWithoutDeepSearch(): string
     {
-        $fallback = site_url($this->isEmployeeContext() ? 'employee/manage-records' : 'admin/manage-records');
+        $fallback = site_url('records');
         $referer  = (string) ($this->request->getServer('HTTP_REFERER') ?? '');
 
         if ($referer === '') {
@@ -1017,10 +1100,10 @@ class FamilyController extends BaseController
     }
 
     /**
-     * GET `{admin|employee}/manage-family/create`: returns the Bootstrap family
-     * record modal fragment loaded by manage-family-modal.js. `?mode=update&id=`
-     * prefills it for editing; otherwise it is a blank Add form. The form posts to
-     * the existing, untouched store()/update() endpoints.
+     * GET `records/entry`: the Data Entry page for a new family, posting to the
+     * existing, untouched store() endpoint. Editing an existing record happens
+     * on the Family Profile page (profile()); this method only ever renders a
+     * blank Add form.
      */
     public function createFamily(): string|RedirectResponse
     {
@@ -1030,10 +1113,28 @@ class FamilyController extends BaseController
             return $this->partialGuard($guard, 'You do not have permission to open the family record form.');
         }
 
-        $isUpdateMode = strtolower(trim((string) $this->request->getGet('mode'))) === 'update';
-        $headId = max(0, (int) $this->request->getGet('id'));
+        $options = (new FamilyFormOptionsModel())->getViewData();
 
-        return $this->renderFamilyModal($isUpdateMode ? 'update' : 'create', $headId);
+        helper('dashboard_view_helper');
+
+        return view('layout', DashboardPageBuilder::shellAccountData() + [
+            'activePage' => 'records-entry',
+            'role'       => RoleAccess::normalizeRole((string) session()->get('role')),
+            'bodyView'   => 'Family/entry',
+            // The sorted suffix/civil/barangay/relationship/education/job/religion/
+            // income/sex lists Family/_fields.php renders come from
+            // FamilyModalDataBuilder (a library), not a model call the view makes
+            // itself - see family_entry_view_data()'s contract.
+            'bodyData'   => family_entry_view_data([
+                'head'        => [],
+                'members'     => [],
+                'readOnly'    => false,
+                'sectors'     => $options['sectorOptions'],
+                'services'    => $options['serviceOptions'],
+                'categories'  => array_keys($options['servicesByCategory']),
+                'formOptions' => (new FamilyModalDataBuilder())->staticOptionLists(),
+            ]),
+        ]);
     }
 
     /** Returns whether a QR number is available to the current Add/Update form. */
@@ -1060,95 +1161,23 @@ class FamilyController extends BaseController
         $headId = max(0, (int) $this->request->getGet('head_id'));
         $exists = model(\App\Models\Scanner\QrControlModel::class)->takenByOtherHead($controlNo, $headId);
 
-        return $this->response->setJSON([
-            'available' => ! $exists,
-            'message' => $exists
-                ? 'QR Number ' . $controlNo . ' already exists in the records and is assigned to another family.'
-                : '',
-        ]);
-    }
-
-    /**
-     * Shared renderer for the Add/Update family modal. In create mode it serves a
-     * blank form pointed at `families` (store). In update mode it prefills the head,
-     * existing members, and selected (incl. grandfathered/archived) sectors/services,
-     * pointed at the role's update/{id} endpoint.
-     */
-    private function renderFamilyModal(string $mode, int $headId): string|RedirectResponse
-    {
-        if ($mode === 'update') {
-            $memberModel = new MemberModel();
-            $rows = $memberModel->getFamilyMembers($headId, 'all');
-            [$head, $members] = $this->splitHeadAndMembers($rows, $headId);
-
-            if ($head === null) {
-                return $this->recordMissing();
-            }
-
-            $currentControl = model(\App\Models\Scanner\QrControlModel::class)->controlForHead($headId);
-            $qrLocked = $currentControl !== null
-                && model(\App\Models\Scanner\AidDistributionModel::class)->hasClaims($currentControl);
-
-            $serviceIdsByMember = (new MemberServiceModel())
-                ->getServiceIdsByMemberIds(array_map(static fn (array $row): int => (int) $row['memberID'], $rows));
-
-            // Gather assigned sectors/services so archived-but-assigned items stay
-            // visible/checked on the form (grandfathering), matching the old editFamily().
-            $assignedSectorIds = [];
-            foreach ($rows as $row) {
-                foreach (SectorIds::normalize($row['sectorID'] ?? null) as $sectorId) {
-                    $assignedSectorIds[] = (int) $sectorId;
-                }
-            }
-
-            $assignedServiceIds = [];
-            foreach ($serviceIdsByMember as $ids) {
-                foreach ($ids as $id) {
-                    $assignedServiceIds[] = (int) $id;
-                }
-            }
-
-            $viewData = (new FamilyFormOptionsModel())->getViewDataForEdit(
-                array_values(array_unique($assignedSectorIds)),
-                array_values(array_unique($assignedServiceIds))
-            );
-
-            $modalData = new FamilyModalDataBuilder();
-
-            return view('Family/family-modal', array_merge(
-                $viewData,
-                $modalData->updateData($head, $serviceIdsByMember[$headId] ?? []),
-                [
-                    'action' => site_url($this->currentRouteBase() . '/update/' . $headId),
-                    'fieldPrefix' => 'family-update',
-                    'modalTitle' => 'Update Family Record',
-                    'modalMode' => 'update',
-                    'qrCheckUrl' => site_url($this->currentRouteBase() . '/qr-check'),
-                    'submitLabel' => 'Update',
-                    'saveDisabled' => false,
-                    'qrLocked' => $qrLocked,
-                    'existingMembers' => $modalData->shapeMembers($members, $serviceIdsByMember),
-                ]
-            ));
+        if ($exists) {
+            return $this->response->setJSON([
+                'available' => false,
+                'message' => 'QR Number ' . $controlNo . ' already exists in the records and is assigned to another family.',
+            ]);
         }
 
-        $viewData = (new FamilyFormOptionsModel())->getViewData();
-
-        return view('Family/family-modal', array_merge(
-            $viewData,
-            [
-                'action' => site_url('families'),
-                'fieldPrefix' => 'family-add',
-                'modalTitle' => 'New Family Record',
-                'modalMode' => 'create',
-                'qrCheckUrl' => site_url($this->currentRouteBase() . '/qr-check'),
-                'submitLabel' => 'Save',
-                'headId' => 0,
-                'saveDisabled' => false,
-                'qrLocked' => false,
-                'existingMembers' => [],
-            ]
-        ));
+        // ControlNumber::payload() is the same call QrCardPdfGenerator makes, so
+        // the preview on the entry page and the code on the card are guaranteed
+        // to encode the same string. Only an available number gets one: a taken
+        // number may already have a card.
+        return $this->response->setJSON([
+            'available' => true,
+            'message' => '',
+            'qr' => (new QrImageGenerator())->dataUri(ControlNumber::payload($controlNo)),
+            'control_no_label' => ControlNumber::format($controlNo),
+        ]);
     }
 
 }

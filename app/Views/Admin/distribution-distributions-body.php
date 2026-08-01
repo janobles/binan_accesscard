@@ -1,10 +1,9 @@
 <?php
 /**
  * Distributions log body: client-side filter toolbar + distributions table.
- * Rendered inside components/card by Admin/layout.php's distributions block
- * (vars: distributions). Each row shows the subsidy type the batch handed out.
- * Filtering/paging handled by the inline script in
- * Admin/layout.php's distributions block.
+ * Rendered inside components/card by Pages/distribution.php's distributions
+ * tab (vars: distributions). Each row shows the subsidy type the batch handed
+ * out. Filtering/paging handled by the inline script in that same page.
  */
 ?>
 <?php /* Filter bar + controls row: pure Bootstrap grid/utilities inside the
@@ -41,7 +40,7 @@
                   <td><?= esc($d['control_no']) ?></td>
                   <td><span class="sector-name"><?= esc($d['head']) ?></span></td>
                   <td><?= esc($d['claimant']) ?></td>
-                  <td><span class="badge bg-light text-dark border"><?= esc((string) $d['aid_type']) ?></span></td>
+                  <td><span class="badge bg-light text-dark border"><?= esc((string) $d['subsidy_type']) ?></span></td>
                   <td><?= esc($d['scanned_by']) ?></td>
                   <td class="text-end">
                     <div class="dropdown actions-menu">
@@ -49,7 +48,7 @@
                         <i class="bi bi-three-dots" aria-hidden="true"></i>
                       </button>
                       <div class="dropdown-menu dropdown-menu-end">
-                        <form method="post" action="<?= esc(site_url('admin/distributions/void/' . $d['aidID']), 'attr') ?>"
+                        <form method="post" action="<?= esc(site_url('distribution/void/' . $d['distribution_id']), 'attr') ?>"
                               onsubmit="return confirm('Void this distribution? This permanently removes the record.');">
                           <?= csrf_field() ?>
                           <button class="dropdown-item text-danger" type="submit"><i class="bi bi-x-circle" aria-hidden="true"></i>Void</button>

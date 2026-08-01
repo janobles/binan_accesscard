@@ -131,4 +131,128 @@ final class ImportStagingStoreTest extends CIUnitTestCase
 
         $this->assertSame(0, $store->sweep([], 24));
     }
+
+    public function testItRoundTripsABundleThroughTheSplitFiles(): void
+    {
+        $store = new ImportStagingStore($this->dir);
+
+        $store->save(41, [
+            'phase'  => 'review',
+            'file'   => 'import.xlsx',
+            'rows'   => [['sheetRow' => 3, 'data' => ['familyno' => '6001']]],
+            'errors' => [['sheetRow' => 3, 'code' => 'SEX', 'severity' => 'blocking']],
+            'counts' => ['rows' => 1, 'blocking' => 1],
+        ]);
+
+        $loaded = $store->load(41);
+
+        $this->assertSame('import.xlsx', $loaded['file']);
+        $this->assertSame('6001', $loaded['rows'][0]['data']['familyno']);
+        $this->assertSame('SEX', $loaded['errors'][0]['code']);
+        $this->assertSame(1, $loaded['counts']['blocking']);
+    }
+
+    public function testSaveRowsRewritesOnlyTheRowsFile(): void
+    {
+        // The point of the split: an Apply must not re-encode the errors and the meta
+        // just to change one cell.
+        $store = new ImportStagingStore($this->dir);
+
+        $store->save(42, [
+            'phase'  => 'review',
+            'file'   => 'import.xlsx',
+            'rows'   => [['sheetRow' => 3, 'data' => ['sex' => 'Mail']]],
+            'errors' => [['sheetRow' => 3, 'code' => 'SEX', 'severity' => 'blocking']],
+            'counts' => ['blocking' => 1],
+        ]);
+
+        $errorsMtimeBefore = filemtime($this->dir . '/job-42-errors.json');
+
+        $store->saveRows(42, [['sheetRow' => 3, 'data' => ['sex' => 'Male']]]);
+
+        $loaded = $store->load(42);
+
+        $this->assertSame('Male', $loaded['rows'][0]['data']['sex']);
+        $this->assertSame($errorsMtimeBefore, filemtime($this->dir . '/job-42-errors.json'));
+    }
+
+    public function testDeleteRemovesEveryFileForTheJob(): void
+    {
+        $store = new ImportStagingStore($this->dir);
+        $store->save(43, ['phase' => 'review', 'rows' => [], 'errors' => [], 'counts' => []]);
+
+        $store->delete(43);
+
+        $this->assertFileDoesNotExist($this->dir . '/job-43.json');
+        $this->assertFileDoesNotExist($this->dir . '/job-43-rows.json');
+        $this->assertFileDoesNotExist($this->dir . '/job-43-errors.json');
+    }
+
+    public function testSweepRemovesEveryFileForAnAbandonedJob(): void
+    {
+        $store = new ImportStagingStore($this->dir);
+        $store->save(44, ['phase' => 'review', 'rows' => [], 'errors' => [], 'counts' => []]);
+
+        $old = time() - (25 * 3600);
+
+        foreach (['', '-rows', '-errors'] as $suffix) {
+            touch($this->dir . '/job-44' . $suffix . '.json', $old);
+        }
+
+        $this->assertSame(1, $store->sweep([]));
+        $this->assertFileDoesNotExist($this->dir . '/job-44-rows.json');
+        $this->assertFileDoesNotExist($this->dir . '/job-44-errors.json');
+    }
+
+    public function testSweepSpareEveryFileOfAProtectedJob(): void
+    {
+        $store = new ImportStagingStore($this->dir);
+        $store->save(45, ['phase' => 'review', 'rows' => [], 'errors' => [], 'counts' => []]);
+
+        $old = time() - (25 * 3600);
+
+        foreach (['', '-rows', '-errors'] as $suffix) {
+            touch($this->dir . '/job-45' . $suffix . '.json', $old);
+        }
+
+        $this->assertSame(0, $store->sweep([45]));
+        $this->assertFileExists($this->dir . '/job-45-rows.json');
+    }
+
+    public function testAWriteLeavesNoTempFileBehind(): void
+    {
+        // The rows file is written through a temp + rename so a concurrent read never
+        // sees half a JSON document. The temp must not survive the write.
+        $store = $this->store();
+        $store->save(46, ['phase' => 'review', 'rows' => [['sheetRow' => 3]], 'errors' => [], 'counts' => []]);
+        $store->saveRows(46, [['sheetRow' => 4]]);
+
+        $this->assertSame([], glob($this->dir . '/job-46*.tmp*'));
+        $this->assertSame(4, $store->load(46)['rows'][0]['sheetRow']);
+    }
+
+    public function testSweepRemovesAnAbandonedTempFile(): void
+    {
+        // A crash between the temp write and the rename leaves PII on disk under a name
+        // no job owns, so the backstop has to reach it too.
+        $store = $this->store();
+        $temp  = $this->dir . '/job-47-rows.json.tmpdeadbeef';
+
+        file_put_contents($temp, '{}');
+        touch($temp, time() - (25 * 3600));
+
+        $this->assertSame(1, $store->sweep([]));
+        $this->assertFileDoesNotExist($temp);
+    }
+
+    public function testSweepSparesAFreshTempFile(): void
+    {
+        $store = $this->store();
+        $temp  = $this->dir . '/job-48-rows.json.tmpdeadbeef';
+
+        file_put_contents($temp, '{}');
+
+        $this->assertSame(0, $store->sweep([]));
+        $this->assertFileExists($temp);
+    }
 }

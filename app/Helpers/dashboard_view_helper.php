@@ -135,8 +135,7 @@ if (! function_exists('family_list_view_data')) {
      *     families: list<array<string, mixed>>,
      *     formatDate: callable,
      *     formatTime: callable,
-     *     keyword: string,
-     *     routeBase: string
+     *     keyword: string
      * }
      */
     function family_list_view_data(array $data): array
@@ -149,8 +148,7 @@ if (! function_exists('family_details_view_data')) {
     /**
      * Builds the single-family detail (view/edit) bundle: the head row, the
      * rest of the members, and the service ID/name maps used to label them.
-     * No current view calls this helper (family detail rendering goes through
-     * FamilyRecordPresenter instead); the shape below is only what
+     * No current view calls this helper; the shape below is only what
      * DashboardViewData::familyDetails() itself guarantees.
      *
      * @return array{
@@ -163,6 +161,82 @@ if (! function_exists('family_details_view_data')) {
     function family_details_view_data(array $data): array
     {
         return DashboardViewData::familyDetails($data);
+    }
+}
+
+if (! function_exists('family_entry_view_data')) {
+    /**
+     * Builds the Data Entry page (`Family/entry`) bundle for a new family: an
+     * empty head/member set, the active sector/service/category lookups, and
+     * the static enumeration lists (`formOptions`) Family/_fields.php renders.
+     * Called by FamilyController::createFamily() to build the `bodyData` it
+     * hands to `layout.php`.
+     *
+     * @return array{
+     *     categories: list<string>,
+     *     formOptions: array<string, mixed>,
+     *     head: array<string, mixed>,
+     *     members: list<array<string, mixed>>,
+     *     readOnly: bool,
+     *     sectors: list<array<string, mixed>>,
+     *     services: list<array<string, mixed>>
+     * }
+     */
+    function family_entry_view_data(array $data): array
+    {
+        return DashboardViewData::familyEntry($data);
+    }
+}
+
+if (! function_exists('family_profile_view_data')) {
+    /**
+     * Builds the Family Profile page (`Family/profile`) bundle for an existing
+     * family: the head and member rows (already shaped for the shared
+     * Family/_fields partial), the QR control number, the read-only flag a
+     * Viewer session sets, and the same sector/service/category/formOptions
+     * lookups the Data Entry page uses. Called by FamilyController::profile()
+     * to build the `bodyData` it hands to `layout.php`.
+     *
+     * @return array{
+     *     categories: list<string>,
+     *     controlNumber: int,
+     *     formOptions: array<string, mixed>,
+     *     head: array<string, mixed>,
+     *     members: list<array<string, mixed>>,
+     *     qrDataUri: string,
+     *     readOnly: bool,
+     *     sectors: list<array<string, mixed>>,
+     *     services: list<array<string, mixed>>
+     * }
+     */
+    function family_profile_view_data(array $data): array
+    {
+        return DashboardViewData::familyProfile($data);
+    }
+}
+
+if (! function_exists('family_record_view_data')) {
+    /**
+     * Builds the read-only Family Profile page (`Family/profile-view`) bundle:
+     * the head and member blocks already shaped into printed label/value pairs by
+     * App\Libraries\FamilyRecordSummary, plus whether this session may reach the
+     * separate edit page. Called by FamilyController::profile().
+     *
+     * @return array{
+     *     canEdit: bool,
+     *     head: array<string, mixed>,
+     *     headId: int,
+     *     members: list<array<string, mixed>>
+     * }
+     */
+    function family_record_view_data(array $data): array
+    {
+        return [
+            'headId'  => (int) ($data['headId'] ?? 0),
+            'head'    => (array) ($data['head'] ?? []),
+            'members' => array_values((array) ($data['members'] ?? [])),
+            'canEdit' => (bool) ($data['canEdit'] ?? false),
+        ];
     }
 }
 
@@ -277,13 +351,5 @@ if (! function_exists('category_management_view_data')) {
     function category_management_view_data(array $data): array
     {
         return DashboardViewData::categoryManagement($data);
-    }
-}
-
-if (! function_exists('aid_type_management_view_data')) {
-    /** View variables for the Subsidy Types management screen. */
-    function aid_type_management_view_data(array $data): array
-    {
-        return DashboardViewData::aidTypeManagement($data);
     }
 }

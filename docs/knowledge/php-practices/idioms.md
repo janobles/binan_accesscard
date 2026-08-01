@@ -53,9 +53,9 @@ Multi-dependency writers list promoted params one per line
 
 ## Rule 4: `match` over `switch` for value mapping
 
-Canonical - `app/Libraries/RoleAccess.php:27` (role canonicalization),
-`app/Models/ViewLayoutModel.php:16` (page → layout), and the
-`match (true)` guard-chain form (`app/Libraries/ViewFormatter.php:240`).
+Canonical - `app/Libraries/RoleAccess.php:21` (account_level enum value → role
+label), and the `match (true)` guard-chain form
+(`app/Libraries/ViewFormatter.php:240`).
 
 ## Rule 5: Shared constants over duplicated literals
 

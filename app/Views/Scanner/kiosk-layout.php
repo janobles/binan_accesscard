@@ -8,7 +8,7 @@
 $pageTitle          = $pageTitle ?? 'Scan';
 $username           = $username ?? 'Scanner';
 $activeBatch        = $activeBatch ?? null;
-$aidType            = $aidType ?? null;
+$subsidyType        = $subsidyType ?? null;
 $myBatchCount       = (int) ($myBatchCount ?? 0);
 $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
 ?>
@@ -36,8 +36,8 @@ $accountMenuData = [
       <span class="d-none d-sm-inline">Bi&ntilde;an Access Card MIS</span>
       <div class="mx-3" style="border-left: 1px solid rgba(255,255,255,0.3); height: 20px;"></div>
       <span class="me-2" style="font-size: 0.95rem;"><?= $activeBatch !== null ? esc($activeBatch['name']) : 'No active batch' ?></span>
-      <?php if ($aidType !== null): ?>
-        <span class="badge bg-light text-dark"><?= esc($aidType['name']) ?></span>
+      <?php if ($subsidyType !== null): ?>
+        <span class="badge bg-light text-dark"><?= esc($subsidyType['name']) ?></span>
       <?php endif; ?>
   </div>
   <ul class="navbar-nav ms-auto me-3 me-lg-4">

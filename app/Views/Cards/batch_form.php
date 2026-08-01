@@ -150,9 +150,9 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
 <script>
 (function () {
     const maxQuantity = <?= (int) config('QrCardSettings')->maxQuantity ?>;
-    const headsUrl    = '<?= site_url('admin/cards/heads') ?>';
-    const generateUrl = '<?= site_url('admin/cards/generate') ?>';
-    const cardUrlBase = '<?= site_url('admin/cards/card') ?>';
+    const headsUrl    = '<?= site_url('cards/heads') ?>';
+    const generateUrl = '<?= site_url('cards/generate') ?>';
+    const cardUrlBase = '<?= site_url('cards/card') ?>';
 
     // ---- mode switch ------------------------------------------------------
     const modeBtns = document.querySelectorAll('#cn-modes [data-mode]');
@@ -201,7 +201,7 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
     if (previewSearchInput) {
         previewSearchInput.addEventListener('input', applyPreviewFilter);
     }
-    // The preview is paged by the server (admin/cards/heads), so the whole
+    // The preview is paged by the server (cards/heads), so the whole
     // selection stays available without shipping every row to the browser.
     let previewPage = 1;
 

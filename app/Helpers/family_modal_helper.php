@@ -76,7 +76,7 @@ if (! function_exists('family_modal_prepare')) {
         ];
 
         return [
-            'action' => (string) ($data['action'] ?? site_url('families')),
+            'action' => (string) ($data['action'] ?? site_url('records')),
             'fieldPrefix' => (string) ($data['fieldPrefix'] ?? 'family-add'),
             'modalTitle' => (string) ($data['modalTitle'] ?? 'New Family Record'),
             'modalMode' => (string) ($data['modalMode'] ?? 'create'),
@@ -136,6 +136,7 @@ if (! function_exists('family_modal_render_person_fields')) {
         $withSummary = ! empty($config['summary']);
         $withRequired = ! empty($config['required']);
         $optionsByKey = (array) ($config['optionsByKey'] ?? []);
+        $withDisabled = ! empty($config['disabled']);
         $attrs = static function (array $attributes): string {
             $html = '';
 
@@ -175,7 +176,7 @@ if (! function_exists('family_modal_render_person_fields')) {
             $feedbackId = $id !== '' ? $id . 'Feedback' : '';
             ?>
             <div class="col-12 col-md-6 col-xl-3">
-                <label class="form-label"<?= $attrs(['for' => $id]) ?>><?= esc($label) ?></label>
+                <label class="form-label"<?= $attrs(['for' => $id]) ?>><?= esc($label) ?><?= $required ? ' <span class="account-required-marker text-danger" aria-hidden="true">*</span>' : '' ?></label>
                 <?php if ($type === 'select'): ?>
                     <select<?= $attrs([
                         'class' => 'form-select' . ($hasOther ? ' js-other-select' : ''),
@@ -184,6 +185,7 @@ if (! function_exists('family_modal_render_person_fields')) {
                         'aria-describedby' => $feedbackId,
                         'data-summary' => $summary,
                         'required' => $required,
+                        'disabled' => $withDisabled,
                         'data-other-field' => $hasOther ? $otherKey : '',
                         'data-initial-value' => $hasOther ? $val($name) : '',
                     ]) ?>><?= $selectOptions($options, $val($name), 'Select') ?></select>
@@ -196,6 +198,7 @@ if (! function_exists('family_modal_render_person_fields')) {
                             'minlength' => $personField['otherMinlength'] ?? '',
                             'pattern' => $personField['otherPattern'] ?? '',
                             'title' => isset($personField['otherPattern']) ? 'Enter text, not numbers only.' : '',
+                            'disabled' => $withDisabled,
                         ]) ?>>
                     <?php endif; ?>
                 <?php else: ?>
@@ -213,6 +216,7 @@ if (! function_exists('family_modal_render_person_fields')) {
                         'inputmode' => $personField['inputmode'] ?? '',
                         'pattern' => $personField['pattern'] ?? '',
                         'title' => $personField['title'] ?? '',
+                        'disabled' => $withDisabled,
                     ]) ?>>
                 <?php endif; ?>
                 <div class="invalid-feedback"<?= $attrs(['id' => $feedbackId]) ?> data-family-field-error></div>
@@ -220,7 +224,7 @@ if (! function_exists('family_modal_render_person_fields')) {
                     <?php /* Workers type placeholders into blanks (see NO_DATA_TOKENS in
                              MemberFieldNormalizer), so blank gets an explicit affordance. */ ?>
                     <div class="form-check mt-1">
-                        <input class="form-check-input" type="checkbox" data-family-no-middlename<?= $attrs(['id' => $id !== '' ? $id . 'None' : '']) ?>>
+                        <input class="form-check-input" type="checkbox" data-family-no-middlename<?= $attrs(['id' => $id !== '' ? $id . 'None' : '', 'disabled' => $withDisabled]) ?>>
                         <label class="form-check-label"<?= $attrs(['for' => $id !== '' ? $id . 'None' : '']) ?>><?= esc((string) $personField['noneToggle']) ?></label>
                     </div>
                 <?php endif; ?>

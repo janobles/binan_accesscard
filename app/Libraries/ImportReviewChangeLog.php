@@ -76,19 +76,6 @@ class ImportReviewChangeLog
     }
 
     /**
-     * A change entry for a removal.
-     *
-     * @param list<array{sheetRow:int,data:array<string,string>}> $oldRows
-     * @return array{at:string,action:string,qr:string,head:string,lines:list<string>}
-     */
-    public static function removed(array $oldRows): array
-    {
-        $count = count($oldRows);
-
-        return self::entry('Removed', $oldRows, ['Removed from this import (' . $count . ' ' . ($count === 1 ? 'row' : 'rows') . ')']);
-    }
-
-    /**
      * @param list<array{sheetRow:int,data:array<string,string>}> $rows
      * @param list<string>                                        $lines
      * @return array{at:string,action:string,qr:string,head:string,lines:list<string>}

@@ -273,6 +273,182 @@
     box-shadow: 0 1px 2px rgba(31, 59, 47, 0.12);
 }
 
+/* Stepper: the app's own step indicator, since Bootstrap ships none. Indicators
+   stay neutral and the section label carries the emphasis, so colour is spent
+   only where it means something (a finished step, a step needing attention). */
+.stepper-steps {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.stepper-step-link {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    color: #2f3e38;
+    text-decoration: none;
+}
+
+.stepper-step-indicator {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 1.75rem;
+    height: 1.75rem;
+    border: 1px solid #c9d5d0;
+    border-radius: 50%;
+    background: #ffffff;
+    color: #6b7a74;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.stepper-step-label {
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.stepper-step[data-state="upcoming"] .stepper-step-label {
+    color: #6b7a74;
+    font-weight: 500;
+}
+
+.stepper-step[data-state="current"] .stepper-step-indicator {
+    border-color: #145c3d;
+    color: #145c3d;
+    box-shadow: 0 0 0 3px rgba(20, 92, 61, 0.12);
+}
+
+.stepper-step[data-state="done"] .stepper-step-indicator {
+    border-color: #198754;
+    background: #198754;
+    color: #ffffff;
+    font-size: 0;
+}
+
+.stepper-step[data-state="done"] .stepper-step-indicator::before {
+    content: "\F272"; /* bi-check2: thinner stroke than bi-check, and reads at size */
+    font-family: "bootstrap-icons";
+    font-size: 1.15rem;
+}
+
+.stepper-step[data-state="error"] .stepper-step-indicator {
+    border-color: #dc3545;
+    background: #dc3545;
+    color: #ffffff;
+    font-size: 0;
+}
+
+.stepper-step[data-state="error"] .stepper-step-indicator::before {
+    content: "\F33A"; /* bi-exclamation-lg */
+    font-family: "bootstrap-icons";
+    font-size: 0.9rem;
+}
+
+/* Horizontal: indicator centred with its label beneath, connector drawn between
+   indicators at circle-centre height. A narrow viewport scrolls rather than
+   squashing, so there is no mobile-only variant to keep in sync. */
+/* Capped rather than full-bleed: the steps share the width evenly, so on a wide
+   screen an uncapped strip pushes the last step out to the far edge, level with
+   the page title and far from the card it heads. The 32rem cap suits the two
+   and three step callers we have; a longer strip would hit the horizontal
+   scroller instead, so raise the cap if a caller adds steps. */
+.stepper-horizontal {
+    max-width: 32rem;
+    margin-top: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+/* Upload step: the strip sits over a centred card, so it centres with it. */
+.family-import-upload .stepper-horizontal {
+    margin-right: auto;
+    margin-left: auto;
+}
+
+.stepper-horizontal .stepper-steps {
+    display: flex;
+    overflow-x: auto;
+    /* The scroller clips vertically as well as horizontally, and the current
+       step's indicator halo sits outside its box, so it needs room to survive. */
+    padding-top: 0.35rem;
+}
+
+.stepper-horizontal .stepper-step {
+    position: relative;
+    flex: 1 1 0;
+    min-width: 7rem;
+}
+
+.stepper-horizontal .stepper-step-link {
+    flex-direction: column;
+    gap: 0.4rem;
+    text-align: center;
+}
+
+.stepper-horizontal .stepper-step:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    top: 0.875rem;
+    left: calc(50% + 1.15rem);
+    right: calc(-50% + 1.15rem);
+    height: 1px;
+    background: #dce5e2;
+}
+
+.stepper-horizontal .stepper-step[data-state="done"]:not(:last-child)::after {
+    background: #198754;
+}
+
+/* Vertical: a spine. Each step's content is indented to align with its label and
+   the connector runs down behind it, stopping at the last step. */
+.stepper-vertical .stepper-step {
+    position: relative;
+    padding-left: 2.5rem;
+    padding-bottom: 2rem;
+}
+
+.stepper-vertical .stepper-step:last-child {
+    padding-bottom: 0;
+}
+
+.stepper-vertical .stepper-step-link {
+    margin-left: -2.5rem;
+}
+
+.stepper-vertical .stepper-step:not(:last-child)::before {
+    content: "";
+    position: absolute;
+    top: 2rem;
+    bottom: 0;
+    left: 0.875rem;
+    width: 1px;
+    background: #dce5e2;
+}
+
+.stepper-step-content {
+    padding-top: 1rem;
+    max-width: 60rem;
+    /* The anchors point at the content, not the heading above it, so a bare jump
+       lands with the step's own label already scrolled off. */
+    scroll-margin-top: 4.5rem;
+}
+
+/* A step whose content is reachable but not the one being filled in. Same weight
+   as the current step (it is not locked), only without the halo. */
+.stepper-step[data-state="available"] .stepper-step-indicator {
+    border-color: #a9bcb5;
+    color: #2f3e38;
+}
+
+/* Which form the officer is in. The indicator halo alone was too far from the
+   fields to notice, so the content itself carries the accent. */
+.stepper-vertical .stepper-step[data-state="current"] > .stepper-step-content .family-person-card {
+    border-color: #145c3d;
+    box-shadow: 0 0 0 3px rgba(20, 92, 61, 0.1);
+}
+
 /* Dashboard section headers: title on the left, that section's global actions
    (batch picker, View All, exports) on the right, outside the cards. */
 .dashboard-section-head {
@@ -301,6 +477,56 @@
     gap: 0.5rem;
 }
 
+/* Data Entry action bar: sticky at the bottom of the form rather than pinned to
+   a rail, because the rail stacked above the form at mobile widths and put Save
+   at the top of a page the officer had to scroll all the way back up. */
+.family-entry-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+    padding: 0.75rem 1rem;
+    background: #ffffff;
+    border-top: 1px solid #dce5e2;
+    box-shadow: 0 -2px 6px rgba(31, 59, 47, 0.06);
+}
+
+/* Page variant (Data Entry), as opposed to the modal footer that shares the class.
+   Two nested px-4 containers sit between the bar and the content column (the
+   layout's <main> and the page's own container-fluid), so the bleed is 3rem, not
+   1.5rem, and the padding is put back so the buttons keep their inset. */
+.family-entry-actions-page {
+    margin-right: -3rem;
+    margin-left: -3rem;
+    padding-right: 3rem;
+    padding-left: 3rem;
+}
+
+/* A short form (the control number alone, before the gate opens) does not fill the
+   viewport, so a sticky bar would stop wherever the content stopped and leave page
+   background beneath it. Stretching the column down to the fold puts the bar on the
+   bottom edge instead, without position: fixed, which would have to hard-code the
+   225px sidenav width and track its collapsed state. */
+#layoutSidenav_content > main:has(.family-entry-actions-page) {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+}
+
+[data-family-entry-form]:has(.family-entry-actions-page),
+[data-family-entry-form]:has(.family-entry-actions-page) > form {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+}
+
+[data-family-entry-form] .family-entry-actions-page {
+    margin-top: auto;
 /* Subtitled variant (Subsidy Distribution): the "Showing batch / Last updated"
    line sits under the title, in the same row as the action buttons, instead
    of wrapping to its own line below. */

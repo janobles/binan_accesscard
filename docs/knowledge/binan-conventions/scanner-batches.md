@@ -25,17 +25,18 @@ views never include it.
 ## Rule 2: Batch and subsidy-type lifecycle is Admin/Developer only, and audited
 
 - Batch open/close: `Admin\DistributionController::openBatch()/closeBatch()`
-  (`POST admin/batches/open`, `POST admin/batches/close/{id}`). The Batches
-  page is `admin/batches` (New Batch modal = name + subsidy-type select); the
-  all-handouts log is `admin/distributions`.
-- Aid-type CRUD: `Admin\AidTypesController` on the `admin/aidtypes` page
-  (Reference Data sidebar group), routes `admin/aidtypes/create|archive|
+  (`POST distribution/batches/open`, `POST distribution/batches/close/{id}`). The
+  Batches tab lives on the `distribution` page (New Batch modal = name +
+  subsidy-type select), alongside the all-handouts log.
+- Subsidy-type CRUD: `Admin\SubsidyTypesController` on the `reference-data` page's
+  subsidy-types tab, routes `reference-data/subsidy-types/create|archive|
   restore|delete`. Delete is blocked while any distribution references the
-  subsidy type (`AidTypeModel::deleteIfUnused()`); archive is the safe retire.
+  subsidy type (`SubsidyTypeModel::deleteIfUnused()`); archive is the safe retire.
 
-Both controllers sit behind `RoleAccess::requireRole(['Admin', 'Developer'])`
-and write `audit_trails` rows for every mutation, rendered through the shared
-admin shell (`DashboardPageBuilder::renderAdminPage()` + `Admin/layout.php`).
+Both controllers sit behind the route's `roleNav` filter (the manifest grants
+`distribution` and `reference-data` to Admin/Developer) and write `audit_trails`
+rows for every mutation, rendered through the one shell
+(`DashboardPageBuilder::renderPage()` + `app/Views/layout.php`).
 The kiosk has no back-office pages.
 
 ## Rule 3: One-action scan; duplicates refused per batch
@@ -76,13 +77,17 @@ The scan IS the log - there is no confirm step and no claimant/date form:
   live `#myBatchCount` counter · logout). Used by `scan.php` and
   `performance.php` - the kiosk's only two pages. Time-and-motion rules apply:
   no per-scan keypresses added, page fits viewport without scrolling.
+- **Family panel details** - the head card always shows the head's badges
+  (sector shortcodes, service category names, service shortcodes, from
+  `MemberModel::referenceBadges()`); the members list sits in a Bootstrap
+  collapse, collapsed by default, so the kiosk stays uncluttered. Expanding
+  is optional and never part of the scan flow.
 - **Simple shell** - `app/Views/Scanner/simple-layout.php`: same topnav brand
-  and account menu as the kiosk shell, but loads the admin table CSS/JS
+  and account menu as the kiosk shell, but loads the dashboard table CSS/JS
   (`asset_styles('admin')`, `lookup-search.js`, `records-filter-panel.js`)
-  directly instead of going through `DashboardPageBuilder::renderAdminPage()`
-  - that page-builder guards Admin/Developer only and is wired to one big
-  `activePage` switch, so a Scanner-reachable page can't render through it
-  without either loosening that guard or forking its switch. Used by
+  directly instead of going through the dashboard page builder - that builder
+  is wired to one big `activePage` switch, so a Scanner-reachable page can't
+  render through it without forking that switch. Used by
   `scanner/history/{controlNo}` (`ScanController::history()`), the "View all"
   page - the one Scanner page that needs a real search/filter/pagination table.
   A plain GET renders it full-page (this shell); an AJAX GET
@@ -92,8 +97,8 @@ The scan IS the log - there is no confirm step and no claimant/date form:
   tabs, both server-rendered on the one page load (switching tabs is
   client-side only, no reload):
   - **History** tab: every past scan of this control number. Server search +
-    Batch/Subsidy Type filters (`components/toolbar`, `AidDistributionModel::
-    batchCountsFor()`/`aidTypeCountsFor()`) + pagination
+    Batch/Subsidy Type filters (`components/toolbar`, `SubsidyDistributionModel::
+    batchCountsFor()`/`subsidyTypeCountsFor()`) + pagination
     (`historyForPaged()`/`countHistoryFor()`), same anatomy as Manage Records.
   - **Family Information** tab: the head + rest of the family, one row each.
     Client-side only (families are small, no pagination) - search box paired
@@ -106,20 +111,21 @@ The scan IS the log - there is no confirm step and no claimant/date form:
     fixed reference list); Sectors/Services options are the full system-wide
     set (every sector, every service category/shortcode) so the dropdown
     always lists every possible value, not just what this family has.
-- **Admin shell** - `Admin/layout.php`: the SB-Admin dashboard frame. Owns
-  subsidy types (`admin/aidtypes`), batches (`admin/batches`), the distributions
-  log (`admin/distributions`), and overall reports (`admin/reports`).
+- **Dashboard shell** - `app/Views/layout.php`: the SB-Admin frame every staff
+  role shares. Owns subsidy types (the `reference-data` page's subsidy-types tab),
+  batches and the distributions log (the `distribution` page), and its reports
+  endpoints (`distribution/reports/*`).
 
 ## Rule 5: Performance stats are batch-scoped and role-filtered
 
-`AidStatsModel` methods take a trailing `?int $batchId` (batch-scoped only -
+`SubsidyStatsModel` methods take a trailing `?int $batchId` (batch-scoped only -
 the date-range filter is removed entirely, not just superseded).
 `perScanner(int $batchId, ?int $onlyUserId)` returns
 `{userID, scanner, handouts, families}` rows - `families` =
-`COUNT(DISTINCT control_no)`. `byAidType(?int $batchId)` drives the
+`COUNT(DISTINCT control_no)`. `bySubsidyType(?int $batchId)` drives the
 handouts-per-subsidy-type chart/PDF table. The Scanner role only ever sees its
 own row on `scanner/performance` (`ScanController` passes `$onlyUserId`
-server-side, never hides rows client-side). `admin/reports` shows the full
+server-side, never hides rows client-side). The `distribution` page's reports show the full
 per-kiosk table (Admin/Developer only), including the PDF export.
 
 The live counter on the scan page updates from the `myBatchCount` field in

@@ -1,20 +1,27 @@
-// Registers the family record modals (View + Add/Update) with the shared
-// dashboard loader, drives the single-page Bootstrap entry form (head card plus
-// member rows), captures repeatable family members, and submits Add/Update over AJAX to the
-// existing FamilyController::store()/update() endpoints, refreshing the
-// server-side DataTable on success.
+// Registers the family record modals (View + Import-fix) with the shared
+// dashboard loader, drives the standalone Data Entry page (Family/entry) and the
+// shared field set it and the modals render (head card plus member rows),
+// captures repeatable family members, and submits over AJAX to the existing
+// FamilyController::store() endpoint, refreshing the server-side DataTable on
+// success.
 //
-// Modal behavior:
+// Shared form behavior:
 //   - "Other" freetext selects (reveal + submit-time option swap)
 //   - Contact number digits-only / exactly-11 validation
 //   - Archived (grandfather) badge un-tick warning
 //   - localStorage draft auto-save + restore-on-reopen + keep/discard-on-close
 //
+// Data Entry page only: the control-number gate ([data-control-number-gate])
+// checks the number before anything else renders; the spine's later sections
+// ([data-entry-section]) lose d-none only once it comes back available. A
+// successful save navigates to the `redirect` the server returns (records)
+// rather than staying on a spent form.
+//
 // Connected to:
 //   - dashboard-modal-loader.js : window.registerDashboardModal()
 //   - family-datatable.js       : window.reloadFamilyDataTable()
-//   - Views  : Family/family-modal.php, Family/view.php, the #familyModal shell
-//   - Backend: POST families (store), POST {role}/manage-family/update/:id
+//   - Views  : Family/entry.php, Family/_fields.php, Family/family-modal.php, Family/view.php
+//   - Backend: POST records (store), GET records/qr-check
 (function (window, document) {
     'use strict';
 
@@ -389,7 +396,10 @@
             var cancelButton = document.createElement('button');
             var confirmButton = document.createElement('button');
 
-            overlay.className = 'family-draft-dialog-backdrop';
+            // No modal box to sit inside on the standalone Data Entry page, so the
+            // backdrop is pinned to the viewport rather than the page-tall form.
+            var isPageLevel = host === form;
+            overlay.className = 'family-draft-dialog-backdrop' + (isPageLevel ? ' is-page-level' : '');
             overlay.setAttribute('role', 'presentation');
             dialog.className = 'family-draft-dialog';
             dialog.setAttribute('role', 'dialog');
@@ -586,7 +596,7 @@
     // One reader for both row states. An open row is read from its controls, a closed
     // row from the hidden inputs that replaced them; the names are the same either way.
     function readMemberData(row) {
-        var data = { sector_ids: [], service_ids: [], sector_labels: [] };
+        var data = { sector_ids: [], service_ids: [], sector_codes: [] };
 
         Array.from(row.querySelectorAll('input, select')).forEach(function (field) {
             var match = /members\[\d+\]\[([a-z_]+)\](\[\])?$/.exec(field.name || '');
@@ -602,9 +612,9 @@
                     data[key].push(field.value);
 
                     if (key === 'sector_ids') {
-                        // The full sector name, not the shortcode: "Bata (Children)"
-                        // tells a worker what the row is, "B" does not.
-                        data.sector_labels.push(String(field.dataset.sectorName || field.dataset.sectorCode || field.dataset.label || '').trim());
+                        // The shortcode, not the full name: a summary line stays
+                        // scannable with "SC, PWD" where the names would wrap.
+                        data.sector_codes.push(String(field.dataset.sectorCode || field.dataset.sectorName || field.dataset.label || '').trim());
                     }
                 }
 
@@ -625,7 +635,7 @@
                 return;
             }
 
-            if (key === 'sector_labels') {
+            if (key === 'sector_codes') {
                 return;
             }
 
@@ -643,14 +653,14 @@
         });
     }
 
-    function hiddenInput(name, value, sectorName) {
+    function hiddenInput(name, value, sectorCode) {
         var input = document.createElement('input');
         input.type = 'hidden';
         input.name = name;
         input.value = value;
 
-        if (sectorName) {
-            input.dataset.sectorName = sectorName;
+        if (sectorCode) {
+            input.dataset.sectorCode = sectorCode;
         }
 
         return input;
@@ -680,7 +690,7 @@
         });
 
         data.sector_ids.forEach(function (id, position) {
-            values.appendChild(hiddenInput(prefix + '[sector_ids][]', id, data.sector_labels[position]));
+            values.appendChild(hiddenInput(prefix + '[sector_ids][]', id, data.sector_codes[position]));
         });
 
         data.service_ids.forEach(function (id) {
@@ -758,7 +768,7 @@
         var last = String(data.lastname || '').trim();
         var name = last !== '' && given !== '' ? last + ', ' + given : (last || given);
         var age = completedAge(data.birthday);
-        var sectors = data.sector_labels.filter(Boolean).join(', ');
+        var sectors = data.sector_codes.filter(Boolean).join(', ');
         // One muted line under the name, in the order a worker scans a household:
         // how they relate to the head, how old they are, what they are classified
         // as, how much aid they draw. Empty facts drop out rather than leaving
@@ -793,7 +803,7 @@
         var members = Array.from(form.querySelectorAll('[data-family-member-row]')).map(function (row) {
             var data = readMemberData(row);
 
-            delete data.sector_labels;
+            delete data.sector_codes;
 
             return data;
         });
@@ -1229,7 +1239,7 @@
         var sectorSelector = row ? 'input[name$="[sector_ids][]"]:checked' : 'input[name="sector_ids[]"]:checked';
         var serviceSelector = row ? 'input[name$="[service_ids][]"]:checked' : 'input[name="service_ids[]"]:checked';
         var codes = Array.from(scopeEl.querySelectorAll(sectorSelector)).map(function (input) {
-            return String(input.dataset.sectorName || input.dataset.sectorCode || input.dataset.label || '').trim();
+            return String(input.dataset.sectorCode || input.dataset.sectorName || input.dataset.label || '').trim();
         }).filter(Boolean);
         var services = scopeEl.querySelectorAll(serviceSelector).length;
 
@@ -1349,7 +1359,15 @@
         }
 
         row.dataset.memberFieldPrefix = 'members[' + nextIndex + ']';
-        container.appendChild(row);
+
+        // Server-rendered rows sit inside a full-width grid cell (the shared
+        // `.row.g-3` in Family/_fields.php); wrap a JS-added row the same way so
+        // members stack one per row.
+        var card = document.createElement('div');
+        card.className = 'col-12';
+        card.setAttribute('data-member-card', '');
+        card.appendChild(row);
+        container.appendChild(card);
         button.dataset.nextIndex = String(nextIndex + 1);
 
         buildMemberEditor(root, row);
@@ -1520,11 +1538,52 @@
         return field;
     }
 
+    // A save that goes nowhere used to explain itself only by focusing the first
+    // bad field, which is invisible if that field is above the fold or inside a
+    // member row further down. The action bar says how many are left, beside the
+    // button the worker just pressed.
+    //
+    // Only counts once a save has actually been attempted: a fresh form is
+    // entirely empty, and announcing "23 required fields are missing" before the
+    // worker has typed anything is noise, not help.
+    function reportSaveBlocked(form) {
+        var reason = form.querySelector('[data-entry-blocked]');
+
+        if (!reason || form.dataset.familySaveAttempted !== '1') {
+            return;
+        }
+
+        // Skip fields inside a d-none container (the spine's locked sections while
+        // the control-number gate is shut): the worker cannot see or fix them, so
+        // counting them turns "1 field is missing" into a meaningless "23 required
+        // fields are missing."
+        var missing = Array.prototype.filter.call(
+            form.querySelectorAll('[required]'),
+            function (field) {
+                return !field.checkValidity() && !field.closest('.d-none');
+            }
+        ).length;
+
+        if (missing === 0) {
+            reason.textContent = '';
+
+            return;
+        }
+
+        reason.textContent = missing === 1
+            ? '1 required field is missing.'
+            : missing + ' required fields are missing.';
+    }
+
     function submitFamilyForm(root, form) {
+        form.dataset.familySaveAttempted = '1';
+
         // Deliberately not was-validated: that also paints every untouched optional
         // field green, which reads as "confirmed" on a box the worker never filled.
         // setFieldError's .is-invalid toggle is the only signal we want.
         if (!validateHead(root)) {
+            reportSaveBlocked(form);
+
             return;
         }
 
@@ -1533,8 +1592,12 @@
         if (badMember) {
             badMember.focus();
             badMember.scrollIntoView({ block: 'center' });
+            reportSaveBlocked(form);
+
             return;
         }
+
+        reportSaveBlocked(form);
 
         // Swap "Other" selects to their typed value so the custom text posts.
         applyOtherValues(form);
@@ -1582,16 +1645,20 @@
                     clearDraft();
                 }
 
+                // The Data Entry page (records/entry) is a full navigation, not a modal
+                // load: `redirect` is only ever set on that response (store()'s AJAX
+                // branch), so following it is the page's only completion path. The
+                // just-saved record's flash message renders after the navigation, on
+                // the page `redirect` points to.
+                if (data.redirect) {
+                    window.location.href = data.redirect;
+                    return;
+                }
+
                 closeFamilyModal();
 
                 if (typeof window.reloadFamilyDataTable === 'function') {
                     window.reloadFamilyDataTable();
-                }
-
-                // Import-fix context (Review Import screen): the save returns a fresh review
-                // report - hand it back so the screen re-renders without a reload.
-                if (data.review && typeof window.importReviewApply === 'function') {
-                    window.importReviewApply(data.review, data.csrf);
                 }
 
                 showFamilyToast(data.message || 'Family record saved successfully.', false);
@@ -1832,7 +1899,10 @@
                 var row = removeButton.closest('[data-family-member-row]');
 
                 if (row) {
-                    row.remove();
+                    // Rows sit in a `col-12` grid cell (`[data-member-card]`); drop
+                    // the cell with the row or the grid keeps an empty column.
+                    var memberCard = row.closest('[data-member-card]');
+                    (memberCard || row).remove();
                     renumberMembers(root);
                     scheduleSave(root);
                 }
@@ -1890,27 +1960,82 @@
                 event.preventDefault();
                 submitFamilyForm(root, formEl);
             });
+
+            // Keeps the blocked count honest as the worker fills fields in. No
+            // debounce: it is a querySelectorAll over one form, cheaper than the
+            // timer that would manage it.
+            formEl.addEventListener('input', function () {
+                reportSaveBlocked(formEl);
+            });
+
+            formEl.addEventListener('change', function () {
+                reportSaveBlocked(formEl);
+            });
         }
         refreshAllAgeEligibility(root);
         refreshAllServiceCategories(root);
         refreshAllChoicesSummaries(root);
         renumberMembers(root);
 
-        // Restore-on-reopen prompt (create mode only).
-        if (isCreateForm(root) && formEl) {
-            var draft = readDraft();
+        // Restore-on-reopen prompt (create mode only). This call runs at page
+        // load, while the entry page's control-number gate is still shut, so
+        // offerDraftRestoreIfVisible's own gateShut check bails out here - the
+        // officer has no control number yet to contextualise the draft
+        // against. bindControlNumberGate calls this again once the gate
+        // opens, and that call is the one that actually offers it (matching
+        // the page's pre-spine behaviour). On Family/profile.php, which has
+        // no gate, this call is the only one and fires normally.
+        offerDraftRestoreIfVisible(root);
+    }
 
-            if (!draftIsEmpty(draft)) {
-                askRestoreDraft(formEl, draft.savedAt).then(function (restore) {
-                    if (restore) {
-                        restoreDraftIntoForm(root, draft);
-                    } else {
-                        clearDraft();
-                        setDraftStatus(formEl, '');
-                    }
-                });
-            }
+    function offerDraftRestoreIfVisible(root) {
+        // Defensive: root must be the [data-family-entry-form] element itself
+        // (it has a classList/dataset to read), never the document it was found
+        // in - a Document has neither and would throw on the check below.
+        if (!root || root.nodeType !== 1) {
+            return;
         }
+
+        var formEl = root.querySelector('form');
+
+        // The entry page's wrapper is never itself d-none (only the gated
+        // sections inside it are, once the spine replaced the single hidden
+        // body this page used to have), so that classList check no longer
+        // suppresses anything here on its own. A shut control-number gate
+        // does the suppressing instead: root.querySelector('[data-control-
+        // number-gate]') is null on Family/profile.php (the edit page, which
+        // shares this partial but has no gate), so gateShut is always false
+        // there and this still offers a restore normally. Without this, an
+        // officer who declines the prompt before entering a control number
+        // loses the draft for good (askRestoreDraft's decline path calls
+        // clearDraft()), and accepting binds head/member data to whichever
+        // control number they type next - possibly a different record.
+        var gate = root.querySelector('[data-control-number-gate]');
+        var gateSections = root.querySelectorAll('[data-entry-section]');
+        var gateShut = !!gate && gateSections.length > 0 && Array.prototype.every.call(gateSections, function (section) {
+            return section.classList.contains('d-none');
+        });
+
+        if (!formEl || !isCreateForm(root) || root.classList.contains('d-none') || gateShut || root.dataset.familyDraftOffered === '1') {
+            return;
+        }
+
+        var draft = readDraft();
+
+        if (draftIsEmpty(draft)) {
+            return;
+        }
+
+        root.dataset.familyDraftOffered = '1';
+
+        askRestoreDraft(formEl, draft.savedAt).then(function (restore) {
+            if (restore) {
+                restoreDraftIntoForm(root, draft);
+            } else {
+                clearDraft();
+                setDraftStatus(formEl, '');
+            }
+        });
     }
 
     // Intercept modal close: when an Add (create) form has unsaved work, ask the
@@ -1957,120 +2082,274 @@
         });
     }
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', bindCloseGuard);
-    } else {
-        bindCloseGuard();
+    // ---- standalone Data Entry page (Family/entry) -------------------------
+    // The entry page is a normal navigation, not a modal load, so nothing ever
+    // fires registerDashboardModal's onLoaded callback for it. It wires itself
+    // up on page load instead, then drives the control-number gate: the spine's
+    // later sections ([data-entry-section]) keep d-none until the number checks
+    // out available.
+
+    function setGateStatus(field, status, text, isError) {
+        field.classList.toggle('is-invalid', !!isError);
+
+        if (status) {
+            status.textContent = text;
+            status.classList.toggle('text-danger', !!isError);
+        }
     }
 
-    window.registerDashboardModal({
-        namespace: 'family',
-        triggerSelector: '.js-open-family-view-modal',
-        defaultTitle: 'View Record',
-        loadingMarkup: '<div class="family-modal-loading" role="status" aria-live="polite"><div class="spinner-border text-primary" aria-hidden="true"></div><span>Loading record...</span></div>',
-        errorMarkup: '<div class="alert alert-danger mb-0">Unable to load the record. Please try again.</div>'
-    });
+    function bindControlNumberGate(gate) {
+        var field = gate.querySelector('#controlNumber');
+        var status = gate.querySelector('[data-control-number-status]');
+        var image = gate.querySelector('[data-control-number-qr]');
+        // The spine interleaves headings with content, so the gated sections are
+        // several nodes rather than one wrapper. [data-family-entry-form] sits on
+        // the outer <div>, one level above the <form>, matching Family/profile.php:
+        // seven call sites elsewhere in this file do root.querySelector('form') to
+        // reach the <form> itself, and would silently find nothing if root WERE the
+        // form. offerDraftRestoreIfVisible below and the one inside
+        // initFamilyEntryModal still share one familyDraftOffered flag because both
+        // resolve to this same root node.
+        var sections = document.querySelectorAll('[data-entry-section]');
+        var root = document.querySelector('[data-family-entry-form]');
+        var timer = null;
+        var sequence = 0;
 
-    window.registerDashboardModal({
-        namespace: 'familyAdd',
-        triggerSelector: '.js-open-family-add-modal',
-        defaultTitle: 'New Family Record',
-        loadingMarkup: '<div class="family-modal-loading" role="status" aria-live="polite"><div class="spinner-border text-primary" aria-hidden="true"></div><span>Loading form...</span></div>',
-        errorMarkup: '<div class="alert alert-danger mb-0">Unable to load the form. Please try again.</div>',
-        onLoaded: initFamilyEntryModal
-    });
-
-    // Import Review "Fix family" modal: the SAME family form, prefilled from the staged
-    // import rows and pointed at the staging-save endpoint. Reuses initFamilyEntryModal
-    // wholesale; the only difference is the form's action (server-rendered) and that its
-    // success payload carries a fresh review report (handled in submitFamilyForm above).
-    function initImportFixModal(container) {
-        initFamilyEntryModal(container);
-        applyImportFieldIssues(container);
-    }
-
-    // Flags each errored input (red = blocking, amber = warning) with the message beneath it,
-    // from the data-family-import-field-issues JSON the builder emits on the form root.
-    function applyImportFieldIssues(container) {
-        var root = container.querySelector('[data-family-entry-form]');
-
-        if (!root || !root.dataset.familyImportFieldIssues) {
+        if (!field || !sections.length || !root) {
             return;
         }
 
-        var issues;
-
-        try {
-            issues = JSON.parse(root.dataset.familyImportFieldIssues);
-        } catch (e) {
-            return;
+        function setSectionsHidden(hidden) {
+            Array.prototype.forEach.call(sections, function (section) {
+                section.classList.toggle('d-none', hidden);
+            });
         }
 
-        var form = root.querySelector('form');
+        // Mirrors the visually-hidden wording stepper.php itself prefixes onto a
+        // step's label ('Completed, ' / 'Needs attention, '), so state here is
+        // never colour alone either. 'Locked, ' is this page's own addition: the
+        // two later steps are real links (so click-to-scroll and focus still
+        // work), but their content is d-none until the gate opens, so a screen
+        // reader needs to be told they currently do nothing.
+        function setStepLink(step, opts) {
+            var link = step.querySelector('.stepper-step-link');
+            var prefix = step.querySelector('[data-step-state-prefix]');
 
-        if (!form || !Array.isArray(issues)) {
-            return;
-        }
-
-        issues.forEach(function (issue) {
-            if (!issue || !issue.name) {
+            if (!link) {
                 return;
             }
 
-            var selector = '[name="' + String(issue.name).replace(/(["\\])/g, '\\$1') + '"]';
-            var field = form.querySelector(selector);
-            var row = field ? field.closest('[data-family-member-row]') : null;
-
-            // A flagged field inside a closed row is a hidden input: the note would be
-            // invisible and the box uneditable, so the row opens to show what to fix.
-            if (row && row.dataset.familyMemberOpen === '0') {
-                expandMemberRow(root, row);
-                field = form.querySelector(selector);
+            if (opts.current) {
+                link.setAttribute('aria-current', 'step');
+            } else {
+                link.removeAttribute('aria-current');
             }
 
-            if (field) {
-                markImportField(field, issue);
+            if (opts.disabled) {
+                link.setAttribute('aria-disabled', 'true');
+            } else {
+                link.removeAttribute('aria-disabled');
             }
+
+            if (prefix) {
+                prefix.textContent = opts.prefixText || '';
+            }
+        }
+
+        function setStepStates(unlocked) {
+            var steps = document.querySelectorAll('#entrySpine .stepper-step');
+
+            if (steps.length < 3) {
+                return;
+            }
+
+            // Once the gate opens both later steps are editable, so neither may keep
+            // the muted 'upcoming' look: a step you can type into must not read as
+            // locked. 'available' is the unlocked-but-not-focused state, and the
+            // focus tracking below moves 'current' onto whichever one is in use.
+            steps[0].setAttribute('data-state', unlocked ? 'done' : 'current');
+            steps[1].setAttribute('data-state', unlocked ? 'current' : 'upcoming');
+            steps[2].setAttribute('data-state', unlocked ? 'available' : 'upcoming');
+
+            setStepLink(steps[0], {
+                current: !unlocked,
+                disabled: false,
+                prefixText: unlocked ? 'Completed, ' : ''
+            });
+            setStepLink(steps[1], {
+                current: unlocked,
+                disabled: !unlocked,
+                prefixText: unlocked ? '' : 'Locked, '
+            });
+            setStepLink(steps[2], {
+                current: false,
+                disabled: !unlocked,
+                prefixText: unlocked ? '' : 'Locked, '
+            });
+        }
+
+        function clearQr() {
+            if (image) {
+                image.classList.add('d-none');
+                image.removeAttribute('src');
+                image.setAttribute('alt', '');
+            }
+        }
+
+        function realControlNumberField() {
+            return root.querySelector('[data-entry-control-number], [name="qr_control_no"]');
+        }
+
+        field.addEventListener('input', function () {
+            setSectionsHidden(true);
+            setStepStates(false);
+            clearQr();
+            setGateStatus(field, status, '', false);
+            window.clearTimeout(timer);
+
+            // A previous available check may have already written this control
+            // number into the hidden field the form actually posts. Editing the
+            // visible input to something else (even an invalid value the browser
+            // still lets through, like a non-numeric string with no pattern to
+            // reject it) must not leave that stale value behind - otherwise Save
+            // stays enabled and the record saves under the abandoned number.
+            var realField = realControlNumberField();
+
+            if (realField) {
+                realField.value = '';
+            }
+
+            var value = String(field.value || '').trim();
+            var mySequence = ++sequence;
+
+            if (value === '' || !field.checkValidity()) {
+                return;
+            }
+
+            timer = window.setTimeout(function () {
+                var url = new URL(gate.dataset.qrCheckUrl, window.location.href);
+                url.searchParams.set('control_no', value);
+                url.searchParams.set('head_id', '0');
+
+                window.fetch(url.toString(), {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    credentials: 'same-origin'
+                }).then(function (response) {
+                    return response.json().then(function (data) {
+                        return { ok: response.ok, data: data };
+                    });
+                }).then(function (result) {
+                    if (mySequence !== sequence) {
+                        return;
+                    }
+
+                    if (result.ok && result.data.available) {
+                        setGateStatus(field, status, 'Control number is available.', false);
+                        setSectionsHidden(false);
+                        setStepStates(true);
+
+                        // The preview is never a gate: a response without a `qr`
+                        // field still unlocks the form.
+                        if (image && result.data.qr) {
+                            image.setAttribute('src', result.data.qr);
+                            // The server formats the label the same way the printed card
+                            // does (ControlNumber::format()); falling back to the raw typed
+                            // value only covers an old response shape without the field.
+                            image.setAttribute('alt', 'QR code for control number ' + (result.data.control_no_label || value));
+                            image.classList.remove('d-none');
+                        }
+
+                        var realField = realControlNumberField();
+
+                        if (realField) {
+                            realField.value = value;
+                        }
+
+                        offerDraftRestoreIfVisible(root);
+                    } else {
+                        setGateStatus(field, status, (result.data && result.data.message) || 'The control number could not be validated.', true);
+                    }
+                }).catch(function () {
+                    if (mySequence === sequence) {
+                        setGateStatus(field, status, 'A network error occurred. Please try again.', true);
+                    }
+                });
+            }, 350);
         });
     }
 
-    function markImportField(field, issue) {
-        var blocking = issue.severity === 'blocking';
+    function initFamilyEntryPage() {
+        // Keyed on [data-family-entry-form] - the same marker initFamilyEntryModal()
+        // looks for - rather than the control-number gate, so the Family Profile page
+        // (Family/profile.php, which has no gate) wires up the same member-row/Other-
+        // select/AJAX-submit behavior the Data Entry page gets. The gate step itself
+        // only runs when a gate is actually present, so the entry page's gating is
+        // unchanged.
+        var root = document.querySelector('[data-family-entry-form]');
 
-        field.classList.add('import-field-flagged', blocking ? 'import-field-error' : 'import-field-warn');
-
-        var note = document.createElement('div');
-        note.className = 'small import-field-note ' + (blocking ? 'import-field-note-error' : 'import-field-note-warn');
-        note.textContent = issue.message || '';
-
-        // Sit the note below the field - or below its "Other" freetext input when there is one.
-        var anchor = field;
-        var other = field.parentNode ? field.parentNode.querySelector('.js-other-input') : null;
-        if (other) {
-            anchor = other;
+        if (!root) {
+            return;
         }
-        anchor.insertAdjacentElement('afterend', note);
 
-        // Clear the flag once the worker touches the field, so a corrected box stops shouting.
-        var clear = function () {
-            field.classList.remove('import-field-flagged', 'import-field-error', 'import-field-warn');
-            if (note.parentNode) {
-                note.parentNode.removeChild(note);
-            }
-            field.removeEventListener('input', clear);
-            field.removeEventListener('change', clear);
-        };
+        initFamilyEntryModal(document);
 
-        field.addEventListener('input', clear);
-        field.addEventListener('change', clear);
+        var gate = document.querySelector('[data-control-number-gate]');
+
+        if (gate) {
+            bindControlNumberGate(gate);
+            bindSpineFocusTracking();
+        }
     }
 
-    window.registerDashboardModal({
-        namespace: 'importFix',
-        triggerSelector: '.js-import-fix-edit',
-        defaultTitle: 'Fix Family Record',
-        loadingMarkup: '<div class="family-modal-loading" role="status" aria-live="polite"><div class="spinner-border text-primary" aria-hidden="true"></div><span>Loading form...</span></div>',
-        errorMarkup: '<div class="alert alert-danger mb-0">Unable to load the form. Please try again.</div>',
-        onLoaded: initImportFixModal
-    });
+    // Follows the caret down the spine: the step holding the focused control becomes
+    // 'current' (the one with the halo) and its unlocked siblings fall back to
+    // 'available'. A step still marked 'upcoming' is genuinely locked, so it is left
+    // alone - this only reshuffles state among steps the gate has already opened.
+    function bindSpineFocusTracking() {
+        var spine = document.getElementById('entrySpine');
+
+        if (!spine) {
+            return;
+        }
+
+        spine.addEventListener('focusin', function (event) {
+            var content = event.target.closest('.stepper-step-content');
+            var focused = content ? content.closest('.stepper-step') : null;
+
+            if (!focused || focused.getAttribute('data-state') === 'upcoming') {
+                return;
+            }
+
+            Array.prototype.forEach.call(spine.querySelectorAll('.stepper-step'), function (step) {
+                var state = step.getAttribute('data-state');
+
+                if (state === 'upcoming' || state === 'error') {
+                    return;
+                }
+
+                if (step === focused) {
+                    step.setAttribute('data-state', 'current');
+                    step.querySelector('.stepper-step-link').setAttribute('aria-current', 'step');
+
+                    return;
+                }
+
+                // Step 1 stays 'done': its control number is filled in and checked,
+                // which is a different thing from merely being reachable.
+                if (state !== 'done') {
+                    step.setAttribute('data-state', 'available');
+                }
+
+                step.querySelector('.stepper-step-link').removeAttribute('aria-current');
+            });
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', bindCloseGuard);
+        document.addEventListener('DOMContentLoaded', initFamilyEntryPage);
+    } else {
+        bindCloseGuard();
+        initFamilyEntryPage();
+    }
 })(window, document);

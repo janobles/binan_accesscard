@@ -63,10 +63,10 @@ $window = ($batchName ?? null) !== null
 <table class="data">
   <thead><tr><th>Subsidy Type</th><th>Handouts</th></tr></thead>
   <tbody>
-  <?php foreach ($byAidType as $a): ?>
-    <tr><td><?= esc($a['aid_type']) ?></td><td><?= esc((string) $a['count']) ?></td></tr>
+  <?php foreach ($bySubsidyType as $a): ?>
+    <tr><td><?= esc($a['subsidy_type']) ?></td><td><?= esc((string) $a['count']) ?></td></tr>
   <?php endforeach; ?>
-  <?php if ($byAidType === []): ?>
+  <?php if ($bySubsidyType === []): ?>
     <tr><td colspan="2">No data for this range.</td></tr>
   <?php endif; ?>
   </tbody>

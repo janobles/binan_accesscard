@@ -480,19 +480,6 @@
     border-radius: 0.35rem;
 }
 
-#familyDataTableFilters .js-open-family-import-modal {
-    color: #212529;
-    border-color: #ffc107;
-    background-color: #ffc107;
-}
-
-#familyDataTableFilters .js-open-family-import-modal:hover,
-#familyDataTableFilters .js-open-family-import-modal:focus {
-    color: #212529;
-    border-color: #ffca2c;
-    background-color: #ffca2c;
-}
-
 div.dt-container div.dt-paging {
     max-width: 100%;
     overflow-x: auto;
@@ -607,4 +594,48 @@ div.dt-container div.dt-search .input-group {
         justify-content: flex-start;
         text-align: start;
     }
+}
+
+/* Caps the search field width on the import review toolbar so it does not
+   stretch to fill the row next to the problem and page-size selects. */
+.import-review-search {
+    max-width: 22rem;
+}
+
+/* The paged import review table. Long issue labels pushed the table past its
+   card, so the badges and the Fix button scrolled out of sight behind macOS's
+   overlay scrollbar. Wrap the badges and grow the row downwards instead, and
+   keep the status and action columns tight so they always stay in view. */
+#importReviewTable {
+    width: 100%;
+}
+
+/* anywhere, not break-word: only `anywhere` lowers the cell's min-content width,
+   and a 200-character pasted name is exactly what pushes the table past its card.
+   The min-widths below stop the browser paying for that break by squeezing the
+   short columns until "Spouse" wraps as "Spous e". */
+#importReviewTable td {
+    overflow-wrap: anywhere;
+}
+
+#importReviewTable td:nth-child(3) {
+    white-space: nowrap;
+}
+
+#importReviewTable td:nth-child(2),
+#importReviewTable td:nth-child(4),
+#importReviewTable td:nth-child(5) {
+    min-width: 7rem;
+}
+
+.import-review-issues {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+}
+
+.import-review-status-col,
+.import-review-open-col {
+    width: 1%;
+    white-space: nowrap;
 }

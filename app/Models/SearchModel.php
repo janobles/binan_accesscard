@@ -101,7 +101,8 @@ class SearchModel
         $limit = max(1, $limit);
         $offset = max(0, $offset);
 
-        $builder = $this->allMembersBuilder($keyword, $filters);
+        $builder = $this->allMembersBuilder($keyword, $filters)
+            ->select('m.memberID, m.firstname, m.middlename, m.lastname, m.suffix, m.birthday, m.contactnumber, m.relationship, m.address, m.headID, m.sectorID, m.dt_created, m.dt_deleted, h.firstname AS head_firstname, h.lastname AS head_lastname, h.suffix AS head_suffix');
         $this->applyAllMembersOrder($builder, $orderKey, $orderDirection);
 
         $rows = $builder
@@ -110,6 +111,47 @@ class SearchModel
             ->getResultArray();
 
         return $this->withServiceNames($this->withSectorNames($rows));
+    }
+
+    /**
+     * One row per household matching the deep member search, instead of one row
+     * per matched member: groups the same query by headID so LIMIT/OFFSET slice
+     * households, not members. Manage Records ("all" scope) uses this, paired
+     * with countAllMembersHeads(), so a household can never straddle two pages
+     * or appear twice. Pairs with MemberModel to fetch each head's own row.
+     *
+     * @return list<int> head IDs, in the requested order
+     */
+    public function allMembersHeadIds(string $keyword = '', array $filters = [], int $limit = 50, int $offset = 0, ?string $orderKey = null, string $orderDirection = 'asc'): array
+    {
+        if (! $this->db->tableExists('member')) {
+            return [];
+        }
+
+        $limit = max(1, $limit);
+        $offset = max(0, $offset);
+
+        $builder = $this->allMembersBuilder($keyword, $filters)
+            ->select('m.headID')
+            ->groupBy('m.headID');
+        $this->applyAllMembersOrder($builder, $orderKey, $orderDirection);
+
+        $rows = $builder->limit($limit, $offset)->get()->getResultArray();
+
+        return array_map(static fn (array $row): int => (int) $row['headID'], $rows);
+    }
+
+    /** Distinct-household count for the deep member search; pairs with allMembersHeadIds(). */
+    public function countAllMembersHeads(string $keyword = '', array $filters = []): int
+    {
+        if (! $this->db->tableExists('member')) {
+            return 0;
+        }
+
+        return $this->allMembersBuilder($keyword, $filters)
+            ->select('m.headID')
+            ->groupBy('m.headID')
+            ->countAllResults();
     }
 
     /**
@@ -162,14 +204,16 @@ class SearchModel
     }
 
     /**
-     * Shared query for allMembers()/countAllMembers(): every member (incl. non-heads),
-     * left-joined to its head, with keyword across member fields + sector + service,
-     * plus the Manage Records filters (sectorID, date, active/archived status).
+     * Shared query for allMembers()/countAllMembers()/allMembersHeadIds()/
+     * countAllMembersHeads(): every member (incl. non-heads), left-joined to its
+     * head, with keyword across member fields + sector + service, plus the
+     * Manage Records filters (sectorID, date, active/archived status). Callers
+     * apply their own select() - a plain member list for allMembers(), or
+     * select('m.headID')->groupBy('m.headID') for the head-scoped pair.
      */
     private function allMembersBuilder(string $keyword, array $filters): BaseBuilder
     {
         $builder = $this->db->table('member m')
-            ->select('m.memberID, m.firstname, m.middlename, m.lastname, m.suffix, m.birthday, m.contactnumber, m.relationship, m.address, m.headID, m.sectorID, m.dt_created, m.dt_deleted, h.firstname AS head_firstname, h.lastname AS head_lastname, h.suffix AS head_suffix')
             ->join('member h', 'h.memberID = m.headID', 'left');
 
         $status = strtolower(trim((string) ($filters['status'] ?? '')));

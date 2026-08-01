@@ -1,41 +1,35 @@
 <?php
 /**
- * Shared dashboard sidebar (SB Admin 1 sb-sidenav), role-aware.
+ * Shared dashboard sidebar (SB Admin 1 sb-sidenav), rendered from the navigation
+ * manifest. Every link, its heading, and whether this role sees it comes from
+ * Config\Navigation, so adding a page is one entry there rather than an edit here.
  *
- * Admin/Developer get the FULL admin nav (all sections). Kiosk pages render
- * via Scanner/kiosk-layout (no sidebar) and never use this component.
+ * Kiosk pages render via Scanner/kiosk-layout and never use this component. The
+ * brand link lives in the topnav partial.
  *
- * Layouts must render this inside #layoutSidenav_nav. The brand link lives in
- * the topnav partial (Partials/dashboard-topnav), not here.
- *
- * Variables (all defaulted defensively):
- * - $navActive          array  active-state map for full admin nav
- * - $canManageAccounts  bool   shows Account Management link
- * - $sidebarRoleClass   string 'developer' | 'admin' | 'scanner'
- * - $sidebarUserUrl     string accepted for backward compatibility (brand
- *                              moved to the topnav; unused here)
+ * $role       normalized role label ('Admin', 'Encoder', ...)
+ * $activePage manifest key of the page being rendered
  */
-$navActive = $navActive ?? [];
-$canManageAccounts = $canManageAccounts ?? false;
-$sidebarRoleClass = $sidebarRoleClass ?? 'admin';
-$sidebarUserUrl = $sidebarUserUrl ?? site_url('admin/dashboard');
+
+use Config\Navigation;
+
+$role = (string) ($role ?? '');
+$activePage = (string) ($activePage ?? '');
+$links = Navigation::linksFor($role);
+$renderedHeading = null;
 ?>
-    <nav class="sb-sidenav accordion sb-sidenav-dark <?= esc($sidebarRoleClass) ?>" id="dashboard-sidebar">
+    <nav class="sb-sidenav accordion sb-sidenav-dark <?= esc(strtolower($role), 'attr') ?>" id="dashboard-sidebar">
         <div class="sb-sidenav-menu">
             <div class="nav">
-                <div class="sb-sidenav-menu-heading">Core</div>
-                <a class="nav-link <?= esc($navActive['dashboard'] ?? '') ?>" href="<?= site_url('admin/dashboard') ?>"><div class="sb-nav-link-icon"><i class="bi bi-speedometer2" aria-hidden="true"></i></div>Dashboard</a>
-                <div class="sb-sidenav-menu-heading">Records</div>
-                <a class="nav-link <?= esc($navActive['family-manage'] ?? '') ?>" href="<?= site_url('admin/manage-records') ?>"><div class="sb-nav-link-icon"><i class="bi bi-people-fill" aria-hidden="true"></i></div>Manage Records</a>
-                <a class="nav-link <?= esc($navActive['reference-data'] ?? '') ?>" href="<?= site_url('admin/reference-data') ?>"><div class="sb-nav-link-icon"><i class="bi bi-collection" aria-hidden="true"></i></div>Reference Data</a>
-                <div class="sb-sidenav-menu-heading">Subsidy</div>
-                <a class="nav-link <?= esc($navActive['cards'] ?? '') ?>" href="<?= site_url('admin/cards') ?>"><div class="sb-nav-link-icon"><i class="bi bi-qr-code" aria-hidden="true"></i></div>Control Numbers</a>
-                <a class="nav-link <?= esc($navActive['distribution'] ?? '') ?>" href="<?= site_url('admin/distribution') ?>"><div class="sb-nav-link-icon"><i class="bi bi-clipboard-check-fill" aria-hidden="true"></i></div>Distribution</a>
-                <div class="sb-sidenav-menu-heading">Administration</div>
-                <?php if ($canManageAccounts): ?>
-                <a class="nav-link <?= esc($navActive['accounts'] ?? '') ?>" href="<?= site_url('admin/accounts') ?>"><div class="sb-nav-link-icon"><i class="bi bi-person-fill-gear" aria-hidden="true"></i></div>Account Management</a>
-                <?php endif; ?>
-                <a class="nav-link <?= esc($navActive['audit-trails'] ?? '') ?>" href="<?= site_url('admin/audit-trails') ?>"><div class="sb-nav-link-icon"><i class="bi bi-clock-history" aria-hidden="true"></i></div>Audit Trails</a>
+                <?php foreach ($links as $link): ?>
+                    <?php if ($link['heading'] !== $renderedHeading): ?>
+                        <div class="sb-sidenav-menu-heading"><?= esc($link['heading']) ?></div>
+                        <?php $renderedHeading = $link['heading']; ?>
+                    <?php endif; ?>
+                    <a class="nav-link<?= $link['key'] === $activePage ? ' active' : '' ?>" href="<?= site_url($link['route']) ?>">
+                        <div class="sb-nav-link-icon"><i class="bi <?= esc($link['icon']) ?>" aria-hidden="true"></i></div><?= esc($link['label']) ?>
+                    </a>
+                <?php endforeach; ?>
             </div>
         </div>
     </nav>

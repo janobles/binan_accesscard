@@ -8,7 +8,7 @@
 //   - View   : Family/list.php - .js-family-record-action-form
 //              (data-family-name, data-action-label, data-action-past, data-confirm-message)
 //              Family/action-confirm-modal.php - #familyActionModal
-//   - Backend: POST {admin|employee}/manage-family/archive|restore/:id
+//   - Backend: POST records/:id/archive|restore
 //              (Families\FamilyController::archive, ::restore)
 (function () {
     function initFixedActionDropdowns(root) {

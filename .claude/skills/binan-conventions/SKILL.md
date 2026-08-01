@@ -33,7 +33,7 @@ version-pinned, so it's safe). PHP floor: 8.2.
 |----------|------|
 | controller, view data, PageBuilder, boundary, library | `binan-conventions/mvc-boundaries.md` |
 | audit, audit_trails, AuditTrailsModel, family mutation, SessionAuditLogger | `binan-conventions/audit-trail.md` |
-| route, namespace, subnamespace, Routes.php, new controller | `binan-conventions/routing-subnamespaces.md` |
+| route, namespace, subnamespace, Routes.php, new controller, navigation manifest, Navigation.php, roleNav, page key, sidebar link, url prefix, 404 by role | `binan-conventions/routing-subnamespaces.md` |
 | model, query, table, allowedFields, schema, SQL dump, enum, role | `binan-conventions/models.md` |
 | view, layout, partial, component, bootstrap, css, page, inline style, empty state, stepper | `binan-conventions/views-bootstrap.md` |
 | button color, btn(), toolbar, filter panel, pills, dual search, design system | `binan-conventions/ui-design-system.md` |

@@ -49,7 +49,7 @@
            Bootstrap .row's negative gutter margins). Family card is first in
            DOM so it stacks above the QR card on mobile (flex-column). */ ?>
   <div class="d-flex flex-column flex-lg-row gap-3">
-    <div class="flex-lg-grow-1" style="min-width: 0;">
+    <div class="flex-lg-grow-1 scan-panel-family">
       <div class="card rounded-3 mb-3 h-100">
         <div class="card-header"><span id="familyPanelTitle"></span></div>
         <div class="card-body">
@@ -73,7 +73,7 @@
       </div>
     </div>
 
-    <div class="flex-lg-shrink-0" style="width: min(100%, 26rem);">
+    <div class="flex-lg-shrink-0 scan-panel-control">
       <div class="card rounded-3 mb-3 text-center h-100">
         <div class="card-header"><span>Control No</span></div>
         <div class="card-body">
@@ -100,7 +100,7 @@
 <script src="<?= esc(asset_url('assets/js/dashboard/table-paginate.js'), 'attr') ?>"></script>
 <script>
 const BASE = '<?= rtrim(base_url(), '/') ?>';
-const AID_TYPE_NAME = <?= json_encode((string) $aidType['name'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+const AID_TYPE_NAME = <?= json_encode((string) $subsidyType['name'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 const $ = (id) => document.getElementById(id);
 
 // Empty-state zone doubles as the error surface: idle prompt by default,
@@ -208,7 +208,7 @@ async function scanLog(control) {
   if (data.logged) {
     // Prefer the server-returned subsidy type: the batch (and its subsidy type) may
     // have changed since this page loaded.
-    showBanner(true, 'Logged', `${data.aid_type_name || AID_TYPE_NAME} → ${headName} (Family #${data.control_no})`);
+    showBanner(true, 'Logged', `${data.subsidy_type_name || AID_TYPE_NAME} → ${headName} (Family #${data.control_no})`);
   } else {
     const d = data.duplicate || {};
     const by = d.scanned_by ? ` by ${d.scanned_by}` : '';

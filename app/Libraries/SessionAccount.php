@@ -38,7 +38,7 @@ class SessionAccount
      */
     public static function levelLabel(): string
     {
-        return RoleAccess::auditRoleLabel((string) (session()->get('role') ?? '')) ?? 'Account';
+        return RoleAccess::normalizeRole((string) (session()->get('role') ?? '')) ?? 'Account';
     }
 
 }

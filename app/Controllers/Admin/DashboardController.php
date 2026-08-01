@@ -6,13 +6,12 @@ use App\Controllers\BaseController;
 use App\Controllers\Concerns\DashboardPartialsTrait;
 use App\Controllers\HomeRoleAccessTrait;
 use App\Libraries\DashboardPageBuilder;
-use App\Libraries\RoleAccess;
-use CodeIgniter\HTTP\RedirectResponse;
 
 /**
- * Renders the admin/developer dashboard pages and their AJAX partials (the
- * `admin/*` routes). The sibling Employee\DashboardController owns the
- * `employee/*` pages.
+ * Renders the dashboard pages and their AJAX partials behind the flat routes
+ * (`dashboard`, `records`, `reference-data`, `cards`, `accounts`,
+ * `audit-trails`), guarded per page by the `roleNav` route filter. One
+ * controller serves every staff role, because there is one URL per page.
  *
  * Page rendering is delegated to App\Libraries\DashboardPageBuilder: this
  * controller only decides WHICH page to show, the builder assembles the view data
@@ -26,85 +25,75 @@ class DashboardController extends BaseController
     use HomeRoleAccessTrait;
     use DashboardPartialsTrait;
 
-    // The full-page Admin/Developer routes below each map to a route in
-    // Config\Routes and an $activePage the admin shell (Views/Admin/layout.php)
-    // switches on; the Developer/Admin guard lives inside
-    // DashboardPageBuilder::renderAdminPage().
+    // Each page action below maps to a route in Config\Routes and to the
+    // matching manifest key in Config\Navigation. Access is the roleNav filter's
+    // job, so no action re-guards the role here.
 
     /**
-     * Entry point for GET `admin`: redirects to the canonical admin dashboard URL.
+     * GET `dashboard`. Delegates to DashboardPageBuilder to assemble stats and
+     * render the shell on the "dashboard" page.
      */
-    public function index(): RedirectResponse
+    public function dashboard(): string
     {
-        return redirect()->to(site_url('admin/dashboard'));
+        return (new DashboardPageBuilder($this->request))->renderPage('dashboard');
     }
 
     /**
-     * GET `admin/dashboard`. Delegates to DashboardPageBuilder to assemble stats
-     * and render the admin shell on the "dashboard" tab. Frontend: full-page load
-     * of `Admin/layout`.
-     */
-    public function dashboard(): string|RedirectResponse
-    {
-        return (new DashboardPageBuilder($this->request))->renderAdminPage('dashboard');
-    }
-
-    /**
-     * GET `admin/accounts`. Renders the full accounts page, or-when the request
+     * GET `accounts`. Renders the full accounts page, or-when the request
      * is an AJAX/partial fetch from the dashboard-just the accounts fragment.
      */
-    public function accounts(): string|RedirectResponse
+    public function accounts(): string
     {
         if ($this->isPartialRequest()) {
             return $this->renderAccountsPartial();
         }
 
-        return (new DashboardPageBuilder($this->request))->renderAdminPage('accounts');
+        return (new DashboardPageBuilder($this->request))->renderPage('accounts');
     }
 
     /**
-     * GET `admin/manage-records`. Renders the family records list page, or the
+     * GET `records`. Renders the family records list page, or the
      * list fragment for AJAX search/pagination.
      */
-    public function manageRecords(): string|RedirectResponse
+    public function manageRecords(): string
     {
         if ($this->isPartialRequest()) {
             return $this->renderRecordListPartial();
         }
 
-        return (new DashboardPageBuilder($this->request))->renderAdminPage('family-manage');
+        return (new DashboardPageBuilder($this->request))->renderPage('records');
     }
 
     /**
-     * GET `admin/audit-trails`. Renders the audit log page, or the audit fragment
+     * GET `audit-trails`. Renders the audit log page, or the audit fragment
      * for AJAX search/filtering.
      */
-    public function auditTrails(): string|RedirectResponse
+    public function auditTrails(): string
     {
         if ($this->isPartialRequest()) {
             return $this->renderAuditPartial();
         }
 
-        return (new DashboardPageBuilder($this->request))->renderAdminPage('audit-trails');
+        return (new DashboardPageBuilder($this->request))->renderPage('audit-trails');
     }
 
     /**
-     * GET `admin/reference-data`. One page for the four lookup tables
-     * (Sectors, Services, Categories, Subsidy Types), switched by ?tab=.
-     * Mutations still post to the Lookups\* and AidTypes controllers.
+     * GET `reference-data`. One page for the lookup tables (Sectors, Services,
+     * Categories, Subsidy Types), switched by ?tab=. Mutations still post to the
+     * Lookups\* and SubsidyTypes controllers, which keep their own guards.
      */
-    public function referenceData(): string|RedirectResponse
+    public function referenceData(): string
     {
-        return (new DashboardPageBuilder($this->request))->renderAdminPage('reference-data');
+        return (new DashboardPageBuilder($this->request))->renderPage('reference-data');
     }
 
     /**
-     * GET `admin/cards`. Renders the QR access-card batch page in the admin
+     * GET `cards`. Renders the QR access-card batch page in the dashboard
      * shell. Generation/lookup are handled by Cards\QrCardController.
      */
-    public function cards(): string|RedirectResponse
+    public function cards(): string
     {
-        return (new DashboardPageBuilder($this->request))->renderAdminPage('cards');
+        return (new DashboardPageBuilder($this->request))->renderPage('cards');
     }
 
     // The AJAX partial methods below back the dashboard shell's fetch-loaded
@@ -114,34 +103,19 @@ class DashboardController extends BaseController
     // Front-end loader: assets/js/dashboard/*-modal.js.
 
     /**
-     * Role guard for admin partial fetches; returns a RedirectResponse to block
-     * non Developer/Admin users, otherwise null to continue.
-     */
-    private function guardAdminPartialAccess(): ?RedirectResponse
-    {
-        return RoleAccess::requireRole(['Developer', 'Admin']);
-    }
-
-    /**
      * Returns just the accounts table fragment for the dashboard's AJAX loader
-     * (assets/js/dashboard/*-modal.js). Guarded for Developer/Admin; renders
-     * `Admin/accounts` with data from DashboardPageBuilder.
+     * (assets/js/dashboard/*-modal.js); renders `Admin/accounts` with data from
+     * DashboardPageBuilder.
      */
-    private function renderAccountsPartial(): string|RedirectResponse
+    private function renderAccountsPartial(): string
     {
-        $guard = $this->guardAdminPartialAccess();
-
-        if ($guard instanceof RedirectResponse) {
-            return $guard;
-        }
-
         $currentRole = $this->normalizeRole((string) session()->get('role'));
 
         if (! in_array($currentRole, ['Developer', 'Admin'], true)) {
             return '<div class="alert alert-danger mb-0">Developer or Admin access is required for account management.</div>';
         }
 
-        $viewData = (new DashboardPageBuilder($this->request))->buildAdminViewData('accounts');
+        $viewData = (new DashboardPageBuilder($this->request))->buildViewData('accounts');
 
         return view('Admin/accounts', [
             'adminAccounts' => $viewData['adminAccounts'] ?? [],
@@ -157,37 +131,25 @@ class DashboardController extends BaseController
     }
 
     /**
-     * Returns the family records list fragment (table rows) for the admin
-     * manage-records AJAX search/pagination. Renders
-     * `Family/list` with data from DashboardPageBuilder.
+     * Returns the family records list fragment (table rows) for the
+     * manage-records AJAX search/pagination. Renders `Family/list` with data from
+     * DashboardPageBuilder, which scopes the list's controls to the session role.
      */
-    private function renderRecordListPartial(): string|RedirectResponse
+    private function renderRecordListPartial(): string
     {
-        $guard = $this->guardAdminPartialAccess();
-
-        if ($guard instanceof RedirectResponse) {
-            return $guard;
-        }
-
         return view(
             'Family/list',
-            (new DashboardPageBuilder($this->request))->buildAdminRecordListViewData()
+            (new DashboardPageBuilder($this->request))->buildRecordListViewData()
         );
     }
 
     /**
-     * Returns the audit-trail list fragment for the admin audit AJAX
-     * search/filter. Renders `Admin/audit-trails`.
+     * Returns the audit-trail list fragment for the audit AJAX search/filter.
+     * Renders `Admin/audit-trails`.
      */
-    private function renderAuditPartial(): string|RedirectResponse
+    private function renderAuditPartial(): string
     {
-        $guard = $this->guardAdminPartialAccess();
-
-        if ($guard instanceof RedirectResponse) {
-            return $guard;
-        }
-
-        $viewData = (new DashboardPageBuilder($this->request))->buildAdminViewData('audit-trails');
+        $viewData = (new DashboardPageBuilder($this->request))->buildViewData('audit-trails');
 
         return view('Admin/audit-trails', [
             'recentAudits' => $viewData['recentAudits'] ?? [],
@@ -197,5 +159,4 @@ class DashboardController extends BaseController
             'auditListData' => $viewData['auditListData'] ?? [],
         ]);
     }
-
 }

@@ -88,6 +88,13 @@
     background: rgba(20, 35, 31, 0.44);
 }
 
+/* On the standalone Data Entry page there is no modal box to sit inside, so the
+   backdrop covers the viewport instead of the (page-tall) form. */
+.family-draft-dialog-backdrop.is-page-level {
+    position: fixed;
+    z-index: 1080;
+}
+
 .family-draft-dialog {
     width: min(28rem, 100%);
     padding: 1.25rem;
@@ -567,6 +574,20 @@
     background: #ffffff;
 }
 
+/* Title and count for the members section. No rule of its own and no border box:
+   the boxed header repeated the section name the page already prints above it. */
+.family-section-head {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.9rem;
+}
+
+/* Count stays right whether or not the title beside it was rendered. */
+.family-section-head [data-family-members-count] {
+    margin-left: auto;
+}
+
 .family-person-card-header {
     display: flex;
     align-items: center;
@@ -727,68 +748,6 @@
 .floating-family-modal.is-family-entry-modal .family-entry-actions .btn:not(.btn-link) {
     min-height: 2.3rem;
     font-size: 0.84rem;
-}
-
-.family-draft-dialog-backdrop {
-    position: absolute;
-    z-index: 12;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1.5rem;
-    background: rgba(20, 35, 31, 0.44);
-}
-
-.family-draft-dialog {
-    width: min(28rem, 100%);
-    padding: 1.25rem;
-    border: 1px solid #cfe0db;
-    border-radius: 0.45rem;
-    background: #ffffff;
-    color: #263b35;
-}
-
-.family-draft-dialog-icon {
-    display: inline-flex;
-    width: 2.5rem;
-    height: 2.5rem;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 0.85rem;
-    border-radius: 50%;
-    background: #e7f2ee;
-    color: #157347;
-    font-size: 1.15rem;
-}
-
-.family-draft-dialog-icon.is-warning {
-    background: #fff4db;
-    color: #9a5b00;
-}
-
-.family-draft-dialog h3 {
-    margin: 0;
-    color: #243b35;
-    font-size: 1.05rem;
-    font-weight: 800;
-}
-
-.family-draft-dialog p {
-    margin: 0.45rem 0 0;
-    color: #5f6f69;
-    font-size: 0.95rem;
-}
-
-.family-draft-dialog-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 0.65rem;
-    margin-top: 1.25rem;
-}
-
-.family-draft-dialog-actions .btn {
-    min-width: 6.5rem;
 }
 
 .family-detail {
@@ -1093,6 +1052,7 @@
 
 /* Repeatable family-member capture (the Members step) and the save toast. */
 .family-members-section { margin-top: 1rem; }
+
 .family-toast { position: fixed; top: 1rem; right: 1rem; z-index: 1080; max-width: 22rem; margin: 0; }
 
 /* Background-import progress toasts (bottom-right). The modal closes on submit and
@@ -1140,31 +1100,6 @@
     color: #8a6d1b;
 }
 
-/* Import-fix modal: a box flagged by an import error/warning, with the message beneath it. */
-.import-field-error {
-    border-color: #dc3545 !important;
-    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.18);
-}
-
-.import-field-warn {
-    border-color: #d6a400 !important;
-    box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.22);
-}
-
-.import-field-note {
-    margin-top: 0.25rem;
-    font-weight: 600;
-    line-height: 1.3;
-}
-
-.import-field-note-error {
-    color: #b02a37;
-}
-
-.import-field-note-warn {
-    color: #997404;
-}
-
 /* Government forms are filled in capitals. Typed values are stored uppercase too
    (see MemberFieldNormalizer); values picked from a dropdown keep their stored
    casing and are only displayed this way, so nothing here changes what is posted.
@@ -1178,4 +1113,37 @@
 /* The program filter is a search box, not a captured value. */
 .family-entry-form [data-family-service-filter] {
     text-transform: none;
+}
+
+/* Read-only Family Profile (Family/profile-view.php). A record is printed here,
+   not edited: a small muted label with the value in bold under it, the way a
+   ticket prints a field. No control styling, because there are no controls. */
+.record-view-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+}
+
+.record-view-label {
+    display: block;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--bs-secondary-color);
+}
+
+.record-view-value {
+    font-weight: 600;
+    color: var(--bs-body-color);
+    overflow-wrap: anywhere;
+}
+
+.record-view-list {
+    margin: 0.25rem 0 0;
+    padding-left: 1.1rem;
+}
+
+.record-view-list li {
+    font-weight: 600;
 }

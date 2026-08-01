@@ -2,15 +2,13 @@
 /**
  * Manage Records list (Admin, Employee and Viewer > Manage Records).
  *
- * One view serves all three roles: $routeBase carries the role's URL prefix and the
- * read-only flags decide which controls render, so there is no per-role copy of this
- * page. The rows themselves are not rendered here; the table is loaded over AJAX from
+ * One view serves every role: the read-only flags decide which controls render,
+ * so there is no per-role copy of this page. The rows themselves are not rendered here; the table is loaded over AJAX from
  * the dataTable endpoint, and row actions are gated again server side in
  * FamilyController::dataTableActions(). This page is the layout source of truth the
  * other list pages are matched against.
  */
 
-$routeBase = (string) ($routeBase ?? 'admin/manage-family');
 $keyword = trim((string) ($keyword ?? ''));
 $status = in_array((string) ($status ?? 'all'), ['all', 'active', 'archived'], true) ? (string) $status : 'all';
 $filters = (array) ($filters ?? []);
@@ -87,8 +85,8 @@ $statusGroup = [
 
 $actionsHtml = '';
 if ($canEdit) {
-    $actionsHtml .= '<button class="' . btn('add') . ' flex-fill js-open-family-add-modal" type="button" data-family-add-record data-modal-url="' . esc(site_url($routeBase . '/create?partial=1'), 'attr') . '" data-modal-title="New Family Record">Add</button>';
-    $actionsHtml .= '<button class="' . btn('import') . ' flex-fill js-open-family-import-modal" type="button" data-modal-url="' . esc(site_url($routeBase . '/import'), 'attr') . '" data-modal-title="Import from Excel" title="Bulk-import families from an Excel file">Import</button>';
+    $actionsHtml .= '<a class="' . btn('add') . ' flex-fill" href="' . esc(site_url('records/entry')) . '"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Add Family</a>';
+    $actionsHtml .= '<a class="' . btn('import') . ' flex-fill" href="' . esc(site_url('records/import')) . '" title="Bulk-import families from an Excel file"><i class="bi bi-file-earmark-arrow-up me-1" aria-hidden="true"></i>Import Excel</a>';
 }
 ?>
 
@@ -112,8 +110,6 @@ if ($canEdit) {
     'cardClass' => 'overflow-hidden',
     'bodyClass' => 'd-flex flex-column overflow-hidden p-3',
     'bodyView' => 'Family/list-body',
-    'bodyData' => [
-        'routeBase' => $routeBase,
-    ],
+    'bodyData' => [],
     'footer' => '<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 w-100"><div id="familyFooterLeft"></div><div id="familyFooterRight"></div></div>',
 ]) ?>

@@ -8,14 +8,16 @@
 Dashboard controllers are thin dispatchers - one line per page, no data
 assembly.
 
-Canonical - `app/Controllers/Admin/DashboardController.php:51`:
+Canonical - `app/Controllers/Admin/DashboardController.php`:
 
 ```php
-return (new DashboardPageBuilder($this->request))->renderAdminPage('dashboard');
+return (new DashboardPageBuilder($this->request))->renderPage('dashboard');
 ```
 
-Every admin/employee/viewer page route follows this exact shape (`:64`, `:86`,
-`:99`, and the Employee/Viewer dashboard controllers).
+Every page route on that controller follows this exact shape, for every role: the
+argument is the navigation-manifest key. The page method carries no role check
+either; the route's `roleNav:<key>` filter is the gate
+(`docs/knowledge/binan-conventions/routing-subnamespaces.md`).
 
 **Worked example:** the Families feature was split along this boundary
 (2026-07, `refactor/mvc-cleanup`). Decisions live in three controllers -
@@ -37,16 +39,22 @@ and page dispatch stays readable.
 All dashboard page data is assembled by `DashboardPageBuilder`, keyed by page
 name - never inline in a controller.
 
-Canonical - `app/Libraries/DashboardPageBuilder.php:36`:
+Canonical - `app/Libraries/DashboardPageBuilder.php`:
 
 ```php
-public function renderAdminPage(string $activePage): string|RedirectResponse
+public function renderPage(string $activePage): string|RedirectResponse
 ```
 
-with `buildAdminViewData()` (`:62`), `buildAdminRecordListViewData()` (`:223`),
-`renderEmployeePage()` (`:484`), `renderViewerPage()` (`:571`) as the
-per-role entry points. Adding a dashboard page = add a branch here, not a
-data-assembly block in the controller.
+with `buildViewData()` and `buildRecordListViewData()` behind it. There is one
+render path for every role: where a role really differs (an Encoder's dashboard
+shows only their own activity, a Viewer's record list emits no edit actions) that is
+a conditional inside the builder, not a parallel method. Adding a dashboard page =
+add a branch here, not a data-assembly block in the controller.
+
+A page reached outside the builder (`records/entry`, `records/{id}`,
+`records/import`) may `return view('layout', [...])` from its controller with its
+own `bodyData`, but the data shaping still belongs in a library or a
+`*_view_data()` helper.
 
 **Boundary note:** modal/partial endpoints (e.g. account form, family modal)
 legitimately `return view(...)` from their controllers - the rule governs

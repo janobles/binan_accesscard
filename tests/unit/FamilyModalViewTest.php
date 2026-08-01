@@ -269,7 +269,7 @@ final class FamilyModalViewTest extends CIUnitTestCase
         );
     }
 
-    public function testClosedRowSectorValuesCarryTheirLabelForTheSummary(): void
+    public function testClosedRowSectorValuesCarryTheirShortcodeForTheSummary(): void
     {
         $html = $this->renderDecoded([
             'modalMode' => 'update',
@@ -278,7 +278,7 @@ final class FamilyModalViewTest extends CIUnitTestCase
         ]);
 
         $this->assertMatchesRegularExpression(
-            '/name="members\[0\]\[sector_ids\]\[\]" value="1"[^>]*data-sector-name="Senior Citizen"/',
+            '/name="members\[0\]\[sector_ids\]\[\]" value="1"[^>]*data-sector-code="SC"/',
             $html
         );
     }

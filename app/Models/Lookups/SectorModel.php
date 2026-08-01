@@ -277,11 +277,12 @@ class SectorModel extends Model
     }
 
     /**
-     * [sectorID => SHORTCODE] map of active sectors, e.g. for the Manage
-     * Records DataTable's Sector column. Rows without an id or shortcode are
-     * skipped; shortcodes are uppercased.
+     * [sectorID => ['code' => SHORTCODE, 'name' => full name]] map of active
+     * sectors, e.g. for the Manage Records DataTable's Sector column, where the
+     * code is the badge label and the name is its hover tooltip. Rows without an
+     * id or shortcode are skipped; shortcodes are uppercased.
      *
-     * @return array<int, string>
+     * @return array<int, array{code: string, name: string}>
      */
     public function shortcodeMap(): array
     {
@@ -292,7 +293,12 @@ class SectorModel extends Model
             $shortcode = trim((string) ($sector['shortcode'] ?? ''));
 
             if ($sectorId > 0 && $shortcode !== '') {
-                $map[$sectorId] = mb_strtoupper($shortcode);
+                $name = trim((string) ($sector['name'] ?? ''));
+
+                $map[$sectorId] = [
+                    'code' => mb_strtoupper($shortcode),
+                    'name' => $name,
+                ];
             }
         }
 

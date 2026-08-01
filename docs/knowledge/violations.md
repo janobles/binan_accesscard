@@ -42,7 +42,7 @@ unchecked item was already moved to issue #9 (UX decision, not code mess).
   reword the convention to "typed signatures, no strict_types declare".
   `php-practices/idioms.md` documents current reality.
   *(Fixed: reworded CLAUDE.md convention to typed-signatures-only, refactor/mvc-cleanup)*
-- [ ] 🟠 Major: `app/Views/components/dashboard_sidebar.php:1` - sidebar exists
+- [x] 🟠 Major: `app/Views/components/dashboard_sidebar.php:1` - sidebar exists
   three times: this component (used only by `Admin/layout.php:83`, all links
   hardcoded to `admin/*` despite the "role-aware" doc comment) plus hand-rolled
   inline copies in `Employee/layout.php:41` and `Viewer/layout.php:48`. Also
@@ -51,6 +51,10 @@ unchecked item was already moved to issue #9 (UX decision, not code mess).
   relocate to `Partials/` per the views-bootstrap.md taxonomy (it is a page
   fragment, not a props-only component). Cross-role regression surface; own
   branch.
+  *(Fixed: one `app/Views/layout.php`, sidebar rendered from
+  `Config\Navigation::linksFor($role)`; the three role layouts and the two
+  role-parallel dashboard controllers are deleted - feat/nav-taxonomy-url-space.
+  It stayed under `components/` because the manifest makes it props-only again.)*
 - [x] 🟠 Major: `app/Controllers/Families/FamilyController.php:862` - when a
   member posted no sector checkbox, `memberPayloadFromArray()` silently copied
   the head's sectors, contradicting the per-person sector controls and allowing
@@ -63,6 +67,40 @@ unchecked item was already moved to issue #9 (UX decision, not code mess).
   (red on `main` since before feat/family-member-rows, verified by stashing the
   branch). Move both to `public/css/scanner-scan.css`, which the scanner manifest
   already loads.
+
+## Appended from feat/nav-taxonomy-url-space (2026-07-30)
+
+- [x] ⚪ Cleanup: `app/Controllers/Families/FamilyImportController.php` -
+  `reviewFamilyModal`, `reviewFamilySave`, and `reviewFamilyRemove` (with their
+  `records/import/review/{id}/family*` routes, `ImportFamilyModalBuilder`, and the
+  `.js-import-fix-edit` registration in `manage-family-modal.js:2207`) are no
+  longer linked from any page: the per-family Edit/Remove cards they served were
+  replaced by the per-person review table, which fixes a bad value in its own
+  cell. The routes are still registered and still answer a direct request behind
+  their `roleNav:records-import` filter. Left in place
+  because the design spec calls the import backend unchanged, and because a
+  structural problem (no head, two addresses under one QR) has no single cell to
+  edit, so a decision is owed on whether that case gets a surface here or is
+  fixed in the spreadsheet only. Retire the endpoints and the builder together
+  with that decision.
+  *(Fixed: feat/nav-taxonomy-url-space retired the endpoints, routes,
+  `ImportFamilyModalBuilder`, and the `manage-family-modal.js` hook along with
+  the per-family cards they served.)*
+- [ ] ⚪ Cleanup: `app/Helpers/asset_helper.php:119,134` - the `employee` and
+  `viewer` script groups (and the matching style groups) are dead now that
+  `layout.php` is the only dashboard shell and loads `admin`. Pre-existing shape,
+  not touched by the collapse; delete when nothing else reads the manifest by
+  role name.
+- [x] 🔵 UX/needs-decision: the review screen lost the paging, per-list search,
+  severity/code filters, bulk remove, "needs a QR" list, and "ready to import"
+  list that the grouped card report had. The per-person table with the
+  problems-only switch is the design spec's deliberate replacement, but a
+  350-person file now renders as 350 rows with no pager. Revisit if an operator
+  reports it; the toggle keeps the default view small.
+  *(Fixed: feat/nav-taxonomy-url-space restored paging, search, and
+  severity/code filters on the per-person table. Bulk remove and the
+  "needs a QR" / "ready to import" lists stayed out of scope and are not
+  restored.)*
 
 Exempt (checked, not violations): `app/Views/errors/html/*` (framework error
 pages, standalone by design), `app/Views/Scanner/pdf/report.php` (PDF

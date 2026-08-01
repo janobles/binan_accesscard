@@ -3,13 +3,18 @@
 namespace App\Libraries;
 
 /**
- * Shapes a staged family-import job (the review-phase result_json produced by
- * App\Jobs\FamilyImportJob) into a report.
+ * Shapes a staged family-import job (the review-phase bundle produced by
+ * App\Jobs\FamilyImportJob) into what the review screen renders.
  *
- * Every issue names the EXACT Excel cell (e.g. "H42"), the column, the current value, and
- * what to do - so the operator can fix it in the spreadsheet and upload again. A flagged
- * family can also be fixed in place: familiesToFix() drives the per-family Edit/Remove
- * actions on the review screen, which restage the corrected group without a re-upload.
+ * build() returns the page-load summary: the file name, the counts, whole-file
+ * notices, and the issue codes present so the filter can offer them. page()
+ * returns one server-side slice of rows, so a 10,000-row file never crosses the
+ * wire whole.
+ *
+ * A row lists every distinct issue it carries and offers an editor for every
+ * field carrying one, whatever column that field belongs to. That is the rule
+ * that keeps a problem from being invisible: the old table showed four columns,
+ * so an error on barangay or relationship flagged a row with nothing to fix.
  *
  * Pure presentation - no DB, request, or session.
  */
@@ -67,238 +72,217 @@ class ImportReviewPresenter
     ];
 
     /**
-     * Builds the read-only report from a decoded review-phase result_json.
+     * The page-load summary. Deliberately carries no rows: those arrive from
+     * page() over the rows endpoint.
      *
-     * @param array $result {rows, errors, counts, file}
+     * @param array $result the staged bundle {rows, errors, counts, columns, file}
      */
     public function build(array $result): array
     {
-        $rows    = is_array($result['rows'] ?? null) ? $result['rows'] : [];
-        $errors  = is_array($result['errors'] ?? null) ? $result['errors'] : [];
-        $counts  = is_array($result['counts'] ?? null) ? $result['counts'] : [];
-        // field => Excel column letter, so an inline-editable cell can show its ref (e.g. H42).
-        $columns = is_array($result['columns'] ?? null) ? $result['columns'] : [];
-
-        // Index cell values per sheet row, and the rows of each QR group.
-        $byRow = [];
-        $byQr  = [];
-        foreach ($rows as $entry) {
-            $sheetRow = (int) ($entry['sheetRow'] ?? 0);
-            $data = is_array($entry['data'] ?? null) ? $entry['data'] : [];
-            $byRow[$sheetRow] = $data;
-            $qr = trim((string) ($data['familyno'] ?? ''));
-            if ($qr !== '') {
-                $byQr[$qr][] = $sheetRow;
-            }
-        }
-
-        $families = (int) ($counts['families'] ?? 0);
-        $existing = (int) ($counts['existing'] ?? 0);
-        $ready    = $this->readyFamilies($byQr, $byRow, $errors);
+        $errors = is_array($result['errors'] ?? null) ? $result['errors'] : [];
+        $counts = is_array($result['counts'] ?? null) ? $result['counts'] : [];
+        $rows   = is_array($result['rows'] ?? null) ? $result['rows'] : [];
 
         return [
             'file'   => (string) ($result['file'] ?? 'import.xlsx'),
             'counts' => [
-                // What is in the file - every person row and QR group, broken ones included.
-                'rows'        => (int) ($counts['rows'] ?? count($rows)),
-                'groups'      => (int) ($counts['groups'] ?? $families),
-                // What the importer could build (a head-less or bad-QR group builds nothing).
-                'families'    => $families,
-                'members'     => (int) ($counts['members'] ?? 0),
-                'people'      => (int) ($counts['people'] ?? $families + (int) ($counts['members'] ?? 0)),
-                'existing'    => $existing,
-                'newFamilies' => max(0, $families - $existing),
-                'appends'     => (int) ($counts['appends'] ?? 0),
-                'blocking'    => (int) ($counts['blocking'] ?? 0),
-                'warnings'    => (int) ($counts['warnings'] ?? 0),
-                'ready'       => count($ready),
+                'rows'     => (int) ($counts['rows'] ?? count($rows)),
+                'groups'   => (int) ($counts['groups'] ?? 0),
+                'families' => (int) ($counts['families'] ?? 0),
+                'members'  => (int) ($counts['members'] ?? 0),
+                'people'   => (int) ($counts['people'] ?? 0),
+                'existing' => (int) ($counts['existing'] ?? 0),
+                'newFamilies' => max(0, (int) ($counts['families'] ?? 0) - (int) ($counts['existing'] ?? 0)),
+                'appends'  => (int) ($counts['appends'] ?? 0),
+                'blocking' => (int) ($counts['blocking'] ?? 0),
+                'warnings' => (int) ($counts['warnings'] ?? 0),
             ],
-            'ready'      => $ready,
-            // The worker's in-review edit history (newest last), so the screen can show what
-            // they changed before they commit.
-            'changes'    => is_array($result['changes'] ?? null) ? array_values($result['changes']) : [],
-            'families'   => $this->familiesToFix($byQr, $byRow, $errors, $columns),
-            // Rows with a blank QR are never grouped into a family - surfaced so the operator
-            // can give them a QR and fix them in place.
-            'unassigned' => $this->unassignedRows($rows, $errors, $byRow, $columns),
-            // Whole-file problems (unreadable / empty) - nothing to edit; upload a fixed file.
+            // The codes actually present, so the filter dropdown offers only what
+            // this file can be narrowed to.
+            'codes'       => $this->codesPresent($errors),
             'fileNotices' => $this->fileNotices($errors),
         ];
     }
 
     /**
-     * One entry per QR group that has any blocking error OR warning - the families the
-     * operator can open in the Edit modal (or Remove). Clean, warning-free groups are
-     * omitted; they need no attention. Groups with a blank QR are omitted too - with no QR
-     * there is nothing to key the in-app fix on (fix those in the file).
+     * One slice of the review table.
      *
-     * @param array<string, list<int>>          $byQr    [qr => sheet rows]
-     * @param array<int, array<string, string>> $byRow   [sheet row => cell values]
-     * @param list<array>                       $errors
-     * @param array<string, string>             $columns [field => Excel column letter]
+     * Filtering runs over every staged row before the slice is cut, so `filtered`
+     * counts what the current narrowing matches and `total` counts the file.
+     *
+     * @return array{rows: list<array>, total: int, filtered: int, page: int, per: int}
+     */
+    public function page(array $result, ImportReviewQuery $query): array
+    {
+        $rows  = is_array($result['rows'] ?? null) ? $result['rows'] : [];
+        $shaped = $this->shapeRows($result);
+        $kept   = [];
+
+        foreach ($shaped as $row) {
+            if ($this->matches($row, $query)) {
+                $kept[] = $row;
+            }
+        }
+
+        return [
+            'rows'     => array_values(array_slice($kept, $query->offset(), $query->per)),
+            'total'    => count($rows),
+            'filtered' => count($kept),
+            'page'     => $query->page,
+            'per'      => $query->per,
+        ];
+    }
+
+    /**
+     * One shaped row by its sheet row, or null when it is not staged. Apply uses
+     * this to return just the row it changed rather than the whole report.
+     */
+    public function row(array $result, int $sheetRow): ?array
+    {
+        foreach ($this->shapeRows($result) as $row) {
+            if ($row['sheetRow'] === $sheetRow) {
+                return $row;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Every staged row shaped for the table, in sheet order.
+     *
      * @return list<array>
      */
-    private function familiesToFix(array $byQr, array $byRow, array $errors, array $columns): array
+    private function shapeRows(array $result): array
     {
-        // Codes that mean this QR/family (or its people) are already on file.
-        $existingCodes = ['DUP-EXISTS' => true, 'DUP-DIFF' => true, 'ADD-MEMBER' => true];
+        $rows    = is_array($result['rows'] ?? null) ? $result['rows'] : [];
+        $errors  = is_array($result['errors'] ?? null) ? $result['errors'] : [];
+        $columns = is_array($result['columns'] ?? null) ? $result['columns'] : [];
 
-        $blocking = [];
-        $warnings = [];
-        $types    = [];   // [qr => [code => severity]] - distinct issue kinds per family
-        $existing = [];   // [qr => true] - already in the system
+        // Index the errors once by sheet row; shaping 10,000 rows must not walk the
+        // error list once per row.
+        $errorsByRow = [];
 
         foreach ($errors as $error) {
-            $qr = trim((string) ($error['familyNo'] ?? ''));
+            $sheetRow = $error['sheetRow'] ?? null;
 
-            if ($qr === '') {
-                continue;
-            }
-
-            $code = (string) ($error['code'] ?? '');
-            $sev  = (($error['severity'] ?? 'blocking') === 'blocking') ? 'blocking' : 'warning';
-
-            if ($sev === 'blocking') {
-                $blocking[$qr] = ($blocking[$qr] ?? 0) + 1;
-            } else {
-                $warnings[$qr] = ($warnings[$qr] ?? 0) + 1;
-            }
-
-            // Keep one entry per code, upgrading to blocking if any instance blocks.
-            if ($code !== '' && (! isset($types[$qr][$code]) || $sev === 'blocking')) {
-                $types[$qr][$code] = $sev;
-            }
-
-            if (isset($existingCodes[$code])) {
-                $existing[$qr] = true;
-            }
-
-            // Only a HEAD already on file marks the whole family as on file (mirrors ready()).
-            if ($code === 'DUP-DB' && $this->isHeadRow($byRow[(int) ($error['sheetRow'] ?? 0)] ?? [])) {
-                $existing[$qr] = true;
+            if ($sheetRow !== null) {
+                $errorsByRow[(int) $sheetRow][] = $error;
             }
         }
 
-        $out = [];
+        $labelByQr = $this->familyLabels($rows);
+        $out       = [];
 
-        foreach ($byQr as $qr => $sheetRows) {
-            $qr = (string) $qr;
-            $b  = (int) ($blocking[$qr] ?? 0);
-            $w  = (int) ($warnings[$qr] ?? 0);
-
-            if ($b === 0 && $w === 0) {
-                continue;
-            }
-
-            $headRow = null;
-
-            foreach ($sheetRows as $sheetRow) {
-                if ($this->isHeadRow($byRow[$sheetRow] ?? [])) {
-                    $headRow = $sheetRow;
-                    break;
-                }
-            }
-
-            if ($headRow === null) {
-                $headRow = $sheetRows[0] ?? null;
-            }
-
-            $head = $headRow !== null ? ($byRow[$headRow] ?? []) : [];
+        foreach ($rows as $entry) {
+            $sheetRow = (int) ($entry['sheetRow'] ?? 0);
+            $data     = is_array($entry['data'] ?? null) ? $entry['data'] : [];
+            $qr       = trim((string) ($data['familyno'] ?? ''));
+            $own      = $errorsByRow[$sheetRow] ?? [];
 
             $out[] = [
+                'sheetRow' => $sheetRow,
                 'qr'       => $qr,
-                'sheetRow' => $headRow,
-                'head'     => trim((string) ($head['firstname'] ?? '') . ' ' . (string) ($head['lastname'] ?? '')),
-                'members'  => max(0, count($sheetRows) - 1),
-                'blocking' => $b,
-                'warnings' => $w,
-                'existing' => ! empty($existing[$qr]),
-                // Each distinct problem as {label, severity} so the row can list them all.
-                'types'    => $this->issueTypes($types[$qr] ?? []),
-                // Field-level problems as inline-editable cells (structural ones stay in the modal).
-                'editableCells' => $this->editableCells($sheetRows, $byRow, $errors, $columns),
+                'family'   => $qr === '' ? 'No QR' : ($labelByQr[$qr] ?? 'QR ' . $qr),
+                'role'     => $this->isHeadRow($data)
+                    ? 'Head'
+                    : (trim((string) ($data['relationship'] ?? '')) ?: 'Member'),
+                'values'   => [
+                    'lastname'  => (string) ($data['lastname'] ?? ''),
+                    'firstname' => (string) ($data['firstname'] ?? ''),
+                    'birthday'  => (string) ($data['birthday'] ?? ''),
+                    'sex'       => (string) ($data['sex'] ?? ''),
+                ],
+                'severity' => $this->worstSeverity($own),
+                'issues'   => $this->issuesFor($own),
+                'fields'   => $this->fieldsFor($own, $data, $columns, $sheetRow),
             ];
         }
-
-        usort($out, static fn (array $a, array $b): int => ((int) ($a['sheetRow'] ?? 0)) <=> ((int) ($b['sheetRow'] ?? 0)));
 
         return $out;
     }
 
     /**
-     * The inline-editable cells for a set of sheet rows: one input per field-level error (an
-     * error carrying a non-null `field`). Structural errors (head / address / grouping - field
-     * null) are excluded; those still need the Edit modal. Keyed to the exact staged cell so the
-     * screen can render an input and POST {sheetRow, field, value}.
+     * The household label per QR: the head's last name, so the grouping reads as a
+     * family rather than as a number. A group with no head falls back to its QR.
      *
-     * @param list<int>                         $sheetRows the group's sheet rows
-     * @param array<int, array<string, string>> $byRow     [sheet row => cell values]
-     * @param list<array>                       $errors
-     * @param array<string, string>             $columns   [field => Excel column letter]
-     * @return list<array{sheetRow:int, field:string, cell:string, label:string, value:string, code:string, severity:string, message:string}>
+     * @return array<string, string>
      */
-    private function editableCells(array $sheetRows, array $byRow, array $errors, array $columns): array
+    private function familyLabels(array $rows): array
     {
-        $wanted = array_fill_keys(array_map('intval', $sheetRows), true);
-        $out    = [];   // [sheetRow|field => cell] - one input per cell
+        $out = [];
+
+        foreach ($rows as $entry) {
+            $data = is_array($entry['data'] ?? null) ? $entry['data'] : [];
+            $qr   = trim((string) ($data['familyno'] ?? ''));
+
+            if ($qr === '') {
+                continue;
+            }
+
+            if (! isset($out[$qr])) {
+                $out[$qr] = 'QR ' . $qr;
+            }
+
+            if ($this->isHeadRow($data) && trim((string) ($data['lastname'] ?? '')) !== '') {
+                $out[$qr] = trim((string) ($data['lastname'] ?? ''));
+            }
+        }
+
+        return $out;
+    }
+
+    /** @param list<array> $errors this row's errors */
+    private function worstSeverity(array $errors): string
+    {
+        $worst = '';
 
         foreach ($errors as $error) {
-            $field    = $error['field'] ?? null;
-            $sheetRow = $error['sheetRow'] ?? null;
+            if (($error['severity'] ?? 'blocking') === 'blocking') {
+                return 'blocking';
+            }
 
-            if ($field === null || $sheetRow === null || ! isset($wanted[(int) $sheetRow])) {
+            $worst = 'warning';
+        }
+
+        return $worst;
+    }
+
+    /**
+     * The row's distinct problems, blocking first: what the Issues column lists.
+     * Field-less codes (a family already on file, members being appended) belong
+     * here too - they report what the import will do, so they must be readable
+     * even though they offer nothing to edit.
+     *
+     * @param list<array> $errors this row's errors
+     * @return list<array{code: string, label: string, severity: string, message: string}>
+     */
+    private function issuesFor(array $errors): array
+    {
+        $byCode = [];
+
+        foreach ($errors as $error) {
+            $code = (string) ($error['code'] ?? '');
+
+            if ($code === '') {
                 continue;
             }
 
-            $field    = (string) $field;
-            $sheetRow = (int) $sheetRow;
-            $key      = $sheetRow . '|' . $field;
-            $sev      = (($error['severity'] ?? 'blocking') === 'blocking') ? 'blocking' : 'warning';
+            $severity = (($error['severity'] ?? 'blocking') === 'blocking') ? 'blocking' : 'warning';
 
-            // One input per cell; a blocking error wins over a warning on the same cell.
-            if (isset($out[$key]) && ($out[$key]['severity'] === 'blocking' || $sev !== 'blocking')) {
+            if (isset($byCode[$code]) && ($byCode[$code]['severity'] === 'blocking' || $severity !== 'blocking')) {
                 continue;
             }
 
-            $letter = isset($columns[$field]) ? (string) $columns[$field] : '';
-            $data   = $byRow[$sheetRow] ?? [];
-
-            $out[$key] = [
-                'sheetRow' => $sheetRow,
-                'field'    => $field,
-                'cell'     => $letter !== '' ? $letter . $sheetRow : '',
-                'label'    => self::FIELD_LABELS[$field] ?? $field,
-                'value'    => (string) ($data[$field] ?? ''),
-                // Whose cell this is - so the editor names the person to fix, not just a cell ref.
-                'person'   => trim((string) ($data['firstname'] ?? '') . ' ' . (string) ($data['lastname'] ?? '')),
-                'role'     => $this->isHeadRow($data) ? 'head' : 'member',
-                'code'     => (string) ($error['code'] ?? ''),
-                'severity' => $sev,
+            $byCode[$code] = [
+                'code'     => $code,
+                'label'    => self::GROUPS[$code]['label'] ?? $code,
+                'severity' => $severity,
                 'message'  => (string) ($error['message'] ?? ''),
             ];
         }
 
-        return array_values($out);
-    }
-
-    /**
-     * Turns a [code => severity] map into an ordered list of {code, label, severity}, blocking
-     * kinds first, using the same friendly labels as the grouped report.
-     *
-     * @param array<string, string> $codes
-     * @return list<array{code:string, label:string, severity:string}>
-     */
-    private function issueTypes(array $codes): array
-    {
-        $out = [];
-
-        foreach ($codes as $code => $severity) {
-            $out[] = [
-                'code'     => $code,
-                'label'    => self::GROUPS[$code]['label'] ?? $code,
-                'severity' => $severity,
-            ];
-        }
+        $out = array_values($byCode);
 
         usort($out, static fn (array $a, array $b): int =>
             (($a['severity'] === 'blocking') ? 0 : 1) <=> (($b['severity'] === 'blocking') ? 0 : 1));
@@ -307,55 +291,114 @@ class ImportReviewPresenter
     }
 
     /**
-     * Every staged row with a blank QR - the importer never groups these into a family, so
-     * they carry no QR to Edit by. Each is listed with its own issue types so the operator can
-     * open it, type a QR, and fix it in place (keyed by sheet row, not QR).
+     * The row's editable fields: one entry per field carrying an error, whatever
+     * column it belongs to. This is what makes an error on barangay, relationship
+     * or income reachable, where the four-column table left it invisible.
      *
-     * @param list<array>                       $rows
-     * @param list<array>                       $errors
-     * @param array<int, array<string, string>> $byRow   [sheet row => cell values]
-     * @param array<string, string>             $columns [field => Excel column letter]
-     * @return list<array{sheetRow:int, person:string, types:list<array>, editableCells:list<array>}>
+     * A blocking error beats a warning on the same field, so a cell offers one
+     * editor carrying the reason that matters.
+     *
+     * @param list<array>           $errors  this row's errors
+     * @param array<string, string> $data    the row's staged cell values
+     * @param array<string, string> $columns [field => Excel column letter]
+     * @return list<array{field: string, label: string, cell: string, value: string, severity: string, message: string}>
      */
-    private function unassignedRows(array $rows, array $errors, array $byRow, array $columns): array
+    private function fieldsFor(array $errors, array $data, array $columns, int $sheetRow): array
     {
-        $codesByRow = [];
+        $byField = [];
 
         foreach ($errors as $error) {
-            $sheetRow = $error['sheetRow'] ?? null;
-            $code     = (string) ($error['code'] ?? '');
+            $field = $error['field'] ?? null;
 
-            if ($sheetRow === null || $code === '') {
+            // A field-less code has nothing to type into; it stays in issuesFor().
+            if ($field === null || ! isset(self::FIELD_LABELS[(string) $field])) {
                 continue;
             }
 
-            $sev = (($error['severity'] ?? 'blocking') === 'blocking') ? 'blocking' : 'warning';
+            $field    = (string) $field;
+            $severity = (($error['severity'] ?? 'blocking') === 'blocking') ? 'blocking' : 'warning';
 
-            if (! isset($codesByRow[(int) $sheetRow][$code]) || $sev === 'blocking') {
-                $codesByRow[(int) $sheetRow][$code] = $sev;
-            }
-        }
-
-        $out = [];
-
-        foreach ($rows as $entry) {
-            $data = is_array($entry['data'] ?? null) ? $entry['data'] : [];
-
-            if (trim((string) ($data['familyno'] ?? '')) !== '') {
+            if (isset($byField[$field]) && ($byField[$field]['severity'] === 'blocking' || $severity !== 'blocking')) {
                 continue;
             }
 
-            $sheetRow = (int) ($entry['sheetRow'] ?? 0);
+            $letter = isset($columns[$field]) ? (string) $columns[$field] : '';
 
-            $out[] = [
-                'sheetRow' => $sheetRow,
-                'person'   => trim((string) ($data['firstname'] ?? '') . ' ' . (string) ($data['lastname'] ?? '')),
-                'types'    => $this->issueTypes($codesByRow[$sheetRow] ?? []),
-                'editableCells' => $this->editableCells([$sheetRow], $byRow, $errors, $columns),
+            $byField[$field] = [
+                'field'    => $field,
+                'label'    => self::FIELD_LABELS[$field],
+                'cell'     => $letter !== '' ? $letter . $sheetRow : '',
+                'value'    => (string) ($data[$field] ?? ''),
+                'severity' => $severity,
+                'message'  => (string) ($error['message'] ?? ''),
             ];
         }
 
-        return $out;
+        return array_values($byField);
+    }
+
+    /**
+     * The distinct issue codes anywhere in the file, for the filter dropdown.
+     *
+     * @param list<array> $errors
+     * @return list<array{code: string, label: string, severity: string}>
+     */
+    private function codesPresent(array $errors): array
+    {
+        $byCode = [];
+
+        foreach ($errors as $error) {
+            $code = (string) ($error['code'] ?? '');
+
+            if ($code === '' || in_array($code, ['FILE', 'EMPTY', 'QR-11'], true)) {
+                continue;
+            }
+
+            $severity = (($error['severity'] ?? 'blocking') === 'blocking') ? 'blocking' : 'warning';
+
+            if (isset($byCode[$code]) && ($byCode[$code]['severity'] === 'blocking' || $severity !== 'blocking')) {
+                continue;
+            }
+
+            $byCode[$code] = [
+                'code'     => $code,
+                'label'    => self::GROUPS[$code]['label'] ?? $code,
+                'severity' => $severity,
+            ];
+        }
+
+        ksort($byCode);
+
+        return array_values($byCode);
+    }
+
+    /** Whether a shaped row survives the current narrowing. */
+    private function matches(array $row, ImportReviewQuery $query): bool
+    {
+        $severity = (string) $row['severity'];
+
+        if ($query->severity === 'problems' && $severity === '') {
+            return false;
+        }
+
+        if (in_array($query->severity, ['blocking', 'warning'], true) && $severity !== $query->severity) {
+            return false;
+        }
+
+        if ($query->code !== '' && ! in_array($query->code, array_column($row['issues'], 'code'), true)) {
+            return false;
+        }
+
+        if ($query->q === '') {
+            return true;
+        }
+
+        $haystack = mb_strtolower(implode(' ', [
+            $row['family'], $row['qr'], $row['role'],
+            $row['values']['lastname'], $row['values']['firstname'],
+        ]));
+
+        return str_contains($haystack, mb_strtolower($query->q));
     }
 
     /**
@@ -370,105 +413,10 @@ class ImportReviewPresenter
         $out = [];
 
         foreach ($errors as $error) {
-            if (in_array((string) ($error['code'] ?? ''), ['FILE', 'EMPTY'], true)) {
+            if (in_array((string) ($error['code'] ?? ''), ['FILE', 'EMPTY', 'QR-11'], true)) {
                 $out[] = (string) ($error['message'] ?? '');
             }
         }
-
-        return $out;
-    }
-
-    /**
-     * The families that are CORRECT - what the import will actually create.
-     *
-     * The rest of this report is nothing but bad news, which leaves the operator no way to
-     * see that the other 300 families are fine, or to eyeball a head and address before
-     * committing. This is the other half of the picture.
-     *
-     * A family is ready when nothing in its group blocks, it is not already on file
-     * (DUP-EXISTS / a head caught by DUP-DB are SKIPPED, never written), and it is not an
-     * add-to-an-existing-family group (those are listed under ADD-MEMBER). Warning-only
-     * families ARE ready - they import as typed - but their warning count rides along so
-     * nothing is quietly glossed over.
-     *
-     * @param array<string, list<int>>          $byQr   [qr => sheet rows]
-     * @param array<int, array<string, string>> $byRow  [sheet row => cell values]
-     * @param list<array>                       $errors
-     * @return list<array>
-     */
-    private function readyFamilies(array $byQr, array $byRow, array $errors): array
-    {
-        $blocked  = [];
-        $skipped  = [];
-        $appended = [];
-        $warnings = [];
-
-        foreach ($errors as $error) {
-            $qr = trim((string) ($error['familyNo'] ?? ''));
-
-            if ($qr === '') {
-                continue;
-            }
-
-            $code = (string) ($error['code'] ?? '');
-
-            if (($error['severity'] ?? 'blocking') === 'blocking') {
-                $blocked[$qr] = true;
-            } else {
-                $warnings[$qr] = ($warnings[$qr] ?? 0) + 1;
-            }
-
-            if ($code === 'DUP-EXISTS') {
-                $skipped[$qr] = true;
-            }
-
-            if ($code === 'ADD-MEMBER') {
-                $appended[$qr] = true;
-            }
-
-            // Only a HEAD already on file skips the family; a member just gets a warning.
-            if ($code === 'DUP-DB' && $this->isHeadRow($byRow[(int) ($error['sheetRow'] ?? 0)] ?? [])) {
-                $skipped[$qr] = true;
-            }
-        }
-
-        $out = [];
-
-        foreach ($byQr as $qr => $sheetRows) {
-            $qr = (string) $qr;
-
-            if (isset($blocked[$qr]) || isset($skipped[$qr]) || isset($appended[$qr])) {
-                continue;
-            }
-
-            $headRow = null;
-
-            foreach ($sheetRows as $sheetRow) {
-                if ($this->isHeadRow($byRow[$sheetRow] ?? [])) {
-                    $headRow = $sheetRow;
-                    break;
-                }
-            }
-
-            // No head = HEAD-NONE, which blocks; it can't reach here. Guard anyway.
-            if ($headRow === null) {
-                continue;
-            }
-
-            $head = $byRow[$headRow] ?? [];
-
-            $out[] = [
-                'qr'       => $qr,
-                'sheetRow' => $headRow,
-                'head'     => trim((string) ($head['firstname'] ?? '') . ' ' . (string) ($head['lastname'] ?? '')),
-                'members'  => max(0, count($sheetRows) - 1),
-                'barangay' => (string) ($head['barangay'] ?? ''),
-                'address'  => (string) ($head['address'] ?? ''),
-                'warnings' => (int) ($warnings[$qr] ?? 0),
-            ];
-        }
-
-        usort($out, static fn (array $a, array $b): int => $a['sheetRow'] <=> $b['sheetRow']);
 
         return $out;
     }

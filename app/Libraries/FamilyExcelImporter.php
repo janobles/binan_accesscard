@@ -326,16 +326,17 @@ class FamilyExcelImporter
     }
 
     /**
-     * Looks up which of a row set's QR numbers already exist in the DB, and the FULL stored
-     * head record for each. Feeds validateAndBuild so it can tell apart: the same family
-     * uploaded twice (skip), members being added to an existing family (append), a
-     * genuinely head-less group, and a mistyped QR that landed on a stranger's family.
-     * Bulk queries; safe when the tables are absent.
+     * The distinct, valid QR numbers in a row set: the only thing
+     * existingHeadsForRows() looks up by.
+     *
+     * Public and separate because ImportLookupCache's correctness rests on this being
+     * the whole input. If a lookup ever starts reading another field, that field has to
+     * appear here too, and ImportLookupCache::INVALIDATING_FIELDS has to grow with it.
      *
      * @param list<array{sheetRow: int|string, data: array<string,string>}> $rows
-     * @return array<int, array{headID: int, name: string, record: array<string, string|null>}>
+     * @return list<int>
      */
-    public function existingHeadsForRows(array $rows): array
+    public function qrKeysForRows(array $rows): array
     {
         $qrs = [];
 
@@ -347,7 +348,44 @@ class FamilyExcelImporter
             }
         }
 
-        $qrs = array_values(array_unique($qrs));
+        return array_values(array_unique($qrs));
+    }
+
+    /**
+     * The distinct lastnames in a row set: the only thing existingPeopleForRows()
+     * looks up by. See qrKeysForRows() for why this is public.
+     *
+     * @param list<array{sheetRow: int|string, data: array<string,string>}> $rows
+     * @return list<string>
+     */
+    public function lastnameKeysForRows(array $rows): array
+    {
+        $lastnames = [];
+
+        foreach ($rows as $entry) {
+            $lastname = trim((string) ($entry['data']['lastname'] ?? ''));
+
+            if ($lastname !== '') {
+                $lastnames[] = $lastname;
+            }
+        }
+
+        return array_values(array_unique($lastnames));
+    }
+
+    /**
+     * Looks up which of a row set's QR numbers already exist in the DB, and the FULL stored
+     * head record for each. Feeds validateAndBuild so it can tell apart: the same family
+     * uploaded twice (skip), members being added to an existing family (append), a
+     * genuinely head-less group, and a mistyped QR that landed on a stranger's family.
+     * Bulk queries; safe when the tables are absent.
+     *
+     * @param list<array{sheetRow: int|string, data: array<string,string>}> $rows
+     * @return array<int, array{headID: int, name: string, record: array<string, string|null>}>
+     */
+    public function existingHeadsForRows(array $rows): array
+    {
+        $qrs = $this->qrKeysForRows($rows);
 
         if ($qrs === []) {
             return [];
@@ -396,15 +434,7 @@ class FamilyExcelImporter
      */
     public function existingPeopleForRows(array $rows): array
     {
-        $lastnames = [];
-
-        foreach ($rows as $entry) {
-            $lastname = trim((string) ($entry['data']['lastname'] ?? ''));
-
-            if ($lastname !== '') {
-                $lastnames[] = $lastname;
-            }
-        }
+        $lastnames = $this->lastnameKeysForRows($rows);
 
         if ($lastnames === []) {
             return [];
@@ -791,35 +821,12 @@ class FamilyExcelImporter
     }
 
     /**
-     * The index of the row most likely to be the family Head when no row is marked "Head":
-     * the first person carrying an address or barangay (members leave those blank and inherit
-     * the head's), else the first row. This mirrors headlessDiagnosis()'s anchor rule so the
-     * in-app Edit modal (ImportFamilyModalBuilder::splitHeadAndMembers) opens on the SAME
-     * person the review report names as the likely head.
-     *
-     * @param list<array{data?: array<string, string>}> $rows
-     */
-    public static function likelyHeadIndex(array $rows): int
-    {
-        foreach ($rows as $i => $row) {
-            $data = is_array($row['data'] ?? null) ? $row['data'] : [];
-
-            if (trim((string) ($data['address'] ?? '')) !== '' || trim((string) ($data['barangay'] ?? '')) !== '') {
-                return (int) $i;
-            }
-        }
-
-        return 0;
-    }
-
-    /**
      * Works out WHO the missing Head probably is, for a family with no Head row.
      *
      * In the template only the Head fills Address/Barangay - members leave them blank and
      * inherit the head's. So in a head-less family, the row that carries an address is
      * almost certainly the intended Head (the worker filled it like a head but never set
-     * Relationship = Head). Point the error straight at that person. Anchors on the same rule
-     * as likelyHeadIndex(), so the report and the Edit modal name the same person.
+     * Relationship = Head). Point the error straight at that person.
      *
      * @param list<array{row: int, data: array<string, string>}> $rows
      * @return array{0: int, 1: string} [anchor sheet row, message]

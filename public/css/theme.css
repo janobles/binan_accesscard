@@ -341,6 +341,7 @@
    scroller instead, so raise the cap if a caller adds steps. */
 .stepper-horizontal {
     max-width: 32rem;
+    margin-top: 1rem;
     margin-bottom: 1.5rem;
 }
 
@@ -353,6 +354,9 @@
 .stepper-horizontal .stepper-steps {
     display: flex;
     overflow-x: auto;
+    /* The scroller clips vertically as well as horizontally, and the current
+       step's indicator halo sits outside its box, so it needs room to survive. */
+    padding-top: 0.35rem;
 }
 
 .stepper-horizontal .stepper-step {

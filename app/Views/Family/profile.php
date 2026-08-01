@@ -38,7 +38,7 @@ $controlNumberLabel = ControlNumber::format((int) ($controlNumber ?? 0));
                         Control No. <?= esc($controlNumberLabel) ?>
                     </span>
                     <?php if ($qrDataUri !== ''): ?>
-                    <img src="<?= esc($qrDataUri) ?>" width="40" height="40" alt="QR code for control number <?= esc($controlNumberLabel) ?>">
+                    <img src="<?= esc($qrDataUri) ?>" width="64" height="64" alt="QR code for control number <?= esc($controlNumberLabel) ?>">
                     <?php endif; ?>
                 </div>
             </div>

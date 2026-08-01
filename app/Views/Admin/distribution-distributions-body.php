@@ -1,10 +1,9 @@
 <?php
 /**
  * Distributions log body: client-side filter toolbar + distributions table.
- * Rendered inside components/card by Admin/layout.php's distributions block
- * (vars: distributions). Each row shows the subsidy type the batch handed out.
- * Filtering/paging handled by the inline script in
- * Admin/layout.php's distributions block.
+ * Rendered inside components/card by Pages/distribution.php's distributions
+ * tab (vars: distributions). Each row shows the subsidy type the batch handed
+ * out. Filtering/paging handled by the inline script in that same page.
  */
 ?>
 <?php /* Filter bar + controls row: pure Bootstrap grid/utilities inside the

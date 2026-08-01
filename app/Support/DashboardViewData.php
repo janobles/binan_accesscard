@@ -15,7 +15,7 @@ use App\Models\Lookups\ServiceModel;
  */
 class DashboardViewData
 {
-    /** Prepares variables for the admin shell (`Admin/layout`). */
+    /** Prepares variables for the shared dashboard shell (`layout`), admin roles. */
     public static function admin(array $data): array
     {
         $user = self::arrayValue($data['user'] ?? []);
@@ -69,7 +69,7 @@ class DashboardViewData
         );
     }
 
-    /** Prepares variables for the employee shell (`Employee/layout`). */
+    /** Prepares variables for the shared dashboard shell (`layout`), encoder roles. */
     public static function employee(array $data): array
     {
         $user = self::arrayValue($data['user'] ?? []);

@@ -3,7 +3,7 @@
  * Subsidy Distribution section of the admin dashboard (Admin > Dashboard).
  *
  * A fragment, not a page: no doctype or head shell, rendered inline by
- * Admin/layout.php's dashboard block. Data comes from
+ * Pages/dashboard.php. Data comes from
  * DashboardPageBuilder::buildReportsData(). The section header carries the batch
  * selector and the Refresh and PDF actions, because global actions belong outside
  * the cards. KPI numbers are not rendered here; they sit in the dashboard's unified

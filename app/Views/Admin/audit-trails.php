@@ -2,7 +2,7 @@
 /**
  * Audit Trails page (Admin > Audit Trails).
  *
- * Rendered inside Admin/layout.php. Rows and their pagination bundle come from
+ * Rendered inside layout.php. Rows and their pagination bundle come from
  * DashboardPageBuilder::buildAuditListData(); the counts describe the whole filtered
  * set, not the rows on screen. Paging and filtering are server side, so every control
  * here is a link or a form rather than a client-side table filter.

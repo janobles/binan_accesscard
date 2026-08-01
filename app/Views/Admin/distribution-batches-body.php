@@ -5,7 +5,7 @@
  * (Admin/batch-create-modal.php), which binds a subsidy type from the subsidy
  * reference table. Each batch row shows its bound subsidy type. Lifecycle
  * buttons render only for Admin/Developer. Rendered inside components/card
- * by Admin/layout.php's batches block.
+ * by Pages/distribution.php's batches tab.
  */
 $canManageBatches = in_array($currentRole ?? '', ['Admin', 'Developer'], true);
 ?>

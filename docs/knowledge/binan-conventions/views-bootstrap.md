@@ -31,8 +31,7 @@ review used to) loses the sidebar and every convention below.
   and active state from `Config\Navigation::linksFor($role)`. Never hand-write a
   nav item here; add a manifest entry.
 - `app/Views/Partials/dashboard-topnav.php:1`,
-  `Partials/topbar-account-menu.php:1`, `Partials/sector-label-list.php:1` -
-  cross-role fragments.
+  `Partials/topbar-account-menu.php:1` - cross-role fragments.
 
 Repeated markup across two views = extract a partial, render with
 `view('Partials/...', [...])`.

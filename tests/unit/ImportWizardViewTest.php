@@ -42,8 +42,8 @@ final class ImportWizardViewTest extends CIUnitTestCase
         $html = $this->render();
 
         $this->assertStringContainsString('stepper stepper-horizontal', $html);
-        $this->assertStringContainsString('Upload', $html);
-        $this->assertStringContainsString('Review and Fix', $html);
+        $this->assertStringContainsString('Upload</span>', $html);
+        $this->assertStringContainsString('Review and Fix</span>', $html);
         $this->assertStringNotContainsString('Column Mapping', $html,
             'The workbook comes from our own template; columns are known.');
     }

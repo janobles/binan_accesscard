@@ -336,7 +336,9 @@
    squashing, so there is no mobile-only variant to keep in sync. */
 /* Capped rather than full-bleed: the steps share the width evenly, so on a wide
    screen an uncapped strip pushes the last step out to the far edge, level with
-   the page title and far from the card it heads. */
+   the page title and far from the card it heads. The 32rem cap suits the two
+   and three step callers we have; a longer strip would hit the horizontal
+   scroller instead, so raise the cap if a caller adds steps. */
 .stepper-horizontal {
     max-width: 32rem;
     margin-bottom: 1.5rem;

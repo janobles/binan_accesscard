@@ -212,7 +212,7 @@ class ScanController extends BaseController
         $familyPayload = [
             'control_no'    => $controlNo,
             'qr_code_image' => (new \App\Libraries\Qr\QrImageGenerator())->dataUri(
-                config('QrCardSettings')->qrUrlPrefix . \App\Libraries\Qr\ControlNumber::format($controlNo)
+                \App\Libraries\Qr\ControlNumber::payload($controlNo)
             ),
             'subsidy_type_name' => (string) ($activeBatch['subsidy_type_name'] ?? 'Subsidy'),
             'head'          => [

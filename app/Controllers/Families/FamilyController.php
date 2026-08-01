@@ -8,6 +8,8 @@ use App\Libraries\FamilyModalDataBuilder;
 use App\Libraries\FamilyRecordSummary;
 use App\Libraries\FamilyRecordWriteException;
 use App\Libraries\FamilyRecordWriter;
+use App\Libraries\Qr\ControlNumber;
+use App\Libraries\Qr\QrImageGenerator;
 use App\Libraries\RoleAccess;
 use App\Libraries\SectorIds;
 use App\Models\Audit\AuditTrailsModel;
@@ -1159,11 +1161,24 @@ class FamilyController extends BaseController
         $headId = max(0, (int) $this->request->getGet('head_id'));
         $exists = model(\App\Models\Scanner\QrControlModel::class)->takenByOtherHead($controlNo, $headId);
 
+        if ($exists) {
+            return $this->response->setJSON([
+                'available' => false,
+                'message' => 'QR Number ' . $controlNo . ' already exists in the records and is assigned to another family.',
+            ]);
+        }
+
+        // The same payload QrCardPdfGenerator prints, so the preview on the entry
+        // page and the code on the card can never encode different strings. Only
+        // an available number gets one: a taken number may already have a card.
+        $control = ControlNumber::format($controlNo);
+
         return $this->response->setJSON([
-            'available' => ! $exists,
-            'message' => $exists
-                ? 'QR Number ' . $controlNo . ' already exists in the records and is assigned to another family.'
-                : '',
+            'available' => true,
+            'message' => '',
+            'qr' => (new QrImageGenerator())->dataUri(
+                config('QrCardSettings')->qrUrlPrefix . $control
+            ),
         ]);
     }
 

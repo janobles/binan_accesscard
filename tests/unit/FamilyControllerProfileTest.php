@@ -200,4 +200,64 @@ final class FamilyControllerProfileTest extends CIUnitTestCase
         $update = $this->withSession($session)->post('records/7/update', []);
         $this->assertNotSame(200, $update->response()->getStatusCode());
     }
+
+    /** @return array{is_logged_in: true, role: string, user_id: int} */
+    private function encoderSession(): array
+    {
+        $db = db_connect();
+        $db->table('users')->insert(['account_level' => 'encoder']);
+
+        return [
+            'is_logged_in' => true,
+            'role'         => 'encoder',
+            'user_id'      => (int) $db->insertID(),
+        ];
+    }
+
+    public function testAnAvailableNumberCarriesAQrPreview(): void
+    {
+        $this->createSchema();
+
+        $response = $this->withSession($this->encoderSession())
+            ->get('records/qr-check?control_no=999999&head_id=0');
+
+        $json = json_decode($response->getJSON(), true);
+
+        $this->assertTrue($json['available']);
+        $this->assertArrayHasKey('qr', $json);
+        $this->assertStringStartsWith('data:image/png;base64,', $json['qr']);
+    }
+
+    public function testATakenNumberCarriesNoQrPreview(): void
+    {
+        $this->createSchema();
+        $db = db_connect();
+        $db->table('member')->insert([
+            'memberID' => 7, 'lastname' => 'DELA CRUZ', 'firstname' => 'JUAN',
+            'middlename' => '', 'headID' => 7, 'sectorID' => '[]', 'Salary' => 0,
+        ]);
+        $db->table('qr_control')->insert(['control_no' => 12345, 'headID' => 7]);
+
+        // A number already issued may have a card printed against it; rendering a
+        // code for it here would suggest otherwise.
+        $response = $this->withSession($this->encoderSession())
+            ->get('records/qr-check?control_no=12345&head_id=0');
+
+        $json = json_decode($response->getJSON(), true);
+
+        $this->assertFalse($json['available']);
+        $this->assertArrayNotHasKey('qr', $json);
+    }
+
+    public function testAnInvalidNumberCarriesNoQrPreview(): void
+    {
+        $this->createSchema();
+
+        $response = $this->withSession($this->encoderSession())
+            ->get('records/qr-check?control_no=abc&head_id=0');
+
+        $json = json_decode($response->getJSON(), true);
+
+        $this->assertArrayNotHasKey('qr', $json);
+    }
 }

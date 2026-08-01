@@ -1921,11 +1921,12 @@
         refreshAllChoicesSummaries(root);
         renumberMembers(root);
 
-        // Restore-on-reopen prompt (create mode only). Skipped here while root is
-        // still hidden (the entry page's gate, before a control number clears it):
-        // askModalDialog would append into a display:none subtree, where the
-        // dialog can't be answered. bindControlNumberGate calls this again once
-        // the gate opens.
+        // Restore-on-reopen prompt (create mode only). [data-family-entry-form]
+        // is never itself d-none on the entry page (only the gated sections
+        // inside it are), so this call runs at page load, before the control
+        // number is entered. bindControlNumberGate calls this again once the
+        // gate opens, but that second call is a no-op by then: the dataset flag
+        // this sets is what stops it firing twice, not visibility.
         offerDraftRestoreIfVisible(root);
     }
 
@@ -2026,10 +2027,13 @@
         var status = gate.querySelector('[data-control-number-status]');
         var image = gate.querySelector('[data-control-number-qr]');
         // The spine interleaves headings with content, so the gated sections are
-        // several nodes rather than one wrapper. [data-family-entry-form] is the
-        // form itself, which is the same node initFamilyEntryModal's `root` binds
-        // to, so offerDraftRestoreIfVisible below and the one inside
-        // initFamilyEntryModal still share one familyDraftOffered flag.
+        // several nodes rather than one wrapper. [data-family-entry-form] sits on
+        // the outer <div>, one level above the <form>, matching Family/profile.php:
+        // seven call sites elsewhere in this file do root.querySelector('form') to
+        // reach the <form> itself, and would silently find nothing if root WERE the
+        // form. offerDraftRestoreIfVisible below and the one inside
+        // initFamilyEntryModal still share one familyDraftOffered flag because both
+        // resolve to this same root node.
         var sections = document.querySelectorAll('[data-entry-section]');
         var root = document.querySelector('[data-family-entry-form]');
         var timer = null;
@@ -2045,6 +2049,37 @@
             });
         }
 
+        // Mirrors the visually-hidden wording stepper.php itself prefixes onto a
+        // step's label ('Completed, ' / 'Needs attention, '), so state here is
+        // never colour alone either. 'Locked, ' is this page's own addition: the
+        // two later steps are real links (so click-to-scroll and focus still
+        // work), but their content is d-none until the gate opens, so a screen
+        // reader needs to be told they currently do nothing.
+        function setStepLink(step, opts) {
+            var link = step.querySelector('.stepper-step-link');
+            var prefix = step.querySelector('[data-step-state-prefix]');
+
+            if (!link) {
+                return;
+            }
+
+            if (opts.current) {
+                link.setAttribute('aria-current', 'step');
+            } else {
+                link.removeAttribute('aria-current');
+            }
+
+            if (opts.disabled) {
+                link.setAttribute('aria-disabled', 'true');
+            } else {
+                link.removeAttribute('aria-disabled');
+            }
+
+            if (prefix) {
+                prefix.textContent = opts.prefixText || '';
+            }
+        }
+
         function setStepStates(unlocked) {
             var steps = document.querySelectorAll('#entrySpine .stepper-step');
 
@@ -2055,6 +2090,22 @@
             steps[0].setAttribute('data-state', unlocked ? 'done' : 'current');
             steps[1].setAttribute('data-state', unlocked ? 'current' : 'upcoming');
             steps[2].setAttribute('data-state', 'upcoming');
+
+            setStepLink(steps[0], {
+                current: !unlocked,
+                disabled: false,
+                prefixText: unlocked ? 'Completed, ' : ''
+            });
+            setStepLink(steps[1], {
+                current: unlocked,
+                disabled: !unlocked,
+                prefixText: unlocked ? '' : 'Locked, '
+            });
+            setStepLink(steps[2], {
+                current: false,
+                disabled: !unlocked,
+                prefixText: unlocked ? '' : 'Locked, '
+            });
         }
 
         function clearQr() {

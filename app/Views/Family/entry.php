@@ -28,8 +28,8 @@ $fieldData = [
     'formOptions' => $formOptions,
 ];
 ?>
-<div class="container-fluid px-4 py-4">
-    <form id="familyEntryForm" method="post" action="<?= esc(site_url('records'), 'attr') ?>" novalidate data-family-entry-form>
+<div class="container-fluid px-4 py-4" data-family-entry-form>
+    <form id="familyEntryForm" method="post" action="<?= esc(site_url('records'), 'attr') ?>" novalidate>
         <?= csrf_field() ?>
 
         <nav class="stepper stepper-vertical" id="entrySpine" aria-label="Record sections">
@@ -37,7 +37,7 @@ $fieldData = [
                 <li class="stepper-step" data-state="current">
                     <a class="stepper-step-link" href="#section-control" aria-current="step">
                         <span class="stepper-step-indicator" aria-hidden="true">1</span>
-                        <span class="stepper-step-label">Control Number</span>
+                        <span class="stepper-step-label"><span class="visually-hidden" data-step-state-prefix></span>Control Number</span>
                     </a>
                     <div class="stepper-step-content" id="section-control" data-control-number-gate data-qr-check-url="<?= esc(site_url('records/qr-check'), 'attr') ?>">
                         <div class="row">
@@ -58,9 +58,9 @@ $fieldData = [
                 </li>
 
                 <li class="stepper-step" data-state="upcoming">
-                    <a class="stepper-step-link" href="#section-head">
+                    <a class="stepper-step-link" href="#section-head" aria-disabled="true">
                         <span class="stepper-step-indicator" aria-hidden="true">2</span>
-                        <span class="stepper-step-label">Head of Family</span>
+                        <span class="stepper-step-label"><span class="visually-hidden" data-step-state-prefix>Locked, </span>Head of Family</span>
                     </a>
                     <div class="stepper-step-content d-none" id="section-head" data-entry-section>
                         <?= view('Family/_fields', $fieldData + ['part' => 'head']) ?>
@@ -68,9 +68,9 @@ $fieldData = [
                 </li>
 
                 <li class="stepper-step" data-state="upcoming">
-                    <a class="stepper-step-link" href="#section-members">
+                    <a class="stepper-step-link" href="#section-members" aria-disabled="true">
                         <span class="stepper-step-indicator" aria-hidden="true">3</span>
-                        <span class="stepper-step-label">Household Members</span>
+                        <span class="stepper-step-label"><span class="visually-hidden" data-step-state-prefix>Locked, </span>Household Members</span>
                     </a>
                     <div class="stepper-step-content d-none" id="section-members" data-entry-section>
                         <?= view('Family/_fields', $fieldData + ['part' => 'members']) ?>

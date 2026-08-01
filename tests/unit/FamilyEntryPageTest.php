@@ -39,6 +39,23 @@ final class FamilyEntryPageTest extends CIUnitTestCase
         $this->assertStringContainsString('Household Members', $html);
     }
 
+    public function testTheGateStillCarriesItsCheckEndpoint(): void
+    {
+        // The gate's fetch call reads this off the dataset; losing it would leave
+        // the suite green while the gate silently stopped checking anything.
+        $this->assertStringContainsString('data-qr-check-url', $this->render());
+    }
+
+    public function testHeadAndMembersAreBothPresentAndNeverTabbed(): void
+    {
+        $html = $this->render();
+
+        $this->assertStringContainsString('id="section-head"', $html);
+        $this->assertStringContainsString('id="section-members"', $html);
+        $this->assertStringNotContainsString('tab-pane', $html,
+            'A tab split would hide the head while members are entered.');
+    }
+
     public function testSectorsAndServicesAreNoLongerPageSections(): void
     {
         $html = $this->render();
@@ -66,11 +83,15 @@ final class FamilyEntryPageTest extends CIUnitTestCase
         $this->assertSame(2, substr_count($html, 'class="stepper-step-content d-none"'));
     }
 
-    public function testTheFormIsTheEntryRootSoTheSharedJsStillBinds(): void
+    public function testTheEntryRootWrapsTheFormSoTheSharedJsStillBinds(): void
     {
         $html = $this->render();
 
-        $this->assertMatchesRegularExpression('/<form[^>]*data-family-entry-form/', $html);
+        // [data-family-entry-form] sits one level above <form>, matching
+        // Family/profile.php's shape: manage-family-modal.js does
+        // root.querySelector('form') from this marker in several places, which
+        // would find nothing if the marker sat on the <form> itself.
+        $this->assertMatchesRegularExpression('/data-family-entry-form[^>]*>\s*<form/', $html);
     }
 
     public function testTheControlNumberFieldDoesNotPost(): void

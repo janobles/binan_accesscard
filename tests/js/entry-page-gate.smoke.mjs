@@ -1,14 +1,25 @@
 // Smoke test for public/assets/js/dashboard/manage-family-modal.js's standalone
 // Data Entry page path: `initFamilyEntryModal(document)` must run to completion
-// without throwing, and `bindControlNumberGate` must actually wire up so typing
-// an available control number reveals the entry body. This repo has no JS test
-// harness (no package.json, no jsdom) - see the notes at the bottom of this file
-// for what that means for how this runs. Rather than add a new dependency, this
-// builds a minimal DOM by hand, just enough to exercise that path.
+// without throwing, must bind the form's submit handler, and
+// `bindControlNumberGate` must actually wire up so typing an available control
+// number reveals both gated sections of the spine and offers a draft restore
+// when one is on record. This repo has no JS test harness (no package.json, no
+// jsdom) - see the notes at the bottom of this file for what that means for how
+// this runs. Rather than add a new dependency, this builds a minimal DOM by
+// hand, just enough to exercise that path.
+//
+// The fixture below mirrors app/Views/Family/entry.php's real shape:
+// [data-family-entry-form] sits on the outer <div>, one level above <form>,
+// not on the form itself - manage-family-modal.js does root.querySelector('form')
+// from that marker in several places, and would silently find nothing if the
+// marker sat on the form. The two gated sections are separate
+// [data-entry-section] nodes (section-head, section-members), not one wrapper.
 //
 // Run with: node tests/js/entry-page-gate.smoke.mjs
-// Exits non-zero (and prints the failure) if the script throws during init, or
-// if typing an available control number does not reveal the entry body.
+// Exits non-zero (and prints the failure) if the script throws during init, if
+// the submit handler never binds, if typing an available control number does
+// not reveal both gated sections, or if an on-record draft is not offered once
+// the gate opens.
 
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
@@ -126,8 +137,34 @@ function matchesSimple(node, parsed) {
     return true;
 }
 
+// Only the plain descendant combinator ("A B") is supported, which is all
+// setStepStates()'s '#entrySpine .stepper-step' lookup needs - no >, +, or ~.
+function matchesCombinatorPart(node, part) {
+    const segments = part.trim().split(/\s+/).filter(Boolean);
+
+    if (segments.length <= 1) {
+        return matchesSimple(node, parseSimpleSelector(part));
+    }
+
+    if (!matchesSimple(node, parseSimpleSelector(segments[segments.length - 1]))) {
+        return false;
+    }
+
+    var ancestor = node.parentNode;
+    var segIndex = segments.length - 2;
+
+    while (ancestor && segIndex >= 0) {
+        if (matchesSimple(ancestor, parseSimpleSelector(segments[segIndex]))) {
+            segIndex--;
+        }
+        ancestor = ancestor.parentNode;
+    }
+
+    return segIndex < 0;
+}
+
 function matchesSelector(node, selector) {
-    return selector.split(',').some((part) => matchesSimple(node, parseSimpleSelector(part)));
+    return selector.split(',').some((part) => matchesCombinatorPart(node, part));
 }
 
 function walk(node, cb) {
@@ -172,6 +209,10 @@ class FakeNode {
 
     getAttribute(name) {
         return name in this._attrs ? this._attrs[name] : null;
+    }
+
+    removeAttribute(name) {
+        delete this._attrs[name];
     }
 
     appendChild(child) {
@@ -229,6 +270,23 @@ class FakeNode {
     checkValidity() {
         return true;
     }
+
+    focus() {
+        /* no-op: nothing in this fixture asserts on focus */
+    }
+
+    remove() {
+        if (this.parentNode) {
+            var siblings = this.parentNode.children;
+            var at = siblings.indexOf(this);
+
+            if (at !== -1) {
+                siblings.splice(at, 1);
+            }
+
+            this.parentNode = null;
+        }
+    }
 }
 
 function el(tag, attrs = {}, children = []) {
@@ -242,34 +300,40 @@ function el(tag, attrs = {}, children = []) {
 
 // The entry page's actual markup (app/Views/Family/entry.php +
 // app/Views/Family/_fields.php), reduced to the elements the init path and the
-// gate touch.
-const controlNumberField = el('input', { id: 'controlNumber', name: 'control_no' });
+// gate touch. [data-family-entry-form] is on the outer div, not the <form> -
+// see the file header comment for why that distinction is the whole point of
+// this fixture.
+const controlNumberField = el('input', { id: 'controlNumber' });
 const gateStatus = el('div', { 'data-control-number-status': '' });
+const qrImage = el('img', { class: 'd-none', 'data-control-number-qr': '' });
 const gate = el(
     'div',
-    { class: 'row mb-4', 'data-control-number-gate': '', 'data-qr-check-url': 'http://localhost/records/qr-check' },
-    [controlNumberField, gateStatus]
+    { 'data-control-number-gate': '', 'data-qr-check-url': 'http://localhost/records/qr-check' },
+    [controlNumberField, gateStatus, qrImage]
 );
 
+const sectionHead = el('div', { class: 'stepper-step-content d-none', id: 'section-head', 'data-entry-section': '' });
+const sectionMembers = el('div', { class: 'stepper-step-content d-none', id: 'section-members', 'data-entry-section': '' });
+
 const realControlNumberInput = el('input', { type: 'hidden', name: 'qr_control_no', 'data-entry-control-number': '' });
-const form = el('form', { id: 'familyEntryForm' }, [realControlNumberInput]);
-const entryBody = el(
-    'div',
-    { class: 'row d-none', 'data-entry-body': '', 'data-family-entry-form': '' },
-    [form]
-);
+const saveButton = el('button', { type: 'submit', 'data-family-save': '' });
+const form = el('form', { id: 'familyEntryForm' }, [gate, sectionHead, sectionMembers, realControlNumberInput, saveButton]);
+const entryRoot = el('div', { class: 'container-fluid px-4 py-4', 'data-family-entry-form': '' }, [form]);
 
 const documentNode = {
     nodeType: 9,
     readyState: 'complete',
     _listeners: {},
-    children: [gate, entryBody],
+    children: [entryRoot],
     addEventListener(type, handler) {
         (this._listeners[type] ||= []).push(handler);
     },
+    createElement(tag) {
+        return new FakeNode(tag);
+    },
     querySelectorAll(selector) {
         const out = [];
-        const roots = [gate, entryBody];
+        const roots = [entryRoot];
         for (const root of roots) {
             if (matchesSelector(root, selector)) {
                 out.push(root);
@@ -294,7 +358,21 @@ const fakeWindow = {};
 fakeWindow.window = fakeWindow;
 fakeWindow.document = documentNode;
 fakeWindow.registerDashboardModal = function registerDashboardModal() {};
-fakeWindow.localStorage = { getItem: () => null, setItem() {}, removeItem() {} };
+// A draft already on record, so offerDraftRestoreIfVisible has something to
+// offer once the gate opens - draftIsEmpty() requires at least one non-blank
+// head field, an empty members/sector/service array is fine.
+const existingDraft = JSON.stringify({
+    head: { lastname: 'Reyes' },
+    members: [],
+    sector_ids: [],
+    service_ids: [],
+    savedAt: Date.now(),
+});
+fakeWindow.localStorage = {
+    getItem: (key) => (key === 'binan_family_modal_draft_v1' ? existingDraft : null),
+    setItem() {},
+    removeItem() {},
+};
 // Instant timers: the gate's real debounce (350ms) and the qr-check hang guard
 // (5000ms) would otherwise make this test slow for no benefit.
 fakeWindow.setTimeout = (fn) => { fn(); return 0; };
@@ -325,9 +403,36 @@ assert.equal(
     'initFamilyEntryPage() must not throw when the page loads: ' + (initThrew && initThrew.stack)
 );
 
+// This is the direct regression check for the bug where [data-family-entry-form]
+// sat on <form> itself: every root.querySelector('form') inside
+// initFamilyEntryModal() then found nothing, so the `if (formEl)` block never
+// ran and no submit handler was ever bound. Confirms the fix without exercising
+// submitFamilyForm()'s validation/AJAX chain, which needs far more DOM than
+// this fixture builds.
+assert.equal(
+    (form._listeners.submit || []).length,
+    1,
+    'initFamilyEntryModal() must bind a submit handler to the form.'
+);
+
+// Same root cause, different symptom: offerDraftRestoreIfVisible(root) also
+// did root.querySelector('form') and returned early on the same null. With the
+// fix, [data-family-entry-form] is never itself d-none on this page (only the
+// gated sections inside it are), so the restore prompt is offered at init,
+// before the control number gate even opens - see the fixed comment in
+// initFamilyEntryModal(). A draft is seeded in fakeWindow.localStorage above
+// so there is something to offer.
+assert.equal(
+    entryRoot.dataset.familyDraftOffered,
+    '1',
+    'A draft on record must be offered for restore once init runs.'
+);
+
 // The gate must actually have wired up: typing a control number should trigger
-// the availability check and, once it comes back available, reveal the body.
-assert.equal(entryBody.classList.contains('d-none'), true, 'Body should still be hidden before any input.');
+// the availability check and, once it comes back available, reveal both gated
+// sections of the spine (not one shared wrapper).
+assert.equal(sectionHead.classList.contains('d-none'), true, 'Head section should still be hidden before any input.');
+assert.equal(sectionMembers.classList.contains('d-none'), true, 'Members section should still be hidden before any input.');
 
 controlNumberField.value = '12345';
 controlNumberField.dispatch('input');
@@ -337,7 +442,8 @@ controlNumberField.dispatch('input');
 // runs after all of them drain, however many hops the chain needs.
 await new Promise((resolve) => setImmediate(resolve));
 
-assert.equal(entryBody.classList.contains('d-none'), false, 'A control number the server reports available must reveal the entry body.');
+assert.equal(sectionHead.classList.contains('d-none'), false, 'A control number the server reports available must reveal the head section.');
+assert.equal(sectionMembers.classList.contains('d-none'), false, 'A control number the server reports available must reveal the members section.');
 assert.equal(realControlNumberInput.value, '12345', 'The hidden qr_control_no field must be filled once the gate clears.');
 
-console.log('OK: entry page init does not throw, and the control-number gate reveals the form.');
+console.log('OK: entry page init does not throw, the submit handler binds, a draft on record is offered, and the control-number gate reveals both spine sections.');

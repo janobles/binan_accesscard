@@ -1039,9 +1039,6 @@
 /* Repeatable family-member capture (the Members step) and the save toast. */
 .family-members-section { margin-top: 1rem; }
 
-/* Data Entry page rail (Family/entry): offset clears the fixed top navbar so the
- * sticky section links do not sit under it while scrolling. */
-.family-entry-rail { top: 5rem; }
 .family-toast { position: fixed; top: 1rem; right: 1rem; z-index: 1080; max-width: 22rem; margin: 0; }
 
 /* Background-import progress toasts (bottom-right). The modal closes on submit and

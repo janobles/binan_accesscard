@@ -429,7 +429,7 @@ $renderMemberRow = static function ($index, array $m = [], bool $open = true) us
 <?php if ($part !== 'head'): ?>
 <section<?= $part === 'all' ? ' id="section-members"' : '' ?> class="family-members-section family-person-card">
     <div class="family-person-card-header">
-        <h3 class="family-person-card-title">Family Members</h3>
+        <h3 class="family-person-card-title">Household Members</h3>
         <span class="badge rounded-pill text-bg-light border" data-family-members-count>0 members</span>
     </div>
 

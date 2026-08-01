@@ -740,6 +740,13 @@ final class FamilyExcelImporterTest extends CIUnitTestCase
         // every edit and quietly undo the optimization.
         $importer = new FamilyExcelImporter();
 
+        // Both halves of "exactly": nothing extra is declared, and each declared
+        // field is shown below to move a key.
+        $this->assertSame(
+            ['familyno', 'lastname'],
+            \App\Libraries\ImportLookupCache::INVALIDATING_FIELDS
+        );
+
         $base = [['sheetRow' => 3, 'data' => ['familyno' => '6001', 'lastname' => 'Cruz']]];
 
         $qrChanged = $base;

@@ -182,7 +182,7 @@ final class ImportReviewRowsTest extends CIUnitTestCase
         return (int) $db->insertID();
     }
 
-    /** @param array<string, mixed> $session */
+    /** @return array{is_logged_in: bool, role: string, user_id: int} */
     private function session(int $userId, string $role = 'encoder'): array
     {
         return ['is_logged_in' => true, 'role' => $role, 'user_id' => $userId];
@@ -362,8 +362,9 @@ final class ImportReviewRowsTest extends CIUnitTestCase
 
     /**
      * A job staged by one user must be invisible to another, on every review endpoint -
-     * the review bundle carries full family PII (names, birthdays, addresses). A mismatch
-     * returns the same 404 as a missing job rather than a 403, so the response cannot be
+     * the review bundle carries full family PII (names, birthdays, addresses). The HTML
+     * page redirects to records with the same flash error a missing job gets; the JSON
+     * endpoints (tested above) answer 404 rather than 403, so neither response can be
      * used to confirm another operator's job ID exists.
      */
     public function testReviewPageRefusesAJobStagedByAnotherUser(): void

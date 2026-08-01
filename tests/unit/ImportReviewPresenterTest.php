@@ -188,8 +188,10 @@ final class ImportReviewPresenterTest extends CIUnitTestCase
     {
         $page = $this->page(['rows' => [
             $this->row(3, '6001', 'Head'),
+            // Deliberately not Cruz: if the label came from each row's own lastname
+            // instead of the head's, this row would read Santos and the test would fail.
             ['sheetRow' => 4, 'data' => [
-                'familyno' => '6001', 'relationship' => 'Child', 'lastname' => 'Cruz',
+                'familyno' => '6001', 'relationship' => 'Child', 'lastname' => 'Santos',
                 'firstname' => 'Ana', 'birthday' => '02-02-2010', 'sex' => 'Female',
             ]],
         ]]);

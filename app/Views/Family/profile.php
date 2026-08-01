@@ -22,6 +22,8 @@ use App\Libraries\Qr\ControlNumber;
 $readOnly = (bool) ($readOnly ?? false);
 $headId = (int) ($head['memberID'] ?? 0);
 $formOptions = (array) ($formOptions ?? []);
+$qrDataUri = (string) ($qrDataUri ?? '');
+$controlNumberLabel = ControlNumber::format((int) ($controlNumber ?? 0));
 ?>
 <div class="container-fluid px-4 py-4" data-family-entry-form>
     <form method="post" action="<?= esc(site_url('records/' . $headId . '/update'), 'attr') ?>">
@@ -31,9 +33,14 @@ $formOptions = (array) ($formOptions ?? []);
         <div class="card shadow-sm" data-head-card>
             <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
                 <h2 class="h5 mb-0">Head of Family</h2>
-                <span class="badge text-bg-secondary">
-                    Control No. <?= esc(ControlNumber::format((int) ($controlNumber ?? 0))) ?>
-                </span>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge text-bg-secondary">
+                        Control No. <?= esc($controlNumberLabel) ?>
+                    </span>
+                    <?php if ($qrDataUri !== ''): ?>
+                    <img src="<?= esc($qrDataUri) ?>" width="40" height="40" alt="QR code for control number <?= esc($controlNumberLabel) ?>">
+                    <?php endif; ?>
+                </div>
             </div>
             <div class="card-body">
                 <?= view('Family/_fields', [

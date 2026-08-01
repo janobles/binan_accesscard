@@ -203,6 +203,7 @@ if (! function_exists('family_profile_view_data')) {
      *     formOptions: array<string, mixed>,
      *     head: array<string, mixed>,
      *     members: list<array<string, mixed>>,
+     *     qrDataUri: string,
      *     readOnly: bool,
      *     sectors: list<array<string, mixed>>,
      *     services: list<array<string, mixed>>

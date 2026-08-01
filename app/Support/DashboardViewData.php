@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use App\Libraries\Qr\ControlNumber;
+use App\Libraries\Qr\QrImageGenerator;
 use App\Models\Lookups\CategoryModel;
 use App\Models\Lookups\SectorModel;
 use App\Models\Lookups\ServiceModel;
@@ -235,6 +237,9 @@ class DashboardViewData
         $services = self::arrayValue($data['services'] ?? []);
         $categories = self::arrayValue($data['categories'] ?? []);
         $formOptions = self::arrayValue($data['formOptions'] ?? []);
+        $qrDataUri = $controlNumber > 0
+            ? (new QrImageGenerator())->dataUri(ControlNumber::payload($controlNumber))
+            : '';
 
         return compact(
             'categories',
@@ -242,6 +247,7 @@ class DashboardViewData
             'formOptions',
             'head',
             'members',
+            'qrDataUri',
             'readOnly',
             'sectors',
             'services'

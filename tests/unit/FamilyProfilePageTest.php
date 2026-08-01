@@ -24,6 +24,7 @@ final class FamilyProfilePageTest extends CIUnitTestCase
             'controlNumber' => 142,
             'readOnly' => $readOnly,
             'sectors' => [], 'services' => [], 'categories' => [],
+            'qrDataUri' => 'data:image/png;base64,stub',
         ]);
     }
 
@@ -72,6 +73,28 @@ final class FamilyProfilePageTest extends CIUnitTestCase
 
         $this->assertStringContainsString('disabled', $html);
         $this->assertStringNotContainsString('data-family-save', $html);
+    }
+
+    public function testTheEditPageShowsTheCodeBesideTheControlNumber(): void
+    {
+        $html = $this->render();
+
+        $this->assertStringContainsString('data:image/png;base64,', $html);
+        $this->assertStringContainsString('QR code for control number', $html);
+    }
+
+    public function testTheCodeIsPlainWithNoCardOrRounding(): void
+    {
+        // Scoped to the card-header block that holds the control number and QR
+        // code, not the whole page: Family/_fields (rendered inside this same
+        // page for the member editor) uses 'rounded' classes unconditionally for
+        // unrelated pills and empty-state borders, so a page-wide assertion would
+        // fail regardless of this feature.
+        $html = $this->render();
+        preg_match('/<div class="card-header.*?<\/div>\s*<div class="card-body">/s', $html, $header);
+
+        $this->assertNotEmpty($header, 'Expected to find the head card header block.');
+        $this->assertStringNotContainsString('rounded', $header[0]);
     }
 
     public function testTheFormPostsToTheFlatUpdateUri(): void

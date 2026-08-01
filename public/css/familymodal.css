@@ -88,6 +88,13 @@
     background: rgba(20, 35, 31, 0.44);
 }
 
+/* On the standalone Data Entry page there is no modal box to sit inside, so the
+   backdrop covers the viewport instead of the (page-tall) form. */
+.family-draft-dialog-backdrop.is-page-level {
+    position: fixed;
+    z-index: 1080;
+}
+
 .family-draft-dialog {
     width: min(28rem, 100%);
     padding: 1.25rem;
@@ -727,68 +734,6 @@
 .floating-family-modal.is-family-entry-modal .family-entry-actions .btn:not(.btn-link) {
     min-height: 2.3rem;
     font-size: 0.84rem;
-}
-
-.family-draft-dialog-backdrop {
-    position: absolute;
-    z-index: 12;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1.5rem;
-    background: rgba(20, 35, 31, 0.44);
-}
-
-.family-draft-dialog {
-    width: min(28rem, 100%);
-    padding: 1.25rem;
-    border: 1px solid #cfe0db;
-    border-radius: 0.45rem;
-    background: #ffffff;
-    color: #263b35;
-}
-
-.family-draft-dialog-icon {
-    display: inline-flex;
-    width: 2.5rem;
-    height: 2.5rem;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 0.85rem;
-    border-radius: 50%;
-    background: #e7f2ee;
-    color: #157347;
-    font-size: 1.15rem;
-}
-
-.family-draft-dialog-icon.is-warning {
-    background: #fff4db;
-    color: #9a5b00;
-}
-
-.family-draft-dialog h3 {
-    margin: 0;
-    color: #243b35;
-    font-size: 1.05rem;
-    font-weight: 800;
-}
-
-.family-draft-dialog p {
-    margin: 0.45rem 0 0;
-    color: #5f6f69;
-    font-size: 0.95rem;
-}
-
-.family-draft-dialog-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 0.65rem;
-    margin-top: 1.25rem;
-}
-
-.family-draft-dialog-actions .btn {
-    min-width: 6.5rem;
 }
 
 .family-detail {

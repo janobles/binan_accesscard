@@ -395,7 +395,10 @@
             var cancelButton = document.createElement('button');
             var confirmButton = document.createElement('button');
 
-            overlay.className = 'family-draft-dialog-backdrop';
+            // No modal box to sit inside on the standalone Data Entry page, so the
+            // backdrop is pinned to the viewport rather than the page-tall form.
+            var isPageLevel = host === form;
+            overlay.className = 'family-draft-dialog-backdrop' + (isPageLevel ? ' is-page-level' : '');
             overlay.setAttribute('role', 'presentation');
             dialog.className = 'family-draft-dialog';
             dialog.setAttribute('role', 'dialog');
@@ -592,7 +595,7 @@
     // One reader for both row states. An open row is read from its controls, a closed
     // row from the hidden inputs that replaced them; the names are the same either way.
     function readMemberData(row) {
-        var data = { sector_ids: [], service_ids: [], sector_labels: [] };
+        var data = { sector_ids: [], service_ids: [], sector_codes: [] };
 
         Array.from(row.querySelectorAll('input, select')).forEach(function (field) {
             var match = /members\[\d+\]\[([a-z_]+)\](\[\])?$/.exec(field.name || '');
@@ -608,9 +611,9 @@
                     data[key].push(field.value);
 
                     if (key === 'sector_ids') {
-                        // The full sector name, not the shortcode: "Bata (Children)"
-                        // tells a worker what the row is, "B" does not.
-                        data.sector_labels.push(String(field.dataset.sectorName || field.dataset.sectorCode || field.dataset.label || '').trim());
+                        // The shortcode, not the full name: a summary line stays
+                        // scannable with "SC, PWD" where the names would wrap.
+                        data.sector_codes.push(String(field.dataset.sectorCode || field.dataset.sectorName || field.dataset.label || '').trim());
                     }
                 }
 
@@ -631,7 +634,7 @@
                 return;
             }
 
-            if (key === 'sector_labels') {
+            if (key === 'sector_codes') {
                 return;
             }
 
@@ -649,14 +652,14 @@
         });
     }
 
-    function hiddenInput(name, value, sectorName) {
+    function hiddenInput(name, value, sectorCode) {
         var input = document.createElement('input');
         input.type = 'hidden';
         input.name = name;
         input.value = value;
 
-        if (sectorName) {
-            input.dataset.sectorName = sectorName;
+        if (sectorCode) {
+            input.dataset.sectorCode = sectorCode;
         }
 
         return input;
@@ -686,7 +689,7 @@
         });
 
         data.sector_ids.forEach(function (id, position) {
-            values.appendChild(hiddenInput(prefix + '[sector_ids][]', id, data.sector_labels[position]));
+            values.appendChild(hiddenInput(prefix + '[sector_ids][]', id, data.sector_codes[position]));
         });
 
         data.service_ids.forEach(function (id) {
@@ -764,7 +767,7 @@
         var last = String(data.lastname || '').trim();
         var name = last !== '' && given !== '' ? last + ', ' + given : (last || given);
         var age = completedAge(data.birthday);
-        var sectors = data.sector_labels.filter(Boolean).join(', ');
+        var sectors = data.sector_codes.filter(Boolean).join(', ');
         // One muted line under the name, in the order a worker scans a household:
         // how they relate to the head, how old they are, what they are classified
         // as, how much aid they draw. Empty facts drop out rather than leaving
@@ -799,7 +802,7 @@
         var members = Array.from(form.querySelectorAll('[data-family-member-row]')).map(function (row) {
             var data = readMemberData(row);
 
-            delete data.sector_labels;
+            delete data.sector_codes;
 
             return data;
         });
@@ -1235,7 +1238,7 @@
         var sectorSelector = row ? 'input[name$="[sector_ids][]"]:checked' : 'input[name="sector_ids[]"]:checked';
         var serviceSelector = row ? 'input[name$="[service_ids][]"]:checked' : 'input[name="service_ids[]"]:checked';
         var codes = Array.from(scopeEl.querySelectorAll(sectorSelector)).map(function (input) {
-            return String(input.dataset.sectorName || input.dataset.sectorCode || input.dataset.label || '').trim();
+            return String(input.dataset.sectorCode || input.dataset.sectorName || input.dataset.label || '').trim();
         }).filter(Boolean);
         var services = scopeEl.querySelectorAll(serviceSelector).length;
 
@@ -1356,11 +1359,11 @@
 
         row.dataset.memberFieldPrefix = 'members[' + nextIndex + ']';
 
-        // Server-rendered rows sit inside a `col-md-6` grid cell (the shared
-        // `.row.g-3` in Family/_fields.php); wrap a JS-added row the same way so it
-        // lines up with them instead of stretching full width.
+        // Server-rendered rows sit inside a full-width grid cell (the shared
+        // `.row.g-3` in Family/_fields.php); wrap a JS-added row the same way so
+        // members stack one per row.
         var card = document.createElement('div');
-        card.className = 'col-md-6';
+        card.className = 'col-12';
         card.setAttribute('data-member-card', '');
         card.appendChild(row);
         container.appendChild(card);
@@ -1850,7 +1853,7 @@
                 var row = removeButton.closest('[data-family-member-row]');
 
                 if (row) {
-                    // Rows sit in a `col-md-6` grid cell (`[data-member-card]`); drop
+                    // Rows sit in a `col-12` grid cell (`[data-member-card]`); drop
                     // the cell with the row or the grid keeps an empty column.
                     var memberCard = row.closest('[data-member-card]');
                     (memberCard || row).remove();

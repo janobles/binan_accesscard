@@ -40,11 +40,11 @@ final class FamilyProfilePageTest extends CIUnitTestCase
 
     public function testMembersUseTheBootstrapGrid(): void
     {
-        // The literal wrapper tag, not a bare 'col-md-6' substring check: that class
+        // The literal wrapper tag, not a bare 'col-12' substring check: that class
         // also appears inside _fields.php's person-field columns (rendered
         // unconditionally, including in the unused member-editor <template>), so a
         // bare substring match would still pass with the grid wrapper deleted.
-        $this->assertStringContainsString('<div class="col-md-6" data-member-card>', $this->render());
+        $this->assertStringContainsString('<div class="col-12" data-member-card>', $this->render());
     }
 
     public function testEditableRenderHasOneSaveButton(): void

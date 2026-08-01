@@ -246,12 +246,12 @@ $renderMemberValues = static function ($index, array $m) use ($sectorCatalog): s
     $i = (string) $index;
     $scalarKeys = ['lastname', 'firstname', 'middlename', 'suffix', 'birthday', 'sex',
         'civilstatus', 'contactnumber', 'religion', 'education', 'job', 'salary', 'relationship'];
-    $names = [];
+    $sectorCodes = [];
 
     foreach ($sectorCatalog as $sectorGroup) {
         foreach (array_values((array) $sectorGroup) as $sector) {
             $sector = (array) $sector;
-            $names[(string) ($sector['sectorID'] ?? $sector['id'] ?? '')] = (string) ($sector['name'] ?? $sector['sector_name'] ?? $sector['shortcode'] ?? $sector['code'] ?? '');
+            $sectorCodes[(string) ($sector['sectorID'] ?? $sector['id'] ?? '')] = (string) ($sector['shortcode'] ?? $sector['code'] ?? $sector['name'] ?? $sector['sector_name'] ?? '');
         }
     }
 
@@ -260,7 +260,7 @@ $renderMemberValues = static function ($index, array $m) use ($sectorCatalog): s
         <input type="hidden" name="<?= esc('members[' . $i . '][' . $key . ']', 'attr') ?>" value="<?= esc((string) ($m[$key] ?? ''), 'attr') ?>">
     <?php endforeach; ?>
     <?php foreach (array_map('strval', (array) ($m['sector_ids'] ?? [])) as $sectorId): ?>
-        <input type="hidden" name="<?= esc('members[' . $i . '][sector_ids][]', 'attr') ?>" value="<?= esc($sectorId, 'attr') ?>" data-sector-name="<?= esc($names[$sectorId] ?? '', 'attr') ?>">
+        <input type="hidden" name="<?= esc('members[' . $i . '][sector_ids][]', 'attr') ?>" value="<?= esc($sectorId, 'attr') ?>" data-sector-code="<?= esc($sectorCodes[$sectorId] ?? '', 'attr') ?>">
     <?php endforeach; ?>
     <?php foreach (array_map('strval', (array) ($m['service_ids'] ?? [])) as $serviceId): ?>
         <input type="hidden" name="<?= esc('members[' . $i . '][service_ids][]', 'attr') ?>" value="<?= esc($serviceId, 'attr') ?>">

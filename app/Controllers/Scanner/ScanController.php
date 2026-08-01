@@ -3,14 +3,19 @@
 namespace App\Controllers\Scanner;
 
 use App\Controllers\BaseController;
+use App\Libraries\Qr\ControlNumber;
+use App\Libraries\Qr\QrImageGenerator;
 use App\Libraries\RoleAccess;
 use App\Libraries\SessionAccount;
 use App\Models\Audit\AuditTrailsModel;
 use App\Models\Families\MemberModel;
+use App\Models\Lookups\SectorModel;
+use App\Models\Lookups\ServiceModel;
 use App\Models\Scanner\DistributionBatchModel;
 use App\Models\Scanner\QrControlModel;
 use App\Models\Scanner\SubsidyDistributionModel;
 use App\Models\Scanner\SubsidyStatsModel;
+use App\Support\MemberFieldNormalizer;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
 
@@ -24,6 +29,9 @@ use CodeIgniter\HTTP\ResponseInterface;
  * (set by an admin when the batch is opened).
  *
  * - scan():        GET  scanner/scan        -> one-action scan UI; empty state when no batch is open.
+ * - history():     GET  scanner/history/{controlNo} -> "View all" page: History tab (server
+ *                                               search/filter/pagination) + Family Information
+ *                                               tab (client-side, families are small).
  * - performance(): GET  scanner/performance  -> this kiosk's own live metrics.
  * - stats():       GET  scanner/stats        -> JSON own-performance snapshot for polling.
  * - logAid():      POST scanner/log          -> the whole scan in one call: resolve family,
@@ -59,6 +67,102 @@ class ScanController extends BaseController
                 ? model(SubsidyDistributionModel::class)->familiesForUserInBatch($userId, (int) $activeBatch['batch_id'])
                 : 0,
         ]);
+    }
+
+    /**
+     * GET scanner/history/{controlNo} - full, filterable subsidy history for
+     * one family, reached from the scan panel's "View all" link. Read-only:
+     * no batch, no scan action. Two tabs: History (every past scan of this
+     * control number - server search/filter/pagination) and Family
+     * Information (the head + rest of the family - client-side search/filter,
+     * families are small so no pagination).
+     */
+    public function history(int $controlNo): ResponseInterface|string
+    {
+        $guard = RoleAccess::requireRole(['Scanner', 'Admin', 'Developer']);
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        $members = new MemberModel();
+        $headId  = model(QrControlModel::class)->headForControl($controlNo);
+        $head    = $headId !== null ? $members->findHead($headId) : null;
+        if ($head === null) {
+            return redirect()->to('scanner/scan')->with('error', 'QR control number is not registered.');
+        }
+
+        // Audit Logs tab: scoped to this control number only - scan a
+        // different one and it's a different set. No search/filters, not
+        // paginated - one control number's scan instances are a small set.
+        $distModel   = model(SubsidyDistributionModel::class);
+        $historyRows = $distModel->historyAllFor($controlNo, '', 0, 0);
+
+        // Family Information tab: head + rest of the family, sectors and
+        // services/programs kept as two separate lists (not merged).
+        $memberRows = array_values(array_filter(
+            $members->familyMembers($headId),
+            static fn (array $m): bool => (int) $m['memberID'] !== $headId
+        ));
+        $splitIds = array_map(static fn (array $m): int => (int) $m['memberID'], array_merge([$head], $memberRows));
+        $split    = $members->referenceBadgesSplit($splitIds);
+
+        foreach ($memberRows as $i => $m) {
+            $memberRows[$i]['sectors']          = $split[(int) $m['memberID']]['sectors'] ?? [];
+            $memberRows[$i]['servicesPrograms']  = $split[(int) $m['memberID']]['servicesPrograms'] ?? [];
+        }
+
+        $viewData = [
+            'pageTitle'    => 'Subsidy History',
+            'username'     => session('username') ?? 'Scanner',
+            'user'         => SessionAccount::user(),
+            'accountLevelLabel' => SessionAccount::levelLabel(),
+            'controlNo'    => $controlNo,
+            'headName'     => trim(($head['firstname'] ?? '') . ' ' . ($head['lastname'] ?? '')),
+            // Audit Logs tab
+            'historyRows'  => $historyRows,
+            // Family Information tab
+            'head'         => [
+                'firstname'     => (string) ($head['firstname'] ?? ''),
+                'lastname'      => (string) ($head['lastname'] ?? ''),
+                'suffix'        => (string) ($head['suffix'] ?? ''),
+                'sex'           => (string) ($head['sex'] ?? ''),
+                'birthday'      => (string) ($head['birthday'] ?? ''),
+                'civilstatus'   => (string) ($head['civilstatus'] ?? ''),
+                'contactnumber' => (string) ($head['contactnumber'] ?? ''),
+                'job'           => (string) ($head['job'] ?? ''),
+                'address'       => (string) ($head['address'] ?? ''),
+                'sectors'         => $split[(int) $head['memberID']]['sectors'] ?? [],
+                'servicesPrograms' => $split[(int) $head['memberID']]['servicesPrograms'] ?? [],
+            ],
+            'members'      => $memberRows,
+            'allSectorOptions'         => array_map(static fn (array $s): string => (string) ($s['shortcode'] ?? ''), (new SectorModel())->getSectorOptions()),
+            'allServiceProgramOptions' => $this->allServiceProgramOptions(),
+        ];
+
+        // The scan panel injects this inline (no page reload) via fetch() with
+        // X-Requested-With: XMLHttpRequest - same fragment the full page uses,
+        // just without the simple-layout shell and "Back to Scan" header.
+        if ($this->request->isAJAX()) {
+            return view('Scanner/history-fragment', $viewData);
+        }
+
+        return view('Scanner/history', $viewData);
+    }
+
+    /**
+     * Every service category name + every service shortcode, system-wide -
+     * so the "View all" page's Services/Programs filter offers every option
+     * that could ever appear, not just what this family happens to have.
+     *
+     * @return list<string>
+     */
+    private function allServiceProgramOptions(): array
+    {
+        $services   = (new ServiceModel())->getActive();
+        $categories = array_map(static fn (array $s): string => trim((string) ($s['category'] ?? '')), $services);
+        $shortcodes = array_map(static fn (array $s): string => trim((string) ($s['shortcode'] ?? '')), $services);
+
+        return array_values(array_unique(array_filter(array_merge($categories, $shortcodes))));
     }
 
     /** GET scanner/performance - this kiosk's own live metrics. */
@@ -169,6 +273,59 @@ class ScanController extends BaseController
     }
 
     /**
+     * Resolves a control number to the family panel payload: the head
+     * (identity, address/barangay, sector-service badges) and the rest of the
+     * family, badges attached, head excluded (the panel shows the head
+     * separately). Returns null when the control number isn't registered or
+     * its head row is missing.
+     */
+    private function resolveFamily(int $controlNo): ?array
+    {
+        $headId = model(QrControlModel::class)->headForControl($controlNo);
+        if ($headId === null) {
+            return null;
+        }
+
+        $members = new MemberModel();
+        $head    = $members->findHead($headId);
+        if ($head === null) {
+            log_message('error', 'Scanner lookup: control {c} maps to missing head {h}', ['c' => $controlNo, 'h' => $headId]);
+            return null;
+        }
+
+        $memberRows = array_values(array_filter(
+            $members->familyMembers($headId),
+            static fn (array $m): bool => (int) $m['memberID'] !== $headId
+        ));
+
+        $badgeIds = array_map(static fn (array $m): int => (int) $m['memberID'], array_merge([$head], $memberRows));
+        $badges   = $members->referenceBadges($badgeIds);
+        $barangay = MemberFieldNormalizer::splitAddressBarangay((string) ($head['address'] ?? ''))['barangay'];
+
+        foreach ($memberRows as $i => $m) {
+            $memberRows[$i]['badges'] = $badges[(int) $m['memberID']] ?? [];
+        }
+
+        return [
+            'control_no'    => $controlNo,
+            'qr_code_image' => (new QrImageGenerator())->dataUri(ControlNumber::payload($controlNo)),
+            'head' => [
+                'memberID'      => (int) $head['memberID'],
+                'firstname'     => (string) ($head['firstname'] ?? ''),
+                'lastname'      => (string) ($head['lastname'] ?? ''),
+                'suffix'        => (string) ($head['suffix'] ?? ''),
+                'sex'           => (string) ($head['sex'] ?? ''),
+                'birthday'      => (string) ($head['birthday'] ?? ''),
+                'contactnumber' => (string) ($head['contactnumber'] ?? ''),
+                'address'       => (string) ($head['address'] ?? ''),
+                'barangay'      => $barangay,
+                'badges'        => $badges[(int) $head['memberID']] ?? [],
+            ],
+            'members' => $memberRows,
+        ];
+    }
+
+    /**
      * POST scanner/log - the whole scan in one action. Resolves the control
      * number to a family, refuses when the family was already logged in the
      * open batch (Duplicate Entry), otherwise inserts a distribution for the
@@ -188,15 +345,9 @@ class ScanController extends BaseController
         }
         $controlNo = (int) $this->request->getPost('control_no');
 
-        $headId = model(QrControlModel::class)->headForControl($controlNo);
-        if ($headId === null) {
+        $familyPayload = $this->resolveFamily($controlNo);
+        if ($familyPayload === null) {
             return $this->response->setStatusCode(404)->setJSON(['error' => 'QR control number is not registered.']);
-        }
-        $members = new MemberModel();
-        $head    = $members->findHead($headId);
-        if ($head === null) {
-            log_message('error', 'Scanner log: control {c} maps to missing head {h}', ['c' => $controlNo, 'h' => $headId]);
-            return $this->response->setStatusCode(404)->setJSON(['error' => 'Family record unavailable.']);
         }
 
         $activeBatch = model(DistributionBatchModel::class)->activeBatch();
@@ -206,32 +357,9 @@ class ScanController extends BaseController
         }
         $batchId = (int) $activeBatch['batch_id'];
         $userId  = (int) (session('user_id') ?? 0);
+        $headId  = $familyPayload['head']['memberID'];
 
-        // Project the head row to what the kiosk renders; the full member row
-        // carries salary/contact/religion, which have no business in this JSON.
-        $familyPayload = [
-            'control_no'    => $controlNo,
-            'qr_code_image' => (new \App\Libraries\Qr\QrImageGenerator())->dataUri(
-                \App\Libraries\Qr\ControlNumber::payload($controlNo)
-            ),
-            'subsidy_type_name' => (string) ($activeBatch['subsidy_type_name'] ?? 'Subsidy'),
-            'head'          => [
-                'memberID'  => (int) $head['memberID'],
-                'firstname' => (string) ($head['firstname'] ?? ''),
-                'lastname'  => (string) ($head['lastname'] ?? ''),
-                'address'   => (string) ($head['address'] ?? ''),
-            ],
-            'members'       => $members->familyMembers($headId),
-        ];
-
-        // Sector/category/service badges per member for the family panel.
-        $memberRows = $familyPayload['members'];
-        $badges     = $members->referenceBadges(array_map(static fn (array $m): int => (int) $m['memberID'], $memberRows));
-        $familyPayload['head']['badges'] = $badges[(int) $head['memberID']] ?? [];
-        foreach ($memberRows as $i => $m) {
-            $memberRows[$i]['badges'] = $badges[(int) $m['memberID']] ?? [];
-        }
-        $familyPayload['members'] = $memberRows;
+        $familyPayload['subsidy_type_name'] = (string) ($activeBatch['subsidy_type_name'] ?? 'Subsidy');
 
         // One handout per family per batch: a repeat scan reports the original
         // entry instead of logging again. The check is server-side so a stale
@@ -258,7 +386,7 @@ class ScanController extends BaseController
 
         $distributionId = model(SubsidyDistributionModel::class)->logAid([
             'control_no'  => $controlNo,
-            'memberID'        => (int) $head['memberID'],
+            'memberID'        => (int) $headId,
             'subsidy_type_id' => $subsidyTypeId,
             'claim_date'      => $claimDate,
             'userID'      => $userId,
@@ -267,7 +395,7 @@ class ScanController extends BaseController
 
         $audited = $distributionId > 0 && (new AuditTrailsModel())->logAction(
             $userId,
-            (int) $head['memberID'],
+            $headId,
             'Logged subsidy distribution',
             'Control #' . $controlNo,
             $this->request->getIPAddress(),

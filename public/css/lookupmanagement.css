@@ -51,6 +51,7 @@
 
 .lookup-management-table .lookup-col-status {
     width: 7.25rem;
+    text-align: center;
 }
 
 .lookup-management-table .lookup-col-actions {
@@ -70,6 +71,18 @@
 }
 
 .lookup-management-table--categories .lookup-col-actions {
+    width: 5.5rem;
+}
+
+.lookup-management-table--subsidy-types {
+    min-width: 28rem;
+}
+
+.lookup-management-table--subsidy-types .lookup-col-name {
+    width: auto;
+}
+
+.lookup-management-table--subsidy-types .lookup-col-actions {
     width: 5.5rem;
 }
 

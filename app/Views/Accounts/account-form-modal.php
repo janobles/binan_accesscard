@@ -100,19 +100,12 @@ $getError = static function (string $field) use ($errors): string {
 
                 <div class="account-field-group" aria-label="Login information">
                     <h3 class="account-field-group-title">Login Information</h3>
-                    <div class="account-fields-row account-fields-row--credentials">
+                    <div class="account-fields-row account-fields-row--requirements">
                         <div class="account-field">
                             <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>-username">Username <span class="account-required-marker text-danger" aria-hidden="true">*</span></label>
                             <input class="form-control <?= $hasError('username') ? 'is-invalid' : '' ?>" id="<?= esc($fieldPrefix, 'attr') ?>-username" name="username" type="text" value="<?= esc($username, 'attr') ?>" placeholder="Enter username" required minlength="4">
                             <?php if ($hasError('username')): ?><div class="invalid-feedback"><?= esc($getError('username')) ?></div><?php endif; ?>
                         </div>
-                        <?php if (! $isEdit && ! $isSelfProfile): ?>
-                            <div class="account-field">
-                                <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>-password">Password <span class="account-required-marker text-danger" aria-hidden="true">*</span></label>
-                                <input class="form-control <?= $hasError('password') ? 'is-invalid' : '' ?>" id="<?= esc($fieldPrefix, 'attr') ?>-password" name="password" type="password" placeholder="Enter password" required minlength="8">
-                                <?php if ($hasError('password')): ?><div class="invalid-feedback"><?= esc($getError('password')) ?></div><?php endif; ?>
-                            </div>
-                        <?php endif; ?>
                         <div class="account-field">
                             <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>-role">Account Level <span class="account-required-marker text-danger" aria-hidden="true">*</span></label>
                             <?php if ($isRoleReadOnly): ?>
@@ -132,20 +125,35 @@ $getError = static function (string $field) use ($errors): string {
                             <?php endif; ?>
                             <?php if ($hasError('role')): ?><div class="invalid-feedback d-block"><?= esc($getError('role')) ?></div><?php endif; ?>
                         </div>
-                        <?php if ($isEdit && ! $isSelf): ?>
+                    </div>
+                    <?php if (! $isEdit && ! $isSelfProfile): ?>
+                        <div class="account-fields-row account-fields-row--requirements">
                             <div class="account-field">
-                                <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>-reset-password">Password Reset</label>
-                                <button class="btn btn-outline-warning account-reset-password-action" id="<?= esc($fieldPrefix, 'attr') ?>-reset-password" type="submit"
-                                        formaction="<?= site_url('accounts/reset-password') ?>"
-                                        formmethod="post"
-                                        formnovalidate
-                                        onclick="return confirm('Generate a new random password for this account? The current password will stop working.');">
-                                    <i class="bi bi-key" aria-hidden="true"></i>
-                                    <span>Generate New Password</span>
-                                </button>
+                                <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>-password">Password</label>
+                                <input class="form-control <?= $hasError('password') ? 'is-invalid' : '' ?>" id="<?= esc($fieldPrefix, 'attr') ?>-password" name="password" type="password" placeholder="Leave blank for temp password" minlength="8">
+                                <?php if ($hasError('password')): ?><div class="invalid-feedback"><?= esc($getError('password')) ?></div><?php endif; ?>
                             </div>
-                        <?php endif; ?>
-                        <?php if ($isSelfProfile): ?>
+                            <div class="account-field account-field--wide">
+                                <label class="form-label invisible" aria-hidden="true">&nbsp;</label>
+                                <span class="text-muted small">Leave blank to set a temporary password (<code>password123</code>).</span>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+                    <?php if ($isEdit && ! $isSelf): ?>
+                        <div class="account-fields-row account-fields-row--requirements">
+                            <div class="account-field">
+                                <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>-new-password">New Password</label>
+                                <input class="form-control <?= $hasError('new_password') ? 'is-invalid' : '' ?>" id="<?= esc($fieldPrefix, 'attr') ?>-new-password" name="new_password" type="password" autocomplete="new-password" placeholder="Leave blank for temp password" minlength="8">
+                                <?php if ($hasError('new_password')): ?><div class="invalid-feedback"><?= esc($getError('new_password')) ?></div><?php endif; ?>
+                            </div>
+                            <div class="account-field account-field--wide">
+                                <label class="form-label invisible" aria-hidden="true">&nbsp;</label>
+                                <span class="text-muted small">Leave blank to set a temporary password (<code>password123</code>).</span>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+                    <?php if ($isSelfProfile): ?>
+                        <div class="account-fields-row account-fields-row--credentials">
                             <div class="account-field">
                                 <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>-current-password">Current Password</label>
                                 <input class="form-control <?= $hasError('current_password') ? 'is-invalid' : '' ?>" id="<?= esc($fieldPrefix, 'attr') ?>-current-password" name="current_password" type="password" autocomplete="current-password" placeholder="Enter current password">
@@ -161,14 +169,14 @@ $getError = static function (string $field) use ($errors): string {
                                 <input class="form-control <?= $hasError('confirm_password') ? 'is-invalid' : '' ?>" id="<?= esc($fieldPrefix, 'attr') ?>-confirm-password" name="confirm_password" type="password" autocomplete="new-password" placeholder="Re-enter new password">
                                 <?php if ($hasError('confirm_password')): ?><div class="invalid-feedback"><?= esc($getError('confirm_password')) ?></div><?php endif; ?>
                             </div>
-                        <?php endif; ?>
-                    </div>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
         </section>
 
         <div class="account-create-actions mt-3">
-            <button class="btn btn-outline-secondary me-2" type="button" data-bs-dismiss="modal">Cancel</button>
+            <button class="btn btn-secondary me-2" type="button" data-bs-dismiss="modal">Cancel</button>
             <button class="btn btn-success" type="submit"><?= esc($submitLabel) ?></button>
         </div>
     </form>

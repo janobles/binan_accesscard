@@ -1,8 +1,10 @@
 <?php
 /**
- * Subsidy Types reference body: Add button + subsidy-type table. Rendered inside
- * components/card by the Reference Data page's subsidy-types tab. Lifecycle
- * buttons render only for Admin/Developer.
+ * Subsidy Types reference body: Add button + search/size controls + the
+ * subsidy-type table. Rendered inside components/card by the Reference Data
+ * page's subsidy-types tab, which supplies the server-side search/pagination
+ * bundle the Sectors/Services/Categories tabs also use. Lifecycle buttons
+ * render only for Admin/Developer.
  */
 $canManageSubsidyTypes = in_array($currentRole ?? '', ['Admin', 'Developer'], true);
 ?>
@@ -14,32 +16,34 @@ $canManageSubsidyTypes = in_array($currentRole ?? '', ['Admin', 'Developer'], tr
 <?php endif; ?>
 
         <?= view('components/table_controls', [
-            'searchId' => 'subsidyTypesLocalSearch',
+            'searchId' => 'subsidyTypeLocalSearch',
             'searchAria' => 'Search shown subsidy types',
-            'searchFormAttrs' => 'onsubmit="return false;"',
-            'searchInputAttrs' => 'data-paginate-search="subsidy-types"',
-            'sizeId' => 'subsidyTypesPerPage',
-            'sizeAction' => null,
-            'perPage' => 25,
-            'perPageOptions' => [10 => '10', 25 => '25', 50 => '50', 100 => '100', 0 => 'All'],
-            'sizeAttrs' => 'data-paginate-size="subsidy-types"',
+            'searchFormAttrs' => 'data-lookup-search',
+            'searchInputAttrs' => 'data-lookup-search-input',
+            'sizeId' => 'subsidyTypePerPage',
+            'sizeAction' => site_url($listRoute),
+            'sizeHiddenHtml' => '<input type="hidden" name="tab" value="subsidy-types">'
+                . ($keyword !== '' ? '<input type="hidden" name="q" value="' . esc($keyword, 'attr') . '">' : '')
+                . ($status !== 'active' ? '<input type="hidden" name="status" value="' . esc($status, 'attr') . '">' : ''),
+            'perPage' => $perPage,
+            'perPageOptions' => $perPageOptions,
         ]) ?>
 
         <div class="table-responsive">
-          <table class="table manage-record-table align-middle w-100">
+          <table class="table manage-record-table align-middle lookup-management-table lookup-management-table--subsidy-types">
             <thead>
-              <tr><th>Name</th><th>Status</th><th class="text-end">Actions</th></tr>
+              <tr><th class="lookup-col-name">Name</th><th class="lookup-col-status">Status</th><th class="lookup-col-actions text-end">Actions</th></tr>
             </thead>
             <tbody>
               <?php foreach ($subsidyTypes as $t): ?>
                 <?php $archived = ! empty($t['dt_deleted']); ?>
-                <tr data-paginate-row data-row-archived="<?= $archived ? '1' : '0' ?>">
+                <tr data-row-archived="<?= $archived ? '1' : '0' ?>">
                   <td><span class="sector-name"><?= esc($t['name']) ?></span></td>
-                  <td><span class="sector-status-badge <?= $archived ? 'sector-status-archived' : 'sector-status-active' ?>"><?= $archived ? 'Archived' : 'Active' ?></span></td>
+                  <td class="lookup-col-status"><span class="sector-status-badge <?= $archived ? 'sector-status-archived' : 'sector-status-active' ?>"><?= $archived ? 'Archived' : 'Active' ?></span></td>
                   <td class="text-end">
                     <?php if ($canManageSubsidyTypes): ?>
                     <div class="dropdown actions-menu">
-                      <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false" aria-label="Subsidy type actions">
+                      <button class="btn btn-outline-secondary btn-sm actions-menu-toggle" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false" aria-label="Subsidy type actions">
                         <i class="bi bi-three-dots" aria-hidden="true"></i>
                       </button>
                       <div class="dropdown-menu dropdown-menu-end">
@@ -66,7 +70,7 @@ $canManageSubsidyTypes = in_array($currentRole ?? '', ['Admin', 'Developer'], tr
                 </tr>
               <?php endforeach; ?>
               <?php if ($subsidyTypes === []): ?>
-                <tr><td colspan="3" class="sector-empty-state">No subsidy types defined.</td></tr>
+                <tr><td colspan="3" class="sector-empty-state"><?= $keyword !== '' ? 'No subsidy types match your search.' : 'No subsidy types defined.' ?></td></tr>
               <?php endif; ?>
             </tbody>
           </table>

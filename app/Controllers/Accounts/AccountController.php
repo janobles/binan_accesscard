@@ -51,7 +51,9 @@ class AccountController extends BaseController
 
         $rules = [
             'username' => 'required|min_length[4]|max_length[255]|is_unique[users.username]',
-            'password' => 'required|min_length[8]',
+            // Blank falls back to a temp password (password123) below, same as the
+            // edit-account New Password field.
+            'password' => 'permit_empty|min_length[8]',
             // Personal details are packed into the single users.full_description
             // column (see buildFullDescription). Suffix is optional.
             'last_name' => 'required|max_length[100]',
@@ -70,7 +72,6 @@ class AccountController extends BaseController
                 'is_unique' => 'Username must be unique. Try examples like admin_maria01, admin_roberto02, emp_ana01, or emp_juan02.',
             ],
             'password' => [
-                'required' => 'Password is required.',
                 'min_length' => 'Password must have at least 8 characters.',
             ],
             'role' => [
@@ -88,11 +89,13 @@ class AccountController extends BaseController
         $role = (string) $this->request->getPost('role');
         $username = trim((string) $this->request->getPost('username'));
         $fullDescription = $this->buildFullDescription();
+        $password = trim((string) $this->request->getPost('password'));
+        $password = $password !== '' ? $password : 'password123';
 
         try {
             $userId = (new UserModel())->createAccount(
                 $username,
-                (string) $this->request->getPost('password'),
+                $password,
                 $role,
                 $fullDescription
             );
@@ -218,6 +221,12 @@ class AccountController extends BaseController
             ];
         }
 
+        // Admin resetting someone else's password (the New Password field only
+        // renders for !$isSelf); blank falls back to a temp password below.
+        if (! $isSelf) {
+            $rules += ['new_password' => 'permit_empty|min_length[8]'];
+        }
+
         if (! $this->validate($rules, $messages)) {
             return redirect()->back()
                 ->withInput()
@@ -261,6 +270,21 @@ class AccountController extends BaseController
             return redirect()->to(site_url('accounts'))->with('error', 'Account could not be updated.');
         }
 
+        // Admin resetting someone else's password: blank falls back to a shared
+        // temp password (the user changes it themselves in My Account afterward).
+        $resetPasswordValue = null;
+
+        if (! $isSelf) {
+            $newPassword = trim((string) $this->request->getPost('new_password'));
+            $resetPasswordValue = $newPassword !== '' ? $newPassword : 'password123';
+
+            if (! $userModel->updatePassword($userId, $resetPasswordValue)) {
+                return redirect()->to(site_url('accounts'))->with('error', 'Account was updated, but the password could not be reset.');
+            }
+
+            $this->audit('ACCOUNT_PASSWORD_RESET', 'Reset password for account "' . $username . '" (#' . $userId . ').');
+        }
+
         // Keep the topbar/session in sync if an admin renamed their own account.
         if ($isSelf) {
             session()->set('username', $username);
@@ -281,7 +305,16 @@ class AccountController extends BaseController
             $this->audit('ACCOUNT_UPDATED', 'Updated ' . $displayRole . ' account "' . $username . '" (#' . $userId . ').');
         }
 
-        return redirect()->to(site_url('accounts'))->with('success', 'Account updated successfully.');
+        $redirect = redirect()->to(site_url('accounts'))->with('success', 'Account updated successfully.');
+
+        if ($resetPasswordValue !== null) {
+            $redirect = $redirect->with('reset_password', [
+                'username' => $username,
+                'password' => $resetPasswordValue,
+            ]);
+        }
+
+        return $redirect;
     }
 
     /**

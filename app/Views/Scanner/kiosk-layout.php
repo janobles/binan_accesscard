@@ -46,17 +46,18 @@ $accountMenuData = [
 </nav>
 <main class="container-fluid px-4 py-3">
 
-  <?php if (session()->getFlashdata('error')): ?>
-    <div class="alert alert-danger"><?= esc(session()->getFlashdata('error')) ?></div>
-  <?php endif; ?>
+  <?= view('components/toast') ?>
+  <?= view('Partials/flash-toasts') ?>
   <?= $this->renderSection('content') ?>
 </main>
 
+<?php /* Plain-sized modal (no floating-family-modal - that class is tuned
+         for the admin/employee record-edit view's rich layout, way oversized
+         for the scan panel's simple head + members read-only popup). */ ?>
 <?= view('components/modal', [
     'id' => 'familyModal',
-    'modalClass' => 'floating-family-modal',
-    'attrs' => 'aria-label="Record details" data-bs-backdrop="static" data-bs-keyboard="false"',
-    'size' => 'modal-xl',
+    'attrs' => 'aria-label="Family details"',
+    'size' => 'modal-lg',
     'title' => 'Record',
     'titleId' => 'familyModalLabel',
     'bodyId' => 'familyModalBody',

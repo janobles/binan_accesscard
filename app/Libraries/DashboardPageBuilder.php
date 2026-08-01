@@ -193,6 +193,9 @@ class DashboardPageBuilder
         $categoryListData = $isReference && $referenceTab === 'categories'
             ? $this->buildLookupListData(new CategoryModel(), 'reference-data', 'categoryID')
             : [];
+        $subsidyTypeListData = $isReference && $referenceTab === 'subsidy-types'
+            ? $this->buildLookupListData(model(SubsidyTypeModel::class), 'reference-data', 'subsidy_type_id')
+            : [];
 
         // Distribution page: batches and the log share one page, switched by
         // ?tab=. Data gated so other pages don't run these queries.
@@ -280,7 +283,8 @@ class DashboardPageBuilder
             'batches'            => $isBatches ? $batchModel->allBatches() : [],
             'activeBatch'        => $isBatches ? $batchModel->activeBatch() : null,
             'activeSubsidyTypes' => $isBatches ? model(SubsidyTypeModel::class)->active() : [],
-            'subsidyTypes'       => $isReference && $referenceTab === 'subsidy-types' ? model(SubsidyTypeModel::class)->all() : [],
+            'subsidyTypes'       => $subsidyTypeListData['rows'] ?? [],
+            'subsidyTypeListData' => $subsidyTypeListData,
             'distributions'      => $isDistributions ? model(SubsidyDistributionModel::class)->allDistributions() : [],
             'reportsBatches'     => $reportsData['reportsBatches'],
             'reportsBatchId'     => $reportsData['reportsBatchId'],

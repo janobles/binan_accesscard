@@ -40,15 +40,22 @@
 }
 
 #qrImage {
-    width: 240px;
-    height: 240px;
+    width: 320px;
+    height: 320px;
     object-fit: contain;
     image-rendering: pixelated;
     display: none;
 }
 
-#qrHeadline {
-    font-size: 6rem;
-    line-height: 1;
+
+/* Scan panel columns. The family card takes the remaining width and needs
+   min-width:0 so its content can shrink instead of forcing the flex row wider;
+   the Control No card is capped so the QR stays a readable size on desktop and
+   still goes full width once the row stacks. */
+.scan-panel-family {
+    min-width: 0;
 }
 
+.scan-panel-control {
+    width: min(100%, 26rem);
+}

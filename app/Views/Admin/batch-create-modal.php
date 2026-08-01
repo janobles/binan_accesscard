@@ -9,7 +9,7 @@
 $activeSubsidyTypes = $activeSubsidyTypes ?? [];
 ?>
 <div class="modal fade" id="newBatchModal" tabindex="-1" aria-labelledby="newBatchModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
+  <div class="modal-dialog modal-dialog-centered">
     <form class="modal-content" method="post" action="<?= site_url('distribution/batches/open') ?>">
       <?= csrf_field() ?>
       <div class="modal-header">
@@ -33,7 +33,7 @@ $activeSubsidyTypes = $activeSubsidyTypes ?? [];
         </div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
         <button type="submit" class="<?= btn('add') ?>">Open Batch</button>
       </div>
     </form>

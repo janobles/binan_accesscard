@@ -2,7 +2,7 @@
 /** Add Subsidy Type modal: single name field, posts to reference-data/subsidy-types/create. */
 ?>
 <div class="modal fade" id="addSubsidyTypeModal" tabindex="-1" aria-labelledby="addSubsidyTypeModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
+  <div class="modal-dialog modal-dialog-centered">
     <form class="modal-content" method="post" action="<?= site_url('reference-data/subsidy-types/create') ?>">
       <?= csrf_field() ?>
       <div class="modal-header">
@@ -17,8 +17,8 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="submit" class="<?= btn('add') ?>">Add Subsidy Type</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="<?= btn('add') ?>">Add</button>
       </div>
     </form>
   </div>

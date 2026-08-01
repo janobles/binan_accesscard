@@ -43,19 +43,29 @@ The kiosk has no back-office pages.
 
 The scan IS the log - there is no confirm step and no claimant/date form:
 
-- `POST scanner/log` takes only `control_no`. The server resolves the family,
-  then inserts a distribution for the **family head** dated **today**, with
-  the open batch's `aid_type_id` and `batch_id`. Insert + audit row share one
-  transaction.
+- `POST scanner/log` takes only `control_no`. Resolves the family via
+  `ScanController::resolveFamily()` (head with suffix/barangay/badges,
+  members excluding the head, also with badges), then inserts a distribution
+  for the **family head** dated **today**, with the open batch's
+  `aid_type_id` and `batch_id`. Insert + audit row share one transaction.
 - **One handout per family per batch**, regardless of date. The server checks
   `AidDistributionModel::inBatch(control_no, batch_id)` before inserting; a
   repeat scan returns `logged: false` with the original entry and writes
-  nothing. The kiosk shows a full-width red "Duplicate Entry" banner
-  (`alert-danger`); a fresh log shows a green "Logged" banner
-  (`alert-success`). Scanning the same family again requires a new batch.
-- The response always carries the family panel data (head, members with
-  badges, history, `myBatchCount`) so the kiosk renders in one round trip.
-  There is no separate lookup endpoint.
+  nothing. The kiosk shows a red "Duplicate Entry" banner (`alert-danger`); a
+  fresh log shows a green "Logged" banner (`alert-success`). Scanning the
+  same family again requires a new batch.
+- The response always carries the family panel data so the kiosk renders in
+  one round trip. There is no separate lookup endpoint.
+- The scan panel shows the family name, then fetches the History/Family
+  Information tabs from `scanner/history/{controlNo}` as an AJAX fragment
+  (`X-Requested-With: XMLHttpRequest`) and injects it inline
+  (`loadHistoryFragment()` in `scan.php`) - same markup the standalone "View
+  all" page renders (`Scanner/history-fragment.php`, shared by both), just
+  without a page navigation. Injected `<script>` tags are re-created
+  manually (innerHTML doesn't execute them) and `lookup-search.js`/
+  `records-filter-panel.js`/`table-paginate.js` are re-bound against the new
+  container, since their DOMContentLoaded init already ran before the
+  fragment existed.
 - `scanner/scan` renders an empty state (no redirect loop) when no batch is
   open; `logAid()` returns **409** when no batch is open (covers a batch
   closed mid-session).
@@ -72,6 +82,35 @@ The scan IS the log - there is no confirm step and no claimant/date form:
   `MemberModel::referenceBadges()`); the members list sits in a Bootstrap
   collapse, collapsed by default, so the kiosk stays uncluttered. Expanding
   is optional and never part of the scan flow.
+- **Simple shell** - `app/Views/Scanner/simple-layout.php`: same topnav brand
+  and account menu as the kiosk shell, but loads the dashboard table CSS/JS
+  (`asset_styles('admin')`, `lookup-search.js`, `records-filter-panel.js`)
+  directly instead of going through the dashboard page builder - that builder
+  is wired to one big `activePage` switch, so a Scanner-reachable page can't
+  render through it without forking that switch. Used by
+  `scanner/history/{controlNo}` (`ScanController::history()`), the "View all"
+  page - the one Scanner page that needs a real search/filter/pagination table.
+  A plain GET renders it full-page (this shell); an AJAX GET
+  (`$this->request->isAJAX()`) renders just `Scanner/history-fragment.php` -
+  the scan panel injects that fragment inline instead of navigating here.
+- **"View all" page anatomy** (`Scanner/history-fragment.php`) - two Bootstrap
+  tabs, both server-rendered on the one page load (switching tabs is
+  client-side only, no reload):
+  - **History** tab: every past scan of this control number. Server search +
+    Batch/Subsidy Type filters (`components/toolbar`, `SubsidyDistributionModel::
+    batchCountsFor()`/`subsidyTypeCountsFor()`) + pagination
+    (`historyForPaged()`/`countHistoryFor()`), same anatomy as Manage Records.
+  - **Family Information** tab: the head + rest of the family, one row each.
+    Client-side only (families are small, no pagination) - search box paired
+    with its own button (same pattern as the scan input), one Filters
+    dropdown with five checkbox groups (Relationship, Sex, Date of Birth,
+    Sectors, Services and Programs - Sectors and Services/Programs are
+    filtered **separately**, via `MemberModel::referenceBadgesSplit()` rather
+    than the merged `referenceBadges()` the scan panel/logAid() response
+    uses), then Clear. Relationship/Sex/DOB options are data-derived (no
+    fixed reference list); Sectors/Services options are the full system-wide
+    set (every sector, every service category/shortcode) so the dropdown
+    always lists every possible value, not just what this family has.
 - **Dashboard shell** - `app/Views/layout.php`: the SB-Admin frame every staff
   role shares. Owns subsidy types (the `reference-data` page's subsidy-types tab),
   batches and the distributions log (the `distribution` page), and its reports

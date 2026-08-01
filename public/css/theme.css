@@ -25,6 +25,22 @@
     --chart-grid: #eaecf4;
 }
 
+/* Bootstrap's stock .btn-warning uses black text on yellow (default WCAG
+   pick); house style wants white text on every yellow button instead. */
+.btn-warning {
+    --bs-btn-color: #fff;
+    --bs-btn-hover-color: #fff;
+    --bs-btn-active-color: #fff;
+    --bs-btn-disabled-color: #fff;
+}
+
+/* .btn-outline-warning keeps its yellow text at rest (transparent bg), but
+   its hover/active states fill solid yellow - same white-text fix there. */
+.btn-outline-warning {
+    --bs-btn-hover-color: #fff;
+    --bs-btn-active-color: #fff;
+}
+
 /* Shell: green topnav + sidenav (SB Admin 1 dark variants re-tinted). */
 .sb-topnav.bg-dark {
     background-color: var(--binan-green-deep) !important;
@@ -511,4 +527,25 @@
 
 [data-family-entry-form] .family-entry-actions-page {
     margin-top: auto;
+/* Subtitled variant (Subsidy Distribution): the "Showing batch / Last updated"
+   line sits under the title, in the same row as the action buttons, instead
+   of wrapping to its own line below. */
+.dashboard-section-head--subtitled {
+    align-items: flex-start;
+}
+
+.dashboard-section-head-title {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.dashboard-section-head--subtitled .section-actions {
+    margin-top: 0.15rem;
+}
+
+/* Extra separation from the KPI stat-card row directly above this page's
+   first section head (their own margins would otherwise collapse together). */
+.overview-stats + .dashboard-section-head {
+    margin-top: 2.5rem;
 }

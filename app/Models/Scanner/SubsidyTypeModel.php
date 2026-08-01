@@ -2,22 +2,44 @@
 
 namespace App\Models\Scanner;
 
+use App\Models\Concerns\LookupModelTrait;
+use CodeIgniter\Database\BaseBuilder;
 use CodeIgniter\Model;
 
 /**
  * Subsidy-type reference lookup (Financial/Rice/Grocery, admin-editable) backing
  * the reference-data/subsidy-types page and the batch-open modal. Isolated from the
  * `services` table: subsidy types are their own concept, not services/programs.
+ *
+ * LookupModelTrait supplies the Subsidy Types management-table search/
+ * pagination (searchLookup/countLookup/statusCounts), matching Sectors/
+ * Services/Categories. This model's own create()/archive()/restore() (single-
+ * field signatures already wired to the subsidy-types controller) take
+ * precedence over the trait's generic versions.
  */
 class SubsidyTypeModel extends Model
 {
+    use LookupModelTrait;
+
     protected $table         = 'subsidy';
     protected $primaryKey    = 'subsidy_type_id';
     protected $returnType    = 'array';
     protected $allowedFields = ['name', 'dt_deleted'];
     protected $useTimestamps = false;
 
-    /** Non-archived subsidy types, ordered by name, for the dropdown. */
+    /** Columns the management search box matches. */
+    protected function lookupSearchColumns(): array
+    {
+        return ['name'];
+    }
+
+    /** Alphabetical, matching all()/active(). */
+    protected function applyLookupOrder(BaseBuilder $builder): void
+    {
+        $builder->orderBy('name', 'ASC');
+    }
+
+    /** Non-archived aid types, ordered by name, for the dropdown. */
     public function active(): array
     {
         try {
@@ -41,7 +63,7 @@ class SubsidyTypeModel extends Model
         }
     }
 
-    /** Insert a new subsidy type; returns the new id (0 on failure or a blank name). */
+    /** Insert a new aid type; returns the new id (0 on failure or a blank name). */
     public function create(string $name): int
     {
         $name = trim($name);
@@ -69,10 +91,10 @@ class SubsidyTypeModel extends Model
     }
 
     /**
-     * Delete a subsidy type only when no distribution references it, checking and
-     * deleting in one transaction to close the check-then-delete race. Returns 0
-     * when the row was deleted, -1 when the delete failed, and the referencing
-     * distribution count when it is still in use.
+     * Delete an aid type only when no distribution references it, checking and
+     * deleting in one transaction to close the check-then-delete race.
+     *
+     * @return integer 0 = deleted, -1 = delete failed, >0 = still referenced (count)
      */
     public function deleteIfUnused(int $id): int
     {

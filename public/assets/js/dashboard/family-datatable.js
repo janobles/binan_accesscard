@@ -26,6 +26,15 @@
         return row.textContent.toLowerCase().indexOf(searchTerm) !== -1;
     }
 
+    // Sector cells render shortcode badges whose tooltip is the full sector name.
+    // Every draw replaces the tbody, so the new page's badges need binding again
+    // (view-interactions.js owns the binding itself).
+    function initSectorTooltips(tableElement) {
+        if (typeof window.initTooltips === 'function') {
+            window.initTooltips(tableElement);
+        }
+    }
+
     function initializeFamilyDataTable() {
         var tableElement = document.getElementById('familyRecordsTable');
         var filterForm = document.getElementById('familyDataTableFilters');
@@ -221,6 +230,7 @@
                 }
 
                 applyCurrentPageQuickSearch();
+                initSectorTooltips(tableElement);
 
                 // Move DataTables info and paging elements to the card footer
                 var dtInfo = tableElement.closest('.dt-container').querySelector('.dt-info');

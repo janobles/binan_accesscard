@@ -120,14 +120,29 @@
         }
     });
 
+    // Bootstrap tooltips are opt-in. Sector shortcode badges carry the full sector
+    // name as their tooltip, so every page that prints them needs this; tables that
+    // re-render rows call it again for the new markup.
+    function bindTooltips(root) {
+        if (!window.bootstrap || typeof window.bootstrap.Tooltip !== 'function') {
+            return;
+        }
+
+        root.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (element) {
+            window.bootstrap.Tooltip.getOrCreateInstance(element);
+        });
+    }
+
     function initViewInteractions(rootElement) {
         const root = rootElement instanceof HTMLElement ? rootElement : document;
 
         bindAutoDismissAlerts(root);
         bindAccountStatusForms(root);
+        bindTooltips(root);
     }
 
     window.initViewInteractions = initViewInteractions;
+    window.initTooltips = bindTooltips;
 
     document.addEventListener('DOMContentLoaded', function () {
         initViewInteractions(document);

@@ -214,6 +214,31 @@ if (! function_exists('family_profile_view_data')) {
     }
 }
 
+if (! function_exists('family_record_view_data')) {
+    /**
+     * Builds the read-only Family Profile page (`Family/profile-view`) bundle:
+     * the head and member blocks already shaped into printed label/value pairs by
+     * App\Libraries\FamilyRecordSummary, plus whether this session may reach the
+     * separate edit page. Called by FamilyController::profile().
+     *
+     * @return array{
+     *     canEdit: bool,
+     *     head: array<string, mixed>,
+     *     headId: int,
+     *     members: list<array<string, mixed>>
+     * }
+     */
+    function family_record_view_data(array $data): array
+    {
+        return [
+            'headId'  => (int) ($data['headId'] ?? 0),
+            'head'    => (array) ($data['head'] ?? []),
+            'members' => array_values((array) ($data['members'] ?? [])),
+            'canEdit' => (bool) ($data['canEdit'] ?? false),
+        ];
+    }
+}
+
 if (! function_exists('sector_and_services_view_data')) {
     /**
      * Builds the family form's sector/service selection bundle: the grouped

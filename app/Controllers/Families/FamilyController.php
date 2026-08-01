@@ -5,6 +5,7 @@ namespace App\Controllers\Families;
 use App\Controllers\BaseController;
 use App\Libraries\DashboardPageBuilder;
 use App\Libraries\FamilyModalDataBuilder;
+use App\Libraries\FamilyRecordSummary;
 use App\Libraries\FamilyRecordWriteException;
 use App\Libraries\FamilyRecordWriter;
 use App\Libraries\RoleAccess;
@@ -19,6 +20,7 @@ use App\Support\FamilyAgeEligibility;
 use App\Support\MemberFieldNormalizer;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
+use Config\Navigation;
 use Throwable;
 
 /**
@@ -29,10 +31,10 @@ use Throwable;
  * single write path the Excel importer also goes through. The remaining screens
  * work through MemberModel and MemberServiceModel directly.
  *
- * createFamily() renders the Data Entry page (create only); profile() renders
- * the Family Profile page, which both displays and edits an existing record;
- * the archive, restore, and delete forms in `Family/list` post here and
- * redirect back to the list.
+ * createFamily() renders the Data Entry page (create only); profile() renders an
+ * existing record read-only and edit() renders the same record as a form; the
+ * archive, restore, and delete forms in `Family/list` post here and redirect back
+ * to the list.
  */
 class FamilyController extends BaseController
 {
@@ -234,13 +236,86 @@ class FamilyController extends BaseController
     }
 
     /**
-     * GET `records/{id}`: the Family Profile page. The one surface for an
-     * existing record - it both displays and edits, reusing the same
-     * Family/_fields partial the Data Entry page renders. A Viewer session
-     * gets `readOnly` true, which the view turns into disabled controls and no
-     * Save button; the manifest already keeps Viewer off the update route.
+     * GET `records/{id}`: the Family Profile page, read-only. It prints the record
+     * as label/value pairs - no controls, no form, nothing to submit - so a reader
+     * cannot edit by accident whatever their role. Editing is its own page,
+     * `records/{id}/edit`, linked from here for the roles that may reach it.
      */
     public function profile(int $headId): string|RedirectResponse
+    {
+        $context = $this->familyProfileContext($headId);
+
+        if ($context instanceof RedirectResponse) {
+            return $context;
+        }
+
+        $summary = new FamilyRecordSummary($context['sectors'], $context['services'], $context['incomeLabels']);
+        $role = RoleAccess::normalizeRole((string) session()->get('role'));
+
+        helper('dashboard_view_helper');
+
+        return view('layout', DashboardPageBuilder::shellAccountData() + [
+            'activePage' => 'records-profile',
+            'role'       => $role,
+            'bodyView'   => 'Family/profile-view',
+            'bodyData'   => family_record_view_data([
+                'headId'  => $headId,
+                'head'    => $summary->head($context['head'], $context['controlNumber']),
+                'members' => $summary->members($context['members']),
+                'canEdit' => in_array($role, Navigation::pageRoles('records-edit'), true),
+            ]),
+        ]);
+    }
+
+    /**
+     * GET `records/{id}/edit`: the editable form for an existing record, the same
+     * Family/_fields partial the Data Entry page renders. The manifest keeps
+     * read-only roles off this route entirely, so the page it renders is always
+     * editable and always carries its Save button.
+     */
+    public function edit(int $headId): string|RedirectResponse
+    {
+        $guard = $this->requireFamilyEntryAccess();
+
+        if ($guard instanceof RedirectResponse) {
+            return $guard;
+        }
+
+        $context = $this->familyProfileContext($headId);
+
+        if ($context instanceof RedirectResponse) {
+            return $context;
+        }
+
+        helper('dashboard_view_helper');
+
+        return view('layout', DashboardPageBuilder::shellAccountData() + [
+            'activePage' => 'records-edit',
+            'role'       => RoleAccess::normalizeRole((string) session()->get('role')),
+            'bodyView'   => 'Family/profile',
+            'bodyData'   => family_profile_view_data([
+                'head'          => $context['head'],
+                'members'       => $context['members'],
+                'controlNumber' => $context['controlNumber'],
+                'readOnly'      => false,
+                'sectors'       => $context['sectors'],
+                'services'      => $context['services'],
+                'categories'    => $context['categories'],
+                'formOptions'   => $context['formOptions'],
+            ]),
+        ]);
+    }
+
+    /**
+     * Loads one family and shapes it for either profile page: the head row with its
+     * address split and sector/service ids attached, the shaped member rows, the QR
+     * control number, and the sector/service/category lookups (which grandfather in
+     * anything archived but still assigned). Returns a redirect when the caller may
+     * not view records or the head does not exist.
+     *
+     * @return array<string, mixed>|RedirectResponse
+     */
+    private function familyProfileContext(int $headId): array|RedirectResponse
     {
         $guard = $this->requireFamilyViewAccess();
 
@@ -296,25 +371,16 @@ class FamilyController extends BaseController
             array_values(array_unique(array_map('intval', $assignedSectorIds))),
             array_values(array_unique(array_map('intval', $assignedServiceIds)))
         );
-        $readOnly = RoleAccess::normalizeRole((string) session()->get('role')) === 'Viewer';
-
-        helper('dashboard_view_helper');
-
-        return view('layout', DashboardPageBuilder::shellAccountData() + [
-            'activePage' => 'records-profile',
-            'role'       => RoleAccess::normalizeRole((string) session()->get('role')),
-            'bodyView'   => 'Family/profile',
-            'bodyData'   => family_profile_view_data([
-                'head'          => $headData,
-                'members'       => $modalData->shapeMembers($members, $serviceIdsByMember),
-                'controlNumber' => $controlNumber,
-                'readOnly'      => $readOnly,
-                'sectors'       => $options['sectorOptions'],
-                'services'      => $options['serviceOptions'],
-                'categories'    => array_keys($options['servicesByCategory']),
-                'formOptions'   => $modalData->staticOptionLists(),
-            ]),
-        ]);
+        return [
+            'head'          => $headData,
+            'members'       => $modalData->shapeMembers($members, $serviceIdsByMember),
+            'controlNumber' => $controlNumber,
+            'sectors'       => $options['sectorOptions'],
+            'services'      => $options['serviceOptions'],
+            'categories'    => array_keys($options['servicesByCategory']),
+            'formOptions'   => $modalData->staticOptionLists(),
+            'incomeLabels'  => $modalData->incomeLabelMap(),
+        ];
     }
 
     /**

@@ -2,7 +2,7 @@
 /**
  * Per-row Actions dropdown for the Manage Records DataTable. Server-side rendered:
  * returned as the `actions` cell by FamilyController::dataTableActions(). This holds
- * the VIEW and UPDATE navigation links and the archive/restore confirm form, so they
+ * the VIEW and EDIT navigation links and the archive/restore confirm form, so they
  * live in the view layer, not the controller. The controller passes pre-computed
  * permission flags + URLs; this template only renders markup.
  *
@@ -20,12 +20,11 @@
         <?php if (! $archived): ?>
         <?php /* Plain navigations, not modal triggers: the target is a full page (the
                  Family Profile page), and loading a full page's response into the
-                 shared modal is the bug records/entry used to have here. VIEW and
-                 UPDATE point at the same URL - the page itself renders editable or
-                 read-only based on role. */ ?>
+                 shared modal is the bug records/entry used to have here. VIEW opens
+                 the read-only profile, EDIT the form at `records/{id}/edit`. */ ?>
         <a class="dropdown-item" href="<?= esc($viewUrl, 'attr') ?>">VIEW</a>
             <?php if ($canEdit): ?>
-        <a class="dropdown-item" href="<?= esc($updateUrl, 'attr') ?>">UPDATE</a>
+        <a class="dropdown-item" href="<?= esc($updateUrl, 'attr') ?>">EDIT</a>
             <?php endif; ?>
         <?php endif; ?>
         <?php if ($canArchive): ?>

@@ -22,21 +22,13 @@ class FamilyDataTablePresenter
      * table never flattens a household into several rows. $memberCount is the
      * household size including the head.
      *
-     * @param array<int, string> $sectorShortcodes sectorID => display shortcode
-     * @param array<int, int>    $controlNumbers   headID => qr_control.control_no
+     * @param array<int, array{code: string, name: string}> $sectorShortcodes sectorID => shortcode + full name, from SectorModel::shortcodeMap()
+     * @param array<int, int>                               $controlNumbers   headID => qr_control.control_no
      */
     public function row(array $row, array $sectorShortcodes, array $controlNumbers, int $memberCount): array
     {
         $headId = (int) ($row['headID'] ?? $row['memberID'] ?? 0);
         $name = $this->displayName($row);
-
-        $sectors = [];
-
-        foreach (SectorIds::normalize($row['sectorID'] ?? null) as $sectorId) {
-            if (isset($sectorShortcodes[$sectorId])) {
-                $sectors[] = $sectorShortcodes[$sectorId];
-            }
-        }
 
         return [
             'qr' => $this->qrCell((int) ($controlNumbers[$headId] ?? 0)),
@@ -44,7 +36,7 @@ class FamilyDataTablePresenter
             // would hide a casing bug rather than surface it.
             'name' => '<span class="entity-title">' . esc($name) . '</span>',
             'members' => (string) $memberCount,
-            'sector' => esc(implode(', ', array_values(array_unique($sectors)))),
+            'sector' => ViewFormatter::sectorBadges($row['sectorID'] ?? null, $sectorShortcodes),
             'address' => esc((string) ($row['address'] ?? '')),
             'actions' => $this->actions($row, $headId, $name),
         ];
@@ -92,7 +84,7 @@ class FamilyDataTablePresenter
 
     /**
      * Builds the per-row Actions dropdown HTML for the DataTable. View is shown to
-     * any viewer; Update only to entry-access roles (Developer/Admin/Encoder);
+     * any viewer; Edit only to entry-access roles (Developer/Admin/Encoder);
      * Archive/Restore only to Developer/Admin. Empty string hides the menu.
      */
     private function actions(array $row, int $headId, string $displayName): string
@@ -109,19 +101,18 @@ class FamilyDataTablePresenter
             return '';
         }
 
-        // The trigger markup (the plain VIEW/UPDATE links + archive/restore form)
+        // The trigger markup (the plain VIEW/EDIT links + archive/restore form)
         // lives in the view; this class only supplies the permission flags and URLs.
         return view('Family/row-actions', [
             'archived'       => $archived,
             'canEdit'        => $canEdit,
             'canArchive'     => $canArchive,
             'displayName'    => $displayName,
-            // VIEW and UPDATE both land on the Family Profile page - the one surface
-            // that displays and edits a record. A Viewer sees only VIEW (its controls
-            // render disabled there); an entry-access role sees both, pointed at the
-            // same URL, because the page itself decides whether to render editable.
+            // Two pages, two URLs: the bare record id prints the record read-only,
+            // `/edit` is the form. EDIT is offered only to entry-access roles, and
+            // the records-edit manifest key keeps everyone else off that route.
             'viewUrl'        => $archived ? '' : site_url('records/' . $headId),
-            'updateUrl'      => (! $archived && $canEdit) ? site_url('records/' . $headId) : '',
+            'updateUrl'      => (! $archived && $canEdit) ? site_url('records/' . $headId . '/edit') : '',
             'formAction'     => $canArchive ? site_url('records/' . $headId . '/' . ($archived ? 'restore' : 'archive')) : '',
             'actionLabel'    => $archived ? 'Restore' : 'Archive',
             'actionPast'     => $archived ? 'restored' : 'archived',

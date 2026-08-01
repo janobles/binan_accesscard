@@ -1,14 +1,14 @@
 <?php
 /**
- * Family Profile page (Family Records > a household). The one surface for an
- * existing record: it both displays and edits. Data source:
- * FamilyController::profile(), documented as family_profile_view_data() in
- * app/Helpers/dashboard_view_helper.php.
+ * Edit page for an existing family record (`records/{id}/edit`). Reading a record
+ * is a different page, Family/profile-view, which prints it with no controls at
+ * all; this one is the form. Data source: FamilyController::edit(), documented as
+ * family_profile_view_data() in app/Helpers/dashboard_view_helper.php.
  *
  * The head is the outer card and the members are nested inside it, which is the
- * containment the paper profiling form implies. Fields render as controls at all
- * times with one Save at the bottom; a Viewer session gets the same controls
- * disabled and no Save, and its update route is withheld by the manifest.
+ * containment the paper profiling form implies. Fields render as controls with
+ * one Save at the bottom; the records-edit manifest key keeps read-only roles off
+ * this page entirely, so $readOnly is only the shared partial's default.
  *
  * `data-family-entry-form` on the outer container is the same marker
  * manage-family-modal.js's initFamilyEntryModal() looks for on the Data Entry

@@ -104,7 +104,7 @@ final class FamilyControllerProfileTest extends CIUnitTestCase
         $this->dropSchema();
     }
 
-    public function testProfilePageIsEditableSavableAndKeepsArchivedAssignments(): void
+    public function testEditPageIsEditableSavableAndKeepsArchivedAssignments(): void
     {
         $this->createSchema();
         $db = db_connect();
@@ -135,7 +135,7 @@ final class FamilyControllerProfileTest extends CIUnitTestCase
             'is_logged_in' => true,
             'role'         => 'admin',
             'user_id'      => $userId,
-        ])->get('records/7');
+        ])->get('records/7/edit');
 
         $result->assertStatus(200);
         $html = (string) $result->response()->getBody();
@@ -188,6 +188,12 @@ final class FamilyControllerProfileTest extends CIUnitTestCase
 
         $html = (string) $profile->response()->getBody();
         $this->assertStringNotContainsString('data-family-save', $html, 'A Viewer must not get a Save button.');
+        $this->assertStringNotContainsString('<form', $html, 'The read view prints the record; it carries no form at all.');
+
+        // records/{id} is read-only for everyone, so the edit page is a separate
+        // route the manifest keeps off a Viewer entirely.
+        $edit = $this->withSession($session)->get('records/7/edit');
+        $this->assertNotSame(200, $edit->response()->getStatusCode());
 
         // The manifest keeps records-update off Viewer, so the update route itself
         // must reject a Viewer, independent of what the profile page renders.

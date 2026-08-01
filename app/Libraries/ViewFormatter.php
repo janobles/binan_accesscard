@@ -25,6 +25,42 @@ class ViewFormatter
         return false;
     }
 
+    /**
+     * Renders a member's sectors as shortcode badges, the same badge the Reference
+     * Data sector table uses. The full sector name rides along as a Bootstrap
+     * tooltip and as the accessible label, so a reader who does not know the code
+     * still gets it; a page rendering these must initialize tooltips. No sectors
+     * prints a muted dash.
+     *
+     * @param mixed                                         $sectorValue the raw stored sectorID (JSON list, array, or comma text)
+     * @param array<int, array{code: string, name: string}> $shortcodes  from SectorModel::shortcodeMap()
+     */
+    public static function sectorBadges(mixed $sectorValue, array $shortcodes): string
+    {
+        $badges = [];
+
+        foreach (SectorIds::normalize($sectorValue) as $sectorId) {
+            $code = trim((string) ($shortcodes[$sectorId]['code'] ?? ''));
+
+            if ($code === '' || isset($badges[$sectorId])) {
+                continue;
+            }
+
+            $name = trim((string) ($shortcodes[$sectorId]['name'] ?? ''));
+            $label = $name !== '' ? $name : $code;
+
+            $badges[$sectorId] = '<span class="badge bg-light text-dark border" data-bs-toggle="tooltip"'
+                . ' title="' . esc($label, 'attr') . '" aria-label="' . esc($label, 'attr') . '">'
+                . esc($code) . '</span>';
+        }
+
+        if ($badges === []) {
+            return '<span class="text-muted">-</span>';
+        }
+
+        return '<span class="sector-badges">' . implode(' ', $badges) . '</span>';
+    }
+
     /** True if a value has non-whitespace text. */
     public static function hasText(mixed $value): bool
     {

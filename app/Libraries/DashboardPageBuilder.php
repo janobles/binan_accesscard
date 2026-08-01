@@ -262,6 +262,9 @@ class DashboardPageBuilder
             'viewerAccounts'     => array_values(array_filter($visibleAccounts, static fn ($account) => $account['role'] === 'viewer')),
             'scannerAccounts'    => array_values(array_filter($visibleAccounts, static fn ($account) => $account['role'] === 'scanner')),
             'recentFamilies'     => $recentFamilies,
+            // Shortcode + full name per sector, so the Recent Records table can print
+            // the same badges Manage Records and Reference Data print.
+            'sectorShortcodes'   => $isDashboard ? $sectorModel->shortcodeMap() : [],
             'recentAudits'       => $recentAudits,
             'auditListData'      => $auditListData,
             'recordListData'      => $memberListData,

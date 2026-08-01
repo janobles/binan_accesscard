@@ -1103,3 +1103,36 @@
 .family-entry-form [data-family-service-filter] {
     text-transform: none;
 }
+
+/* Read-only Family Profile (Family/profile-view.php). A record is printed here,
+   not edited: a small muted label with the value in bold under it, the way a
+   ticket prints a field. No control styling, because there are no controls. */
+.record-view-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+}
+
+.record-view-label {
+    display: block;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--bs-secondary-color);
+}
+
+.record-view-value {
+    font-weight: 600;
+    color: var(--bs-body-color);
+    overflow-wrap: anywhere;
+}
+
+.record-view-list {
+    margin: 0.25rem 0 0;
+    padding-left: 1.1rem;
+}
+
+.record-view-list li {
+    font-weight: 600;
+}

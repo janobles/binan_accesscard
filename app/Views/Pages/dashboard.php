@@ -13,6 +13,7 @@
 
 $stats = $stats ?? ['families' => 0, 'members' => 0, 'sectors' => 0, 'assistance' => 0];
 $recentFamilies = $recentFamilies ?? [];
+$sectorShortcodes = (array) ($sectorShortcodes ?? []);
 $myAudits = $myAudits ?? [];
 $seesDistribution = (bool) ($seesDistribution ?? false);
 $reportsSummary = $reportsSummary ?? ['total' => 0, 'received' => 0, 'notReceived' => 0, 'coverage' => 0];
@@ -82,7 +83,7 @@ $reportsSummary = $reportsSummary ?? ['total' => 0, 'received' => 0, 'notReceive
         $contact = trim((string) ($family['contactnumber'] ?? ''));
         $recentFamilyRows[] = [
             esc(trim(($family['firstname'] ?? '') . ' ' . ($family['lastname'] ?? ''))),
-            esc((string) ($family['sector_name'] ?? '-')),
+            \App\Libraries\ViewFormatter::sectorBadges($family['sectorID'] ?? null, $sectorShortcodes),
             $contact === '' ? '<span class="text-muted">-</span>' : esc($contact),
             esc($formatDate($family['dt_created'] ?? '')),
         ];

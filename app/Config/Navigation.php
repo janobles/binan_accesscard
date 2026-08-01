@@ -62,6 +62,7 @@ class Navigation
         'records-entry'   => ['Developer', 'Admin', 'Encoder'],
         'records-import'  => ['Developer', 'Admin', 'Encoder'],
         'records-profile' => self::ALL_STAFF,
+        'records-edit'    => ['Developer', 'Admin', 'Encoder'],
         'records-update'  => ['Developer', 'Admin', 'Encoder'],
     ];
 
@@ -74,7 +75,8 @@ class Navigation
         'records-entry'   => 'New Family Record',
         'records-import'  => 'Import Family Records',
         'records-profile' => 'Family Profile',
-        'records-update'  => 'Family Profile',
+        'records-edit'    => 'Edit Family Record',
+        'records-update'  => 'Edit Family Record',
     ];
 
     /**

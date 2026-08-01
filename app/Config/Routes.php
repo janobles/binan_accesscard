@@ -52,7 +52,13 @@ $routes->group('records', ['filter' => 'roleNav:records-import'], static functio
     $routes->post('import/review/(:num)/apply', 'Families\FamilyImportController::reviewRowApply/$1');
 });
 
+/*
+ * Resource convention: the bare id shows the record read-only, `/edit` is the
+ * form. The mode is a path segment, not a query flag, so the route filter can
+ * gate who reaches the editable page at all.
+ */
 $routes->get('records/(:num)', 'Families\FamilyController::profile/$1', ['filter' => 'roleNav:records-profile']);
+$routes->get('records/(:num)/edit', 'Families\FamilyController::edit/$1', ['filter' => 'roleNav:records-edit']);
 
 $routes->group('records', ['filter' => 'roleNav:records-update'], static function (RouteCollection $routes): void {
     $routes->post('(:num)/update', 'Families\FamilyController::update/$1');

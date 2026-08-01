@@ -29,7 +29,7 @@ final class FamilyDataTablePresenterTest extends CIUnitTestCase
         $cells = $presenter->row(
             ['memberID' => 7, 'headID' => 7, 'lastname' => 'DELA CRUZ',
              'firstname' => 'JUAN', 'address' => 'CANLALAY', 'sectorID' => '1'],
-            [1 => 'SC'],
+            [1 => ['code' => 'SC', 'name' => 'Senior Citizen']],
             [7 => 142],
             4
         );
@@ -40,6 +40,13 @@ final class FamilyDataTablePresenterTest extends CIUnitTestCase
         $this->assertStringContainsString('DELA CRUZ', $cells['name']);
         $this->assertStringNotContainsString('text-muted d-block', $cells['name'],
             'A head row carries no relationship subline.');
+        $this->assertStringContainsString('badge', $cells['sector'],
+            'The sector shows as a shortcode badge, matching Reference Data.');
+        $this->assertStringContainsString('>SC<', $cells['sector']);
+        // esc(..., 'attr') encodes the space, so decode before asserting the label.
+        $this->assertStringContainsString('title="Senior Citizen"',
+            html_entity_decode($cells['sector'], ENT_QUOTES | ENT_HTML5),
+            'The full sector name is the badge tooltip and accessible label.');
     }
 
     public function testRowLinksToTheFlatProfileUri(): void

@@ -29,14 +29,19 @@ class SubsidyDistributionModel extends Model
             return 0;
         }
 
-        $this->insert([
+        // getInsertID() reports the last id on the connection, which after a failed
+        // insert is some earlier row's - returning it would report a handout that
+        // was never recorded. Only ask for it once the insert actually succeeded.
+        if ($this->insert([
             'control_no'  => (int) $data['control_no'],
             'memberID'    => (int) $data['memberID'],
             'subsidy_type_id' => (int) $data['subsidy_type_id'],
             'claim_date'  => $data['claim_date'],
             'userID'      => isset($data['userID']) && (int) $data['userID'] > 0 ? (int) $data['userID'] : null,
             'batch_id'    => isset($data['batch_id']) && (int) $data['batch_id'] > 0 ? (int) $data['batch_id'] : null,
-        ]);
+        ]) === false) {
+            return 0;
+        }
 
         return (int) $this->getInsertID();
     }

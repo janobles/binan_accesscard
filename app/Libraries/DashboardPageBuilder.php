@@ -68,8 +68,13 @@ class DashboardPageBuilder
             $user = SessionAccount::user();
         } catch (DatabaseException $e) {
             // The name in the topbar is not worth a 500. Fall back to the session,
-            // which already carries the username the operator signed in with.
-            $user = (array) session()->get();
+            // which already carries the username the operator signed in with -
+            // but only the display fields. Casting the whole session here would
+            // hand auth_token and every other key to the views as $user.
+            $user = [
+                'username' => (string) (session()->get('username') ?? ''),
+                'userID'   => (int) session()->get('user_id'),
+            ];
         }
 
         return [

@@ -169,19 +169,21 @@ class ImportStagingStore
             return false;
         }
 
-        if (is_file($path) && ! @unlink($path)) {
-            @unlink($tmp);
-
-            return false;
+        // rename() over an existing file is atomic on POSIX, so a reader either
+        // sees the old staging file or the new one, never a missing one. Deleting
+        // the target first would open exactly that gap.
+        if (@rename($tmp, $path)) {
+            return true;
         }
 
-        if (! @rename($tmp, $path)) {
-            @unlink($tmp);
-
-            return false;
+        // Windows cannot rename onto an existing file, so there it has to go.
+        if (DIRECTORY_SEPARATOR === '\\' && is_file($path) && @unlink($path) && @rename($tmp, $path)) {
+            return true;
         }
 
-        return true;
+        @unlink($tmp);
+
+        return false;
     }
 
     /** @return array<mixed> the decoded file, or [] when missing/unreadable */

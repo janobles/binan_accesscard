@@ -115,6 +115,10 @@ class SubsidyTypeModel extends Model
 
             return ($this->db->transStatus() && $ok) ? 0 : -1;
         } catch (\Throwable $e) {
+            // transStart() opened a transaction that transComplete() never reached.
+            // Without this the connection keeps it open for the rest of the request.
+            $this->db->transRollback();
+
             return -1;
         }
     }

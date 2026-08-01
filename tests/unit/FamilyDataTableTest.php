@@ -144,9 +144,9 @@ final class FamilyDataTableTest extends TestCase
         $this->assertNotFalse($countWhereIn, 'missing the member-count query');
         $this->assertLessThan($countWhereIn, $countGuard);
         $this->assertStringContainsString(
-            'memberCountsForHeads($pageHeadIds)',
+            'memberCountsForHeads($pageHeadIds, $status)',
             $controller,
-            'the data table must read member counts through the model'
+            'the data table must read member counts through the model, for the status it is listing'
         );
     }
 

@@ -106,7 +106,7 @@ class FamilyDataTableController extends BaseController
 
             // One grouped query for every head on the page instead of a per-row count.
             // A head with no member rows still counts as one person, itself.
-            $memberCounts = (new MemberModel())->memberCountsForHeads($pageHeadIds);
+            $memberCounts = (new MemberModel())->memberCountsForHeads($pageHeadIds, $status);
 
             $data = array_map(
                 static fn (array $row): array => $presenter->row(

@@ -18,18 +18,47 @@ $activePage = (string) ($activePage ?? '');
 $links = Navigation::linksFor($role);
 $renderedHeading = null;
 ?>
-    <nav class="sb-sidenav accordion sb-sidenav-dark <?= esc(strtolower($role), 'attr') ?>" id="dashboard-sidebar">
-        <div class="sb-sidenav-menu">
-            <div class="nav">
+    <nav class="app-sidebar-nav d-flex flex-column h-100 <?= esc(strtolower($role), 'attr') ?>" id="dashboard-sidebar">
+        <!-- Brand Header -->
+        <div class="sidebar-brand-header p-3 pb-4 d-flex align-items-center justify-content-between">
+            <a class="text-decoration-none text-dark d-flex align-items-center text-nowrap" href="<?= site_url('dashboard') ?>">
+                <img src="<?= asset_url('assets/image/binan.png') ?>" alt="City of Binan Logo" height="36" class="me-2">
+                <span class="fw-normal" style="font-size: 0.875rem;">Bi&ntilde;an Access Card MIS</span>
+            </a>
+            <button type="button" class="btn-close d-lg-none" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+
+        <!-- Nav Links -->
+        <div class="sidebar-menu-wrapper flex-grow-1 overflow-y-auto pb-3 px-2">
+            <div class="nav flex-column gap-1">
                 <?php foreach ($links as $link): ?>
                     <?php if ($link['heading'] !== $renderedHeading): ?>
-                        <div class="sb-sidenav-menu-heading"><?= esc($link['heading']) ?></div>
+                        <div class="sidebar-menu-heading text-uppercase text-muted fw-bold mt-3 mb-1 px-3" style="font-size: 0.65rem; letter-spacing: 0.05em;"><?= esc($link['heading']) ?></div>
                         <?php $renderedHeading = $link['heading']; ?>
                     <?php endif; ?>
-                    <a class="nav-link<?= $link['key'] === $activePage ? ' active' : '' ?>" href="<?= site_url($link['route']) ?>">
-                        <div class="sb-nav-link-icon"><i class="bi <?= esc($link['icon']) ?>" aria-hidden="true"></i></div><?= esc($link['label']) ?>
+                    <a class="nav-link rounded px-3 py-1 text-dark d-flex align-items-center <?= $link['key'] === $activePage ? 'active' : '' ?>" href="<?= site_url($link['route']) ?>" style="font-size: 0.85rem; <?= $link['key'] === $activePage ? 'background-color: var(--token-gray-200); color: var(--token-primary-green) !important;' : '' ?>">
+                        <div class="sidebar-nav-icon me-2"><i class="bi <?= esc($link['icon']) ?>" style="font-size: 1.1rem;" aria-hidden="true"></i></div>
+                        <span><?= esc($link['label']) ?></span>
                     </a>
                 <?php endforeach; ?>
             </div>
+        </div>
+
+        <div class="px-2 pb-2 mt-auto">
+            <a class="nav-link rounded px-3 py-1 text-dark d-flex align-items-center" href="#" style="font-size: 0.85rem;">
+                <div class="sidebar-nav-icon me-2"><i class="bi bi-question-circle" style="font-size: 1.1rem;" aria-hidden="true"></i></div>
+                <span>User Manual</span>
+            </a>
+        </div>
+
+        <!-- Sidebar Footer -->
+        <div class="sidebar-footer border-top p-2" style="background-color: var(--token-gray-50);">
+            <?= view('Partials/sidebar-account-menu', [
+                'user' => $user ?? [],
+                'username' => $username ?? 'User',
+                'accountLevelLabel' => $accountLevelLabel ?? 'Account',
+                'accountSettingsUrl' => $accountSettingsUrl ?? site_url('account/profile'),
+                'accountSettingsMode' => $accountSettingsMode ?? 'modal'
+            ]) ?>
         </div>
     </nav>

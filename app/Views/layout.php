@@ -44,6 +44,10 @@ $bodyView = ($bodyView ?? '') !== '' ? $bodyView : 'Pages/dashboard';
     <title><?= esc($pageTitle) ?> - Binan Access Card MIS</title>
     <link rel="icon" type="image/png" href="<?= asset_url('assets/image/binan.png') ?>">
     <?php
+    // Ensure design tokens are loaded first
+    ?>
+    <link rel="stylesheet" href="<?= esc(asset_url('css/design-tokens.css'), 'attr') ?>">
+    <?php
     // The dashboard's distribution analytics reuse the scanner reports styles
     // (KPI tiles, chart cards, barangay chart) from the scanner asset group.
     $layoutStyles = array_merge(asset_styles('head'), asset_styles('admin'));
@@ -55,27 +59,45 @@ $bodyView = ($bodyView ?? '') !== '' ? $bodyView : 'Pages/dashboard';
     <link rel="stylesheet" href="<?= esc(asset_url($stylePath), 'attr') ?>">
     <?php endforeach; ?>
 </head>
-<body class="sb-nav-fixed">
-<?= view('Partials/dashboard-topnav', [
-    'brandUrl' => $sidebarUserUrl,
-    'user' => $user,
-    'username' => $username,
-    'accountLevelLabel' => $accountLevelLabel,
-]) ?>
-<div id="layoutSidenav">
-    <div id="layoutSidenav_nav">
+<body class="app-body bg-white">
+<div id="layoutSidenav" class="d-flex vh-100 overflow-hidden">
+    <div id="layoutSidenav_nav" class="app-sidebar bg-light border-end d-flex flex-column flex-shrink-0 offcanvas-lg offcanvas-start" tabindex="-1">
         <?= view('components/dashboard_sidebar', [
             'role' => $role,
             'activePage' => $activePage,
+            'user' => $user,
+            'username' => $username,
+            'accountLevelLabel' => $accountLevelLabel,
+            'accountSettingsUrl' => site_url('account/profile'),
+            'accountSettingsMode' => 'modal'
         ]) ?>
     </div>
-    <div id="layoutSidenav_content">
-            <main class="container-fluid px-4 dashboard-content">
+    <div id="layoutSidenav_content" class="app-content flex-grow-1 overflow-y-auto d-flex flex-column">
+            <!-- Mobile Topbar -->
+            <nav class="d-lg-none navbar navbar-light border-bottom px-3 py-2" style="background-color: var(--token-gray-50);">
+                <a class="navbar-brand d-flex align-items-center" href="<?= site_url('dashboard') ?>">
+                    <img src="<?= asset_url('assets/image/binan.png') ?>" alt="City of Binan Logo" height="32" class="me-2">
+                    <span class="fw-normal" style="font-size: 0.875rem;">Bi&ntilde;an Access Card MIS</span>
+                </a>
+                <button class="btn btn-sm btn-light border d-flex align-items-center justify-content-center" type="button" data-bs-toggle="offcanvas" data-bs-target="#layoutSidenav_nav" aria-controls="layoutSidenav_nav" aria-label="Toggle sidebar" style="width: 36px; height: 36px;">
+                    <i class="bi bi-list fs-5" aria-hidden="true"></i>
+                </button>
+            </nav>
+            
+            <main class="container-fluid px-4 pt-3 pb-4 dashboard-content flex-grow-1">
+            
+            <!-- Desktop Sidebar Toggle (Ghost Button) -->
+            <div class="d-none d-lg-block mb-3">
+                <button class="btn btn-link p-0 text-muted text-decoration-none border-0" id="sidebarToggle" type="button" aria-label="Toggle sidebar">
+                    <i class="bi bi-layout-sidebar fs-5"></i>
+                </button>
+            </div>
+
             <?php /* Breadcrumbs sit above the title: they are ancestor context, so
                      they precede the page name rather than trail it. Only pages that
                      declare a parent in the manifest get one. */ ?>
             <?php if (($breadcrumbParent = Navigation::parentFor($activePage)) !== null): ?>
-            <nav class="mt-4" aria-label="breadcrumb">
+            <nav class="mt-2" aria-label="breadcrumb">
                 <ol class="breadcrumb mb-0">
                     <li class="breadcrumb-item">
                         <a href="<?= esc(site_url(Navigation::routeFor($breadcrumbParent)), 'attr') ?>"><?= esc(Navigation::titleFor($breadcrumbParent)) ?></a>
@@ -85,7 +107,7 @@ $bodyView = ($bodyView ?? '') !== '' ? $bodyView : 'Pages/dashboard';
             </nav>
             <h1 class="mb-0" id="dashboard-page-title"><?= esc($pageTitle) ?></h1>
             <?php else: ?>
-            <h1 class="mt-4" id="dashboard-page-title"><?= esc($pageTitle) ?></h1>
+            <h1 class="mt-2" id="dashboard-page-title"><?= esc($pageTitle) ?></h1>
             <?php endif; ?>
             <?php if (session()->getFlashdata('success')): ?>
                 <div class="alert alert-success" data-auto-dismiss-alert><?= esc(session()->getFlashdata('success')) ?></div>

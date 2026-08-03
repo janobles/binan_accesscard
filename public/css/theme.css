@@ -41,30 +41,44 @@
     --bs-btn-active-color: #fff;
 }
 
-/* Shell: green topnav + sidenav (SB Admin 1 dark variants re-tinted). */
-.sb-topnav.bg-dark {
-    background-color: var(--binan-green-deep) !important;
+/* App Layout: Modern split view (Sidebar + Content) */
+/* Neutralize legacy SB Admin 1 transform/margin hacks that conflict with flex/offcanvas */
+#layoutSidenav #layoutSidenav_nav {
+    transform: none !important;
 }
-.sb-topnav #sidebarToggle {
-    color: rgba(255, 255, 255, 0.85);
-    text-decoration: none;
+#layoutSidenav #layoutSidenav_content {
+    margin-left: 0 !important;
 }
-
-.sb-topnav #sidebarToggle:hover,
-.sb-topnav #sidebarToggle:focus {
-    color: #fff;
+.sb-sidenav-toggled #layoutSidenav #layoutSidenav_content:before {
+    display: none !important;
 }
 
-.sb-sidenav-dark {
-    background-color: var(--binan-green);
+#layoutSidenav_nav {
+    width: 270px !important;
+    flex-basis: 270px !important;
+    z-index: 1055 !important;
+    background-color: var(--token-gray-50);
+    transition: margin-left 0.25s ease-in-out;
 }
 
-.sb-sidenav-dark .nav-link.active {
-    color: #fff;
+@media (min-width: 992px) {
+    /* Desktop sidebar collapse (Full Hide) */
+    .sb-sidenav-toggled #layoutSidenav_nav {
+        margin-left: -270px !important;
+    }
 }
 
-.sb-sidenav-dark .nav-link.active .sb-nav-link-icon {
-    color: #fff;
+/* Sidebar Navigation overrides */
+.app-sidebar-nav .nav-link {
+    transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out;
+}
+.app-sidebar-nav .nav-link:hover:not(.active) {
+    background-color: var(--token-gray-100);
+    color: var(--token-primary-green);
+}
+.app-sidebar-nav .sidebar-nav-icon {
+    width: 24px;
+    text-align: center;
 }
 
 /* Buttons keep stock Bootstrap colors (see ui-design-system.md Rule 1);
@@ -184,59 +198,13 @@
     color: rgba(20, 92, 59, 0.3);
 }
 
-/* Topbar account dropdown. */
-.topbar-account-toggle {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    color: rgba(255, 255, 255, 0.85);
-    background: transparent;
-    border: 0;
+/* Sidebar account dropdown hover states */
+.sidebar-footer .btn-light:hover {
+    background-color: var(--token-gray-200) !important;
 }
-
-.topbar-account-toggle:hover,
-.topbar-account-toggle:focus {
-    color: #fff;
-}
-
-.topbar-account-menu {
-    min-width: 15rem;
-    padding: 0.75rem;
-}
-
-.topbar-account-summary {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.15rem;
-    text-align: center;
-    padding-bottom: 0.75rem;
-    margin-bottom: 0.5rem;
-    border-bottom: 1px solid var(--bs-border-color);
-}
-
-.topbar-account-avatar {
-    width: 3.5rem;
-    height: 3.5rem;
-    border-radius: 50%;
-    margin-bottom: 0.35rem;
-}
-
-.topbar-account-summary strong {
-    font-size: 0.875rem;
-}
-
-.topbar-account-summary small {
-    color: var(--bs-secondary-color);
-}
-
-.topbar-account-menu .dropdown-item {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    border-radius: 0.25rem;
-    padding: 0.4rem 0.6rem;
-    font-size: 0.875rem;
+.sidebar-footer .dropdown-item:hover {
+    background-color: var(--token-gray-100);
+    color: var(--token-primary-green) !important;
 }
 
 /* Segmented tab strip (components/page_tabs): Bootstrap nav-pills styled as an

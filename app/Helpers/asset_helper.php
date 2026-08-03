@@ -62,6 +62,7 @@ if (! function_exists('asset_styles')) {
             ],
             'login' => [
                 'assets/bootstrap/css/bootstrap.min.css',
+                'css/design-tokens.css',
                 'css/login.css',
             ],
             'scanner' => [

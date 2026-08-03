@@ -115,9 +115,10 @@ rendering needs inline styles), layout shells + `Auth/login.php` (standalone
   no mechanical way to prove an edit changed nothing, and because a view's
   inline `<script>` is compared verbatim by the token gate. Needs its own branch
   with its own gate.
-- [ ] 🔵 UX/needs-decision: two brand greens are in use, `--binan-green: #145c3b`
+- [x] 🔵 UX/needs-decision: two brand greens are in use, `--binan-green: #145c3b`
   (`public/css/theme.css:8`) and `--login-green: #176b4d`
   (`public/css/login.css:8`). A design decision, not a cleanup one.
+  *(Fixed: UI Modernization pilot on login page adopted `#176b4d` into the strict `design-tokens.css` system, effectively deciding the green for the future)*
 - [ ] ⚪ Cleanup: `public/css/managerecord.css:263` - `.records-table-controls`
   is emitted by no view; `app/Views/components/table_controls.php` builds the
   same row from Bootstrap utilities. Left in place because

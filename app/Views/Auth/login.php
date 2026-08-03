@@ -21,8 +21,11 @@
 </head>
 <body>
     <main class="login-page">
-        <section class="login-card">
-            <div class="login-card-body">
+        <div class="container position-relative z-1">
+            <div class="row justify-content-center">
+                <div class="col-12 col-md-8 col-lg-5 col-xl-4">
+                    <section class="login-card">
+                        <div class="login-card-body">
                 <div class="login-heading">
                     <img src="<?= esc(asset_url('assets/image/binan.png'), 'attr') ?>" alt="City of Binan Logo" class="login-logo">
                     <h1>Binan Access Card Portal</h1>
@@ -52,7 +55,10 @@
                     </div>
 
                     <div class="mb-4">
-                        <label for="password" class="form-label">Password</label>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <label for="password" class="form-label mb-1">Password</label>
+                            <a href="#" class="text-decoration-none small text-muted mb-1">Forgot password?</a>
+                        </div>
                         <input
                             type="password"
                             class="form-control"
@@ -65,8 +71,11 @@
 
                     <button type="submit" class="btn login-submit">Login</button>
                 </form>
+                        </div>
+                    </section>
+                </div>
             </div>
-        </section>
+        </div>
     </main>
     <?php foreach (asset_scripts('login') as $scriptPath): ?>
     <script src="<?= esc(asset_url($scriptPath), 'attr') ?>"></script>

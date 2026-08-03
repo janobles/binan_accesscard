@@ -1,18 +1,8 @@
-/* Login page. Loaded via the `login` manifest context (asset_helper.php), which
-   pulls in stock Bootstrap but not the dashboard shell CSS, so this file carries
-   its own color tokens rather than reusing theme.css.
-   Scope: split layout, form card, branding panel. Note --login-green differs
-   from theme.css's --binan-green; see docs/knowledge/violations.md. */
+/* Login page. Loaded via the `login` manifest context (asset_helper.php).
+   Adheres to UI_MODERNIZATION_PRD.md deterministic tokens. */
 
 :root {
-    --login-green: #176b4d;
-    --login-green-dark: #10503a;
-    --login-green-soft: #e7f2ed;
-    --login-ink: #24312d;
-    --login-muted: #66736f;
-    --login-border: #d9e2df;
-    --login-surface: #ffffff;
-    --login-background: #f3f7f5;
+    /* Using tokens from design-tokens.css */
 }
 
 * {
@@ -21,9 +11,9 @@
 
 body {
     margin: 0;
-    color: var(--login-ink);
-    background: var(--login-background);
-    font-family: Calibri, "Calibri Body", "Segoe UI", Arial, sans-serif;
+    color: var(--token-text-primary);
+    background: var(--token-background); /* White/gray-50 from tokens */
+    font-family: var(--bs-font-sans-serif);
 }
 
 .login-page {
@@ -31,32 +21,43 @@ body {
     min-height: 100vh;
     display: flex;
     align-items: center;
-    justify-content: center;
-    padding: 2rem 1rem;
+    padding: var(--space-xl) var(--space-md);
     overflow: hidden;
     isolation: isolate;
 }
 
+/* Graphic Map Background */
 .login-page::before {
     position: absolute;
-    z-index: -2;
-    inset: -0.5rem;
+    z-index: 0;
     content: "";
-    background: url("../assets/image/hall.jpg") center / cover no-repeat;
-    filter: blur(0.2rem);
+    /* Oversize container to prevent rotation from clipping corners */
+    top: -20vh;
+    bottom: -20vh;
+    left: -20vw;
+    right: -20vw;
+    background-image: url("../assets/image/binan_brgy.svg");
+    background-repeat: no-repeat;
+    /* Container right edge is at +20vw outside viewport. 
+       Pushing it 22vw from right edge puts it 2vw inside viewport. */
+    background-position: right 22vw center;
+    background-size: auto 135vh;
+    transform: rotate(8deg);
+    opacity: 0.6; /* Softened token color */
+    pointer-events: none;
 }
 
 .login-card {
-    width: min(100%, 26rem);
+    width: 100%;
     overflow: hidden;
-    border: 1px solid var(--login-border);
-    border-top: 0.3rem solid var(--login-green);
-    border-radius: 0.5rem;
-    background: var(--login-surface);
+    border: 1px solid var(--token-border-light);
+    border-radius: var(--border-radius);
+    background: var(--token-surface);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02); /* Extremely subtle/soft elevation for clean UI */
 }
 
 .login-card-body {
-    padding: 2.25rem;
+    padding: var(--space-xl) var(--space-lg);
 }
 
 .login-heading {
@@ -74,66 +75,69 @@ body {
 
 .login-heading h1 {
     margin: 0 0 0.35rem;
-    color: var(--login-ink);
-    font-size: 1.35rem;
+    color: var(--token-text-primary);
+    font-size: 1.5rem;
     font-weight: 700;
     line-height: 1.3;
 }
 
 .login-heading p {
     margin: 0;
-    color: var(--login-muted);
+    color: var(--token-text-secondary);
     font-size: 0.95rem;
 }
 
 .form-label {
-    color: var(--login-ink);
+    color: var(--token-text-primary);
     font-size: 0.9rem;
     font-weight: 600;
 }
 
 .form-control {
-    min-height: 2.75rem;
-    border-color: var(--login-border);
+    min-height: var(--btn-min-height);
+    border-color: var(--token-border-light);
+    border-radius: var(--border-radius);
+    background: var(--token-surface);
 }
 
 .form-control:focus {
-    border-color: var(--login-green);
-    box-shadow: 0 0 0 0.2rem rgba(23, 107, 77, 0.16);
+    border-color: var(--token-border-focus);
+    box-shadow: 0 0 0 2px var(--token-primary-green-soft);
 }
 
 .alert {
-    border-radius: 0.35rem;
+    border-radius: var(--border-radius);
     font-size: 0.9rem;
 }
 
 .login-submit {
     width: 100%;
-    min-height: 2.75rem;
-    border-color: var(--login-green);
-    background: var(--login-green);
-    color: #ffffff;
-    font-weight: 700;
+    min-height: var(--btn-min-height);
+    border-color: var(--token-primary-green);
+    background: var(--token-primary-green);
+    color: var(--token-white);
+    font-weight: normal;
+    border-radius: var(--border-radius);
 }
 
 .login-submit:hover,
 .login-submit:focus,
 .login-submit:active {
-    border-color: var(--login-green-dark);
-    background: var(--login-green-dark);
-    color: #ffffff;
+    border-color: var(--token-primary-green-hover);
+    background: var(--token-primary-green-hover);
+    color: var(--token-white);
 }
 
 .login-submit:focus {
-    box-shadow: 0 0 0 0.2rem rgba(23, 107, 77, 0.2);
+    box-shadow: 0 0 0 2px var(--token-surface), 0 0 0 4px var(--token-primary-green);
 }
 
 @media (max-width: 30rem) {
     .login-page {
-        padding: 1rem;
+        padding: var(--space-md);
     }
 
     .login-card-body {
-        padding: 1.75rem 1.25rem;
+        padding: var(--space-lg) var(--space-md);
     }
 }

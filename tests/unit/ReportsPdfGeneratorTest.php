@@ -10,11 +10,10 @@ final class ReportsPdfGeneratorTest extends CIUnitTestCase
     public function testGeneratesPdfBytes(): void
     {
         $bytes = (new ReportsPdfGenerator())->generate(
-            ['total' => 3, 'received' => 2, 'notReceived' => 1, 'coverage' => 67],
+            ['eligible' => 3, 'served' => 2, 'remaining' => 1, 'coverage' => 67, 'voided' => 0],
             [['barangay' => 'Poblacion', 'total' => 3, 'received' => 2, 'coverage' => 67]],
-            [['subsidy_type' => 'Rice', 'count' => 5]],
-            '2026-01-01',
-            '2026-01-31'
+            [['headID' => 1, 'name' => 'Juan Cruz', 'barangay' => 'Poblacion', 'contact' => '']],
+            'Batch 1'
         );
         $this->assertStringStartsWith('%PDF-', $bytes);
     }

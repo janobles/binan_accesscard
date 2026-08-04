@@ -1,6 +1,7 @@
-/* Builds the three Reports charts from the #reportsData JSON block and exposes
-   window.ReportsCharts.update(data) so a poller can repaint them live without a
-   page reload. No-ops when chart.js or the canvases are absent. */
+/* Builds the dashboard batch zone's two charts (barangay coverage, cumulative
+   served) from the #reportsData JSON block and exposes
+   window.ReportsCharts.update(data) so a poller can repaint them live without
+   a page reload. No-ops when chart.js or the canvases are absent. */
 (function () {
     'use strict';
 
@@ -38,35 +39,13 @@
     ];
     var gridColor = cssVar('--chart-grid', '#eaecf4');
 
-    // Whole-number axis: never show fractional ticks for handout/family counts.
-    var countScale = {
-        beginAtZero: true,
-        ticks: { precision: 0, stepSize: 1 },
-        grid: { color: gridColor }
-    };
-
     var charts = {};
 
-    var received = ctx('chartReceived');
-    if (received && data.received) {
-        charts.received = new Chart(received, {
-            type: 'pie',
-            data: {
-                labels: ['Received subsidy', 'Still waiting'],
-                datasets: [{
-                    data: [data.received.received || 0, data.received.notReceived || 0],
-                    backgroundColor: [palette[3], palette[1]],
-                    borderColor: '#fff',
-                    borderWidth: 1
-                }]
-            },
-            options: { plugins: { legend: { position: 'bottom' } } }
-        });
-    }
-
+    // Worst coverage first, matching SubsidyStatsModel::byBarangay() - the top
+    // row of the chart is where staff get sent.
     function sortedBarangay(rows) {
         return (rows || []).slice().sort(function (a, b) {
-            return (b.coverage - a.coverage) || (b.total - a.total);
+            return (a.coverage - b.coverage) || (b.total - a.total);
         });
     }
 
@@ -97,26 +76,30 @@
         });
     }
 
-    function aidTypeLabel(a) { return a.aid_type; }
-
-    var byAidType = ctx('chartAidType');
-    if (byAidType && Array.isArray(data.byAidType)) {
-        charts.byAidType = new Chart(byAidType, {
-            type: 'bar',
+    // Cumulative served over time (open batch only - the canvas isn't in the
+    // DOM for a closed batch). A flat tail means scanning stopped.
+    var timeline = ctx('chartTimeline');
+    if (timeline && Array.isArray(data.timeline)) {
+        charts.timeline = new Chart(timeline, {
+            type: 'line',
             data: {
-                labels: data.byAidType.map(aidTypeLabel),
+                labels: data.timeline.map(function (t) { return t.label; }),
                 datasets: [{
-                    label: 'Handouts',
-                    data: data.byAidType.map(function (a) { return a.count; }),
-                    backgroundColor: palette[2],
-                    borderRadius: 4,
-                    maxBarThickness: 64,
-                    categoryPercentage: 0.6
+                    label: 'Families served',
+                    data: data.timeline.map(function (t) { return t.cumulative; }),
+                    borderColor: palette[3],
+                    backgroundColor: palette[3],
+                    tension: 0.2,
+                    pointRadius: 2,
+                    fill: false
                 }]
             },
             options: {
                 maintainAspectRatio: false,
-                scales: { y: countScale, x: { grid: { display: false } } },
+                scales: {
+                    y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: gridColor } },
+                    x: { ticks: { autoSkip: true, maxTicksLimit: 6 }, grid: { display: false } }
+                },
                 plugins: { legend: { display: false } }
             }
         });
@@ -126,20 +109,16 @@
     window.ReportsCharts = {
         update: function (fresh) {
             if (!fresh) { return; }
-            if (charts.received && fresh.received) {
-                charts.received.data.datasets[0].data = [fresh.received.received || 0, fresh.received.notReceived || 0];
-                charts.received.update();
-            }
             if (charts.barangay && Array.isArray(fresh.barangay)) {
                 var r = sortedBarangay(fresh.barangay);
                 charts.barangay.data.labels = r.map(function (b) { return b.barangay; });
                 charts.barangay.data.datasets[0].data = r.map(function (b) { return b.coverage; });
                 charts.barangay.update();
             }
-            if (charts.byAidType && Array.isArray(fresh.byAidType)) {
-                charts.byAidType.data.labels = fresh.byAidType.map(aidTypeLabel);
-                charts.byAidType.data.datasets[0].data = fresh.byAidType.map(function (a) { return a.count; });
-                charts.byAidType.update();
+            if (charts.timeline && Array.isArray(fresh.timeline)) {
+                charts.timeline.data.labels = fresh.timeline.map(function (t) { return t.label; });
+                charts.timeline.data.datasets[0].data = fresh.timeline.map(function (t) { return t.cumulative; });
+                charts.timeline.update();
             }
         }
     };

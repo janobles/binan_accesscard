@@ -6,11 +6,7 @@
  * bars rather than a chart. The figures are the same ones the on-screen report shows;
  * only the presentation differs.
  */
-$window = ($batchName ?? null) !== null
-    ? 'Batch: ' . $batchName
-    : (($from || $to)
-        ? ($from ?: 'start') . ' to ' . ($to ?: 'today')
-        : 'All dates');
+$window = ($batchName ?? null) !== null ? 'Batch: ' . $batchName : 'All batches';
 ?>
 <?= $this->include('Scanner/pdf/_styles') ?>
 <h1>Subsidy Distribution Report</h1>
@@ -18,10 +14,10 @@ $window = ($batchName ?? null) !== null
 
 <table class="kpis" style="width:100%; border-collapse:collapse;">
   <tr>
-    <td>Families with a QR<br><span class="n"><?= esc((string) $summary['total']) ?></span></td>
-    <td>Received subsidy<br><span class="n"><?= esc((string) $summary['received']) ?></span></td>
-    <td>Still waiting<br><span class="n"><?= esc((string) $summary['notReceived']) ?></span></td>
-    <td>Coverage<br><span class="n"><?= esc((string) $summary['coverage']) ?>%</span></td>
+    <td>Eligible<br><span class="n"><?= esc((string) $coverage['eligible']) ?></span></td>
+    <td>Served<br><span class="n"><?= esc((string) $coverage['served']) ?></span></td>
+    <td>Remaining<br><span class="n"><?= esc((string) $coverage['remaining']) ?></span></td>
+    <td>Coverage<br><span class="n"><?= esc((string) $coverage['coverage']) ?>%</span></td>
   </tr>
 </table>
 
@@ -59,15 +55,19 @@ $window = ($batchName ?? null) !== null
 </table>
 <?php endif; ?>
 
-<h2>Handouts by subsidy type</h2>
+<h2>Remaining families</h2>
 <table class="data">
-  <thead><tr><th>Subsidy Type</th><th>Handouts</th></tr></thead>
+  <thead><tr><th>Name</th><th>Barangay</th><th>Contact</th></tr></thead>
   <tbody>
-  <?php foreach ($bySubsidyType as $a): ?>
-    <tr><td><?= esc($a['subsidy_type']) ?></td><td><?= esc((string) $a['count']) ?></td></tr>
+  <?php foreach ($remaining as $r): ?>
+    <tr>
+      <td><?= esc($r['name']) ?></td>
+      <td><?= esc($r['barangay']) ?></td>
+      <td><?= esc($r['contact']) ?></td>
+    </tr>
   <?php endforeach; ?>
-  <?php if ($bySubsidyType === []): ?>
-    <tr><td colspan="2">No data for this range.</td></tr>
+  <?php if ($remaining === []): ?>
+    <tr><td colspan="3">No families remaining.</td></tr>
   <?php endif; ?>
   </tbody>
 </table>

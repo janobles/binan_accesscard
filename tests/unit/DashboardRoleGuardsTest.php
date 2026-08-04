@@ -95,18 +95,19 @@ final class DashboardRoleGuardsTest extends CIUnitTestCase
     }
 
     /**
-     * app/Views/Pages/dashboard.php must gate both the distribution KPI tiles
-     * and the Subsidy Distribution section on the same $seesDistribution flag
-     * the builder computes, so the two never drift apart.
+     * app/Views/Pages/dashboard.php must gate the batch zone (dashboard-batch-body)
+     * on the same $seesDistribution flag the builder computes. Task 11 cut the
+     * separate distribution KPI tiles (wrong denominator, replaced by the batch
+     * zone's own progress block), so only one gate remains.
      */
     public function testDashboardViewGatesDistributionSectionOnSeesDistribution(): void
     {
         $view = (string) file_get_contents(APPPATH . 'Views/Pages/dashboard.php');
 
         $this->assertSame(
-            2,
+            1,
             substr_count($view, 'if ($seesDistribution)'),
-            'both the distribution tiles and the Subsidy Distribution section must gate on $seesDistribution'
+            'the batch zone must gate on $seesDistribution'
         );
     }
 }

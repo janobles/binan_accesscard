@@ -212,20 +212,23 @@ class DashboardPageBuilder
         $isDistributions = $activePage === 'distribution' && $distributionTab === 'log';
         $batchModel      = model(DistributionBatchModel::class);
 
+        // Dashboard batch zone's own table: Barangay / Stations / Remaining,
+        // switched by ?tab= like the other tabbed pages. Not shared with
+        // $distributionTab above: that one belongs to the Distribution page.
+        $batchBodyTab = (string) $this->request->getGet('tab');
+        $batchBodyTab = in_array($batchBodyTab, ['barangay', 'stations', 'remaining'], true) ? $batchBodyTab : 'barangay';
+
         // Distribution analytics now live on the dashboard (combined totals +
         // per-kiosk table), batch-scoped only (no date filter). Gated so other
         // pages, and roles with no distribution access, don't run these queries.
         $reportsData = $isDashboard && $seesDistribution
             ? $this->buildReportsData($batchModel)
             : [
-                'reportsBatches'    => [],
-                'reportsBatchId'    => null,
-                'reportsBatchName'  => null,
-                'reportsBatchOpen'  => false,
-                'reportsSummary'    => ['total' => 0, 'received' => 0, 'notReceived' => 0, 'coverage' => 0],
-                'reportsByBarangay' => [],
-                'reportsBySubsidyType' => [],
-                'reportsPerScanner' => [],
+                'batches'       => [],
+                'batchRow'      => null,
+                'batchOpen'     => false,
+                'batchSnapshot' => $this->emptyBatchSnapshot(),
+                'remaining'     => [],
             ];
 
         // Hide the logged-in user's own account from Account Management; self-service
@@ -287,7 +290,10 @@ class DashboardPageBuilder
             'sectorListData'     => $sectorListData,
             'serviceListData'    => $serviceListData,
             'categoryListData'   => $categoryListData,
-            'batches'            => $isBatches ? $batchModel->allBatches() : [],
+            // Same "all batches" list feeds the Distribution page's Batches tab
+            // and the dashboard's batch selector; only one of the two gates is
+            // ever true for a given page load.
+            'batches'            => $isBatches ? $batchModel->allBatches() : ($reportsData['batches'] ?? []),
             'activeBatch'        => $isBatches ? $batchModel->activeBatch() : null,
             'activeSubsidyTypes' => $isBatches ? model(SubsidyTypeModel::class)->active() : [],
             // Barangay/sector option lists for the batch-open modal's eligibility
@@ -297,14 +303,12 @@ class DashboardPageBuilder
             'subsidyTypes'       => $subsidyTypeListData['rows'] ?? [],
             'subsidyTypeListData' => $subsidyTypeListData,
             'distributions'      => $isDistributions ? model(SubsidyDistributionModel::class)->allDistributions() : [],
-            'reportsBatches'     => $reportsData['reportsBatches'],
-            'reportsBatchId'     => $reportsData['reportsBatchId'],
-            'reportsBatchName'   => $reportsData['reportsBatchName'],
-            'reportsBatchOpen'   => $reportsData['reportsBatchOpen'],
-            'reportsSummary'     => $reportsData['reportsSummary'],
-            'reportsByBarangay'  => $reportsData['reportsByBarangay'],
-            'reportsBySubsidyType' => $reportsData['reportsBySubsidyType'],
-            'reportsPerScanner'  => $reportsData['reportsPerScanner'],
+            'batchRow'           => $reportsData['batchRow'],
+            'batchOpen'          => $reportsData['batchOpen'],
+            'batchSnapshot'      => $reportsData['batchSnapshot'],
+            'remaining'          => $reportsData['remaining'],
+            'batchBodyTab'       => $batchBodyTab,
+            'programStats'       => $isDashboard ? $dashboardModel->programStats() : ['families' => 0, 'neverServed' => 0],
             'stats'              => $isDashboard
                 ? array_merge(['families' => 0, 'members' => 0, 'sectors' => 0, 'assistance' => 0], $dashboardModel->stats())
                 : ['families' => 0, 'members' => 0, 'sectors' => 0, 'assistance' => 0],
@@ -500,12 +504,12 @@ class DashboardPageBuilder
     }
 
     /**
-     * Batch-scoped data for the admin overall Reports page: combined totals,
-     * per-barangay/subsidy-type breakdowns, and the per-kiosk table (all scanners,
-     * no self-scoping - admin sees every kiosk). The scoping batch defaults to
-     * the active batch, else the most recent batch, and honors ?batch= when it
-     * matches a known batch (BatchScope::resolve(), shared with the reports
-     * endpoint and the scanner performance page).
+     * Batch-scoped data for the dashboard's "this batch" zone: the cached
+     * coverage/barangay/scanner/timeline snapshot plus the remaining-families
+     * list. The scoping batch defaults to the active batch, else the most
+     * recent batch, and honors ?batch= when it matches a known batch
+     * (BatchScope::resolve(), shared with the reports endpoint and the scanner
+     * performance page).
      */
     private function buildReportsData(DistributionBatchModel $batchModel): array
     {
@@ -514,18 +518,26 @@ class DashboardPageBuilder
 
         [$batchId, $batch] = BatchScope::resolve($batches, $active, (int) $this->request->getGet('batch'));
 
-        $scope = $batchId > 0 ? $batchId : null;
-        $stats = model(SubsidyStatsModel::class);
+        $isOpen = $batch !== null && ($batch['closed_at'] ?? null) === null;
+        $stats  = model(SubsidyStatsModel::class);
 
         return [
-            'reportsBatches'    => $batches,
-            'reportsBatchId'    => $batchId > 0 ? $batchId : null,
-            'reportsBatchName'  => $batch['name'] ?? null,
-            'reportsBatchOpen'  => $batch !== null && ($batch['closed_at'] ?? null) === null,
-            'reportsSummary'    => $stats->receivedVsNot($scope),
-            'reportsByBarangay' => $stats->byBarangay($scope),
-            'reportsBySubsidyType' => $stats->bySubsidyType($scope),
-            'reportsPerScanner' => $batchId > 0 ? $stats->perScanner($batchId) : [],
+            'batches'       => $batches,
+            'batchRow'      => $batch,
+            'batchOpen'     => $isOpen,
+            'batchSnapshot' => $batchId > 0 ? $stats->batchSnapshot($batchId, $isOpen) : $this->emptyBatchSnapshot(),
+            'remaining'     => $batchId > 0 ? $stats->remaining($batchId) : [],
+        ];
+    }
+
+    /** The zero shape for SubsidyStatsModel::batchSnapshot(), used when no batch is scoped. */
+    private function emptyBatchSnapshot(): array
+    {
+        return [
+            'coverage'   => ['eligible' => 0, 'served' => 0, 'remaining' => 0, 'coverage' => 0, 'voided' => 0],
+            'byBarangay' => [],
+            'perScanner' => [],
+            'timeline'   => [],
         ];
     }
 

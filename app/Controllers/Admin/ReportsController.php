@@ -34,14 +34,18 @@ class ReportsController extends BaseController
 
         $batchModel = model(DistributionBatchModel::class);
         $batches    = $batchModel->allBatches();
-        [$batchId]  = BatchScope::resolve($batches, $batchModel->activeBatch(), (int) $this->request->getGet('batch'));
-        $scope      = $batchId > 0 ? $batchId : null;
+        [$batchId, $batch] = BatchScope::resolve($batches, $batchModel->activeBatch(), (int) $this->request->getGet('batch'));
+        $isOpen     = $batch !== null && ($batch['closed_at'] ?? null) === null;
         $stats      = model(SubsidyStatsModel::class);
+        $snapshot   = $batchId > 0
+            ? $stats->batchSnapshot($batchId, $isOpen)
+            : ['coverage' => ['eligible' => 0, 'served' => 0, 'remaining' => 0, 'coverage' => 0, 'voided' => 0], 'byBarangay' => [], 'perScanner' => [], 'timeline' => []];
 
         return $this->response->setJSON([
-            'coverage'   => $stats->coverage($batchId),
-            'barangay'   => $stats->byBarangay($scope),
-            'perScanner' => $batchId > 0 ? $stats->perScanner($batchId) : [],
+            'coverage'   => $snapshot['coverage'],
+            'barangay'   => $snapshot['byBarangay'],
+            'perScanner' => $snapshot['perScanner'],
+            'timeline'   => $snapshot['timeline'],
             'updated'    => date('c'),
         ]);
     }
@@ -58,13 +62,11 @@ class ReportsController extends BaseController
         $stats              = model(SubsidyStatsModel::class);
 
         $bytes = (new \App\Libraries\Scanner\ReportsPdfGenerator())->generate(
-            $stats->receivedVsNot($scope),
+            $stats->coverage($batchId),
             $stats->byBarangay($scope),
-            $stats->bySubsidyType($scope),
-            null,
-            null,
-            $batchId > 0 ? $stats->perScanner($batchId) : [],
-            $batch['name'] ?? null
+            $stats->remaining($batchId),
+            $batch['name'] ?? null,
+            $batchId > 0 ? $stats->perScanner($batchId) : []
         );
 
         $name = 'subsidy-report-' . ($batchId > 0 ? 'batch' . $batchId : 'all') . '.pdf';

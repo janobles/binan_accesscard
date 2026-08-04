@@ -406,6 +406,8 @@ class ScanController extends BaseController
             return $this->response->setStatusCode(500)->setJSON(['error' => 'Failed to log the subsidy distribution.']);
         }
 
+        model(SubsidyStatsModel::class)->forgetBatch($batchId);
+
         return $this->response->setJSON($familyPayload + [
             'ok'           => true,
             'logged'       => true,

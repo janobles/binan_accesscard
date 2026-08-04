@@ -271,4 +271,67 @@ class SubsidyStatsModel extends Model
             return [];
         }
     }
+
+    /**
+     * Per-batch cache key. A closed batch's figures are immutable, so they are
+     * cached indefinitely; the open batch caches briefly and is invalidated by
+     * every scan, mirroring how AuditTrailsModel clears the dashboard counts.
+     */
+    public static function cacheKey(int $batchId): string
+    {
+        return 'subsidy_batch_stats_' . $batchId;
+    }
+
+    public function forgetBatch(int $batchId): void
+    {
+        cache()->delete(self::cacheKey($batchId));
+    }
+
+    /**
+     * Everything the dashboard's batch zone needs, in one cached payload.
+     * $isOpen decides the TTL: closed batches never change again, so they save
+     * with ttl 0 (the file cache handler's "never expires").
+     *
+     * coverage()/byBarangay()/perScanner()/servedTimeline() each swallow
+     * \Throwable and return an empty shape rather than raise, per the scanner
+     * module's no-DB test posture, so a transient DB error inside them is
+     * indistinguishable from "batch genuinely has no data yet" once it reaches
+     * this method. A DB health probe runs first, on its own try/catch: if the
+     * probe fails, the snapshot still gets returned (each component method
+     * degrades to its own empty shape, unchanged) but nothing is written to
+     * cache, so a closed batch never freezes on an all-zero read caused by a
+     * blip rather than reality.
+     */
+    public function batchSnapshot(int $batchId, bool $isOpen): array
+    {
+        $cached = cache(self::cacheKey($batchId));
+        if (is_array($cached)) {
+            return $cached;
+        }
+
+        $snapshot = [
+            'coverage'   => $this->coverage($batchId),
+            'byBarangay' => $this->byBarangay($batchId),
+            'perScanner' => $this->perScanner($batchId),
+            'timeline'   => $isOpen ? $this->servedTimeline($batchId) : [],
+        ];
+
+        if ($this->dbIsHealthy()) {
+            cache()->save(self::cacheKey($batchId), $snapshot, $isOpen ? 10 : 0);
+        }
+
+        return $snapshot;
+    }
+
+    /** Cheap connectivity probe so batchSnapshot() can tell a real empty batch from a failed query. */
+    private function dbIsHealthy(): bool
+    {
+        try {
+            $this->db->simpleQuery('SELECT 1');
+
+            return true;
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
 }

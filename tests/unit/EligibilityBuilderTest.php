@@ -21,4 +21,15 @@ final class EligibilityBuilderTest extends CIUnitTestCase
     {
         $this->assertGreaterThanOrEqual(0, (new EligibilityBuilder())->count([1], [2]));
     }
+
+    public function testMaterializeReturnsFalseNotZeroOnWriteFailure(): void
+    {
+        // false must be distinguishable from a legitimately empty roster (0),
+        // since DistributionBatchModel::open() uses this to decide whether to
+        // discard the batch row it just inserted.
+        $db = $this->createMock(\CodeIgniter\Database\BaseConnection::class);
+        $db->method('table')->willThrowException(new \RuntimeException('forced failure'));
+
+        $this->assertFalse((new EligibilityBuilder($db))->materialize(1, [], []));
+    }
 }

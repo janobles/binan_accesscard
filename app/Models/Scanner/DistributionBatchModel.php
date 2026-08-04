@@ -76,6 +76,22 @@ class DistributionBatchModel extends Model
 
             $eligible = (new \App\Libraries\EligibilityBuilder($this->db))
                 ->materialize($batchId, $barangayIds, $sectorIds);
+
+            // materialize() returns false (not 0) on a genuine write failure,
+            // never on a legitimately empty roster. This matters because CI4's
+            // BaseConnection::query() rolls back and, since transStrict is off
+            // by default, resets transStatus() back to true the moment a query
+            // fails inside a transaction - by the time control gets back here,
+            // transStatus() already reads as success even though the roster
+            // write failed and everything since transStart() was undone. Treat
+            // a false return as fatal directly; don't fall through to the
+            // transStatus() check below, which cannot see this failure.
+            if ($eligible === false) {
+                $this->discardOrphan($batchId);
+
+                return 0;
+            }
+
             $this->update($batchId, ['eligible_count' => $eligible]);
 
             $this->db->transComplete();
@@ -83,6 +99,26 @@ class DistributionBatchModel extends Model
             return $this->db->transStatus() === false ? 0 : $batchId;
         } catch (\Throwable $e) {
             return 0;
+        }
+    }
+
+    /**
+     * Defensive cleanup after a roster-write failure inside open(). CI4 has
+     * already rolled back the transaction by this point, so the batch row and
+     * its junction rows should already be gone; this is a second, best-effort
+     * pass in case any of them survived, so open() never leaves an orphan
+     * distribution_batch row behind. Failures here are swallowed - open() is
+     * returning 0 regardless.
+     */
+    private function discardOrphan(int $batchId): void
+    {
+        try {
+            $this->db->table('batch_eligibility')->where('batch_id', $batchId)->delete();
+            $this->db->table('batch_barangay')->where('batch_id', $batchId)->delete();
+            $this->db->table('batch_sector')->where('batch_id', $batchId)->delete();
+            $this->delete($batchId);
+        } catch (\Throwable $e) {
+            // best effort; nothing more to do
         }
     }
 
@@ -100,6 +136,10 @@ class DistributionBatchModel extends Model
         }
 
         try {
+            if ($this->find($batchId) === null) {
+                return $empty;
+            }
+
             $brgy = $this->db->table('batch_barangay')
                 ->select('barangayID')->where('batch_id', $batchId)->get()->getResultArray();
             $sect = $this->db->table('batch_sector')
@@ -126,17 +166,33 @@ class DistributionBatchModel extends Model
             return 0;
         }
 
-        $filters  = $this->filtersFor($batchId);
-        $eligible = (new \App\Libraries\EligibilityBuilder($this->db))
-            ->materialize($batchId, $filters['barangays'], $filters['sectors']);
-
         try {
+            if ($this->find($batchId) === null) {
+                return 0;
+            }
+
+            $this->db->transStart();
+
+            $filters  = $this->filtersFor($batchId);
+            $eligible = (new \App\Libraries\EligibilityBuilder($this->db))
+                ->materialize($batchId, $filters['barangays'], $filters['sectors']);
+
+            // See open()'s comment: materialize() returning false is a real
+            // write failure, and transStatus() alone can't be trusted to
+            // notice it. Bail before reporting a count.
+            if ($eligible === false) {
+                $this->db->transComplete();
+
+                return 0;
+            }
+
             $this->update($batchId, ['eligible_count' => $eligible]);
+            $this->db->transComplete();
+
+            return $this->db->transStatus() === false ? 0 : $eligible;
         } catch (\Throwable $e) {
             return 0;
         }
-
-        return $eligible;
     }
 
     /** Closes (resets) an open batch by stamping closed_at. */

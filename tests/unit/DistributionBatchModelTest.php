@@ -53,4 +53,15 @@ final class DistributionBatchModelTest extends CIUnitTestCase
     {
         $this->assertSame(0, (new DistributionBatchModel())->rebuildRoster(0));
     }
+
+    public function testFiltersForNonexistentPositiveIdReturnsEmpty(): void
+    {
+        $out = (new DistributionBatchModel())->filtersFor(999999999);
+        $this->assertSame(['barangays' => [], 'sectors' => []], $out);
+    }
+
+    public function testRebuildRosterRefusesNonexistentPositiveId(): void
+    {
+        $this->assertSame(0, (new DistributionBatchModel())->rebuildRoster(999999999));
+    }
 }

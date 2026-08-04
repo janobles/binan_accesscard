@@ -74,8 +74,13 @@ class EligibilityBuilder
      * Freezes the roster for a batch. Returns the number of rows written, which
      * the caller stores as distribution_batch.eligible_count. Clears any prior
      * roster first so an explicit rebuild is idempotent.
+     *
+     * Returns false, not 0, when the delete or insert genuinely fails - an
+     * empty roster and a broken write must stay distinguishable, because the
+     * caller (DistributionBatchModel::open()) uses this to decide whether the
+     * batch it just inserted is real or has to be discarded.
      */
-    public function materialize(int $batchId, array $barangayIds, array $sectorIds): int
+    public function materialize(int $batchId, array $barangayIds, array $sectorIds): int|false
     {
         if ($batchId <= 0) {
             return 0;
@@ -100,7 +105,7 @@ class EligibilityBuilder
 
             return count($payload);
         } catch (\Throwable $e) {
-            return 0;
+            return false;
         }
     }
 }

@@ -51,6 +51,20 @@
 }
 
 /* App Layout: Modern split view (Sidebar + Content) */
+.mobile-topbar { background-color: var(--token-gray-50); }
+.mobile-brand-title { font-size: 0.875rem; }
+.mobile-sidebar-toggle { width: 36px; height: 36px; }
+
+/* Form entry fixed action bar spacing */
+.has-fixed-action-bar {
+    padding-bottom: calc(5rem + env(safe-area-inset-bottom));
+}
+@media (max-width: 576px) {
+    .has-fixed-action-bar {
+        padding-bottom: calc(7rem + env(safe-area-inset-bottom));
+    }
+}
+
 /* Neutralize legacy SB Admin 1 transform/margin hacks that conflict with flex/offcanvas */
 #layoutSidenav #layoutSidenav_nav {
     transform: none !important;

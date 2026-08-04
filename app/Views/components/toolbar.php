@@ -134,15 +134,32 @@ $buildAttrs = static function(array $attrs): string {
 
     <div class="col-12 col-lg-auto d-flex flex-wrap align-items-center gap-2" role="group" aria-label="Toolbar actions">
         <?php
-            $finalClearAttrs = trim((string)($clearAttrs ?? ''));
-            if (strpos($finalClearAttrs, 'data-records-clear') === false) {
-                $finalClearAttrs .= ($finalClearAttrs === '' ? '' : ' ') . 'data-records-clear';
+            $rawClearAttrs = trim((string)($clearAttrs ?? ''));
+            $finalClearAttrsHTML = '';
+            $hasDataRecordsClear = false;
+
+            if ($rawClearAttrs !== '') {
+                preg_match_all('/([a-zA-Z0-9\-]+)(?:="([^"]*)")?/', $rawClearAttrs, $matches, PREG_SET_ORDER);
+                foreach ($matches as $match) {
+                    $attrName = $match[1];
+                    $attrValue = $match[2] ?? '';
+                    if (strtolower($attrName) === 'data-records-clear') {
+                        $hasDataRecordsClear = true;
+                    }
+                    $finalClearAttrsHTML .= ' ' . $attrName;
+                    if ($attrValue !== '') {
+                        $finalClearAttrsHTML .= '="' . esc($attrValue, 'attr') . '"';
+                    }
+                }
+            }
+            if (!$hasDataRecordsClear) {
+                $finalClearAttrsHTML .= ' data-records-clear';
             }
         ?>
         <?php if ($isClient): ?>
-            <button class="<?= btn('clear') ?> flex-fill" type="button" <?= $finalClearAttrs ?>>Clear</button>
+            <button class="<?= btn('clear') ?> flex-fill" type="button"<?= $finalClearAttrsHTML ?>>Clear</button>
         <?php else: ?>
-            <a class="<?= btn('clear') ?> flex-fill" href="<?= esc($clearUrl, 'attr') ?>" <?= $finalClearAttrs ?>>Clear</a>
+            <a class="<?= btn('clear') ?> flex-fill" href="<?= esc($clearUrl, 'attr') ?>"<?= $finalClearAttrsHTML ?>>Clear</a>
         <?php endif; ?>
         <?php if ($actionsHtml !== ''): ?>
         <div class="vr"></div>

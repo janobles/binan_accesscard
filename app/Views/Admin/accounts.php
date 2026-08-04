@@ -53,7 +53,7 @@ $accounts = array_merge($adminAccounts, $employeeAccounts, $viewerAccounts, $sca
 
     $actionsHtml = '';
     if ($canCreateAccounts) {
-        $actionsHtml = '<button class="' . btn('add') . ' flex-fill js-open-account-create-modal" type="button" data-modal-url="' . site_url('accounts/create') . '" data-modal-title="Create Account"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Create Account</button>';
+        $actionsHtml = '<button class="' . btn('add') . ' flex-fill js-open-account-create-modal" type="button" data-modal-url="' . esc(site_url('accounts/create'), 'attr') . '" data-modal-title="Create Account"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Create Account</button>';
     }
     ?>
     <?= view('components/toolbar', [

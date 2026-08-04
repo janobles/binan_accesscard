@@ -44,12 +44,7 @@ $renderedHeading = null;
             </div>
         </div>
 
-        <div class="px-2 pb-2 mt-auto">
-            <a class="nav-link rounded px-3 py-1 text-dark d-flex align-items-center" href="#" style="font-size: 0.85rem;">
-                <div class="sidebar-nav-icon me-2"><i class="bi bi-question-circle" style="font-size: 1.1rem;" aria-hidden="true"></i></div>
-                <span>User Manual</span>
-            </a>
-        </div>
+
 
         <!-- Sidebar Footer -->
         <div class="sidebar-footer border-top p-2" style="background-color: var(--token-gray-50);">

@@ -74,12 +74,12 @@ $bodyView = ($bodyView ?? '') !== '' ? $bodyView : 'Pages/dashboard';
     </div>
     <div id="layoutSidenav_content" class="app-content flex-grow-1 d-flex flex-column">
             <!-- Mobile Topbar -->
-            <nav class="d-lg-none navbar navbar-light border-bottom px-3 py-2" style="background-color: var(--token-gray-50);">
-                <a class="navbar-brand d-flex align-items-center" href="<?= site_url('dashboard') ?>">
-                    <img src="<?= asset_url('assets/image/binan.png') ?>" alt="City of Binan Logo" height="32" class="me-2">
-                    <span class="fw-normal" style="font-size: 0.875rem;">Bi&ntilde;an Access Card MIS</span>
+            <nav class="d-lg-none navbar navbar-light border-bottom px-3 py-2 mobile-topbar">
+                <a class="navbar-brand d-flex align-items-center" href="<?= esc(site_url('dashboard'), 'attr') ?>">
+                    <img src="<?= esc(asset_url('assets/image/binan.png'), 'attr') ?>" alt="City of Binan Logo" height="32" class="me-2">
+                    <span class="fw-normal mobile-brand-title">Bi&ntilde;an Access Card MIS</span>
                 </a>
-                <button class="btn btn-sm btn-light border d-flex align-items-center justify-content-center" type="button" data-bs-toggle="offcanvas" data-bs-target="#layoutSidenav_nav" aria-controls="layoutSidenav_nav" aria-label="Toggle sidebar" style="width: 36px; height: 36px;">
+                <button class="btn btn-sm btn-light border d-flex align-items-center justify-content-center mobile-sidebar-toggle" type="button" data-bs-toggle="offcanvas" data-bs-target="#layoutSidenav_nav" aria-controls="layoutSidenav_nav" aria-label="Toggle sidebar">
                     <i class="bi bi-list fs-5" aria-hidden="true"></i>
                 </button>
             </nav>

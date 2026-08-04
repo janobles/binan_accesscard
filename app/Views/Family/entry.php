@@ -30,7 +30,7 @@ $fieldData = [
 ?>
 <?php /* No bottom padding: the action bar below is sticky and full-bleed, so a
          padded container would float it above a strip of page background. */ ?>
-<div class="container-fluid px-4 pt-4 pb-5 mb-5" data-family-entry-form>
+<div class="container-fluid px-4 pt-4 has-fixed-action-bar" data-family-entry-form>
     <form id="familyEntryForm" method="post" action="<?= esc(site_url('records'), 'attr') ?>" novalidate>
         <?= csrf_field() ?>
 

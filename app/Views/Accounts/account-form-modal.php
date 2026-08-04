@@ -176,7 +176,7 @@ $getError = static function (string $field) use ($errors): string {
         </section>
 
         <div class="account-create-actions mt-3">
-            <button class="btn btn-secondary me-2" type="button" data-bs-dismiss="modal">Cancel</button>
+            <button class="btn btn-outline-secondary me-2" type="button" data-bs-dismiss="modal">Cancel</button>
             <button class="btn btn-success" type="submit"><?= esc($submitLabel) ?></button>
         </div>
     </form>

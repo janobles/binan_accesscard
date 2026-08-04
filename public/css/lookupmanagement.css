@@ -13,11 +13,6 @@
     padding: 0.85rem 1rem 1rem;
 }
 
-.sector-management .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-}
 
 /* .sector-name carries no styling of its own: name cells read like every
    other cell, matching the Manage Records table. */

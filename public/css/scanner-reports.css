@@ -36,9 +36,6 @@
 }
 
 .reports-toolbar .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
     min-height: 2.65rem;
     white-space: nowrap;
 }

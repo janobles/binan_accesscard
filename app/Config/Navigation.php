@@ -20,29 +20,29 @@ class Navigation
      */
     public const LINKS = [
         [
-            'key' => 'dashboard', 'label' => 'Dashboard', 'icon' => 'bi-house-door',
+            'key' => 'dashboard', 'label' => 'Dashboard', 'icon' => 'bi-grid',
             'route' => 'dashboard', 'heading' => 'Core', 'roles' => self::ALL_STAFF,
         ],
         [
-            'key' => 'records', 'label' => 'Family Records', 'icon' => 'bi-people-fill',
+            'key' => 'records', 'label' => 'Family Records', 'icon' => 'bi-people',
             'route' => 'records', 'heading' => 'Profiling', 'roles' => self::ALL_STAFF,
         ],
         [
-            'key' => 'reference-data', 'label' => 'Reference Data', 'icon' => 'bi-collection',
+            'key' => 'reference-data', 'label' => 'Reference Data', 'icon' => 'bi-database',
             'route' => 'reference-data', 'heading' => 'Profiling', 'roles' => self::ALL_STAFF,
         ],
         [
-            'key' => 'cards', 'label' => 'Access Cards', 'icon' => 'bi-qr-code',
+            'key' => 'cards', 'label' => 'Access Cards', 'icon' => 'bi-person-vcard',
             'route' => 'cards', 'heading' => 'Distribution',
             'roles' => ['Developer', 'Admin', 'Encoder'],
         ],
         [
-            'key' => 'distribution', 'label' => 'Distribution', 'icon' => 'bi-clipboard-check-fill',
+            'key' => 'distribution', 'label' => 'Distribution', 'icon' => 'bi-clipboard-check',
             'route' => 'distribution', 'heading' => 'Distribution',
             'roles' => ['Developer', 'Admin', 'Viewer'],
         ],
         [
-            'key' => 'accounts', 'label' => 'Account Management', 'icon' => 'bi-person-fill-gear',
+            'key' => 'accounts', 'label' => 'Account Management', 'icon' => 'bi-person-gear',
             'route' => 'accounts', 'heading' => 'Administration', 'roles' => self::MANAGERS,
         ],
         [

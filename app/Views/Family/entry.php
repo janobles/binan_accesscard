@@ -30,7 +30,7 @@ $fieldData = [
 ?>
 <?php /* No bottom padding: the action bar below is sticky and full-bleed, so a
          padded container would float it above a strip of page background. */ ?>
-<div class="container-fluid px-4 pt-4 pb-0" data-family-entry-form>
+<div class="container-fluid px-4 pt-4 has-fixed-action-bar" data-family-entry-form>
     <form id="familyEntryForm" method="post" action="<?= esc(site_url('records'), 'attr') ?>" novalidate>
         <?= csrf_field() ?>
 
@@ -88,14 +88,14 @@ $fieldData = [
         <input type="hidden" name="members_meta_count" value="0" data-members-count>
         <input type="hidden" name="_form_end" value="1">
 
-        <div class="family-entry-actions family-entry-actions-page">
+        <div class="position-fixed bottom-0 start-0 w-100 bg-white border-top p-3 z-3 d-flex flex-wrap justify-content-between align-items-center gap-2 shadow-sm" style="margin-bottom: 0;">
             <p class="mb-0 text-muted" data-entry-blocked role="status" aria-live="polite"></p>
-            <div class="d-flex gap-2">
+            <div class="d-flex gap-2 ms-auto">
                 <a class="btn btn-outline-secondary" href="<?= esc(site_url('records'), 'attr') ?>">Cancel</a>
                 <?php /* Green and named for what it does: this page creates a record,
                          it does not save an edit to one (that is Family/profile). */ ?>
                 <button class="<?= btn('add') ?>" type="submit" data-family-save>
-                    <i class="bi bi-check2-circle me-1" aria-hidden="true"></i>Add Record
+                    Add Record
                 </button>
             </div>
         </div>

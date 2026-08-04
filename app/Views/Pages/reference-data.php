@@ -66,7 +66,31 @@ foreach ($referenceTabs as $tabKey) {
         'per_page' => (int) ($subsidyTypeList['perPage'] ?? 25),
         'page'     => $p,
     ], static fn ($v): bool => $v !== '' && $v !== null));
+    $subsidyTypeClearUrl = site_url('reference-data') . '?' . http_build_query(array_filter([
+        'tab'      => 'subsidy-types',
+        'per_page' => ((int) ($subsidyTypeList['perPage'] ?? 25) !== 25) ? (string) ((int) ($subsidyTypeList['perPage'] ?? 25)) : '',
+    ], static fn ($v): bool => $v !== ''));
     ?>
+    <?= view('components/toolbar', [
+        'formAction' => site_url('reference-data'),
+        'formAria' => 'Search all subsidy types',
+        'searchPlaceholder' => 'Search all subsidy types...',
+        'keyword' => $subsidyTypeList['keyword'] ?? '',
+        'clearUrl' => $subsidyTypeClearUrl,
+        'pillsId' => 'subsidyTypeFilterPills',
+        'hiddenHtml' => '<input type="hidden" name="tab" value="subsidy-types">'
+            . ((int) ($subsidyTypeList['perPage'] ?? 25) !== 25 ? '<input type="hidden" name="per_page" value="' . esc((string) ((int) ($subsidyTypeList['perPage'] ?? 25)), 'attr') . '">' : ''),
+        'actionsHtml' => $canManageLookups ? '<button class="' . btn('add') . ' flex-fill" type="button" data-bs-toggle="modal" data-bs-target="#addSubsidyTypeModal"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Add Subsidy Type</button>' : '',
+        'filterGroups' => [[
+            'name' => 'status',
+            'label' => 'Status',
+            'options' => [
+                ['value' => 'active', 'label' => "Active (" . (int) ($subsidyTypeList['activeCount'] ?? 0) . ")", 'checked' => ($subsidyTypeList['status'] ?? 'all') === 'active', 'default' => true],
+                ['value' => 'archived', 'label' => "Archived (" . (int) ($subsidyTypeList['archivedCount'] ?? 0) . ")", 'pill' => 'Archived', 'checked' => ($subsidyTypeList['status'] ?? 'all') === 'archived'],
+                ['value' => 'all', 'label' => "All (" . ((int) ($subsidyTypeList['activeCount'] ?? 0) + (int) ($subsidyTypeList['archivedCount'] ?? 0)) . ")", 'checked' => ($subsidyTypeList['status'] ?? 'all') === 'all'],
+            ],
+        ]],
+    ]) ?>
     <?= view('components/card', [
         'icon' => 'box-seam',
         'title' => 'Subsidy Types',

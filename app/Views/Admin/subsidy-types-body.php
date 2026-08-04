@@ -8,12 +8,7 @@
  */
 $canManageSubsidyTypes = in_array($currentRole ?? '', ['Admin', 'Developer'], true);
 ?>
-<?php /* Action row: Bootstrap utilities inside the card-body's own padding. */ ?>
-<?php if ($canManageSubsidyTypes): ?>
-<div class="d-flex justify-content-end mb-3">
-          <button class="<?= btn('add') ?>" type="button" data-bs-toggle="modal" data-bs-target="#addSubsidyTypeModal"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add Subsidy Type</button>
-        </div>
-<?php endif; ?>
+
 
         <?= view('components/table_controls', [
             'searchId' => 'subsidyTypeLocalSearch',
@@ -39,7 +34,7 @@ $canManageSubsidyTypes = in_array($currentRole ?? '', ['Admin', 'Developer'], tr
                 <?php $archived = ! empty($t['dt_deleted']); ?>
                 <tr data-row-archived="<?= $archived ? '1' : '0' ?>">
                   <td><span class="sector-name"><?= esc($t['name']) ?></span></td>
-                  <td class="lookup-col-status"><span class="sector-status-badge <?= $archived ? 'sector-status-archived' : 'sector-status-active' ?>"><?= $archived ? 'Archived' : 'Active' ?></span></td>
+                  <td class="lookup-col-status"><span class="badge rounded-pill <?= $archived ? 'text-bg-secondary' : 'text-bg-success' ?>"><?= $archived ? 'Archived' : 'Active' ?></span></td>
                   <td class="text-end">
                     <?php if ($canManageSubsidyTypes): ?>
                     <div class="dropdown actions-menu">

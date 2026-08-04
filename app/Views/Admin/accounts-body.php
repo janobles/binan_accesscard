@@ -44,7 +44,7 @@ use App\Libraries\ViewFormatter;
                         $isActive = ViewFormatter::isActiveStatus($account['isactive'] ?? null);
                         $nextStatus = $isActive ? 'Disabled' : 'Enable';
                         $statusLabel = $isActive ? 'Active' : 'Inactive';
-                        $statusClass = $isActive ? 'is-active' : 'is-disabled';
+                        $statusClass = $isActive ? 'text-bg-success' : 'text-bg-danger';
                         $statusFilter = $isActive ? 'active' : 'inactive';
                         $canEditRow = $canEditAccounts && in_array($rawRole, ['administrator', 'encoder', 'viewer', 'scanner'], true);
                         $canDeveloperToggle = $isDeveloper && in_array($rawRole, ['administrator', 'encoder', 'viewer', 'scanner'], true);
@@ -56,7 +56,7 @@ use App\Libraries\ViewFormatter;
                         <tr data-account-row data-paginate-row data-account-username="<?= esc(mb_strtolower((string) ($account['username'] ?? '')), 'attr') ?>" data-account-role="<?= esc(mb_strtolower($rawRole), 'attr') ?>" data-account-status="<?= esc($statusFilter, 'attr') ?>">
                             <td><?= esc((string) ($account['username'] ?? '')) ?></td>
                             <td><?= esc($roleLabel) ?></td>
-                            <td class="text-center"><span class="account-status-badge <?= esc($statusClass) ?>"><?= esc($statusLabel) ?></span></td>
+                            <td class="text-center"><span class="badge rounded-pill <?= esc($statusClass) ?>"><?= esc($statusLabel) ?></span></td>
                             <td class="text-end">
                                 <div class="account-actions">
                                     <?php if ($hasRowActions): ?>

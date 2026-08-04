@@ -21,7 +21,7 @@ $counts  = is_array($summary['counts'] ?? null) ? $summary['counts'] : [];
 $summaryJson = json_encode($summary, JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE);
 $fieldOptionsJson = json_encode($fieldOptions, JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE);
 ?>
-<div id="importReview"
+<div id="importReview" class="pb-5 mb-5"
      data-rows-url="<?= esc(site_url('records/import/review/' . $jobId . '/rows'), 'attr') ?>"
      data-apply-url="<?= esc(site_url('records/import/review/' . $jobId . '/apply'), 'attr') ?>"
      data-commit-url="<?= esc(site_url('records/import/review/' . $jobId . '/commit'), 'attr') ?>"
@@ -58,10 +58,10 @@ $fieldOptionsJson = json_encode($fieldOptions, JSON_HEX_TAG | JSON_HEX_AMP | JSO
         <li class="nav-item"><button type="button" class="nav-link active" data-severity="all">All</button></li>
         <li class="nav-item"><button type="button" class="nav-link" data-severity="problems">Problems</button></li>
         <li class="nav-item"><button type="button" class="nav-link" data-severity="blocking">
-            Must fix <span class="badge text-bg-danger" data-count="blocking"><?= (int) ($counts['blocking'] ?? 0) ?></span>
+            Must fix <span class="badge rounded-pill text-bg-danger" data-count="blocking"><?= (int) ($counts['blocking'] ?? 0) ?></span>
         </button></li>
         <li class="nav-item"><button type="button" class="nav-link" data-severity="warning">
-            Warnings <span class="badge text-bg-warning" data-count="warnings"><?= (int) ($counts['warnings'] ?? 0) ?></span>
+            Warnings <span class="badge rounded-pill text-bg-warning" data-count="warnings"><?= (int) ($counts['warnings'] ?? 0) ?></span>
         </button></li>
     </ul>
 
@@ -124,13 +124,13 @@ $fieldOptionsJson = json_encode($fieldOptions, JSON_HEX_TAG | JSON_HEX_AMP | JSO
         </div>
     </div>
 
-    <div class="d-flex flex-wrap justify-content-end align-items-center gap-2 mt-4">
+    <div class="fixed-bottom bg-white border-top p-3 shadow-sm d-flex flex-wrap justify-content-end align-items-center gap-2">
         <span id="importReviewStatus" class="text-muted me-auto" role="status" aria-live="polite"></span>
-        <button type="button" class="btn btn-secondary" id="importReviewCancel">
-            <i class="bi bi-x-circle me-1" aria-hidden="true"></i>Cancel import
+        <button type="button" class="btn btn-outline-secondary" id="importReviewCancel">
+            Cancel import
         </button>
         <button type="button" class="<?= btn('add') ?>" id="importReviewConfirm" disabled>
-            <i class="bi bi-check2-circle me-1" aria-hidden="true"></i>Confirm import
+            Confirm import
         </button>
     </div>
 

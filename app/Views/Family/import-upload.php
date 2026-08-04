@@ -26,24 +26,24 @@ $templateUrl = (string) ($templateUrl ?? site_url('records/template'));
         ],
     ]) ?>
 
-    <div class="row justify-content-center">
+    <div class="row justify-content-center mt-3">
         <div class="col-lg-8 col-xl-7">
-            <div class="card shadow-sm">
-                <div class="card-body">
+            <div class="card border">
+                <div class="card-body p-4">
                     <p>
                         Fill the template, mark each head as <strong>Relationship = Head</strong>,
                         and give every person of one household the same <strong>FamilyNo</strong>.
                     </p>
 
-                    <a class="btn btn-outline-secondary mb-3" href="<?= esc($templateUrl, 'attr') ?>">
-                        <i class="bi bi-file-earmark-arrow-down me-1" aria-hidden="true"></i>Download Excel template
+                    <a class="btn btn-outline-secondary mb-4" href="<?= esc($templateUrl, 'attr') ?>">
+                        Download Excel template
                     </a>
 
                     <form data-import-form action="<?= esc($action, 'attr') ?>" method="post" enctype="multipart/form-data">
                         <?= csrf_field() ?>
 
-                        <div class="mb-3">
-                            <label class="form-label" for="familyImportFile">Excel file (.xlsx)</label>
+                        <div class="mb-4">
+                            <label class="form-label fw-bold" for="familyImportFile">Excel file (.xlsx)</label>
                             <input
                                 class="form-control"
                                 type="file"
@@ -59,11 +59,13 @@ $templateUrl = (string) ($templateUrl ?? site_url('records/template'));
 
                         <div data-import-results aria-live="polite"></div>
 
-                        <div class="d-flex flex-wrap justify-content-end gap-2 mt-3">
-                            <a class="btn btn-outline-secondary" href="<?= esc(site_url('records'), 'attr') ?>">Cancel</a>
-                            <button class="btn btn-primary" type="submit" data-import-submit>
-                                <i class="bi bi-file-earmark-arrow-up me-1" aria-hidden="true"></i>Upload and check
-                            </button>
+                        <div data-import-actions>
+                            <div class="d-flex flex-wrap justify-content-end gap-2 mt-2">
+                                <a class="btn btn-outline-secondary" href="<?= esc(site_url('records'), 'attr') ?>">Cancel</a>
+                                <button class="btn btn-primary" type="submit" data-import-submit>
+                                    Upload and check
+                                </button>
+                            </div>
                         </div>
                     </form>
                 </div>

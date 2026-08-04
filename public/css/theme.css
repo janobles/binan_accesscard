@@ -41,30 +41,37 @@
     --bs-btn-active-color: #fff;
 }
 
+/* Global Button Standards: consistent font weight and icon gap across all pages */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    font-weight: 400 !important;
+}
+
 /* App Layout: Modern split view (Sidebar + Content) */
 /* Neutralize legacy SB Admin 1 transform/margin hacks that conflict with flex/offcanvas */
 #layoutSidenav #layoutSidenav_nav {
     transform: none !important;
+    z-index: 1045 !important;
+    background-color: var(--token-gray-50);
+    transition: margin-left 0.25s ease-in-out;
 }
 #layoutSidenav #layoutSidenav_content {
     margin-left: 0 !important;
+    min-height: 0 !important;
+    height: 100% !important;
+    overflow-y: auto !important;
 }
 .sb-sidenav-toggled #layoutSidenav #layoutSidenav_content:before {
     display: none !important;
 }
 
-#layoutSidenav_nav {
-    width: 270px !important;
-    flex-basis: 270px !important;
-    z-index: 1055 !important;
-    background-color: var(--token-gray-50);
-    transition: margin-left 0.25s ease-in-out;
-}
-
 @media (min-width: 992px) {
-    /* Desktop sidebar collapse (Full Hide) */
+    /* Desktop sidebar collapse */
     .sb-sidenav-toggled #layoutSidenav_nav {
-        margin-left: -270px !important;
+        margin-left: -225px !important;
     }
 }
 
@@ -310,9 +317,9 @@
 }
 
 .stepper-step[data-state="error"] .stepper-step-indicator::before {
-    content: "\F33A"; /* bi-exclamation-lg */
+    content: "\F659"; /* bi-x-lg */
     font-family: "bootstrap-icons";
-    font-size: 0.9rem;
+    font-size: 1.05rem;
 }
 
 /* Horizontal: indicator centred with its label beneath, connector drawn between
@@ -327,10 +334,6 @@
     max-width: 32rem;
     margin-top: 1rem;
     margin-bottom: 1.5rem;
-}
-
-/* Upload step: the strip sits over a centred card, so it centres with it. */
-.family-import-upload .stepper-horizontal {
     margin-right: auto;
     margin-left: auto;
 }

@@ -1,11 +1,9 @@
 // Drives step 1 of the import wizard (the upload page) and submits the uploaded .xlsx to
-// FamilyImportController::import(), which QUEUES a background job. As soon as the job is
-// queued, progress is tracked in a small toast in a stack pinned to the bottom-right.
-// Each import gets its OWN toast, so several files can import at once and all show
-// progress while the user keeps working.
+// FamilyImportController::import(), which QUEUES a background job. Progress is tracked
+// inline on the page.
 //
-// Active jobs are remembered in localStorage, so every in-flight toast resumes polling
-// even if the user navigates to another dashboard page before the imports finish.
+// Active jobs are remembered in localStorage, so if the user navigates away and comes back,
+// it resumes polling and updates the inline UI.
 //
 // Connected to:
 //   - family-datatable.js : window.reloadFamilyDataTable()
@@ -17,38 +15,26 @@
 
     var POLL_MS = 1500;
     var STORAGE_KEY = 'binanFamilyImport';
-    // statusUrl -> { toast: Element, timer: number|null }
-    var tracked = {};
+    var tracked = {}; // statusUrl -> timer: number|null
 
     function escapeHtml(value) {
         var div = document.createElement('div');
         div.textContent = String(value == null ? '' : value);
-
         return div.innerHTML;
     }
 
-    // Refreshes the import form's CSRF token so a second import in the same session
-    // works. The modal form's only hidden input is the csrf_field(). Polling is a GET
-    // (CodeIgniter does not rotate the token on GET), so it needs no refresh.
     function updateCsrfForm(form, hash) {
-        if (!hash || !form) {
-            return;
-        }
-
+        if (!hash || !form) return;
         var input = form.querySelector('input[type="hidden"]');
-
-        if (input) {
-            input.value = hash;
-        }
+        if (input) input.value = hash;
     }
 
-    // -- localStorage list of in-flight jobs (so they resume after navigation) -
+    // -- localStorage list of in-flight jobs -----------------------------------
 
     function getStored() {
         try {
             var raw = window.localStorage.getItem(STORAGE_KEY);
             var list = raw ? JSON.parse(raw) : [];
-
             return Array.isArray(list) ? list : [];
         } catch (e) {
             return [];
@@ -62,12 +48,11 @@
             } else {
                 window.localStorage.removeItem(STORAGE_KEY);
             }
-        } catch (e) { /* private mode / quota - tracking still works this session */ }
+        } catch (e) { }
     }
 
     function addStored(statusUrl) {
         var list = getStored();
-
         if (list.indexOf(statusUrl) === -1) {
             list.push(statusUrl);
             saveStored(list);
@@ -78,119 +63,33 @@
         saveStored(getStored().filter(function (u) { return u !== statusUrl; }));
     }
 
-    // -- the bottom-right stack of progress toasts -----------------------------
+    // -- Inline UI Rendering ---------------------------------------------------
 
-    function getContainer() {
-        var el = document.getElementById('familyImportToasts');
-
-        if (!el) {
-            el = document.createElement('div');
-            el.className = 'family-import-toasts';
-            el.id = 'familyImportToasts';
-            document.body.appendChild(el);
-        }
-
-        return el;
+    function getResultsContainer() {
+        return document.querySelector('[data-import-results]');
     }
 
-    function buildToast(statusUrl) {
-        var toast = document.createElement('div');
-        toast.className = 'family-import-toast';
-        toast.dataset.statusUrl = statusUrl;
-        toast.setAttribute('role', 'status');
-        toast.setAttribute('aria-live', 'polite');
-        toast.innerHTML =
-            '<div class="fit-header">' +
-            '<span class="fit-title">Importing families</span>' +
-            '<button type="button" class="fit-close" aria-label="Dismiss" hidden>&times;</button>' +
-            '</div>' +
-            '<div class="fit-msg"></div>' +
-            '<div class="progress" role="progressbar" aria-label="Import progress" aria-valuemin="0" aria-valuemax="100">' +
-            '<div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 100%;"></div>' +
-            '</div>' +
-            '<div class="fit-errors"></div>';
-
-        getContainer().appendChild(toast);
-
-        toast.querySelector('.fit-close').addEventListener('click', function () {
-            stopTracking(statusUrl);
-            removeToast(toast);
-        });
-
-        return toast;
+    function getActionsContainer() {
+        return document.querySelector('[data-import-actions]');
     }
 
-    function removeToast(toast) {
-        if (!toast) {
-            return;
-        }
+    function renderProgress(data) {
+        var results = getResultsContainer();
+        var actions = getActionsContainer();
+        if (!results) return; // Not on the upload page
 
-        toast.classList.add('fit-hide');
-        window.setTimeout(function () {
-            if (toast.parentNode) {
-                toast.parentNode.removeChild(toast);
-            }
+        if (actions) actions.hidden = true; // Hide upload/cancel buttons
 
-            // Drop the empty container once the last toast is gone.
-            var container = document.getElementById('familyImportToasts');
-
-            if (container && !container.children.length) {
-                container.parentNode.removeChild(container);
-            }
-        }, 260);
-    }
-
-    function setToastState(toast, kind) {
-        toast.classList.remove('fit-success', 'fit-warning', 'fit-error');
-
-        if (kind) {
-            toast.classList.add('fit-' + kind);
-        }
-    }
-
-    function errorTable(errors) {
-        if (!errors || !errors.length) {
-            return '';
-        }
-
-        var rows = errors.map(function (error) {
-            var where = error.sheetRow ? ('Row ' + error.sheetRow) : 'File';
-
-            if (error.familyNo) {
-                where += ' &middot; ' + escapeHtml(error.familyNo);
-            }
-
-            return '<tr><td class="text-nowrap">' + where + '</td><td>' + escapeHtml(error.message) + '</td></tr>';
-        }).join('');
-
-        return '<table class="table table-sm table-bordered">' +
-            '<thead><tr><th>Where</th><th>Details</th></tr></thead><tbody>' + rows + '</tbody></table>';
-    }
-
-    function renderProgress(toast, data) {
         var progress = data.progress || { total: 0, percent: 0 };
-        var bar = toast.querySelector('.progress-bar');
-        var animated = progress.total === 0; // unknown total yet -> indeterminate
-
-        setToastState(toast, null);
-        toast.querySelector('.fit-title').textContent = 'Importing families';
-        toast.querySelector('.fit-close').hidden = true;
-        toast.querySelector('.fit-errors').innerHTML = '';
+        var animated = progress.total === 0;
 
         var label;
-
         if (data.status === 'pending') {
             label = 'Queued - waiting for the worker...';
         } else if (progress.total > 0) {
             var extra = [];
-
-            if (progress.failed) {
-                extra.push(progress.failed + ' failed');
-            }
-
-            if (progress.skipped) {
-                extra.push(progress.skipped + ' skipped');
-            }
+            if (progress.failed) extra.push(progress.failed + ' failed');
+            if (progress.skipped) extra.push(progress.skipped + ' skipped');
 
             label = 'Imported ' + progress.imported + ' of ' + progress.total + ' families' +
                 (extra.length ? ' (' + extra.join(', ') + ')' : '') + '...';
@@ -198,117 +97,98 @@
             label = 'Reading and validating...';
         }
 
-        toast.querySelector('.fit-msg').textContent = label;
+        var barClass = 'progress-bar' + (animated ? ' progress-bar-striped progress-bar-animated' : '');
+        var width = (progress.total > 0 ? progress.percent : 100) + '%';
+        var text = progress.total > 0 ? progress.percent + '%' : '';
 
-        bar.className = 'progress-bar' + (animated ? ' progress-bar-striped progress-bar-animated' : '');
-        bar.style.width = (progress.total > 0 ? progress.percent : 100) + '%';
-        bar.textContent = progress.total > 0 ? progress.percent + '%' : '';
+        results.innerHTML = 
+            '<div class="mb-2 text-muted small fw-bold">' + escapeHtml(label) + '</div>' +
+            '<div class="progress mb-3" style="height: 20px;">' +
+                '<div class="' + barClass + '" role="progressbar" style="width: ' + width + ';">' + text + '</div>' +
+            '</div>';
     }
 
-    // The upload only STAGES the file now; a finished review-phase job is not "imported",
-    // it is ready for the operator to inspect. Show an "Open review" call to action.
-    function renderReviewReady(toast, data) {
-        var bar = toast.querySelector('.progress-bar');
-        var closeBtn = toast.querySelector('.fit-close');
+    function errorTable(errors) {
+        if (!errors || !errors.length) return '';
+        var rows = errors.map(function (error) {
+            var where = error.sheetRow ? ('Row ' + error.sheetRow) : 'File';
+            if (error.familyNo) where += ' &middot; ' + escapeHtml(error.familyNo);
+            return '<tr><td class="text-nowrap">' + where + '</td><td>' + escapeHtml(error.message) + '</td></tr>';
+        }).join('');
 
-        bar.className = 'progress-bar';
-        bar.style.width = '100%';
-        bar.textContent = '';
-        bar.classList.add('bg-info');
-
-        setToastState(toast, 'success');
-        toast.querySelector('.fit-title').textContent = 'Ready to review';
-        toast.querySelector('.fit-msg').textContent = data.message || 'Your file is ready to review.';
-
-        var errorsEl = toast.querySelector('.fit-errors');
-        errorsEl.innerHTML = '';
-        var link = document.createElement('a');
-        link.className = 'btn btn-sm btn-primary mt-2';
-        link.href = data.reviewUrl;
-        link.textContent = 'Open review';
-        errorsEl.appendChild(link);
-
-        closeBtn.hidden = false;
+        return '<table class="table table-sm table-bordered mt-2">' +
+            '<thead><tr><th>Where</th><th>Details</th></tr></thead><tbody>' + rows + '</tbody></table>';
     }
 
-    function renderFinal(toast, data) {
-        // A staged file that finished cleanly routes to the review screen, not "done".
+    function renderReviewReady(data) {
+        var results = getResultsContainer();
+        var actions = getActionsContainer();
+        if (!results) return;
+
+        if (actions) actions.hidden = true;
+
+        var msg = data.message || 'Your file is ready to review.';
+        results.innerHTML = 
+            '<div class="alert alert-success d-flex flex-column align-items-start">' +
+                '<div class="mb-2"><i class="bi bi-check-circle me-2" aria-hidden="true"></i>' + escapeHtml(msg) + '</div>' +
+                '<a class="btn btn-primary" href="' + escapeHtml(data.reviewUrl) + '">Review and Fix</a>' +
+            '</div>';
+    }
+
+    function renderFinal(data) {
         if (data.reviewUrl) {
-            renderReviewReady(toast, data);
-
+            renderReviewReady(data);
             return;
         }
 
-        var bar = toast.querySelector('.progress-bar');
-        var closeBtn = toast.querySelector('.fit-close');
+        var results = getResultsContainer();
+        var actions = getActionsContainer();
+        if (!results) return;
 
-        bar.className = 'progress-bar';
-        bar.style.width = '100%';
-        bar.textContent = '';
-        toast.querySelector('.fit-msg').textContent = data.message || '';
+        if (actions) actions.hidden = true;
 
-        if (data.status === 'done') {
-            var skipped = (data.progress && data.progress.skipped) || 0;
-
-            setToastState(toast, 'success');
-            toast.querySelector('.fit-title').textContent = skipped ? 'Import complete (some skipped)' : 'Import complete';
-            bar.classList.add('bg-success');
-
-            // Nothing was skipped: clean success, auto-dismiss. When families were
-            // skipped, keep the toast open with the list so the user can see which
-            // records already existed.
-            if (!skipped) {
-                closeBtn.hidden = true;
-                window.setTimeout(function () { removeToast(toast); }, 6000);
-
-                return;
-            }
-
-            toast.querySelector('.fit-errors').innerHTML = errorTable(data.errors);
-            closeBtn.hidden = false;
-
-            return;
-        }
-
-        // partial or failed: keep the toast open with the per-row details + a close X.
+        var skipped = (data.progress && data.progress.skipped) || 0;
         var isPartial = data.status === 'partial';
-        setToastState(toast, isPartial ? 'warning' : 'error');
-        toast.querySelector('.fit-title').textContent = isPartial ? 'Finished with errors' : 'Import failed';
-        bar.classList.add(isPartial ? 'bg-warning' : 'bg-danger');
-        toast.querySelector('.fit-errors').innerHTML = errorTable(data.errors);
-        closeBtn.hidden = false;
+        
+        var alertClass = data.status === 'done' ? 'alert-success' : (isPartial ? 'alert-warning' : 'alert-danger');
+        var title = data.status === 'done' ? (skipped ? 'Import complete (some skipped)' : 'Import complete') : (isPartial ? 'Finished with errors' : 'Import failed');
+        var icon = data.status === 'done' ? 'bi-check-circle' : 'bi-exclamation-triangle';
+        
+        var html = '<div class="alert ' + alertClass + '">' +
+            '<div class="fw-bold mb-1"><i class="bi ' + icon + ' me-2" aria-hidden="true"></i>' + escapeHtml(title) + '</div>' +
+            '<div class="small">' + escapeHtml(data.message || '') + '</div>';
+
+        if (skipped || data.errors) {
+            html += errorTable(data.errors);
+        }
+        
+        html += '<div class="mt-3"><a class="btn btn-outline-secondary btn-sm" href="' + escapeHtml(window.location.href) + '">Upload another file</a></div>';
+        html += '</div>';
+
+        results.innerHTML = html;
     }
 
     // -- per-job tracking lifecycle --------------------------------------------
 
     function startTracking(statusUrl) {
-        if (!statusUrl || tracked[statusUrl]) {
-            return; // already tracking this job
-        }
-
-        tracked[statusUrl] = { toast: buildToast(statusUrl), timer: null };
+        if (!statusUrl || tracked[statusUrl]) return;
+        tracked[statusUrl] = { timer: null };
         addStored(statusUrl);
         poll(statusUrl);
     }
 
-    // Stops polling a job and forgets it (the toast itself is left to the caller).
     function stopTracking(statusUrl) {
         var entry = tracked[statusUrl];
-
         if (entry && entry.timer) {
             window.clearTimeout(entry.timer);
         }
-
         delete tracked[statusUrl];
         removeStored(statusUrl);
     }
 
     function poll(statusUrl) {
         var entry = tracked[statusUrl];
-
-        if (!entry) {
-            return; // dismissed/stopped
-        }
+        if (!entry) return;
 
         window.fetch(statusUrl, {
             method: 'GET',
@@ -321,47 +201,40 @@
                 return { code: response.status, data: {} };
             });
         }).then(function (result) {
-            if (!tracked[statusUrl]) {
-                return; // dismissed mid-request
-            }
+            if (!tracked[statusUrl]) return;
 
             var data = result.data || {};
-            var toast = tracked[statusUrl].toast;
 
-            // Job gone (e.g. cleared) - stop quietly.
             if (result.code === 404) {
                 stopTracking(statusUrl);
-                removeToast(toast);
-
+                var results = getResultsContainer();
+                if (results) results.innerHTML = '<div class="alert alert-warning">Import job no longer found.</div>';
+                var actions = getActionsContainer();
+                if (actions) actions.hidden = false;
                 return;
             }
 
             if (!data.finished) {
-                renderProgress(toast, data);
+                renderProgress(data);
                 tracked[statusUrl].timer = window.setTimeout(function () { poll(statusUrl); }, POLL_MS);
-
                 return;
             }
 
-            // Terminal state: render, then forget the job (toast stays for errors).
-            renderFinal(toast, data);
+            renderFinal(data);
             stopTracking(statusUrl);
 
-            // Only a WRITE-phase job changed records; a review-phase job wrote nothing.
             if ((data.status === 'done' || data.status === 'partial') &&
                 data.phase !== 'review' &&
                 typeof window.reloadFamilyDataTable === 'function') {
                 window.reloadFamilyDataTable();
             }
         }).catch(function () {
-            // Transient network error - the job keeps running server-side; retry.
             if (tracked[statusUrl]) {
                 tracked[statusUrl].timer = window.setTimeout(function () { poll(statusUrl); }, POLL_MS * 2);
             }
         });
     }
 
-    // Resume every still-running import after a page navigation/reload.
     function resumeTracking() {
         getStored().forEach(function (statusUrl) {
             startTracking(statusUrl);
@@ -372,29 +245,22 @@
 
     function initImportForm(container) {
         var root = container.querySelector('[data-family-import]');
-
-        if (!root || root.dataset.familyImportReady === '1') {
-            return;
-        }
-
+        if (!root || root.dataset.familyImportReady === '1') return;
         root.dataset.familyImportReady = '1';
 
         var form = root.querySelector('[data-import-form]');
         var results = root.querySelector('[data-import-results]');
         var submit = root.querySelector('[data-import-submit]');
+        var actions = getActionsContainer();
 
-        if (!form || !results) {
-            return;
-        }
+        if (!form || !results) return;
 
         form.addEventListener('submit', function (event) {
             event.preventDefault();
 
             var fileInput = form.querySelector('input[type="file"]');
-
             if (fileInput && fileInput.files.length === 0) {
                 results.innerHTML = '<div class="alert alert-warning mb-0">Please choose a .xlsx file first.</div>';
-
                 return;
             }
 
@@ -405,7 +271,8 @@
                 submit.textContent = 'Uploading...';
             }
 
-            results.innerHTML = '<div class="text-muted small">Uploading your file...</div>';
+            results.innerHTML = '<div class="text-muted small mb-3">Uploading your file...</div>';
+            if (actions) actions.hidden = true;
 
             window.fetch(form.action, {
                 method: 'POST',
@@ -426,39 +293,29 @@
                     submit.textContent = originalLabel;
                 }
 
-                // Queued: reset the form and hand off to its own toast, which carries the
-                // "Open review" link once staging finishes.
-                // form.reset() must run BEFORE updateCsrfForm(), since reset() would
-                // otherwise wipe the just-refreshed token back to its page-load value.
                 if (result.ok && data.status === 'queued' && data.statusUrl) {
-                    results.innerHTML = '<div class="alert alert-info mb-0">' +
-                        'Checking your file. The review opens from the progress toast when it is ready.</div>';
                     form.reset();
                     updateCsrfForm(form, data.csrf);
                     startTracking(data.statusUrl);
-
                     return;
                 }
 
                 updateCsrfForm(form, data.csrf);
+                if (actions) actions.hidden = false;
 
-                // Upload rejected before queuing (bad file, permission, etc.) - stay on
-                // the page so the user can fix and retry.
-                results.innerHTML = '<div class="alert alert-danger mb-0">' +
+                results.innerHTML = '<div class="alert alert-danger mb-3">' +
                     escapeHtml(data.message || 'The file could not be queued for import.') + '</div>';
             }).catch(function () {
                 if (submit) {
                     submit.disabled = false;
                     submit.textContent = originalLabel;
                 }
-
-                results.innerHTML = '<div class="alert alert-danger mb-0">A network error occurred. Please try again.</div>';
+                if (actions) actions.hidden = false;
+                results.innerHTML = '<div class="alert alert-danger mb-3">A network error occurred. Please try again.</div>';
             });
         });
     }
 
-    // Wire the upload form when this page carries one, and pick up imports that were
-    // still running when the page loaded (any dashboard page resumes their toasts).
     function start() {
         initImportForm(document);
         resumeTracking();
@@ -470,3 +327,4 @@
         start();
     }
 })(window, document);
+

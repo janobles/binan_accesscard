@@ -215,13 +215,13 @@ class DashboardPageBuilder
         // per-kiosk table), batch-scoped only (no date filter). Gated so other
         // pages, and roles with no distribution access, don't run these queries.
         $reportsData = $isDashboard && $seesDistribution
-            ? $this->buildReportsData($batchModel)
+            ? $this->buildReportsData($batchModel, $batchBodyTab)
             : [
                 'batches'       => [],
                 'batchRow'      => null,
                 'batchOpen'     => false,
                 'batchSnapshot' => $this->emptyBatchSnapshot(),
-                'remaining'     => [],
+                'remainingPage' => $this->emptyRemainingPage(),
             ];
 
         // Hide the logged-in user's own account from Account Management; self-service
@@ -295,7 +295,7 @@ class DashboardPageBuilder
             'batchRow'           => $reportsData['batchRow'],
             'batchOpen'          => $reportsData['batchOpen'],
             'batchSnapshot'      => $reportsData['batchSnapshot'],
-            'remaining'          => $reportsData['remaining'],
+            'remainingPage'      => $reportsData['remainingPage'],
             'batchBodyTab'       => $batchBodyTab,
             'programStats'       => $isDashboard ? $dashboardModel->programStats() : ['families' => 0, 'neverServed' => 0],
             // Only the roles that may open the record-entry page get the Add and
@@ -491,13 +491,20 @@ class DashboardPageBuilder
 
     /**
      * Batch-scoped data for the dashboard's "this batch" zone: the cached
-     * coverage/barangay/scanner/timeline snapshot plus the remaining-families
-     * list. The scoping batch defaults to the active batch, else the most
-     * recent batch, and honors ?batch= when it matches a known batch
-     * (BatchScope::resolve(), shared with the reports endpoint and the scanner
-     * performance page).
+     * coverage/barangay/scanner/timeline snapshot plus one page of the
+     * remaining-families list. The scoping batch defaults to the active batch,
+     * else the most recent batch, and honors ?batch= when it matches a known
+     * batch (BatchScope::resolve(), shared with the reports endpoint and the
+     * scanner performance page).
+     *
+     * The remaining-families query only runs when $batchBodyTab is 'remaining':
+     * against the 100k-family target, SubsidyStatsModel::remaining() lists
+     * everyone in one response, so it is too large to fetch on every dashboard
+     * load regardless of which sub-tab is showing. The PDF export keeps calling
+     * remaining() directly (ReportsController::pdf()); the liquidation artifact
+     * must stay whole.
      */
-    private function buildReportsData(DistributionBatchModel $batchModel): array
+    private function buildReportsData(DistributionBatchModel $batchModel, string $batchBodyTab): array
     {
         $batches = $batchModel->allBatches();
         $active  = $batchModel->activeBatch();
@@ -512,7 +519,42 @@ class DashboardPageBuilder
             'batchRow'      => $batch,
             'batchOpen'     => $isOpen,
             'batchSnapshot' => $batchId > 0 ? $stats->batchSnapshot($batchId, $isOpen) : $this->emptyBatchSnapshot(),
-            'remaining'     => $batchId > 0 ? $stats->remaining($batchId) : [],
+            'remainingPage' => $batchId > 0 && $batchBodyTab === 'remaining'
+                ? $this->buildRemainingPageData($stats, $batchId)
+                : $this->emptyRemainingPage(),
+        ];
+    }
+
+    /** Paginated remaining-families bundle for the dashboard's Remaining tab. */
+    private function buildRemainingPageData(SubsidyStatsModel $stats, int $batchId): array
+    {
+        $perPageOptions = [10, 25, 50, 100];
+        $page    = max(1, (int) $this->request->getGet('page'));
+        $perPage = (int) $this->request->getGet('per_page');
+        $perPage = in_array($perPage, $perPageOptions, true) ? $perPage : 25;
+
+        $total      = $stats->remainingCount($batchId);
+        $totalPages = max(1, (int) ceil($total / $perPage));
+        $page       = min($page, $totalPages);
+
+        return [
+            'rows'          => $stats->remainingPage($batchId, $perPage, ($page - 1) * $perPage),
+            'page'          => $page,
+            'perPage'       => $perPage,
+            'perPageOptions'=> $perPageOptions,
+            'totalPages'    => $totalPages,
+            'totalRows'     => $total,
+            'fromRecord'    => $total === 0 ? 0 : (($page - 1) * $perPage) + 1,
+            'toRecord'      => min($total, $page * $perPage),
+        ];
+    }
+
+    /** The zero shape for buildRemainingPageData(), used when the tab isn't active or no batch is scoped. */
+    private function emptyRemainingPage(): array
+    {
+        return [
+            'rows' => [], 'page' => 1, 'perPage' => 25, 'perPageOptions' => [10, 25, 50, 100],
+            'totalPages' => 1, 'totalRows' => 0, 'fromRecord' => 0, 'toRecord' => 0,
         ];
     }
 

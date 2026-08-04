@@ -126,8 +126,33 @@ class SubsidyStatsModel extends Model
     }
 
     /**
+     * The shared filter behind every "unclaimed families" read: on the roster,
+     * no live distribution in this batch. remaining(), remainingPage() and
+     * remainingCount() all build off this one join so the dashboard's paginated
+     * tab, its total count, and the PDF's complete list can never disagree
+     * about who counts as unclaimed.
+     */
+    private function remainingBuilder(int $batchId): \CodeIgniter\Database\BaseBuilder
+    {
+        return $this->db->table('batch_eligibility')
+            ->join('member', 'member.memberID = batch_eligibility.headID')
+            ->join('barangay', 'barangay.barangayID = member.barangayID', 'left')
+            ->join(
+                'subsidy_distribution',
+                'subsidy_distribution.memberID = batch_eligibility.headID'
+                    . ' AND subsidy_distribution.batch_id = batch_eligibility.batch_id'
+                    . ' AND subsidy_distribution.dt_voided IS NULL',
+                'left'
+            )
+            ->where('batch_eligibility.batch_id', $batchId)
+            ->where('subsidy_distribution.distribution_id IS NULL', null, false);
+    }
+
+    /**
      * The unclaimed families: on the roster, no live distribution in this batch.
-     * This is the liquidation artifact, and the reason the dashboard exists.
+     * This is the liquidation artifact the PDF report prints, so it always
+     * returns the complete list - never call this for the dashboard's Remaining
+     * tab at scale; use remainingPage()/remainingCount() there instead.
      *
      * @return list<array{headID:int,name:string,barangay:string,contact:string}>
      */
@@ -138,24 +163,68 @@ class SubsidyStatsModel extends Model
         }
 
         try {
-            $rows = $this->db->table('batch_eligibility')
+            $rows = $this->remainingBuilder($batchId)
                 ->select('batch_eligibility.headID,'
                     . ' member.firstname, member.lastname,'
                     . " COALESCE(barangay.name, 'Unassigned') AS barangay,"
                     . " COALESCE(member.contactnumber, '') AS contact")
-                ->join('member', 'member.memberID = batch_eligibility.headID')
-                ->join('barangay', 'barangay.barangayID = member.barangayID', 'left')
-                ->join(
-                    'subsidy_distribution',
-                    'subsidy_distribution.memberID = batch_eligibility.headID'
-                        . ' AND subsidy_distribution.batch_id = batch_eligibility.batch_id'
-                        . ' AND subsidy_distribution.dt_voided IS NULL',
-                    'left'
-                )
-                ->where('batch_eligibility.batch_id', $batchId)
-                ->where('subsidy_distribution.distribution_id IS NULL', null, false)
                 ->orderBy('barangay', 'ASC')
                 ->orderBy('member.lastname', 'ASC')
+                ->get()->getResultArray();
+
+            return array_map(static fn ($r) => [
+                'headID'   => (int) $r['headID'],
+                'name'     => trim((string) $r['firstname'] . ' ' . (string) $r['lastname']),
+                'barangay' => (string) $r['barangay'],
+                'contact'  => (string) $r['contact'],
+            ], $rows);
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
+
+    /**
+     * Count behind remainingPage()'s pagination footer. Same filter as
+     * remaining(), so the "Showing X to Y of Z" text can never disagree with
+     * the rows the page actually returns.
+     */
+    public function remainingCount(int $batchId): int
+    {
+        if ($batchId <= 0) {
+            return 0;
+        }
+
+        try {
+            return (int) $this->remainingBuilder($batchId)
+                ->countAllResults();
+        } catch (\Throwable $e) {
+            return 0;
+        }
+    }
+
+    /**
+     * One page of remaining(), for the dashboard's Remaining tab. Against the
+     * 100k-family target, remaining() lists everyone in one response; this is
+     * the paginated substitute for the tab (the PDF's unclaimed list must stay
+     * whole, so it keeps calling remaining() directly).
+     *
+     * @return list<array{headID:int,name:string,barangay:string,contact:string}>
+     */
+    public function remainingPage(int $batchId, int $limit, int $offset): array
+    {
+        if ($batchId <= 0 || $limit <= 0) {
+            return [];
+        }
+
+        try {
+            $rows = $this->remainingBuilder($batchId)
+                ->select('batch_eligibility.headID,'
+                    . ' member.firstname, member.lastname,'
+                    . " COALESCE(barangay.name, 'Unassigned') AS barangay,"
+                    . " COALESCE(member.contactnumber, '') AS contact")
+                ->orderBy('barangay', 'ASC')
+                ->orderBy('member.lastname', 'ASC')
+                ->limit($limit, max(0, $offset))
                 ->get()->getResultArray();
 
             return array_map(static fn ($r) => [

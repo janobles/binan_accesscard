@@ -5,14 +5,14 @@
  * fragment, not a page: rendered inline by Pages/dashboard.php for
  * Developer/Admin only. Data comes from
  * DashboardPageBuilder::buildReportsData() (batches, batchRow, batchOpen,
- * batchSnapshot, remaining, batchBodyTab). All server data is escaped.
+ * batchSnapshot, remainingPage, batchBodyTab). All server data is escaped.
  */
 
 $batches = $batches ?? [];
 $batchRow = $batchRow ?? null;
 $batchOpen = (bool) ($batchOpen ?? false);
 $batchSnapshot = $batchSnapshot ?? ['coverage' => ['eligible' => 0, 'served' => 0, 'remaining' => 0, 'coverage' => 0, 'voided' => 0], 'byBarangay' => [], 'perScanner' => [], 'timeline' => []];
-$remaining = $remaining ?? [];
+$remainingPage = $remainingPage ?? ['rows' => [], 'page' => 1, 'perPage' => 25, 'perPageOptions' => [10, 25, 50, 100], 'totalPages' => 1, 'totalRows' => 0, 'fromRecord' => 0, 'toRecord' => 0];
 $batchBodyTab = $batchBodyTab ?? 'barangay';
 
 $c = $batchSnapshot['coverage'];
@@ -197,18 +197,37 @@ $noEligible = ! $noBatch && $c['eligible'] === 0;
         'footer' => null,
         'tableId' => 'stationsTable',
     ]) ?>
-<?php else: ?>
-    <?php /* remaining() can return hundreds of rows: same client-side pagination
-             pattern as the Distribution Batches / Distribution Log tables
-             (assets/js/dashboard/table-paginate.js), not a data_table. */ ?>
+<?php else:
+    // Server-side paginated (SubsidyStatsModel::remainingPage()): against the
+    // 100k-family target, fetching the whole roster into the DOM for
+    // table-paginate.js to slice client-side (the Distribution Batches/Log
+    // pattern) is too large a page. Preserves batch + tab across page links.
+    $remainingPageUrl = static function (int $targetPage) use ($batchId, $remainingPage): string {
+        $params = array_filter([
+            'tab'      => 'remaining',
+            'batch'    => $batchId > 0 ? (string) $batchId : '',
+            'per_page' => $remainingPage['perPage'] !== 25 ? (string) $remainingPage['perPage'] : '',
+            'page'     => $targetPage > 1 ? (string) $targetPage : '',
+        ], static fn ($value): bool => $value !== '');
+
+        return site_url('dashboard') . ($params === [] ? '' : '?' . http_build_query($params));
+    };
+    ?>
     <?= view('components/card', [
         'icon' => 'hourglass-split',
         'title' => $batchOpen ? 'Remaining families' : 'Families not claimed',
         'cardClass' => 'reports-fallback',
-        'attrs' => 'data-table-paginate data-paginate-key="remaining" data-paginate-label="families"',
         'bodyView' => 'Admin/dashboard-remaining-body',
-        'bodyData' => ['remaining' => $remaining],
-        'footer' => view('components/table_footer', ['clientKey' => 'remaining', 'entityLabel' => 'families']),
+        'bodyData' => ['remaining' => $remainingPage['rows']],
+        'footer' => view('components/table_footer', [
+            'fromRecord' => $remainingPage['fromRecord'],
+            'toRecord' => $remainingPage['toRecord'],
+            'totalRows' => $remainingPage['totalRows'],
+            'page' => $remainingPage['page'],
+            'totalPages' => $remainingPage['totalPages'],
+            'pageUrl' => $remainingPageUrl,
+            'entityLabel' => 'families',
+        ]),
     ]) ?>
 <?php endif; ?>
 

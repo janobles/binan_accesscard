@@ -15,6 +15,7 @@ use App\Models\Scanner\SubsidyStatsModel;
 use App\Models\Scanner\DistributionBatchModel;
 use App\Support\FamilyProfilingFormV2;
 use App\Libraries\RoleAccess;
+use App\Libraries\Scanner\BatchScope;
 use App\Models\ViewLayoutModel;
 use CodeIgniter\Database\Exceptions\DatabaseException;
 use CodeIgniter\HTTP\IncomingRequest;
@@ -498,27 +499,15 @@ class DashboardPageBuilder
      * per-barangay/subsidy-type breakdowns, and the per-kiosk table (all scanners,
      * no self-scoping - admin sees every kiosk). The scoping batch defaults to
      * the active batch, else the most recent batch, and honors ?batch= when it
-     * matches a known batch (mirrors Admin\ReportsController::resolveBatch()).
+     * matches a known batch (BatchScope::resolve(), shared with the reports
+     * endpoint and the scanner performance page).
      */
     private function buildReportsData(DistributionBatchModel $batchModel): array
     {
         $batches = $batchModel->allBatches();
         $active  = $batchModel->activeBatch();
 
-        $batchId = (int) $this->request->getGet('batch');
-        $batch   = null;
-        if ($batchId <= 0) {
-            $batchId = $active !== null ? (int) $active['batch_id'] : (int) ($batches[0]['batch_id'] ?? 0);
-        }
-        foreach ($batches as $b) {
-            if ((int) $b['batch_id'] === $batchId) {
-                $batch = $b;
-                break;
-            }
-        }
-        if ($batch === null) {
-            $batchId = 0;
-        }
+        [$batchId, $batch] = BatchScope::resolve($batches, $active, (int) $this->request->getGet('batch'));
 
         $scope = $batchId > 0 ? $batchId : null;
         $stats = model(SubsidyStatsModel::class);

@@ -6,6 +6,7 @@ use App\Controllers\BaseController;
 use App\Libraries\Qr\ControlNumber;
 use App\Libraries\Qr\QrImageGenerator;
 use App\Libraries\RoleAccess;
+use App\Libraries\Scanner\BatchScope;
 use App\Libraries\SessionAccount;
 use App\Models\Audit\AuditTrailsModel;
 use App\Models\Families\MemberModel;
@@ -176,19 +177,9 @@ class ScanController extends BaseController
         $batchModel = model(DistributionBatchModel::class);
         $active     = $batchModel->activeBatch();
         $batches    = $batchModel->allBatches();
-        $batchId    = (int) $this->request->getGet('batch');
-        if ($batchId <= 0) {
-            $batchId = $active !== null ? (int) $active['batch_id'] : (int) ($batches[0]['batch_id'] ?? 0);
-        }
+        [$batchId, $batchRow] = BatchScope::resolve($batches, $active, (int) $this->request->getGet('batch'));
 
-        $userId    = (int) (session('user_id') ?? 0);
-        $batchRow  = null;
-        foreach ($batches as $b) {
-            if ((int) $b['batch_id'] === $batchId) {
-                $batchRow = $b;
-                break;
-            }
-        }
+        $userId   = (int) (session('user_id') ?? 0);
         $snapshot = $this->kioskSnapshot($batchId, $userId, $batchRow);
 
         return view('Scanner/performance', array_merge([

@@ -29,7 +29,14 @@ class EligibilityBuilder
      */
     private function scoped(array $barangayIds, array $sectorIds): \CodeIgniter\Database\BaseBuilder
     {
+        // qr_control.headID has no unique constraint, so a head could in theory
+        // pick up a second control row. select()+distinct() here, not just at
+        // the materialize() call site, so count() and materialize() can never
+        // diverge on the join: CI4's countAllResults() wraps a DISTINCT select
+        // in a subquery and counts that, so both callers count the same rows.
         $b = $this->db->table('member')
+            ->select('member.memberID AS headID')
+            ->distinct()
             ->join('qr_control', 'qr_control.headID = member.memberID')
             ->where('member.memberID = member.headID', null, false)
             ->where('member.dt_deleted IS NULL', null, false);
@@ -78,8 +85,6 @@ class EligibilityBuilder
             $this->db->table('batch_eligibility')->where('batch_id', $batchId)->delete();
 
             $rows = $this->scoped($barangayIds, $sectorIds)
-                ->select('member.memberID AS headID')
-                ->distinct()
                 ->get()
                 ->getResultArray();
 

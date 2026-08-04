@@ -224,10 +224,8 @@
 
 .account-create-actions .btn {
     min-width: 8.5rem;
-    justify-content: center;
     min-height: 2.65rem;
     border-radius: 0.35rem;
-    font-weight: 700;
 }
 
 /* The filter toolbar is stock Bootstrap grid + btn() markup in
@@ -281,14 +279,9 @@
 }
 
 .account-table .btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.35rem;
     min-width: 6.2rem;
     min-height: 2.2rem;
     border-radius: 0.35rem;
-    font-weight: 700;
 }
 
 .account-table .account-action-toggle {

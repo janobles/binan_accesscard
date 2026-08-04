@@ -17,7 +17,7 @@
 				<p class="mb-0">Close this batch? Statistics reset for the next batch.</p>
 			</div>
 			<div class="modal-footer">
-				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+				<button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
 				<button type="button" class="btn btn-warning js-batch-close-confirm">Close batch</button>
 			</div>
 		</div>

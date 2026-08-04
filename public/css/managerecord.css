@@ -37,11 +37,6 @@
     border-bottom: 1px solid #e2e9e7;
 }
 
-.manage-records .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-}
 
 .actions-menu-toggle {
     display: inline-flex;

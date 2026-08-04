@@ -72,7 +72,7 @@ $bodyView = ($bodyView ?? '') !== '' ? $bodyView : 'Pages/dashboard';
             'accountSettingsMode' => 'modal'
         ]) ?>
     </div>
-    <div id="layoutSidenav_content" class="app-content flex-grow-1 overflow-y-auto d-flex flex-column">
+    <div id="layoutSidenav_content" class="app-content flex-grow-1 d-flex flex-column">
             <!-- Mobile Topbar -->
             <nav class="d-lg-none navbar navbar-light border-bottom px-3 py-2" style="background-color: var(--token-gray-50);">
                 <a class="navbar-brand d-flex align-items-center" href="<?= site_url('dashboard') ?>">

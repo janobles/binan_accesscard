@@ -65,7 +65,7 @@ $categoryClearUrl = static function () use ($listRoute, $perPage, $tabParam): st
     'pillsId' => 'categoryFilterPills',
     'hiddenHtml' => ($tabParam !== '' ? '<input type="hidden" name="tab" value="' . esc($tabParam, 'attr') . '">' : '')
         . ($perPage !== 25 ? '<input type="hidden" name="per_page" value="' . esc((string) $perPage, 'attr') . '">' : ''),
-    'actionsHtml' => '<button class="' . btn('add') . ' flex-fill js-category-modal-open" type="button" data-category-mode="create">Add Category</button>',
+    'actionsHtml' => '<button class="' . btn('add') . ' flex-fill js-category-modal-open" type="button" data-category-mode="create"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Add Category</button>',
     'filterGroups' => [[
         'name' => 'status',
         'label' => 'Status',

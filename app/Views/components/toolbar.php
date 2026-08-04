@@ -136,7 +136,7 @@ $buildAttrs = static function(array $attrs): string {
         <?php if ($isClient): ?>
             <button class="<?= btn('clear') ?> flex-fill" type="button" <?= $clearAttrs ?: 'data-records-clear' ?>>Clear</button>
         <?php else: ?>
-            <a class="<?= btn('clear') ?> flex-fill" href="<?= esc($clearUrl, 'attr') ?>" <?= $clearAttrs ?>>Clear</a>
+            <a class="<?= btn('clear') ?> flex-fill" href="<?= esc($clearUrl, 'attr') ?>" <?= $clearAttrs ?: 'data-records-clear' ?>>Clear</a>
         <?php endif; ?>
         <?php if ($actionsHtml !== ''): ?>
         <div class="vr"></div>

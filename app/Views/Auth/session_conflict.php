@@ -43,7 +43,7 @@
 
                 <form method="post" action="<?= site_url('login/confirm') ?>">
                     <?= csrf_field() ?>
-                    <button type="submit" name="cancel" value="1" class="btn btn-secondary w-100">Cancel</button>
+                    <button type="submit" name="cancel" value="1" class="btn btn-outline-secondary w-100">Cancel</button>
                 </form>
             </div>
         </section>

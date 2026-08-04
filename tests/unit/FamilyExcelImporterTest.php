@@ -763,4 +763,64 @@ final class FamilyExcelImporterTest extends CIUnitTestCase
             $importer->lastnameKeysForRows($nameChanged)
         );
     }
+
+    // -- barangayID resolution (Task 9) -----------------------------------------
+
+    public function testTemplateOffersBarangayColumn(): void
+    {
+        $headers = \App\Libraries\FamilyExcelTemplate::COLUMNS;
+        $this->assertContains('BARANGAY', array_map('strtoupper', $headers));
+    }
+
+    /**
+     * MemberFieldNormalizer::barangayKey() is what both the importer's Barangay
+     * warning and the barangayID resolution fold through - it has to treat "Santo
+     * Niño" (the DB spelling) and "Santo Nino" (the sheet dropdown's ASCII
+     * spelling) as the same barangay, and a case/hyphen difference like
+     * "Soro-Soro" vs "Soro-soro" as the same barangay too.
+     */
+    public function testBarangayKeyFoldsSpecialCharactersAndHyphenation(): void
+    {
+        $this->assertSame(
+            \App\Support\MemberFieldNormalizer::barangayKey('Santo Niño'),
+            \App\Support\MemberFieldNormalizer::barangayKey('Santo Nino')
+        );
+
+        $this->assertSame(
+            \App\Support\MemberFieldNormalizer::barangayKey('Soro-soro'),
+            \App\Support\MemberFieldNormalizer::barangayKey('Soro-Soro')
+        );
+
+        // Trims and is case-insensitive on an otherwise plain name.
+        $this->assertSame(
+            \App\Support\MemberFieldNormalizer::barangayKey('Biñan'),
+            \App\Support\MemberFieldNormalizer::barangayKey('  BIÑAN  ')
+        );
+    }
+
+    /**
+     * Resolves a head's Barangay cell to the matching barangayID (case-insensitive,
+     * ñ-tolerant), and leaves it null on a blank or unrecognised value rather than
+     * failing the row - validateBarangay() already raises the warning for that case.
+     */
+    public function testBarangayIdForHeadResolvesOrReturnsNull(): void
+    {
+        $importer = new FamilyExcelImporter();
+        $reflection = new ReflectionClass($importer);
+
+        $map = $reflection->getProperty('barangayIdMap');
+        $map->setAccessible(true);
+        $map->setValue($importer, [
+            \App\Support\MemberFieldNormalizer::barangayKey('Santo Niño') => 19,
+            \App\Support\MemberFieldNormalizer::barangayKey('Soro-soro') => 21,
+        ]);
+
+        $resolve = $reflection->getMethod('barangayIdForHead');
+        $resolve->setAccessible(true);
+
+        $this->assertSame(19, $resolve->invoke($importer, 'Santo Nino'));
+        $this->assertSame(21, $resolve->invoke($importer, '  soro-soro  '));
+        $this->assertNull($resolve->invoke($importer, 'Not A Real Barangay'));
+        $this->assertNull($resolve->invoke($importer, ''));
+    }
 }

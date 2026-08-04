@@ -16,6 +16,7 @@ use App\Models\Audit\AuditTrailsModel;
 use App\Models\Families\FamilyFormOptionsModel;
 use App\Models\Families\MemberModel;
 use App\Models\Families\MemberServiceModel;
+use App\Models\Lookups\BarangayModel;
 use App\Models\Lookups\SectorModel;
 use App\Models\Lookups\ServiceModel;
 use App\Support\FamilyAgeEligibility;
@@ -41,6 +42,9 @@ use Throwable;
 class FamilyController extends BaseController
 {
     use FamilyRequestContext;
+
+    /** Folded barangay name to barangayID, loaded once per request by barangayIdMap(). */
+    private ?array $barangayIdMap = null;
 
     /**
      * Saves a family registration submitted to POST `families` from the family
@@ -819,6 +823,7 @@ class FamilyController extends BaseController
                 $this->request->getPost($prefix . 'address'),
                 $this->request->getPost($prefix . 'barangay')
             ),
+            'barangayID' => $this->resolveBarangayId($this->request->getPost($prefix . 'barangay')),
             'relationship' => $prefix === 'head_' ? 'Head' : $this->nullableText($this->request->getPost($prefix . 'relationship')),
             'sectorID' => SectorIds::normalize($this->request->getPost('sector_ids')),
         ];
@@ -832,6 +837,31 @@ class FamilyController extends BaseController
     private function combineAddressBarangay(mixed $address, mixed $barangay): ?string
     {
         return MemberFieldNormalizer::combineAddressBarangay($address, $barangay);
+    }
+
+    /**
+     * Resolves a Barangay select's text value to its `barangay.barangayID`, matching
+     * case-insensitively and tolerant of the ñ/Sto./Sta. spelling variants the form
+     * and the Excel importer's dropdown both allow (MemberFieldNormalizer::
+     * barangayKey()). Null on a blank or unrecognised value - the record still
+     * saves, it just groups under "Unassigned" in the barangay rollup until
+     * corrected. The map is loaded once per request, not once per member.
+     */
+    private function resolveBarangayId(mixed $barangayText): ?int
+    {
+        $text = trim((string) $barangayText);
+
+        if ($text === '') {
+            return null;
+        }
+
+        return $this->barangayIdMap()[MemberFieldNormalizer::barangayKey($text)] ?? null;
+    }
+
+    /** Folded barangay name to barangayID, memoized for the life of the request. */
+    private function barangayIdMap(): array
+    {
+        return $this->barangayIdMap ??= (new BarangayModel())->idByNormalizedName();
     }
 
     /**
@@ -944,6 +974,7 @@ class FamilyController extends BaseController
                 $this->request->getPost('head_address'),
                 $this->request->getPost('head_barangay')
             ),
+            'barangayID' => $this->resolveBarangayId($this->request->getPost('head_barangay')),
             'relationship' => $this->nullableText($member['relationship'] ?? 'Member'),
             'sectorID' => SectorIds::normalize($member['sector_ids'] ?? []),
         ];

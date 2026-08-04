@@ -103,6 +103,11 @@ class FamilyExcelImporter
     // Normalized official-barangay lookup, built once from FamilyProfilingFormV2.
     private ?array $barangayLookup = null;
 
+    // Folded barangay name to barangayID (App\Models\Lookups\BarangayModel), built
+    // once per importer instance so resolving every head's barangayID doesn't cost
+    // a query per row.
+    private ?array $barangayIdMap = null;
+
     // -- public API ------------------------------------------------------------
 
     /**
@@ -800,8 +805,10 @@ class FamilyExcelImporter
 
         foreach ($members as $memberEntry) {
             $memberPayload = $this->buildPersonPayload($memberEntry, $familyNo, false, $sectorByCode, $incomeByLabel);
-            // Members share the head's address - auto-fill so workers never retype it.
+            // Members share the head's address (and barangay) - auto-fill so workers
+            // never retype it.
             $memberPayload['address'] = $headPayload['address'];
+            $memberPayload['barangayID'] = $headPayload['barangayID'];
 
             $memberPayloads[] = [
                 'payload'    => $memberPayload,
@@ -1027,6 +1034,7 @@ class FamilyExcelImporter
                 (string) ($data['address'] ?? ''),
                 (string) ($data['barangay'] ?? '')
             ),
+            'barangayID'    => $this->barangayIdForHead((string) ($data['barangay'] ?? '')),
             'relationship'  => $isHead ? 'Head' : (MemberFieldNormalizer::nullableText((string) ($data['relationship'] ?? '')) ?? 'Member'),
             'sectorID'      => $sectorIds,
         ];
@@ -1698,13 +1706,34 @@ class FamilyExcelImporter
      */
     private function normalizeBarangay(string $value): string
     {
-        $s = mb_strtolower(trim($value));
-        $s = strtr($s, ['ñ' => 'n']);
-        $s = (string) preg_replace('/\([^)]*\)/', ' ', $s);
-        $s = strtr($s, ['sto.' => 'santo', 'sto ' => 'santo ', 'sta.' => 'santa', 'sta ' => 'santa ']);
-        $s = (string) preg_replace('/[^a-z0-9 ]/', ' ', $s);
+        return MemberFieldNormalizer::barangayKey($value);
+    }
 
-        return trim((string) preg_replace('/\s+/', ' ', $s));
+    /**
+     * Folded barangay name to barangayID, loaded once via App\Models\Lookups\
+     * BarangayModel. Backs barangayIdForHead() so member.barangayID gets set from
+     * the same fold this class already uses to validate the cell.
+     */
+    private function barangayIdMap(): array
+    {
+        return $this->barangayIdMap ??= (new \App\Models\Lookups\BarangayModel())->idByNormalizedName();
+    }
+
+    /**
+     * Resolves a head's Barangay cell to its barangayID, or null when blank or
+     * unrecognised. Unrecognised values are already flagged by validateBarangay()
+     * as a warning; this leaves member.barangayID null rather than duplicating
+     * that error.
+     */
+    private function barangayIdForHead(string $value): ?int
+    {
+        $value = trim($value);
+
+        if ($value === '') {
+            return null;
+        }
+
+        return $this->barangayIdMap()[$this->normalizeBarangay($value)] ?? null;
     }
 
     /** @return list<string> Non-empty, trimmed tokens from a comma-separated cell. */

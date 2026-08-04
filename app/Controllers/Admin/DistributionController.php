@@ -71,8 +71,11 @@ class DistributionController extends BaseController
         if ($subsidyTypeId <= 0) {
             return redirect()->to('distribution?tab=batches')->with('error', 'Choose a subsidy type for this batch.');
         }
+        $barangayIds = array_map('intval', (array) $this->request->getPost('barangay_ids'));
+        $sectorIds   = array_map('intval', (array) $this->request->getPost('sector_ids'));
+
         $batchModel = model(DistributionBatchModel::class);
-        $id         = $batchModel->open($name, $subsidyTypeId, (int) (session('user_id') ?? 0));
+        $id         = $batchModel->open($name, $subsidyTypeId, (int) (session('user_id') ?? 0), $barangayIds, $sectorIds);
         if ($id <= 0) {
             $message = $batchModel->activeBatch() !== null
                 ? 'A batch is already open. Close the active batch before opening a new one.'
@@ -80,7 +83,14 @@ class DistributionController extends BaseController
 
             return redirect()->to('distribution?tab=batches')->with('error', $message);
         }
-        $this->audit('Opened distribution batch "' . $name . '" #' . $id . ' (subsidy type ID ' . $subsidyTypeId . ')');
+        $eligible = (int) ($batchModel->find($id)['eligible_count'] ?? 0);
+        $this->audit(
+            'Opened distribution batch "' . $name . '" #' . $id . ' (subsidy type ID ' . $subsidyTypeId . ')',
+            0,
+            'Eligible families: ' . $eligible
+                . '; barangays: ' . ($barangayIds === [] ? 'all' : implode(',', $barangayIds))
+                . '; sectors: ' . ($sectorIds === [] ? 'all' : implode(',', $sectorIds))
+        );
         return redirect()->to('distribution?tab=batches')->with('success', 'Batch opened. Scanning is now live.');
     }
 

@@ -4,6 +4,7 @@ namespace App\Libraries;
 
 use App\Models\Audit\AuditTrailsModel;
 use App\Models\DashboardModel;
+use App\Models\Lookups\BarangayModel;
 use App\Models\Families\MemberModel;
 use App\Models\SearchModel;
 use App\Models\Lookups\CategoryModel;
@@ -289,6 +290,10 @@ class DashboardPageBuilder
             'batches'            => $isBatches ? $batchModel->allBatches() : [],
             'activeBatch'        => $isBatches ? $batchModel->activeBatch() : null,
             'activeSubsidyTypes' => $isBatches ? model(SubsidyTypeModel::class)->active() : [],
+            // Barangay/sector option lists for the batch-open modal's eligibility
+            // filters (Task 10). Only fetched on the batches tab.
+            'barangayOptions'    => $isBatches ? model(BarangayModel::class)->activeList() : [],
+            'batchSectorOptions' => $isBatches ? $sectorModel->getActive() : [],
             'subsidyTypes'       => $subsidyTypeListData['rows'] ?? [],
             'subsidyTypeListData' => $subsidyTypeListData,
             'distributions'      => $isDistributions ? model(SubsidyDistributionModel::class)->allDistributions() : [],

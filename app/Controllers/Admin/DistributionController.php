@@ -64,6 +64,24 @@ class DistributionController extends BaseController
         return redirect()->to('distribution?tab=log')->with('success', 'Distribution voided.');
     }
 
+    /**
+     * GET distribution/batches/preview - the eligible-family count for a
+     * prospective batch, so the admin sees the roster size before committing.
+     * Runs the same query the roster build uses, via EligibilityBuilder::count(),
+     * so this preview and the frozen roster can never disagree.
+     */
+    public function previewEligibility(): ResponseInterface
+    {
+        if ($g = $this->guard()) { return $g; }
+
+        $barangayIds = array_map('intval', (array) $this->request->getGet('barangay_ids'));
+        $sectorIds   = array_map('intval', (array) $this->request->getGet('sector_ids'));
+
+        return $this->response->setJSON([
+            'eligible' => (new \App\Libraries\EligibilityBuilder())->count($barangayIds, $sectorIds),
+        ]);
+    }
+
     /** POST distribution/batches/open - name + subsidy type. */
     public function openBatch(): RedirectResponse
     {

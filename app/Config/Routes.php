@@ -106,6 +106,7 @@ $routes->group('cards', ['filter' => 'roleNav:cards'], static function (RouteCol
 
 $routes->group('distribution', ['filter' => 'roleNav:distribution'], static function (RouteCollection $routes): void {
     $routes->post('batches/open', 'Admin\DistributionController::openBatch');
+    $routes->get('batches/preview', 'Admin\DistributionController::previewEligibility');
     $routes->post('batches/close/(:num)', 'Admin\DistributionController::closeBatch/$1');
     $routes->post('void/(:num)', 'Admin\DistributionController::voidDistribution/$1');
     $routes->get('reports/stats', 'Admin\ReportsController::stats');

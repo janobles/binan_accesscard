@@ -36,6 +36,8 @@ $distributionTab = in_array($distributionTab, ['batches', 'log'], true) ? $distr
     ]) ?>
     <?= view('Admin/batch-create-modal', [
         'activeSubsidyTypes' => $activeSubsidyTypes ?? [],
+        'barangayOptions'    => $barangayOptions ?? [],
+        'sectorOptions'      => $batchSectorOptions ?? [],
     ]) ?>
 <?php else: ?>
     <?= view('components/toolbar', [

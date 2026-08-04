@@ -16,9 +16,13 @@
 
 <?php /* Scanners have no sidebar, so this is their only route to their own
          stats. Placed off to the side, away from the scan input and result
-         area, so a mis-aimed scan or the focus-guard script can't land on it. */ ?>
+         area. tabindex="-1" keeps it out of the tab sequence entirely: the
+         window keydown guard below treats an anchor as "already in a field"
+         and won't recapture focus for the scan input on the next keystroke,
+         so a gun scan fired while this link holds focus would otherwise
+         vanish silently. A click/tap still works with tabindex="-1". */ ?>
 <div class="text-end mb-2">
-  <a href="<?= esc(site_url('scanner/performance'), 'attr') ?>" class="small">My Performance (this scanner's own stats)</a>
+  <a href="<?= esc(site_url('scanner/performance'), 'attr') ?>" class="small" tabindex="-1">My Performance (this scanner's own stats)</a>
 </div>
 
 <?php if ($activeBatch === null): ?>

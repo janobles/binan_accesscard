@@ -26,7 +26,10 @@ class SubsidyStatsModel extends Model
     /**
      * Headline batch figures, all from indexed counts. The denominator is the
      * batch's frozen roster, not a live query, so a closed batch's coverage
-     * never drifts when profiling data changes afterwards.
+     * never drifts when profiling data changes afterwards. served/voided are
+     * joined against batch_eligibility, so a scan for a family outside the
+     * roster is still logged and audited but never moves this count; served
+     * can therefore never exceed eligible.
      *
      * @return array{eligible:int,served:int,remaining:int,coverage:int,voided:int}
      */
@@ -45,13 +48,23 @@ class SubsidyStatsModel extends Model
 
             $served = (int) ($this->db->table('subsidy_distribution')
                 ->select('COUNT(DISTINCT memberID) AS n')
-                ->where('batch_id', $batchId)
-                ->where('dt_voided', null)
+                ->join(
+                    'batch_eligibility',
+                    'batch_eligibility.batch_id = subsidy_distribution.batch_id'
+                        . ' AND batch_eligibility.headID = subsidy_distribution.memberID'
+                )
+                ->where('subsidy_distribution.batch_id', $batchId)
+                ->where('subsidy_distribution.dt_voided', null)
                 ->get()->getRowArray()['n'] ?? 0);
 
             $voided = (int) ($this->db->table('subsidy_distribution')
                 ->select('COUNT(*) AS n')
-                ->where('batch_id', $batchId)
+                ->join(
+                    'batch_eligibility',
+                    'batch_eligibility.batch_id = subsidy_distribution.batch_id'
+                        . ' AND batch_eligibility.headID = subsidy_distribution.memberID'
+                )
+                ->where('subsidy_distribution.batch_id', $batchId)
                 ->where('dt_voided IS NOT NULL', null, false)
                 ->get()->getRowArray()['n'] ?? 0);
 

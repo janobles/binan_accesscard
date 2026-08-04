@@ -88,7 +88,7 @@
                             <strong><?= esc($auditUsername) ?></strong>
                             <?php if ($auditRole !== ''): ?><small class="text-muted d-block"><?= esc($auditRole) ?></small><?php endif; ?>
                         </td>
-                        <td><span class="audit-action-pill" title="<?= esc($formatActionLabel((string) ($audit['user_action'] ?? '')), 'attr') ?>"><?= esc($formatActionLabel((string) ($audit['user_action'] ?? ''))) ?></span></td>
+                        <td><span class="badge rounded-pill text-bg-primary" title="<?= esc($formatActionLabel((string) ($audit['user_action'] ?? '')), 'attr') ?>"><?= esc($formatActionLabel((string) ($audit['user_action'] ?? ''))) ?></span></td>
                         <td class="audit-desc"><?= esc((string) ($audit['description'] ?? '')) ?></td>
                         <td class="audit-ua"><?= $auditUa === '' ? '<span class="text-muted">-</span>' : '<span title="' . esc($auditUa, 'attr') . '">' . esc($formatUaShort($auditUa)) . '</span>' ?></td>
                         <td class="audit-when"><?= $auditTs ? esc(date('M j, Y h:i A', $auditTs)) : '-' ?></td>

@@ -40,7 +40,7 @@
 						<td><span class="badge bg-primary-subtle text-dark border fw-semibold"><?= esc((string) ($service['shortcode'] ?? '')) ?></span></td>
 						<td><span class="badge bg-light text-dark border"><?= esc((string) ($service['category'] ?? '')) ?></span></td>
 						<td><span class="text-trim d-inline-block"><?= esc((string) ($service['description'] ?? '')) ?></span></td>
-						<td class="lookup-col-status"><span class="sector-status-badge <?= $isArchived ? 'sector-status-archived' : 'sector-status-active' ?>"><?= $isArchived ? 'Archived' : 'Active' ?></span></td>
+						<td class="lookup-col-status"><span class="badge rounded-pill <?= $isArchived ? 'text-bg-secondary' : 'text-bg-success' ?>"><?= $isArchived ? 'Archived' : 'Active' ?></span></td>
 						<?php if ($canManage): ?><td class="text-end">
 							<div class="dropdown actions-menu">
 								<button class="btn btn-outline-secondary btn-sm actions-menu-toggle" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false" aria-label="Service actions">

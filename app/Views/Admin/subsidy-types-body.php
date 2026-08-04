@@ -39,7 +39,7 @@ $canManageSubsidyTypes = in_array($currentRole ?? '', ['Admin', 'Developer'], tr
                 <?php $archived = ! empty($t['dt_deleted']); ?>
                 <tr data-row-archived="<?= $archived ? '1' : '0' ?>">
                   <td><span class="sector-name"><?= esc($t['name']) ?></span></td>
-                  <td class="lookup-col-status"><span class="sector-status-badge <?= $archived ? 'sector-status-archived' : 'sector-status-active' ?>"><?= $archived ? 'Archived' : 'Active' ?></span></td>
+                  <td class="lookup-col-status"><span class="badge rounded-pill <?= $archived ? 'text-bg-secondary' : 'text-bg-success' ?>"><?= $archived ? 'Archived' : 'Active' ?></span></td>
                   <td class="text-end">
                     <?php if ($canManageSubsidyTypes): ?>
                     <div class="dropdown actions-menu">

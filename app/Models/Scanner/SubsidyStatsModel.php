@@ -6,10 +6,10 @@ use CodeIgniter\Model;
 
 /**
  * Read-only subsidy-distribution statistics for the Reports tab. Every method is
- * scoped to an optional distribution batch only, and returns a safe empty shape
- * on any DB error, matching the scanner module's no-DB test posture.
- * "Received" is defined at the family (head) level: a family counts as having
- * received aid when any scan under its control_no produced a distribution row.
+ * scoped to a distribution batch and returns a safe empty shape on any DB error,
+ * matching the scanner module's no-DB test posture. "Eligible" and "served" are
+ * both defined against a batch's frozen roster (`batch_eligibility`), not a live
+ * guess, so numbers a closed batch already reported never drift afterwards.
  */
 class SubsidyStatsModel extends Model
 {
@@ -18,87 +18,93 @@ class SubsidyStatsModel extends Model
     protected $returnType    = 'array';
     protected $useTimestamps = false;
 
-    /** Applies the optional batch scope to subsidy_distribution. */
-    private function applyScope($builder, ?int $batchId)
-    {
-        if ($batchId !== null && $batchId > 0) {
-            $builder->where('subsidy_distribution.batch_id', $batchId);
-        }
-
-        return $builder;
-    }
-
     private static function pct(int $received, int $total): int
     {
         return $total === 0 ? 0 : (int) round($received / $total * 100);
     }
 
-    /** Family-level received vs not-yet counts + coverage percent. */
-    public function receivedVsNot(?int $batchId = null): array
+    /**
+     * Headline batch figures, all from indexed counts. The denominator is the
+     * batch's frozen roster, not a live query, so a closed batch's coverage
+     * never drifts when profiling data changes afterwards.
+     *
+     * @return array{eligible:int,served:int,remaining:int,coverage:int,voided:int}
+     */
+    public function coverage(int $batchId): array
     {
-        try {
-            $total = (int) $this->db->table('qr_control')
-                ->select('headID')
-                ->distinct()
-                ->countAllResults();
+        $empty = ['eligible' => 0, 'served' => 0, 'remaining' => 0, 'coverage' => 0, 'voided' => 0];
+        if ($batchId <= 0) {
+            return $empty;
+        }
 
-            $b = $this->db->table('qr_control')
-                ->select('qr_control.headID')
-                ->join('subsidy_distribution', 'subsidy_distribution.control_no = qr_control.control_no')
-                ->groupBy('qr_control.headID');
-            $this->applyScope($b, $batchId);
-            $received = count($b->get()->getResultArray());
+        try {
+            $eligible = (int) ($this->db->table('distribution_batch')
+                ->select('eligible_count')
+                ->where('batch_id', $batchId)
+                ->get()->getRowArray()['eligible_count'] ?? 0);
+
+            $served = (int) ($this->db->table('subsidy_distribution')
+                ->select('COUNT(DISTINCT memberID) AS n')
+                ->where('batch_id', $batchId)
+                ->where('dt_voided', null)
+                ->get()->getRowArray()['n'] ?? 0);
+
+            $voided = (int) ($this->db->table('subsidy_distribution')
+                ->select('COUNT(*) AS n')
+                ->where('batch_id', $batchId)
+                ->where('dt_voided IS NOT NULL', null, false)
+                ->get()->getRowArray()['n'] ?? 0);
 
             return [
-                'total'       => $total,
-                'received'    => $received,
-                'notReceived' => max(0, $total - $received),
-                'coverage'    => self::pct($received, $total),
+                'eligible'  => $eligible,
+                'served'    => $served,
+                'remaining' => max(0, $eligible - $served),
+                'coverage'  => self::pct($served, $eligible),
+                'voided'    => $voided,
             ];
         } catch (\Throwable $e) {
-            return ['total' => 0, 'received' => 0, 'notReceived' => 0, 'coverage' => 0];
+            return $empty;
         }
     }
 
-    /** Per-barangay family totals + received + coverage. */
-    public function byBarangay(?int $batchId = null): array
+    /**
+     * Per-barangay progress inside the batch's roster, worst coverage first so
+     * the top row is where staff get sent. Groups on the indexed barangayID.
+     *
+     * @return list<array{barangay:string,total:int,received:int,coverage:int}>
+     */
+    public function byBarangay(int $batchId): array
     {
-        try {
-            $barangayExpr = $this->db->fieldExists('barangay', 'member')
-                ? "COALESCE(NULLIF(TRIM(member.barangay), ''), 'Unspecified')"
-                : "COALESCE(NULLIF(TRIM(SUBSTRING_INDEX(member.address, ',', -1)), ''), 'Unspecified')";
+        if ($batchId <= 0) {
+            return [];
+        }
 
-            // Total families per barangay (head's barangay).
-            $totals = $this->db->table('qr_control')
-                ->select($barangayExpr . ' AS barangay,'
-                    . ' COUNT(DISTINCT qr_control.headID) AS total')
-                ->join('member', 'member.memberID = qr_control.headID', 'left')
+        try {
+            $rows = $this->db->table('batch_eligibility')
+                ->select("COALESCE(barangay.name, 'Unassigned') AS barangay,"
+                    . ' COUNT(*) AS total,'
+                    . ' COUNT(subsidy_distribution.distribution_id) AS received')
+                ->join('member', 'member.memberID = batch_eligibility.headID')
+                ->join('barangay', 'barangay.barangayID = member.barangayID', 'left')
+                ->join(
+                    'subsidy_distribution',
+                    'subsidy_distribution.memberID = batch_eligibility.headID'
+                        . ' AND subsidy_distribution.batch_id = batch_eligibility.batch_id'
+                        . ' AND subsidy_distribution.dt_voided IS NULL',
+                    'left'
+                )
+                ->where('batch_eligibility.batch_id', $batchId)
                 ->groupBy('barangay')
                 ->get()->getResultArray();
 
-            // Received families per barangay, within the batch scope.
-            $rb = $this->db->table('qr_control')
-                ->select($barangayExpr . ' AS barangay,'
-                    . ' COUNT(DISTINCT qr_control.headID) AS received')
-                ->join('member', 'member.memberID = qr_control.headID', 'left')
-                ->join('subsidy_distribution', 'subsidy_distribution.control_no = qr_control.control_no');
-            $this->applyScope($rb, $batchId);
-            $recv = [];
-            foreach ($rb->groupBy('barangay')->get()->getResultArray() as $r) {
-                $recv[$r['barangay']] = (int) $r['received'];
-            }
+            $out = array_map(static fn ($r) => [
+                'barangay' => (string) $r['barangay'],
+                'total'    => (int) $r['total'],
+                'received' => (int) $r['received'],
+                'coverage' => self::pct((int) $r['received'], (int) $r['total']),
+            ], $rows);
 
-            $out = [];
-            foreach ($totals as $t) {
-                $total    = (int) $t['total'];
-                $received = $recv[$t['barangay']] ?? 0;
-                $out[] = [
-                    'barangay' => $t['barangay'],
-                    'total'    => $total,
-                    'received' => $received,
-                    'coverage' => self::pct($received, $total),
-                ];
-            }
+            usort($out, static fn ($a, $b) => $a['coverage'] <=> $b['coverage']);
 
             return $out;
         } catch (\Throwable $e) {
@@ -107,27 +113,84 @@ class SubsidyStatsModel extends Model
     }
 
     /**
-     * Handout counts per subsidy type, within the batch scope, busiest first.
-     * Subsidy types with zero handouts are omitted.
+     * The unclaimed families: on the roster, no live distribution in this batch.
+     * This is the liquidation artifact, and the reason the dashboard exists.
+     *
+     * @return list<array{headID:int,name:string,barangay:string,contact:string}>
      */
-    public function bySubsidyType(?int $batchId = null): array
+    public function remaining(int $batchId): array
     {
+        if ($batchId <= 0) {
+            return [];
+        }
+
         try {
-            $b = $this->db->table('subsidy')
-                ->select('subsidy.name AS subsidy_type,'
-                    . ' COUNT(subsidy_distribution.distribution_id) AS count')
-                ->join('subsidy_distribution', 'subsidy_distribution.subsidy_type_id = subsidy.subsidy_type_id', 'left');
-            $this->applyScope($b, $batchId);
-            $rows = $b->groupBy('subsidy.subsidy_type_id')
-                ->having('count >', 0)
-                ->orderBy('count', 'DESC')
-                ->orderBy('subsidy.name', 'ASC')
+            $rows = $this->db->table('batch_eligibility')
+                ->select('batch_eligibility.headID,'
+                    . ' member.firstname, member.lastname,'
+                    . " COALESCE(barangay.name, 'Unassigned') AS barangay,"
+                    . " COALESCE(member.contactnumber, '') AS contact")
+                ->join('member', 'member.memberID = batch_eligibility.headID')
+                ->join('barangay', 'barangay.barangayID = member.barangayID', 'left')
+                ->join(
+                    'subsidy_distribution',
+                    'subsidy_distribution.memberID = batch_eligibility.headID'
+                        . ' AND subsidy_distribution.batch_id = batch_eligibility.batch_id'
+                        . ' AND subsidy_distribution.dt_voided IS NULL',
+                    'left'
+                )
+                ->where('batch_eligibility.batch_id', $batchId)
+                ->where('subsidy_distribution.distribution_id IS NULL', null, false)
+                ->orderBy('barangay', 'ASC')
+                ->orderBy('member.lastname', 'ASC')
                 ->get()->getResultArray();
 
             return array_map(static fn ($r) => [
-                'subsidy_type' => (string) $r['subsidy_type'],
-                'count'    => (int) $r['count'],
+                'headID'   => (int) $r['headID'],
+                'name'     => trim((string) $r['firstname'] . ' ' . (string) $r['lastname']),
+                'barangay' => (string) $r['barangay'],
+                'contact'  => (string) $r['contact'],
             ], $rows);
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
+
+    /**
+     * Cumulative families served across the batch, 15 minute buckets. A flat
+     * tail means scanning has stopped, which is the one thing a live view must
+     * surface.
+     *
+     * @return list<array{label:string,cumulative:int}>
+     */
+    public function servedTimeline(int $batchId): array
+    {
+        if ($batchId <= 0) {
+            return [];
+        }
+
+        try {
+            $rows = $this->db->table('subsidy_distribution')
+                ->select('FLOOR(UNIX_TIMESTAMP(dt_created) / 900) AS bucket,'
+                    . ' MIN(dt_created) AS ts,'
+                    . ' COUNT(DISTINCT memberID) AS served')
+                ->where('batch_id', $batchId)
+                ->where('dt_voided', null)
+                ->groupBy('bucket')
+                ->orderBy('bucket', 'ASC')
+                ->get()->getResultArray();
+
+            $running = 0;
+            $out     = [];
+            foreach ($rows as $r) {
+                $running += (int) $r['served'];
+                $out[] = [
+                    'label'      => date('g:i A', strtotime((string) $r['ts'])),
+                    'cumulative' => $running,
+                ];
+            }
+
+            return $out;
         } catch (\Throwable $e) {
             return [];
         }
@@ -152,6 +215,7 @@ class SubsidyStatsModel extends Model
                     . ' COUNT(DISTINCT subsidy_distribution.control_no) AS families')
                 ->join('users', 'users.userID = subsidy_distribution.userID', 'left')
                 ->where('subsidy_distribution.batch_id', $batchId)
+                ->where('subsidy_distribution.dt_voided', null)
                 ->groupBy('subsidy_distribution.userID')
                 ->orderBy('families', 'DESC')
                 ->orderBy('scanner', 'ASC');
@@ -193,6 +257,7 @@ class SubsidyStatsModel extends Model
                     . ' COUNT(distribution_id) AS handouts')
                 ->where('batch_id', $batchId)
                 ->where('userID', $userId)
+                ->where('dt_voided', null)
                 ->groupBy('bucket')
                 ->orderBy('bucket', 'ASC')
                 ->get()->getResultArray();

@@ -14,6 +14,13 @@
 <?= $this->extend('Scanner/kiosk-layout') ?>
 <?= $this->section('content') ?>
 
+<?php /* Scanners have no sidebar, so this is their only route to their own
+         stats. Placed off to the side, away from the scan input and result
+         area, so a mis-aimed scan or the focus-guard script can't land on it. */ ?>
+<div class="text-end mb-2">
+  <a href="<?= esc(site_url('scanner/performance'), 'attr') ?>" class="small">My Performance (this scanner's own stats)</a>
+</div>
+
 <?php if ($activeBatch === null): ?>
 <div class="alert alert-warning" role="alert">
   No active distribution batch. Ask an administrator to start one.

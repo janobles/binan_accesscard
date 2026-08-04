@@ -55,7 +55,7 @@ $window = ($batchName ?? null) !== null ? 'Batch: ' . $batchName : 'All batches'
 </table>
 <?php endif; ?>
 
-<h2>Remaining families</h2>
+<h2>Remaining families (<?= esc((string) count($remaining)) ?>)</h2>
 <table class="data">
   <thead><tr><th>Name</th><th>Barangay</th><th>Contact</th></tr></thead>
   <tbody>

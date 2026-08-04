@@ -17,4 +17,26 @@ final class ReportsPdfGeneratorTest extends CIUnitTestCase
         );
         $this->assertStringStartsWith('%PDF-', $bytes);
     }
+
+    /**
+     * The remaining-families heading must carry the row count so a reviewer
+     * can reconcile it against the table below without counting rows by hand.
+     * Rendered pre-dompdf so the count is asserted against plain HTML, not
+     * PDF bytes.
+     */
+    public function testRemainingHeadingShowsTheCount(): void
+    {
+        $html = view('Scanner/pdf/report', [
+            'coverage'   => ['eligible' => 3, 'served' => 2, 'remaining' => 1, 'coverage' => 67, 'voided' => 0],
+            'byBarangay' => [],
+            'remaining'  => [
+                ['headID' => 1, 'name' => 'Juan Cruz', 'barangay' => 'Poblacion', 'contact' => ''],
+                ['headID' => 2, 'name' => 'Ana Reyes', 'barangay' => 'Poblacion', 'contact' => ''],
+            ],
+            'perScanner' => [],
+            'batchName'  => 'Batch 1',
+        ], ['saveData' => false]);
+
+        $this->assertStringContainsString('Remaining families (2)', $html);
+    }
 }

@@ -140,6 +140,11 @@ $noEligible = ! $noBatch && $c['eligible'] === 0;
     ],
     'active' => $batchBodyTab,
     'baseUrl' => 'dashboard',
+    // Carries the batch selection through the sub-tab switch: without this,
+    // ?tab= alone silently reverts an explicitly-picked batch back to the
+    // default (active, or most recent) on every Barangay/Stations/Remaining
+    // click.
+    'queryParams' => $noBatch ? [] : ['batch' => $batchId],
 ]) ?>
 
 <?php if ($batchBodyTab === 'barangay'):
@@ -164,10 +169,15 @@ $noEligible = ! $noBatch && $c['eligible'] === 0;
         'footer' => null,
     ]) ?>
 <?php elseif ($batchBodyTab === 'stations'):
+    // Plain text, not a link: scanner/performance reads $userId from the
+    // session, not a query param, so a link here would take an admin to their
+    // own (usually zero) numbers under a station's name - a silent wrong
+    // answer, worse than no link at all. Extending that route to accept a
+    // target user is Task 12's scope, not this one's.
     $stationRows = [];
     foreach ($perScanner as $p) {
         $stationRows[] = [
-            '<a href="' . esc(site_url('scanner/performance') . '?batch=' . $batchId, 'attr') . '">' . esc($p['scanner']) . '</a>',
+            esc($p['scanner']),
             esc((string) $p['families']),
             esc((string) $p['handouts']),
         ];

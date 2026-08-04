@@ -30,12 +30,10 @@ if (! function_exists('dashboard_admin_view_data')) {
      *     navActive: array<string, string>,
      *     pageTitle: string,
      *     recentAudits: list<array<string, mixed>>,
-     *     recentFamilies: list<array<string, mixed>>,
      *     searchFilters: array<string, mixed>,
      *     searchTerm: string,
      *     sectorShortcodeOptions: list<string>,
      *     sectorOptions: list<array<string, mixed>>,
-     *     stats: array<string, int>,
      *     user: array<string, mixed>,
      *     username: string
      * }
@@ -64,11 +62,9 @@ if (! function_exists('dashboard_employee_view_data')) {
      *     myAudits: list<array<string, mixed>>,
      *     navActive: array<string, string>,
      *     pageTitle: string,
-     *     recentFamilies: list<array<string, mixed>>,
      *     searchFilters: array<string, mixed>,
      *     searchTerm: string,
      *     sectorOptions: list<array<string, mixed>>,
-     *     stats: array<string, int>,
      *     user: array<string, mixed>,
      *     username: string
      * }

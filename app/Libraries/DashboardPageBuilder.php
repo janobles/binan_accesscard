@@ -157,13 +157,6 @@ class DashboardPageBuilder
 
         $sectorOptions = $sectorModel->getSectorOptions();
 
-        $recentFamilies = [];
-        if ($isDashboard) {
-            $recentFamilies = $searchTerm !== '' || $hasSearchFilters
-                ? $searchModel->families($searchTerm, $searchFilters, 25)
-                : $dashboardModel->recentFamilies(10);
-        }
-
         // Keep legacy file-backed Developer audit rows (NULL userID) visible only to
         // Developers. New Developer activity has a real userID like every DB account.
         $includeDeveloperAudits = $currentRole === 'Developer';
@@ -274,10 +267,6 @@ class DashboardPageBuilder
             'employeeAccounts'   => array_values(array_filter($visibleAccounts, static fn ($account) => $account['role'] === 'encoder')),
             'viewerAccounts'     => array_values(array_filter($visibleAccounts, static fn ($account) => $account['role'] === 'viewer')),
             'scannerAccounts'    => array_values(array_filter($visibleAccounts, static fn ($account) => $account['role'] === 'scanner')),
-            'recentFamilies'     => $recentFamilies,
-            // Shortcode + full name per sector, so the Recent Records table can print
-            // the same badges Manage Records and Reference Data print.
-            'sectorShortcodes'   => $isDashboard ? $sectorModel->shortcodeMap() : [],
             'recentAudits'       => $recentAudits,
             'auditListData'      => $auditListData,
             'recordListData'      => $memberListData,
@@ -309,9 +298,6 @@ class DashboardPageBuilder
             'remaining'          => $reportsData['remaining'],
             'batchBodyTab'       => $batchBodyTab,
             'programStats'       => $isDashboard ? $dashboardModel->programStats() : ['families' => 0, 'neverServed' => 0],
-            'stats'              => $isDashboard
-                ? array_merge(['families' => 0, 'members' => 0, 'sectors' => 0, 'assistance' => 0], $dashboardModel->stats())
-                : ['families' => 0, 'members' => 0, 'sectors' => 0, 'assistance' => 0],
             // Only the roles that may open the record-entry page get the Add and
             // Import buttons on the records list (Config\Navigation, records-entry).
             'canCreateFamily'    => in_array($currentRole, Navigation::pageRoles('records-entry'), true),

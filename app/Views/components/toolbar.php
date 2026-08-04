@@ -133,10 +133,16 @@ $buildAttrs = static function(array $attrs): string {
     <?= $hiddenHtml ?>
 
     <div class="col-12 col-lg-auto d-flex flex-wrap align-items-center gap-2" role="group" aria-label="Toolbar actions">
+        <?php
+            $finalClearAttrs = trim((string)($clearAttrs ?? ''));
+            if (strpos($finalClearAttrs, 'data-records-clear') === false) {
+                $finalClearAttrs .= ($finalClearAttrs === '' ? '' : ' ') . 'data-records-clear';
+            }
+        ?>
         <?php if ($isClient): ?>
-            <button class="<?= btn('clear') ?> flex-fill" type="button" <?= $clearAttrs ?: 'data-records-clear' ?>>Clear</button>
+            <button class="<?= btn('clear') ?> flex-fill" type="button" <?= $finalClearAttrs ?>>Clear</button>
         <?php else: ?>
-            <a class="<?= btn('clear') ?> flex-fill" href="<?= esc($clearUrl, 'attr') ?>" <?= $clearAttrs ?: 'data-records-clear' ?>>Clear</a>
+            <a class="<?= btn('clear') ?> flex-fill" href="<?= esc($clearUrl, 'attr') ?>" <?= $finalClearAttrs ?>>Clear</a>
         <?php endif; ?>
         <?php if ($actionsHtml !== ''): ?>
         <div class="vr"></div>

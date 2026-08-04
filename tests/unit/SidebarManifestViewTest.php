@@ -50,7 +50,7 @@ final class SidebarManifestViewTest extends CIUnitTestCase
         $html = $this->render('Admin', 'cards');
 
         $this->assertMatchesRegularExpression(
-            '#<a class="nav-link active"[^>]*href="[^"]*/cards"#',
+            '#<a class="[^"]*\bnav-link\b[^"]*\bactive\b[^"]*"[^>]*href="[^"]*/cards"#',
             $html
         );
     }

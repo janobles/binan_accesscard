@@ -7,6 +7,7 @@ use App\Libraries\RoleAccess;
 use App\Models\Audit\AuditTrailsModel;
 use App\Models\Scanner\DistributionBatchModel;
 use App\Models\Scanner\SubsidyDistributionModel;
+use App\Models\Scanner\SubsidyStatsModel;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
 
@@ -56,6 +57,10 @@ class DistributionController extends BaseController
             (int) ($row['memberID'] ?? 0),
             'Control #' . (string) ($row['control_no'] ?? '') . ', subsidy type ID ' . (int) ($row['subsidy_type_id'] ?? 0) . ', claim date ' . (string) ($row['claim_date'] ?? '')
         );
+        // The voided row's own batch, not whatever batch is active now - a void
+        // reaches back into a closed batch just as often as the open one, and
+        // that closed batch's cache never expires on its own (ttl 0).
+        model(SubsidyStatsModel::class)->forgetBatch((int) ($row['batch_id'] ?? 0));
         return redirect()->to('distribution?tab=log')->with('success', 'Distribution voided.');
     }
 

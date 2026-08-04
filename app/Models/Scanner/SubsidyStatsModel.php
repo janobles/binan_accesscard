@@ -323,7 +323,14 @@ class SubsidyStatsModel extends Model
         return $snapshot;
     }
 
-    /** Cheap connectivity probe so batchSnapshot() can tell a real empty batch from a failed query. */
+    /**
+     * Cheap connectivity probe run after the four stats calls, on batchSnapshot()'s
+     * behalf. It only proves the DB is reachable at that moment; it does not
+     * inspect what happened during the calls above it, so a connection that
+     * drops mid-computation and recovers before this probe would still let a
+     * false empty snapshot through. It catches the common case (DB down or
+     * still down) without adding a query to every one of the four methods.
+     */
     private function dbIsHealthy(): bool
     {
         try {

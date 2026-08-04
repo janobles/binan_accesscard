@@ -58,12 +58,11 @@ class ReportsController extends BaseController
         $batchModel         = model(DistributionBatchModel::class);
         $batches            = $batchModel->allBatches();
         [$batchId, $batch]  = BatchScope::resolve($batches, $batchModel->activeBatch(), (int) $this->request->getGet('batch'));
-        $scope              = $batchId > 0 ? $batchId : null;
         $stats              = model(SubsidyStatsModel::class);
 
         $bytes = (new \App\Libraries\Scanner\ReportsPdfGenerator())->generate(
             $stats->coverage($batchId),
-            $stats->byBarangay($scope),
+            $stats->byBarangay($batchId),
             $stats->remaining($batchId),
             $batch['name'] ?? null,
             $batchId > 0 ? $stats->perScanner($batchId) : []

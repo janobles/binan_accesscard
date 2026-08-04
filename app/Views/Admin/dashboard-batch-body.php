@@ -63,13 +63,14 @@ $noEligible = ! $noBatch && $c['eligible'] === 0;
     <div class="card h-100"><div class="card-body">
       <p class="stat-label">This batch</p>
       <strong class="progress-headline">
-        <?= esc((string) $c['served']) ?> of <?= esc((string) $c['eligible']) ?> served,
-        <?= esc((string) $c['coverage']) ?>%
+        <span id="progressServed"><?= esc((string) $c['served']) ?></span> of
+        <span id="progressEligible"><?= esc((string) $c['eligible']) ?></span> served,
+        <span id="progressCoverage"><?= esc((string) $c['coverage']) ?></span>%
       </strong>
-      <div class="progress" role="progressbar"
+      <div class="progress" id="coverageProgress" role="progressbar"
            aria-valuenow="<?= esc((string) $c['coverage'], 'attr') ?>"
            aria-valuemin="0" aria-valuemax="100">
-        <div class="progress-bar" style="width: <?= esc((string) $c['coverage'], 'attr') ?>%"></div>
+        <div class="progress-bar" id="coverageProgressFill" style="width: <?= esc((string) $c['coverage'], 'attr') ?>%"></div>
       </div>
     </div></div>
   </div>
@@ -79,18 +80,20 @@ $noEligible = ! $noBatch && $c['eligible'] === 0;
         'value' => (string) $c['remaining'],
         'icon' => 'hourglass-split',
         'variant' => 'stat-card--records',
+        'valueId' => 'remainingTileValue',
     ]) ?>
   </div>
-  <?php if ($c['voided'] > 0): ?>
-  <div class="col-6 col-lg-3">
+  <?php /* Always rendered (hidden at 0) so a live poll can reveal it in place
+           without inserting new markup mid-batch. */ ?>
+  <div class="col-6 col-lg-3<?= $c['voided'] > 0 ? '' : ' d-none' ?>" id="voidedTileWrap">
     <?= view('components/stat_card', [
         'label' => 'Voided',
         'value' => (string) $c['voided'],
         'icon' => 'x-circle',
         'variant' => 'stat-card--members',
+        'valueId' => 'voidedTileValue',
     ]) ?>
   </div>
-  <?php endif; ?>
 </div>
 
 <div class="row g-3 reports-charts mt-1">
@@ -192,6 +195,7 @@ $noEligible = ! $noBatch && $c['eligible'] === 0;
         'tableClass' => 'table align-middle w-100 mb-0',
         'cardClass' => 'reports-fallback',
         'footer' => null,
+        'tableId' => 'stationsTable',
     ]) ?>
 <?php else: ?>
     <?php /* remaining() can return hundreds of rows: same client-side pagination

@@ -1,7 +1,13 @@
 /* Builds the dashboard batch zone's two charts (barangay coverage, cumulative
    served) from the #reportsData JSON block and exposes
    window.ReportsCharts.update(data) so a poller can repaint them live without
-   a page reload. No-ops when chart.js or the canvases are absent. */
+   a page reload. No-ops when chart.js or the canvases are absent.
+
+   update(data) also repaints everything else under the "Last updated" stamp
+   that a fresh distribution/reports/stats payload carries: the progress
+   headline and bar, the Remaining/Voided tiles, and the Stations table. All
+   values are written with textContent, never innerHTML, so nothing here
+   needs a separate escaping step. */
 (function () {
     'use strict';
 
@@ -105,7 +111,65 @@
         });
     }
 
-    // Live update: repaint datasets in place from a fresh stats payload.
+    function text(id, value) {
+        var node = document.getElementById(id);
+        if (node) { node.textContent = String(value); }
+    }
+
+    // Progress headline + bar, from fresh.coverage (SubsidyStatsModel::coverage()'s
+    // shape: eligible/served/remaining/coverage/voided).
+    function applyCoverage(coverage) {
+        if (!coverage) { return; }
+        text('progressServed', coverage.served);
+        text('progressEligible', coverage.eligible);
+        text('progressCoverage', coverage.coverage);
+
+        var bar = document.getElementById('coverageProgress');
+        var fill = document.getElementById('coverageProgressFill');
+        if (bar) { bar.setAttribute('aria-valuenow', String(coverage.coverage)); }
+        if (fill) { fill.style.width = coverage.coverage + '%'; }
+
+        text('remainingTileValue', coverage.remaining);
+
+        var voidedWrap = document.getElementById('voidedTileWrap');
+        if (voidedWrap) {
+            text('voidedTileValue', coverage.voided);
+            voidedWrap.classList.toggle('d-none', !(coverage.voided > 0));
+        }
+    }
+
+    // Stations table (Stations tab only - the table isn't in the DOM on the
+    // other two sub-tabs, so this is a no-op there).
+    function applyStations(perScanner) {
+        var table = document.getElementById('stationsTable');
+        if (!table || !Array.isArray(perScanner)) { return; }
+        var tbody = table.querySelector('tbody');
+        if (!tbody) { return; }
+
+        tbody.innerHTML = '';
+        if (perScanner.length === 0) {
+            var emptyRow = document.createElement('tr');
+            var emptyCell = document.createElement('td');
+            emptyCell.colSpan = 3;
+            emptyCell.className = 'text-center text-muted';
+            emptyCell.textContent = 'No scans in this batch yet.';
+            emptyRow.appendChild(emptyCell);
+            tbody.appendChild(emptyRow);
+            return;
+        }
+        perScanner.forEach(function (row) {
+            var tr = document.createElement('tr');
+            [row.scanner, row.families, row.handouts].forEach(function (value) {
+                var td = document.createElement('td');
+                td.textContent = String(value);
+                tr.appendChild(td);
+            });
+            tbody.appendChild(tr);
+        });
+    }
+
+    // Live update: repaint datasets and the surrounding page in place from a
+    // fresh distribution/reports/stats payload.
     window.ReportsCharts = {
         update: function (fresh) {
             if (!fresh) { return; }
@@ -120,6 +184,8 @@
                 charts.timeline.data.datasets[0].data = fresh.timeline.map(function (t) { return t.cumulative; });
                 charts.timeline.update();
             }
+            applyCoverage(fresh.coverage);
+            applyStations(fresh.perScanner);
         }
     };
 })();

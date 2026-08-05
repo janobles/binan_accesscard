@@ -151,7 +151,7 @@
             var emptyRow = document.createElement('tr');
             var emptyCell = document.createElement('td');
             emptyCell.colSpan = 3;
-            emptyCell.className = 'text-center text-muted';
+            emptyCell.className = 'text-muted';
             emptyCell.textContent = 'No scans in this batch yet.';
             emptyRow.appendChild(emptyCell);
             tbody.appendChild(emptyRow);

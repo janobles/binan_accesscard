@@ -1,9 +1,9 @@
 <?php
 /**
- * Remaining tab pane inside the dashboard's batch table: one page of the
- * unclaimed families on the batch roster (SubsidyStatsModel::remainingPage(),
- * gated to this tab by DashboardPageBuilder::buildReportsData()). Rendered
- * inside components/card by Admin/dashboard-batch-body.php, which supplies
+ * Remaining tab pane on the dashboard: one page of the unclaimed families on
+ * the batch roster (SubsidyStatsModel::remainingPage(), gated to this tab by
+ * DashboardPageBuilder::buildReportsData()). Rendered by
+ * Admin/batch-overview.php, which supplies
  * the matching server-paginated components/table_footer. Against the
  * 100k-family target, a batch's remaining list can run to hundreds of rows,
  * too large to hand table-paginate.js the whole thing client-side, so the

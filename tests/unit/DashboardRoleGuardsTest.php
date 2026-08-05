@@ -95,7 +95,7 @@ final class DashboardRoleGuardsTest extends CIUnitTestCase
     }
 
     /**
-     * app/Views/Pages/dashboard.php must gate the batch zone (dashboard-batch-body)
+     * app/Views/Pages/dashboard.php must gate the batch zone (batch-overview)
      * on the same $seesDistribution flag the builder computes. Task 11 cut the
      * separate distribution KPI tiles (wrong denominator, replaced by the batch
      * zone's own progress block), so only one gate remains.

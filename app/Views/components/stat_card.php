@@ -10,7 +10,7 @@
  * - $icon    string       bootstrap-icons name without "bi-" prefix
  * - $variant string       modifier class, e.g. 'stat-card--records'
  * - $valueId string|null  id on the value <strong>, so a live poll can repaint
- *                         just this number in place (e.g. dashboard-batch-body.php)
+ *                         just this number in place (e.g. batch-overview.php)
  */
 $label = $label ?? '';
 $value = $value ?? '0';

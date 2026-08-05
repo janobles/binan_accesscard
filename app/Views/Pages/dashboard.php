@@ -4,7 +4,7 @@
  *
  * Rendered inside layout.php as the `dashboard` page body. Zone 1 (program to
  * date) comes from DashboardModel::programStats() via DashboardPageBuilder;
- * Zone 2 (this batch) is Admin/dashboard-batch-body, fed by
+ * Zone 2 (this batch) is Admin/batch-overview, fed by
  * DashboardPageBuilder::buildReportsData() and shown only to Developer/Admin
  * (see DashboardPageBuilder::buildViewData() for why $seesDistribution is
  * narrower than the Distribution *page*). The activity panel only renders for
@@ -22,7 +22,7 @@ $seesDistribution = (bool) ($seesDistribution ?? false);
     </section>
 
     <?php if ($seesDistribution): ?>
-        <?= view('Admin/dashboard-batch-body') ?>
+        <?= view('Admin/batch-overview') ?>
     <?php endif; ?>
 
     <?php if (($role ?? '') === 'Encoder'): ?>

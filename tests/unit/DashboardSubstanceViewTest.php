@@ -26,7 +26,7 @@ final class DashboardSubstanceViewTest extends CIUnitTestCase
 
     public function testBatchBodyRendersRemainingTab(): void
     {
-        $src = file_get_contents(APPPATH . 'Views/Admin/dashboard-batch-body.php');
+        $src = file_get_contents(APPPATH . 'Views/Admin/batch-overview.php');
         $this->assertStringContainsString('Remaining', $src);
     }
 
@@ -39,7 +39,7 @@ final class DashboardSubstanceViewTest extends CIUnitTestCase
      */
     public function testStationsTabDoesNotLinkToScannerPerformance(): void
     {
-        $src = file_get_contents(APPPATH . 'Views/Admin/dashboard-batch-body.php');
+        $src = file_get_contents(APPPATH . 'Views/Admin/batch-overview.php');
         $this->assertStringNotContainsString("site_url('scanner/performance')", $src);
         $this->assertStringNotContainsString('<a href=', $src);
     }
@@ -47,7 +47,7 @@ final class DashboardSubstanceViewTest extends CIUnitTestCase
     /** The dashboard's batch sub-tabs must carry ?batch= through the switch. */
     public function testBatchSubTabsCarryTheBatchSelectionThrough(): void
     {
-        $src = file_get_contents(APPPATH . 'Views/Admin/dashboard-batch-body.php');
+        $src = file_get_contents(APPPATH . 'Views/Admin/batch-overview.php');
         $this->assertStringContainsString("'queryParams'", $src);
         $this->assertStringContainsString("'batch' => \$batchId", $src);
     }

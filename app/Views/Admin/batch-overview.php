@@ -4,11 +4,12 @@
  * headline, and the Barangay/Stations/Remaining tabs. A fragment, not a page:
  * rendered inline by Pages/dashboard.php for Developer/Admin only. Data comes
  * from DashboardPageBuilder::buildReportsData() (batches, batchRow, batchOpen,
- * batchSnapshot, remainingPage, batchBodyTab). All server data is escaped.
+ * batchSnapshot, remainingPage, batchBodyTab, busiestDay). All server data is
+ * escaped.
  *
- * Deliberately flat: headings and text, no cards, no tiles. Everything here is
- * one figure read four ways, so boxing each view of it invents a hierarchy the
- * data does not have.
+ * The batch figures render as a KPI card row plus a slim coverage bar,
+ * matching the Overview pane's card row (`.kpi-card` styles are shared, see
+ * theme.css).
  */
 
 $batches = $batches ?? [];
@@ -17,6 +18,7 @@ $batchOpen = (bool) ($batchOpen ?? false);
 $batchSnapshot = $batchSnapshot ?? ['coverage' => ['eligible' => 0, 'served' => 0, 'remaining' => 0, 'coverage' => 0, 'voided' => 0], 'byBarangay' => [], 'perScanner' => [], 'timeline' => [], 'byDay' => []];
 $remainingPage = $remainingPage ?? ['rows' => [], 'keyword' => '', 'page' => 1, 'perPage' => 25, 'perPageOptions' => [10, 25, 50, 100], 'totalPages' => 1, 'totalRows' => 0, 'fromRecord' => 0, 'toRecord' => 0];
 $batchBodyTab = $batchBodyTab ?? 'barangay';
+$busiestDay = $busiestDay ?? null;
 
 $c = $batchSnapshot['coverage'];
 $byBarangay = $batchSnapshot['byBarangay'];
@@ -64,32 +66,54 @@ $emptyChart = ! $noBatch && ! $batchOpen && $c['served'] === 0;
 <p class="text-muted mb-4">This batch has no eligible families. Check its barangay and sector filters.</p>
 <?php else: ?>
 
-<section class="batch-progress" aria-label="Batch coverage">
-  <p class="batch-progress-line">
-    <strong id="progressServed"><?= esc((string) $c['served']) ?></strong> of
-    <span id="progressEligible"><?= esc((string) $c['eligible']) ?></span> families served
-    <span class="batch-progress-pct"><span id="progressCoverage"><?= esc((string) $c['coverage']) ?></span>%</span>
-  </p>
-  <div class="progress" id="coverageProgress" role="progressbar"
-       aria-valuenow="<?= esc((string) $c['coverage'], 'attr') ?>"
-       aria-valuemin="0" aria-valuemax="100">
-    <div class="progress-bar" id="coverageProgressFill" style="width: <?= esc((string) $c['coverage'], 'attr') ?>%"></div>
+<div class="row row-cols-2 row-cols-md-4 g-3 kpi-row">
+  <div class="col">
+    <div class="card kpi-card h-100"><div class="card-body">
+      <p class="kpi-label">Eligible families</p>
+      <p class="kpi-value" id="progressEligible"><?= esc(number_format($c['eligible'])) ?></p>
+    </div></div>
   </div>
-  <p class="batch-progress-sub">
-    <span id="remainingTileValue"><?= esc((string) $c['remaining']) ?></span>
-    <?= $batchOpen ? 'remaining' : 'not claimed' ?>
-    <?php /* Always rendered (hidden at 0) so the live poll can reveal it in
-             place without inserting new markup mid-batch. */ ?>
-    <span id="voidedTileWrap"<?= $c['voided'] > 0 ? '' : ' class="d-none"' ?>>&middot;
-      <span id="voidedTileValue"><?= esc((string) $c['voided']) ?></span> voided</span>
-    &middot;
-    <?php if ($batchOpen): ?>
-      batch open, updated <span id="lastUpdated">-</span>
-    <?php else: ?>
-      batch closed
-    <?php endif; ?>
-  </p>
-</section>
+  <div class="col">
+    <div class="card kpi-card h-100"><div class="card-body">
+      <p class="kpi-label">Served</p>
+      <p class="kpi-value" id="progressServed"><?= esc(number_format($c['served'])) ?></p>
+      <p class="kpi-sub"><span id="progressCoverage"><?= esc((string) $c['coverage']) ?></span>%</p>
+    </div></div>
+  </div>
+  <div class="col">
+    <div class="card kpi-card h-100"><div class="card-body">
+      <p class="kpi-label"><?= $batchOpen ? 'Remaining' : 'Not claimed' ?></p>
+      <p class="kpi-value" id="remainingTileValue"><?= esc(number_format($c['remaining'])) ?></p>
+    </div></div>
+  </div>
+  <div class="col">
+    <div class="card kpi-card h-100"><div class="card-body">
+      <p class="kpi-label">Busiest day</p>
+      <p class="kpi-value"><?= $busiestDay === null ? '-' : esc($busiestDay['label']) ?></p>
+      <?php if ($busiestDay !== null): ?>
+      <p class="kpi-sub"><?= esc(number_format($busiestDay['served'])) ?> families</p>
+      <?php endif; ?>
+    </div></div>
+  </div>
+</div>
+
+<div class="progress batch-bar" id="coverageProgress" role="progressbar"
+     aria-label="Coverage"
+     aria-valuenow="<?= esc((string) $c['coverage'], 'attr') ?>"
+     aria-valuemin="0" aria-valuemax="100">
+  <div class="progress-bar" id="coverageProgressFill" style="width: <?= esc((string) $c['coverage'], 'attr') ?>%"></div>
+</div>
+<p class="batch-progress-sub">
+  <?php /* Always rendered (hidden at 0) so the live poll can reveal it in
+           place without inserting new markup mid-batch. */ ?>
+  <span id="voidedTileWrap"<?= $c['voided'] > 0 ? '' : ' class="d-none"' ?>>
+    <span id="voidedTileValue"><?= esc((string) $c['voided']) ?></span> voided &middot;</span>
+  <?php if ($batchOpen): ?>
+    batch open, updated <span id="lastUpdated">-</span>
+  <?php else: ?>
+    batch closed
+  <?php endif; ?>
+</p>
 
 <?php if ($batchOpen): ?>
 <section class="batch-pane">

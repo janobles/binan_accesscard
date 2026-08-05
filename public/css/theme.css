@@ -680,36 +680,17 @@
     gap: 0.5rem;
 }
 
-/* The one number the page exists for, set as a sentence rather than a tile.
-   Remaining and voided sit under the bar because both are read off it. */
-.batch-progress {
-    margin-bottom: 2rem;
-}
-
-.batch-progress-line {
-    font-size: 1.5rem;
-    color: #1f3b2f;
-    margin-bottom: 0.6rem;
-}
-
-.batch-progress-line strong {
-    font-weight: 600;
-}
-
-.batch-progress-pct {
-    color: #7a8783;
-}
-
-.batch-progress .progress {
+/* Slim coverage bar under the batch KPI row. The cards carry the numbers, so
+   this only has to show fraction-of-whole at a glance. */
+.batch-bar {
     height: 0.5rem;
-    background: #eef2f0;
-    max-width: 34rem;
+    margin-bottom: 0.5rem;
 }
 
 .batch-progress-sub {
-    color: #7a8783;
-    font-size: 0.9rem;
-    margin: 0.55rem 0 0;
+    font-size: 0.82rem;
+    color: #858796;
+    margin-bottom: 1.5rem;
 }
 
 /* A tab pane or a block inside one: heading plus content, nothing enclosing. */

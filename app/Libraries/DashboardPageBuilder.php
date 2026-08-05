@@ -574,6 +574,7 @@ class DashboardPageBuilder
             'byBarangay' => [],
             'perScanner' => [],
             'timeline'   => [],
+            'byDay'      => [],
         ];
     }
 

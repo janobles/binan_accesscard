@@ -116,6 +116,53 @@ class SubsidyStatsModel extends Model
     }
 
     /**
+     * Families served per calendar day inside one batch, oldest first, for the
+     * rollout chart and the Busiest day card.
+     *
+     * claim_date is already a date column and is written server-side at scan
+     * time, so it needs no DATE() wrapper and cannot be skewed by client input.
+     *
+     * Joined to batch_eligibility on the same terms as coverage(). That is what
+     * makes the per-day figures sum to the Served card: an off-roster or voided
+     * scan is invisible to both.
+     *
+     * @return list<array{date:string,label:string,served:int}>
+     */
+    public function servedByDay(int $batchId): array
+    {
+        if ($batchId <= 0) {
+            return [];
+        }
+
+        try {
+            $rows = $this->db->table('subsidy_distribution sd')
+                ->select('sd.claim_date AS day, COUNT(DISTINCT sd.memberID) AS served')
+                ->join(
+                    'batch_eligibility be',
+                    'be.batch_id = sd.batch_id AND be.headID = sd.memberID'
+                )
+                ->where('sd.batch_id', $batchId)
+                ->where('sd.dt_voided', null)
+                ->groupBy('sd.claim_date')
+                ->orderBy('sd.claim_date', 'ASC')
+                ->get()->getResultArray();
+
+            $out = [];
+            foreach ($rows as $index => $row) {
+                $out[] = [
+                    'date'   => (string) $row['day'],
+                    'label'  => 'Day ' . ($index + 1),
+                    'served' => (int) $row['served'],
+                ];
+            }
+
+            return $out;
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
+
+    /**
      * Per-barangay progress inside the batch's roster, worst coverage first so
      * the top row is where staff get sent. Groups on the indexed barangayID.
      *
@@ -465,6 +512,7 @@ class SubsidyStatsModel extends Model
             'byBarangay' => $this->byBarangay($batchId),
             'perScanner' => $this->perScanner($batchId),
             'timeline'   => $isOpen ? $this->servedTimeline($batchId) : [],
+            'byDay'      => $this->servedByDay($batchId),
         ];
 
         if ($this->dbIsHealthy()) {

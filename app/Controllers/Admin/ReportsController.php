@@ -39,7 +39,7 @@ class ReportsController extends BaseController
         $stats      = model(SubsidyStatsModel::class);
         $snapshot   = $batchId > 0
             ? $stats->batchSnapshot($batchId, $isOpen)
-            : ['coverage' => ['eligible' => 0, 'served' => 0, 'remaining' => 0, 'coverage' => 0, 'voided' => 0], 'byBarangay' => [], 'perScanner' => [], 'timeline' => []];
+            : ['coverage' => ['eligible' => 0, 'served' => 0, 'remaining' => 0, 'coverage' => 0, 'voided' => 0], 'byBarangay' => [], 'perScanner' => [], 'timeline' => [], 'byDay' => []];
 
         return $this->response->setJSON([
             'coverage'   => $snapshot['coverage'],

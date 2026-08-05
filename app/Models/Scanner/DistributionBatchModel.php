@@ -189,7 +189,16 @@ class DistributionBatchModel extends Model
             $this->update($batchId, ['eligible_count' => $eligible]);
             $this->db->transComplete();
 
-            return $this->db->transStatus() === false ? 0 : $eligible;
+            if ($this->db->transStatus() === false) {
+                return 0;
+            }
+
+            // A closed batch's snapshot is cached with no expiry, so without
+            // this the dashboard keeps serving the pre-rebuild coverage
+            // forever. Scans invalidate the open batch the same way.
+            (new SubsidyStatsModel())->forgetBatch($batchId);
+
+            return $eligible;
         } catch (\Throwable $e) {
             return 0;
         }

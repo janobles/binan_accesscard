@@ -2,10 +2,7 @@
 /**
  * Account dropdown in the top bar, included by the dashboard and kiosk layouts.
  *
- * The display name is assembled here from the account's packed full_description
- * field rather than read from a column, which is why this partial reaches for
- * ViewFormatter. $accountSettingsMode decides whether the settings entry opens the
- * profile modal or navigates, since the kiosk layout has no modal to open.
+ * Styled like Shadcn (matching the sidebar-account-menu).
  */
 
 $user = $user ?? [];
@@ -22,22 +19,53 @@ $topbarFullName = trim(implode(' ', array_filter([
     $topbarDetails['suffix'] ?? '',
 ])));
 $topbarFullName = $topbarFullName !== '' ? $topbarFullName : $username;
+
+$initials = '';
+foreach (explode(' ', $topbarFullName) as $word) {
+    if (mb_strlen($word) > 0) {
+        $initials .= mb_substr($word, 0, 1);
+    }
+}
+$initials = mb_strtoupper(mb_substr($initials, 0, 2));
 ?>
-<li class="nav-item dropdown topbar-account">
-    <button class="nav-link topbar-user topbar-account-toggle dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-        <i class="bi bi-person-circle" aria-hidden="true"></i><span><?= esc($username) ?></span>
-    </button>
-    <div class="dropdown-menu dropdown-menu-end topbar-account-menu">
-        <div class="topbar-account-summary">
-            <img class="topbar-account-avatar" src="<?= esc(base_url('assets/image/default-profile.svg'), 'attr') ?>" alt="Profile picture">
-            <strong><?= esc(mb_strtoupper($topbarFullName, 'UTF-8')) ?></strong>
-            <small><?= esc($accountLevelLabel) ?></small>
+<li class="nav-item dropdown">
+    <button class="btn btn-light d-flex align-items-center justify-content-between p-1 px-2 border-0 text-start bg-transparent" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+        <div class="d-flex align-items-center overflow-hidden">
+            <div class="rounded-circle me-2 d-flex align-items-center justify-content-center text-white" style="width: 28px; height: 28px; background-color: var(--token-primary-green); font-size: 0.75rem; font-weight: 600;">
+                <?= esc($initials) ?>
+            </div>
+            <div class="overflow-hidden d-none d-md-block">
+                <div class="fw-bold text-truncate" style="font-size: 0.8rem; color: var(--token-text-primary); line-height: 1.2;"><?= esc($username) ?></div>
+                <div class="text-truncate" style="font-size: 0.7rem; color: var(--token-text-secondary); line-height: 1.2;"><?= esc($accountLevelLabel) ?></div>
+            </div>
         </div>
+        <i class="bi bi-chevron-down text-muted ms-2" style="font-size: 0.85rem;"></i>
+    </button>
+    <div class="dropdown-menu dropdown-menu-end shadow-sm border rounded p-2 mt-1" style="min-width: 15rem; z-index: 1050;">
+        <div class="d-flex align-items-center p-2 mb-1">
+            <div class="rounded-circle me-2 d-flex align-items-center justify-content-center text-white" style="width: 40px; height: 40px; background-color: var(--token-primary-green); font-size: 1rem; font-weight: 600;">
+                <?= esc($initials) ?>
+            </div>
+            <div class="overflow-hidden">
+                <strong class="d-block text-truncate" style="font-size: 0.875rem; color: var(--token-text-primary);"><?= esc(mb_strtoupper($topbarFullName, 'UTF-8')) ?></strong>
+                <small class="d-block text-truncate" style="font-size: 0.75rem; color: var(--token-text-secondary);"><?= esc($accountLevelLabel) ?></small>
+            </div>
+        </div>
+        <hr class="dropdown-divider my-1">
+        
         <?php if ($accountSettingsMode === 'link'): ?>
-            <a href="<?= esc($accountSettingsUrl, 'attr') ?>" class="dropdown-item"><i class="bi bi-gear-fill" aria-hidden="true"></i><span>Account Settings</span></a>
+            <a href="<?= esc($accountSettingsUrl, 'attr') ?>" class="dropdown-item rounded d-flex align-items-center py-2 text-dark" style="font-size: 0.875rem;">
+                <i class="bi bi-gear me-2"></i>Account Settings
+            </a>
         <?php else: ?>
-            <button type="button" class="dropdown-item js-open-my-account-modal" data-modal-url="<?= esc($accountSettingsUrl, 'attr') ?>" data-modal-title="My Account"><i class="bi bi-gear-fill" aria-hidden="true"></i><span>Account Settings</span></button>
+            <button type="button" class="dropdown-item rounded d-flex align-items-center py-2 text-dark js-open-my-account-modal" data-modal-url="<?= esc($accountSettingsUrl, 'attr') ?>" data-modal-title="My Account" style="font-size: 0.875rem;">
+                <i class="bi bi-gear me-2"></i>Account Settings
+            </button>
         <?php endif; ?>
-        <a href="<?= site_url('logout') ?>" class="dropdown-item js-logout-link"><i class="bi bi-box-arrow-right" aria-hidden="true"></i><span>Sign Out</span></a>
+        
+        <hr class="dropdown-divider my-1">
+        <a href="<?= site_url('logout') ?>" class="dropdown-item rounded d-flex align-items-center py-2 text-dark js-logout-link" style="font-size: 0.875rem;">
+            <i class="bi bi-box-arrow-right me-2"></i>Sign Out
+        </a>
     </div>
 </li>

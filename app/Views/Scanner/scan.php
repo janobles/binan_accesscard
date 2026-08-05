@@ -14,16 +14,7 @@
 <?= $this->extend('Scanner/kiosk-layout') ?>
 <?= $this->section('content') ?>
 
-<?php /* Scanners have no sidebar, so this is their only route to their own
-         stats. Placed off to the side, away from the scan input and result
-         area. tabindex="-1" keeps it out of the tab sequence entirely: the
-         window keydown guard below treats an anchor as "already in a field"
-         and won't recapture focus for the scan input on the next keystroke,
-         so a gun scan fired while this link holds focus would otherwise
-         vanish silently. A click/tap still works with tabindex="-1". */ ?>
-<div class="text-end mb-2">
-  <a href="<?= esc(site_url('scanner/performance'), 'attr') ?>" class="small" tabindex="-1">My Performance (this scanner's own stats)</a>
-</div>
+
 
 <?php if ($activeBatch === null): ?>
 <div class="alert alert-warning" role="alert">
@@ -37,11 +28,11 @@
     <div class="input-group input-group-lg">
       <input type="text" inputmode="numeric" autocomplete="off" class="form-control"
              id="controlInput" placeholder="e.g. 42" autofocus>
-      <button class="btn btn-outline-secondary" id="cameraBtn" type="button" title="Scan with camera" aria-label="Scan with camera">
-        <i class="bi bi-camera" aria-hidden="true"></i>
+      <button class="btn btn-outline-secondary px-4" id="cameraBtn" type="button" title="Scan with camera" aria-label="Scan with camera" style="min-width: 120px; min-height: 44px;">
+        Camera
       </button>
-      <button class="btn btn-primary" id="lookupBtn" type="button" aria-label="Look up control number">
-        <i class="bi bi-search" aria-hidden="true"></i>
+      <button class="btn btn-primary px-4" id="lookupBtn" type="button" aria-label="Look up control number" style="min-width: 120px; min-height: 44px;">
+        Search
       </button>
     </div>
   </div>

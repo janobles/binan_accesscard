@@ -40,6 +40,12 @@ $noEligible = ! $noBatch && $c['eligible'] === 0;
   <div class="section-actions">
     <?php if ($batches !== []): ?>
     <form class="reports-filter" method="get" action="<?= site_url('dashboard') ?>">
+      <?php /* A GET form submits only its own fields, so the pane and the
+               sub-tab have to ride along or picking a batch drops the reader
+               back on Overview/Barangay. Same fix the scanner performance
+               page's batch selector already carries. */ ?>
+      <input type="hidden" name="view" value="distribution">
+      <input type="hidden" name="tab" value="<?= esc($batchBodyTab, 'attr') ?>">
       <label for="batchPick" class="form-label mb-0 visually-hidden">Batch</label>
       <select class="form-select" id="batchPick" name="batch" onchange="this.form.submit()">
         <?php foreach ($batches as $b): ?>
@@ -137,11 +143,16 @@ $noEligible = ! $noBatch && $c['eligible'] === 0;
     ],
     'active' => $batchBodyTab,
     'baseUrl' => 'dashboard',
-    // Carries the batch selection through the sub-tab switch: without this,
-    // ?tab= alone silently reverts an explicitly-picked batch back to the
-    // default (active, or most recent) on every Barangay/Stations/Remaining
-    // click.
-    'queryParams' => ['batch' => $batchId],
+    // Named even though 'tab' is the default: the outer strip on
+    // Pages/dashboard.php renders first with 'view', and CI4's renderer carries
+    // view data from one view() call into the next, so leaving this implicit
+    // makes the sub-tabs switch ?view= instead of ?tab=.
+    'param' => 'tab',
+    // Carries the pane and the batch selection through the sub-tab switch.
+    // Without view=, DashboardPageBuilder falls back to Overview and the click
+    // leaves the Distribution pane; without batch=, ?tab= alone silently
+    // reverts an explicitly-picked batch back to the default.
+    'queryParams' => ['view' => 'distribution', 'batch' => $batchId],
 ]) ?>
 
 <?php if ($batchBodyTab === 'barangay'): ?>
@@ -180,6 +191,7 @@ $noEligible = ! $noBatch && $c['eligible'] === 0;
   // pattern) is too large a page. Preserves batch + tab across page links.
   $remainingPageUrl = static function (int $targetPage) use ($batchId, $remainingPage): string {
       $params = array_filter([
+          'view'     => 'distribution',
           'tab'      => 'remaining',
           'batch'    => $batchId > 0 ? (string) $batchId : '',
           'q'        => $remainingPage['keyword'],
@@ -189,9 +201,10 @@ $noEligible = ! $noBatch && $c['eligible'] === 0;
 
       return site_url('dashboard') . ($params === [] ? '' : '?' . http_build_query($params));
   };
-  // Hidden fields that keep the tab/batch selection through the search and
-  // per-page forms below; a new search always lands on page 1.
-  $remainingHiddenHtml = '<input type="hidden" name="tab" value="remaining">'
+  // Hidden fields that keep the pane, tab and batch selection through the
+  // search and per-page forms below; a new search always lands on page 1.
+  $remainingHiddenHtml = '<input type="hidden" name="view" value="distribution">'
+      . '<input type="hidden" name="tab" value="remaining">'
       . ($batchId > 0 ? '<input type="hidden" name="batch" value="' . esc((string) $batchId, 'attr') . '">' : '');
   $remainingPerPageHidden = $remainingPage['perPage'] !== 25
       ? '<input type="hidden" name="per_page" value="' . esc((string) $remainingPage['perPage'], 'attr') . '">'

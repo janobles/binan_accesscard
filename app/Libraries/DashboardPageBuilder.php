@@ -217,6 +217,13 @@ class DashboardPageBuilder
         $dashboardView = (string) $this->request->getGet('view');
         $dashboardView = in_array($dashboardView, ['overview', 'distribution'], true) ? $dashboardView : 'overview';
 
+        // The batch the reader explicitly asked for, straight off the query
+        // rather than out of $reportsData: the outer tab strip has to carry the
+        // selection onto the Overview pane, where no batch data is assembled at
+        // all, and back again.
+        $requestedBatch  = $this->request->getGet('batch');
+        $selectedBatchId = is_scalar($requestedBatch) ? max(0, (int) $requestedBatch) : 0;
+
         // Distribution analytics now live on the dashboard (combined totals +
         // per-kiosk table), batch-scoped only (no date filter). Gated so other
         // pages, roles with no distribution access, and the Overview pane
@@ -305,6 +312,7 @@ class DashboardPageBuilder
             'remainingPage'      => $reportsData['remainingPage'],
             'batchBodyTab'       => $batchBodyTab,
             'dashboardView'      => $dashboardView,
+            'selectedBatchId'    => $selectedBatchId,
             'overviewStats'      => $isDashboard && $dashboardView === 'overview'
                 ? $dashboardModel->programStats()
                 : ['families' => 0, 'distributions' => 0, 'everServed' => 0, 'neverServed' => 0],

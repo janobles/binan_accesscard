@@ -16,6 +16,7 @@
 $myAudits = $myAudits ?? [];
 $seesDistribution = (bool) ($seesDistribution ?? false);
 $dashboardView = ($dashboardView ?? 'overview') === 'distribution' ? 'distribution' : 'overview';
+$selectedBatchId = (int) ($selectedBatchId ?? 0);
 ?>
 <div class="dashboard-overview" data-dashboard-overview>
     <?php if ($seesDistribution): ?>
@@ -27,6 +28,10 @@ $dashboardView = ($dashboardView ?? 'overview') === 'distribution' ? 'distributi
             'active' => $dashboardView,
             'baseUrl' => 'dashboard',
             'param' => 'view',
+            // An explicitly picked batch survives the hop to Overview and back.
+            // Without it the return trip lands on whatever batch the default
+            // resolves to, which is rarely the one the reader was looking at.
+            'queryParams' => $selectedBatchId > 0 ? ['batch' => $selectedBatchId] : [],
         ]) ?>
 
         <?php if ($dashboardView === 'distribution'): ?>

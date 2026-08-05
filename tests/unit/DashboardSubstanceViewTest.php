@@ -45,6 +45,27 @@ final class DashboardSubstanceViewTest extends CIUnitTestCase
         $this->assertStringContainsString('scanner=', $src);
     }
 
+    /**
+     * The #stationsGrid container must render even with zero stations, so the
+     * live poll (scanner-reports.js applyStations()) has somewhere to land an
+     * open batch's first station without a page reload. Fix round 1 caught
+     * this rendering only a bare <p> and omitting the container entirely.
+     */
+    public function testStationsGridContainerAlwaysRenders(): void
+    {
+        $src = file_get_contents(APPPATH . 'Views/Admin/batch-stations-grid.php');
+        $gridPos = strpos($src, 'id="stationsGrid"');
+        $emptyCheckPos = strpos($src, '$perScanner === []');
+
+        $this->assertNotFalse($gridPos, 'stationsGrid container not found');
+        $this->assertNotFalse($emptyCheckPos, 'empty-state check not found');
+        $this->assertLessThan(
+            $emptyCheckPos,
+            $gridPos,
+            'the stationsGrid container must open before the empty-state branch, not be replaced by it'
+        );
+    }
+
     /** The dashboard's batch sub-tabs must carry ?batch= through the switch. */
     public function testBatchSubTabsCarryTheBatchSelectionThrough(): void
     {

@@ -75,6 +75,12 @@
 <script>
 (function () {
   var url = '<?= site_url('scanner/stats') ?>';
+  // Set only when an Admin/Developer has drilled into a station (see
+  // ScanController::resolveViewedScanner()); carried into the poll and the
+  // batch selector so both stay pinned on that station instead of quietly
+  // falling back to the viewer's own figures.
+  var viewedScannerId = <?= $viewedScannerId === null ? 'null' : (int) $viewedScannerId ?>;
+  if (viewedScannerId !== null) { url += '?scanner=' + encodeURIComponent(viewedScannerId); }
 
   function cssVar(name, fallback) {
     var v = getComputedStyle(document.documentElement).getPropertyValue(name);
@@ -146,7 +152,9 @@
   draw(timeline);
   document.getElementById('refreshNow').addEventListener('click', poll);
   document.getElementById('batchSelect').addEventListener('change', function () {
-    window.location.href = '<?= site_url('scanner/performance') ?>?batch=' + encodeURIComponent(this.value);
+    var target = '<?= site_url('scanner/performance') ?>?batch=' + encodeURIComponent(this.value);
+    if (viewedScannerId !== null) { target += '&scanner=' + encodeURIComponent(viewedScannerId); }
+    window.location.href = target;
   });
   document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString();
   setInterval(function () {

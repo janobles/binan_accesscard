@@ -145,6 +145,14 @@
         if (!grid || !Array.isArray(perScanner)) { return; }
 
         grid.innerHTML = '';
+        if (perScanner.length === 0) {
+            var empty = document.createElement('p');
+            empty.className = 'text-muted';
+            empty.id = 'stationsGridEmpty';
+            empty.textContent = 'No station has logged a scan in this batch yet.';
+            grid.appendChild(empty);
+            return;
+        }
         perScanner.forEach(function (row) {
             var col = document.createElement('div');
             col.className = 'col';

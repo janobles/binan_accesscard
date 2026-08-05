@@ -179,17 +179,21 @@ class ScanController extends BaseController
         $batches    = $batchModel->allBatches();
         [$batchId, $batchRow] = BatchScope::resolve($batches, $active, (int) $this->request->getGet('batch'));
 
-        $userId   = $this->resolveViewedScanner();
-        $snapshot = $this->kioskSnapshot($batchId, $userId, $batchRow);
+        $userId       = $this->resolveViewedScanner();
+        $viewingOther = $userId !== (int) (session('user_id') ?? 0);
+        $snapshot     = $this->kioskSnapshot($batchId, $userId, $batchRow);
 
         return view('Scanner/performance', array_merge([
-            'pageTitle'    => $userId === (int) (session('user_id') ?? 0) ? 'My Performance' : 'Station Performance',
+            'pageTitle'    => $viewingOther ? 'Station Performance' : 'My Performance',
             'username'     => session('username') ?? 'Scanner',
             'user'         => SessionAccount::user(),
             'accountLevelLabel' => SessionAccount::levelLabel(),
             'activeBatch'  => $active,
             'batches'      => $batches,
             'batchId'      => $batchId,
+            // Carried into the batch selector and the stats poll so an admin
+            // drilled into a station stays on it, see resolveViewedScanner().
+            'viewedScannerId' => $viewingOther ? $userId : null,
         ], $snapshot));
     }
 
@@ -272,7 +276,7 @@ class ScanController extends BaseController
         }
 
         $activeBatch = model(DistributionBatchModel::class)->activeBatch();
-        $userId      = (int) (session('user_id') ?? 0);
+        $userId      = $this->resolveViewedScanner();
         if ($activeBatch === null) {
             return $this->response->setJSON(['batch' => null, 'families' => 0, 'handouts' => 0]);
         }

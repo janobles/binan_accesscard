@@ -9,17 +9,21 @@
  * Squares are labelled with the account username because that is already the
  * operational identity: the accounts are named Scanner1 through Scanner20, so
  * inventing a separate kiosk numbering would add a second name for one thing.
+ *
+ * The grid container always renders, even with zero stations: the live poll
+ * (scanner-reports.js applyStations()) targets #stationsGrid by id, and an
+ * open batch's first station needs somewhere to land without a page reload.
  */
 
 $perScanner = $perScanner ?? [];
 $batchId = (int) ($batchId ?? 0);
 ?>
-<?php if ($perScanner === []): ?>
-<p class="text-muted">No station has logged a scan in this batch yet.</p>
-<?php else: ?>
 <div class="row row-cols-2 row-cols-sm-3 row-cols-lg-4 row-cols-xl-6 g-3" id="stationsGrid"
      data-performance-url="<?= esc(site_url('scanner/performance'), 'attr') ?>"
      data-batch="<?= esc((string) $batchId, 'attr') ?>">
+  <?php if ($perScanner === []): ?>
+  <p class="text-muted" id="stationsGridEmpty">No station has logged a scan in this batch yet.</p>
+  <?php else: ?>
   <?php foreach ($perScanner as $p): ?>
   <div class="col">
     <a class="station-square" href="<?= site_url('scanner/performance') ?>?scanner=<?= esc((string) (int) $p['userID'], 'attr') ?>&batch=<?= esc((string) $batchId, 'attr') ?>">
@@ -29,5 +33,5 @@ $batchId = (int) ($batchId ?? 0);
     </a>
   </div>
   <?php endforeach; ?>
+  <?php endif; ?>
 </div>
-<?php endif; ?>

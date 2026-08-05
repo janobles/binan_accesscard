@@ -512,6 +512,8 @@
 
 [data-family-entry-form] .family-entry-actions-page {
     margin-top: auto;
+}
+
 /* Subtitled variant (Subsidy Distribution): the "Showing batch / Last updated"
    line sits under the title, in the same row as the action buttons, instead
    of wrapping to its own line below. */

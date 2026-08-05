@@ -708,7 +708,7 @@
 }
 
 /* Cumulative timeline chart occupies a fixed height so its column does not
-   collapse to zero when there is little data, matching .reports-barangay-chart. */
+   collapse to zero when there is little data. */
 .batch-timeline-chart {
     position: relative;
     height: 220px;

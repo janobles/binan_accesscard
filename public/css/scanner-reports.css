@@ -47,14 +47,6 @@
     max-width: 100%;
 }
 
-/* Fixed-height, scrollable box for the barangay bar chart so it stays compact and
-   never enters the Chart.js responsive-resize growth loop. */
-.reports-barangay-chart {
-    position: relative;
-    height: 380px;
-    overflow-y: auto;
-}
-
 /* Barangay summary table: clean, striped, hover-highlighted. */
 .reports-fallback {
     overflow: hidden;

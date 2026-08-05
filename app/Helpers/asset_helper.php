@@ -95,7 +95,6 @@ if (! function_exists('asset_scripts')) {
                 'assets/bootstrap/js/bootstrap.bundle.min.js',
                 'assets/sb-admin/js/scripts.js',
                 'assets/js/toast.js',
-                'assets/js/dashboard/table-stack.js',
             ],
             'admin' => [
                 'assets/js/dashboard/view-interactions.js',

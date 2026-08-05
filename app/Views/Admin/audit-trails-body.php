@@ -61,7 +61,7 @@
     $formatActionLabel = static fn (string $action): string => ucwords(strtolower(str_replace('_', ' ', $action)));
     ?>
     <div class="table-responsive">
-        <table class="table audit-trails-table manage-record-table table-stack align-middle">
+        <table class="table audit-trails-table manage-record-table align-middle">
             <thead>
                 <tr>
                     <th scope="col">User</th>

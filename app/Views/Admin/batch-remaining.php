@@ -30,7 +30,7 @@ $sizeHiddenHtml = (string) ($sizeHiddenHtml ?? '');
     'perPage' => $perPage,
     'perPageOptions' => $perPageOptions,
 ]) ?>
-<table class="table manage-record-table table-stack align-middle w-100 mb-0">
+<table class="table manage-record-table align-middle w-100 mb-0">
   <thead><tr><th>Name</th><th>Barangay</th><th>Contact</th></tr></thead>
   <tbody>
     <?php foreach ($remaining as $r): ?>

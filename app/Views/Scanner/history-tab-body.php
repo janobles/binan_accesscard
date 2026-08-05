@@ -10,7 +10,7 @@ $historyRows = (array) ($historyRows ?? []);
 <?php /* Grows with row count up to 60vh, then scrolls internally instead of
          pushing the rest of the panel (and the page) taller without bound. */ ?>
 <div class="table-responsive" style="max-height: 60vh; overflow-y: auto;">
-  <table class="table manage-record-table table-stack align-middle w-100">
+  <table class="table manage-record-table align-middle w-100">
     <thead>
       <tr>
         <th>Date &amp; Time</th>

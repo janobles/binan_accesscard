@@ -20,7 +20,7 @@ use App\Libraries\ViewFormatter;
             'sizeAttrs' => 'data-paginate-size="accounts"',
         ]) ?>
         <div class="table-responsive">
-            <table class="table account-table manage-record-table table-stack align-middle">
+            <table class="table account-table manage-record-table align-middle">
                 <colgroup>
                     <col class="account-col-username">
                     <col class="account-col-role">

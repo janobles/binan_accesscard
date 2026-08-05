@@ -717,3 +717,31 @@
 .batch-rollout-chart {
     height: 220px;
 }
+
+/* Barangay choropleth. Four flat steps, no legend: the popover carries the
+   exact figures, so the colour only has to show the pattern. */
+.barangay-map svg {
+    width: 100%;
+    height: auto;
+    max-height: 520px;
+}
+
+.barangay-map path {
+    cursor: pointer;
+    transition: fill 0.15s ease;
+}
+
+.barangay-map path.is-none { fill: #f8f9fa; }
+.barangay-map path.is-low  { fill: #cfe2f3; }
+.barangay-map path.is-mid  { fill: #7bb0e0; }
+.barangay-map path.is-high { fill: #2e75b6; }
+
+.barangay-map path:hover,
+.barangay-map path:focus {
+    stroke-width: 2.5;
+    outline: none;
+}
+
+tr.is-highlighted {
+    background-color: #eaf2fb;
+}

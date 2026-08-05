@@ -145,23 +145,30 @@ $noEligible = ! $noBatch && $c['eligible'] === 0;
 ]) ?>
 
 <?php if ($batchBodyTab === 'barangay'): ?>
-  <div class="table-responsive">
-    <table class="table manage-record-table align-middle w-100 mb-0" id="barangayTable">
-      <thead><tr><th>Barangay</th><th>Eligible</th><th>Served</th><th>Coverage</th></tr></thead>
-      <tbody>
-        <?php foreach ($byBarangay as $b): ?>
-        <tr data-barangay="<?= esc($b['barangay'], 'attr') ?>">
-          <td><?= esc($b['barangay']) ?></td>
-          <td><?= esc(number_format($b['total'])) ?></td>
-          <td><?= esc(number_format($b['received'])) ?></td>
-          <td><?= esc((string) $b['coverage']) ?>%</td>
-        </tr>
-        <?php endforeach; ?>
-        <?php if ($byBarangay === []): ?>
-        <tr><td colspan="4" class="text-muted">No data for this batch.</td></tr>
-        <?php endif; ?>
-      </tbody>
-    </table>
+  <div class="row g-3 align-items-start">
+    <div class="col-12 col-lg-5">
+      <?= view('Admin/batch-barangay-map', ['byBarangay' => $byBarangay]) ?>
+    </div>
+    <div class="col-12 col-lg-7">
+      <div class="table-responsive">
+        <table class="table manage-record-table align-middle w-100 mb-0" id="barangayTable">
+          <thead><tr><th>Barangay</th><th>Eligible</th><th>Served</th><th>Coverage</th></tr></thead>
+          <tbody>
+            <?php foreach ($byBarangay as $b): ?>
+            <tr data-barangay="<?= esc($b['barangay'], 'attr') ?>">
+              <td><?= esc($b['barangay']) ?></td>
+              <td><?= esc(number_format($b['total'])) ?></td>
+              <td><?= esc(number_format($b['received'])) ?></td>
+              <td><?= esc((string) $b['coverage']) ?>%</td>
+            </tr>
+            <?php endforeach; ?>
+            <?php if ($byBarangay === []): ?>
+            <tr><td colspan="4" class="text-muted">No data for this batch.</td></tr>
+            <?php endif; ?>
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
 <?php elseif ($batchBodyTab === 'stations'): ?>
   <?php
@@ -244,6 +251,12 @@ $noEligible = ! $noBatch && $c['eligible'] === 0;
 
 <script src="<?= esc(asset_url('vendor/chart.js/chart.umd.min.js'), 'attr') ?>"></script>
 <script src="<?= esc(asset_url('assets/js/dashboard/scanner-reports.js'), 'attr') ?>"></script>
+<?php /* This fragment renders inside <main>, ahead of layout.php's Bootstrap
+         bundle script at the end of the body, so a plain <script src> here
+         would run before window.bootstrap exists and the Popover constructor
+         below would throw. defer holds it until after the document (and the
+         blocking bootstrap.bundle.min.js tag within it) has parsed. */ ?>
+<script src="<?= esc(asset_url('assets/js/dashboard/barangay-map.js'), 'attr') ?>" defer></script>
 <script>
 (function () {
   // Live poll: fetch fresh stats for the selected batch and repaint the charts

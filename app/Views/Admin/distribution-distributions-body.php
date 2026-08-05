@@ -21,7 +21,7 @@
         ]) ?>
 
         <div class="table-responsive">
-          <table class="table manage-record-table align-middle w-100" id="distTable">
+          <table class="table manage-record-table table-stack align-middle w-100" id="distTable">
             <thead>
               <tr>
                 <th>Date</th>

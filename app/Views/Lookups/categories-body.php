@@ -20,7 +20,7 @@
 	]) ?>
 
 	<div class="table-responsive">
-		<table class="table manage-record-table align-middle lookup-management-table lookup-management-table--categories">
+		<table class="table manage-record-table table-stack align-middle lookup-management-table lookup-management-table--categories">
 			<thead>
 				<tr>
 					<th class="lookup-col-name">Name</th>

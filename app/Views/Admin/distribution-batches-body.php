@@ -46,7 +46,7 @@ $canManageBatches = in_array($currentRole ?? '', ['Admin', 'Developer'], true);
     'sizeAttrs' => 'data-paginate-size="batches"',
 ]) ?>
 
-<table class="table manage-record-table align-middle w-100 mb-0">
+<table class="table manage-record-table table-stack align-middle w-100 mb-0">
   <thead><tr><th>Batch</th><th>Subsidy Type</th><th>Started</th><th>Closed</th></tr></thead>
   <tbody>
     <?php foreach (($batches ?? []) as $b): ?>

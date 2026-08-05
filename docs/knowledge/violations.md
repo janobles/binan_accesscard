@@ -158,3 +158,16 @@ rendering needs inline styles), layout shells + `Auth/login.php` (standalone
   inline `<script>` blocks, which the divider scan now skips. No file hits it
   today, so nothing was changed; an em dash written into a view's inline JS would
   fail a check that cannot be satisfied without failing the token gate.
+- [ ] 🟠 Major: `app/Views/components/data_table.php` - passes table rows as
+  `list<list<raw HTML>>`, so the caller concatenates markup and owns the
+  escaping (the docblock says as much: "Cell values are RAW HTML"). Every other
+  component either takes scalars and escapes them itself (`toolbar`,
+  `table_controls`, `table_footer`, `stat_card`) or takes a body view and
+  composes (`card`, `modal`). Rows are content, so they belong to the second
+  shape. Fifteen views already write their own `<table>` inside `card` +
+  `table_controls` + `table_footer`, which is the correct pattern; this
+  component is the deviation and is down to one caller (`Pages/dashboard.php`).
+  The card/data_table composition is also what forced the 25-line `$tempData`
+  recursion comment in `components/card.php`. Resolve by converting that one
+  caller to `card` + an inline table and deleting the component, not by
+  migrating the fifteen onto it.

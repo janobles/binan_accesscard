@@ -25,7 +25,7 @@ $canManageSubsidyTypes = in_array($currentRole ?? '', ['Admin', 'Developer'], tr
         ]) ?>
 
         <div class="table-responsive">
-          <table class="table manage-record-table align-middle lookup-management-table lookup-management-table--subsidy-types">
+          <table class="table manage-record-table table-stack align-middle lookup-management-table lookup-management-table--subsidy-types">
             <thead>
               <tr><th class="lookup-col-name">Name</th><th class="lookup-col-status">Status</th><th class="lookup-col-actions text-end">Actions</th></tr>
             </thead>

@@ -211,10 +211,17 @@ class DashboardPageBuilder
         $batchBodyTab = (string) $this->request->getGet('tab');
         $batchBodyTab = in_array($batchBodyTab, ['barangay', 'stations', 'remaining'], true) ? $batchBodyTab : 'barangay';
 
+        // Two panes share the dashboard page. An unknown ?view= falls back to
+        // Overview rather than erroring, matching how $batchBodyTab treats a
+        // bad ?tab=.
+        $dashboardView = (string) $this->request->getGet('view');
+        $dashboardView = in_array($dashboardView, ['overview', 'distribution'], true) ? $dashboardView : 'overview';
+
         // Distribution analytics now live on the dashboard (combined totals +
         // per-kiosk table), batch-scoped only (no date filter). Gated so other
-        // pages, and roles with no distribution access, don't run these queries.
-        $reportsData = $isDashboard && $seesDistribution
+        // pages, roles with no distribution access, and the Overview pane
+        // don't run these queries.
+        $reportsData = $isDashboard && $dashboardView === 'distribution' && $seesDistribution
             ? $this->buildReportsData($batchModel, $batchBodyTab)
             : [
                 'batches'       => [],
@@ -297,7 +304,14 @@ class DashboardPageBuilder
             'batchSnapshot'      => $reportsData['batchSnapshot'],
             'remainingPage'      => $reportsData['remainingPage'],
             'batchBodyTab'       => $batchBodyTab,
-            'programStats'       => $isDashboard ? $dashboardModel->programStats() : ['families' => 0, 'neverServed' => 0],
+            'dashboardView'      => $dashboardView,
+            'overviewStats'      => $isDashboard && $dashboardView === 'overview'
+                ? $dashboardModel->programStats()
+                : ['families' => 0, 'distributions' => 0, 'everServed' => 0, 'neverServed' => 0],
+            'distributionRows'   => $isDashboard && $dashboardView === 'overview'
+                ? $this->buildDistributionRows($batchModel)
+                : [],
+            'busiestDay'         => self::busiestDay($reportsData['batchSnapshot']['byDay'] ?? []),
             // Only the roles that may open the record-entry page get the Add and
             // Import buttons on the records list (Config\Navigation, records-entry).
             'canCreateFamily'    => in_array($currentRole, Navigation::pageRoles('records-entry'), true),
@@ -523,6 +537,51 @@ class DashboardPageBuilder
                 ? $this->buildRemainingPageData($stats, $batchId)
                 : $this->emptyRemainingPage(),
         ];
+    }
+
+    /**
+     * Every distribution with its outcome, newest first, for the Overview
+     * tab's table. Served comes from one grouped query rather than a call per
+     * batch, so the table costs two queries regardless of how many batches
+     * the city has run.
+     *
+     * @return list<array<string,mixed>>
+     */
+    private function buildDistributionRows(DistributionBatchModel $batchModel): array
+    {
+        $served = model(SubsidyStatsModel::class)->servedByBatch();
+
+        return array_map(static function (array $batch) use ($served): array {
+            $batchId  = (int) $batch['batch_id'];
+            $eligible = (int) ($batch['eligible_count'] ?? 0);
+            $count    = $served[$batchId] ?? 0;
+
+            return $batch + [
+                'eligible' => $eligible,
+                'served'   => $count,
+                'coverage' => $eligible === 0 ? 0 : (int) round($count / $eligible * 100),
+            ];
+        }, $batchModel->allBatches());
+    }
+
+    /**
+     * The day carrying the largest served count, for the Busiest day card.
+     * Null when the batch has no scans at all, which the view renders as a
+     * dash rather than a zero that looks like a real reading.
+     *
+     * @param list<array{date:string,label:string,served:int}> $byDay
+     * @return array{label:string,served:int}|null
+     */
+    private static function busiestDay(array $byDay): ?array
+    {
+        $best = null;
+        foreach ($byDay as $day) {
+            if ($best === null || $day['served'] > $best['served']) {
+                $best = ['label' => $day['label'], 'served' => (int) $day['served']];
+            }
+        }
+
+        return $best;
     }
 
     /**

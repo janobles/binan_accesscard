@@ -337,6 +337,24 @@
     border-bottom: 0;
 }
 
+.manage-record-table tbody tr:nth-child(even),
+.manage-record-table tbody tr:nth-child(even) td {
+    background-color: #fafbfc !important;
+    box-shadow: none !important;
+}
+
+.manage-record-table tbody tr:nth-child(odd),
+.manage-record-table tbody tr:nth-child(odd) td {
+    background-color: transparent !important;
+    box-shadow: none !important;
+}
+
+.manage-record-table tbody tr:hover,
+.manage-record-table tbody tr:hover td {
+    background-color: #eef6f2 !important;
+    box-shadow: none !important;
+}
+
 @media (min-width: 74.01rem) and (max-width: 82rem) {
     .records-search-row {
         gap: 0.5rem;

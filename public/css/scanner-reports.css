@@ -81,13 +81,7 @@
     vertical-align: middle;
 }
 
-.reports-fallback tbody tr:nth-child(even) {
-    background: #fafbfc;
-}
 
-.reports-fallback tbody tr:hover {
-    background: #eef6f2;
-}
 
 .reports-fallback td:first-child {
     font-weight: 600;

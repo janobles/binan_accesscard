@@ -234,7 +234,7 @@
 .account-table {
     min-width: 36rem;
     margin: 0;
-    table-layout: fixed;
+    table-layout: fixed !important;
 }
 
 .account-col-username,

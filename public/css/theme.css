@@ -233,7 +233,6 @@
 }
 
 /* Stat cards (dashboard + reports KPI tiles). */
-.overview-stats,
 .reports-stats {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -242,14 +241,12 @@
 }
 
 @media (max-width: 62rem) {
-    .overview-stats,
     .reports-stats {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 
 @media (max-width: 34rem) {
-    .overview-stats,
     .reports-stats {
         grid-template-columns: 1fr;
     }
@@ -502,34 +499,6 @@
     box-shadow: 0 0 0 3px rgba(20, 92, 61, 0.1);
 }
 
-/* Dashboard section headers: title on the left, that section's global actions
-   (batch picker, View All, exports) on the right, outside the cards. */
-.dashboard-section-head {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem 1.5rem;
-    margin: 1.75rem 0 0.75rem;
-}
-
-.dashboard-section-head h2 {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: #2f3e38;
-    margin: 0;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.dashboard-section-head .section-actions {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.5rem;
-}
-
 /* Data Entry action bar: sticky at the bottom of the form rather than pinned to
    a rail, because the rail stacked above the form at mobile widths and put Save
    at the top of a page the officer had to scroll all the way back up. */
@@ -580,29 +549,6 @@
 
 [data-family-entry-form] .family-entry-actions-page {
     margin-top: auto;
-}
-
-/* Subtitled variant (Subsidy Distribution): the "Showing batch / Last updated"
-   line sits under the title, in the same row as the action buttons, instead
-   of wrapping to its own line below. */
-.dashboard-section-head--subtitled {
-    align-items: flex-start;
-}
-
-.dashboard-section-head-title {
-    display: flex;
-    flex-direction: column;
-    gap: 0.15rem;
-}
-
-.dashboard-section-head--subtitled .section-actions {
-    margin-top: 0.15rem;
-}
-
-/* Extra separation from the KPI stat-card row directly above this page's
-   first section head (their own margins would otherwise collapse together). */
-.overview-stats + .dashboard-section-head {
-    margin-top: 2.5rem;
 }
 
 /* KPI tiles. Shared by the Overview pane's four program figures and the
@@ -670,9 +616,8 @@
     margin: 0;
 }
 
-/* The selector and the report button sit on one line. Without this the two
-   land in a column, because the flex rule for .section-actions is scoped to
-   .dashboard-section-head, which this flat header deliberately is not. */
+/* The selector and the report button sit on one line: .section-actions
+   carries no layout of its own. */
 .batch-head .section-actions {
     display: flex;
     flex-wrap: wrap;

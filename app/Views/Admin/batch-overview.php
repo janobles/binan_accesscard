@@ -91,10 +91,14 @@ $noEligible = ! $noBatch && $c['eligible'] === 0;
   <div class="col">
     <div class="card kpi-card h-100"><div class="card-body">
       <p class="kpi-label">Busiest day</p>
-      <p class="kpi-value"><?= $busiestDay === null ? '-' : esc($busiestDay['label']) ?></p>
-      <?php if ($busiestDay !== null): ?>
-      <p class="kpi-sub"><?= esc(number_format($busiestDay['served'])) ?> families</p>
-      <?php endif; ?>
+      <?php /* Carries ids, and the sub-line is always in the markup (hidden
+               when there is nothing to say), because the live poll recomputes
+               this card from the same byDay series it repaints the rollout
+               chart from. Left server-only it would drift out of agreement
+               with the tallest bar beside it during an open batch. */ ?>
+      <p class="kpi-value" id="busiestDayLabel"><?= $busiestDay === null ? '-' : esc($busiestDay['label']) ?></p>
+      <p class="kpi-sub<?= $busiestDay === null ? ' d-none' : '' ?>" id="busiestDaySub">
+        <span id="busiestDayCount"><?= $busiestDay === null ? '0' : esc(number_format($busiestDay['served'])) ?></span> families</p>
     </div></div>
   </div>
 </div>

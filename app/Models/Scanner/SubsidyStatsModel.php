@@ -126,6 +126,14 @@ class SubsidyStatsModel extends Model
      * makes the per-day figures sum to the Served card: an off-roster or voided
      * scan is invisible to both.
      *
+     * One hole in that invariant, left as is. The scan-time duplicate guard in
+     * SubsidyDistributionModel::inBatch() keys on control_no, while these counts
+     * and the Served card key on memberID, and qr_control.headID carries no
+     * unique constraint. A head holding two control numbers, scanned once on
+     * each of two days, is one served family but two rows on two days, so the
+     * day bars would sum to one more than the Served card. Fixing it belongs in
+     * the schema, not here.
+     *
      * @return list<array{date:string,label:string,served:int}>
      */
     public function servedByDay(int $batchId): array

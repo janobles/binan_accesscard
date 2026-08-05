@@ -137,6 +137,27 @@
         }
     }
 
+    // The Busiest day card reads the same byDay series the rollout chart draws,
+    // so it has to be recomputed here: left to the server-rendered value it
+    // would sit beside a repainted chart disagreeing with the tallest bar.
+    function applyBusiestDay(byDay) {
+        var label = document.getElementById('busiestDayLabel');
+        if (!label || !Array.isArray(byDay)) { return; }
+
+        var best = null;
+        byDay.forEach(function (day) {
+            if (!best || day.served > best.served) { best = day; }
+        });
+
+        label.textContent = best ? best.label : '-';
+
+        var sub = document.getElementById('busiestDaySub');
+        if (sub) {
+            sub.classList.toggle('d-none', !best);
+            text('busiestDayCount', best ? best.served : 0);
+        }
+    }
+
     // Repaint the stations grid. Squares are rebuilt rather than patched
     // because a station appears the moment it logs its first scan, so the set
     // itself changes during an open batch.
@@ -191,6 +212,7 @@
                 charts.rollout.data.datasets[0].data = fresh.byDay.map(function (d) { return d.served; });
                 charts.rollout.update();
             }
+            applyBusiestDay(fresh.byDay);
             applyCoverage(fresh.coverage);
             applyStations(fresh.perScanner);
         }

@@ -30,8 +30,8 @@ review used to) loses the sidebar and every convention below.
   `layout.php`. It takes `$role` and `$activePage` and renders every link, heading,
   and active state from `Config\Navigation::linksFor($role)`. Never hand-write a
   nav item here; add a manifest entry.
-- `app/Views/Partials/dashboard-topnav.php:1`,
-  `Partials/topbar-account-menu.php:1` - cross-role fragments.
+- `app/Views/Partials/topbar-account-menu.php:1` - cross-role fragment, shared
+  by the admin shell and the scanner kiosk shell.
 
 Repeated markup across two views = extract a partial, render with
 `view('Partials/...', [...])`.
@@ -104,7 +104,7 @@ page needs one:
   theming survives the SB Admin migration.
 
 **Reviewer false positive to ignore:** `h-100` is a plain Bootstrap sizing
-utility used by the house style (`app/Views/Admin/reports-body.php:98`), NOT
+utility used by the house style (`app/Views/Admin/batch-overview.php:73`), NOT
 an SB-Admin-Pro demo class. The Pro-only markers this repo bans are
 `border-left-*` and `text-xs text-uppercase` (the ReportsViewTest that
 asserted this was retired with the old scanner shell, commit 9cd705e).

@@ -291,8 +291,9 @@ $noEligible = ! $noBatch && $c['eligible'] === 0;
   if (stamp) { stamp.textContent = new Date().toLocaleTimeString(); }
 
   // Live-poll only while the selected batch is open (closed batches are
-  // static) and the tab is visible; browsers throttle hidden-tab timers anyway.
-  if (batchOpen) {
+  // static), the sub-tab isn't Remaining (see onRemainingTab above), and the
+  // tab is visible; browsers throttle hidden-tab timers anyway.
+  if (batchOpen && !onRemainingTab) {
     setInterval(function () {
       if (document.visibilityState === 'visible') { poll(); }
     }, 5000);

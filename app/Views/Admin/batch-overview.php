@@ -29,11 +29,6 @@ $byDay = $batchSnapshot['byDay'] ?? [];
 $batchId = (int) ($batchRow['batch_id'] ?? 0);
 $noBatch = $batchRow === null;
 $noEligible = ! $noBatch && $c['eligible'] === 0;
-// A closed batch with no scans can never grow bars, so the coverage chart would
-// be a screen of empty gridlines under one label per barangay. An OPEN batch at
-// zero still gets the canvas: the live poll fills it in place, and swapping
-// markup mid-batch is what the poll is written to avoid.
-$emptyChart = ! $noBatch && ! $batchOpen && $c['served'] === 0;
 ?>
 
 <header class="batch-head">
@@ -150,23 +145,15 @@ $emptyChart = ! $noBatch && ! $batchOpen && $c['served'] === 0;
 ]) ?>
 
 <?php if ($batchBodyTab === 'barangay'): ?>
-  <?php if ($emptyChart): ?>
-  <p class="text-muted">Nothing was handed out in this batch, so there is no coverage to plot.</p>
-  <?php else: ?>
-  <section class="batch-pane">
-    <h3 class="batch-pane-title">Coverage by barangay, worst first</h3>
-    <div class="reports-barangay-chart"><canvas id="chartBarangay"></canvas></div>
-  </section>
-  <?php endif; ?>
   <div class="table-responsive">
-    <table class="table manage-record-table align-middle w-100 mb-0">
+    <table class="table manage-record-table align-middle w-100 mb-0" id="barangayTable">
       <thead><tr><th>Barangay</th><th>Eligible</th><th>Served</th><th>Coverage</th></tr></thead>
       <tbody>
         <?php foreach ($byBarangay as $b): ?>
-        <tr>
+        <tr data-barangay="<?= esc($b['barangay'], 'attr') ?>">
           <td><?= esc($b['barangay']) ?></td>
-          <td><?= esc((string) $b['total']) ?></td>
-          <td><?= esc((string) $b['received']) ?></td>
+          <td><?= esc(number_format($b['total'])) ?></td>
+          <td><?= esc(number_format($b['received'])) ?></td>
           <td><?= esc((string) $b['coverage']) ?>%</td>
         </tr>
         <?php endforeach; ?>

@@ -163,8 +163,12 @@ class SubsidyStatsModel extends Model
     }
 
     /**
-     * Per-barangay progress inside the batch's roster, worst coverage first so
-     * the top row is where staff get sent. Groups on the indexed barangayID.
+     * Per-barangay progress inside the batch's roster, best coverage first so
+     * the table reads as a leaderboard. Groups on the indexed barangayID.
+     *
+     * Sorting is not operational here. Distribution happens at one central
+     * site and families travel to it, so no one is dispatched to a barangay
+     * and there is no worst-first decision to optimise for.
      *
      * @return list<array{barangay:string,total:int,received:int,coverage:int}>
      */
@@ -199,7 +203,7 @@ class SubsidyStatsModel extends Model
                 'coverage' => self::pct((int) $r['received'], (int) $r['total']),
             ], $rows);
 
-            usort($out, static fn ($a, $b) => $a['coverage'] <=> $b['coverage']);
+            usort($out, static fn ($a, $b) => $b['coverage'] <=> $a['coverage']);
 
             return $out;
         } catch (\Throwable $e) {

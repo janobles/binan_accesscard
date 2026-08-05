@@ -1,13 +1,12 @@
-/* Builds the dashboard batch zone's charts (barangay coverage, cumulative
-   served, rollout by day) from the #reportsData JSON block and exposes
-   window.ReportsCharts.update(data) so a poller can repaint them live without
-   a page reload. No-ops when chart.js or the canvases are absent.
+/* Builds the dashboard batch pane's charts (rollout by day, cumulative served)
+   from the #reportsData JSON block and exposes window.ReportsCharts.update(data)
+   so a poller can repaint them live without a page reload. No-ops when chart.js
+   or the canvases are absent.
 
    update(data) also repaints everything else under the "Last updated" stamp
-   that a fresh distribution/reports/stats payload carries: the progress
-   headline and bar, the Remaining/Voided tiles, and the Stations table. All
-   values are written with textContent, never innerHTML, so nothing here
-   needs a separate escaping step. */
+   that a fresh distribution/reports/stats payload carries: the batch cards and
+   bar, and the Stations grid. All values are written with textContent, never
+   innerHTML, so nothing here needs a separate escaping step. */
 (function () {
     'use strict';
 
@@ -46,41 +45,6 @@
     var gridColor = cssVar('--chart-grid', '#eaecf4');
 
     var charts = {};
-
-    // Worst coverage first, matching SubsidyStatsModel::byBarangay() - the top
-    // row of the chart is where staff get sent.
-    function sortedBarangay(rows) {
-        return (rows || []).slice().sort(function (a, b) {
-            return (a.coverage - b.coverage) || (b.total - a.total);
-        });
-    }
-
-    var barangay = ctx('chartBarangay');
-    if (barangay && Array.isArray(data.barangay)) {
-        var rows = sortedBarangay(data.barangay);
-        charts.barangay = new Chart(barangay, {
-            type: 'bar',
-            data: {
-                labels: rows.map(function (b) { return b.barangay; }),
-                datasets: [{
-                    label: 'Coverage %',
-                    data: rows.map(function (b) { return b.coverage; }),
-                    backgroundColor: palette[0],
-                    borderRadius: 3,
-                    barThickness: 12
-                }]
-            },
-            options: {
-                indexAxis: 'y',
-                maintainAspectRatio: false,
-                scales: {
-                    x: { beginAtZero: true, max: 100, ticks: { stepSize: 20 }, grid: { color: gridColor } },
-                    y: { ticks: { autoSkip: false, font: { size: 11 } }, grid: { display: false } }
-                },
-                plugins: { legend: { display: false } }
-            }
-        });
-    }
 
     // Cumulative served over time (open batch only - the canvas isn't in the
     // DOM for a closed batch). A flat tail means scanning stopped.
@@ -208,12 +172,6 @@
     window.ReportsCharts = {
         update: function (fresh) {
             if (!fresh) { return; }
-            if (charts.barangay && Array.isArray(fresh.barangay)) {
-                var r = sortedBarangay(fresh.barangay);
-                charts.barangay.data.labels = r.map(function (b) { return b.barangay; });
-                charts.barangay.data.datasets[0].data = r.map(function (b) { return b.coverage; });
-                charts.barangay.update();
-            }
             if (charts.timeline && Array.isArray(fresh.timeline)) {
                 charts.timeline.data.labels = fresh.timeline.map(function (t) { return t.label; });
                 charts.timeline.data.datasets[0].data = fresh.timeline.map(function (t) { return t.cumulative; });

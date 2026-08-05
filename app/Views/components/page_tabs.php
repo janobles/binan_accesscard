@@ -17,19 +17,24 @@
  *         $param string the query key the tabs switch on, default 'tab'.
  *         A page with two tab strips gives the outer one 'view' so the two
  *         do not overwrite each other.
+ *         $variantClass string extra class on the <ul>, default '' (today's
+ *         appearance, unaffected). A page nesting a second strip inside a pane
+ *         of the first passes 'segmented-tabs--subordinate' (theme.css) so the
+ *         inner strip reads as subordinate rather than a second page nav.
  */
 $tabs = $tabs ?? [];
 $active = $active ?? '';
 $baseUrl = $baseUrl ?? '';
 $queryParams = $queryParams ?? [];
 $param = $param ?? 'tab';
+$variantClass = $variantClass ?? '';
 
 $extraQuery = '';
 foreach ($queryParams as $paramName => $paramValue) {
     $extraQuery .= '&' . rawurlencode((string) $paramName) . '=' . rawurlencode((string) $paramValue);
 }
 ?>
-<ul class="nav nav-pills segmented-tabs">
+<ul class="nav nav-pills segmented-tabs<?= $variantClass !== '' ? ' ' . esc($variantClass, 'attr') : '' ?>">
     <?php foreach ($tabs as $tab): ?>
     <li class="nav-item">
         <a class="nav-link <?= $tab['key'] === $active ? 'active' : '' ?>"

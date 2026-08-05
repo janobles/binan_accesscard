@@ -327,6 +327,27 @@
     border-bottom-color: var(--token-primary-green);
 }
 
+/* Subordinate variant: a second .segmented-tabs strip nested inside a pane of
+   the first (This batch's Barangay/Stations/Remaining, inside the outer
+   Overview/Distribution strip). Same shape, quieter voice, so the reader
+   never mistakes it for page-level navigation. */
+.segmented-tabs--subordinate {
+    gap: 0 1.25rem;
+    margin-bottom: 1rem;
+}
+
+.segmented-tabs--subordinate .nav-link {
+    font-size: 0.85rem;
+    font-weight: 400;
+    color: var(--token-text-secondary);
+    padding-bottom: 0.4rem;
+}
+
+.segmented-tabs--subordinate .nav-link.active {
+    font-weight: 500;
+    border-bottom-width: 1px;
+}
+
 /* Stepper: the app's own step indicator, since Bootstrap ships none. Indicators
    stay neutral and the section label carries the emphasis, so colour is spent
    only where it means something (a finished step, a step needing attention). */

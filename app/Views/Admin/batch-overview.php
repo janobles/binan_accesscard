@@ -157,6 +157,10 @@ $noEligible = ! $noBatch && $c['eligible'] === 0;
     // leaves the Distribution pane; without batch=, ?tab= alone silently
     // reverts an explicitly-picked batch back to the default.
     'queryParams' => ['view' => 'distribution', 'batch' => $batchId],
+    // Subordinate to the outer Overview/Distribution strip on
+    // Pages/dashboard.php: same component, toned down in theme.css so it
+    // reads as inside a pane rather than a second page nav.
+    'variantClass' => 'segmented-tabs--subordinate',
 ]) ?>
 
 <?php if ($batchBodyTab === 'barangay'): ?>

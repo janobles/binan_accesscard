@@ -24,6 +24,7 @@ $c = $batchSnapshot['coverage'];
 $byBarangay = $batchSnapshot['byBarangay'];
 $perScanner = $batchSnapshot['perScanner'];
 $timeline = $batchSnapshot['timeline'];
+$byDay = $batchSnapshot['byDay'] ?? [];
 
 $batchId = (int) ($batchRow['batch_id'] ?? 0);
 $noBatch = $batchRow === null;
@@ -114,6 +115,17 @@ $emptyChart = ! $noBatch && ! $batchOpen && $c['served'] === 0;
     batch closed
   <?php endif; ?>
 </p>
+
+<?php if (count($byDay) > 1): ?>
+<?php /* One bar per day the batch ran. A single-day batch gets no chart:
+         one bar says nothing the Served card has not already said. Shown for
+         closed batches too, because this is retrospective reporting rather
+         than the live monitoring the cumulative timeline does. */ ?>
+<section class="batch-pane">
+  <h3 class="batch-pane-title">Rollout by day</h3>
+  <div class="batch-rollout-chart"><canvas id="chartRollout"></canvas></div>
+</section>
+<?php endif; ?>
 
 <?php if ($batchOpen): ?>
 <section class="batch-pane">
@@ -238,6 +250,7 @@ $emptyChart = ! $noBatch && ! $batchOpen && $c['served'] === 0;
         'coverage'  => $c,
         'barangay'  => $byBarangay,
         'timeline'  => $timeline,
+        'byDay'     => $byDay,
     ],
     JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT,
 ) ?></script>

@@ -1,5 +1,5 @@
-/* Builds the dashboard batch zone's two charts (barangay coverage, cumulative
-   served) from the #reportsData JSON block and exposes
+/* Builds the dashboard batch zone's charts (barangay coverage, cumulative
+   served, rollout by day) from the #reportsData JSON block and exposes
    window.ReportsCharts.update(data) so a poller can repaint them live without
    a page reload. No-ops when chart.js or the canvases are absent.
 
@@ -111,6 +111,41 @@
         });
     }
 
+    // Families served per day. Bars rather than a line: these are discrete
+    // days of a rollout, not a continuous series, and the shape of the drop
+    // from day one is the thing worth seeing.
+    var rollout = ctx('chartRollout');
+    if (rollout && Array.isArray(data.byDay)) {
+        charts.rollout = new Chart(rollout, {
+            type: 'bar',
+            data: {
+                labels: data.byDay.map(function (d) { return d.label; }),
+                datasets: [{
+                    label: 'Families served',
+                    data: data.byDay.map(function (d) { return d.served; }),
+                    backgroundColor: palette[0]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, grid: { color: gridColor } },
+                    x: { grid: { display: false } }
+                },
+                onClick: function (evt, items) {
+                    if (!items.length) { return; }
+                    var row = data.byDay[items[0].index];
+                    // Task 11's map listens for this and recolours to one day.
+                    document.dispatchEvent(new CustomEvent('rollout:day', {
+                        detail: { date: row ? row.date : null }
+                    }));
+                }
+            }
+        });
+    }
+
     function text(id, value) {
         var node = document.getElementById(id);
         if (node) { node.textContent = String(value); }
@@ -183,6 +218,11 @@
                 charts.timeline.data.labels = fresh.timeline.map(function (t) { return t.label; });
                 charts.timeline.data.datasets[0].data = fresh.timeline.map(function (t) { return t.cumulative; });
                 charts.timeline.update();
+            }
+            if (charts.rollout && Array.isArray(fresh.byDay)) {
+                charts.rollout.data.labels = fresh.byDay.map(function (d) { return d.label; });
+                charts.rollout.data.datasets[0].data = fresh.byDay.map(function (d) { return d.served; });
+                charts.rollout.update();
             }
             applyCoverage(fresh.coverage);
             applyStations(fresh.perScanner);

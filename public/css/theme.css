@@ -713,3 +713,7 @@
     position: relative;
     height: 220px;
 }
+
+.batch-rollout-chart {
+    height: 220px;
+}

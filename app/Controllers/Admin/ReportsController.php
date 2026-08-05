@@ -46,6 +46,7 @@ class ReportsController extends BaseController
             'barangay'   => $snapshot['byBarangay'],
             'perScanner' => $snapshot['perScanner'],
             'timeline'   => $snapshot['timeline'],
+            'byDay'      => $snapshot['byDay'] ?? [],
             'updated'    => date('c'),
         ]);
     }

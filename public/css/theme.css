@@ -605,30 +605,42 @@
     margin-top: 2.5rem;
 }
 
-/* Dashboard Zone 1: "program to date". A line of text, not a panel. It is
-   standing context, so it should not draw a box around itself. */
-.program-strip {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.25rem 1.75rem;
-    margin-bottom: 1.75rem;
+/* KPI tiles. Shared by the Overview pane's four program figures and the
+   Distribution pane's four batch figures, so both rows read as one system.
+   No icon and no card-header by design: the number is the content. */
+.kpi-row {
+    margin-bottom: 1.5rem;
 }
 
-.program-strip > div {
-    display: flex;
-    align-items: baseline;
-    gap: 0.4rem;
+.kpi-card .card-body {
+    padding: 1rem 1.15rem;
 }
 
-.program-strip span {
-    color: #7a8783;
-    font-size: 0.9rem;
-}
-
-.program-strip strong {
-    font-size: 0.9rem;
+.kpi-label {
+    margin: 0 0 0.35rem;
+    font-size: 0.78rem;
     font-weight: 600;
-    color: #2f3e38;
+    color: #6e707e;
+}
+
+.kpi-value {
+    margin: 0;
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1.1;
+    color: #3a3b45;
+}
+
+.kpi-sub {
+    margin: 0.3rem 0 0;
+    font-size: 0.8rem;
+    color: #858796;
+}
+
+.dashboard-zone-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin: 1.25rem 0 0.85rem;
 }
 
 .stat-label {

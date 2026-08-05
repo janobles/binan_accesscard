@@ -2,27 +2,38 @@
 /**
  * Dashboard body (every role).
  *
- * Rendered inside layout.php as the `dashboard` page body. Zone 1 (program to
- * date) comes from DashboardModel::programStats() via DashboardPageBuilder;
- * Zone 2 (this batch) is Admin/batch-overview, fed by
- * DashboardPageBuilder::buildReportsData() and shown only to Developer/Admin
- * (see DashboardPageBuilder::buildViewData() for why $seesDistribution is
- * narrower than the Distribution *page*). The activity panel only renders for
- * an Encoder, who has no Audit Trails page of their own.
+ * Two panes share this page and the outer tab strip picks between them with
+ * ?view=. Overview covers the program end to end and never moves with the
+ * batch selector; Distribution covers one batch. Both render only for the
+ * roles that already see distribution data (see
+ * DashboardPageBuilder::buildViewData() for why $seesDistribution is narrower
+ * than the Distribution page itself).
+ *
+ * The activity panel renders only for an Encoder, who has no Audit Trails page
+ * of their own and no tabs at all.
  */
 
-$programStats = $programStats ?? ['families' => 0, 'neverServed' => 0];
 $myAudits = $myAudits ?? [];
 $seesDistribution = (bool) ($seesDistribution ?? false);
+$dashboardView = ($dashboardView ?? 'overview') === 'distribution' ? 'distribution' : 'overview';
 ?>
 <div class="dashboard-overview" data-dashboard-overview>
-    <section class="program-strip" aria-label="Program to date">
-        <div><span>Families profiled</span><strong><?= esc((string) ($programStats['families'] ?? 0)) ?></strong></div>
-        <div><span>Never served</span><strong><?= esc((string) ($programStats['neverServed'] ?? 0)) ?></strong></div>
-    </section>
-
     <?php if ($seesDistribution): ?>
-        <?= view('Admin/batch-overview') ?>
+        <?= view('components/page_tabs', [
+            'tabs' => [
+                ['key' => 'overview', 'label' => 'Overview'],
+                ['key' => 'distribution', 'label' => 'Distribution'],
+            ],
+            'active' => $dashboardView,
+            'baseUrl' => 'dashboard',
+            'param' => 'view',
+        ]) ?>
+
+        <?php if ($dashboardView === 'distribution'): ?>
+            <?= view('Admin/batch-overview') ?>
+        <?php else: ?>
+            <?= view('Pages/dashboard-overview') ?>
+        <?php endif; ?>
     <?php endif; ?>
 
     <?php if (($role ?? '') === 'Encoder'): ?>

@@ -165,7 +165,15 @@ $noEligible = ! $noBatch && $c['eligible'] === 0;
 
 <?php if ($batchBodyTab === 'barangay'): ?>
   <div class="row g-3 align-items-start">
-    <div class="col-12 col-lg-5">
+    <?php /* Desktop-only: measured at 390px the SVG renders 342x520 and four
+             barangays (Casile 18x19, Poblacion 14x44, Santo Domingo 16x51, San
+             Jose 23x62) fall under a 24px tap target in at least one dimension.
+             The popover trigger is hover-or-focus and hover does not exist on
+             touch, and the map costs 520px of scroll before the leaderboard
+             table below carries the same figures legibly. Hidden below lg
+             rather than shipped unusable; the table column is already col-12
+             at that width so nothing is left holding an empty column open. */ ?>
+    <div class="col-12 col-lg-5 d-none d-lg-block">
       <?= view('Admin/batch-barangay-map', ['byBarangay' => $byBarangay]) ?>
     </div>
     <div class="col-12 col-lg-7">

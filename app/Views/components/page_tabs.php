@@ -14,11 +14,15 @@
  *         survives a tab switch). Defaults to [], which reproduces today's
  *         "?tab=<key>" href exactly - existing callers that don't pass it are
  *         unaffected.
+ *         $param string the query key the tabs switch on, default 'tab'.
+ *         A page with two tab strips gives the outer one 'view' so the two
+ *         do not overwrite each other.
  */
 $tabs = $tabs ?? [];
 $active = $active ?? '';
 $baseUrl = $baseUrl ?? '';
 $queryParams = $queryParams ?? [];
+$param = $param ?? 'tab';
 
 $extraQuery = '';
 foreach ($queryParams as $paramName => $paramValue) {
@@ -30,7 +34,7 @@ foreach ($queryParams as $paramName => $paramValue) {
     <li class="nav-item">
         <a class="nav-link <?= $tab['key'] === $active ? 'active' : '' ?>"
            <?= $tab['key'] === $active ? 'aria-current="page"' : '' ?>
-           href="<?= site_url($baseUrl) ?>?tab=<?= esc($tab['key'], 'attr') ?><?= esc($extraQuery) ?>">
+           href="<?= site_url($baseUrl) ?>?<?= esc($param, 'attr') ?>=<?= esc($tab['key'], 'attr') ?><?= esc($extraQuery) ?>">
             <?= esc($tab['label']) ?>
         </a>
     </li>

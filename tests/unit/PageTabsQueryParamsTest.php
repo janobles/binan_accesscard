@@ -43,4 +43,42 @@ final class PageTabsQueryParamsTest extends CIUnitTestCase
         $this->assertStringContainsString('href="' . site_url('dashboard') . '?tab=barangay&amp;batch=9"', $html);
         $this->assertStringContainsString('href="' . site_url('dashboard') . '?tab=remaining&amp;batch=9"', $html);
     }
+
+    public function testParamDefaultsToTab(): void
+    {
+        $html = $this->render([
+            'tabs'    => [['key' => 'barangay', 'label' => 'Barangay']],
+            'active'  => 'barangay',
+            'baseUrl' => 'dashboard',
+        ]);
+
+        $this->assertStringContainsString('?tab=barangay', $html);
+        $this->assertStringNotContainsString('?view=', $html);
+    }
+
+    public function testParamOverridesTheQueryKey(): void
+    {
+        $html = $this->render([
+            'tabs'    => [['key' => 'overview', 'label' => 'Overview']],
+            'active'  => 'overview',
+            'baseUrl' => 'dashboard',
+            'param'   => 'view',
+        ]);
+
+        $this->assertStringContainsString('?view=overview', $html);
+        $this->assertStringNotContainsString('?tab=', $html);
+    }
+
+    public function testParamCarriesExtraQueryParams(): void
+    {
+        $html = $this->render([
+            'tabs'        => [['key' => 'distribution', 'label' => 'Distribution']],
+            'active'      => 'distribution',
+            'baseUrl'     => 'dashboard',
+            'param'       => 'view',
+            'queryParams' => ['batch' => 5],
+        ]);
+
+        $this->assertStringContainsString('href="' . site_url('dashboard') . '?view=distribution&amp;batch=5"', $html);
+    }
 }

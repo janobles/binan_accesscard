@@ -1,8 +1,9 @@
 <?php
 /**
- * Server-side segmented tab strip (Bootstrap nav-pills in an enclosed track,
- * styled by theme.css .segmented-tabs). Each tab is a plain link that reloads
- * the page with ?tab=<key>; only the active pane is rendered by the caller.
+ * Server-side page tab strip: an underline row, styled by theme.css
+ * .segmented-tabs over Bootstrap's nav-pills (the shell's Bootstrap is 5.2.3,
+ * which predates .nav-underline). Each tab is a plain link that reloads the
+ * page with ?tab=<key>; only the active pane is rendered by the caller.
  *
  * Tabs are text only, no icons.
  *
@@ -24,7 +25,7 @@ foreach ($queryParams as $paramName => $paramValue) {
     $extraQuery .= '&' . rawurlencode((string) $paramName) . '=' . rawurlencode((string) $paramValue);
 }
 ?>
-<ul class="nav nav-pills segmented-tabs mb-3">
+<ul class="nav nav-pills segmented-tabs">
     <?php foreach ($tabs as $tab): ?>
     <li class="nav-item">
         <a class="nav-link <?= $tab['key'] === $active ? 'active' : '' ?>"

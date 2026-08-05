@@ -52,6 +52,13 @@
 
 /* App Layout: Modern split view (Sidebar + Content) */
 .mobile-topbar { background-color: var(--token-gray-50); }
+
+/* One height for the content topbar and the sidebar brand header, so their
+   bottom borders meet and read as a single rule across the shell. */
+:root { --app-topbar-height: 3.5rem; }
+
+.app-topbar,
+.sidebar-brand-header { min-height: var(--app-topbar-height); }
 .mobile-brand-title { font-size: 0.875rem; }
 .mobile-sidebar-toggle { width: 36px; height: 36px; }
 
@@ -231,34 +238,39 @@
 /* Segmented tab strip (components/page_tabs): Bootstrap nav-pills styled as an
    enclosed control track, so tabs read as a switcher instead of folder tabs.
    Fits pages whose global actions live outside the content cards. */
+/* Underline tab strip. Bootstrap ships .nav-underline for exactly this, but the
+   shell loads SB Admin's bundle, which is Bootstrap 5.2.3, and .nav-underline
+   arrived in 5.3. So the strip is spelled out here over .nav-pills, using the
+   same tokens the rest of the shell uses. */
 .segmented-tabs {
     display: flex;
     flex-wrap: wrap;
     gap: 0 1.75rem;
-    border-bottom: 1px solid #e2e9e7;
+    border-bottom: 1px solid var(--token-border-light);
     margin-bottom: 1.5rem;
 }
 
 .segmented-tabs .nav-link {
     background: none;
     border-radius: 0;
+    /* -1px so the active tab's rule sits on the strip's, not under it. */
     border-bottom: 2px solid transparent;
-    color: #6b7a74;
+    margin-bottom: -1px;
+    color: var(--token-text-secondary);
     font-size: 0.95rem;
     padding: 0 0 0.55rem;
-    margin-bottom: -1px;
 }
 
 .segmented-tabs .nav-link:hover {
-    color: var(--token-primary-green, #176b4d);
+    color: var(--token-primary-green);
 }
 
 .segmented-tabs .nav-link.active {
     background: none;
     box-shadow: none;
-    color: var(--token-primary-green, #176b4d);
+    color: var(--token-primary-green);
     font-weight: 600;
-    border-bottom-color: var(--token-primary-green, #176b4d);
+    border-bottom-color: var(--token-primary-green);
 }
 
 /* Stepper: the app's own step indicator, since Bootstrap ships none. Indicators

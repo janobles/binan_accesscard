@@ -84,31 +84,29 @@ $bodyView = ($bodyView ?? '') !== '' ? $bodyView : 'Pages/dashboard';
                 </button>
             </nav>
             
-            <main class="container-fluid px-4 pt-3 pb-4 dashboard-content flex-grow-1">
-            
-            <!-- Desktop Sidebar Toggle (Ghost Button) -->
-            <div class="d-none d-lg-block mb-3">
-                <button class="btn btn-link p-0 text-muted text-decoration-none border-0" id="sidebarToggle" type="button" aria-label="Toggle sidebar">
+            <?php /* Desktop topbar: the sidebar toggle and the breadcrumb trail on
+                     one line, closed by a border that meets the sidebar brand
+                     header's own. Both are sized by --app-topbar-height so the two
+                     borders line up as a single rule across the shell. */ ?>
+            <header class="d-none d-lg-flex align-items-center gap-3 border-bottom px-4 app-topbar">
+                <button class="btn btn-link p-0 text-muted text-decoration-none border-0 lh-1" id="sidebarToggle" type="button" aria-label="Toggle sidebar">
                     <i class="bi bi-layout-sidebar fs-5"></i>
                 </button>
-            </div>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb mb-0">
+                        <?php if (($breadcrumbParent = Navigation::parentFor($activePage)) !== null): ?>
+                        <li class="breadcrumb-item">
+                            <a class="link-secondary text-decoration-none" href="<?= esc(site_url(Navigation::routeFor($breadcrumbParent)), 'attr') ?>"><?= esc(Navigation::titleFor($breadcrumbParent)) ?></a>
+                        </li>
+                        <?php endif; ?>
+                        <li class="breadcrumb-item active" aria-current="page"><?= esc($pageTitle) ?></li>
+                    </ol>
+                </nav>
+            </header>
 
-            <?php /* Breadcrumbs sit above the title: they are ancestor context, so
-                     they precede the page name rather than trail it. Only pages that
-                     declare a parent in the manifest get one. */ ?>
-            <?php if (($breadcrumbParent = Navigation::parentFor($activePage)) !== null): ?>
-            <nav class="mt-2" aria-label="breadcrumb">
-                <ol class="breadcrumb mb-0">
-                    <li class="breadcrumb-item">
-                        <a href="<?= esc(site_url(Navigation::routeFor($breadcrumbParent)), 'attr') ?>"><?= esc(Navigation::titleFor($breadcrumbParent)) ?></a>
-                    </li>
-                    <li class="breadcrumb-item active" aria-current="page"><?= esc($pageTitle) ?></li>
-                </ol>
-            </nav>
-            <h1 class="mb-0" id="dashboard-page-title"><?= esc($pageTitle) ?></h1>
-            <?php else: ?>
-            <h1 class="mt-2" id="dashboard-page-title"><?= esc($pageTitle) ?></h1>
-            <?php endif; ?>
+            <main class="container-fluid px-4 pt-3 pb-4 dashboard-content flex-grow-1">
+
+            <h1 id="dashboard-page-title"><?= esc($pageTitle) ?></h1>
             <?php if (session()->getFlashdata('success')): ?>
                 <div class="alert alert-success" data-auto-dismiss-alert><?= esc(session()->getFlashdata('success')) ?></div>
             <?php endif; ?>

@@ -185,12 +185,20 @@ class ScanController extends BaseController
 
         return view('Scanner/performance', array_merge([
             'pageTitle'    => $viewingOther ? 'Station Performance' : 'My Performance',
+            // The topbar account menu names whoever is signed in, which is the
+            // admin when one has drilled into a station. The figures below
+            // belong to someone else, so the heading names them separately.
             'username'     => session('username') ?? 'Scanner',
+            'stationName'  => $viewingOther
+                ? $this->accountUsername($userId)
+                : (string) (session('username') ?? 'Scanner'),
+            'viewingOther' => $viewingOther,
             'user'         => SessionAccount::user(),
             'accountLevelLabel' => SessionAccount::levelLabel(),
             'activeBatch'  => $active,
             'batches'      => $batches,
             'batchId'      => $batchId,
+            'batchOpen'    => $batchRow !== null && ($batchRow['closed_at'] ?? null) === null,
             // Carried into the batch selector and the stats poll so an admin
             // drilled into a station stays on it, see resolveViewedScanner().
             'viewedScannerId' => $viewingOther ? $userId : null,
@@ -209,7 +217,10 @@ class ScanController extends BaseController
     private function resolveViewedScanner(): int
     {
         $sessionUserId = (int) (session('user_id') ?? 0);
-        $requested     = (int) $this->request->getGet('scanner');
+        // ?scanner[]=1 hands back an array, and casting one to int is a warning
+        // that becomes a 500 under `development`.
+        $requestedRaw  = $this->request->getGet('scanner');
+        $requested     = is_scalar($requestedRaw) ? (int) $requestedRaw : 0;
 
         if ($requested <= 0 || $requested === $sessionUserId) {
             return $sessionUserId;
@@ -226,6 +237,19 @@ class ScanController extends BaseController
             ->get()->getRowArray();
 
         return ($target['account_level'] ?? '') === 'scanner' ? $requested : $sessionUserId;
+    }
+
+    /** The account username for a userID, or 'Scanner' when the row is gone. */
+    private function accountUsername(int $userId): string
+    {
+        $row = db_connect()->table('users')
+            ->select('username')
+            ->where('userID', $userId)
+            ->get()->getRowArray();
+
+        $username = trim((string) ($row['username'] ?? ''));
+
+        return $username === '' ? 'Scanner' : $username;
     }
 
     /**
@@ -275,20 +299,33 @@ class ScanController extends BaseController
             return $this->response->setStatusCode(403)->setJSON(['error' => 'Forbidden.']);
         }
 
-        $activeBatch = model(DistributionBatchModel::class)->activeBatch();
-        $userId      = $this->resolveViewedScanner();
-        if ($activeBatch === null) {
+        $batchModel = model(DistributionBatchModel::class);
+        $userId     = $this->resolveViewedScanner();
+
+        // The performance page can be pinned to one batch, and an admin opening
+        // a station from the dashboard usually pins it to a closed one. Without
+        // honouring ?batch= the poll answers for whatever batch happens to be
+        // open and overwrites the figures the page rendered. No ?batch= keeps
+        // the kiosk's own behaviour: the open batch, or nothing.
+        $requested   = $this->request->getGet('batch');
+        $requestedId = is_scalar($requested) ? max(0, (int) $requested) : 0;
+
+        $batch = $requestedId > 0
+            ? BatchScope::resolve($batchModel->allBatches(), null, $requestedId)[1]
+            : $batchModel->activeBatch();
+
+        if ($batch === null) {
             return $this->response->setJSON(['batch' => null, 'families' => 0, 'handouts' => 0]);
         }
 
-        $batchId  = (int) $activeBatch['batch_id'];
-        $snapshot = $this->kioskSnapshot($batchId, $userId, $activeBatch);
+        $batchId  = (int) $batch['batch_id'];
+        $snapshot = $this->kioskSnapshot($batchId, $userId, $batch);
 
         return $this->response->setJSON([
             'batch'    => [
                 'id'       => $batchId,
-                'name'     => (string) $activeBatch['name'],
-                'subsidy_type' => (string) ($activeBatch['subsidy_type_name'] ?? ''),
+                'name'     => (string) $batch['name'],
+                'subsidy_type' => (string) ($batch['subsidy_type_name'] ?? ''),
             ],
             'families' => $snapshot['mine']['families'],
             'handouts' => $snapshot['mine']['handouts'],

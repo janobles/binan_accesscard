@@ -42,8 +42,8 @@ $bodyClass = $bodyClass ?? '';
  *    renderer reuses for every nested view() call, not a fresh scope per
  *    call, and setData() merges onto it rather than replacing it. So a
  *    nested view($bodyView, $bodyData) call that doesn't mention "bodyView"
- *    in its own data (data_table.php composing components/card with just
- *    $bodyHtml, say) leaves THIS card's $bodyView string sitting in
+ *    in its own data (any caller passing only $bodyHtml, say) leaves THIS
+ *    card's $bodyView string sitting in
  *    $tempData, and the next nested view() call inherits it - card.php runs
  *    again seeing a $bodyView it never received, walks the same branch, and
  *    recurses until memory runs out. Nulling this file's own prop names in

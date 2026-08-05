@@ -26,25 +26,15 @@ $seesDistribution = (bool) ($seesDistribution ?? false);
     <?php endif; ?>
 
     <?php if (($role ?? '') === 'Encoder'): ?>
-        <?php
-        $myAuditRows = [];
-        foreach ($myAudits as $audit) {
-            $myAuditRows[] = [
-                '<span class="status-pill is-muted">' . esc((string) ($audit['user_action'] ?? '')) . '</span>',
-                esc(isset($formatAuditMember) ? $formatAuditMember($audit) : ''),
-                esc((string) ($audit['description'] ?? '')),
-            ];
-        }
-        ?>
-        <?= view('components/data_table', [
+        <?= view('components/card', [
             'icon' => 'clock-history',
             'title' => 'My Recent Activity',
-            'columns' => ['Action', 'Member', 'Description'],
-            'rows' => $myAuditRows,
-            'emptyMessage' => 'No activity yet.',
-            'tableClass' => 'table overview-table mb-0',
             'cardClass' => 'dashboard-table-panel',
-            'headerActions' => null,
+            'bodyView' => 'Pages/dashboard-activity-body',
+            'bodyData' => [
+                'myAudits' => $myAudits,
+                'formatAuditMember' => $formatAuditMember ?? null,
+            ],
             'footer' => null,
         ]) ?>
     <?php endif; ?>

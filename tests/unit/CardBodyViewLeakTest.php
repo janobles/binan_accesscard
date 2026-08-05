@@ -19,19 +19,14 @@ final class CardBodyViewLeakTest extends CIUnitTestCase
         // Card A sets bodyView/bodyData, the way Lookups/sectors.php does.
         view('components/card', [
             'title'    => 'Card A',
-            'bodyView' => 'components/data_table',
-            'bodyData' => [
-                'title'   => 'Leaked Inner Table',
-                'columns' => ['Col'],
-                'rows'    => [['Leaked Value']],
-            ],
+            'bodyView' => 'components/table_footer',
+            'bodyData' => ['leftContent' => 'Leaked Inner Body'],
         ]);
 
         // Card B sets no bodyView at all, the way most cards on a page after it do.
         $second = view('components/card', ['title' => 'Card B']);
 
-        $this->assertStringNotContainsString('Leaked Inner Table', $second);
-        $this->assertStringNotContainsString('Leaked Value', $second);
+        $this->assertStringNotContainsString('Leaked Inner Body', $second);
         $this->assertStringContainsString('Card B', $second);
     }
 }

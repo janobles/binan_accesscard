@@ -158,7 +158,7 @@ rendering needs inline styles), layout shells + `Auth/login.php` (standalone
   inline `<script>` blocks, which the divider scan now skips. No file hits it
   today, so nothing was changed; an em dash written into a view's inline JS would
   fail a check that cannot be satisfied without failing the token gate.
-- [ ] 🟠 Major: `app/Views/components/data_table.php` - passes table rows as
+- [x] 🟠 Major: `app/Views/components/data_table.php` - passes table rows as
   `list<list<raw HTML>>`, so the caller concatenates markup and owns the
   escaping (the docblock says as much: "Cell values are RAW HTML"). Every other
   component either takes scalars and escapes them itself (`toolbar`,
@@ -171,3 +171,5 @@ rendering needs inline styles), layout shells + `Auth/login.php` (standalone
   recursion comment in `components/card.php`. Resolve by converting that one
   caller to `card` + an inline table and deleting the component, not by
   migrating the fifteen onto it.
+  *(Fixed: `Pages/dashboard.php` now renders `card` + the new
+  `Pages/dashboard-activity-body.php`, and the component is deleted.)*

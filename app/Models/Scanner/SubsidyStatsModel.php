@@ -81,6 +81,41 @@ class SubsidyStatsModel extends Model
     }
 
     /**
+     * Served counts for every batch at once, keyed by batch_id, for the
+     * Overview tab's distributions table.
+     *
+     * Joined to batch_eligibility on the same terms as coverage(), so a scan
+     * for a family outside the roster is invisible here exactly as it is
+     * there. Without the join the Overview table would report a larger served
+     * figure than the Distribution tab does for the same batch.
+     *
+     * @return array<int,int>
+     */
+    public function servedByBatch(): array
+    {
+        try {
+            $rows = $this->db->table('subsidy_distribution sd')
+                ->select('sd.batch_id, COUNT(DISTINCT sd.memberID) AS served')
+                ->join(
+                    'batch_eligibility be',
+                    'be.batch_id = sd.batch_id AND be.headID = sd.memberID'
+                )
+                ->where('sd.dt_voided', null)
+                ->groupBy('sd.batch_id')
+                ->get()->getResultArray();
+
+            $out = [];
+            foreach ($rows as $row) {
+                $out[(int) $row['batch_id']] = (int) $row['served'];
+            }
+
+            return $out;
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
+
+    /**
      * Per-barangay progress inside the batch's roster, worst coverage first so
      * the top row is where staff get sent. Groups on the indexed barangayID.
      *

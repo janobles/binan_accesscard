@@ -139,12 +139,6 @@ class DashboardPageBuilder
         $isDeveloper = $currentRole === 'Developer';
         $isAdmin = $currentRole === 'Admin';
         $canManageAccounts = $isDeveloper || $isAdmin;
-        // Manager-only, even though the `distribution` PAGE is Viewer-reachable via
-        // the manifest: this section's Download Report button and stats poll hit
-        // reports endpoints guarded to Developer/Admin, and its per-scanner table
-        // surfaces kiosk usernames, not aggregate data. Do not re-key this to
-        // Navigation::pageRoles('distribution').
-        $seesDistribution = $isDeveloper || $isAdmin;
         $isAccounts = $activePage === 'accounts' && $canManageAccounts;
         $isDashboard = $activePage === 'dashboard';
 
@@ -156,16 +150,6 @@ class DashboardPageBuilder
         $serviceModel = new ServiceModel();
 
         $sectorOptions = $sectorModel->getSectorOptions();
-
-        // Recent Records on the dashboard. Every role gets it, including the
-        // ones with no distribution access at all, so it is keyed on the page
-        // rather than on the role.
-        $recentFamilies = [];
-        if ($isDashboard) {
-            $recentFamilies = $searchTerm !== '' || $hasSearchFilters
-                ? $searchModel->families($searchTerm, $searchFilters, 25)
-                : $dashboardModel->recentFamilies(10);
-        }
 
         // Keep legacy file-backed Developer audit rows (NULL userID) visible only to
         // Developers. New Developer activity has a real userID like every DB account.
@@ -235,10 +219,10 @@ class DashboardPageBuilder
         $selectedBatchId = is_scalar($requestedBatch) ? max(0, (int) $requestedBatch) : 0;
 
         // Distribution analytics now live on the dashboard (combined totals +
-        // per-kiosk table), batch-scoped only (no date filter). Gated so other
-        // pages, roles with no distribution access, and the Overview pane
-        // don't run these queries.
-        $reportsData = $isDashboard && $dashboardView === 'distribution' && $seesDistribution
+        // per-kiosk table), batch-scoped only (no date filter). Gated on the
+        // page and the pane, not on the role: every role reaches the dashboard
+        // and both panes, but neither pane pays for the other's queries.
+        $reportsData = $isDashboard && $dashboardView === 'distribution'
             ? $this->buildReportsData($batchModel, $batchBodyTab)
             : [
                 'batches'       => [],
@@ -280,7 +264,6 @@ class DashboardPageBuilder
             'canCreateAccounts' => $canManageAccounts,
             'canEditAccounts' => $canManageAccounts,
             'canManageLookups' => $canManageAccounts,
-            'seesDistribution' => $seesDistribution,
             'currentRole' => $currentRole,
             'referenceTabs'      => $referenceTabs,
             'myAudits'           => $myAudits,
@@ -291,10 +274,6 @@ class DashboardPageBuilder
             'employeeAccounts'   => array_values(array_filter($visibleAccounts, static fn ($account) => $account['role'] === 'encoder')),
             'viewerAccounts'     => array_values(array_filter($visibleAccounts, static fn ($account) => $account['role'] === 'viewer')),
             'scannerAccounts'    => array_values(array_filter($visibleAccounts, static fn ($account) => $account['role'] === 'scanner')),
-            'recentFamilies'     => $recentFamilies,
-            // Shortcode + full name per sector, so the Recent Records table can print
-            // the same badges Manage Records and Reference Data print.
-            'sectorShortcodes'   => $isDashboard ? $sectorModel->shortcodeMap() : [],
             'recentAudits'       => $recentAudits,
             'auditListData'      => $auditListData,
             'recordListData'      => $memberListData,
@@ -334,13 +313,6 @@ class DashboardPageBuilder
                 ? $this->buildDistributionRows($batchModel)
                 : [],
             'busiestDay'         => self::busiestDay($reportsData['batchSnapshot']['byDay'] ?? []),
-            // The stat row every role sees, whatever pane is showing. Kept out
-            // of the $seesDistribution gate: `dashboard` is the post-login
-            // landing page for all staff, so a Viewer with nothing here lands
-            // on an empty div.
-            'stats'              => $isDashboard
-                ? array_merge(['families' => 0, 'members' => 0, 'sectors' => 0, 'assistance' => 0], $dashboardModel->stats())
-                : ['families' => 0, 'members' => 0, 'sectors' => 0, 'assistance' => 0],
             // Only the roles that may open the record-entry page get the Add and
             // Import buttons on the records list (Config\Navigation, records-entry).
             'canCreateFamily'    => in_array($currentRole, Navigation::pageRoles('records-entry'), true),

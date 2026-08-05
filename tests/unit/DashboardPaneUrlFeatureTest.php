@@ -166,18 +166,28 @@ final class DashboardPaneUrlFeatureTest extends CIUnitTestCase
         }
     }
 
-    public function testEncoderAndViewerBothGetADashboardWithTheStatRow(): void
+    public function testEncoderAndViewerBothGetTheRealDashboard(): void
     {
         foreach ([['encoder', 2, 'keyer'], ['viewer', 3, 'looker']] as [$role, $userId, $username]) {
             $body = $this->withSession($this->session($role, $userId, $username))->get('dashboard')->getBody();
 
-            $this->assertStringContainsString('class="overview-stats"', $body, $role);
-            $this->assertStringContainsString('Total Records', $body, $role);
-            $this->assertStringContainsString('Registered Members', $body, $role);
-            $this->assertStringContainsString('Recent Records', $body, $role);
-            // No empty shell: the role that cannot see distribution still gets
-            // numbers, not just the wrapper div.
-            $this->assertStringNotContainsString('id="stationsGrid"', $body, $role);
+            // The outer strip, both its tabs, and the Overview pane it lands on.
+            $this->assertMatchesRegularExpression('#<ul class="nav nav-pills segmented-tabs">#', $body, $role);
+            $this->assertStringContainsString('?view=distribution', $body, $role);
+            $this->assertStringContainsString('Program to date', $body, $role);
+            $this->assertStringContainsString('Families profiled', $body, $role);
+            $this->assertStringContainsString('Families never served', $body, $role);
+            $this->assertStringContainsString('August rice', $body, $role);
         }
+    }
+
+    public function testEncoderReachesTheDistributionPaneToo(): void
+    {
+        $body = $this->withSession($this->session('encoder', 2, 'keyer'))
+            ->get('dashboard?view=distribution&tab=stations&batch=' . self::BATCH_ID)
+            ->getBody();
+
+        $this->assertStringContainsString('id="stationsGrid"', $body);
+        $this->assertStringContainsString('Eligible families', $body);
     }
 }

@@ -72,42 +72,31 @@ final class DashboardRoleGuardsTest extends CIUnitTestCase
     }
 
     /**
-     * $seesDistribution must stay Developer/Admin only, deliberately narrower
-     * than the Distribution *page* (Viewer-reachable via the manifest): the
-     * dashboard's Subsidy Distribution section hits reports endpoints guarded
-     * to Developer/Admin and surfaces per-scanner kiosk usernames, so it must
-     * not be re-keyed to Navigation::pageRoles('distribution').
+     * The dashboard is the landing page for all staff, so its two panes are
+     * not role-gated any more and $seesDistribution is gone. A reinstated gate
+     * would put a role back on an empty page.
      */
-    public function testSeesDistributionIsNarrowedToDeveloperAndAdmin(): void
+    public function testDashboardPanesAreNotRoleGated(): void
     {
-        $source = (string) file_get_contents(APPPATH . 'Libraries/DashboardPageBuilder.php');
+        $view = (string) file_get_contents(APPPATH . 'Views/Pages/dashboard.php');
+        $builder = (string) file_get_contents(APPPATH . 'Libraries/DashboardPageBuilder.php');
 
-        $this->assertStringContainsString(
-            '$seesDistribution = $isDeveloper || $isAdmin;',
-            $source,
-            '$seesDistribution must be Developer/Admin only, not re-keyed to the navigation manifest'
-        );
-        $this->assertStringNotContainsString(
-            "Navigation::pageRoles('distribution'), true)",
-            $source,
-            '$seesDistribution must not read the distribution page roles from the manifest'
-        );
+        $this->assertStringNotContainsString('seesDistribution', $view);
+        $this->assertStringNotContainsString('seesDistribution', $builder);
+        $this->assertStringContainsString("view('Admin/batch-overview')", $view);
+        $this->assertStringContainsString("view('Pages/dashboard-overview')", $view);
     }
 
     /**
-     * app/Views/Pages/dashboard.php must gate the batch zone (batch-overview)
-     * on the same $seesDistribution flag the builder computes. Task 11 cut the
-     * separate distribution KPI tiles (wrong denominator, replaced by the batch
-     * zone's own progress block), so only one gate remains.
+     * The panes must still be assembled one at a time. The role condition went
+     * away; the per-pane laziness that keeps Overview from paying for the batch
+     * snapshot queries, and the reverse, did not.
      */
-    public function testDashboardViewGatesDistributionSectionOnSeesDistribution(): void
+    public function testBuilderStillAssemblesOnlyThePaneBeingShown(): void
     {
-        $view = (string) file_get_contents(APPPATH . 'Views/Pages/dashboard.php');
+        $builder = (string) file_get_contents(APPPATH . 'Libraries/DashboardPageBuilder.php');
 
-        $this->assertSame(
-            1,
-            substr_count($view, 'if ($seesDistribution)'),
-            'the batch zone must gate on $seesDistribution'
-        );
+        $this->assertStringContainsString("\$isDashboard && \$dashboardView === 'distribution'", $builder);
+        $this->assertStringContainsString("\$isDashboard && \$dashboardView === 'overview'", $builder);
     }
 }

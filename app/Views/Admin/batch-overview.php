@@ -2,7 +2,7 @@
 /**
  * Dashboard Zone 2, "this batch": the batch picker, the served-of-eligible
  * headline, and the Barangay/Stations/Remaining tabs. A fragment, not a page:
- * rendered inline by Pages/dashboard.php for Developer/Admin only. Data comes
+ * rendered inline by Pages/dashboard.php for every role. Data comes
  * from DashboardPageBuilder::buildReportsData() (batches, batchRow, batchOpen,
  * batchSnapshot, remainingPage, batchBodyTab, busiestDay). All server data is
  * escaped.

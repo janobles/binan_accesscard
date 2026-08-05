@@ -1,0 +1,183 @@
+<?php
+
+namespace Tests\Unit;
+
+use CodeIgniter\Test\CIUnitTestCase;
+use CodeIgniter\Test\FeatureTestTrait;
+use Tests\Support\Database\DumpSchema;
+
+/**
+ * Renders the dashboard for real and reads the HTML back.
+ *
+ * The rest of the dashboard suite greps source files, which cannot see whether
+ * a link a view builds actually carries the query params it needs. These cases
+ * fetch the page through the router with a session and assert on the response
+ * body: that the Distribution pane's own links keep the reader inside the pane,
+ * and that a role without distribution access still lands on a dashboard with
+ * something on it.
+ *
+ * The schema comes from the SQL dump (Tests\Support\Database\DumpSchema); rows
+ * are the few this file asserts on.
+ */
+final class DashboardPaneUrlFeatureTest extends CIUnitTestCase
+{
+    use FeatureTestTrait;
+
+    private const BATCH_ID = 7;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        cache()->clean();
+        // The renderer is a singleton and CI4 keeps view data on it between
+        // render() calls, so one case's tab strip would otherwise seed the
+        // next case's.
+        \Config\Services::resetSingle('renderer');
+
+        $db = db_connect();
+        DumpSchema::create($db);
+
+        $db->table('users')->insertBatch([
+            ['userID' => 1, 'username' => 'boss', 'account_level' => 'administrator', 'isactive' => 'Enable', 'password' => 'x'],
+            ['userID' => 2, 'username' => 'keyer', 'account_level' => 'encoder', 'isactive' => 'Enable', 'password' => 'x'],
+            ['userID' => 3, 'username' => 'looker', 'account_level' => 'viewer', 'isactive' => 'Enable', 'password' => 'x'],
+        ]);
+        $db->table('subsidy')->insert(['subsidy_type_id' => 1, 'name' => 'Rice']);
+        $db->table('barangay')->insert(['barangayID' => 1, 'name' => 'Canlalay']);
+        $db->table('distribution_batch')->insert([
+            'batch_id'        => self::BATCH_ID,
+            'name'            => 'August rice',
+            'subsidy_type_id' => 1,
+            'started_at'      => '2026-08-01 08:00:00',
+            'closed_at'       => null,
+            'eligible_count'  => 12,
+        ]);
+
+        // Twelve eligible heads, none served, so a 10-per-page Remaining tab
+        // has a second page and therefore real pagination links to inspect.
+        $members = [];
+        $roster  = [];
+        for ($id = 1; $id <= 12; $id++) {
+            $members[] = [
+                'memberID' => $id, 'lastname' => 'Head' . $id, 'firstname' => 'Test',
+                'middlename' => '', 'headID' => $id, 'sectorID' => '[]', 'barangayID' => 1,
+                'contactnumber' => '', 'dt_deleted' => null,
+            ];
+            $roster[] = ['batch_id' => self::BATCH_ID, 'headID' => $id];
+        }
+        $db->table('member')->insertBatch($members);
+        $db->table('batch_eligibility')->insertBatch($roster);
+    }
+
+    protected function tearDown(): void
+    {
+        DumpSchema::drop(db_connect());
+        cache()->clean();
+
+        parent::tearDown();
+    }
+
+    /** @return array<string,mixed> */
+    private function session(string $role, int $userId, string $username): array
+    {
+        return ['is_logged_in' => true, 'role' => $role, 'user_id' => $userId, 'username' => $username];
+    }
+
+    /**
+     * Every href in $html that points at the dashboard and carries $needle,
+     * with entity-encoded ampersands decoded back so a caller can grep params.
+     *
+     * @return list<string>
+     */
+    private function dashboardLinks(string $html, string $needle): array
+    {
+        preg_match_all('/href="([^"]*dashboard\?[^"]*)"/', $html, $matches);
+
+        $links = array_map(static fn (string $href): string => html_entity_decode($href), $matches[1]);
+
+        return array_values(array_filter($links, static fn (string $href): bool => str_contains($href, $needle)));
+    }
+
+    public function testStationsSubTabKeepsEveryLinkInsideTheDistributionPane(): void
+    {
+        $body = $this->withSession($this->session('administrator', 1, 'boss'))
+            ->get('dashboard?view=distribution&tab=stations&batch=' . self::BATCH_ID)
+            ->getBody();
+
+        // The Distribution pane rendered, and the Overview pane did not.
+        $this->assertStringContainsString('id="stationsGrid"', $body);
+        $this->assertStringNotContainsString('Families profiled', $body);
+
+        // Sub-tab strip: three links, each switching ?tab= while holding the
+        // pane and the picked batch.
+        $subTabs = $this->dashboardLinks($body, 'tab=');
+        $this->assertCount(3, $subTabs);
+        foreach ($subTabs as $href) {
+            $this->assertStringContainsString('view=distribution', $href, $href);
+            $this->assertStringContainsString('batch=' . self::BATCH_ID, $href, $href);
+        }
+
+        // Batch picker: submitting it must not drop the pane or the sub-tab.
+        $this->assertMatchesRegularExpression(
+            '/<input type="hidden" name="view" value="distribution"\s*\/?>/',
+            $body
+        );
+        $this->assertMatchesRegularExpression(
+            '/<input type="hidden" name="tab" value="stations"\s*\/?>/',
+            $body
+        );
+    }
+
+    public function testRemainingPaginationAndFormsStayInsideTheDistributionPane(): void
+    {
+        $body = $this->withSession($this->session('administrator', 1, 'boss'))
+            ->get('dashboard?view=distribution&tab=remaining&batch=' . self::BATCH_ID . '&per_page=10')
+            ->getBody();
+
+        $pageLinks = $this->dashboardLinks($body, 'page=');
+        $this->assertNotSame([], $pageLinks, 'Expected paginated Remaining links.');
+        foreach ($pageLinks as $href) {
+            $this->assertStringContainsString('view=distribution', $href, $href);
+            $this->assertStringContainsString('batch=' . self::BATCH_ID, $href, $href);
+        }
+
+        // Three forms carry the pane back: the batch picker, the Remaining
+        // search box and its page-size selector.
+        $this->assertGreaterThanOrEqual(
+            3,
+            preg_match_all('/<input type="hidden" name="view" value="distribution"\s*\/?>/', $body),
+            'The batch picker and both Remaining forms must carry the pane.'
+        );
+    }
+
+    public function testOverviewPaneKeepsThePickedBatchOnTheOuterTabs(): void
+    {
+        $body = $this->withSession($this->session('administrator', 1, 'boss'))
+            ->get('dashboard?view=overview&batch=' . self::BATCH_ID)
+            ->getBody();
+
+        // Only the outer strip, not the Distributions table's own batch links.
+        $this->assertSame(1, preg_match('#<ul class="nav nav-pills segmented-tabs">.*?</ul>#s', $body, $strip));
+        $outer = $this->dashboardLinks($strip[0], 'view=');
+        $this->assertCount(2, $outer);
+        foreach ($outer as $href) {
+            $this->assertStringContainsString('batch=' . self::BATCH_ID, $href, $href);
+        }
+    }
+
+    public function testEncoderAndViewerBothGetADashboardWithTheStatRow(): void
+    {
+        foreach ([['encoder', 2, 'keyer'], ['viewer', 3, 'looker']] as [$role, $userId, $username]) {
+            $body = $this->withSession($this->session($role, $userId, $username))->get('dashboard')->getBody();
+
+            $this->assertStringContainsString('class="overview-stats"', $body, $role);
+            $this->assertStringContainsString('Total Records', $body, $role);
+            $this->assertStringContainsString('Registered Members', $body, $role);
+            $this->assertStringContainsString('Recent Records', $body, $role);
+            // No empty shell: the role that cannot see distribution still gets
+            // numbers, not just the wrapper div.
+            $this->assertStringNotContainsString('id="stationsGrid"', $body, $role);
+        }
+    }
+}

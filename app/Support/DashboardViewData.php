@@ -25,6 +25,8 @@ class DashboardViewData
         $modeLabel = (string) ($data['modeLabel'] ?? 'Admin Console');
         $canManageAccounts = (bool) ($data['canManageAccounts'] ?? false);
         $navActive = self::arrayValue($data['navActive'] ?? []);
+        $stats = array_merge(self::defaultStats(), self::arrayValue($data['stats'] ?? []));
+        $recentFamilies = self::arrayValue($data['recentFamilies'] ?? []);
         $recentAudits = self::arrayValue($data['recentAudits'] ?? []);
         $adminAccounts = self::arrayValue($data['adminAccounts'] ?? []);
         $employeeAccounts = self::arrayValue($data['employeeAccounts'] ?? []);
@@ -56,10 +58,12 @@ class DashboardViewData
             'navActive',
             'pageTitle',
             'recentAudits',
+            'recentFamilies',
             'searchFilters',
             'searchTerm',
             'sectorShortcodeOptions',
             'sectorOptions',
+            'stats',
             'user',
             'username'
         );
@@ -73,6 +77,8 @@ class DashboardViewData
         $activePage = (string) ($data['activePage'] ?? 'dashboard');
         $pageTitle = (string) ($data['pageTitle'] ?? ($activePage === 'dashboard' ? 'Workspace' : ucwords(str_replace('-', ' ', $activePage))));
         $navActive = self::arrayValue($data['navActive'] ?? []);
+        $stats = array_merge(self::defaultStats(), self::arrayValue($data['stats'] ?? []));
+        $recentFamilies = self::arrayValue($data['recentFamilies'] ?? []);
         $myAudits = self::arrayValue($data['myAudits'] ?? []);
         $searchTerm = (string) ($data['searchTerm'] ?? '');
         $searchFilters = self::arrayValue($data['searchFilters'] ?? []);
@@ -97,9 +103,11 @@ class DashboardViewData
             'myAudits',
             'navActive',
             'pageTitle',
+            'recentFamilies',
             'searchFilters',
             'searchTerm',
             'sectorOptions',
+            'stats',
             'user',
             'username'
         );
@@ -379,6 +387,17 @@ class DashboardViewData
             'activeCount'   => max(0, (int) ($bundle['activeCount'] ?? 0)),
             'archivedCount' => max(0, (int) ($bundle['archivedCount'] ?? 0)),
             'listRoute'     => (string) ($bundle['listRoute'] ?? $defaultRoute),
+        ];
+    }
+
+    /** Zeroed stats array used as a default before real counts are merged in. */
+    private static function defaultStats(): array
+    {
+        return [
+            'families' => 0,
+            'members' => 0,
+            'sectors' => 0,
+            'assistance' => 0,
         ];
     }
 

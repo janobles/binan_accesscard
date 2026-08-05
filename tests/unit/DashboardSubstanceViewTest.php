@@ -11,17 +11,29 @@ final class DashboardSubstanceViewTest extends CIUnitTestCase
         return file_get_contents(APPPATH . 'Views/pages/dashboard.php');
     }
 
-    public function testVanityTilesAreGone(): void
+    /**
+     * The stat row and Recent Records were cut as vanity when the two panes
+     * landed, which left a Viewer with an empty page: `dashboard` is open to
+     * all staff and the panes are not. They are back, and outside the
+     * $seesDistribution gate, which is the part that matters here.
+     */
+    public function testStatRowAndRecentRecordsAreNotGatedOnDistribution(): void
     {
         $src = $this->dashboardSource();
-        $this->assertStringNotContainsString('Registered Members', $src);
-        $this->assertStringNotContainsString('Active Sectors', $src);
-        $this->assertStringNotContainsString('Services and Programs', $src);
-    }
+        $gatePos = strpos($src, 'if ($seesDistribution)');
+        $this->assertNotFalse($gatePos);
 
-    public function testRecentRecordsTableIsGone(): void
-    {
-        $this->assertStringNotContainsString('Recent Records', $this->dashboardSource());
+        foreach (['class="overview-stats"', 'Registered Members', 'Active Sectors', 'Services and Programs'] as $needle) {
+            $position = strpos($src, $needle);
+            $this->assertNotFalse($position, $needle);
+            $this->assertLessThan($gatePos, $position, $needle . ' must render before the distribution gate');
+        }
+
+        // Recent Records sits after the panes, so source order says nothing
+        // about the gate; DashboardPaneUrlFeatureTest renders the page as a
+        // Viewer and an Encoder and reads it back instead.
+        $this->assertStringContainsString('Recent Records', $src);
+        $this->assertStringContainsString('Pages/dashboard-recent-body', $src);
     }
 
     public function testBatchBodyRendersRemainingTab(): void

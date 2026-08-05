@@ -22,31 +22,37 @@
 </head>
 <body>
     <main class="login-page">
-        <section class="login-card">
-            <div class="login-card-body">
-                <div class="login-heading">
-                    <img src="<?= esc(asset_url('assets/image/binan.png'), 'attr') ?>" alt="City of Binan Logo" class="login-logo">
-                    <h1>Already Signed In</h1>
-                    <p>This account is active on another session</p>
+        <div class="container position-relative z-1">
+            <div class="row justify-content-center">
+                <div class="col-12 col-md-8 col-lg-5 col-xl-4">
+                    <section class="login-card">
+                        <div class="login-card-body">
+                            <div class="login-heading">
+                                <img src="<?= esc(asset_url('assets/image/binan.png'), 'attr') ?>" alt="City of Binan Logo" class="login-logo">
+                                <h1>Already Signed In</h1>
+                                <p>This account is active on another session</p>
+                            </div>
+
+                            <div class="alert alert-warning" role="alert">
+                                Your account is already signed in on another session.
+                            </div>
+
+                            <p>Do you want to log out of that session and continue here?</p>
+
+                            <form method="post" action="<?= site_url('login/confirm') ?>" class="mb-2">
+                                <?= csrf_field() ?>
+                                <button type="submit" class="btn login-submit">Log out the other session and continue</button>
+                            </form>
+
+                            <form method="post" action="<?= site_url('login/confirm') ?>">
+                                <?= csrf_field() ?>
+                                <button type="submit" name="cancel" value="1" class="btn btn-outline-secondary w-100">Cancel</button>
+                            </form>
+                        </div>
+                    </section>
                 </div>
-
-                <div class="alert alert-warning" role="alert">
-                    Your account is already signed in on another session.
-                </div>
-
-                <p>Do you want to log out of that session and continue here?</p>
-
-                <form method="post" action="<?= site_url('login/confirm') ?>" class="mb-2">
-                    <?= csrf_field() ?>
-                    <button type="submit" class="btn login-submit">Log out the other session and continue</button>
-                </form>
-
-                <form method="post" action="<?= site_url('login/confirm') ?>">
-                    <?= csrf_field() ?>
-                    <button type="submit" name="cancel" value="1" class="btn btn-outline-secondary w-100">Cancel</button>
-                </form>
             </div>
-        </section>
+        </div>
     </main>
     <?php foreach (asset_scripts('login') as $scriptPath): ?>
     <script src="<?= esc(asset_url($scriptPath), 'attr') ?>"></script>

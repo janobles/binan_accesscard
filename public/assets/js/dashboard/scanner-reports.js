@@ -137,33 +137,34 @@
         }
     }
 
-    // Stations table (Stations tab only - the table isn't in the DOM on the
-    // other two sub-tabs, so this is a no-op there).
+    // Repaint the stations grid. Squares are rebuilt rather than patched
+    // because a station appears the moment it logs its first scan, so the set
+    // itself changes during an open batch.
     function applyStations(perScanner) {
-        var table = document.getElementById('stationsTable');
-        if (!table || !Array.isArray(perScanner)) { return; }
-        var tbody = table.querySelector('tbody');
-        if (!tbody) { return; }
+        var grid = document.getElementById('stationsGrid');
+        if (!grid || !Array.isArray(perScanner)) { return; }
 
-        tbody.innerHTML = '';
-        if (perScanner.length === 0) {
-            var emptyRow = document.createElement('tr');
-            var emptyCell = document.createElement('td');
-            emptyCell.colSpan = 3;
-            emptyCell.className = 'text-muted';
-            emptyCell.textContent = 'No scans in this batch yet.';
-            emptyRow.appendChild(emptyCell);
-            tbody.appendChild(emptyRow);
-            return;
-        }
+        grid.innerHTML = '';
         perScanner.forEach(function (row) {
-            var tr = document.createElement('tr');
-            [row.scanner, row.families, row.handouts].forEach(function (value) {
-                var td = document.createElement('td');
-                td.textContent = String(value);
-                tr.appendChild(td);
-            });
-            tbody.appendChild(tr);
+            var col = document.createElement('div');
+            col.className = 'col';
+
+            var link = document.createElement('a');
+            link.className = 'station-square';
+            link.href = grid.getAttribute('data-performance-url')
+                + '?scanner=' + encodeURIComponent(row.userID)
+                + '&batch=' + encodeURIComponent(grid.getAttribute('data-batch') || '0');
+
+            [['station-name', row.scanner], ['station-count', row.families], ['station-unit', 'families']]
+                .forEach(function (pair) {
+                    var span = document.createElement('span');
+                    span.className = pair[0];
+                    span.textContent = String(pair[1]);
+                    link.appendChild(span);
+                });
+
+            col.appendChild(link);
+            grid.appendChild(col);
         });
     }
 

@@ -179,11 +179,11 @@ class ScanController extends BaseController
         $batches    = $batchModel->allBatches();
         [$batchId, $batchRow] = BatchScope::resolve($batches, $active, (int) $this->request->getGet('batch'));
 
-        $userId   = (int) (session('user_id') ?? 0);
+        $userId   = $this->resolveViewedScanner();
         $snapshot = $this->kioskSnapshot($batchId, $userId, $batchRow);
 
         return view('Scanner/performance', array_merge([
-            'pageTitle'    => 'My Performance',
+            'pageTitle'    => $userId === (int) (session('user_id') ?? 0) ? 'My Performance' : 'Station Performance',
             'username'     => session('username') ?? 'Scanner',
             'user'         => SessionAccount::user(),
             'accountLevelLabel' => SessionAccount::levelLabel(),
@@ -191,6 +191,37 @@ class ScanController extends BaseController
             'batches'      => $batches,
             'batchId'      => $batchId,
         ], $snapshot));
+    }
+
+    /**
+     * Which scanner's figures the performance page is showing.
+     *
+     * A Scanner sees their own session and nothing else. An Admin or Developer
+     * may pass ?scanner=<userID> to open one station from the dashboard's
+     * Stations grid, and only when that account is genuinely a scanner. Without
+     * this the page would answer with the viewer's own (usually zero) numbers
+     * under the clicked station's name, which is a silent wrong answer.
+     */
+    private function resolveViewedScanner(): int
+    {
+        $sessionUserId = (int) (session('user_id') ?? 0);
+        $requested     = (int) $this->request->getGet('scanner');
+
+        if ($requested <= 0 || $requested === $sessionUserId) {
+            return $sessionUserId;
+        }
+
+        $role = RoleAccess::normalizeRole((string) session()->get('role'));
+        if (! in_array($role, ['Admin', 'Developer'], true)) {
+            return $sessionUserId;
+        }
+
+        $target = db_connect()->table('users')
+            ->select('account_level')
+            ->where('userID', $requested)
+            ->get()->getRowArray();
+
+        return ($target['account_level'] ?? '') === 'scanner' ? $requested : $sessionUserId;
     }
 
     /**

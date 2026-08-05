@@ -718,6 +718,47 @@
     height: 220px;
 }
 
+/* Stations grid. One square per scanner working the batch, sized square so a
+   fleet of twenty reads as a fleet rather than a list. */
+.station-square {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    aspect-ratio: 1 / 1;
+    padding: 0.75rem;
+    border: 1px solid #e3e6f0;
+    border-radius: 0.35rem;
+    background: #fff;
+    color: #3a3b45;
+    text-decoration: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.station-square:hover,
+.station-square:focus {
+    border-color: #2e75b6;
+    box-shadow: 0 0.15rem 0.5rem rgba(58, 59, 69, 0.12);
+    color: #3a3b45;
+}
+
+.station-name {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #6e707e;
+}
+
+.station-count {
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.station-unit {
+    font-size: 0.72rem;
+    color: #858796;
+}
+
 /* Barangay choropleth. Four flat steps, no legend: the popover carries the
    exact figures, so the colour only has to show the pattern. */
 .barangay-map svg {

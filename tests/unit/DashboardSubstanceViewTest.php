@@ -31,17 +31,18 @@ final class DashboardSubstanceViewTest extends CIUnitTestCase
     }
 
     /**
-     * scanner/performance derives its user from the session, not a query
-     * param, so a link on a station's name would silently show the clicked
-     * admin's own (usually zero) numbers rather than that station's. The
-     * Stations tab must render the scanner name as plain text, not an <a>
-     * to that route.
+     * The Stations grid links each square to that scanner's performance page.
+     * This used to be forbidden, because scanner/performance read the viewer
+     * from the session and an admin clicking through would silently see their
+     * own numbers under a scanner's name. ScanController::performance() now
+     * takes a role-gated ?scanner= override, so the link is safe and the grid
+     * is the orphaned page's entry point.
      */
-    public function testStationsTabDoesNotLinkToScannerPerformance(): void
+    public function testStationsGridLinksToScannerPerformance(): void
     {
-        $src = file_get_contents(APPPATH . 'Views/Admin/batch-overview.php');
-        $this->assertStringNotContainsString("site_url('scanner/performance')", $src);
-        $this->assertStringNotContainsString('<a href=', $src);
+        $src = file_get_contents(APPPATH . 'Views/Admin/batch-stations-grid.php');
+        $this->assertStringContainsString('scanner/performance', $src);
+        $this->assertStringContainsString('scanner=', $src);
     }
 
     /** The dashboard's batch sub-tabs must carry ?batch= through the switch. */

@@ -171,28 +171,7 @@ $noEligible = ! $noBatch && $c['eligible'] === 0;
     </div>
   </div>
 <?php elseif ($batchBodyTab === 'stations'): ?>
-  <?php
-  // Names only, no link: scanner/performance reads the user from the session,
-  // not a query param, so a link here would take an admin to their own (usually
-  // zero) numbers under a station's name, a silent wrong answer.
-  ?>
-  <div class="table-responsive">
-    <table class="table manage-record-table align-middle w-100 mb-0" id="stationsTable">
-      <thead><tr><th>Scanner</th><th>Families</th><th>Handouts</th></tr></thead>
-      <tbody>
-        <?php foreach ($perScanner as $p): ?>
-        <tr>
-          <td><?= esc($p['scanner']) ?></td>
-          <td><?= esc((string) $p['families']) ?></td>
-          <td><?= esc((string) $p['handouts']) ?></td>
-        </tr>
-        <?php endforeach; ?>
-        <?php if ($perScanner === []): ?>
-        <tr><td colspan="3" class="text-muted">No scans in this batch yet.</td></tr>
-        <?php endif; ?>
-      </tbody>
-    </table>
-  </div>
+  <?= view('Admin/batch-stations-grid', ['perScanner' => $perScanner, 'batchId' => $batchId]) ?>
 <?php else: ?>
   <?php
   // Server-side paginated (SubsidyStatsModel::remainingPage()): against the

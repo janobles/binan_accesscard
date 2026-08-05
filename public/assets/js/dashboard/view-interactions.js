@@ -113,6 +113,37 @@
         });
     }
 
+    // The desktop sidebar toggle is a disclosure control, and an icon cannot say
+    // whether the thing it controls is currently open.
+    //
+    // The state is read from body.sb-sidenav-toggled, which sb-admin's own
+    // script flips. Watching the class rather than listening for the same click
+    // is deliberate: DOMContentLoaded fires on document before it reaches
+    // window, and sb-admin binds on window, so a click listener added here runs
+    // BEFORE the class it wants to read has been changed.
+    function bindSidebarToggle() {
+        const toggle = document.getElementById('sidebarToggle');
+        if (!toggle) {
+            return;
+        }
+
+        function syncState() {
+            const collapsed = document.body.classList.contains('sb-sidenav-toggled');
+
+            toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+            toggle.setAttribute('aria-label', collapsed ? 'Expand sidebar' : 'Collapse sidebar');
+        }
+
+        syncState();
+
+        if (typeof MutationObserver === 'function') {
+            new MutationObserver(syncState).observe(document.body, {
+                attributes: true,
+                attributeFilter: ['class'],
+            });
+        }
+    }
+
     function initViewInteractions(rootElement) {
         const root = rootElement instanceof HTMLElement ? rootElement : document;
 
@@ -125,5 +156,8 @@
 
     document.addEventListener('DOMContentLoaded', function () {
         initViewInteractions(document);
+        // Not part of initViewInteractions: that runs again for every modal
+        // fragment, and the sidebar is on the page once.
+        bindSidebarToggle();
     });
 })(window, document);

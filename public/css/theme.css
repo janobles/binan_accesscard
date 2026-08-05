@@ -59,6 +59,34 @@
 
 .app-topbar,
 .sidebar-brand-header { min-height: var(--app-topbar-height); }
+
+/* Breadcrumbs. The divider is set through Bootstrap's own
+   --bs-breadcrumb-divider rather than written into the markup, which is what
+   that property exists for and keeps the separator out of the accessibility
+   tree. No page prints a visible <h1> any more, so the trail is where the page
+   name is read: the current item is the strongest text on the line, and the
+   ancestor above it looks like the link it is. */
+.app-topbar .breadcrumb {
+    --bs-breadcrumb-divider: "\203A";
+    --bs-breadcrumb-item-padding-x: 0.5rem;
+    margin-bottom: 0;
+    font-size: 0.9rem;
+}
+
+.app-topbar .breadcrumb-item > a {
+    color: var(--token-primary-green);
+    text-decoration: none;
+}
+
+.app-topbar .breadcrumb-item > a:hover,
+.app-topbar .breadcrumb-item > a:focus-visible {
+    text-decoration: underline;
+}
+
+.app-topbar .breadcrumb-item.active {
+    color: var(--token-text-primary);
+    font-weight: 600;
+}
 .mobile-brand-title { font-size: 0.875rem; }
 .mobile-sidebar-toggle { width: 36px; height: 36px; }
 
@@ -90,9 +118,41 @@
 }
 
 @media (min-width: 992px) {
-    /* Desktop sidebar collapse */
+    /* Desktop sidebar collapse. The margin is animated by the rule above, so
+       the sidebar slides off to the left rather than vanishing. */
     .sb-sidenav-toggled #layoutSidenav_nav {
         margin-left: -225px !important;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #layoutSidenav #layoutSidenav_nav {
+        transition: none;
+    }
+}
+
+/* Icon-only control in the topbar. Bootstrap has no ghost-icon-button variant,
+   so .btn-link carries the semantics and this gives it the hit target and the
+   hover surface a bare icon otherwise lacks. */
+.app-topbar .btn-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 0.375rem;
+    transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out;
+}
+
+.app-topbar .btn-link:hover,
+.app-topbar .btn-link:focus-visible {
+    background-color: var(--token-gray-100);
+    color: var(--token-primary-green) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .app-topbar .btn-link {
+        transition: none;
     }
 }
 

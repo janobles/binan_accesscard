@@ -18,14 +18,11 @@ $username = $user['username'] ?? 'Admin';
 $activePage = $activePage ?? 'dashboard';
 $role = $role ?? '';
 $pageTitle = Navigation::titleFor($activePage);
-$modeLabel = $modeLabel ?? 'Admin Console';
-$canManageAccounts = $canManageAccounts ?? false;
 $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
 // Only DashboardPageBuilder-driven pages supply this (SessionAccount::levelLabel());
 // a caller like createFamily()/profile() that renders 'layout' directly leaves it
-// unset, and dashboard-topnav.php's own `?? 'Account'` fallback takes it from here.
+// unset, and sidebar-account-menu.php's own `?? 'Account'` fallback takes over.
 $accountLevelLabel = $accountLevelLabel ?? null;
-$sidebarUserUrl = $canManageAccounts ? site_url('accounts') : site_url('dashboard');
 // A caller that omits the body view still gets a page rather than a TypeError from
 // view(null): the dashboard body is the safe landing content for any manifest page.
 $bodyView = ($bodyView ?? '') !== '' ? $bodyView : 'Pages/dashboard';
@@ -89,14 +86,22 @@ $bodyView = ($bodyView ?? '') !== '' ? $bodyView : 'Pages/dashboard';
                      header's own. Both are sized by --app-topbar-height so the two
                      borders line up as a single rule across the shell. */ ?>
             <header class="d-none d-lg-flex align-items-center gap-3 border-bottom px-4 app-topbar">
-                <button class="btn btn-link p-0 text-muted text-decoration-none border-0 lh-1" id="sidebarToggle" type="button" aria-label="Toggle sidebar">
-                    <i class="bi bi-layout-sidebar fs-5"></i>
+                <?php /* A disclosure button, so it states what it controls and
+                         whether that thing is open; an icon alone says neither.
+                         view-interactions.js keeps aria-expanded and the label in
+                         step with the sidebar. No tooltip: it would be anchored
+                         to a control that then slides 225px away underneath it. */ ?>
+                <button class="btn btn-link p-0 text-muted text-decoration-none border-0 lh-1"
+                        id="sidebarToggle" type="button"
+                        aria-controls="layoutSidenav_nav" aria-expanded="true"
+                        aria-label="Collapse sidebar">
+                    <i class="bi bi-layout-sidebar fs-5" aria-hidden="true"></i>
                 </button>
                 <nav aria-label="breadcrumb">
                     <ol class="breadcrumb mb-0">
                         <?php if (($breadcrumbParent = Navigation::parentFor($activePage)) !== null): ?>
                         <li class="breadcrumb-item">
-                            <a class="link-secondary text-decoration-none" href="<?= esc(site_url(Navigation::routeFor($breadcrumbParent)), 'attr') ?>"><?= esc(Navigation::titleFor($breadcrumbParent)) ?></a>
+                            <a href="<?= esc(site_url(Navigation::routeFor($breadcrumbParent)), 'attr') ?>"><?= esc(Navigation::titleFor($breadcrumbParent)) ?></a>
                         </li>
                         <?php endif; ?>
                         <li class="breadcrumb-item active" aria-current="page"><?= esc($pageTitle) ?></li>
@@ -106,7 +111,13 @@ $bodyView = ($bodyView ?? '') !== '' ? $bodyView : 'Pages/dashboard';
 
             <main class="container-fluid px-4 pt-3 pb-4 dashboard-content flex-grow-1">
 
-            <h1 id="dashboard-page-title"><?= esc($pageTitle) ?></h1>
+            <?php /* The breadcrumb in the topbar shows the page name, so printing
+                     it again here was the same string twice on one screen. The
+                     heading stays for screen readers and for the document
+                     outline: a page with no h1 gives assistive tech nothing to
+                     jump to, and the breadcrumb cannot serve as one because it
+                     sits inside a nav landmark. */ ?>
+            <h1 class="visually-hidden" id="dashboard-page-title"><?= esc($pageTitle) ?></h1>
             <?php if (session()->getFlashdata('success')): ?>
                 <div class="alert alert-success" data-auto-dismiss-alert><?= esc(session()->getFlashdata('success')) ?></div>
             <?php endif; ?>

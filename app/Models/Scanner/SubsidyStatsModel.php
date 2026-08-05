@@ -131,10 +131,20 @@ class SubsidyStatsModel extends Model
      * remainingCount() all build off this one join so the dashboard's paginated
      * tab, its total count, and the PDF's complete list can never disagree
      * about who counts as unclaimed.
+     *
+     * $keyword, when given, narrows to families whose head name or barangay
+     * matches (the Remaining tab's search box). like()/orLike() add the SQL
+     * ESCAPE clause but do not themselves escape % or _ inside the match
+     * string, so a literal % or _ typed by staff is escaped by hand here
+     * (with the query builder's own escape character) before the wildcard %
+     * gets wrapped around it - otherwise it would be read as a SQL wildcard
+     * instead of the literal character staff typed. Values still reach the
+     * database through like()'s own bound placeholder, so quotes need no
+     * separate escaping here.
      */
-    private function remainingBuilder(int $batchId): \CodeIgniter\Database\BaseBuilder
+    private function remainingBuilder(int $batchId, ?string $keyword = null): \CodeIgniter\Database\BaseBuilder
     {
-        return $this->db->table('batch_eligibility')
+        $builder = $this->db->table('batch_eligibility')
             ->join('member', 'member.memberID = batch_eligibility.headID')
             ->join('barangay', 'barangay.barangayID = member.barangayID', 'left')
             ->join(
@@ -145,7 +155,23 @@ class SubsidyStatsModel extends Model
                 'left'
             )
             ->where('batch_eligibility.batch_id', $batchId)
-            ->where('subsidy_distribution.distribution_id IS NULL', null, false);
+            ->where('subsidy_distribution.distribution_id', null);
+
+        if ($keyword !== null && $keyword !== '') {
+            $escapeChar = $this->db->likeEscapeChar;
+            $escaped    = str_replace(
+                [$escapeChar, '%', '_'],
+                [$escapeChar . $escapeChar, $escapeChar . '%', $escapeChar . '_'],
+                $keyword
+            );
+            $builder->groupStart()
+                ->like('member.firstname', $escaped)
+                ->orLike('member.lastname', $escaped)
+                ->orLike('barangay.name', $escaped)
+                ->groupEnd();
+        }
+
+        return $builder;
     }
 
     /**
@@ -170,6 +196,7 @@ class SubsidyStatsModel extends Model
                     . " COALESCE(member.contactnumber, '') AS contact")
                 ->orderBy('barangay', 'ASC')
                 ->orderBy('member.lastname', 'ASC')
+                ->orderBy('batch_eligibility.headID', 'ASC')
                 ->get()->getResultArray();
 
             return array_map(static fn ($r) => [
@@ -184,18 +211,18 @@ class SubsidyStatsModel extends Model
     }
 
     /**
-     * Count behind remainingPage()'s pagination footer. Same filter as
-     * remaining(), so the "Showing X to Y of Z" text can never disagree with
-     * the rows the page actually returns.
+     * Count behind remainingPage()'s pagination footer. Same filter (and the
+     * same optional search keyword) as remainingPage(), so the "Showing X to Y
+     * of Z" text can never disagree with the rows the page actually returns.
      */
-    public function remainingCount(int $batchId): int
+    public function remainingCount(int $batchId, ?string $keyword = null): int
     {
         if ($batchId <= 0) {
             return 0;
         }
 
         try {
-            return (int) $this->remainingBuilder($batchId)
+            return (int) $this->remainingBuilder($batchId, $keyword)
                 ->countAllResults();
         } catch (\Throwable $e) {
             return 0;
@@ -206,24 +233,31 @@ class SubsidyStatsModel extends Model
      * One page of remaining(), for the dashboard's Remaining tab. Against the
      * 100k-family target, remaining() lists everyone in one response; this is
      * the paginated substitute for the tab (the PDF's unclaimed list must stay
-     * whole, so it keeps calling remaining() directly).
+     * whole, so it keeps calling remaining() directly). $keyword narrows to
+     * name/barangay matches, same as remainingCount()'s.
+     *
+     * Ordered by barangay, then surname, then headID: the first two alone are
+     * not unique (two roster families can share both), and LIMIT/OFFSET over
+     * an undefined tie order can repeat or skip a row across two pages.
+     * headID (the batch_eligibility roster's own key) closes that gap.
      *
      * @return list<array{headID:int,name:string,barangay:string,contact:string}>
      */
-    public function remainingPage(int $batchId, int $limit, int $offset): array
+    public function remainingPage(int $batchId, int $limit, int $offset, ?string $keyword = null): array
     {
         if ($batchId <= 0 || $limit <= 0) {
             return [];
         }
 
         try {
-            $rows = $this->remainingBuilder($batchId)
+            $rows = $this->remainingBuilder($batchId, $keyword)
                 ->select('batch_eligibility.headID,'
                     . ' member.firstname, member.lastname,'
                     . " COALESCE(barangay.name, 'Unassigned') AS barangay,"
                     . " COALESCE(member.contactnumber, '') AS contact")
                 ->orderBy('barangay', 'ASC')
                 ->orderBy('member.lastname', 'ASC')
+                ->orderBy('batch_eligibility.headID', 'ASC')
                 ->limit($limit, max(0, $offset))
                 ->get()->getResultArray();
 

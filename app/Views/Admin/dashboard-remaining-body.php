@@ -6,10 +6,30 @@
  * inside components/card by Admin/dashboard-batch-body.php, which supplies
  * the matching server-paginated components/table_footer. Against the
  * 100k-family target, a batch's remaining list can run to hundreds of rows,
- * too large to hand table-paginate.js the whole thing client-side.
+ * too large to hand table-paginate.js the whole thing client-side, so the
+ * search box here is a real database search (routed through
+ * SubsidyStatsModel::remainingBuilder()), not the usual in-page client filter.
  */
 $remaining = $remaining ?? [];
+$keyword = (string) ($keyword ?? '');
+$perPage = (int) ($perPage ?? 25);
+$perPageOptions = (array) ($perPageOptions ?? [10, 25, 50, 100]);
+$searchHiddenHtml = (string) ($searchHiddenHtml ?? '');
+$sizeHiddenHtml = (string) ($sizeHiddenHtml ?? '');
 ?>
+<?= view('components/table_controls', [
+    'searchId' => 'remainingSearch',
+    'searchAria' => 'Search remaining families',
+    'searchAction' => site_url('dashboard'),
+    'searchValue' => $keyword,
+    'searchPlaceholder' => 'Search by family name or barangay...',
+    'searchHiddenHtml' => $searchHiddenHtml,
+    'sizeId' => 'remainingPerPage',
+    'sizeAction' => site_url('dashboard'),
+    'sizeHiddenHtml' => $sizeHiddenHtml,
+    'perPage' => $perPage,
+    'perPageOptions' => $perPageOptions,
+]) ?>
 <table class="table manage-record-table align-middle w-100 mb-0">
   <thead><tr><th>Name</th><th>Barangay</th><th>Contact</th></tr></thead>
   <tbody>
@@ -21,7 +41,7 @@ $remaining = $remaining ?? [];
       </tr>
     <?php endforeach; ?>
     <?php if ($remaining === []): ?>
-      <tr><td colspan="3" class="text-muted">Everyone on the roster has been served.</td></tr>
+      <tr><td colspan="3" class="text-muted"><?= $keyword !== '' ? 'No remaining families match your search.' : 'Everyone on the roster has been served.' ?></td></tr>
     <?php endif; ?>
   </tbody>
 </table>

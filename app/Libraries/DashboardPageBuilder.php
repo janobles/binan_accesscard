@@ -525,20 +525,28 @@ class DashboardPageBuilder
         ];
     }
 
-    /** Paginated remaining-families bundle for the dashboard's Remaining tab. */
+    /**
+     * Paginated remaining-families bundle for the dashboard's Remaining tab.
+     * The 'q' query param (family name or barangay) routes through
+     * SubsidyStatsModel::remainingBuilder() for both the count and the page,
+     * so the footer total and the rows shown can never disagree.
+     */
     private function buildRemainingPageData(SubsidyStatsModel $stats, int $batchId): array
     {
         $perPageOptions = [10, 25, 50, 100];
+        $keyword = trim((string) $this->request->getGet('q'));
         $page    = max(1, (int) $this->request->getGet('page'));
         $perPage = (int) $this->request->getGet('per_page');
         $perPage = in_array($perPage, $perPageOptions, true) ? $perPage : 25;
 
-        $total      = $stats->remainingCount($batchId);
+        $searchKeyword = $keyword === '' ? null : $keyword;
+        $total      = $stats->remainingCount($batchId, $searchKeyword);
         $totalPages = max(1, (int) ceil($total / $perPage));
         $page       = min($page, $totalPages);
 
         return [
-            'rows'          => $stats->remainingPage($batchId, $perPage, ($page - 1) * $perPage),
+            'rows'          => $stats->remainingPage($batchId, $perPage, ($page - 1) * $perPage, $searchKeyword),
+            'keyword'       => $keyword,
             'page'          => $page,
             'perPage'       => $perPage,
             'perPageOptions'=> $perPageOptions,
@@ -553,7 +561,7 @@ class DashboardPageBuilder
     private function emptyRemainingPage(): array
     {
         return [
-            'rows' => [], 'page' => 1, 'perPage' => 25, 'perPageOptions' => [10, 25, 50, 100],
+            'rows' => [], 'keyword' => '', 'page' => 1, 'perPage' => 25, 'perPageOptions' => [10, 25, 50, 100],
             'totalPages' => 1, 'totalRows' => 0, 'fromRecord' => 0, 'toRecord' => 0,
         ];
     }

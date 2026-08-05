@@ -18,6 +18,23 @@
  * - $searchButtonAttrs string       extra raw attrs on the icon button
  *                                   (caller-escaped); client-only tables can
  *                                   wire an onclick here
+ * - $searchAction      string|null  GET action for the search form; null (the
+ *                                   default) keeps the client-local behavior
+ *                                   above. Set this when the table itself is
+ *                                   server-paginated, so a client filter over
+ *                                   the one loaded page would miss every row
+ *                                   not on screen - the search has to be a
+ *                                   real GET like the page-size form below.
+ * - $searchName        string       name attribute for the search input when
+ *                                   $searchAction is set (default 'q')
+ * - $searchValue       string       current keyword, echoed into the input's
+ *                                   value when $searchAction is set
+ * - $searchPlaceholder string       input placeholder; default "Search this
+ *                                   page..." (client mode wording), override
+ *                                   for a $searchAction server search
+ * - $searchHiddenHtml  string       hidden inputs preserving current filters
+ *                                   on the search form (caller-escaped),
+ *                                   only used when $searchAction is set
  * - $sizeId            string       id for the page-size <select>
  * - $sizeAttrs         string       extra raw attrs on the client-side page-size
  *                                   <select> (caller-escaped), e.g.
@@ -35,6 +52,11 @@ $searchAria = (string) ($searchAria ?? 'Search this page');
 $searchFormAttrs = (string) ($searchFormAttrs ?? '');
 $searchInputAttrs = (string) ($searchInputAttrs ?? '');
 $searchButtonAttrs = (string) ($searchButtonAttrs ?? '');
+$searchAction = $searchAction ?? null;
+$searchName = (string) ($searchName ?? 'q');
+$searchValue = (string) ($searchValue ?? '');
+$searchPlaceholder = (string) ($searchPlaceholder ?? 'Search this page...');
+$searchHiddenHtml = (string) ($searchHiddenHtml ?? '');
 $sizeId = (string) ($sizeId ?? 'tablePerPage');
 $sizeAttrs = (string) ($sizeAttrs ?? '');
 $sizeAction = $sizeAction ?? null;
@@ -48,7 +70,15 @@ if (array_is_list($perPageOptions)) {
 }
 ?>
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-    <?php if ($showSearch): ?>
+    <?php if ($showSearch && $searchAction !== null): ?>
+    <form class="records-table-search-form mb-0" role="search" method="get" action="<?= esc($searchAction, 'attr') ?>" aria-label="<?= esc($searchAria, 'attr') ?>"<?= $searchFormAttrs !== '' ? ' ' . trim($searchFormAttrs) : '' ?>>
+        <?= $searchHiddenHtml ?>
+        <div class="input-group input-group-sm">
+            <input class="form-control" type="search" id="<?= esc($searchId, 'attr') ?>" name="<?= esc($searchName, 'attr') ?>" value="<?= esc($searchValue, 'attr') ?>" placeholder="<?= esc($searchPlaceholder, 'attr') ?>" autocomplete="off" aria-label="<?= esc($searchPlaceholder, 'attr') ?>"<?= $searchInputAttrs !== '' ? ' ' . trim($searchInputAttrs) : '' ?>>
+            <button class="btn btn-primary" type="submit" aria-label="<?= esc($searchPlaceholder, 'attr') ?>"<?= $searchButtonAttrs !== '' ? ' ' . trim($searchButtonAttrs) : '' ?>><i class="bi bi-search" aria-hidden="true"></i></button>
+        </div>
+    </form>
+    <?php elseif ($showSearch): ?>
     <form class="records-table-search-form mb-0" role="search" aria-label="<?= esc($searchAria, 'attr') ?>"<?= $searchFormAttrs !== '' ? ' ' . trim($searchFormAttrs) : '' ?>>
         <div class="input-group input-group-sm">
             <input class="form-control" type="search" id="<?= esc($searchId, 'attr') ?>" placeholder="Search this page..." autocomplete="off" aria-label="Search this page"<?= $searchInputAttrs !== '' ? ' ' . trim($searchInputAttrs) : '' ?>>

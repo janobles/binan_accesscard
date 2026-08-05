@@ -12,7 +12,7 @@ $batches = $batches ?? [];
 $batchRow = $batchRow ?? null;
 $batchOpen = (bool) ($batchOpen ?? false);
 $batchSnapshot = $batchSnapshot ?? ['coverage' => ['eligible' => 0, 'served' => 0, 'remaining' => 0, 'coverage' => 0, 'voided' => 0], 'byBarangay' => [], 'perScanner' => [], 'timeline' => []];
-$remainingPage = $remainingPage ?? ['rows' => [], 'page' => 1, 'perPage' => 25, 'perPageOptions' => [10, 25, 50, 100], 'totalPages' => 1, 'totalRows' => 0, 'fromRecord' => 0, 'toRecord' => 0];
+$remainingPage = $remainingPage ?? ['rows' => [], 'keyword' => '', 'page' => 1, 'perPage' => 25, 'perPageOptions' => [10, 25, 50, 100], 'totalPages' => 1, 'totalRows' => 0, 'fromRecord' => 0, 'toRecord' => 0];
 $batchBodyTab = $batchBodyTab ?? 'barangay';
 
 $c = $batchSnapshot['coverage'];
@@ -206,19 +206,36 @@ $noEligible = ! $noBatch && $c['eligible'] === 0;
         $params = array_filter([
             'tab'      => 'remaining',
             'batch'    => $batchId > 0 ? (string) $batchId : '',
+            'q'        => $remainingPage['keyword'],
             'per_page' => $remainingPage['perPage'] !== 25 ? (string) $remainingPage['perPage'] : '',
             'page'     => $targetPage > 1 ? (string) $targetPage : '',
         ], static fn ($value): bool => $value !== '');
 
         return site_url('dashboard') . ($params === [] ? '' : '?' . http_build_query($params));
     };
+    // Hidden fields that keep the tab/batch selection through the search and
+    // per-page forms below; a new search always lands on page 1.
+    $remainingHiddenHtml = '<input type="hidden" name="tab" value="remaining">'
+        . ($batchId > 0 ? '<input type="hidden" name="batch" value="' . esc((string) $batchId, 'attr') . '">' : '');
+    $remainingPerPageHidden = $remainingPage['perPage'] !== 25
+        ? '<input type="hidden" name="per_page" value="' . esc((string) $remainingPage['perPage'], 'attr') . '">'
+        : '';
     ?>
     <?= view('components/card', [
         'icon' => 'hourglass-split',
         'title' => $batchOpen ? 'Remaining families' : 'Families not claimed',
         'cardClass' => 'reports-fallback',
         'bodyView' => 'Admin/dashboard-remaining-body',
-        'bodyData' => ['remaining' => $remainingPage['rows']],
+        'bodyData' => [
+            'remaining' => $remainingPage['rows'],
+            'keyword' => $remainingPage['keyword'],
+            'perPage' => $remainingPage['perPage'],
+            'perPageOptions' => $remainingPage['perPageOptions'],
+            'searchHiddenHtml' => $remainingHiddenHtml . $remainingPerPageHidden,
+            'sizeHiddenHtml' => $remainingHiddenHtml . ($remainingPage['keyword'] !== ''
+                ? '<input type="hidden" name="q" value="' . esc($remainingPage['keyword'], 'attr') . '">'
+                : ''),
+        ],
         'footer' => view('components/table_footer', [
             'fromRecord' => $remainingPage['fromRecord'],
             'toRecord' => $remainingPage['toRecord'],
@@ -249,6 +266,12 @@ $noEligible = ! $noBatch && $c['eligible'] === 0;
   var statsUrl = '<?= site_url('distribution/reports/stats') ?>';
   var batchId = <?= (int) $batchId ?>;
   var batchOpen = <?= $batchOpen ? 'true' : 'false' ?>;
+  // distribution/reports/stats carries no remaining-families rows, so there is
+  // nothing to repaint the Remaining table with. Rather than tick the tile and
+  // the "Last updated" stamp while the list underneath sits frozen (a poll
+  // that looks live but visibly isn't), the whole poll is skipped on this tab:
+  // tile, list and stamp all stay exactly what the page loaded with, together.
+  var onRemainingTab = <?= $batchBodyTab === 'remaining' ? 'true' : 'false' ?>;
   if (batchId > 0) { statsUrl += '?batch=' + batchId; }
 
   function apply(d) {

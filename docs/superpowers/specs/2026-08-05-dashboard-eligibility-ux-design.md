@@ -25,57 +25,75 @@ three days.
 ## Zone 1, program to date
 
 Gets a visible `<h2>Program to date</h2>` (today it has none, just an
-`aria-label`). Four stock-Bootstrap `.card` tiles, `row row-cols-2
-row-cols-md-4 g-3`, no `card-header`, no icon. This deliberately breaks from
+`aria-label`) and otherwise stays what the 2026-08-04 spec designed: a quiet
+two-number strip, not cards.
+
+- Families profiled
+- Families never served
+
+This is standing context about the registry, not the event the page is about.
+It never moves with the batch selector and it does not compete with the batch
+figures for attention, so it gets typographic weight and nothing else. Both
+numbers come from `DashboardModel::programStats()` unchanged, same 60 second
+cache (`PROGRAM_STATS_CACHE_KEY`).
+
+An earlier draft of this spec put four all-time cards here (profiled, ever
+served, never served, barangays with zero coverage). Dropped: the registry is
+not what an officer opens this page to read, and three of those four were one
+fact viewed three ways. The card row belongs to the batch, below.
+
+Rejected with it: a period selector (Today / Last 7 days / Last 30 days) of
+the kind the Umami reference carries. Batches are irregular events of one to n
+days, not calendar periods, so a rolling 7 or 30 day window cuts across whole
+and partial rollouts and produces a number nobody can act on. The batch
+selector in Zone 2 is the real time control on this page.
+
+## Zone 2, this batch
+
+Header (`<h2>This batch</h2>`, batch picker, Download Report) unchanged. No
+batch-over-batch comparison line: considered and dropped, out of scope for
+this pass.
+
+### The four figures
+
+The scenario this page exists for: one distribution site, families holding
+access cards arrive to claim a subsidy, tracked across n days. The card row
+describes that event, the way the Umami reference's cards all describe the
+view currently selected.
+
+Four stock-Bootstrap `.card` tiles, `row row-cols-2 row-cols-md-4 g-3`, no
+`card-header`, no icon. This deliberately breaks from
 `docs/knowledge/sbadmin/target-theme.md`'s documented card convention
 (`card-header` with an `<i>` icon), scoped to KPI tiles only; content cards
 elsewhere keep the icon+title header.
 
-1. Families profiled
-2. Families ever served (distinct family heads, any batch, ever)
-3. Families never served
-4. Barangays with zero coverage to date
+| Card | Source | Pilot reading |
+|------|--------|---------------|
+| Eligible families | `distribution_batch.eligible_count` | 20,000 |
+| Served | `coverage()['served']`, with coverage percent as a small sub-line | 18,039 / 90% |
+| Remaining | `coverage()['remaining']` | 1,961 |
+| Busiest day | max of the by-day series, labelled with its day | Day 1, 9,133 |
 
-Card 4 counts only barangays that have at least one profiled family and no
-family ever served. A barangay with nothing profiled in it is excluded: that
-is a profiling gap, not a coverage gap, and counting it here would blame
-distribution for work that never reached the encoding stage. The `Unassigned`
-bucket (`member.barangayID IS NULL`, which `byBarangay()` already emits as its
-own row) is excluded too, since it is a data-quality artifact and not a
-barangay.
+Card 4 carries the n-days dimension. It states the shape of the arrival curve
+(the pilot ran 9,133 / 6,078 / 2,828, heavily front-loaded) without making
+anyone read the chart, and it is the figure that informs staffing for the next
+event. It reads identically on an open or a closed batch, so no label or
+layout flips underneath an operator mid-event.
 
-All four are all-time counts with no trend arrow: "to date" is already
-cumulative, so there's no prior period to compare against. (2) and (3) sum to
-(1), the same layering Umami's visitors/visits/views has.
+A slim progress bar sits under the row, spanning its full width: the cards give
+the numbers, the bar gives fraction-of-whole at a glance. The voided count and
+the "batch open, updated hh:mm" stamp keep their existing muted line below it,
+voided still hidden at zero.
 
-These four are also how this design satisfies the cross-batch view: cards 2,
-3 and 4 all aggregate over every batch ever run, so the officer's
-"city-wide, across batches" question is answered by Zone 1, and Zone 2 stays
-strictly about the batch in the selector. No separate cross-batch history
-page is built.
-
-Rejected: a period selector (Today / Last 7 days / Last 30 days) of the kind
-the Umami reference carries. Batches are irregular events of one to n days,
-not calendar periods, so a rolling 7 or 30 day window cuts across whole and
-partial rollouts and produces a number nobody can act on. The batch selector
-in Zone 2 is the real time control on this page.
-
-`DashboardModel::programStats()` gains the two new counts, same 60 second
-cache (`PROGRAM_STATS_CACHE_KEY`). Its return shape is consumed in exactly
-three places (`DashboardPageBuilder`, `Pages/dashboard.php`, the model
-itself), all touched by this work, so the shape is free to change.
-
-## Zone 2, this batch
-
-Header (`<h2>This batch</h2>`, batch picker, Download Report) and the
-served/eligible/percent progress block are unchanged. No batch-over-batch
-comparison line: considered and dropped, out of scope for this pass.
+This replaces the current `.batch-progress` block, which packed the same four
+facts into one sentence.
 
 ### Rollout by day
 
 New bar chart, one bar per calendar day the batch was open. Renders only when
 a batch spans more than one day; a single-day batch gets no chart, one bar
-proves nothing. Shown for open and closed batches alike: this is retrospective
+proves nothing. The underlying series is still computed for a single-day batch,
+because the Busiest day card reads from it either way. Shown for open and closed batches alike: this is retrospective
 reporting ("how did the three days break down"), a different job from the
 existing cumulative line chart, which stays open-batch-only because its job is
 live monitoring (a flat tail means scanning stopped).
@@ -86,7 +104,7 @@ already a `date` column and is set server-side to `date('Y-m-d')` at scan time
 (`ScanController::logAid()`), never from user input, so it needs no `DATE()`
 wrapper and is a reliable day key.
 
-The day bars sum to the progress block's served total because a family can be
+The day bars sum to the Served card's total because a family can be
 scanned at most once per batch: `ScanController::logAid()` refuses a repeat
 scan in the same batch. If that rule ever changes, per-day distinct counts
 would double-count a family across days and the bars would stop summing to the
@@ -209,6 +227,11 @@ comments. The same ban applies to strings the user reads.
   goes unused, since demographics are out of scope (see above).
 - The distribution calendar and masterlist import, both already out of scope
   per the 2026-08-04 spec and untouched by this one.
+- A dedicated cross-batch history page. The city-wide, across-batches read is
+  served by Zone 1's never-served figure (which spans every batch ever run) and
+  by stepping the batch selector through past events. If comparing batches side
+  by side turns out to be a real need, it earns its own spec rather than a
+  corner of this page.
 
 ## Verification
 
@@ -218,10 +241,13 @@ comments. The same ban applies to strings the user reads.
   correct by inspection.
 - A fixture seeds a three-day batch with 9,133 / 6,078 / 2,828 distinct
   families served per day (the pilot's shape). The chart renders three bars
-  carrying exactly those values and they sum to the 18,039 the progress block
+  carrying exactly those values and they sum to the 18,039 the Served card
   reports. A single-day batch renders no chart at all.
-- Zone 1 card 4 excludes both a barangay with zero profiled families and the
-  Unassigned bucket, verified against a fixture that contains one of each.
+- The Busiest day card names the day carrying the largest per-day count and
+  agrees with the tallest bar in the chart beside it. On a single-day batch it
+  names that day and no chart renders.
+- Eligible, Served and Remaining on the cards match what `coverage()` returns,
+  and Served plus Remaining equal Eligible.
 - Barangay leaderboard returns the same rows in both batch states, sorted
   best-first, no flip.
 - Stations grid shows exactly the scanners with at least one scan in the

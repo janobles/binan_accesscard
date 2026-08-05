@@ -30,9 +30,8 @@ $templateUrl = (string) ($templateUrl ?? site_url('records/template'));
         <div class="col-lg-8 col-xl-7">
             <div class="card border">
                 <div class="card-body p-4">
-                    <p>
-                        Fill the template, mark each head as <strong>Relationship = Head</strong>,
-                        and give every person of one household the same <strong>FamilyNo</strong>.
+                    <p class="text-muted mb-4">
+                        Please fill out the provided template with the family records. To group members into one household, assign them the same <strong>Family Number</strong> and make sure to indicate the <strong>Head</strong> of the family in the Relationship column.
                     </p>
 
                     <a class="btn btn-outline-secondary mb-4" href="<?= esc($templateUrl, 'attr') ?>">
@@ -53,17 +52,15 @@ $templateUrl = (string) ($templateUrl ?? site_url('records/template'));
                                 required
                             >
                             <div class="form-text">
-                                Nothing is saved yet. The file is checked first, then you review it.
+                                We will safely scan your file for errors first. You will be able to review the records before they are saved to the system.
                             </div>
                         </div>
 
-                        <div data-import-results aria-live="polite"></div>
-
-                        <div data-import-actions>
+                        <div>
                             <div class="d-flex flex-wrap justify-content-end gap-2 mt-2">
                                 <a class="btn btn-outline-secondary" href="<?= esc(site_url('records'), 'attr') ?>">Cancel</a>
                                 <button class="btn btn-primary" type="submit" data-import-submit>
-                                    Upload and check
+                                    Upload and scan file
                                 </button>
                             </div>
                         </div>

@@ -66,7 +66,12 @@
         window.clearTimeout(hideTimer);
 
         toastEl.className = 'toast align-items-center text-bg-' + (variant || 'success') + ' border-0';
-        bodyEl.textContent = message;
+        
+        if (opts.html) {
+            bodyEl.innerHTML = message;
+        } else {
+            bodyEl.textContent = message;
+        }
 
         if (instance) {
             instance.show();

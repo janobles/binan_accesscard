@@ -29,7 +29,7 @@ class DashboardModel
      */
     public const STATS_CACHE_KEY = 'dashboard_stats';
 
-    /** Cache key for the dashboard's Zone 1 program strip. Same 60 second TTL as STATS_CACHE_KEY. */
+    /** Cache key for the Overview tab's four counts. Same 60 second TTL as STATS_CACHE_KEY. */
     public const PROGRAM_STATS_CACHE_KEY = 'dashboard_program_stats';
 
     /**
@@ -62,12 +62,21 @@ class DashboardModel
     }
 
     /**
-     * Zone 1 of the dashboard: the quiet program-to-date strip that never moves
-     * with the batch selector. "Never served" is the pool the next batch draws
-     * from - a family head with a QR but no live (unvoided) distribution in any
-     * batch, ever. Cached 60 seconds like stats().
+     * The Overview tab's four all-time figures: how many households we know
+     * about, how many distributions we have staged, how many households those
+     * reached, and how many we have never reached.
      *
-     * @return array{families:int,neverServed:int}
+     * neverServed is profiled minus ever served, with no QR requirement. A
+     * family whose card has not been printed yet has still never been served,
+     * and gating on qr_control would make everServed and neverServed add up to
+     * the carded total rather than the profiled one, so the Overview cards
+     * would not reconcile.
+     *
+     * everServed joins back to member so it counts active heads only. Without
+     * that, a soft-deleted head holding a distribution would count as served
+     * while being excluded from families, and neverServed could go negative.
+     *
+     * @return array{families:int,distributions:int,everServed:int,neverServed:int}
      */
     public function programStats(): array
     {
@@ -76,27 +85,29 @@ class DashboardModel
             return $cached;
         }
 
-        if (! $this->db->tableExists('member')) {
-            return ['families' => 0, 'neverServed' => 0];
+        $families = $this->countFamilies();
+
+        $everServed = 0;
+        if ($this->db->tableExists('member') && $this->db->tableExists('subsidy_distribution')) {
+            $everServed = (int) $this->db->table('subsidy_distribution sd')
+                ->select('COUNT(DISTINCT sd.memberID) AS n')
+                ->join('member m', 'm.memberID = sd.memberID')
+                ->where('m.memberID = m.headID', null, false)
+                ->where('m.dt_deleted IS NULL', null, false)
+                ->where('sd.dt_voided', null)
+                ->get()->getRowArray()['n'] ?? 0;
         }
 
-        $neverServed = 0;
-        if ($this->db->tableExists('qr_control') && $this->db->tableExists('subsidy_distribution')) {
-            $neverServed = (int) $this->db->table('member')
-                ->where('memberID = headID', null, false)
-                ->where('dt_deleted IS NULL', null, false)
-                ->where('EXISTS (SELECT 1 FROM qr_control WHERE qr_control.headID = member.memberID)', null, false)
-                ->where(
-                    'NOT EXISTS (SELECT 1 FROM subsidy_distribution'
-                        . ' WHERE subsidy_distribution.memberID = member.memberID'
-                        . ' AND subsidy_distribution.dt_voided IS NULL)',
-                    null,
-                    false
-                )
-                ->countAllResults();
-        }
+        $distributions = $this->db->tableExists('distribution_batch')
+            ? $this->db->table('distribution_batch')->countAllResults()
+            : 0;
 
-        $stats = ['families' => $this->countFamilies(), 'neverServed' => $neverServed];
+        $stats = [
+            'families'      => $families,
+            'distributions' => $distributions,
+            'everServed'    => $everServed,
+            'neverServed'   => max(0, $families - $everServed),
+        ];
 
         cache()->save(self::PROGRAM_STATS_CACHE_KEY, $stats, 60);
 

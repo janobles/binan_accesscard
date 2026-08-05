@@ -24,6 +24,11 @@ $batchId = (int) ($batchRow['batch_id'] ?? 0);
 $rangeLabel = $batchRow !== null ? 'Showing batch: ' . esc($batchRow['name']) : 'No batch selected';
 $noBatch = $batchRow === null;
 $noEligible = ! $noBatch && $c['eligible'] === 0;
+// A closed batch with no scans can never grow bars, so the coverage chart would
+// be a screen of empty gridlines under one label per barangay. An OPEN batch at
+// zero still gets the canvas: the live poll fills it in place, and swapping
+// markup mid-batch is what the poll is written to avoid.
+$emptyChart = ! $noBatch && ! $batchOpen && $c['served'] === 0;
 ?>
 
 <div class="dashboard-section-head dashboard-section-head--subtitled">
@@ -74,7 +79,10 @@ $noEligible = ! $noBatch && $c['eligible'] === 0;
       </div>
     </div></div>
   </div>
-  <div class="col-6 col-lg-3">
+  <?php /* Full width below sm: the Voided tile beside this one is hidden at 0,
+           so a col-6 leaves a lone half-width card against dead space on a
+           phone. */ ?>
+  <div class="col-12 col-sm-6 col-lg-3">
     <?= view('components/stat_card', [
         'label' => $batchOpen ? 'Remaining' : 'Not claimed',
         'value' => (string) $c['remaining'],
@@ -85,7 +93,7 @@ $noEligible = ! $noBatch && $c['eligible'] === 0;
   </div>
   <?php /* Always rendered (hidden at 0) so a live poll can reveal it in place
            without inserting new markup mid-batch. */ ?>
-  <div class="col-6 col-lg-3<?= $c['voided'] > 0 ? '' : ' d-none' ?>" id="voidedTileWrap">
+  <div class="col-12 col-sm-6 col-lg-3<?= $c['voided'] > 0 ? '' : ' d-none' ?>" id="voidedTileWrap">
     <?= view('components/stat_card', [
         'label' => 'Voided',
         'value' => (string) $c['voided'],
@@ -101,8 +109,12 @@ $noEligible = ! $noBatch && $c['eligible'] === 0;
     <?= view('components/card', [
         'icon' => 'bar-chart-fill',
         'title' => 'Coverage by barangay (percent, worst first)',
-        'bodyHtml' => '<div class="reports-barangay-chart"><canvas id="chartBarangay"></canvas></div>',
-        'footer' => view('components/table_footer', ['leftContent' => $rangeLabel]),
+        'bodyHtml' => $emptyChart
+            ? '<p class="text-muted mb-0">Nothing was handed out in this batch, so there is no coverage to plot. The per-barangay roster is in the Barangay tab below.</p>'
+            : '<div class="reports-barangay-chart"><canvas id="chartBarangay"></canvas></div>',
+        // No footer: the batch name is already the section subtitle above, and
+        // repeating it under the chart reads as a second, different scope.
+        'footer' => null,
         'cardClass' => 'reports-chart-card h-100',
     ]) ?>
   </div>

@@ -367,6 +367,30 @@ class SubsidyStatsModel extends Model
     }
 
     /**
+     * The date() format a timeline's labels should use, decided once for the
+     * whole series so one axis never mixes two formats.
+     *
+     * Buckets are ordered by time, but a bare clock repeats every day: a batch
+     * running Tuesday to Thursday produced an axis reading 9:36 AM, 8:41 AM,
+     * 9:22 AM, which looks like it runs backwards. A single day is the live
+     * monitoring case and the date there is only noise, so it keeps the clock.
+     *
+     * @param list<string> $timestamps bucket timestamps, any strtotime format
+     */
+    public static function timelineLabelFormat(array $timestamps): string
+    {
+        $days = [];
+        foreach ($timestamps as $ts) {
+            $time = strtotime((string) $ts);
+            if ($time !== false) {
+                $days[date('Y-m-d', $time)] = true;
+            }
+        }
+
+        return count($days) > 1 ? 'M j, g:i A' : 'g:i A';
+    }
+
+    /**
      * Cumulative families served across the batch, 15 minute buckets. A flat
      * tail means scanning has stopped, which is the one thing a live view must
      * surface.
@@ -390,12 +414,14 @@ class SubsidyStatsModel extends Model
                 ->orderBy('bucket', 'ASC')
                 ->get()->getResultArray();
 
+            $format = self::timelineLabelFormat(array_column($rows, 'ts'));
+
             $running = 0;
             $out     = [];
             foreach ($rows as $r) {
                 $running += (int) $r['served'];
                 $out[] = [
-                    'label'      => date('g:i A', strtotime((string) $r['ts'])),
+                    'label'      => date($format, strtotime((string) $r['ts'])),
                     'cumulative' => $running,
                 ];
             }
@@ -472,8 +498,10 @@ class SubsidyStatsModel extends Model
                 ->orderBy('bucket', 'ASC')
                 ->get()->getResultArray();
 
+            $format = self::timelineLabelFormat(array_column($rows, 'ts'));
+
             return array_map(static fn ($r) => [
-                'label'    => date('g:i A', strtotime((string) $r['ts'])),
+                'label'    => date($format, strtotime((string) $r['ts'])),
                 'families' => (int) $r['families'],
                 'handouts' => (int) $r['handouts'],
             ], $rows);

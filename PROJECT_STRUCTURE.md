@@ -1,8 +1,7 @@
 # Project Structure
 
-Normal CodeIgniter 4 layout. The database source of truth is `accesscardV19.sql`
-(with `accesscardV18.sql` kept as the base its patch applies to); no app migrations
-are used.
+Normal CodeIgniter 4 layout. The database source of truth is `accesscardV20.sql`;
+no app migrations are used.
 
 ## Navigation and URL space
 
@@ -115,8 +114,10 @@ Controllers and models are grouped into **feature subnamespaces** so each slice
 
 ## Database
 
-- `accesscardV19.sql` - the schema and reference seed rows (import it to set up).
-- `sql/patches/` - incremental patches, including `v19-subsidy-rename.sql`.
+- `accesscardV20.sql` - the schema and reference seed rows (import it to set up).
+- `sql/patches/` - incremental patches for a database already carrying data,
+  through `v20-eligibility.sql` and `v20-barangay-backfill.sql`. A fresh setup
+  needs the dump only; the patches exist for databases that predate it.
 - `app/Database/Seeds/` - test login accounts only; never tables or columns.
 
 ## Public Assets

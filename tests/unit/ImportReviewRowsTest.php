@@ -104,7 +104,7 @@ final class ImportReviewRowsTest extends CIUnitTestCase
 
         // The apply endpoint revalidates through FamilyExcelImporter::existingHeadsForRows(),
         // which queries qr_control directly with no hasTable() guard once a staged row's
-        // familyno looks like a real QR (accesscardV19.sql's qr_control, unprefixed here).
+        // familyno looks like a real QR (the dump's qr_control, unprefixed here).
         $forge->addField([
             'control_no' => ['type' => 'INTEGER'],
             'headID'     => ['type' => 'INTEGER'],

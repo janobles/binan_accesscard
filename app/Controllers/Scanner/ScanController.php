@@ -6,6 +6,7 @@ use App\Controllers\BaseController;
 use App\Libraries\Qr\ControlNumber;
 use App\Libraries\Qr\QrImageGenerator;
 use App\Libraries\RoleAccess;
+use App\Libraries\Scanner\BatchScope;
 use App\Libraries\SessionAccount;
 use App\Models\Audit\AuditTrailsModel;
 use App\Models\Families\MemberModel;
@@ -176,30 +177,79 @@ class ScanController extends BaseController
         $batchModel = model(DistributionBatchModel::class);
         $active     = $batchModel->activeBatch();
         $batches    = $batchModel->allBatches();
-        $batchId    = (int) $this->request->getGet('batch');
-        if ($batchId <= 0) {
-            $batchId = $active !== null ? (int) $active['batch_id'] : (int) ($batches[0]['batch_id'] ?? 0);
-        }
+        [$batchId, $batchRow] = BatchScope::resolve($batches, $active, (int) $this->request->getGet('batch'));
 
-        $userId    = (int) (session('user_id') ?? 0);
-        $batchRow  = null;
-        foreach ($batches as $b) {
-            if ((int) $b['batch_id'] === $batchId) {
-                $batchRow = $b;
-                break;
-            }
-        }
-        $snapshot = $this->kioskSnapshot($batchId, $userId, $batchRow);
+        $userId       = $this->resolveViewedScanner();
+        $viewingOther = $userId !== (int) (session('user_id') ?? 0);
+        $snapshot     = $this->kioskSnapshot($batchId, $userId, $batchRow);
 
         return view('Scanner/performance', array_merge([
-            'pageTitle'    => 'My Performance',
+            'pageTitle'    => $viewingOther ? 'Station Performance' : 'My Performance',
+            // The topbar account menu names whoever is signed in, which is the
+            // admin when one has drilled into a station. The figures below
+            // belong to someone else, so the heading names them separately.
             'username'     => session('username') ?? 'Scanner',
+            'stationName'  => $viewingOther
+                ? $this->accountUsername($userId)
+                : (string) (session('username') ?? 'Scanner'),
+            'viewingOther' => $viewingOther,
             'user'         => SessionAccount::user(),
             'accountLevelLabel' => SessionAccount::levelLabel(),
             'activeBatch'  => $active,
             'batches'      => $batches,
             'batchId'      => $batchId,
+            'batchOpen'    => $batchRow !== null && ($batchRow['closed_at'] ?? null) === null,
+            // Carried into the batch selector and the stats poll so an admin
+            // drilled into a station stays on it, see resolveViewedScanner().
+            'viewedScannerId' => $viewingOther ? $userId : null,
         ], $snapshot));
+    }
+
+    /**
+     * Which scanner's figures the performance page is showing.
+     *
+     * A Scanner sees their own session and nothing else. An Admin or Developer
+     * may pass ?scanner=<userID> to open one station from the dashboard's
+     * Stations grid, and only when that account is genuinely a scanner. Without
+     * this the page would answer with the viewer's own (usually zero) numbers
+     * under the clicked station's name, which is a silent wrong answer.
+     */
+    private function resolveViewedScanner(): int
+    {
+        $sessionUserId = (int) (session('user_id') ?? 0);
+        // ?scanner[]=1 hands back an array, and casting one to int is a warning
+        // that becomes a 500 under `development`.
+        $requestedRaw  = $this->request->getGet('scanner');
+        $requested     = is_scalar($requestedRaw) ? (int) $requestedRaw : 0;
+
+        if ($requested <= 0 || $requested === $sessionUserId) {
+            return $sessionUserId;
+        }
+
+        $role = RoleAccess::normalizeRole((string) session()->get('role'));
+        if (! in_array($role, ['Admin', 'Developer'], true)) {
+            return $sessionUserId;
+        }
+
+        $target = db_connect()->table('users')
+            ->select('account_level')
+            ->where('userID', $requested)
+            ->get()->getRowArray();
+
+        return ($target['account_level'] ?? '') === 'scanner' ? $requested : $sessionUserId;
+    }
+
+    /** The account username for a userID, or 'Scanner' when the row is gone. */
+    private function accountUsername(int $userId): string
+    {
+        $row = db_connect()->table('users')
+            ->select('username')
+            ->where('userID', $userId)
+            ->get()->getRowArray();
+
+        $username = trim((string) ($row['username'] ?? ''));
+
+        return $username === '' ? 'Scanner' : $username;
     }
 
     /**
@@ -249,20 +299,33 @@ class ScanController extends BaseController
             return $this->response->setStatusCode(403)->setJSON(['error' => 'Forbidden.']);
         }
 
-        $activeBatch = model(DistributionBatchModel::class)->activeBatch();
-        $userId      = (int) (session('user_id') ?? 0);
-        if ($activeBatch === null) {
+        $batchModel = model(DistributionBatchModel::class);
+        $userId     = $this->resolveViewedScanner();
+
+        // The performance page can be pinned to one batch, and an admin opening
+        // a station from the dashboard usually pins it to a closed one. Without
+        // honouring ?batch= the poll answers for whatever batch happens to be
+        // open and overwrites the figures the page rendered. No ?batch= keeps
+        // the kiosk's own behaviour: the open batch, or nothing.
+        $requested   = $this->request->getGet('batch');
+        $requestedId = is_scalar($requested) ? max(0, (int) $requested) : 0;
+
+        $batch = $requestedId > 0
+            ? BatchScope::resolve($batchModel->allBatches(), null, $requestedId)[1]
+            : $batchModel->activeBatch();
+
+        if ($batch === null) {
             return $this->response->setJSON(['batch' => null, 'families' => 0, 'handouts' => 0]);
         }
 
-        $batchId  = (int) $activeBatch['batch_id'];
-        $snapshot = $this->kioskSnapshot($batchId, $userId, $activeBatch);
+        $batchId  = (int) $batch['batch_id'];
+        $snapshot = $this->kioskSnapshot($batchId, $userId, $batch);
 
         return $this->response->setJSON([
             'batch'    => [
                 'id'       => $batchId,
-                'name'     => (string) $activeBatch['name'],
-                'subsidy_type' => (string) ($activeBatch['subsidy_type_name'] ?? ''),
+                'name'     => (string) $batch['name'],
+                'subsidy_type' => (string) ($batch['subsidy_type_name'] ?? ''),
             ],
             'families' => $snapshot['mine']['families'],
             'handouts' => $snapshot['mine']['handouts'],
@@ -414,6 +477,8 @@ class ScanController extends BaseController
         if ($db->transStatus() === false) {
             return $this->response->setStatusCode(500)->setJSON(['error' => 'Failed to log the subsidy distribution.']);
         }
+
+        model(SubsidyStatsModel::class)->forgetBatch($batchId);
 
         return $this->response->setJSON($familyPayload + [
             'ok'           => true,

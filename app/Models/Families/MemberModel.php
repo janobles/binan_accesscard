@@ -34,6 +34,7 @@ class MemberModel extends Model
         'religion' => 'permit_empty|min_length[2]|max_length[100]|not_numeric_only',
         'address' => 'permit_empty|max_length[255]',
         'barangay' => 'permit_empty|max_length[100]',
+        'barangayID' => 'permit_empty|is_natural_no_zero',
     ];
 
     protected $table = 'member';
@@ -55,6 +56,7 @@ class MemberModel extends Model
         'religion',
         'address',
         'barangay',
+        'barangayID',
         'relationship',
         'headID',
         'sectorID',

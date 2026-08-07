@@ -13,7 +13,7 @@ class SubsidyDistributionModel extends Model
     protected $table         = 'subsidy_distribution';
     protected $primaryKey    = 'distribution_id';
     protected $returnType    = 'array';
-    protected $allowedFields = ['control_no', 'memberID', 'subsidy_type_id', 'claim_date', 'userID', 'batch_id'];
+    protected $allowedFields = ['control_no', 'memberID', 'subsidy_type_id', 'claim_date', 'userID', 'batch_id', 'dt_voided'];
     protected $useTimestamps = false;
 
     /** Inserts one distribution row and returns its distribution_id. */
@@ -78,6 +78,7 @@ class SubsidyDistributionModel extends Model
                 ->join('member', 'member.memberID = subsidy_distribution.memberID', 'left')
                 ->join('distribution_batch', 'distribution_batch.batch_id = subsidy_distribution.batch_id', 'left')
                 ->where('subsidy_distribution.control_no', $controlNo)
+                ->where('subsidy_distribution.dt_voided IS NULL', null, false)
                 ->orderBy('subsidy_distribution.claim_date', 'DESC')
                 ->orderBy('subsidy_distribution.distribution_id', 'DESC')
                 ->limit(10)
@@ -150,6 +151,7 @@ class SubsidyDistributionModel extends Model
             $rows = $this->select('subsidy_distribution.batch_id, distribution_batch.name, COUNT(*) AS n')
                 ->join('distribution_batch', 'distribution_batch.batch_id = subsidy_distribution.batch_id', 'left')
                 ->where('subsidy_distribution.control_no', $controlNo)
+                ->where('subsidy_distribution.dt_voided IS NULL', null, false)
                 ->groupBy('subsidy_distribution.batch_id, distribution_batch.name')
                 ->orderBy('distribution_batch.name', 'ASC')
                 ->findAll();
@@ -180,6 +182,7 @@ class SubsidyDistributionModel extends Model
             $rows = $this->select('subsidy_distribution.subsidy_type_id, subsidy.name, COUNT(*) AS n')
                 ->join('subsidy', 'subsidy.subsidy_type_id = subsidy_distribution.subsidy_type_id', 'left')
                 ->where('subsidy_distribution.control_no', $controlNo)
+                ->where('subsidy_distribution.dt_voided IS NULL', null, false)
                 ->groupBy('subsidy_distribution.subsidy_type_id, subsidy.name')
                 ->orderBy('subsidy.name', 'ASC')
                 ->findAll();
@@ -238,6 +241,7 @@ class SubsidyDistributionModel extends Model
                 ->join('users', 'users.userID = subsidy_distribution.userID', 'left')
                 ->where('subsidy_distribution.control_no', $controlNo)
                 ->where('subsidy_distribution.batch_id', $batchId)
+                ->where('subsidy_distribution.dt_voided IS NULL', null, false)
                 ->first();
 
             return is_array($row) ? $row : null;
@@ -258,19 +262,29 @@ class SubsidyDistributionModel extends Model
                 ->select('COUNT(DISTINCT control_no) AS n')
                 ->where('userID', $userId)
                 ->where('batch_id', $batchId)
+                ->where('dt_voided IS NULL', null, false)
                 ->get()->getRowArray()['n'] ?? 0);
         } catch (\Throwable $e) {
             return 0;
         }
     }
 
-    /** Hard-delete one distribution (void a wrong entry). Audited by the caller. */
+    /**
+     * Soft-voids a logged distribution. The row survives for audit while every
+     * statistic ignores it, so the family correctly returns to "not served".
+     * Hard deletion would leave the audit trail pointing at a missing
+     * distribution_id.
+     */
     public function void(int $distributionId): bool
     {
         if ($distributionId <= 0) {
             return false;
         }
 
-        return $this->delete($distributionId) !== false;
+        try {
+            return $this->update($distributionId, ['dt_voided' => date('Y-m-d H:i:s')]) !== false;
+        } catch (\Throwable $e) {
+            return false;
+        }
     }
 }

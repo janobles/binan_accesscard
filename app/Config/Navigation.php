@@ -56,14 +56,22 @@ class Navigation
      * to visit them: they are reached from a toolbar on the page that owns them.
      * Same shape as LINKS minus the display fields.
      *
+     * 'dashboard-reports' is not a page at all but the pair of read-only
+     * endpoints the dashboard's Distribution pane reads from (its live poll and
+     * its Download Report link). It carries its own key because the pane renders
+     * for every staff role while the Distribution page it used to be grouped
+     * with does not, which left an Encoder on a pane whose data 404'd silently.
+     * The batch writes stay on the 'distribution' key.
+     *
      * @var array<string, list<string>> page key => allowed roles
      */
     public const UNLISTED = [
-        'records-entry'   => ['Developer', 'Admin', 'Encoder'],
-        'records-import'  => ['Developer', 'Admin', 'Encoder'],
-        'records-profile' => self::ALL_STAFF,
-        'records-edit'    => ['Developer', 'Admin', 'Encoder'],
-        'records-update'  => ['Developer', 'Admin', 'Encoder'],
+        'records-entry'     => ['Developer', 'Admin', 'Encoder'],
+        'records-import'    => ['Developer', 'Admin', 'Encoder'],
+        'records-profile'   => self::ALL_STAFF,
+        'records-edit'      => ['Developer', 'Admin', 'Encoder'],
+        'records-update'    => ['Developer', 'Admin', 'Encoder'],
+        'dashboard-reports' => self::ALL_STAFF,
     ];
 
     /**
@@ -72,11 +80,12 @@ class Navigation
      * @var array<string, string>
      */
     private const UNLISTED_TITLES = [
-        'records-entry'   => 'New Family Record',
-        'records-import'  => 'Import Family Records',
-        'records-profile' => 'Family Profile',
-        'records-edit'    => 'Edit Family Record',
-        'records-update'  => 'Edit Family Record',
+        'records-entry'     => 'New Family Record',
+        'records-import'    => 'Import Family Records',
+        'records-profile'   => 'Family Profile',
+        'records-edit'      => 'Edit Family Record',
+        'records-update'    => 'Edit Family Record',
+        'dashboard-reports' => 'Distribution Report',
     ];
 
     /**
@@ -92,6 +101,11 @@ class Navigation
         'records-profile' => 'records',
         'records-edit'    => 'records',
         'records-update'  => 'records',
+        // Neither endpoint renders a breadcrumb (one returns JSON, the other
+        // PDF bytes), but the manifest's invariant is that every unlisted key
+        // names the page it hangs off, and the dashboard is where both are
+        // reached from.
+        'dashboard-reports' => 'dashboard',
     ];
 
     /**

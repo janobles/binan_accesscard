@@ -7,7 +7,7 @@
 ?>
 <div class="table-responsive flex-grow-1 overflow-auto">
     <table
-        class="table table-hover align-middle w-100"
+        class="table manage-record-table table-hover align-middle w-100"
         id="familyRecordsTable"
         data-ajax-url="<?= esc(site_url('records/data'), 'attr') ?>"
     >

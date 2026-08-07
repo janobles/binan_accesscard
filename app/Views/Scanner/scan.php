@@ -14,6 +14,8 @@
 <?= $this->extend('Scanner/kiosk-layout') ?>
 <?= $this->section('content') ?>
 
+
+
 <?php if ($activeBatch === null): ?>
 <div class="alert alert-warning" role="alert">
   No active distribution batch. Ask an administrator to start one.
@@ -26,11 +28,11 @@
     <div class="input-group input-group-lg">
       <input type="text" inputmode="numeric" autocomplete="off" class="form-control"
              id="controlInput" placeholder="e.g. 42" autofocus>
-      <button class="btn btn-outline-secondary" id="cameraBtn" type="button" title="Scan with camera" aria-label="Scan with camera">
-        <i class="bi bi-camera" aria-hidden="true"></i>
+      <button class="btn btn-outline-secondary px-4 scan-lookup-btn" id="cameraBtn" type="button" title="Scan with camera" aria-label="Scan with camera">
+        Camera
       </button>
-      <button class="btn btn-primary" id="lookupBtn" type="button" aria-label="Look up control number">
-        <i class="bi bi-search" aria-hidden="true"></i>
+      <button class="btn btn-primary px-4 scan-lookup-btn" id="lookupBtn" type="button" aria-label="Look up control number">
+        Search
       </button>
     </div>
   </div>

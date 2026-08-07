@@ -1,0 +1,17 @@
+-- V20 follow-up: member.barangayID data backfill.
+--
+-- v20-eligibility.sql only added the barangayID column (schema); it shipped
+-- with no data migration, so every family imported before this feature has
+-- barangayID NULL. Resolving that NULL to the right barangay needs the same
+-- fold the family form and Excel importer already use to turn free text into
+-- a barangayID (MemberFieldNormalizer::barangayKey() + BarangayModel::
+-- idByNormalizedName()) - that fold does multibyte lowercasing, an n-with-
+-- tilde substitution, and Sto./Sta. expansion that plain SQL cannot
+-- reproduce without silently drifting from the PHP version over time.
+--
+-- Run instead of a plain SQL patch:
+--   php spark members:backfill-barangay --dry-run   preview matches/misses
+--   php spark members:backfill-barangay             back up member, then write
+--
+-- See app/Commands/BackfillMemberBarangay.php. Only ever fills a NULL
+-- barangayID, never overwrites one already set, and is safe to re-run.

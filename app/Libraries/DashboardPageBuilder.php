@@ -4,6 +4,7 @@ namespace App\Libraries;
 
 use App\Models\Audit\AuditTrailsModel;
 use App\Models\DashboardModel;
+use App\Models\Lookups\BarangayModel;
 use App\Models\Families\MemberModel;
 use App\Models\SearchModel;
 use App\Models\Lookups\CategoryModel;
@@ -15,6 +16,7 @@ use App\Models\Scanner\SubsidyStatsModel;
 use App\Models\Scanner\DistributionBatchModel;
 use App\Support\FamilyProfilingFormV2;
 use App\Libraries\RoleAccess;
+use App\Libraries\Scanner\BatchScope;
 use App\Models\ViewLayoutModel;
 use CodeIgniter\Database\Exceptions\DatabaseException;
 use CodeIgniter\HTTP\IncomingRequest;
@@ -137,12 +139,6 @@ class DashboardPageBuilder
         $isDeveloper = $currentRole === 'Developer';
         $isAdmin = $currentRole === 'Admin';
         $canManageAccounts = $isDeveloper || $isAdmin;
-        // Manager-only, even though the `distribution` PAGE is Viewer-reachable via
-        // the manifest: this section's Download Report button and stats poll hit
-        // reports endpoints guarded to Developer/Admin, and its per-scanner table
-        // surfaces kiosk usernames, not aggregate data. Do not re-key this to
-        // Navigation::pageRoles('distribution').
-        $seesDistribution = $isDeveloper || $isAdmin;
         $isAccounts = $activePage === 'accounts' && $canManageAccounts;
         $isDashboard = $activePage === 'dashboard';
 
@@ -154,13 +150,6 @@ class DashboardPageBuilder
         $serviceModel = new ServiceModel();
 
         $sectorOptions = $sectorModel->getSectorOptions();
-
-        $recentFamilies = [];
-        if ($isDashboard) {
-            $recentFamilies = $searchTerm !== '' || $hasSearchFilters
-                ? $searchModel->families($searchTerm, $searchFilters, 25)
-                : $dashboardModel->recentFamilies(10);
-        }
 
         // Keep legacy file-backed Developer audit rows (NULL userID) visible only to
         // Developers. New Developer activity has a real userID like every DB account.
@@ -210,20 +199,37 @@ class DashboardPageBuilder
         $isDistributions = $activePage === 'distribution' && $distributionTab === 'log';
         $batchModel      = model(DistributionBatchModel::class);
 
+        // Dashboard batch zone's own table: Barangay / Stations / Remaining,
+        // switched by ?tab= like the other tabbed pages. Not shared with
+        // $distributionTab above: that one belongs to the Distribution page.
+        $batchBodyTab = (string) $this->request->getGet('tab');
+        $batchBodyTab = in_array($batchBodyTab, ['barangay', 'stations', 'remaining'], true) ? $batchBodyTab : 'barangay';
+
+        // Two panes share the dashboard page. An unknown ?view= falls back to
+        // Overview rather than erroring, matching how $batchBodyTab treats a
+        // bad ?tab=.
+        $dashboardView = (string) $this->request->getGet('view');
+        $dashboardView = in_array($dashboardView, ['overview', 'distribution'], true) ? $dashboardView : 'overview';
+
+        // The batch the reader explicitly asked for, straight off the query
+        // rather than out of $reportsData: the outer tab strip has to carry the
+        // selection onto the Overview pane, where no batch data is assembled at
+        // all, and back again.
+        $requestedBatch  = $this->request->getGet('batch');
+        $selectedBatchId = is_scalar($requestedBatch) ? max(0, (int) $requestedBatch) : 0;
+
         // Distribution analytics now live on the dashboard (combined totals +
-        // per-kiosk table), batch-scoped only (no date filter). Gated so other
-        // pages, and roles with no distribution access, don't run these queries.
-        $reportsData = $isDashboard && $seesDistribution
-            ? $this->buildReportsData($batchModel)
+        // per-kiosk table), batch-scoped only (no date filter). Gated on the
+        // page and the pane, not on the role: every role reaches the dashboard
+        // and both panes, but neither pane pays for the other's queries.
+        $reportsData = $isDashboard && $dashboardView === 'distribution'
+            ? $this->buildReportsData($batchModel, $batchBodyTab)
             : [
-                'reportsBatches'    => [],
-                'reportsBatchId'    => null,
-                'reportsBatchName'  => null,
-                'reportsBatchOpen'  => false,
-                'reportsSummary'    => ['total' => 0, 'received' => 0, 'notReceived' => 0, 'coverage' => 0],
-                'reportsByBarangay' => [],
-                'reportsBySubsidyType' => [],
-                'reportsPerScanner' => [],
+                'batches'       => [],
+                'batchRow'      => null,
+                'batchOpen'     => false,
+                'batchSnapshot' => $this->emptyBatchSnapshot(),
+                'remainingPage' => $this->emptyRemainingPage(),
             ];
 
         // Hide the logged-in user's own account from Account Management; self-service
@@ -258,7 +264,6 @@ class DashboardPageBuilder
             'canCreateAccounts' => $canManageAccounts,
             'canEditAccounts' => $canManageAccounts,
             'canManageLookups' => $canManageAccounts,
-            'seesDistribution' => $seesDistribution,
             'currentRole' => $currentRole,
             'referenceTabs'      => $referenceTabs,
             'myAudits'           => $myAudits,
@@ -269,10 +274,6 @@ class DashboardPageBuilder
             'employeeAccounts'   => array_values(array_filter($visibleAccounts, static fn ($account) => $account['role'] === 'encoder')),
             'viewerAccounts'     => array_values(array_filter($visibleAccounts, static fn ($account) => $account['role'] === 'viewer')),
             'scannerAccounts'    => array_values(array_filter($visibleAccounts, static fn ($account) => $account['role'] === 'scanner')),
-            'recentFamilies'     => $recentFamilies,
-            // Shortcode + full name per sector, so the Recent Records table can print
-            // the same badges Manage Records and Reference Data print.
-            'sectorShortcodes'   => $isDashboard ? $sectorModel->shortcodeMap() : [],
             'recentAudits'       => $recentAudits,
             'auditListData'      => $auditListData,
             'recordListData'      => $memberListData,
@@ -285,23 +286,33 @@ class DashboardPageBuilder
             'sectorListData'     => $sectorListData,
             'serviceListData'    => $serviceListData,
             'categoryListData'   => $categoryListData,
-            'batches'            => $isBatches ? $batchModel->allBatches() : [],
+            // Same "all batches" list feeds the Distribution page's Batches tab
+            // and the dashboard's batch selector; only one of the two gates is
+            // ever true for a given page load.
+            'batches'            => $isBatches ? $batchModel->allBatches() : ($reportsData['batches'] ?? []),
             'activeBatch'        => $isBatches ? $batchModel->activeBatch() : null,
             'activeSubsidyTypes' => $isBatches ? model(SubsidyTypeModel::class)->active() : [],
+            // Barangay/sector option lists for the batch-open modal's eligibility
+            // filters (Task 10). Only fetched on the batches tab.
+            'barangayOptions'    => $isBatches ? model(BarangayModel::class)->activeList() : [],
+            'batchSectorOptions' => $isBatches ? $sectorModel->getActive() : [],
             'subsidyTypes'       => $subsidyTypeListData['rows'] ?? [],
             'subsidyTypeListData' => $subsidyTypeListData,
             'distributions'      => $isDistributions ? model(SubsidyDistributionModel::class)->allDistributions() : [],
-            'reportsBatches'     => $reportsData['reportsBatches'],
-            'reportsBatchId'     => $reportsData['reportsBatchId'],
-            'reportsBatchName'   => $reportsData['reportsBatchName'],
-            'reportsBatchOpen'   => $reportsData['reportsBatchOpen'],
-            'reportsSummary'     => $reportsData['reportsSummary'],
-            'reportsByBarangay'  => $reportsData['reportsByBarangay'],
-            'reportsBySubsidyType' => $reportsData['reportsBySubsidyType'],
-            'reportsPerScanner'  => $reportsData['reportsPerScanner'],
-            'stats'              => $isDashboard
-                ? array_merge(['families' => 0, 'members' => 0, 'sectors' => 0, 'assistance' => 0], $dashboardModel->stats())
-                : ['families' => 0, 'members' => 0, 'sectors' => 0, 'assistance' => 0],
+            'batchRow'           => $reportsData['batchRow'],
+            'batchOpen'          => $reportsData['batchOpen'],
+            'batchSnapshot'      => $reportsData['batchSnapshot'],
+            'remainingPage'      => $reportsData['remainingPage'],
+            'batchBodyTab'       => $batchBodyTab,
+            'dashboardView'      => $dashboardView,
+            'selectedBatchId'    => $selectedBatchId,
+            'overviewStats'      => $isDashboard && $dashboardView === 'overview'
+                ? $dashboardModel->programStats()
+                : ['families' => 0, 'cardsIssued' => 0, 'distributions' => 0, 'everServed' => 0, 'neverServed' => 0],
+            'distributionRows'   => $isDashboard && $dashboardView === 'overview'
+                ? $this->buildDistributionRows($batchModel)
+                : [],
+            'busiestDay'         => self::busiestDay($reportsData['batchSnapshot']['byDay'] ?? []),
             // Only the roles that may open the record-entry page get the Add and
             // Import buttons on the records list (Config\Navigation, records-entry).
             'canCreateFamily'    => in_array($currentRole, Navigation::pageRoles('records-entry'), true),
@@ -494,44 +505,136 @@ class DashboardPageBuilder
     }
 
     /**
-     * Batch-scoped data for the admin overall Reports page: combined totals,
-     * per-barangay/subsidy-type breakdowns, and the per-kiosk table (all scanners,
-     * no self-scoping - admin sees every kiosk). The scoping batch defaults to
-     * the active batch, else the most recent batch, and honors ?batch= when it
-     * matches a known batch (mirrors Admin\ReportsController::resolveBatch()).
+     * Batch-scoped data for the dashboard's "this batch" zone: the cached
+     * coverage/barangay/scanner/timeline snapshot plus one page of the
+     * remaining-families list. The scoping batch defaults to the active batch,
+     * else the most recent batch, and honors ?batch= when it matches a known
+     * batch (BatchScope::resolve(), shared with the reports endpoint and the
+     * scanner performance page).
+     *
+     * The remaining-families query only runs when $batchBodyTab is 'remaining':
+     * against the 100k-family target, SubsidyStatsModel::remaining() lists
+     * everyone in one response, so it is too large to fetch on every dashboard
+     * load regardless of which sub-tab is showing. The PDF export keeps calling
+     * remaining() directly (ReportsController::pdf()); the liquidation artifact
+     * must stay whole.
      */
-    private function buildReportsData(DistributionBatchModel $batchModel): array
+    private function buildReportsData(DistributionBatchModel $batchModel, string $batchBodyTab): array
     {
         $batches = $batchModel->allBatches();
         $active  = $batchModel->activeBatch();
 
-        $batchId = (int) $this->request->getGet('batch');
-        $batch   = null;
-        if ($batchId <= 0) {
-            $batchId = $active !== null ? (int) $active['batch_id'] : (int) ($batches[0]['batch_id'] ?? 0);
-        }
-        foreach ($batches as $b) {
-            if ((int) $b['batch_id'] === $batchId) {
-                $batch = $b;
-                break;
-            }
-        }
-        if ($batch === null) {
-            $batchId = 0;
-        }
+        [$batchId, $batch] = BatchScope::resolve($batches, $active, (int) $this->request->getGet('batch'));
 
-        $scope = $batchId > 0 ? $batchId : null;
-        $stats = model(SubsidyStatsModel::class);
+        $isOpen = $batch !== null && ($batch['closed_at'] ?? null) === null;
+        $stats  = model(SubsidyStatsModel::class);
 
         return [
-            'reportsBatches'    => $batches,
-            'reportsBatchId'    => $batchId > 0 ? $batchId : null,
-            'reportsBatchName'  => $batch['name'] ?? null,
-            'reportsBatchOpen'  => $batch !== null && ($batch['closed_at'] ?? null) === null,
-            'reportsSummary'    => $stats->receivedVsNot($scope),
-            'reportsByBarangay' => $stats->byBarangay($scope),
-            'reportsBySubsidyType' => $stats->bySubsidyType($scope),
-            'reportsPerScanner' => $batchId > 0 ? $stats->perScanner($batchId) : [],
+            'batches'       => $batches,
+            'batchRow'      => $batch,
+            'batchOpen'     => $isOpen,
+            'batchSnapshot' => $batchId > 0 ? $stats->batchSnapshot($batchId, $isOpen) : $this->emptyBatchSnapshot(),
+            'remainingPage' => $batchId > 0 && $batchBodyTab === 'remaining'
+                ? $this->buildRemainingPageData($stats, $batchId)
+                : $this->emptyRemainingPage(),
+        ];
+    }
+
+    /**
+     * Every distribution with its outcome, newest first, for the Overview
+     * tab's table. Served comes from one grouped query rather than a call per
+     * batch, so the table costs two queries regardless of how many batches
+     * the city has run.
+     *
+     * @return list<array<string,mixed>>
+     */
+    private function buildDistributionRows(DistributionBatchModel $batchModel): array
+    {
+        $served = model(SubsidyStatsModel::class)->servedByBatch();
+
+        return array_map(static function (array $batch) use ($served): array {
+            $batchId  = (int) $batch['batch_id'];
+            $eligible = (int) ($batch['eligible_count'] ?? 0);
+            $count    = $served[$batchId] ?? 0;
+
+            return $batch + [
+                'eligible' => $eligible,
+                'served'   => $count,
+                'coverage' => $eligible === 0 ? 0 : (int) round($count / $eligible * 100),
+            ];
+        }, $batchModel->allBatches());
+    }
+
+    /**
+     * The day carrying the largest served count, for the Busiest day card.
+     * Null when the batch has no scans at all, which the view renders as a
+     * dash rather than a zero that looks like a real reading.
+     *
+     * @param list<array{date:string,label:string,served:int}> $byDay
+     * @return array{label:string,served:int}|null
+     */
+    private static function busiestDay(array $byDay): ?array
+    {
+        $best = null;
+        foreach ($byDay as $day) {
+            if ($best === null || $day['served'] > $best['served']) {
+                $best = ['label' => $day['label'], 'served' => (int) $day['served']];
+            }
+        }
+
+        return $best;
+    }
+
+    /**
+     * Paginated remaining-families bundle for the dashboard's Remaining tab.
+     * The 'q' query param (family name or barangay) routes through
+     * SubsidyStatsModel::remainingBuilder() for both the count and the page,
+     * so the footer total and the rows shown can never disagree.
+     */
+    private function buildRemainingPageData(SubsidyStatsModel $stats, int $batchId): array
+    {
+        $perPageOptions = [10, 25, 50, 100];
+        $keyword = trim((string) $this->request->getGet('q'));
+        $page    = max(1, (int) $this->request->getGet('page'));
+        $perPage = (int) $this->request->getGet('per_page');
+        $perPage = in_array($perPage, $perPageOptions, true) ? $perPage : 25;
+
+        $searchKeyword = $keyword === '' ? null : $keyword;
+        $total      = $stats->remainingCount($batchId, $searchKeyword);
+        $totalPages = max(1, (int) ceil($total / $perPage));
+        $page       = min($page, $totalPages);
+
+        return [
+            'rows'          => $stats->remainingPage($batchId, $perPage, ($page - 1) * $perPage, $searchKeyword),
+            'keyword'       => $keyword,
+            'page'          => $page,
+            'perPage'       => $perPage,
+            'perPageOptions'=> $perPageOptions,
+            'totalPages'    => $totalPages,
+            'totalRows'     => $total,
+            'fromRecord'    => $total === 0 ? 0 : (($page - 1) * $perPage) + 1,
+            'toRecord'      => min($total, $page * $perPage),
+        ];
+    }
+
+    /** The zero shape for buildRemainingPageData(), used when the tab isn't active or no batch is scoped. */
+    private function emptyRemainingPage(): array
+    {
+        return [
+            'rows' => [], 'keyword' => '', 'page' => 1, 'perPage' => 25, 'perPageOptions' => [10, 25, 50, 100],
+            'totalPages' => 1, 'totalRows' => 0, 'fromRecord' => 0, 'toRecord' => 0,
+        ];
+    }
+
+    /** The zero shape for SubsidyStatsModel::batchSnapshot(), used when no batch is scoped. */
+    private function emptyBatchSnapshot(): array
+    {
+        return [
+            'coverage'   => ['eligible' => 0, 'served' => 0, 'remaining' => 0, 'coverage' => 0, 'voided' => 0],
+            'byBarangay' => [],
+            'perScanner' => [],
+            'timeline'   => [],
+            'byDay'      => [],
         ];
     }
 

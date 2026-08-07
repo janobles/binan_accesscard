@@ -106,8 +106,18 @@ $routes->group('cards', ['filter' => 'roleNav:cards'], static function (RouteCol
 
 $routes->group('distribution', ['filter' => 'roleNav:distribution'], static function (RouteCollection $routes): void {
     $routes->post('batches/open', 'Admin\DistributionController::openBatch');
+    $routes->get('batches/preview', 'Admin\DistributionController::previewEligibility');
     $routes->post('batches/close/(:num)', 'Admin\DistributionController::closeBatch/$1');
     $routes->post('void/(:num)', 'Admin\DistributionController::voidDistribution/$1');
+});
+
+/*
+ * The same URL prefix on a different key: these two are read-only and back the
+ * dashboard's Distribution pane, which renders for every staff role, so they
+ * cannot sit behind the Distribution page's narrower guard. See the
+ * 'dashboard-reports' note in Config\Navigation.
+ */
+$routes->group('distribution', ['filter' => 'roleNav:dashboard-reports'], static function (RouteCollection $routes): void {
     $routes->get('reports/stats', 'Admin\ReportsController::stats');
     $routes->get('reports/pdf', 'Admin\ReportsController::pdf');
 });

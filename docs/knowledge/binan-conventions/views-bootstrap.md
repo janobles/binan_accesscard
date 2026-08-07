@@ -30,8 +30,8 @@ review used to) loses the sidebar and every convention below.
   `layout.php`. It takes `$role` and `$activePage` and renders every link, heading,
   and active state from `Config\Navigation::linksFor($role)`. Never hand-write a
   nav item here; add a manifest entry.
-- `app/Views/Partials/dashboard-topnav.php:1`,
-  `Partials/topbar-account-menu.php:1` - cross-role fragments.
+- `app/Views/Partials/topbar-account-menu.php:1` - cross-role fragment, shared
+  by the admin shell and the scanner kiosk shell.
 
 Repeated markup across two views = extract a partial, render with
 `view('Partials/...', [...])`.
@@ -42,14 +42,18 @@ anatomy: card-header icon+title > card-body > optional card-footer):
 - `app/Views/components/card.php:1` - generic shell; body content comes
   from a named view (`bodyView` + `bodyData`) or `bodyHtml`. JS scope
   hooks (e.g. `data-*-management-root`) pass through `attrs`.
-- `app/Views/components/data_table.php:1` - columns/rows table card;
-  cell values are RAW HTML, caller esc()'s every dynamic part.
 - `app/Views/components/table_footer.php:1` - shared "Showing X-Y of Z"
   + Previous/Next pagination row, passed as `card`'s `footer`.
 
-Canonical consumers: `app/Views/Family/list.php:26` (card + body
-partial), `app/Views/Admin/reports-body.php:79` (chart cards + data_table).
+Canonical consumers: `app/Views/Family/list.php:26` and
+`app/Views/Admin/accounts.php:71` (card + body partial).
 New panels MUST use these components, not hand-rolled card markup.
+
+A table is content, so it goes in a body partial: write the `<table>` there
+and wrap it in `card`, with `table_controls` above and `table_footer` as the
+card's footer. There is deliberately no table component taking rows as data:
+one existed, took `list<list<raw HTML>>`, and pushed escaping onto every
+caller. It was deleted rather than migrated onto.
 
 ## Rule 3: CSS loads via `asset_styles()` - Bootstrap first, adapter, then page CSS
 
@@ -100,7 +104,7 @@ page needs one:
   theming survives the SB Admin migration.
 
 **Reviewer false positive to ignore:** `h-100` is a plain Bootstrap sizing
-utility used by the house style (`app/Views/Admin/reports-body.php:98`), NOT
+utility used by the house style (`app/Views/Admin/batch-overview.php:73`), NOT
 an SB-Admin-Pro demo class. The Pro-only markers this repo bans are
 `border-left-*` and `text-xs text-uppercase` (the ReportsViewTest that
 asserted this was retired with the old scanner shell, commit 9cd705e).

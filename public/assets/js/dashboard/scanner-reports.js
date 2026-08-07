@@ -1,6 +1,12 @@
-/* Builds the three Reports charts from the #reportsData JSON block and exposes
-   window.ReportsCharts.update(data) so a poller can repaint them live without a
-   page reload. No-ops when chart.js or the canvases are absent. */
+/* Builds the dashboard batch pane's charts (rollout by day, cumulative served)
+   from the #reportsData JSON block and exposes window.ReportsCharts.update(data)
+   so a poller can repaint them live without a page reload. No-ops when chart.js
+   or the canvases are absent.
+
+   update(data) also repaints everything else under the "Last updated" stamp
+   that a fresh distribution/reports/stats payload carries: the batch cards and
+   bar, and the Stations grid. All values are written with textContent, never
+   innerHTML, so nothing here needs a separate escaping step. */
 (function () {
     'use strict';
 
@@ -38,109 +44,208 @@
     ];
     var gridColor = cssVar('--chart-grid', '#eaecf4');
 
-    // Whole-number axis: never show fractional ticks for handout/family counts.
-    var countScale = {
-        beginAtZero: true,
-        ticks: { precision: 0, stepSize: 1 },
-        grid: { color: gridColor }
-    };
-
     var charts = {};
 
-    var received = ctx('chartReceived');
-    if (received && data.received) {
-        charts.received = new Chart(received, {
-            type: 'pie',
+    // Cumulative served over time (open batch only - the canvas isn't in the
+    // DOM for a closed batch). A flat tail means scanning stopped.
+    var timeline = ctx('chartTimeline');
+    if (timeline && Array.isArray(data.timeline)) {
+        charts.timeline = new Chart(timeline, {
+            type: 'line',
             data: {
-                labels: ['Received subsidy', 'Still waiting'],
+                labels: data.timeline.map(function (t) { return t.label; }),
                 datasets: [{
-                    data: [data.received.received || 0, data.received.notReceived || 0],
-                    backgroundColor: [palette[3], palette[1]],
-                    borderColor: '#fff',
-                    borderWidth: 1
-                }]
-            },
-            options: { plugins: { legend: { position: 'bottom' } } }
-        });
-    }
-
-    function sortedBarangay(rows) {
-        return (rows || []).slice().sort(function (a, b) {
-            return (b.coverage - a.coverage) || (b.total - a.total);
-        });
-    }
-
-    var barangay = ctx('chartBarangay');
-    if (barangay && Array.isArray(data.barangay)) {
-        var rows = sortedBarangay(data.barangay);
-        charts.barangay = new Chart(barangay, {
-            type: 'bar',
-            data: {
-                labels: rows.map(function (b) { return b.barangay; }),
-                datasets: [{
-                    label: 'Coverage %',
-                    data: rows.map(function (b) { return b.coverage; }),
-                    backgroundColor: palette[0],
-                    borderRadius: 3,
-                    barThickness: 12
+                    label: 'Families served',
+                    data: data.timeline.map(function (t) { return t.cumulative; }),
+                    borderColor: palette[3],
+                    backgroundColor: palette[3],
+                    tension: 0.2,
+                    pointRadius: 2,
+                    fill: false
                 }]
             },
             options: {
-                indexAxis: 'y',
                 maintainAspectRatio: false,
                 scales: {
-                    x: { beginAtZero: true, max: 100, ticks: { stepSize: 20 }, grid: { color: gridColor } },
-                    y: { ticks: { autoSkip: false, font: { size: 11 } }, grid: { display: false } }
+                    y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: gridColor } },
+                    x: { ticks: { autoSkip: true, maxTicksLimit: 6 }, grid: { display: false } }
                 },
                 plugins: { legend: { display: false } }
             }
         });
     }
 
-    function aidTypeLabel(a) { return a.aid_type; }
-
-    var byAidType = ctx('chartAidType');
-    if (byAidType && Array.isArray(data.byAidType)) {
-        charts.byAidType = new Chart(byAidType, {
+    // Families served per day. Bars rather than a line: these are discrete
+    // days of a rollout, not a continuous series, and the shape of the drop
+    // from day one is the thing worth seeing.
+    var rollout = ctx('chartRollout');
+    if (rollout && Array.isArray(data.byDay)) {
+        charts.rollout = new Chart(rollout, {
             type: 'bar',
             data: {
-                labels: data.byAidType.map(aidTypeLabel),
+                labels: data.byDay.map(function (d) { return d.label; }),
                 datasets: [{
-                    label: 'Handouts',
-                    data: data.byAidType.map(function (a) { return a.count; }),
-                    backgroundColor: palette[2],
-                    borderRadius: 4,
-                    maxBarThickness: 64,
-                    categoryPercentage: 0.6
+                    label: 'Families served',
+                    data: data.byDay.map(function (d) { return d.served; }),
+                    backgroundColor: palette[0]
                 }]
             },
             options: {
+                responsive: true,
                 maintainAspectRatio: false,
-                scales: { y: countScale, x: { grid: { display: false } } },
-                plugins: { legend: { display: false } }
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, grid: { color: gridColor } },
+                    x: { grid: { display: false } }
+                },
+                onClick: function (evt, items) {
+                    if (!items.length) { return; }
+                    var row = data.byDay[items[0].index];
+                    // Task 11's map listens for this and recolours to one day.
+                    document.dispatchEvent(new CustomEvent('rollout:day', {
+                        detail: { date: row ? row.date : null }
+                    }));
+                }
             }
         });
     }
 
-    // Live update: repaint datasets in place from a fresh stats payload.
+    function text(id, value) {
+        var node = document.getElementById(id);
+        if (node) { node.textContent = String(value); }
+    }
+
+    // Counts the server printed through number_format, so a repaint does not
+    // turn "1,204" into "1204" halfway through a batch. Percentages and labels
+    // keep going through text() unchanged.
+    function count(id, value) {
+        text(id, typeof value === 'number' ? value.toLocaleString() : value);
+    }
+
+    // Progress headline + bar, from fresh.coverage (SubsidyStatsModel::coverage()'s
+    // shape: eligible/served/remaining/coverage/voided).
+    function applyCoverage(coverage) {
+        if (!coverage) { return; }
+        count('progressServed', coverage.served);
+        count('progressEligible', coverage.eligible);
+        text('progressCoverage', coverage.coverage);
+
+        var bar = document.getElementById('coverageProgress');
+        var fill = document.getElementById('coverageProgressFill');
+        if (bar) { bar.setAttribute('aria-valuenow', String(coverage.coverage)); }
+        if (fill) { fill.style.width = coverage.coverage + '%'; }
+
+        count('remainingTileValue', coverage.remaining);
+
+        var voidedWrap = document.getElementById('voidedTileWrap');
+        if (voidedWrap) {
+            count('voidedTileValue', coverage.voided);
+            voidedWrap.classList.toggle('d-none', !(coverage.voided > 0));
+        }
+    }
+
+    // The Busiest day card reads the same byDay series the rollout chart draws,
+    // so it has to be recomputed here: left to the server-rendered value it
+    // would sit beside a repainted chart disagreeing with the tallest bar.
+    function applyBusiestDay(byDay) {
+        var label = document.getElementById('busiestDayLabel');
+        if (!label || !Array.isArray(byDay)) { return; }
+
+        var best = null;
+        byDay.forEach(function (day) {
+            if (!best || day.served > best.served) { best = day; }
+        });
+
+        label.textContent = best ? best.label : '-';
+
+        var sub = document.getElementById('busiestDaySub');
+        if (sub) {
+            sub.classList.toggle('d-none', !best);
+            count('busiestDayCount', best ? best.served : 0);
+        }
+    }
+
+    // Repaint the stations grid. Squares are rebuilt rather than patched
+    // because a station appears the moment it logs its first scan, so the set
+    // itself changes during an open batch.
+    function applyStations(perScanner) {
+        var grid = document.getElementById('stationsGrid');
+        if (!grid || !Array.isArray(perScanner)) { return; }
+
+        grid.innerHTML = '';
+        if (perScanner.length === 0) {
+            var emptyCol = document.createElement('div');
+            emptyCol.className = 'col-12';
+            var empty = document.createElement('p');
+            empty.className = 'text-muted';
+            empty.id = 'stationsGridEmpty';
+            empty.textContent = 'No station has logged a scan in this batch yet.';
+            emptyCol.appendChild(empty);
+            grid.appendChild(emptyCol);
+            return;
+        }
+        // Mirrors Admin/batch-stations-grid.php: a button that opens the station
+        // modal where the viewer may read scanner/stats, an inert tile where
+        // they may not. Diverging here would let the poll hand a role a control
+        // the server-rendered page deliberately withheld.
+        var canDrillIn = grid.getAttribute('data-can-drill-in') === '1';
+
+        perScanner.forEach(function (row) {
+            var col = document.createElement('div');
+            col.className = 'col';
+
+            var square;
+            if (canDrillIn) {
+                square = document.createElement('button');
+                square.type = 'button';
+                square.className = 'station-square';
+                square.setAttribute('data-scanner-id', String(row.userID));
+                square.setAttribute('data-scanner-name', String(row.scanner));
+            } else {
+                square = document.createElement('div');
+                square.className = 'station-square is-static';
+            }
+
+            [['station-name', row.scanner], ['station-count', row.families], ['station-unit', 'families']]
+                .forEach(function (pair) {
+                    var span = document.createElement('span');
+                    span.className = pair[0];
+                    span.textContent = typeof pair[1] === 'number' ? pair[1].toLocaleString() : String(pair[1]);
+                    square.appendChild(span);
+                });
+
+            col.appendChild(square);
+            grid.appendChild(col);
+        });
+    }
+
+    // Live update: repaint datasets and the surrounding page in place from a
+    // fresh distribution/reports/stats payload.
     window.ReportsCharts = {
         update: function (fresh) {
             if (!fresh) { return; }
-            if (charts.received && fresh.received) {
-                charts.received.data.datasets[0].data = [fresh.received.received || 0, fresh.received.notReceived || 0];
-                charts.received.update();
+            if (charts.timeline && Array.isArray(fresh.timeline)) {
+                charts.timeline.data.labels = fresh.timeline.map(function (t) { return t.label; });
+                charts.timeline.data.datasets[0].data = fresh.timeline.map(function (t) { return t.cumulative; });
+                charts.timeline.update();
             }
-            if (charts.barangay && Array.isArray(fresh.barangay)) {
-                var r = sortedBarangay(fresh.barangay);
-                charts.barangay.data.labels = r.map(function (b) { return b.barangay; });
-                charts.barangay.data.datasets[0].data = r.map(function (b) { return b.coverage; });
-                charts.barangay.update();
+            if (charts.rollout && Array.isArray(fresh.byDay)) {
+                charts.rollout.data.labels = fresh.byDay.map(function (d) { return d.label; });
+                charts.rollout.data.datasets[0].data = fresh.byDay.map(function (d) { return d.served; });
+                charts.rollout.update();
             }
-            if (charts.byAidType && Array.isArray(fresh.byAidType)) {
-                charts.byAidType.data.labels = fresh.byAidType.map(aidTypeLabel);
-                charts.byAidType.data.datasets[0].data = fresh.byAidType.map(function (a) { return a.count; });
-                charts.byAidType.update();
-            }
+            applyBusiestDay(fresh.byDay);
+            applyCoverage(fresh.coverage);
+            applyStations(fresh.perScanner);
         }
     };
+
+    var downloadBtn = document.querySelector('.reports-download-btn');
+    if (downloadBtn) {
+        downloadBtn.addEventListener('click', function () {
+            if (window.showToast) {
+                window.showToast('Exporting report. The download will begin shortly...', 'primary', { delay: 6000 });
+            }
+        });
+    }
 })();

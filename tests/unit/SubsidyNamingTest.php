@@ -3,6 +3,7 @@
 namespace Tests\Unit;
 
 use CodeIgniter\Test\CIUnitTestCase;
+use Tests\Support\Database\DumpSchema;
 
 /**
  * Guards the aid-to-subsidy rename. The schema calls a subsidy type a subsidy;
@@ -31,9 +32,16 @@ final class SubsidyNamingTest extends CIUnitTestCase
         $this->assertSame('distribution_id', $model->primaryKey);
     }
 
+    /**
+     * Reads whichever dump is current rather than naming one, so retiring a
+     * superseded dump does not take this guard down with it.
+     */
     public function testTheDumpUsesSubsidyNamesOnly(): void
     {
-        $dump = (string) file_get_contents(ROOTPATH . 'accesscardV19.sql');
+        $path = DumpSchema::dumpPath();
+        $this->assertNotNull($path, 'no accesscardV*.sql in the project root');
+
+        $dump = (string) file_get_contents($path);
         $this->assertStringContainsString('CREATE TABLE `subsidy_distribution`', $dump);
         $this->assertStringContainsString('`distribution_id`', $dump);
         $this->assertStringNotContainsString('aid_distribution', $dump);

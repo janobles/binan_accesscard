@@ -17,31 +17,34 @@
 helper('ui');
 $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
 ?>
-<p class="text-muted small mb-3">Issue printable QR access cards for registered heads of family. The PDF is the output; the table below previews who will be printed.</p>
-
-<ul class="nav nav-pills segmented-tabs mb-3" id="cn-modes" role="tablist">
+<ul class="nav nav-pills segmented-tabs mb-4" id="cn-modes" role="tablist">
     <li class="nav-item">
         <button class="nav-link active" type="button" data-mode="batch" aria-current="page">
-            Batch
+            Batch Export
         </button>
     </li>
     <li class="nav-item">
         <button class="nav-link" type="button" data-mode="single">
-            Single card
+            Individual Export
         </button>
     </li>
 </ul>
 
+
 <!-- BATCH -->
 <div id="cn-panel-batch">
-    <div class="card mb-3 sector-management">
+    <div class="card mb-4 sector-management">
         <div class="card-header">
-            <span><i class="bi bi-collection me-1" aria-hidden="true"></i>Batch generation</span>
+            <span><i class="bi bi-collection me-1" aria-hidden="true"></i>Batch Configuration</span>
         </div>
         <div class="card-body">
+            <div class="alert alert-primary d-flex align-items-center mb-3 py-2" role="alert">
+                <i class="bi bi-info-circle flex-shrink-0 me-2 fs-5"></i>
+                <div class="small">Leave all fields blank to export all active family heads. Both range bounds are inclusive.</div>
+            </div>
             <form id="cn-batch-form" class="row g-3 align-items-end" autocomplete="off">
                 <?= csrf_field() ?>
-                <div class="col-12 col-md">
+                <div class="col-12 col-md-5">
                     <label class="form-label" for="cn-barangay">Barangay</label>
                     <select class="form-select" id="cn-barangay" name="barangay">
                         <option value="">All barangays</option>
@@ -50,24 +53,24 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
                         <?php endforeach; ?>
                     </select>
                 </div>
-                <div class="col-6 col-md-2">
-                    <label class="form-label" for="cn-from">From #</label>
-                    <input type="number" min="1" inputmode="numeric" class="form-control" id="cn-from" name="from" placeholder="e.g. 100">
+                <div class="col-6 col-md-2 position-relative">
+                    <label class="form-label" for="cn-from">Starting #</label>
+                    <input type="number" min="1" inputmode="numeric" class="form-control" id="cn-from" name="from">
+                    <div class="invalid-tooltip">Must be &le; ending #</div>
                 </div>
                 <div class="col-6 col-md-2">
-                    <label class="form-label" for="cn-to">To #</label>
-                    <input type="number" min="1" inputmode="numeric" class="form-control" id="cn-to" name="to" placeholder="e.g. 150">
+                    <label class="form-label" for="cn-to">Ending #</label>
+                    <input type="number" min="1" inputmode="numeric" class="form-control" id="cn-to" name="to">
                 </div>
-                <div class="col-12 col-md-auto">
-                    <button type="submit" class="<?= btn('generate') ?>" id="cn-batch-btn">
-                        <i class="bi bi-printer" aria-hidden="true"></i> Generate cards
+                <div class="col-12 col-md-3">
+                    <button type="submit" class="<?= btn('generate') ?> w-100" id="cn-batch-btn">
+                        <i class="bi bi-printer me-1" aria-hidden="true"></i>
+                        <span>Export Cards</span>
+                        <span id="cn-batch-status" class="badge bg-light text-dark ms-1" aria-live="polite">0</span>
                     </button>
                 </div>
             </form>
-            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2">
-                <span class="text-muted small">Leave all blank to print every active head. Both range bounds are inclusive.</span>
-                <span id="cn-batch-status" class="small text-muted" aria-live="polite"></span>
-            </div>
+
         </div>
     </div>
 
@@ -112,39 +115,30 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
 <!-- SINGLE -->
 <div class="card mb-4 sector-management" id="cn-card-single" hidden>
     <div class="card-header">
-        <span><i class="bi bi-person-vcard me-1" aria-hidden="true"></i>Single card</span>
+        <span><i class="bi bi-person-vcard me-1" aria-hidden="true"></i>Individual Configuration</span>
     </div>
     <div class="card-body">
+        <div class="alert alert-primary d-flex align-items-center mb-3 py-2" role="alert">
+            <i class="bi bi-info-circle flex-shrink-0 me-2 fs-5"></i>
+            <div class="small">Enter the exact Control Number of the family head to export their individual card.</div>
+        </div>
         <div class="row g-3 align-items-end">
-            <div class="col-12 col-md cn-typeahead">
-                <label class="form-label" for="cn-head">Head</label>
-                <input type="text" class="form-control" id="cn-head" placeholder="Type a head name&hellip;" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="cn-head-list">
-                <ul class="list-group cn-typeahead-list shadow-sm" id="cn-head-list" hidden></ul>
-            </div>
-            <div class="col-6 col-md-3">
+            <div class="col-12 col-md-4">
                 <label class="form-label" for="cn-control">Control #</label>
-                <input type="number" min="1" inputmode="numeric" class="form-control" id="cn-control" placeholder="Exact number">
+                <input type="number" min="1" inputmode="numeric" class="form-control" id="cn-control">
             </div>
-            <div class="col-6 col-md-auto">
-                <button type="button" class="<?= btn('generate') ?>" id="cn-single-btn">
-                    <i class="bi bi-printer" aria-hidden="true"></i> Generate card
+            <div class="col-12 col-md-3">
+                <button type="button" class="<?= btn('generate') ?> w-100" id="cn-single-btn">
+                    <i class="bi bi-printer me-1" aria-hidden="true"></i>
+                    <span>Export Card</span>
                 </button>
             </div>
-        </div>
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2">
-            <span class="text-muted small">Pick a head from the list OR type an exact control number, then Generate.</span>
         </div>
     </div>
 </div>
 
 <style>
 #cn-modes .nav-link { cursor: pointer; }
-.cn-typeahead { position: relative; }
-.cn-typeahead-list {
-    position: absolute; width: 100%; z-index: 5;
-    max-height: 16rem; overflow-y: auto;
-}
-.cn-typeahead-list .list-group-item { cursor: pointer; }
 </style>
 
 <script>
@@ -233,10 +227,14 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
                 return;
             }
             if (count > maxQuantity) {
-                batchStatus.textContent = count + ' cards match, over the max of ' + maxQuantity + ' per batch. Narrow the filters.';
+                batchStatus.className = 'badge bg-danger ms-2';
+                batchStatus.textContent = count;
+                batchStatus.title = 'Max ' + maxQuantity + ' cards per batch';
                 batchBtn.disabled = true;
             } else {
-                batchStatus.textContent = count + (count === 1 ? ' card will be generated.' : ' cards will be generated.');
+                batchStatus.className = 'badge bg-light text-dark ms-2';
+                batchStatus.textContent = count;
+                batchStatus.title = '';
                 batchBtn.disabled = false;
             }
             countEl.textContent = 'Showing ' + (from + 1) + ' to ' + (from + rows.length) + ' of ' + count + ' cards';
@@ -275,6 +273,8 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
 
     ['cn-barangay', 'cn-from', 'cn-to'].forEach((id) => {
         document.getElementById(id).addEventListener('input', function () {
+            // clear validation state on change
+            document.getElementById('cn-from').classList.remove('is-invalid');
             clearTimeout(debounce); debounce = setTimeout(reloadFromFirstPage, 300);
         });
     });
@@ -282,6 +282,17 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
 
     batchForm.addEventListener('submit', async function (e) {
         e.preventDefault();
+
+        // Validate
+        const fromEl = document.getElementById('cn-from');
+        const toEl = document.getElementById('cn-to');
+        const fromVal = parseInt(fromEl.value, 10);
+        const toVal = parseInt(toEl.value, 10);
+        if (!isNaN(fromVal) && !isNaN(toVal) && fromVal > toVal) {
+            fromEl.classList.add('is-invalid');
+            return;
+        }
+
         window.showToast('Generating…', 'primary');
         batchBtn.disabled = true;
         try {
@@ -298,8 +309,15 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
                 window.showToast(msg, 'danger');
                 return;
             }
-            await download(resp, 'binan-qr-cards.pdf');
-            window.showToast('Cards generated.', 'success');
+            
+            let fallbackName = 'binan-qr-cards.pdf';
+            const contentType = resp.headers.get('Content-Type');
+            if (contentType && contentType.includes('zip')) {
+                fallbackName = 'binan-qr-cards.zip';
+            }
+            
+            await download(resp, fallbackName);
+            window.showToast('Cards exported successfully.', 'success');
         } catch (err) {
             window.showToast('Generation failed. Please try again.', 'danger');
         } finally {
@@ -307,71 +325,28 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
         }
     });
 
-    // ---- single: autocomplete + generate ---------------------------------
-    const headInput = document.getElementById('cn-head');
-    const headList = document.getElementById('cn-head-list');
+    // ---- single: generate ---------------------------------
     const controlInput = document.getElementById('cn-control');
     const singleBtn = document.getElementById('cn-single-btn');
-    let selectedHead = null;
-    let acDebounce;
-
-    function clearList() { headList.innerHTML = ''; headList.hidden = true; headInput.setAttribute('aria-expanded', 'false'); }
-
-    headInput.addEventListener('input', function () {
-        selectedHead = null;
-        const q = headInput.value.trim();
-        clearTimeout(acDebounce);
-        if (q.length < 2) { clearList(); return; }
-        acDebounce = setTimeout(async function () {
-            try {
-                const resp = await fetch(headsUrl + '?mode=search&q=' + encodeURIComponent(q), { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-                if (!resp.ok) { clearList(); return; }
-                const data = await resp.json();
-                const rows = data.rows || [];
-                if (rows.length === 0) { clearList(); return; }
-                headList.innerHTML = rows.map((r) =>
-                    '<li class="list-group-item list-group-item-action" role="option" ' +
-                    'data-id="' + esc(String(r.memberID)) + '">' +
-                    esc(r.name) + ' <span class="text-muted small">#' + esc(String(r.controlNo)) +
-                    (r.barangay ? ' · ' + esc(r.barangay) : '') + '</span></li>'
-                ).join('');
-                headList.hidden = false; headInput.setAttribute('aria-expanded', 'true');
-            } catch (e) { clearList(); }
-        }, 300);
-    });
-
-    headList.addEventListener('click', function (e) {
-        const li = e.target.closest('[data-id]');
-        if (!li) { return; }
-        selectedHead = parseInt(li.dataset.id, 10);
-        headInput.value = li.textContent.trim();
-        controlInput.value = '';
-        clearList();
-    });
-
-    document.addEventListener('click', function (e) {
-        if (!headList.contains(e.target) && e.target !== headInput) { clearList(); }
-    });
 
     singleBtn.addEventListener('click', async function () {
-        let memberId = selectedHead;
+        const control = controlInput.value.trim();
+        if (!control) { window.showToast('Please enter a control number.', 'warning'); return; }
+        
+        let memberId = null;
 
         // Exact control number path: resolve to a head via the heads feed (range
         // collapsed to the single control_no) before hitting the single-card route,
         // so a bad number fails with a clear message instead of a 404 download.
         // control_no is the paper QR number, not necessarily the memberID, so we
         // must look it up rather than assume control === memberID.
-        if (!memberId) {
-            const control = controlInput.value.trim();
-            if (!control) { window.showToast('Pick a head or enter a control number.', 'warning'); return; }
-            try {
-                const resp = await fetch(headsUrl + '?from=' + encodeURIComponent(control) + '&to=' + encodeURIComponent(control), { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-                const data = await resp.json();
-                const hit = (data.rows || []).find((r) => String(r.controlNo) === control);
-                if (!hit) { window.showToast('No head found for control number ' + control + '.', 'warning'); return; }
-                memberId = hit.memberID;
-            } catch (e) { window.showToast('Lookup failed. Try again.', 'danger'); return; }
-        }
+        try {
+            const resp = await fetch(headsUrl + '?from=' + encodeURIComponent(control) + '&to=' + encodeURIComponent(control), { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            const data = await resp.json();
+            const hit = (data.rows || []).find((r) => String(r.controlNo) === control);
+            if (!hit) { window.showToast('No head found for control number ' + control + '.', 'warning'); return; }
+            memberId = hit.memberID;
+        } catch (e) { window.showToast('Lookup failed. Try again.', 'danger'); return; }
 
         window.showToast('Generating…', 'primary');
         singleBtn.disabled = true;

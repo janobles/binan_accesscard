@@ -12,8 +12,8 @@ What replaced each adapter concern:
 - Shell frame / sidebar / topnav classes → upstream SB Admin 1 markup
   (`docs/knowledge/sbadmin/target-theme.md`).
 - Card/panel chrome → the props-only components
-  `app/Views/components/card.php:1`, `app/Views/components/data_table.php:1`,
-  `app/Views/components/table_footer.php:1`
+  `app/Views/components/card.php:1`, `app/Views/components/table_footer.php:1`,
+  `app/Views/components/table_controls.php:1`
   (see `docs/knowledge/binan-conventions/views-bootstrap.md`).
 - Theme tokens (`--sb-*`/`--ui-*`) → gone; current baseline is pure upstream
   defaults. A future Biñan re-skin should reintroduce tokens on top of

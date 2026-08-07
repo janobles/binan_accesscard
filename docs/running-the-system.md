@@ -6,10 +6,10 @@ section applies to all of them.
 
 **Before anything:** the database must exist. MySQL on `127.0.0.1:3306`, database
 `accesscard`, user `root`, no password (see `.env`). Import the current SQL dump
-(`accesscardV14.sql`) - it's the source of truth, there are no CI4 migrations:
+(`accesscardV20.sql`) - it's the source of truth, there are no CI4 migrations:
 
 ```bash
-mysql -uroot accesscard < accesscardV14.sql
+mysql -uroot accesscard < accesscardV20.sql
 ```
 
 ---

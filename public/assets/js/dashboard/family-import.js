@@ -63,76 +63,35 @@
         saveStored(getStored().filter(function (u) { return u !== statusUrl; }));
     }
 
-    // -- Inline UI Rendering ---------------------------------------------------
-
-    function getResultsContainer() {
-        return document.querySelector('[data-import-results]');
-    }
-
-    function getActionsContainer() {
-        return document.querySelector('[data-import-actions]');
-    }
-
     function renderProgress(data) {
-        var results = getResultsContainer();
-        var actions = getActionsContainer();
-        if (!results) return; // Not on the upload page
-
-        if (actions) actions.hidden = true; // Hide upload/cancel buttons
-
         var progress = data.progress || { total: 0, percent: 0 };
-        var animated = progress.total === 0;
-
+        
         var label;
         if (data.status === 'pending') {
-            label = 'Queued - waiting for the worker...';
+            label = 'Preparing your file...';
         } else if (progress.total > 0) {
             var extra = [];
             if (progress.failed) extra.push(progress.failed + ' failed');
             if (progress.skipped) extra.push(progress.skipped + ' skipped');
 
-            label = 'Imported ' + progress.imported + ' of ' + progress.total + ' families' +
+            label = 'Saved ' + progress.imported + ' of ' + progress.total + ' families' +
                 (extra.length ? ' (' + extra.join(', ') + ')' : '') + '...';
         } else {
-            label = 'Reading and validating...';
+            label = 'Scanning your file for errors...';
         }
 
-        var barClass = 'progress-bar' + (animated ? ' progress-bar-striped progress-bar-animated' : '');
-        var width = (progress.total > 0 ? progress.percent : 100) + '%';
-        var text = progress.total > 0 ? progress.percent + '%' : '';
-
-        results.innerHTML = 
-            '<div class="mb-2 text-muted small fw-bold">' + escapeHtml(label) + '</div>' +
-            '<div class="progress mb-3" style="height: 20px;">' +
-                '<div class="' + barClass + '" role="progressbar" style="width: ' + width + ';">' + text + '</div>' +
-            '</div>';
-    }
-
-    function errorTable(errors) {
-        if (!errors || !errors.length) return '';
-        var rows = errors.map(function (error) {
-            var where = error.sheetRow ? ('Row ' + error.sheetRow) : 'File';
-            if (error.familyNo) where += ' &middot; ' + escapeHtml(error.familyNo);
-            return '<tr><td class="text-nowrap">' + where + '</td><td>' + escapeHtml(error.message) + '</td></tr>';
-        }).join('');
-
-        return '<table class="table table-sm table-bordered mt-2">' +
-            '<thead><tr><th>Where</th><th>Details</th></tr></thead><tbody>' + rows + '</tbody></table>';
+        if (window.showToast) {
+            window.showToast(label, 'primary', { autohide: false });
+        }
     }
 
     function renderReviewReady(data) {
-        var results = getResultsContainer();
-        var actions = getActionsContainer();
-        if (!results) return;
-
-        if (actions) actions.hidden = true;
-
-        var msg = data.message || 'Your file is ready to review.';
-        results.innerHTML = 
-            '<div class="alert alert-success d-flex flex-column align-items-start">' +
-                '<div class="mb-2"><i class="bi bi-check-circle me-2" aria-hidden="true"></i>' + escapeHtml(msg) + '</div>' +
-                '<a class="btn btn-primary" href="' + escapeHtml(data.reviewUrl) + '">Review and Fix</a>' +
-            '</div>';
+        var msg = data.message || 'We\'ve scanned your file. Please review the records before saving.';
+        var html = '<div>' + escapeHtml(msg) + '</div><a class="btn btn-sm btn-light mt-2 fw-bold" href="' + escapeHtml(data.reviewUrl) + '">Review and Fix</a>';
+        
+        if (window.showToast) {
+            window.showToast(html, 'success', { html: true, autohide: false });
+        }
     }
 
     function renderFinal(data) {
@@ -141,31 +100,16 @@
             return;
         }
 
-        var results = getResultsContainer();
-        var actions = getActionsContainer();
-        if (!results) return;
-
-        if (actions) actions.hidden = true;
-
         var skipped = (data.progress && data.progress.skipped) || 0;
         var isPartial = data.status === 'partial';
         
-        var alertClass = data.status === 'done' ? 'alert-success' : (isPartial ? 'alert-warning' : 'alert-danger');
-        var title = data.status === 'done' ? (skipped ? 'Import complete (some skipped)' : 'Import complete') : (isPartial ? 'Finished with errors' : 'Import failed');
-        var icon = data.status === 'done' ? 'bi-check-circle' : 'bi-exclamation-triangle';
+        var alertClass = data.status === 'done' ? 'success' : (isPartial ? 'warning' : 'danger');
+        var title = data.status === 'done' ? (skipped ? 'Import completed (some skipped)' : 'Import completed successfully') : (isPartial ? 'Import finished with errors' : 'Failed to import file');
         
-        var html = '<div class="alert ' + alertClass + '">' +
-            '<div class="fw-bold mb-1"><i class="bi ' + icon + ' me-2" aria-hidden="true"></i>' + escapeHtml(title) + '</div>' +
-            '<div class="small">' + escapeHtml(data.message || '') + '</div>';
-
-        if (skipped || data.errors) {
-            html += errorTable(data.errors);
+        var html = '<strong>' + escapeHtml(title) + '</strong><br>' + escapeHtml(data.message || '');
+        if (window.showToast) {
+            window.showToast(html, alertClass, { html: true });
         }
-        
-        html += '<div class="mt-3"><a class="btn btn-outline-secondary btn-sm" href="' + escapeHtml(window.location.href) + '">Upload another file</a></div>';
-        html += '</div>';
-
-        results.innerHTML = html;
     }
 
     // -- per-job tracking lifecycle --------------------------------------------
@@ -207,10 +151,9 @@
 
             if (result.code === 404) {
                 stopTracking(statusUrl);
-                var results = getResultsContainer();
-                if (results) results.innerHTML = '<div class="alert alert-warning">Import job no longer found.</div>';
-                var actions = getActionsContainer();
-                if (actions) actions.hidden = false;
+                if (window.showToast) {
+                    window.showToast('Import job no longer found.', 'warning');
+                }
                 return;
             }
 
@@ -249,18 +192,18 @@
         root.dataset.familyImportReady = '1';
 
         var form = root.querySelector('[data-import-form]');
-        var results = root.querySelector('[data-import-results]');
         var submit = root.querySelector('[data-import-submit]');
-        var actions = getActionsContainer();
 
-        if (!form || !results) return;
+        if (!form) return;
 
         form.addEventListener('submit', function (event) {
             event.preventDefault();
 
             var fileInput = form.querySelector('input[type="file"]');
             if (fileInput && fileInput.files.length === 0) {
-                results.innerHTML = '<div class="alert alert-warning mb-0">Please choose a .xlsx file first.</div>';
+                if (window.showToast) {
+                    window.showToast('Please choose a .xlsx file first.', 'warning');
+                }
                 return;
             }
 
@@ -271,8 +214,9 @@
                 submit.textContent = 'Uploading...';
             }
 
-            results.innerHTML = '<div class="text-muted small mb-3">Uploading your file...</div>';
-            if (actions) actions.hidden = true;
+            if (window.showToast) {
+                window.showToast('Uploading file...', 'primary', { autohide: false });
+            }
 
             window.fetch(form.action, {
                 method: 'POST',
@@ -301,17 +245,17 @@
                 }
 
                 updateCsrfForm(form, data.csrf);
-                if (actions) actions.hidden = false;
-
-                results.innerHTML = '<div class="alert alert-danger mb-3">' +
-                    escapeHtml(data.message || 'The file could not be queued for import.') + '</div>';
+                if (window.showToast) {
+                    window.showToast(data.message || 'We could not process your file at this time.', 'danger');
+                }
             }).catch(function () {
                 if (submit) {
                     submit.disabled = false;
                     submit.textContent = originalLabel;
                 }
-                if (actions) actions.hidden = false;
-                results.innerHTML = '<div class="alert alert-danger mb-3">A network error occurred. Please try again.</div>';
+                if (window.showToast) {
+                    window.showToast('We had trouble connecting. Please check your network and try again.', 'danger');
+                }
             });
         });
     }

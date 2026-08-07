@@ -20,7 +20,9 @@ $renderedHeading = null;
 ?>
     <nav class="app-sidebar-nav d-flex flex-column h-100 <?= esc(strtolower($role), 'attr') ?>" id="dashboard-sidebar">
         <!-- Brand Header -->
-        <div class="sidebar-brand-header p-3 pb-4 d-flex align-items-center justify-content-between">
+        <?php /* Height and bottom border match the content topbar so the divider
+                 reads as one line across the shell, not two panels. */ ?>
+        <div class="sidebar-brand-header border-bottom px-3 d-flex align-items-center justify-content-between">
             <a class="text-decoration-none text-dark d-flex align-items-center text-nowrap" href="<?= site_url('dashboard') ?>">
                 <img src="<?= asset_url('assets/image/binan.png') ?>" alt="City of Binan Logo" height="36" class="me-2">
                 <span class="fw-normal" style="font-size: 0.875rem;">Bi&ntilde;an Access Card MIS</span>

@@ -106,6 +106,25 @@ class MemberFieldNormalizer
     }
 
     /**
+     * Folds a barangay name to a comparable key: lowercase, ñ to n, a trailing
+     * "(alias)" dropped, Sto./Sta. expanded to Santo/Santa, punctuation stripped,
+     * whitespace collapsed. Lets "Biñan", "Sto. Tomas" and "Santo Tomas
+     * (Calabuso)" all resolve to the same barangay regardless of which spelling
+     * produced them - the Excel importer's barangay warning already relied on
+     * this fold; member.barangayID resolution reuses it so the two paths agree.
+     */
+    public static function barangayKey(mixed $value): string
+    {
+        $key = mb_strtolower(trim((string) $value));
+        $key = strtr($key, ['ñ' => 'n']);
+        $key = (string) preg_replace('/\([^)]*\)/', ' ', $key);
+        $key = strtr($key, ['sto.' => 'santo', 'sto ' => 'santo ', 'sta.' => 'santa', 'sta ' => 'santa ']);
+        $key = (string) preg_replace('/[^a-z0-9 ]/', ' ', $key);
+
+        return trim((string) preg_replace('/\s+/', ' ', $key));
+    }
+
+    /**
      * Combines the separate Address and Barangay inputs into the single
      * `member.address` column ("address, barangay"). The schema has no barangay
      * column; barangay is kept only as a form/sheet field for entry.

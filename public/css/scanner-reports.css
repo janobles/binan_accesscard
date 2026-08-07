@@ -1,5 +1,5 @@
 /* Reports page: toolbar, KPI tiles, chart cards. Cards sit directly on the page
-   background (no outer container) and reuse the admin dashboard stat-card style. */
+   background (no outer container) and reuse the dashboard's .kpi-card style. */
 
 /* Toolbar: date filter on the left, actions on the right - flex, not grid, so
    From/To/Apply keep their natural widths instead of stretching. */
@@ -40,19 +40,11 @@
     white-space: nowrap;
 }
 
-/* KPI tile grid + stat-card styles live in theme.css. */
+/* KPI tile styles (.kpi-row, .kpi-card) live in theme.css. */
 
 /* Chart cards (header/body/footer come from components/card). */
 .reports-chart-card canvas {
     max-width: 100%;
-}
-
-/* Fixed-height, scrollable box for the barangay bar chart so it stays compact and
-   never enters the Chart.js responsive-resize growth loop. */
-.reports-barangay-chart {
-    position: relative;
-    height: 380px;
-    overflow-y: auto;
 }
 
 /* Barangay summary table: clean, striped, hover-highlighted. */
@@ -81,13 +73,7 @@
     vertical-align: middle;
 }
 
-.reports-fallback tbody tr:nth-child(even) {
-    background: #fafbfc;
-}
 
-.reports-fallback tbody tr:hover {
-    background: #eef6f2;
-}
 
 .reports-fallback td:first-child {
     font-weight: 600;

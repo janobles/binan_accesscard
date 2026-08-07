@@ -36,4 +36,32 @@ final class DistributionBatchModelTest extends CIUnitTestCase
     {
         $this->assertIsArray((new DistributionBatchModel())->allBatches());
     }
+
+    public function testOpenStillRejectsBlankNameWithFilters(): void
+    {
+        $this->assertSame(0, (new DistributionBatchModel())->open('   ', 1, 1, [1], [2]));
+    }
+
+    public function testFiltersForReturnsBothKeys(): void
+    {
+        $out = (new DistributionBatchModel())->filtersFor(0);
+        $this->assertArrayHasKey('barangays', $out);
+        $this->assertArrayHasKey('sectors', $out);
+    }
+
+    public function testRebuildRosterRefusesNonPositiveId(): void
+    {
+        $this->assertSame(0, (new DistributionBatchModel())->rebuildRoster(0));
+    }
+
+    public function testFiltersForNonexistentPositiveIdReturnsEmpty(): void
+    {
+        $out = (new DistributionBatchModel())->filtersFor(999999999);
+        $this->assertSame(['barangays' => [], 'sectors' => []], $out);
+    }
+
+    public function testRebuildRosterRefusesNonexistentPositiveId(): void
+    {
+        $this->assertSame(0, (new DistributionBatchModel())->rebuildRoster(999999999));
+    }
 }

@@ -29,6 +29,9 @@ class DashboardModel
      */
     public const STATS_CACHE_KEY = 'dashboard_stats';
 
+    /** Cache key for the Overview tab's four counts. Same 60 second TTL as STATS_CACHE_KEY. */
+    public const PROGRAM_STATS_CACHE_KEY = 'dashboard_program_stats';
+
     /**
      * Returns the four headline counts (families, members, active sectors, active
      * services) for the dashboard summary cards. Frontend: dashboard overview.
@@ -59,25 +62,57 @@ class DashboardModel
     }
 
     /**
-     * Returns the newest family heads for the dashboard's recent-families list.
-     * Sector names are not resolved: the list renders sector badges from
-     * shortcodes and never reads sector_name. (DashboardModel is a lightweight
-     * reporting model separate from the Eloquent-style MemberModel.)
+     * The Overview tab's four all-time figures: how many households we know
+     * about, how many distributions we have staged, how many households those
+     * reached, and how many we have never reached.
+     *
+     * neverServed is profiled minus ever served, with no QR requirement. A
+     * family whose card has not been printed yet has still never been served,
+     * and gating on qr_control would make everServed and neverServed add up to
+     * the carded total rather than the profiled one, so the Overview cards
+     * would not reconcile.
+     *
+     * everServed joins back to member so it counts active heads only. Without
+     * that, a soft-deleted head holding a distribution would count as served
+     * while being excluded from families, and neverServed could go negative.
+     *
+     * @return array{families:int,cardsIssued:int,distributions:int,everServed:int,neverServed:int}
      */
-    public function recentFamilies(int $limit = 10): array
+    public function programStats(): array
     {
-        if (! $this->db->tableExists('member')) {
-            return [];
+        $cached = cache(self::PROGRAM_STATS_CACHE_KEY);
+        if (is_array($cached)) {
+            return $cached;
         }
 
-        return $this->db->table('member')
-            ->select('memberID, firstname, lastname, contactnumber, relationship, headID, sectorID, dt_created')
-            ->where('memberID = headID', null, false)
-            ->where('dt_deleted IS NULL', null, false)
-            ->orderBy('memberID', 'DESC')
-            ->limit($limit)
-            ->get()
-            ->getResultArray();
+        $families = $this->countFamilies();
+
+        $everServed = 0;
+        if ($this->db->tableExists('member') && $this->db->tableExists('subsidy_distribution')) {
+            $everServed = (int) $this->db->table('subsidy_distribution sd')
+                ->select('COUNT(DISTINCT sd.memberID) AS n')
+                ->join('member m', 'm.memberID = sd.memberID')
+                ->where('m.memberID = m.headID', null, false)
+                ->where('m.dt_deleted IS NULL', null, false)
+                ->where('sd.dt_voided', null)
+                ->get()->getRowArray()['n'] ?? 0;
+        }
+
+        $distributions = $this->db->tableExists('distribution_batch')
+            ? $this->db->table('distribution_batch')->countAllResults()
+            : 0;
+
+        $stats = [
+            'families'      => $families,
+            'cardsIssued'   => $this->countCardsIssued(),
+            'distributions' => $distributions,
+            'everServed'    => $everServed,
+            'neverServed'   => max(0, $families - $everServed),
+        ];
+
+        cache()->save(self::PROGRAM_STATS_CACHE_KEY, $stats, 60);
+
+        return $stats;
     }
 
     /** Counts active family heads (memberID = headID). */
@@ -91,6 +126,26 @@ class DashboardModel
             ->where('memberID = headID', null, false)
             ->where('dt_deleted IS NULL', null, false)
             ->countAllResults();
+    }
+
+    /**
+     * Counts active family heads holding an access card. DISTINCT on the head,
+     * because qr_control keeps a row per control number and a reissued card
+     * leaves the family with two; the figure this feeds sits beside the family
+     * count and has to stay comparable to it.
+     */
+    private function countCardsIssued(): int
+    {
+        if (! $this->db->tableExists('qr_control') || ! $this->db->tableExists('member')) {
+            return 0;
+        }
+
+        return (int) ($this->db->table('qr_control q')
+            ->select('COUNT(DISTINCT q.headID) AS n')
+            ->join('member m', 'm.memberID = q.headID')
+            ->where('m.memberID = m.headID', null, false)
+            ->where('m.dt_deleted IS NULL', null, false)
+            ->get()->getRowArray()['n'] ?? 0);
     }
 
     /** Counts all active members (heads + relatives). */

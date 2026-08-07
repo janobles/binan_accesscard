@@ -18,33 +18,55 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= esc($pageTitle) ?> - Binan Access Card MIS</title>
+    <link rel="icon" type="image/png" href="<?= esc(asset_url('assets/image/binan.png'), 'attr') ?>">
+    <link rel="stylesheet" href="<?= esc(asset_url('css/design-tokens.css'), 'attr') ?>">
     <?php foreach (array_merge(asset_styles('head'), asset_styles('admin'), asset_styles('scanner')) as $stylePath): ?>
     <link rel="stylesheet" href="<?= esc(asset_url($stylePath), 'attr') ?>">
     <?php endforeach; ?>
 </head>
-<body>
+<body class="app-body bg-white">
 <?php
 $accountMenuData = [
     'user' => $user ?? [],
     'username' => $username ?? 'Scanner',
     'accountLevelLabel' => $accountLevelLabel ?? 'Scanner'
 ];
+$currentUri = uri_string();
+$isPerformance = strpos($currentUri, 'scanner/performance') !== false;
 ?>
-<nav class="sb-topnav navbar navbar-expand navbar-dark" style="background-color: var(--binan-green);">
-  <div class="navbar-brand ps-3 d-flex align-items-center pe-3" style="white-space: nowrap;">
-      <img src="<?= asset_url('assets/image/binan.png') ?>" alt="City of Binan Logo" height="24" class="me-2">
-      <span class="d-none d-sm-inline">Bi&ntilde;an Access Card MIS</span>
-      <div class="mx-3" style="border-left: 1px solid rgba(255,255,255,0.3); height: 20px;"></div>
-      <span class="me-2" style="font-size: 0.95rem;"><?= $activeBatch !== null ? esc($activeBatch['name']) : 'No active batch' ?></span>
-      <?php if ($subsidyType !== null): ?>
-        <span class="badge bg-light text-dark"><?= esc($subsidyType['name']) ?></span>
-      <?php endif; ?>
+<header class="navbar navbar-expand bg-white border-bottom px-3 py-2 app-topbar">
+  <div class="d-flex align-items-center gap-3">
+      <div class="navbar-brand d-flex align-items-center m-0 pe-2">
+          <img src="<?= esc(asset_url('assets/image/binan.png'), 'attr') ?>" alt="City of Binan Logo" height="32" class="me-2">
+          <span class="fw-normal d-none d-sm-inline">Bi&ntilde;an Access Card MIS</span>
+      </div>
+      <div class="vr bg-secondary opacity-25" style="width: 1px;"></div>
+      <div class="d-flex flex-column lh-1 justify-content-center">
+          <span class="fw-bold mb-1" style="font-size: 0.95rem;"><?= $activeBatch !== null ? esc($activeBatch['name']) : 'No active batch' ?></span>
+          <?php if ($subsidyType !== null): ?>
+            <span class="badge bg-light text-dark align-self-start border fw-normal" style="font-size: 0.75rem;"><?= esc($subsidyType['name']) ?></span>
+          <?php endif; ?>
+      </div>
   </div>
-  <ul class="navbar-nav ms-auto me-3 me-lg-4">
+  <ul class="navbar-nav ms-auto">
       <?= view('Partials/topbar-account-menu', $accountMenuData) ?>
   </ul>
-</nav>
-<main class="container-fluid px-4 py-3">
+</header>
+
+<main class="container-fluid px-4 py-4 dashboard-content flex-grow-1">
+
+  <ul class="nav nav-pills segmented-tabs mb-4">
+    <li class="nav-item">
+      <a class="nav-link <?= !$isPerformance ? 'active' : '' ?>" <?= !$isPerformance ? 'aria-current="page"' : '' ?> href="<?= site_url('scanner/scan') ?>">
+        Scan Handout
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link <?= $isPerformance ? 'active' : '' ?>" <?= $isPerformance ? 'aria-current="page"' : '' ?> href="<?= site_url('scanner/performance') ?>">
+        My Performance
+      </a>
+    </li>
+  </ul>
 
   <?= view('components/toast') ?>
   <?= view('Partials/flash-toasts') ?>

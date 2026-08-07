@@ -194,6 +194,21 @@ final class DashboardPaneUrlFeatureTest extends CIUnitTestCase
     }
 
     /**
+     * With no ?batch= in the URL the Distribution pane still resolves a batch
+     * (BatchScope: the open one), so the outer tab strip has to carry that id
+     * onto the Overview pane. Carrying 0 would describe a page nobody is
+     * looking at, and the reader would lose their batch crossing the strip.
+     */
+    public function testTabStripCarriesTheResolvedBatchWithoutAnExplicitQuery(): void
+    {
+        $body = $this->withSession($this->session('administrator', 1, 'boss'))
+            ->get('dashboard?view=distribution')
+            ->getBody();
+
+        $this->assertStringContainsString('batch=' . self::BATCH_ID, $body);
+    }
+
+    /**
      * The station modal reads scanner/stats, which answers Scanner, Admin and
      * Developer only. An Encoder sees the grid but must get no control that
      * would 403, and no modal markup to go with it.

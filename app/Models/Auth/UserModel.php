@@ -106,6 +106,35 @@ class UserModel extends Model
     }
 
     /**
+     * Whether an account exists and stores the given account_level. Used by the
+     * scanner performance page to check that a ?scanner= id really is a scanner
+     * account before showing another account's figures under its name.
+     */
+    public function hasAccountLevel(int $userId, string $accountLevel): bool
+    {
+        if ($userId <= 0 || ! $this->db->tableExists($this->table)) {
+            return false;
+        }
+
+        $row = $this->select('account_level')->find($userId);
+
+        return ($row['account_level'] ?? '') === $accountLevel;
+    }
+
+    /** An account's username, or null when the id is missing or the row is gone. */
+    public function usernameById(int $userId): ?string
+    {
+        if ($userId <= 0 || ! $this->db->tableExists($this->table)) {
+            return null;
+        }
+
+        $row      = $this->select('username')->find($userId);
+        $username = trim((string) ($row['username'] ?? ''));
+
+        return $username === '' ? null : $username;
+    }
+
+    /**
      * Resolves a username to its userID for audit attribution (e.g. a failed login
      * against a known account), or null when no such account exists. Read-only and
      * password-agnostic - never use this for authentication.

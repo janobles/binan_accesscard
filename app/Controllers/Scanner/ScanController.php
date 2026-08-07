@@ -9,6 +9,7 @@ use App\Libraries\RoleAccess;
 use App\Libraries\Scanner\BatchScope;
 use App\Libraries\SessionAccount;
 use App\Models\Audit\AuditTrailsModel;
+use App\Models\Auth\UserModel;
 use App\Models\Families\MemberModel;
 use App\Models\Lookups\SectorModel;
 use App\Models\Lookups\ServiceModel;
@@ -231,25 +232,15 @@ class ScanController extends BaseController
             return $sessionUserId;
         }
 
-        $target = db_connect()->table('users')
-            ->select('account_level')
-            ->where('userID', $requested)
-            ->get()->getRowArray();
-
-        return ($target['account_level'] ?? '') === 'scanner' ? $requested : $sessionUserId;
+        return model(UserModel::class)->hasAccountLevel($requested, 'scanner')
+            ? $requested
+            : $sessionUserId;
     }
 
     /** The account username for a userID, or 'Scanner' when the row is gone. */
     private function accountUsername(int $userId): string
     {
-        $row = db_connect()->table('users')
-            ->select('username')
-            ->where('userID', $userId)
-            ->get()->getRowArray();
-
-        $username = trim((string) ($row['username'] ?? ''));
-
-        return $username === '' ? 'Scanner' : $username;
+        return model(UserModel::class)->usernameById($userId) ?? 'Scanner';
     }
 
     /**

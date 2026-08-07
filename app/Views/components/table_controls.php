@@ -32,8 +32,8 @@
  * - $searchPlaceholder string       input placeholder; default "Search this
  *                                   page..." (client mode wording), override
  *                                   for a $searchAction server search
- * - $searchHiddenHtml  string       hidden inputs preserving current filters
- *                                   on the search form (caller-escaped),
+ * - $searchHidden      array        name => value pairs preserving current
+ *                                   filters on the search form, escaped here;
  *                                   only used when $searchAction is set
  * - $sizeId            string       id for the page-size <select>
  * - $sizeAttrs         string       extra raw attrs on the client-side page-size
@@ -41,8 +41,9 @@
  *                                   ' data-paginate-size="accounts"'
  * - $sizeAction        string|null  GET action for the page-size form; null =
  *                                   client-side select (no form, no submit)
- * - $sizeHiddenHtml    string       hidden inputs preserving current filters
- *                                   (caller-escaped values)
+ * - $sizeHidden        array        name => value pairs preserving current
+ *                                   filters on the page-size form, escaped
+ *                                   here
  * - $perPage           int          current page size
  * - $perPageOptions    array        value => label; plain lists use value as label
  */
@@ -56,11 +57,11 @@ $searchAction = $searchAction ?? null;
 $searchName = (string) ($searchName ?? 'q');
 $searchValue = (string) ($searchValue ?? '');
 $searchPlaceholder = (string) ($searchPlaceholder ?? 'Search this page...');
-$searchHiddenHtml = (string) ($searchHiddenHtml ?? '');
+$searchHidden = (array) ($searchHidden ?? []);
 $sizeId = (string) ($sizeId ?? 'tablePerPage');
 $sizeAttrs = (string) ($sizeAttrs ?? '');
 $sizeAction = $sizeAction ?? null;
-$sizeHiddenHtml = (string) ($sizeHiddenHtml ?? '');
+$sizeHidden = (array) ($sizeHidden ?? []);
 $perPage = (int) ($perPage ?? 25);
 $perPageOptions = (array) ($perPageOptions ?? [10, 25, 50, 100]);
 // Plain lists ([10, 25, 50]) become value => label maps; assoc arrays pass
@@ -68,11 +69,29 @@ $perPageOptions = (array) ($perPageOptions ?? [10, 25, 50, 100]);
 if (array_is_list($perPageOptions)) {
     $perPageOptions = array_combine($perPageOptions, $perPageOptions);
 }
+
+// Both forms carry the current filters as hidden fields. They used to arrive as
+// a string of markup each caller assembled and escaped itself, which made the
+// escaping seven separate promises; the component takes name => value now and
+// keeps that promise once. Empty values are dropped, since a blank filter in
+// the query string means the same as no filter and only lengthens the URL.
+$hiddenFields = static function (array $fields): string {
+    $html = '';
+    foreach ($fields as $name => $value) {
+        if ((string) $value === '') {
+            continue;
+        }
+        $html .= '<input type="hidden" name="' . esc((string) $name, 'attr')
+            . '" value="' . esc((string) $value, 'attr') . '">';
+    }
+
+    return $html;
+};
 ?>
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <?php if ($showSearch && $searchAction !== null): ?>
     <form class="records-table-search-form mb-0" role="search" method="get" action="<?= esc($searchAction, 'attr') ?>" aria-label="<?= esc($searchAria, 'attr') ?>"<?= $searchFormAttrs !== '' ? ' ' . trim($searchFormAttrs) : '' ?>>
-        <?= $searchHiddenHtml ?>
+        <?= $hiddenFields($searchHidden) ?>
         <div class="input-group input-group-sm">
             <input class="form-control" type="search" id="<?= esc($searchId, 'attr') ?>" name="<?= esc($searchName, 'attr') ?>" value="<?= esc($searchValue, 'attr') ?>" placeholder="<?= esc($searchPlaceholder, 'attr') ?>" autocomplete="off" aria-label="<?= esc($searchPlaceholder, 'attr') ?>"<?= $searchInputAttrs !== '' ? ' ' . trim($searchInputAttrs) : '' ?>>
             <button class="btn btn-primary" type="submit" aria-label="<?= esc($searchPlaceholder, 'attr') ?>"<?= $searchButtonAttrs !== '' ? ' ' . trim($searchButtonAttrs) : '' ?>><i class="bi bi-search" aria-hidden="true"></i></button>
@@ -90,7 +109,7 @@ if (array_is_list($perPageOptions)) {
     <?php endif; ?>
     <?php if ($sizeAction !== null): ?>
     <form class="d-flex align-items-center gap-2 mb-0 small text-muted" method="get" action="<?= esc((string) $sizeAction, 'attr') ?>">
-        <?= $sizeHiddenHtml ?>
+        <?= $hiddenFields($sizeHidden) ?>
         <label class="mb-0" for="<?= esc($sizeId, 'attr') ?>">Show</label>
         <select class="form-select form-select-sm w-auto" id="<?= esc($sizeId, 'attr') ?>" name="per_page" onchange="this.form.submit()">
             <?php foreach ($perPageOptions as $value => $label): ?>

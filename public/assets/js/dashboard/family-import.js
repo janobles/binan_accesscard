@@ -17,12 +17,6 @@
     var STORAGE_KEY = 'binanFamilyImport';
     var tracked = {}; // statusUrl -> timer: number|null
 
-    function escapeHtml(value) {
-        var div = document.createElement('div');
-        div.textContent = String(value == null ? '' : value);
-        return div.innerHTML;
-    }
-
     function updateCsrfForm(form, hash) {
         if (!hash || !form) return;
         var input = form.querySelector('input[type="hidden"]');
@@ -87,10 +81,12 @@
 
     function renderReviewReady(data) {
         var msg = data.message || 'We\'ve scanned your file. Please review the records before saving.';
-        var html = '<div>' + escapeHtml(msg) + '</div><a class="btn btn-sm btn-light mt-2 fw-bold" href="' + escapeHtml(data.reviewUrl) + '">Review and Fix</a>';
-        
+
         if (window.showToast) {
-            window.showToast(html, 'success', { html: true, autohide: false });
+            window.showToast(msg, 'success', {
+                autohide: false,
+                action: { label: 'Review and Fix', href: data.reviewUrl }
+            });
         }
     }
 
@@ -106,9 +102,8 @@
         var alertClass = data.status === 'done' ? 'success' : (isPartial ? 'warning' : 'danger');
         var title = data.status === 'done' ? (skipped ? 'Import completed (some skipped)' : 'Import completed successfully') : (isPartial ? 'Import finished with errors' : 'Failed to import file');
         
-        var html = '<strong>' + escapeHtml(title) + '</strong><br>' + escapeHtml(data.message || '');
         if (window.showToast) {
-            window.showToast(html, alertClass, { html: true });
+            window.showToast(data.message || '', alertClass, { title: title });
         }
     }
 

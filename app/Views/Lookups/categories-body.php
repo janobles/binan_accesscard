@@ -13,8 +13,7 @@
 		'searchInputAttrs' => 'data-lookup-search-input',
 		'sizeId' => 'categoryPerPage',
 		'sizeAction' => site_url($listRoute),
-		'sizeHiddenHtml' => ($keyword !== '' ? '<input type="hidden" name="q" value="' . esc($keyword, 'attr') . '">' : '')
-			. ($status !== 'active' ? '<input type="hidden" name="status" value="' . esc($status, 'attr') . '">' : ''),
+		'sizeHidden' => ['q' => $keyword, 'status' => $status !== 'active' ? $status : ''],
 		'perPage' => $perPage,
 		'perPageOptions' => $perPageOptions,
 	]) ?>

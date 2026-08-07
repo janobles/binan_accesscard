@@ -6,10 +6,11 @@
 //
 // Connected to:
 //   - View   : Admin/batch-create-modal.php - #batchBarangayIds, #batchSectorIds,
-//              #eligiblePreview, #newBatchSubmit
+//              #eligiblePreview, #newBatchSubmit, and the form's
+//              data-preview-url (the endpoint, read off the element rather
+//              than out of a global the view had to inline a script to set)
 //   - Backend: GET distribution/batches/preview
 (function (window, document) {
-    var PREVIEW_URL = window.batchPreviewUrl || null;
     var debounceTimer = null;
     var currentRequest = 0;
 
@@ -38,8 +39,9 @@
         var sectorSelect = form.querySelector('#batchSectorIds');
         var countEl = form.querySelector('[data-eligible-count]');
         var submitBtn = form.querySelector('#newBatchSubmit');
+        var previewUrl = form.getAttribute('data-preview-url');
 
-        if (!barangaySelect || !sectorSelect || !countEl || !PREVIEW_URL) {
+        if (!barangaySelect || !sectorSelect || !countEl || !previewUrl) {
             return;
         }
 
@@ -48,7 +50,7 @@
         setCount(countEl, submitBtn, 'checking...', true);
 
         var requestId = ++currentRequest;
-        var url = PREVIEW_URL + '?' + buildQuery(barangaySelect, sectorSelect);
+        var url = previewUrl + '?' + buildQuery(barangaySelect, sectorSelect);
 
         fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
             .then(function (response) {

@@ -211,10 +211,12 @@ class DashboardPageBuilder
         $dashboardView = (string) $this->request->getGet('view');
         $dashboardView = in_array($dashboardView, ['overview', 'distribution'], true) ? $dashboardView : 'overview';
 
-        // The batch the reader explicitly asked for, straight off the query
-        // rather than out of $reportsData: the outer tab strip has to carry the
-        // selection onto the Overview pane, where no batch data is assembled at
-        // all, and back again.
+        // The batch the outer tab strip carries between the two panes. It has to
+        // be read off the query here, because the Overview pane assembles no
+        // batch data at all and still has to hand the selection back. Where the
+        // Distribution pane did resolve a batch, its id wins below: with no
+        // ?batch= in the URL the page shows the open batch, and a strip
+        // carrying 0 would describe a page nobody is looking at.
         $requestedBatch  = $this->request->getGet('batch');
         $selectedBatchId = is_scalar($requestedBatch) ? max(0, (int) $requestedBatch) : 0;
 
@@ -226,6 +228,7 @@ class DashboardPageBuilder
             ? $this->buildReportsData($batchModel, $batchBodyTab)
             : [
                 'batches'       => [],
+                'batchId'       => 0,
                 'batchRow'      => null,
                 'batchOpen'     => false,
                 'batchSnapshot' => $this->emptyBatchSnapshot(),
@@ -305,7 +308,7 @@ class DashboardPageBuilder
             'remainingPage'      => $reportsData['remainingPage'],
             'batchBodyTab'       => $batchBodyTab,
             'dashboardView'      => $dashboardView,
-            'selectedBatchId'    => $selectedBatchId,
+            'selectedBatchId'    => $selectedBatchId > 0 ? $selectedBatchId : (int) ($reportsData['batchId'] ?? 0),
             'overviewStats'      => $isDashboard && $dashboardView === 'overview'
                 ? $dashboardModel->programStats()
                 : ['families' => 0, 'cardsIssued' => 0, 'distributions' => 0, 'everServed' => 0, 'neverServed' => 0],
@@ -531,6 +534,7 @@ class DashboardPageBuilder
 
         return [
             'batches'       => $batches,
+            'batchId'       => $batchId,
             'batchRow'      => $batch,
             'batchOpen'     => $isOpen,
             'batchSnapshot' => $batchId > 0 ? $stats->batchSnapshot($batchId, $isOpen) : $this->emptyBatchSnapshot(),

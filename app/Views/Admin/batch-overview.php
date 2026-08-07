@@ -232,24 +232,24 @@ $noEligible = ! $noBatch && $c['eligible'] === 0;
 
       return site_url('dashboard') . ($params === [] ? '' : '?' . http_build_query($params));
   };
-  // Hidden fields that keep the pane, tab and batch selection through the
-  // search and per-page forms below; a new search always lands on page 1.
-  $remainingHiddenHtml = '<input type="hidden" name="view" value="distribution">'
-      . '<input type="hidden" name="tab" value="remaining">'
-      . ($batchId > 0 ? '<input type="hidden" name="batch" value="' . esc((string) $batchId, 'attr') . '">' : '');
-  $remainingPerPageHidden = $remainingPage['perPage'] !== 25
-      ? '<input type="hidden" name="per_page" value="' . esc((string) $remainingPage['perPage'], 'attr') . '">'
-      : '';
+  // The pane, tab and batch selection have to survive the search and per-page
+  // forms below; a new search always lands on page 1, so neither form carries
+  // one. table_controls escapes these.
+  $remainingContext = [
+      'view'  => 'distribution',
+      'tab'   => 'remaining',
+      'batch' => $batchId > 0 ? (string) $batchId : '',
+  ];
   ?>
   <?= view('Admin/batch-remaining', [
       'remaining' => $remainingPage['rows'],
       'keyword' => $remainingPage['keyword'],
       'perPage' => $remainingPage['perPage'],
       'perPageOptions' => $remainingPage['perPageOptions'],
-      'searchHiddenHtml' => $remainingHiddenHtml . $remainingPerPageHidden,
-      'sizeHiddenHtml' => $remainingHiddenHtml . ($remainingPage['keyword'] !== ''
-          ? '<input type="hidden" name="q" value="' . esc($remainingPage['keyword'], 'attr') . '">'
-          : ''),
+      'searchHidden' => $remainingContext + [
+          'per_page' => $remainingPage['perPage'] !== 25 ? (string) $remainingPage['perPage'] : '',
+      ],
+      'sizeHidden' => $remainingContext + ['q' => $remainingPage['keyword']],
   ]) ?>
   <?= view('components/table_footer', [
       'fromRecord' => $remainingPage['fromRecord'],

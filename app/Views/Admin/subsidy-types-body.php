@@ -17,9 +17,11 @@ $canManageSubsidyTypes = in_array($currentRole ?? '', ['Admin', 'Developer'], tr
             'searchInputAttrs' => 'data-lookup-search-input',
             'sizeId' => 'subsidyTypePerPage',
             'sizeAction' => site_url($listRoute),
-            'sizeHiddenHtml' => '<input type="hidden" name="tab" value="subsidy-types">'
-                . ($keyword !== '' ? '<input type="hidden" name="q" value="' . esc($keyword, 'attr') . '">' : '')
-                . ($status !== 'active' ? '<input type="hidden" name="status" value="' . esc($status, 'attr') . '">' : ''),
+            'sizeHidden' => [
+                'tab'    => 'subsidy-types',
+                'q'      => $keyword,
+                'status' => $status !== 'active' ? $status : '',
+            ],
             'perPage' => $perPage,
             'perPageOptions' => $perPageOptions,
         ]) ?>

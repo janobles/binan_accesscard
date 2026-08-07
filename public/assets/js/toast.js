@@ -56,12 +56,18 @@
         }
     }
 
-    // Same-origin URLs only, resolved against the current page so a relative
-    // path stays relative. A javascript: or data: URL handed to a toast would
-    // run on click, and no caller has a reason to point one off-site.
+    // Same-origin http(s) URLs only, resolved against the current page so a
+    // relative path stays relative. A javascript: or data: URL handed to a
+    // toast would run on click, and no caller has a reason to point one
+    // off-site. The scheme is checked outright rather than left to the origin
+    // comparison, which is an indirect way to say the same thing.
     function safeHref(value) {
         try {
             var url = new URL(String(value), window.location.href);
+
+            if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+                return null;
+            }
 
             return url.origin === window.location.origin ? url.href : null;
         } catch (e) {

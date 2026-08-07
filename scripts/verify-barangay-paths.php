@@ -30,8 +30,8 @@ if ($svgRaw === false) {
 }
 
 $geo = json_decode($geoRaw, true);
-if (! is_array($geo) || ! is_array($geo['features'] ?? null)) {
-    fwrite(STDERR, "GeoJSON has no feature list: {$geojsonPath}\n");
+if (! is_array($geo) || ($geo['type'] ?? '') !== 'FeatureCollection' || ! is_array($geo['features'] ?? null)) {
+    fwrite(STDERR, "Not a GeoJSON FeatureCollection: {$geojsonPath}\n");
     exit(1);
 }
 

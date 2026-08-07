@@ -35,8 +35,12 @@ final class TableControlsHiddenFieldsTest extends CIUnitTestCase
             'sizeHidden'   => ['status' => '"><img src=x onerror=alert(1)>'],
         ]);
 
-        $this->assertStringNotContainsString('<script>', $html);
-        $this->assertStringNotContainsString('onerror=', $html);
+        // Asserted as markup: the encoded payload still contains the words
+        // "script" and "onerror", so only the absence of a real tag proves
+        // anything.
+        $this->assertStringNotContainsString('<script', $html);
+        $this->assertStringNotContainsString('<img', $html);
+        $this->assertStringContainsString('&lt;script&gt;', $html);
         $this->assertStringContainsString('<input type="hidden" name="q"', $html);
         $this->assertStringContainsString('<input type="hidden" name="status"', $html);
     }

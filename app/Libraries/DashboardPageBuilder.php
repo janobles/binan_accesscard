@@ -211,12 +211,13 @@ class DashboardPageBuilder
         $dashboardView = (string) $this->request->getGet('view');
         $dashboardView = in_array($dashboardView, ['overview', 'distribution'], true) ? $dashboardView : 'overview';
 
-        // The batch the outer tab strip carries between the two panes. It has to
-        // be read off the query here, because the Overview pane assembles no
-        // batch data at all and still has to hand the selection back. Where the
-        // Distribution pane did resolve a batch, its id wins below: with no
-        // ?batch= in the URL the page shows the open batch, and a strip
-        // carrying 0 would describe a page nobody is looking at.
+        // The batch the outer tab strip carries between the two panes. On the
+        // Overview pane it can only come off the query, since no batch data is
+        // assembled there and the selection still has to survive the trip. On
+        // the Distribution pane the resolved id wins instead (below), because
+        // that is the batch on screen: with no ?batch= the page shows the open
+        // one, and an unknown ?batch= resolves to nothing, which the strip
+        // should stop carrying rather than hand to the other pane.
         $requestedBatch  = $this->request->getGet('batch');
         $selectedBatchId = is_scalar($requestedBatch) ? max(0, (int) $requestedBatch) : 0;
 
@@ -308,7 +309,9 @@ class DashboardPageBuilder
             'remainingPage'      => $reportsData['remainingPage'],
             'batchBodyTab'       => $batchBodyTab,
             'dashboardView'      => $dashboardView,
-            'selectedBatchId'    => $selectedBatchId > 0 ? $selectedBatchId : (int) ($reportsData['batchId'] ?? 0),
+            'selectedBatchId'    => $isDashboard && $dashboardView === 'distribution'
+                ? (int) ($reportsData['batchId'] ?? 0)
+                : $selectedBatchId,
             'overviewStats'      => $isDashboard && $dashboardView === 'overview'
                 ? $dashboardModel->programStats()
                 : ['families' => 0, 'cardsIssued' => 0, 'distributions' => 0, 'everServed' => 0, 'neverServed' => 0],

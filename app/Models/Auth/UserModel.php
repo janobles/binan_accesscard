@@ -112,13 +112,15 @@ class UserModel extends Model
      */
     public function hasAccountLevel(int $userId, string $accountLevel): bool
     {
-        if ($userId <= 0 || ! $this->db->tableExists($this->table)) {
+        // A blank $accountLevel would otherwise match a missing row, since
+        // both sides collapse to the empty string.
+        if ($userId <= 0 || $accountLevel === '' || ! $this->db->tableExists($this->table)) {
             return false;
         }
 
         $row = $this->select('account_level')->find($userId);
 
-        return ($row['account_level'] ?? '') === $accountLevel;
+        return $row !== null && ($row['account_level'] ?? '') === $accountLevel;
     }
 
     /** An account's username, or null when the id is missing or the row is gone. */

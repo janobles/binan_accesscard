@@ -205,7 +205,26 @@ final class DashboardPaneUrlFeatureTest extends CIUnitTestCase
             ->get('dashboard?view=distribution')
             ->getBody();
 
-        $this->assertStringContainsString('batch=' . self::BATCH_ID, $body);
+        // Read off the strip's own links rather than the whole body, where any
+        // batch-scoped href on the page would have satisfied the assertion.
+        $outerTabs = $this->dashboardLinks($body, 'view=');
+        $this->assertNotSame([], $outerTabs);
+
+        foreach ($outerTabs as $href) {
+            $this->assertStringContainsString('batch=' . self::BATCH_ID, $href);
+        }
+    }
+
+    /** An id matching no batch is not a selection, and must not travel. */
+    public function testTabStripDropsAnUnknownBatchRatherThanCarryingIt(): void
+    {
+        $body = $this->withSession($this->session('administrator', 1, 'boss'))
+            ->get('dashboard?view=distribution&batch=99999')
+            ->getBody();
+
+        foreach ($this->dashboardLinks($body, 'view=') as $href) {
+            $this->assertStringNotContainsString('batch=99999', $href);
+        }
     }
 
     /**

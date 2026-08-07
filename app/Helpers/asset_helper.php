@@ -24,8 +24,8 @@ if (! function_exists('asset_styles')) {
      * loads. Views iterate the returned relative paths and wrap each with
      * asset_url() for cache-busting. Per-role order is significant (CSS cascade).
      *
-     * Contexts: head (shared <head> CSS), admin|employee|viewer (dashboard
-     * shells), login. Unknown context returns [].
+     * Contexts: head (shared <head> CSS), admin (the one dashboard shell),
+     * login, scanner. Unknown context returns [].
      */
     function asset_styles(string $context): array
     {
@@ -40,22 +40,6 @@ if (! function_exists('asset_styles')) {
                 'css/managerecord.css',
                 'css/lookupmanagement.css',
                 'css/audittrails.css',
-                'css/accounts.css',
-                'css/familymodal.css',
-                'css/session-timeout.css',
-            ],
-            'employee' => [
-                'assets/datatables/css/dataTables.bootstrap5.min.css',
-                'css/managerecord.css',
-                'css/audittrails.css',
-                'css/familymodal.css',
-                'css/accounts.css',
-                'css/session-timeout.css',
-            ],
-            'viewer' => [
-                'assets/datatables/css/dataTables.bootstrap5.min.css',
-                'css/managerecord.css',
-                'css/lookupmanagement.css',
                 'css/accounts.css',
                 'css/familymodal.css',
                 'css/session-timeout.css',
@@ -84,8 +68,8 @@ if (! function_exists('asset_scripts')) {
      * `session-timeout.js` is intentionally absent - each layout renders it
      * inline because its data-* attributes differ per role.
      *
-     * Contexts: core (jQuery + Bootstrap bundle, shared), admin|employee|viewer
-     * (dashboard shells), login. Unknown context returns [].
+     * Contexts: core (jQuery + Bootstrap bundle, shared), admin (the one dashboard
+     * shell), login, scanner. Unknown context returns [].
      */
     function asset_scripts(string $context): array
     {
@@ -120,34 +104,6 @@ if (! function_exists('asset_scripts')) {
                 'assets/js/dashboard/audit-detail-modal.js',
                 'assets/js/dashboard/batch-close-modal.js',
                 'assets/js/dashboard/batch-create-modal.js',
-            ],
-            'employee' => [
-                'assets/js/dashboard/view-interactions.js',
-                'assets/datatables/js/dataTables.min.js',
-                'assets/datatables/js/dataTables.bootstrap5.min.js',
-                'assets/js/dashboard/family-datatable.js',
-                'assets/js/dashboard/family-list.js',
-                'assets/js/dashboard/audit-filters.js',
-                'assets/js/dashboard/lookup-search.js',
-                'assets/js/dashboard/records-filter-panel.js',
-                'assets/js/dashboard/table-paginate.js',
-                'assets/js/dashboard/dashboard-modal-loader.js',
-                'assets/js/dashboard/manage-family-modal.js',
-                'assets/js/dashboard/family-import.js',
-                'assets/js/dashboard/account-form-modal.js',
-            ],
-            'viewer' => [
-                'assets/js/dashboard/view-interactions.js',
-                'assets/datatables/js/dataTables.min.js',
-                'assets/datatables/js/dataTables.bootstrap5.min.js',
-                'assets/js/dashboard/family-datatable.js',
-                'assets/js/dashboard/family-list.js',
-                'assets/js/dashboard/lookup-search.js',
-                'assets/js/dashboard/records-filter-panel.js',
-                'assets/js/dashboard/table-paginate.js',
-                'assets/js/dashboard/dashboard-modal-loader.js',
-                'assets/js/dashboard/manage-family-modal.js',
-                'assets/js/dashboard/account-form-modal.js',
             ],
             'login' => [
                 'assets/bootstrap/js/bootstrap.bundle.min.js',

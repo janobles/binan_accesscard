@@ -69,37 +69,28 @@ for file in public/css/*.css; do
     fi
 done
 
+# Both bans below are about prose, so they run over comment text only, never the
+# raw file. list-comments.php tokenizes the PHP and reads the CSS quote-aware, so
+# an em dash or a `----` run inside a string, a regex, or inline HTML is no longer
+# reported as a comment violation. A view's inline <script> is T_INLINE_HTML and
+# so never reaches these scans; covering JS comments means giving the JS files
+# their own extractor, which is its own job (see docs/knowledge/violations.md).
+# app/Config is stock framework code and public/assets is vendored.
+comments="$(mktemp)"
+trap 'rm -f "$comments"' EXIT
+
+find app public/css \( -name '*.php' -o -name '*.css' \) -not -path 'app/Config/*' -print0 \
+    | xargs -0 php scripts/list-comments.php > "$comments" 2>/dev/null
+
 # Em dashes read as AI slop in this codebase. Plain language only.
 while IFS= read -r hit; do
     report "EM DASH: $hit"
-done < <(grep -rn '—' app public/css --include='*.php' --include='*.css' 2>/dev/null)
+done < <(grep -F '—' "$comments" 2>/dev/null)
 
-# Every `file:line:` that sits inside a <script> block. A view's inline script is
-# T_INLINE_HTML: the token gate compares it verbatim, so editing a JS comment
-# there cannot be proven to change nothing. The divider ban therefore covers PHP
-# and CSS comments, not JS embedded in a view. Note that moving such a script to
-# its own .js file does not bring it back under the ban either: the scan below
-# only includes *.php and *.css. Covering JS means extending that include list,
-# which is its own job (see docs/knowledge/violations.md).
-script_block_lines="$(mktemp)"
-trap 'rm -f "$script_block_lines"' EXIT
-
-find app -name '*.php' -not -path 'app/Config/*' -print0 \
-    | xargs -0 awk '
-        FNR == 1 { inscript = 0 }
-        /<script/ { inscript = 1 }
-        inscript { print FILENAME ":" FNR ":" }
-        /<\/script>/ { inscript = 0 }
-    ' > "$script_block_lines" 2>/dev/null
-
-# Divider comments are replaced by prose or by splitting the unit. app/Config is
-# stock framework code and public/assets is vendored.
+# Divider comments are replaced by prose or by splitting the unit.
 while IFS= read -r hit; do
     report "DIVIDER COMMENT: $hit"
-done < <(grep -rn -E '(//|/\*|\*)[[:space:]]*[-=]{4,}' app public/css \
-    --include='*.php' --include='*.css' 2>/dev/null \
-    | grep -v '^app/Config/' \
-    | grep -vF -f "$script_block_lines")
+done < <(grep -E '(//|/\*|\*)[[:space:]]*[-=]{4,}' "$comments" 2>/dev/null)
 
 if [ "$failed" -ne 0 ]; then
     echo "" >&2

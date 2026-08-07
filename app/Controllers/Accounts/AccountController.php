@@ -3,6 +3,7 @@
 namespace App\Controllers\Accounts;
 
 use App\Controllers\BaseController;
+use App\Libraries\AccountFormRetry;
 use App\Libraries\RoleAccess;
 use App\Libraries\ViewFormatter;
 use App\Models\Audit\AuditTrailsModel;
@@ -28,8 +29,12 @@ class AccountController extends BaseController
             return $guard;
         }
 
+        $retry = AccountFormRetry::take('create');
+
         return view('Accounts/account-form-modal', [
-            'mode' => 'create',
+            'mode'   => 'create',
+            'old'    => $retry['input'],
+            'errors' => $retry['errors'],
         ]);
     }
 
@@ -80,9 +85,10 @@ class AccountController extends BaseController
         ];
 
         if (! $this->validate($rules, $messages)) {
+            AccountFormRetry::remember('create', $this->request->getPost(), $this->validator->getErrors());
+
             return redirect()->back()
                 ->withInput()
-                ->with('validationErrors', $this->validator->getErrors())
                 ->with('openModal', 'account-create');
         }
 
@@ -145,11 +151,14 @@ class AccountController extends BaseController
         }
 
         $currentUserId = (int) session()->get('user_id');
+        $retry         = AccountFormRetry::take('edit', $userId);
 
         return view('Accounts/account-form-modal', [
             'mode'    => 'edit',
             'account' => $account,
             'details' => ViewFormatter::parseFullDescription((string) ($account['full_description'] ?? '')),
+            'old'     => $retry['input'],
+            'errors'  => $retry['errors'],
             'isSelf'  => $userId === $currentUserId,
             // An Admin may change another Admin's username/password but not role,
             // status, or personal details. Developers are unrestricted.
@@ -228,9 +237,10 @@ class AccountController extends BaseController
         }
 
         if (! $this->validate($rules, $messages)) {
+            AccountFormRetry::remember('edit', $this->request->getPost(), $this->validator->getErrors(), $userId);
+
             return redirect()->back()
                 ->withInput()
-                ->with('validationErrors', $this->validator->getErrors())
                 ->with('openModal', 'account-edit')
                 ->with('openModalId', $userId);
         }

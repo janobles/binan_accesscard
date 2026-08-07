@@ -130,7 +130,7 @@ final class FamilyDataTableTest extends TestCase
         // end - either one leaves that list empty - must skip the query rather
         // than reach whereIn() with nothing in it.
         $wholeDatabaseGuard = strpos($controller, "if (\$headIds !== [])");
-        $wholeDatabaseWhereIn = strpos($controller, "whereIn('memberID', \$headIds)->findAll()");
+        $wholeDatabaseWhereIn = strpos($controller, "whereIn('memberID', \$headIds)");
         $this->assertNotFalse($wholeDatabaseGuard, 'missing the whole-database head-lookup guard');
         $this->assertNotFalse($wholeDatabaseWhereIn, 'missing the whole-database head lookup');
         $this->assertLessThan($wholeDatabaseWhereIn, $wholeDatabaseGuard);

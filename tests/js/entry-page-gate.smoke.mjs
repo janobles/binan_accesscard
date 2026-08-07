@@ -399,10 +399,29 @@ fakeWindow.localStorage = {
     setItem() {},
     removeItem() { draftRemoveCount++; },
 };
-// Instant timers: the gate's real debounce (350ms) and the qr-check hang guard
-// (5000ms) would otherwise make this test slow for no benefit.
-fakeWindow.setTimeout = (fn) => { fn(); return 0; };
-fakeWindow.clearTimeout = () => {};
+// Queued timers, not instant ones. Running every callback the moment it is
+// scheduled fires the qr-check hang guard (5000ms) before fetch() settles, so
+// the request aborts and the gate never opens - the test would then be
+// asserting against a code path the browser never takes. Callbacks are held
+// here and flushTimers() releases only the ones at or under a given delay, so
+// the debounce (350ms) can run while the guard stays pending.
+const pendingTimers = new Map();
+let nextTimerId = 1;
+fakeWindow.setTimeout = (fn, delay) => {
+    const id = nextTimerId++;
+    pendingTimers.set(id, { fn, delay: delay || 0 });
+    return id;
+};
+fakeWindow.clearTimeout = (id) => { pendingTimers.delete(id); };
+
+function flushTimers(maxDelay) {
+    for (const [id, timer] of [...pendingTimers]) {
+        if (timer.delay <= maxDelay) {
+            pendingTimers.delete(id);
+            timer.fn();
+        }
+    }
+}
 fakeWindow.URL = URL;
 fakeWindow.location = { href: 'http://localhost/records/entry' };
 fakeWindow.fetch = (url) => {
@@ -483,9 +502,10 @@ assert.equal(step3Prefix.textContent, 'Locked, ', 'Step 3 should announce "Locke
 controlNumberField.value = '12345';
 controlNumberField.dispatch('input');
 
-// The debounce timer runs synchronously (fakeWindow.setTimeout above), but the
-// fetch().then() chain it kicks off resolves as real microtasks - setImmediate
-// runs after all of them drain, however many hops the chain needs.
+// Release the debounce and nothing longer, then let the fetch().then() chain it
+// kicks off resolve as real microtasks - setImmediate runs after all of them
+// drain, however many hops the chain needs.
+flushTimers(1000);
 await new Promise((resolve) => setImmediate(resolve));
 
 assert.equal(sectionHead.classList.contains('d-none'), false, 'A control number the server reports available must reveal the head section.');
@@ -523,6 +543,8 @@ assert.equal(
 controlNumberField.value = 'abc';
 controlNumberField.dispatch('input');
 
+// No flush here on purpose: the carrier must be cleared by the input handler
+// itself, before the new check's debounce even fires.
 assert.equal(
     realControlNumberInput.value,
     '',

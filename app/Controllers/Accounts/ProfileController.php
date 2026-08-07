@@ -3,6 +3,7 @@
 namespace App\Controllers\Accounts;
 
 use App\Controllers\BaseController;
+use App\Libraries\AccountFormRetry;
 use App\Libraries\RoleAccess;
 use App\Libraries\ViewFormatter;
 use App\Models\Audit\AuditTrailsModel;
@@ -40,10 +41,14 @@ class ProfileController extends BaseController
 
         $role = (string) ($account['role'] ?? '');
 
+        $retry = AccountFormRetry::take('self');
+
         return view('Accounts/account-form-modal', [
             'mode'      => 'self',
             'account'   => $account,
             'details'   => ViewFormatter::parseFullDescription((string) ($account['full_description'] ?? '')),
+            'old'       => $retry['input'],
+            'errors'    => $retry['errors'],
             'roleLabel' => RoleAccess::normalizeRole($role) ?? $role,
         ]);
     }
@@ -86,9 +91,10 @@ class ProfileController extends BaseController
         ];
 
         if (! $this->validate($rules, $messages)) {
+            AccountFormRetry::remember('self', $this->request->getPost(), $this->validator->getErrors());
+
             return redirect()->back()
                 ->withInput()
-                ->with('validationErrors', $this->validator->getErrors())
                 ->with('openModal', 'account-profile');
         }
 

@@ -7,8 +7,9 @@
  * page break. Rendered through dompdf, not a browser, which is why the grid is a CSS
  * table rather than flex or grid.
  *
- * @var array $cells       The cards on this page, already ordered.
- * @var bool  $isFirstPage Suppresses the leading page break.
+ * Props (this header is the contract; a PDF partial has no *_view_data()):
+ * - $cells       array  The cards on this page, already ordered.
+ * - $isFirstPage bool   Suppresses the leading page break.
  */
 ?>
 <div class="page <?= $isFirstPage ? '' : 'page-break' ?>">

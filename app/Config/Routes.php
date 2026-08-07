@@ -39,6 +39,10 @@ $routes->group('records', ['filter' => 'roleNav:records'], static function (Rout
 
 $routes->group('records', ['filter' => 'roleNav:records-entry'], static function (RouteCollection $routes): void {
     $routes->get('entry', 'Families\FamilyController::createFamily');
+    // The POST that the entry form submits to, so it sits under the key that
+    // names creating a record rather than the one that names editing one. Both
+    // keys resolve to the same roles, so this is naming, not access.
+    $routes->post('', 'Families\FamilyController::store');
 });
 
 $routes->group('records', ['filter' => 'roleNav:records-import'], static function (RouteCollection $routes): void {
@@ -64,7 +68,6 @@ $routes->group('records', ['filter' => 'roleNav:records-update'], static functio
     $routes->post('(:num)/update', 'Families\FamilyController::update/$1');
     $routes->post('(:num)/archive', 'Families\FamilyController::archive/$1');
     $routes->post('(:num)/restore', 'Families\FamilyController::restore/$1');
-    $routes->post('', 'Families\FamilyController::store');
 });
 
 /*

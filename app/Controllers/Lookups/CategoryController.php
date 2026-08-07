@@ -98,14 +98,14 @@ class CategoryController extends BaseController
         $model = new CategoryModel();
 
         if (! $model->hasTable()) {
-            return $this->redirect('error', 'Category table is not available.');
+            return $this->redirect('error', 'Category table is not available.', true);
         }
 
         $category   = $model->find($categoryId);
         $archivedAt = (string) ($category['dt_deleted'] ?? '');
 
         if (! $model->restore($categoryId)) {
-            return $this->redirect('error', 'Unable to restore category.');
+            return $this->redirect('error', 'Unable to restore category.', true);
         }
 
         $categoryName     = trim((string) ($category['name'] ?? ''));
@@ -195,10 +195,16 @@ class CategoryController extends BaseController
         return $this->redirect('success', $isUpdate ? 'Category updated successfully.' : 'Category added successfully.');
     }
 
-    /** Redirect back to the categories page with a typed flash message. */
-    private function redirect(string $type, string $message): RedirectResponse
+    /**
+     * Redirect back to the categories page with a typed flash message.
+     * $archived keeps the caller on the Archived filter, which is where a
+     * failed restore was triggered from.
+     */
+    private function redirect(string $type, string $message, bool $archived = false): RedirectResponse
     {
-        return $this->redirectAdmin('reference-data?tab=categories', $type, $message);
+        $path = 'reference-data?tab=categories' . ($archived ? '&status=archived' : '');
+
+        return $this->redirectAdmin($path, $type, $message);
     }
 
     /** Human-readable category label for audit descriptions, e.g. "category SC (Senior Citizen) #3". */

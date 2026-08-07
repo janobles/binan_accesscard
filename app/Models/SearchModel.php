@@ -218,10 +218,17 @@ class SearchModel
 
         $status = strtolower(trim((string) ($filters['status'] ?? '')));
 
+        // The head carries the same condition as the member. This query groups by
+        // headID and the caller then loads those head rows to display, so without
+        // it a member archived on its own could put its still-active head on the
+        // Archived tab (and the reverse). Archiving a family stamps every one of
+        // its rows, so in the normal case the two conditions select the same set.
         if ($status === RecordStatus::ARCHIVED) {
-            $builder->where('m.dt_deleted IS NOT NULL', null, false);
+            $builder->where('m.dt_deleted IS NOT NULL', null, false)
+                ->where('h.dt_deleted IS NOT NULL', null, false);
         } elseif ($status !== RecordStatus::ALL) {
-            $builder->where('m.dt_deleted IS NULL', null, false);
+            $builder->where('m.dt_deleted IS NULL', null, false)
+                ->where('h.dt_deleted IS NULL', null, false);
         }
 
         $keyword = $this->normalizeKeyword($keyword);

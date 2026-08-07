@@ -263,18 +263,6 @@
     font-size: 0.83rem;
 }
 
-/* No view emits this class any more: components/table_controls.php builds the
-   same row from Bootstrap utilities. Left in place because
-   docs/knowledge/binan-conventions/ui-design-system.md still names
-   .records-table-controls as the controls-row hook. */
-.records-table-controls {
-    display: inline-flex;
-    align-items: center;
-    width: 100%;
-    justify-content: space-between;
-    gap: 1rem;
-}
-
 /* Sizes the page search inside components/table_controls.php. */
 .records-table-search-form .form-control {
     width: min(18rem, 42vw);
@@ -408,8 +396,7 @@
         margin-left: 0;
     }
 
-    .table-meta,
-    .records-table-controls {
+    .table-meta {
         align-items: flex-start;
         flex-direction: column;
         gap: 0.5rem;

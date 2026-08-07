@@ -166,11 +166,18 @@ final class ImportStagingStoreTest extends CIUnitTestCase
             'counts' => ['blocking' => 1],
         ]);
 
-        $errorsMtimeBefore = filemtime($this->dir . '/job-42-errors.json');
+        // A known past mtime, not "whatever it is now": within one second of each
+        // other the before and after readings match whether or not the file was
+        // rewritten, so the assertion would hold for the bug too. clearstatcache()
+        // stops PHP answering the second filemtime() from its cache.
+        $errorsMtimeBefore = time() - 3600;
+        touch($this->dir . '/job-42-errors.json', $errorsMtimeBefore);
+        clearstatcache(true, $this->dir . '/job-42-errors.json');
 
         $store->saveRows(42, [['sheetRow' => 3, 'data' => ['sex' => 'Male']]]);
 
         $loaded = $store->load(42);
+        clearstatcache(true, $this->dir . '/job-42-errors.json');
 
         $this->assertSame('Male', $loaded['rows'][0]['data']['sex']);
         $this->assertSame($errorsMtimeBefore, filemtime($this->dir . '/job-42-errors.json'));
@@ -200,6 +207,7 @@ final class ImportStagingStoreTest extends CIUnitTestCase
         }
 
         $this->assertSame(1, $store->sweep([]));
+        $this->assertFileDoesNotExist($this->dir . '/job-44.json');
         $this->assertFileDoesNotExist($this->dir . '/job-44-rows.json');
         $this->assertFileDoesNotExist($this->dir . '/job-44-errors.json');
     }
@@ -216,7 +224,9 @@ final class ImportStagingStoreTest extends CIUnitTestCase
         }
 
         $this->assertSame(0, $store->sweep([45]));
+        $this->assertFileExists($this->dir . '/job-45.json');
         $this->assertFileExists($this->dir . '/job-45-rows.json');
+        $this->assertFileExists($this->dir . '/job-45-errors.json');
     }
 
     public function testAWriteLeavesNoTempFileBehind(): void

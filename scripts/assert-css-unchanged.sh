@@ -3,7 +3,7 @@
 #
 # Usage: bash scripts/assert-css-unchanged.sh <git-ref>
 #
-# Strips /* ... */ comments and blank lines from each custom stylesheet at
+# Strips comments and blank lines (scripts/strip-css-comments.php) from each custom stylesheet at
 # <git-ref> and in the working tree, then compares. The file list is the
 # union of what public/css held at <ref> and what it holds now, so a
 # stylesheet deleted (or added) since <ref> is not silently skipped by a
@@ -16,8 +16,11 @@ set -uo pipefail
 ref="${1:?usage: assert-css-unchanged.sh <git-ref>}"
 failed=0
 
+# Quote-aware, so a comment opener inside a string or a url() stays put. A plain
+# regex stripped it from both sides, which made an edit there compare equal and
+# let a real rule change through.
 strip() {
-    perl -0777 -pe 's{/\*.*?\*/}{}gs' | grep -v '^[[:space:]]*$' || true
+    php scripts/strip-css-comments.php || true
 }
 
 files=$( { git ls-tree -r --name-only "$ref" -- public/css 2>/dev/null | grep '\.css$'

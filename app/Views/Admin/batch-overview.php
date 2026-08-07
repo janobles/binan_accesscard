@@ -4,7 +4,8 @@
  * headline, and the Barangay/Stations/Remaining tabs. A fragment, not a page:
  * rendered inline by Pages/dashboard.php for every role. Data comes
  * from DashboardPageBuilder::buildReportsData() (batches, batchRow, batchOpen,
- * batchSnapshot, remainingPage, batchBodyTab, busiestDay). All server data is
+ * batchSnapshot, remainingPage, batchBodyTab, busiestDay) plus $role, which
+ * decides only whether a station square is clickable. All server data is
  * escaped.
  *
  * The batch figures render as a KPI card row plus a slim coverage bar,
@@ -19,6 +20,10 @@ $batchSnapshot = $batchSnapshot ?? ['coverage' => ['eligible' => 0, 'served' => 
 $remainingPage = $remainingPage ?? ['rows' => [], 'keyword' => '', 'page' => 1, 'perPage' => 25, 'perPageOptions' => [10, 25, 50, 100], 'totalPages' => 1, 'totalRows' => 0, 'fromRecord' => 0, 'toRecord' => 0];
 $batchBodyTab = $batchBodyTab ?? 'barangay';
 $busiestDay = $busiestDay ?? null;
+
+// Only these two reach scanner/stats, which is what the station modal reads.
+// See the note in Admin/batch-stations-grid.php.
+$canDrillInStations = in_array($role ?? '', ['Developer', 'Admin'], true);
 
 $c = $batchSnapshot['coverage'];
 $byBarangay = $batchSnapshot['byBarangay'];
@@ -114,10 +119,13 @@ $noEligible = ! $noBatch && $c['eligible'] === 0;
            place without inserting new markup mid-batch. */ ?>
   <span id="voidedTileWrap"<?= $c['voided'] > 0 ? '' : ' class="d-none"' ?>>
     <span id="voidedTileValue"><?= esc((string) $c['voided']) ?></span> voided &middot;</span>
+  <?php /* The state reads as a pill rather than a sentence, matching the "open"
+           pill on the Overview pane's Distributions table. Not a Bootstrap
+           alert: an alert is a block banner for something needing attention,
+           and a batch being closed is the steady state of most batches. */ ?>
+  <span class="status-pill is-muted"><?= $batchOpen ? 'open' : 'closed' ?></span>
   <?php if ($batchOpen): ?>
-    batch open, updated <span id="lastUpdated">-</span>
-  <?php else: ?>
-    batch closed
+    updated <span id="lastUpdated">-</span>
   <?php endif; ?>
 </p>
 
@@ -198,7 +206,14 @@ $noEligible = ! $noBatch && $c['eligible'] === 0;
     </div>
   </div>
 <?php elseif ($batchBodyTab === 'stations'): ?>
-  <?= view('Admin/batch-stations-grid', ['perScanner' => $perScanner, 'batchId' => $batchId]) ?>
+  <?= view('Admin/batch-stations-grid', [
+      'perScanner' => $perScanner,
+      'batchId' => $batchId,
+      'canDrillIn' => $canDrillInStations,
+  ]) ?>
+  <?php if ($canDrillInStations): ?>
+    <?= view('Admin/batch-station-modal') ?>
+  <?php endif; ?>
 <?php else: ?>
   <?php
   // Server-side paginated (SubsidyStatsModel::remainingPage()): against the
@@ -265,6 +280,12 @@ $noEligible = ! $noBatch && $c['eligible'] === 0;
          below would throw. defer holds it until after the document (and the
          blocking bootstrap.bundle.min.js tag within it) has parsed. */ ?>
 <script src="<?= esc(asset_url('assets/js/dashboard/barangay-map.js'), 'attr') ?>" defer></script>
+<?php if ($batchBodyTab === 'stations' && $canDrillInStations): ?>
+<?php /* defer for the same reason as barangay-map.js above: this fragment
+         renders ahead of layout.php's Bootstrap bundle, and the Modal
+         constructor needs window.bootstrap to exist. */ ?>
+<script src="<?= esc(asset_url('assets/js/dashboard/station-modal.js'), 'attr') ?>" defer></script>
+<?php endif; ?>
 <script>
 (function () {
   // Live poll: fetch fresh stats for the selected batch and repaint the charts
@@ -279,21 +300,37 @@ $noEligible = ! $noBatch && $c['eligible'] === 0;
   var onRemainingTab = <?= $batchBodyTab === 'remaining' ? 'true' : 'false' ?>;
   if (batchId > 0) { statsUrl += '?batch=' + batchId; }
 
-  function apply(d) {
-    if (window.ReportsCharts) { window.ReportsCharts.update(d); }
+  // A stamp that stops ticking looks the same as a quiet batch, so a failed
+  // poll has to say so rather than leave the last good time sitting there. One
+  // dropped request on a flaky connection is not worth a warning, so the notice
+  // waits for three in a row.
+  var failures = 0;
+
+  function stampNow() {
     var stamp = document.getElementById('lastUpdated');
     if (stamp) { stamp.textContent = new Date().toLocaleTimeString(); }
+  }
+
+  function apply(d) {
+    if (window.ReportsCharts) { window.ReportsCharts.update(d); }
+    failures = 0;
+    stampNow();
+  }
+
+  function failed() {
+    failures += 1;
+    var stamp = document.getElementById('lastUpdated');
+    if (stamp && failures >= 3) { stamp.textContent = 'not connected'; }
   }
 
   function poll() {
     fetch(statsUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
       .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (d) { if (d) { apply(d); } })
-      .catch(function () {});
+      .then(function (d) { if (d) { apply(d); } else { failed(); } })
+      .catch(failed);
   }
 
-  var stamp = document.getElementById('lastUpdated');
-  if (stamp) { stamp.textContent = new Date().toLocaleTimeString(); }
+  stampNow();
 
   // Live-poll only while the selected batch is open (closed batches are
   // static), the sub-tab isn't Remaining (see onRemainingTab above), and the

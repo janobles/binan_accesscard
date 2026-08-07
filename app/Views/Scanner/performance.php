@@ -42,7 +42,15 @@ $viewingOther = (bool) ($viewingOther ?? false);
   </div>
 </div>
 
-<section class="reports-stats mb-3" aria-label="Kiosk performance">
+<?php /* The row does its own columns, the same way the dashboard's KPI rows do.
+         This section used to carry .reports-stats, a four-column CSS grid from
+         when the tiles were its direct children; with a Bootstrap row inside it
+         instead, the whole row became one grid item in a single 1fr track and
+         got a quarter of the width, which squeezed the four labels down to one
+         character per line. That grid and the rest of the .stat-card system are
+         deleted now. The .stat-card--* classes below are not styling: they are
+         the hooks setTile() uses to find a tile when the poll comes back. */ ?>
+<section class="mb-4" aria-label="Kiosk performance">
   <div class="row row-cols-2 row-cols-md-4 g-3 kpi-row">
     <div class="col stat-card--records">
       <div class="card kpi-card h-100">

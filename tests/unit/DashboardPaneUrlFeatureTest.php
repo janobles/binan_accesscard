@@ -176,7 +176,8 @@ final class DashboardPaneUrlFeatureTest extends CIUnitTestCase
             $this->assertStringContainsString('?view=distribution', $body, $role);
             $this->assertStringContainsString('Program to date', $body, $role);
             $this->assertStringContainsString('Families profiled', $body, $role);
-            $this->assertStringContainsString('Families never served', $body, $role);
+            $this->assertStringContainsString('Access cards issued', $body, $role);
+            $this->assertStringContainsString('never served', $body, $role);
             $this->assertStringContainsString('August rice', $body, $role);
         }
     }
@@ -189,5 +190,33 @@ final class DashboardPaneUrlFeatureTest extends CIUnitTestCase
 
         $this->assertStringContainsString('id="stationsGrid"', $body);
         $this->assertStringContainsString('Eligible families', $body);
+    }
+
+    /**
+     * The station modal reads scanner/stats, which answers Scanner, Admin and
+     * Developer only. An Encoder sees the grid but must get no control that
+     * would 403, and no modal markup to go with it.
+     */
+    public function testEncoderGetsStationsWithoutADrillIn(): void
+    {
+        $body = $this->withSession($this->session('encoder', 2, 'keyer'))
+            ->get('dashboard?view=distribution&tab=stations&batch=' . self::BATCH_ID)
+            ->getBody();
+
+        $this->assertStringContainsString('data-can-drill-in="0"', $body);
+        $this->assertStringNotContainsString('data-scanner-id=', $body);
+        $this->assertStringNotContainsString('id="stationModal"', $body);
+    }
+
+    /** The same grid, for a role that may open a station. */
+    public function testDeveloperGetsTheStationModal(): void
+    {
+        $body = $this->withSession($this->session('developer', 1, 'developer'))
+            ->get('dashboard?view=distribution&tab=stations&batch=' . self::BATCH_ID)
+            ->getBody();
+
+        $this->assertStringContainsString('data-can-drill-in="1"', $body);
+        $this->assertStringContainsString('id="stationModal"', $body);
+        $this->assertStringNotContainsString('scanner/performance', $body);
     }
 }

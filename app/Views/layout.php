@@ -109,7 +109,10 @@ $bodyView = ($bodyView ?? '') !== '' ? $bodyView : 'Pages/dashboard';
                 </nav>
             </header>
 
-            <main class="container-fluid px-4 pt-3 pb-4 dashboard-content flex-grow-1">
+            <?php /* Bottom padding comes from theme.css, not a pb-* utility: it
+                     has to carry the safe-area inset, which no Bootstrap
+                     spacing class can express. */ ?>
+            <main class="container-fluid px-4 pt-3 dashboard-content flex-grow-1">
 
             <?php /* The breadcrumb in the topbar shows the page name, so printing
                      it again here was the same string twice on one screen. The

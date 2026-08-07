@@ -162,7 +162,7 @@ rendering needs inline styles), layout shells + `Auth/login.php` (standalone
   `list<list<raw HTML>>`, so the caller concatenates markup and owns the
   escaping (the docblock says as much: "Cell values are RAW HTML"). Every other
   component either takes scalars and escapes them itself (`toolbar`,
-  `table_controls`, `table_footer`, `stat_card`) or takes a body view and
+  `table_controls`, `table_footer`) or takes a body view and
   composes (`card`, `modal`). Rows are content, so they belong to the second
   shape. Fifteen views already write their own `<table>` inside `card` +
   `table_controls` + `table_footer`, which is the correct pattern; this

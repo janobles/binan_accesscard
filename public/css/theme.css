@@ -117,6 +117,17 @@
     display: none !important;
 }
 
+/* Breathing room under the last thing on a page. #layoutSidenav_content is the
+   scroll container, so this is the only gap between a table's final row (or a
+   pagination bar) and the bottom edge of the window; the pb-4 utility this
+   replaces left 24px, which reads as content cut off rather than content
+   ending. The inset keeps it clear of a phone's home indicator, which is why
+   this is a rule and not a Bootstrap spacing class. Pages with their own fixed
+   action bar carry .has-fixed-action-bar on an inner div and are unaffected. */
+#layoutSidenav_content > main.dashboard-content {
+    padding-bottom: calc(3rem + env(safe-area-inset-bottom));
+}
+
 @media (min-width: 992px) {
     /* Desktop sidebar collapse. The margin is animated by the rule above, so
        the sidebar slides off to the left rather than vanishing. */
@@ -232,56 +243,12 @@
     border-top: 0;
 }
 
-/* Stat cards (dashboard + reports KPI tiles). */
-.reports-stats {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-}
-
-@media (max-width: 62rem) {
-    .reports-stats {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-}
-
-@media (max-width: 34rem) {
-    .reports-stats {
-        grid-template-columns: 1fr;
-    }
-}
-
-.stat-card {
-    margin-bottom: 0;
-}
-
-.stat-card-content {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
-}
-
-.stat-card-content p {
-    margin: 0;
-    font-size: 0.75rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    color: var(--binan-green);
-}
-
-.stat-card-content strong {
-    font-size: 1.5rem;
-    color: var(--bs-emphasis-color);
-}
-
-.stat-card-icon {
-    font-size: 2rem;
-    color: var(--binan-green-soft);
-    color: rgba(20, 92, 59, 0.3);
-}
+/* KPI tiles are .kpi-card in a Bootstrap row, further down this file. The
+   .stat-card / .overview-stats / .reports-stats system that used to render them
+   (an icon beside every number, in a hand-rolled CSS grid) is gone along with
+   its components/stat_card.php. Scanner/performance.php keeps the
+   .stat-card--records/members/sectors/services class names on its columns, but
+   those are id-free hooks its own poll uses to find a tile, never styled. */
 
 /* Sidebar account dropdown hover states */
 .sidebar-footer .btn-light:hover {
@@ -659,6 +626,37 @@
     margin-bottom: 1.5rem;
 }
 
+/* Small state label sitting beside the thing it qualifies: an open batch in the
+   Distributions table, an action in the Encoder's activity panel, whether the
+   selected batch is still running. Proportions follow .audit-action-pill
+   (audittrails.css); .is-muted is the grey default and the only variant so far.
+   The class was in the markup before it was in a stylesheet, so those spans
+   rendered as bare text. */
+.status-pill {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border: 1px solid #d8dedb;
+    border-radius: 999px;
+    background: #f2f5f4;
+    color: #5b6b66;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+/* .manage-record-table carries a min-width of clamp(36rem, 58vw, 44rem)
+   (managerecord.css), which the eight columns of Manage Records earn. The
+   dashboard's tables run three to six columns and fit well under that floor, so
+   inheriting it buys them a horizontal scrollbar around blank space. Dropped
+   here rather than weakened at the source, which would let the Manage Records
+   columns collapse. */
+.dashboard-overview .manage-record-table {
+    min-width: 0;
+}
+
 /* A tab pane or a block inside one: heading plus content, nothing enclosing. */
 .batch-pane {
     margin-bottom: 2rem;
@@ -686,23 +684,34 @@
 
 /* Stations grid. One square per scanner working the batch, sized square so a
    fleet of twenty reads as a fleet rather than a list. */
+/* Rendered as a <button> for the roles that can open the station modal and as
+   an inert <div> for everyone else, so the shared properties reset what a
+   button inherits (font, full width) and the hover/focus lift is scoped to the
+   interactive one. */
 .station-square {
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
+    width: 100%;
     aspect-ratio: 1 / 1;
     padding: 0.75rem;
     border: 1px solid #e3e6f0;
     border-radius: 0.35rem;
     background: #fff;
     color: #3a3b45;
+    font: inherit;
+    text-align: center;
     text-decoration: none;
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.station-square:hover,
-.station-square:focus {
+button.station-square {
+    cursor: pointer;
+}
+
+button.station-square:hover,
+button.station-square:focus-visible {
     border-color: #2e75b6;
     box-shadow: 0 0.15rem 0.5rem rgba(58, 59, 69, 0.12);
     color: #3a3b45;

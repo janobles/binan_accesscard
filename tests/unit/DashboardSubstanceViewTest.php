@@ -31,18 +31,51 @@ final class DashboardSubstanceViewTest extends CIUnitTestCase
     }
 
     /**
-     * The Stations grid links each square to that scanner's performance page.
-     * This used to be forbidden, because scanner/performance read the viewer
-     * from the session and an admin clicking through would silently see their
-     * own numbers under a scanner's name. ScanController::performance() now
-     * takes a role-gated ?scanner= override, so the link is safe and the grid
-     * is the orphaned page's entry point.
+     * A station square opens the modal rather than navigating into the kiosk
+     * shell, so it carries the scanner id as data and no href. The role-gated
+     * ?scanner= override on the scanner endpoints is what makes reading another
+     * account's figures safe; the modal is the caller of it now.
      */
-    public function testStationsGridLinksToScannerPerformance(): void
+    public function testStationsGridOpensTheModalRatherThanTheKioskShell(): void
     {
         $src = file_get_contents(APPPATH . 'Views/Admin/batch-stations-grid.php');
-        $this->assertStringContainsString('scanner/performance', $src);
-        $this->assertStringContainsString('scanner=', $src);
+
+        $this->assertStringContainsString('data-scanner-id=', $src);
+        $this->assertStringNotContainsString('scanner/performance', $src);
+        $this->assertStringNotContainsString('<a ', $src);
+    }
+
+    /**
+     * scanner/stats answers Scanner, Admin and Developer only, while the
+     * dashboard renders for every staff role. An Encoder or Viewer must get an
+     * inert tile, not a control that 403s when they press it.
+     */
+    public function testStationSquareIsOnlyInteractiveForRolesThatCanReadIt(): void
+    {
+        $src = file_get_contents(APPPATH . 'Views/Admin/batch-stations-grid.php');
+
+        $this->assertStringContainsString('$canDrillIn', $src);
+        $this->assertStringContainsString('station-square is-static', $src);
+
+        $overview = file_get_contents(APPPATH . 'Views/Admin/batch-overview.php');
+        $this->assertMatchesRegularExpression(
+            "/\\\$canDrillInStations\s*=\s*in_array\(\\\$role \?\? '', \['Developer', 'Admin'\], true\)/",
+            $overview
+        );
+    }
+
+    /**
+     * The live poll rebuilds the grid, so its squares have to match what the
+     * server rendered. Emitting an anchor or an always-clickable button there
+     * would hand a role a control the page withheld.
+     */
+    public function testLivePollRebuildsSquaresWithTheSameRoleGate(): void
+    {
+        $js = file_get_contents(FCPATH . 'assets/js/dashboard/scanner-reports.js');
+
+        $this->assertStringContainsString("data-can-drill-in", $js);
+        $this->assertStringContainsString('is-static', $js);
+        $this->assertStringNotContainsString('data-performance-url', $js);
     }
 
     /**

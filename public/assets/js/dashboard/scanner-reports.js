@@ -174,25 +174,37 @@
             grid.appendChild(empty);
             return;
         }
+        // Mirrors Admin/batch-stations-grid.php: a button that opens the station
+        // modal where the viewer may read scanner/stats, an inert tile where
+        // they may not. Diverging here would let the poll hand a role a control
+        // the server-rendered page deliberately withheld.
+        var canDrillIn = grid.getAttribute('data-can-drill-in') === '1';
+
         perScanner.forEach(function (row) {
             var col = document.createElement('div');
             col.className = 'col';
 
-            var link = document.createElement('a');
-            link.className = 'station-square';
-            link.href = grid.getAttribute('data-performance-url')
-                + '?scanner=' + encodeURIComponent(row.userID)
-                + '&batch=' + encodeURIComponent(grid.getAttribute('data-batch') || '0');
+            var square;
+            if (canDrillIn) {
+                square = document.createElement('button');
+                square.type = 'button';
+                square.className = 'station-square';
+                square.setAttribute('data-scanner-id', String(row.userID));
+                square.setAttribute('data-scanner-name', String(row.scanner));
+            } else {
+                square = document.createElement('div');
+                square.className = 'station-square is-static';
+            }
 
             [['station-name', row.scanner], ['station-count', row.families], ['station-unit', 'families']]
                 .forEach(function (pair) {
                     var span = document.createElement('span');
                     span.className = pair[0];
                     span.textContent = String(pair[1]);
-                    link.appendChild(span);
+                    square.appendChild(span);
                 });
 
-            col.appendChild(link);
+            col.appendChild(square);
             grid.appendChild(col);
         });
     }
@@ -217,4 +229,13 @@
             applyStations(fresh.perScanner);
         }
     };
+
+    var downloadBtn = document.querySelector('.reports-download-btn');
+    if (downloadBtn) {
+        downloadBtn.addEventListener('click', function () {
+            if (window.showToast) {
+                window.showToast('Exporting report. The download will begin shortly...', 'primary', { delay: 6000 });
+            }
+        });
+    }
 })();

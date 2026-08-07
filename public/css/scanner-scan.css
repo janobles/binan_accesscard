@@ -59,3 +59,11 @@
 .scan-panel-control {
     width: min(100%, 26rem);
 }
+
+/* Camera and Search buttons in the control-number input group. Fixed width so
+   the two read as a pair, 44px tall to stay a comfortable touch target on the
+   kiosk tablet. */
+.scan-lookup-btn {
+    min-width: 120px;
+    min-height: 44px;
+}

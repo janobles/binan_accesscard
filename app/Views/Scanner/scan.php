@@ -28,10 +28,10 @@
     <div class="input-group input-group-lg">
       <input type="text" inputmode="numeric" autocomplete="off" class="form-control"
              id="controlInput" placeholder="e.g. 42" autofocus>
-      <button class="btn btn-outline-secondary px-4" id="cameraBtn" type="button" title="Scan with camera" aria-label="Scan with camera" style="min-width: 120px; min-height: 44px;">
+      <button class="btn btn-outline-secondary px-4 scan-lookup-btn" id="cameraBtn" type="button" title="Scan with camera" aria-label="Scan with camera">
         Camera
       </button>
-      <button class="btn btn-primary px-4" id="lookupBtn" type="button" aria-label="Look up control number" style="min-width: 120px; min-height: 44px;">
+      <button class="btn btn-primary px-4 scan-lookup-btn" id="lookupBtn" type="button" aria-label="Look up control number">
         Search
       </button>
     </div>

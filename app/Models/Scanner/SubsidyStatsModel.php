@@ -188,9 +188,13 @@ class SubsidyStatsModel extends Model
 
         try {
             $rows = $this->db->table('batch_eligibility')
+                // DISTINCT on both counts: the left join below fans a roster row
+                // out once per distribution, so a family that collected twice in
+                // one batch (two handouts, one family) counted twice as received
+                // and twice again as total. Coverage is families, not handouts.
                 ->select("COALESCE(barangay.name, 'Unassigned') AS barangay,"
-                    . ' COUNT(*) AS total,'
-                    . ' COUNT(subsidy_distribution.distribution_id) AS received')
+                    . ' COUNT(DISTINCT batch_eligibility.headID) AS total,'
+                    . ' COUNT(DISTINCT subsidy_distribution.memberID) AS received')
                 ->join('member', 'member.memberID = batch_eligibility.headID')
                 ->join('barangay', 'barangay.barangayID = member.barangayID', 'left')
                 ->join(
@@ -573,9 +577,10 @@ class SubsidyStatsModel extends Model
     private function dbIsHealthy(): bool
     {
         try {
-            $this->db->simpleQuery('SELECT 1');
-
-            return true;
+            // simpleQuery() reports a failed query by returning false rather
+            // than throwing, so the catch below is not the only outcome to
+            // check: without this the probe called a dead connection healthy.
+            return $this->db->simpleQuery('SELECT 1') !== false;
         } catch (\Throwable $e) {
             return false;
         }

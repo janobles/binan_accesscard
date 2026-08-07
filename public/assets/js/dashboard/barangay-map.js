@@ -53,13 +53,19 @@
             : 'No eligible families in this batch';
 
         path.setAttribute('tabindex', '0');
-        new bootstrap.Popover(path, {
-            title: name,
-            content: text,
-            trigger: 'hover focus',
-            placement: 'top',
-            container: 'body'
-        });
+        // The popover is the nice-to-have; the leaderboard highlighting below
+        // is the part that has to survive a missing Bootstrap bundle, and
+        // constructing a Popover that isn't there would throw out of the loop
+        // before any of it got wired up.
+        if (window.bootstrap && window.bootstrap.Popover) {
+            new bootstrap.Popover(path, {
+                title: name,
+                content: text,
+                trigger: 'hover focus',
+                placement: 'top',
+                container: 'body'
+            });
+        }
 
         // Hovering a barangay marks its row in the leaderboard, so the map
         // acts as a spatial index into the table rather than a second copy.

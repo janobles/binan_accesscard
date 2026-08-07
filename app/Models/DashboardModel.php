@@ -76,7 +76,7 @@ class DashboardModel
      * that, a soft-deleted head holding a distribution would count as served
      * while being excluded from families, and neverServed could go negative.
      *
-     * @return array{families:int,distributions:int,everServed:int,neverServed:int}
+     * @return array{families:int,cardsIssued:int,distributions:int,everServed:int,neverServed:int}
      */
     public function programStats(): array
     {

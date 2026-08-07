@@ -87,7 +87,14 @@ class EligibilityBuilder
         }
 
         try {
-            $this->db->table('batch_eligibility')->where('batch_id', $batchId)->delete();
+            // Both writes report failure by returning false rather than
+            // throwing, so neither result can be discarded: a delete that
+            // failed leaves the previous roster in place, and reporting a row
+            // count over it would tell the caller a batch is real when its
+            // roster is somebody else's.
+            if ($this->db->table('batch_eligibility')->where('batch_id', $batchId)->delete() === false) {
+                return false;
+            }
 
             $rows = $this->scoped($barangayIds, $sectorIds)
                 ->get()
@@ -101,7 +108,9 @@ class EligibilityBuilder
                 static fn ($r) => ['batch_id' => $batchId, 'headID' => (int) $r['headID']],
                 $rows
             );
-            $this->db->table('batch_eligibility')->insertBatch($payload);
+            if ($this->db->table('batch_eligibility')->insertBatch($payload) === false) {
+                return false;
+            }
 
             return count($payload);
         } catch (\Throwable $e) {

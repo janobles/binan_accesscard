@@ -758,6 +758,11 @@ button.station-square:focus-visible {
     outline: none;
 }
 
-tr.is-highlighted {
+/* The cells carry the highlight, not the row: managerecord.css paints its zebra
+   striping on the td, which sits on top of anything set on the tr and left the
+   map's hover doing nothing to the leaderboard row it points at. */
+tr.is-highlighted,
+tr.is-highlighted td,
+.manage-record-table tbody tr.is-highlighted td {
     background-color: #eaf2fb;
 }

@@ -42,6 +42,7 @@ final class DashboardPaneUrlFeatureTest extends CIUnitTestCase
             ['userID' => 1, 'username' => 'boss', 'account_level' => 'administrator', 'isactive' => 'Enable', 'password' => 'x'],
             ['userID' => 2, 'username' => 'keyer', 'account_level' => 'encoder', 'isactive' => 'Enable', 'password' => 'x'],
             ['userID' => 3, 'username' => 'looker', 'account_level' => 'viewer', 'isactive' => 'Enable', 'password' => 'x'],
+            ['userID' => 4, 'username' => 'dev', 'account_level' => 'developer', 'isactive' => 'Enable', 'password' => 'x'],
         ]);
         $db->table('subsidy')->insert(['subsidy_type_id' => 1, 'name' => 'Rice']);
         $db->table('barangay')->insert(['barangayID' => 1, 'name' => 'Canlalay']);
@@ -211,7 +212,7 @@ final class DashboardPaneUrlFeatureTest extends CIUnitTestCase
     /** The same grid, for a role that may open a station. */
     public function testDeveloperGetsTheStationModal(): void
     {
-        $body = $this->withSession($this->session('developer', 1, 'developer'))
+        $body = $this->withSession($this->session('developer', 4, 'dev'))
             ->get('dashboard?view=distribution&tab=stations&batch=' . self::BATCH_ID)
             ->getBody();
 

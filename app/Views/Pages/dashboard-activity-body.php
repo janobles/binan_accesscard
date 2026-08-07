@@ -18,7 +18,7 @@ $formatAuditMember = $formatAuditMember ?? null;
       <?php foreach ($myAudits as $audit): ?>
       <tr>
         <td><span class="status-pill is-muted"><?= esc((string) ($audit['user_action'] ?? '')) ?></span></td>
-        <td><?= esc($formatAuditMember !== null ? $formatAuditMember($audit) : '') ?></td>
+        <td><?= esc((string) ($formatAuditMember !== null ? $formatAuditMember($audit) : '')) ?></td>
         <td><?= esc((string) ($audit['description'] ?? '')) ?></td>
       </tr>
       <?php endforeach; ?>

@@ -8,7 +8,13 @@ final class DashboardSubstanceViewTest extends CIUnitTestCase
 {
     private function dashboardSource(): string
     {
-        return file_get_contents(APPPATH . 'Views/pages/dashboard.php');
+        // Views/Pages, capital P: a lowercase path resolves on a macOS dev
+        // machine and returns false on CI's case-sensitive filesystem, where
+        // every assertion below would then pass against an empty string.
+        $src = file_get_contents(APPPATH . 'Views/Pages/dashboard.php');
+        $this->assertIsString($src, 'Views/Pages/dashboard.php could not be read');
+
+        return $src;
     }
 
     public function testVanityTilesAreGone(): void

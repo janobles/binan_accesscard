@@ -37,6 +37,7 @@ final class ReportsPdfGenerator
     public function generate(array $coverage, array $byBarangay, array $remaining, ?string $batchName, array $perScanner = []): string
     {
         $previousMemoryLimit = ini_get('memory_limit');
+        $previousTimeLimit   = ini_get('max_execution_time');
         ini_set('memory_limit', self::RENDER_MEMORY_LIMIT);
         set_time_limit(self::RENDER_TIME_LIMIT_SECONDS);
 
@@ -44,6 +45,11 @@ final class ReportsPdfGenerator
             return $this->render($coverage, $byBarangay, $remaining, $batchName, $perScanner);
         } finally {
             $this->restoreMemoryLimit($previousMemoryLimit === false ? '128M' : $previousMemoryLimit);
+            // Same reason as the memory limit: a queue worker rendering a
+            // second report should not inherit this one's five minutes.
+            if ($previousTimeLimit !== false) {
+                set_time_limit((int) $previousTimeLimit);
+            }
         }
     }
 

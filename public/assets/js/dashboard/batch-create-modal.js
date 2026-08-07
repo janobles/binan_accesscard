@@ -85,7 +85,8 @@
 
     document.addEventListener('shown.bs.modal', function (event) {
         if (event.target && event.target.id === 'newBatchModal') {
-            refreshCount(document.getElementById('newBatchForm'));
+            var form = document.getElementById('newBatchForm');
+            if (form) { refreshCount(form); }
         }
     });
 })(window, document);

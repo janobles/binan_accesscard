@@ -87,6 +87,11 @@ class DistributionBatchModel extends Model
             // a false return as fatal directly; don't fall through to the
             // transStatus() check below, which cannot see this failure.
             if ($eligible === false) {
+                // Undo the batch insert and close the transaction before the
+                // cleanup pass. Leaving it open would run discardOrphan's
+                // deletes inside a transaction nothing ever completes, and
+                // every later query in the request would join it.
+                $this->db->transRollback();
                 $this->discardOrphan($batchId);
 
                 return 0;
@@ -98,16 +103,23 @@ class DistributionBatchModel extends Model
 
             return $this->db->transStatus() === false ? 0 : $batchId;
         } catch (\Throwable $e) {
+            // An exception between transStart() and transComplete() leaves the
+            // transaction open on the shared connection, and every query after
+            // it in the request silently becomes part of it. Roll back rather
+            // than complete: transStatus() can still read true here, which
+            // would commit whatever the exception interrupted.
+            $this->db->transRollback();
+
             return 0;
         }
     }
 
     /**
-     * Defensive cleanup after a roster-write failure inside open(). CI4 has
-     * already rolled back the transaction by this point, so the batch row and
-     * its junction rows should already be gone; this is a second, best-effort
-     * pass in case any of them survived, so open() never leaves an orphan
-     * distribution_batch row behind. Failures here are swallowed - open() is
+     * Defensive cleanup after a roster-write failure inside open(). The
+     * transaction has been rolled back by the time this runs, so the batch row
+     * and its junction rows should already be gone; this is a second,
+     * best-effort pass in case any of them survived, so open() never leaves an
+     * orphan distribution_batch row behind. Failures here are swallowed - open() is
      * returning 0 regardless.
      */
     private function discardOrphan(int $batchId): void
@@ -200,6 +212,10 @@ class DistributionBatchModel extends Model
 
             return $eligible;
         } catch (\Throwable $e) {
+            // See open()'s catch: an open transaction outlives this method and
+            // swallows every query after it.
+            $this->db->transRollback();
+
             return 0;
         }
     }

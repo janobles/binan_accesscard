@@ -18,7 +18,7 @@ $idleTimeoutSeconds = $idleTimeoutSeconds ?? 900;
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= esc($pageTitle) ?> - Binan Access Card MIS</title>
-    <link rel="icon" type="image/png" href="<?= asset_url('assets/image/binan.png') ?>">
+    <link rel="icon" type="image/png" href="<?= esc(asset_url('assets/image/binan.png'), 'attr') ?>">
     <link rel="stylesheet" href="<?= esc(asset_url('css/design-tokens.css'), 'attr') ?>">
     <?php foreach (array_merge(asset_styles('head'), asset_styles('admin'), asset_styles('scanner')) as $stylePath): ?>
     <link rel="stylesheet" href="<?= esc(asset_url($stylePath), 'attr') ?>">

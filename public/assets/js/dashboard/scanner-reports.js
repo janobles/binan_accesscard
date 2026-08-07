@@ -115,12 +115,19 @@
         if (node) { node.textContent = String(value); }
     }
 
+    // Counts the server printed through number_format, so a repaint does not
+    // turn "1,204" into "1204" halfway through a batch. Percentages and labels
+    // keep going through text() unchanged.
+    function count(id, value) {
+        text(id, typeof value === 'number' ? value.toLocaleString() : value);
+    }
+
     // Progress headline + bar, from fresh.coverage (SubsidyStatsModel::coverage()'s
     // shape: eligible/served/remaining/coverage/voided).
     function applyCoverage(coverage) {
         if (!coverage) { return; }
-        text('progressServed', coverage.served);
-        text('progressEligible', coverage.eligible);
+        count('progressServed', coverage.served);
+        count('progressEligible', coverage.eligible);
         text('progressCoverage', coverage.coverage);
 
         var bar = document.getElementById('coverageProgress');
@@ -128,11 +135,11 @@
         if (bar) { bar.setAttribute('aria-valuenow', String(coverage.coverage)); }
         if (fill) { fill.style.width = coverage.coverage + '%'; }
 
-        text('remainingTileValue', coverage.remaining);
+        count('remainingTileValue', coverage.remaining);
 
         var voidedWrap = document.getElementById('voidedTileWrap');
         if (voidedWrap) {
-            text('voidedTileValue', coverage.voided);
+            count('voidedTileValue', coverage.voided);
             voidedWrap.classList.toggle('d-none', !(coverage.voided > 0));
         }
     }
@@ -154,7 +161,7 @@
         var sub = document.getElementById('busiestDaySub');
         if (sub) {
             sub.classList.toggle('d-none', !best);
-            text('busiestDayCount', best ? best.served : 0);
+            count('busiestDayCount', best ? best.served : 0);
         }
     }
 
@@ -167,11 +174,14 @@
 
         grid.innerHTML = '';
         if (perScanner.length === 0) {
+            var emptyCol = document.createElement('div');
+            emptyCol.className = 'col-12';
             var empty = document.createElement('p');
             empty.className = 'text-muted';
             empty.id = 'stationsGridEmpty';
             empty.textContent = 'No station has logged a scan in this batch yet.';
-            grid.appendChild(empty);
+            emptyCol.appendChild(empty);
+            grid.appendChild(emptyCol);
             return;
         }
         // Mirrors Admin/batch-stations-grid.php: a button that opens the station
@@ -200,7 +210,7 @@
                 .forEach(function (pair) {
                     var span = document.createElement('span');
                     span.className = pair[0];
-                    span.textContent = String(pair[1]);
+                    span.textContent = typeof pair[1] === 'number' ? pair[1].toLocaleString() : String(pair[1]);
                     square.appendChild(span);
                 });
 

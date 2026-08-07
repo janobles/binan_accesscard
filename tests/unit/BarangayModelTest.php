@@ -14,7 +14,13 @@ final class BarangayModelTest extends CIUnitTestCase
 
     public function testNameMapKeysAreIntegers(): void
     {
-        foreach ((new BarangayModel())->nameMap() as $id => $name) {
+        $map = (new BarangayModel())->nameMap();
+        // Asserted before the loop so the case still says something without a
+        // database, where nameMap() legitimately comes back empty and the loop
+        // never runs.
+        $this->assertIsArray($map);
+
+        foreach ($map as $id => $name) {
             $this->assertIsInt($id);
             $this->assertIsString($name);
         }

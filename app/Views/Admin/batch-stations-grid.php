@@ -31,7 +31,7 @@ $canDrillIn = (bool) ($canDrillIn ?? false);
      data-batch="<?= esc((string) $batchId, 'attr') ?>"
      data-can-drill-in="<?= $canDrillIn ? '1' : '0' ?>">
   <?php if ($perScanner === []): ?>
-  <p class="text-muted" id="stationsGridEmpty">No station has logged a scan in this batch yet.</p>
+  <div class="col-12"><p class="text-muted" id="stationsGridEmpty">No station has logged a scan in this batch yet.</p></div>
   <?php else: ?>
   <?php foreach ($perScanner as $p): ?>
   <div class="col">

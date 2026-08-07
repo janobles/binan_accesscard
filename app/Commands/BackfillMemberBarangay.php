@@ -129,10 +129,14 @@ class BackfillMemberBarangay extends BaseCommand
             // Re-guards barangayID IS NULL per row, not just in the SELECT above,
             // so this stays safe to re-run even against a table that changed
             // between the SELECT and here.
-            $updated += $db->table('member')
+            // affectedRows(), not update()'s return: the builder answers true
+            // for a statement that matched nothing, so adding it counted every
+            // attempt as a row written.
+            $db->table('member')
                 ->where('memberID', $memberId)
                 ->where('barangayID IS NULL', null, false)
                 ->update(['barangayID' => $barangayId]);
+            $updated += $db->affectedRows();
         }
 
         CLI::write("Updated {$updated} member row(s).", 'green');

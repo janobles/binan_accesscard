@@ -39,7 +39,10 @@ foreach ($queryParams as $paramName => $paramValue) {
     <li class="nav-item">
         <a class="nav-link <?= $tab['key'] === $active ? 'active' : '' ?>"
            <?= $tab['key'] === $active ? 'aria-current="page"' : '' ?>
-           href="<?= site_url($baseUrl) ?>?<?= esc($param, 'attr') ?>=<?= esc($tab['key'], 'attr') ?><?= esc($extraQuery) ?>">
+           <?php /* html context, not attr: the value sits inside a quoted
+                    attribute, where both are safe, and attr would encode the
+                    colons and slashes of a perfectly ordinary URL. */ ?>
+           href="<?= esc(site_url($baseUrl)) ?>?<?= esc($param, 'attr') ?>=<?= esc($tab['key'], 'attr') ?><?= esc($extraQuery) ?>">
             <?= esc($tab['label']) ?>
         </a>
     </li>

@@ -40,9 +40,19 @@ final class StatCardRemovalTest extends CIUnitTestCase
     /** No view may call the deleted component. */
     public function testNoViewRendersTheComponent(): void
     {
-        $hits = shell_exec('grep -rl "components/stat_card" ' . escapeshellarg(APPPATH) . ' 2>/dev/null');
+        // Walked in PHP rather than shelled out to grep: shell_exec is disabled
+        // on plenty of hardened PHP builds, where the old version of this test
+        // read an empty string as "no hits" and passed without looking.
+        $hits = [];
+        $files = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator(APPPATH));
 
-        $this->assertSame('', trim((string) $hits));
+        foreach ($files as $file) {
+            if ($file->isFile() && str_contains((string) file_get_contents($file->getPathname()), 'components/stat_card')) {
+                $hits[] = $file->getPathname();
+            }
+        }
+
+        $this->assertSame([], $hits);
     }
 
     /**

@@ -64,7 +64,7 @@ $initials = mb_strtoupper(mb_substr($initials, 0, 2));
         <?php endif; ?>
         
         <hr class="dropdown-divider my-1">
-        <a href="<?= site_url('logout') ?>" class="dropdown-item rounded d-flex align-items-center py-2 text-dark js-logout-link" style="font-size: 0.875rem;">
+        <a href="<?= esc(site_url('logout')) ?>" class="dropdown-item rounded d-flex align-items-center py-2 text-dark js-logout-link" style="font-size: 0.875rem;">
             <i class="bi bi-box-arrow-right me-2"></i>Sign Out
         </a>
     </div>

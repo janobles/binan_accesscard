@@ -20,7 +20,8 @@ $sectorOptions      = $sectorOptions ?? [];
 ?>
 <div class="modal fade" id="newBatchModal" tabindex="-1" aria-labelledby="newBatchModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
-    <form class="modal-content" method="post" action="<?= site_url('distribution/batches/open') ?>" id="newBatchForm">
+    <form class="modal-content" method="post" action="<?= esc(site_url('distribution/batches/open')) ?>" id="newBatchForm"
+          data-preview-url="<?= esc(site_url('distribution/batches/preview'), 'attr') ?>">
       <?= csrf_field() ?>
       <div class="modal-header">
         <h5 class="modal-title" id="newBatchModalLabel">New Batch</h5>
@@ -72,6 +73,3 @@ $sectorOptions      = $sectorOptions ?? [];
     </form>
   </div>
 </div>
-<script>
-  window.batchPreviewUrl = <?= json_encode(site_url('distribution/batches/preview')) ?>;
-</script>

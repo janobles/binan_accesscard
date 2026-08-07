@@ -14,8 +14,8 @@ $remaining = $remaining ?? [];
 $keyword = (string) ($keyword ?? '');
 $perPage = (int) ($perPage ?? 25);
 $perPageOptions = (array) ($perPageOptions ?? [10, 25, 50, 100]);
-$searchHiddenHtml = (string) ($searchHiddenHtml ?? '');
-$sizeHiddenHtml = (string) ($sizeHiddenHtml ?? '');
+$searchHidden = (array) ($searchHidden ?? []);
+$sizeHidden = (array) ($sizeHidden ?? []);
 ?>
 <?= view('components/table_controls', [
     'searchId' => 'remainingSearch',
@@ -23,10 +23,10 @@ $sizeHiddenHtml = (string) ($sizeHiddenHtml ?? '');
     'searchAction' => site_url('dashboard'),
     'searchValue' => $keyword,
     'searchPlaceholder' => 'Search by family name or barangay...',
-    'searchHiddenHtml' => $searchHiddenHtml,
+    'searchHidden' => $searchHidden,
     'sizeId' => 'remainingPerPage',
     'sizeAction' => site_url('dashboard'),
-    'sizeHiddenHtml' => $sizeHiddenHtml,
+    'sizeHidden' => $sizeHidden,
     'perPage' => $perPage,
     'perPageOptions' => $perPageOptions,
 ]) ?>

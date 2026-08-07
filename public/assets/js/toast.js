@@ -56,6 +56,25 @@
         }
     }
 
+    // Same-origin http(s) URLs only, resolved against the current page so a
+    // relative path stays relative. A javascript: or data: URL handed to a
+    // toast would run on click, and no caller has a reason to point one
+    // off-site. The scheme is checked outright rather than left to the origin
+    // comparison, which is an indirect way to say the same thing.
+    function safeHref(value) {
+        try {
+            var url = new URL(String(value), window.location.href);
+
+            if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+                return null;
+            }
+
+            return url.origin === window.location.origin ? url.href : null;
+        } catch (e) {
+            return null;
+        }
+    }
+
     function showToast(message, variant, opts) {
         opts = opts || {};
 
@@ -67,10 +86,31 @@
 
         toastEl.className = 'toast align-items-center text-bg-' + (variant || 'success') + ' border-0';
         
-        if (opts.html) {
-            bodyEl.innerHTML = message;
-        } else {
-            bodyEl.textContent = message;
+        // Content is built with DOM APIs, never assigned as markup. The old
+        // { html: true } option let a caller hand this an HTML string, which
+        // put a raw sink one careless interpolation away from anything a
+        // server message happened to contain. The two callers that used it
+        // wanted a bold first line and a link, so those are options now.
+        bodyEl.textContent = '';
+
+        if (opts.title) {
+            var title = document.createElement('strong');
+            title.textContent = String(opts.title);
+            bodyEl.appendChild(title);
+            bodyEl.appendChild(document.createElement('br'));
+        }
+
+        bodyEl.appendChild(document.createTextNode(String(message)));
+
+        if (opts.action && opts.action.href && opts.action.label) {
+            var href = safeHref(opts.action.href);
+            if (href !== null) {
+                var link = document.createElement('a');
+                link.className = 'btn btn-sm btn-light mt-2 fw-bold d-block';
+                link.href = href;
+                link.textContent = String(opts.action.label);
+                bodyEl.appendChild(link);
+            }
         }
 
         if (instance) {

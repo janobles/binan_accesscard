@@ -17,8 +17,25 @@ $geojsonPath = $argv[1] ?? '/tmp/binan_brgy.json';
 $svgPath     = __DIR__ . '/../public/assets/image/binan_brgy.svg';
 $outPath     = __DIR__ . '/../public/assets/image/binan_brgy_paths.json';
 
-$geo = json_decode((string) file_get_contents($geojsonPath), true);
-$svg = (string) file_get_contents($svgPath);
+$geoRaw = @file_get_contents($geojsonPath);
+if ($geoRaw === false) {
+    fwrite(STDERR, "Cannot read GeoJSON: {$geojsonPath}\n");
+    exit(1);
+}
+
+$svgRaw = @file_get_contents($svgPath);
+if ($svgRaw === false) {
+    fwrite(STDERR, "Cannot read SVG: {$svgPath}\n");
+    exit(1);
+}
+
+$geo = json_decode($geoRaw, true);
+if (! is_array($geo) || ($geo['type'] ?? '') !== 'FeatureCollection' || ! is_array($geo['features'] ?? null)) {
+    fwrite(STDERR, "Not a GeoJSON FeatureCollection: {$geojsonPath}\n");
+    exit(1);
+}
+
+$svg = (string) $svgRaw;
 
 preg_match_all('/<path d="([^"]+)"/', $svg, $matches);
 $paths = $matches[1];
@@ -31,7 +48,11 @@ if (count($paths) !== count($geo['features'])) {
 /** Mean of every coordinate pair in an SVG path's number stream. */
 function svgCentroid(string $d): array
 {
-    preg_match_all('/-?\d+\.?\d*/', $d, $nums);
+    // Covers the forms an exporter actually emits: 12, -12.5, .5, -.25, and
+    // 1.2e-3. The old pattern needed a digit before the decimal point, so a
+    // leading-dot number split into two, which shifted every x/y pair after it
+    // and quietly moved the centroid.
+    preg_match_all('/-?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?/', $d, $nums);
     $values = array_map('floatval', $nums[0]);
     $xs = $ys = [];
     for ($i = 0; $i + 1 < count($values); $i += 2) {

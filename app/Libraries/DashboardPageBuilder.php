@@ -211,10 +211,13 @@ class DashboardPageBuilder
         $dashboardView = (string) $this->request->getGet('view');
         $dashboardView = in_array($dashboardView, ['overview', 'distribution'], true) ? $dashboardView : 'overview';
 
-        // The batch the reader explicitly asked for, straight off the query
-        // rather than out of $reportsData: the outer tab strip has to carry the
-        // selection onto the Overview pane, where no batch data is assembled at
-        // all, and back again.
+        // The batch the outer tab strip carries between the two panes. On the
+        // Overview pane it can only come off the query, since no batch data is
+        // assembled there and the selection still has to survive the trip. On
+        // the Distribution pane the resolved id wins instead (below), because
+        // that is the batch on screen: with no ?batch= the page shows the open
+        // one, and an unknown ?batch= resolves to nothing, which the strip
+        // should stop carrying rather than hand to the other pane.
         $requestedBatch  = $this->request->getGet('batch');
         $selectedBatchId = is_scalar($requestedBatch) ? max(0, (int) $requestedBatch) : 0;
 
@@ -226,6 +229,7 @@ class DashboardPageBuilder
             ? $this->buildReportsData($batchModel, $batchBodyTab)
             : [
                 'batches'       => [],
+                'batchId'       => 0,
                 'batchRow'      => null,
                 'batchOpen'     => false,
                 'batchSnapshot' => $this->emptyBatchSnapshot(),
@@ -305,7 +309,9 @@ class DashboardPageBuilder
             'remainingPage'      => $reportsData['remainingPage'],
             'batchBodyTab'       => $batchBodyTab,
             'dashboardView'      => $dashboardView,
-            'selectedBatchId'    => $selectedBatchId,
+            'selectedBatchId'    => $isDashboard && $dashboardView === 'distribution'
+                ? (int) ($reportsData['batchId'] ?? 0)
+                : $selectedBatchId,
             'overviewStats'      => $isDashboard && $dashboardView === 'overview'
                 ? $dashboardModel->programStats()
                 : ['families' => 0, 'cardsIssued' => 0, 'distributions' => 0, 'everServed' => 0, 'neverServed' => 0],
@@ -531,6 +537,7 @@ class DashboardPageBuilder
 
         return [
             'batches'       => $batches,
+            'batchId'       => $batchId,
             'batchRow'      => $batch,
             'batchOpen'     => $isOpen,
             'batchSnapshot' => $batchId > 0 ? $stats->batchSnapshot($batchId, $isOpen) : $this->emptyBatchSnapshot(),

@@ -15,8 +15,7 @@
         'searchInputAttrs' => 'data-lookup-search-input',
         'sizeId' => 'auditPerPage',
         'sizeAction' => site_url($listRoute),
-        'sizeHiddenHtml' => ($searchTerm !== '' ? '<input type="hidden" name="q" value="' . esc($searchTerm, 'attr') . '">' : '')
-            . ($auditAction !== '' ? '<input type="hidden" name="action" value="' . esc($auditAction, 'attr') . '">' : ''),
+        'sizeHidden' => ['q' => $searchTerm, 'action' => $auditAction],
         'perPage' => $perPage,
         'perPageOptions' => $perPageOptions,
     ]) ?>

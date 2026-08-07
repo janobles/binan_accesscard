@@ -308,7 +308,7 @@ class DashboardPageBuilder
             'selectedBatchId'    => $selectedBatchId,
             'overviewStats'      => $isDashboard && $dashboardView === 'overview'
                 ? $dashboardModel->programStats()
-                : ['families' => 0, 'distributions' => 0, 'everServed' => 0, 'neverServed' => 0],
+                : ['families' => 0, 'cardsIssued' => 0, 'distributions' => 0, 'everServed' => 0, 'neverServed' => 0],
             'distributionRows'   => $isDashboard && $dashboardView === 'overview'
                 ? $this->buildDistributionRows($batchModel)
                 : [],

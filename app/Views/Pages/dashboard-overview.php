@@ -13,14 +13,25 @@
  * numbers.
  */
 
-$overviewStats = $overviewStats ?? ['families' => 0, 'distributions' => 0, 'everServed' => 0, 'neverServed' => 0];
+$overviewStats = $overviewStats ?? ['families' => 0, 'cardsIssued' => 0, 'distributions' => 0, 'everServed' => 0, 'neverServed' => 0];
 $distributionRows = $distributionRows ?? [];
 
+$neverServed = (int) ($overviewStats['neverServed'] ?? 0);
+
+// Read left to right the row is the program's funnel: every family profiled,
+// how many of them hold a card, how many have collected at least once, and the
+// number of distributions those collections came out of. Never-served is
+// families minus ever-served, so it rides under the card it is the remainder of
+// rather than taking a fourth tile to restate a number already on the row.
 $cards = [
-    ['label' => 'Families profiled', 'value' => (int) $overviewStats['families']],
-    ['label' => 'Distributions hosted', 'value' => (int) $overviewStats['distributions']],
-    ['label' => 'Families ever served', 'value' => (int) $overviewStats['everServed']],
-    ['label' => 'Families never served', 'value' => (int) $overviewStats['neverServed']],
+    ['label' => 'Families profiled', 'value' => (int) $overviewStats['families'], 'sub' => null],
+    ['label' => 'Access cards issued', 'value' => (int) ($overviewStats['cardsIssued'] ?? 0), 'sub' => null],
+    [
+        'label' => 'Families ever served',
+        'value' => (int) $overviewStats['everServed'],
+        'sub'   => number_format($neverServed) . ' never served',
+    ],
+    ['label' => 'Distributions hosted', 'value' => (int) $overviewStats['distributions'], 'sub' => null],
 ];
 ?>
 <h2 class="dashboard-zone-title">Program to date</h2>
@@ -32,6 +43,9 @@ $cards = [
       <div class="card-body">
         <p class="kpi-label"><?= esc($card['label']) ?></p>
         <p class="kpi-value"><?= esc(number_format($card['value'])) ?></p>
+        <?php if ($card['sub'] !== null): ?>
+        <p class="kpi-sub"><?= esc($card['sub']) ?></p>
+        <?php endif; ?>
       </div>
     </div>
   </div>

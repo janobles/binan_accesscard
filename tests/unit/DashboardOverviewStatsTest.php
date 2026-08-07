@@ -91,6 +91,43 @@ final class DashboardOverviewStatsTest extends CIUnitTestCase
         $this->dropSchema();
     }
 
+    /**
+     * Access cards issued is the step between profiling and being served, and
+     * the only one of the four figures that is not derivable from the others.
+     * It counts heads holding a control number, so a card on an archived head
+     * or two control numbers on one head must not inflate it.
+     */
+    public function testCardsIssuedCountsActiveHeadsHoldingAControlNumber(): void
+    {
+        $this->createSchema();
+        $db = db_connect();
+
+        $db->table('member')->insert(['memberID' => 1, 'headID' => 1]);
+        $db->table('member')->insert(['memberID' => 2, 'headID' => 2]);
+        $db->table('member')->insert(['memberID' => 3, 'headID' => 3, 'dt_deleted' => '2026-01-01 00:00:00']);
+        // A relative, not a head: never carded in its own right.
+        $db->table('member')->insert(['memberID' => 4, 'headID' => 1]);
+
+        $db->table('qr_control')->insert(['control_no' => 101, 'headID' => 1]);
+        // Reissued card for the same head: still one family holding a card.
+        $db->table('qr_control')->insert(['control_no' => 102, 'headID' => 1]);
+        $db->table('qr_control')->insert(['control_no' => 103, 'headID' => 2]);
+        // Archived head.
+        $db->table('qr_control')->insert(['control_no' => 104, 'headID' => 3]);
+
+        $out = (new DashboardModel())->programStats();
+
+        $this->assertSame(2, $out['families']);
+        $this->assertSame(2, $out['cardsIssued']);
+        $this->assertLessThanOrEqual(
+            $out['families'],
+            $out['cardsIssued'],
+            'a card count above the family count means the join is duplicating rows'
+        );
+
+        $this->dropSchema();
+    }
+
     /** A voided distribution puts the family back in the never-served pool. */
     public function testVoidedDistributionDoesNotCountAsServed(): void
     {

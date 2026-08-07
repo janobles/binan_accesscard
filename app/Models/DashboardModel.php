@@ -104,6 +104,7 @@ class DashboardModel
 
         $stats = [
             'families'      => $families,
+            'cardsIssued'   => $this->countCardsIssued(),
             'distributions' => $distributions,
             'everServed'    => $everServed,
             'neverServed'   => max(0, $families - $everServed),
@@ -125,6 +126,26 @@ class DashboardModel
             ->where('memberID = headID', null, false)
             ->where('dt_deleted IS NULL', null, false)
             ->countAllResults();
+    }
+
+    /**
+     * Counts active family heads holding an access card. DISTINCT on the head,
+     * because qr_control keeps a row per control number and a reissued card
+     * leaves the family with two; the figure this feeds sits beside the family
+     * count and has to stay comparable to it.
+     */
+    private function countCardsIssued(): int
+    {
+        if (! $this->db->tableExists('qr_control') || ! $this->db->tableExists('member')) {
+            return 0;
+        }
+
+        return (int) ($this->db->table('qr_control q')
+            ->select('COUNT(DISTINCT q.headID) AS n')
+            ->join('member m', 'm.memberID = q.headID')
+            ->where('m.memberID = m.headID', null, false)
+            ->where('m.dt_deleted IS NULL', null, false)
+            ->get()->getRowArray()['n'] ?? 0);
     }
 
     /** Counts all active members (heads + relatives). */

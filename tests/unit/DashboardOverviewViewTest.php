@@ -11,12 +11,28 @@ final class DashboardOverviewViewTest extends CIUnitTestCase
         return file_get_contents(APPPATH . $path);
     }
 
+    /**
+     * The four cards read as one funnel: profiled, carded, served, and the
+     * number of distributions those came out of. "Families never served" is not
+     * among them because it is families minus ever-served, so as a card it
+     * restated a number already on the row; it survives as the sub-line under
+     * Families ever served.
+     */
     public function testOverviewRendersTheFourCards(): void
     {
         $src = $this->source('Views/Pages/dashboard-overview.php');
-        foreach (['Families profiled', 'Distributions hosted', 'Families ever served', 'Families never served'] as $label) {
+        foreach (['Families profiled', 'Access cards issued', 'Families ever served', 'Distributions hosted'] as $label) {
             $this->assertStringContainsString($label, $src);
         }
+    }
+
+    public function testNeverServedIsASubLineNotACard(): void
+    {
+        $src = $this->source('Views/Pages/dashboard-overview.php');
+
+        $this->assertStringContainsString('never served', $src);
+        $this->assertStringNotContainsString("'label' => 'Families never served'", $src);
+        $this->assertStringContainsString('kpi-sub', $src);
     }
 
     /** KPI tiles carry no icon, per the spec's exception to the card convention. */

@@ -121,4 +121,31 @@ final class BatchScheduleReconcileTest extends CIUnitTestCase
         $this->model->reconcileSchedule('2026-08-20 08:00:00');
         $this->assertSame([], $this->model->allBatches());
     }
+
+    public function testOpenIsAuditedEvenWhenTheRosterFreezeFails(): void
+    {
+        $model = new class () extends DistributionBatchModel {
+            protected function freezeRoster(int $batchId): int|false
+            {
+                return false;
+            }
+        };
+        $id = $model->saveSchedule([
+            'batch_id' => 0, 'name' => 'Relief Distribution - Zone 4', 'venue' => 'Canlalay Covered Court',
+            'subsidy_type_id' => 1, 'scheduled_start' => '2026-08-20', 'scheduled_end' => '2026-08-20',
+            'daily_start_time' => '08:00:00', 'daily_end_time' => '17:00:00', 'color' => 'blue',
+            'barangay_ids' => [], 'sector_ids' => [],
+        ], 1);
+
+        $model->reconcileSchedule('2026-08-20 08:00:00');
+
+        $row = $model->find($id);
+        $this->assertNotNull($row['started_at'], 'the batch still opens');
+
+        $rows = db_connect()->table('audit_trails')->get()->getResultArray();
+        $this->assertNotEmpty(
+            array_filter($rows, static fn (array $r): bool => str_contains((string) $r['user_action'], 'Opened distribution batch')),
+            'the open transition is audited even though the roster freeze failed'
+        );
+    }
 }

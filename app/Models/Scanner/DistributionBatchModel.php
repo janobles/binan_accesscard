@@ -58,8 +58,10 @@ class DistributionBatchModel extends Model
      * weeks out covers the families who exist on the day it runs.
      *
      * Returns the batch id, or 0 when the payload is refused: blank name, no
-     * subsidy type, an end before its start, or dates already taken by another
-     * batch. Callers distinguish the last case by calling overlapping() first.
+     * subsidy type, an end before its start, dates already taken by another
+     * batch, or an edit against a batch that has already started or has scans
+     * recorded against it. Callers distinguish the overlap case by calling
+     * overlapping() first.
      *
      * @param array{batch_id:int,name:string,venue:string,subsidy_type_id:int,scheduled_start:string,scheduled_end:string,daily_start_time:string,daily_end_time:string,color:string,barangay_ids:list<int>,sector_ids:list<int>} $data
      */
@@ -98,7 +100,18 @@ class DistributionBatchModel extends Model
             $this->db->transStart();
 
             if ($batchId > 0) {
-                if ($this->find($batchId) === null) {
+                $existing = $this->find($batchId);
+                if ($existing === null) {
+                    $this->db->transComplete();
+
+                    return 0;
+                }
+                // A batch that has started (or finished) is refused the same way
+                // deleteSchedule() refuses it: rewriting scheduled_start/_end or
+                // subsidy_type_id here would move a closed batch's span onto
+                // today (reopening it, see openDue()) or change what logged
+                // distributions are reported under.
+                if ($existing['started_at'] !== null || $this->hasDistributions($batchId)) {
                     $this->db->transComplete();
 
                     return 0;
@@ -217,14 +230,26 @@ class DistributionBatchModel extends Model
         if (($row['started_at'] ?? null) === null) {
             $this->update($batchId, ['started_at' => $now, 'closed_at' => null]);
 
-            if ($this->freezeRoster($batchId) === false) {
+            $venue    = (string) ($row['venue'] ?? '');
+            $eligible = $this->freezeRoster($batchId);
+
+            // Opening is itself the lifecycle transition, and it already
+            // happened (started_at is committed above); a roster-freeze
+            // failure must not cost the batch its audit row, or this becomes
+            // the one open with no trace.
+            if ($eligible === false) {
+                log_message('error', 'Distribution batch #{id} opened on schedule but its roster freeze failed.', ['id' => $batchId]);
+                $this->auditLifecycle(
+                    'Opened distribution batch "' . (string) $row['name'] . '" #' . $batchId . ' on schedule',
+                    'Roster freeze failed, eligible count not recorded; venue: ' . $venue
+                );
+
                 return;
             }
 
-            $eligible = (int) ($this->find($batchId)['eligible_count'] ?? 0);
             $this->auditLifecycle(
                 'Opened distribution batch "' . (string) $row['name'] . '" #' . $batchId . ' on schedule',
-                'Eligible families: ' . $eligible . '; venue: ' . (string) ($row['venue'] ?? '')
+                'Eligible families: ' . $eligible . '; venue: ' . $venue
             );
 
             return;
@@ -249,9 +274,10 @@ class DistributionBatchModel extends Model
     /**
      * Freezes the batch's eligibility roster and records the size. Returns the
      * count, or false on a write failure, matching EligibilityBuilder so a
-     * caller can tell a failed write from an empty roster.
+     * caller can tell a failed write from an empty roster. Protected (not
+     * private) so a test can force the failure path openDue() guards against.
      */
-    private function freezeRoster(int $batchId): int|false
+    protected function freezeRoster(int $batchId): int|false
     {
         $filters  = $this->filtersFor($batchId);
         $eligible = (new \App\Libraries\EligibilityBuilder($this->db))

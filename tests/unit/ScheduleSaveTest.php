@@ -159,6 +159,32 @@ final class ScheduleSaveTest extends CIUnitTestCase
         $this->assertNull($this->model->find($id));
     }
 
+    public function testEditIsRefusedOnceTheBatchHasStarted(): void
+    {
+        $id = $this->model->saveSchedule($this->payload(), 1);
+        db_connect()->table('distribution_batch')->where('batch_id', $id)
+            ->update(['started_at' => '2026-08-20 08:00:00']);
+
+        $result = $this->model->saveSchedule($this->payload(['batch_id' => $id, 'subsidy_type_id' => 1, 'name' => 'Renamed']), 1);
+
+        $this->assertSame(0, $result);
+        $this->assertSame('Relief Distribution - Zone 4', $this->model->find($id)['name'], 'the started batch is untouched');
+    }
+
+    public function testEditIsRefusedOnceTheBatchHasScans(): void
+    {
+        $id = $this->model->saveSchedule($this->payload(), 1);
+        db_connect()->table('subsidy_distribution')->insert([
+            'distribution_id' => 1, 'control_no' => 5, 'memberID' => 5, 'subsidy_type_id' => 1,
+            'claim_date' => '2026-08-20', 'batch_id' => $id, 'dt_created' => '2026-08-20 09:10:00',
+        ]);
+
+        $result = $this->model->saveSchedule($this->payload(['batch_id' => $id, 'scheduled_start' => '2026-09-01', 'scheduled_end' => '2026-09-02']), 1);
+
+        $this->assertSame(0, $result);
+        $this->assertSame('2026-08-20', $this->model->find($id)['scheduled_start'], 'the scanned batch keeps its dates');
+    }
+
     public function testSavingAgainstAMissingBatchIdIsRefused(): void
     {
         $this->assertSame(0, $this->model->saveSchedule(

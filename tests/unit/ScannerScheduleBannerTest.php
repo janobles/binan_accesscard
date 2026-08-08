@@ -121,12 +121,19 @@ final class ScannerScheduleBannerTest extends CIUnitTestCase
 
     public function testOpenBannerNamesTheVenueAndTheDay(): void
     {
+        // The route runs BatchScheduleFilter, which reconciles against the real
+        // clock: a daily_end_time in the past (plus BatchScheduleWindow's 30
+        // minute grace) would have the reconciler correctly close the batch
+        // before the controller ever builds the banner. Spanning the whole day
+        // keeps the batch open at any hour the suite happens to run, including
+        // near midnight, without weakening what this test actually checks
+        // (venue + day count), which BatchScheduleWindowTest covers precisely.
         db_connect()->table('distribution_batch')->insert([
             'batch_id' => 1, 'name' => 'AICS Payout - Cluster 1', 'venue' => 'Alonte Sports Arena',
             'subsidy_type_id' => 1,
             'scheduled_start' => date('Y-m-d'), 'scheduled_end' => date('Y-m-d'),
-            'daily_start_time' => '08:00:00', 'daily_end_time' => '17:00:00',
-            'color' => 'green', 'started_at' => date('Y-m-d') . ' 08:00:00',
+            'daily_start_time' => '00:00:00', 'daily_end_time' => '23:59:59',
+            'color' => 'green', 'started_at' => date('Y-m-d') . ' 00:00:00',
             'closed_at' => null, 'eligible_count' => 0,
         ]);
 

@@ -119,11 +119,33 @@ final class ScheduleEndpointTest extends CIUnitTestCase
         $this->assertSame([], (new \App\Models\Scanner\DistributionBatchModel())->allBatches());
     }
 
+    public function testJsSendsTheParameterNamesTheFeedReads(): void
+    {
+        // FullCalendar's own defaults are start/end; the calendar remaps them to
+        // from/to via startParam/endParam so prev/next actually reaches the
+        // month the feed reads (DistributionController::scheduleFeed()).
+        $js = file_get_contents(FCPATH . 'assets/js/dashboard/schedule-calendar.js');
+        $this->assertStringContainsString("startParam: 'from'", $js);
+        $this->assertStringContainsString("endParam: 'to'", $js);
+    }
+
     public function testDeleteRemovesAPlan(): void
     {
         $this->withSession($this->asAdmin())->post('distribution/schedule/save', $this->payload());
         $this->withSession($this->asAdmin())->post('distribution/schedule/1/delete');
 
         $this->assertSame([], (new \App\Models\Scanner\DistributionBatchModel())->allBatches());
+    }
+
+    public function testDeletingANonexistentScheduleAnswers404WithNoAuditRow(): void
+    {
+        $result = $this->withSession($this->asAdmin())->post('distribution/schedule/999999/delete');
+
+        $result->assertStatus(404);
+        $body = json_decode($result->getJSON(), true);
+        $this->assertSame('not_found', $body['error']);
+
+        $rows = db_connect()->table('audit_trails')->get()->getResultArray();
+        $this->assertSame([], $rows, 'a delete on a missing id must not write an audit row');
     }
 }

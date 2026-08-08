@@ -20,10 +20,11 @@ class AccountFormRetry
     private const KEY = 'account_form_retry';
 
     /**
-     * Fields never parked: a password does not belong in session storage, and
-     * the token is reissued per request anyway.
+     * Fields never parked: a password does not belong in session storage. The
+     * CSRF token is dropped too (reissued per request anyway), but by its
+     * configured name rather than a literal, which Security.tokenName moves.
      */
-    private const EXCLUDED = ['password', 'new_password', 'confirm_password', 'current_password', 'csrf_test_name'];
+    private const EXCLUDED = ['password', 'new_password', 'confirm_password', 'current_password'];
 
     /**
      * @param string               $mode   create|edit|self, matched on the way back out.
@@ -34,9 +35,10 @@ class AccountFormRetry
     public static function remember(string $mode, array $input, array $errors, int $userId = 0): void
     {
         $kept = [];
+        $token = csrf_token();
 
         foreach ($input as $field => $value) {
-            if (! in_array($field, self::EXCLUDED, true) && is_scalar($value)) {
+            if ($field !== $token && ! in_array($field, self::EXCLUDED, true) && is_scalar($value)) {
                 $kept[(string) $field] = (string) $value;
             }
         }

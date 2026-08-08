@@ -73,8 +73,14 @@ function cssComments(string $file): void
         }
 
         if ($quote !== '') {
-            // A backslash escapes the next character, including the closing quote.
+            // A backslash escapes the next character, including the closing
+            // quote. When that character is a newline the line still advances,
+            // or every comment after it is reported one line early.
             if ($char === '\\') {
+                if (($source[$i + 1] ?? '') === "\n") {
+                    $line++;
+                }
+
                 $i += 2;
                 continue;
             }

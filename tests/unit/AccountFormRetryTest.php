@@ -74,6 +74,10 @@ final class AccountFormRetryTest extends CIUnitTestCase
         AccountFormRetry::remember('create', ['username' => 'ab'], []);
 
         $this->assertSame([], AccountFormRetry::take('self')['input']);
+
+        // Dropped, not merely withheld: the create form does not get it back
+        // on the next request either.
+        $this->assertSame(['input' => [], 'errors' => []], AccountFormRetry::take('create'));
     }
 
     public function testEditFormShowsTheSubmittedUsernameNotTheStoredOne(): void
@@ -103,6 +107,22 @@ final class AccountFormRetryTest extends CIUnitTestCase
         ]);
 
         $this->assertStringContainsString('value="Stored"', $html);
+    }
+
+    public function testAPasswordRejectionLandsUnderItsOwnField(): void
+    {
+        // What ProfileController::reopenWithPasswordError parks. The message
+        // belongs on the field that was wrong, not in a page-level flash.
+        $html = view('Accounts/account-form-modal', [
+            'mode'    => 'self',
+            'account' => ['userID' => 7, 'username' => 'me', 'role' => 'viewer'],
+            'details' => ['last_name' => 'Stored', 'first_name' => 'Name'],
+            'old'     => ['username' => 'me'],
+            'errors'  => ['current_password' => 'Your current password is incorrect.'],
+        ]);
+
+        $this->assertStringContainsString('Your current password is incorrect.', $html);
+        $this->assertStringContainsString('name="current_password" type="password"', $html);
     }
 
     public function testCreateFormIsBlankWithNothingParked(): void

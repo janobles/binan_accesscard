@@ -107,15 +107,15 @@ class ProfileController extends BaseController
             $confirmPassword = (string) $this->request->getPost('confirm_password');
 
             if (strlen($newPassword) < 8) {
-                return redirect()->back()->with('error', 'New password must have at least 8 characters.');
+                return $this->reopenWithPasswordError('new_password', 'New password must have at least 8 characters.');
             }
 
             if ($newPassword !== $confirmPassword) {
-                return redirect()->back()->with('error', 'New password and confirmation do not match.');
+                return $this->reopenWithPasswordError('confirm_password', 'New password and confirmation do not match.');
             }
 
             if (! $userModel->verifyUserPassword($userId, $currentPassword)) {
-                return redirect()->back()->with('error', 'Your current password is incorrect.');
+                return $this->reopenWithPasswordError('current_password', 'Your current password is incorrect.');
             }
         }
 
@@ -142,6 +142,21 @@ class ProfileController extends BaseController
         }
 
         return redirect()->back()->with('success', 'Your account was updated successfully.');
+    }
+
+    /**
+     * Sends a rejected password change back the same way a failed validate()
+     * goes: the submitted non-secret fields and the error are parked for the
+     * modal, which reopens with the message under the offending field. An
+     * error flash alone left the modal shut and the retyped values gone.
+     */
+    private function reopenWithPasswordError(string $field, string $message): RedirectResponse
+    {
+        AccountFormRetry::remember('self', $this->request->getPost(), [$field => $message]);
+
+        return redirect()->back()
+            ->withInput()
+            ->with('openModal', 'account-profile');
     }
 
     /**

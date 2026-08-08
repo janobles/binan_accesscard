@@ -20,7 +20,7 @@ failed=0
 # regex stripped it from both sides, which made an edit there compare equal and
 # let a real rule change through.
 strip() {
-    php scripts/strip-css-comments.php || true
+    php scripts/strip-css-comments.php
 }
 
 files=$( { git ls-tree -r --name-only "$ref" -- public/css 2>/dev/null | grep '\.css$'
@@ -47,8 +47,19 @@ while IFS= read -r file; do
         continue
     fi
 
-    old=$(git show "${ref}:${file}" 2>/dev/null | strip)
-    new=$(strip < "$file")
+    # A stripper that dies has to fail the file. Swallowing its status left both
+    # sides empty, which compared equal and passed the gate on a real edit.
+    if ! old=$(git show "${ref}:${file}" 2>/dev/null | strip); then
+        echo "STRIP FAILED: ${ref}:${file}" >&2
+        failed=1
+        continue
+    fi
+
+    if ! new=$(strip < "$file"); then
+        echo "STRIP FAILED: $file" >&2
+        failed=1
+        continue
+    fi
 
     if [ "$old" = "$new" ]; then
         echo "OK       $file"

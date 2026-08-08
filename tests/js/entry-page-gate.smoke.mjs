@@ -415,8 +415,11 @@ fakeWindow.setTimeout = (fn, delay) => {
 fakeWindow.clearTimeout = (id) => { pendingTimers.delete(id); };
 
 function flushTimers(maxDelay) {
+    // Re-checked against the live map, not just the snapshot: a callback that
+    // runs here can clearTimeout a later one, and the cancelled timer must not
+    // fire anyway.
     for (const [id, timer] of [...pendingTimers]) {
-        if (timer.delay <= maxDelay) {
+        if (timer.delay <= maxDelay && pendingTimers.has(id)) {
             pendingTimers.delete(id);
             timer.fn();
         }

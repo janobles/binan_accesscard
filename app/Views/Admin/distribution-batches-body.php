@@ -1,11 +1,11 @@
 <?php
 /**
  * Distribution Batches pane: active-batch banner + close control + past list.
- * Opening a batch happens through the New Batch modal
- * (Admin/batch-create-modal.php), which binds a subsidy type from the subsidy
- * reference table. Each batch row shows its bound subsidy type. Lifecycle
- * buttons render only for Admin/Developer. Rendered inside components/card
- * by Pages/distribution.php's batches tab.
+ * A batch opens itself on its plotted start day (see the Schedule tab); this
+ * pane only shows the result and lets Admin/Developer close the active one
+ * early. Each batch row shows its bound subsidy type. Lifecycle buttons render
+ * only for Admin/Developer. Rendered inside components/card by
+ * Pages/distribution.php's batches tab.
  */
 $canManageBatches = in_array($currentRole ?? '', ['Admin', 'Developer'], true);
 ?>
@@ -14,7 +14,7 @@ $canManageBatches = in_array($currentRole ?? '', ['Admin', 'Developer'], true);
     <span>
       <strong><?= esc($activeBatch['name']) ?></strong>
       <span class="badge bg-light text-dark border"><?= esc((string) ($activeBatch['subsidy_type_name'] ?? '')) ?></span>
-      open since <?= esc($activeBatch['started_at']) ?>
+      <?= $activeBatch['started_at'] !== null ? 'open since ' . esc($activeBatch['started_at']) : 'not yet open' ?>
     </span>
     <?php if ($canManageBatches): ?>
     <form method="post" action="<?= site_url('distribution/batches/close/' . (int) $activeBatch['batch_id']) ?>" class="js-batch-close-form">
@@ -27,9 +27,9 @@ $canManageBatches = in_array($currentRole ?? '', ['Admin', 'Developer'], true);
   <div class="alert alert-secondary d-flex justify-content-between align-items-center">
     <span>No active batch. Scanning is paused until one is opened.</span>
     <?php if ($canManageBatches): ?>
-    <button type="button" class="<?= btn('add') ?>" data-bs-toggle="modal" data-bs-target="#newBatchModal">
-      <i class="bi bi-plus-lg" aria-hidden="true"></i> New Batch
-    </button>
+    <a href="<?= esc(site_url('distribution?tab=schedule'), 'attr') ?>" class="<?= btn('add') ?>">
+      <i class="bi bi-plus-lg" aria-hidden="true"></i> New schedule
+    </a>
     <?php endif; ?>
   </div>
 <?php endif; ?>
@@ -53,7 +53,7 @@ $canManageBatches = in_array($currentRole ?? '', ['Admin', 'Developer'], true);
       <tr data-paginate-row>
         <td><?= esc($b['name']) ?></td>
         <td><?= esc((string) ($b['subsidy_type_name'] ?? '')) ?></td>
-        <td><?= esc($b['started_at']) ?></td>
+        <td><?= $b['started_at'] !== null ? esc($b['started_at']) : 'Not yet started' ?></td>
         <td><?= $b['closed_at'] === null ? '<span class="badge bg-success">Open</span>' : esc($b['closed_at']) ?></td>
       </tr>
     <?php endforeach; ?>

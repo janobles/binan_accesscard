@@ -194,7 +194,8 @@ class DashboardPageBuilder
         // Distribution page: batches and the log share one page, switched by
         // ?tab=. Data gated so other pages don't run these queries.
         $distributionTab = (string) $this->request->getGet('tab');
-        $distributionTab = in_array($distributionTab, ['batches', 'log'], true) ? $distributionTab : 'batches';
+        $distributionTab = in_array($distributionTab, ['schedule', 'batches', 'log'], true) ? $distributionTab : 'schedule';
+        $isSchedule      = $activePage === 'distribution' && $distributionTab === 'schedule';
         $isBatches       = $activePage === 'distribution' && $distributionTab === 'batches';
         $isDistributions = $activePage === 'distribution' && $distributionTab === 'log';
         $batchModel      = model(DistributionBatchModel::class);
@@ -295,11 +296,13 @@ class DashboardPageBuilder
             // ever true for a given page load.
             'batches'            => $isBatches ? $batchModel->allBatches() : ($reportsData['batches'] ?? []),
             'activeBatch'        => $isBatches ? $batchModel->activeBatch() : null,
-            'activeSubsidyTypes' => $isBatches ? model(SubsidyTypeModel::class)->active() : [],
-            // Barangay/sector option lists for the batch-open modal's eligibility
-            // filters (Task 10). Only fetched on the batches tab.
-            'barangayOptions'    => $isBatches ? model(BarangayModel::class)->activeList() : [],
-            'batchSectorOptions' => $isBatches ? $sectorModel->getActive() : [],
+            'activeSubsidyTypes' => ($isBatches || $isSchedule) ? model(SubsidyTypeModel::class)->active() : [],
+            // Barangay/sector option lists for the schedule and batch-open forms'
+            // eligibility filters (Task 10). Only fetched on those tabs.
+            'barangayOptions'    => ($isBatches || $isSchedule) ? model(BarangayModel::class)->activeList() : [],
+            'batchSectorOptions' => ($isBatches || $isSchedule) ? $sectorModel->getActive() : [],
+            'scheduleColors'     => $isSchedule ? DistributionBatchModel::COLORS : [],
+            'venueSuggestions'   => $isSchedule ? $this->venueSuggestions($batchModel) : [],
             'subsidyTypes'       => $subsidyTypeListData['rows'] ?? [],
             'subsidyTypeListData' => $subsidyTypeListData,
             'distributions'      => $isDistributions ? model(SubsidyDistributionModel::class)->allDistributions() : [],
@@ -383,6 +386,27 @@ class DashboardPageBuilder
     public function buildRecordListViewData(): array
     {
         return $this->buildMemberListData();
+    }
+
+    /**
+     * Venues used before, newest first, for the schedule form's datalist. A
+     * venue reference table would be disproportionate: venues repeat rarely and
+     * a datalist gives most of the convenience.
+     *
+     * @return list<string>
+     */
+    private function venueSuggestions(DistributionBatchModel $batchModel): array
+    {
+        $seen = [];
+
+        foreach ($batchModel->allBatches() as $batch) {
+            $venue = trim((string) ($batch['venue'] ?? ''));
+            if ($venue !== '' && ! in_array($venue, $seen, true)) {
+                $seen[] = $venue;
+            }
+        }
+
+        return $seen;
     }
 
     /** All sectors (active + archived) ordered by ID, for the admin sectors view. */

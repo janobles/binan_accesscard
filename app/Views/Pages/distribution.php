@@ -2,17 +2,19 @@
 /**
  * Distribution body (Developer, Admin, Viewer).
  *
- * Rendered inside layout.php as the `distribution` page body. Batches and the
- * distribution log share one page, switched by ?tab=; data comes from
- * DashboardPageBuilder::buildViewData(). Who reaches this page at all is the
- * roleNav filter's decision (Config\Navigation).
+ * Rendered inside layout.php as the `distribution` page body. The schedule
+ * calendar, the batches list, and the distribution log share one page,
+ * switched by ?tab=; data comes from DashboardPageBuilder::buildViewData().
+ * Who reaches this page at all is the roleNav filter's decision
+ * (Config\Navigation).
  */
 
-$distributionTab = (string) ($distributionTab ?? 'batches');
-$distributionTab = in_array($distributionTab, ['batches', 'log'], true) ? $distributionTab : 'batches';
+$distributionTab = (string) ($distributionTab ?? 'schedule');
+$distributionTab = in_array($distributionTab, ['schedule', 'batches', 'log'], true) ? $distributionTab : 'schedule';
 ?>
 <?= view('components/page_tabs', [
     'tabs' => [
+        ['key' => 'schedule', 'label' => 'Schedule'],
         ['key' => 'batches', 'label' => 'Batches'],
         ['key' => 'log', 'label' => 'Distribution Log'],
     ],
@@ -20,7 +22,18 @@ $distributionTab = in_array($distributionTab, ['batches', 'log'], true) ? $distr
     'baseUrl' => 'distribution',
 ]) ?>
 
-<?php if ($distributionTab === 'batches'): ?>
+<?php if ($distributionTab === 'schedule'): ?>
+    <?= view('Admin/schedule-calendar', ['currentRole' => $currentRole ?? '']) ?>
+    <?php if (in_array($currentRole ?? '', ['Admin', 'Developer'], true)): ?>
+        <?= view('Admin/schedule-form-modal', [
+            'activeSubsidyTypes' => $activeSubsidyTypes ?? [],
+            'barangayOptions'    => $barangayOptions ?? [],
+            'sectorOptions'      => $batchSectorOptions ?? [],
+            'scheduleColors'     => $scheduleColors ?? [],
+            'venueSuggestions'   => $venueSuggestions ?? [],
+        ]) ?>
+    <?php endif; ?>
+<?php elseif ($distributionTab === 'batches'): ?>
     <?= view('components/card', [
         'icon' => 'collection',
         'title' => 'Distribution Batches',
@@ -33,11 +46,6 @@ $distributionTab = in_array($distributionTab, ['batches', 'log'], true) ? $distr
             'currentRole' => $currentRole ?? '',
         ],
         'footer' => view('components/table_footer', ['clientKey' => 'batches', 'entityLabel' => 'batches']),
-    ]) ?>
-    <?= view('Admin/batch-create-modal', [
-        'activeSubsidyTypes' => $activeSubsidyTypes ?? [],
-        'barangayOptions'    => $barangayOptions ?? [],
-        'sectorOptions'      => $batchSectorOptions ?? [],
     ]) ?>
 <?php else: ?>
     <?= view('components/toolbar', [

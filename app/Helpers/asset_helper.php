@@ -103,7 +103,8 @@ if (! function_exists('asset_scripts')) {
                 'assets/js/dashboard/audit-trails-modal.js',
                 'assets/js/dashboard/audit-detail-modal.js',
                 'assets/js/dashboard/batch-close-modal.js',
-                'assets/js/dashboard/batch-create-modal.js',
+                'assets/fullcalendar/index.global.min.js',
+                'assets/js/dashboard/schedule-calendar.js',
             ],
             'login' => [
                 'assets/bootstrap/js/bootstrap.bundle.min.js',

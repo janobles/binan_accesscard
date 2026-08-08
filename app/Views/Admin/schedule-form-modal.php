@@ -60,16 +60,16 @@ $venueSuggestions   = $venueSuggestions ?? [];
         <div class="mb-3">
           <label for="scheduleStart" class="form-label">Days</label>
           <div class="row g-2">
-            <div class="col"><input type="date" class="form-control" id="scheduleStart" name="scheduled_start" required></div>
-            <div class="col"><input type="date" class="form-control" id="scheduleEnd" name="scheduled_end" required></div>
+            <div class="col"><input type="date" class="form-control" id="scheduleStart" name="scheduled_start" required aria-label="First day"></div>
+            <div class="col"><input type="date" class="form-control" id="scheduleEnd" name="scheduled_end" required aria-label="Last day"></div>
           </div>
           <div class="form-text">Opens on the first day, closes 30 minutes after the last scan.</div>
         </div>
         <div class="mb-3">
           <label for="scheduleDailyStart" class="form-label">Daily hours</label>
           <div class="row g-2">
-            <div class="col"><input type="time" class="form-control" id="scheduleDailyStart" name="daily_start_time" value="08:00" required></div>
-            <div class="col"><input type="time" class="form-control" id="scheduleDailyEnd" name="daily_end_time" value="17:00" required></div>
+            <div class="col"><input type="time" class="form-control" id="scheduleDailyStart" name="daily_start_time" value="08:00" required aria-label="Daily start time"></div>
+            <div class="col"><input type="time" class="form-control" id="scheduleDailyEnd" name="daily_end_time" value="17:00" required aria-label="Daily end time"></div>
           </div>
         </div>
         <div class="mb-3">

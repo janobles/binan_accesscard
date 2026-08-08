@@ -67,6 +67,18 @@ final class ScheduleCalendarViewTest extends CIUnitTestCase
         $this->assertStringNotContainsString('scheduleFormModal', $body);
     }
 
+    public function testDateAndTimeInputsAreIndividuallyLabelled(): void
+    {
+        $body = $this->withSession(['user_id' => 1, 'username' => 'boss', 'role' => 'Admin', 'is_logged_in' => true])
+            ->get('distribution?tab=schedule')
+            ->getBody();
+
+        $this->assertStringContainsString('aria-label="First day"', $body);
+        $this->assertStringContainsString('aria-label="Last day"', $body);
+        $this->assertStringContainsString('aria-label="Daily start time"', $body);
+        $this->assertStringContainsString('aria-label="Daily end time"', $body);
+    }
+
     public function testOldBatchCreateModalIsGone(): void
     {
         $this->assertFileDoesNotExist(APPPATH . 'Views/Admin/batch-create-modal.php');

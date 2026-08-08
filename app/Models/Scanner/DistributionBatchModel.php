@@ -91,6 +91,11 @@ class DistributionBatchModel extends Model
             $this->db->transStart();
 
             if ($batchId > 0) {
+                if ($this->find($batchId) === null) {
+                    $this->db->transComplete();
+
+                    return 0;
+                }
                 if ($this->update($batchId, $row) === false) {
                     $this->db->transComplete();
 
@@ -152,11 +157,11 @@ class DistributionBatchModel extends Model
     }
 
     /**
-     * Defensive cleanup after a roster-write failure inside open(). The
-     * transaction has been rolled back by the time this runs, so the batch row
-     * and its junction rows should already be gone; this is a second,
-     * best-effort pass in case any of them survived, so open() never leaves an
-     * orphan distribution_batch row behind. Failures here are swallowed - open() is
+     * Defensive cleanup after a roster-write failure. The transaction has
+     * already been rolled back by the time this runs, so the batch row and its
+     * junction rows should already be gone; this is a second, best-effort pass
+     * in case any of them survived, so the caller never leaves an orphan
+     * distribution_batch row behind. Failures here are swallowed - the caller is
      * returning 0 regardless.
      */
     private function discardOrphan(int $batchId): void
@@ -333,9 +338,14 @@ class DistributionBatchModel extends Model
             $eligible = (new \App\Libraries\EligibilityBuilder($this->db))
                 ->materialize($batchId, $filters['barangays'], $filters['sectors']);
 
-            // See open()'s comment: materialize() returning false is a real
-            // write failure, and transStatus() alone can't be trusted to
-            // notice it. Bail before reporting a count.
+            // CI4's BaseConnection::query() rolls back and, since transStrict is
+            // off by default, resets transStatus() back to true the moment a
+            // query fails inside a transaction, so by the time control gets
+            // back here transStatus() already reads as success even though the
+            // roster write failed. materialize() returning false (not 0) is how
+            // it flags a genuine write failure rather than a legitimately empty
+            // roster; treat that as fatal directly instead of falling through
+            // to the transStatus() check below, which cannot see it.
             if ($eligible === false) {
                 $this->db->transComplete();
 
@@ -356,8 +366,11 @@ class DistributionBatchModel extends Model
 
             return $eligible;
         } catch (\Throwable $e) {
-            // See open()'s catch: an open transaction outlives this method and
-            // swallows every query after it.
+            // An exception between transStart() and transComplete() leaves the
+            // transaction open on the shared connection, and every query after
+            // it in the request silently becomes part of it. Roll back rather
+            // than complete: transStatus() can still read true here, which
+            // would commit whatever the exception interrupted.
             $this->db->transRollback();
 
             return 0;

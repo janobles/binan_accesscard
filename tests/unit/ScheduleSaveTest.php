@@ -158,4 +158,16 @@ final class ScheduleSaveTest extends CIUnitTestCase
         $this->assertTrue($this->model->deleteSchedule($id));
         $this->assertNull($this->model->find($id));
     }
+
+    public function testSavingAgainstAMissingBatchIdIsRefused(): void
+    {
+        $this->assertSame(0, $this->model->saveSchedule(
+            $this->payload(['batch_id' => 999999, 'barangay_ids' => [1], 'sector_ids' => [2]]),
+            1
+        ));
+
+        $db = db_connect();
+        $this->assertSame(0, $db->table('batch_barangay')->where('batch_id', 999999)->countAllResults());
+        $this->assertSame(0, $db->table('batch_sector')->where('batch_id', 999999)->countAllResults());
+    }
 }

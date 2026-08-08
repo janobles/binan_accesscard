@@ -120,8 +120,15 @@ class DistributionController extends BaseController
                 'dailyEnd'      => substr((string) $batch['daily_end_time'], 0, 5),
                 'barangayIds'   => $filters['barangays'],
                 'sectorIds'     => $filters['sectors'],
-                // Only a batch that has not started may be dragged or resized.
+                // Only a batch that has not started may be dragged, resized or
+                // re-planned - this mirrors saveSchedule()'s own refusal rule
+                // exactly, so the calendar never offers an edit the server
+                // would reject.
                 'editable'      => $batch['started_at'] === null && (string) $batch['scheduled_start'] > $today,
+                // deleteSchedule() judges a looser rule than saveSchedule(): a
+                // started batch with no scans yet may still be removed, so
+                // this is computed separately rather than reusing `editable`.
+                'deletable'     => ! $model->hasDistributions($id),
             ];
         }
 

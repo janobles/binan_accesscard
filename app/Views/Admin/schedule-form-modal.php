@@ -10,6 +10,12 @@
  * GET distribution/batches/preview, the same query the roster freezes on, so
  * the estimate and the eventual roster cannot disagree in shape.
  *
+ * The plan fields sit in a fieldset schedule-calendar.js can disable wholesale
+ * for a batch the server's editable flag refuses (started, or its window has
+ * begun): the Delete button and the read-only note are the only things left
+ * live, since deleteSchedule() judges a different, looser rule than
+ * saveSchedule() does.
+ *
  * Variables:
  * - $activeSubsidyTypes list of subsidy rows (subsidy_type_id, name)
  * - $barangayOptions    list of barangay rows (barangayID, name)
@@ -35,6 +41,10 @@ $venueSuggestions   = $venueSuggestions ?? [];
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
+        <p class="text-muted small d-none" id="scheduleReadOnlyNote">
+          This batch has already started, so its plan cannot be changed. It can still be removed if it has served no families.
+        </p>
+        <fieldset id="scheduleFields">
         <div class="mb-3">
           <label for="scheduleName" class="form-label">Name</label>
           <input type="text" class="form-control" id="scheduleName" name="name" required maxlength="100">
@@ -109,6 +119,7 @@ $venueSuggestions   = $venueSuggestions ?? [];
           </div>
           <input type="hidden" name="color" id="scheduleColor" value="<?= esc($scheduleColors[0] ?? 'green', 'attr') ?>">
         </div>
+        </fieldset>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-outline-danger me-auto d-none" id="scheduleDelete">Delete</button>

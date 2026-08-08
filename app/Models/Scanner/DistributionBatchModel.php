@@ -106,11 +106,12 @@ class DistributionBatchModel extends Model
 
                     return 0;
                 }
-                // A batch that has started (or finished) is refused the same way
-                // deleteSchedule() refuses it: rewriting scheduled_start/_end or
+                // Stricter than deleteSchedule(), which only checks
+                // hasDistributions(): rewriting scheduled_start/_end or
                 // subsidy_type_id here would move a closed batch's span onto
                 // today (reopening it, see openDue()) or change what logged
-                // distributions are reported under.
+                // distributions are reported under, so a started batch is
+                // refused even with no scans against it yet.
                 if ($existing['started_at'] !== null || $this->hasDistributions($batchId)) {
                     $this->db->transComplete();
 

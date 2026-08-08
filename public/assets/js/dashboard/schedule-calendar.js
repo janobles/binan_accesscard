@@ -5,9 +5,12 @@
  * Events come from the data-feed-url endpoint. Dragging across empty days
  * opens the modal with those dates prefilled; dragging or resizing an existing
  * event saves the new span directly, reverting on refusal. Clicking an event
- * opens it for edit, when the feed says it is still editable. A save that
- * collides answers 409 with the clashing batch, which becomes either a
- * replace confirmation or a plain refusal when that batch already has scans.
+ * opens it for edit or deletion, according to the feed's separate `editable`
+ * and `deletable` flags (a started batch with no scans may still be removed,
+ * just not re-planned) - a batch that is neither says so instead of opening
+ * an empty form. A save that collides answers 409 with the clashing batch,
+ * which becomes either a replace confirmation or a plain refusal when that
+ * batch already has scans.
  */
 (function () {
   const mount = document.getElementById('scheduleCalendar');
@@ -28,17 +31,34 @@
     });
   }
 
+  /**
+   * Opens the modal for a new schedule (event is null, always fully
+   * editable) or an existing one. The feed's `editable`/`deletable` flags
+   * mirror saveSchedule()'s and deleteSchedule()'s own server-side rules
+   * exactly (they are not the same rule - a started batch with no scans may
+   * still be deleted but not re-planned), so the modal locks the plan fields
+   * rather than guess whether a save would be accepted.
+   */
   function openForm(start, end, event) {
     if (!modal) return;
     form.reset();
     document.getElementById('scheduleBatchId').value = event ? event.id : 0;
     document.getElementById('scheduleStart').value = start;
     document.getElementById('scheduleEnd').value = end;
-    document.getElementById('scheduleFormTitle').textContent = event ? 'Edit schedule' : 'New schedule';
-    document.getElementById('scheduleDelete').classList.toggle('d-none', !event);
+
+    const p        = event ? event.extendedProps : null;
+    const canEdit   = !event || p.editable;
+    const canDelete = event ? p.deletable : false;
+
+    document.getElementById('scheduleFormTitle').textContent = event
+      ? (canEdit ? 'Edit schedule' : 'Schedule details')
+      : 'New schedule';
+    document.getElementById('scheduleDelete').classList.toggle('d-none', !canDelete);
+    document.getElementById('scheduleSubmit').classList.toggle('d-none', !canEdit);
+    document.getElementById('scheduleFields').disabled = !canEdit;
+    document.getElementById('scheduleReadOnlyNote').classList.toggle('d-none', canEdit);
 
     if (event) {
-      const p = event.extendedProps;
       document.getElementById('scheduleName').value = event.title;
       document.getElementById('scheduleVenue').value = p.venue || '';
       document.getElementById('scheduleSubsidyType').value = p.subsidyTypeId || '';
@@ -121,11 +141,13 @@
     eventClick: function (info) {
       if (!canManage) return;
       const p = info.event.extendedProps;
-      // The server refuses to save over a batch that has started or has scans
-      // (DistributionBatchModel::saveSchedule()); don't offer an edit it would
-      // only reject. Reuses the same `editable` flag the feed computes for
-      // drag/resize.
-      if (!p.editable) return;
+      // A batch that may be neither re-planned nor removed has nothing this
+      // modal can do for it - say so rather than open a form with nothing
+      // live, or do nothing and leave the click unexplained.
+      if (!p.editable && !p.deletable) {
+        window.alert('This batch has already run and cannot be changed or removed.');
+        return;
+      }
       openForm(p.start, isoMinusDay(p.end), info.event);
     },
     // eventDataTransform sets editable per event from the feed, so FullCalendar

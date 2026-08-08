@@ -159,6 +159,19 @@ final class ScheduleSaveTest extends CIUnitTestCase
         $this->assertNull($this->model->find($id));
     }
 
+    public function testDeleteAllowsAStartedBatchWithNoScans(): void
+    {
+        // deleteSchedule() only tests hasDistributions(), unlike saveSchedule()'s
+        // stricter started_at check: a batch plotted for today that has already
+        // opened but served nobody yet may still be removed.
+        $id = $this->model->saveSchedule($this->payload(), 1);
+        db_connect()->table('distribution_batch')->where('batch_id', $id)
+            ->update(['started_at' => '2026-08-20 08:00:00']);
+
+        $this->assertTrue($this->model->deleteSchedule($id));
+        $this->assertNull($this->model->find($id));
+    }
+
     public function testEditIsRefusedOnceTheBatchHasStarted(): void
     {
         $id = $this->model->saveSchedule($this->payload(), 1);

@@ -77,6 +77,24 @@ final class ScheduleEndpointTest extends CIUnitTestCase
         $this->assertSame('2026-08-22', $events[0]['end'], 'FullCalendar treats end as exclusive');
         $this->assertSame('Canlalay Covered Court', $events[0]['venue']);
         $this->assertSame('upcoming', $events[0]['status']);
+        $this->assertTrue($events[0]['deletable'], 'no scans yet, so the plan may be removed');
+    }
+
+    public function testFeedMarksAStartedBatchWithNoScansAsDeletableButNotEditable(): void
+    {
+        // saveSchedule() and deleteSchedule() judge different rules: a started
+        // batch with no scans may still be removed but not re-planned. The
+        // feed's editable and deletable flags must not collapse into one.
+        $this->withSession($this->asAdmin())->post('distribution/schedule/save', $this->payload());
+        db_connect()->table('distribution_batch')->where('batch_id', 1)
+            ->update(['started_at' => '2026-08-20 08:00:00']);
+
+        $result = $this->withSession($this->asAdmin())
+            ->get('distribution/schedule/feed?from=2026-08-01&to=2026-08-31');
+        $events = json_decode($result->getJSON(), true);
+
+        $this->assertFalse($events[0]['editable']);
+        $this->assertTrue($events[0]['deletable']);
     }
 
     public function testOverlapIsRefusedAndNamesTheClash(): void

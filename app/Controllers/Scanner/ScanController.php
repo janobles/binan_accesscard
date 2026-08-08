@@ -68,7 +68,55 @@ class ScanController extends BaseController
             'myBatchCount' => $activeBatch !== null
                 ? model(SubsidyDistributionModel::class)->familiesForUserInBatch($userId, (int) $activeBatch['batch_id'])
                 : 0,
+            'scheduleBanner' => $this->scheduleBanner($activeBatch),
+            // Printed so a person in the room can catch a laptop whose clock is
+            // wrong. The database shares that clock, so nothing in code can.
+            'systemNow'      => date('D, F j, Y g:i A'),
         ]);
+    }
+
+    /**
+     * Plain-language state for the scanner screen: what is running or what is
+     * next, where, and for how long. Replaces the bare "no open batch"
+     * refusal, which told a person at a venue nothing they could act on.
+     *
+     * @return array{state:string,lines:list<string>}
+     */
+    private function scheduleBanner(?array $activeBatch): array
+    {
+        $today = date('Y-m-d');
+
+        if ($activeBatch !== null) {
+            $start = (string) ($activeBatch['scheduled_start'] ?? $today);
+            $end   = (string) ($activeBatch['scheduled_end'] ?? $today);
+            $day   = (int) ((strtotime($today) - strtotime($start)) / 86400) + 1;
+            $total = (int) ((strtotime($end) - strtotime($start)) / 86400) + 1;
+
+            return [
+                'state' => 'open',
+                'lines' => [
+                    (string) $activeBatch['name'] . ($activeBatch['venue'] !== '' ? ', ' . (string) $activeBatch['venue'] : ''),
+                    'Day ' . $day . ' of ' . $total . ', until ' . date('g:i A', strtotime((string) $activeBatch['daily_end_time'])) . '.',
+                ],
+            ];
+        }
+
+        $next = model(DistributionBatchModel::class)
+            ->scheduledBetween(date('Y-m-d', strtotime('+1 day')), date('Y-m-d', strtotime('+1 year')))[0] ?? null;
+
+        if ($next === null) {
+            return ['state' => 'idle', 'lines' => ['Nothing scheduled today, and nothing plotted ahead.']];
+        }
+
+        return [
+            'state' => 'idle',
+            'lines' => [
+                'Nothing scheduled today.',
+                'Next: ' . (string) $next['name'] . ', ' . (string) $next['venue'] . ', '
+                    . date('D M j', strtotime((string) $next['scheduled_start'])) . ', '
+                    . date('g:i A', strtotime((string) $next['daily_start_time'])) . '.',
+            ],
+        ];
     }
 
     /**

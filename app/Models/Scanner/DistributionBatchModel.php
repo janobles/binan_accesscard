@@ -36,6 +36,13 @@ class DistributionBatchModel extends Model
             $row = $this->select('distribution_batch.*, subsidy.name AS subsidy_type_name')
                 ->join('subsidy', 'subsidy.subsidy_type_id = distribution_batch.subsidy_type_id', 'left')
                 ->where('distribution_batch.closed_at', null)
+                // Raw and unqualified, because ->where('started_at !=', null)
+                // builds "started_at != NULL", which matches nothing, and a
+                // table-qualified raw string skips the query builder's prefix
+                // handling. A batch scheduled ahead sits with both columns null
+                // until reconcileSchedule() opens it, and must not read as
+                // active before its scheduled day arrives.
+                ->where('started_at IS NOT NULL', null, false)
                 ->orderBy('distribution_batch.batch_id', 'DESC')
                 ->first();
 

@@ -16,11 +16,14 @@
 
 
 
-<?php if ($activeBatch === null): ?>
-<div class="alert alert-warning" role="alert">
-  No active distribution batch. Ask an administrator to start one.
+<div class="alert <?= ($scheduleBanner['state'] ?? 'idle') === 'open' ? 'alert-success' : 'alert-secondary' ?>" role="status">
+  <?php foreach (($scheduleBanner['lines'] ?? []) as $line): ?>
+    <p class="mb-1"><?= esc($line) ?></p>
+  <?php endforeach; ?>
+  <p class="small text-muted mb-0">System time: <?= esc($systemNow ?? '') ?></p>
 </div>
-<?php else: ?>
+
+<?php if ($activeBatch !== null): ?>
 
 <div class="row g-3 align-items-end mb-3">
   <div class="col-12">

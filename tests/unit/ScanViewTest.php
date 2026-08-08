@@ -37,9 +37,13 @@ final class ScanViewTest extends CIUnitTestCase
         $this->assertStringNotContainsString('name="service_id"', $this->html);
     }
 
-    public function testNoActiveBatchEmptyState(): void
+    public function testScheduleBannerAlwaysRenders(): void
     {
-        $this->assertStringContainsString('No active distribution batch', $this->html);
+        // Replaces the old "No active distribution batch" refusal: the banner
+        // states what is scheduled (or running) and the system clock, in both
+        // the open and idle states.
+        $this->assertStringContainsString('scheduleBanner', $this->html);
+        $this->assertStringContainsString('System time:', $this->html);
     }
 
     public function testTwoColumnResponsiveGrid(): void

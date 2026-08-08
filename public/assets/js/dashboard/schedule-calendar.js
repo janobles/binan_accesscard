@@ -15,6 +15,16 @@
   const form = document.getElementById('scheduleForm');
   const modalEl = document.getElementById('scheduleFormModal');
   const modal = modalEl ? new bootstrap.Modal(modalEl) : null;
+  const KNOWN_COLORS = ['green', 'yellow', 'orange', 'red', 'purple', 'blue'];
+
+  // A response the server never sent as JSON (a 500 HTML page, a dropped
+  // connection) resolves body to null here instead of throwing, so every
+  // caller can check res.body === null and give the same plain message.
+  function readJsonResponse(r) {
+    return r.json().catch(function () { return null; }).then(function (body) {
+      return { status: r.status, body: body };
+    });
+  }
 
   function openForm(start, end, event) {
     if (!modal) return;
@@ -63,14 +73,18 @@
     // The feed already answers with `from` and `to` defaults, and FullCalendar
     // appends its own start and end, so the month in view is what comes back.
     eventDataTransform: function (raw) {
+      // The feed is our own endpoint, but the colour still lands here as a
+      // plain string; fall back to green rather than build a CSS var name
+      // out of whatever the response happens to contain.
+      const color = KNOWN_COLORS.indexOf(raw.color) !== -1 ? raw.color : 'green';
       return {
         id: raw.id,
         title: raw.title,
         start: raw.start,
         end: raw.end,
         allDay: true,
-        backgroundColor: 'var(--batch-' + raw.color + ')',
-        borderColor: 'var(--batch-' + raw.color + ')',
+        backgroundColor: 'var(--batch-' + color + ')',
+        borderColor: 'var(--batch-' + color + ')',
         editable: canManage && raw.editable,
         classNames: raw.status === 'finished' ? ['batch-finished'] : [],
         extendedProps: raw
@@ -118,11 +132,15 @@
   form.addEventListener('submit', function (e) {
     e.preventDefault();
     fetch(form.action, { method: 'POST', body: new FormData(form), headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-      .then(function (r) { return r.json().then(function (body) { return { status: r.status, body: body }; }); })
+      .then(readJsonResponse)
       .then(function (res) {
         if (res.status === 200) {
           modal.hide();
           calendar.refetchEvents();
+          return;
+        }
+        if (res.body === null) {
+          window.alert('Could not save this schedule. Check the connection and try again.');
           return;
         }
         if (res.status === 409 && res.body.error === 'overlap') {
@@ -137,12 +155,14 @@
               method: 'POST',
               body: new FormData(form),
               headers: { 'X-Requested-With': 'XMLHttpRequest' }
-            }).then(function () { form.requestSubmit(); });
+            }).then(function () { form.requestSubmit(); })
+              .catch(function () { window.alert('Could not replace ' + c.name + '. Check the connection and try again.'); });
           }
           return;
         }
         window.alert(res.body.message || 'Could not save this schedule.');
-      });
+      })
+      .catch(function () { window.alert('Could not save this schedule. Check the connection and try again.'); });
   });
 
   document.getElementById('scheduleDelete').addEventListener('click', function () {
@@ -155,15 +175,20 @@
       body: new FormData(form),
       headers: { 'X-Requested-With': 'XMLHttpRequest' }
     })
-      .then(function (r) { return r.json().then(function (b) { return { status: r.status, body: b }; }); })
+      .then(readJsonResponse)
       .then(function (res) {
         if (res.status === 200) {
           modal.hide();
           calendar.refetchEvents();
           return;
         }
+        if (res.body === null) {
+          window.alert('Could not remove this schedule. Check the connection and try again.');
+          return;
+        }
         window.alert(res.body.message || 'Could not remove this schedule.');
-      });
+      })
+      .catch(function () { window.alert('Could not remove this schedule. Check the connection and try again.'); });
   });
 
   const newBtn = document.getElementById('newScheduleBtn');

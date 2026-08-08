@@ -1,7 +1,8 @@
 <?php
 /**
- * Dashboard schedule card: the current month with the days each batch covers
- * marked, and the running or next batches listed beneath.
+ * Dashboard schedule card: the current month with a spanning bar for each
+ * batch's days, today ringed, and the running or next two batches listed
+ * beneath.
  *
  * Read only. Plotting happens on the Schedule tab of the distribution page,
  * which the heading links to. The grid is written by hand rather than with
@@ -9,14 +10,15 @@
  * more than drawing a static month.
  *
  * Data source: DashboardPageBuilder::buildViewData(), keys upcomingSchedule
- * and scheduleMonthDays.
+ * and scheduleGrid (see buildScheduleGrid() for the grid's shape).
  */
-$upcomingSchedule  = $upcomingSchedule ?? [];
-$scheduleMonthDays = $scheduleMonthDays ?? [];
-
-$first     = (int) date('N', strtotime(date('Y-m-01'))) % 7; // leading blanks, Sunday first
-$daysInMonth = (int) date('t');
-$today       = date('Y-m-d');
+$upcomingSchedule = $upcomingSchedule ?? [];
+$scheduleGrid     = $scheduleGrid ?? ['weeks' => [], 'bars' => []];
+$weeks            = $scheduleGrid['weeks'];
+$barsByWeek       = [];
+foreach ($scheduleGrid['bars'] as $bar) {
+    $barsByWeek[$bar['weekIndex']][] = $bar;
+}
 ?>
 <div class="card mb-4">
   <div class="card-header d-flex justify-content-between align-items-center">
@@ -25,39 +27,31 @@ $today       = date('Y-m-d');
   </div>
   <div class="card-body">
     <p class="fw-semibold mb-2"><?= esc(date('F Y')) ?></p>
-    <table class="table table-sm text-center mb-3">
-      <thead>
-        <tr class="text-muted small">
-          <th>S</th><th>M</th><th>T</th><th>W</th><th>T</th><th>F</th><th>S</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <?php for ($blank = 0; $blank < $first; $blank++): ?>
-            <td></td>
-          <?php endfor; ?>
-          <?php for ($day = 1; $day <= $daysInMonth; $day++): ?>
-            <?php
-              $date  = date('Y-m-') . str_pad((string) $day, 2, '0', STR_PAD_LEFT);
-              $color = $scheduleMonthDays[$date] ?? null;
-            ?>
-            <td<?= $date === $today ? ' class="fw-bold"' : '' ?>>
-              <?= esc((string) $day) ?>
-              <?php if ($color !== null): ?>
-                <span class="d-block mx-auto rounded-circle" aria-hidden="true"
-                      style="width:5px;height:5px;background:var(--batch-<?= esc($color, 'attr') ?>)"></span>
-              <?php endif; ?>
-            </td>
-            <?php if ((($day + $first) % 7) === 0 && $day !== $daysInMonth): ?>
-              </tr><tr>
-            <?php endif; ?>
-          <?php endfor; ?>
-        </tr>
-      </tbody>
-    </table>
+    <div class="dash-schedule-heading text-muted small">
+      <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+    </div>
+    <?php foreach ($weeks as $weekIndex => $week): ?>
+      <?php
+        $laneCount = 0;
+        foreach ($barsByWeek[$weekIndex] ?? [] as $bar) {
+            $laneCount = max($laneCount, $bar['lane'] + 1);
+        }
+      ?>
+      <div class="dash-schedule-week" style="grid-template-rows:1.5rem repeat(<?= max(1, $laneCount) ?>, 6px);">
+        <?php foreach ($week as $col => $cell): ?>
+          <span class="dash-schedule-day<?= $cell['isToday'] ? ' is-today' : '' ?>" style="grid-column:<?= $col + 1 ?>">
+            <?= $cell['day'] !== null ? esc((string) $cell['day']) : '' ?>
+          </span>
+        <?php endforeach; ?>
+        <?php foreach ($barsByWeek[$weekIndex] ?? [] as $bar): ?>
+          <span class="dash-schedule-bar<?= $bar['status'] === 'done' ? ' is-done' : '' ?>" aria-hidden="true"
+                style="grid-column:<?= $bar['startCol'] + 1 ?> / span <?= $bar['span'] ?>;grid-row:<?= $bar['lane'] + 2 ?>;background:var(--batch-<?= esc($bar['color'], 'attr') ?>)"></span>
+        <?php endforeach; ?>
+      </div>
+    <?php endforeach; ?>
 
     <?php if ($upcomingSchedule === []): ?>
-      <p class="text-muted small mb-0">Nothing scheduled. Plot a distribution on the calendar.</p>
+      <p class="text-muted small mb-0 mt-2">Nothing scheduled. Plot a distribution on the calendar.</p>
     <?php else: ?>
       <?php foreach ($upcomingSchedule as $row): ?>
         <div class="d-flex gap-2 align-items-start border-top pt-2 mt-2">
@@ -70,7 +64,7 @@ $today       = date('Y-m-d');
               <?= esc(date('M j', strtotime($row['start']))) ?><?= $row['end'] !== $row['start'] ? esc(' to ' . date('M j', strtotime($row['end']))) : '' ?>
             </span>
             <?php if ($row['status'] === 'running'): ?>
-              <span class="badge bg-success-subtle text-success-emphasis mt-1">Scanning open</span>
+              <span class="badge bg-success mt-1">Scanning open</span>
             <?php endif; ?>
           </div>
         </div>

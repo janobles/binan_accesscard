@@ -324,9 +324,9 @@ class DashboardPageBuilder
             'upcomingSchedule'   => $isDashboard && $dashboardView === 'overview'
                 ? $this->buildUpcomingSchedule($batchModel)
                 : [],
-            'scheduleMonthDays'  => $isDashboard && $dashboardView === 'overview'
-                ? $this->buildScheduleMonthDays($batchModel)
-                : [],
+            'scheduleGrid'       => $isDashboard && $dashboardView === 'overview'
+                ? $this->buildScheduleGrid($batchModel)
+                : ['weeks' => [], 'bars' => []],
             'busiestDay'         => self::busiestDay($reportsData['batchSnapshot']['byDay'] ?? []),
             // Only the roles that may open the record-entry page get the Add and
             // Import buttons on the records list (Config\Navigation, records-entry).
@@ -632,7 +632,7 @@ class DashboardPageBuilder
                 'status'   => $status,
             ];
 
-            if (count($rows) === 3) {
+            if (count($rows) === 2) {
                 break;
             }
         }
@@ -641,29 +641,122 @@ class DashboardPageBuilder
     }
 
     /**
-     * Every day of the current month that a batch covers, mapped to that
-     * batch's colour, so the card's grid can mark them without the view
-     * repeating the date arithmetic.
+     * The dashboard schedule card's month grid, as cells to print day numbers
+     * and bars to draw across them, so the view never touches date arithmetic.
      *
-     * @return array<string,string> 'Y-m-d' => colour name
+     * A cell only carries a day number and whether it's today; the leading and
+     * trailing blanks of the first and last week are left out (null day). A
+     * bar is one batch's contiguous run of days within a single week row: a
+     * batch is clipped to the visible month first, then split at each week
+     * boundary it crosses, so a run over a Sunday becomes two bars and a run
+     * crossing into another month is cut off at the edge. `startCol` and
+     * `lane` are both 0 based; `lane` only rises above 0 when two batches
+     * cover the same days in the same week, which the scheduler otherwise
+     * refuses.
+     *
+     * @return array{
+     *     weeks: list<list<array{day: ?int, isToday: bool}>>,
+     *     bars: list<array{weekIndex: int, startCol: int, span: int, lane: int, color: string, status: string}>
+     * }
      */
-    private function buildScheduleMonthDays(DistributionBatchModel $batchModel): array
+    private function buildScheduleGrid(DistributionBatchModel $batchModel): array
     {
-        $first = date('Y-m-01');
-        $last  = date('Y-m-t');
-        $days  = [];
+        $monthStart  = date('Y-m-01');
+        $monthEnd    = date('Y-m-t');
+        $today       = date('Y-m-d');
+        $leading     = (int) date('w', strtotime($monthStart));
+        $daysInMonth = (int) date('t');
+        $weekCount   = (int) ceil(($leading + $daysInMonth) / 7);
 
-        foreach ($batchModel->scheduledBetween($first, $last) as $batch) {
-            $cursor = max((string) $batch['scheduled_start'], $first);
-            $stop   = min((string) $batch['scheduled_end'], $last);
+        $weeks = [];
+        for ($w = 0; $w < $weekCount; $w++) {
+            $week = [];
+            for ($c = 0; $c < 7; $c++) {
+                $dayNum = $w * 7 + $c - $leading + 1;
+                $isDay  = $dayNum >= 1 && $dayNum <= $daysInMonth;
+                $week[] = [
+                    'day'     => $isDay ? $dayNum : null,
+                    'isToday' => $isDay && date('Y-m-') . str_pad((string) $dayNum, 2, '0', STR_PAD_LEFT) === $today,
+                ];
+            }
+            $weeks[] = $week;
+        }
 
-            while ($cursor <= $stop) {
-                $days[$cursor] = (string) $batch['color'];
-                $cursor        = date('Y-m-d', strtotime($cursor . ' +1 day'));
+        $bars = [];
+        foreach ($batchModel->scheduledBetween($monthStart, $monthEnd) as $batch) {
+            $start = max((string) $batch['scheduled_start'], $monthStart);
+            $end   = min((string) $batch['scheduled_end'], $monthEnd);
+            if ($start > $end) {
+                continue;
+            }
+
+            $status = 'upcoming';
+            if ($batch['closed_at'] !== null) {
+                $status = 'done';
+            } elseif ($batch['started_at'] !== null) {
+                $status = 'running';
+            }
+
+            $startOffset = $leading + (int) date('j', strtotime($start)) - 1;
+            $endOffset   = $leading + (int) date('j', strtotime($end)) - 1;
+
+            for ($weekIndex = intdiv($startOffset, 7); $weekIndex <= intdiv($endOffset, 7); $weekIndex++) {
+                $weekFrom = $weekIndex * 7;
+                $weekTo   = $weekFrom + 6;
+                $segFrom  = max($startOffset, $weekFrom);
+                $segTo    = min($endOffset, $weekTo);
+
+                $bars[] = [
+                    'weekIndex' => $weekIndex,
+                    'startCol'  => $segFrom - $weekFrom,
+                    'span'      => $segTo - $segFrom + 1,
+                    'lane'      => 0,
+                    'color'     => (string) $batch['color'],
+                    'status'    => $status,
+                ];
             }
         }
 
-        return $days;
+        return ['weeks' => $weeks, 'bars' => self::assignScheduleLanes($bars)];
+    }
+
+    /**
+     * Gives each bar the lowest lane index that keeps it clear of every other
+     * bar sharing its week and columns, so two batches covering the same days
+     * stack into separate rows instead of drawing on top of each other. The
+     * scheduler refuses overlapping dates, so in practice every bar lands on
+     * lane 0; this only matters if that rule is ever relaxed.
+     *
+     * @param list<array{weekIndex: int, startCol: int, span: int, lane: int, color: string, status: string}> $bars
+     * @return list<array{weekIndex: int, startCol: int, span: int, lane: int, color: string, status: string}>
+     */
+    private static function assignScheduleLanes(array $bars): array
+    {
+        $lanesByWeek = [];
+
+        foreach ($bars as &$bar) {
+            $lane = 0;
+            while (self::laneTaken($lanesByWeek, $bar, $lane)) {
+                $lane++;
+            }
+            $bar['lane']                             = $lane;
+            $lanesByWeek[$bar['weekIndex']][$lane][] = $bar;
+        }
+
+        return $bars;
+    }
+
+    /** Whether any bar already placed in this week and lane shares a column with $bar. */
+    private static function laneTaken(array $lanesByWeek, array $bar, int $lane): bool
+    {
+        foreach ($lanesByWeek[$bar['weekIndex']][$lane] ?? [] as $placed) {
+            if ($placed['startCol'] < $bar['startCol'] + $bar['span']
+                && $bar['startCol'] < $placed['startCol'] + $placed['span']) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

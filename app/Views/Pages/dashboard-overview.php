@@ -5,7 +5,9 @@
  *
  * Figures come from DashboardModel::programStats() and the per-batch outcome
  * rows from DashboardPageBuilder::buildDistributionRows(), both handed over by
- * DashboardPageBuilder::buildViewData().
+ * DashboardPageBuilder::buildViewData(). The schedule card at the bottom is
+ * Admin/dashboard-schedule-card.php, fed by the same builder's
+ * buildUpcomingSchedule() and buildScheduleMonthDays().
  *
  * The tiles carry no icon and no card header block. That is a deliberate
  * exception to the SB Admin card convention, scoped to KPI tiles: an icon
@@ -81,4 +83,12 @@ $cards = [
       </tbody>
     </table>
   </div>
+</section>
+
+<section class="batch-pane">
+  <h3 class="batch-pane-title">Upcoming schedule</h3>
+  <?= view('Admin/dashboard-schedule-card', [
+      'upcomingSchedule'  => $upcomingSchedule ?? [],
+      'scheduleMonthDays' => $scheduleMonthDays ?? [],
+  ]) ?>
 </section>

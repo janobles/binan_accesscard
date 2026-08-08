@@ -321,6 +321,12 @@ class DashboardPageBuilder
             'distributionRows'   => $isDashboard && $dashboardView === 'overview'
                 ? $this->buildDistributionRows($batchModel)
                 : [],
+            'upcomingSchedule'  => $isDashboard && $dashboardView === 'overview'
+                ? $this->buildUpcomingSchedule($batchModel)
+                : [],
+            'scheduleMonthDays' => $isDashboard && $dashboardView === 'overview'
+                ? $this->buildScheduleMonthDays($batchModel)
+                : [],
             'busiestDay'         => self::busiestDay($reportsData['batchSnapshot']['byDay'] ?? []),
             // Only the roles that may open the record-entry page get the Add and
             // Import buttons on the records list (Config\Navigation, records-entry).
@@ -594,6 +600,70 @@ class DashboardPageBuilder
                 'coverage' => $eligible === 0 ? 0 : (int) round($count / $eligible * 100),
             ];
         }, $batchModel->allBatches());
+    }
+
+    /**
+     * The batch running now, if any, then the next two plotted ones, for the
+     * dashboard's schedule card.
+     *
+     * @return list<array{batch_id:int,name:string,venue:string,start:string,end:string,color:string,status:string}>
+     */
+    private function buildUpcomingSchedule(DistributionBatchModel $batchModel): array
+    {
+        $today = date('Y-m-d');
+        $rows  = [];
+
+        foreach ($batchModel->scheduledBetween($today, date('Y-m-d', strtotime('+6 months'))) as $batch) {
+            $status = 'upcoming';
+            if ($batch['closed_at'] !== null) {
+                continue;
+            }
+            if ($batch['started_at'] !== null) {
+                $status = 'running';
+            }
+
+            $rows[] = [
+                'batch_id' => (int) $batch['batch_id'],
+                'name'     => (string) $batch['name'],
+                'venue'    => (string) $batch['venue'],
+                'start'    => (string) $batch['scheduled_start'],
+                'end'      => (string) $batch['scheduled_end'],
+                'color'    => (string) $batch['color'],
+                'status'   => $status,
+            ];
+
+            if (count($rows) === 3) {
+                break;
+            }
+        }
+
+        return $rows;
+    }
+
+    /**
+     * Every day of the current month that a batch covers, mapped to that
+     * batch's colour, so the card's grid can mark them without the view
+     * repeating the date arithmetic.
+     *
+     * @return array<string,string> 'Y-m-d' => colour name
+     */
+    private function buildScheduleMonthDays(DistributionBatchModel $batchModel): array
+    {
+        $first = date('Y-m-01');
+        $last  = date('Y-m-t');
+        $days  = [];
+
+        foreach ($batchModel->scheduledBetween($first, $last) as $batch) {
+            $cursor = max((string) $batch['scheduled_start'], $first);
+            $stop   = min((string) $batch['scheduled_end'], $last);
+
+            while ($cursor <= $stop) {
+                $days[$cursor] = (string) $batch['color'];
+                $cursor        = date('Y-m-d', strtotime($cursor . ' +1 day'));
+            }
+        }
+
+        return $days;
     }
 
     /**

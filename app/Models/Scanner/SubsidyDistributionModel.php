@@ -13,7 +13,7 @@ class SubsidyDistributionModel extends Model
     protected $table         = 'subsidy_distribution';
     protected $primaryKey    = 'distribution_id';
     protected $returnType    = 'array';
-    protected $allowedFields = ['control_no', 'memberID', 'subsidy_type_id', 'claim_date', 'userID', 'batch_id', 'dt_voided'];
+    protected $allowedFields = ['control_no', 'memberID', 'subsidy_type_id', 'claim_date', 'userID', 'batch_id', 'dt_voided', 'dt_created'];
     protected $useTimestamps = false;
 
     /** Inserts one distribution row and returns its distribution_id. */
@@ -32,6 +32,12 @@ class SubsidyDistributionModel extends Model
         // getInsertID() reports the last id on the connection, which after a failed
         // insert is some earlier row's - returning it would report a handout that
         // was never recorded. Only ask for it once the insert actually succeeded.
+        //
+        // dt_created is stamped here from PHP rather than left to the column's
+        // current_timestamp() default: the batch lifecycle (BatchScheduleWindow)
+        // compares this value against PHP's own now(), and the two must share one
+        // clock. PHP runs UTC while MySQL runs local time, so a default-timestamp
+        // row would land hours away from what reconcileSchedule() expects.
         if ($this->insert([
             'control_no'  => (int) $data['control_no'],
             'memberID'    => (int) $data['memberID'],
@@ -39,6 +45,7 @@ class SubsidyDistributionModel extends Model
             'claim_date'  => $data['claim_date'],
             'userID'      => isset($data['userID']) && (int) $data['userID'] > 0 ? (int) $data['userID'] : null,
             'batch_id'    => isset($data['batch_id']) && (int) $data['batch_id'] > 0 ? (int) $data['batch_id'] : null,
+            'dt_created'  => date('Y-m-d H:i:s'),
         ]) === false) {
             return 0;
         }

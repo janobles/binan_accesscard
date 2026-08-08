@@ -87,4 +87,41 @@ final class SubsidyDistributionModelTest extends CIUnitTestCase
 
         $this->assertSame(5, (int) ($model->inserted['batch_id'] ?? 0));
     }
+
+    public function testLogAidStampsDtCreatedFromPhp(): void
+    {
+        // The batch lifecycle compares dt_created against PHP's own now(), so a
+        // scan row must carry a PHP-stamped time rather than fall back to the
+        // column's current_timestamp() default, which runs on MySQL's clock.
+        $model = new class () extends SubsidyDistributionModel {
+            /** @var array<string, mixed> */
+            public array $inserted = [];
+
+            public function insert($row = null, bool $returnID = true)
+            {
+                $this->inserted = (array) $row;
+
+                return 1;
+            }
+
+            public function getInsertID(): int
+            {
+                return 1;
+            }
+        };
+
+        $before = date('Y-m-d H:i:s');
+        $model->logAid([
+            'control_no'      => 42,
+            'memberID'        => 7,
+            'subsidy_type_id' => 3,
+            'claim_date'      => '2026-08-07',
+            'batch_id'        => 5,
+        ]);
+        $after = date('Y-m-d H:i:s');
+
+        $this->assertArrayHasKey('dt_created', $model->inserted);
+        $this->assertGreaterThanOrEqual($before, $model->inserted['dt_created']);
+        $this->assertLessThanOrEqual($after, $model->inserted['dt_created']);
+    }
 }

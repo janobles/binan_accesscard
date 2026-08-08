@@ -321,10 +321,10 @@ class DashboardPageBuilder
             'distributionRows'   => $isDashboard && $dashboardView === 'overview'
                 ? $this->buildDistributionRows($batchModel)
                 : [],
-            'upcomingSchedule'  => $isDashboard && $dashboardView === 'overview'
+            'upcomingSchedule'   => $isDashboard && $dashboardView === 'overview'
                 ? $this->buildUpcomingSchedule($batchModel)
                 : [],
-            'scheduleMonthDays' => $isDashboard && $dashboardView === 'overview'
+            'scheduleMonthDays'  => $isDashboard && $dashboardView === 'overview'
                 ? $this->buildScheduleMonthDays($batchModel)
                 : [],
             'busiestDay'         => self::busiestDay($reportsData['batchSnapshot']['byDay'] ?? []),

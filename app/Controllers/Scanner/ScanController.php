@@ -104,11 +104,16 @@ class ScanController extends BaseController
         // Starts from today, not tomorrow: a batch plotted for today that has
         // not opened yet (before its daily_start_time, or before a reconcile
         // has run) is still the one worth naming, not "nothing plotted ahead".
-        // Closed batches are excluded so a plan that already ran today does
-        // not get announced twice.
+        //
+        // Excludes by scheduled_end, not closed_at: a multi-day batch grace-
+        // closes between days and reopens the next one still inside its span
+        // (BatchScheduleWindow::verdict()'s reopen branch), so closed_at alone
+        // does not mean finished - a blanket closed_at check would drop a
+        // batch that is due to resume tomorrow. scheduled_end < today is the
+        // only signal that a plotted span has genuinely passed.
         $upcoming = array_values(array_filter(
             model(DistributionBatchModel::class)->scheduledBetween($today, date('Y-m-d', strtotime('+1 year'))),
-            static fn (array $b): bool => $b['closed_at'] === null
+            static fn (array $b): bool => (string) $b['scheduled_end'] >= $today
         ));
         $next = $upcoming[0] ?? null;
 

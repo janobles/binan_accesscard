@@ -137,6 +137,109 @@ class DistributionBatchModel extends Model
     }
 
     /**
+     * Brings batch state in line with the clock: opens the batch whose plotted
+     * span contains today, closes one whose day has finished. Safe to call on
+     * every request and a no-op when nothing is due, which is what lets a
+     * request filter own the trigger instead of a scheduled task on a laptop
+     * that travels to the venue.
+     *
+     * @param string|null $now 'Y-m-d H:i:s'. Tests pass it; production does not.
+     */
+    public function reconcileSchedule(?string $now = null): void
+    {
+        $now ??= date('Y-m-d H:i:s');
+        $today = substr($now, 0, 10);
+
+        try {
+            // The one batch whose span contains today, or the newest still-open
+            // one whose span has passed. Overlaps are refused at save time, so
+            // there is never more than one of the first kind.
+            $row = $this->groupStart()
+                    ->where('scheduled_start <=', $today)
+                    ->where('scheduled_end >=', $today)
+                ->groupEnd()
+                ->orGroupStart()
+                    ->where('scheduled_end <', $today)
+                    ->where('closed_at', null)
+                    // Raw, because ->where('started_at !=', null) builds
+                    // "started_at != NULL", which matches nothing.
+                    ->where('started_at IS NOT NULL', null, false)
+                ->groupEnd()
+                ->orderBy('scheduled_start', 'DESC')
+                ->first();
+
+            if (! is_array($row)) {
+                return;
+            }
+
+            $batchId = (int) $row['batch_id'];
+            $verdict = \App\Libraries\BatchScheduleWindow::verdict(
+                $row,
+                $this->lastScanAt($batchId),
+                $now
+            );
+
+            if ($verdict['action'] === 'open') {
+                $this->openDue($row, $now);
+
+                return;
+            }
+
+            if ($verdict['action'] === 'close') {
+                $this->update($batchId, ['closed_at' => $verdict['closed_at']]);
+                (new SubsidyStatsModel())->forgetBatch($batchId);
+                $this->auditLifecycle('Closed distribution batch "' . (string) $row['name'] . '" #' . $batchId . ' on schedule', 'Recorded end: ' . (string) $verdict['closed_at']);
+            }
+        } catch (\Throwable $e) {
+            // Reconcile is best effort on a page request. A DB hiccup must not
+            // take the page down; the next request tries again and computes the
+            // same answer.
+        }
+    }
+
+    /**
+     * Applies an open verdict: stamps started_at and freezes the roster the
+     * first time, clears closed_at on a later day or after a premature grace
+     * close. The roster never rebuilds on reopen, because a running batch's
+     * coverage figure must not drift under it.
+     */
+    private function openDue(array $row, string $now): void
+    {
+        $batchId = (int) $row['batch_id'];
+
+        if (($row['started_at'] ?? null) === null) {
+            $this->update($batchId, ['started_at' => $now, 'closed_at' => null]);
+
+            if ($this->freezeRoster($batchId) === false) {
+                return;
+            }
+
+            $eligible = (int) ($this->find($batchId)['eligible_count'] ?? 0);
+            $this->auditLifecycle(
+                'Opened distribution batch "' . (string) $row['name'] . '" #' . $batchId . ' on schedule',
+                'Eligible families: ' . $eligible . '; venue: ' . (string) ($row['venue'] ?? '')
+            );
+
+            return;
+        }
+
+        $this->update($batchId, ['closed_at' => null]);
+        (new SubsidyStatsModel())->forgetBatch($batchId);
+        $this->auditLifecycle('Reopened distribution batch "' . (string) $row['name'] . '" #' . $batchId, 'Still inside its scheduled days.');
+    }
+
+    /** Audit row for an automatic transition. User id 0 reads as the system. */
+    private function auditLifecycle(string $action, ?string $detail = null): void
+    {
+        try {
+            (new \App\Models\Audit\AuditTrailsModel())->logAction(0, null, $action, $detail);
+        } catch (\Throwable $e) {
+            // A missing audit row must not roll back a lifecycle transition
+            // that already happened.
+        }
+    }
+
+    /**
      * Freezes the batch's eligibility roster and records the size. Returns the
      * count, or false on a write failure, matching EligibilityBuilder so a
      * caller can tell a failed write from an empty roster.

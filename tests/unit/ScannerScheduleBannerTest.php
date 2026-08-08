@@ -67,6 +67,58 @@ final class ScannerScheduleBannerTest extends CIUnitTestCase
         $this->assertStringContainsString(date('F j, Y'), $body);
     }
 
+    /**
+     * Calls the private scheduleBanner() directly rather than through
+     * GET scanner/scan: that route runs BatchScheduleFilter first, which
+     * would reconcile (and so auto-open) any batch whose span includes today
+     * before the controller ever builds the banner, masking exactly the
+     * not-yet-opened state these two cases pin.
+     */
+    private function banner(?array $activeBatch): array
+    {
+        $method = new \ReflectionMethod(\App\Controllers\Scanner\ScanController::class, 'scheduleBanner');
+        $method->setAccessible(true);
+
+        return $method->invoke(new \App\Controllers\Scanner\ScanController(), $activeBatch);
+    }
+
+    public function testIdleBannerNamesABatchScheduledForTodayThatHasNotOpenedYet(): void
+    {
+        // scheduledBetween() sees the row (it touches today) even though
+        // reconcileSchedule() has not opened it yet. The old range started at
+        // tomorrow and would miss it, claiming nothing is plotted ahead when a
+        // batch is, in fact, plotted for right now.
+        db_connect()->table('distribution_batch')->insert([
+            'batch_id' => 1, 'name' => 'AICS Payout - Cluster 1', 'venue' => 'Alonte Sports Arena',
+            'subsidy_type_id' => 1,
+            'scheduled_start' => date('Y-m-d'), 'scheduled_end' => date('Y-m-d'),
+            'daily_start_time' => '08:00:00', 'daily_end_time' => '17:00:00',
+            'color' => 'green', 'started_at' => null, 'closed_at' => null, 'eligible_count' => 0,
+        ]);
+
+        $banner = $this->banner(null);
+
+        $this->assertStringContainsString('Scheduled today, not open yet.', implode(' ', $banner['lines']));
+        $this->assertStringContainsString('AICS Payout - Cluster 1', implode(' ', $banner['lines']));
+        $this->assertStringContainsString('Alonte Sports Arena', implode(' ', $banner['lines']));
+    }
+
+    public function testIdleBannerWithNoVenueHasNoDoubleComma(): void
+    {
+        db_connect()->table('distribution_batch')->insert([
+            'batch_id' => 1, 'name' => 'AICS Payout - Cluster 1', 'venue' => '',
+            'subsidy_type_id' => 1,
+            'scheduled_start' => date('Y-m-d', strtotime('+2 days')),
+            'scheduled_end'   => date('Y-m-d', strtotime('+3 days')),
+            'daily_start_time' => '08:00:00', 'daily_end_time' => '17:00:00',
+            'color' => 'green', 'started_at' => null, 'closed_at' => null, 'eligible_count' => 0,
+        ]);
+
+        $banner = $this->banner(null);
+
+        $this->assertStringNotContainsString('AICS Payout - Cluster 1, ,', implode(' ', $banner['lines']));
+    }
+
     public function testOpenBannerNamesTheVenueAndTheDay(): void
     {
         db_connect()->table('distribution_batch')->insert([

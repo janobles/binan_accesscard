@@ -101,18 +101,29 @@ class ScanController extends BaseController
             ];
         }
 
-        $next = model(DistributionBatchModel::class)
-            ->scheduledBetween(date('Y-m-d', strtotime('+1 day')), date('Y-m-d', strtotime('+1 year')))[0] ?? null;
+        // Starts from today, not tomorrow: a batch plotted for today that has
+        // not opened yet (before its daily_start_time, or before a reconcile
+        // has run) is still the one worth naming, not "nothing plotted ahead".
+        // Closed batches are excluded so a plan that already ran today does
+        // not get announced twice.
+        $upcoming = array_values(array_filter(
+            model(DistributionBatchModel::class)->scheduledBetween($today, date('Y-m-d', strtotime('+1 year'))),
+            static fn (array $b): bool => $b['closed_at'] === null
+        ));
+        $next = $upcoming[0] ?? null;
 
         if ($next === null) {
             return ['state' => 'idle', 'lines' => ['Nothing scheduled today, and nothing plotted ahead.']];
         }
 
+        $venuePart   = $next['venue'] !== '' ? ', ' . (string) $next['venue'] : '';
+        $startsToday = (string) $next['scheduled_start'] === $today;
+
         return [
             'state' => 'idle',
             'lines' => [
-                'Nothing scheduled today.',
-                'Next: ' . (string) $next['name'] . ', ' . (string) $next['venue'] . ', '
+                $startsToday ? 'Scheduled today, not open yet.' : 'Nothing scheduled today.',
+                ($startsToday ? 'Opens: ' : 'Next: ') . (string) $next['name'] . $venuePart . ', '
                     . date('D M j', strtotime((string) $next['scheduled_start'])) . ', '
                     . date('g:i A', strtotime((string) $next['daily_start_time'])) . '.',
             ],

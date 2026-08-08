@@ -152,5 +152,6 @@ class Filters extends BaseFilters
                 'session/keep-alive',
             ],
         ],
+        'batchSchedule' => ['before' => ['distribution', 'distribution/*', 'scanner/*']],
     ];
 }

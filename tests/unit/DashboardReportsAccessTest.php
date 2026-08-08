@@ -75,10 +75,10 @@ final class DashboardReportsAccessTest extends CIUnitTestCase
 
         $this->assertMatchesRegularExpression(
             "/\\\$routes->group\('distribution', \['filter' => 'roleNav:distribution'\].*?"
-            . "\\\$routes->post\('batches\/open'.*?\\\$routes->post\('batches\/close\/\(:num\)'"
+            . "\\\$routes->post\('batches\/close\/\(:num\)'"
             . ".*?\\\$routes->post\('void\/\(:num\)'/s",
             $routes,
-            'batch open/close/void must stay in the roleNav:distribution group'
+            'batch close/void must stay in the roleNav:distribution group'
         );
 
         $this->assertNotContains(

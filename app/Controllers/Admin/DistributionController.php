@@ -14,9 +14,10 @@ use CodeIgniter\HTTP\ResponseInterface;
 /**
  * Distribution-batch control and the all-distributions log. Who may open the
  * page is the roleNav filter's decision (Config\Navigation lists Viewer there
- * too); the batch and void actions below stay Admin/Developer only. Batch open
- * binds a subsidy type (from the subsidy reference table) for the whole batch.
- * Every mutation writes an audit_trails row. Rendered in the dashboard shell.
+ * too); the schedule, batch and void actions below stay Admin/Developer only.
+ * A schedule binds a subsidy type (from the subsidy reference table) for the
+ * whole batch. Every mutation writes an audit_trails row. Rendered in the
+ * dashboard shell.
  */
 class DistributionController extends BaseController
 {
@@ -82,39 +83,133 @@ class DistributionController extends BaseController
         ]);
     }
 
-    /** POST distribution/batches/open - name + subsidy type. */
-    public function openBatch(): RedirectResponse
+    /**
+     * GET distribution/schedule/feed - plotted batches touching ?from=&to=, in
+     * the shape FullCalendar consumes. `end` is exclusive, per its all-day
+     * event contract, so a batch ending Aug 21 reports Aug 22.
+     */
+    public function scheduleFeed(): ResponseInterface
+    {
+        $from = (string) ($this->request->getGet('from') ?? date('Y-m-01'));
+        $to   = (string) ($this->request->getGet('to') ?? date('Y-m-t'));
+
+        $model  = model(DistributionBatchModel::class);
+        $today  = date('Y-m-d');
+        $events = [];
+
+        foreach ($model->scheduledBetween($from, $to) as $batch) {
+            $id      = (int) $batch['batch_id'];
+            $filters = $model->filtersFor($id);
+            $status  = 'upcoming';
+            if ($batch['closed_at'] !== null) {
+                $status = 'finished';
+            } elseif ($batch['started_at'] !== null) {
+                $status = 'running';
+            }
+
+            $events[] = [
+                'id'            => $id,
+                'title'         => (string) $batch['name'],
+                'start'         => (string) $batch['scheduled_start'],
+                'end'           => date('Y-m-d', strtotime((string) $batch['scheduled_end'] . ' +1 day')),
+                'color'         => (string) $batch['color'],
+                'venue'         => (string) $batch['venue'],
+                'status'        => $status,
+                'subsidyTypeId' => (int) $batch['subsidy_type_id'],
+                'dailyStart'    => substr((string) $batch['daily_start_time'], 0, 5),
+                'dailyEnd'      => substr((string) $batch['daily_end_time'], 0, 5),
+                'barangayIds'   => $filters['barangays'],
+                'sectorIds'     => $filters['sectors'],
+                // Only a batch that has not started may be dragged or resized.
+                'editable'      => $batch['started_at'] === null && (string) $batch['scheduled_start'] > $today,
+            ];
+        }
+
+        return $this->response->setJSON($events);
+    }
+
+    /**
+     * POST distribution/schedule/save - creates or updates a plotted batch.
+     * Answers 409 with the clashing batch when the dates are taken, so the
+     * calendar can offer replacing a plan or refuse outright once that batch
+     * has scans against it.
+     */
+    public function saveSchedule(): ResponseInterface|RedirectResponse
     {
         if ($g = $this->guard()) { return $g; }
-        $name      = trim((string) $this->request->getPost('name'));
-        $subsidyTypeId = (int) $this->request->getPost('subsidy_type_id');
-        if ($name === '') {
-            return redirect()->to('distribution?tab=batches')->with('error', 'Batch name is required.');
-        }
-        if ($subsidyTypeId <= 0) {
-            return redirect()->to('distribution?tab=batches')->with('error', 'Choose a subsidy type for this batch.');
-        }
-        $barangayIds = array_map('intval', (array) $this->request->getPost('barangay_ids'));
-        $sectorIds   = array_map('intval', (array) $this->request->getPost('sector_ids'));
 
-        $batchModel = model(DistributionBatchModel::class);
-        $id         = $batchModel->open($name, $subsidyTypeId, (int) (session('user_id') ?? 0), $barangayIds, $sectorIds);
-        if ($id <= 0) {
-            $message = $batchModel->activeBatch() !== null
-                ? 'A batch is already open. Close the active batch before opening a new one.'
-                : 'Unable to open batch. Please try again or contact an administrator.';
+        $model = model(DistributionBatchModel::class);
+        $start = (string) $this->request->getPost('scheduled_start');
+        $end   = (string) $this->request->getPost('scheduled_end');
+        $id    = (int) $this->request->getPost('batch_id');
 
-            return redirect()->to('distribution?tab=batches')->with('error', $message);
+        if ($clash = $model->overlapping($start, $end, $id)) {
+            $clashId = (int) $clash['batch_id'];
+
+            return $this->response->setStatusCode(409)->setJSON([
+                'error' => 'overlap',
+                'clash' => [
+                    'id'          => $clashId,
+                    'name'        => (string) $clash['name'],
+                    'venue'       => (string) $clash['venue'],
+                    'start'       => (string) $clash['scheduled_start'],
+                    'end'         => (string) $clash['scheduled_end'],
+                    'replaceable' => ! $model->hasDistributions($clashId),
+                ],
+            ]);
         }
-        $eligible = (int) ($batchModel->find($id)['eligible_count'] ?? 0);
+
+        $saved = $model->saveSchedule([
+            'batch_id'         => $id,
+            'name'             => (string) $this->request->getPost('name'),
+            'venue'            => (string) $this->request->getPost('venue'),
+            'subsidy_type_id'  => (int) $this->request->getPost('subsidy_type_id'),
+            'scheduled_start'  => $start,
+            'scheduled_end'    => $end,
+            'daily_start_time' => (string) $this->request->getPost('daily_start_time') . ':00',
+            'daily_end_time'   => (string) $this->request->getPost('daily_end_time') . ':00',
+            'color'            => (string) $this->request->getPost('color'),
+            'barangay_ids'     => array_map('intval', (array) $this->request->getPost('barangay_ids')),
+            'sector_ids'       => array_map('intval', (array) $this->request->getPost('sector_ids')),
+        ], (int) (session('user_id') ?? 0));
+
+        if ($saved <= 0) {
+            return $this->response->setStatusCode(422)->setJSON([
+                'error'   => 'invalid',
+                'message' => 'Check the name, subsidy type and dates, then save again.',
+            ]);
+        }
+
         $this->audit(
-            'Opened distribution batch "' . $name . '" #' . $id . ' (subsidy type ID ' . $subsidyTypeId . ')',
+            ($id > 0 ? 'Updated' : 'Plotted') . ' distribution schedule "' . (string) $this->request->getPost('name') . '" #' . $saved,
             0,
-            'Eligible families: ' . $eligible
-                . '; barangays: ' . ($barangayIds === [] ? 'all' : implode(',', $barangayIds))
-                . '; sectors: ' . ($sectorIds === [] ? 'all' : implode(',', $sectorIds))
+            'Venue: ' . (string) $this->request->getPost('venue') . '; ' . $start . ' to ' . $end
         );
-        return redirect()->to('distribution?tab=batches')->with('success', 'Batch opened. Scanning is now live.');
+
+        return $this->response->setJSON(['id' => $saved]);
+    }
+
+    /**
+     * POST distribution/schedule/{id}/delete - removes a plotted batch. Refused
+     * by the model once scans exist, because deleting then would orphan them.
+     */
+    public function deleteSchedule(int $id): ResponseInterface|RedirectResponse
+    {
+        if ($g = $this->guard()) { return $g; }
+
+        $model = model(DistributionBatchModel::class);
+        $batch = $model->find($id);
+
+        if (! $model->deleteSchedule($id)) {
+            return $this->response->setStatusCode(409)->setJSON([
+                'error'   => 'has_distributions',
+                'message' => 'This batch already ran and families were served, so its record cannot be removed.',
+            ]);
+        }
+
+        $this->audit('Removed distribution schedule "' . (string) ($batch['name'] ?? '') . '" #' . $id);
+
+        return $this->response->setJSON(['ok' => true]);
     }
 
     /**

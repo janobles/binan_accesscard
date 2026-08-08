@@ -20,6 +20,11 @@ use CodeIgniter\HTTP\ResponseInterface;
  * acceptable because a batch matters only when someone is using it, and
  * DistributionBatchModel::reconcileSchedule() computes the same closed_at
  * whenever it runs.
+ *
+ * This runs before() on every matched request regardless of HTTP method, so a
+ * plain GET writes to the database: a Viewer opening the schedule feed, or
+ * anyone loading `distribution`, can open or close a batch and add an audit
+ * row as a side effect of reading a page.
  */
 class BatchScheduleFilter implements FilterInterface
 {

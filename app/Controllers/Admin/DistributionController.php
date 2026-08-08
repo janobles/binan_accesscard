@@ -200,6 +200,13 @@ class DistributionController extends BaseController
         $model = model(DistributionBatchModel::class);
         $batch = $model->find($id);
 
+        if ($batch === null) {
+            return $this->response->setStatusCode(404)->setJSON([
+                'error'   => 'not_found',
+                'message' => 'This schedule no longer exists.',
+            ]);
+        }
+
         if (! $model->deleteSchedule($id)) {
             return $this->response->setStatusCode(409)->setJSON([
                 'error'   => 'has_distributions',
@@ -207,7 +214,7 @@ class DistributionController extends BaseController
             ]);
         }
 
-        $this->audit('Removed distribution schedule "' . (string) ($batch['name'] ?? '') . '" #' . $id);
+        $this->audit('Removed distribution schedule "' . (string) $batch['name'] . '" #' . $id);
 
         return $this->response->setJSON(['ok' => true]);
     }

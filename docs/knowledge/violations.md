@@ -179,6 +179,12 @@ rendering needs inline styles), layout shells + `Auth/login.php` (standalone
   fail a check that cannot be satisfied without failing the token gate.
   *(Fixed: a view's inline script is `T_INLINE_HTML`, so it never reaches either
   scan now that both read comment text only - chore/backlog-cleanup.)*
+- [ ] ⚪ Cleanup: `docs/knowledge/binan-conventions/scanner-batches.md` (Rules 3
+  and 5) - still names `aid_type_id` and `AidDistributionModel`, both renamed
+  to `subsidy_type_id`/`SubsidyDistributionModel` by the V19 subsidy rename.
+  Spotted while updating the doc for the schedule calendar (feat/
+  distribution-schedule-calendar); out of scope there, left for a pass over
+  the whole file.
 - [x] 🟠 Major: `app/Views/components/data_table.php` - passes table rows as
   `list<list<raw HTML>>`, so the caller concatenates markup and owns the
   escaping (the docblock says as much: "Cell values are RAW HTML"). Every other

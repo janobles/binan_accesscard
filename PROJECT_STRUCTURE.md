@@ -1,6 +1,6 @@
 # Project Structure
 
-Normal CodeIgniter 4 layout. The database source of truth is `accesscardV20.sql`;
+Normal CodeIgniter 4 layout. The database source of truth is `accesscardV21.sql`;
 no app migrations are used.
 
 ## Navigation and URL space
@@ -11,6 +11,10 @@ no app migrations are used.
   page titles, and per-page role access.
 - `app/Filters/RoleNavFilter.php` (alias `roleNav`) - gates a route on its manifest
   key. A role with no entry gets a 404, not a redirect.
+- `app/Filters/BatchScheduleFilter.php` (alias `batchSchedule`) - runs
+  `DistributionBatchModel::reconcileSchedule()` before scanner and distribution
+  requests, so a plotted batch opens and closes on its own without a scheduled
+  task on the laptop that travels to the venue.
 - Routes carry no role prefix. One page, one URI: `dashboard`, `records`,
   `reference-data`, `cards`, `distribution`, `accounts`, `audit-trails`, plus
   `records/entry`, `records/import`, `records/{id}`. The `scanner/` kiosk keeps its
@@ -50,8 +54,11 @@ Controllers and models are grouped into **feature subnamespaces** so each slice
   `reference-data`.
 - `Admin/SubsidyTypesController.php` - Admin/Developer-only subsidy-type CRUD under
   `reference-data/subsidy-types/*`.
-- `Admin/DistributionController.php` - batch open/close (a subsidy type is bound to
-  the batch at open) and distribution void, under `distribution/*`.
+- `Admin/DistributionController.php` - the Schedule tab's feed/save/delete
+  endpoints (a subsidy type is bound to the batch at plot time), a manual
+  batch close, and distribution void, under `distribution/*`. Batches open and
+  close themselves on schedule; see `App\Libraries\BatchScheduleWindow` and
+  `App\Filters\BatchScheduleFilter` below.
 - `Admin/ReportsController.php` - distribution reports (combined totals, per-kiosk
   drilldown, PDF export), batch-scoped.
 - `Scanner/ScanController.php` - kiosk-only one-action scan flow (`scanner/scan`,
@@ -71,6 +78,9 @@ Controllers and models are grouped into **feature subnamespaces** so each slice
   (table `subsidy_distribution`, key `distribution_id`), `SubsidyStatsModel.php`,
   `DistributionBatchModel.php`, `QrControlModel.php` - subsidy types, the
   single-open-batch invariant, handout logging, and batch/per-kiosk stats.
+  `DistributionBatchModel::saveSchedule()`/`overlapping()`/`scheduledBetween()`/
+  `reconcileSchedule()` plot and run the schedule that replaces a manual
+  open/close.
 - `Jobs/JobQueueModel.php` - the `job_queue` table behind the Excel import.
 - `DashboardModel.php`, `SearchModel.php`, `ViewLayoutModel.php` - shared query
   helpers; `ViewLayoutModel` now only supplies the shell's mode-banner label.
@@ -87,6 +97,10 @@ Controllers and models are grouped into **feature subnamespaces** so each slice
   `ImportReviewPresenter.php` (its `people` list drives the review table),
   `ImportReviewChangeLog.php`, `ImportFamilyModalBuilder.php` - the Excel import.
 - `Qr/` - control numbers, QR images, and card PDFs.
+- `BatchScheduleWindow.php` - pure open/close arithmetic for a scheduled
+  batch (dates gate scanning, `daily_end_time` advises a close that a late
+  scan pushes forward in grace steps). No database or framework state, called
+  only by `DistributionBatchModel::reconcileSchedule()`.
 - `RoleAccess.php`, `SessionAccount.php`, `SessionAuditLogger.php`,
   `ActiveSessionRegistry.php`, `SectorIds.php`, `ViewFormatter.php` - auth/audit and
   domain helpers used across slices.
@@ -103,7 +117,9 @@ Controllers and models are grouped into **feature subnamespaces** so each slice
   set both share), `import-upload.php` and `import-review.php` (the wizard's two
   steps), `family-modal.php`, `row-actions.php`, `action-confirm-modal.php`.
 - `app/Views/Admin/` - accounts, audit trails, subsidy types, and the distribution
-  bodies/modals.
+  bodies/modals, including `schedule-calendar.php` (the Schedule tab's
+  FullCalendar month view), `schedule-form-modal.php` (the plot/edit form), and
+  `dashboard-schedule-card.php` (the dashboard's upcoming-schedule widget).
 - `app/Views/Lookups/` - sector/service/category management bodies and modals, and
   the family-form `picker.php`.
 - `app/Views/Accounts/`, `Partials/`, `components/` - account modals, topnav and
@@ -114,10 +130,10 @@ Controllers and models are grouped into **feature subnamespaces** so each slice
 
 ## Database
 
-- `accesscardV20.sql` - the schema and reference seed rows (import it to set up).
+- `accesscardV21.sql` - the schema and reference seed rows (import it to set up).
 - `sql/patches/` - incremental patches for a database already carrying data,
-  through `v20-eligibility.sql` and `v20-barangay-backfill.sql`. A fresh setup
-  needs the dump only; the patches exist for databases that predate it.
+  through `v21-batch-schedule.sql`. A fresh setup needs the dump only; the
+  patches exist for databases that predate it.
 - `app/Database/Seeds/` - test login accounts only; never tables or columns.
 
 ## Public Assets
@@ -125,7 +141,11 @@ Controllers and models are grouped into **feature subnamespaces** so each slice
 - `public/assets/css/` - dashboard, scanner, and component styling.
 - `public/assets/js/dashboard/` - per-page behavior: `family-datatable.js`,
   `family-list.js`, `manage-family-modal.js`, `family-import.js` (upload page and
-  progress toasts), `import-review.js` (the per-person review table), and the modal
-  loaders.
-- `public/assets/bootstrap/`, `datatables/`, `jquery/`, `sb-admin/` - vendored.
+  progress toasts), `import-review.js` (the per-person review table),
+  `schedule-calendar.js` (the Schedule tab's FullCalendar wiring, drag/resize,
+  save and delete), and the modal loaders.
+- `public/assets/bootstrap/`, `datatables/`, `jquery/`, `sb-admin/`,
+  `fullcalendar/` (vendored `index.global.min.js`, 6.1.15) - vendored. The
+  `fullcalendar` bundle loads only under the `schedule` asset context (the
+  distribution page's Schedule tab), not the shared `admin` context.
 - `public/assets/image/` - Biñan logo, CSWD logo, backgrounds.

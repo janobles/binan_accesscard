@@ -15,7 +15,8 @@
  * the new one, and both are failures. Added and deleted files fail by default
  * because a documentation branch adds and removes no PHP files in the
  * compared paths; pass --allow-added for the rare task that legitimately
- * adds one.
+ * adds one. Even then the added file has to tokenize to nothing executable,
+ * or the gate would pass a new file it never read.
  *
  * Exits 0 when every file matches and none were added or deleted, 1 otherwise.
  */
@@ -130,8 +131,20 @@ foreach ($changed as $entry) {
     if ($status === 'A') {
         $added++;
 
+        // --allow-added covers a docs-only branch that legitimately adds a file,
+        // so the file still has to be documentation: an added file that carries
+        // executable tokens is exactly what this gate exists to catch, and
+        // waiving the comparison entirely would let it through unread.
         if ($allowAdded) {
-            echo "ADDED    {$file} (allowed)\n";
+            $source = is_file($file) ? (string) file_get_contents($file) : '';
+
+            if (significantTokens($source) === []) {
+                echo "ADDED    {$file} (allowed, no executable token)\n";
+                continue;
+            }
+
+            echo "ADDED    {$file} (not allowed: carries executable code)\n";
+            $failed[] = "{$file} (added, carries executable code)";
             continue;
         }
 

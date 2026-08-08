@@ -20,9 +20,9 @@ final class DistributionBatchModelTest extends CIUnitTestCase
 
     public function testOpenRequiresSubsidyType(): void
     {
-        if (! extension_loaded('sqlite3')) {
-            $this->markTestSkipped('sqlite3 not available');
-        }
+        // No skip guard: `$subsidyTypeId <= 0` short-circuits ahead of the
+        // activeBatch() lookup in open()'s condition, so nothing here reaches
+        // storage and the contract holds with or without a database.
         $m = new DistributionBatchModel();
         $this->assertSame(0, $m->open('Batch A', 0, 1), 'subsidy type 0 must refuse');
     }

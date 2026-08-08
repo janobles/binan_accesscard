@@ -3,7 +3,7 @@
 #
 # Usage: bash scripts/assert-css-unchanged.sh <git-ref>
 #
-# Strips /* ... */ comments and blank lines from each custom stylesheet at
+# Strips comments and blank lines (scripts/strip-css-comments.php) from each custom stylesheet at
 # <git-ref> and in the working tree, then compares. The file list is the
 # union of what public/css held at <ref> and what it holds now, so a
 # stylesheet deleted (or added) since <ref> is not silently skipped by a
@@ -16,8 +16,11 @@ set -uo pipefail
 ref="${1:?usage: assert-css-unchanged.sh <git-ref>}"
 failed=0
 
+# Quote-aware, so a comment opener inside a string or a url() stays put. A plain
+# regex stripped it from both sides, which made an edit there compare equal and
+# let a real rule change through.
 strip() {
-    perl -0777 -pe 's{/\*.*?\*/}{}gs' | grep -v '^[[:space:]]*$' || true
+    php scripts/strip-css-comments.php
 }
 
 files=$( { git ls-tree -r --name-only "$ref" -- public/css 2>/dev/null | grep '\.css$'
@@ -44,8 +47,19 @@ while IFS= read -r file; do
         continue
     fi
 
-    old=$(git show "${ref}:${file}" 2>/dev/null | strip)
-    new=$(strip < "$file")
+    # A stripper that dies has to fail the file. Swallowing its status left both
+    # sides empty, which compared equal and passed the gate on a real edit.
+    if ! old=$(git show "${ref}:${file}" 2>/dev/null | strip); then
+        echo "STRIP FAILED: ${ref}:${file}" >&2
+        failed=1
+        continue
+    fi
+
+    if ! new=$(strip < "$file"); then
+        echo "STRIP FAILED: $file" >&2
+        failed=1
+        continue
+    fi
 
     if [ "$old" = "$new" ]; then
         echo "OK       $file"

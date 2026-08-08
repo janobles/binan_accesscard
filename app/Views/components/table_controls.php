@@ -5,7 +5,7 @@
  * on the right. Pure Bootstrap utilities - it sits inside the card-body's own
  * padding and must never re-pad (ui-design-system.md Rule 6).
  *
- * Variables:
+ * Props (this header is the contract; a props-only component has no *_view_data()):
  * - $showSearch        bool         false hides the page-search box, for lists
  *                                   where a page keyword would not match what
  *                                   the page's action operates on

@@ -3,6 +3,7 @@
 namespace App\Controllers\Accounts;
 
 use App\Controllers\BaseController;
+use App\Libraries\AccountFormRetry;
 use App\Libraries\RoleAccess;
 use App\Libraries\ViewFormatter;
 use App\Models\Audit\AuditTrailsModel;
@@ -40,10 +41,14 @@ class ProfileController extends BaseController
 
         $role = (string) ($account['role'] ?? '');
 
+        $retry = AccountFormRetry::take('self');
+
         return view('Accounts/account-form-modal', [
             'mode'      => 'self',
             'account'   => $account,
             'details'   => ViewFormatter::parseFullDescription((string) ($account['full_description'] ?? '')),
+            'old'       => $retry['input'],
+            'errors'    => $retry['errors'],
             'roleLabel' => RoleAccess::normalizeRole($role) ?? $role,
         ]);
     }
@@ -86,9 +91,10 @@ class ProfileController extends BaseController
         ];
 
         if (! $this->validate($rules, $messages)) {
+            AccountFormRetry::remember('self', $this->request->getPost(), $this->validator->getErrors());
+
             return redirect()->back()
                 ->withInput()
-                ->with('validationErrors', $this->validator->getErrors())
                 ->with('openModal', 'account-profile');
         }
 
@@ -101,15 +107,15 @@ class ProfileController extends BaseController
             $confirmPassword = (string) $this->request->getPost('confirm_password');
 
             if (strlen($newPassword) < 8) {
-                return redirect()->back()->with('error', 'New password must have at least 8 characters.');
+                return $this->reopenWithPasswordError('new_password', 'New password must have at least 8 characters.');
             }
 
             if ($newPassword !== $confirmPassword) {
-                return redirect()->back()->with('error', 'New password and confirmation do not match.');
+                return $this->reopenWithPasswordError('confirm_password', 'New password and confirmation do not match.');
             }
 
             if (! $userModel->verifyUserPassword($userId, $currentPassword)) {
-                return redirect()->back()->with('error', 'Your current password is incorrect.');
+                return $this->reopenWithPasswordError('current_password', 'Your current password is incorrect.');
             }
         }
 
@@ -136,6 +142,21 @@ class ProfileController extends BaseController
         }
 
         return redirect()->back()->with('success', 'Your account was updated successfully.');
+    }
+
+    /**
+     * Sends a rejected password change back the same way a failed validate()
+     * goes: the submitted non-secret fields and the error are parked for the
+     * modal, which reopens with the message under the offending field. An
+     * error flash alone left the modal shut and the retyped values gone.
+     */
+    private function reopenWithPasswordError(string $field, string $message): RedirectResponse
+    {
+        AccountFormRetry::remember('self', $this->request->getPost(), [$field => $message]);
+
+        return redirect()->back()
+            ->withInput()
+            ->with('openModal', 'account-profile');
     }
 
     /**

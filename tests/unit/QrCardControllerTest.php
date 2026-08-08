@@ -40,15 +40,19 @@ final class QrCardControllerTest extends CIUnitTestCase
 
     public function testUnauthenticatedGenerateRedirects(): void
     {
-        // No session - guard should redirect to login.
+        // No session - guard should redirect to login. Asserting the target
+        // matters: a redirect anywhere else would still pass assertRedirect()
+        // while leaving the endpoint reachable from the wrong place.
         $result = $this->post('cards/generate', []);
         $result->assertRedirect();
+        $result->assertRedirectTo(site_url('login'));
     }
 
     public function testHeadsEndpointRejectsUnauthenticated(): void
     {
         $result = $this->get('cards/heads?q=de');
         $result->assertRedirect();
+        $result->assertRedirectTo(site_url('login'));
     }
 
     public function testHeadsRouteAndMethodExist(): void

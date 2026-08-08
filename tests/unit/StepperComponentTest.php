@@ -143,6 +143,9 @@ final class StepperComponentTest extends CIUnitTestCase
         $this->assertStringNotContainsString('<b>Programs</b>', $html);
         $this->assertStringContainsString('&amp;', $html);
         $this->assertStringNotContainsString('href="#a"b"', $html);
+        // Absence of the raw form is only half the claim: the escaped form has
+        // to be what landed in the attribute, or a dropped href would pass too.
+        $this->assertStringContainsString('href="#a&quot;b"', $html);
     }
 
     public function testNoStepsRendersNothing(): void

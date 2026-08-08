@@ -17,7 +17,9 @@ final class SubsidyDistributionModelTest extends CIUnitTestCase
         $model  = new SubsidyDistributionModel();
         $fields = (new \ReflectionClass($model))->getProperty('allowedFields');
         $fields->setAccessible(true);
-        foreach (['control_no', 'memberID', 'subsidy_type_id', 'claim_date', 'userID'] as $col) {
+        // batch_id is part of the scan insert payload, so leaving it out of
+        // allowedFields would make Model::insert() drop it silently.
+        foreach (['control_no', 'memberID', 'subsidy_type_id', 'claim_date', 'userID', 'batch_id'] as $col) {
             $this->assertContains($col, $fields->getValue($model));
         }
     }
@@ -51,5 +53,38 @@ final class SubsidyDistributionModelTest extends CIUnitTestCase
         // proving the signature tolerates the new key.
         $m = new SubsidyDistributionModel();
         $this->assertSame(0, $m->logAid(['control_no' => 0, 'batch_id' => 5]));
+    }
+
+    public function testLogAidMapsBatchIdOntoTheInsertPayload(): void
+    {
+        // The guard test above only proves logAid() tolerates the key. This one
+        // proves the key survives into what insert() is handed: a batch_id that
+        // is accepted and then dropped would log a handout against no batch.
+        $model = new class () extends SubsidyDistributionModel {
+            /** @var array<string, mixed> */
+            public array $inserted = [];
+
+            public function insert($row = null, bool $returnID = true)
+            {
+                $this->inserted = (array) $row;
+
+                return 1;
+            }
+
+            public function getInsertID(): int
+            {
+                return 1;
+            }
+        };
+
+        $model->logAid([
+            'control_no'      => 42,
+            'memberID'        => 7,
+            'subsidy_type_id' => 3,
+            'claim_date'      => '2026-08-07 09:00:00',
+            'batch_id'        => 5,
+        ]);
+
+        $this->assertSame(5, (int) ($model->inserted['batch_id'] ?? 0));
     }
 }

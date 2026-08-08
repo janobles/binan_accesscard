@@ -18,6 +18,9 @@ use CodeIgniter\Test\CIUnitTestCase;
  */
 final class SearchModelAllMembersHeadsTest extends CIUnitTestCase
 {
+    /** The connection behind the most recent seededSearchModel(), for tests that edit the fixture. */
+    private ?BaseConnection $seededDb = null;
+
     /**
      * Two households: head 1 has three members matching "DELA" (a full
      * household match), head 4 is a single-member household that also
@@ -30,6 +33,7 @@ final class SearchModelAllMembersHeadsTest extends CIUnitTestCase
         }
 
         $db = db_connect(['DBDriver' => 'SQLite3', 'database' => ':memory:', 'DBDebug' => true], false);
+        $this->seededDb = $db;
 
         $db->query(
             'CREATE TABLE member (
@@ -123,5 +127,38 @@ final class SearchModelAllMembersHeadsTest extends CIUnitTestCase
         // input this data set can never produce a false positive on.
         $this->assertSame([], $model->allMembersHeadIds('NO_SUCH_KEYWORD_XYZ', []));
         $this->assertSame(0, $model->countAllMembersHeads('NO_SUCH_KEYWORD_XYZ', []));
+    }
+
+    public function testAMemberArchivedOnItsOwnDoesNotPutItsActiveHeadOnTheArchivedTab(): void
+    {
+        $model = $this->seededSearchModel();
+
+        if ($model === null) {
+            $this->markTestSkipped('sqlite3 extension not available.');
+        }
+
+        // Member 2 is archived; its head (member 1) is not. The caller loads the
+        // head row to display, so returning head 1 here would print an active
+        // household on the Archived tab.
+        $this->seededDb->table('member')->where('memberID', 2)->update(['dt_deleted' => '2026-02-01']);
+
+        $this->assertSame([], $model->allMembersHeadIds('DELA', ['status' => 'archived']));
+        $this->assertSame(0, $model->countAllMembersHeads('DELA', ['status' => 'archived']));
+    }
+
+    public function testAnArchivedFamilyStillListsOnTheArchivedTab(): void
+    {
+        $model = $this->seededSearchModel();
+
+        if ($model === null) {
+            $this->markTestSkipped('sqlite3 extension not available.');
+        }
+
+        // Archiving a family stamps every row including the head, which is what
+        // MemberModel::archiveFamily() does.
+        $this->seededDb->table('member')->where('headID', 1)->update(['dt_deleted' => '2026-02-01']);
+
+        $this->assertSame([1], $model->allMembersHeadIds('DELA', ['status' => 'archived']));
+        $this->assertSame([4], $model->allMembersHeadIds('DELA', ['status' => 'active']));
     }
 }

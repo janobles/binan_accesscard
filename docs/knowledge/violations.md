@@ -62,11 +62,13 @@ unchecked item was already moved to issue #9 (UX decision, not code mess).
   *(Fixed: members without a sector selection now persist an empty selection;
   age eligibility validation change.)*
 
-- [ ] 🟡 Minor: `app/Views/Scanner/scan.php:52,55`: inline `style="..."` on the
+- [x] 🟡 Minor: `app/Views/Scanner/scan.php:52,55`: inline `style="..."` on the
   QR image and the headline, which is what fails `ScanViewTest::testNoInlineStyles`
   (red on `main` since before feat/family-member-rows, verified by stashing the
   branch). Move both to `public/css/scanner-scan.css`, which the scanner manifest
   already loads.
+  *(Fixed: the view carries no `style=` attribute any more and the test passes;
+  the `--filter` that excluded it from CI is deleted - chore/backlog-cleanup.)*
 
 ## Appended from feat/nav-taxonomy-url-space (2026-07-30)
 
@@ -86,11 +88,13 @@ unchecked item was already moved to issue #9 (UX decision, not code mess).
   *(Fixed: feat/nav-taxonomy-url-space retired the endpoints, routes,
   `ImportFamilyModalBuilder`, and the `manage-family-modal.js` hook along with
   the per-family cards they served.)*
-- [ ] ⚪ Cleanup: `app/Helpers/asset_helper.php:119,134` - the `employee` and
+- [x] ⚪ Cleanup: `app/Helpers/asset_helper.php:119,134` - the `employee` and
   `viewer` script groups (and the matching style groups) are dead now that
   `layout.php` is the only dashboard shell and loads `admin`. Pre-existing shape,
   not touched by the collapse; delete when nothing else reads the manifest by
   role name.
+  *(Fixed: all four groups deleted; the only callers pass head/admin/login/scanner
+  - chore/backlog-cleanup.)*
 - [x] 🔵 UX/needs-decision: the review screen lost the paging, per-list search,
   severity/code filters, bulk remove, "needs a QR" list, and "ready to import"
   list that the grouped card report had. The per-person table with the
@@ -114,50 +118,67 @@ rendering needs inline styles), layout shells + `Auth/login.php` (standalone
   because comment markers occur inside strings and regex literals, so there is
   no mechanical way to prove an edit changed nothing, and because a view's
   inline `<script>` is compared verbatim by the token gate. Needs its own branch
-  with its own gate.
+  with its own gate. `scripts/list-comments.php` now solves half of it: it has a
+  quote-aware CSS reader that a JS extractor could be modelled on.
 - [x] 🔵 UX/needs-decision: two brand greens are in use, `--binan-green: #145c3b`
   (`public/css/theme.css:8`) and `--login-green: #176b4d`
   (`public/css/login.css:8`). A design decision, not a cleanup one.
   *(Fixed: UI Modernization pilot on login page adopted `#176b4d` into the strict `design-tokens.css` system, effectively deciding the green for the future)*
-- [ ] ⚪ Cleanup: `public/css/managerecord.css:263` - `.records-table-controls`
+- [x] ⚪ Cleanup: `public/css/managerecord.css:263` - `.records-table-controls`
   is emitted by no view; `app/Views/components/table_controls.php` builds the
   same row from Bootstrap utilities. Left in place because
   `docs/knowledge/binan-conventions/ui-design-system.md:72` still names the
   class as the controls-row hook. Retire the rule and the doc reference together.
-- [ ] ⚪ Cleanup: `app/Views/Lookups/picker.php` - rendered by nothing. The family
+  *(Fixed: both the base rule and its media-query branch are gone, and Rule 6
+  now names the component instead of the class - chore/backlog-cleanup.)*
+- [x] ⚪ Cleanup: `app/Views/Lookups/picker.php` - rendered by nothing. The family
   form uses the picker built into `family-modal.php`. Superseded, not wired up.
-- [ ] 🟡 Minor: `app/Views/components/table_controls.php:8` - the header carries a
+  *(Fixed: deleted - chore/backlog-cleanup.)*
+- [x] 🟡 Minor: `app/Views/components/table_controls.php:8` - the header carries a
   full variable list, which the comment standard bans for views. Kept because a
   props-only component has no `*_view_data()` function to hold the contract, so
   deleting the list would lose it with nowhere to put it. Resolve by deciding
   where a component's props contract lives.
-- [ ] 🟡 Minor: `scripts/check-comment-style.sh` - the em-dash and divider scans
+  *(Fixed: the contract lives in the header. `comments.md` now carves out
+  `components/*` and `Cards/pdf/*`: the ban is on a list that duplicates a
+  contract held elsewhere, not on the only copy of one - chore/backlog-cleanup.)*
+- [x] 🟡 Minor: `scripts/check-comment-style.sh` - the em-dash and divider scans
   match on raw text, so an em dash or a `----` run inside a PHP string, a regex,
   or inline HTML would be reported as a comment violation. A false positive fails
   the build rather than passing it, so this is loud, not silent. Fixing it means
   parsing comments with `token_get_all()` for PHP and a quote-aware scan for CSS,
   which is its own branch. Raised by CodeRabbit on PR #42.
-- [ ] 🟡 Minor: `scripts/assert-css-unchanged.sh:19` - `strip()` removes anything
+  *(Fixed: both scans read `scripts/list-comments.php`, which tokenizes the PHP
+  and reads CSS quote-aware - chore/backlog-cleanup.)*
+- [x] 🟡 Minor: `scripts/assert-css-unchanged.sh:19` - `strip()` removes anything
   between `/*` and `*/` with a regex, so a comment-like sequence inside a quoted
   string or a `url()` is stripped from both sides and an edit there would not be
   seen. This one fails open, unlike the check above. No stylesheet in `public/css`
   contains such a string today. A real fix needs a CSS-aware lexer. Raised by
   CodeRabbit on PR #42.
-- [ ] 🟡 Minor: `scripts/assert-tokens-unchanged.php` - `--allow-added` waives the
+  *(Fixed: `strip()` calls `scripts/strip-css-comments.php`, a quote-aware reader
+  - chore/backlog-cleanup.)*
+- [x] 🟡 Minor: `scripts/assert-tokens-unchanged.php` - `--allow-added` waives the
   token comparison for an added file entirely, so a new executable PHP file passes
   the gate unread. Intended as an escape hatch for the rare docs-only branch that
   adds a file; not used by the branch that added the script. Tighten it to allow
   an added file only when `significantTokens()` comes back empty. Raised by
   CodeRabbit on PR #42.
-- [ ] 🟡 Minor: `app/Views/Cards/pdf/batch_page.php:10` - the header carries `@var`
+  *(Fixed: exactly that - an added file passes only when it tokenizes to nothing
+  executable - chore/backlog-cleanup.)*
+- [x] 🟡 Minor: `app/Views/Cards/pdf/batch_page.php:10` - the header carries `@var`
   tags for `$cells` and `$isFirstPage`, which the comment standard bans for views.
   Same shape as the `table_controls.php` item above: a partial rendered by the PDF
   builder has no `*_view_data()` function to hold the contract, so deleting the
   tags loses it with nowhere to put it. Resolve with that item, not separately.
-- [ ] 🟡 Minor: `scripts/check-comment-style.sh` - the em-dash scan still covers
+  *(Fixed with that item: the `@var` tags are now a prose props list under the
+  same carve-out - chore/backlog-cleanup.)*
+- [x] 🟡 Minor: `scripts/check-comment-style.sh` - the em-dash scan still covers
   inline `<script>` blocks, which the divider scan now skips. No file hits it
   today, so nothing was changed; an em dash written into a view's inline JS would
   fail a check that cannot be satisfied without failing the token gate.
+  *(Fixed: a view's inline script is `T_INLINE_HTML`, so it never reaches either
+  scan now that both read comment text only - chore/backlog-cleanup.)*
 - [x] 🟠 Major: `app/Views/components/data_table.php` - passes table rows as
   `list<list<raw HTML>>`, so the caller concatenates markup and owns the
   escaping (the docblock says as much: "Cell values are RAW HTML"). Every other

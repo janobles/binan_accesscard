@@ -5,6 +5,7 @@ namespace App\Controllers\Families;
 use App\Controllers\BaseController;
 use App\Libraries\FamilyDataTablePresenter;
 use App\Libraries\RoleAccess;
+use App\Models\Concerns\RecordStatus;
 use App\Models\Families\MemberModel;
 use App\Models\Lookups\SectorModel;
 use App\Models\SearchModel;
@@ -83,7 +84,18 @@ class FamilyDataTableController extends BaseController
                 $headsById = [];
 
                 if ($headIds !== []) {
-                    foreach ((new MemberModel())->whereIn('memberID', $headIds)->findAll() as $head) {
+                    // The same status the ids were selected under, so the head row
+                    // shown is the row the search matched. allMembersBuilder() holds
+                    // the head to this condition too, so nothing drops out here.
+                    $headQuery = (new MemberModel())->whereIn('memberID', $headIds);
+
+                    if ($status === RecordStatus::ARCHIVED) {
+                        $headQuery->where('dt_deleted IS NOT NULL', null, false);
+                    } elseif ($status !== RecordStatus::ALL) {
+                        $headQuery->where('dt_deleted IS NULL', null, false);
+                    }
+
+                    foreach ($headQuery->findAll() as $head) {
                         $headsById[(int) $head['memberID']] = $head;
                     }
                 }
@@ -92,6 +104,11 @@ class FamilyDataTableController extends BaseController
                     static fn (int $headId): ?array => $headsById[$headId] ?? null,
                     $headIds
                 )));
+
+                // A head id that did not resolve would leave fewer rows than the
+                // count the client paginates on. It should not happen now that both
+                // queries agree; if it ever does, tell the client the real number.
+                $filtered -= count($headIds) - count($rows);
             } else {
                 $memberModel = new MemberModel();
                 $searchKeyword = $keyword === '' ? null : $keyword;

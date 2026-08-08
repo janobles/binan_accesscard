@@ -70,7 +70,8 @@ everywhere (single-source pages like accounts say "Search accounts...").
 ## Rule 6: In-card controls row
 
 Follow Manage Records: page search on the LEFT, "Show N entries" on the
-RIGHT (`.records-table-controls`, space-between). The page search is a small
+RIGHT (space-between, built by `components/table_controls.php` out of
+Bootstrap utilities). The page search is a small
 input-group with an integrated `btn-primary` search-icon button. No "Search:"
 label text.
 

@@ -2,19 +2,23 @@
 /**
  * Shared create/edit account modal fragment.
  *
- * @var string $mode create|edit|self
- * @var array  $account userID, username, role, full_description, isactive
- * @var array  $details parsed name/address fields
- * @var bool   $isSelf true when editing your own row
+ * Rendered by AccountController::createForm/editForm and
+ * ProfileController::myAccount. Stored values come from the users row; `old`
+ * and `errors` come from AccountFormRetry when the previous submission was
+ * rejected, and take priority so the form shows what was typed.
  */
 $mode = (string) ($mode ?? 'create');
+$old = is_array($old ?? null) ? $old : [];
+$oldValue = static function (string $key) use ($old): ?string {
+    return array_key_exists($key, $old) ? (string) $old[$key] : null;
+};
 $isEdit = $mode === 'edit';
 $isSelfProfile = $mode === 'self';
 $details = $details ?? [];
 $account = $account ?? [];
 $userId = (int) ($account['userID'] ?? 0);
-$username = ($isEdit || $isSelfProfile) ? (string) ($account['username'] ?? '') : (string) old('username');
-$role = ($isEdit || $isSelfProfile) ? (string) ($account['role'] ?? '') : (string) old('role');
+$username = $oldValue('username') ?? (($isEdit || $isSelfProfile) ? (string) ($account['username'] ?? '') : '');
+$role = $oldValue('role') ?? (($isEdit || $isSelfProfile) ? (string) ($account['role'] ?? '') : '');
 $isSelf = (bool) ($isSelf ?? false);
 // True when an admin edits another administrator: personal details and account
 // level are locked, while username and password reset remain available.
@@ -33,10 +37,10 @@ $displayRoleLabel = $roleLabel !== '' ? $roleLabel : match ($role) {
 $fieldPrefix = $isEdit ? 'edit-account' : ($isSelfProfile ? 'my-account' : 'account');
 $action = $isEdit ? site_url('accounts/update') : ($isSelfProfile ? site_url('account/profile/update') : site_url('accounts'));
 $submitLabel = $isEdit ? 'Save Changes' : ($isSelfProfile ? 'Save Account' : 'Create Account');
-$value = static function (array $details, string $key, bool $isEdit): string {
-    return $isEdit ? (string) ($details[$key] ?? '') : (string) old($key);
+$value = static function (array $details, string $key, bool $useStored) use ($oldValue): string {
+    return $oldValue($key) ?? ($useStored ? (string) ($details[$key] ?? '') : '');
 };
-$errors = session()->getFlashdata('validationErrors') ?? [];
+$errors = is_array($errors ?? null) ? $errors : [];
 $hasError = static function (string $field) use ($errors): bool {
     return isset($errors[$field]);
 };

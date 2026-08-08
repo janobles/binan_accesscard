@@ -161,7 +161,10 @@ final class ImportWizardViewTest extends CIUnitTestCase
         $source = file_get_contents(APPPATH . 'Views/Family/import-review.php');
         $this->assertIsString($source);
 
-        $this->assertStringContainsString('<?= btn(', $source,
+        // Named, not just "some btn() call somewhere in the file": a btn() on an
+        // unrelated control would satisfy the loose form while the confirm button
+        // carried a hand-written class.
+        $this->assertStringContainsString("class=\"<?= btn('add') ?>\" id=\"importReviewConfirm\"", $source,
             'The confirm action should be styled through btn(), not a literal class.');
 
         // A hand-written role class (what btn() would otherwise produce) must never

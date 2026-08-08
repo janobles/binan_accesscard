@@ -61,6 +61,13 @@ Purpose, data source, and any non-obvious rendering constraint. No variable list
  */
 ```
 
+A props-only view is the exception: `app/Views/components/*` and the PDF
+partials under `app/Views/Cards/pdf/` are called by another view or by a
+builder, never by a controller, so no `*_view_data()` function exists to hold
+their contract. Those headers list their props, and that list is the contract.
+The rule bans a variable list that duplicates a contract recorded elsewhere,
+not the only copy of one.
+
 ## View data contracts
 
 The 10 `*_view_data()` functions in `app/Helpers/dashboard_view_helper.php` each get an

@@ -71,23 +71,35 @@ class SubsidyTypeModel extends Model
             return 0;
         }
 
-        if ($this->insert(['name' => $name, 'dt_deleted' => null]) === false) {
+        try {
+            if ($this->insert(['name' => $name, 'dt_deleted' => null]) === false) {
+                return 0;
+            }
+
+            return (int) $this->getInsertID();
+        } catch (\Throwable $e) {
             return 0;
         }
-
-        return (int) $this->getInsertID();
     }
 
     /** Soft-archive: stamp dt_deleted so it drops out of active(). */
     public function archive(int $id): bool
     {
-        return $this->update($id, ['dt_deleted' => date('Y-m-d H:i:s')]) !== false;
+        try {
+            return $this->update($id, ['dt_deleted' => date('Y-m-d H:i:s')]) !== false;
+        } catch (\Throwable $e) {
+            return false;
+        }
     }
 
     /** Un-archive: clear dt_deleted. */
     public function restore(int $id): bool
     {
-        return $this->update($id, ['dt_deleted' => null]) !== false;
+        try {
+            return $this->update($id, ['dt_deleted' => null]) !== false;
+        } catch (\Throwable $e) {
+            return false;
+        }
     }
 
     /**

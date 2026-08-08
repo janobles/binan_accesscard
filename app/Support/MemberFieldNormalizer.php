@@ -156,18 +156,28 @@ class MemberFieldNormalizer
             $suffix = ', ' . $barangay;
 
             if (mb_strlen($combined) >= mb_strlen($suffix)
-                && strcasecmp(mb_substr($combined, -mb_strlen($suffix)), $suffix) === 0) {
+                && self::sameFold(mb_substr($combined, -mb_strlen($suffix)), $suffix)) {
                 return [
                     'address' => rtrim(mb_substr($combined, 0, mb_strlen($combined) - mb_strlen($suffix))),
                     'barangay' => $barangay,
                 ];
             }
 
-            if (strcasecmp($combined, $barangay) === 0) {
+            if (self::sameFold($combined, $barangay)) {
                 return ['address' => '', 'barangay' => $barangay];
             }
         }
 
         return ['address' => $combined, 'barangay' => ''];
+    }
+
+    /**
+     * Case-insensitive equality that survives non-ASCII text. strcasecmp() only
+     * folds ASCII, so a barangay name carrying an accent would compare unequal
+     * to the same name typed in another case.
+     */
+    private static function sameFold(string $a, string $b): bool
+    {
+        return mb_strtolower($a, 'UTF-8') === mb_strtolower($b, 'UTF-8');
     }
 }

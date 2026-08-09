@@ -781,25 +781,86 @@ tr.is-highlighted td,
     --batch-blue: #3d7ea6;
 }
 
-.batch-swatch { width: 26px; height: 26px; border-radius: 6px; border: 2px solid transparent; padding: 0; }
+.batch-swatch { width: 26px; height: 26px; border-radius: 6px; border: 2px solid transparent; padding: 0; position: relative; }
 .batch-swatch.selected { border-color: var(--token-gray-900); }
+.batch-swatch.selected::after {
+    content: "\2713"; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: .8rem; font-weight: 700;
+}
 .fc-event.batch-finished { opacity: .4; }
 .fc-event .batch-status {
     font-size: .68rem; font-weight: 700; text-transform: uppercase;
     background: rgba(255, 255, 255, .26); border-radius: 20px; padding: .15rem .35rem; margin-right: .35rem;
 }
 
+/* Schedule tab: FullCalendar's own DOM, themed to the calendar mock rather
+   than left on its stock look. Scoped to #scheduleCalendar so nothing here
+   leaks onto a FullCalendar instance used elsewhere. Options (button text,
+   toolbar layout) are set in schedule-calendar.js; this is the paint. */
+#scheduleCalendar .fc-toolbar { margin-bottom: 1rem; flex-wrap: wrap; gap: .5rem; }
+#scheduleCalendar .fc-toolbar-title { font-size: .95rem; font-weight: 600; margin-left: .75rem; color: var(--token-gray-900); }
+#scheduleCalendar .fc-button-primary {
+    background: #fff; border-color: var(--token-gray-300); color: var(--token-gray-600);
+    box-shadow: none; font-weight: 500; text-transform: none;
+}
+#scheduleCalendar .fc-button-primary:hover,
+#scheduleCalendar .fc-button-primary:focus {
+    background: #fff; border-color: var(--token-gray-300); color: var(--token-gray-600); box-shadow: none;
+}
+#scheduleCalendar .fc-button-primary:not(:disabled).fc-button-active,
+#scheduleCalendar .fc-button-primary:not(:disabled):active {
+    background: var(--token-primary-green-soft); border-color: var(--token-gray-300); color: var(--token-primary-green);
+    box-shadow: none;
+}
+#scheduleCalendar .fc-col-header-cell-cushion { color: var(--token-gray-600); font-size: .68rem; text-transform: uppercase; letter-spacing: .04em; }
+#scheduleCalendar .fc-daygrid-day-top { flex-direction: row; }
+#scheduleCalendar .fc-daygrid-day-number {
+    text-decoration: none; color: var(--token-gray-900); font-size: .78rem; font-weight: 500; padding: 6px;
+}
+#scheduleCalendar .fc-day-today { background: transparent; }
+#scheduleCalendar .fc-day-today .fc-daygrid-day-number {
+    background: var(--token-primary-green); color: #fff; border-radius: 50%; font-weight: 600;
+    width: 1.4rem; height: 1.4rem; display: flex; align-items: center; justify-content: center; padding: 0; margin: 4px;
+}
+#scheduleCalendar .fc-daygrid-day.fc-day-other .fc-daygrid-day-number { color: var(--token-gray-500); }
+#scheduleCalendar .fc-event { border: none; font-size: .74rem; }
+
+/* Dashboard schedule card: drawn at one dashboard column's width, not the
+   page's full width, so a multi-day batch's bar keeps the same proportion it
+   has in the design mock. */
+.dash-schedule-card { max-width: 340px; }
+
+/* Month bar's prev/next, decorative only: the card always shows the current
+   month, browsing other months happens on the Schedule tab it links to. */
+.dash-schedule-nav span {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px; margin-left: 4px; border: 1px solid var(--token-gray-300);
+    border-radius: 4px; font-size: .7rem; color: var(--token-gray-600);
+}
+
 /* Dashboard schedule card's month grid.
    One .dash-schedule-week per row: day numbers sit on grid row 1, and each
    batch's .dash-schedule-bar is a spanning grid item placed by
    DashboardPageBuilder::buildScheduleGrid() below them, so a multi-day batch
-   reads as one bar rather than a mark per day. */
+   reads as one labelled bar rather than a mark per day. */
 .dash-schedule-heading, .dash-schedule-week { display: grid; grid-template-columns: repeat(7, 1fr); column-gap: 2px; }
 .dash-schedule-heading { text-align: center; margin-bottom: .25rem; }
-.dash-schedule-day { grid-row: 1; text-align: center; font-size: .8rem; }
+.dash-schedule-day { grid-row: 1; text-align: center; font-size: .78rem; padding-top: 2px; }
+.dash-schedule-day.is-outside { color: var(--token-gray-500); }
 .dash-schedule-day.is-today {
-    width: 1.5rem; height: 1.5rem; margin: 0 auto; border-radius: 50%; border: 2px solid var(--token-gray-900);
+    width: 1.35rem; height: 1.35rem; margin: 0 auto; border-radius: 50%;
+    background: var(--token-primary-green); color: #fff; font-weight: 600;
     display: flex; align-items: center; justify-content: center;
 }
-.dash-schedule-bar { height: 6px; border-radius: 3px; }
+.dash-schedule-bar {
+    height: 15px; border-radius: 3px; font-size: .58rem; font-weight: 600; line-height: 15px;
+    color: #fff; padding: 0 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 .dash-schedule-bar.is-done { opacity: .4; }
+
+/* Upcoming-schedule list rows: a large day number with its month underneath,
+   matching a normal agenda item's date block. */
+.dash-schedule-when { flex: 0 0 2.25rem; text-align: center; }
+.dash-schedule-when b { display: block; font-size: 1rem; line-height: 1.1; font-weight: 700; }
+.dash-schedule-when i { display: block; font-size: .62rem; font-style: normal; font-weight: 600;
+    text-transform: uppercase; letter-spacing: .04em; color: var(--token-gray-600); }

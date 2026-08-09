@@ -606,7 +606,7 @@ class DashboardPageBuilder
      * The batch running now, if any, then the next two plotted ones, for the
      * dashboard's schedule card.
      *
-     * @return list<array{batch_id:int,name:string,venue:string,start:string,end:string,color:string,status:string}>
+     * @return list<array{batch_id:int,name:string,venue:string,start:string,end:string,dailyStart:string,dailyEnd:string,color:string,status:string}>
      */
     private function buildUpcomingSchedule(DistributionBatchModel $batchModel): array
     {
@@ -623,13 +623,15 @@ class DashboardPageBuilder
             }
 
             $rows[] = [
-                'batch_id' => (int) $batch['batch_id'],
-                'name'     => (string) $batch['name'],
-                'venue'    => (string) $batch['venue'],
-                'start'    => (string) $batch['scheduled_start'],
-                'end'      => (string) $batch['scheduled_end'],
-                'color'    => (string) $batch['color'],
-                'status'   => $status,
+                'batch_id'   => (int) $batch['batch_id'],
+                'name'       => (string) $batch['name'],
+                'venue'      => (string) $batch['venue'],
+                'start'      => (string) $batch['scheduled_start'],
+                'end'        => (string) $batch['scheduled_end'],
+                'dailyStart' => substr((string) $batch['daily_start_time'], 0, 5),
+                'dailyEnd'   => substr((string) $batch['daily_end_time'], 0, 5),
+                'color'      => (string) $batch['color'],
+                'status'     => $status,
             ];
 
             if (count($rows) === 2) {
@@ -644,19 +646,19 @@ class DashboardPageBuilder
      * The dashboard schedule card's month grid, as cells to print day numbers
      * and bars to draw across them, so the view never touches date arithmetic.
      *
-     * A cell only carries a day number and whether it's today; the leading and
-     * trailing blanks of the first and last week are left out (null day). A
-     * bar is one batch's contiguous run of days within a single week row: a
-     * batch is clipped to the visible month first, then split at each week
-     * boundary it crosses, so a run over a Sunday becomes two bars and a run
-     * crossing into another month is cut off at the edge. `startCol` and
-     * `lane` are both 0 based; `lane` only rises above 0 when two batches
-     * cover the same days in the same week, which the scheduler otherwise
-     * refuses.
+     * The leading and trailing blanks of the first and last week carry the
+     * adjacent month's real day numbers (`isOutside` true) rather than being
+     * left empty, matching a normal month calendar. A bar is one batch's
+     * contiguous run of days within a single week row: a batch is clipped to
+     * the visible month first, then split at each week boundary it crosses,
+     * so a run over a Sunday becomes two bars and a run crossing into another
+     * month is cut off at the edge. `startCol` and `lane` are both 0 based;
+     * `lane` only rises above 0 when two batches cover the same days in the
+     * same week, which the scheduler otherwise refuses.
      *
      * @return array{
-     *     weeks: list<list<array{day: ?int, isToday: bool}>>,
-     *     bars: list<array{weekIndex: int, startCol: int, span: int, lane: int, color: string, status: string}>
+     *     weeks: list<list<array{day: int, isToday: bool, isOutside: bool}>>,
+     *     bars: list<array{weekIndex: int, startCol: int, span: int, lane: int, color: string, status: string, name: string}>
      * }
      */
     private function buildScheduleGrid(DistributionBatchModel $batchModel): array
@@ -672,11 +674,13 @@ class DashboardPageBuilder
         for ($w = 0; $w < $weekCount; $w++) {
             $week = [];
             for ($c = 0; $c < 7; $c++) {
-                $dayNum = $w * 7 + $c - $leading + 1;
-                $isDay  = $dayNum >= 1 && $dayNum <= $daysInMonth;
-                $week[] = [
-                    'day'     => $isDay ? $dayNum : null,
-                    'isToday' => $isDay && date('Y-m-') . str_pad((string) $dayNum, 2, '0', STR_PAD_LEFT) === $today,
+                $dayNum    = $w * 7 + $c - $leading + 1;
+                $isDay     = $dayNum >= 1 && $dayNum <= $daysInMonth;
+                $cellDate  = date('Y-m-d', strtotime($monthStart . ' ' . ($dayNum - 1) . ' days'));
+                $week[]    = [
+                    'day'       => (int) date('j', strtotime($cellDate)),
+                    'isToday'   => $isDay && $cellDate === $today,
+                    'isOutside' => ! $isDay,
                 ];
             }
             $weeks[] = $week;
@@ -713,6 +717,7 @@ class DashboardPageBuilder
                     'lane'      => 0,
                     'color'     => (string) $batch['color'],
                     'status'    => $status,
+                    'name'      => (string) $batch['name'],
                 ];
             }
         }
@@ -727,8 +732,8 @@ class DashboardPageBuilder
      * scheduler refuses overlapping dates, so in practice every bar lands on
      * lane 0; this only matters if that rule is ever relaxed.
      *
-     * @param list<array{weekIndex: int, startCol: int, span: int, lane: int, color: string, status: string}> $bars
-     * @return list<array{weekIndex: int, startCol: int, span: int, lane: int, color: string, status: string}>
+     * @param list<array{weekIndex: int, startCol: int, span: int, lane: int, color: string, status: string, name: string}> $bars
+     * @return list<array{weekIndex: int, startCol: int, span: int, lane: int, color: string, status: string, name: string}>
      */
     private static function assignScheduleLanes(array $bars): array
     {

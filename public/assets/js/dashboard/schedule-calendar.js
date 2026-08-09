@@ -65,7 +65,15 @@
       document.getElementById('scheduleDailyStart').value = p.dailyStart || '08:00';
       document.getElementById('scheduleDailyEnd').value = p.dailyEnd || '17:00';
       selectColor(p.color || 'green');
+      checkCovers('barangay', p.barangayIds || []);
+      checkCovers('sector', p.sectorIds || []);
+    } else {
+      checkCovers('barangay', []);
+      checkCovers('sector', []);
     }
+    updateCoversLabel('barangay');
+    updateCoversLabel('sector');
+    refreshEligibleCount();
     modal.show();
   }
 
@@ -82,10 +90,71 @@
     b.addEventListener('click', function () { selectColor(b.dataset.color); });
   });
 
+  /**
+   * Covers is two closed, one-line dropdowns of checkboxes (barangays,
+   * sectors) rather than the tall native multi-select boxes the mock
+   * dropped: each toggle button reads "All barangays"/"All sectors" with
+   * nothing checked, or "N selected" once some are, same as the mock's
+   * closed state.
+   */
+  function coversBoxes(kind) {
+    return document.querySelectorAll('input[name="' + kind + '_ids[]"]');
+  }
+
+  function checkCovers(kind, ids) {
+    const wanted = ids.map(String);
+    coversBoxes(kind).forEach(function (box) {
+      box.checked = wanted.indexOf(box.value) !== -1;
+    });
+  }
+
+  function updateCoversLabel(kind) {
+    const toggle = document.getElementById(kind === 'barangay' ? 'scheduleBarangayToggle' : 'scheduleSectorToggle');
+    if (!toggle) return;
+    const checked = Array.prototype.filter.call(coversBoxes(kind), function (b) { return b.checked; });
+    toggle.textContent = checked.length === 0
+      ? 'All ' + (kind === 'barangay' ? 'barangays' : 'sectors')
+      : checked.length + ' selected';
+  }
+
+  document.querySelectorAll('input[name="barangay_ids[]"], input[name="sector_ids[]"]').forEach(function (box) {
+    box.addEventListener('change', function () {
+      updateCoversLabel('barangay');
+      updateCoversLabel('sector');
+      refreshEligibleCount();
+    });
+  });
+
+  /**
+   * Refreshes the "N families so far" count under Covers from
+   * GET distribution/batches/preview, the same eligibility query the roster
+   * freezes on, so the estimate shown here and the eventual roster cannot
+   * disagree in shape.
+   */
+  function refreshEligibleCount() {
+    const url = form.dataset.previewUrl;
+    const target = document.querySelector('[data-eligible-count]');
+    if (!url || !target) return;
+
+    const params = new URLSearchParams();
+    coversBoxes('barangay').forEach(function (b) { if (b.checked) params.append('barangay_ids[]', b.value); });
+    coversBoxes('sector').forEach(function (s) { if (s.checked) params.append('sector_ids[]', s.value); });
+
+    fetch(url + '?' + params.toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (body) {
+        if (body && typeof body.eligible === 'number') {
+          target.textContent = body.eligible.toLocaleString() + ' families';
+        }
+      })
+      .catch(function () { /* leave the last known count showing */ });
+  }
+
   const calendar = new FullCalendar.Calendar(mount, {
     initialView: 'dayGridMonth',
     height: 'auto',
-    headerToolbar: { left: 'prev,next today', center: 'title', right: '' },
+    headerToolbar: { left: 'prev,next,today title', center: '', right: '' },
+    buttonText: { today: 'Today' },
     selectable: canManage,
     editable: canManage,
     // The feed reads ?from=&to=; FullCalendar's own names for these are
@@ -127,7 +196,8 @@
         wrap.appendChild(pill);
       }
       const text = document.createElement('span');
-      text.textContent = p.venue ? arg.event.title + ' - ' + p.venue : arg.event.title;
+      const time = (p.dailyStart && p.dailyEnd) ? ' · ' + shortHour(p.dailyStart) + '-' + shortHour(p.dailyEnd) : '';
+      text.textContent = (p.venue ? arg.event.title + ' · ' + p.venue : arg.event.title) + time;
       wrap.appendChild(text);
       return { domNodes: [wrap] };
     },
@@ -234,6 +304,68 @@
     return isoLocal(d);
   }
 
+  /** '17:00' -> '5', '08:30' -> '8:30': a round hour drops its minutes, for the compact "8-5" event label. */
+  function shortHour(hhmm) {
+    const [h, m] = hhmm.split(':');
+    const hour12 = ((parseInt(h, 10) % 12) || 12);
+    return m === '00' ? String(hour12) : hour12 + ':' + m;
+  }
+
+  const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  /** 'Aug 12' for a single day, 'Aug 12-13' within a month, 'Aug 30-Sep 1' across one. */
+  function formatWhen(startIso, endIso) {
+    const s = new Date(startIso + 'T00:00:00');
+    const e = new Date(endIso + 'T00:00:00');
+    const startLabel = MONTH_NAMES[s.getMonth()] + ' ' + s.getDate();
+    if (startIso === endIso) return startLabel;
+    return s.getMonth() === e.getMonth()
+      ? startLabel + '-' + e.getDate()
+      : startLabel + '-' + MONTH_NAMES[e.getMonth()] + ' ' + e.getDate();
+  }
+
+  const conflictModalEl = document.getElementById('scheduleConflictModal');
+  const conflictModal = conflictModalEl ? new bootstrap.Modal(conflictModalEl) : null;
+
+  /**
+   * Asks whether to delete and replace the clashing batch a 409 overlap
+   * response names, with the two named actions the mock specifies rather
+   * than window.confirm's generic OK/Cancel. Falls back to window.confirm
+   * when the styled modal markup isn't on the page (a Viewer never gets
+   * this far, since only Admin/Developer can save a schedule at all).
+   */
+  function confirmReplace(clash, onConfirm) {
+    if (!conflictModal) {
+      const when = formatWhen(clash.start, clash.end);
+      if (window.confirm(clash.name + ' is already on ' + when + '. Only one batch runs at a time, so saving replaces it.')) {
+        onConfirm();
+      }
+      return;
+    }
+
+    const when = formatWhen(clash.start, clash.end);
+    document.getElementById('scheduleConflictModalLabel').textContent = 'Replace the schedule on ' + when + '?';
+
+    const message = conflictModalEl.querySelector('[data-conflict-message]');
+    message.textContent = '';
+    const name = document.createElement('strong');
+    name.textContent = clash.name;
+    const consequence = document.createElement('strong');
+    consequence.textContent = 'delete that schedule';
+    message.appendChild(name);
+    message.appendChild(document.createTextNode(
+      ' is already plotted for ' + when + ' at ' + clash.venue + '. Only one batch can run at a time, so saving this will '
+    ));
+    message.appendChild(consequence);
+    message.appendChild(document.createTextNode('.'));
+
+    document.getElementById('scheduleConflictConfirm').onclick = function () {
+      conflictModal.hide();
+      onConfirm();
+    };
+    conflictModal.show();
+  }
+
   calendar.render();
 
   if (!form) return;
@@ -254,8 +386,7 @@
         }
         if (res.status === 409 && res.body.error === 'overlap' && res.body.clash.replaceable) {
           const c = res.body.clash;
-          const when = c.start === c.end ? c.start : c.start + ' to ' + c.end;
-          if (window.confirm(c.name + ' is already on ' + when + '. Only one batch runs at a time, so saving replaces it.')) {
+          confirmReplace(c, function () {
             fetch(mount.dataset.deleteUrl + '/' + c.id + '/delete', {
               method: 'POST',
               body: new FormData(form),
@@ -272,7 +403,7 @@
                 window.alert((delRes.body && delRes.body.message) || 'Could not replace ' + c.name + '. Check the connection and try again.');
               })
               .catch(function () { window.alert('Could not replace ' + c.name + '. Check the connection and try again.'); });
-          }
+          });
           return;
         }
         window.alert(describeSaveError(res));

@@ -1,13 +1,14 @@
 <?php
 /**
- * Dashboard schedule card: the current month with a spanning bar for each
- * batch's days, today ringed, and the running or next two batches listed
- * beneath.
+ * Dashboard schedule card: the current month with a labelled, spanning bar
+ * for each batch's run of days, today filled in as a badge, and the running
+ * or next batches listed beneath with their date and time range.
  *
  * Read only. Plotting happens on the Schedule tab of the distribution page,
  * which the heading links to. The grid is written by hand rather than with
  * FullCalendar because shrinking that into a single dashboard column costs
- * more than drawing a static month.
+ * more than drawing a static month. Drawn at one dashboard column's width
+ * (see .dash-schedule-card, theme.css), not the page's full width.
  *
  * Data source: DashboardPageBuilder::buildViewData(), keys upcomingSchedule
  * and scheduleGrid (see buildScheduleGrid() for the grid's shape).
@@ -20,13 +21,16 @@ foreach ($scheduleGrid['bars'] as $bar) {
     $barsByWeek[$bar['weekIndex']][] = $bar;
 }
 ?>
-<div class="card mb-4">
+<div class="card mb-4 dash-schedule-card">
   <div class="card-header d-flex justify-content-between align-items-center">
     <span><i class="bi bi-calendar-event me-1"></i>Distribution Schedule</span>
     <a href="<?= esc(site_url('distribution?tab=schedule'), 'attr') ?>" class="small">Open calendar</a>
   </div>
   <div class="card-body">
-    <p class="fw-semibold mb-2"><?= esc(date('F Y')) ?></p>
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <span class="fw-semibold"><?= esc(date('F Y')) ?></span>
+      <span class="dash-schedule-nav" aria-hidden="true"><span>&lsaquo;</span><span>&rsaquo;</span></span>
+    </div>
     <div class="dash-schedule-heading text-muted small">
       <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
     </div>
@@ -37,15 +41,17 @@ foreach ($scheduleGrid['bars'] as $bar) {
             $laneCount = max($laneCount, $bar['lane'] + 1);
         }
       ?>
-      <div class="dash-schedule-week" style="grid-template-rows:1.5rem repeat(<?= max(1, $laneCount) ?>, 6px);">
+      <div class="dash-schedule-week" style="grid-template-rows:1.5rem repeat(<?= max(1, $laneCount) ?>, 15px);">
         <?php foreach ($week as $col => $cell): ?>
-          <span class="dash-schedule-day<?= $cell['isToday'] ? ' is-today' : '' ?>" style="grid-column:<?= $col + 1 ?>">
-            <?= $cell['day'] !== null ? esc((string) $cell['day']) : '' ?>
+          <span class="dash-schedule-day<?= $cell['isToday'] ? ' is-today' : '' ?><?= $cell['isOutside'] ? ' is-outside' : '' ?>" style="grid-column:<?= $col + 1 ?>">
+            <?= esc((string) $cell['day']) ?>
           </span>
         <?php endforeach; ?>
         <?php foreach ($barsByWeek[$weekIndex] ?? [] as $bar): ?>
-          <span class="dash-schedule-bar<?= $bar['status'] === 'done' ? ' is-done' : '' ?>" aria-hidden="true"
-                style="grid-column:<?= $bar['startCol'] + 1 ?> / span <?= $bar['span'] ?>;grid-row:<?= $bar['lane'] + 2 ?>;background:var(--batch-<?= esc($bar['color'], 'attr') ?>)"></span>
+          <span class="dash-schedule-bar<?= $bar['status'] === 'done' ? ' is-done' : '' ?>"
+                style="grid-column:<?= $bar['startCol'] + 1 ?> / span <?= $bar['span'] ?>;grid-row:<?= $bar['lane'] + 2 ?>;background:var(--batch-<?= esc($bar['color'], 'attr') ?>)">
+            <?= esc($bar['name']) ?>
+          </span>
         <?php endforeach; ?>
       </div>
     <?php endforeach; ?>
@@ -54,14 +60,17 @@ foreach ($scheduleGrid['bars'] as $bar) {
       <p class="text-muted small mb-0 mt-2">Nothing scheduled. Plot a distribution on the calendar.</p>
     <?php else: ?>
       <?php foreach ($upcomingSchedule as $row): ?>
-        <div class="d-flex gap-2 align-items-start border-top pt-2 mt-2">
-          <span class="rounded" aria-hidden="true"
-                style="width:4px;align-self:stretch;background:var(--batch-<?= esc($row['color'], 'attr') ?>)"></span>
+        <div class="d-flex gap-2 align-items-start border-top pt-2 mt-2 dash-schedule-item">
+          <div class="dash-schedule-when">
+            <b><?= esc(date('j', strtotime($row['start']))) ?></b>
+            <i><?= esc(date('M', strtotime($row['start']))) ?></i>
+          </div>
           <div class="small">
             <span class="fw-semibold d-block"><?= esc($row['name']) ?></span>
             <span class="text-muted d-block"><?= esc($row['venue']) ?></span>
             <span class="text-muted d-block">
-              <?= esc(date('M j', strtotime($row['start']))) ?><?= $row['end'] !== $row['start'] ? esc(' to ' . date('M j', strtotime($row['end']))) : '' ?>
+              <?= esc(date('M j', strtotime($row['start']))) ?><?= $row['end'] !== $row['start'] ? esc('–' . date('j', strtotime($row['end']))) : '' ?>
+              &middot; <?= esc(date('g:i A', strtotime($row['dailyStart']))) ?>&ndash;<?= esc(date('g:i A', strtotime($row['dailyEnd']))) ?>
             </span>
             <?php if ($row['status'] === 'running'): ?>
               <span class="badge bg-success mt-1">Scanning open</span>

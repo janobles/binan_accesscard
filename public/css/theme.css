@@ -864,3 +864,10 @@ tr.is-highlighted td,
 .dash-schedule-when b { display: block; font-size: 1rem; line-height: 1.1; font-weight: 700; }
 .dash-schedule-when i { display: block; font-size: .62rem; font-style: normal; font-weight: 600;
     text-transform: uppercase; letter-spacing: .04em; color: var(--token-gray-600); }
+
+/* Covers dropdowns on the schedule form: the toggle keeps a select's height so
+   the field reads as one line, and the checkbox list scrolls inside the menu
+   rather than growing the modal. */
+.schedule-covers-menu { max-height: 15rem; overflow-y: auto; width: 100%; min-width: 12rem; }
+.schedule-covers-menu .form-check { margin-bottom: .15rem; }
+.schedule-covers-menu .form-check-label { font-size: .875rem; }

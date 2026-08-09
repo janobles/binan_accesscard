@@ -16,6 +16,10 @@
  * live, since deleteSchedule() judges a different, looser rule than
  * saveSchedule() does.
  *
+ * Covers is two closed one-line dropdowns of checkboxes rather than tall
+ * native multi-selects, so the form reads as six short fields the way the
+ * approved mockup draws it. The toggle carries the summary text.
+ *
  * Variables:
  * - $activeSubsidyTypes list of subsidy rows (subsidy_type_id, name)
  * - $barangayOptions    list of barangay rows (barangayID, name)
@@ -86,20 +90,42 @@ $venueSuggestions   = $venueSuggestions ?? [];
           <label for="scheduleBarangayIds" class="form-label">Covers</label>
           <div class="row g-2">
             <div class="col-sm-6">
-              <select class="form-select" id="scheduleBarangayIds" name="barangay_ids[]" multiple size="4"
-                      aria-label="All barangays">
-                <?php foreach ($barangayOptions as $b): ?>
-                  <option value="<?= (int) $b['barangayID'] ?>"><?= esc($b['name']) ?></option>
-                <?php endforeach; ?>
-              </select>
+              <div class="dropdown">
+                <button class="form-select text-start" type="button" id="scheduleBarangayToggle"
+                        data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                  All barangays
+                </button>
+                <div class="dropdown-menu p-2 schedule-covers-menu" aria-labelledby="scheduleBarangayToggle">
+                  <?php foreach ($barangayOptions as $b): ?>
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" name="barangay_ids[]"
+                             value="<?= (int) $b['barangayID'] ?>" id="scheduleBarangay<?= (int) $b['barangayID'] ?>">
+                      <label class="form-check-label" for="scheduleBarangay<?= (int) $b['barangayID'] ?>">
+                        <?= esc($b['name']) ?>
+                      </label>
+                    </div>
+                  <?php endforeach; ?>
+                </div>
+              </div>
             </div>
             <div class="col-sm-6">
-              <select class="form-select" id="scheduleSectorIds" name="sector_ids[]" multiple size="4"
-                      aria-label="All sectors">
-                <?php foreach ($sectorOptions as $s): ?>
-                  <option value="<?= (int) $s['sectorID'] ?>"><?= esc($s['name']) ?></option>
-                <?php endforeach; ?>
-              </select>
+              <div class="dropdown">
+                <button class="form-select text-start" type="button" id="scheduleSectorToggle"
+                        data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                  All sectors
+                </button>
+                <div class="dropdown-menu p-2 schedule-covers-menu" aria-labelledby="scheduleSectorToggle">
+                  <?php foreach ($sectorOptions as $s): ?>
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" name="sector_ids[]"
+                             value="<?= (int) $s['sectorID'] ?>" id="scheduleSector<?= (int) $s['sectorID'] ?>">
+                      <label class="form-check-label" for="scheduleSector<?= (int) $s['sectorID'] ?>">
+                        <?= esc($s['name']) ?>
+                      </label>
+                    </div>
+                  <?php endforeach; ?>
+                </div>
+              </div>
             </div>
           </div>
           <p class="form-text mb-0" id="scheduleEligible">
@@ -124,7 +150,7 @@ $venueSuggestions   = $venueSuggestions ?? [];
       <div class="modal-footer">
         <button type="button" class="btn btn-outline-danger me-auto d-none" id="scheduleDelete">Delete</button>
         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="submit" class="<?= btn('save') ?>" id="scheduleSubmit">Save</button>
+        <button type="submit" class="<?= btn('add') ?>" id="scheduleSubmit">Save</button>
       </div>
     </form>
   </div>

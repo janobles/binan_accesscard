@@ -11,10 +11,7 @@
  */
 $canManageBatches = in_array($currentRole ?? '', ['Admin', 'Developer'], true);
 ?>
-<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-    <p class="text-muted small mb-0">
-        Batches open and close themselves on the days plotted here.
-    </p>
+<div class="d-flex justify-content-end align-items-center flex-wrap gap-2 mb-3">
     <?php if ($canManageBatches): ?>
         <button type="button" class="<?= btn('add') ?>" id="newScheduleBtn">New schedule</button>
     <?php endif; ?>

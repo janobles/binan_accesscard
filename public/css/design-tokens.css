@@ -22,6 +22,7 @@
 
     /* Semantic Mappings */
     --token-surface: var(--token-white);
+    --token-surface-hover: #eef6f2;
     --token-background: var(--token-gray-50);
     --token-text-primary: var(--token-gray-900);
     --token-text-secondary: var(--token-gray-600);

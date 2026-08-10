@@ -156,7 +156,7 @@
   const calendar = new FullCalendar.Calendar(mount, {
     initialView: 'dayGridMonth',
     height: 'auto',
-    headerToolbar: { left: 'prev,next,today title', center: '', right: '' },
+    headerToolbar: { left: 'title', center: '', right: 'prev,next today' },
     buttonText: { today: 'Today' },
     selectable: canManage,
     editable: canManage,
@@ -191,14 +191,16 @@
       const p = arg.event.extendedProps;
       const label = p.status === 'running' ? 'Open' : (p.status === 'finished' ? 'Done' : '');
       const wrap = document.createElement('div');
-      wrap.className = 'd-flex align-items-center';
+      wrap.className = 'd-flex align-items-center w-100 overflow-hidden';
+      wrap.style.padding = '2px 4px';
       if (label) {
         const pill = document.createElement('span');
-        pill.className = 'batch-status';
+        pill.className = 'batch-status shadow-sm';
         pill.textContent = label;
         wrap.appendChild(pill);
       }
       const text = document.createElement('span');
+      text.className = 'text-truncate';
       text.textContent = eventLabel(arg.event);
       wrap.appendChild(text);
       return { domNodes: [wrap] };

@@ -200,4 +200,33 @@ final class DashboardScheduleCardTest extends CIUnitTestCase
 
         $this->assertStringContainsString('Nothing scheduled. Plot a distribution on the calendar.', $body);
     }
+
+    public function testCardCarriesNoMonthArrows(): void
+    {
+        $body = $this->withSession(['user_id' => 1, 'username' => 'boss', 'role' => 'administrator', 'is_logged_in' => true])
+            ->get('dashboard')
+            ->getBody();
+
+        $this->assertStringNotContainsString('dash-schedule-nav', $body, 'the arrows never worked, so they are not drawn');
+    }
+
+    public function testBarsCarryTheFullNameAsATooltip(): void
+    {
+        $day   = self::mondayWithRoomInMonth();
+        $start = date('Y-m-') . str_pad((string) $day, 2, '0', STR_PAD_LEFT);
+        $this->insertBatch(5, $start, $start);
+
+        $body = $this->withSession(['user_id' => 1, 'username' => 'boss', 'role' => 'administrator', 'is_logged_in' => true])
+            ->get('dashboard')
+            ->getBody();
+
+        // A bar is one column wide at its narrowest, so the label is usually
+        // clipped: the tooltip is the only place the whole name is readable.
+        // bindTooltips() in view-interactions.js turns the attributes into a
+        // real Bootstrap tooltip; body is the container because the bar itself
+        // is overflow:hidden and would clip it.
+        $this->assertStringContainsString('data-bs-toggle="tooltip"', $body);
+        $this->assertStringContainsString('data-bs-container="body"', $body);
+        $this->assertStringContainsString('title="Batch 5', $body);
+    }
 }

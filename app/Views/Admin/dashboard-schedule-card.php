@@ -4,6 +4,10 @@
  * for each batch's run of days, today filled in as a badge, and the running
  * or next batches listed beneath with their date and time range.
  *
+ * A bar is one column wide at its narrowest and clips its label, so each one
+ * carries a Bootstrap tooltip with the whole batch name. The tooltip is
+ * containered on body because the bar itself is overflow:hidden.
+ *
  * Read only. Plotting happens on the Schedule tab of the distribution page,
  * which the heading links to. The grid is written by hand rather than with
  * FullCalendar because shrinking that into a single dashboard column costs
@@ -27,9 +31,8 @@ foreach ($scheduleGrid['bars'] as $bar) {
     <a href="<?= esc(site_url('distribution?tab=schedule'), 'attr') ?>" class="small">Open calendar</a>
   </div>
   <div class="card-body">
-    <div class="d-flex justify-content-between align-items-center mb-2">
+    <div class="mb-2">
       <span class="fw-semibold"><?= esc(date('F Y')) ?></span>
-      <span class="dash-schedule-nav" aria-hidden="true"><span>&lsaquo;</span><span>&rsaquo;</span></span>
     </div>
     <div class="dash-schedule-heading text-muted small">
       <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
@@ -49,7 +52,9 @@ foreach ($scheduleGrid['bars'] as $bar) {
         <?php endforeach; ?>
         <?php foreach ($barsByWeek[$weekIndex] ?? [] as $bar): ?>
           <span class="dash-schedule-bar<?= $bar['status'] === 'done' ? ' is-done' : '' ?>"
-                style="grid-column:<?= $bar['startCol'] + 1 ?> / span <?= $bar['span'] ?>;grid-row:<?= $bar['lane'] + 2 ?>;background:var(--batch-<?= esc($bar['color'], 'attr') ?>)">
+                style="grid-column:<?= $bar['startCol'] + 1 ?> / span <?= $bar['span'] ?>;grid-row:<?= $bar['lane'] + 2 ?>;background:var(--batch-<?= esc($bar['color'], 'attr') ?>)"
+                data-bs-toggle="tooltip" data-bs-container="body"
+                title="<?= esc($bar['name']) ?>">
             <?= esc($bar['name']) ?>
           </span>
         <?php endforeach; ?>

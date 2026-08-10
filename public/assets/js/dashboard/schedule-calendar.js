@@ -10,7 +10,8 @@
  * just not re-planned) - a batch that is neither says so instead of opening
  * an empty form. A save that collides answers 409 with the clashing batch,
  * which becomes either a replace confirmation or a plain refusal when that
- * batch already has scans.
+ * batch already has scans. The confirmation is a second pane of the same
+ * dialog, since Bootstrap supports only one open modal at a time.
  */
 (function () {
   const mount = document.getElementById('scheduleCalendar');
@@ -42,6 +43,8 @@
   function openForm(start, end, event) {
     if (!modal) return;
     form.reset();
+    // A dialog closed while the replace question was up reopens on the form.
+    showPane('form');
     document.getElementById('scheduleBatchId').value = event ? event.id : 0;
     document.getElementById('scheduleStart').value = start;
     document.getElementById('scheduleEnd').value = end;
@@ -196,10 +199,26 @@
         wrap.appendChild(pill);
       }
       const text = document.createElement('span');
-      const time = (p.dailyStart && p.dailyEnd) ? ' · ' + shortHour(p.dailyStart) + '-' + shortHour(p.dailyEnd) : '';
-      text.textContent = (p.venue ? arg.event.title + ' · ' + p.venue : arg.event.title) + time;
+      text.textContent = eventLabel(arg.event);
       wrap.appendChild(text);
       return { domNodes: [wrap] };
+    },
+    // A day cell is narrower than most labels, so the visible text is usually
+    // clipped; the tooltip is where the whole thing is readable. Built here
+    // rather than by view-interactions.js's bindTooltips(), which runs once at
+    // load and would miss every event FullCalendar draws afterwards, and torn
+    // down again so a month change leaves no orphan instances behind.
+    eventDidMount: function (info) {
+      if (!window.bootstrap || typeof window.bootstrap.Tooltip !== 'function') return;
+      new window.bootstrap.Tooltip(info.el, {
+        title: eventLabel(info.event),
+        container: 'body'
+      });
+    },
+    eventWillUnmount: function (info) {
+      if (!window.bootstrap || typeof window.bootstrap.Tooltip !== 'function') return;
+      const tip = window.bootstrap.Tooltip.getInstance(info.el);
+      if (tip) tip.dispose();
     },
     select: function (info) {
       if (!canManage) return;
@@ -304,6 +323,14 @@
     return isoLocal(d);
   }
 
+  /** An event's one-line label: name, venue and daily hours. Drawn in the day cell and repeated in full by the tooltip. */
+  function eventLabel(event) {
+    const p = event.extendedProps;
+    const time = (p.dailyStart && p.dailyEnd) ? ' · ' + shortHour(p.dailyStart) + '-' + shortHour(p.dailyEnd) : '';
+
+    return (p.venue ? event.title + ' · ' + p.venue : event.title) + time;
+  }
+
   /** '17:00' -> '5', '08:30' -> '8:30': a round hour drops its minutes, for the compact "8-5" event label. */
   function shortHour(hhmm) {
     const [h, m] = hhmm.split(':');
@@ -324,29 +351,36 @@
       : startLabel + '-' + MONTH_NAMES[e.getMonth()] + ' ' + e.getDate();
   }
 
-  const conflictModalEl = document.getElementById('scheduleConflictModal');
-  const conflictModal = conflictModalEl ? new bootstrap.Modal(conflictModalEl) : null;
+  const formPane     = document.getElementById('scheduleFormPane');
+  const conflictPane = document.getElementById('scheduleConflictPane');
+
+  /** Shows one of the dialog's two panes. Bootstrap supports only one open modal, so the confirmation is a state of this one. */
+  function showPane(which) {
+    if (!formPane || !conflictPane) return;
+    formPane.classList.toggle('d-none', which === 'conflict');
+    conflictPane.classList.toggle('d-none', which !== 'conflict');
+  }
 
   /**
-   * Asks whether to delete and replace the clashing batch a 409 overlap
-   * response names, with the two named actions the mock specifies rather
-   * than window.confirm's generic OK/Cancel. Falls back to window.confirm
-   * when the styled modal markup isn't on the page (a Viewer never gets
-   * this far, since only Admin/Developer can save a schedule at all).
+   * Turns the dialog into the replace question a 409 overlap response
+   * describes, with the two named actions the mock specifies rather than
+   * window.confirm's generic OK/Cancel. Back returns to the form still
+   * filled in, which is what someone who decides not to replace needs in
+   * order to pick other dates.
    */
   function confirmReplace(clash, onConfirm) {
-    if (!conflictModal) {
-      const when = formatWhen(clash.start, clash.end);
+    const when = formatWhen(clash.start, clash.end);
+
+    if (!conflictPane) {
       if (window.confirm(clash.name + ' is already on ' + when + '. Only one batch runs at a time, so saving replaces it.')) {
         onConfirm();
       }
       return;
     }
 
-    const when = formatWhen(clash.start, clash.end);
-    document.getElementById('scheduleConflictModalLabel').textContent = 'Replace the schedule on ' + when + '?';
+    document.getElementById('scheduleConflictTitle').textContent = 'Replace the schedule on ' + when + '?';
 
-    const message = conflictModalEl.querySelector('[data-conflict-message]');
+    const message = conflictPane.querySelector('[data-conflict-message]');
     message.textContent = '';
     const name = document.createElement('strong');
     name.textContent = clash.name;
@@ -360,10 +394,15 @@
     message.appendChild(document.createTextNode('.'));
 
     document.getElementById('scheduleConflictConfirm').onclick = function () {
-      conflictModal.hide();
+      showPane('form');
       onConfirm();
     };
-    conflictModal.show();
+    showPane('conflict');
+  }
+
+  const conflictBack = document.getElementById('scheduleConflictBack');
+  if (conflictBack) {
+    conflictBack.addEventListener('click', function () { showPane('form'); });
   }
 
   calendar.render();

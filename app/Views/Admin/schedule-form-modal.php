@@ -20,6 +20,12 @@
  * native multi-selects, so the form reads as six short fields the way the
  * approved mockup draws it. The toggle carries the summary text.
  *
+ * The dialog holds two panes and shows one at a time. A save that collides
+ * with another batch swaps #scheduleFormPane for #scheduleConflictPane, which
+ * asks whether to delete the batch in the way; Back returns to the filled-in
+ * form. Bootstrap does not support two open modals, so the confirmation is a
+ * second state of this one rather than a dialog of its own.
+ *
  * Variables:
  * - $activeSubsidyTypes list of subsidy rows (subsidy_type_id, name)
  * - $barangayOptions    list of barangay rows (barangayID, name)
@@ -40,6 +46,7 @@ $venueSuggestions   = $venueSuggestions ?? [];
           data-preview-url="<?= esc(site_url('distribution/batches/preview'), 'attr') ?>">
       <?= csrf_field() ?>
       <input type="hidden" name="batch_id" id="scheduleBatchId" value="0">
+      <div id="scheduleFormPane">
       <div class="modal-header">
         <h5 class="modal-title" id="scheduleFormTitle">New schedule</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -151,6 +158,21 @@ $venueSuggestions   = $venueSuggestions ?? [];
         <button type="button" class="btn btn-outline-danger me-auto d-none" id="scheduleDelete">Delete</button>
         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
         <button type="submit" class="<?= btn('add') ?>" id="scheduleSubmit">Save</button>
+      </div>
+      </div>
+
+      <div id="scheduleConflictPane" class="d-none">
+        <div class="modal-header">
+          <h5 class="modal-title" id="scheduleConflictTitle">Replace the existing schedule?</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p class="mb-0" data-conflict-message></p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" id="scheduleConflictBack">Back</button>
+          <button type="button" class="btn btn-danger" id="scheduleConflictConfirm">Delete and replace</button>
+        </div>
       </div>
     </form>
   </div>

@@ -830,14 +830,6 @@ tr.is-highlighted td,
    has in the design mock. */
 .dash-schedule-card { max-width: 340px; }
 
-/* Month bar's prev/next, decorative only: the card always shows the current
-   month, browsing other months happens on the Schedule tab it links to. */
-.dash-schedule-nav span {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 22px; height: 22px; margin-left: 4px; border: 1px solid var(--token-gray-300);
-    border-radius: 4px; font-size: .7rem; color: var(--token-gray-600);
-}
-
 /* Dashboard schedule card's month grid.
    One .dash-schedule-week per row: day numbers sit on grid row 1, and each
    batch's .dash-schedule-bar is a spanning grid item placed by

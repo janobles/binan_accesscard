@@ -45,10 +45,11 @@ jobs:
       - name: Run tests
         run: vendor/bin/phpunit --no-coverage
 
-      # A route that names a missing controller resolves at request time, not at
-      # test time, so the suite passes and the page 500s. This is the cheapest
-      # check that "one page, one URL" still holds.
-      - name: Check every route resolves
+      # This builds and lists the route table, so it catches a route config
+      # that throws during registration, a class that cannot be loaded at
+      # registration time, and a malformed route definition. It does not
+      # verify that each route's handler method exists.
+      - name: Check the route table builds
         run: php spark routes
 
       - name: Set up Node

@@ -51,8 +51,8 @@ final class DumpSchemaDriverTest extends CIUnitTestCase
 
         $this->assertSame(
             0,
-            $db->table('member')->countAllResults(),
-            'a test starts from empty tables on either backend'
+            $db->table('users')->countAllResults(),
+            'the imported dump seeds users, so a test starts from empty only if create() emptied it'
         );
 
         DumpSchema::drop($db);

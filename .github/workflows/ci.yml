@@ -56,3 +56,59 @@ jobs:
       # gate, where a mis-wired gate binds a saved draft to the wrong record.
       - name: Run the entry page JS smoke test
         run: node tests/js/entry-page-gate.smoke.mjs
+
+  # The suite otherwise runs on SQLite, which DumpSchema reaches by rewriting the
+  # dump: types collapse to INTEGER/TEXT/REAL and every KEY and CONSTRAINT line
+  # drops. That verifies column names and nothing else. This job imports the dump
+  # as written, so types, constraints, foreign keys, and the utf8mb4_general_ci
+  # collation are the ones production runs on.
+  #
+  # MariaDB 10.4 rather than MySQL because the dump is a MariaDB 10.4 dump and
+  # XAMPP is what the app is developed and deployed against.
+  mariadb-tests:
+    runs-on: ubuntu-latest
+
+    services:
+      mariadb:
+        image: mariadb:10.4
+        env:
+          MARIADB_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: intl, mbstring, mysqli
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      # No database argument: the dump declares CREATE DATABASE `accesscard` and
+      # USE `accesscard` itself.
+      - name: Import the schema dump
+        run: mysql -h 127.0.0.1 -P 3306 -uroot -proot < accesscardV21.sql
+
+      # CodeIgniter reads these over the $tests group in app/Config/Database.php.
+      # DBPrefix is empty because the dump creates unprefixed tables; the SQLite
+      # group keeps its db_ prefix.
+      - name: Run the suite against MariaDB
+        env:
+          database.tests.hostname: 127.0.0.1
+          database.tests.port: '3306'
+          database.tests.database: accesscard
+          database.tests.username: root
+          database.tests.password: root
+          database.tests.DBDriver: MySQLi
+          database.tests.DBPrefix: ''
+        run: vendor/bin/phpunit --no-coverage

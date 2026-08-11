@@ -190,6 +190,12 @@ $bodyView = ($bodyView ?? '') !== '' ? $bodyView : 'Pages/dashboard';
 <?php foreach (array_merge(asset_scripts('core'), asset_scripts('admin')) as $scriptPath): ?>
 <script src="<?= esc(asset_url($scriptPath), 'attr') ?>"></script>
 <?php endforeach; ?>
+<?php // FullCalendar (~275KB) only ships to the Schedule tab, not every dashboard page. ?>
+<?php if (($activePage ?? '') === 'distribution' && ($distributionTab ?? '') === 'schedule'): ?>
+<?php foreach (asset_scripts('schedule') as $scriptPath): ?>
+<script src="<?= esc(asset_url($scriptPath), 'attr') ?>"></script>
+<?php endforeach; ?>
+<?php endif; ?>
 <script src="<?= esc(asset_url('assets/js/session-timeout.js'), 'attr') ?>" data-timeout-seconds="<?= esc((string) $idleTimeoutSeconds) ?>" data-logout-url="<?= site_url('logout?timeout=1') ?>" data-home-url="<?= site_url('/') ?>" data-keep-alive-url="<?= site_url('session/keep-alive') ?>"></script>
 
 <?php if (session()->getFlashdata('openModal')): ?>

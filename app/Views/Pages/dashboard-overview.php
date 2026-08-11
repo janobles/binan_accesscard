@@ -5,7 +5,9 @@
  *
  * Figures come from DashboardModel::programStats() and the per-batch outcome
  * rows from DashboardPageBuilder::buildDistributionRows(), both handed over by
- * DashboardPageBuilder::buildViewData().
+ * DashboardPageBuilder::buildViewData(). The schedule card at the bottom is
+ * Admin/dashboard-schedule-card.php, fed by the same builder's
+ * buildUpcomingSchedule() and buildScheduleGrid().
  *
  * The tiles carry no icon and no card header block. That is a deliberate
  * exception to the SB Admin card convention, scoped to KPI tiles: an icon
@@ -66,10 +68,13 @@ $cards = [
             <a href="<?= site_url('dashboard') ?>?view=distribution&batch=<?= esc((string) (int) $row['batch_id'], 'attr') ?>">
               <?= esc((string) $row['name']) ?>
             </a>
-            <?= ($row['closed_at'] ?? null) === null ? '<span class="status-pill is-muted">open</span>' : '' ?>
+            <?php if (($row['closed_at'] ?? null) === null): ?>
+              <?php // A plotted batch also has no closed_at, so started_at is what separates one that is running from one still ahead of its day. ?>
+              <span class="status-pill is-muted"><?= ($row['started_at'] ?? null) === null ? 'scheduled' : 'open' ?></span>
+            <?php endif; ?>
           </td>
           <td><?= esc((string) ($row['subsidy_type_name'] ?? '')) ?></td>
-          <td><?= esc((string) ($row['started_at'] ?? '')) ?></td>
+          <td><?= ($row['started_at'] ?? null) === null ? 'Not yet started' : esc((string) $row['started_at']) ?></td>
           <td><?= esc(number_format((int) $row['eligible'])) ?></td>
           <td><?= esc(number_format((int) $row['served'])) ?></td>
           <td><?= esc((string) (int) $row['coverage']) ?>%</td>
@@ -81,4 +86,12 @@ $cards = [
       </tbody>
     </table>
   </div>
+</section>
+
+<section class="batch-pane">
+  <h3 class="batch-pane-title">Upcoming schedule</h3>
+  <?= view('Admin/dashboard-schedule-card', [
+      'upcomingSchedule' => $upcomingSchedule ?? [],
+      'scheduleGrid'     => $scheduleGrid ?? ['weeks' => [], 'bars' => []],
+  ]) ?>
 </section>

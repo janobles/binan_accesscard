@@ -85,9 +85,12 @@ final class DumpSchema
 
         $tables = [];
         foreach ($matches as $match) {
+            preg_match('/PRIMARY KEY \(`(\w+)`\)/i', $match[2], $pk);
+            $primaryKey = $pk[1] ?? null;
+
             $columns = [];
             foreach (explode("\n", $match[2]) as $line) {
-                $definition = self::column(trim($line));
+                $definition = self::column(trim($line), $primaryKey);
                 if ($definition !== null) {
                     $columns[] = $definition;
                 }
@@ -101,8 +104,14 @@ final class DumpSchema
         return $tables;
     }
 
-    /** One dump line as a SQLite column definition, or null when the line is not a column. */
-    private static function column(string $line): ?string
+    /**
+     * One dump line as a SQLite column definition, or null when the line is not
+     * a column. An AUTO_INCREMENT primary key is declared `INTEGER PRIMARY KEY`
+     * so SQLite aliases it to the rowid: without that alias an insert leaves
+     * the column NULL and a later find() by the id getInsertID() returned
+     * comes back empty.
+     */
+    private static function column(string $line, ?string $primaryKey): ?string
     {
         $line = rtrim($line, ',');
 
@@ -115,6 +124,10 @@ final class DumpSchema
         }
 
         [$name, $type] = [$parts[1], strtolower($parts[2])];
+
+        if ($name === $primaryKey && str_contains($type, 'int')) {
+            return '`' . $name . '` INTEGER PRIMARY KEY AUTOINCREMENT';
+        }
 
         $sqliteType = match (true) {
             str_contains($type, 'int')                                => 'INTEGER',

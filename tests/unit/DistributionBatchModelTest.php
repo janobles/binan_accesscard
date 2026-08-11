@@ -13,20 +13,6 @@ final class DistributionBatchModelTest extends CIUnitTestCase
         $this->assertTrue($out === null || is_array($out));
     }
 
-    public function testOpenRejectsBlankName(): void
-    {
-        $this->assertSame(0, (new DistributionBatchModel())->open('   ', 1, 1));
-    }
-
-    public function testOpenRequiresSubsidyType(): void
-    {
-        // No skip guard: `$subsidyTypeId <= 0` short-circuits ahead of the
-        // activeBatch() lookup in open()'s condition, so nothing here reaches
-        // storage and the contract holds with or without a database.
-        $m = new DistributionBatchModel();
-        $this->assertSame(0, $m->open('Batch A', 0, 1), 'subsidy type 0 must refuse');
-    }
-
     public function testCloseRejectsNonPositiveId(): void
     {
         $this->assertFalse((new DistributionBatchModel())->close(0));
@@ -35,11 +21,6 @@ final class DistributionBatchModelTest extends CIUnitTestCase
     public function testAllBatchesReturnsArray(): void
     {
         $this->assertIsArray((new DistributionBatchModel())->allBatches());
-    }
-
-    public function testOpenStillRejectsBlankNameWithFilters(): void
-    {
-        $this->assertSame(0, (new DistributionBatchModel())->open('   ', 1, 1, [1], [2]));
     }
 
     public function testFiltersForReturnsBothKeys(): void
@@ -63,5 +44,31 @@ final class DistributionBatchModelTest extends CIUnitTestCase
     public function testRebuildRosterRefusesNonexistentPositiveId(): void
     {
         $this->assertSame(0, (new DistributionBatchModel())->rebuildRoster(999999999));
+    }
+
+    public function testSaveScheduleRejectsBlankName(): void
+    {
+        $this->assertSame(0, (new DistributionBatchModel())->saveSchedule([
+            'batch_id' => 0, 'name' => '   ', 'subsidy_type_id' => 1,
+            'scheduled_start' => '2026-08-20', 'scheduled_end' => '2026-08-20',
+        ], 1));
+    }
+
+    public function testSaveScheduleRequiresSubsidyType(): void
+    {
+        $this->assertSame(0, (new DistributionBatchModel())->saveSchedule([
+            'batch_id' => 0, 'name' => 'Batch A', 'subsidy_type_id' => 0,
+            'scheduled_start' => '2026-08-20', 'scheduled_end' => '2026-08-20',
+        ], 1));
+    }
+
+    public function testLastScanAtRefusesNonPositiveId(): void
+    {
+        $this->assertNull((new DistributionBatchModel())->lastScanAt(0));
+    }
+
+    public function testDeleteScheduleRefusesNonPositiveId(): void
+    {
+        $this->assertFalse((new DistributionBatchModel())->deleteSchedule(0));
     }
 }

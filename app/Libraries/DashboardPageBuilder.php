@@ -194,7 +194,8 @@ class DashboardPageBuilder
         // Distribution page: batches and the log share one page, switched by
         // ?tab=. Data gated so other pages don't run these queries.
         $distributionTab = (string) $this->request->getGet('tab');
-        $distributionTab = in_array($distributionTab, ['batches', 'log'], true) ? $distributionTab : 'batches';
+        $distributionTab = in_array($distributionTab, ['schedule', 'batches', 'log'], true) ? $distributionTab : 'schedule';
+        $isSchedule      = $activePage === 'distribution' && $distributionTab === 'schedule';
         $isBatches       = $activePage === 'distribution' && $distributionTab === 'batches';
         $isDistributions = $activePage === 'distribution' && $distributionTab === 'log';
         $batchModel      = model(DistributionBatchModel::class);
@@ -295,11 +296,13 @@ class DashboardPageBuilder
             // ever true for a given page load.
             'batches'            => $isBatches ? $batchModel->allBatches() : ($reportsData['batches'] ?? []),
             'activeBatch'        => $isBatches ? $batchModel->activeBatch() : null,
-            'activeSubsidyTypes' => $isBatches ? model(SubsidyTypeModel::class)->active() : [],
-            // Barangay/sector option lists for the batch-open modal's eligibility
-            // filters (Task 10). Only fetched on the batches tab.
-            'barangayOptions'    => $isBatches ? model(BarangayModel::class)->activeList() : [],
-            'batchSectorOptions' => $isBatches ? $sectorModel->getActive() : [],
+            'activeSubsidyTypes' => ($isBatches || $isSchedule) ? model(SubsidyTypeModel::class)->active() : [],
+            // Barangay/sector option lists for the schedule and batch-open forms'
+            // eligibility filters (Task 10). Only fetched on those tabs.
+            'barangayOptions'    => ($isBatches || $isSchedule) ? model(BarangayModel::class)->activeList() : [],
+            'batchSectorOptions' => ($isBatches || $isSchedule) ? $sectorModel->getActive() : [],
+            'scheduleColors'     => $isSchedule ? DistributionBatchModel::COLORS : [],
+            'venueSuggestions'   => $isSchedule ? $this->venueSuggestions($batchModel) : [],
             'subsidyTypes'       => $subsidyTypeListData['rows'] ?? [],
             'subsidyTypeListData' => $subsidyTypeListData,
             'distributions'      => $isDistributions ? model(SubsidyDistributionModel::class)->allDistributions() : [],
@@ -318,6 +321,12 @@ class DashboardPageBuilder
             'distributionRows'   => $isDashboard && $dashboardView === 'overview'
                 ? $this->buildDistributionRows($batchModel)
                 : [],
+            'upcomingSchedule'   => $isDashboard && $dashboardView === 'overview'
+                ? $this->buildUpcomingSchedule($batchModel)
+                : [],
+            'scheduleGrid'       => $isDashboard && $dashboardView === 'overview'
+                ? $this->buildScheduleGrid($batchModel)
+                : ['weeks' => [], 'bars' => []],
             'busiestDay'         => self::busiestDay($reportsData['batchSnapshot']['byDay'] ?? []),
             // Only the roles that may open the record-entry page get the Add and
             // Import buttons on the records list (Config\Navigation, records-entry).
@@ -383,6 +392,27 @@ class DashboardPageBuilder
     public function buildRecordListViewData(): array
     {
         return $this->buildMemberListData();
+    }
+
+    /**
+     * Venues used before, newest first, for the schedule form's datalist. A
+     * venue reference table would be disproportionate: venues repeat rarely and
+     * a datalist gives most of the convenience.
+     *
+     * @return list<string>
+     */
+    private function venueSuggestions(DistributionBatchModel $batchModel): array
+    {
+        $seen = [];
+
+        foreach ($batchModel->allBatches() as $batch) {
+            $venue = trim((string) ($batch['venue'] ?? ''));
+            if ($venue !== '' && ! in_array($venue, $seen, true)) {
+                $seen[] = $venue;
+            }
+        }
+
+        return $seen;
     }
 
     /** All sectors (active + archived) ordered by ID, for the admin sectors view. */
@@ -570,6 +600,169 @@ class DashboardPageBuilder
                 'coverage' => $eligible === 0 ? 0 : (int) round($count / $eligible * 100),
             ];
         }, $batchModel->allBatches());
+    }
+
+    /**
+     * At most two plotted batches for the dashboard's schedule card, earliest
+     * first: the one running now counts as one of the two, so a running batch
+     * leaves room for a single upcoming one. Closed batches are skipped.
+     *
+     * @return list<array{batch_id:int,name:string,venue:string,start:string,end:string,dailyStart:string,dailyEnd:string,color:string,status:string}>
+     */
+    private function buildUpcomingSchedule(DistributionBatchModel $batchModel): array
+    {
+        $today = date('Y-m-d');
+        $rows  = [];
+
+        foreach ($batchModel->scheduledBetween($today, date('Y-m-d', strtotime('+6 months'))) as $batch) {
+            $status = 'upcoming';
+            if ($batch['closed_at'] !== null) {
+                continue;
+            }
+            if ($batch['started_at'] !== null) {
+                $status = 'running';
+            }
+
+            $rows[] = [
+                'batch_id'   => (int) $batch['batch_id'],
+                'name'       => (string) $batch['name'],
+                'venue'      => (string) $batch['venue'],
+                'start'      => (string) $batch['scheduled_start'],
+                'end'        => (string) $batch['scheduled_end'],
+                'dailyStart' => substr((string) $batch['daily_start_time'], 0, 5),
+                'dailyEnd'   => substr((string) $batch['daily_end_time'], 0, 5),
+                'color'      => (string) $batch['color'],
+                'status'     => $status,
+            ];
+
+            if (count($rows) === 2) {
+                break;
+            }
+        }
+
+        return $rows;
+    }
+
+    /**
+     * The dashboard schedule card's month grid, as cells to print day numbers
+     * and bars to draw across them, so the view never touches date arithmetic.
+     *
+     * The leading and trailing blanks of the first and last week carry the
+     * adjacent month's real day numbers (`isOutside` true) rather than being
+     * left empty, matching a normal month calendar. A bar is one batch's
+     * contiguous run of days within a single week row: a batch is clipped to
+     * the visible month first, then split at each week boundary it crosses,
+     * so a run over a Sunday becomes two bars and a run crossing into another
+     * month is cut off at the edge. `startCol` and `lane` are both 0 based;
+     * `lane` only rises above 0 when two batches cover the same days in the
+     * same week, which the scheduler otherwise refuses.
+     *
+     * @return array{
+     *     weeks: list<list<array{day: int, isToday: bool, isOutside: bool}>>,
+     *     bars: list<array{weekIndex: int, startCol: int, span: int, lane: int, color: string, status: string, name: string}>
+     * }
+     */
+    private function buildScheduleGrid(DistributionBatchModel $batchModel): array
+    {
+        $monthStart  = date('Y-m-01');
+        $monthEnd    = date('Y-m-t');
+        $today       = date('Y-m-d');
+        $leading     = (int) date('w', strtotime($monthStart));
+        $daysInMonth = (int) date('t');
+        $weekCount   = (int) ceil(($leading + $daysInMonth) / 7);
+
+        $weeks = [];
+        for ($w = 0; $w < $weekCount; $w++) {
+            $week = [];
+            for ($c = 0; $c < 7; $c++) {
+                $dayNum    = $w * 7 + $c - $leading + 1;
+                $isDay     = $dayNum >= 1 && $dayNum <= $daysInMonth;
+                $cellDate  = date('Y-m-d', strtotime($monthStart . ' ' . ($dayNum - 1) . ' days'));
+                $week[]    = [
+                    'day'       => (int) date('j', strtotime($cellDate)),
+                    'isToday'   => $isDay && $cellDate === $today,
+                    'isOutside' => ! $isDay,
+                ];
+            }
+            $weeks[] = $week;
+        }
+
+        $bars = [];
+        foreach ($batchModel->scheduledBetween($monthStart, $monthEnd) as $batch) {
+            $start = max((string) $batch['scheduled_start'], $monthStart);
+            $end   = min((string) $batch['scheduled_end'], $monthEnd);
+            if ($start > $end) {
+                continue;
+            }
+
+            $status = 'upcoming';
+            if ($batch['closed_at'] !== null) {
+                $status = 'done';
+            } elseif ($batch['started_at'] !== null) {
+                $status = 'running';
+            }
+
+            $startOffset = $leading + (int) date('j', strtotime($start)) - 1;
+            $endOffset   = $leading + (int) date('j', strtotime($end)) - 1;
+
+            for ($weekIndex = intdiv($startOffset, 7); $weekIndex <= intdiv($endOffset, 7); $weekIndex++) {
+                $weekFrom = $weekIndex * 7;
+                $weekTo   = $weekFrom + 6;
+                $segFrom  = max($startOffset, $weekFrom);
+                $segTo    = min($endOffset, $weekTo);
+
+                $bars[] = [
+                    'weekIndex' => $weekIndex,
+                    'startCol'  => $segFrom - $weekFrom,
+                    'span'      => $segTo - $segFrom + 1,
+                    'lane'      => 0,
+                    'color'     => (string) $batch['color'],
+                    'status'    => $status,
+                    'name'      => (string) $batch['name'],
+                ];
+            }
+        }
+
+        return ['weeks' => $weeks, 'bars' => self::assignScheduleLanes($bars)];
+    }
+
+    /**
+     * Gives each bar the lowest lane index that keeps it clear of every other
+     * bar sharing its week and columns, so two batches covering the same days
+     * stack into separate rows instead of drawing on top of each other. The
+     * scheduler refuses overlapping dates, so in practice every bar lands on
+     * lane 0; this only matters if that rule is ever relaxed.
+     *
+     * @param list<array{weekIndex: int, startCol: int, span: int, lane: int, color: string, status: string, name: string}> $bars
+     * @return list<array{weekIndex: int, startCol: int, span: int, lane: int, color: string, status: string, name: string}>
+     */
+    private static function assignScheduleLanes(array $bars): array
+    {
+        $lanesByWeek = [];
+
+        foreach ($bars as &$bar) {
+            $lane = 0;
+            while (self::laneTaken($lanesByWeek, $bar, $lane)) {
+                $lane++;
+            }
+            $bar['lane']                             = $lane;
+            $lanesByWeek[$bar['weekIndex']][$lane][] = $bar;
+        }
+
+        return $bars;
+    }
+
+    /** Whether any bar already placed in this week and lane shares a column with $bar. */
+    private static function laneTaken(array $lanesByWeek, array $bar, int $lane): bool
+    {
+        foreach ($lanesByWeek[$bar['weekIndex']][$lane] ?? [] as $placed) {
+            if ($placed['startCol'] < $bar['startCol'] + $bar['span']
+                && $bar['startCol'] < $placed['startCol'] + $placed['span']) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

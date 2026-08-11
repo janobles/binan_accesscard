@@ -2,6 +2,9 @@
 /**
  * Scan page (Scanner kiosk > Scan), the screen the distribution kiosk sits on.
  *
+ * A schedule banner sits above everything else and states what is running or
+ * next, where, and the system's own clock (ScanController::scheduleBanner()),
+ * so a person at the venue can tell what state the kiosk believes it is in.
  * Refuses to scan at all when no distribution batch is open, because a scan with no
  * batch to record against has nowhere to go. Built for a keyboard-wedge scanner gun
  * rather than a mouse: the input stays focused and a scan completes in one action, so
@@ -16,11 +19,14 @@
 
 
 
-<?php if ($activeBatch === null): ?>
-<div class="alert alert-warning" role="alert">
-  No active distribution batch. Ask an administrator to start one.
+<div class="alert <?= ($scheduleBanner['state'] ?? 'idle') === 'open' ? 'alert-success' : 'alert-secondary' ?>" role="status">
+  <?php foreach (($scheduleBanner['lines'] ?? []) as $line): ?>
+    <p class="mb-1"><?= esc($line) ?></p>
+  <?php endforeach; ?>
+  <p class="small text-muted mb-0">System time: <?= esc($systemNow ?? '') ?></p>
 </div>
-<?php else: ?>
+
+<?php if ($activeBatch !== null): ?>
 
 <div class="row g-3 align-items-end mb-3">
   <div class="col-12">

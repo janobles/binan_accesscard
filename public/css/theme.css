@@ -175,6 +175,10 @@
     background-color: var(--token-gray-100);
     color: var(--token-primary-green);
 }
+.app-sidebar-nav .nav-link.active {
+    background-color: var(--token-gray-100);
+    color: var(--token-primary-green) !important;
+}
 .app-sidebar-nav .sidebar-nav-icon {
     width: 24px;
     text-align: center;
@@ -251,8 +255,9 @@
    those are id-free hooks its own poll uses to find a tile, never styled. */
 
 /* Sidebar account dropdown hover states */
-.sidebar-footer .btn-light:hover {
-    background-color: var(--token-gray-200) !important;
+.sidebar-footer .btn-light:hover,
+.sidebar-footer .btn-light[aria-expanded="true"] {
+    background-color: var(--token-gray-100) !important;
 }
 .sidebar-footer .dropdown-item:hover {
     background-color: var(--token-gray-100);
@@ -766,3 +771,104 @@ tr.is-highlighted td,
 .manage-record-table tbody tr.is-highlighted td {
     background-color: #eaf2fb;
 }
+
+/* Batch label colours.
+   Stored on distribution_batch.color as a name, never a hex, so a theme change
+   is one edit here. Muted on purpose: a month holding several batches should
+   read as a schedule rather than a swatch book. All six clear 4.5:1 against
+   white text: green 4.63, yellow 4.70, orange 4.64, red 4.83, purple 5.73,
+   blue 4.61. */
+:root {
+    --batch-green: #3a8357;
+    --batch-yellow: #966c17;
+    --batch-orange: #b95a17;
+    --batch-red: #c14953;
+    --batch-purple: #6f5b9e;
+    --batch-blue: #3c7ba2;
+}
+
+.batch-swatch { width: 26px; height: 26px; border-radius: 6px; border: 2px solid transparent; padding: 0; position: relative; }
+.batch-swatch.selected { border-color: var(--token-gray-900); }
+.batch-swatch.selected::after {
+    content: "\2713"; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: .8rem; font-weight: 700;
+}
+/* A finished batch is marked by its Done pill and a hairline inset, not by
+   fading: opacity pales the bar toward white and takes the white label with
+   it, which put the label under 2:1 against its own bar. */
+.fc-event.batch-finished { box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .55); }
+.fc-event .batch-status {
+    font-size: .55rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase;
+    background: #fff; color: var(--token-gray-900); border-radius: 3px; padding: 2px 5px; margin-right: 5px; flex-shrink: 0;
+}
+
+/* Schedule tab: FullCalendar's own DOM, themed to the calendar mock rather
+   than left on its stock look. Scoped to #scheduleCalendar so nothing here
+   leaks onto a FullCalendar instance used elsewhere. Options (button text,
+   toolbar layout) are set in schedule-calendar.js; this is the paint. */
+#scheduleCalendar .fc-toolbar { margin-bottom: 1rem; flex-wrap: wrap; gap: .5rem; }
+#scheduleCalendar .fc-toolbar-title { font-size: 1.5rem; font-weight: 700; color: var(--token-gray-900); }
+#scheduleCalendar .fc-button-primary {
+    background: #fff; border-color: var(--token-gray-300); color: var(--token-gray-600);
+    box-shadow: none; font-weight: 500; text-transform: none;
+}
+#scheduleCalendar .fc-button-primary:hover,
+#scheduleCalendar .fc-button-primary:focus {
+    background: #fff; border-color: var(--token-gray-300); color: var(--token-gray-600); box-shadow: none;
+}
+#scheduleCalendar .fc-button-primary:not(:disabled).fc-button-active,
+#scheduleCalendar .fc-button-primary:not(:disabled):active {
+    background: var(--token-primary-green-soft); border-color: var(--token-gray-300); color: var(--token-primary-green);
+    box-shadow: none;
+}
+#scheduleCalendar .fc-col-header-cell-cushion { color: var(--token-gray-600); font-size: .68rem; text-transform: uppercase; letter-spacing: .04em; }
+#scheduleCalendar .fc-daygrid-day-top { flex-direction: row; }
+#scheduleCalendar .fc-daygrid-day-number {
+    text-decoration: none; color: var(--token-gray-900); font-size: .78rem; font-weight: 500; padding: 6px;
+}
+#scheduleCalendar .fc-day-today { background: transparent; }
+#scheduleCalendar .fc-day-today .fc-daygrid-day-number {
+    background: var(--token-primary-green); color: #fff; border-radius: 50%; font-weight: 600;
+    width: 1.4rem; height: 1.4rem; display: flex; align-items: center; justify-content: center; padding: 0; margin: 4px;
+}
+#scheduleCalendar .fc-daygrid-day.fc-day-other .fc-daygrid-day-number { color: var(--token-gray-500); }
+#scheduleCalendar .fc-event { border: none; font-size: .74rem; padding: 0 !important; overflow: hidden; }
+
+/* Dashboard schedule card: drawn at one dashboard column's width, not the
+   page's full width, so a multi-day batch's bar keeps the same proportion it
+   has in the design mock. */
+.dash-schedule-card { max-width: 340px; }
+
+/* Dashboard schedule card's month grid.
+   One .dash-schedule-week per row: day numbers sit on grid row 1, and each
+   batch's .dash-schedule-bar is a spanning grid item placed by
+   DashboardPageBuilder::buildScheduleGrid() below them, so a multi-day batch
+   reads as one labelled bar rather than a mark per day. */
+.dash-schedule-heading, .dash-schedule-week { display: grid; grid-template-columns: repeat(7, 1fr); column-gap: 2px; }
+.dash-schedule-heading { text-align: center; margin-bottom: .25rem; }
+.dash-schedule-day { grid-row: 1; text-align: center; font-size: .78rem; padding-top: 2px; }
+.dash-schedule-day.is-outside { color: var(--token-gray-500); }
+.dash-schedule-day.is-today {
+    width: 1.35rem; height: 1.35rem; margin: 0 auto; border-radius: 50%;
+    background: var(--token-primary-green); color: #fff; font-weight: 600;
+    display: flex; align-items: center; justify-content: center;
+}
+.dash-schedule-bar {
+    height: 15px; border-radius: 3px; font-size: .58rem; font-weight: 600; line-height: 15px;
+    color: #fff; padding: 0 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.dash-schedule-bar.is-done { opacity: .4; }
+
+/* Upcoming-schedule list rows: a large day number with its month underneath,
+   matching a normal agenda item's date block. */
+.dash-schedule-when { flex: 0 0 2.25rem; text-align: center; }
+.dash-schedule-when b { display: block; font-size: 1rem; line-height: 1.1; font-weight: 700; }
+.dash-schedule-when i { display: block; font-size: .62rem; font-style: normal; font-weight: 600;
+    text-transform: uppercase; letter-spacing: .04em; color: var(--token-gray-600); }
+
+/* Covers dropdowns on the schedule form: the toggle keeps a select's height so
+   the field reads as one line, and the checkbox list scrolls inside the menu
+   rather than growing the modal. */
+.schedule-covers-menu { max-height: 15rem; overflow-y: auto; width: 100%; min-width: 12rem; }
+.schedule-covers-menu .form-check { margin-bottom: .15rem; }
+.schedule-covers-menu .form-check-label { font-size: .875rem; }

@@ -2,6 +2,7 @@
 
 namespace Config;
 
+use App\Filters\BatchScheduleFilter;
 use App\Filters\IdleTimeoutFilter;
 use App\Filters\RoleNavFilter;
 use App\Filters\SingleSessionFilter;
@@ -40,6 +41,7 @@ class Filters extends BaseFilters
         'idleTimeout'   => IdleTimeoutFilter::class,
         'singleSession' => SingleSessionFilter::class,
         'roleNav'       => RoleNavFilter::class,
+        'batchSchedule' => BatchScheduleFilter::class,
     ];
 
     /**
@@ -150,5 +152,6 @@ class Filters extends BaseFilters
                 'session/keep-alive',
             ],
         ],
+        'batchSchedule' => ['before' => ['distribution', 'distribution/*', 'scanner/*']],
     ];
 }

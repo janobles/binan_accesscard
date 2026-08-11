@@ -69,7 +69,8 @@ if (! function_exists('asset_scripts')) {
      * inline because its data-* attributes differ per role.
      *
      * Contexts: core (jQuery + Bootstrap bundle, shared), admin (the one dashboard
-     * shell), login, scanner. Unknown context returns [].
+     * shell), schedule (FullCalendar, the distribution page's Schedule tab only),
+     * login, scanner. Unknown context returns [].
      */
     function asset_scripts(string $context): array
     {
@@ -103,7 +104,10 @@ if (! function_exists('asset_scripts')) {
                 'assets/js/dashboard/audit-trails-modal.js',
                 'assets/js/dashboard/audit-detail-modal.js',
                 'assets/js/dashboard/batch-close-modal.js',
-                'assets/js/dashboard/batch-create-modal.js',
+            ],
+            'schedule' => [
+                'assets/fullcalendar/index.global.min.js',
+                'assets/js/dashboard/schedule-calendar.js',
             ],
             'login' => [
                 'assets/bootstrap/js/bootstrap.bundle.min.js',

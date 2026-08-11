@@ -339,7 +339,7 @@
 
 .manage-record-table tbody tr:hover,
 .manage-record-table tbody tr:hover td {
-    background-color: #eef6f2 !important;
+    background-color: var(--token-surface-hover) !important;
     box-shadow: none !important;
 }
 

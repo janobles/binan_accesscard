@@ -4,30 +4,54 @@
 performance stats, and the kiosk-vs-dashboard shell split in the scanner
 module.
 
-## Rule 1: Batch = one giving event; at most one open; subsidy type bound at open
+## Rule 1: Batch = one giving event; at most one open; subsidy type bound at plot time
 
-`distribution_batch` (dump V18) holds one row per giving event, including the
-subsidy type distributed in it (`aid_type_id` -> the `aid_type` reference table).
-`closed_at IS NULL` marks the single open batch; the invariant is enforced in
-`App\Models\Scanner\DistributionBatchModel::open()` (refuses when one is
-already open), not by a DB constraint. Closing a batch is the manual
-statistics reset - the next batch starts from zero. The admin picks the aid
-type when opening the batch; the kiosk never picks one - every scan during
-that batch logs against the batch's `aid_type_id`.
+`distribution_batch` (dump V21) holds one row per giving event, including the
+subsidy type distributed in it (`subsidy_type_id` -> the `subsidy` reference
+table) plus its schedule: `venue`, `scheduled_start`, `scheduled_end`,
+`daily_start_time`, `daily_end_time`, `color`. The single open batch is
+`closed_at IS NULL` **and** `started_at IS NOT NULL`
+(`DistributionBatchModel::activeBatch()`): a batch plotted for a later day
+also has no `closed_at`, and it is not open until its first day arrives. The
+invariant is enforced by refusing overlapping date spans at save time
+(`DistributionBatchModel::overlapping()`), not by a DB constraint. A batch is plotted on the Schedule tab's calendar with a name,
+venue, subsidy type and date/time span; it opens and closes itself against
+that plan rather than by an admin clicking a button - see Rule 1a. The kiosk
+never picks a subsidy type - every scan during a batch logs against the
+batch's `subsidy_type_id`.
 
-Aid types are their own concept, unrelated to the `services`/`category`
+Subsidy types are their own concept, unrelated to the `services`/`category`
 reference data (which describe member program enrollment, not handouts).
 
-`aid_distribution.batch_id` stamps every handout with the batch that was
+`subsidy_distribution.batch_id` stamps every handout with the batch that was
 open when it was logged. `batch_id NULL` = pre-batch history; batch-scoped
 views never include it.
 
-## Rule 2: Batch and subsidy-type lifecycle is Admin/Developer only, and audited
+## Rule 1a: Batches open and close on schedule, not on a click
 
-- Batch open/close: `Admin\DistributionController::openBatch()/closeBatch()`
-  (`POST distribution/batches/open`, `POST distribution/batches/close/{id}`). The
-  Batches tab lives on the `distribution` page (New Batch modal = name +
-  subsidy-type select), alongside the all-handouts log.
+Plotting a schedule only writes the plan (`scheduled_start`/`scheduled_end`,
+daily times); it never starts the batch. `App\Libraries\BatchScheduleWindow`
+is the pure open/close arithmetic (dates gate scanning, `daily_end_time`
+advises a closing time that a late scan pushes forward in 30-minute grace
+steps); `DistributionBatchModel::reconcileSchedule()` is the only thing that
+reads that verdict and writes `started_at`/`closed_at`. `App\Filters\
+BatchScheduleFilter` (alias `batchSchedule`) calls it on every scanner and
+distribution request, so state advances without a scheduled task on the
+laptop that travels to the venue. Each transition writes its own
+`audit_trails` row (user id 0, reads as "system"). `closeBatch()` still exists
+as a manual override (`POST distribution/batches/close/{id}`) for ending a
+batch early.
+
+## Rule 2: Schedule and subsidy-type lifecycle is Admin/Developer only, and audited
+
+- Schedule CRUD: `Admin\DistributionController::scheduleFeed()/saveSchedule()/
+  deleteSchedule()` (`GET distribution/schedule/feed`, `POST
+  distribution/schedule/save`, `POST distribution/schedule/(:num)/delete`).
+  The Schedule tab lives on the `distribution` page (a FullCalendar month view;
+  the create/edit modal is name + venue + subsidy-type select + date/time span
+  + label colour), alongside the all-handouts log. Saving over a date span
+  already taken by another batch is refused with the clashing batch's name;
+  deleting is refused once the batch has distributions against it.
 - Subsidy-type CRUD: `Admin\SubsidyTypesController` on the `reference-data` page's
   subsidy-types tab, routes `reference-data/subsidy-types/create|archive|
   restore|delete`. Delete is blocked while any distribution references the

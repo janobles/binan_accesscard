@@ -22,6 +22,12 @@ final class DumpSchema
     /** Creates every table in the dump on the given connection, honouring its DBPrefix. */
     public static function create(BaseConnection $db): void
     {
+        if (! self::isTranslatedDriver($db)) {
+            self::emptyAll($db);
+
+            return;
+        }
+
         $prefix = $db->getPrefix();
 
         foreach (self::tables() as $name => $columns) {
@@ -35,12 +41,18 @@ final class DumpSchema
     }
 
     /**
-     * Drops every table create() made. The test connection is one in-memory
-     * SQLite database shared by the whole run, so a case that leaves the dump
-     * schema behind changes what the next case sees.
+     * Returns the connection to the state create() found it in. The test
+     * connection is one database shared by the whole run, so a case that leaves
+     * rows or tables behind changes what the next case sees.
      */
     public static function drop(BaseConnection $db): void
     {
+        if (! self::isTranslatedDriver($db)) {
+            self::emptyAll($db);
+
+            return;
+        }
+
         $prefix = $db->getPrefix();
 
         foreach (array_keys(self::tables()) as $name) {
@@ -48,6 +60,41 @@ final class DumpSchema
         }
 
         $db->resetDataCache();
+    }
+
+    /**
+     * Whether this connection needs the dump rewritten before it can read it.
+     * MySQLi reads the dump as written, and the CI job imports it before the
+     * suite runs; every other driver gets the SQLite translation below.
+     */
+    public static function isTranslatedDriver(BaseConnection $db): bool
+    {
+        return $db->DBDriver !== 'MySQLi';
+    }
+
+    /**
+     * Empties every table the dump declares, leaving the schema in place. This
+     * is the native-driver equivalent of dropping and recreating: the tables
+     * arrive from the imported dump carrying its seeded reference rows, and a
+     * test inserts the rows it asserts on, so it has to start from empty.
+     *
+     * Foreign keys are real on MariaDB and dropped by the SQLite translation,
+     * so the checks come off for the duration.
+     */
+    private static function emptyAll(BaseConnection $db): void
+    {
+        $prefix = $db->getPrefix();
+
+        $db->query('SET FOREIGN_KEY_CHECKS = 0');
+
+        try {
+            foreach (array_keys(self::tables()) as $name) {
+                $db->query('TRUNCATE TABLE ' . $prefix . $name);
+            }
+        } finally {
+            $db->query('SET FOREIGN_KEY_CHECKS = 1');
+            $db->resetDataCache();
+        }
     }
 
     /** The newest dump in the project root, or null when none is present. */

@@ -251,10 +251,10 @@ class MemberModel extends Model
         foreach (array_chunk($names, 500) as $chunk) {
             $builder = $this->db->table($this->table)
                 ->select('memberID, headID, firstname, middlename, lastname, suffix, birthday')
-                ->whereIn('LOWER(member.lastname)', $chunk);
+                ->whereIn('LOWER(lastname)', $chunk);
 
             if ($soft) {
-                $builder->where('member.dt_deleted IS NULL', null, false);
+                $builder->where('dt_deleted IS NULL', null, false);
             }
 
             foreach ($builder->get()->getResultArray() as $row) {

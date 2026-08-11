@@ -6,6 +6,9 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   lint-and-test:
     runs-on: ubuntu-latest
@@ -40,4 +43,91 @@ jobs:
       # rather than the failOnWarning guard, which still has to catch real
       # warnings.
       - name: Run tests
+        run: vendor/bin/phpunit --no-coverage
+
+      # This builds and lists the route table, so it catches a route config
+      # that throws during registration, a class that cannot be loaded at
+      # registration time, and a malformed route definition. It does not
+      # verify that each route's handler method exists.
+      - name: Check the route table builds
+        run: php spark routes
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # The smoke test builds its own DOM by hand rather than pulling in jsdom,
+      # so this needs no npm install. It covers the data-entry control-number
+      # gate, where a mis-wired gate binds a saved draft to the wrong record.
+      - name: Run the entry page JS smoke test
+        run: node tests/js/entry-page-gate.smoke.mjs
+
+      - name: Install JS tooling
+        run: npm ci
+
+      # no-undef only, effectively. The browser JS wires itself together through
+      # window.* globals with no build step and no types, so a renamed entry
+      # point is a runtime ReferenceError no PHP test can see.
+      - name: Lint the browser JS
+        run: npx eslint public/assets/js
+
+  # The suite otherwise runs on SQLite, which DumpSchema reaches by rewriting the
+  # dump: types collapse to INTEGER/TEXT/REAL and every KEY and CONSTRAINT line
+  # drops. That verifies column names and nothing else. This job imports the dump
+  # as written, so types, constraints, foreign keys, and the utf8mb4_general_ci
+  # collation are the ones production runs on.
+  #
+  # MariaDB 10.4 rather than MySQL because the dump is a MariaDB 10.4 dump and
+  # XAMPP is what the app is developed and deployed against.
+  mariadb-tests:
+    runs-on: ubuntu-latest
+
+    services:
+      mariadb:
+        image: mariadb:10.4
+        env:
+          MARIADB_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: intl, mbstring, mysqli
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      # Resolve the dump by version instead of naming one: DumpSchema::dumpPath()
+      # (tests/_support/Database/DumpSchema.php) picks the highest-numbered
+      # accesscardV*.sql at test time, and a hardcoded filename here could drift
+      # from that choice, letting CI import one schema while the tests parse
+      # another. No database argument: the dump declares CREATE DATABASE
+      # `accesscard` and USE `accesscard` itself.
+      - name: Import the schema dump
+        run: mysql -h 127.0.0.1 -P 3306 -uroot -proot < "$(ls accesscardV*.sql | sort -V | tail -1)"
+
+      # CodeIgniter reads these over the $tests group in app/Config/Database.php.
+      # DBPrefix is empty because the dump creates unprefixed tables; the SQLite
+      # group keeps its db_ prefix.
+      - name: Run the suite against MariaDB
+        env:
+          database.tests.hostname: 127.0.0.1
+          database.tests.port: '3306'
+          database.tests.database: accesscard
+          database.tests.username: root
+          database.tests.password: root
+          database.tests.DBDriver: MySQLi
+          database.tests.DBPrefix: ''
         run: vendor/bin/phpunit --no-coverage

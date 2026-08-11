@@ -1,0 +1,28 @@
+# Composer advisories arrive on upstream's schedule, not on the schedule of our
+# pull requests, so this rather than a `composer audit` step in the workflow: a
+# PR gate reports a CVE whenever someone happens to open a PR, and blocks an
+# author who did not cause it.
+version: 2
+updates:
+  - package-ecosystem: composer
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: chore
+
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 2
+    commit-message:
+      prefix: chore
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: ci

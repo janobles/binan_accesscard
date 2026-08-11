@@ -4,6 +4,7 @@ namespace Tests\Unit;
 
 use CodeIgniter\Test\CIUnitTestCase;
 use Config\Navigation;
+use Tests\Support\Database\DumpSchema;
 
 /**
  * The manifest is the single source of truth for the sidebar, page titles, and
@@ -119,20 +120,19 @@ final class NavigationManifestTest extends CIUnitTestCase
 
     /**
      * RoleAccess::sessionUserExists() requires the session's user_id to map to a
-     * real `users` row. The PHPUnit run has no such table (no migrations, per repo
-     * policy - schema lives in the SQL dump only), so these two filter tests create
-     * a minimal one for the duration of the test and drop it after. The brief's
-     * test bodies did not include this fixture; see task-3-report.md.
+     * real `users` row, so these two filter tests seed one against the dump's
+     * schema. The brief's test bodies did not include this fixture; see
+     * task-3-report.md.
      */
     private function fixtureUserId(): int
     {
-        $forge = \Config\Database::forge();
-        $forge->addField(['userID' => ['type' => 'INTEGER', 'auto_increment' => true]]);
-        $forge->addField(['account_level' => ['type' => 'VARCHAR', 'constraint' => 20]]);
-        $forge->addPrimaryKey('userID');
-        $forge->createTable('users', true);
+        DumpSchema::create(db_connect());
 
-        db_connect()->table('users')->insert(['account_level' => 'encoder']);
+        db_connect()->table('users')->insert([
+            'username'      => 'nav-fixture',
+            'password'      => 'x',
+            'account_level' => 'encoder',
+        ]);
 
         return (int) db_connect()->insertID();
     }
@@ -140,6 +140,6 @@ final class NavigationManifestTest extends CIUnitTestCase
     protected function tearDown(): void
     {
         parent::tearDown();
-        \Config\Database::forge()->dropTable('users', true);
+        DumpSchema::drop(db_connect());
     }
 }

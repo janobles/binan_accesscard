@@ -4,57 +4,53 @@ namespace Tests\Unit;
 
 use App\Models\DashboardModel;
 use CodeIgniter\Test\CIUnitTestCase;
+use Tests\Support\Database\DumpSchema;
 
+/**
+ * The four Overview figures, counted against the dump's own schema.
+ *
+ * Schema comes from the dump; rows are only the ones each case asserts on.
+ */
 final class DashboardOverviewStatsTest extends CIUnitTestCase
 {
-    private function createSchema(): void
-    {
-        $forge = \Config\Database::forge();
-
-        $forge->addField([
-            'memberID'   => ['type' => 'INTEGER', 'auto_increment' => true],
-            'headID'     => ['type' => 'INTEGER'],
-            'dt_deleted' => ['type' => 'DATETIME', 'null' => true],
-        ]);
-        $forge->addPrimaryKey('memberID');
-        $forge->createTable('member', true);
-
-        $forge->addField([
-            'control_no' => ['type' => 'INTEGER'],
-            'headID'     => ['type' => 'INTEGER'],
-        ]);
-        $forge->addPrimaryKey('control_no');
-        $forge->createTable('qr_control', true);
-
-        $forge->addField([
-            'distribution_id' => ['type' => 'INTEGER', 'auto_increment' => true],
-            'memberID'        => ['type' => 'INTEGER'],
-            'batch_id'        => ['type' => 'INTEGER'],
-            'dt_voided'       => ['type' => 'DATETIME', 'null' => true],
-        ]);
-        $forge->addPrimaryKey('distribution_id');
-        $forge->createTable('subsidy_distribution', true);
-
-        $forge->addField([
-            'batch_id' => ['type' => 'INTEGER', 'auto_increment' => true],
-            'name'     => ['type' => 'VARCHAR', 'constraint' => 100],
-        ]);
-        $forge->addPrimaryKey('batch_id');
-        $forge->createTable('distribution_batch', true);
-    }
-
-    private function dropSchema(): void
-    {
-        $forge = \Config\Database::forge();
-        foreach (['subsidy_distribution', 'qr_control', 'member', 'distribution_batch'] as $table) {
-            $forge->dropTable($table, true);
-        }
-    }
-
     protected function setUp(): void
     {
         parent::setUp();
+        DumpSchema::create(db_connect());
         cache()->delete(DashboardModel::PROGRAM_STATS_CACHE_KEY);
+    }
+
+    protected function tearDown(): void
+    {
+        DumpSchema::drop(db_connect());
+        parent::tearDown();
+    }
+
+    /**
+     * A head of family, carrying the names and the head link the dump requires
+     * of every member row.
+     */
+    private function head(int $id, array $overrides = []): array
+    {
+        return array_merge([
+            'memberID'   => $id,
+            'headID'     => $id,
+            'lastname'   => 'Cruz',
+            'firstname'  => 'Head ' . $id,
+            'middlename' => '',
+        ], $overrides);
+    }
+
+    /** One claim for the given member against batch 1. */
+    private function distribution(int $memberId, array $overrides = []): array
+    {
+        return array_merge([
+            'control_no'      => 100 + $memberId,
+            'memberID'        => $memberId,
+            'subsidy_type_id' => 1,
+            'claim_date'      => '2026-03-01',
+            'batch_id'        => 1,
+        ], $overrides);
     }
 
     /**
@@ -65,16 +61,17 @@ final class DashboardOverviewStatsTest extends CIUnitTestCase
      */
     public function testFamilyFiguresReconcileIncludingUncardedHeads(): void
     {
-        $this->createSchema();
         $db = db_connect();
 
         foreach ([1, 2, 3] as $id) {
-            $db->table('member')->insert(['memberID' => $id, 'headID' => $id]);
+            $db->table('member')->insert($this->head($id));
         }
         $db->table('qr_control')->insert(['control_no' => 101, 'headID' => 1]);
         $db->table('qr_control')->insert(['control_no' => 102, 'headID' => 2]);
-        $db->table('subsidy_distribution')->insert(['memberID' => 1, 'batch_id' => 1]);
-        $db->table('distribution_batch')->insert(['batch_id' => 1, 'name' => 'Rice Q1']);
+        $db->table('subsidy_distribution')->insert($this->distribution(1));
+        $db->table('distribution_batch')->insert([
+            'batch_id' => 1, 'name' => 'Rice Q1', 'subsidy_type_id' => 1,
+        ]);
 
         $out = (new DashboardModel())->programStats();
 
@@ -87,8 +84,6 @@ final class DashboardOverviewStatsTest extends CIUnitTestCase
             $out['everServed'] + $out['neverServed'],
             'The three family cards must add up.'
         );
-
-        $this->dropSchema();
     }
 
     /**
@@ -99,14 +94,13 @@ final class DashboardOverviewStatsTest extends CIUnitTestCase
      */
     public function testCardsIssuedCountsActiveHeadsHoldingAControlNumber(): void
     {
-        $this->createSchema();
         $db = db_connect();
 
-        $db->table('member')->insert(['memberID' => 1, 'headID' => 1]);
-        $db->table('member')->insert(['memberID' => 2, 'headID' => 2]);
-        $db->table('member')->insert(['memberID' => 3, 'headID' => 3, 'dt_deleted' => '2026-01-01 00:00:00']);
+        $db->table('member')->insert($this->head(1));
+        $db->table('member')->insert($this->head(2));
+        $db->table('member')->insert($this->head(3, ['dt_deleted' => '2026-01-01 00:00:00']));
         // A relative, not a head: never carded in its own right.
-        $db->table('member')->insert(['memberID' => 4, 'headID' => 1]);
+        $db->table('member')->insert($this->head(4, ['headID' => 1]));
 
         $db->table('qr_control')->insert(['control_no' => 101, 'headID' => 1]);
         // Reissued card for the same head: still one family holding a card.
@@ -124,27 +118,22 @@ final class DashboardOverviewStatsTest extends CIUnitTestCase
             $out['cardsIssued'],
             'a card count above the family count means the join is duplicating rows'
         );
-
-        $this->dropSchema();
     }
 
     /** A voided distribution puts the family back in the never-served pool. */
     public function testVoidedDistributionDoesNotCountAsServed(): void
     {
-        $this->createSchema();
         $db = db_connect();
 
-        $db->table('member')->insert(['memberID' => 1, 'headID' => 1]);
-        $db->table('subsidy_distribution')->insert([
-            'memberID' => 1, 'batch_id' => 1, 'dt_voided' => date('Y-m-d H:i:s'),
-        ]);
+        $db->table('member')->insert($this->head(1));
+        $db->table('subsidy_distribution')->insert(
+            $this->distribution(1, ['dt_voided' => date('Y-m-d H:i:s')])
+        );
 
         $out = (new DashboardModel())->programStats();
 
         $this->assertSame(0, $out['everServed']);
         $this->assertSame(1, $out['neverServed']);
-
-        $this->dropSchema();
     }
 
     /**
@@ -153,14 +142,11 @@ final class DashboardOverviewStatsTest extends CIUnitTestCase
      */
     public function testSoftDeletedHeadIsExcludedFromBothSides(): void
     {
-        $this->createSchema();
         $db = db_connect();
 
-        $db->table('member')->insert(['memberID' => 1, 'headID' => 1]);
-        $db->table('member')->insert([
-            'memberID' => 2, 'headID' => 2, 'dt_deleted' => date('Y-m-d H:i:s'),
-        ]);
-        $db->table('subsidy_distribution')->insert(['memberID' => 2, 'batch_id' => 1]);
+        $db->table('member')->insert($this->head(1));
+        $db->table('member')->insert($this->head(2, ['dt_deleted' => date('Y-m-d H:i:s')]));
+        $db->table('subsidy_distribution')->insert($this->distribution(2));
 
         $out = (new DashboardModel())->programStats();
 
@@ -168,7 +154,5 @@ final class DashboardOverviewStatsTest extends CIUnitTestCase
         $this->assertSame(0, $out['everServed']);
         $this->assertSame(1, $out['neverServed']);
         $this->assertGreaterThanOrEqual(0, $out['neverServed']);
-
-        $this->dropSchema();
     }
 }

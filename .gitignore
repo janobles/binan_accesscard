@@ -167,3 +167,5 @@ sessions.json
 
 # Playwright MCP
 .playwright-mcp/
+
+/node_modules/

@@ -187,6 +187,11 @@ $bodyView = ($bodyView ?? '') !== '' ? $bodyView : 'Pages/dashboard';
     'footerHtml' => '<button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>',
 ]) ?>
 
+<?php /* The single toast node assets/js/toast.js targets. Without it showToast()
+         returns silently, which leaves the Excel import with no progress, no
+         "Review and Fix" link, and no error text. */ ?>
+<?= view('components/toast') ?>
+
 <?php foreach (array_merge(asset_scripts('core'), asset_scripts('admin')) as $scriptPath): ?>
 <script src="<?= esc(asset_url($scriptPath), 'attr') ?>"></script>
 <?php endforeach; ?>

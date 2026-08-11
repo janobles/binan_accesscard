@@ -84,8 +84,14 @@
 
         window.clearTimeout(hideTimer);
 
-        toastEl.className = 'toast align-items-center text-bg-' + (variant || 'success') + ' border-0';
-        
+        // A caller that updates the same toast repeatedly (the import poller runs
+        // every 1.5s) must not restart the show animation each time, or the toast
+        // visibly flickers. When it is already on screen, only its text and
+        // variant change.
+        var wasVisible = toastEl.classList.contains('show');
+
+        toastEl.className = 'toast align-items-center text-bg-' + (variant || 'success') + ' border-0' + (wasVisible ? ' show' : '');
+
         // Content is built with DOM APIs, never assigned as markup. The old
         // { html: true } option let a caller hand this an HTML string, which
         // put a raw sink one careless interpolation away from anything a
@@ -113,10 +119,12 @@
             }
         }
 
-        if (instance) {
-            instance.show();
-        } else {
-            toastEl.classList.add('show');
+        if (!wasVisible) {
+            if (instance) {
+                instance.show();
+            } else {
+                toastEl.classList.add('show');
+            }
         }
 
         if (opts.autohide !== false) {

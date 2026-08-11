@@ -53,7 +53,6 @@ class ReportsController extends BaseController
         $bytes = (new \App\Libraries\Scanner\ReportsPdfGenerator())->generate(
             $stats->coverage($batchId),
             $stats->byBarangay($batchId),
-            $stats->remaining($batchId),
             $batch['name'] ?? null,
             $batchId > 0 ? $stats->perScanner($batchId) : []
         );

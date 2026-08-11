@@ -5,6 +5,10 @@
  * Built by dompdf, so no JavaScript runs and the barangay coverage is drawn as CSS
  * bars rather than a chart. The figures are the same ones the on-screen report shows;
  * only the presentation differs.
+ *
+ * Summary figures only. The unclaimed families are a KPI count here, not a roster:
+ * printing the names ran the file to a hundred-odd pages behind one page of report.
+ * The names stay available on the dashboard's Remaining tab.
  */
 $window = ($batchName ?? null) !== null ? 'Batch: ' . $batchName : 'All batches';
 ?>
@@ -56,33 +60,3 @@ $window = ($batchName ?? null) !== null ? 'Batch: ' . $batchName : 'All batches'
   </tbody>
 </table>
 <?php endif; ?>
-
-<h2>Remaining families (<?= esc((string) count($remaining)) ?>)</h2>
-  <?php if ($remaining === []): ?>
-  <table class="data">
-    <colgroup><col style="width:40%"><col style="width:30%"><col style="width:30%"></colgroup>
-    <thead><tr><th>Name</th><th>Barangay</th><th>Contact</th></tr></thead>
-    <tbody><tr><td colspan="3">No families remaining.</td></tr></tbody>
-  </table>
-  <?php else: ?>
-    <?php /* One table per 100 names rather than one long one. Dompdf's table
-             layout cost climbs faster than the row count, so splitting the
-             roster is worth about 3x on a 1,000-name batch (17.1s unsplit,
-             14.2s at 1,000 a table, 5.5s at 100). It buys nothing on memory:
-             Dompdf keeps every frame either way. */ ?>
-    <?php foreach (array_chunk($remaining, 100) as $chunk): ?>
-    <table class="data">
-      <colgroup><col style="width:40%"><col style="width:30%"><col style="width:30%"></colgroup>
-      <thead><tr><th>Name</th><th>Barangay</th><th>Contact</th></tr></thead>
-      <tbody>
-      <?php foreach ($chunk as $r): ?>
-        <tr>
-          <td><?= esc($r['name']) ?></td>
-          <td><?= esc($r['barangay']) ?></td>
-          <td><?= esc($r['contact']) ?></td>
-        </tr>
-      <?php endforeach; ?>
-      </tbody>
-    </table>
-    <?php endforeach; ?>
-  <?php endif; ?>

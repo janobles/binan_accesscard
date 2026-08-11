@@ -51,16 +51,16 @@ jobs:
       - name: Check every route resolves
         run: php spark routes
 
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
       # The smoke test builds its own DOM by hand rather than pulling in jsdom,
       # so this needs no npm install. It covers the data-entry control-number
       # gate, where a mis-wired gate binds a saved draft to the wrong record.
       - name: Run the entry page JS smoke test
         run: node tests/js/entry-page-gate.smoke.mjs
-
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
 
       - name: Install JS tooling
         run: npm ci

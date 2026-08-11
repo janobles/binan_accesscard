@@ -87,13 +87,14 @@ final class DumpSchema
 
         $db->query('SET FOREIGN_KEY_CHECKS = 0');
 
-        foreach (array_keys(self::tables()) as $name) {
-            $db->query('TRUNCATE TABLE ' . $prefix . $name);
+        try {
+            foreach (array_keys(self::tables()) as $name) {
+                $db->query('TRUNCATE TABLE ' . $prefix . $name);
+            }
+        } finally {
+            $db->query('SET FOREIGN_KEY_CHECKS = 1');
+            $db->resetDataCache();
         }
-
-        $db->query('SET FOREIGN_KEY_CHECKS = 1');
-
-        $db->resetDataCache();
     }
 
     /** The newest dump in the project root, or null when none is present. */

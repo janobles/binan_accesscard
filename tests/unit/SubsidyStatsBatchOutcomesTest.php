@@ -4,37 +4,25 @@ namespace Tests\Unit;
 
 use App\Models\Scanner\SubsidyStatsModel;
 use CodeIgniter\Test\CIUnitTestCase;
+use Tests\Support\Database\DumpSchema;
 
+/**
+ * Served-per-batch, which the Overview and Distribution tabs both read.
+ *
+ * Schema comes from the dump; rows are only the ones each case asserts on.
+ */
 final class SubsidyStatsBatchOutcomesTest extends CIUnitTestCase
 {
-    private function createSchema(): void
+    protected function setUp(): void
     {
-        $forge = \Config\Database::forge();
-
-        $forge->addField([
-            'batch_id' => ['type' => 'INTEGER'],
-            'headID'   => ['type' => 'INTEGER'],
-        ]);
-        $forge->addPrimaryKey(['batch_id', 'headID']);
-        $forge->createTable('batch_eligibility', true);
-
-        $forge->addField([
-            'distribution_id' => ['type' => 'INTEGER', 'auto_increment' => true],
-            'memberID'        => ['type' => 'INTEGER'],
-            'batch_id'        => ['type' => 'INTEGER'],
-            'claim_date'      => ['type' => 'DATE', 'null' => true],
-            'dt_voided'       => ['type' => 'DATETIME', 'null' => true],
-        ]);
-        $forge->addPrimaryKey('distribution_id');
-        $forge->createTable('subsidy_distribution', true);
+        parent::setUp();
+        DumpSchema::create(db_connect());
     }
 
-    private function dropSchema(): void
+    protected function tearDown(): void
     {
-        $forge = \Config\Database::forge();
-        foreach (['subsidy_distribution', 'batch_eligibility'] as $table) {
-            $forge->dropTable($table, true);
-        }
+        DumpSchema::drop(db_connect());
+        parent::tearDown();
     }
 
     public function testEmptyMapOnNoData(): void
@@ -50,7 +38,6 @@ final class SubsidyStatsBatchOutcomesTest extends CIUnitTestCase
      */
     public function testServedPerBatchMatchesCoverageSemantics(): void
     {
-        $this->createSchema();
         $db = db_connect();
 
         foreach ([[1, 1], [1, 2], [1, 3], [2, 4]] as [$batch, $head]) {
@@ -70,7 +57,5 @@ final class SubsidyStatsBatchOutcomesTest extends CIUnitTestCase
 
         $this->assertSame(2, $out[1] ?? 0, 'Voided and off-roster rows must not count.');
         $this->assertSame(1, $out[2] ?? 0);
-
-        $this->dropSchema();
     }
 }

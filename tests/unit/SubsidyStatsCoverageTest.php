@@ -4,54 +4,33 @@ namespace Tests\Unit;
 
 use App\Models\Scanner\SubsidyStatsModel;
 use CodeIgniter\Test\CIUnitTestCase;
+use Tests\Support\Database\DumpSchema;
 
+/**
+ * Coverage: eligible, served, remaining and the percentage they produce.
+ *
+ * Schema comes from the dump; rows are only the ones each case asserts on.
+ */
 final class SubsidyStatsCoverageTest extends CIUnitTestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+        DumpSchema::create(db_connect());
+    }
+
+    protected function tearDown(): void
+    {
+        DumpSchema::drop(db_connect());
+        parent::tearDown();
+    }
+
     public function testCoverageShapeOnUnknownBatch(): void
     {
         $out = (new SubsidyStatsModel())->coverage(0);
         foreach (['eligible', 'served', 'remaining', 'coverage', 'voided'] as $key) {
             $this->assertArrayHasKey($key, $out);
             $this->assertIsInt($out[$key]);
-        }
-    }
-
-    private function createSchema(): void
-    {
-        $forge = \Config\Database::forge();
-
-        $forge->addField([
-            'batch_id' => ['type' => 'INTEGER', 'auto_increment' => true],
-            'eligible_count' => ['type' => 'INTEGER', 'default' => 0],
-        ]);
-        $forge->addPrimaryKey('batch_id');
-        $forge->createTable('distribution_batch', true);
-
-        $forge->addField([
-            'batch_id' => ['type' => 'INTEGER'],
-            'headID'   => ['type' => 'INTEGER'],
-        ]);
-        $forge->addPrimaryKey(['batch_id', 'headID']);
-        $forge->createTable('batch_eligibility', true);
-
-        $forge->addField([
-            'distribution_id' => ['type' => 'INTEGER', 'auto_increment' => true],
-            'control_no'      => ['type' => 'INTEGER'],
-            'memberID'        => ['type' => 'INTEGER'],
-            'batch_id'        => ['type' => 'INTEGER'],
-            'dt_created'      => ['type' => 'DATETIME', 'null' => true],
-            'dt_voided'       => ['type' => 'DATETIME', 'null' => true],
-        ]);
-        $forge->addPrimaryKey('distribution_id');
-        $forge->createTable('subsidy_distribution', true);
-    }
-
-    private function dropSchema(): void
-    {
-        $forge = \Config\Database::forge();
-
-        foreach (['subsidy_distribution', 'batch_eligibility', 'distribution_batch'] as $table) {
-            $forge->dropTable($table, true);
         }
     }
 
@@ -66,7 +45,6 @@ final class SubsidyStatsCoverageTest extends CIUnitTestCase
      */
     public function testCoveragePercentNeverExceedsHundred(): void
     {
-        $this->createSchema();
         $db = db_connect();
 
         $db->table('distribution_batch')->insert(['batch_id' => 1, 'eligible_count' => 2]);
@@ -94,8 +72,6 @@ final class SubsidyStatsCoverageTest extends CIUnitTestCase
         $this->assertSame(2, $out['eligible']);
         $this->assertLessThanOrEqual(100, $out['coverage']);
         $this->assertSame(50, $out['coverage']);
-
-        $this->dropSchema();
     }
 
     public function testRemainingReturnsList(): void

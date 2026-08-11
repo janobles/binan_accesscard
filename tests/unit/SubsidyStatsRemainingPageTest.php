@@ -4,6 +4,7 @@ namespace Tests\Unit;
 
 use App\Models\Scanner\SubsidyStatsModel;
 use CodeIgniter\Test\CIUnitTestCase;
+use Tests\Support\Database\DumpSchema;
 
 /**
  * Covers Fix A's search: remainingBuilder()'s optional keyword narrows to
@@ -23,79 +24,22 @@ use CodeIgniter\Test\CIUnitTestCase;
  * residual-fixes-report documents the direct-SQL/live-paging proof instead
  * (dev DB, MySQL, no prefix - the production path this ships to).
  *
- * Builds its own schema (member, barangay, distribution_batch,
- * batch_eligibility, subsidy_distribution) so it runs against the isolated
- * test DB, not the dev database.
+ * Schema comes from the dump, so it runs against the isolated test DB rather
+ * than the dev database.
  */
 final class SubsidyStatsRemainingPageTest extends CIUnitTestCase
 {
     protected function setUp(): void
     {
         parent::setUp();
-        $this->createSchema();
+        DumpSchema::create(db_connect());
         $this->seedRoster();
     }
 
     protected function tearDown(): void
     {
-        $this->dropSchema();
+        DumpSchema::drop(db_connect());
         parent::tearDown();
-    }
-
-    private function createSchema(): void
-    {
-        $forge = \Config\Database::forge();
-
-        $forge->addField([
-            'barangayID' => ['type' => 'INTEGER', 'auto_increment' => true],
-            'name'       => ['type' => 'VARCHAR', 'constraint' => 100],
-        ]);
-        $forge->addPrimaryKey('barangayID');
-        $forge->createTable('barangay', true);
-
-        $forge->addField([
-            'memberID'      => ['type' => 'INTEGER', 'auto_increment' => true],
-            'firstname'     => ['type' => 'VARCHAR', 'constraint' => 100],
-            'lastname'      => ['type' => 'VARCHAR', 'constraint' => 100],
-            'barangayID'    => ['type' => 'INTEGER', 'null' => true],
-            'contactnumber' => ['type' => 'VARCHAR', 'constraint' => 30, 'null' => true],
-        ]);
-        $forge->addPrimaryKey('memberID');
-        $forge->createTable('member', true);
-
-        $forge->addField([
-            'batch_id'       => ['type' => 'INTEGER', 'auto_increment' => true],
-            'eligible_count' => ['type' => 'INTEGER', 'default' => 0],
-        ]);
-        $forge->addPrimaryKey('batch_id');
-        $forge->createTable('distribution_batch', true);
-
-        $forge->addField([
-            'batch_id' => ['type' => 'INTEGER'],
-            'headID'   => ['type' => 'INTEGER'],
-        ]);
-        $forge->addPrimaryKey(['batch_id', 'headID']);
-        $forge->createTable('batch_eligibility', true);
-
-        $forge->addField([
-            'distribution_id' => ['type' => 'INTEGER', 'auto_increment' => true],
-            'control_no'      => ['type' => 'INTEGER'],
-            'memberID'        => ['type' => 'INTEGER'],
-            'batch_id'        => ['type' => 'INTEGER'],
-            'dt_created'      => ['type' => 'DATETIME', 'null' => true],
-            'dt_voided'       => ['type' => 'DATETIME', 'null' => true],
-        ]);
-        $forge->addPrimaryKey('distribution_id');
-        $forge->createTable('subsidy_distribution', true);
-    }
-
-    private function dropSchema(): void
-    {
-        $forge = \Config\Database::forge();
-
-        foreach (['subsidy_distribution', 'batch_eligibility', 'distribution_batch', 'member', 'barangay'] as $table) {
-            $forge->dropTable($table, true);
-        }
     }
 
     /**

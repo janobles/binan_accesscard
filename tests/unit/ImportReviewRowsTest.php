@@ -6,6 +6,7 @@ use App\Libraries\ImportLookupCache;
 use App\Libraries\ImportStagingStore;
 use CodeIgniter\Test\CIUnitTestCase;
 use CodeIgniter\Test\FeatureTestTrait;
+use Tests\Support\Database\DumpSchema;
 
 /**
  * Feature coverage for the review rows and apply endpoints through the real route,
@@ -17,9 +18,8 @@ use CodeIgniter\Test\FeatureTestTrait;
  * after the 24h TTL, or the job committing in another tab) and an operator who is told
  * nothing would keep typing fixes into a review that can no longer be saved.
  *
- * The `job_queue` and `users` tables this needs do not exist in PHPUnit's in-memory
- * SQLite (no migrations, per repo policy - schema lives in the SQL dump only), so they
- * are built for the duration of each test and dropped after.
+ * Schema comes from the dump (Tests\Support\Database\DumpSchema), so the `job_queue`,
+ * `users` and `qr_control` tables this needs carry the column set production runs on.
  *
  * @internal
  */
@@ -41,7 +41,7 @@ final class ImportReviewRowsTest extends CIUnitTestCase
 
         \CodeIgniter\Config\Services::injectMock('importStaging', new ImportStagingStore($this->stagingDir));
 
-        $this->createSchema();
+        DumpSchema::create(db_connect());
     }
 
     protected function tearDown(): void
@@ -54,72 +54,16 @@ final class ImportReviewRowsTest extends CIUnitTestCase
 
         // ImportLookupCache (unlike ImportStagingStore) has no service seam to point at the
         // temp dir above, so the apply endpoint writes its cache to the real writable/
-        // import-staging under the job ID SQLite just handed out. SQLite resets that
-        // auto-increment every test, so without this a later test can read an earlier
-        // test's stale cache under the same ID.
+        // import-staging under the job ID the insert just handed out. Emptying the table
+        // between tests restarts that auto-increment, so without this a later test can
+        // read an earlier test's stale cache under the same ID.
         foreach ($this->stagedJobIds as $jobId) {
             (new ImportLookupCache())->forget($jobId);
         }
 
         \CodeIgniter\Config\Services::reset();
-        $this->dropSchema();
+        DumpSchema::drop(db_connect());
         parent::tearDown();
-    }
-
-    private function createSchema(): void
-    {
-        $forge = \Config\Database::forge();
-
-        $forge->addField([
-            'userID'        => ['type' => 'INTEGER', 'auto_increment' => true],
-            'account_level' => ['type' => 'VARCHAR', 'constraint' => 20],
-        ]);
-        $forge->addPrimaryKey('userID');
-        $forge->createTable('users', true);
-
-        $forge->addField([
-            'jobID'          => ['type' => 'INTEGER', 'auto_increment' => true],
-            'type'           => ['type' => 'VARCHAR', 'constraint' => 64],
-            'payload'        => ['type' => 'TEXT', 'null' => true],
-            'status'         => ['type' => 'VARCHAR', 'constraint' => 20, 'default' => 'pending'],
-            'progress_total' => ['type' => 'INTEGER', 'default' => 0],
-            'progress_done'  => ['type' => 'INTEGER', 'default' => 0],
-            'checkpoint'     => ['type' => 'INTEGER', 'default' => 0],
-            'result_json'    => ['type' => 'TEXT', 'null' => true],
-            'message'        => ['type' => 'VARCHAR', 'constraint' => 500, 'null' => true],
-            'userID'         => ['type' => 'INTEGER', 'null' => true],
-            'ip_address'     => ['type' => 'VARCHAR', 'constraint' => 45, 'null' => true],
-            'user_agent'     => ['type' => 'VARCHAR', 'constraint' => 255, 'null' => true],
-            'attempts'       => ['type' => 'INTEGER', 'default' => 0],
-            'max_attempts'   => ['type' => 'INTEGER', 'default' => 1],
-            'available_at'   => ['type' => 'DATETIME', 'null' => true],
-            'locked_at'      => ['type' => 'DATETIME', 'null' => true],
-            'locked_by'      => ['type' => 'VARCHAR', 'constraint' => 64, 'null' => true],
-            'dt_created'     => ['type' => 'DATETIME', 'null' => true],
-            'dt_started'     => ['type' => 'DATETIME', 'null' => true],
-            'dt_finished'    => ['type' => 'DATETIME', 'null' => true],
-        ]);
-        $forge->addPrimaryKey('jobID');
-        $forge->createTable('job_queue', true);
-
-        // The apply endpoint revalidates through FamilyExcelImporter::existingHeadsForRows(),
-        // which queries qr_control directly with no hasTable() guard once a staged row's
-        // familyno looks like a real QR (the dump's qr_control, unprefixed here).
-        $forge->addField([
-            'control_no' => ['type' => 'INTEGER'],
-            'headID'     => ['type' => 'INTEGER'],
-        ]);
-        $forge->addPrimaryKey('control_no');
-        $forge->createTable('qr_control', true);
-    }
-
-    private function dropSchema(): void
-    {
-        $forge = \Config\Database::forge();
-
-        foreach (['job_queue', 'users', 'qr_control'] as $table) {
-            $forge->dropTable($table, true);
-        }
     }
 
     /**

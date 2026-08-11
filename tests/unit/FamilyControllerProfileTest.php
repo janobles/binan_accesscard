@@ -4,6 +4,7 @@ namespace Tests\Unit;
 
 use CodeIgniter\Test\CIUnitTestCase;
 use CodeIgniter\Test\FeatureTestTrait;
+use Tests\Support\Database\DumpSchema;
 
 /**
  * Feature coverage for FamilyController::profile() through the real route,
@@ -12,101 +13,28 @@ use CodeIgniter\Test\FeatureTestTrait;
  * fix round 1 found broken: the missing truncation sentinel, the missing JS
  * init marker, the Salary/salary casing miss, and the active-only option list.
  *
- * The `member`/`member_services`/`qr_control`/`sector`/`users` tables this
- * needs do not exist in PHPUnit's in-memory SQLite `tests` group (no
- * migrations, per repo policy - schema lives in the SQL dump only). Built here
- * for the duration of each test and dropped after, mirroring
- * NavigationManifestTest::fixtureUserId()'s precedent for the same constraint.
+ * Schema comes from the dump (Tests\Support\Database\DumpSchema), so the
+ * `member`/`member_services`/`qr_control`/`sector`/`users` tables this needs
+ * carry the column set production runs on.
  */
 final class FamilyControllerProfileTest extends CIUnitTestCase
 {
     use FeatureTestTrait;
 
-    private function createSchema(): void
+    protected function setUp(): void
     {
-        $forge = \Config\Database::forge();
-
-        $forge->addField([
-            'userID'        => ['type' => 'INTEGER', 'auto_increment' => true],
-            'account_level' => ['type' => 'VARCHAR', 'constraint' => 20],
-        ]);
-        $forge->addPrimaryKey('userID');
-        $forge->createTable('users', true);
-
-        $forge->addField([
-            'memberID'      => ['type' => 'INTEGER', 'auto_increment' => true],
-            'lastname'      => ['type' => 'VARCHAR', 'constraint' => 100],
-            'firstname'     => ['type' => 'VARCHAR', 'constraint' => 100],
-            'middlename'    => ['type' => 'VARCHAR', 'constraint' => 50, 'null' => true],
-            'suffix'        => ['type' => 'VARCHAR', 'constraint' => 10, 'null' => true],
-            'birthday'      => ['type' => 'VARCHAR', 'constraint' => 20, 'null' => true],
-            'civilstatus'   => ['type' => 'VARCHAR', 'constraint' => 100, 'null' => true],
-            'sex'           => ['type' => 'VARCHAR', 'constraint' => 10, 'null' => true],
-            'education'     => ['type' => 'TEXT', 'null' => true],
-            'job'           => ['type' => 'TEXT', 'null' => true],
-            'Salary'        => ['type' => 'FLOAT', 'null' => true],
-            'contactnumber' => ['type' => 'VARCHAR', 'constraint' => 20, 'null' => true],
-            'relationship'  => ['type' => 'TEXT', 'null' => true],
-            'address'       => ['type' => 'TEXT', 'null' => true],
-            'religion'      => ['type' => 'VARCHAR', 'constraint' => 100, 'null' => true],
-            'dt_created'    => ['type' => 'DATETIME', 'null' => true],
-            'dt_updated'    => ['type' => 'DATETIME', 'null' => true],
-            'dt_deleted'    => ['type' => 'DATETIME', 'null' => true],
-            'headID'        => ['type' => 'INTEGER'],
-            'sectorID'      => ['type' => 'VARCHAR', 'constraint' => 255, 'default' => '[]'],
-        ]);
-        $forge->addPrimaryKey('memberID');
-        $forge->createTable('member', true);
-
-        $forge->addField([
-            'ID'         => ['type' => 'INTEGER', 'auto_increment' => true],
-            'dt_created' => ['type' => 'DATETIME', 'null' => true],
-            'dt_updated' => ['type' => 'DATETIME', 'null' => true],
-            'serviceID'  => ['type' => 'INTEGER'],
-            'memberID'   => ['type' => 'INTEGER'],
-        ]);
-        $forge->addPrimaryKey('ID');
-        $forge->createTable('member_services', true);
-
-        $forge->addField([
-            'control_no' => ['type' => 'INTEGER'],
-            'headID'     => ['type' => 'INTEGER'],
-            'dt_created' => ['type' => 'DATETIME', 'null' => true],
-        ]);
-        $forge->addPrimaryKey('control_no');
-        $forge->createTable('qr_control', true);
-
-        $forge->addField([
-            'sectorID'    => ['type' => 'INTEGER', 'auto_increment' => true],
-            'shortcode'   => ['type' => 'VARCHAR', 'constraint' => 30],
-            'name'        => ['type' => 'TEXT'],
-            'description' => ['type' => 'TEXT'],
-            'dt_created'  => ['type' => 'DATETIME', 'null' => true],
-            'dt_updated'  => ['type' => 'DATETIME', 'null' => true],
-            'dt_deleted'  => ['type' => 'DATETIME', 'null' => true],
-        ]);
-        $forge->addPrimaryKey('sectorID');
-        $forge->createTable('sector', true);
-    }
-
-    private function dropSchema(): void
-    {
-        $forge = \Config\Database::forge();
-
-        foreach (['sector', 'qr_control', 'member_services', 'member', 'users'] as $table) {
-            $forge->dropTable($table, true);
-        }
+        parent::setUp();
+        DumpSchema::create(db_connect());
     }
 
     protected function tearDown(): void
     {
         parent::tearDown();
-        $this->dropSchema();
+        DumpSchema::drop(db_connect());
     }
 
     public function testEditPageIsEditableSavableAndKeepsArchivedAssignments(): void
     {
-        $this->createSchema();
         $db = db_connect();
 
         $db->table('users')->insert(['account_level' => 'admin']);
@@ -166,7 +94,6 @@ final class FamilyControllerProfileTest extends CIUnitTestCase
 
     public function testViewerCannotReachTheUpdateRoute(): void
     {
-        $this->createSchema();
         $db = db_connect();
 
         $db->table('users')->insert(['account_level' => 'viewer']);
@@ -216,8 +143,6 @@ final class FamilyControllerProfileTest extends CIUnitTestCase
 
     public function testAnAvailableNumberCarriesAQrPreview(): void
     {
-        $this->createSchema();
-
         $response = $this->withSession($this->encoderSession())
             ->get('records/qr-check?control_no=999999&head_id=0');
 
@@ -230,7 +155,6 @@ final class FamilyControllerProfileTest extends CIUnitTestCase
 
     public function testATakenNumberCarriesNoQrPreview(): void
     {
-        $this->createSchema();
         $db = db_connect();
         $db->table('member')->insert([
             'memberID' => 7, 'lastname' => 'DELA CRUZ', 'firstname' => 'JUAN',
@@ -251,8 +175,6 @@ final class FamilyControllerProfileTest extends CIUnitTestCase
 
     public function testAnInvalidNumberCarriesNoQrPreview(): void
     {
-        $this->createSchema();
-
         $response = $this->withSession($this->encoderSession())
             ->get('records/qr-check?control_no=abc&head_id=0');
 

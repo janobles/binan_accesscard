@@ -64,11 +64,14 @@ final class SubsidyStatsRemainingPageTest extends CIUnitTestCase
         ];
         foreach ($rows as [$id, $first, $last, $brgy]) {
             $db->table('member')->insert([
-                'memberID' => $id, 'firstname' => $first, 'lastname' => $last, 'barangayID' => $brgy,
+                'memberID' => $id, 'headID' => $id, 'firstname' => $first, 'lastname' => $last,
+                'middlename' => '', 'barangayID' => $brgy,
             ]);
             $db->table('batch_eligibility')->insert(['batch_id' => 1, 'headID' => $id]);
         }
-        $db->table('distribution_batch')->insert(['batch_id' => 1, 'eligible_count' => 6]);
+        $db->table('distribution_batch')->insert([
+            'batch_id' => 1, 'name' => 'Rice Q1', 'subsidy_type_id' => 1, 'eligible_count' => 6,
+        ]);
     }
 
     public function testNoKeywordCountsWholeRoster(): void

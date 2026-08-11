@@ -25,6 +25,18 @@ final class SubsidyStatsByDayTest extends CIUnitTestCase
         parent::tearDown();
     }
 
+    /** One claim against batch 1, with the columns the dump requires. */
+    private function claim(int $memberId, string $date, array $overrides = []): array
+    {
+        return array_merge([
+            'control_no'      => 100 + $memberId,
+            'memberID'        => $memberId,
+            'subsidy_type_id' => 1,
+            'claim_date'      => $date,
+            'batch_id'        => 1,
+        ], $overrides);
+    }
+
     public function testEmptyListOnUnknownBatch(): void
     {
         $this->assertSame([], (new SubsidyStatsModel())->servedByDay(0));
@@ -40,7 +52,9 @@ final class SubsidyStatsByDayTest extends CIUnitTestCase
     {
         $db = db_connect();
 
-        $db->table('distribution_batch')->insert(['batch_id' => 1, 'eligible_count' => 7]);
+        $db->table('distribution_batch')->insert([
+            'batch_id' => 1, 'name' => 'Rice Q1', 'subsidy_type_id' => 1, 'eligible_count' => 7,
+        ]);
 
         $heads = range(1, 7);
         foreach ($heads as $head) {
@@ -53,17 +67,12 @@ final class SubsidyStatsByDayTest extends CIUnitTestCase
             [6, '2026-03-03'],
         ];
         foreach ($rows as [$member, $date]) {
-            $db->table('subsidy_distribution')->insert([
-                'memberID' => $member, 'batch_id' => 1, 'claim_date' => $date,
-            ]);
+            $db->table('subsidy_distribution')->insert($this->claim($member, $date));
         }
-        $db->table('subsidy_distribution')->insert([
-            'memberID' => 7, 'batch_id' => 1, 'claim_date' => '2026-03-02',
-            'dt_voided' => date('Y-m-d H:i:s'),
-        ]);
-        $db->table('subsidy_distribution')->insert([
-            'memberID' => 99, 'batch_id' => 1, 'claim_date' => '2026-03-02',
-        ]);
+        $db->table('subsidy_distribution')->insert(
+            $this->claim(7, '2026-03-02', ['dt_voided' => date('Y-m-d H:i:s')])
+        );
+        $db->table('subsidy_distribution')->insert($this->claim(99, '2026-03-02'));
 
         $out = (new SubsidyStatsModel())->servedByDay(1);
 
@@ -86,9 +95,7 @@ final class SubsidyStatsByDayTest extends CIUnitTestCase
         $db = db_connect();
 
         $db->table('batch_eligibility')->insert(['batch_id' => 1, 'headID' => 1]);
-        $db->table('subsidy_distribution')->insert([
-            'memberID' => 1, 'batch_id' => 1, 'claim_date' => '2026-03-01',
-        ]);
+        $db->table('subsidy_distribution')->insert($this->claim(1, '2026-03-01'));
 
         $out = (new SubsidyStatsModel())->servedByDay(1);
 

@@ -27,6 +27,33 @@ final class DashboardOverviewStatsTest extends CIUnitTestCase
     }
 
     /**
+     * A head of family, carrying the names and the head link the dump requires
+     * of every member row.
+     */
+    private function head(int $id, array $overrides = []): array
+    {
+        return array_merge([
+            'memberID'   => $id,
+            'headID'     => $id,
+            'lastname'   => 'Cruz',
+            'firstname'  => 'Head ' . $id,
+            'middlename' => '',
+        ], $overrides);
+    }
+
+    /** One claim for the given member against batch 1. */
+    private function distribution(int $memberId, array $overrides = []): array
+    {
+        return array_merge([
+            'control_no'      => 100 + $memberId,
+            'memberID'        => $memberId,
+            'subsidy_type_id' => 1,
+            'claim_date'      => '2026-03-01',
+            'batch_id'        => 1,
+        ], $overrides);
+    }
+
+    /**
      * Three heads profiled, only two of them carded, one of the carded ones
      * served. The uncarded head is the case the old QR gate silently dropped:
      * it has never been served, so it must count toward neverServed and the
@@ -37,12 +64,14 @@ final class DashboardOverviewStatsTest extends CIUnitTestCase
         $db = db_connect();
 
         foreach ([1, 2, 3] as $id) {
-            $db->table('member')->insert(['memberID' => $id, 'headID' => $id]);
+            $db->table('member')->insert($this->head($id));
         }
         $db->table('qr_control')->insert(['control_no' => 101, 'headID' => 1]);
         $db->table('qr_control')->insert(['control_no' => 102, 'headID' => 2]);
-        $db->table('subsidy_distribution')->insert(['memberID' => 1, 'batch_id' => 1]);
-        $db->table('distribution_batch')->insert(['batch_id' => 1, 'name' => 'Rice Q1']);
+        $db->table('subsidy_distribution')->insert($this->distribution(1));
+        $db->table('distribution_batch')->insert([
+            'batch_id' => 1, 'name' => 'Rice Q1', 'subsidy_type_id' => 1,
+        ]);
 
         $out = (new DashboardModel())->programStats();
 
@@ -67,11 +96,11 @@ final class DashboardOverviewStatsTest extends CIUnitTestCase
     {
         $db = db_connect();
 
-        $db->table('member')->insert(['memberID' => 1, 'headID' => 1]);
-        $db->table('member')->insert(['memberID' => 2, 'headID' => 2]);
-        $db->table('member')->insert(['memberID' => 3, 'headID' => 3, 'dt_deleted' => '2026-01-01 00:00:00']);
+        $db->table('member')->insert($this->head(1));
+        $db->table('member')->insert($this->head(2));
+        $db->table('member')->insert($this->head(3, ['dt_deleted' => '2026-01-01 00:00:00']));
         // A relative, not a head: never carded in its own right.
-        $db->table('member')->insert(['memberID' => 4, 'headID' => 1]);
+        $db->table('member')->insert($this->head(4, ['headID' => 1]));
 
         $db->table('qr_control')->insert(['control_no' => 101, 'headID' => 1]);
         // Reissued card for the same head: still one family holding a card.
@@ -96,10 +125,10 @@ final class DashboardOverviewStatsTest extends CIUnitTestCase
     {
         $db = db_connect();
 
-        $db->table('member')->insert(['memberID' => 1, 'headID' => 1]);
-        $db->table('subsidy_distribution')->insert([
-            'memberID' => 1, 'batch_id' => 1, 'dt_voided' => date('Y-m-d H:i:s'),
-        ]);
+        $db->table('member')->insert($this->head(1));
+        $db->table('subsidy_distribution')->insert(
+            $this->distribution(1, ['dt_voided' => date('Y-m-d H:i:s')])
+        );
 
         $out = (new DashboardModel())->programStats();
 
@@ -115,11 +144,9 @@ final class DashboardOverviewStatsTest extends CIUnitTestCase
     {
         $db = db_connect();
 
-        $db->table('member')->insert(['memberID' => 1, 'headID' => 1]);
-        $db->table('member')->insert([
-            'memberID' => 2, 'headID' => 2, 'dt_deleted' => date('Y-m-d H:i:s'),
-        ]);
-        $db->table('subsidy_distribution')->insert(['memberID' => 2, 'batch_id' => 1]);
+        $db->table('member')->insert($this->head(1));
+        $db->table('member')->insert($this->head(2, ['dt_deleted' => date('Y-m-d H:i:s')]));
+        $db->table('subsidy_distribution')->insert($this->distribution(2));
 
         $out = (new DashboardModel())->programStats();
 

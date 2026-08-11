@@ -118,10 +118,18 @@ final class ImportReviewRowsTest extends CIUnitTestCase
         return $jobId;
     }
 
+    /**
+     * An Encoder account. username and password are the two columns the dump
+     * requires of every account; nothing here reads them.
+     */
     private function encoder(): int
     {
         $db = db_connect();
-        $db->table('users')->insert(['account_level' => 'encoder']);
+        $db->table('users')->insert([
+            'username'      => uniqid('encoder-', true),
+            'password'      => 'x',
+            'account_level' => 'encoder',
+        ]);
 
         return (int) $db->insertID();
     }
@@ -189,7 +197,9 @@ final class ImportReviewRowsTest extends CIUnitTestCase
     public function testItReturns404ForARoleWithoutImportAccess(): void
     {
         $db = db_connect();
-        $db->table('users')->insert(['account_level' => 'viewer']);
+        $db->table('users')->insert([
+            'username' => 'viewer-fixture', 'password' => 'x', 'account_level' => 'viewer',
+        ]);
         $userId = (int) $db->insertID();
         $jobId  = $this->stageJob($userId);
 

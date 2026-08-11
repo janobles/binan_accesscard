@@ -25,6 +25,18 @@ final class SubsidyStatsBatchOutcomesTest extends CIUnitTestCase
         parent::tearDown();
     }
 
+    /** One claim, with the columns the dump requires. */
+    private function claim(int $memberId, int $batchId, array $overrides = []): array
+    {
+        return array_merge([
+            'control_no'      => 100 + $memberId,
+            'memberID'        => $memberId,
+            'subsidy_type_id' => 1,
+            'claim_date'      => '2026-03-01',
+            'batch_id'        => $batchId,
+        ], $overrides);
+    }
+
     public function testEmptyMapOnNoData(): void
     {
         $this->assertSame([], (new SubsidyStatsModel())->servedByBatch());
@@ -44,14 +56,14 @@ final class SubsidyStatsBatchOutcomesTest extends CIUnitTestCase
             $db->table('batch_eligibility')->insert(['batch_id' => $batch, 'headID' => $head]);
         }
 
-        $db->table('subsidy_distribution')->insert(['memberID' => 1, 'batch_id' => 1]);
-        $db->table('subsidy_distribution')->insert(['memberID' => 2, 'batch_id' => 1]);
-        $db->table('subsidy_distribution')->insert([
-            'memberID' => 3, 'batch_id' => 1, 'dt_voided' => date('Y-m-d H:i:s'),
-        ]);
+        $db->table('subsidy_distribution')->insert($this->claim(1, 1));
+        $db->table('subsidy_distribution')->insert($this->claim(2, 1));
+        $db->table('subsidy_distribution')->insert(
+            $this->claim(3, 1, ['dt_voided' => date('Y-m-d H:i:s')])
+        );
         // Never on batch 1's roster.
-        $db->table('subsidy_distribution')->insert(['memberID' => 99, 'batch_id' => 1]);
-        $db->table('subsidy_distribution')->insert(['memberID' => 4, 'batch_id' => 2]);
+        $db->table('subsidy_distribution')->insert($this->claim(99, 1));
+        $db->table('subsidy_distribution')->insert($this->claim(4, 2));
 
         $out = (new SubsidyStatsModel())->servedByBatch();
 

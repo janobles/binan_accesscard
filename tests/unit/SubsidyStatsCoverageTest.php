@@ -47,22 +47,27 @@ final class SubsidyStatsCoverageTest extends CIUnitTestCase
     {
         $db = db_connect();
 
-        $db->table('distribution_batch')->insert(['batch_id' => 1, 'eligible_count' => 2]);
+        $db->table('distribution_batch')->insert([
+            'batch_id' => 1, 'name' => 'Rice Q1', 'subsidy_type_id' => 1, 'eligible_count' => 2,
+        ]);
         $db->table('batch_eligibility')->insert(['batch_id' => 1, 'headID' => 1]);
         $db->table('batch_eligibility')->insert(['batch_id' => 1, 'headID' => 2]);
 
         // On-roster served.
         $db->table('subsidy_distribution')->insert([
-            'control_no' => 1, 'memberID' => 1, 'batch_id' => 1, 'dt_created' => date('Y-m-d H:i:s'),
+            'control_no' => 1, 'memberID' => 1, 'batch_id' => 1, 'subsidy_type_id' => 1,
+            'claim_date' => '2026-03-01', 'dt_created' => date('Y-m-d H:i:s'),
         ]);
         // On-roster voided.
         $db->table('subsidy_distribution')->insert([
-            'control_no' => 2, 'memberID' => 2, 'batch_id' => 1,
+            'control_no' => 2, 'memberID' => 2, 'batch_id' => 1, 'subsidy_type_id' => 1,
+            'claim_date' => '2026-03-01',
             'dt_created' => date('Y-m-d H:i:s'), 'dt_voided' => date('Y-m-d H:i:s'),
         ]);
         // Off-roster: memberID 3 was never granted eligibility for batch 1.
         $db->table('subsidy_distribution')->insert([
-            'control_no' => 3, 'memberID' => 3, 'batch_id' => 1, 'dt_created' => date('Y-m-d H:i:s'),
+            'control_no' => 3, 'memberID' => 3, 'batch_id' => 1, 'subsidy_type_id' => 1,
+            'claim_date' => '2026-03-01', 'dt_created' => date('Y-m-d H:i:s'),
         ]);
 
         $out = (new SubsidyStatsModel())->coverage(1);

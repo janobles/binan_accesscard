@@ -37,8 +37,7 @@ final class FamilyControllerProfileTest extends CIUnitTestCase
     {
         $db = db_connect();
 
-        $db->table('users')->insert(['account_level' => 'admin']);
-        $userId = (int) $db->insertID();
+        $userId = $this->user('administrator');
 
         // Archived (dt_deleted set) - absent from SectorModel::getActive()'s list -
         // but still assigned to the head below. getViewData() would silently drop
@@ -96,8 +95,7 @@ final class FamilyControllerProfileTest extends CIUnitTestCase
     {
         $db = db_connect();
 
-        $db->table('users')->insert(['account_level' => 'viewer']);
-        $userId = (int) $db->insertID();
+        $userId = $this->user('viewer');
 
         $db->table('member')->insert([
             'memberID' => 7, 'lastname' => 'DELA CRUZ', 'firstname' => 'JUAN',
@@ -128,16 +126,29 @@ final class FamilyControllerProfileTest extends CIUnitTestCase
         $this->assertNotSame(200, $update->response()->getStatusCode());
     }
 
+    /**
+     * A user row at the given account level. username and password are the two
+     * columns the dump requires of every account; nothing here reads them.
+     */
+    private function user(string $level): int
+    {
+        $db = db_connect();
+        $db->table('users')->insert([
+            'username'      => $level . '-fixture',
+            'password'      => 'x',
+            'account_level' => $level,
+        ]);
+
+        return (int) $db->insertID();
+    }
+
     /** @return array{is_logged_in: true, role: string, user_id: int} */
     private function encoderSession(): array
     {
-        $db = db_connect();
-        $db->table('users')->insert(['account_level' => 'encoder']);
-
         return [
             'is_logged_in' => true,
             'role'         => 'encoder',
-            'user_id'      => (int) $db->insertID(),
+            'user_id'      => $this->user('encoder'),
         ];
     }
 

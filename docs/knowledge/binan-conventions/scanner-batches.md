@@ -9,10 +9,12 @@ module.
 `distribution_batch` (dump V21) holds one row per giving event, including the
 subsidy type distributed in it (`subsidy_type_id` -> the `subsidy` reference
 table) plus its schedule: `venue`, `scheduled_start`, `scheduled_end`,
-`daily_start_time`, `daily_end_time`, `color`. `closed_at IS NULL` marks the
-single open batch; the invariant is enforced by refusing overlapping date
-spans at save time (`DistributionBatchModel::overlapping()`), not by a DB
-constraint. A batch is plotted on the Schedule tab's calendar with a name,
+`daily_start_time`, `daily_end_time`, `color`. The single open batch is
+`closed_at IS NULL` **and** `started_at IS NOT NULL`
+(`DistributionBatchModel::activeBatch()`): a batch plotted for a later day
+also has no `closed_at`, and it is not open until its first day arrives. The
+invariant is enforced by refusing overlapping date spans at save time
+(`DistributionBatchModel::overlapping()`), not by a DB constraint. A batch is plotted on the Schedule tab's calendar with a name,
 venue, subsidy type and date/time span; it opens and closes itself against
 that plan rather than by an admin clicking a button - see Rule 1a. The kiosk
 never picks a subsidy type - every scan during a batch logs against the

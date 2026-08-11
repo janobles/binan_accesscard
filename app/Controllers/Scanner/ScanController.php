@@ -105,34 +105,63 @@ class ScanController extends BaseController
         // not opened yet (before its daily_start_time, or before a reconcile
         // has run) is still the one worth naming, not "nothing plotted ahead".
         //
-        // Excludes by scheduled_end, not closed_at: a multi-day batch grace-
-        // closes between days and reopens the next one still inside its span
-        // (BatchScheduleWindow::verdict()'s reopen branch), so closed_at alone
-        // does not mean finished - a blanket closed_at check would drop a
-        // batch that is due to resume tomorrow. scheduled_end < today is the
-        // only signal that a plotted span has genuinely passed.
-        $upcoming = array_values(array_filter(
-            model(DistributionBatchModel::class)->scheduledBetween($today, date('Y-m-d', strtotime('+1 year'))),
-            static fn (array $b): bool => (string) $b['scheduled_end'] >= $today
-        ));
-        $next = $upcoming[0] ?? null;
+        // A batch is dropped from the list only once it can no longer run
+        // again: its span has passed, or it has both started and closed with
+        // no scheduled day left. closed_at alone is not enough, because a
+        // multi-day batch grace-closes between days and reopens on the next
+        // one still inside its span (BatchScheduleWindow::verdict()).
+        $finished = null;
+        $upcoming = [];
 
-        if ($next === null) {
-            return ['state' => 'idle', 'lines' => ['Nothing scheduled today, and nothing plotted ahead.']];
+        foreach (model(DistributionBatchModel::class)->scheduledBetween($today, date('Y-m-d', strtotime('+1 year'))) as $batch) {
+            $end = (string) $batch['scheduled_end'];
+            if ($end < $today) {
+                continue;
+            }
+
+            if ($end === $today && $batch['started_at'] !== null && $batch['closed_at'] !== null) {
+                $finished ??= $batch;
+
+                continue;
+            }
+
+            $upcoming[] = $batch;
         }
 
-        $venuePart   = $next['venue'] !== '' ? ', ' . (string) $next['venue'] : '';
-        $startsToday = (string) $next['scheduled_start'] === $today;
+        $next  = $upcoming[0] ?? null;
+        $lines = [];
 
-        return [
-            'state' => 'idle',
-            'lines' => [
-                $startsToday ? 'Scheduled today, not open yet.' : 'Nothing scheduled today.',
-                ($startsToday ? 'Opens: ' : 'Next: ') . (string) $next['name'] . $venuePart . ', '
-                    . date('D M j', strtotime((string) $next['scheduled_start'])) . ', '
-                    . date('g:i A', strtotime((string) $next['daily_start_time'])) . '.',
-            ],
-        ];
+        if ($finished !== null) {
+            // Named rather than skipped: staff who just closed the batch need
+            // to see that the kiosk agrees, not a line that reads as if the
+            // day were still ahead of them.
+            $lines[] = 'Today\'s distribution has ended.';
+            $lines[] = 'Closed: ' . (string) $finished['name']
+                . ($finished['venue'] !== '' ? ', ' . (string) $finished['venue'] : '') . '.';
+        }
+
+        if ($next === null) {
+            if ($lines === []) {
+                $lines[] = 'Nothing scheduled today, and nothing plotted ahead.';
+            }
+
+            return ['state' => 'idle', 'lines' => $lines];
+        }
+
+        $venuePart = $next['venue'] !== '' ? ', ' . (string) $next['venue'] : '';
+        // A batch that starts today is still the one to name, unless today's
+        // batch has already finished: then it is simply what comes next.
+        $startsToday = $finished === null && (string) $next['scheduled_start'] === $today;
+
+        if ($lines === []) {
+            $lines[] = $startsToday ? 'Scheduled today, not open yet.' : 'Nothing scheduled today.';
+        }
+
+        $lines[] = ($startsToday ? 'Opens: ' : 'Next: ') . (string) $next['name'] . $venuePart . ', '
+            . date('D M j', strtotime((string) $next['scheduled_start'])) . ', '
+            . date('g:i A', strtotime((string) $next['daily_start_time'])) . '.';
+
+        return ['state' => 'idle', 'lines' => $lines];
     }
 
     /**

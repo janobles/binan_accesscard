@@ -54,7 +54,16 @@ $canManageBatches = in_array($currentRole ?? '', ['Admin', 'Developer'], true);
         <td><?= esc($b['name']) ?></td>
         <td><?= esc((string) ($b['subsidy_type_name'] ?? '')) ?></td>
         <td><?= $b['started_at'] !== null ? esc($b['started_at']) : 'Not yet started' ?></td>
-        <td><?= $b['closed_at'] === null ? '<span class="badge bg-success">Open</span>' : esc($b['closed_at']) ?></td>
+        <?php // Same test as the Started column: closed_at alone cannot tell a running batch from one that is only plotted. ?>
+        <td>
+          <?php if ($b['closed_at'] !== null): ?>
+            <?= esc($b['closed_at']) ?>
+          <?php elseif ($b['started_at'] === null): ?>
+            <span class="badge bg-secondary">Scheduled</span>
+          <?php else: ?>
+            <span class="badge bg-success">Open</span>
+          <?php endif; ?>
+        </td>
       </tr>
     <?php endforeach; ?>
     <?php if (($batches ?? []) === []): ?>

@@ -182,6 +182,26 @@ final class DashboardScheduleCardTest extends CIUnitTestCase
         $this->assertStringContainsString('City Hall Quadrangle', $body);
     }
 
+    public function testDistributionsTableSeparatesAPlottedBatchFromARunningOne(): void
+    {
+        // Both rows have closed_at NULL, which is what the pill used to test
+        // on its own: it labelled a batch plotted for next week "open".
+        $this->insertBatch(6, date('Y-m-d', strtotime('+7 days')), date('Y-m-d', strtotime('+8 days')));
+        db_connect()->table('distribution_batch')->update(
+            ['started_at' => date('Y-m-d H:i:s')],
+            ['batch_id' => 6]
+        );
+        $this->insertBatch(7, date('Y-m-d', strtotime('+14 days')), date('Y-m-d', strtotime('+15 days')));
+
+        $body = $this->withSession(['user_id' => 1, 'username' => 'boss', 'role' => 'administrator', 'is_logged_in' => true])
+            ->get('dashboard')
+            ->getBody();
+
+        $this->assertStringContainsString('>open</span>', $body, 'the started batch reads as open');
+        $this->assertStringContainsString('>scheduled</span>', $body, 'the plotted batch reads as scheduled');
+        $this->assertStringContainsString('Not yet started', $body);
+    }
+
     public function testCardIsReadOnly(): void
     {
         $body = $this->withSession(['user_id' => 1, 'username' => 'boss', 'role' => 'administrator', 'is_logged_in' => true])

@@ -119,6 +119,75 @@ final class ScannerScheduleBannerTest extends CIUnitTestCase
         $this->assertStringNotContainsString('AICS Payout - Cluster 1, ,', implode(' ', $banner['lines']));
     }
 
+    public function testIdleBannerSaysTodaysBatchHasEndedRatherThanNotOpenYet(): void
+    {
+        // A single-day batch that ran and closed still touches today, so it is
+        // still in scheduledBetween()'s range. Naming it as the next thing to
+        // open told staff who had just closed it that the day was ahead of
+        // them.
+        db_connect()->table('distribution_batch')->insert([
+            'batch_id' => 1, 'name' => 'AICS Payout - Cluster 1', 'venue' => 'Alonte Sports Arena',
+            'subsidy_type_id' => 1,
+            'scheduled_start' => date('Y-m-d'), 'scheduled_end' => date('Y-m-d'),
+            'daily_start_time' => '08:00:00', 'daily_end_time' => '17:00:00',
+            'color' => 'green', 'started_at' => date('Y-m-d') . ' 08:00:00',
+            'closed_at' => date('Y-m-d') . ' 16:30:00', 'eligible_count' => 0,
+        ]);
+
+        $lines = implode(' ', $this->banner(null)['lines']);
+
+        $this->assertStringContainsString('Today\'s distribution has ended.', $lines);
+        $this->assertStringContainsString('AICS Payout - Cluster 1', $lines);
+        $this->assertStringNotContainsString('Scheduled today, not open yet.', $lines);
+        $this->assertStringNotContainsString('Opens:', $lines);
+    }
+
+    public function testIdleBannerStillNamesTheNextBatchAfterTodaysHasEnded(): void
+    {
+        $db = db_connect();
+        $db->table('distribution_batch')->insert([
+            'batch_id' => 1, 'name' => 'AICS Payout - Cluster 1', 'venue' => 'Alonte Sports Arena',
+            'subsidy_type_id' => 1,
+            'scheduled_start' => date('Y-m-d'), 'scheduled_end' => date('Y-m-d'),
+            'daily_start_time' => '08:00:00', 'daily_end_time' => '17:00:00',
+            'color' => 'green', 'started_at' => date('Y-m-d') . ' 08:00:00',
+            'closed_at' => date('Y-m-d') . ' 16:30:00', 'eligible_count' => 0,
+        ]);
+        $db->table('distribution_batch')->insert([
+            'batch_id' => 2, 'name' => 'Rice Distribution - Zone 4', 'venue' => 'Canlalay Covered Court',
+            'subsidy_type_id' => 1,
+            'scheduled_start' => date('Y-m-d', strtotime('+3 days')),
+            'scheduled_end'   => date('Y-m-d', strtotime('+3 days')),
+            'daily_start_time' => '08:00:00', 'daily_end_time' => '15:00:00',
+            'color' => 'blue', 'started_at' => null, 'closed_at' => null, 'eligible_count' => 0,
+        ]);
+
+        $lines = implode(' ', $this->banner(null)['lines']);
+
+        $this->assertStringContainsString('Today\'s distribution has ended.', $lines);
+        $this->assertStringContainsString('Next: Rice Distribution - Zone 4', $lines);
+    }
+
+    public function testIdleBannerKeepsAMultiDayBatchThatClosedBetweenDays(): void
+    {
+        // Grace-closed after day one but due to resume tomorrow: this is the
+        // case that stops "closed_at is set" from meaning finished.
+        db_connect()->table('distribution_batch')->insert([
+            'batch_id' => 1, 'name' => 'Grocery Packs - Senior Citizens', 'venue' => 'City Hall Grounds',
+            'subsidy_type_id' => 1,
+            'scheduled_start' => date('Y-m-d', strtotime('-1 day')),
+            'scheduled_end'   => date('Y-m-d', strtotime('+1 day')),
+            'daily_start_time' => '08:00:00', 'daily_end_time' => '17:00:00',
+            'color' => 'orange', 'started_at' => date('Y-m-d', strtotime('-1 day')) . ' 08:00:00',
+            'closed_at' => date('Y-m-d', strtotime('-1 day')) . ' 17:30:00', 'eligible_count' => 0,
+        ]);
+
+        $lines = implode(' ', $this->banner(null)['lines']);
+
+        $this->assertStringContainsString('Grocery Packs - Senior Citizens', $lines);
+        $this->assertStringNotContainsString('has ended', $lines);
+    }
+
     public function testOpenBannerNamesTheVenueAndTheDay(): void
     {
         // The route runs BatchScheduleFilter, which reconciles against the real

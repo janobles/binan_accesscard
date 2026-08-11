@@ -57,6 +57,20 @@ jobs:
       - name: Run the entry page JS smoke test
         run: node tests/js/entry-page-gate.smoke.mjs
 
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install JS tooling
+        run: npm ci
+
+      # no-undef only, effectively. The browser JS wires itself together through
+      # window.* globals with no build step and no types, so a renamed entry
+      # point is a runtime ReferenceError no PHP test can see.
+      - name: Lint the browser JS
+        run: npx eslint public/assets/js
+
   # The suite otherwise runs on SQLite, which DumpSchema reaches by rewriting the
   # dump: types collapse to INTEGER/TEXT/REAL and every KEY and CONSTRAINT line
   # drops. That verifies column names and nothing else. This job imports the dump

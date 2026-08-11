@@ -4,6 +4,10 @@
 // Note: this is older pre-Bootstrap code kept for any views that still reference
 // the bare init() / showTab() / toggle() globals.
 // Connected to: any view that calls init() on DOMContentLoaded or toggle() inline.
+// Callers are inline onload/onclick handlers in app/Views/errors/html/error_exception.php,
+// not other JS files, so the linter can't see the reference. Keep this directive
+// or the error-debug page breaks.
+/* exported init, toggle */
 var tabLinks = new Array();
 var contentDivs = new Array();
 

@@ -1,0 +1,12 @@
+{
+  "name": "binan-accesscard",
+  "private": true,
+  "description": "Tooling manifest only. This project has no JS build step; ESLint is the sole dependency.",
+  "scripts": {
+    "lint:js": "eslint public/assets/js"
+  },
+  "devDependencies": {
+    "eslint": "^9.39.5",
+    "globals": "^17.9.0"
+  }
+}

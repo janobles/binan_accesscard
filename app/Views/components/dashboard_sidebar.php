@@ -38,7 +38,7 @@ $renderedHeading = null;
                         <div class="sidebar-menu-heading text-uppercase text-muted fw-bold mt-3 mb-1 px-3" style="font-size: 0.65rem; letter-spacing: 0.05em;"><?= esc($link['heading']) ?></div>
                         <?php $renderedHeading = $link['heading']; ?>
                     <?php endif; ?>
-                    <a class="nav-link rounded px-3 py-1 text-dark d-flex align-items-center <?= $link['key'] === $activePage ? 'active' : '' ?>" href="<?= site_url($link['route']) ?>" style="font-size: 0.85rem;">
+                    <a class="nav-link rounded px-3 py-1 text-dark d-flex align-items-center <?= $link['key'] === $activePage ? 'active' : '' ?>" href="<?= esc(site_url($link['route'])) ?>" style="font-size: 0.85rem;">
                         <div class="sidebar-nav-icon me-2"><i class="bi <?= esc($link['icon']) ?>" style="font-size: 1.1rem;" aria-hidden="true"></i></div>
                         <span><?= esc($link['label']) ?></span>
                     </a>

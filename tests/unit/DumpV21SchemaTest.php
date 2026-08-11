@@ -22,12 +22,30 @@ final class DumpV21SchemaTest extends CIUnitTestCase
         return (string) file_get_contents($path);
     }
 
+    /**
+     * The CREATE TABLE body for distribution_batch alone. Column names like
+     * `color` and `started_at` appear in other tables too, so a search across
+     * the whole dump would pass on a column that never reached this one.
+     */
+    private function batchTable(): string
+    {
+        $matched = preg_match(
+            '/CREATE TABLE `distribution_batch` \((.*?)\n\)/s',
+            $this->dumpText(),
+            $m
+        );
+
+        $this->assertSame(1, $matched, 'no CREATE TABLE `distribution_batch` in the dump');
+
+        return $m[1];
+    }
+
     public function testScheduleColumnsExist(): void
     {
-        $sql = $this->dumpText();
+        $table = $this->batchTable();
 
         foreach (['venue', 'scheduled_start', 'scheduled_end', 'daily_start_time', 'daily_end_time', 'color'] as $column) {
-            $this->assertStringContainsString('`' . $column . '`', $sql, $column . ' missing from the dump');
+            $this->assertStringContainsString('`' . $column . '`', $table, $column . ' missing from distribution_batch');
         }
     }
 
@@ -35,7 +53,7 @@ final class DumpV21SchemaTest extends CIUnitTestCase
     {
         $this->assertMatchesRegularExpression(
             '/`started_at` timestamp NULL DEFAULT NULL/',
-            $this->dumpText(),
+            $this->batchTable(),
             'started_at must be nullable so a plotted batch can report that it has not started'
         );
     }

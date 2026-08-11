@@ -173,8 +173,8 @@ class DistributionController extends BaseController
             'subsidy_type_id'  => (int) $this->request->getPost('subsidy_type_id'),
             'scheduled_start'  => $start,
             'scheduled_end'    => $end,
-            'daily_start_time' => (string) $this->request->getPost('daily_start_time') . ':00',
-            'daily_end_time'   => (string) $this->request->getPost('daily_end_time') . ':00',
+            'daily_start_time' => $this->timeOrDefault($this->request->getPost('daily_start_time'), '08:00:00'),
+            'daily_end_time'   => $this->timeOrDefault($this->request->getPost('daily_end_time'), '17:00:00'),
             'color'            => (string) $this->request->getPost('color'),
             'barangay_ids'     => array_map('intval', (array) $this->request->getPost('barangay_ids')),
             'sector_ids'       => array_map('intval', (array) $this->request->getPost('sector_ids')),
@@ -240,6 +240,19 @@ class DistributionController extends BaseController
         }
         $this->audit('Closed distribution batch "' . (string) ($batch['name'] ?? '') . '" #' . $id);
         return redirect()->to('distribution?tab=batches')->with('success', 'Batch closed. Statistics reset for the next batch.');
+    }
+
+    /**
+     * A posted HH:MM as a storable HH:MM:SS, or the default when the field is
+     * missing or malformed. Without this a request that omits the time inputs
+     * stores 00:00:00, which reads as a batch that closes at midnight rather
+     * than one whose hours were never given.
+     */
+    private function timeOrDefault(mixed $posted, string $default): string
+    {
+        $value = trim((string) $posted);
+
+        return preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $value) === 1 ? $value . ':00' : $default;
     }
 
     private function audit(string $action, int $memberId = 0, ?string $detail = null): void

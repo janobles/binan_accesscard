@@ -155,6 +155,23 @@ final class ScheduleEndpointTest extends CIUnitTestCase
         $this->assertSame([], (new \App\Models\Scanner\DistributionBatchModel())->allBatches());
     }
 
+    public function testMissingOrMalformedDailyTimesFallBackToTheDefaultHours(): void
+    {
+        // The time inputs are required in the form, so this only happens on a
+        // hand-made request - but appending ':00' to a blank field stored
+        // 00:00:00, and a batch that closes at midnight is not what a missing
+        // field means.
+        $this->withSession($this->asAdmin())->post('distribution/schedule/save', $this->payload([
+            'daily_start_time' => '',
+            'daily_end_time'   => 'half five',
+        ]));
+
+        $row = (new \App\Models\Scanner\DistributionBatchModel())->find(1);
+
+        $this->assertSame('08:00:00', $row['daily_start_time']);
+        $this->assertSame('17:00:00', $row['daily_end_time']);
+    }
+
     public function testDeletingANonexistentScheduleAnswers404WithNoAuditRow(): void
     {
         $result = $this->withSession($this->asAdmin())->post('distribution/schedule/999999/delete');

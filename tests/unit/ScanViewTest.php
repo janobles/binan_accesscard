@@ -42,8 +42,16 @@ final class ScanViewTest extends CIUnitTestCase
         // Replaces the old "No active distribution batch" refusal: the banner
         // states what is scheduled (or running) and the system clock, in both
         // the open and idle states.
-        $this->assertStringContainsString('scheduleBanner', $this->html);
+        $this->assertStringContainsString('$scheduleBanner[\'lines\']', $this->html);
         $this->assertStringContainsString('System time:', $this->html);
+
+        // Above the active-batch branch, so the banner still prints on a day
+        // with nothing open - the state it exists for.
+        $this->assertLessThan(
+            strpos($this->html, '$activeBatch !== null'),
+            strpos($this->html, '$scheduleBanner[\'lines\']'),
+            'the banner must render before the active-batch conditional'
+        );
     }
 
     public function testTwoColumnResponsiveGrid(): void

@@ -603,8 +603,9 @@ class DashboardPageBuilder
     }
 
     /**
-     * The batch running now, if any, then the next two plotted ones, for the
-     * dashboard's schedule card.
+     * At most two plotted batches for the dashboard's schedule card, earliest
+     * first: the one running now counts as one of the two, so a running batch
+     * leaves room for a single upcoming one. Closed batches are skipped.
      *
      * @return list<array{batch_id:int,name:string,venue:string,start:string,end:string,dailyStart:string,dailyEnd:string,color:string,status:string}>
      */

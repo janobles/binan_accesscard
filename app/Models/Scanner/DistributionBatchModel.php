@@ -402,6 +402,10 @@ class DistributionBatchModel extends Model
     /**
      * Removes a plotted batch and its filters. Refuses once any scan has been
      * recorded against it, because deleting then would orphan real records.
+     *
+     * The four deletes run in one transaction: a failure partway through would
+     * otherwise leave a roster or a filter row pointing at a batch that no
+     * longer exists, and the next eligibility count would read it.
      */
     public function deleteSchedule(int $batchId): bool
     {
@@ -410,12 +414,31 @@ class DistributionBatchModel extends Model
         }
 
         try {
+            // Manual rather than transStart(): a delete() that returns false
+            // does not mark the managed transaction failed, so the rollback
+            // has to be asked for by name.
+            $this->db->transBegin();
+
             $this->db->table('batch_eligibility')->where('batch_id', $batchId)->delete();
             $this->db->table('batch_barangay')->where('batch_id', $batchId)->delete();
             $this->db->table('batch_sector')->where('batch_id', $batchId)->delete();
 
-            return $this->delete($batchId) !== false;
+            if ($this->delete($batchId) === false) {
+                $this->db->transRollback();
+
+                return false;
+            }
+
+            $this->db->transCommit();
+
+            return true;
         } catch (\Throwable $e) {
+            try {
+                $this->db->transRollback();
+            } catch (\Throwable $ignored) {
+                // Nothing to undo when the connection itself is the problem.
+            }
+
             return false;
         }
     }

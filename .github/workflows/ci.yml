@@ -109,10 +109,14 @@ jobs:
       - name: Install dependencies
         run: composer install --prefer-dist --no-interaction --no-progress
 
-      # No database argument: the dump declares CREATE DATABASE `accesscard` and
-      # USE `accesscard` itself.
+      # Resolve the dump by version instead of naming one: DumpSchema::dumpPath()
+      # (tests/_support/Database/DumpSchema.php) picks the highest-numbered
+      # accesscardV*.sql at test time, and a hardcoded filename here could drift
+      # from that choice, letting CI import one schema while the tests parse
+      # another. No database argument: the dump declares CREATE DATABASE
+      # `accesscard` and USE `accesscard` itself.
       - name: Import the schema dump
-        run: mysql -h 127.0.0.1 -P 3306 -uroot -proot < accesscardV21.sql
+        run: mysql -h 127.0.0.1 -P 3306 -uroot -proot < "$(ls accesscardV*.sql | sort -V | tail -1)"
 
       # CodeIgniter reads these over the $tests group in app/Config/Database.php.
       # DBPrefix is empty because the dump creates unprefixed tables; the SQLite

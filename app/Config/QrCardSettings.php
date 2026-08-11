@@ -23,8 +23,15 @@ class QrCardSettings extends BaseConfig
     /** QR cards per printed page. The PDF template is a fixed 3x4 grid. */
     public int $cellsPerPage = 12;
 
-    /** Cards per chunk (1000 pages per chunk); a batch larger than this is split into several PDFs in a ZIP. */
-    public int $cardsPerChunk = 12000;
+    /**
+     * Cards per chunk; a batch larger than this is split into several PDFs in a
+     * ZIP. One chunk is one dompdf render, and dompdf holds the whole document
+     * plus every embedded QR image until output, costing about 0.22 MB per card
+     * (1200 cards peaked at 268 MB). 1000 keeps a render inside half of
+     * QrCardPdfGenerator's 512 MB ceiling; larger chunks exhaust it mid-render
+     * and the request dies with no file at all.
+     */
+    public int $cardsPerChunk = 1000;
 
     /** Width of a control number (width 1 = bare memberID, no leading zeros). */
     public int $controlNumberWidth = 1;

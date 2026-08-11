@@ -551,9 +551,9 @@ class DashboardPageBuilder
      * The remaining-families query only runs when $batchBodyTab is 'remaining':
      * against the 100k-family target, SubsidyStatsModel::remaining() lists
      * everyone in one response, so it is too large to fetch on every dashboard
-     * load regardless of which sub-tab is showing. The PDF export keeps calling
-     * remaining() directly (ReportsController::pdf()); the liquidation artifact
-     * must stay whole.
+     * load regardless of which sub-tab is showing. The Remaining tab is now the
+     * only place that list appears: the report PDF carries the count, not the
+     * names.
      */
     private function buildReportsData(DistributionBatchModel $batchModel, string $batchBodyTab): array
     {

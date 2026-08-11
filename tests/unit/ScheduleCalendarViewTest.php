@@ -128,4 +128,36 @@ final class ScheduleCalendarViewTest extends CIUnitTestCase
     {
         $this->assertFileDoesNotExist(APPPATH . 'Views/Admin/batch-create-modal.php');
     }
+
+    public function testBatchesTabCarriesTheCloseConfirmation(): void
+    {
+        // batch-close-modal.js looks for #batchCloseModal and quietly falls
+        // back to window.confirm when it is absent, which is how the modal
+        // went unrendered by any page without anything breaking.
+        db_connect()->table('distribution_batch')->insert([
+            'batch_id' => 1, 'name' => 'AICS Payout - Cluster 1', 'venue' => 'Alonte Sports Arena',
+            'subsidy_type_id' => 1,
+            'scheduled_start' => date('Y-m-d'), 'scheduled_end' => date('Y-m-d'),
+            'daily_start_time' => '00:00:00', 'daily_end_time' => '23:59:59',
+            'color' => 'green', 'started_at' => date('Y-m-d') . ' 00:00:00',
+            'closed_at' => null, 'eligible_count' => 0,
+        ]);
+
+        $body = $this->withSession(['user_id' => 1, 'username' => 'boss', 'role' => 'Admin', 'is_logged_in' => true])
+            ->get('distribution?tab=batches')
+            ->getBody();
+
+        $this->assertStringContainsString('js-batch-close-form', $body);
+        $this->assertStringContainsString('id="batchCloseModal"', $body);
+        $this->assertStringContainsString('js-batch-close-confirm', $body);
+    }
+
+    public function testViewerGetsNoCloseConfirmation(): void
+    {
+        $body = $this->withSession(['user_id' => 3, 'username' => 'looker', 'role' => 'Viewer', 'is_logged_in' => true])
+            ->get('distribution?tab=batches')
+            ->getBody();
+
+        $this->assertStringNotContainsString('batchCloseModal', $body);
+    }
 }

@@ -7,6 +7,9 @@
  * switched by ?tab=; data comes from DashboardPageBuilder::buildViewData().
  * Who reaches this page at all is the roleNav filter's decision
  * (Config\Navigation).
+ *
+ * Each tab renders its own dialogs, so the schedule form and the close
+ * confirmation only reach the page that can open them.
  */
 
 $distributionTab = (string) ($distributionTab ?? 'schedule');
@@ -47,6 +50,9 @@ $distributionTab = in_array($distributionTab, ['schedule', 'batches', 'log'], tr
         ],
         'footer' => view('components/table_footer', ['clientKey' => 'batches', 'entityLabel' => 'batches']),
     ]) ?>
+    <?php if (in_array($currentRole ?? '', ['Admin', 'Developer'], true)): ?>
+        <?= view('Admin/batch-close-modal') ?>
+    <?php endif; ?>
 <?php else: ?>
     <?= view('components/toolbar', [
         'isClient' => true,

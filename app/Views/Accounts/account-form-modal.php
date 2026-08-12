@@ -48,7 +48,7 @@ $getError = static function (string $field) use ($errors): string {
     return $errors[$field] ?? '';
 };
 ?>
-<div class="accounts-page edit-account-modal">
+<div class="edit-account-modal d-flex flex-column h-100">
     <form method="post" action="<?= esc($action, 'attr') ?>">
         <?= csrf_field() ?>
         <?php if ($isEdit): ?>
@@ -56,15 +56,9 @@ $getError = static function (string $field) use ($errors): string {
         <?php endif; ?>
 
         <section class="account-card" aria-labelledby="<?= esc($fieldPrefix, 'attr') ?>-profile-title">
-            <div class="account-card-header">
-                <div>
-                    <h2 id="<?= esc($fieldPrefix, 'attr') ?>-profile-title">Profile Information</h2>
-                </div>
-            </div>
-
             <div class="account-create-grid account-create-grid--stacked">
-                <div class="account-field-group" aria-label="User credentials">
-                    <h3 class="account-field-group-title">User Credentials</h3>
+                <div class="account-field-group" aria-label="Profile Information">
+                    <h3 class="account-field-group-title" id="<?= esc($fieldPrefix, 'attr') ?>-profile-title">Profile Information</h3>
                     <?php if ($personalLocked): ?>
                         <p class="text-muted account-field small mb-0">Personal details and account level are read-only. As an administrator you can only update this account's username and password.</p>
                     <?php endif; ?>
@@ -179,9 +173,9 @@ $getError = static function (string $field) use ($errors): string {
             </div>
         </section>
 
-        <div class="account-create-actions mt-3">
-            <button class="btn btn-outline-secondary me-2" type="button" data-bs-dismiss="modal">Cancel</button>
-            <button class="btn btn-success" type="submit"><?= esc($submitLabel) ?></button>
+        <div class="d-flex justify-content-end gap-2 border-top pt-3 mt-4">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="<?= btn('add') ?>"><?= esc($submitLabel) ?></button>
         </div>
     </form>
 </div>

@@ -544,16 +544,18 @@ class FamilyController extends BaseController
 
         $successMessage = 'Family record updated successfully.';
 
+        session()->setFlashdata('success', $successMessage);
+
         if ($this->request->isAJAX()) {
             return $this->response->setJSON([
-                'status' => 'success',
-                'message' => $successMessage,
-                'csrf' => csrf_hash(),
+                'status'   => 'success',
+                'message'  => $successMessage,
+                'redirect' => site_url('records/' . $headId),
+                'csrf'     => csrf_hash(),
             ]);
         }
 
-        return redirect()->to(site_url('records'))
-            ->with('success', $successMessage);
+        return redirect()->to(site_url('records/' . $headId));
     }
 
     /**

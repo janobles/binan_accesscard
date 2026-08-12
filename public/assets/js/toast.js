@@ -99,6 +99,14 @@
         // wanted a bold first line and a link, so those are options now.
         bodyEl.textContent = '';
 
+        if (opts.spinner) {
+            var spinner = document.createElement('span');
+            spinner.className = 'spinner-border spinner-border-sm me-2 align-middle';
+            spinner.setAttribute('role', 'status');
+            spinner.setAttribute('aria-hidden', 'true');
+            bodyEl.appendChild(spinner);
+        }
+
         if (opts.title) {
             var title = document.createElement('strong');
             title.textContent = String(opts.title);

@@ -59,7 +59,7 @@ $cards = [
   <div class="table-responsive">
     <table class="table manage-record-table align-middle w-100 mb-0">
       <thead>
-        <tr><th>Batch</th><th>Subsidy</th><th>Opened</th><th>Eligible</th><th>Served</th><th>Coverage</th></tr>
+        <tr><th>Batch</th><th>Status</th><th>Subsidy</th><th>Opened</th><th>Eligible</th><th>Served</th><th>Coverage</th></tr>
       </thead>
       <tbody>
         <?php foreach ($distributionRows as $row): ?>
@@ -68,9 +68,14 @@ $cards = [
             <a href="<?= site_url('dashboard') ?>?view=distribution&batch=<?= esc((string) (int) $row['batch_id'], 'attr') ?>">
               <?= esc((string) $row['name']) ?>
             </a>
-            <?php if (($row['closed_at'] ?? null) === null): ?>
-              <?php // A plotted batch also has no closed_at, so started_at is what separates one that is running from one still ahead of its day. ?>
-              <span class="status-pill is-muted"><?= ($row['started_at'] ?? null) === null ? 'scheduled' : 'open' ?></span>
+          </td>
+          <td>
+            <?php if (($row['closed_at'] ?? null) !== null): ?>
+              <span class="badge bg-secondary">Closed</span>
+            <?php elseif (($row['started_at'] ?? null) === null): ?>
+              <span class="badge bg-info text-dark">Scheduled</span>
+            <?php else: ?>
+              <span class="badge bg-success">Open</span>
             <?php endif; ?>
           </td>
           <td><?= esc((string) ($row['subsidy_type_name'] ?? '')) ?></td>
@@ -81,7 +86,7 @@ $cards = [
         </tr>
         <?php endforeach; ?>
         <?php if ($distributionRows === []): ?>
-        <tr><td colspan="6" class="text-muted">No distribution has been run yet. Open one from the Distribution page.</td></tr>
+        <tr><td colspan="7" class="text-muted">No distribution has been run yet. Open one from the Distribution page.</td></tr>
         <?php endif; ?>
       </tbody>
     </table>

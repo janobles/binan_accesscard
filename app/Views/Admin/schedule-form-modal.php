@@ -39,14 +39,18 @@ $sectorOptions      = $sectorOptions ?? [];
 $scheduleColors     = $scheduleColors ?? [];
 $venueSuggestions   = $venueSuggestions ?? [];
 ?>
-<div class="modal fade" id="scheduleFormModal" tabindex="-1" aria-labelledby="scheduleFormTitle" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
+<div class="modal fade" id="scheduleFormModal" tabindex="-1" aria-labelledby="scheduleFormTitle" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
     <form class="modal-content" method="post" id="scheduleForm"
           action="<?= esc(site_url('distribution/schedule/save'), 'attr') ?>"
           data-preview-url="<?= esc(site_url('distribution/batches/preview'), 'attr') ?>">
       <?= csrf_field() ?>
       <input type="hidden" name="batch_id" id="scheduleBatchId" value="0">
-      <div id="scheduleFormPane">
+      <style>
+        .contents-pane { display: contents; }
+        .contents-pane.d-none { display: none !important; }
+      </style>
+      <div id="scheduleFormPane" class="contents-pane">
       <div class="modal-header">
         <h5 class="modal-title" id="scheduleFormTitle">New schedule</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -135,8 +139,9 @@ $venueSuggestions   = $venueSuggestions ?? [];
               </div>
             </div>
           </div>
-          <p class="form-text mb-0" id="scheduleEligible">
-            <strong data-eligible-count>All families</strong> so far. Locked in when the batch opens.
+          <p class="form-text mb-0 text-success" id="scheduleEligible">
+            <i class="bi bi-check-circle-fill me-1"></i>
+            <strong data-eligible-count>All families eligible</strong>
           </p>
         </div>
         <div class="mb-1">
@@ -161,7 +166,7 @@ $venueSuggestions   = $venueSuggestions ?? [];
       </div>
       </div>
 
-      <div id="scheduleConflictPane" class="d-none">
+      <div id="scheduleConflictPane" class="contents-pane d-none">
         <div class="modal-header">
           <h5 class="modal-title" id="scheduleConflictTitle">Replace the existing schedule?</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>

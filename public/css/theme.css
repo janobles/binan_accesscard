@@ -198,10 +198,10 @@
     --bs-pagination-padding-x: 0.6rem;
     --bs-pagination-padding-y: 0.25rem;
     --bs-pagination-font-size: 0.875rem;
-    --bs-pagination-color: var(--binan-green);
-    --bs-pagination-active-bg: var(--binan-green);
-    --bs-pagination-active-border-color: var(--binan-green);
-    --bs-pagination-hover-color: var(--binan-green-deep);
+    --bs-pagination-color: var(--bs-success);
+    --bs-pagination-active-bg: var(--bs-success);
+    --bs-pagination-active-border-color: var(--bs-success);
+    --bs-pagination-hover-color: #146c43; /* Bootstrap success darker hover */
     margin-bottom: 0;
 }
 

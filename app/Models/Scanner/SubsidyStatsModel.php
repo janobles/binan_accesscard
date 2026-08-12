@@ -546,9 +546,11 @@ class SubsidyStatsModel extends Model
      */
     public function batchSnapshot(int $batchId, bool $isOpen): array
     {
+        $fingerprint = $this->batchFingerprint($batchId);
+
         $cached = cache(self::cacheKey($batchId));
-        if (is_array($cached)) {
-            return $cached;
+        if (is_array($cached) && ($cached['fingerprint'] ?? null) === $fingerprint && isset($cached['snapshot'])) {
+            return $cached['snapshot'];
         }
 
         $snapshot = [
@@ -559,11 +561,49 @@ class SubsidyStatsModel extends Model
             'byDay'      => $this->servedByDay($batchId),
         ];
 
-        if ($this->dbIsHealthy()) {
-            cache()->save(self::cacheKey($batchId), $snapshot, $isOpen ? 10 : 0);
+        if ($fingerprint !== '' && $this->dbIsHealthy()) {
+            cache()->save(
+                self::cacheKey($batchId),
+                ['fingerprint' => $fingerprint, 'snapshot' => $snapshot],
+                $isOpen ? 10 : 0
+            );
         }
 
         return $snapshot;
+    }
+
+    /**
+     * Identity of the batch row behind $batchId, so a cached snapshot can be
+     * matched to the batch it was computed from. The cache key is the batch id
+     * alone, and a closed batch saves with ttl 0, so without this check any
+     * reuse of an id by a different batch (a database reimport, a restore into
+     * a fresh schema) serves the old batch's figures forever. The columns are
+     * the ones fixed when the batch is created or opened, not the counters that
+     * move during distribution, so a live batch keeps its cache hits.
+     *
+     * @return string Empty when the row is missing or the query fails, which
+     *                tells batchSnapshot() to skip the cache write entirely.
+     */
+    private function batchFingerprint(int $batchId): string
+    {
+        if ($batchId <= 0) {
+            return '';
+        }
+
+        try {
+            $row = $this->db->table('distribution_batch')
+                ->select('name, scheduled_start, started_at, closed_at, created_by')
+                ->where('batch_id', $batchId)
+                ->get()->getRowArray();
+        } catch (\Throwable $e) {
+            return '';
+        }
+
+        if ($row === null) {
+            return '';
+        }
+
+        return md5(implode('|', array_map(static fn ($v) => (string) $v, $row)));
     }
 
     /**

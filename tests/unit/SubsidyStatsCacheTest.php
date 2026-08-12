@@ -26,6 +26,25 @@ final class SubsidyStatsCacheTest extends CIUnitTestCase
     }
 
     /**
+     * A closed batch caches with ttl 0, and the key is the batch id alone, so
+     * an entry that outlives the batch it describes (a database reimport that
+     * reuses id 1) would otherwise be served forever. The payload carries a
+     * fingerprint of the batch row and the read path compares it, so a cache
+     * entry that does not carry one is ignored rather than trusted.
+     */
+    public function testSnapshotCacheIsFingerprinted(): void
+    {
+        $source = file_get_contents(APPPATH . 'Models/Scanner/SubsidyStatsModel.php');
+        $body   = substr($source, strpos($source, 'function batchSnapshot'));
+        $body   = substr($body, 0, strpos($body, "\n    }"));
+
+        $this->assertStringContainsString('batchFingerprint', $body);
+        $this->assertStringContainsString("\$cached['fingerprint'] ?? null) === \$fingerprint", $body);
+        // An unfingerprintable batch (missing row, dead DB) must not be cached.
+        $this->assertStringContainsString("\$fingerprint !== ''", $body);
+    }
+
+    /**
      * Voiding a distribution changes coverage()'s served/voided counts, so it
      * must invalidate that batch's cached snapshot the same way a new scan
      * does - otherwise a closed batch (ttl 0, cached forever) never recovers.

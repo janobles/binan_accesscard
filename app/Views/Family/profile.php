@@ -25,24 +25,15 @@ $formOptions = (array) ($formOptions ?? []);
 $qrDataUri = (string) ($qrDataUri ?? '');
 $controlNumberLabel = ControlNumber::format((int) ($controlNumber ?? 0));
 ?>
-<div class="container-fluid px-4 py-4" data-family-entry-form>
+<div class="pb-5 mb-5" data-family-entry-form>
     <form method="post" action="<?= esc(site_url('records/' . $headId . '/update'), 'attr') ?>">
         <?= csrf_field() ?>
         <input type="hidden" name="form_mode" value="update">
 
-        <div class="card shadow-sm" data-head-card>
-            <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
-                <h2 class="h5 mb-0">Head of Family</h2>
-                <div class="d-flex align-items-center gap-2">
-                    <span class="badge text-bg-secondary">
-                        Control No. <?= esc($controlNumberLabel) ?>
-                    </span>
-                    <?php if ($qrDataUri !== ''): ?>
-                    <?php // Decorative: the badge beside it already announces "Control No. N",
-                        // so a label here would repeat the same number a second time. ?>
-                    <img src="<?= esc($qrDataUri) ?>" width="64" height="64" alt="">
-                    <?php endif; ?>
-                </div>
+        <div class="card shadow-none border" data-head-card>
+            <div class="card-header bg-white border-bottom py-3 d-flex flex-wrap align-items-center gap-3">
+                <h2 class="h5 mb-0 fw-bold text-dark">Primary Information</h2>
+                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle px-2 py-1">Head</span>
             </div>
             <div class="card-body">
                 <?= view('Family/_fields', [
@@ -53,15 +44,10 @@ $controlNumberLabel = ControlNumber::format((int) ($controlNumber ?? 0));
                     'services'    => $services,
                     'categories'  => $categories,
                     'formOptions' => $formOptions,
+                    'qrDataUri'   => $qrDataUri ?? '',
                 ]) ?>
             </div>
-            <?php if (! $readOnly): ?>
-            <div class="card-footer text-end">
-                <button class="<?= btn('save') ?>" type="submit" data-family-save>
-                    <i class="bi bi-check2-circle me-1" aria-hidden="true"></i>Save Changes
-                </button>
-            </div>
-            <?php endif; ?>
+
         </div>
 
         <?php /* Truncation sentinel - MUST stay the last named field in the form. A
@@ -70,5 +56,14 @@ $controlNumberLabel = ControlNumber::format((int) ($controlNumber ?? 0));
                  to save (FamilyController::submissionWasTruncated()). */ ?>
         <input type="hidden" name="members_meta_count" value="0" data-members-count>
         <input type="hidden" name="_form_end" value="1">
+
+        <?php if (! $readOnly): ?>
+        <div class="position-fixed bottom-0 start-0 w-100 bg-white border-top p-3 z-3 d-flex flex-wrap justify-content-end align-items-center gap-2 shadow-sm" style="margin-bottom: 0;">
+            <a href="<?= esc(site_url('records/' . $headId), 'attr') ?>" class="btn btn-outline-secondary">Cancel</a>
+            <button class="<?= btn('save') ?> px-4" type="submit" data-family-save>
+                <i class="bi bi-check2-circle me-1" aria-hidden="true"></i>Save Changes
+            </button>
+        </div>
+        <?php endif; ?>
     </form>
 </div>

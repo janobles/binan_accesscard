@@ -30,6 +30,7 @@ $sectors = (array) ($sectors ?? []);
 $services = (array) ($services ?? []);
 $categories = (array) ($categories ?? []);
 $formOptions = (array) ($formOptions ?? []);
+$qrDataUri = (string) ($qrDataUri ?? '');
 
 // The Data Entry spine renders the head and the member list as separate steps;
 // the edit page renders both in one card, which is what 'all' keeps doing.
@@ -372,9 +373,15 @@ $renderMemberRow = static function ($index, array $m = [], bool $open = true) us
                 <?php /* An existing record's control number identifies it, so it is shown
                          readonly here rather than re-typed; entry.php's own control-number
                          gate owns the create-mode field instead. */ ?>
+                <?php if ($qrDataUri !== ''): ?>
+                    <div class="mb-3">
+                        <img src="<?= esc($qrDataUri) ?>" width="80" height="80" alt="QR Code" class="img-thumbnail">
+                    </div>
+                <?php endif; ?>
                 <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>HeadQr">Control Number</label>
-                <input id="<?= esc($fieldPrefix, 'attr') ?>HeadQr" name="qr_control_no" class="form-control" type="text"
-                    value="<?= esc((string) ($head['qr_control_no'] ?? ''), 'attr') ?>" readonly>
+                <input type="hidden" name="qr_control_no" value="<?= esc((string) ($head['qr_control_no'] ?? ''), 'attr') ?>">
+                <input id="<?= esc($fieldPrefix, 'attr') ?>HeadQr" class="form-control text-muted fw-semibold" type="text"
+                    value="<?= esc((string) ($head['qr_control_no'] ?? ''), 'attr') ?>" disabled>
                 <?php if ($qrLocked): ?>
                     <small class="text-muted">Locked: subsidy already recorded under this number.</small>
                 <?php endif; ?>
@@ -430,11 +437,11 @@ $renderMemberRow = static function ($index, array $m = [], bool $open = true) us
     <?php /* The entry spine names this section on its step link, so the title here
              would be the same words twice; the edit page has no such label and
              keeps it. The count rides along in both. */ ?>
-    <div class="family-section-head">
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-4 pb-3 border-bottom mt-4 pt-2">
         <?php if ($part === 'all'): ?>
-            <h3 class="family-person-card-title">Members of the Family</h3>
+            <h3 class="h6 mb-0 fw-bold text-dark"><i class="bi bi-people-fill me-2 text-muted"></i>Family Members</h3>
         <?php endif; ?>
-        <span class="badge rounded-pill text-bg-light border" data-family-members-count>0 members</span>
+        <span class="badge rounded-pill text-bg-light border px-3 py-2" data-family-members-count>0 members</span>
     </div>
 
     <div class="row g-3" data-family-members>

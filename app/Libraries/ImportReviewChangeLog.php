@@ -15,11 +15,11 @@ class ImportReviewChangeLog
 {
     /** Person fields worth showing in a diff line, in display order. */
     private const FIELDS = [
-        'relationship' => 'Relationship', 'lastname' => 'Last name', 'firstname' => 'First name',
-        'middlename' => 'Middle name', 'suffix' => 'Suffix', 'birthday' => 'Birthday',
-        'sex' => 'Sex', 'civilstatus' => 'Civil status', 'contactnumber' => 'Contact number',
+        'relationship' => 'Relationship', 'lastname' => 'Last Name', 'firstname' => 'First Name',
+        'middlename' => 'Middle Name', 'suffix' => 'Suffix', 'birthday' => 'Birthday',
+        'sex' => 'Sex', 'civilstatus' => 'Civil Status', 'contactnumber' => 'Contact Number',
         'religion' => 'Religion', 'education' => 'Education', 'job' => 'Job',
-        'monthlyincome' => 'Monthly income', 'address' => 'Address', 'barangay' => 'Barangay',
+        'monthlyincome' => 'Monthly Income', 'address' => 'Address', 'barangay' => 'Barangay',
         'sector' => 'Sector', 'services' => 'Services',
     ];
 

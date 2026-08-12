@@ -17,7 +17,7 @@ trait MemberQueryFilters
      * Adds the shared member keyword search:
      * - every name token must match a name column
      * - the whole keyword may also match contact/relationship/extra fields
-     * - sector names are resolved to sector IDs and matched inside sectorID JSON
+     * - sector names are resolved to sector IDs and matched through member_sectors
      * - optional service matches are used by deep search
      * - an exact QR match takes precedence and includes only that family
      */
@@ -26,7 +26,6 @@ trait MemberQueryFilters
         string $keyword,
         string $prefix,
         array $likeColumns,
-        string $sectorColumn,
         array $serviceMemberIds = [],
         array $qrHeadIds = []
     ): void {
@@ -72,11 +71,15 @@ trait MemberQueryFilters
             }
         }
 
-        foreach ($this->sectorIdsForKeyword($keyword) as $sectorId) {
+        $keywordSectorIds = $this->sectorIdsForKeyword($keyword);
+
+        if ($keywordSectorIds !== []) {
+            $condition = $this->sectorMembershipCondition($keywordSectorIds, $prefix . 'memberID');
+
             if ($hasCondition) {
-                $builder->orWhere(SectorIds::containsCondition($sectorId, $sectorColumn), null, false);
+                $builder->orWhere($condition, null, false);
             } else {
-                $builder->where(SectorIds::containsCondition($sectorId, $sectorColumn), null, false);
+                $builder->where($condition, null, false);
                 $hasCondition = true;
             }
         }
@@ -117,8 +120,12 @@ trait MemberQueryFilters
         );
     }
 
-    /** Adds the shared sectorID filter for member queries. */
-    private function applySectorIdFilter(BaseBuilder $builder, mixed $value, string $sectorColumn): void
+    /**
+     * Adds the shared sector filter for member queries. $memberIdColumn is the
+     * member id in the caller's query ('member.memberID', 'm.memberID', or a
+     * bare 'memberID'), which is what the junction is matched against.
+     */
+    private function applySectorIdFilter(BaseBuilder $builder, mixed $value, string $memberIdColumn): void
     {
         $sectorIds = $this->normalizeFilterList($value);
 
@@ -126,71 +133,81 @@ trait MemberQueryFilters
             return;
         }
 
-        $builder->groupStart();
-
-        foreach ($sectorIds as $index => $sectorId) {
-            if ($index === 0) {
-                $builder->where(SectorIds::containsCondition((int) $sectorId, $sectorColumn), null, false);
-                continue;
-            }
-
-            $builder->orWhere(SectorIds::containsCondition((int) $sectorId, $sectorColumn), null, false);
-        }
-
-        $builder->groupEnd();
+        $builder->where($this->sectorMembershipCondition($sectorIds, $memberIdColumn), null, false);
     }
 
     /**
-     * Adds the shared barangay filter. Newer flows store barangay at the end of
-     * address, but this also supports a real barangay column if a schema has one.
+     * "member is in any of these sectors", as a subquery against member_sectors.
+     * A member holds one row per sector there, so a join would multiply the
+     * result rows; IN (SELECT ...) keeps one row per member, which is what
+     * every caller here counts on.
+     *
+     * Ids are cast to int before they reach the SQL string, so nothing a caller
+     * passes can be interpolated as anything but a number.
      */
-    private function applyBarangayFilter(
-        BaseBuilder $builder,
-        mixed $value,
-        string $addressColumn,
-        ?string $barangayColumn = null
-    ): void {
+    private function sectorMembershipCondition(array $sectorIds, string $memberIdColumn): string
+    {
+        $ids = implode(',', array_map('intval', $this->positiveUniqueIds($sectorIds)));
+
+        if ($ids === '') {
+            return '1 = 0';
+        }
+
+        return $this->qualifiedMemberColumn($memberIdColumn) . ' IN (SELECT memberID FROM '
+            . $this->db->prefixTable('member_sectors') . ' WHERE sectorID IN (' . $ids . '))';
+    }
+
+    /**
+     * Table-qualified column for raw SQL. The query builder adds DBPrefix to a
+     * table name it is given, but a hand-written fragment is passed through
+     * untouched, so "member.memberID" has to become "db_member.memberID" here or
+     * it resolves to nothing on a prefixed connection (the test database is one).
+     * An alias like "m." is left alone: an alias is never prefixed.
+     */
+    private function qualifiedMemberColumn(string $column): string
+    {
+        return str_starts_with($column, 'member.')
+            ? $this->db->prefixTable('member') . substr($column, strlen('member'))
+            : $column;
+    }
+
+    /**
+     * Adds the shared barangay filter, matching member.barangayID against the
+     * selected barangay names. $memberIdColumn is only used to qualify the
+     * barangayID column in the caller's query ('member.', 'm.', or bare).
+     *
+     * Filtering used to run against the barangay text on the end of the address
+     * and so answered by spelling: "Sto. Tomas" and "SANTO TOMAS" were
+     * different barangays. V22 took that text out of the address; the id is now
+     * the only source, and names resolve through the same fold the importer and
+     * the form use.
+     */
+    private function applyBarangayFilter(BaseBuilder $builder, mixed $value, string $memberIdColumn): void
+    {
         $barangays = $this->normalizeFilterList($value, false);
 
-        if ($barangays === []) {
+        if ($barangays === [] || ! $this->db->tableExists('barangay')) {
             return;
         }
 
-        $hasAddressColumn = $this->memberFieldExistsForQuery($this->unqualifiedMemberColumn($addressColumn));
-        $hasBarangayColumn = $barangayColumn !== null
-            && $this->memberFieldExistsForQuery($this->unqualifiedMemberColumn($barangayColumn));
+        $idsByKey = (new \App\Models\Lookups\BarangayModel())->idByNormalizedName();
+        $ids      = [];
 
-        if (! $hasAddressColumn && ! $hasBarangayColumn) {
-            return;
+        foreach ($barangays as $barangay) {
+            $key = \App\Support\MemberFieldNormalizer::barangayKey((string) $barangay);
+
+            if (isset($idsByKey[$key])) {
+                $ids[] = $idsByKey[$key];
+            }
         }
 
-        $builder->groupStart();
+        $column = str_contains($memberIdColumn, '.')
+            ? substr($memberIdColumn, 0, strrpos($memberIdColumn, '.') + 1) . 'barangayID'
+            : 'barangayID';
 
-        foreach ($barangays as $index => $barangay) {
-            $open = $index === 0 ? 'groupStart' : 'orGroupStart';
-            $builder->{$open}();
-            $hasCondition = false;
-
-            if ($hasBarangayColumn) {
-                $builder->where($barangayColumn, $barangay);
-                $hasCondition = true;
-            }
-
-            if ($hasAddressColumn) {
-                if ($hasCondition) {
-                    $builder->orWhere($addressColumn, $barangay);
-                } else {
-                    $builder->where($addressColumn, $barangay);
-                    $hasCondition = true;
-                }
-
-                $builder->orLike($addressColumn, ', ' . $barangay, 'before');
-            }
-
-            $builder->groupEnd();
-        }
-
-        $builder->groupEnd();
+        // A name matching no barangay row must return nothing rather than
+        // everything, or an unknown filter value would silently widen the list.
+        $builder->whereIn($column, $ids === [] ? [0] : array_unique($ids));
     }
 
     /** Applies a whole-day or date-range filter to a date/datetime column. */

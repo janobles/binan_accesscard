@@ -1696,6 +1696,43 @@
 
     // ---- per-load initialisation -------------------------------------------
 
+    // Every text answer is stored uppercase, so the field types uppercase: the
+    // value that posts is the value on screen, rather than the worker typing
+    // lowercase and the server quietly re-casing it on save. Delegated on the
+    // form root so member rows added later are covered too.
+    //
+    // Only free-text inputs are touched. Dates, the numeric contact number and
+    // the control number carry no case, and a search box filters against
+    // labels the user reads in mixed case.
+    function bindUppercaseTyping(root) {
+        var SELECTOR = 'input[type="text"]:not([data-no-uppercase]), input:not([type])';
+
+        root.addEventListener('input', function (event) {
+            var field = event.target;
+
+            if (!field.matches || !field.matches(SELECTOR) || field.readOnly || field.disabled) {
+                return;
+            }
+
+            var upper = field.value.toUpperCase();
+
+            if (upper === field.value) {
+                return;
+            }
+
+            // Rewriting value moves the caret to the end, which makes editing the
+            // middle of a name impossible, so it is put back where it was.
+            var start = field.selectionStart;
+            var end = field.selectionEnd;
+
+            field.value = upper;
+
+            if (start !== null && field.setSelectionRange) {
+                field.setSelectionRange(start, end);
+            }
+        });
+    }
+
     function initFamilyEntryModal(container) {
         var root = container.querySelector('[data-family-entry-form]');
 
@@ -1716,6 +1753,8 @@
         }
 
         root.dataset.familyEntryReady = '1';
+
+        bindUppercaseTyping(root);
 
         var formEl = root.querySelector('form');
 

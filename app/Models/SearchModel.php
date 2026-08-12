@@ -54,15 +54,14 @@ class SearchModel
                 $builder,
                 $keyword,
                 '',
-                ['sectorID'],
-                'sectorID',
+                [],
                 [],
                 $this->headIdsForQrKeyword($keyword)
             );
         }
 
-        $this->applySectorIdFilter($builder, $filters['sectorID'] ?? [], 'sectorID');
-        $this->applyBarangayFilter($builder, $filters['barangay'] ?? [], 'address', 'barangay');
+        $this->applySectorIdFilter($builder, $filters['sectorID'] ?? [], 'memberID');
+        $this->applyBarangayFilter($builder, $filters['barangay'] ?? [], 'memberID');
 
         $this->applyDateRange($builder, 'dt_created', $filters);
 
@@ -242,14 +241,13 @@ class SearchModel
                 $keyword,
                 'm.',
                 ['address', 'religion', 'job'],
-                'm.sectorID',
                 $serviceMemberIds,
                 $this->headIdsForQrKeyword($keyword)
             );
         }
 
-        $this->applySectorIdFilter($builder, $filters['sectorID'] ?? [], 'm.sectorID');
-        $this->applyBarangayFilter($builder, $filters['barangay'] ?? [], 'm.address', 'm.barangay');
+        $this->applySectorIdFilter($builder, $filters['sectorID'] ?? [], 'm.memberID');
+        $this->applyBarangayFilter($builder, $filters['barangay'] ?? [], 'm.memberID');
 
         $this->applyDateRange($builder, 'm.dt_created', $filters);
 
@@ -527,10 +525,15 @@ class SearchModel
         return array_map(
             static fn (array $service): int => (int) $service['serviceID'],
             $this->db->table('services')
-                ->select('serviceID')
+                ->select('services.serviceID')
+                // The grouping label lives in category/sector since V22, so the
+                // keyword is matched against those tables through the keys.
+                ->join('category', 'category.categoryID = services.categoryID', 'left')
+                ->join('sector', 'sector.sectorID = services.sectorID', 'left')
                 ->groupStart()
-                    ->like('name', $keyword)
-                    ->orLike('category', $keyword)
+                    ->like('services.name', $keyword)
+                    ->orLike('category.name', $keyword)
+                    ->orLike('sector.name', $keyword)
                 ->groupEnd()
                 ->get()
                 ->getResultArray()

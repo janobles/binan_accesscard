@@ -16,15 +16,14 @@ class FamilyModalDataBuilder
 {
     /**
      * Builds the head prefill block (formValues + selected sector/service IDs) for
-     * the Update modal. Splits the stored "address, barangay" back into the two
-     * separate inputs via MemberFieldNormalizer::splitAddressBarangay().
+     * the Update modal. Address and barangay are separate stored values since
+     * V22, so both prefill straight from the row.
      *
      * @param list<int> $headServiceIds the head's currently assigned service IDs
      */
     public function updateData(array $head, array $headServiceIds): array
     {
         $headId = (int) ($head['memberID'] ?? 0);
-        $addressParts = MemberFieldNormalizer::splitAddressBarangay($head['address'] ?? '');
 
         return [
             'headId' => $headId,
@@ -40,12 +39,12 @@ class FamilyModalDataBuilder
                 'head_religion' => (string) ($head['religion'] ?? ''),
                 'head_education' => (string) ($head['education'] ?? ''),
                 'head_job' => (string) ($head['job'] ?? ''),
-                'head_salary' => (string) ($head['Salary'] ?? ''),
-                'head_address' => $addressParts['address'],
-                'head_barangay' => $addressParts['barangay'],
+                'head_salary' => MemberFieldNormalizer::salaryOptionValue($head['salary'] ?? null),
+                'head_address' => (string) ($head['address'] ?? ''),
+                'head_barangay' => (string) ($head['barangay'] ?? ''),
                 'qr_control_no' => (string) (model(\App\Models\Scanner\QrControlModel::class)->controlForHead($headId) ?? ''),
             ],
-            'selectedSectorIds' => array_map('strval', SectorIds::normalize($head['sectorID'] ?? null)),
+            'selectedSectorIds' => array_map('strval', SectorIds::normalize($head['sector_ids'] ?? null)),
             'selectedServiceIds' => array_map('strval', $headServiceIds),
         ];
     }
@@ -74,9 +73,9 @@ class FamilyModalDataBuilder
                 'religion' => (string) ($member['religion'] ?? ''),
                 'education' => (string) ($member['education'] ?? ''),
                 'job' => (string) ($member['job'] ?? ''),
-                'salary' => (string) ($member['Salary'] ?? ''),
+                'salary' => MemberFieldNormalizer::salaryOptionValue($member['salary'] ?? null),
                 'relationship' => (string) ($member['relationship'] ?? ''),
-                'sector_ids' => array_map('strval', SectorIds::normalize($member['sectorID'] ?? null)),
+                'sector_ids' => array_map('strval', SectorIds::normalize($member['sector_ids'] ?? null)),
                 'service_ids' => array_map('strval', $serviceIdsByMember[$memberId] ?? []),
             ];
         }, $members);

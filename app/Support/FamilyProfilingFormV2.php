@@ -9,27 +9,27 @@ class FamilyProfilingFormV2
 {
     /** The sectors (a person's classification) - code => display name. */
     public const SECTOR_CATEGORIES = [
-        'SC' => 'Senior Citizen',
-        'PWD' => 'Person with Disability',
-        'SP' => 'Solo Parent',
-        'B' => 'Bata (Children)',
+        'SC' => 'SENIOR CITIZEN',
+        'PWD' => 'PERSON WITH DISABILITY',
+        'SP' => 'SOLO PARENT',
+        'B' => 'BATA (CHILDREN)',
         'LGBT' => 'LGBTQIA+',
-        'OFW' => 'Overseas Filipino Worker',
-        'IP' => 'Indigenous People',
-        'IDP' => 'Internally Displaced Person',
-        'PDL' => 'Persons Deprived of Liberty',
-        'OTHER' => 'Other Sectors',
+        'OFW' => 'OVERSEAS FILIPINO WORKER',
+        'IP' => 'INDIGENOUS PEOPLE',
+        'IDP' => 'INTERNALLY DISPLACED PERSON',
+        'PDL' => 'PERSONS DEPRIVED OF LIBERTY',
+        'OTHER' => 'OTHER SECTORS',
     ];
 
     /** The service categories (programs a person received are grouped by these). */
     public const SERVICE_CATEGORIES = [
-        'Senior Citizen',
-        'Person with Disability',
-        'Solo Parent',
-        'Bata (Children)',
-        'Financial Assistance Programs',
-        'Social Welfare Programs and Services',
-        'Emergency / Disaster Assistance Programs',
+        'SENIOR CITIZEN',
+        'PERSON WITH DISABILITY',
+        'SOLO PARENT',
+        'BATA (CHILDREN)',
+        'FINANCIAL ASSISTANCE PROGRAMS',
+        'SOCIAL WELFARE PROGRAMS AND SERVICES',
+        'EMERGENCY / DISASTER ASSISTANCE PROGRAMS',
     ];
 
     // The methods below return fixed option lists straight from the CSWD Family
@@ -39,31 +39,19 @@ class FamilyProfilingFormV2
     /** Name-suffix options (Jr, Sr, I-V) for the family form. */
     public static function suffixes(): array
     {
-        return ['Jr', 'Sr', 'I', 'II', 'III', 'IV', 'V'];
-    }
-
-    /** Biñan barangay options for the family form address. */
-    public static function barangays(): array
-    {
-        return [
-            'Binan', 'Bungahan', 'Santo Tomas (Calabuso)', 'Canlalay',
-            'Casile', 'De La Paz', 'Ganado', 'San Francisco (Halang)', 'Langkiwa',
-            'Loma', 'Malaban', 'Malamig', 'Mamplasan', 'Platero',
-            'Poblacion', 'Santo Nino', 'San Antonio', 'San Jose', 'San Vicente',
-            'Soro-Soro', 'Santo Domingo', 'Timbao', 'Tubigan', 'Zapote',
-        ];
+        return ['JR', 'SR', 'I', 'II', 'III', 'IV', 'V'];
     }
 
     /** Civil-status options for the family form. */
     public static function civilStatuses(): array
     {
         return [
-            'Single',
-            'Married',
-            'Widow / Widower',
-            'Separated',
-            'Live-in / Not Married',
-            'Others',
+            'SINGLE',
+            'MARRIED',
+            'WIDOW / WIDOWER',
+            'SEPARATED',
+            'LIVE-IN / NOT MARRIED',
+            'OTHERS',
         ];
     }
 
@@ -71,13 +59,13 @@ class FamilyProfilingFormV2
     public static function educationLevels(): array
     {
         return [
-            'Elementary',
-            'High School',
-            'Undergraduate',
-            'Vocational',
-            'College Graduate',
-            'Post Graduate',
-            'Others',
+            'ELEMENTARY',
+            'HIGH SCHOOL',
+            'UNDERGRADUATE',
+            'VOCATIONAL',
+            'COLLEGE GRADUATE',
+            'POST GRADUATE',
+            'OTHERS',
         ];
     }
 
@@ -85,22 +73,22 @@ class FamilyProfilingFormV2
     public static function jobOptions(): array
     {
         return [
-            'Unemployed',
-            'Student',
-            'Homemaker',
-            'Self-employed',
-            'Vendor',
-            'Driver',
-            'Construction Worker',
-            'Factory Worker',
-            'Office Staff',
-            'Teacher',
-            'Healthcare Worker',
-            'Government Employee',
-            'Private Employee',
+            'UNEMPLOYED',
+            'STUDENT',
+            'HOMEMAKER',
+            'SELF-EMPLOYED',
+            'VENDOR',
+            'DRIVER',
+            'CONSTRUCTION WORKER',
+            'FACTORY WORKER',
+            'OFFICE STAFF',
+            'TEACHER',
+            'HEALTHCARE WORKER',
+            'GOVERNMENT EMPLOYEE',
+            'PRIVATE EMPLOYEE',
             'OFW',
-            'Retired',
-            'Others',
+            'RETIRED',
+            'OTHERS',
         ];
     }
 
@@ -108,19 +96,19 @@ class FamilyProfilingFormV2
     public static function religions(): array
     {
         return [
-            'Roman Catholic',
-            'Iglesia ni Cristo',
-            'Islam',
-            'Born Again Christian',
-            'Protestant',
-            'Seventh-day Adventist',
-            'Iglesia Filipina Independiente',
-            'Bible Baptist',
-            "Jehovah's Witness",
-            'Church of Christ',
-            'Indigenous Beliefs',
-            'No Religion',
-            'Others',
+            'ROMAN CATHOLIC',
+            'IGLESIA NI CRISTO',
+            'ISLAM',
+            'BORN AGAIN CHRISTIAN',
+            'PROTESTANT',
+            'SEVENTH-DAY ADVENTIST',
+            'IGLESIA FILIPINA INDEPENDIENTE',
+            'BIBLE BAPTIST',
+            "JEHOVAH'S WITNESS",
+            'CHURCH OF CHRIST',
+            'INDIGENOUS BELIEFS',
+            'NO RELIGION',
+            'OTHERS',
         ];
     }
 }

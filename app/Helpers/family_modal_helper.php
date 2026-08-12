@@ -65,14 +65,14 @@ if (! function_exists('family_modal_prepare')) {
             ['name' => 'firstname', 'label' => 'First Name', 'type' => 'text', 'idSuffix' => 'Firstname', 'summary' => 'name-first', 'required' => true],
             ['name' => 'middlename', 'label' => 'Middle Name', 'type' => 'text', 'idSuffix' => 'Middlename', 'summary' => 'name-middle', 'noneToggle' => 'No middle name'],
             ['name' => 'suffix', 'label' => 'Suffix', 'type' => 'select', 'options' => 'suffixOptions', 'idSuffix' => 'Suffix', 'summary' => 'name-suffix'],
-            ['name' => 'birthday', 'label' => 'Date of birth', 'type' => 'date', 'idSuffix' => 'Birthday', 'summary' => 'birthday', 'required' => true, 'max' => date('Y-m-d'), 'ageNote' => true],
+            ['name' => 'birthday', 'label' => 'Date of Birth', 'type' => 'date', 'idSuffix' => 'Birthday', 'summary' => 'birthday', 'required' => true, 'max' => date('Y-m-d'), 'ageNote' => true],
             ['name' => 'sex', 'label' => 'Sex', 'type' => 'select', 'options' => 'sexOptions', 'idSuffix' => 'Sex', 'summary' => 'sex', 'required' => true],
-            ['name' => 'civilstatus', 'label' => 'Civil status', 'type' => 'select', 'options' => 'civilOptions', 'other' => true, 'otherMinlength' => 2, 'otherPattern' => '.*[^\d\s].*', 'idSuffix' => 'CivilStatus', 'summary' => 'civil', 'required' => true],
-            ['name' => 'contactnumber', 'label' => 'Contact number', 'type' => 'tel', 'maxlength' => '11', 'inputmode' => 'numeric', 'pattern' => '09\d{9}|(049)?\d{7,8}', 'title' => 'Enter an 11-digit mobile number (09XXXXXXXXX) or a Binan landline (7 to 8 digits, optional 049 prefix).', 'idSuffix' => 'Contact', 'summary' => 'contact'],
+            ['name' => 'civilstatus', 'label' => 'Civil Status', 'type' => 'select', 'options' => 'civilOptions', 'other' => true, 'otherMinlength' => 2, 'otherPattern' => '.*[^\d\s].*', 'idSuffix' => 'CivilStatus', 'summary' => 'civil', 'required' => true],
+            ['name' => 'contactnumber', 'label' => 'Contact Number', 'type' => 'tel', 'maxlength' => '11', 'inputmode' => 'numeric', 'pattern' => '09\d{9}|(049)?\d{7,8}', 'title' => 'Enter an 11-digit mobile number (09XXXXXXXXX) or a Binan landline (7 to 8 digits, optional 049 prefix).', 'idSuffix' => 'Contact', 'summary' => 'contact'],
             ['name' => 'religion', 'label' => 'Religion', 'type' => 'select', 'options' => 'religionOptions', 'other' => true, 'otherMinlength' => 2, 'otherPattern' => '.*[^\d\s].*', 'idSuffix' => 'Religion', 'summary' => 'religion'],
             ['name' => 'education', 'label' => 'Education', 'type' => 'select', 'options' => 'educationOptions', 'other' => true, 'otherMinlength' => 2, 'otherPattern' => '.*[^\d\s].*', 'idSuffix' => 'Education', 'summary' => 'education', 'required' => true],
             ['name' => 'job', 'label' => 'Job', 'type' => 'select', 'options' => 'jobOptions', 'other' => true, 'otherMinlength' => 2, 'otherPattern' => '.*[^\d\s].*', 'idSuffix' => 'Job', 'summary' => 'job', 'required' => true],
-            ['name' => 'salary', 'label' => 'Monthly income', 'type' => 'select', 'options' => 'incomeOptions', 'idSuffix' => 'Salary', 'summary' => 'income', 'required' => true],
+            ['name' => 'salary', 'label' => 'Monthly Income', 'type' => 'select', 'options' => 'incomeOptions', 'idSuffix' => 'Salary', 'summary' => 'income', 'required' => true],
         ];
 
         return [
@@ -89,7 +89,7 @@ if (! function_exists('family_modal_prepare')) {
             // assigned sectors (flagged) in update mode, so it is safe to render from.
             'sectorCatalog' => (array) ($data['sectorCatalog'] ?? []),
             'suffixOptions' => (array) ($data['suffixOptions'] ?? []),
-            'sexOptions' => (array) ($data['sexOptions'] ?? ['Male', 'Female']),
+            'sexOptions' => (array) ($data['sexOptions'] ?? ['MALE', 'FEMALE']),
             'civilOptions' => (array) ($data['civilOptions'] ?? []),
             'barangayOptions' => (array) ($data['barangayOptions'] ?? []),
             'relationshipOptions' => (array) ($data['relationshipOptions'] ?? []),

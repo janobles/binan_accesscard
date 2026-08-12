@@ -37,7 +37,11 @@ $qrDataUri = (string) ($qrDataUri ?? '');
 $part = (string) ($part ?? 'all');
 $part = in_array($part, ['head', 'members', 'all'], true) ? $part : 'all';
 
-$headId = (int) ($head['headID'] ?? 0);
+// A head row carries headID == memberID, so either identifies it. Reading only
+// headID meant a caller that passed the head row without it (Family/profile
+// derives its own id from memberID) rendered as a new record: no control number
+// and no code.
+$headId = (int) ($head['headID'] ?? $head['memberID'] ?? 0);
 $fieldPrefix = $headId > 0 ? 'family-update' : 'family-add';
 $qrLocked = ! empty($head['qr_locked'] ?? false);
 
@@ -374,14 +378,19 @@ $renderMemberRow = static function ($index, array $m = [], bool $open = true) us
                          readonly here rather than re-typed; entry.php's own control-number
                          gate owns the create-mode field instead. */ ?>
                 <?php if ($qrDataUri !== ''): ?>
+                    <?php /* Decorative: alt="" so a screen reader does not read the number
+                             twice, the Control Number field beside it already carries it. */ ?>
                     <div class="mb-3">
-                        <img src="<?= esc($qrDataUri) ?>" width="80" height="80" alt="QR Code" class="img-thumbnail">
+                        <img src="<?= esc($qrDataUri) ?>" width="64" height="64" alt="">
                     </div>
                 <?php endif; ?>
                 <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>HeadQr">Control Number</label>
-                <input type="hidden" name="qr_control_no" value="<?= esc((string) ($head['qr_control_no'] ?? ''), 'attr') ?>">
-                <input id="<?= esc($fieldPrefix, 'attr') ?>HeadQr" class="form-control text-muted fw-semibold" type="text"
-                    value="<?= esc((string) ($head['qr_control_no'] ?? ''), 'attr') ?>" disabled>
+                <?php /* readonly, not disabled: the number identifies the record and has to
+                         post with the form, and a disabled control submits nothing - which
+                         update() then rejects as a missing QR Number. One input, so the
+                         posted value is the one on screen. */ ?>
+                <input id="<?= esc($fieldPrefix, 'attr') ?>HeadQr" name="qr_control_no" class="form-control text-muted fw-semibold" type="text"
+                    value="<?= esc((string) ($head['qr_control_no'] ?? ''), 'attr') ?>" readonly>
                 <?php if ($qrLocked): ?>
                     <small class="text-muted">Locked: subsidy already recorded under this number.</small>
                 <?php endif; ?>

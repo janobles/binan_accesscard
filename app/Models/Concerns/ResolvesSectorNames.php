@@ -5,24 +5,26 @@ namespace App\Models\Concerns;
 use App\Libraries\SectorIds;
 
 /**
- * Resolves the raw JSON sectorID stored on member rows into readable names.
+ * Turns the sector ids carried on a member row into readable names.
  * Shared by MemberModel, DashboardModel and SearchModel, which all display
  * member/family rows. Hosting classes expose $this->db (a CI Model or a plain
  * class holding a BaseConnection $db).
+ *
+ * The ids arrive as the `sector_ids` comma list the member listings select out
+ * of member_sectors (V22 replaced the JSON column that used to hold them).
+ * SectorIds::normalize() reads that list, an array, or the old JSON string, so
+ * a row assembled by any path resolves the same way.
  */
 trait ResolvesSectorNames
 {
-    /**
-     * DECODE/display path. For each row, resolves the raw JSON sectorID string into
-     * a readable 'sector_name'. See App\Libraries\SectorIds::toNames().
-     */
+    /** For each row, resolves its sector ids into a readable 'sector_name'. */
     private function withSectorNames(array $rows): array
     {
         $sectorNames = $this->sectorNameMap();
 
         foreach ($rows as &$row) {
-            $sectorValue = $row['sector_array_string'] ?? $row['sectorID'] ?? '[]';
-            $row['sectorID'] = $sectorValue;
+            $sectorValue = $row['sector_ids'] ?? $row['sector_array_string'] ?? '';
+            $row['sector_ids'] = SectorIds::normalize($sectorValue);
             $row['sector_name'] = SectorIds::toNames($sectorValue, $sectorNames);
         }
 

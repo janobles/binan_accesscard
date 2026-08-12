@@ -501,7 +501,7 @@ final class FamilyExcelImporterTest extends CIUnitTestCase
         $this->assertContains('DUP-EXISTS', $this->codes($result)); // still the same family
         $this->assertCount(1, $diff);
         $this->assertSame('warning', $diff[0]['severity']);
-        $this->assertStringContainsString('Contact number', $diff[0]['message']);
+        $this->assertStringContainsString('Contact Number', $diff[0]['message']);
         $this->assertStringContainsString('09171234567', $diff[0]['message']);
         $this->assertStringContainsString('09990000000', $diff[0]['message']);
         $this->assertStringContainsString('will NOT be saved', $diff[0]['message']);
@@ -607,6 +607,19 @@ final class FamilyExcelImporterTest extends CIUnitTestCase
             $prop->setAccessible(true);
             $prop->setValue($importer, []);
         }
+
+        // The barangay list comes from the `barangay` table now, so the cache is
+        // primed here the same way the other lookups are - keyed by the fold
+        // FamilyExcelImporter::normalizeBarangay() applies.
+        $barangays = $reflection->getProperty('barangayLookup');
+        $barangays->setAccessible(true);
+        $barangays->setValue($importer, array_fill_keys(
+            ['binan', 'bungahan', 'santo tomas', 'canlalay', 'casile', 'de la paz', 'ganado',
+                'langkiwa', 'loma', 'malaban', 'malamig', 'mamplasan', 'platero', 'poblacion',
+                'san antonio', 'san francisco', 'san jose', 'san vicente', 'santo domingo',
+                'santo nino', 'soro soro', 'timbao', 'tubigan', 'zapote'],
+            true
+        ));
 
         return $importer;
     }

@@ -123,8 +123,9 @@ class DummyDataSeeder extends Seeder
     public function run(): void
     {
         if (self::TRUNCATE_BEFORE_SEED) {
-            CLI::write('Truncating member_services and member tables...', 'yellow');
+            CLI::write('Truncating member_sectors, member_services and member tables...', 'yellow');
             $this->db->query('SET FOREIGN_KEY_CHECKS=0');
+            $this->db->table('member_sectors')->truncate();
             $this->db->table('member_services')->truncate();
             $this->db->table('member')->truncate();
             $this->db->query('SET FOREIGN_KEY_CHECKS=1');
@@ -135,6 +136,7 @@ class DummyDataSeeder extends Seeder
         CLI::write("Starting memberID will be: {$nextID}", 'cyan');
 
         $memberBatch   = [];
+        $sectorsBatch  = [];
         $servicesBatch = [];
         $totalMembers  = 0;
         $id            = $nextID;
@@ -171,6 +173,7 @@ class DummyDataSeeder extends Seeder
                 sectors:      $headSectors,
                 now:          $now,
             );
+            $this->addSectors($sectorsBatch, $id, $headSectors, $now);
             $this->addServices($servicesBatch, $id, $headSectors, $now);
             $id++;
             $totalMembers++;
@@ -202,6 +205,7 @@ class DummyDataSeeder extends Seeder
                     sectors:      $memSectors,
                     now:          $now,
                 );
+                $this->addSectors($sectorsBatch, $id, $memSectors, $now);
                 $this->addServices($servicesBatch, $id, $memSectors, $now);
                 $id++;
                 $totalMembers++;
@@ -223,7 +227,12 @@ class DummyDataSeeder extends Seeder
             $this->db->table('member')->insertBatch($memberBatch);
         }
 
-        // Flush all member_services
+        // Flush all member_sectors, then member_services. Both carry a foreign key
+        // to member, so they go in after the member rows above.
+        foreach (array_chunk($sectorsBatch, self::BATCH_SIZE) as $chunk) {
+            $this->db->table('member_sectors')->insertBatch($chunk);
+        }
+
         foreach (array_chunk($servicesBatch, self::BATCH_SIZE) as $chunk) {
             $this->db->table('member_services')->insertBatch($chunk);
         }
@@ -280,20 +289,35 @@ class DummyDataSeeder extends Seeder
             'middlename'    => MemberFieldNormalizer::cleanName($this->pick($this->middleNames)),
             'suffix'        => null,
             'birthday'      => $birthday,
-            'civilstatus'   => $civilStatus,
-            'sex'           => $sex,
-            'education'     => $education,
-            'job'           => $job,
-            'Salary'        => $salary,
+            'civilstatus'   => mb_strtoupper($civilStatus, 'UTF-8'),
+            'sex'           => mb_strtoupper($sex, 'UTF-8'),
+            'education'     => mb_strtoupper($education, 'UTF-8'),
+            'job'           => $job === null ? null : mb_strtoupper($job, 'UTF-8'),
+            'salary'        => $salary,
             'contactnumber' => rand(9000000000, 9999999999),
-            'relationship'  => $relationship,
+            'relationship'  => mb_strtoupper($relationship, 'UTF-8'),
             'address'       => MemberFieldNormalizer::cleanAddress($address),
-            'religion'      => $this->pick($this->religions),
-            'sectorID'      => $sectors,
+            'religion'      => mb_strtoupper((string) $this->pick($this->religions), 'UTF-8'),
             'dt_created'    => $now,
             'dt_updated'    => $now,
             'dt_deleted'    => null,
         ];
+    }
+
+    /**
+     * Queues one member_sectors row per sector the member belongs to. Sectors are
+     * a relation since V22; the JSON string built above is still the shape the
+     * seeder's own helpers pass around, so it is decoded here.
+     */
+    private function addSectors(array &$batch, int $memberID, string $sectorString, string $now): void
+    {
+        foreach ((array) (json_decode($sectorString, true) ?? []) as $sectorId) {
+            $batch[] = [
+                'memberID'   => $memberID,
+                'sectorID'   => (int) $sectorId,
+                'dt_created' => $now,
+            ];
+        }
     }
 
     private function addServices(array &$batch, int $memberID, string $sectorString, string $now): void

@@ -25,7 +25,7 @@ verify each step.
 
 ## Non-Negotiables
 
-- **No migrations.** DB schema source of truth is the SQL dump (`accesscardV21.sql`).
+- **No migrations.** DB schema source of truth is the SQL dump (`accesscardV22.sql`).
   Never add migrations or alter schema in code. Seeds (`app/Database/Seeds/`) add
   test login accounts ONLY - never tables/columns.
 - **Match the SQL dump.** Column names, allowed enum values, and role names must

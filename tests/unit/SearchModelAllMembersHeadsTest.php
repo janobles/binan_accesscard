@@ -61,7 +61,7 @@ final class SearchModelAllMembersHeadsTest extends CIUnitTestCase
             'firstname' => $first, 'middlename' => '', 'lastname' => $last, 'suffix' => '',
             'birthday' => null, 'contactnumber' => '', 'relationship' => $headId === $id ? 'Head' : 'Member',
             'address' => '', 'barangay' => '', 'religion' => '', 'job' => '',
-            'sectorID' => null, 'dt_created' => '2026-01-01', 'dt_deleted' => null,
+            'dt_created' => '2026-01-01', 'dt_deleted' => null,
         ]);
     }
 

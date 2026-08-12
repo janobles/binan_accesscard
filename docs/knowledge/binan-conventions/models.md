@@ -37,8 +37,8 @@ class MemberModel extends Model
     use ResolvesSectorNames;
 
     public const VALIDATION_RULES = [
-        'sectorID' => 'permit_empty|valid_sector_array',
         'firstname' => 'required|max_length[100]',
+        'sex' => 'permit_empty|in_list[MALE,FEMALE]',
         // ...
     ];
 
@@ -52,8 +52,9 @@ Pattern notes:
 - `$returnType = 'array'` throughout - no entity classes.
 - Validation rules as a `public const` so controllers/tests can reference the
   same source (`app/Models/Families/MemberModel.php:21`).
-- Model hooks for storage normalization, e.g. `beforeInsert`
-  (`app/Models/Families/MemberModel.php:63`).
+- A member's sectors are a relation, not a column: `member_sectors` via
+  `app/Models/Families/MemberSectorModel.php`. V22 dropped the `member.sectorID`
+  JSON list, so nothing normalizes ids into a column on the way in.
 
 ## Rule 4: Schema truth is the SQL dump - non-negotiable
 

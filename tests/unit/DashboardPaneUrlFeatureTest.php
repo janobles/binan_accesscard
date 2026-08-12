@@ -62,7 +62,7 @@ final class DashboardPaneUrlFeatureTest extends CIUnitTestCase
         for ($id = 1; $id <= 12; $id++) {
             $members[] = [
                 'memberID' => $id, 'lastname' => 'Head' . $id, 'firstname' => 'Test',
-                'middlename' => '', 'headID' => $id, 'sectorID' => '[]', 'barangayID' => 1,
+                'middlename' => '', 'headID' => $id, 'barangayID' => 1,
                 'contactnumber' => '', 'dt_deleted' => null,
             ];
             $roster[] = ['batch_id' => self::BATCH_ID, 'headID' => $id];

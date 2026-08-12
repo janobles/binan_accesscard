@@ -92,7 +92,7 @@ final class DashboardOverviewStatsTest extends CIUnitTestCase
      * It counts heads holding a control number, so a card on an archived head
      * or two control numbers on one head must not inflate it.
      */
-    public function testCardsIssuedCountsActiveHeadsHoldingAControlNumber(): void
+    public function testCardsIssuedCountsActiveHeadsWhoseCardWasGenerated(): void
     {
         $db = db_connect();
 
@@ -102,12 +102,18 @@ final class DashboardOverviewStatsTest extends CIUnitTestCase
         // A relative, not a head: never carded in its own right.
         $db->table('member')->insert($this->head(4, ['headID' => 1]));
 
-        $db->table('qr_control')->insert(['control_no' => 101, 'headID' => 1]);
+        // card_generated_at is what counts: a control number on its own is a
+        // number a worker typed while profiling, not a card anyone holds.
+        $generated = '2026-02-01 09:00:00';
+
+        $db->table('qr_control')->insert(['control_no' => 101, 'headID' => 1, 'card_generated_at' => $generated]);
         // Reissued card for the same head: still one family holding a card.
-        $db->table('qr_control')->insert(['control_no' => 102, 'headID' => 1]);
-        $db->table('qr_control')->insert(['control_no' => 103, 'headID' => 2]);
+        $db->table('qr_control')->insert(['control_no' => 102, 'headID' => 1, 'card_generated_at' => $generated]);
+        $db->table('qr_control')->insert(['control_no' => 103, 'headID' => 2, 'card_generated_at' => $generated]);
         // Archived head.
-        $db->table('qr_control')->insert(['control_no' => 104, 'headID' => 3]);
+        $db->table('qr_control')->insert(['control_no' => 104, 'headID' => 3, 'card_generated_at' => $generated]);
+        // Profiled but never carded: reserves a number, issues nothing.
+        $db->table('qr_control')->insert(['control_no' => 105, 'headID' => 2]);
 
         $out = (new DashboardModel())->programStats();
 

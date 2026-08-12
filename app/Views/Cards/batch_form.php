@@ -15,7 +15,7 @@
  */
 
 helper('ui');
-$barangayList = \App\Support\FamilyProfilingFormV2::barangays();
+$barangayList = (new \App\Models\Lookups\BarangayModel())->activeNames();
 ?>
 <ul class="nav nav-pills segmented-tabs mb-4" id="cn-modes" role="tablist">
     <li class="nav-item">
@@ -278,7 +278,14 @@ $barangayList = \App\Support\FamilyProfilingFormV2::barangays();
             clearTimeout(debounce); debounce = setTimeout(reloadFromFirstPage, 300);
         });
     });
-    refreshPreview();
+    // After load, not inline: this script runs while table-paginate.js is still
+    // being fetched, so a preview drawn now throws on renderTablePaging and the
+    // catch below prints "Preview unavailable." on a page whose data is fine.
+    if (document.readyState === 'complete') {
+        refreshPreview();
+    } else {
+        window.addEventListener('load', refreshPreview);
+    }
 
     batchForm.addEventListener('submit', async function (e) {
         e.preventDefault();

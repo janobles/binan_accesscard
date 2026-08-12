@@ -45,15 +45,19 @@ class EligibilityBuilder
             $b->whereIn('member.barangayID', $barangayIds);
         }
 
-        // sectorID stores a JSON array of ints (e.g. "[10]"), matched with
-        // JSON_CONTAINS like the rest of the codebase (see SectorIds::containsCondition).
-        // Runs once per batch open, so the scan cost is paid once and never on a poll.
+        // A head's sectors live in member_sectors (V22). IN (SELECT ...) rather
+        // than a join: a head in two of the batch's sectors would otherwise
+        // produce two rows, and count() would report more families than exist.
+        $sectorIds = array_values(array_filter(array_map('intval', $sectorIds), static fn (int $id): bool => $id > 0));
+
         if ($sectorIds !== []) {
-            $b->groupStart();
-            foreach ($sectorIds as $sectorId) {
-                $b->orWhere(SectorIds::containsCondition((int) $sectorId, 'member.sectorID'), null, false);
-            }
-            $b->groupEnd();
+            $b->where(
+                $this->db->prefixTable('member') . '.memberID IN (SELECT memberID FROM '
+                    . $this->db->prefixTable('member_sectors')
+                    . ' WHERE sectorID IN (' . implode(',', $sectorIds) . '))',
+                null,
+                false
+            );
         }
 
         return $b;

@@ -200,3 +200,50 @@ rendering needs inline styles), layout shells + `Auth/login.php` (standalone
   migrating the fifteen onto it.
   *(Fixed: `Pages/dashboard.php` now renders `card` + the new
   `Pages/dashboard-activity-body.php`, and the component is deleted.)*
+- [x] 🔴 Critical: `member.sectorID varchar(255) DEFAULT '[]'` - a many-to-many
+  stored as a JSON list in a varchar. No foreign key, no usable index, and every
+  sector filter matched ids inside the string (`MemberModel::applyRecordFilters`,
+  `EligibilityBuilder::scoped`), so a deleted sector left its id behind in every
+  member row that carried it. `member_services` beside it always had the right
+  shape.
+  *(Fixed in V22: `member_sectors(memberID, sectorID)` with both foreign keys,
+  `MemberSectorModel`, and `php spark members:split-sectors` to copy the JSON
+  across before `sql/patches/v22-normalize-drop.sql` drops the column.)*
+- [x] 🔴 Critical: `services.category text` - the grouping NAME copied onto every
+  service row, while `category` (categoryID, code UNIQUE, name) already existed.
+  A rename desynced every service filed under it, and grouping depended on two
+  strings staying character-identical. The column was text because it pointed at
+  two tables: a service is grouped by a standalone category OR by a sector.
+  *(Fixed in V22: nullable `categoryID` + `sectorID` with foreign keys and a
+  CHECK that exactly one is set; `php spark services:link-categories` resolves
+  the old labels.)*
+- [x] 🔴 Critical: `member.address` stored "address, barangay" next to the
+  `member.barangayID` V20 added, so the same fact lived twice and only the
+  free-text copy was displayed. Filtering answered by spelling: "Sto. Tomas" and
+  "SANTO TOMAS" were different barangays, and a second hardcoded barangay list in
+  `FamilyProfilingFormV2` had drifted from the `barangay` table.
+  *(Fixed in V22: address holds the address alone, the list comes from
+  `BarangayModel::activeNames()`, and `php spark members:split-address` strips the
+  barangay after `members:backfill-barangay` has filled every id.)*
+- [x] 🟠 Major: foreign keys existed only on `audit_trails` and `member_services`.
+  `member.barangayID`, `qr_control.headID`, every `subsidy_distribution` id and
+  all three `batch_*` tables could point at rows that no longer existed, with no
+  way to detect it.
+  *(Fixed in V22: constraints added in `sql/patches/v22-normalize.sql`.)*
+- [x] 🟠 Major: `member.Salary float` - the one capitalized column in the schema
+  (the family form carried a documented workaround for the casing), and a float
+  for a peso amount.
+  *(Fixed in V22: `salary decimal(12,2)`. The stored value now reads back
+  "25000.00", so the income select matches it through
+  `MemberFieldNormalizer::salaryOptionValue()`.)*
+- [x] 🟠 Major: `suffix`/`sex` were Title Case enums, so uppercase could not be
+  stored at all - MySQL resolved an inserted 'JR' back to the member 'Jr'.
+  *(Fixed in V22: `enum('JR','SR',...)` and `enum('MALE','FEMALE')`, with the
+  option lists, the Excel code maps and the "Other" free text uppercased to
+  match.)*
+- [x] 🟡 Minor: `services.serviceID` was the only lookup primary key without
+  AUTO_INCREMENT, so `ServiceModel::nextServiceId()` allocated ids by hand under a
+  FOR UPDATE lock. *(Fixed in V22; the method is gone.)*
+- [x] 🟡 Minor: `sector.shortcode` and `services.shortcode` had no UNIQUE key
+  though `category.code` did, so two rows could share a code and shortcode lookup
+  picked whichever came first. *(Fixed in V22.)*

@@ -1,6 +1,6 @@
 # Project Structure
 
-Normal CodeIgniter 4 layout. The database source of truth is `accesscardV21.sql`;
+Normal CodeIgniter 4 layout. The database source of truth is `accesscardV22.sql`;
 no app migrations are used.
 
 ## Navigation and URL space
@@ -130,7 +130,7 @@ Controllers and models are grouped into **feature subnamespaces** so each slice
 
 ## Database
 
-- `accesscardV21.sql` - the schema and reference seed rows (import it to set up).
+- `accesscardV22.sql` - the schema and reference seed rows (import it to set up).
 - `sql/patches/` - incremental patches for a database already carrying data,
   through `v21-batch-schedule.sql`. A fresh setup needs the dump only; the
   patches exist for databases that predate it.

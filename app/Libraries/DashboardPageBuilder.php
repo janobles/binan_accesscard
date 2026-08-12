@@ -895,7 +895,7 @@ class DashboardPageBuilder
             'totalPages'        => $totalPages,
             // Filter UI data.
             'sectorOptions'     => (new SectorModel())->getSectorOptions(),
-            'barangayOptions'   => FamilyProfilingFormV2::barangays(),
+            'barangayOptions'   => (new \App\Models\Lookups\BarangayModel())->activeNames(),
             'filters'           => $filters,
         ], $this->buildDeepSearchData($status));
     }

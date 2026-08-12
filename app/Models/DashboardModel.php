@@ -129,10 +129,17 @@ class DashboardModel
     }
 
     /**
-     * Counts active family heads holding an access card. DISTINCT on the head,
-     * because qr_control keeps a row per control number and a reissued card
-     * leaves the family with two; the figure this feeds sits beside the family
-     * count and has to stay comparable to it.
+     * Counts active family heads whose access card has actually been generated.
+     *
+     * Not the same as counting qr_control rows, which is what this did before
+     * V22: that row is written the moment a worker types the paper control
+     * number during profiling, so profiling two families reported two cards
+     * issued with nothing printed. card_generated_at is stamped by
+     * QrCardController once the PDF is built.
+     *
+     * DISTINCT on the head, because qr_control keeps a row per control number
+     * and a reissued card leaves the family with two; the figure sits beside the
+     * family count and has to stay comparable to it.
      */
     private function countCardsIssued(): int
     {
@@ -140,12 +147,17 @@ class DashboardModel
             return 0;
         }
 
-        return (int) ($this->db->table('qr_control q')
+        $builder = $this->db->table('qr_control q')
             ->select('COUNT(DISTINCT q.headID) AS n')
             ->join('member m', 'm.memberID = q.headID')
             ->where('m.memberID = m.headID', null, false)
-            ->where('m.dt_deleted IS NULL', null, false)
-            ->get()->getRowArray()['n'] ?? 0);
+            ->where('m.dt_deleted IS NULL', null, false);
+
+        if ($this->db->fieldExists('card_generated_at', 'qr_control')) {
+            $builder->where('q.card_generated_at IS NOT NULL', null, false);
+        }
+
+        return (int) ($builder->get()->getRowArray()['n'] ?? 0);
     }
 
     /** Counts all active members (heads + relatives). */

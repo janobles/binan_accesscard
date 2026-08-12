@@ -115,6 +115,38 @@ class QrControlModel extends Model
         return $found;
     }
 
+    /**
+     * Stamps the heads whose access cards were just generated, so the dashboard
+     * can count cards that exist rather than control numbers that were typed.
+     *
+     * A reprint refreshes the stamp: the figure answers "this family has a card",
+     * not "a card was printed once", and the newest print is the one in the
+     * family's hands. $userId is the operator, or null for an account the scanner
+     * cannot attribute (see the developer-account scan path).
+     *
+     * @param list<int> $headIds
+     */
+    public function markCardsGenerated(array $headIds, ?int $userId = null): void
+    {
+        $headIds = array_values(array_unique(array_filter(
+            array_map('intval', $headIds),
+            static fn (int $id): bool => $id > 0
+        )));
+
+        if ($headIds === [] || ! $this->db->fieldExists('card_generated_at', $this->table)) {
+            return;
+        }
+
+        foreach (array_chunk($headIds, 1000) as $chunk) {
+            $this->db->table($this->table)
+                ->whereIn('headID', $chunk)
+                ->update([
+                    'card_generated_at' => date('Y-m-d H:i:s'),
+                    'card_generated_by' => $userId !== null && $userId > 0 ? $userId : null,
+                ]);
+        }
+    }
+
     /** True when $controlNo is already assigned to a head other than $headId. */
     public function takenByOtherHead(int $controlNo, int $headId): bool
     {

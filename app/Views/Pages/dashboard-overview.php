@@ -27,6 +27,8 @@ $neverServed = (int) ($overviewStats['neverServed'] ?? 0);
 // rather than taking a fourth tile to restate a number already on the row.
 $cards = [
     ['label' => 'Families profiled', 'value' => (int) $overviewStats['families'], 'sub' => null],
+    // Cards generated, not control numbers assigned: profiling a family reserves
+    // its number, printing the card is what issues it.
     ['label' => 'Access cards issued', 'value' => (int) ($overviewStats['cardsIssued'] ?? 0), 'sub' => null],
     [
         'label' => 'Families ever served',

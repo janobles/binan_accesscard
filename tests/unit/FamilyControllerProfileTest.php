@@ -53,10 +53,11 @@ final class FamilyControllerProfileTest extends CIUnitTestCase
             'firstname' => 'JUAN',
             'middlename' => '',
             'headID'    => 7,
-            'sectorID'  => '[99]',
-            'Salary'    => 8000,
-            'address'   => 'Purok 1, Canlalay',
+            'salary'    => 8000,
+            'address'   => 'PUROK 1',
+            'barangayID' => 3,
         ]);
+        $db->table('member_sectors')->insert(['memberID' => 7, 'sectorID' => 99]);
 
         $result = $this->withSession([
             'is_logged_in' => true,
@@ -99,7 +100,7 @@ final class FamilyControllerProfileTest extends CIUnitTestCase
 
         $db->table('member')->insert([
             'memberID' => 7, 'lastname' => 'DELA CRUZ', 'firstname' => 'JUAN',
-            'middlename' => '', 'headID' => 7, 'sectorID' => '[]', 'Salary' => 0,
+            'middlename' => '', 'headID' => 7, 'salary' => 0,
         ]);
 
         $session = [
@@ -169,7 +170,7 @@ final class FamilyControllerProfileTest extends CIUnitTestCase
         $db = db_connect();
         $db->table('member')->insert([
             'memberID' => 7, 'lastname' => 'DELA CRUZ', 'firstname' => 'JUAN',
-            'middlename' => '', 'headID' => 7, 'sectorID' => '[]', 'Salary' => 0,
+            'middlename' => '', 'headID' => 7, 'salary' => 0,
         ]);
         $db->table('qr_control')->insert(['control_no' => 12345, 'headID' => 7]);
 

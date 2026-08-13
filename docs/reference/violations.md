@@ -261,10 +261,11 @@ branch, which changed documentation only.
   nowhere in the repo (verified by grep). They were the filter counts for a
   search-and-filter Audit Logs tab on the scanner "View all" page; that tab now
   renders unfiltered and unpaginated. Dead code; remove or wire up.
-- [ ] ⚪ Cleanup: `install-cron-worker.ps1` at the repository root duplicates
-  `scripts/install-cron-worker.ps1`, and the two files differ. Only the copy
-  under `scripts/` is documented and only that one names the `BinanQueueWorker`
-  task. The root copy should go.
+- [x] ⚪ Cleanup: `install-cron-worker.ps1` at the repository root was a nine-line
+  shim forwarding to `scripts/install-cron-worker.ps1`. Nothing referenced it, the
+  bash installer had no equivalent, and the real script resolves its paths from its
+  own location, so running it from `scripts/` out of the repository root already
+  worked. *(Fixed: root shim deleted, this branch.)*
 - [ ] 🟡 Minor: `app/Models/Audit/AuditTrailsModel.php:65` invalidates
   `DashboardModel::STATS_CACHE_KEY` on every logged mutation but not
   `PROGRAM_STATS_CACHE_KEY`, so the Overview tab's four counts lag a mutation by

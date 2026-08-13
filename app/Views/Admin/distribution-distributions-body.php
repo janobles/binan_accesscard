@@ -1,9 +1,11 @@
 <?php
 /**
- * Distributions log body: client-side filter toolbar + distributions table.
- * Rendered inside components/card by Pages/distribution.php's distributions
- * tab (vars: distributions). Each row shows the subsidy type the batch handed
- * out. Filtering/paging handled by the inline script in that same page.
+ * Distributions log body: page controls + distributions table.
+ * Rendered inside components/card by Pages/distribution.php's log tab (vars:
+ * distributions, listRoute, keyword, perPage, perPageOptions). The rows are
+ * one server-side page from SubsidyDistributionModel::distributionsPage();
+ * paging and the database search live in Pages/distribution.php, above this
+ * card. Each row shows the subsidy type the batch handed out.
  */
 ?>
 <?php /* Filter bar + controls row: pure Bootstrap grid/utilities inside the
@@ -11,13 +13,13 @@
         <?= view('components/table_controls', [
             'searchId' => 'distLocalSearch',
             'searchAria' => 'Search shown distributions',
-            'searchFormAttrs' => 'onsubmit="return false;"',
-            'searchInputAttrs' => 'data-paginate-search="distributions"',
+            'searchFormAttrs' => 'data-lookup-search',
+            'searchInputAttrs' => 'data-lookup-search-input',
             'sizeId' => 'distPerPage',
-            'sizeAction' => null,
-            'perPage' => 25,
-            'perPageOptions' => [10 => '10', 25 => '25', 50 => '50', 100 => '100', 0 => 'All'],
-            'sizeAttrs' => 'data-paginate-size="distributions"',
+            'sizeAction' => site_url('distribution'),
+            'sizeHidden' => ['tab' => 'log', 'q' => $keyword],
+            'perPage' => $perPage,
+            'perPageOptions' => $perPageOptions,
         ]) ?>
 
         <div class="table-responsive">
@@ -35,7 +37,7 @@
             </thead>
             <tbody>
               <?php foreach ($distributions as $d): ?>
-                <tr data-paginate-row>
+                <tr>
                   <td><?= esc($d['claim_date']) ?></td>
                   <td><?= esc($d['control_no']) ?></td>
                   <td><span class="sector-name"><?= esc($d['head']) ?></span></td>

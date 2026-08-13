@@ -159,5 +159,5 @@ the `scanner/log` JSON response
 **Caveat:** the `.env` developer account has no `users` row (`user_id` 0),
 so its handouts store `userID NULL` and appear as "Unknown" in perScanner /
 keep the live counter at 0. Pre-existing auth design, not a stats bug; test
-per-scanner features with real `users`-table accounts. (The V18 dump ships a
+per-scanner features with real `users`-table accounts. (The dump ships a
 DB-backed `developer` account, which does have a `users` row.)

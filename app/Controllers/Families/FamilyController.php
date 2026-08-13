@@ -492,7 +492,11 @@ class FamilyController extends BaseController
             return $this->failUpdate('Head of family could not be updated. Please check required fields.', 422);
         }
 
-        $memberSectorModel->replaceForMember($headId, $this->existingSectorIds($sectorModel, $headSectorIds));
+        if (! $memberSectorModel->replaceForMember($headId, $this->existingSectorIds($sectorModel, $headSectorIds))) {
+            $memberModel->rollbackTransaction();
+
+            return $this->failUpdate('The head of family\'s sectors could not be saved.', 422);
+        }
 
         if (! $locked) {
             try {
@@ -523,7 +527,11 @@ class FamilyController extends BaseController
                 return $this->failUpdate('One family member could not be saved.', 422);
             }
 
-            $memberSectorModel->replaceForMember($memberId, $this->existingSectorIds($sectorModel, $memberSectorIds));
+            if (! $memberSectorModel->replaceForMember($memberId, $this->existingSectorIds($sectorModel, $memberSectorIds))) {
+                $memberModel->rollbackTransaction();
+
+                return $this->failUpdate('One family member\'s sectors could not be saved.', 422);
+            }
 
             if (! $this->assignServices($memberServiceModel, $serviceModel, $memberId, $member['service_ids'] ?? [], $grandfatheredServiceIds)) {
                 $memberModel->rollbackTransaction();

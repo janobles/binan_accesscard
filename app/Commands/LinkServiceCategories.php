@@ -60,19 +60,17 @@ class LinkServiceCategories extends BaseCommand
         // Both the name and the code are accepted on each side: rows written by
         // the lookup CRUD stored the display name, the Excel importer stored
         // the code.
-        $categoryIds = [];
+        $categoryIds = self::foldMap(
+            $db->table('category')->select('categoryID, code, name')->get()->getResultArray(),
+            'categoryID',
+            ['name', 'code']
+        );
 
-        foreach ($db->table('category')->select('categoryID, code, name')->get()->getResultArray() as $row) {
-            $categoryIds[self::fold((string) $row['name'])] = (int) $row['categoryID'];
-            $categoryIds[self::fold((string) $row['code'])] = (int) $row['categoryID'];
-        }
-
-        $sectorIds = [];
-
-        foreach ($db->table('sector')->select('sectorID, shortcode, name')->get()->getResultArray() as $row) {
-            $sectorIds[self::fold((string) $row['name'])]      = (int) $row['sectorID'];
-            $sectorIds[self::fold((string) $row['shortcode'])] = (int) $row['sectorID'];
-        }
+        $sectorIds = self::foldMap(
+            $db->table('sector')->select('sectorID, shortcode, name')->get()->getResultArray(),
+            'sectorID',
+            ['name', 'shortcode']
+        );
 
         $rows = $db->table('services')
             ->select('serviceID, category')
@@ -161,5 +159,45 @@ class LinkServiceCategories extends BaseCommand
     private static function fold(string $value): string
     {
         return mb_strtolower(trim((string) preg_replace('/\s+/u', ' ', $value)), 'UTF-8');
+    }
+
+    /**
+     * [folded text => row id] over the given columns of one reference table.
+     * A key two different rows both claim is dropped rather than left pointing
+     * at whichever row came last: an ambiguous grouping text should end up in
+     * the unmatched report for a human to resolve, not silently linked to one
+     * of the two. Blank folds are dropped for the same reason.
+     *
+     * @param list<array<string, mixed>> $rows
+     * @param list<string>               $columns
+     * @return array<string, int>
+     */
+    private static function foldMap(array $rows, string $idColumn, array $columns): array
+    {
+        $map      = [];
+        $conflict = [];
+
+        foreach ($rows as $row) {
+            $id = (int) $row[$idColumn];
+
+            foreach ($columns as $column) {
+                $key = self::fold((string) ($row[$column] ?? ''));
+
+                if ($key === '' || isset($conflict[$key])) {
+                    continue;
+                }
+
+                if (isset($map[$key]) && $map[$key] !== $id) {
+                    $conflict[$key] = true;
+                    unset($map[$key]);
+
+                    continue;
+                }
+
+                $map[$key] = $id;
+            }
+        }
+
+        return $map;
     }
 }

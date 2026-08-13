@@ -81,6 +81,8 @@ final class DumpV22SchemaTest extends CIUnitTestCase
         $junction = $this->table('member_sectors');
         $this->assertStringContainsString('PRIMARY KEY (`memberID`,`sectorID`)', $junction);
         $this->assertStringContainsString('FOREIGN KEY (`sectorID`)', $junction);
+        // Both sides, or a member row can be deleted out from under its sectors.
+        $this->assertStringContainsString('FOREIGN KEY (`memberID`)', $junction);
     }
 
     /** A service is grouped by a category or by a sector, never by loose text. */
@@ -91,7 +93,12 @@ final class DumpV22SchemaTest extends CIUnitTestCase
         $this->assertStringNotContainsString('`category` text', $services);
         $this->assertStringContainsString('`categoryID`', $services);
         $this->assertStringContainsString('`sectorID`', $services);
-        $this->assertStringContainsString('CHECK', $services);
+        // Exactly one of the two keys: `is null <> is null` rejects both-null and
+        // both-set, which a bare CHECK assertion would let drift.
+        $this->assertStringContainsString(
+            'CHECK (`categoryID` is null <> (`sectorID` is null))',
+            $services
+        );
     }
 
     /** Uppercase has to be storable, which the Title Case enums made impossible. */

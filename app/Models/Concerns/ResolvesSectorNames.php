@@ -31,6 +31,22 @@ trait ResolvesSectorNames
         return $rows;
     }
 
+    /**
+     * The `sector_ids` select withSectorNames() reads: the member's sectors as a
+     * comma list, as a correlated subquery. A join against member_sectors would
+     * multiply the row by the member's sector count and break every count and
+     * paginator downstream. Selected unescaped by the caller (and so prefixed by
+     * hand) because the builder cannot prefix a subquery it did not build.
+     *
+     * @param string $memberExpr How the outer query spells the member table (an
+     *                           alias such as `m`, or the prefixed table name).
+     */
+    private function sectorIdsSelect(string $memberExpr): string
+    {
+        return '(SELECT GROUP_CONCAT(ms.sectorID) FROM ' . $this->db->prefixTable('member_sectors')
+            . ' ms WHERE ms.memberID = ' . $memberExpr . '.memberID) AS sector_ids';
+    }
+
     /** Builds an [sectorID => name] map used to resolve sector names for display. */
     private function sectorNameMap(): array
     {

@@ -986,7 +986,7 @@ class FamilyExcelImporter
             $this->requireField($row, $familyNo, 'address', 'Address', (string) ($data['address'] ?? ''));
             $this->requireField($row, $familyNo, 'barangay', 'Barangay', (string) ($data['barangay'] ?? ''));
             // Barangay has no "Other" option - it must be one of the official barangays
-            // (tolerant match). A mismatch is a warning: it still imports as typed.
+            // (tolerant match). A mismatch blocks the row: there is nowhere to store it.
             $this->validateBarangay($row, $familyNo, (string) ($data['barangay'] ?? ''));
         } else {
             $this->requireField($row, $familyNo, 'relationship', 'Relationship', (string) ($data['relationship'] ?? ''));
@@ -1293,24 +1293,26 @@ class FamilyExcelImporter
     }
 
     /**
-     * Warns when a head's barangay isn't one of the official Biñan barangays. The match is
+     * Blocks a head whose barangay isn't one of the official Biñan barangays. The match is
      * tolerant (case, ñ, dots and the "(...)" alias are ignored) so "Biñan"/"Sto. Tomas"
-     * still pass; only a genuine non-barangay is flagged. Warning - imports as typed.
+     * still pass; only a genuine non-barangay is flagged. Blocking since V22: the barangay
+     * is stored as member.barangayID, so a value that resolves to no row is not saved at
+     * all. Letting it through would import the head with no barangay.
      */
     private function validateBarangay(int $row, string $familyNo, string $value): void
     {
         $value  = trim($value);
         $known  = $this->barangayLookup();
 
-        // No reference rows means there is nothing to check against, and warning
-        // on every row would be noise about the database rather than the file.
+        // No reference rows means there is nothing to check against, and flagging
+        // every row would be noise about the database rather than the file.
         if ($value === '' || $known === []) {
             return;
         }
 
         if (! isset($known[$this->normalizeBarangay($value)])) {
             $this->addError($row, $familyNo, 'BRGY', 'barangay',
-                'Barangay "' . $value . '" is not an official Biñan barangay - please check the spelling.', 'warning');
+                'Barangay "' . $value . '" is not an official Biñan barangay - please check the spelling.');
         }
     }
 
@@ -1735,9 +1737,8 @@ class FamilyExcelImporter
 
     /**
      * Resolves a head's Barangay cell to its barangayID, or null when blank or
-     * unrecognised. Unrecognised values are already flagged by validateBarangay()
-     * as a warning; this leaves member.barangayID null rather than duplicating
-     * that error.
+     * unrecognised. Both cases are already blocked by requireField()/validateBarangay(),
+     * so the null here only ever reaches a row the review step refuses to commit.
      */
     private function barangayIdForHead(string $value): ?int
     {

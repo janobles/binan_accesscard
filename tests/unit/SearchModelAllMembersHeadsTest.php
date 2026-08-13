@@ -35,16 +35,25 @@ final class SearchModelAllMembersHeadsTest extends CIUnitTestCase
         $db = db_connect(['DBDriver' => 'SQLite3', 'database' => ':memory:', 'DBDebug' => true], false);
         $this->seededDb = $db;
 
+        // V22 column set: no sectorID on member (it moved to member_sectors), and
+        // the sector tables exist so the listing queries that read them run here
+        // instead of only in the MySQL job.
         $db->query(
             'CREATE TABLE member (
                 memberID INTEGER PRIMARY KEY,
                 headID INTEGER,
                 firstname TEXT, middlename TEXT, lastname TEXT, suffix TEXT,
                 birthday TEXT, contactnumber TEXT, relationship TEXT,
-                address TEXT, barangay TEXT, religion TEXT, job TEXT,
-                sectorID TEXT, dt_created TEXT, dt_deleted TEXT
+                address TEXT, barangayID INTEGER, religion TEXT, job TEXT,
+                dt_created TEXT, dt_updated TEXT, dt_deleted TEXT
             )'
         );
+        $db->query('CREATE TABLE member_sectors (memberID INTEGER, sectorID INTEGER)');
+        $db->query('CREATE TABLE sector (sectorID INTEGER PRIMARY KEY, name TEXT, shortcode TEXT, description TEXT)');
+        $db->table('sector')->insert([
+            'sectorID' => 1, 'name' => 'SENIOR CITIZEN', 'shortcode' => 'SC', 'description' => '',
+        ]);
+        $db->table('member_sectors')->insert(['memberID' => 1, 'sectorID' => 1]);
 
         $this->insertMember($db, 1, 1, 'JUAN', 'DELA CRUZ');
         $this->insertMember($db, 2, 1, 'PEDRO', 'DELA CRUZ');
@@ -60,8 +69,8 @@ final class SearchModelAllMembersHeadsTest extends CIUnitTestCase
             'memberID' => $id, 'headID' => $headId,
             'firstname' => $first, 'middlename' => '', 'lastname' => $last, 'suffix' => '',
             'birthday' => null, 'contactnumber' => '', 'relationship' => $headId === $id ? 'Head' : 'Member',
-            'address' => '', 'barangay' => '', 'religion' => '', 'job' => '',
-            'dt_created' => '2026-01-01', 'dt_deleted' => null,
+            'address' => '', 'barangayID' => null, 'religion' => '', 'job' => '',
+            'dt_created' => '2026-01-01', 'dt_updated' => '2026-01-01', 'dt_deleted' => null,
         ]);
     }
 
@@ -144,6 +153,33 @@ final class SearchModelAllMembersHeadsTest extends CIUnitTestCase
 
         $this->assertSame([], $model->allMembersHeadIds('DELA', ['status' => 'archived']));
         $this->assertSame(0, $model->countAllMembersHeads('DELA', ['status' => 'archived']));
+    }
+
+    /**
+     * Both listing queries used to select member.sectorID, a column V22 dropped,
+     * which made every deep search and the recent-families list a SQL error
+     * rather than an empty result.
+     */
+    public function testTheListingQueriesReadSectorsFromTheJunctionNotAMemberColumn(): void
+    {
+        $model = $this->seededSearchModel();
+
+        if ($model === null) {
+            $this->markTestSkipped('sqlite3 extension not available.');
+        }
+
+        $members = $model->allMembers('DELA');
+        $this->assertCount(4, $members);
+
+        $head = array_values(array_filter(
+            $members,
+            static fn (array $row): bool => (int) $row['memberID'] === 1
+        ))[0];
+        $this->assertSame([1], $head['sector_ids']);
+        $this->assertStringContainsString('SENIOR CITIZEN', $head['sector_name']);
+
+        // families() selects the same dropped column through a different builder.
+        $this->assertCount(2, $model->families('DELA'));
     }
 
     public function testAnArchivedFamilyStillListsOnTheArchivedTab(): void

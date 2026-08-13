@@ -2,6 +2,7 @@
 
 namespace App\Database\Seeds;
 
+use App\Models\Lookups\BarangayModel;
 use App\Support\MemberFieldNormalizer;
 use CodeIgniter\CLI\CLI;
 use CodeIgniter\Database\Seeder;
@@ -74,14 +75,15 @@ class DummyDataSeeder extends Seeder
         'A. Mabini St', 'J. Rizal Ave', 'P. Burgos St', 'Gen. Luna Rd',
     ];
 
-    private array $barangays = [
-        'Brgy. San Vicente', 'Brgy. Malaban', 'Brgy. Canlalay', 'Brgy. Poblacion',
-        'Brgy. Santo Niño', 'Brgy. San Antonio', 'Brgy. Tubigan', 'Brgy. Zapote',
-        'Brgy. Platero', 'Brgy. De La Paz', 'Brgy. Loma', 'Brgy. Casile',
-        'Brgy. Langkiwa', 'Brgy. Soro-soro', 'Brgy. Timbao', 'Brgy. Halang',
-        'Brgy. Behia', 'Brgy. Malamig', 'Brgy. Mamplasan', 'Brgy. Sto. Tomas',
-        'Brgy. San Jose', 'Brgy. Niyugan', 'Brgy. Biñan', 'Brgy. Puting Kahoy',
-    ];
+    /**
+     * barangayIDs to draw from, read from the barangay table in run(). Seeded
+     * rows carry the id, not a name in the address: since V22 barangayID is the
+     * only place a member's barangay lives, and a hardcoded name list here would
+     * drift from the table the way FamilyProfilingFormV2's copy did.
+     *
+     * @var list<int>
+     */
+    private array $barangayIds = [];
 
     private array $religions = [
         'Roman Catholic', 'Roman Catholic', 'Roman Catholic', 'Roman Catholic',
@@ -132,6 +134,17 @@ class DummyDataSeeder extends Seeder
             CLI::write('Done truncating.', 'yellow');
         }
 
+        $this->barangayIds = array_map(
+            static fn (array $row): int => (int) $row['barangayID'],
+            (new BarangayModel())->activeList()
+        );
+
+        if ($this->barangayIds === []) {
+            CLI::error('No barangay rows - import the SQL dump before seeding.');
+
+            return;
+        }
+
         $nextID = $this->getNextAutoIncrement();
         CLI::write("Starting memberID will be: {$nextID}", 'cyan');
 
@@ -156,7 +169,10 @@ class DummyDataSeeder extends Seeder
             $headSex    = (rand(0, 9) < 7) ? 'Male' : 'Female';
             $headBday   = $this->birthdayFromAge($headAge);
             $headSectors = $this->assignHeadSectors($headAge, $headSex);
+            // One household, one address and one barangay: the members below reuse
+            // the head's, the way the entry form copies them down.
             $address    = $this->randomAddress();
+            $barangayID = (int) $this->pick($this->barangayIds);
 
             // The head references itself as its own headID.
             $memberBatch[] = $this->buildMember(
@@ -170,6 +186,7 @@ class DummyDataSeeder extends Seeder
                 relationship: 'Head of Family',
                 civilStatus:  $this->civilStatus($headAge),
                 address:      $address,
+                barangayID:   $barangayID,
                 sectors:      $headSectors,
                 now:          $now,
             );
@@ -202,6 +219,7 @@ class DummyDataSeeder extends Seeder
                     relationship: $relLabel,
                     civilStatus:  $this->civilStatus($memAge),
                     address:      $address,
+                    barangayID:   $barangayID,
                     sectors:      $memSectors,
                     now:          $now,
                 );
@@ -263,6 +281,7 @@ class DummyDataSeeder extends Seeder
         string $relationship,
         string $civilStatus,
         string $address,
+        int    $barangayID,
         string $sectors,
         string $now,
     ): array {
@@ -297,6 +316,7 @@ class DummyDataSeeder extends Seeder
             'contactnumber' => rand(9000000000, 9999999999),
             'relationship'  => mb_strtoupper($relationship, 'UTF-8'),
             'address'       => MemberFieldNormalizer::cleanAddress($address),
+            'barangayID'    => $barangayID,
             'religion'      => mb_strtoupper((string) $this->pick($this->religions), 'UTF-8'),
             'dt_created'    => $now,
             'dt_updated'    => $now,
@@ -477,12 +497,13 @@ class DummyDataSeeder extends Seeder
             : $this->pick($this->firstNamesFemale);
     }
 
+    /** Street address only: the barangay is a barangayID on the row, not text here. */
     private function randomAddress(): string
     {
         $num    = rand(1, 250);
         $street = $this->pick($this->streets);
-        $brgy   = $this->pick($this->barangays);
-        return "{$num} {$street}, {$brgy}, Biñan, Laguna";
+
+        return "{$num} {$street}";
     }
 
     private function pick(array $array): mixed

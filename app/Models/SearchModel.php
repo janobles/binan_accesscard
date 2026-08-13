@@ -43,7 +43,8 @@ class SearchModel
 
         $limit = max(1, $limit);
         $builder = $this->db->table('member')
-            ->select('memberID, firstname, middlename, lastname, contactnumber, relationship, headID, sectorID, dt_created, dt_updated')
+            ->select('memberID, firstname, middlename, lastname, contactnumber, relationship, headID, dt_created, dt_updated')
+            ->select($this->sectorIdsSelect($this->db->prefixTable('member')), false)
             ->where('memberID = headID', null, false)
             ->where('dt_deleted IS NULL', null, false);
 
@@ -101,7 +102,8 @@ class SearchModel
         $offset = max(0, $offset);
 
         $builder = $this->allMembersBuilder($keyword, $filters)
-            ->select('m.memberID, m.firstname, m.middlename, m.lastname, m.suffix, m.birthday, m.contactnumber, m.relationship, m.address, m.headID, m.sectorID, m.dt_created, m.dt_deleted, h.firstname AS head_firstname, h.lastname AS head_lastname, h.suffix AS head_suffix');
+            ->select('m.memberID, m.firstname, m.middlename, m.lastname, m.suffix, m.birthday, m.contactnumber, m.relationship, m.address, m.headID, m.dt_created, m.dt_deleted, h.firstname AS head_firstname, h.lastname AS head_lastname, h.suffix AS head_suffix')
+            ->select($this->sectorIdsSelect('m'), false);
         $this->applyAllMembersOrder($builder, $orderKey, $orderDirection);
 
         $rows = $builder

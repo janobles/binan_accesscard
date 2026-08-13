@@ -131,9 +131,11 @@ Controllers and models are grouped into **feature subnamespaces** so each slice
 ## Database
 
 - `accesscardV22.sql` - the schema and reference seed rows (import it to set up).
-- `sql/patches/` - incremental patches for a database already carrying data,
-  through `v21-batch-schedule.sql`. A fresh setup needs the dump only; the
-  patches exist for databases that predate it.
+- `sql/patches/` - incremental patches for a database already carrying data. A
+  fresh setup needs the dump only; the patches exist for databases that predate
+  it. V22 lands in order: `v22-uppercase.sql`, `v22-barangay-fk.sql`,
+  `v22-normalize.sql`, then `v22-normalize-drop.sql` once the `app/Commands`
+  migrations that read the old text columns have run.
 - `app/Database/Seeds/` - test login accounts only; never tables or columns.
 
 ## Public Assets

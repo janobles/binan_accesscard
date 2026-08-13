@@ -339,6 +339,7 @@ class SectorModel extends Model
     public function existsById(int $sectorId): bool
     {
         return $sectorId > 0
+            && $this->hasTable()
             && $this->db->table($this->table)->where('sectorID', $sectorId)->countAllResults() > 0;
     }
 }

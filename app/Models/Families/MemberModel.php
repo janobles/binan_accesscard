@@ -74,7 +74,7 @@ class MemberModel extends Model
      */
     public function hasRequiredFamilyTables(): bool
     {
-        foreach (['member', 'sector', 'services', 'member_services', 'audit_trails'] as $table) {
+        foreach (['member', 'sector', 'member_sectors', 'services', 'member_services', 'audit_trails'] as $table) {
             if (! $this->db->tableExists($table)) {
                 return false;
             }
@@ -118,7 +118,8 @@ class MemberModel extends Model
     {
         $data['memberID'] = $this->nextAutoIncrementId();
         $data['headID'] = $data['memberID'];
-        $data['relationship'] = $data['relationship'] ?? 'HEAD';
+        // Not a fallback: this row IS the head, whatever the caller passed.
+        $data['relationship'] = 'HEAD';
         $data = $this->memberColumnPayload($data);
 
         if (! $this->insert($data)) {
@@ -667,7 +668,7 @@ class MemberModel extends Model
 
     /**
      * Reference-data badges per member for the kiosk family panel: sector
-     * shortcodes (member.sectorID JSON), then category names, then service
+     * shortcodes (member_sectors), then category names, then service
      * shortcodes (member_services -> services). Returns memberID => list of
      * badge labels; empty map on empty input or any DB error.
      *

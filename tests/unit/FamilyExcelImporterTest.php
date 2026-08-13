@@ -179,7 +179,7 @@ final class FamilyExcelImporterTest extends CIUnitTestCase
         $this->assertSame('warning', $contig[0]['severity']);
     }
 
-    // -- barangay / contact / suffix / duplicate-person (all warnings) ---------
+    // -- barangay (blocking) / contact / suffix / duplicate-person (warnings) --
 
     public function testBarangayToleratesSpellingButFlagsNonBarangays(): void
     {
@@ -190,13 +190,14 @@ final class FamilyExcelImporterTest extends CIUnitTestCase
         ]);
         $this->assertNotContains('BRGY', $this->codes($ok));
 
-        // "Santa Rosa" is a different city - flagged (warning).
+        // "Santa Rosa" is a different city - blocking, since it resolves to no barangayID
+        // and the address column no longer carries the barangay name.
         $bad = $this->importer()->validateAndBuild([
             $this->headRow(3, '6003', ['barangay' => 'Santa Rosa']),
         ]);
         $brgy = array_values(array_filter($bad['errors'], static fn (array $e): bool => $e['code'] === 'BRGY'));
         $this->assertCount(1, $brgy);
-        $this->assertSame('warning', $brgy[0]['severity']);
+        $this->assertSame('blocking', $brgy[0]['severity']);
     }
 
     public function testContactNumberMustBe09Plus11Digits(): void

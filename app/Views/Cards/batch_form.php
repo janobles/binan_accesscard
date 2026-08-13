@@ -2,9 +2,9 @@
 /**
  * QR access card issuing page (Admin > Cards).
  *
- * Self-contained: the layout includes it with no data, and the barangay list is read
- * from FamilyProfilingFormV2 so the filter values always match what headsForCards()
- * compares against. Two modes share the page: Batch, which takes a barangay and a
+ * Reads $cardBarangayNames from DashboardPageBuilder: the same live barangay list
+ * headsForCards() compares against, so the filter can't offer a value that matches
+ * nothing. Two modes share the page: Batch, which takes a barangay and a
  * control-number range and previews the heads it would print, and Single card, which
  * takes one searchable head or an exact control number. The PDF is the real output;
  * the table only previews who lands in it.
@@ -15,7 +15,7 @@
  */
 
 helper('ui');
-$barangayList = (new \App\Models\Lookups\BarangayModel())->activeNames();
+$barangayList = $cardBarangayNames ?? [];
 ?>
 <ul class="nav nav-pills segmented-tabs mb-4" id="cn-modes" role="tablist">
     <li class="nav-item">

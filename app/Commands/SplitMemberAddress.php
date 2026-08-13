@@ -70,6 +70,14 @@ class SplitMemberAddress extends BaseCommand
 
         $names = (new BarangayModel())->nameMap();
 
+        // No barangay rows means every address below is skipped and the command
+        // reports "Nothing to write." on a database it never actually looked at.
+        if ($names === []) {
+            CLI::error('The barangay table returned no rows - aborting rather than reporting a no-op.');
+
+            return EXIT_ERROR;
+        }
+
         $rows = $db->table('member')
             ->select('memberID, address, barangayID')
             ->where('barangayID IS NOT NULL', null, false)

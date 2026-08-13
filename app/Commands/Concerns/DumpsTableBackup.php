@@ -28,8 +28,10 @@ trait DumpsTableBackup
         $config = (new \Config\Database())->default;
         $dir    = rtrim(WRITEPATH, '/\\') . DIRECTORY_SEPARATOR . 'backups';
 
+        // Owner-only: a table dump is a full copy of the personal data in it, and
+        // writable/ is inside the web root on the XAMPP boxes this runs on.
         if (! is_dir($dir)) {
-            @mkdir($dir, 0777, true);
+            @mkdir($dir, 0700, true);
         }
 
         $path = $dir . DIRECTORY_SEPARATOR . $label . '-' . date('Ymd-His') . '.sql';
@@ -80,7 +82,12 @@ trait DumpsTableBackup
             return null;
         }
 
-        if (file_put_contents($path, "[client]\nuser={$user}\npassword={$pass}\n") === false) {
+        // Quoted, with backslashes and quotes escaped: an option file treats #, a
+        // trailing space and a bare backslash as syntax, so an unquoted password
+        // containing one authenticates as something other than itself.
+        $quoted = '"' . str_replace(['\\', '"'], ['\\\\', '\\"'], $pass) . '"';
+
+        if (file_put_contents($path, "[client]\nuser={$user}\npassword={$quoted}\n") === false) {
             @unlink($path);
 
             return null;

@@ -87,7 +87,10 @@ which need backing up. Two subdirectories are exceptions worth knowing about:
 `writable/uploads/` and `writable/import-staging/` hold uploaded spreadsheets and
 in-progress import staging data. Losing those loses any import that has been
 uploaded but not yet confirmed. `writable/backups/` is not an automatic backup of
-anything; do not mistake it for one.
+anything; do not mistake it for one. It holds single-table `mysqldump` files
+written by the one-time backfill commands before they change data
+(`app/Commands/Concerns/DumpsTableBackup.php`), so it carries the same personal
+data as a full dump and deserves the same handling.
 
 Test a restore before you need one. A backup nobody has restored is a hypothesis.
 

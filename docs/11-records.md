@@ -77,9 +77,14 @@ writer throws `FamilyRecordWriteException` and the caller rolls back and reports
 
 ## The family profile
 
-`records/{id}` is the family's page: display and editing in one surface rather
-than a separate edit screen. From there a family can be updated, archived, or
-restored.
+`records/{id}` is the family's page, and it is read-only: label and value pairs,
+no form and nothing to submit, so a reader cannot edit by accident whatever their
+role. Editing is its own page, `records/{id}/edit`, rendering the same
+`Family/_fields` partial the entry form uses. The profile links to it only for
+the roles the manifest lets through, and the manifest keeps read-only roles off
+the edit route entirely. Archiving and restoring are row actions on the records
+list (`app/Views/Family/row-actions.php`), posting to `records/{id}/archive` and
+`records/{id}/restore` under the `records-update` manifest key.
 
 Archiving sets `dt_deleted`. Nothing is deleted outright, so an archived family
 can be restored with its history intact, and its audit trail keeps resolving.

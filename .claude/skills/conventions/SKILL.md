@@ -9,9 +9,10 @@ Before editing code under `app/Controllers|Models|Views|Libraries` or
 `app/Config/Routes.php`, classify your question and retrieve. One Grep, not a
 scan.
 
-Every chapter in `docs/` ends with a `## Rules` section holding the terse,
-enforceable version of its conventions. **Read the `#rules` anchor, not the whole
-chapter**, unless you need the reasoning above it.
+The chapters carrying enforceable conventions end with a `## Rules` section
+holding the terse version of them: 01, 02, 10, 15, 16, 20, 21, and 23. **Read the
+`#rules` anchor, not the whole chapter**, unless you need the reasoning above it.
+The rest are narrative and the table below points at the chapter itself.
 
 ## Decision table
 
@@ -50,7 +51,7 @@ chapter**, unless you need the reasoning above it.
 
 The CI4 library (`/codeigniter4/userguide`) serves LATEST docs, not this repo's
 pinned versions. Cross-check version-sensitive answers against
-`docs/reference/version-pins.md` (CI4 v4.7.3, PHP floor 8.2).
+`docs/reference/version-pins.md` (CI4 v4.7.4, PHP floor 8.2).
 
 **Bootstrap needs more care than a single pin.** The Context7 Bootstrap library
 is pinned to 5.3, which matches this repo's JavaScript bundle and its login page,

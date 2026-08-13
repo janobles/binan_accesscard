@@ -48,11 +48,14 @@ key, which also supplies the page title), `role`, `bodyView`, and `bodyData`.
 A page never branches on the role to pick a shell. The role-prefixed `Admin/`,
 `Employee/`, and `Viewer/` layouts are deleted.
 
-Standalone `<html>` is correct in exactly five places: `layout.php`, the scanner's
-`kiosk-layout.php` and `simple-layout.php`, `Auth/login.php`, the PDF views, and
-the framework error pages under `app/Views/errors/html/`. A page that grows its
-own shell loses the sidebar and every convention on this page. The import review
-did this once, and it was undone.
+Standalone `<html>` is correct in five kinds of view and nowhere else:
+`layout.php`, the scanner's `kiosk-layout.php` and `simple-layout.php`,
+`Auth/login.php` with `Auth/session_conflict.php`, and the framework error pages
+under `app/Views/errors/html/`. The PDF views are not among them: dompdf is handed
+a document the generator assembles, so `Cards/pdf/batch_page.php` and
+`Scanner/pdf/report.php` are fragments. A page that grows its own shell loses the
+sidebar and every convention on this page. The import review did this once, and it
+was undone.
 
 Chapter 15 covers the scanner shells and why they exist.
 
@@ -157,9 +160,10 @@ Adding a role means three edits in order: this table, then the helper map, then 
 Every list tab is the same composition as `Family/list.php`. No hand-rolled layout
 markup, no page-specific layout CSS.
 
-1. **The toolbar, above the card.** `components/records_toolbar` for the AJAX
-   flavour, `components/records_toolbar_server` for everything else. The pills row
-   renders directly beneath it. The toolbar is never inside the card.
+1. **The toolbar, above the card.** `components/toolbar`, in one of its two
+   modes: `$isClient = true` for the AJAX flavour, the default GET-form mode for
+   everything else. The pills row renders directly beneath it. The toolbar is
+   never inside the card.
 2. **`components/card`** with stock `.card` chrome. Page CSS must never override
    the card border, radius, or background, re-pad the card body, or set
    `height: 100%`. That last one caused dead space under short tables.
@@ -186,7 +190,9 @@ Never one crammed button group, and never `w-100` or `h-100` stretching.
 ### The filter panel
 
 `.dropdown-menu.records-filter-panel` with `data-bs-auto-close="outside"`.
-Checkboxes and radios live-apply, debounced in JavaScript. **There are no Apply or
+Checkboxes and radios live-apply: the AJAX flavour redraws after a debounce
+(`FILTER_DEBOUNCE_MS` in `family-datatable.js`), the GET-form flavour submits the
+form on change (`records-filter-panel.js`). **There are no Apply or
 Reset buttons inside the panel.** Long option lists get a type-to-narrow input and
 scroll inside a viewport-capped list. Stock Bootstrap only, no drill-in submenus.
 
@@ -349,7 +355,7 @@ Copied from the conventions this codebase is held to. Terse on purpose.
 
 **Scope:** button roles, records toolbar anatomy, filter panel + pills, dual
 search. Reference implementation: `/records`
-(`app/Views/Family/list.php` + `components/records_toolbar.php`).
+(`app/Views/Family/list.php` + `app/Views/components/toolbar.php`).
 Spec receipt: `docs/superpowers/specs/2026-07-12-manage-records-ui-design.md`.
 
 #### Rule 1: Button colors come from btn()
@@ -377,7 +383,7 @@ New role: add the row here first, then to the helper map, then a
 
 #### Rule 2: Records toolbar anatomy
 
-`components/records_toolbar.php`. One Bootstrap grid row:
+`app/Views/components/toolbar.php`. One Bootstrap grid row:
 keyword input (grows) | Filters dropdown | two btn-groups separated by gap
 (search actions: Search + Clear; record actions: Add + Import, gated by
 `$canEdit`). Never one crammed btn-group, never w-100/h-100 stretching.
@@ -386,8 +392,9 @@ keyword input (grows) | Filters dropdown | two btn-groups separated by gap
 
 `.dropdown-menu.records-filter-panel` (rules at the bottom of
 `public/css/managerecord.css`) with `data-bs-auto-close="outside"`.
-Checkboxes and radios live-apply (debounced in JS, see `FILTER_DEBOUNCE_MS`);
-NO Apply or Reset buttons inside the panel. Long option lists get a
+Checkboxes and radios live-apply: AJAX pages debounce the redraw
+(`FILTER_DEBOUNCE_MS`, `family-datatable.js`), GET-form pages submit on change
+(`records-filter-panel.js`). NO Apply or Reset buttons inside the panel. Long option lists get a
 type-to-narrow input (`[data-records-narrow]`) and scroll inside a
 viewport-capped `.records-filter-list`. Stock Bootstrap only; no drill-in
 submenus.
@@ -435,9 +442,9 @@ small/muted in `managerecord.css` so it reads identically (pageLength 25).
 Every list tab is the SAME composition as `Family/list.php` - no hand-rolled
 layout markup, no page-specific layout CSS:
 
-1. Toolbar ABOVE the card: `components/records_toolbar` (family, AJAX) or
-   `components/records_toolbar_server` (everything else). Pills row renders
-   with it.
+1. Toolbar ABOVE the card: `components/toolbar` with `$isClient = true`
+   (family, AJAX) or in its default GET-form mode (everything else). Pills row
+   renders with it.
 2. `components/card` with stock `.card` chrome - page CSS must never override
    the card border/radius/background, re-pad the card-body, or set
    `height: 100%` (that caused the dead space under short tables).
@@ -464,9 +471,8 @@ what not to trust as an example.
 - manage-records: done (feat/manage-records-ui). AJAX flavor: filter panel +
   pills wired by `assets/js/dashboard/family-datatable.js`.
 - lookups (sectors/services/categories), audit-trails, encoder activity:
-  done (feat/retrofit-toolbar-conventions) via
-  `components/records_toolbar_server.php` - same Bootstrap-grid anatomy as
-  records_toolbar, wired by the shared
+  done (feat/retrofit-toolbar-conventions) via the toolbar's GET-form mode -
+  same Bootstrap-grid anatomy as the AJAX mode, wired by the shared
   `assets/js/dashboard/records-filter-panel.js` (radios inside the GET form,
   change = submit, pills from server state). Options that mean "no filter"
   (Active default, All) get no pill label, so they never render pills.

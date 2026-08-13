@@ -37,14 +37,15 @@ that is accepted rather than unnoticed. Do not "fix" it with FULLTEXT.
 ## The stats cache
 
 `DashboardModel::stats()` caches its counts for 60 seconds under
-`STATS_CACHE_KEY`, and the Overview tab's four counts cache the same way under
-their own key.
+`STATS_CACHE_KEY`, and the Overview tab's four counts cache for the same 60
+seconds under `PROGRAM_STATS_CACHE_KEY`.
 
-The TTL is not the mechanism, it is the backstop.
-`AuditTrailsModel::logAction()` deletes the key first thing, so any audited
+For `STATS_CACHE_KEY` the TTL is not the mechanism, it is the backstop.
+`AuditTrailsModel::logAction()` deletes that key first thing, so any audited
 mutation refreshes the tiles on the next visit. Since every family mutation writes
-an audit row (chapter 16), every family mutation clears the cache. The 60 seconds
-only covers direct database edits that bypass the application entirely.
+an audit row (chapter 16), every family mutation clears it, and the 60 seconds
+only covers direct database edits that bypass the application entirely. Nothing
+deletes `PROGRAM_STATS_CACHE_KEY`, so those four counts expire on the TTL alone.
 
 If you add a cached aggregate, follow the same three-part pattern: a public
 constant for the key, a delete in the mutation funnel, and a short TTL as backstop.

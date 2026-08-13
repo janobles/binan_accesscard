@@ -123,9 +123,10 @@ member, service, and audit write sequence).
 ### Models
 
 Grouped the same way. `Auth/UserModel.php` handles login and account creation.
-`Families/` holds `MemberModel`, `MemberServiceModel`, and
+`Families/` holds `MemberModel`, `MemberServiceModel`, `MemberSectorModel`, and
 `FamilyFormOptionsModel`. `Audit/AuditTrailsModel.php` owns audit inserts and the
-audit list queries. `Lookups/` holds the three reference tables.
+audit list queries. `Lookups/` holds the reference tables: `SectorModel`,
+`ServiceModel`, `CategoryModel`, and `BarangayModel`.
 
 `Scanner/` is the largest group, and the names do not all match their tables:
 `SubsidyTypeModel`, `SubsidyDistributionModel` (table `subsidy_distribution`, key
@@ -147,6 +148,8 @@ Families set already named:
 - The import set: `FamilyExcelTemplate`, `FamilyExcelImporter`,
   `ImportStagingStore`, `ImportReviewPresenter`, `ImportReviewQuery`,
   `ImportReviewChangeLog`, and `ImportLookupCache`.
+- `Scanner/` holds `BatchScope`, the one rule for deciding which batch a page is
+  showing, and `ReportsPdfGenerator`.
 - `EligibilityBuilder` works out who a distribution batch serves.
 - `BatchScheduleWindow` is pure open and close arithmetic for a scheduled batch.
   It touches no database and no framework state, and is called only from
@@ -161,7 +164,7 @@ Families set already named:
 `Config\Navigation::linksFor($role)` through
 `app/Views/components/dashboard_sidebar.php`. Page bodies live in directories
 matching their controllers: `Pages/`, `Family/`, `Admin/`, `Lookups/`,
-`Accounts/`, plus shared `Partials/` and `components/`.
+`Accounts/`, `Cards/`, plus shared `Partials/`, `components/`, and `errors/`.
 
 Two shells stand outside the dashboard: `Scanner/kiosk-layout.php`, a
 full-viewport green shell used only by the scan and performance pages, and the

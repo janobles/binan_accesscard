@@ -13,8 +13,10 @@ Strictness here means **typed signatures**, not the declare.
 
 Do not add the declare to a single file in passing. It would be inconsistent with
 every other file, and it can change coercion behaviour in ways that are invisible
-until they are not. Whether to adopt it everywhere or drop the phrase entirely is
-tracked as an open question in `docs/reference/violations.md`.
+until they are not. This was settled once already: the agent instructions used to
+say "respect existing strict-type conventions" while no file carried the declare,
+and the wording was changed to typed signatures rather than the code being
+changed (`docs/reference/violations.md`).
 
 ## File shape
 

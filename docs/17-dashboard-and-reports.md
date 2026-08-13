@@ -44,13 +44,15 @@ on every dashboard load is wasteful. They are cached for **60 seconds**.
 
 A 60-second cache on a page people watch while entering records would normally be
 a bug: create a family, refresh, and the count is stale. So the cache is
-invalidated as well as expired. `logAction()` deletes the stats cache keys after
-every logged mutation, and since every family mutation writes an audit row
-(chapter 16), every family mutation clears the cache. The TTL is the backstop, not
-the mechanism.
+invalidated as well as expired. `logAction()` deletes `DashboardModel::STATS_CACHE_KEY`
+after every logged mutation, and since every family mutation writes an audit row
+(chapter 16), every family mutation clears the overview counts. For that key the
+TTL is the backstop, not the mechanism.
 
-Two keys are cached this way: the overview stats and the program stats behind the
-Overview tab's four counts. Both use the same 60-second TTL.
+A second key, `PROGRAM_STATS_CACHE_KEY`, holds the program stats behind the
+Overview tab's four counts. It uses the same 60-second TTL but nothing deletes it,
+so those four counts refresh on expiry alone and can lag a mutation by up to a
+minute.
 
 This coupling is worth remembering if you ever add a mutation path that skips the
 audit. You would break the dashboard's freshness as well as the accountability

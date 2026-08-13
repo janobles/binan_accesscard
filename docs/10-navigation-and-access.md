@@ -96,9 +96,10 @@ anything else.
 
 ## The other two filters
 
-Every dashboard route carries four filters, not one. `roleNav` is the
+Every dashboard route carries three filters, not one. `roleNav` is the
 interesting one, but the other two shape the session and are worth knowing when
-a page behaves strangely.
+a page behaves strangely. They are declared by URI pattern in
+`app/Config/Filters.php`, not on the route.
 
 `idleTimeout` (`app/Filters/IdleTimeoutFilter.php`) logs a session out after a
 period of inactivity, configured by `IdleTimeout`. It clears the auth session

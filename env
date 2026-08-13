@@ -1,0 +1,76 @@
+#--------------------------------------------------------------------
+# Sample environment configuration
+#
+# Copy this file to `.env` and edit it. `.env` is git-ignored, so local
+# credentials and machine-specific paths never reach the repository.
+#
+# The values below are the ones a standard local setup needs. Anything
+# still commented out is a CodeIgniter default this project does not
+# override. See docs/03-setup.md.
+#--------------------------------------------------------------------
+
+#--------------------------------------------------------------------
+# ENVIRONMENT
+#--------------------------------------------------------------------
+
+CI_ENVIRONMENT = development
+
+#--------------------------------------------------------------------
+# APP
+#
+# app.baseURL must match the URL you actually type into the browser.
+# CodeIgniter builds every link, asset path, and redirect from it, so a
+# wrong value loads the page while its CSS and JavaScript 404. See
+# docs/04-networking.md for the value each run mode needs.
+#--------------------------------------------------------------------
+
+app.baseURL = 'http://localhost:8090/'
+app.indexPage = ''
+
+#--------------------------------------------------------------------
+# DATABASE
+#
+# Import accesscardV22.sql into the database named here first.
+#--------------------------------------------------------------------
+
+database.default.hostname = 127.0.0.1
+database.default.database = accesscard
+database.default.username = root
+database.default.password =
+database.default.DBDriver = MySQLi
+database.default.DBPrefix =
+database.default.port = 3306
+
+# The test connection. Only needed to run the suite against a real
+# MariaDB the way the mariadb-tests CI job does; see docs/22-testing.md.
+# database.tests.hostname = 127.0.0.1
+# database.tests.database = accesscard_ci
+# database.tests.username = root
+# database.tests.password =
+# database.tests.DBDriver = MySQLi
+# database.tests.DBPrefix =
+# database.tests.charset = utf8mb4
+# database.tests.DBCollat = utf8mb4_general_ci
+# database.tests.port = 3306
+
+#--------------------------------------------------------------------
+# ENCRYPTION
+#--------------------------------------------------------------------
+
+# encryption.key =
+
+#--------------------------------------------------------------------
+# SESSION
+#
+# savePath is an absolute path on your machine. Leave it unset to use
+# the framework default, or point it at this checkout's writable dir.
+#--------------------------------------------------------------------
+
+session.driver = 'CodeIgniter\Session\Handlers\FileHandler'
+# session.savePath = '/path/to/binan_accesscard/writable/session'
+
+#--------------------------------------------------------------------
+# LOGGER
+#--------------------------------------------------------------------
+
+# logger.threshold = 4

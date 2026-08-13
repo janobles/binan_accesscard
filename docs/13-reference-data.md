@@ -4,7 +4,10 @@ Five lookup tables sit behind the record forms and the distribution targeting.
 They change rarely, they are seeded from the dump, and getting them wrong ripples
 outward, because everything else references them.
 
-They live on one page, `reference-data`, in tabs.
+Four of them live on one page, `reference-data`, switched by `?tab=`: Sectors and
+Services and Programs for every staff role, plus Categories and Subsidy Types for
+Developer and Admin. `barangay` has no tab. It is seeded from the dump and read
+everywhere through `BarangayModel`, and there is no screen for editing it.
 
 ## The five
 

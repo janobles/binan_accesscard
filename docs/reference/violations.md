@@ -250,3 +250,28 @@ rendering needs inline styles), layout shells + `Auth/login.php` (standalone
 - [x] 🟡 Minor: `sector.shortcode` and `services.shortcode` had no UNIQUE key
   though `category.code` did, so two rows could share a code and shortcode lookup
   picked whichever came first. *(Fixed in V22.)*
+
+## Appended from docs/restructure-docs-and-agent-context (2026-08-14)
+
+Found while fact-checking the handbook against the code. Not fixed in that
+branch, which changed documentation only.
+
+- [ ] ⚪ Cleanup: `app/Models/Scanner/SubsidyDistributionModel.php:163` -
+  `batchCountsFor()` and `subsidyTypeCountsFor()` are defined but called from
+  nowhere in the repo (verified by grep). They were the filter counts for a
+  search-and-filter Audit Logs tab on the scanner "View all" page; that tab now
+  renders unfiltered and unpaginated. Dead code; remove or wire up.
+- [ ] ⚪ Cleanup: `install-cron-worker.ps1` at the repository root duplicates
+  `scripts/install-cron-worker.ps1`, and the two files differ. Only the copy
+  under `scripts/` is documented and only that one names the `BinanQueueWorker`
+  task. The root copy should go.
+- [ ] 🟡 Minor: `app/Models/Audit/AuditTrailsModel.php:65` invalidates
+  `DashboardModel::STATS_CACHE_KEY` on every logged mutation but not
+  `PROGRAM_STATS_CACHE_KEY`, so the Overview tab's four counts lag a mutation by
+  up to their 60 second TTL while the tiles beside them update immediately.
+  Decide whether that is intended and either delete both keys or say so in the
+  model docblock.
+- [ ] 🟡 Minor: `app/Views/Cards/pdf/batch_page.php:5` says "Nine cards to a
+  page, laid out three per row", but the grid is 3x4 and the page count comes
+  from `QrCardSettings::$cellsPerPage`, which is 12. The header contradicts both
+  the config docblock and `QrCardPdfGenerator::` padding to a full 3x4 grid.

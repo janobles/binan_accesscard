@@ -195,10 +195,11 @@ full per-kiosk table and its PDF export are Admin and Developer only.
 The live counter on the scan page updates from the `myBatchCount` field in the
 `scanner/log` response.
 
-**One caveat that looks like a bug and is not.** The `.env` developer account has
-no `users` row, so its user id is 0 and its handouts store `userID` as NULL. Those
-scans appear as "Unknown" in `perScanner` and leave the live counter at zero. That
-is pre-existing authentication design, not a stats fault. Test per-scanner
+**One caveat that looks like a bug and is not.** A session whose user id is 0,
+which is what an account with no `users` row leaves behind, stores `userID` as
+NULL on its handouts (`app/Models/Scanner/SubsidyDistributionModel.php`). Those
+scans appear as "Unknown" in `perScanner` and leave the live counter at zero.
+That is the foreign key being kept intact, not a stats fault. Test per-scanner
 features with real accounts from the `users` table; the dump ships a
 database-backed `developer` account that has one.
 
@@ -319,28 +320,25 @@ The scan IS the log - there is no confirm step and no claimant/date form:
   is wired to one big `activePage` switch, so a Scanner-reachable page can't
   render through it without forking that switch. Used by
   `scanner/history/{controlNo}` (`ScanController::history()`), the "View all"
-  page - the one Scanner page that needs a real search/filter/pagination table.
-  A plain GET renders it full-page (this shell); an AJAX GET
-  (`$this->request->isAJAX()`) renders just `Scanner/history-fragment.php` -
-  the scan panel injects that fragment inline instead of navigating here.
+  page. A plain GET renders it full-page through `Scanner/history.php` (this
+  shell); an AJAX GET (`$this->request->isAJAX()`) renders just
+  `Scanner/history-fragment.php` - the scan panel injects that fragment inline
+  instead of navigating here.
 - **"View all" page anatomy** (`Scanner/history-fragment.php`) - two Bootstrap
   tabs, both server-rendered on the one page load (switching tabs is
   client-side only, no reload):
-  - **History** tab: every past scan of this control number. Server search +
-    Batch/Subsidy Type filters (`components/toolbar`, `SubsidyDistributionModel::
-    batchCountsFor()`/`subsidyTypeCountsFor()`) + pagination
-    (`historyForPaged()`/`countHistoryFor()`), same anatomy as Manage Records.
-  - **Family Information** tab: the head + rest of the family, one row each.
-    Client-side only (families are small, no pagination) - search box paired
-    with its own button (same pattern as the scan input), one Filters
-    dropdown with five checkbox groups (Relationship, Sex, Date of Birth,
-    Sectors, Services and Programs - Sectors and Services/Programs are
-    filtered **separately**, via `MemberModel::referenceBadgesSplit()` rather
-    than the merged `referenceBadges()` the scan panel/logAid() response
-    uses), then Clear. Relationship/Sex/DOB options are data-derived (no
-    fixed reference list); Sectors/Services options are the full system-wide
-    set (every sector, every service category/shortcode) so the dropdown
-    always lists every possible value, not just what this family has.
+  - **Family Information** tab, active by default
+    (`Scanner/family-tab-body.php`): the head plus the rest of the family, one
+    row each, shown in full. No search, filters, per-page control, or
+    pagination; a family is small enough to render whole. Sectors and
+    services/programs are kept as two separate lists, via
+    `MemberModel::referenceBadgesSplit()` rather than the merged
+    `referenceBadges()` the scan panel and the `logAid()` response use.
+  - **Audit Logs** tab (`Scanner/history-tab-body.php`): every past scan of this
+    control number, from `SubsidyDistributionModel::historyAllFor()`. The
+    controller passes no keyword and no batch or subsidy-type filter, and the
+    tab is not paginated, because one control number's scans are a small
+    bounded set.
 - **Dashboard shell** - `app/Views/layout.php`: the SB-Admin frame every staff
   role shares. Owns subsidy types (the `reference-data` page's subsidy-types tab),
   batches and the distributions log (the `distribution` page), and its reports

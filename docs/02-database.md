@@ -113,7 +113,7 @@ erDiagram
         int memberID FK
         int subsidy_type_id FK
         int batch_id FK
-        int userID FK "null for a developer-account scan"
+        int userID FK "null when the scanning account has no users row"
         timestamp dt_voided
     }
     job_queue {

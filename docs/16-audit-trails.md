@@ -18,11 +18,13 @@ Two of the columns are nullable for reasons worth knowing.
 `memberID` is null when the change affected no particular person. A change to the
 sector list is a change to the system, not to someone's record.
 
-`userID` is null for the `.env` developer account, whose user id is 0 and which
-has no `users` row. Storing NULL keeps the foreign key intact and has the useful
-side effect that those rows stay hidden from non-developer viewers. The dump ships
-a database-backed `developer` account that does have a row, and that is the one to
-test with.
+`userID` is null when the actor has no `users` row, which `logAction()` writes as
+NULL for any user id of 0 (`app/Models/Audit/AuditTrailsModel.php:78`). That covers
+failed logins and system errors, and it covered the file-backed developer account
+this app used before the account moved into the database. Storing NULL keeps the
+foreign key intact and has the useful side effect that those rows stay hidden from
+non-developer viewers. The dump's `developer` account has a real row, so log in
+with that and your actions carry your user id.
 
 ## The rule
 

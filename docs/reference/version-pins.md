@@ -7,7 +7,7 @@ chapters and update this file.
 
 | Dependency | Version | Source of truth |
 |---|---|---|
-| CodeIgniter 4 | v4.7.3 | `composer.lock` (`codeigniter4/framework`) |
+| CodeIgniter 4 | v4.7.4 | `composer.lock` (`codeigniter4/framework`) |
 | PHP | 8.2.30 | local runtime; repo floor is PHP 8.2 |
 | Bootstrap, dashboard CSS | pre-5.3, compiled into SB Admin | `public/assets/sb-admin/css/styles.css` |
 | Bootstrap, login CSS | v5.3.3 | `public/assets/bootstrap/css/bootstrap.min.css` (header) |

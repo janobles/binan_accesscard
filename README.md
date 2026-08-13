@@ -1,108 +1,97 @@
 # Biñan Access Card
 
-A CodeIgniter 4 application for managing family/member access-card records,
-assistance services, and audit trails for the City of Biñan CSWD.
+A records and distribution system for the City Social Welfare and Development
+office of Biñan.
 
-## Backend layout
+Staff record a family once, the system issues that family a QR access card, and
+when the city runs a relief or subsidy distribution the card is scanned at the
+venue instead of a name being looked up on a printed list. Every change to a
+family record is written to an audit trail.
 
-The backend uses the default CodeIgniter 4 structure with controllers and models
-grouped into **feature subnamespaces** (Auth, Accounts, Families, Lookups, Audit,
-Workspace) for easier navigation and debugging. See
-[`PROJECT_STRUCTURE.md`](PROJECT_STRUCTURE.md) for the full map of where each
-feature lives and the shared libraries that cross-cut them.
+Built with CodeIgniter 4 and MySQL. Server-rendered, no build step, run on a
+laptop or a small server inside the office and sometimes carried to a
+distribution venue.
 
-The database source of truth is the SQL dump (no app migrations are used).
+## What it does
 
-## Verifying the backend 
+- **Records.** Families and their members, entered through a staged form or
+  imported from a filled spreadsheet, with barangay, sector, and service details.
+- **Excel import.** Bulk entry with a validation pass that names the exact cell of
+  every problem before anything is saved.
+- **Access cards.** A control number and QR code per family head, generated in
+  bulk by barangay and printed as PDFs.
+- **Distribution.** Batches targeted by barangay and sector, with a precomputed
+  eligibility roster, a schedule that opens and closes the batch on its own, and a
+  one-action scanner kiosk for the venue.
+- **Audit trails.** Who changed what, and when.
+- **Roles.** Developer, Admin, Encoder, Viewer, and a Scanner account for the
+  kiosk, with per-page access decided by a single manifest.
 
-- `php spark routes` — confirm every route resolves to a controller namespace.
-- `vendor/bin/phpunit` — run the backend test suite. The `Workspace Controller
-  Routing` test guards the feature-subnamespace layout. (The two
-  `ExampleDatabaseTest` cases require the `sqlite3` PHP extension and are skipped
-  when it is not installed.)
-- Smoke-test the key flows: login, role redirect, family create/update, and audit
-  log creation.
+## Requirements
 
----
+- PHP 8.2 or newer, with the `intl` and `mbstring` extensions
+- MySQL or MariaDB
+- Composer
 
-# CodeIgniter 4 Application Starter
+## Quick start
 
-## What is CodeIgniter?
+```bash
+composer install
+cp env .env                                    # then set app.baseURL and the DB block
+mysql -uroot -e "CREATE DATABASE accesscard"
+mysql -uroot accesscard < accesscardV22.sql
+PHP_CLI_SERVER_WORKERS=8 php spark serve --port 8090
+```
 
-CodeIgniter is a PHP full-stack web framework that is light, fast, flexible and secure.
-More information can be found at the [official site](https://codeigniter.com).
+Open `http://localhost:8090` and log in as `developer` / `developer123`.
 
-This repository holds a composer-installable app starter.
-It has been built from the
-[development repository](https://github.com/codeigniter4/CodeIgniter4).
+Two things commonly go wrong on a first run. `app.baseURL` in `.env` must match
+the URL you actually type, or the page loads while its CSS and JavaScript 404.
+And `php spark` needs an intl-enabled PHP, which XAMPP's bundled command-line
+binary often is not. Both are covered in
+[docs/03-setup.md](docs/03-setup.md).
 
-More information about the plans for version 4 can be found in [CodeIgniter 4](https://forum.codeigniter.com/forumdisplay.php?fid=28) on the forums.
+## There are no migrations
 
-You can read the [user guide](https://codeigniter.com/user_guide/)
-corresponding to the latest version of the framework.
+The database schema lives in the SQL dump at the repository root
+(`accesscardV22.sql`), and that file is the source of truth. Schema changes are
+written as patch files under `sql/patches/` and folded into a new dump.
 
-## Installation & updates
+This surprises people who know CodeIgniter, so it is worth stating up front: a
+column invented in code and missing from the dump fails at runtime, not at lint
+time. [docs/02-database.md](docs/02-database.md) explains the arrangement and
+carries the entity relationship diagram.
 
-`composer create-project codeigniter4/appstarter` then `composer update` whenever
-there is a new release of the framework.
+## Documentation
 
-When updating, check the release notes to see if there are any changes you might need to apply
-to your `app` folder. The affected files can be copied or merged from
-`vendor/codeigniter4/framework/app`.
+**[docs/README.md](docs/README.md)** is the index. It is written for developers:
+someone joining, someone receiving a turnover, or an IT team taking the system
+over.
 
-## Setup
+- New here: [00 Introduction](docs/00-introduction.md),
+  [01 Architecture](docs/01-architecture.md), [03 Setup](docs/03-setup.md), in
+  that order.
+- Taking over operations: [00 Introduction](docs/00-introduction.md),
+  [03 Setup](docs/03-setup.md), and
+  [06 Operations and handover](docs/06-operations-and-handover.md), which covers
+  deployment, backups, the background worker, account administration, and where
+  to look when something breaks.
 
-Copy `env` to `.env` and tailor for your app, specifically the baseURL
-and any database settings.
+`AGENTS.md` holds the rules for AI coding agents working in this repository.
+`CLAUDE.md` is a symlink to it.
 
-### Dev server
+## Checking a checkout is healthy
 
-Run the dev server with multiple PHP workers so the page and its assets load
-in parallel instead of queueing behind a single worker:
+```bash
+php spark routes      # every route resolves to a real controller method
+vendor/bin/phpunit    # the test suite
+composer lint         # docblock and comment-style gates
+```
 
-    PHP_CLI_SERVER_WORKERS=8 php spark serve --port 8090
+All three pass on a clean checkout. Some database and session tests skip without
+the `sqlite3` extension, which is expected.
+[docs/22-testing.md](docs/22-testing.md) covers the suite and the two-backend CI.
 
-With one worker (the default) every CSS/JS/image request is served one at a
-time, which alone adds seconds to each page load. The env-var prefix syntax is
-for Unix-like shells; on Windows set PHP_CLI_SERVER_WORKERS first (e.g.
-`set PHP_CLI_SERVER_WORKERS=8` in cmd) and then run the serve command.
+## License
 
-## Important Change with index.php
-
-`index.php` is no longer in the root of the project! It has been moved inside the *public* folder,
-for better security and separation of components.
-
-This means that you should configure your web server to "point" to your project's *public* folder, and
-not to the project root. A better practice would be to configure a virtual host to point there. A poor practice would be to point your web server to the project root and expect to enter *public/...*, as the rest of your logic and the
-framework are exposed.
-
-**Please** read the user guide for a better explanation of how CI4 works!
-
-## Repository Management
-
-We use GitHub issues, in our main repository, to track **BUGS** and to track approved **DEVELOPMENT** work packages.
-We use our [forum](http://forum.codeigniter.com) to provide SUPPORT and to discuss
-FEATURE REQUESTS.
-
-This repository is a "distribution" one, built by our release preparation script.
-Problems with it can be raised on our forum, or as issues in the main repository.
-
-## Server Requirements
-
-PHP version 8.2 or higher is required, with the following extensions installed:
-
-- [intl](http://php.net/manual/en/intl.requirements.php)
-- [mbstring](http://php.net/manual/en/mbstring.installation.php)
-
-> [!WARNING]
-> - The end of life date for PHP 7.4 was November 28, 2022.
-> - The end of life date for PHP 8.0 was November 26, 2023.
-> - The end of life date for PHP 8.1 was December 31, 2025.
-> - If you are still using below PHP 8.2, you should upgrade immediately.
-> - The end of life date for PHP 8.2 will be December 31, 2026.
-
-Additionally, make sure that the following extensions are enabled in your PHP:
-
-- json (enabled by default - don't turn it off)
-- [mysqlnd](http://php.net/manual/en/mysqlnd.install.php) if you plan to use MySQL
-- [libcurl](http://php.net/manual/en/curl.requirements.php) if you plan to use the HTTP\CURLRequest library
+MIT. See [LICENSE](LICENSE).

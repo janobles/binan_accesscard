@@ -5,6 +5,7 @@ namespace Tests\Unit;
 use App\Models\Scanner\SubsidyStatsModel;
 use CodeIgniter\Test\CIUnitTestCase;
 use Tests\Support\Database\DumpSchema;
+use Tests\Support\Database\ReferentialFixture;
 
 /**
  * Served-per-batch, which the Overview and Distribution tabs both read.
@@ -51,6 +52,18 @@ final class SubsidyStatsBatchOutcomesTest extends CIUnitTestCase
     public function testServedPerBatchMatchesCoverageSemantics(): void
     {
         $db = db_connect();
+
+        // Head 99's claim is the off-roster one, so it needs a card too.
+        ReferentialFixture::claimParents($db, [1, 2, 3, 4, 99]);
+
+        foreach ([1, 2] as $batchId) {
+            $db->table('distribution_batch')->insert([
+                'batch_id'        => $batchId,
+                'name'            => 'Batch ' . $batchId,
+                'subsidy_type_id' => 1,
+                'eligible_count'  => $batchId === 1 ? 3 : 1,
+            ]);
+        }
 
         foreach ([[1, 1], [1, 2], [1, 3], [2, 4]] as [$batch, $head]) {
             $db->table('batch_eligibility')->insert(['batch_id' => $batch, 'headID' => $head]);

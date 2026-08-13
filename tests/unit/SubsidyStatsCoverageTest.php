@@ -5,6 +5,7 @@ namespace Tests\Unit;
 use App\Models\Scanner\SubsidyStatsModel;
 use CodeIgniter\Test\CIUnitTestCase;
 use Tests\Support\Database\DumpSchema;
+use Tests\Support\Database\ReferentialFixture;
 
 /**
  * Coverage: eligible, served, remaining and the percentage they produce.
@@ -47,6 +48,9 @@ final class SubsidyStatsCoverageTest extends CIUnitTestCase
     {
         $db = db_connect();
 
+        // Control numbers here are the memberID itself, not the +100 the other
+        // subsidy fixtures use, so the cards are numbered to match.
+        ReferentialFixture::claimParents($db, [1, 2, 3], 0);
         $db->table('distribution_batch')->insert([
             'batch_id' => 1, 'name' => 'Rice Q1', 'subsidy_type_id' => 1, 'eligible_count' => 2,
         ]);

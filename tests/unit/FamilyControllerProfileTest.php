@@ -47,6 +47,10 @@ final class FamilyControllerProfileTest extends CIUnitTestCase
             'description' => 'x', 'dt_deleted' => date('Y-m-d H:i:s'),
         ]);
 
+        // The head's barangay is a real foreign key since V22, so the barangay
+        // has to exist before the member pointing at it does.
+        $db->table('barangay')->insert(['barangayID' => 3, 'name' => 'CANLALAY']);
+
         $db->table('member')->insert([
             'memberID'  => 7,
             'lastname'  => 'DELA CRUZ',

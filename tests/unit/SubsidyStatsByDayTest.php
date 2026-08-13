@@ -5,6 +5,7 @@ namespace Tests\Unit;
 use App\Models\Scanner\SubsidyStatsModel;
 use CodeIgniter\Test\CIUnitTestCase;
 use Tests\Support\Database\DumpSchema;
+use Tests\Support\Database\ReferentialFixture;
 
 /**
  * The per-day bars behind the Distribution tab.
@@ -52,6 +53,8 @@ final class SubsidyStatsByDayTest extends CIUnitTestCase
     {
         $db = db_connect();
 
+        // Head 99's claim is the off-roster one, so it needs a card too.
+        ReferentialFixture::claimParents($db, [...range(1, 7), 99]);
         $db->table('distribution_batch')->insert([
             'batch_id' => 1, 'name' => 'Rice Q1', 'subsidy_type_id' => 1, 'eligible_count' => 7,
         ]);
@@ -94,6 +97,10 @@ final class SubsidyStatsByDayTest extends CIUnitTestCase
     {
         $db = db_connect();
 
+        ReferentialFixture::claimParents($db, [1]);
+        $db->table('distribution_batch')->insert([
+            'batch_id' => 1, 'name' => 'Rice Q1', 'subsidy_type_id' => 1, 'eligible_count' => 1,
+        ]);
         $db->table('batch_eligibility')->insert(['batch_id' => 1, 'headID' => 1]);
         $db->table('subsidy_distribution')->insert($this->claim(1, '2026-03-01'));
 

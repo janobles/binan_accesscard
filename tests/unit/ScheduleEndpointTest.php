@@ -5,6 +5,7 @@ namespace Tests\Unit;
 use CodeIgniter\Test\CIUnitTestCase;
 use CodeIgniter\Test\FeatureTestTrait;
 use Tests\Support\Database\DumpSchema;
+use Tests\Support\Database\ReferentialFixture;
 
 /**
  * The schedule endpoints through the router: the feed's shape, the overlap
@@ -28,6 +29,9 @@ final class ScheduleEndpointTest extends CIUnitTestCase
             ['userID' => 3, 'username' => 'looker', 'account_level' => 'viewer', 'isactive' => 'Enable', 'password' => 'x'],
         ]);
         $db->table('subsidy')->insert(['subsidy_type_id' => 1, 'name' => 'Rice']);
+        // Member 5 holds card 5, the scan row one case inserts.
+        ReferentialFixture::heads($db, [5]);
+        ReferentialFixture::cards($db, [5], 0);
     }
 
     protected function tearDown(): void

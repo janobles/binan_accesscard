@@ -110,7 +110,7 @@ $distributionTab = in_array($distributionTab, ['schedule', 'batches', 'log'], tr
         'icon' => 'clipboard-check-fill',
         'title' => 'All Distributions',
         'cardClass' => 'sector-management',
-        'attrs' => 'aria-label="All distributions"',
+        'attrs' => 'aria-label="All distributions" data-distribution-management-root',
         'bodyView' => 'Admin/distribution-distributions-body',
         'bodyData' => [
             'distributions' => $distributions ?? [],

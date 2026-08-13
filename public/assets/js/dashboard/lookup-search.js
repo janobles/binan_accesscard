@@ -5,11 +5,14 @@
 // (Filters dropdown panel, wired by records-filter-panel.js) are server-driven
 // (whole-table search + pagination).
 //
-// Connected to: Lookups/sectors.php + services.php + categories.php
+// Connected to: Lookups/sectors.php + services.php + categories.php,
+// Admin/audit-trails.php, Pages/distribution.php (log tab)
 //   - [data-lookup-search]         the local-filter <form>
 //   - [data-lookup-search-input]   the local-filter <input>
 //   - [data-lookup-search-all]     optional button that clears the keyword filter
-//   - the nearest [data-sector-management-root] / [data-service-management-root] / [data-category-management-root]
+//   - the nearest [data-sector-management-root] / [data-service-management-root] /
+//     [data-category-management-root] / [data-audit-management-root] /
+//     [data-distribution-management-root]
 // Exposes window.initLookupSearch(root) so AJAX-loaded fragments can re-bind.
 (function (window, document) {
     function normalize(value) {
@@ -17,7 +20,7 @@
     }
 
     function managementRoot(el) {
-        return el.closest('[data-sector-management-root], [data-service-management-root], [data-category-management-root], [data-audit-management-root]') || document;
+        return el.closest('[data-sector-management-root], [data-service-management-root], [data-category-management-root], [data-audit-management-root], [data-distribution-management-root]') || document;
     }
 
     function dataRows(form) {

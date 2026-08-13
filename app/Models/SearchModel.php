@@ -135,7 +135,7 @@ class SearchModel
         $builder = $this->allMembersBuilder($keyword, $filters)
             ->select('m.headID')
             ->groupBy('m.headID');
-        $this->applyAllMembersOrder($builder, $orderKey, $orderDirection);
+        $this->applyAllMembersOrder($builder, $orderKey, $orderDirection, true);
 
         $rows = $builder->limit($limit, $offset)->get()->getResultArray();
 
@@ -160,10 +160,49 @@ class SearchModel
      * sorts by the family head's control number (no-control members last); the
      * `newest` key restores last-added-first order; null/unrecognized keys preserve the
      * original (lastname, firstname ASC) behavior for non-DataTables callers.
+     *
+     * $grouped is true only for the head-scoped caller (allMembersHeadIds()),
+     * which groups by m.headID. An order column that is neither grouped nor
+     * aggregated is rejected under ONLY_FULL_GROUP_BY, so that caller's columns
+     * are wrapped in MIN(): one row's value per household, deterministic, and
+     * what the ungrouped form was already doing by accident. allMembers() has
+     * no grouping and must keep its plain columns - an aggregate in ORDER BY on
+     * an ungrouped query would collapse every row to one.
      */
-    private function applyAllMembersOrder(BaseBuilder $builder, ?string $orderKey, string $orderDirection): void
+    private function applyAllMembersOrder(BaseBuilder $builder, ?string $orderKey, string $orderDirection, bool $grouped = false): void
     {
         $direction = strtolower(trim($orderDirection)) === 'desc' ? 'DESC' : 'ASC';
+
+        if ($grouped) {
+            // The head-scoped caller groups by m.headID, so an order column that is
+            // neither grouped nor aggregated is rejected under ONLY_FULL_GROUP_BY.
+            // MIN() picks one row's value per household deterministically, which is
+            // what the ungrouped form was already doing by accident.
+            switch ($orderKey) {
+                case 'qr':
+                    $builder->join('qr_control qc_sort', 'qc_sort.headID = m.headID', 'left')
+                        ->orderBy('MIN(qc_sort.control_no) IS NULL', 'ASC', false)
+                        ->orderBy('MIN(qc_sort.control_no)', $direction, false)
+                        // Family members share the head's control number; memberID
+                        // breaks the tie so pagination stays stable.
+                        ->orderBy('MIN(m.memberID)', $direction, false);
+                    return;
+                case 'newest':
+                    $builder->orderBy('MIN(m.memberID)', 'DESC', false);
+                    return;
+                case 'address':
+                    $builder->orderBy('MIN(m.address)', $direction, false);
+                    return;
+                case 'birthday':
+                    $builder->orderBy('MIN(m.birthday)', $direction, false);
+                    return;
+                case 'name':
+                default:
+                    $builder->orderBy('MIN(m.lastname)', $direction === 'DESC' ? 'DESC' : 'ASC', false)
+                        ->orderBy('MIN(m.firstname)', $direction === 'DESC' ? 'DESC' : 'ASC', false);
+            }
+            return;
+        }
 
         switch ($orderKey) {
             case 'qr':

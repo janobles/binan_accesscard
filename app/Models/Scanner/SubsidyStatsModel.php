@@ -457,6 +457,10 @@ class SubsidyStatsModel extends Model
                 ->where('subsidy_distribution.batch_id', $batchId)
                 ->where('subsidy_distribution.dt_voided', null)
                 ->groupBy('subsidy_distribution.userID')
+                // username is selected, so it has to be grouped too or
+                // ONLY_FULL_GROUP_BY rejects the query. One username per userID,
+                // so this changes no row count.
+                ->groupBy('users.username')
                 ->orderBy('families', 'DESC')
                 ->orderBy('scanner', 'ASC');
             if ($onlyUserId !== null) {

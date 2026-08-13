@@ -134,6 +134,10 @@ $fieldOptionsJson = json_encode($fieldOptions, JSON_HEX_TAG | JSON_HEX_AMP | JSO
         </button>
     </div>
 
-    <script id="importReviewSummary" type="application/json"><?= $summaryJson ?></script>
-    <script id="importReviewFieldOptions" type="application/json"><?= $fieldOptionsJson ?></script>
+    <?php /* Payloads ride in <template> rather than <script type="application/json">:
+             a script body is parsed by script-tag rules and ends at the first </script>
+             in any casing, which a value inside the JSON (a name, an address) can
+             produce. <template> has no such rule. */ ?>
+    <template id="importReviewSummary"><?= $summaryJson ?></template>
+    <template id="importReviewFieldOptions"><?= $fieldOptionsJson ?></template>
 </div>

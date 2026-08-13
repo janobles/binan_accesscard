@@ -76,16 +76,25 @@ class SubsidyDistributionModel extends Model
         }
 
         try {
+            // The CONCAT() call below and the raw dt_voided condition both name a
+            // table by hand in a form the builder can't run through
+            // protectIdentifiers() (a parenthesised function call, and a
+            // condition with escaping disabled), so neither ever picks up
+            // DBPrefix on its own - writing the prefixed name is what keeps a
+            // prefixed connection working.
+            $member = $this->db->prefixTable('member');
+            $sd     = $this->db->prefixTable('subsidy_distribution');
+
             return $this->select('subsidy_distribution.distribution_id, subsidy_distribution.claim_date,'
                     . ' subsidy_distribution.dt_created, subsidy_distribution.subsidy_type_id,'
                     . " subsidy.name AS subsidy_type,"
                     . " distribution_batch.name AS batch_name,"
-                    . " TRIM(CONCAT(member.firstname, ' ', member.lastname)) AS claimant")
+                    . " TRIM(CONCAT({$member}.firstname, ' ', {$member}.lastname)) AS claimant")
                 ->join('subsidy', 'subsidy.subsidy_type_id = subsidy_distribution.subsidy_type_id', 'left')
                 ->join('member', 'member.memberID = subsidy_distribution.memberID', 'left')
                 ->join('distribution_batch', 'distribution_batch.batch_id = subsidy_distribution.batch_id', 'left')
                 ->where('subsidy_distribution.control_no', $controlNo)
-                ->where('subsidy_distribution.dt_voided IS NULL', null, false)
+                ->where($sd . '.dt_voided IS NULL', null, false)
                 ->orderBy('subsidy_distribution.claim_date', 'DESC')
                 ->orderBy('subsidy_distribution.distribution_id', 'DESC')
                 ->limit(10)
@@ -110,11 +119,14 @@ class SubsidyDistributionModel extends Model
         }
 
         try {
+            // Same CONCAT()-hides-the-table shape as historyFor() above.
+            $member = $this->db->prefixTable('member');
+
             $builder = $this->select('subsidy_distribution.distribution_id, subsidy_distribution.claim_date,'
                     . ' subsidy_distribution.dt_created, subsidy_distribution.subsidy_type_id, subsidy_distribution.batch_id,'
                     . " subsidy.name AS subsidy_type,"
                     . " distribution_batch.name AS batch_name,"
-                    . " TRIM(CONCAT(member.firstname, ' ', member.lastname)) AS claimant")
+                    . " TRIM(CONCAT({$member}.firstname, ' ', {$member}.lastname)) AS claimant")
                 ->join('subsidy', 'subsidy.subsidy_type_id = subsidy_distribution.subsidy_type_id', 'left')
                 ->join('member', 'member.memberID = subsidy_distribution.memberID', 'left')
                 ->join('distribution_batch', 'distribution_batch.batch_id = subsidy_distribution.batch_id', 'left')
@@ -155,10 +167,15 @@ class SubsidyDistributionModel extends Model
         }
 
         try {
+            // The raw dt_voided condition below disables escaping to keep the
+            // literal "IS NULL", which also means the builder never prefixes
+            // the table name it's written against by hand.
+            $sd = $this->db->prefixTable('subsidy_distribution');
+
             $rows = $this->select('subsidy_distribution.batch_id, distribution_batch.name, COUNT(*) AS n')
                 ->join('distribution_batch', 'distribution_batch.batch_id = subsidy_distribution.batch_id', 'left')
                 ->where('subsidy_distribution.control_no', $controlNo)
-                ->where('subsidy_distribution.dt_voided IS NULL', null, false)
+                ->where($sd . '.dt_voided IS NULL', null, false)
                 ->groupBy('subsidy_distribution.batch_id, distribution_batch.name')
                 ->orderBy('distribution_batch.name', 'ASC')
                 ->findAll();
@@ -186,10 +203,13 @@ class SubsidyDistributionModel extends Model
         }
 
         try {
+            // Same shape as batchCountsFor() above.
+            $sd = $this->db->prefixTable('subsidy_distribution');
+
             $rows = $this->select('subsidy_distribution.subsidy_type_id, subsidy.name, COUNT(*) AS n')
                 ->join('subsidy', 'subsidy.subsidy_type_id = subsidy_distribution.subsidy_type_id', 'left')
                 ->where('subsidy_distribution.control_no', $controlNo)
-                ->where('subsidy_distribution.dt_voided IS NULL', null, false)
+                ->where($sd . '.dt_voided IS NULL', null, false)
                 ->groupBy('subsidy_distribution.subsidy_type_id, subsidy.name')
                 ->orderBy('subsidy.name', 'ASC')
                 ->findAll();
@@ -205,28 +225,92 @@ class SubsidyDistributionModel extends Model
     }
 
     /**
-     * Every distribution, newest first, with subsidy type name, claimant name,
-     * family-head name, and the scanning user's username resolved via joins.
-     * Drives the all-distributions table.
+     * Shared join set behind distributionsPage() and countDistributions(), so
+     * the page and its total can never disagree about which claims exist.
+     * $keyword, when given, narrows to the
+     * claimant name, the family-head name, the subsidy type or the control
+     * number, which is what the log's search box offers.
+     *
+     * "member head" aliases the second join to member as "head" - an alias,
+     * not a real table, so it is never prefixed; prefixing it would break the
+     * query on both backends.
      */
-    public function allDistributions(): array
+    private function distributionsBuilder(string $keyword = ''): \CodeIgniter\Database\BaseBuilder
+    {
+        $builder = $this->builder()
+            ->join('subsidy', 'subsidy.subsidy_type_id = subsidy_distribution.subsidy_type_id', 'left')
+            ->join('member', 'member.memberID = subsidy_distribution.memberID', 'left')
+            ->join('qr_control', 'qr_control.control_no = subsidy_distribution.control_no', 'left')
+            ->join('member head', 'head.memberID = qr_control.headID', 'left')
+            ->join('users', 'users.userID = subsidy_distribution.userID', 'left');
+
+        $keyword = trim($keyword);
+
+        if ($keyword !== '') {
+            // like()/orLike() add the ESCAPE clause but do not escape % or _
+            // inside the match string, so a literal one typed by staff is
+            // escaped here before the wildcards get wrapped around it.
+            $escapeChar = $this->db->likeEscapeChar;
+            $escaped    = str_replace(
+                [$escapeChar, '%', '_'],
+                [$escapeChar . $escapeChar, $escapeChar . '%', $escapeChar . '_'],
+                $keyword
+            );
+
+            $builder->groupStart()
+                ->like('member.firstname', $escaped)
+                ->orLike('member.lastname', $escaped)
+                ->orLike('head.firstname', $escaped)
+                ->orLike('head.lastname', $escaped)
+                ->orLike('subsidy.name', $escaped)
+                ->orLike('subsidy_distribution.control_no', $escaped)
+                ->groupEnd();
+        }
+
+        return $builder;
+    }
+
+    /**
+     * One page of the distribution log, newest first, matching $keyword. The
+     * log used to render every claim ever logged and filter it in the
+     * browser, which does not survive the 100k-family target.
+     *
+     * CONCAT()/COALESCE() hide their arguments from protectIdentifiers() (a
+     * parenthesised function call is the one shape the builder can't run
+     * through it), so member and users are prefixed by hand below. head is
+     * the join alias above, not a real table, and stays bare.
+     *
+     * @return list<array<string, string|null>>
+     */
+    public function distributionsPage(string $keyword = '', int $limit = 25, int $offset = 0): array
     {
         try {
-            return $this->select('subsidy_distribution.distribution_id, subsidy_distribution.control_no, subsidy_distribution.claim_date,'
-                    . " subsidy.name AS subsidy_type,"
-                    . " TRIM(CONCAT(member.firstname, ' ', member.lastname)) AS claimant,"
+            $member = $this->db->prefixTable('member');
+            $users  = $this->db->prefixTable('users');
+
+            return $this->distributionsBuilder($keyword)
+                ->select('subsidy_distribution.distribution_id, subsidy_distribution.control_no, subsidy_distribution.claim_date,'
+                    . ' subsidy.name AS subsidy_type,'
+                    . " TRIM(CONCAT({$member}.firstname, ' ', {$member}.lastname)) AS claimant,"
                     . " TRIM(CONCAT(head.firstname, ' ', head.lastname)) AS head,"
-                    . " COALESCE(users.username, '') AS scanned_by")
-                ->join('subsidy', 'subsidy.subsidy_type_id = subsidy_distribution.subsidy_type_id', 'left')
-                ->join('member', 'member.memberID = subsidy_distribution.memberID', 'left')
-                ->join('qr_control', 'qr_control.control_no = subsidy_distribution.control_no', 'left')
-                ->join('member head', 'head.memberID = qr_control.headID', 'left')
-                ->join('users', 'users.userID = subsidy_distribution.userID', 'left')
+                    . " COALESCE({$users}.username, '') AS scanned_by")
                 ->orderBy('subsidy_distribution.claim_date', 'DESC')
                 ->orderBy('subsidy_distribution.distribution_id', 'DESC')
-                ->findAll();
+                ->limit(max(1, $limit), max(0, $offset))
+                ->get()
+                ->getResultArray();
         } catch (\Throwable $e) {
             return [];
+        }
+    }
+
+    /** Total claims matching $keyword, for the log's pagination. */
+    public function countDistributions(string $keyword = ''): int
+    {
+        try {
+            return $this->distributionsBuilder($keyword)->countAllResults();
+        } catch (\Throwable $e) {
+            return 0;
         }
     }
 
@@ -242,13 +326,18 @@ class SubsidyDistributionModel extends Model
         }
 
         try {
+            // Same COALESCE()/raw-condition shape as historyFor() and
+            // batchCountsFor() above.
+            $sd    = $this->db->prefixTable('subsidy_distribution');
+            $users = $this->db->prefixTable('users');
+
             $row = $this->select('subsidy_distribution.distribution_id, subsidy_distribution.claim_date,'
                     . ' subsidy_distribution.dt_created,'
-                    . " COALESCE(users.username, '') AS scanned_by")
+                    . " COALESCE({$users}.username, '') AS scanned_by")
                 ->join('users', 'users.userID = subsidy_distribution.userID', 'left')
                 ->where('subsidy_distribution.control_no', $controlNo)
                 ->where('subsidy_distribution.batch_id', $batchId)
-                ->where('subsidy_distribution.dt_voided IS NULL', null, false)
+                ->where($sd . '.dt_voided IS NULL', null, false)
                 ->first();
 
             return is_array($row) ? $row : null;

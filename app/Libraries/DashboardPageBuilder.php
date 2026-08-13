@@ -199,6 +199,9 @@ class DashboardPageBuilder
         $isBatches       = $activePage === 'distribution' && $distributionTab === 'batches';
         $isDistributions = $activePage === 'distribution' && $distributionTab === 'log';
         $batchModel      = model(DistributionBatchModel::class);
+        $distributionListData = $isDistributions
+            ? $this->buildDistributionListData()
+            : [];
 
         // Dashboard batch zone's own table: Barangay / Stations / Remaining,
         // switched by ?tab= like the other tabbed pages. Not shared with
@@ -308,7 +311,8 @@ class DashboardPageBuilder
             'venueSuggestions'   => $isSchedule ? $this->venueSuggestions($batchModel) : [],
             'subsidyTypes'       => $subsidyTypeListData['rows'] ?? [],
             'subsidyTypeListData' => $subsidyTypeListData,
-            'distributions'      => $isDistributions ? model(SubsidyDistributionModel::class)->allDistributions() : [],
+            'distributionListData' => $distributionListData,
+            'distributions'      => $distributionListData['rows'] ?? [],
             'batchRow'           => $reportsData['batchRow'],
             'batchOpen'          => $reportsData['batchOpen'],
             'batchSnapshot'      => $reportsData['batchSnapshot'],
@@ -540,6 +544,40 @@ class DashboardPageBuilder
             'fromRecord'    => $total === 0 ? 0 : $offset + 1,
             'toRecord'      => min($total, $page * $perPage),
             'listRoute'     => $listRoute,
+        ];
+    }
+
+    /**
+     * Builds the Distribution Log's paginated bundle. Mirrors
+     * buildAuditListData(): reads q/page/per_page off the query, asks the model
+     * for one page and the matching total, and returns the rows plus the
+     * pagination metadata the view turns into links. Frontend: the Distribution
+     * page's log tab.
+     */
+    private function buildDistributionListData(): array
+    {
+        $keyword = trim((string) $this->request->getGet('q'));
+        $page    = max(1, (int) $this->request->getGet('page'));
+        $perPageOptions = [10, 25, 50, 100];
+        $perPage = (int) $this->request->getGet('per_page');
+        $perPage = in_array($perPage, $perPageOptions, true) ? $perPage : 25;
+
+        $model      = model(SubsidyDistributionModel::class);
+        $total      = $model->countDistributions($keyword);
+        $totalPages = max(1, (int) ceil($total / $perPage));
+        $page       = min($page, $totalPages);
+        $offset     = ($page - 1) * $perPage;
+
+        return [
+            'rows'          => $model->distributionsPage($keyword, $perPage, $offset),
+            'keyword'       => $keyword,
+            'page'          => $page,
+            'perPage'       => $perPage,
+            'perPageOptions'=> $perPageOptions,
+            'totalPages'    => $totalPages,
+            'totalRows'     => $total,
+            'fromRecord'    => $total === 0 ? 0 : $offset + 1,
+            'toRecord'      => min($total, $page * $perPage),
         ];
     }
 

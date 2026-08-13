@@ -71,9 +71,9 @@ The scan IS the log - there is no confirm step and no claimant/date form:
   `ScanController::resolveFamily()` (head with suffix/barangay/badges,
   members excluding the head, also with badges), then inserts a distribution
   for the **family head** dated **today**, with the open batch's
-  `aid_type_id` and `batch_id`. Insert + audit row share one transaction.
+  `subsidy_type_id` and `batch_id`. Insert + audit row share one transaction.
 - **One handout per family per batch**, regardless of date. The server checks
-  `AidDistributionModel::inBatch(control_no, batch_id)` before inserting; a
+  `SubsidyDistributionModel::inBatch(control_no, batch_id)` before inserting; a
   repeat scan returns `logged: false` with the original entry and writes
   nothing. The kiosk shows a red "Duplicate Entry" banner (`alert-danger`); a
   fresh log shows a green "Logged" banner (`alert-success`). Scanning the
@@ -154,10 +154,10 @@ per-kiosk table (Admin/Developer only), including the PDF export.
 
 The live counter on the scan page updates from the `myBatchCount` field in
 the `scanner/log` JSON response
-(`AidDistributionModel::familiesForUserInBatch()`).
+(`SubsidyDistributionModel::familiesForUserInBatch()`).
 
 **Caveat:** the `.env` developer account has no `users` row (`user_id` 0),
 so its handouts store `userID NULL` and appear as "Unknown" in perScanner /
 keep the live counter at 0. Pre-existing auth design, not a stats bug; test
-per-scanner features with real `users`-table accounts. (The V18 dump ships a
+per-scanner features with real `users`-table accounts. (The dump ships a
 DB-backed `developer` account, which does have a `users` row.)

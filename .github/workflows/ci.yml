@@ -52,6 +52,12 @@ jobs:
       - name: Check the route table builds
         run: php spark routes
 
+      # spark routes builds and lists the table; it never checks that a route's
+      # handler method exists, so a route pointed at a missing method lists fine
+      # and 500s on the first request. This reflects over each handler.
+      - name: Check every route handler exists
+        run: php scripts/check-route-handlers.php
+
       - name: Set up Node
         uses: actions/setup-node@v4
         with:

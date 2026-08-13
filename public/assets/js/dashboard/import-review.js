@@ -62,11 +62,14 @@
     // in the Excel template, so an inline field edit offers the same choices as the sheet.
     var fieldOptions = parseJson('importReviewFieldOptions', {});
 
+    // The payload lives in a <template>, not a <script>: a <template>'s children land
+    // in its .content fragment rather than as its own child nodes, so the JSON has to
+    // be read off node.content.textContent, not node.textContent (which is empty).
     function parseJson(id, fallback) {
         var node = document.getElementById(id);
 
         try {
-            var parsed = JSON.parse(node ? node.textContent : 'null');
+            var parsed = JSON.parse(node ? node.content.textContent : 'null');
 
             return (parsed && typeof parsed === 'object') ? parsed : fallback;
         } catch (e) {

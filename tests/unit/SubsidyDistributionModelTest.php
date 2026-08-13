@@ -24,9 +24,9 @@ final class SubsidyDistributionModelTest extends CIUnitTestCase
         }
     }
 
-    public function testAllDistributionsReturnsArray(): void
+    public function testDistributionsPageReturnsArray(): void
     {
-        $this->assertIsArray((new \App\Models\Scanner\SubsidyDistributionModel())->allDistributions());
+        $this->assertIsArray((new \App\Models\Scanner\SubsidyDistributionModel())->distributionsPage());
     }
 
     public function testVoidMethodExists(): void

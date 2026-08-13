@@ -113,13 +113,14 @@ rendering needs inline styles), layout shells + `Auth/login.php` (standalone
 
 ## Deferred from chore/doc-standard (2026-07-28)
 
-- [ ] ⚪ Cleanup: `public/assets/js/` (23 files) - has the same comment problems
-  the PHP had: divider banners, notes recording a requested change. Skipped
-  because comment markers occur inside strings and regex literals, so there is
-  no mechanical way to prove an edit changed nothing, and because a view's
-  inline `<script>` is compared verbatim by the token gate. Needs its own branch
-  with its own gate. `scripts/list-comments.php` now solves half of it: it has a
-  quote-aware CSS reader that a JS extractor could be modelled on.
+- [x] ⚪ Cleanup: `public/assets/js/` (23 files) - has the same comment problems
+  the PHP had: divider banners, notes recording a requested change.
+  *(Won't fix - chore/issue-sweep. Roughly ninety percent of the work is
+  building a JavaScript comment extractor that can prove an edit changed
+  nothing, since comment markers occur inside strings and regex literals, and
+  ten percent is editing comments. The gate costs more than tidier comments are
+  worth. `scripts/list-comments.php` and its quote-aware CSS reader stay
+  available if the trade ever changes.)*
 - [x] 🔵 UX/needs-decision: two brand greens are in use, `--binan-green: #145c3b`
   (`public/css/theme.css:8`) and `--login-green: #176b4d`
   (`public/css/login.css:8`). A design decision, not a cleanup one.
@@ -179,12 +180,14 @@ rendering needs inline styles), layout shells + `Auth/login.php` (standalone
   fail a check that cannot be satisfied without failing the token gate.
   *(Fixed: a view's inline script is `T_INLINE_HTML`, so it never reaches either
   scan now that both read comment text only - chore/backlog-cleanup.)*
-- [ ] ⚪ Cleanup: `docs/knowledge/binan-conventions/scanner-batches.md` (Rules 3
+- [x] ⚪ Cleanup: `docs/knowledge/binan-conventions/scanner-batches.md` (Rules 3
   and 5) - still names `aid_type_id` and `AidDistributionModel`, both renamed
   to `subsidy_type_id`/`SubsidyDistributionModel` by the V19 subsidy rename.
   Spotted while updating the doc for the schedule calendar (feat/
   distribution-schedule-calendar); out of scope there, left for a pass over
   the whole file.
+  *(Fixed: every schema object and class name in the file now matches V22 -
+  chore/issue-sweep.)*
 - [x] 🟠 Major: `app/Views/components/data_table.php` - passes table rows as
   `list<list<raw HTML>>`, so the caller concatenates markup and owns the
   escaping (the docblock says as much: "Cell values are RAW HTML"). Every other

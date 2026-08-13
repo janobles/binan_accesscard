@@ -54,49 +54,68 @@ $distributionTab = in_array($distributionTab, ['schedule', 'batches', 'log'], tr
         <?= view('Admin/batch-close-modal') ?>
     <?php endif; ?>
 <?php else: ?>
+    <?php
+    // Server-paged bundle from DashboardPageBuilder::buildDistributionListData().
+    $distributionListData = $distributionListData ?? [];
+    $distKeyword    = (string) ($distributionListData['keyword'] ?? '');
+    $distPerPage    = (int) ($distributionListData['perPage'] ?? 25);
+    $distPerPageOptions = ($distributionListData['perPageOptions'] ?? []) ?: [10, 25, 50, 100];
+    $distPage       = (int) ($distributionListData['page'] ?? 1);
+    $distTotalPages = (int) ($distributionListData['totalPages'] ?? 1);
+    $distTotalRows  = (int) ($distributionListData['totalRows'] ?? 0);
+    $distFrom       = (int) ($distributionListData['fromRecord'] ?? 0);
+    $distTo         = (int) ($distributionListData['toRecord'] ?? 0);
+
+    // Page URL preserving the keyword and the page size. tab=log is part of the
+    // route rather than a param, so it rides in the base URL.
+    $distPageUrl = static function (int $targetPage) use ($distKeyword, $distPerPage): string {
+        $params = array_filter([
+            'tab'      => 'log',
+            'q'        => $distKeyword,
+            'per_page' => $distPerPage !== 25 ? (string) $distPerPage : '',
+            'page'     => $targetPage > 1 ? (string) $targetPage : '',
+        ], static fn ($value): bool => $value !== '');
+
+        return site_url('distribution') . '?' . http_build_query($params);
+    };
+
+    $distClearUrl = static function () use ($distPerPage): string {
+        $params = ['tab' => 'log'] + ($distPerPage !== 25 ? ['per_page' => (string) $distPerPage] : []);
+
+        return site_url('distribution') . '?' . http_build_query($params);
+    };
+    ?>
     <?= view('components/toolbar', [
-        'isClient' => true,
-        'formAria' => 'Search distributions',
-        'searchPlaceholder' => 'Search the distributions log',
-        'searchAttrs' => 'id="distSearch"',
-        'clearAttrs' => 'id="distClear"',
+        'formAction' => site_url('distribution'),
+        'formAria' => 'Search all distributions',
+        'searchPlaceholder' => 'Search all distributions...',
+        'keyword' => $distKeyword,
+        'clearUrl' => $distClearUrl(),
+        'hiddenHtml' => '<input type="hidden" name="tab" value="log">'
+            . ($distPerPage !== 25 ? '<input type="hidden" name="per_page" value="' . esc((string) $distPerPage, 'attr') . '">' : ''),
     ]) ?>
+    <?php
+    $distFooter = $distTotalRows > 0 ? view('components/table_footer', [
+        'fromRecord' => $distFrom,
+        'toRecord' => $distTo,
+        'totalRows' => $distTotalRows,
+        'page' => $distPage,
+        'totalPages' => $distTotalPages,
+        'pageUrl' => $distPageUrl,
+    ]) : null;
+    ?>
     <?= view('components/card', [
         'icon' => 'clipboard-check-fill',
         'title' => 'All Distributions',
         'cardClass' => 'sector-management',
-        'attrs' => 'data-table-paginate data-paginate-key="distributions" data-paginate-label="distributions"',
+        'attrs' => 'aria-label="All distributions" data-distribution-management-root',
         'bodyView' => 'Admin/distribution-distributions-body',
-        'bodyData' => ['distributions' => $distributions ?? []],
-        'footer' => view('components/table_footer', ['clientKey' => 'distributions', 'entityLabel' => 'distributions']),
+        'bodyData' => [
+            'distributions' => $distributions ?? [],
+            'keyword' => $distKeyword,
+            'perPage' => $distPerPage,
+            'perPageOptions' => $distPerPageOptions,
+        ],
+        'footer' => $distFooter,
     ]) ?>
-
-    <?php /* The toolbar keyword narrows the rows; paging and the page
-             search are table-paginate.js (data-paginate-* above). */ ?>
-    <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const table  = document.getElementById('distTable');
-      const search = document.getElementById('distSearch');
-      const clear  = document.getElementById('distClear');
-      const local  = document.getElementById('distLocalSearch');
-      if (!table) return;
-      const rows = Array.from(table.querySelectorAll('[data-paginate-row]'));
-
-      const applyKeyword = () => {
-        const q = (search.value || '').trim().toLowerCase();
-        rows.forEach(r => {
-          r.dataset.filtered = (q === '' || r.textContent.toLowerCase().includes(q)) ? '' : 'out';
-        });
-        window.refreshTablePagination('distributions', true);
-      };
-
-      search.addEventListener('input', applyKeyword);
-      if (clear) clear.addEventListener('click', () => {
-        search.value = '';
-        if (local) local.value = '';
-        applyKeyword();
-      });
-      applyKeyword();
-    });
-    </script>
 <?php endif; ?>

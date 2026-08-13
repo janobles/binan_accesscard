@@ -75,7 +75,7 @@ class QueueWork extends BaseCommand
             $model = new JobQueueModel();
 
             if (! $model->hasTable()) {
-                CLI::write('The job_queue table is missing (import it from accesscardV14.sql). Exiting.', 'red');
+                CLI::write('The job_queue table is missing (import the newest accesscardV*.sql). Exiting.', 'red');
 
                 return EXIT_ERROR;
             }

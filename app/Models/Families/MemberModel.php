@@ -707,8 +707,13 @@ class MemberModel extends Model
 
             $sectorIdsByMember = (new MemberSectorModel())->getSectorIdsByMemberIds($memberIds);
 
+            $memberServices = $this->db->prefixTable('member_services');
+            $services       = $this->db->prefixTable('services');
+            $category       = $this->db->prefixTable('category');
+
             $serviceRows = $this->db->table('member_services')
-                ->select('member_services.memberID, services.shortcode, COALESCE(category.name, service_sector.name) AS category', false)
+                // service_sector is the join alias below, not a real table, so it stays unprefixed.
+                ->select($memberServices . '.memberID, ' . $services . '.shortcode, COALESCE(' . $category . '.name, service_sector.name) AS category', false)
                 ->join('services', 'services.serviceID = member_services.serviceID')
                 ->join('category', 'category.categoryID = services.categoryID', 'left')
                 ->join('sector service_sector', 'service_sector.sectorID = services.sectorID', 'left')
@@ -773,8 +778,13 @@ class MemberModel extends Model
 
             $sectorIdsByMember = (new MemberSectorModel())->getSectorIdsByMemberIds($memberIds);
 
+            $memberServices = $this->db->prefixTable('member_services');
+            $services       = $this->db->prefixTable('services');
+            $category       = $this->db->prefixTable('category');
+
             $serviceRows = $this->db->table('member_services')
-                ->select('member_services.memberID, services.shortcode, COALESCE(category.name, service_sector.name) AS category', false)
+                // service_sector is the join alias below, not a real table, so it stays unprefixed.
+                ->select($memberServices . '.memberID, ' . $services . '.shortcode, COALESCE(' . $category . '.name, service_sector.name) AS category', false)
                 ->join('services', 'services.serviceID = member_services.serviceID')
                 ->join('category', 'category.categoryID = services.categoryID', 'left')
                 ->join('sector service_sector', 'service_sector.sectorID = services.sectorID', 'left')

@@ -145,19 +145,24 @@ class MemberModel extends Model
             return false;
         }
 
+        // Escaping is off on these conditions so the LOWER() calls survive, which
+        // also means the builder never applies DBPrefix to the qualifier. Writing
+        // the prefixed name is what keeps a prefixed connection working.
+        $member = $this->db->prefixTable($this->table);
+
         $builder = $this->db->table($this->table)
-            ->where('member.memberID = member.headID', null, false)
-            ->where('LOWER(member.firstname) = ' . $this->db->escape(mb_strtolower(trim($firstname))), null, false)
-            ->where('LOWER(member.lastname) = ' . $this->db->escape(mb_strtolower(trim($lastname))), null, false);
+            ->where($member . '.memberID = ' . $member . '.headID', null, false)
+            ->where('LOWER(' . $member . '.firstname) = ' . $this->db->escape(mb_strtolower(trim($firstname))), null, false)
+            ->where('LOWER(' . $member . '.lastname) = ' . $this->db->escape(mb_strtolower(trim($lastname))), null, false);
 
         if ($birthday !== null && trim($birthday) !== '') {
-            $builder->where('member.birthday', $birthday);
+            $builder->where($member . '.birthday', $birthday);
         } else {
-            $builder->where('member.birthday IS NULL', null, false);
+            $builder->where($member . '.birthday IS NULL', null, false);
         }
 
         if ($this->db->fieldExists('dt_deleted', $this->table)) {
-            $builder->where('member.dt_deleted IS NULL', null, false);
+            $builder->where($member . '.dt_deleted IS NULL', null, false);
         }
 
         return $builder->countAllResults() > 0;
@@ -185,10 +190,12 @@ class MemberModel extends Model
 
         $map = [];
 
+        $member = $this->db->prefixTable($this->table);
+
         foreach (array_chunk($headIds, 1000) as $chunk) {
             $rows = $this->db->table($this->table)
                 ->select('memberID, firstname, middlename, lastname, suffix, birthday, sex, civilstatus, contactnumber, religion, address')
-                ->where('member.memberID = member.headID', null, false)
+                ->where($member . '.memberID = ' . $member . '.headID', null, false)
                 ->whereIn('memberID', $chunk)
                 ->get()
                 ->getResultArray();
@@ -259,17 +266,19 @@ class MemberModel extends Model
             return false;
         }
 
+        $member = $this->db->prefixTable($this->table);
+
         $builder = $this->db->table($this->table)
-            ->where('member.headID', $headId)
-            ->where('LOWER(member.firstname) = ' . $this->db->escape(mb_strtolower(trim($firstname))), null, false)
-            ->where('LOWER(member.lastname) = ' . $this->db->escape(mb_strtolower(trim($lastname))), null, false);
+            ->where($member . '.headID', $headId)
+            ->where('LOWER(' . $member . '.firstname) = ' . $this->db->escape(mb_strtolower(trim($firstname))), null, false)
+            ->where('LOWER(' . $member . '.lastname) = ' . $this->db->escape(mb_strtolower(trim($lastname))), null, false);
 
         if ($birthday !== null && trim($birthday) !== '') {
-            $builder->where('member.birthday', $birthday);
+            $builder->where($member . '.birthday', $birthday);
         }
 
         if ($this->db->fieldExists('dt_deleted', $this->table)) {
-            $builder->where('member.dt_deleted IS NULL', null, false);
+            $builder->where($member . '.dt_deleted IS NULL', null, false);
         }
 
         return $builder->countAllResults() > 0;

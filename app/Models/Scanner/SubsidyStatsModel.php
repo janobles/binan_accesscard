@@ -192,7 +192,7 @@ class SubsidyStatsModel extends Model
                 // out once per distribution, so a family that collected twice in
                 // one batch (two handouts, one family) counted twice as received
                 // and twice again as total. Coverage is families, not handouts.
-                ->select("COALESCE(barangay.name, 'Unassigned') AS barangay,"
+                ->select('COALESCE(' . $this->db->prefixTable('barangay') . ".name, 'Unassigned') AS barangay,"
                     . ' COUNT(DISTINCT batch_eligibility.headID) AS total,'
                     . ' COUNT(DISTINCT subsidy_distribution.memberID) AS received')
                 ->join('member', 'member.memberID = batch_eligibility.headID')
@@ -290,8 +290,8 @@ class SubsidyStatsModel extends Model
             $rows = $this->remainingBuilder($batchId)
                 ->select('batch_eligibility.headID,'
                     . ' member.firstname, member.lastname,'
-                    . " COALESCE(barangay.name, 'Unassigned') AS barangay,"
-                    . " COALESCE(member.contactnumber, '') AS contact")
+                    . ' COALESCE(' . $this->db->prefixTable('barangay') . ".name, 'Unassigned') AS barangay,"
+                    . ' COALESCE(' . $this->db->prefixTable('member') . ".contactnumber, '') AS contact")
                 ->orderBy('barangay', 'ASC')
                 ->orderBy('member.lastname', 'ASC')
                 ->orderBy('batch_eligibility.headID', 'ASC')
@@ -351,8 +351,8 @@ class SubsidyStatsModel extends Model
             $rows = $this->remainingBuilder($batchId, $keyword)
                 ->select('batch_eligibility.headID,'
                     . ' member.firstname, member.lastname,'
-                    . " COALESCE(barangay.name, 'Unassigned') AS barangay,"
-                    . " COALESCE(member.contactnumber, '') AS contact")
+                    . ' COALESCE(' . $this->db->prefixTable('barangay') . ".name, 'Unassigned') AS barangay,"
+                    . ' COALESCE(' . $this->db->prefixTable('member') . ".contactnumber, '') AS contact")
                 ->orderBy('barangay', 'ASC')
                 ->orderBy('member.lastname', 'ASC')
                 ->orderBy('batch_eligibility.headID', 'ASC')

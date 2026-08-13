@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-# Verify every `path:line` cite in docs/knowledge resolves to a real file and line.
+# Verify every `path:line` cite in docs/ resolves to a real file and line.
 # Cite format in docs: `app/Path/File.php:123` (backtick-wrapped, repo-relative).
+# docs/superpowers/ is skipped: it is a dated archive and its cites are allowed
+# to go stale with the code they described.
 set -u
 cd "$(dirname "$0")/.."
 fail=0
@@ -15,7 +17,7 @@ while IFS=: read -r file line; do
     echo "LINE OUT OF RANGE: $file:$line"
     fail=1
   fi
-done < <(grep -rhoE '`(app|public|tests|scripts)/[^`]+:[0-9]+`' docs/knowledge --include='*.md' 2>/dev/null | tr -d '`' | sort -u)
+done < <(grep -rhoE '`(app|public|tests|scripts|sql)/[^`]+:[0-9]+`' docs --include='*.md' --exclude-dir=superpowers 2>/dev/null | tr -d '`' | sort -u)
 if [ "$fail" -eq 0 ]; then
   echo "OK: $count unique cites resolve."
 fi

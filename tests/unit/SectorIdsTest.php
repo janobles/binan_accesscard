@@ -9,12 +9,15 @@ use CodeIgniter\Test\CIUnitTestCase;
  */
 final class SectorIdsTest extends CIUnitTestCase
 {
-    public function testNormalizesFinalDatabaseJsonArrayString(): void
+    public function testNormalizesEveryShapeAMemberRowArrivesIn(): void
     {
+        // The comma list the member listings select out of member_sectors, an
+        // array from the form, a single id, and the JSON a pre-V22 export holds.
+        $this->assertSame([1, 2, 3], SectorIds::normalize('1,2,3'));
+        $this->assertSame([1, 2, 3], SectorIds::normalize(['1', 2, '3', '2']));
+        $this->assertSame([10], SectorIds::normalize('10'));
         $this->assertSame([1, 2, 3], SectorIds::normalize('[1,2,"3",2]'));
-        $this->assertSame('[1,2,3]', SectorIds::toStorage(['1', 2, '3', '2']));
-        $this->assertSame('[10]', SectorIds::toStorage('10'));
-        $this->assertSame('[1,6]', SectorIds::toStorage('1,6'));
+        $this->assertSame([], SectorIds::normalize(null));
     }
 
     public function testRejectsMalformedSectorPayloads(): void

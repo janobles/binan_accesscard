@@ -54,6 +54,12 @@ final class SubsidyStatsRemainingPageTest extends CIUnitTestCase
         $db->table('barangay')->insert(['barangayID' => 1, 'name' => 'Zapote']);
         $db->table('barangay')->insert(['barangayID' => 2, 'name' => 'Poblacion']);
 
+        // Parents first: V22 made batch_eligibility's batch_id and headID real
+        // foreign keys, so the batch has to exist before its roster does.
+        $db->table('distribution_batch')->insert([
+            'batch_id' => 1, 'name' => 'Rice Q1', 'subsidy_type_id' => 1, 'eligible_count' => 6,
+        ]);
+
         $rows = [
             [1, 'Ana', 'Cruz', 1],
             [2, 'Ben', 'Cruz', 1],
@@ -69,9 +75,6 @@ final class SubsidyStatsRemainingPageTest extends CIUnitTestCase
             ]);
             $db->table('batch_eligibility')->insert(['batch_id' => 1, 'headID' => $id]);
         }
-        $db->table('distribution_batch')->insert([
-            'batch_id' => 1, 'name' => 'Rice Q1', 'subsidy_type_id' => 1, 'eligible_count' => 6,
-        ]);
     }
 
     public function testNoKeywordCountsWholeRoster(): void

@@ -11,7 +11,7 @@ final class FamilyModalDataBuilderTest extends CIUnitTestCase
     {
         $builder = new FamilyModalDataBuilder();
         $shaped  = $builder->shapeMembers(
-            [['memberID' => 7, 'firstname' => 'Ana', 'Salary' => '1500', 'sectorID' => null]],
+            [['memberID' => 7, 'firstname' => 'Ana', 'salary' => '1500', 'sector_ids' => null]],
             [7 => [1, 2]]
         );
 

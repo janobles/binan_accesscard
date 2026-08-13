@@ -63,6 +63,10 @@ Vagrantfile
 /writable/debugbar/*
 !/writable/debugbar/index.html
 
+# mysqldump snapshots the one-time migration commands take before they write
+/writable/backups/*
+!/writable/backups/index.html
+
 # Developer account runtime data (credentials + profile) — never commit; seeded from .env
 /writable/developer/*
 !/writable/developer/index.html
@@ -83,6 +87,7 @@ Vagrantfile
 # Local scratch / junk
 #-------------------------
 todos.txt
+~$*
 *.tuxedo-lock
 # Windows drive-letter dir created when session.savePath uses a C:/ path on *nix
 /public/C:/

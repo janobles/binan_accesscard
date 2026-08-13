@@ -17,7 +17,6 @@ use App\Models\Scanner\DistributionBatchModel;
 use App\Models\Scanner\QrControlModel;
 use App\Models\Scanner\SubsidyDistributionModel;
 use App\Models\Scanner\SubsidyStatsModel;
-use App\Support\MemberFieldNormalizer;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
 
@@ -447,7 +446,7 @@ class ScanController extends BaseController
 
         $badgeIds = array_map(static fn (array $m): int => (int) $m['memberID'], array_merge([$head], $memberRows));
         $badges   = $members->referenceBadges($badgeIds);
-        $barangay = MemberFieldNormalizer::splitAddressBarangay((string) ($head['address'] ?? ''))['barangay'];
+        $barangay = (string) ($head['barangay'] ?? '');
 
         foreach ($memberRows as $i => $m) {
             $memberRows[$i]['badges'] = $badges[(int) $m['memberID']] ?? [];

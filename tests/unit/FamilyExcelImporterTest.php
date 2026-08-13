@@ -179,7 +179,7 @@ final class FamilyExcelImporterTest extends CIUnitTestCase
         $this->assertSame('warning', $contig[0]['severity']);
     }
 
-    // -- barangay / contact / suffix / duplicate-person (all warnings) ---------
+    // -- barangay (blocking) / contact / suffix / duplicate-person (warnings) --
 
     public function testBarangayToleratesSpellingButFlagsNonBarangays(): void
     {
@@ -190,13 +190,14 @@ final class FamilyExcelImporterTest extends CIUnitTestCase
         ]);
         $this->assertNotContains('BRGY', $this->codes($ok));
 
-        // "Santa Rosa" is a different city - flagged (warning).
+        // "Santa Rosa" is a different city - blocking, since it resolves to no barangayID
+        // and the address column no longer carries the barangay name.
         $bad = $this->importer()->validateAndBuild([
             $this->headRow(3, '6003', ['barangay' => 'Santa Rosa']),
         ]);
         $brgy = array_values(array_filter($bad['errors'], static fn (array $e): bool => $e['code'] === 'BRGY'));
         $this->assertCount(1, $brgy);
-        $this->assertSame('warning', $brgy[0]['severity']);
+        $this->assertSame('blocking', $brgy[0]['severity']);
     }
 
     public function testContactNumberMustBe09Plus11Digits(): void
@@ -501,7 +502,7 @@ final class FamilyExcelImporterTest extends CIUnitTestCase
         $this->assertContains('DUP-EXISTS', $this->codes($result)); // still the same family
         $this->assertCount(1, $diff);
         $this->assertSame('warning', $diff[0]['severity']);
-        $this->assertStringContainsString('Contact number', $diff[0]['message']);
+        $this->assertStringContainsString('Contact Number', $diff[0]['message']);
         $this->assertStringContainsString('09171234567', $diff[0]['message']);
         $this->assertStringContainsString('09990000000', $diff[0]['message']);
         $this->assertStringContainsString('will NOT be saved', $diff[0]['message']);
@@ -607,6 +608,19 @@ final class FamilyExcelImporterTest extends CIUnitTestCase
             $prop->setAccessible(true);
             $prop->setValue($importer, []);
         }
+
+        // The barangay list comes from the `barangay` table now, so the cache is
+        // primed here the same way the other lookups are - keyed by the fold
+        // FamilyExcelImporter::normalizeBarangay() applies.
+        $barangays = $reflection->getProperty('barangayLookup');
+        $barangays->setAccessible(true);
+        $barangays->setValue($importer, array_fill_keys(
+            ['binan', 'bungahan', 'santo tomas', 'canlalay', 'casile', 'de la paz', 'ganado',
+                'langkiwa', 'loma', 'malaban', 'malamig', 'mamplasan', 'platero', 'poblacion',
+                'san antonio', 'san francisco', 'san jose', 'san vicente', 'santo domingo',
+                'santo nino', 'soro soro', 'timbao', 'tubigan', 'zapote'],
+            true
+        ));
 
         return $importer;
     }

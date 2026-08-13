@@ -168,6 +168,16 @@ class ServiceController extends BaseController
             return $this->redirectAdmin('reference-data?tab=services', 'error', 'Code, category and name are required.');
         }
 
+        // A service is grouped by a category row or by a sector, and the DB now
+        // enforces exactly one. Resolving here turns "no such group" into a
+        // sentence a worker can act on instead of a constraint violation.
+        $group = $model->resolveGroupKey($data['category']);
+
+        if (empty($group['categoryID']) && empty($group['sectorID'])) {
+            return $this->redirectAdmin('reference-data?tab=services', 'error',
+                'There is no category or sector named "' . $data['category'] . '". Add it under Categories first, then file the program under it.');
+        }
+
         // The code is the unique key the Excel import uses, so it must not clash.
         if ($model->shortcodeExists($data['shortcode'], $serviceId)) {
             return $this->redirectAdmin('reference-data?tab=services', 'error', 'The code "' . $data['shortcode'] . '" is already used by another service.');

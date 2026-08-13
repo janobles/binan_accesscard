@@ -75,7 +75,7 @@
         }
 
         if (window.showToast) {
-            window.showToast(label, 'primary', { autohide: false });
+            window.showToast(label, 'primary', { autohide: false, spinner: true });
         }
     }
 
@@ -210,7 +210,7 @@
             }
 
             if (window.showToast) {
-                window.showToast('Uploading file...', 'primary', { autohide: false });
+                window.showToast('Uploading file...', 'primary', { autohide: false, spinner: true });
             }
 
             window.fetch(form.action, {

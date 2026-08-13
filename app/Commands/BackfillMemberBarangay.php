@@ -32,7 +32,7 @@ use Config\Database;
  * is safe to re-run: a second run finds no NULL rows left to match and
  * reports zero matched. Every run prints which addresses had no fold match,
  * so staff can fix the free-text spelling by hand (the same class of typo
- * validateBarangay() already flags as a BRGY warning on import).
+ * validateBarangay() blocks with a BRGY error on import).
  *
  * Usage:
  *   php spark members:backfill-barangay            back up + fill matching barangayID

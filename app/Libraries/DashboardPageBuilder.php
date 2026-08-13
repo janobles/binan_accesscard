@@ -301,6 +301,9 @@ class DashboardPageBuilder
             // eligibility filters (Task 10). Only fetched on those tabs.
             'barangayOptions'    => ($isBatches || $isSchedule) ? model(BarangayModel::class)->activeList() : [],
             'batchSectorOptions' => ($isBatches || $isSchedule) ? $sectorModel->getActive() : [],
+            // Access Cards page: the batch filter's barangay dropdown. Names, not
+            // ids, because headsForCards() compares against the stored name.
+            'cardBarangayNames'  => $activePage === 'cards' ? model(BarangayModel::class)->activeNames() : [],
             'scheduleColors'     => $isSchedule ? DistributionBatchModel::COLORS : [],
             'venueSuggestions'   => $isSchedule ? $this->venueSuggestions($batchModel) : [],
             'subsidyTypes'       => $subsidyTypeListData['rows'] ?? [],
@@ -895,7 +898,7 @@ class DashboardPageBuilder
             'totalPages'        => $totalPages,
             // Filter UI data.
             'sectorOptions'     => (new SectorModel())->getSectorOptions(),
-            'barangayOptions'   => FamilyProfilingFormV2::barangays(),
+            'barangayOptions'   => (new \App\Models\Lookups\BarangayModel())->activeNames(),
             'filters'           => $filters,
         ], $this->buildDeepSearchData($status));
     }

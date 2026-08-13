@@ -22,14 +22,90 @@ class ServiceModel extends Model
     protected $table = 'services';
     protected $primaryKey = 'serviceID';
     protected $returnType = 'array';
-    protected $allowedFields = ['serviceID', 'shortcode', 'category', 'name', 'description'];
-    protected $useAutoIncrement = false;
+    protected $allowedFields = ['serviceID', 'shortcode', 'categoryID', 'sectorID', 'name', 'description'];
+    protected $useAutoIncrement = true;
     protected $useTimestamps = false;
 
     /** Columns the Services management search box matches. */
     protected function lookupSearchColumns(): array
     {
-        return array_values(array_filter([$this->codeColumn(), 'category', 'name', 'description']));
+        return array_values(array_filter([$this->codeColumn(), 'name', 'description']));
+    }
+
+    /**
+     * A service's grouping is a key (categoryID or sectorID) since V22, so a
+     * keyword that names a category or a sector is resolved to ids here rather
+     than matched as text on the row.
+     */
+    protected function applyLookupKeywordExtras(BaseBuilder $builder, string $keyword, bool $isFirst): void
+    {
+        $categoryIds = $this->groupIdsMatching('category', 'categoryID', $keyword);
+        $sectorIds   = $this->groupIdsMatching('sector', 'sectorID', $keyword);
+
+        foreach ([['categoryID', $categoryIds], ['sectorID', $sectorIds]] as [$column, $ids]) {
+            if ($ids === []) {
+                continue;
+            }
+
+            if ($isFirst) {
+                $builder->whereIn($column, $ids);
+                $isFirst = false;
+
+                continue;
+            }
+
+            $builder->orWhereIn($column, $ids);
+        }
+    }
+
+    /**
+     * Ids in a grouping table whose name (or code/shortcode) contains $keyword.
+     *
+     * @return list<int>
+     */
+    private function groupIdsMatching(string $table, string $idColumn, string $keyword): array
+    {
+        if (! $this->db->tableExists($table)) {
+            return [];
+        }
+
+        $codeColumn = $this->db->fieldExists('shortcode', $table) ? 'shortcode' : 'code';
+
+        $rows = $this->db->table($table)
+            ->select($idColumn)
+            ->groupStart()
+            ->like('name', $keyword)
+            ->orLike($codeColumn, $keyword)
+            ->groupEnd()
+            ->get()
+            ->getResultArray();
+
+        return array_map(static fn (array $row): int => (int) $row[$idColumn], $rows);
+    }
+
+    /**
+     * Grouping label per service row, so every view keeps reading `category`
+     * while the table stores the key. A service is grouped by a standalone
+     * category (FA/SWPS/EDA) or by a sector, which is its own category once
+     * categories:dedupe-sectors has run.
+     */
+    private function groupNames(): array
+    {
+        $names = ['category' => [], 'sector' => []];
+
+        foreach ($names as $table => $_) {
+            if (! $this->db->tableExists($table)) {
+                continue;
+            }
+
+            $idColumn = $table === 'category' ? 'categoryID' : 'sectorID';
+
+            foreach ($this->db->table($table)->select($idColumn . ', name')->get()->getResultArray() as $row) {
+                $names[$table][(int) $row[$idColumn]] = (string) $row['name'];
+            }
+        }
+
+        return $names;
     }
 
     /**
@@ -39,20 +115,43 @@ class ServiceModel extends Model
     protected function normalizeLookupRows(array $rows): array
     {
         $codeColumn = $this->codeColumn();
+        $groupNames = $rows === [] ? ['category' => [], 'sector' => []] : $this->groupNames();
 
-        return array_map(static function (array $row) use ($codeColumn): array {
+        return array_map(static function (array $row) use ($codeColumn, $groupNames): array {
             if ($codeColumn !== null && ! array_key_exists('shortcode', $row) && array_key_exists($codeColumn, $row)) {
                 $row['shortcode'] = $row[$codeColumn];
             }
+
+            // Views and the family form group services by this label; it is
+            // resolved from whichever key the row carries.
+            $categoryId = (int) ($row['categoryID'] ?? 0);
+            $sectorId   = (int) ($row['sectorID'] ?? 0);
+
+            $row['category'] = $groupNames['category'][$categoryId]
+                ?? $groupNames['sector'][$sectorId]
+                ?? '';
 
             return $row;
         }, $rows);
     }
 
-    /** Maps write payloads to the actual database columns in the current schema. */
+    /**
+     * Maps write payloads to the actual database columns in the current schema,
+     * including the grouping: callers (the Services modal, the importer) still
+     * submit a `category` label, and it is resolved here to the one key that
+     * matches - categoryID for a standalone category, sectorID when the label
+     * names a sector. A label matching neither is rejected by the CHECK
+     * constraint rather than saved ungrouped.
+     */
     public function dataForCurrentSchema(array $data): array
     {
         $codeColumn = $this->codeColumn();
+
+        if (array_key_exists('category', $data)) {
+            $group = $this->resolveGroupKey((string) $data['category']);
+            unset($data['category']);
+            $data = array_merge($data, $group);
+        }
 
         if ($codeColumn !== null && $codeColumn !== 'shortcode' && array_key_exists('shortcode', $data)) {
             $data[$codeColumn] = $data['shortcode'];
@@ -68,6 +167,42 @@ class ServiceModel extends Model
             fn (string $column): bool => $this->db->fieldExists($column, $this->table),
             ARRAY_FILTER_USE_KEY
         );
+    }
+
+    /**
+     * The key a grouping label resolves to: ['categoryID' => id] or
+     * ['sectorID' => id], and ['categoryID' => null, 'sectorID' => null] when it
+     * matches neither. Matching folds case and whitespace, the same way
+     * services:link-categories matched the labels this replaced.
+     *
+     * @return array{categoryID?: int|null, sectorID?: int|null}
+     */
+    public function resolveGroupKey(string $label): array
+    {
+        $key = mb_strtolower(trim((string) preg_replace('/\s+/u', ' ', $label)), 'UTF-8');
+
+        if ($key === '') {
+            return ['categoryID' => null, 'sectorID' => null];
+        }
+
+        foreach ([['category', 'categoryID', 'code'], ['sector', 'sectorID', 'shortcode']] as [$table, $idColumn, $codeColumn]) {
+            if (! $this->db->tableExists($table)) {
+                continue;
+            }
+
+            $column = $this->db->fieldExists($codeColumn, $table) ? $codeColumn : 'code';
+
+            foreach ($this->db->table($table)->select($idColumn . ', name, ' . $column)->get()->getResultArray() as $row) {
+                $name = mb_strtolower(trim((string) preg_replace('/\s+/u', ' ', (string) $row['name'])), 'UTF-8');
+                $code = mb_strtolower(trim((string) $row[$column]), 'UTF-8');
+
+                if ($key === $name || $key === $code) {
+                    return [$idColumn => (int) $row[$idColumn]];
+                }
+            }
+        }
+
+        return ['categoryID' => null, 'sectorID' => null];
     }
 
     private function codeColumn(): ?string
@@ -143,10 +278,11 @@ class ServiceModel extends Model
         ))));
     }
 
-    /** Services management list order: by category then ID. */
+    /** Services management list order: grouped, then by ID within the group. */
     protected function applyLookupOrder(BaseBuilder $builder): void
     {
-        $builder->orderBy('category', 'ASC')
+        $builder->orderBy('categoryID', 'ASC')
+            ->orderBy('sectorID', 'ASC')
             ->orderBy('serviceID', 'ASC');
     }
 
@@ -193,28 +329,6 @@ class ServiceModel extends Model
     }
 
     /**
-     * Returns the next service ID (max + 1). serviceID is not auto-increment here,
-     * so create flows assign it explicitly.
-     */
-    public function nextServiceId(): int
-    {
-        if (! $this->hasTable()) {
-            return 1;
-        }
-
-        // serviceID is not AUTO_INCREMENT, so two concurrent creates could read the
-        // same MAX and collide. Take a FOR UPDATE lock inside the caller's
-        // transaction so allocation serializes. Requires the caller to have an open
-        // transaction and to insert before committing (see ServiceController).
-        $db  = $this->db;
-        $sql = 'SELECT MAX(' . $db->protectIdentifiers($this->primaryKey) . ') AS max_id FROM '
-            . $db->protectIdentifiers($this->table) . ' FOR UPDATE';
-        $row = $db->query($sql)->getRowArray();
-
-        return ((int) ($row['max_id'] ?? 0)) + 1;
-    }
-
-    /**
      * Fetch active (non-archived) services from the read-only view (or the base
      * table filtered by dt_deleted). Frontend: the family form's service options.
      */
@@ -227,7 +341,8 @@ class ServiceModel extends Model
         }
 
         $rows = $builder
-            ->orderBy('category', 'ASC')
+            ->orderBy('categoryID', 'ASC')
+            ->orderBy('sectorID', 'ASC')
             ->orderBy('serviceID', 'ASC')
             ->get()
             ->getResultArray();
@@ -251,7 +366,8 @@ class ServiceModel extends Model
 
         $rows = $this->db->table($this->table)
             ->whereIn($this->primaryKey, $ids)
-            ->orderBy('category', 'ASC')
+            ->orderBy('categoryID', 'ASC')
+            ->orderBy('sectorID', 'ASC')
             ->orderBy('serviceID', 'ASC')
             ->get()
             ->getResultArray();
@@ -335,29 +451,47 @@ class ServiceModel extends Model
     }
 
     /**
-     * Soft-archive every active service whose category label equals $name (exact
-     * match on services.category, how services store their category), stamping each
-     * with $archivedAt - the parent category/sector's own dt_deleted. Sharing that
-     * exact timestamp is what lets restoreByCategoryArchivedAt() later un-archive only
-     * the services THIS cascade retired, leaving independently-archived ones alone.
-     * Returns the number of services archived.
+     * Soft-archive every active service grouped under $name (a category or a
+     * sector), stamping each with $archivedAt - the parent's own dt_deleted.
+     * Sharing that exact timestamp is what lets restoreByCategoryArchivedAt()
+     * later un-archive only the services THIS cascade retired, leaving
+     * independently-archived ones alone. Returns the number archived.
      */
     public function archiveByCategory(string $name, string $archivedAt): int
     {
-        $name       = trim($name);
         $archivedAt = trim($archivedAt);
+        $group      = $this->groupKeyFilter($name);
 
-        if ($name === '' || $archivedAt === '' || ! $this->db->tableExists($this->table) || ! $this->db->fieldExists('dt_deleted', $this->table)) {
+        if ($group === null || $archivedAt === '' || ! $this->db->tableExists($this->table) || ! $this->db->fieldExists('dt_deleted', $this->table)) {
             return 0;
         }
 
         $this->db->table($this->table)
-            ->where('category', $name)
+            ->where($group[0], $group[1])
             ->where('dt_deleted IS NULL', null, false)
             ->set('dt_deleted', $archivedAt)
             ->update();
 
         return $this->db->affectedRows();
+    }
+
+    /**
+     * [column, id] for a grouping label, or null when it names neither a
+     * category nor a sector (in which case nothing should be cascaded).
+     *
+     * @return array{0: string, 1: int}|null
+     */
+    private function groupKeyFilter(string $name): ?array
+    {
+        $group = $this->resolveGroupKey($name);
+
+        foreach (['categoryID', 'sectorID'] as $column) {
+            if (! empty($group[$column])) {
+                return [$column, (int) $group[$column]];
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -369,15 +503,15 @@ class ServiceModel extends Model
      */
     public function restoreByCategoryArchivedAt(string $name, string $archivedAt): int
     {
-        $name       = trim($name);
         $archivedAt = trim($archivedAt);
+        $group      = $this->groupKeyFilter($name);
 
-        if ($name === '' || $archivedAt === '' || ! $this->db->tableExists($this->table) || ! $this->db->fieldExists('dt_deleted', $this->table)) {
+        if ($group === null || $archivedAt === '' || ! $this->db->tableExists($this->table) || ! $this->db->fieldExists('dt_deleted', $this->table)) {
             return 0;
         }
 
         $this->db->table($this->table)
-            ->where('category', $name)
+            ->where($group[0], $group[1])
             ->where('dt_deleted', $archivedAt)
             ->set('dt_deleted', null)
             ->update();
@@ -386,17 +520,20 @@ class ServiceModel extends Model
     }
 
     /**
-     * Inserts a service inside a transaction, assigning the next serviceID.
-     * Returns the new serviceID or false on failure.
+     * Inserts a service and returns its new serviceID, or false on failure.
+     *
+     * serviceID is AUTO_INCREMENT since V22, so the id comes from the DB. It used
+     * to be allocated by hand as MAX(serviceID) + 1 under a FOR UPDATE lock,
+     * because the column was the one lookup primary key without AUTO_INCREMENT.
      */
     public function insertWithNextId(array $data): int|false
     {
         $this->db->transStart();
-        $data['serviceID'] = $this->nextServiceId();
         $inserted = $this->insert($this->dataForCurrentSchema($data)) !== false;
+        $newId    = (int) $this->getInsertID();
         $this->db->transComplete();
 
-        return ($inserted && $this->db->transStatus() !== false) ? (int) $data['serviceID'] : false;
+        return ($inserted && $newId > 0 && $this->db->transStatus() !== false) ? $newId : false;
     }
 
     /**

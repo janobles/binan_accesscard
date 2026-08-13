@@ -966,8 +966,8 @@ class FamilyExcelImporter
         $firstName = (string) ($data['firstname'] ?? '');
         $lastName  = (string) ($data['lastname'] ?? '');
 
-        $this->requireField($row, $familyNo, 'firstname', 'First name', $firstName);
-        $this->requireField($row, $familyNo, 'lastname', 'Last name', $lastName);
+        $this->requireField($row, $familyNo, 'firstname', 'First Name', $firstName);
+        $this->requireField($row, $familyNo, 'lastname', 'Last Name', $lastName);
 
         // Personal-profile fields are required for EVERY person (head and member), mirroring
         // the Add/Edit family form. Only the head carries Address/Barangay - members inherit
@@ -978,7 +978,7 @@ class FamilyExcelImporter
         $civilStatus = $this->fullValueFromCode((string) ($data['civilstatus'] ?? ''), FamilyExcelTemplate::CIVIL_STATUS_CODES);
         $education   = $this->fullValueFromCode((string) ($data['education'] ?? ''), FamilyExcelTemplate::EDUCATION_CODES);
 
-        $this->requireField($row, $familyNo, 'civilstatus', 'Civil status', $civilStatus);
+        $this->requireField($row, $familyNo, 'civilstatus', 'Civil Status', $civilStatus);
         $this->requireField($row, $familyNo, 'education', 'Education', $education);
         $this->requireField($row, $familyNo, 'job', 'Job', (string) ($data['job'] ?? ''));
 
@@ -986,7 +986,7 @@ class FamilyExcelImporter
             $this->requireField($row, $familyNo, 'address', 'Address', (string) ($data['address'] ?? ''));
             $this->requireField($row, $familyNo, 'barangay', 'Barangay', (string) ($data['barangay'] ?? ''));
             // Barangay has no "Other" option - it must be one of the official barangays
-            // (tolerant match). A mismatch is a warning: it still imports as typed.
+            // (tolerant match). A mismatch blocks the row: there is nowhere to store it.
             $this->validateBarangay($row, $familyNo, (string) ($data['barangay'] ?? ''));
         } else {
             $this->requireField($row, $familyNo, 'relationship', 'Relationship', (string) ($data['relationship'] ?? ''));
@@ -1006,15 +1006,15 @@ class FamilyExcelImporter
         $lastClean   = MemberFieldNormalizer::cleanName($lastName);
         $civilValue  = MemberFieldNormalizer::nullableText($civilStatus);
         $contact     = MemberFieldNormalizer::nullableText((string) ($data['contactnumber'] ?? ''));
-        $religion    = MemberFieldNormalizer::nullableText((string) ($data['religion'] ?? ''));
+        $religion    = MemberFieldNormalizer::nullableUpperText((string) ($data['religion'] ?? ''));
 
         // Guard the varchar column limits so an over-long value can't fail or silently
         // truncate at the write step. (Address / Job / Education / Relationship are TEXT.)
-        $this->checkLength($row, $familyNo, 'firstname', 'First name', $firstClean, 100);
-        $this->checkLength($row, $familyNo, 'lastname', 'Last name', $lastClean, 100);
-        $this->checkLength($row, $familyNo, 'middlename', 'Middle name', $middleClean, 50);
-        $this->checkLength($row, $familyNo, 'civilstatus', 'Civil status', $civilValue, 100);
-        $this->checkLength($row, $familyNo, 'contactnumber', 'Contact number', $contact, 20);
+        $this->checkLength($row, $familyNo, 'firstname', 'First Name', $firstClean, 100);
+        $this->checkLength($row, $familyNo, 'lastname', 'Last Name', $lastClean, 100);
+        $this->checkLength($row, $familyNo, 'middlename', 'Middle Name', $middleClean, 50);
+        $this->checkLength($row, $familyNo, 'civilstatus', 'Civil Status', $civilValue, 100);
+        $this->checkLength($row, $familyNo, 'contactnumber', 'Contact Number', $contact, 20);
         $this->checkLength($row, $familyNo, 'religion', 'Religion', $religion, 100);
 
         return [
@@ -1025,18 +1025,19 @@ class FamilyExcelImporter
             'birthday'      => $birthday,
             'civilstatus'   => $civilValue,
             'sex'           => $sex,
-            'education'     => MemberFieldNormalizer::nullableText($education),
-            'job'           => MemberFieldNormalizer::nullableText((string) ($data['job'] ?? '')),
-            'Salary'        => MemberFieldNormalizer::moneyOrNull($income),
+            'education'     => MemberFieldNormalizer::nullableUpperText($education),
+            'job'           => MemberFieldNormalizer::nullableUpperText((string) ($data['job'] ?? '')),
+            'salary'        => MemberFieldNormalizer::moneyOrNull($income),
             'contactnumber' => $contact,
             'religion'      => $religion,
-            'address'       => MemberFieldNormalizer::combineAddressBarangay(
-                (string) ($data['address'] ?? ''),
-                (string) ($data['barangay'] ?? '')
+            // The sheet's Barangay column resolves to barangayID below; it is no
+            // longer appended to the address, which holds the street address only.
+            'address'       => MemberFieldNormalizer::nullableText(
+                MemberFieldNormalizer::cleanAddress((string) ($data['address'] ?? ''))
             ),
             'barangayID'    => $this->barangayIdForHead((string) ($data['barangay'] ?? '')),
-            'relationship'  => $isHead ? 'Head' : (MemberFieldNormalizer::nullableText((string) ($data['relationship'] ?? '')) ?? 'Member'),
-            'sectorID'      => $sectorIds,
+            'relationship'  => $isHead ? 'HEAD' : (MemberFieldNormalizer::nullableUpperText((string) ($data['relationship'] ?? '')) ?? 'MEMBER'),
+            'sector_ids'    => $sectorIds,
         ];
     }
 
@@ -1133,11 +1134,11 @@ class FamilyExcelImporter
         }
 
         if (strcasecmp($value, 'Male') === 0) {
-            return 'Male';
+            return 'MALE';
         }
 
         if (strcasecmp($value, 'Female') === 0) {
-            return 'Female';
+            return 'FEMALE';
         }
 
         $this->addError($row, $familyNo, 'SEX', 'sex', 'Sex "' . $value . '" must be Male or Female.');
@@ -1292,21 +1293,26 @@ class FamilyExcelImporter
     }
 
     /**
-     * Warns when a head's barangay isn't one of the official Biñan barangays. The match is
+     * Blocks a head whose barangay isn't one of the official Biñan barangays. The match is
      * tolerant (case, ñ, dots and the "(...)" alias are ignored) so "Biñan"/"Sto. Tomas"
-     * still pass; only a genuine non-barangay is flagged. Warning - imports as typed.
+     * still pass; only a genuine non-barangay is flagged. Blocking since V22: the barangay
+     * is stored as member.barangayID, so a value that resolves to no row is not saved at
+     * all. Letting it through would import the head with no barangay.
      */
     private function validateBarangay(int $row, string $familyNo, string $value): void
     {
-        $value = trim($value);
+        $value  = trim($value);
+        $known  = $this->barangayLookup();
 
-        if ($value === '') {
+        // No reference rows means there is nothing to check against, and flagging
+        // every row would be noise about the database rather than the file.
+        if ($value === '' || $known === []) {
             return;
         }
 
-        if (! isset($this->barangayLookup()[$this->normalizeBarangay($value)])) {
+        if (! isset($known[$this->normalizeBarangay($value)])) {
             $this->addError($row, $familyNo, 'BRGY', 'barangay',
-                'Barangay "' . $value . '" is not an official Biñan barangay - please check the spelling.', 'warning');
+                'Barangay "' . $value . '" is not an official Biñan barangay - please check the spelling.');
         }
     }
 
@@ -1382,11 +1388,11 @@ class FamilyExcelImporter
     private function comparePersonToRecord(array $payload, array $record): array
     {
         $fields = [
-            'middlename'    => 'Middle name',
+            'middlename'    => 'Middle Name',
             'suffix'        => 'Suffix',
             'sex'           => 'Sex',
-            'civilstatus'   => 'Civil status',
-            'contactnumber' => 'Contact number',
+            'civilstatus'   => 'Civil Status',
+            'contactnumber' => 'Contact Number',
             'religion'      => 'Religion',
             'address'       => 'Address',
         ];
@@ -1648,7 +1654,12 @@ class FamilyExcelImporter
 
     /**
      * Translates a civil-status / education cell to its full stored value. Accepts a
-     * bare code, a "CODE - Name" pick, or the full name (returned unchanged).
+     * bare code, a "CODE - Name" pick, or the full name typed out.
+     *
+     * The stored values are uppercase, so a sheet that spells the name instead of
+     * the code ("Single", "High School") is matched against the map's values as
+     * well as its keys and uppercased - otherwise those rows would store a
+     * differently-cased copy of a value the dropdowns no longer offer.
      *
      * @param array<string,string> $codeMap code => full value
      */
@@ -1663,12 +1674,12 @@ class FamilyExcelImporter
         $token = str_contains($value, ' - ') ? trim(explode(' - ', $value)[0]) : $value;
 
         foreach ($codeMap as $code => $full) {
-            if (strcasecmp($token, $code) === 0) {
+            if (strcasecmp($token, $code) === 0 || strcasecmp($value, $full) === 0) {
                 return $full;
             }
         }
 
-        return $value;
+        return mb_strtoupper($value, 'UTF-8');
     }
 
     /** Normalizes a header label to lowercase alphanumerics ("Monthly Income" -> "monthlyincome"). */
@@ -1683,7 +1694,12 @@ class FamilyExcelImporter
         return mb_strtolower(trim((string) preg_replace('/\s+/u', ' ', $value)));
     }
 
-    /** [normalized barangay => true] for the official Biñan list. Built once. */
+    /**
+     * [normalized barangay => true] from the `barangay` table, built once per
+     * importer. The list used to be a second hardcoded copy in
+     * FamilyProfilingFormV2 that had drifted from the table it was meant to
+     * mirror, so a sheet could name a barangay the table did not have.
+     */
     private function barangayLookup(): array
     {
         if ($this->barangayLookup !== null) {
@@ -1692,7 +1708,7 @@ class FamilyExcelImporter
 
         $set = [];
 
-        foreach (FamilyProfilingFormV2::barangays() as $barangay) {
+        foreach ((new \App\Models\Lookups\BarangayModel())->activeNames() as $barangay) {
             $set[$this->normalizeBarangay($barangay)] = true;
         }
 
@@ -1721,9 +1737,8 @@ class FamilyExcelImporter
 
     /**
      * Resolves a head's Barangay cell to its barangayID, or null when blank or
-     * unrecognised. Unrecognised values are already flagged by validateBarangay()
-     * as a warning; this leaves member.barangayID null rather than duplicating
-     * that error.
+     * unrecognised. Both cases are already blocked by requireField()/validateBarangay(),
+     * so the null here only ever reaches a row the review step refuses to commit.
      */
     private function barangayIdForHead(string $value): ?int
     {

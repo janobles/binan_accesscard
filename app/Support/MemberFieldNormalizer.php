@@ -93,8 +93,39 @@ class MemberFieldNormalizer
     }
 
     /**
+     * A stored salary as the income select spells it. member.salary is
+     * decimal(12,2) since V22, so it reads back "25000.00" while the option
+     * values are plain integers - without this the select matches nothing,
+     * renders empty, and blocks Save on a required field.
+     */
+    public static function salaryOptionValue(mixed $value): string
+    {
+        if ($value === null || $value === '') {
+            return '';
+        }
+
+        $amount = (float) $value;
+
+        return $amount === floor($amount) ? (string) (int) $amount : (string) $amount;
+    }
+
+    /**
+     * Uppercased trimmed value, or null when empty. For the choice fields that
+     * also accept free text (civil status, religion, education, job,
+     * relationship): the dropdown values are uppercase, so an "Other" answer
+     * typed by hand has to be stored the same way or the same answer reads two
+     * ways depending on how it was entered.
+     */
+    public static function nullableUpperText(mixed $value): ?string
+    {
+        $value = trim((string) $value);
+
+        return $value === '' ? null : mb_strtoupper($value, 'UTF-8');
+    }
+
+    /**
      * Parses a salary input into a float, stripping thousands separators, or null
-     * when blank. Keeps the `Salary` column numeric/nullable.
+     * when blank. Keeps the `salary` column numeric/nullable.
      */
     public static function moneyOrNull(mixed $value): ?float
     {
@@ -122,62 +153,5 @@ class MemberFieldNormalizer
         $key = (string) preg_replace('/[^a-z0-9 ]/', ' ', $key);
 
         return trim((string) preg_replace('/\s+/', ' ', $key));
-    }
-
-    /**
-     * Combines the separate Address and Barangay inputs into the single
-     * `member.address` column ("address, barangay"). The schema has no barangay
-     * column; barangay is kept only as a form/sheet field for entry.
-     */
-    public static function combineAddressBarangay(mixed $address, mixed $barangay): ?string
-    {
-        $address = self::cleanAddress($address);
-        $barangay = self::cleanAddress($barangay);
-        $combined = trim($address . ($address !== '' && $barangay !== '' ? ', ' : '') . $barangay);
-
-        return $combined === '' ? null : $combined;
-    }
-
-    /**
-     * Inverse of combineAddressBarangay(): splits a stored address back into its
-     * address + barangay parts so the edit form can prefill both inputs. Matches the
-     * trailing barangay against the canonical list (longest match first so
-     * "Binan (Poblacion)" wins over "Poblacion").
-     *
-     * @return array{address: string, barangay: string}
-     */
-    public static function splitAddressBarangay(mixed $combined): array
-    {
-        $combined = trim((string) $combined);
-        $barangays = FamilyProfilingFormV2::barangays();
-        usort($barangays, static fn (string $a, string $b): int => mb_strlen($b) <=> mb_strlen($a));
-
-        foreach ($barangays as $barangay) {
-            $suffix = ', ' . $barangay;
-
-            if (mb_strlen($combined) >= mb_strlen($suffix)
-                && self::sameFold(mb_substr($combined, -mb_strlen($suffix)), $suffix)) {
-                return [
-                    'address' => rtrim(mb_substr($combined, 0, mb_strlen($combined) - mb_strlen($suffix))),
-                    'barangay' => $barangay,
-                ];
-            }
-
-            if (self::sameFold($combined, $barangay)) {
-                return ['address' => '', 'barangay' => $barangay];
-            }
-        }
-
-        return ['address' => $combined, 'barangay' => ''];
-    }
-
-    /**
-     * Case-insensitive equality that survives non-ASCII text. strcasecmp() only
-     * folds ASCII, so a barangay name carrying an accent would compare unequal
-     * to the same name typed in another case.
-     */
-    private static function sameFold(string $a, string $b): bool
-    {
-        return mb_strtolower($a, 'UTF-8') === mb_strtolower($b, 'UTF-8');
     }
 }

@@ -30,13 +30,18 @@ $sectors = (array) ($sectors ?? []);
 $services = (array) ($services ?? []);
 $categories = (array) ($categories ?? []);
 $formOptions = (array) ($formOptions ?? []);
+$qrDataUri = (string) ($qrDataUri ?? '');
 
 // The Data Entry spine renders the head and the member list as separate steps;
 // the edit page renders both in one card, which is what 'all' keeps doing.
 $part = (string) ($part ?? 'all');
 $part = in_array($part, ['head', 'members', 'all'], true) ? $part : 'all';
 
-$headId = (int) ($head['headID'] ?? 0);
+// A head row carries headID == memberID, so either identifies it. Reading only
+// headID meant a caller that passed the head row without it (Family/profile
+// derives its own id from memberID) rendered as a new record: no control number
+// and no code.
+$headId = (int) ($head['headID'] ?? $head['memberID'] ?? 0);
 $fieldPrefix = $headId > 0 ? 'family-update' : 'family-add';
 $qrLocked = ! empty($head['qr_locked'] ?? false);
 
@@ -372,8 +377,19 @@ $renderMemberRow = static function ($index, array $m = [], bool $open = true) us
                 <?php /* An existing record's control number identifies it, so it is shown
                          readonly here rather than re-typed; entry.php's own control-number
                          gate owns the create-mode field instead. */ ?>
+                <?php if ($qrDataUri !== ''): ?>
+                    <?php /* Decorative: alt="" so a screen reader does not read the number
+                             twice, the Control Number field beside it already carries it. */ ?>
+                    <div class="mb-3">
+                        <img src="<?= esc($qrDataUri) ?>" width="64" height="64" alt="">
+                    </div>
+                <?php endif; ?>
                 <label class="form-label" for="<?= esc($fieldPrefix, 'attr') ?>HeadQr">Control Number</label>
-                <input id="<?= esc($fieldPrefix, 'attr') ?>HeadQr" name="qr_control_no" class="form-control" type="text"
+                <?php /* readonly, not disabled: the number identifies the record and has to
+                         post with the form, and a disabled control submits nothing - which
+                         update() then rejects as a missing QR Number. One input, so the
+                         posted value is the one on screen. */ ?>
+                <input id="<?= esc($fieldPrefix, 'attr') ?>HeadQr" name="qr_control_no" class="form-control text-muted fw-semibold" type="text"
                     value="<?= esc((string) ($head['qr_control_no'] ?? ''), 'attr') ?>" readonly>
                 <?php if ($qrLocked): ?>
                     <small class="text-muted">Locked: subsidy already recorded under this number.</small>
@@ -430,11 +446,11 @@ $renderMemberRow = static function ($index, array $m = [], bool $open = true) us
     <?php /* The entry spine names this section on its step link, so the title here
              would be the same words twice; the edit page has no such label and
              keeps it. The count rides along in both. */ ?>
-    <div class="family-section-head">
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-4 pb-3 border-bottom mt-4 pt-2">
         <?php if ($part === 'all'): ?>
-            <h3 class="family-person-card-title">Members of the Family</h3>
+            <h3 class="h6 mb-0 fw-bold text-dark"><i class="bi bi-people-fill me-2 text-muted"></i>Family Members</h3>
         <?php endif; ?>
-        <span class="badge rounded-pill text-bg-light border" data-family-members-count>0 members</span>
+        <span class="badge rounded-pill text-bg-light border px-3 py-2" data-family-members-count>0 members</span>
     </div>
 
     <div class="row g-3" data-family-members>

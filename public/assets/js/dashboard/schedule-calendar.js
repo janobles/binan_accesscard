@@ -147,7 +147,7 @@
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (body) {
         if (body && typeof body.eligible === 'number') {
-          target.textContent = body.eligible.toLocaleString() + ' families';
+          target.textContent = body.eligible.toLocaleString() + ' families eligible';
         }
       })
       .catch(function () { /* leave the last known count showing */ });
@@ -190,19 +190,40 @@
     eventContent: function (arg) {
       const p = arg.event.extendedProps;
       const label = p.status === 'running' ? 'Open' : (p.status === 'finished' ? 'Done' : '');
+      
       const wrap = document.createElement('div');
-      wrap.className = 'd-flex align-items-center w-100 overflow-hidden';
+      wrap.className = 'd-flex flex-column w-100 overflow-hidden';
       wrap.style.padding = '2px 4px';
+      
+      const timeStr = (p.dailyStart && p.dailyEnd) ? shortHour(p.dailyStart) + '-' + shortHour(p.dailyEnd) : '';
+      
+      const topRow = document.createElement('div');
+      topRow.className = 'd-flex align-items-center mb-1';
+      topRow.style.gap = '4px';
+      
       if (label) {
         const pill = document.createElement('span');
         pill.className = 'batch-status shadow-sm';
         pill.textContent = label;
-        wrap.appendChild(pill);
+        topRow.appendChild(pill);
       }
-      const text = document.createElement('span');
-      text.className = 'text-truncate';
-      text.textContent = eventLabel(arg.event);
-      wrap.appendChild(text);
+      
+      if (timeStr) {
+        const timeText = document.createElement('span');
+        timeText.textContent = timeStr;
+        topRow.appendChild(timeText);
+      }
+      
+      if (topRow.childNodes.length > 0) {
+        wrap.appendChild(topRow);
+      }
+      
+      const details = document.createElement('div');
+      details.className = 'text-truncate';
+      details.style.fontSize = '0.9em';
+      details.textContent = p.venue ? arg.event.title + ' · ' + p.venue : arg.event.title;
+      wrap.appendChild(details);
+      
       return { domNodes: [wrap] };
     },
     // A day cell is narrower than most labels, so the visible text is usually
@@ -325,19 +346,22 @@
     return isoLocal(d);
   }
 
-  /** An event's one-line label: name, venue and daily hours. Drawn in the day cell and repeated in full by the tooltip. */
+  /** An event's one-line label: name, venue and daily hours. Repeated in full by the tooltip. */
   function eventLabel(event) {
     const p = event.extendedProps;
-    const time = (p.dailyStart && p.dailyEnd) ? ' · ' + shortHour(p.dailyStart) + '-' + shortHour(p.dailyEnd) : '';
-
-    return (p.venue ? event.title + ' · ' + p.venue : event.title) + time;
+    const timeStr = (p.dailyStart && p.dailyEnd) ? shortHour(p.dailyStart) + '-' + shortHour(p.dailyEnd) : '';
+    const detailsStr = p.venue ? event.title + ' · ' + p.venue : event.title;
+    
+    return timeStr ? timeStr + ' · ' + detailsStr : detailsStr;
   }
 
-  /** '17:00' -> '5', '08:30' -> '8:30': a round hour drops its minutes, for the compact "8-5" event label. */
+  /** '17:00' -> '5pm', '08:30' -> '8:30am': a round hour drops its minutes, for the compact "8am-5pm" event label. */
   function shortHour(hhmm) {
-    const [h, m] = hhmm.split(':');
-    const hour12 = ((parseInt(h, 10) % 12) || 12);
-    return m === '00' ? String(hour12) : hour12 + ':' + m;
+    const parts = hhmm.split(':');
+    const hInt = parseInt(parts[0], 10);
+    const hour12 = (hInt % 12) || 12;
+    const ampm = hInt < 12 ? 'am' : 'pm';
+    return parts[1] === '00' ? hour12 + ampm : hour12 + ':' + parts[1] + ampm;
   }
 
   const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];

@@ -197,8 +197,8 @@ final class DashboardScheduleCardTest extends CIUnitTestCase
             ->get('dashboard')
             ->getBody();
 
-        $this->assertStringContainsString('>open</span>', $body, 'the started batch reads as open');
-        $this->assertStringContainsString('>scheduled</span>', $body, 'the plotted batch reads as scheduled');
+        $this->assertStringContainsString('>Open</span>', $body, 'the started batch reads as open');
+        $this->assertStringContainsString('>Scheduled</span>', $body, 'the plotted batch reads as scheduled');
         $this->assertStringContainsString('Not yet started', $body);
     }
 

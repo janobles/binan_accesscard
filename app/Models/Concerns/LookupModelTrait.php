@@ -57,10 +57,6 @@ trait LookupModelTrait
                 fn (string $column): bool => $this->db->fieldExists($column, $this->table)
             ));
 
-            if ($searchColumns === []) {
-                return $builder;
-            }
-
             $builder->groupStart();
 
             foreach ($searchColumns as $index => $column) {
@@ -70,6 +66,12 @@ trait LookupModelTrait
                     $builder->orLike($column, $keyword);
                 }
             }
+
+            // A model whose searchable text is not all in its own columns adds it
+            // here, inside the keyword group, so it stays OR-ed with the LIKEs and
+            // AND-ed with the status filter. ServiceModel uses it: a service's
+            // grouping is a key into category/sector, not text on the row.
+            $this->applyLookupKeywordExtras($builder, $keyword, $searchColumns === []);
 
             $builder->groupEnd();
         }

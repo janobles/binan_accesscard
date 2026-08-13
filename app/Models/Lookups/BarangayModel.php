@@ -32,6 +32,24 @@ class BarangayModel extends Model
         }
     }
 
+    /**
+     * Live barangay names in name order - the one list every dropdown, the Excel
+     * template's Barangay validation list, and the importer's spelling check
+     * read. A second hardcoded copy used to live in FamilyProfilingFormV2 and had
+     * drifted from the table ("Soro-Soro" against "SORO-SORO", "Santo Tomas
+     * (Calabuso)" against "SANTO TOMAS"), so a form value could resolve to no
+     * barangay at all.
+     *
+     * @return list<string>
+     */
+    public function activeNames(): array
+    {
+        return array_values(array_map(
+            static fn (array $row): string => (string) $row['name'],
+            $this->activeList()
+        ));
+    }
+
     /** barangayID to name, for labelling rows the rollup returns by ID. */
     public function nameMap(): array
     {

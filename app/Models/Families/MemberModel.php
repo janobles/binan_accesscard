@@ -20,14 +20,13 @@ class MemberModel extends Model
     use ResolvesSectorNames;
 
     public const VALIDATION_RULES = [
-        'sectorID' => 'permit_empty|valid_sector_array',
         'firstname' => 'required|max_length[100]',
         'lastname' => 'required|max_length[100]',
         'middlename' => 'permit_empty|max_length[50]',
         'suffix' => 'permit_empty|max_length[20]',
         'birthday' => 'permit_empty|valid_date[Y-m-d]|not_future_date',
         'civilstatus' => 'permit_empty|min_length[2]|max_length[100]|not_numeric_only',
-        'sex' => 'permit_empty|in_list[Male,Female]',
+        'sex' => 'permit_empty|in_list[MALE,FEMALE]',
         'education' => 'permit_empty|min_length[2]|max_length[150]|not_numeric_only',
         'job' => 'permit_empty|min_length[2]|max_length[150]|not_numeric_only',
         'contactnumber' => 'permit_empty|max_length[30]',
@@ -51,7 +50,7 @@ class MemberModel extends Model
         'sex',
         'education',
         'job',
-        'Salary',
+        'salary',
         'contactnumber',
         'religion',
         'address',
@@ -59,12 +58,9 @@ class MemberModel extends Model
         'barangayID',
         'relationship',
         'headID',
-        'sectorID',
     ];
     protected $useTimestamps = false;
     protected $validationRules = self::VALIDATION_RULES;
-    protected $beforeInsert = ['normalizeSectorIdStorage'];
-    protected $beforeUpdate = ['normalizeSectorIdStorage'];
 
     /** True if the `member` table exists; callers guard queries with this. */
     public function hasTable(): bool
@@ -78,7 +74,7 @@ class MemberModel extends Model
      */
     public function hasRequiredFamilyTables(): bool
     {
-        foreach (['member', 'sector', 'services', 'member_services', 'audit_trails'] as $table) {
+        foreach (['member', 'sector', 'member_sectors', 'services', 'member_services', 'audit_trails'] as $table) {
             if (! $this->db->tableExists($table)) {
                 return false;
             }
@@ -115,20 +111,6 @@ class MemberModel extends Model
     }
 
     /**
-     * ENCODE hook. Registered as beforeInsert/beforeUpdate, this runs right
-     * before a row is written and converts the sectorID array into its JSON
-    * storage string ('[1,2,3]'). See App\Libraries\SectorIds::toStorage().
-     */
-    protected function normalizeSectorIdStorage(array $data): array
-    {
-        if (array_key_exists('sectorID', $data['data'] ?? [])) {
-            $data['data']['sectorID'] = SectorIds::toStorage($data['data']['sectorID']);
-        }
-
-        return $data;
-    }
-
-    /**
      * Inserts a head-of-family row, where headID points to its own memberID.
      * Called by FamilyController::store(); returns the new memberID or false.
      */
@@ -136,7 +118,8 @@ class MemberModel extends Model
     {
         $data['memberID'] = $this->nextAutoIncrementId();
         $data['headID'] = $data['memberID'];
-        $data['relationship'] = $data['relationship'] ?? 'Head';
+        // Not a fallback: this row IS the head, whatever the caller passed.
+        $data['relationship'] = 'HEAD';
         $data = $this->memberColumnPayload($data);
 
         if (! $this->insert($data)) {
@@ -453,9 +436,9 @@ class MemberModel extends Model
 
     /**
      * Builds the head-only records query. $filters (optional) applies the Manage Records
-     * filter controls: 'sectorID' (exact match inside the JSON array), 'barangay',
-     * and 'date' (single-day match on member.dt_created). Empty $filters = original
-     * behavior unchanged.
+     * filter controls: 'sectorID' (matched through member_sectors), 'barangay'
+     * (matched on member.barangayID), and 'date' (single-day match on
+     * member.dt_created). Empty $filters = original behavior unchanged.
      */
     private function familySearchBuilder(?string $keyword = null, string $status = RecordStatus::ALL, array $filters = [])
     {
@@ -475,8 +458,7 @@ class MemberModel extends Model
                 $builder,
                 $keyword,
                 'member.',
-                ['religion', 'address', 'barangay'],
-                'member.sectorID',
+                ['religion', 'address'],
                 [],
                 $this->headIdsForQrKeyword($keyword)
             );
@@ -493,8 +475,8 @@ class MemberModel extends Model
      */
     private function applyRecordFilters($builder, array $filters): void
     {
-        $this->applySectorIdFilter($builder, $filters['sectorID'] ?? [], 'member.sectorID');
-        $this->applyBarangayFilter($builder, $filters['barangay'] ?? [], 'member.address', 'member.barangay');
+        $this->applySectorIdFilter($builder, $filters['sectorID'] ?? [], 'member.memberID');
+        $this->applyBarangayFilter($builder, $filters['barangay'] ?? [], 'member.memberID');
         $this->applyDateRange($builder, 'member.dt_created', $filters);
     }
 
@@ -548,15 +530,10 @@ class MemberModel extends Model
                 $row['suffix'] ?? ''
             ));
 
+            // The barangay comes from the barangayID join (headsForCardsBuilder),
+            // so a card prints the canonical name rather than whatever spelling
+            // reached the address field.
             $barangay = trim((string) ($row['barangay'] ?? ''));
-
-            if ($barangay === '') {
-                // Barangay lives at the tail of the combined address. Use the shared
-                // splitter rather than matching here: addresses are stored uppercase,
-                // and the local copy of this logic compared case-sensitively against
-                // the Title Case list, so the card printed a blank barangay.
-                $barangay = MemberFieldNormalizer::splitAddressBarangay($row['address'] ?? '')['barangay'];
-            }
 
             return [
                 'memberID'  => (int) $row['memberID'],
@@ -587,16 +564,14 @@ class MemberModel extends Model
      */
     private function headsForCardsBuilder(array $filter = [], bool $forCount = false): \CodeIgniter\Database\BaseBuilder
     {
-        $hasBarangayColumn = $this->memberFieldExists('barangay');
-
         $columns = $forCount
             ? 'member.memberID'
-            : 'member.memberID, member.lastname, member.firstname, member.middlename, member.suffix, member.address, qc.control_no'
-                . ($hasBarangayColumn ? ', member.barangay' : '');
+            : 'member.memberID, member.lastname, member.firstname, member.middlename, member.suffix, member.address, barangay.name AS barangay, qc.control_no';
 
         $builder = $this->db->table('member')
             ->select($columns)
             ->join('qr_control qc', 'qc.headID = member.memberID', 'left')
+            ->join('barangay', 'barangay.barangayID = member.barangayID', 'left')
             ->where('member.headID = member.memberID', null, false);
 
         // qr_control is the single source of truth for control numbers: a head with
@@ -613,15 +588,7 @@ class MemberModel extends Model
         }
 
         if (! empty($filter['barangay'])) {
-            if ($hasBarangayColumn) {
-                $builder->where('member.barangay', $filter['barangay']);
-            } else {
-                // Barangay lives at the tail of the combined address ("address, barangay").
-                $builder->groupStart()
-                    ->like('member.address', ', ' . $filter['barangay'], 'before')
-                    ->orWhere('member.address', $filter['barangay'])
-                    ->groupEnd();
-            }
+            $builder->where('barangay.name', $filter['barangay']);
         }
 
         if (isset($filter['controlFrom']) && (int) $filter['controlFrom'] > 0) {
@@ -641,8 +608,7 @@ class MemberModel extends Model
         }
 
         if (! empty($filter['sectorID'])) {
-            // sectorID is stored as a JSON array ('[1,2,3]'); match membership.
-            $builder->where(SectorIds::containsCondition((int) $filter['sectorID'], 'member.sectorID'), null, false);
+            $builder->where($this->sectorMembershipCondition([(int) $filter['sectorID']], 'member.memberID'), null, false);
         }
 
         return $builder;
@@ -686,6 +652,8 @@ class MemberModel extends Model
         }
 
         $builder = $this->db->table('member')
+            ->select('member.*, barangay.name AS barangay')
+            ->join('barangay', 'barangay.barangayID = member.barangayID', 'left')
             ->where('memberID', $memberID)
             ->where('member.headID = member.memberID', null, false);
 
@@ -700,7 +668,7 @@ class MemberModel extends Model
 
     /**
      * Reference-data badges per member for the kiosk family panel: sector
-     * shortcodes (member.sectorID JSON), then category names, then service
+     * shortcodes (member_sectors), then category names, then service
      * shortcodes (member_services -> services). Returns memberID => list of
      * badge labels; empty map on empty input or any DB error.
      *
@@ -721,14 +689,13 @@ class MemberModel extends Model
                 $sectorCodes[(int) $s['sectorID']] = (string) $s['shortcode'];
             }
 
-            $sectorJson = [];
-            foreach ($this->db->table('member')->select('memberID, sectorID')->whereIn('memberID', $memberIds)->get()->getResultArray() as $m) {
-                $sectorJson[(int) $m['memberID']] = $m['sectorID'];
-            }
+            $sectorIdsByMember = (new MemberSectorModel())->getSectorIdsByMemberIds($memberIds);
 
             $serviceRows = $this->db->table('member_services')
-                ->select('member_services.memberID, services.shortcode, services.category')
+                ->select('member_services.memberID, services.shortcode, COALESCE(category.name, service_sector.name) AS category', false)
                 ->join('services', 'services.serviceID = member_services.serviceID')
+                ->join('category', 'category.categoryID = services.categoryID', 'left')
+                ->join('sector service_sector', 'service_sector.sectorID = services.sectorID', 'left')
                 ->whereIn('member_services.memberID', $memberIds)
                 ->where('services.dt_deleted IS NULL', null, false)
                 ->get()->getResultArray();
@@ -736,7 +703,7 @@ class MemberModel extends Model
             $badges = [];
             foreach ($memberIds as $id) {
                 $sectors = [];
-                foreach (\App\Libraries\SectorIds::normalize($sectorJson[$id] ?? '[]') as $sid) {
+                foreach ($sectorIdsByMember[$id] ?? [] as $sid) {
                     if (isset($sectorCodes[$sid])) {
                         $sectors[] = $sectorCodes[$sid];
                     }
@@ -788,14 +755,13 @@ class MemberModel extends Model
                 $sectorCodes[(int) $s['sectorID']] = (string) $s['shortcode'];
             }
 
-            $sectorJson = [];
-            foreach ($this->db->table('member')->select('memberID, sectorID')->whereIn('memberID', $memberIds)->get()->getResultArray() as $m) {
-                $sectorJson[(int) $m['memberID']] = $m['sectorID'];
-            }
+            $sectorIdsByMember = (new MemberSectorModel())->getSectorIdsByMemberIds($memberIds);
 
             $serviceRows = $this->db->table('member_services')
-                ->select('member_services.memberID, services.shortcode, services.category')
+                ->select('member_services.memberID, services.shortcode, COALESCE(category.name, service_sector.name) AS category', false)
                 ->join('services', 'services.serviceID = member_services.serviceID')
+                ->join('category', 'category.categoryID = services.categoryID', 'left')
+                ->join('sector service_sector', 'service_sector.sectorID = services.sectorID', 'left')
                 ->whereIn('member_services.memberID', $memberIds)
                 ->where('services.dt_deleted IS NULL', null, false)
                 ->get()->getResultArray();
@@ -803,7 +769,7 @@ class MemberModel extends Model
             $split = [];
             foreach ($memberIds as $id) {
                 $sectors = [];
-                foreach (\App\Libraries\SectorIds::normalize($sectorJson[$id] ?? '[]') as $sid) {
+                foreach ($sectorIdsByMember[$id] ?? [] as $sid) {
                     if (isset($sectorCodes[$sid])) {
                         $sectors[] = $sectorCodes[$sid];
                     }
@@ -860,7 +826,7 @@ class MemberModel extends Model
     public function updateHead(int $headId, array $data): bool
     {
         $data['headID'] = $headId;
-        $data['relationship'] = 'Head';
+        $data['relationship'] = 'HEAD';
         $data = $this->memberColumnPayload($data);
 
         return $this->update($headId, $data) !== false;
@@ -938,19 +904,19 @@ class MemberModel extends Model
             'member.sex',
             'member.education',
             'member.job',
-            'member.Salary',
+            'member.salary',
             'member.contactnumber',
             'member.relationship',
             'member.dt_created',
             'member.dt_updated',
             'member.dt_deleted',
             'member.headID',
-            'member.sectorID',
             'head.firstname AS head_firstname',
             'head.lastname AS head_lastname',
+            'barangay.name AS barangay',
         ];
 
-        foreach (['religion', 'address', 'barangay'] as $field) {
+        foreach (['religion', 'address'] as $field) {
             if ($this->memberFieldExists($field)) {
                 $select[] = 'member.' . $field;
             }
@@ -958,7 +924,19 @@ class MemberModel extends Model
 
         $builder = $this->db->table('member')
             ->select($select)
-            ->join('member head', 'head.memberID = member.headID', 'left');
+            ->join('member head', 'head.memberID = member.headID', 'left')
+            ->join('barangay', 'barangay.barangayID = member.barangayID', 'left');
+
+        // The member's sectors as a comma list, so a listing stays one row per
+        // member: joining member_sectors would multiply rows by sector count and
+        // break every count and paginator downstream. Selected unescaped (and so
+        // spelled with the prefix by hand) because the builder cannot prefix a
+        // subquery it did not build.
+        $builder->select(
+            '(SELECT GROUP_CONCAT(ms.sectorID) FROM ' . $this->db->prefixTable('member_sectors')
+                . ' ms WHERE ms.memberID = ' . $this->db->prefixTable('member') . '.memberID) AS sector_ids',
+            false
+        );
 
         if ($this->db->fieldExists('dt_deleted', 'member')) {
             if ($status === RecordStatus::ARCHIVED) {

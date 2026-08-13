@@ -2,6 +2,7 @@
 
 namespace App\Database\Seeds;
 
+use App\Models\Lookups\BarangayModel;
 use App\Support\MemberFieldNormalizer;
 use CodeIgniter\CLI\CLI;
 use CodeIgniter\Database\Seeder;
@@ -74,14 +75,15 @@ class DummyDataSeeder extends Seeder
         'A. Mabini St', 'J. Rizal Ave', 'P. Burgos St', 'Gen. Luna Rd',
     ];
 
-    private array $barangays = [
-        'Brgy. San Vicente', 'Brgy. Malaban', 'Brgy. Canlalay', 'Brgy. Poblacion',
-        'Brgy. Santo Niño', 'Brgy. San Antonio', 'Brgy. Tubigan', 'Brgy. Zapote',
-        'Brgy. Platero', 'Brgy. De La Paz', 'Brgy. Loma', 'Brgy. Casile',
-        'Brgy. Langkiwa', 'Brgy. Soro-soro', 'Brgy. Timbao', 'Brgy. Halang',
-        'Brgy. Behia', 'Brgy. Malamig', 'Brgy. Mamplasan', 'Brgy. Sto. Tomas',
-        'Brgy. San Jose', 'Brgy. Niyugan', 'Brgy. Biñan', 'Brgy. Puting Kahoy',
-    ];
+    /**
+     * barangayIDs to draw from, read from the barangay table in run(). Seeded
+     * rows carry the id, not a name in the address: since V22 barangayID is the
+     * only place a member's barangay lives, and a hardcoded name list here would
+     * drift from the table the way FamilyProfilingFormV2's copy did.
+     *
+     * @var list<int>
+     */
+    private array $barangayIds = [];
 
     private array $religions = [
         'Roman Catholic', 'Roman Catholic', 'Roman Catholic', 'Roman Catholic',
@@ -123,18 +125,31 @@ class DummyDataSeeder extends Seeder
     public function run(): void
     {
         if (self::TRUNCATE_BEFORE_SEED) {
-            CLI::write('Truncating member_services and member tables...', 'yellow');
+            CLI::write('Truncating member_sectors, member_services and member tables...', 'yellow');
             $this->db->query('SET FOREIGN_KEY_CHECKS=0');
+            $this->db->table('member_sectors')->truncate();
             $this->db->table('member_services')->truncate();
             $this->db->table('member')->truncate();
             $this->db->query('SET FOREIGN_KEY_CHECKS=1');
             CLI::write('Done truncating.', 'yellow');
         }
 
+        $this->barangayIds = array_map(
+            static fn (array $row): int => (int) $row['barangayID'],
+            (new BarangayModel())->activeList()
+        );
+
+        if ($this->barangayIds === []) {
+            CLI::error('No barangay rows - import the SQL dump before seeding.');
+
+            return;
+        }
+
         $nextID = $this->getNextAutoIncrement();
         CLI::write("Starting memberID will be: {$nextID}", 'cyan');
 
         $memberBatch   = [];
+        $sectorsBatch  = [];
         $servicesBatch = [];
         $totalMembers  = 0;
         $id            = $nextID;
@@ -154,7 +169,10 @@ class DummyDataSeeder extends Seeder
             $headSex    = (rand(0, 9) < 7) ? 'Male' : 'Female';
             $headBday   = $this->birthdayFromAge($headAge);
             $headSectors = $this->assignHeadSectors($headAge, $headSex);
+            // One household, one address and one barangay: the members below reuse
+            // the head's, the way the entry form copies them down.
             $address    = $this->randomAddress();
+            $barangayID = (int) $this->pick($this->barangayIds);
 
             // The head references itself as its own headID.
             $memberBatch[] = $this->buildMember(
@@ -168,9 +186,11 @@ class DummyDataSeeder extends Seeder
                 relationship: 'Head of Family',
                 civilStatus:  $this->civilStatus($headAge),
                 address:      $address,
+                barangayID:   $barangayID,
                 sectors:      $headSectors,
                 now:          $now,
             );
+            $this->addSectors($sectorsBatch, $id, $headSectors, $now);
             $this->addServices($servicesBatch, $id, $headSectors, $now);
             $id++;
             $totalMembers++;
@@ -199,9 +219,11 @@ class DummyDataSeeder extends Seeder
                     relationship: $relLabel,
                     civilStatus:  $this->civilStatus($memAge),
                     address:      $address,
+                    barangayID:   $barangayID,
                     sectors:      $memSectors,
                     now:          $now,
                 );
+                $this->addSectors($sectorsBatch, $id, $memSectors, $now);
                 $this->addServices($servicesBatch, $id, $memSectors, $now);
                 $id++;
                 $totalMembers++;
@@ -223,7 +245,12 @@ class DummyDataSeeder extends Seeder
             $this->db->table('member')->insertBatch($memberBatch);
         }
 
-        // Flush all member_services
+        // Flush all member_sectors, then member_services. Both carry a foreign key
+        // to member, so they go in after the member rows above.
+        foreach (array_chunk($sectorsBatch, self::BATCH_SIZE) as $chunk) {
+            $this->db->table('member_sectors')->insertBatch($chunk);
+        }
+
         foreach (array_chunk($servicesBatch, self::BATCH_SIZE) as $chunk) {
             $this->db->table('member_services')->insertBatch($chunk);
         }
@@ -254,6 +281,7 @@ class DummyDataSeeder extends Seeder
         string $relationship,
         string $civilStatus,
         string $address,
+        int    $barangayID,
         string $sectors,
         string $now,
     ): array {
@@ -280,20 +308,36 @@ class DummyDataSeeder extends Seeder
             'middlename'    => MemberFieldNormalizer::cleanName($this->pick($this->middleNames)),
             'suffix'        => null,
             'birthday'      => $birthday,
-            'civilstatus'   => $civilStatus,
-            'sex'           => $sex,
-            'education'     => $education,
-            'job'           => $job,
-            'Salary'        => $salary,
+            'civilstatus'   => mb_strtoupper($civilStatus, 'UTF-8'),
+            'sex'           => mb_strtoupper($sex, 'UTF-8'),
+            'education'     => mb_strtoupper($education, 'UTF-8'),
+            'job'           => $job === null ? null : mb_strtoupper($job, 'UTF-8'),
+            'salary'        => $salary,
             'contactnumber' => rand(9000000000, 9999999999),
-            'relationship'  => $relationship,
+            'relationship'  => mb_strtoupper($relationship, 'UTF-8'),
             'address'       => MemberFieldNormalizer::cleanAddress($address),
-            'religion'      => $this->pick($this->religions),
-            'sectorID'      => $sectors,
+            'barangayID'    => $barangayID,
+            'religion'      => mb_strtoupper((string) $this->pick($this->religions), 'UTF-8'),
             'dt_created'    => $now,
             'dt_updated'    => $now,
             'dt_deleted'    => null,
         ];
+    }
+
+    /**
+     * Queues one member_sectors row per sector the member belongs to. Sectors are
+     * a relation since V22; the JSON string built above is still the shape the
+     * seeder's own helpers pass around, so it is decoded here.
+     */
+    private function addSectors(array &$batch, int $memberID, string $sectorString, string $now): void
+    {
+        foreach ((array) (json_decode($sectorString, true) ?? []) as $sectorId) {
+            $batch[] = [
+                'memberID'   => $memberID,
+                'sectorID'   => (int) $sectorId,
+                'dt_created' => $now,
+            ];
+        }
     }
 
     private function addServices(array &$batch, int $memberID, string $sectorString, string $now): void
@@ -453,12 +497,13 @@ class DummyDataSeeder extends Seeder
             : $this->pick($this->firstNamesFemale);
     }
 
+    /** Street address only: the barangay is a barangayID on the row, not text here. */
     private function randomAddress(): string
     {
         $num    = rand(1, 250);
         $street = $this->pick($this->streets);
-        $brgy   = $this->pick($this->barangays);
-        return "{$num} {$street}, {$brgy}, Biñan, Laguna";
+
+        return "{$num} {$street}";
     }
 
     private function pick(array $array): mixed

@@ -122,7 +122,10 @@ $bodyView = ($bodyView ?? '') !== '' ? $bodyView : 'Pages/dashboard';
                      sits inside a nav landmark. */ ?>
             <h1 class="visually-hidden" id="dashboard-page-title"><?= esc($pageTitle) ?></h1>
             <?php if (session()->getFlashdata('success')): ?>
-                <div class="alert alert-success" data-auto-dismiss-alert><?= esc(session()->getFlashdata('success')) ?></div>
+                <div class="alert alert-success alert-dismissible fade show" role="alert" data-auto-dismiss-alert>
+                    <?= esc(session()->getFlashdata('success')) ?>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
             <?php endif; ?>
             <?php if ($resetInfo = session()->getFlashdata('reset_password')): ?>
                 <div class="reset-password-callout" role="alert">
@@ -140,7 +143,10 @@ $bodyView = ($bodyView ?? '') !== '' ? $bodyView : 'Pages/dashboard';
                 </div>
             <?php endif; ?>
             <?php if (session()->getFlashdata('error')): ?>
-                <div class="alert alert-danger" data-auto-dismiss-alert><?= esc(session()->getFlashdata('error')) ?></div>
+                <div class="alert alert-danger alert-dismissible fade show" role="alert" data-auto-dismiss-alert>
+                    <?= esc(session()->getFlashdata('error')) ?>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
             <?php endif; ?>
             <?php if (session()->getFlashdata('family_record_saved')): ?>
                 <span id="familyDraftSavedMarker" hidden></span>

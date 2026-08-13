@@ -43,7 +43,8 @@ class SearchModel
 
         $limit = max(1, $limit);
         $builder = $this->db->table('member')
-            ->select('memberID, firstname, middlename, lastname, contactnumber, relationship, headID, sectorID, dt_created, dt_updated')
+            ->select('memberID, firstname, middlename, lastname, contactnumber, relationship, headID, dt_created, dt_updated')
+            ->select($this->sectorIdsSelect($this->db->prefixTable('member')), false)
             ->where('memberID = headID', null, false)
             ->where('dt_deleted IS NULL', null, false);
 
@@ -54,15 +55,14 @@ class SearchModel
                 $builder,
                 $keyword,
                 '',
-                ['sectorID'],
-                'sectorID',
+                [],
                 [],
                 $this->headIdsForQrKeyword($keyword)
             );
         }
 
-        $this->applySectorIdFilter($builder, $filters['sectorID'] ?? [], 'sectorID');
-        $this->applyBarangayFilter($builder, $filters['barangay'] ?? [], 'address', 'barangay');
+        $this->applySectorIdFilter($builder, $filters['sectorID'] ?? [], 'memberID');
+        $this->applyBarangayFilter($builder, $filters['barangay'] ?? [], 'memberID');
 
         $this->applyDateRange($builder, 'dt_created', $filters);
 
@@ -102,7 +102,8 @@ class SearchModel
         $offset = max(0, $offset);
 
         $builder = $this->allMembersBuilder($keyword, $filters)
-            ->select('m.memberID, m.firstname, m.middlename, m.lastname, m.suffix, m.birthday, m.contactnumber, m.relationship, m.address, m.headID, m.sectorID, m.dt_created, m.dt_deleted, h.firstname AS head_firstname, h.lastname AS head_lastname, h.suffix AS head_suffix');
+            ->select('m.memberID, m.firstname, m.middlename, m.lastname, m.suffix, m.birthday, m.contactnumber, m.relationship, m.address, m.headID, m.dt_created, m.dt_deleted, h.firstname AS head_firstname, h.lastname AS head_lastname, h.suffix AS head_suffix')
+            ->select($this->sectorIdsSelect('m'), false);
         $this->applyAllMembersOrder($builder, $orderKey, $orderDirection);
 
         $rows = $builder
@@ -242,14 +243,13 @@ class SearchModel
                 $keyword,
                 'm.',
                 ['address', 'religion', 'job'],
-                'm.sectorID',
                 $serviceMemberIds,
                 $this->headIdsForQrKeyword($keyword)
             );
         }
 
-        $this->applySectorIdFilter($builder, $filters['sectorID'] ?? [], 'm.sectorID');
-        $this->applyBarangayFilter($builder, $filters['barangay'] ?? [], 'm.address', 'm.barangay');
+        $this->applySectorIdFilter($builder, $filters['sectorID'] ?? [], 'm.memberID');
+        $this->applyBarangayFilter($builder, $filters['barangay'] ?? [], 'm.memberID');
 
         $this->applyDateRange($builder, 'm.dt_created', $filters);
 
@@ -527,10 +527,15 @@ class SearchModel
         return array_map(
             static fn (array $service): int => (int) $service['serviceID'],
             $this->db->table('services')
-                ->select('serviceID')
+                ->select('services.serviceID')
+                // The grouping label lives in category/sector since V22, so the
+                // keyword is matched against those tables through the keys.
+                ->join('category', 'category.categoryID = services.categoryID', 'left')
+                ->join('sector', 'sector.sectorID = services.sectorID', 'left')
                 ->groupStart()
-                    ->like('name', $keyword)
-                    ->orLike('category', $keyword)
+                    ->like('services.name', $keyword)
+                    ->orLike('category.name', $keyword)
+                    ->orLike('sector.name', $keyword)
                 ->groupEnd()
                 ->get()
                 ->getResultArray()

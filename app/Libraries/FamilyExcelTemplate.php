@@ -47,21 +47,21 @@ class FamilyExcelTemplate
 
     /** Civil-status short codes (CSWD form) -> the full value stored in the DB. */
     public const CIVIL_STATUS_CODES = [
-        'S' => 'Single',
-        'M' => 'Married',
-        'W' => 'Widow / Widower',
-        'H' => 'Separated',
-        'N' => 'Live-in / Not Married',
+        'S' => 'SINGLE',
+        'M' => 'MARRIED',
+        'W' => 'WIDOW / WIDOWER',
+        'H' => 'SEPARATED',
+        'N' => 'LIVE-IN / NOT MARRIED',
     ];
 
     /** Education short codes (CSWD form) -> the full value stored in the DB. */
     public const EDUCATION_CODES = [
-        'E'   => 'Elementary',
-        'HS'  => 'High School',
-        'UG'  => 'Undergraduate',
-        'Voc' => 'Vocational',
-        'CG'  => 'College Graduate',
-        'PG'  => 'Post Graduate',
+        'E'   => 'ELEMENTARY',
+        'HS'  => 'HIGH SCHOOL',
+        'UG'  => 'UNDERGRADUATE',
+        'Voc' => 'VOCATIONAL',
+        'CG'  => 'COLLEGE GRADUATE',
+        'PG'  => 'POST GRADUATE',
     ];
 
     /** Ordered column headers for the Families sheet (matched case-insensitively). @var list<string> */
@@ -141,13 +141,13 @@ class FamilyExcelTemplate
         $ranges = [];
         $ranges['relationship'] = $this->writeList($sheet, 'A', 'Relationships', $relationships);
         $ranges['suffix']       = $this->writeList($sheet, 'B', 'Suffixes', FamilyProfilingFormV2::suffixes());
-        $ranges['sex']          = $this->writeList($sheet, 'C', 'Sexes', ['Male', 'Female']);
+        $ranges['sex']          = $this->writeList($sheet, 'C', 'Sexes', ['MALE', 'FEMALE']);
         $ranges['civilstatus']  = $this->writeList($sheet, 'D', 'CivilStatus (code - name)', $this->codeNameList(self::CIVIL_STATUS_CODES, FamilyProfilingFormV2::civilStatuses()));
         $ranges['religion']     = $this->writeList($sheet, 'E', 'Religions', FamilyProfilingFormV2::religions());
         $ranges['education']    = $this->writeList($sheet, 'F', 'Education (code - name)', $this->codeNameList(self::EDUCATION_CODES, FamilyProfilingFormV2::educationLevels()));
         $ranges['job']          = $this->writeList($sheet, 'G', 'Jobs', FamilyProfilingFormV2::jobOptions());
         $ranges['income']       = $this->writeList($sheet, 'H', 'MonthlyIncome', $this->incomeLabels());
-        $ranges['barangay']     = $this->writeList($sheet, 'I', 'Barangays', FamilyProfilingFormV2::barangays());
+        $ranges['barangay']     = $this->writeList($sheet, 'I', 'Barangays', (new \App\Models\Lookups\BarangayModel())->activeNames());
 
         $sheet->setCellValue('K1', 'Sector code');
         $sheet->setCellValue('L1', 'Sector name');
@@ -400,13 +400,13 @@ class FamilyExcelTemplate
         return [
             'relationship'  => $relationships,
             'suffix'        => FamilyProfilingFormV2::suffixes(),
-            'sex'           => ['Male', 'Female'],
+            'sex'           => ['MALE', 'FEMALE'],
             'civilstatus'   => $this->codeNameList(self::CIVIL_STATUS_CODES, FamilyProfilingFormV2::civilStatuses()),
             'religion'      => FamilyProfilingFormV2::religions(),
             'education'     => $this->codeNameList(self::EDUCATION_CODES, FamilyProfilingFormV2::educationLevels()),
             'job'           => FamilyProfilingFormV2::jobOptions(),
             'monthlyincome' => $this->incomeLabels(),
-            'barangay'      => FamilyProfilingFormV2::barangays(),
+            'barangay'      => (new \App\Models\Lookups\BarangayModel())->activeNames(),
         ];
     }
 

@@ -5,6 +5,7 @@ namespace Tests\Unit;
 use App\Models\Scanner\DistributionBatchModel;
 use CodeIgniter\Test\CIUnitTestCase;
 use Tests\Support\Database\DumpSchema;
+use Tests\Support\Database\ReferentialFixture;
 
 /**
  * Saving a plotted schedule: the refusals that protect the one open batch
@@ -23,6 +24,10 @@ final class ScheduleSaveTest extends CIUnitTestCase
         $db = db_connect();
         DumpSchema::create($db);
         $db->table('subsidy')->insert(['subsidy_type_id' => 1, 'name' => 'Rice']);
+        // Members 5 and 6 hold cards 5 and 6: the scan rows below reference
+        // both, and V22 made qr_control.control_no and member the real parents.
+        ReferentialFixture::heads($db, [5, 6]);
+        ReferentialFixture::cards($db, [5, 6], 0);
 
         $this->model = new DistributionBatchModel();
     }

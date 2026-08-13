@@ -5,6 +5,7 @@ namespace Tests\Unit;
 use App\Models\DashboardModel;
 use CodeIgniter\Test\CIUnitTestCase;
 use Tests\Support\Database\DumpSchema;
+use Tests\Support\Database\ReferentialFixture;
 
 /**
  * The four Overview figures, counted against the dump's own schema.
@@ -54,6 +55,22 @@ final class DashboardOverviewStatsTest extends CIUnitTestCase
     }
 
     /**
+     * The batch, subsidy type and cards a distribution() row points at. The
+     * member rows are the case's own, since whether a head is archived is
+     * what these cases are about.
+     *
+     * @param list<int> $memberIds
+     */
+    private function seedClaimParents(\CodeIgniter\Database\BaseConnection $db, array $memberIds): void
+    {
+        ReferentialFixture::subsidyType($db);
+        ReferentialFixture::cards($db, $memberIds);
+        $db->table('distribution_batch')->insert([
+            'batch_id' => 1, 'name' => 'Rice Q1', 'subsidy_type_id' => 1,
+        ]);
+    }
+
+    /**
      * Three heads profiled, only two of them carded, one of the carded ones
      * served. The uncarded head is the case the old QR gate silently dropped:
      * it has never been served, so it must count toward neverServed and the
@@ -68,10 +85,12 @@ final class DashboardOverviewStatsTest extends CIUnitTestCase
         }
         $db->table('qr_control')->insert(['control_no' => 101, 'headID' => 1]);
         $db->table('qr_control')->insert(['control_no' => 102, 'headID' => 2]);
-        $db->table('subsidy_distribution')->insert($this->distribution(1));
+        // The claim's batch, type and card are all foreign keys since V22.
+        ReferentialFixture::subsidyType($db);
         $db->table('distribution_batch')->insert([
             'batch_id' => 1, 'name' => 'Rice Q1', 'subsidy_type_id' => 1,
         ]);
+        $db->table('subsidy_distribution')->insert($this->distribution(1));
 
         $out = (new DashboardModel())->programStats();
 
@@ -92,7 +111,7 @@ final class DashboardOverviewStatsTest extends CIUnitTestCase
      * It counts heads holding a control number, so a card on an archived head
      * or two control numbers on one head must not inflate it.
      */
-    public function testCardsIssuedCountsActiveHeadsHoldingAControlNumber(): void
+    public function testCardsIssuedCountsActiveHeadsWhoseCardWasGenerated(): void
     {
         $db = db_connect();
 
@@ -102,12 +121,18 @@ final class DashboardOverviewStatsTest extends CIUnitTestCase
         // A relative, not a head: never carded in its own right.
         $db->table('member')->insert($this->head(4, ['headID' => 1]));
 
-        $db->table('qr_control')->insert(['control_no' => 101, 'headID' => 1]);
+        // card_generated_at is what counts: a control number on its own is a
+        // number a worker typed while profiling, not a card anyone holds.
+        $generated = '2026-02-01 09:00:00';
+
+        $db->table('qr_control')->insert(['control_no' => 101, 'headID' => 1, 'card_generated_at' => $generated]);
         // Reissued card for the same head: still one family holding a card.
-        $db->table('qr_control')->insert(['control_no' => 102, 'headID' => 1]);
-        $db->table('qr_control')->insert(['control_no' => 103, 'headID' => 2]);
+        $db->table('qr_control')->insert(['control_no' => 102, 'headID' => 1, 'card_generated_at' => $generated]);
+        $db->table('qr_control')->insert(['control_no' => 103, 'headID' => 2, 'card_generated_at' => $generated]);
         // Archived head.
-        $db->table('qr_control')->insert(['control_no' => 104, 'headID' => 3]);
+        $db->table('qr_control')->insert(['control_no' => 104, 'headID' => 3, 'card_generated_at' => $generated]);
+        // Profiled but never carded: reserves a number, issues nothing.
+        $db->table('qr_control')->insert(['control_no' => 105, 'headID' => 2]);
 
         $out = (new DashboardModel())->programStats();
 
@@ -126,6 +151,7 @@ final class DashboardOverviewStatsTest extends CIUnitTestCase
         $db = db_connect();
 
         $db->table('member')->insert($this->head(1));
+        $this->seedClaimParents($db, [1]);
         $db->table('subsidy_distribution')->insert(
             $this->distribution(1, ['dt_voided' => date('Y-m-d H:i:s')])
         );
@@ -146,6 +172,7 @@ final class DashboardOverviewStatsTest extends CIUnitTestCase
 
         $db->table('member')->insert($this->head(1));
         $db->table('member')->insert($this->head(2, ['dt_deleted' => date('Y-m-d H:i:s')]));
+        $this->seedClaimParents($db, [2]);
         $db->table('subsidy_distribution')->insert($this->distribution(2));
 
         $out = (new DashboardModel())->programStats();

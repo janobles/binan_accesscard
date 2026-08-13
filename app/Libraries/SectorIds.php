@@ -3,16 +3,19 @@
 namespace App\Libraries;
 
 /**
- * Normalizes sector IDs stored as arrays, JSON lists, or comma-separated text.
+ * Normalizes sector IDs arriving as arrays, comma-separated text, or the JSON
+ * list `member.sectorID` held before V22 moved sectors into member_sectors.
+ * Rows still reach here in every one of those shapes: a form posts an array, a
+ * listing selects a GROUP_CONCAT comma list, and an old export may hold JSON.
  */
 class SectorIds
 {
     /**
      * DECODE: stored value -> clean array of int IDs.
      *
-     * Accepts the JSON string from the DB (e.g. '[1,2,3]') or an
-     * already-decoded array, and returns a list of unique, positive integers
-     * like [1, 2, 3]. Used for display, name lookups and search.
+     * Accepts a comma list ('1,2,3'), an array, or a JSON string, and returns
+     * a list of unique, positive integers like [1, 2, 3]. Used for display,
+     * name lookups and search.
      */
     public static function normalize(mixed $value): array
     {
@@ -76,30 +79,6 @@ class SectorIds
         }
 
         return false;
-    }
-
-    /**
-     * ENCODE: array -> storage string.
-     *
-     * Normalizes to a clean list of unique positive IDs, then json_encode()s
-     * it to '[1,2,3]' for the `member`.`sectorID` column. Falls back to '[]'
-     * if encoding fails. Called on save by MemberModel::normalizeSectorIdStorage().
-     */
-    public static function toStorage(mixed $value): string
-    {
-        return json_encode(self::normalize($value)) ?: '[]';
-    }
-
-    /**
-     * Builds the SQL used to search members by sector:
-     * JSON_CONTAINS(<column>, '<id>') = 1. This works directly on the JSON
-     * array string in the column (no decoding needed in PHP).
-     * Used by MemberModel::familySearchBuilder().
-     */
-    public static function containsCondition(int $sectorId, string $column = 'sector_array_string'): string
-    {
-        // Used in query filters for the database JSON sector list column.
-        return 'JSON_CONTAINS(' . $column . ", '" . $sectorId . "') = 1";
     }
 
     /**

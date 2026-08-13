@@ -28,7 +28,8 @@ final class FamilyDataTablePresenterTest extends CIUnitTestCase
 
         $cells = $presenter->row(
             ['memberID' => 7, 'headID' => 7, 'lastname' => 'DELA CRUZ',
-             'firstname' => 'JUAN', 'address' => 'CANLALAY', 'sectorID' => '1'],
+             'firstname' => 'JUAN', 'address' => 'PUROK 1', 'barangay' => 'CANLALAY',
+             'sector_ids' => '1'],
             [1 => ['code' => 'SC', 'name' => 'Senior Citizen']],
             [7 => 142],
             4
@@ -37,6 +38,9 @@ final class FamilyDataTablePresenterTest extends CIUnitTestCase
         $this->assertSame(['qr', 'name', 'members', 'sector', 'address', 'actions'],
             array_keys($cells));
         $this->assertSame('4', $cells['members']);
+        // Barangay leads the address cell, and it comes from the barangay join
+        // rather than from text parsed off the end of the address.
+        $this->assertSame('CANLALAY, PUROK 1', $cells['address']);
         $this->assertStringContainsString('DELA CRUZ', $cells['name']);
         $this->assertStringNotContainsString('text-muted d-block', $cells['name'],
             'A head row carries no relationship subline.');

@@ -15,6 +15,7 @@ use App\Libraries\SectorIds;
 use App\Models\Audit\AuditTrailsModel;
 use App\Models\Families\FamilyFormOptionsModel;
 use App\Models\Families\MemberModel;
+use App\Models\Families\MemberSectorModel;
 use App\Models\Families\MemberServiceModel;
 use App\Models\Lookups\BarangayModel;
 use App\Models\Lookups\SectorModel;
@@ -344,18 +345,17 @@ class FamilyController extends BaseController
         $modalData = new FamilyModalDataBuilder();
         $qrModel = model(\App\Models\Scanner\QrControlModel::class);
         $controlNumber = (int) ($qrModel->controlForHead($headId) ?? 0);
-        $addressParts = MemberFieldNormalizer::splitAddressBarangay((string) ($head['address'] ?? ''));
 
         $headData = array_merge($head, [
-            'address'       => $addressParts['address'],
-            'barangay'      => $addressParts['barangay'],
-            // member.Salary is capitalized in the schema; _fields.php's field name is
-            // the lowercase 'salary', so the auto-prefixed 'head_Salary' the raw $head
-            // row would otherwise produce never matches - the select renders empty on
-            // a required field, blocking Save.
-            'salary'        => (string) ($head['Salary'] ?? ''),
+            // Both come straight off the row now: the address column holds the
+            // address alone, and the barangay name arrives from the barangayID
+            // join, so the form prefills from stored values rather than from a
+            // string split that had to guess where the barangay began.
+            'address'       => (string) ($head['address'] ?? ''),
+            'barangay'      => (string) ($head['barangay'] ?? ''),
+            'salary'        => MemberFieldNormalizer::salaryOptionValue($head['salary'] ?? null),
             'qr_control_no' => (string) $controlNumber,
-            'sector_ids'    => array_map('strval', SectorIds::normalize($head['sectorID'] ?? null)),
+            'sector_ids'    => array_map('strval', SectorIds::normalize($head['sector_ids'] ?? null)),
             'service_ids'   => array_map('strval', $serviceIdsByMember[$headId] ?? []),
             'qr_locked'     => $controlNumber > 0
                 && model(\App\Models\Scanner\SubsidyDistributionModel::class)->hasClaims($controlNumber),
@@ -365,11 +365,11 @@ class FamilyController extends BaseController
         // member), so getViewDataForEdit() can grandfather in anything since
         // archived - otherwise it would render unchecked, post unchecked, and
         // update() would delete the assignment on save.
-        $assignedSectorIds = SectorIds::normalize($head['sectorID'] ?? null);
+        $assignedSectorIds = SectorIds::normalize($head['sector_ids'] ?? null);
         $assignedServiceIds = $serviceIdsByMember[$headId] ?? [];
 
         foreach ($members as $member) {
-            $assignedSectorIds = array_merge($assignedSectorIds, SectorIds::normalize($member['sectorID'] ?? null));
+            $assignedSectorIds = array_merge($assignedSectorIds, SectorIds::normalize($member['sector_ids'] ?? null));
             $assignedServiceIds = array_merge($assignedServiceIds, $serviceIdsByMember[(int) ($member['memberID'] ?? 0)] ?? []);
         }
 
@@ -476,10 +476,26 @@ class FamilyController extends BaseController
         // from the submission so the edit fully replaces the prior member list.
         $memberServiceModel->deleteByMemberIds($familyMemberIds);
 
-        if (! $memberModel->updateHead($headId, $this->memberPayload('head_'))) {
+        // Sector links are cleared with the service links: the relatives are about
+        // to be deleted and re-inserted, and member_sectors carries a foreign key
+        // to member, so rows left behind would block that delete.
+        $memberSectorModel = new MemberSectorModel();
+        $memberSectorModel->deleteByMemberIds($familyMemberIds);
+
+        $headPayload    = $this->memberPayload('head_');
+        $headSectorIds  = $headPayload['sector_ids'] ?? [];
+        unset($headPayload['sector_ids']);
+
+        if (! $memberModel->updateHead($headId, $headPayload)) {
             $memberModel->rollbackTransaction();
 
             return $this->failUpdate('Head of family could not be updated. Please check required fields.', 422);
+        }
+
+        if (! $memberSectorModel->replaceForMember($headId, $this->existingSectorIds($sectorModel, $headSectorIds))) {
+            $memberModel->rollbackTransaction();
+
+            return $this->failUpdate('The head of family\'s sectors could not be saved.', 422);
         }
 
         if (! $locked) {
@@ -499,12 +515,22 @@ class FamilyController extends BaseController
                 continue;
             }
 
-            $memberId = $memberModel->addFamilyMember($headId, $this->memberPayloadFromArray($member));
+            $memberPayload   = $this->memberPayloadFromArray($member);
+            $memberSectorIds = $memberPayload['sector_ids'] ?? [];
+            unset($memberPayload['sector_ids']);
+
+            $memberId = $memberModel->addFamilyMember($headId, $memberPayload);
 
             if ($memberId === false) {
                 $memberModel->rollbackTransaction();
 
                 return $this->failUpdate('One family member could not be saved.', 422);
+            }
+
+            if (! $memberSectorModel->replaceForMember($memberId, $this->existingSectorIds($sectorModel, $memberSectorIds))) {
+                $memberModel->rollbackTransaction();
+
+                return $this->failUpdate('One family member\'s sectors could not be saved.', 422);
             }
 
             if (! $this->assignServices($memberServiceModel, $serviceModel, $memberId, $member['service_ids'] ?? [], $grandfatheredServiceIds)) {
@@ -544,16 +570,18 @@ class FamilyController extends BaseController
 
         $successMessage = 'Family record updated successfully.';
 
+        session()->setFlashdata('success', $successMessage);
+
         if ($this->request->isAJAX()) {
             return $this->response->setJSON([
-                'status' => 'success',
-                'message' => $successMessage,
-                'csrf' => csrf_hash(),
+                'status'   => 'success',
+                'message'  => $successMessage,
+                'redirect' => site_url('records/' . $headId),
+                'csrf'     => csrf_hash(),
             ]);
         }
 
-        return redirect()->to(site_url('records'))
-            ->with('success', $successMessage);
+        return redirect()->to(site_url('records/' . $headId));
     }
 
     /**
@@ -697,6 +725,24 @@ class FamilyController extends BaseController
     }
 
     /**
+     * Keeps only the submitted sector ids that still have a sector row, archived
+     * or not. member_sectors carries a foreign key, so a stale id from a tampered
+     * or long-open form would otherwise fail the whole save; an archived sector a
+     * family already holds is kept, matching how assignServices() grandfathers
+     * archived services.
+     *
+     * @param int[] $sectorIds
+     * @return int[]
+     */
+    private function existingSectorIds(SectorModel $sectorModel, array $sectorIds): array
+    {
+        return array_values(array_filter(
+            SectorIds::normalize($sectorIds),
+            static fn (int $sectorId): bool => $sectorModel->existsById($sectorId)
+        ));
+    }
+
+    /**
      * Validates and links a set of selected service IDs to one member inside the
      * update transaction. A service is accepted when it is an active service, OR it
      * is in $grandfatheredServiceIds - the set the family already held before this
@@ -812,31 +858,18 @@ class FamilyController extends BaseController
             'lastname' => $this->cleanName($this->request->getPost($prefix . 'lastname')),
             'suffix' => $this->nullableText($this->request->getPost($prefix . 'suffix')),
             'birthday' => $this->request->getPost($prefix . 'birthday'),
-            'civilstatus' => $this->nullableText($this->request->getPost($prefix . 'civilstatus')),
+            'civilstatus' => $this->nullableUpperText($this->request->getPost($prefix . 'civilstatus')),
             'sex' => $this->nullableText($this->request->getPost($prefix . 'sex')),
-            'education' => $this->nullableText($this->request->getPost($prefix . 'education')),
-            'job' => $this->nullableText($this->request->getPost($prefix . 'job')),
-            'Salary' => $this->moneyOrNull($this->request->getPost($prefix . 'salary')),
+            'education' => $this->nullableUpperText($this->request->getPost($prefix . 'education')),
+            'job' => $this->nullableUpperText($this->request->getPost($prefix . 'job')),
+            'salary' => $this->moneyOrNull($this->request->getPost($prefix . 'salary')),
             'contactnumber' => $this->nullableText($this->request->getPost($prefix . 'contactnumber')),
-            'religion' => $this->nullableText($this->request->getPost($prefix . 'religion')),
-            'address' => $this->combineAddressBarangay(
-                $this->request->getPost($prefix . 'address'),
-                $this->request->getPost($prefix . 'barangay')
-            ),
+            'religion' => $this->nullableUpperText($this->request->getPost($prefix . 'religion')),
+            'address' => $this->nullableText($this->cleanAddress($this->request->getPost($prefix . 'address'))),
             'barangayID' => $this->resolveBarangayId($this->request->getPost($prefix . 'barangay')),
-            'relationship' => $prefix === 'head_' ? 'Head' : $this->nullableText($this->request->getPost($prefix . 'relationship')),
-            'sectorID' => SectorIds::normalize($this->request->getPost('sector_ids')),
+            'relationship' => $prefix === 'head_' ? 'HEAD' : $this->nullableUpperText($this->request->getPost($prefix . 'relationship')),
+            'sector_ids' => SectorIds::normalize($this->request->getPost('sector_ids')),
         ];
-    }
-
-    /**
-     * Combines the separate Address and Barangay form inputs into the single
-     * `member.address` column ("address, barangay"). The schema has no barangay
-     * column; barangay is kept only as a form field for entry/editing.
-     */
-    private function combineAddressBarangay(mixed $address, mixed $barangay): ?string
-    {
-        return MemberFieldNormalizer::combineAddressBarangay($address, $barangay);
     }
 
     /**
@@ -862,19 +895,6 @@ class FamilyController extends BaseController
     private function barangayIdMap(): array
     {
         return $this->barangayIdMap ??= (new BarangayModel())->idByNormalizedName();
-    }
-
-    /**
-     * Inverse of combineAddressBarangay(): splits a stored address back into its
-     * address + barangay parts so the edit form can prefill both inputs. Matches the
-     * trailing barangay against the canonical list (longest match first so
-     * "Binan (Poblacion)" wins over "Poblacion").
-     *
-     * @return array{address: string, barangay: string}
-     */
-    private function splitAddressBarangay(mixed $combined): array
-    {
-        return MemberFieldNormalizer::splitAddressBarangay($combined);
     }
 
     /**
@@ -930,7 +950,7 @@ class FamilyController extends BaseController
                 'member_lastname' => 'required|max_length[100]',
                 'member_middlename' => 'permit_empty|max_length[50]',
                 'member_birthday' => 'permit_empty|valid_date[Y-m-d]',
-                'member_sex' => 'permit_empty|in_list[Male,Female]',
+                'member_sex' => 'permit_empty|in_list[MALE,FEMALE]',
             ];
         }
 
@@ -939,7 +959,7 @@ class FamilyController extends BaseController
             'head_middlename' => 'permit_empty|max_length[50]',
             'head_lastname' => 'required|max_length[100]',
             'head_birthday' => 'required|valid_date[Y-m-d]|not_future_date',
-            'head_sex' => 'required|in_list[Male,Female]',
+            'head_sex' => 'required|in_list[MALE,FEMALE]',
             'head_civilstatus' => 'required|min_length[2]',
             'head_education' => 'required|min_length[2]',
             'head_job' => 'required|min_length[2]',
@@ -963,20 +983,19 @@ class FamilyController extends BaseController
             'lastname' => $this->cleanName($member['lastname'] ?? ''),
             'suffix' => $this->nullableText($member['suffix'] ?? null),
             'birthday' => $member['birthday'] ?? null,
-            'civilstatus' => $this->nullableText($member['civilstatus'] ?? null),
+            'civilstatus' => $this->nullableUpperText($member['civilstatus'] ?? null),
             'sex' => $this->nullableText($member['sex'] ?? null),
-            'education' => $this->nullableText($member['education'] ?? null),
-            'job' => $this->nullableText($member['job'] ?? null),
-            'Salary' => $this->moneyOrNull($member['salary'] ?? null),
+            'education' => $this->nullableUpperText($member['education'] ?? null),
+            'job' => $this->nullableUpperText($member['job'] ?? null),
+            'salary' => $this->moneyOrNull($member['salary'] ?? null),
             'contactnumber' => $this->nullableText($member['contactnumber'] ?? null),
-            'religion' => $this->nullableText($member['religion'] ?? null),
-            'address' => $this->combineAddressBarangay(
-                $this->request->getPost('head_address'),
-                $this->request->getPost('head_barangay')
-            ),
+            'religion' => $this->nullableUpperText($member['religion'] ?? null),
+            // Members inherit the head's address and barangay: the form asks for
+            // them once, on the head.
+            'address' => $this->nullableText($this->cleanAddress($this->request->getPost('head_address'))),
             'barangayID' => $this->resolveBarangayId($this->request->getPost('head_barangay')),
-            'relationship' => $this->nullableText($member['relationship'] ?? 'Member'),
-            'sectorID' => SectorIds::normalize($member['sector_ids'] ?? []),
+            'relationship' => $this->nullableUpperText($member['relationship'] ?? 'MEMBER'),
+            'sector_ids' => SectorIds::normalize($member['sector_ids'] ?? []),
         ];
     }
 
@@ -999,12 +1018,12 @@ class FamilyController extends BaseController
     private function firstIncompleteMember(array $members): ?string
     {
         $required = [
-            'birthday'    => 'Date of birth',
+            'birthday'    => 'Date of Birth',
             'sex'         => 'Sex',
-            'civilstatus' => 'Civil status',
+            'civilstatus' => 'Civil Status',
             'education'   => 'Education',
             'job'         => 'Job',
-            'salary'      => 'Monthly income',
+            'salary'      => 'Monthly Income',
         ];
 
         foreach ($members as $member) {
@@ -1091,7 +1110,7 @@ class FamilyController extends BaseController
 
     /**
      * Parses a salary input into a float, stripping thousands separators, or null
-     * when blank. Keeps the `Salary` column numeric/nullable.
+     * when blank. Keeps the `salary` column numeric/nullable.
      */
     private function moneyOrNull(mixed $value): ?float
     {
@@ -1105,6 +1124,12 @@ class FamilyController extends BaseController
     private function nullableText(mixed $value): ?string
     {
         return MemberFieldNormalizer::nullableText($value);
+    }
+
+    /** Uppercased trimmed value, or null when blank. See MemberFieldNormalizer::nullableUpperText(). */
+    private function nullableUpperText(mixed $value): ?string
+    {
+        return MemberFieldNormalizer::nullableUpperText($value);
     }
 
     /**

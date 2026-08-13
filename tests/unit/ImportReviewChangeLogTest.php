@@ -53,6 +53,6 @@ final class ImportReviewChangeLogTest extends CIUnitTestCase
         $joined = implode("\n", $entry['lines']);
 
         $this->assertStringContainsString('QR Number: "42" → "99"', $joined);
-        $this->assertStringContainsString('Contact number: (blank) → "09171234567"', $joined);
+        $this->assertStringContainsString('Contact Number: (blank) → "09171234567"', $joined);
     }
 }

@@ -2,7 +2,6 @@
 
 namespace App\Models\Lookups;
 
-use App\Libraries\SectorIds;
 use App\Models\Concerns\LookupModelTrait;
 use App\Models\Concerns\NormalizesIds;
 use CodeIgniter\Database\BaseBuilder;
@@ -145,9 +144,10 @@ class SectorModel extends Model
     }
 
     /**
-     * True if any active service uses this sector's name as its category
-     * (services.category stores the group name). Guards hard-deleting a sector that
-     * still backs a service category.
+     * True if any active service is grouped under this sector (a sector is its
+     * own service category). Guards hard-deleting a sector that still backs one.
+     * Matched on services.sectorID: the group used to be the sector's name
+     * copied onto the service row, so a rename silently broke this check.
      */
     public function usedAsServiceCategory(string $name): bool
     {
@@ -157,7 +157,13 @@ class SectorModel extends Model
             return false;
         }
 
-        $builder = $this->db->table('services')->where('category', $name);
+        $sector = $this->db->table($this->table)->select('sectorID')->where('name', $name)->get()->getRowArray();
+
+        if ($sector === null) {
+            return false;
+        }
+
+        $builder = $this->db->table('services')->where('sectorID', (int) $sector['sectorID']);
 
         if ($this->db->fieldExists('dt_deleted', 'services')) {
             $builder->where('dt_deleted IS NULL', null, false);
@@ -306,17 +312,34 @@ class SectorModel extends Model
     }
 
     /**
-     * True if any `member` row references this sector ID (sectorID stores a JSON
-     * array, matched via SectorIds::containsCondition). Guards archive/delete.
+     * True if any member is filed under this sector, or any service is grouped
+     * by it. Guards archive/delete: since V22 the junction and services.sectorID
+     * both carry a foreign key, so a delete would fail at the DB anyway - this
+     * turns that into a message the worker can act on.
      */
     public function isInUse(int $sectorId): bool
     {
-        if (! $this->db->tableExists('member')) {
+        if ($sectorId <= 0) {
             return false;
         }
 
-        return $this->db->table('member')
-            ->where(SectorIds::containsCondition($sectorId, 'sectorID'), null, false)
-            ->countAllResults() > 0;
+        if ($this->db->tableExists('member_sectors')
+            && $this->db->table('member_sectors')->where('sectorID', $sectorId)->countAllResults() > 0) {
+            return true;
+        }
+
+        return $this->db->fieldExists('sectorID', 'services')
+            && $this->db->table('services')
+                ->where('sectorID', $sectorId)
+                ->where('dt_deleted IS NULL', null, false)
+                ->countAllResults() > 0;
+    }
+
+    /** True when this sector id exists (archived or not). */
+    public function existsById(int $sectorId): bool
+    {
+        return $sectorId > 0
+            && $this->hasTable()
+            && $this->db->table($this->table)->where('sectorID', $sectorId)->countAllResults() > 0;
     }
 }

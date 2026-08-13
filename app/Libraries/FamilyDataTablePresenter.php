@@ -36,8 +36,10 @@ class FamilyDataTablePresenter
             // would hide a casing bug rather than surface it.
             'name' => '<span class="entity-title">' . esc($name) . '</span>',
             'members' => (string) $memberCount,
-            'sector' => ViewFormatter::sectorBadges($row['sectorID'] ?? null, $sectorShortcodes),
-            'address' => esc((string) ($row['address'] ?? '')),
+            'sector' => ViewFormatter::sectorBadges($row['sector_ids'] ?? null, $sectorShortcodes),
+            // Barangay first: it is what staff scan this column by, and it is
+            // now its own stored value rather than text on the end of the address.
+            'address' => esc($this->addressCell($row)),
             'actions' => $this->actions($row, $headId, $name),
         ];
     }
@@ -57,6 +59,19 @@ class FamilyDataTablePresenter
         }
 
         return $payload;
+    }
+
+    /** "BARANGAY, ADDRESS", or whichever half the row has. */
+    private function addressCell(array $row): string
+    {
+        $barangay = trim((string) ($row['barangay'] ?? ''));
+        $address  = trim((string) ($row['address'] ?? ''));
+
+        if ($barangay === '' || $address === '') {
+            return $barangay . $address;
+        }
+
+        return $barangay . ', ' . $address;
     }
 
     /** QR NO. cell: plain row text, or a muted dash when no mapping exists. */

@@ -71,14 +71,14 @@ foreach ($scheduleGrid['bars'] as $bar) {
             <i><?= esc(date('M', strtotime($row['start']))) ?></i>
           </div>
           <div class="small">
-            <span class="fw-semibold d-block"><?= esc($row['name']) ?></span>
-            <span class="text-muted d-block"><?= esc($row['venue']) ?></span>
+            <span class="fw-semibold d-block"><i class="bi bi-calendar-event me-1 text-muted"></i><?= esc($row['name']) ?></span>
+            <span class="text-muted d-block"><i class="bi bi-geo-alt me-1"></i><?= esc($row['venue']) ?></span>
             <span class="text-muted d-block">
-              <?= esc(date('M j', strtotime($row['start']))) ?><?= $row['end'] !== $row['start'] ? esc('–' . date('j', strtotime($row['end']))) : '' ?>
+              <i class="bi bi-clock me-1"></i><?= esc(date('M j', strtotime($row['start']))) ?><?= $row['end'] !== $row['start'] ? esc('–' . date('j', strtotime($row['end']))) : '' ?>
               &middot; <?= esc(date('g:i A', strtotime($row['dailyStart']))) ?>&ndash;<?= esc(date('g:i A', strtotime($row['dailyEnd']))) ?>
             </span>
             <?php if ($row['status'] === 'running'): ?>
-              <span class="badge bg-success mt-1">Scanning open</span>
+              <span class="badge bg-success mt-1">Open</span>
             <?php endif; ?>
           </div>
         </div>

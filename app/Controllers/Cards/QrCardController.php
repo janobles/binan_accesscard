@@ -74,6 +74,7 @@ class QrCardController extends BaseController
                 ->setJSON(['error' => 'Generation failed. Please try again, or contact support.']));
         }
 
+        $this->markGenerated($heads);
         $this->recordBatchAudit(count($heads), $filter);
 
         return $this->streamDownload($result);
@@ -186,6 +187,7 @@ class QrCardController extends BaseController
                 ->setJSON(['error' => 'Generation failed. Please try again.']);
         }
 
+        $this->markGenerated($single);
         $this->recordReprintAudit($memberID);
 
         return $this->streamDownload($result);
@@ -237,6 +239,22 @@ class QrCardController extends BaseController
     private function withFreshCsrf(ResponseInterface $response): ResponseInterface
     {
         return $response->setHeader('X-CSRF-TOKEN', csrf_hash());
+    }
+
+    /**
+     * Records that these heads now hold a generated card. Runs only after the
+     * PDF is built, so a failed generation never counts as an issued card - which
+     * is the whole point of the column: the dashboard used to count the qr_control
+     * row a worker created by typing a control number during profiling.
+     *
+     * @param list<array{memberID: int}> $heads the rows just rendered
+     */
+    private function markGenerated(array $heads): void
+    {
+        model(QrControlModel::class)->markCardsGenerated(
+            array_map(static fn (array $head): int => (int) ($head['memberID'] ?? 0), $heads),
+            (int) session()->get('user_id')
+        );
     }
 
     private function recordBatchAudit(int $cardCount, array $filter): void

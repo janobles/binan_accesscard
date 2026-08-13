@@ -127,4 +127,35 @@
             });
         });
     };
+
+    // The layout flashes a modal to reopen after a redirect (e.g. a failed account
+    // form) as a hidden node - data-open-modal / data-open-modal-id - rather than an
+    // inline script, so it clicks the same trigger button a user would. The 100ms
+    // delay matches the previous inline script: the trigger buttons this looks for
+    // live on pages/partials that can still be settling right at DOMContentLoaded.
+    document.addEventListener('DOMContentLoaded', function () {
+        const flag = document.querySelector('[data-open-modal]');
+
+        if (!flag) {
+            return;
+        }
+
+        window.setTimeout(function () {
+            const modalType = flag.dataset.openModal;
+            const modalId = flag.dataset.openModalId || '';
+            let btn = null;
+
+            if (modalType === 'account-create') {
+                btn = document.querySelector('.js-open-account-create-modal');
+            } else if (modalType === 'account-profile') {
+                btn = document.querySelector('.js-open-my-account-modal');
+            } else if (modalType === 'account-edit' && modalId) {
+                btn = document.querySelector('.js-open-account-edit-modal[data-modal-url*="/edit/' + modalId + '"]');
+            }
+
+            if (btn) {
+                btn.click();
+            }
+        }, 100);
+    });
 })(window, jQuery);

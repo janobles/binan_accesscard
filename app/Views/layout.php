@@ -209,27 +209,11 @@ $bodyView = ($bodyView ?? '') !== '' ? $bodyView : 'Pages/dashboard';
 <?php endif; ?>
 <script src="<?= esc(asset_url('assets/js/session-timeout.js'), 'attr') ?>" data-timeout-seconds="<?= esc((string) $idleTimeoutSeconds) ?>" data-logout-url="<?= site_url('logout?timeout=1') ?>" data-home-url="<?= site_url('/') ?>" data-keep-alive-url="<?= site_url('session/keep-alive') ?>"></script>
 
-<?php if (session()->getFlashdata('openModal')): ?>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    setTimeout(function() {
-        var modalType = '<?= esc(session()->getFlashdata('openModal')) ?>';
-        var modalId = '<?= esc((string) session()->getFlashdata('openModalId')) ?>';
-        var btn = null;
-        if (modalType === 'account-create') {
-            btn = document.querySelector('.js-open-account-create-modal');
-        } else if (modalType === 'account-profile') {
-            btn = document.querySelector('.js-open-my-account-modal');
-        } else if (modalType === 'account-edit' && modalId) {
-            var urlPart = '/edit/' + modalId;
-            btn = document.querySelector('.js-open-account-edit-modal[data-modal-url*="' + urlPart + '"]');
-        }
-        if (btn) {
-            btn.click();
-        }
-    }, 100);
-});
-</script>
+<?php if ($openModal = session()->getFlashdata('openModal')): ?>
+<?php /* The modal to auto-open after a redirect is handed to JS as data, not as an
+         inline script: dashboard-modal-loader.js (already loaded, owns modal
+         behaviour) reads this node and clicks the matching trigger button. */ ?>
+<div data-open-modal="<?= esc($openModal, 'attr') ?>" data-open-modal-id="<?= esc((string) session()->getFlashdata('openModalId'), 'attr') ?>" hidden></div>
 <?php endif; ?>
 
 </body>

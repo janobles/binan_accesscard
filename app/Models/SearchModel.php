@@ -365,10 +365,12 @@ class SearchModel
         // Legacy file-backed Developer rows (NULL userID) stay hidden from
         // Administrators. Only relevant to the all-users view ($userId === null).
         if ($userId === null && ! $includeDeveloper) {
+            $t = $this->db->prefixTable('audit_trails');
+
             // Hide only the Developer's own rows; failed logins and system errors
             // (logged without a users row) still surface to admins.
             $builder->where(
-                "(audit_trails.userID IS NOT NULL OR audit_trails.user_action IN ('LOGIN_FAILED','SYSTEM_ERROR'))",
+                "({$t}.userID IS NOT NULL OR {$t}.user_action IN ('LOGIN_FAILED','SYSTEM_ERROR'))",
                 null,
                 false
             );
@@ -507,7 +509,9 @@ class SearchModel
         $action = $this->normalizeKeyword((string) ($filters['action'] ?? ''));
 
         if ($action !== '') {
-            $builder->where('TRIM(audit_trails.user_action) = ' . $this->db->escape($action), null, false);
+            $t = $this->db->prefixTable('audit_trails');
+
+            $builder->where('TRIM(' . $t . '.user_action) = ' . $this->db->escape($action), null, false);
         }
 
         $this->applyDateRange($builder, 'audit_trails.dt_created', $filters);

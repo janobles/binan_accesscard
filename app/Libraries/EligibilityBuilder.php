@@ -34,12 +34,14 @@ class EligibilityBuilder
         // the materialize() call site, so count() and materialize() can never
         // diverge on the join: CI4's countAllResults() wraps a DISTINCT select
         // in a subquery and counts that, so both callers count the same rows.
+        $t = $this->db->prefixTable('member');
+
         $b = $this->db->table('member')
             ->select('member.memberID AS headID')
             ->distinct()
             ->join('qr_control', 'qr_control.headID = member.memberID')
-            ->where('member.memberID = member.headID', null, false)
-            ->where('member.dt_deleted IS NULL', null, false);
+            ->where($t . '.memberID = ' . $t . '.headID', null, false)
+            ->where($t . '.dt_deleted IS NULL', null, false);
 
         if ($barangayIds !== []) {
             $b->whereIn('member.barangayID', $barangayIds);

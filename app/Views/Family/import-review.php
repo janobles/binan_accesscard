@@ -65,64 +65,21 @@ $fieldOptionsJson = json_encode($fieldOptions, JSON_HEX_TAG | JSON_HEX_AMP | JSO
         </button></li>
     </ul>
 
-    <div class="card mb-4">
-        <div class="card-header">
-            <span><i class="bi bi-table me-1" aria-hidden="true"></i>Rows to review</span>
-        </div>
-        <div class="card-body">
-            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-                <div class="flex-grow-1 import-review-search">
-                    <div class="input-group input-group-sm">
-                        <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
-                        <input type="search" class="form-control" id="importReviewSearch"
-                               placeholder="Search this import..." aria-label="Search this import">
-                    </div>
-                </div>
-                <div class="d-flex flex-wrap align-items-center gap-2">
-                    <div class="d-flex align-items-center gap-2 small text-muted">
-                        <label class="mb-0" for="importReviewCodeFilter">Problem</label>
-                        <select class="form-select form-select-sm w-auto" id="importReviewCodeFilter">
-                            <option value="">All problems</option>
-                            <?php foreach (($summary['codes'] ?? []) as $code) : ?>
-                                <option value="<?= esc($code['code'], 'attr') ?>"><?= esc($code['label']) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="d-flex align-items-center gap-2 small text-muted">
-                        <label class="mb-0" for="importReviewPerPage">Show</label>
-                        <select class="form-select form-select-sm w-auto" id="importReviewPerPage">
-                            <option value="25" selected>25</option>
-                            <option value="50">50</option>
-                            <option value="100">100</option>
-                        </select>
-                        <span>entries</span>
-                    </div>
-                </div>
-            </div>
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0" id="importReviewTable">
-                    <thead>
-                        <tr>
-                            <th scope="col"><span class="visually-hidden">Status</span></th>
-                            <th scope="col">Family</th>
-                            <th scope="col">Role</th>
-                            <th scope="col">Last Name</th>
-                            <th scope="col">First Name</th>
-                            <th scope="col">Issues</th>
-                            <th scope="col"><span class="visually-hidden">Open</span></th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-        </div>
-        <div class="card-footer small text-muted">
-            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 w-100">
-                <span id="importReviewCount" role="status" aria-live="polite"></span>
-                <nav aria-label="Review pages"><ul class="pagination pagination-sm mb-0" id="importReviewPager"></ul></nav>
-            </div>
-        </div>
-    </div>
+    <?php /* House list-surface shell (components/card), matching Manage Records and
+             the other converted list pages, in place of a hand-written card. The
+             severity tabs above stay outside the card, same as a toolbar does on
+             those pages; the search input, filters and table markup are unchanged,
+             just relocated into Family/import-review-table as the card's body. */ ?>
+    <?= view('components/card', [
+        'icon' => 'table',
+        'title' => 'Rows to review',
+        'bodyView' => 'Family/import-review-table',
+        'bodyData' => ['summary' => $summary],
+        'footer' => '<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 w-100">'
+            . '<span id="importReviewCount" role="status" aria-live="polite"></span>'
+            . '<nav aria-label="Review pages"><ul class="pagination pagination-sm mb-0" id="importReviewPager"></ul></nav>'
+            . '</div>',
+    ]) ?>
 
     <div class="fixed-bottom bg-white border-top p-3 shadow-sm d-flex flex-wrap justify-content-end align-items-center gap-2">
         <span id="importReviewStatus" class="text-muted me-auto" role="status" aria-live="polite"></span>

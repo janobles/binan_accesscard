@@ -128,7 +128,7 @@ rendering needs inline styles), layout shells + `Auth/login.php` (standalone
 - [x] ⚪ Cleanup: `public/css/managerecord.css:263` - `.records-table-controls`
   is emitted by no view; `app/Views/components/table_controls.php` builds the
   same row from Bootstrap utilities. Left in place because
-  `docs/knowledge/binan-conventions/ui-design-system.md:72` still names the
+  `docs/20-frontend.md` still names the
   class as the controls-row hook. Retire the rule and the doc reference together.
   *(Fixed: both the base rule and its media-query branch are gone, and Rule 6
   now names the component instead of the class - chore/backlog-cleanup.)*
@@ -180,7 +180,7 @@ rendering needs inline styles), layout shells + `Auth/login.php` (standalone
   fail a check that cannot be satisfied without failing the token gate.
   *(Fixed: a view's inline script is `T_INLINE_HTML`, so it never reaches either
   scan now that both read comment text only - chore/backlog-cleanup.)*
-- [x] ⚪ Cleanup: `docs/knowledge/binan-conventions/scanner-batches.md` (Rules 3
+- [x] ⚪ Cleanup: `docs/15-distribution.md` (Rules 3
   and 5) - still names `aid_type_id` and `AidDistributionModel`, both renamed
   to `subsidy_type_id`/`SubsidyDistributionModel` by the V19 subsidy rename.
   Spotted while updating the doc for the schedule calendar (feat/

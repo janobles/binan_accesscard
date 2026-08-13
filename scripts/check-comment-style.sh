@@ -74,7 +74,7 @@ done
 # an em dash or a `----` run inside a string, a regex, or inline HTML is no longer
 # reported as a comment violation. A view's inline <script> is T_INLINE_HTML and
 # so never reaches these scans; covering JS comments means giving the JS files
-# their own extractor, which is its own job (see docs/knowledge/violations.md).
+# their own extractor, which is its own job (see docs/reference/violations.md).
 # app/Config is stock framework code and public/assets is vendored.
 comments="$(mktemp)"
 trap 'rm -f "$comments"' EXIT
@@ -94,7 +94,7 @@ done < <(grep -E '(//|/\*|\*)[[:space:]]*[-=]{4,}' "$comments" 2>/dev/null)
 
 if [ "$failed" -ne 0 ]; then
     echo "" >&2
-    echo "See docs/knowledge/php-practices/comments.md" >&2
+    echo "See docs/reference/comment-standard.md" >&2
     exit 1
 fi
 

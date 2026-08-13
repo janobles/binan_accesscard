@@ -1,7 +1,7 @@
 // Filter panel + pills for the retrofit tabs (lookups, audit trails, employee
 // activity, accounts). The panel's radios live inside the page's search form;
 // changing one applies immediately (live-apply, no Apply/Reset buttons - see
-// docs/knowledge/binan-conventions/ui-design-system.md). Manage Records has
+// docs/20-frontend.md). Manage Records has
 // its own AJAX version of this in family-datatable.js.
 //
 // Two modes:

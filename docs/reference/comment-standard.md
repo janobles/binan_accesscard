@@ -117,7 +117,7 @@ it correctly.
 - `@author`, `@created`, `@version`, `@package`.
 - Comments describing a change someone wanted rather than what the code does.
 - Historical residue (`the old records-multiselect widget was retired...`).
-- AI-slop register. Plain language, matching `docs/knowledge/` house style.
+- AI-slop register. Plain language, matching the handbook house style (see the `writing-voice` skill).
 
 ## Enforcement
 

@@ -7,7 +7,7 @@
         but restated tags. Classes must be documented. Whether a given method
         earns a docblock is decided at review, not here, because a linter can
         see that a docblock exists but never that it is true. See
-        docs/knowledge/php-practices/comments.md.
+        docs/reference/comment-standard.md.
     </description>
 
     <arg name="extensions" value="php"/>
@@ -85,7 +85,7 @@
          It does NOT catch a redundant tag inside a docblock that also has
          prose: the sniff bails out once any summary text is present. That
          narrower case is a review matter. See
-         docs/knowledge/php-practices/comments.md. -->
+         docs/reference/comment-standard.md. -->
     <rule ref="SlevomatCodingStandard.Commenting.UselessFunctionDocComment"/>
     <rule ref="SlevomatCodingStandard.Commenting.DocCommentSpacing"/>
 

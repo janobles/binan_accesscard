@@ -76,6 +76,42 @@ The `--sb-*` and `--ui-*` theme tokens went with the adapter. The current baseli
 is pure upstream defaults, and a future Biñan re-skin should reintroduce tokens on
 top of SB Admin's own SCSS variables rather than resurrect the adapter.
 
+### The markup shapes it expects
+
+The upstream frame, which `app/Views/layout.php` follows:
+
+```html
+<body class="sb-nav-fixed">
+  <nav class="sb-topnav navbar navbar-expand navbar-dark bg-dark">...</nav>
+  <div id="layoutSidenav">
+    <div id="layoutSidenav_nav">
+      <nav class="sb-sidenav accordion sb-sidenav-dark" id="sidenavAccordion">
+        <div class="sb-sidenav-menu">
+          <div class="nav">
+            <div class="sb-sidenav-menu-heading">Core</div>
+            <a class="nav-link" href="#">
+              <div class="sb-nav-link-icon"><i class="bi bi-grid"></i></div>Dashboard
+            </a>
+          </div>
+        </div>
+      </nav>
+    </div>
+    <div id="layoutSidenav_content">
+      <main><div class="container-fluid px-4">...</div></main>
+    </div>
+  </div>
+</body>
+```
+
+Inside the content area: a page header is `<h1 class="mt-4">` followed by
+`<ol class="breadcrumb mb-4">`. Cards are stock Bootstrap `card` with a
+`card-header` carrying an icon and a title, spaced with `mb-4`. Tables are plain
+`<table>` inside a card body, enhanced by the DataTables bootstrap5 build.
+
+Sidebar theming is the `sb-sidenav-dark` and `sb-sidenav-light` variants. A Biñan
+re-skin maps onto SB Admin's SCSS variables rather than scattering colours across
+page CSS.
+
 ## How CSS loads
 
 `app/Helpers/asset_helper.php` holds the manifest, and `layout.php` renders it.
@@ -417,6 +453,30 @@ page-unique rules: badges, modals, column widths. Anything about toolbars,
 controls rows, card chrome, or cell typography belongs to the shared layer
 (`managerecord.css` + the components). If a new rule would apply to two
 pages, it goes in the shared layer.
+
+#### Retrofit status
+
+Which pages already follow the anatomy above, so a reader knows what to copy and
+what not to trust as an example.
+
+- The toolbar always renders ABOVE the page's card (never inside it), pills
+  row directly under it - see `Family/list.php` for the standard.
+- manage-records: done (feat/manage-records-ui). AJAX flavor: filter panel +
+  pills wired by `assets/js/dashboard/family-datatable.js`.
+- lookups (sectors/services/categories), audit-trails, encoder activity:
+  done (feat/retrofit-toolbar-conventions) via
+  `components/records_toolbar_server.php` - same Bootstrap-grid anatomy as
+  records_toolbar, wired by the shared
+  `assets/js/dashboard/records-filter-panel.js` (radios inside the GET form,
+  change = submit, pills from server state). Options that mean "no filter"
+  (Active default, All) get no pill label, so they never render pills.
+- accounts: done, client mode - the list is fully loaded, so the panel radios
+  carry `data-records-client` wiring (no submit; accounts-modal.js filters
+  rows, records-filter-panel.js renders pills).
+- distribution tabs: btn() roles + placeholder wording done; the
+  distributions log keeps its client-side subsidy-type select (no server search
+  to live-apply against). Batches tab has plain form buttons, not a toolbar -
+  out of scope.
 
 ### Views and Bootstrap
 

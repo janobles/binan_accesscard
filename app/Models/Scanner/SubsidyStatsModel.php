@@ -450,7 +450,7 @@ class SubsidyStatsModel extends Model
         try {
             $b = $this->db->table('subsidy_distribution')
                 ->select('subsidy_distribution.userID,'
-                    . " COALESCE(users.username, 'Unknown') AS scanner,"
+                    . ' COALESCE(' . $this->db->prefixTable('users') . ".username, 'Unknown') AS scanner,"
                     . ' COUNT(subsidy_distribution.distribution_id) AS handouts,'
                     . ' COUNT(DISTINCT subsidy_distribution.control_no) AS families')
                 ->join('users', 'users.userID = subsidy_distribution.userID', 'left')

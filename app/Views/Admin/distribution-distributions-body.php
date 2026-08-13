@@ -61,7 +61,7 @@
                 </tr>
               <?php endforeach; ?>
               <?php if ($distributions === []): ?>
-                <tr><td colspan="7" class="sector-empty-state">No subsidy distributions logged yet.</td></tr>
+                <tr><td colspan="7" class="sector-empty-state"><?= $keyword !== '' ? 'No matching distributions found.' : 'No subsidy distributions logged yet.' ?></td></tr>
               <?php endif; ?>
             </tbody>
           </table>

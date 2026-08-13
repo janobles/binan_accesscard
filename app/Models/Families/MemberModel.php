@@ -414,6 +414,8 @@ class MemberModel extends Model
             return [];
         }
 
+        $member = $this->db->prefixTable($this->table);
+
         $builder = $this->db->table($this->table)
             ->select('headID, COUNT(*) AS total')
             ->whereIn('headID', $headIds)
@@ -421,9 +423,9 @@ class MemberModel extends Model
 
         if ($this->db->fieldExists('dt_deleted', $this->table)) {
             if ($status === RecordStatus::ARCHIVED) {
-                $builder->where('member.dt_deleted IS NOT NULL', null, false);
+                $builder->where($member . '.dt_deleted IS NOT NULL', null, false);
             } elseif ($status !== RecordStatus::ALL) {
-                $builder->where('member.dt_deleted IS NULL', null, false);
+                $builder->where($member . '.dt_deleted IS NULL', null, false);
             }
         }
 
@@ -458,8 +460,9 @@ class MemberModel extends Model
         }
 
         $status = in_array($status, [RecordStatus::ACTIVE, RecordStatus::ARCHIVED, RecordStatus::ALL], true) ? $status : RecordStatus::ALL;
+        $member = $this->db->prefixTable($this->table);
         $builder = $this->memberDashboardBuilder($status)
-            ->where('member.memberID = member.headID', null, false);
+            ->where($member . '.memberID = ' . $member . '.headID', null, false);
 
         if ($keyword !== null && trim($keyword) !== '') {
             $keyword = trim($keyword);
@@ -573,6 +576,8 @@ class MemberModel extends Model
      */
     private function headsForCardsBuilder(array $filter = [], bool $forCount = false): \CodeIgniter\Database\BaseBuilder
     {
+        $member = $this->db->prefixTable('member');
+
         $columns = $forCount
             ? 'member.memberID'
             : 'member.memberID, member.lastname, member.firstname, member.middlename, member.suffix, member.address, barangay.name AS barangay, qc.control_no';
@@ -581,7 +586,7 @@ class MemberModel extends Model
             ->select($columns)
             ->join('qr_control qc', 'qc.headID = member.memberID', 'left')
             ->join('barangay', 'barangay.barangayID = member.barangayID', 'left')
-            ->where('member.headID = member.memberID', null, false);
+            ->where($member . '.headID = ' . $member . '.memberID', null, false);
 
         // qr_control is the single source of truth for control numbers: a head with
         // no mapping cannot be scanned, so it is excluded from card generation
@@ -589,7 +594,7 @@ class MemberModel extends Model
         $builder->where('qc.control_no IS NOT NULL', null, false);
 
         if ($this->db->fieldExists('dt_deleted', 'member')) {
-            $builder->where('member.dt_deleted IS NULL', null, false);
+            $builder->where($member . '.dt_deleted IS NULL', null, false);
         }
 
         if (isset($filter['memberID']) && (int) $filter['memberID'] > 0) {
@@ -637,7 +642,7 @@ class MemberModel extends Model
 
         $builder = $this->db->table('member')->where('memberID', $memberID);
         if ($this->db->fieldExists('dt_deleted', 'member')) {
-            $builder->where('member.dt_deleted IS NULL', null, false);
+            $builder->where($this->db->prefixTable('member') . '.dt_deleted IS NULL', null, false);
         }
 
         $row = $builder->get()->getRowArray();
@@ -660,14 +665,16 @@ class MemberModel extends Model
             return null;
         }
 
+        $member = $this->db->prefixTable('member');
+
         $builder = $this->db->table('member')
             ->select('member.*, barangay.name AS barangay')
             ->join('barangay', 'barangay.barangayID = member.barangayID', 'left')
             ->where('memberID', $memberID)
-            ->where('member.headID = member.memberID', null, false);
+            ->where($member . '.headID = ' . $member . '.memberID', null, false);
 
         if ($this->db->fieldExists('dt_deleted', 'member')) {
-            $builder->where('member.dt_deleted IS NULL', null, false);
+            $builder->where($member . '.dt_deleted IS NULL', null, false);
         }
 
         $row = $builder->get()->getRowArray();
@@ -706,7 +713,7 @@ class MemberModel extends Model
                 ->join('category', 'category.categoryID = services.categoryID', 'left')
                 ->join('sector service_sector', 'service_sector.sectorID = services.sectorID', 'left')
                 ->whereIn('member_services.memberID', $memberIds)
-                ->where('services.dt_deleted IS NULL', null, false)
+                ->where($this->db->prefixTable('services') . '.dt_deleted IS NULL', null, false)
                 ->get()->getResultArray();
 
             $badges = [];
@@ -772,7 +779,7 @@ class MemberModel extends Model
                 ->join('category', 'category.categoryID = services.categoryID', 'left')
                 ->join('sector service_sector', 'service_sector.sectorID = services.sectorID', 'left')
                 ->whereIn('member_services.memberID', $memberIds)
-                ->where('services.dt_deleted IS NULL', null, false)
+                ->where($this->db->prefixTable('services') . '.dt_deleted IS NULL', null, false)
                 ->get()->getResultArray();
 
             $split = [];
@@ -821,7 +828,7 @@ class MemberModel extends Model
             ->where('headID', $headId);
 
         if ($this->db->fieldExists('dt_deleted', 'member')) {
-            $builder->where('member.dt_deleted IS NULL', null, false);
+            $builder->where($this->db->prefixTable('member') . '.dt_deleted IS NULL', null, false);
         }
 
         // Head (memberID == headId) sorts first, then the rest by memberID.
@@ -948,10 +955,12 @@ class MemberModel extends Model
         );
 
         if ($this->db->fieldExists('dt_deleted', 'member')) {
+            $member = $this->db->prefixTable('member');
+
             if ($status === RecordStatus::ARCHIVED) {
-                $builder->where('member.dt_deleted IS NOT NULL', null, false);
+                $builder->where($member . '.dt_deleted IS NOT NULL', null, false);
             } elseif ($status !== RecordStatus::ALL) {
-                $builder->where('member.dt_deleted IS NULL', null, false);
+                $builder->where($member . '.dt_deleted IS NULL', null, false);
             }
         }
 

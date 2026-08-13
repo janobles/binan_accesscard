@@ -200,7 +200,7 @@ class DashboardPageBuilder
         $isDistributions = $activePage === 'distribution' && $distributionTab === 'log';
         $batchModel      = model(DistributionBatchModel::class);
         $distributionListData = $isDistributions
-            ? $this->buildDistributionListData('distribution?tab=log')
+            ? $this->buildDistributionListData()
             : [];
 
         // Dashboard batch zone's own table: Barangay / Stations / Remaining,
@@ -554,7 +554,7 @@ class DashboardPageBuilder
      * pagination metadata the view turns into links. Frontend: the Distribution
      * page's log tab.
      */
-    private function buildDistributionListData(string $listRoute): array
+    private function buildDistributionListData(): array
     {
         $keyword = trim((string) $this->request->getGet('q'));
         $page    = max(1, (int) $this->request->getGet('page'));
@@ -578,7 +578,6 @@ class DashboardPageBuilder
             'totalRows'     => $total,
             'fromRecord'    => $total === 0 ? 0 : $offset + 1,
             'toRecord'      => min($total, $page * $perPage),
-            'listRoute'     => $listRoute,
         ];
     }
 

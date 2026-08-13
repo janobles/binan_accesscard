@@ -57,7 +57,6 @@ $distributionTab = in_array($distributionTab, ['schedule', 'batches', 'log'], tr
     <?php
     // Server-paged bundle from DashboardPageBuilder::buildDistributionListData().
     $distributionListData = $distributionListData ?? [];
-    $distListRoute  = (string) ($distributionListData['listRoute'] ?? 'distribution?tab=log');
     $distKeyword    = (string) ($distributionListData['keyword'] ?? '');
     $distPerPage    = (int) ($distributionListData['perPage'] ?? 25);
     $distPerPageOptions = ($distributionListData['perPageOptions'] ?? []) ?: [10, 25, 50, 100];
@@ -92,7 +91,6 @@ $distributionTab = in_array($distributionTab, ['schedule', 'batches', 'log'], tr
         'searchPlaceholder' => 'Search all distributions...',
         'keyword' => $distKeyword,
         'clearUrl' => $distClearUrl(),
-        'narrow' => true,
         'hiddenHtml' => '<input type="hidden" name="tab" value="log">'
             . ($distPerPage !== 25 ? '<input type="hidden" name="per_page" value="' . esc((string) $distPerPage, 'attr') . '">' : ''),
     ]) ?>
@@ -114,7 +112,6 @@ $distributionTab = in_array($distributionTab, ['schedule', 'batches', 'log'], tr
         'bodyView' => 'Admin/distribution-distributions-body',
         'bodyData' => [
             'distributions' => $distributions ?? [],
-            'listRoute' => $distListRoute,
             'keyword' => $distKeyword,
             'perPage' => $distPerPage,
             'perPageOptions' => $distPerPageOptions,

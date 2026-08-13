@@ -91,10 +91,12 @@ $fieldOptionsJson = json_encode($fieldOptions, JSON_HEX_TAG | JSON_HEX_AMP | JSO
         </button>
     </div>
 
-    <?php /* Payloads ride in <template> rather than <script type="application/json">:
-             a script body is parsed by script-tag rules and ends at the first </script>
-             in any casing, which a value inside the JSON (a name, an address) can
-             produce. <template> has no such rule. */ ?>
+    <?php /* Payloads ride in <template> rather than <script type="application/json">. A
+             <template>'s content is still parsed as HTML text, so a raw "&" from the
+             payload could start a character entity a browser decodes before the JS reads
+             it. The JSON_HEX_TAG/JSON_HEX_AMP flags on the encode side keep "<" and "&"
+             out of the payload entirely, which is what keeps that entity decoding from
+             corrupting it. */ ?>
     <template id="importReviewSummary"><?= $summaryJson ?></template>
     <template id="importReviewFieldOptions"><?= $fieldOptionsJson ?></template>
 </div>

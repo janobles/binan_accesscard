@@ -2,7 +2,7 @@
 /**
  * Distributions log body: page controls + distributions table.
  * Rendered inside components/card by Pages/distribution.php's log tab (vars:
- * distributions, listRoute, keyword, perPage, perPageOptions). The rows are
+ * distributions, keyword, perPage, perPageOptions). The rows are
  * one server-side page from SubsidyDistributionModel::distributionsPage();
  * paging and the database search live in Pages/distribution.php, above this
  * card. Each row shows the subsidy type the batch handed out.

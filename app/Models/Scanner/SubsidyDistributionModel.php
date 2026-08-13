@@ -225,9 +225,9 @@ class SubsidyDistributionModel extends Model
     }
 
     /**
-     * Shared join set behind allDistributions(), distributionsPage() and
-     * countDistributions(), so the page, its total and the export can never
-     * disagree about which claims exist. $keyword, when given, narrows to the
+     * Shared join set behind distributionsPage() and countDistributions(), so
+     * the page and its total can never disagree about which claims exist.
+     * $keyword, when given, narrows to the
      * claimant name, the family-head name, the subsidy type or the control
      * number, which is what the log's search box offers.
      *
@@ -280,7 +280,7 @@ class SubsidyDistributionModel extends Model
      * through it), so member and users are prefixed by hand below. head is
      * the join alias above, not a real table, and stays bare.
      *
-     * @return list<array<string, string|null>> same row shape as allDistributions()
+     * @return list<array<string, string|null>>
      */
     public function distributionsPage(string $keyword = '', int $limit = 25, int $offset = 0): array
     {
@@ -312,17 +312,6 @@ class SubsidyDistributionModel extends Model
         } catch (\Throwable $e) {
             return 0;
         }
-    }
-
-    /**
-     * Every distribution, newest first, with subsidy type name, claimant name,
-     * family-head name, and the scanning user's username resolved via joins.
-     * Drives the all-distributions export; the log itself reads
-     * distributionsPage() instead.
-     */
-    public function allDistributions(): array
-    {
-        return $this->distributionsPage('', PHP_INT_MAX, 0);
     }
 
     /**

@@ -3,62 +3,89 @@
 namespace Tests\Unit;
 
 use App\Models\Families\MemberModel;
+use App\Models\Scanner\QrControlModel;
 use CodeIgniter\Test\CIUnitTestCase;
+use Tests\Support\Database\DumpSchema;
+use Tests\Support\Database\ReferentialFixture;
 
+/**
+ * Coverage: headsForCards()'s shape, limit, control range and keyword filter,
+ * plus findHead() rejecting a non-head.
+ *
+ * Schema comes from the dump; each case seeds the heads it asserts on.
+ */
 final class MemberHeadsForCardsTest extends CIUnitTestCase
 {
-    private function modelOrSkip(): MemberModel
+    protected function setUp(): void
     {
-        $model = new MemberModel();
-        if (! $model->hasTable()) {
-            $this->markTestSkipped('member table not available in this environment.');
-        }
+        parent::setUp();
+        DumpSchema::create(db_connect());
+    }
 
-        return $model;
+    protected function tearDown(): void
+    {
+        DumpSchema::drop(db_connect());
+        parent::tearDown();
+    }
+
+    /**
+     * Three active heads with cards, in one barangay, plus one relative that
+     * must never appear in a card selection. Control numbers are 101/102/103,
+     * which the control-range cases assert against.
+     */
+    private function seedHeads(): MemberModel
+    {
+        $db = db_connect();
+
+        $db->table('barangay')->insert(['barangayID' => 1, 'name' => 'SANTO TOMAS']);
+
+        ReferentialFixture::heads($db, [1, 2, 3]);
+        ReferentialFixture::cards($db, [1, 2, 3], 100);
+
+        $db->table('member')->update(['barangayID' => 1], ['headID' => 1]);
+        $db->table('member')->update(['barangayID' => 1], ['headID' => 2]);
+        $db->table('member')->update(['barangayID' => 1], ['headID' => 3]);
+
+        // A relative under head 1: heads-only selection must not return it.
+        $db->table('member')->insert([
+            'memberID' => 4, 'headID' => 1,
+            'firstname' => 'ANA', 'middlename' => '', 'lastname' => 'FIXTURE',
+            'barangayID' => 1,
+        ]);
+
+        return new MemberModel();
     }
 
     public function testHeadsForCardsReturnsExpectedShape(): void
     {
-        $model = $this->modelOrSkip();
+        $heads = $this->seedHeads()->headsForCards();
 
-        $heads = $model->headsForCards();
-
-        $this->assertIsArray($heads);
-        if ($heads === []) {
-            $this->markTestSkipped('No head records seeded to assert shape against.');
-        }
+        $this->assertCount(3, $heads, 'three heads seeded, the relative is not a head');
 
         $first = $heads[0];
-        $this->assertArrayHasKey('memberID', $first);
-        $this->assertArrayHasKey('fullname', $first);
-        $this->assertArrayHasKey('barangay', $first);
-        $this->assertIsInt($first['memberID']);
+        $this->assertSame(1, $first['memberID']);
+        $this->assertSame(101, $first['controlNo']);
+        $this->assertSame('FIXTURE, HEAD1', $first['fullname']);
+        $this->assertSame('SANTO TOMAS', $first['barangay']);
     }
 
     public function testFindHeadRejectsNonHead(): void
     {
-        $model = $this->modelOrSkip();
-
-        // memberID 0 can never be a head (ids are positive).
-        $this->assertNull($model->findHead(0));
+        // memberID 4 is the relative seeded under head 1, never a head itself.
+        $this->assertNull($this->seedHeads()->findHead(4));
     }
 
     public function testHeadsForCardsControlNoEqualsMappedControl(): void
     {
-        $model = $this->modelOrSkip();
+        $model = $this->seedHeads();
         $heads = $model->headsForCards();
-        if ($heads === []) {
-            $this->markTestSkipped('No mapped heads seeded to assert against.');
-        }
 
         foreach ($heads as $head) {
-            $this->assertArrayHasKey('controlNo', $head);
-            $this->assertIsInt($head['controlNo']);
             // Every returned head must resolve back through qr_control, so its
             // controlNo is a real mapping, never a memberID fallback.
             $this->assertSame(
                 $head['memberID'],
-                (new \App\Models\Scanner\QrControlModel())->headForControl($head['controlNo']),
+                (new QrControlModel())->headForControl($head['controlNo']),
                 'controlNo ' . $head['controlNo'] . ' must map back to its head via qr_control'
             );
         }
@@ -72,64 +99,37 @@ final class MemberHeadsForCardsTest extends CIUnitTestCase
         );
     }
 
-    public function testHeadsForCardsHonorsLimit(): void
+    public function testLimitSlicesTheSelection(): void
     {
-        $model = $this->modelOrSkip();
+        $model = $this->seedHeads();
 
-        $all = $model->headsForCards();
-        if (count($all) < 2) {
-            $this->markTestSkipped('Need at least 2 mapped heads to assert limit.');
-        }
-
-        $limited = $model->headsForCards(['limit' => 1]);
-        $this->assertCount(1, $limited);
+        $this->assertCount(3, $model->headsForCards());
+        $this->assertCount(1, $model->headsForCards(['limit' => 1]));
     }
 
-    public function testHeadsForCardsControlRangeStaysWithinBounds(): void
+    public function testControlRangeNarrowsToTheBoundedCards(): void
     {
-        $model = $this->modelOrSkip();
+        $model = $this->seedHeads();
 
-        $all = $model->headsForCards();
-        if ($all === []) {
-            $this->markTestSkipped('No mapped heads seeded.');
-        }
+        $ranged = $model->headsForCards(['controlFrom' => 102, 'controlTo' => 103]);
 
-        $controls = array_column($all, 'controlNo');
-        $lo = min($controls);
-        $hi = max($controls);
-
-        $ranged = $model->headsForCards(['controlFrom' => $lo, 'controlTo' => $hi]);
-        foreach ($ranged as $head) {
-            $this->assertGreaterThanOrEqual($lo, $head['controlNo']);
-            $this->assertLessThanOrEqual($hi, $head['controlNo']);
-        }
+        $this->assertSame([102, 103], array_column($ranged, 'controlNo'));
 
         // The count method must agree with the ranged row count when no limit applies.
         $this->assertSame(
             count($ranged),
-            $model->countHeadsForCards(['controlFrom' => $lo, 'controlTo' => $hi]),
+            $model->countHeadsForCards(['controlFrom' => 102, 'controlTo' => 103]),
             'countHeadsForCards() must match the unlimited ranged result size.'
         );
     }
 
-    public function testHeadsForCardsKeywordNarrowsByName(): void
+    public function testKeywordMatchesOnName(): void
     {
-        $model = $this->modelOrSkip();
+        $model = $this->seedHeads();
 
-        $all = $model->headsForCards();
-        if ($all === []) {
-            $this->markTestSkipped('No mapped heads seeded.');
-        }
+        $hit = $model->headsForCards(['keyword' => 'HEAD2']);
 
-        // Take a lastname fragment from the first head and confirm it still returns
-        // that head, so the keyword filter does not drop an exact-name match.
-        $name = $all[0]['fullname'];
-        $fragment = substr(trim(explode(',', $name)[0]), 0, 3);
-        if ($fragment === '') {
-            $this->markTestSkipped('First head has no usable name fragment.');
-        }
-
-        $hit = $model->headsForCards(['keyword' => $fragment]);
-        $this->assertNotSame([], $hit, 'Keyword matching a real name must return rows.');
+        $this->assertCount(1, $hit);
+        $this->assertSame(2, $hit[0]['memberID']);
     }
 }

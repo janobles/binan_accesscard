@@ -76,16 +76,25 @@ class SubsidyDistributionModel extends Model
         }
 
         try {
+            // The CONCAT() call below and the raw dt_voided condition both name a
+            // table by hand in a form the builder can't run through
+            // protectIdentifiers() (a parenthesised function call, and a
+            // condition with escaping disabled), so neither ever picks up
+            // DBPrefix on its own - writing the prefixed name is what keeps a
+            // prefixed connection working.
+            $member = $this->db->prefixTable('member');
+            $sd     = $this->db->prefixTable('subsidy_distribution');
+
             return $this->select('subsidy_distribution.distribution_id, subsidy_distribution.claim_date,'
                     . ' subsidy_distribution.dt_created, subsidy_distribution.subsidy_type_id,'
                     . " subsidy.name AS subsidy_type,"
                     . " distribution_batch.name AS batch_name,"
-                    . " TRIM(CONCAT(member.firstname, ' ', member.lastname)) AS claimant")
+                    . " TRIM(CONCAT({$member}.firstname, ' ', {$member}.lastname)) AS claimant")
                 ->join('subsidy', 'subsidy.subsidy_type_id = subsidy_distribution.subsidy_type_id', 'left')
                 ->join('member', 'member.memberID = subsidy_distribution.memberID', 'left')
                 ->join('distribution_batch', 'distribution_batch.batch_id = subsidy_distribution.batch_id', 'left')
                 ->where('subsidy_distribution.control_no', $controlNo)
-                ->where('subsidy_distribution.dt_voided IS NULL', null, false)
+                ->where($sd . '.dt_voided IS NULL', null, false)
                 ->orderBy('subsidy_distribution.claim_date', 'DESC')
                 ->orderBy('subsidy_distribution.distribution_id', 'DESC')
                 ->limit(10)
@@ -110,11 +119,14 @@ class SubsidyDistributionModel extends Model
         }
 
         try {
+            // Same CONCAT()-hides-the-table shape as historyFor() above.
+            $member = $this->db->prefixTable('member');
+
             $builder = $this->select('subsidy_distribution.distribution_id, subsidy_distribution.claim_date,'
                     . ' subsidy_distribution.dt_created, subsidy_distribution.subsidy_type_id, subsidy_distribution.batch_id,'
                     . " subsidy.name AS subsidy_type,"
                     . " distribution_batch.name AS batch_name,"
-                    . " TRIM(CONCAT(member.firstname, ' ', member.lastname)) AS claimant")
+                    . " TRIM(CONCAT({$member}.firstname, ' ', {$member}.lastname)) AS claimant")
                 ->join('subsidy', 'subsidy.subsidy_type_id = subsidy_distribution.subsidy_type_id', 'left')
                 ->join('member', 'member.memberID = subsidy_distribution.memberID', 'left')
                 ->join('distribution_batch', 'distribution_batch.batch_id = subsidy_distribution.batch_id', 'left')
@@ -155,10 +167,15 @@ class SubsidyDistributionModel extends Model
         }
 
         try {
+            // The raw dt_voided condition below disables escaping to keep the
+            // literal "IS NULL", which also means the builder never prefixes
+            // the table name it's written against by hand.
+            $sd = $this->db->prefixTable('subsidy_distribution');
+
             $rows = $this->select('subsidy_distribution.batch_id, distribution_batch.name, COUNT(*) AS n')
                 ->join('distribution_batch', 'distribution_batch.batch_id = subsidy_distribution.batch_id', 'left')
                 ->where('subsidy_distribution.control_no', $controlNo)
-                ->where('subsidy_distribution.dt_voided IS NULL', null, false)
+                ->where($sd . '.dt_voided IS NULL', null, false)
                 ->groupBy('subsidy_distribution.batch_id, distribution_batch.name')
                 ->orderBy('distribution_batch.name', 'ASC')
                 ->findAll();
@@ -186,10 +203,13 @@ class SubsidyDistributionModel extends Model
         }
 
         try {
+            // Same shape as batchCountsFor() above.
+            $sd = $this->db->prefixTable('subsidy_distribution');
+
             $rows = $this->select('subsidy_distribution.subsidy_type_id, subsidy.name, COUNT(*) AS n')
                 ->join('subsidy', 'subsidy.subsidy_type_id = subsidy_distribution.subsidy_type_id', 'left')
                 ->where('subsidy_distribution.control_no', $controlNo)
-                ->where('subsidy_distribution.dt_voided IS NULL', null, false)
+                ->where($sd . '.dt_voided IS NULL', null, false)
                 ->groupBy('subsidy_distribution.subsidy_type_id, subsidy.name')
                 ->orderBy('subsidy.name', 'ASC')
                 ->findAll();
@@ -317,13 +337,18 @@ class SubsidyDistributionModel extends Model
         }
 
         try {
+            // Same COALESCE()/raw-condition shape as historyFor() and
+            // batchCountsFor() above.
+            $sd    = $this->db->prefixTable('subsidy_distribution');
+            $users = $this->db->prefixTable('users');
+
             $row = $this->select('subsidy_distribution.distribution_id, subsidy_distribution.claim_date,'
                     . ' subsidy_distribution.dt_created,'
-                    . " COALESCE(users.username, '') AS scanned_by")
+                    . " COALESCE({$users}.username, '') AS scanned_by")
                 ->join('users', 'users.userID = subsidy_distribution.userID', 'left')
                 ->where('subsidy_distribution.control_no', $controlNo)
                 ->where('subsidy_distribution.batch_id', $batchId)
-                ->where('subsidy_distribution.dt_voided IS NULL', null, false)
+                ->where($sd . '.dt_voided IS NULL', null, false)
                 ->first();
 
             return is_array($row) ? $row : null;

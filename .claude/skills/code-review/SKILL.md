@@ -95,7 +95,7 @@ Then:
 - The title states the actual current scope.
 - One scope line near the top: `**Scope:** PR # · branch · base · tool`.
 - One checkbox style throughout:
-  `- [ ] 🔴 Critical: \`path:line\` - description.`
+  `- [ ] 🔴 Critical: \`path:line\` — description.`
 - Five severities, each as emoji plus word, then a colon, then `path:line`, then
   an em dash before the description: 🔴 Critical, 🟠 Major, 🟡 Minor, ⚪ Cleanup,
   🔵 UX/needs-decision.

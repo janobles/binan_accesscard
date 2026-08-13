@@ -45,6 +45,10 @@ PHP_CLI_SERVER_WORKERS=8 php spark serve --port 8090
 
 Open `http://localhost:8090` and log in as `developer` / `developer123`.
 
+That account ships in the dump for local development. Change or disable it, and
+the other accounts that came with the dump, before the app is reachable by anyone
+else. See [docs/06-operations-and-handover.md](docs/06-operations-and-handover.md).
+
 Two things commonly go wrong on a first run. `app.baseURL` in `.env` must match
 the URL you actually type, or the page loads while its CSS and JavaScript 404.
 And `php spark` needs an intl-enabled PHP, which XAMPP's bundled command-line

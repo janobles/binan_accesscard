@@ -126,7 +126,7 @@ every PR to `main` (`.github/workflows/ci.yml`).
 
 | Layer | Command | Catches |
 |-------|---------|---------|
-| 1. Docblock sniff | `composer lint:sniff` (`phpcs.xml.dist`) | Missing class docblock, a tag naming a parameter that does not exist, a return tag the code contradicts, a docblock that is nothing but restated tags, `@author`/`@created`/`@version`/`@package` |
+| 1. Docblock sniff | `composer lint:sniff` (`phpcs.xml.dist`) | Missing class docblock, a return tag the code contradicts, a docblock that is nothing but restated tags, `@author`/`@created`/`@version`/`@package` |
 | 2. Comment style | `composer lint:comments` (`scripts/check-comment-style.sh`) | Missing view header, missing stylesheet header, em dashes, `---- ----` dividers |
 | 3. Review | a human | Whether a method earns a docblock, and whether what it says is true |
 

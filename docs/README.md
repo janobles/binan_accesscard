@@ -43,7 +43,7 @@ come back for a module chapter when you need it.
 
 | Chapter | What is in it |
 |---|---|
-| [20 Frontend](20-frontend.md) | Layouts, components, the SB Admin adapter, and the design system rules |
+| [20 Frontend](20-frontend.md) | Layouts, components, the SB Admin theme, and the design system rules |
 | [21 PHP style](21-php-style.md) | PHP 8.2 idioms and the conventions this repo actually follows |
 | [22 Testing](22-testing.md) | Running the suite, what it guards, and the two-backend CI |
 | [23 Performance](23-performance.md) | Indexes, the stats cache, and how to check a query before you optimise it |

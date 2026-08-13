@@ -46,6 +46,13 @@ The database account needs `SELECT`, `INSERT`, `UPDATE`, and `DELETE` on the
 `accesscard` database. It does not need `DROP`, and it does not need access to
 any other database.
 
+**Change the shipped account passwords before the system is reachable by anyone
+else.** The dump ships working staff accounts so a fresh import can log in, and
+the development password is published in this handbook and in the README. On a
+production deployment, change or disable every account that came with the dump,
+then confirm none of them still works. Disable rather than delete, for the audit
+reasons below.
+
 Chapter 04 covers exposing the app beyond the local network, and the security
 note there applies with more force to a production box.
 
@@ -64,6 +71,16 @@ Restoring is importing that file:
 ```bash
 mysql -u<user> -p accesscard < accesscard-2026-08-14.sql
 ```
+
+**A dump is a file containing the personal details of every family the office
+serves**, including minors, and it carries no protection of its own. Treat it
+accordingly: write it somewhere only the backup operator can read, encrypt it at
+rest and in transit rather than copying it to a shared drive or emailing it, keep
+at least one copy off the machine that made it, set a retention limit and
+actually delete what ages out, and write down who is allowed to restore one.
+
+A dump left in a developer's home directory or a project folder is the most
+likely way this system leaks.
 
 `writable/` holds logs, sessions, the debug bar's output, and caches, none of
 which need backing up. Two subdirectories are exceptions worth knowing about:
@@ -134,6 +151,17 @@ Whoever takes this next needs four things: the repository, the current `.env`
 values (not the file, the values), a recent database dump, and the credentials to
 the machine it runs on. Everything else in this handbook is reconstructable from
 the code.
+
+Three of those four are secrets, so hand them over as secrets. Use a password
+manager or secret store that both parties already have, or an encrypted archive
+whose passphrase travels by a different channel. Not email, not chat, not a
+shared folder, not a document in the repository.
+
+Then rotate them. Database password, application account passwords, and any
+machine credentials should change once ownership does, because the point of a
+handover is that the previous holder no longer has access. Rotating afterwards is
+also the only way the audit trail keeps meaning anything: an account whose
+password two people know cannot answer the question "who did this".
 
 Point them at chapter 00 first. The domain is the part that takes longest to
 learn, and it is the part the code does not explain.

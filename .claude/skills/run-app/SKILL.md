@@ -55,6 +55,11 @@ because CodeIgniter's entry point is `public/`, not the repository root. Set
 `docs/04-networking.md`. It is a Cloudflare tunnel or a port forward, plus the
 `baseURL` change.
 
+The `developer` / `developer123` login above is a local-development convenience
+and is published in the handbook, the README, and the dump. Before exposing the
+app beyond localhost by any route, change or disable the accounts that shipped
+with the dump and confirm none of them still works.
+
 ## Keep `app.baseURL` in sync
 
 Whatever mode you are in, `app.baseURL` in `.env` must match the URL actually

@@ -264,8 +264,11 @@ Order within a version matters. Backfills run before the constraints that depend
 on them, and `v22-normalize-drop.sql` runs only after the commands that read the
 old text columns have finished with them.
 
-`app/Database/Seeds/` exists, but it adds test login accounts only. It never
-creates a table or a column.
+`app/Database/Seeds/` holds one seeder, `DummyDataSeeder`, which generates about
+50,000 dummy members in family units for load work. It never touches sectors,
+services, or user accounts, and it never creates a table or a column. Staff
+accounts come with the dump, not from a seeder. Do not run it against real
+records.
 
 ## Rules
 
@@ -337,8 +340,9 @@ Pattern notes:
 - The `users.account_level` enum is `viewer`, `scanner`, `administrator`,
   `developer`, `encoder`. There is no `User` level; the encoding role is
   `encoder` in the schema, the code, and the interface.
-- Seeds (`app/Database/Seeds/`) add test login accounts ONLY - never
-  tables/columns.
+- Seeds (`app/Database/Seeds/`) never create tables or columns. The only seeder,
+  `DummyDataSeeder`, writes ~50,000 dummy `member` rows for load work; staff
+  accounts ship in the dump.
 
 **Why:** the DB is owned by the CSWD deployment; code follows the dump, not
 the other way around.

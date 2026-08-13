@@ -137,6 +137,13 @@ tunnel or a port forward, and the `baseURL` half is the part people forget.
 Staff accounts come with the dump, so a fresh import can log in immediately. The
 development login is `developer` / `developer123`.
 
+That password is published here, in the README, and in the dump itself, so treat
+it as a local-development convenience and nothing more. Before the app is
+reachable by anyone other than you, whether that is a production deployment, a
+Cloudflare tunnel, or a port forward, change or disable every account that came
+with the dump and confirm none of them still works. Chapter 06 covers this as a
+deployment step and chapter 04 covers it for temporary sharing.
+
 There is one seeder, `DummyDataSeeder`, and it does something different: it
 generates about 50,000 dummy members in family units, for load and performance
 work. It never touches sectors, services, or user accounts, and it never creates

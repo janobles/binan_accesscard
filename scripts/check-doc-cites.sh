@@ -13,6 +13,9 @@ while IFS=: read -r file line; do
   if [ ! -f "$file" ]; then
     echo "MISSING FILE: $file (cited as $file:$line)"
     fail=1
+  elif [ "$line" -eq 0 ] 2>/dev/null; then
+    echo "INVALID LINE: $file:$line (line numbers start at 1)"
+    fail=1
   elif [ "$(wc -l < "$file" | tr -d ' ')" -lt "$line" ]; then
     echo "LINE OUT OF RANGE: $file:$line"
     fail=1

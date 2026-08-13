@@ -21,6 +21,16 @@ Best for a quick share, a demo, or testing on a phone. No router access, no
 account, and HTTPS for free. The catch is that the URL is random and temporary:
 it dies when you press Ctrl-C and you get a different one next time.
 
+**A quick tunnel is public.** The URL is unguessable, not protected: anyone who
+has it reaches your application, and the login page is the only thing between
+them and the records. So use it for demos and device testing, against a database
+holding test or synthetic families rather than real ones, and change the shipped
+account passwords before you share the URL, because the development login is
+published in this handbook. Stop the tunnel when you are done rather than leaving
+it running.
+
+For anything with real family data on the other side, this is not the tool.
+
 You need [`cloudflared`](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/)
 installed. It is already on the main development machine at
 `/opt/local/bin/cloudflared`.
@@ -75,8 +85,15 @@ The shape is the same on both platforms:
    Forwarding", "Virtual Server", or "NAT" in the admin panel, usually at
    `192.168.1.1`.
 4. **Open the firewall** for that port.
-5. **Set `baseURL`** to `http://<your-public-address>:<port>/`. Find your public
-   address with `curl ifconfig.me`.
+5. **Set `baseURL`** to the address people will type. Find your public address
+   with `curl ifconfig.me`.
+
+**Serve it over HTTPS with a real certificate, or keep it on a VPN.** Plain
+`http://` over the internet sends session cookies and every record in clear text,
+readable by anything between the browser and your router. If you cannot terminate
+TLS with a trusted certificate, either put the whole thing behind a VPN so it is
+never publicly reachable, or use the Cloudflare tunnel above, which gives you
+HTTPS without opening anything.
 
 ### Opening the firewall on macOS
 
@@ -106,10 +123,17 @@ inbound port 80 on a residential line. Many do.
 
 ### Before you forward a port
 
-Port forwarding puts the machine on the open internet. Only do it on a network
-you are allowed to, prefer a high non-standard port, and take the rule down when
-you are finished. For anything beyond a quick internal test the Cloudflare tunnel
-is the safer choice, because it opens nothing on your router at all.
+Port forwarding puts the machine on the open internet, where it will be found and
+probed within hours whether or not anyone was told about it. Only do it on a
+network you are allowed to, and take the rule down when you are finished.
+
+A high non-standard port is not a security measure. It reduces log noise from
+scanners and nothing else; port scans enumerate the whole range. What actually
+protects the system is TLS, changed default passwords, and not being publicly
+reachable in the first place.
+
+For anything beyond a quick internal test the Cloudflare tunnel is the safer
+choice, because it opens nothing on your router at all.
 
 ## Which one
 

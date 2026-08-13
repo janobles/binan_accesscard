@@ -18,8 +18,9 @@ use Config\Database;
  * Status lifecycle: pending → processing → done | partial | failed.
  *
  * No CI4 migrations exist in this project - the `job_queue` table ships in the
- * schema dump (accesscardV14.sql); sql/job_queue.sql holds the standalone DDL for
- * reference. Callers guard on hasTable() rather than creating it at runtime.
+ * newest accesscardV*.sql schema dump; sql/job_queue.sql holds the standalone
+ * DDL for reference. Callers guard on hasTable() rather than creating it at
+ * runtime.
  */
 class JobQueueModel
 {

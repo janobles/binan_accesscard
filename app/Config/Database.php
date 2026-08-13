@@ -177,6 +177,12 @@ class Database extends Config
         'swapPre'     => '',
         'encrypt'     => false,
         'compress'    => false,
+        // The tests group runs strict while default runs permissive, so CI is
+        // stricter than production. That is deliberate and stays: MariaDB's
+        // default sql_mode under XAMPP is what production actually runs, and
+        // turning strict mode on here to match the harness would change insert
+        // behaviour on a live database. The job proves fixture hygiene, not
+        // production's strictness.
         'strictOn'    => true,
         'failover'    => [],
         'port'        => 3306,

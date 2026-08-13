@@ -98,7 +98,7 @@ class FamilyImportController extends BaseController
         $memberModel = new MemberModel();
 
         if (! $memberModel->hasRequiredFamilyTables()) {
-            return $this->jsonError('The accesscard database is missing required tables from accesscardV14.sql.', 422);
+            return $this->jsonError('The accesscard database is missing required tables. Import the newest accesscardV*.sql from the project root.', 422);
         }
 
         $file = $this->request->getFile('import_file');
@@ -136,7 +136,7 @@ class FamilyImportController extends BaseController
         if (! $jobs->hasTable()) {
             @unlink($storedPath);
 
-            return $this->jsonError('The background job queue is unavailable (missing job_queue table from accesscardV14.sql).', 422);
+            return $this->jsonError('The background job queue is unavailable (missing job_queue table, import the newest accesscardV*.sql).', 422);
         }
 
         try {

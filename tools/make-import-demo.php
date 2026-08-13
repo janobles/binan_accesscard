@@ -17,7 +17,7 @@
  * If those change, update the rows below and re-run. New QRs use 90000xx (the highest QR
  * on file is 5740, so they are free).
  *
- * See IMPORT-VALIDATIONS.txt for what every code means and which row demonstrates it.
+ * See docs/12-import.md for what every code means and which row demonstrates it.
  */
 
 use CodeIgniter\Boot;

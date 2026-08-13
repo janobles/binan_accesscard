@@ -16,7 +16,7 @@ unchecked item was already moved to issue #9 (UX decision, not code mess).
   controller mixes family CRUD, Excel import, QR control-number handling, and
   modal partial rendering. Candidates for extraction into libraries per the
   controllers-decide/libraries-build boundary (see
-  `binan-conventions/mvc-boundaries.md`).
+  `docs/01-architecture.md`).
   *(Fixed: split into FamilyController (~1000 lines, CRUD) +
   FamilyImportController + FamilyDataTableController + FamilyRequestContext
   trait, with FamilyDataTablePresenter and FamilyModalDataBuilder libraries -

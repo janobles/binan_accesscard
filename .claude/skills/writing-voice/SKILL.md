@@ -36,7 +36,7 @@ without it:
 
 **Use second person and contractions.** "You'll need MySQL running" reads like a
 person. "The user must ensure MySQL is running" reads like a compliance
-document. `docs/running-the-system.md` before its rewrite is the model here.
+document. The setup and networking chapters are the model here.
 
 **Prefer a worked example to an abstract description.** Show the actual command,
 the actual manifest entry, the actual failure message. One concrete example

@@ -1,5 +1,5 @@
 /* Login page. Loaded via the `login` manifest context (asset_helper.php).
-   Adheres to UI_MODERNIZATION_PRD.md deterministic tokens. */
+   Adheres to the design tokens in docs/20-frontend.md. */
 
 :root {
     /* Using tokens from design-tokens.css */

@@ -205,9 +205,13 @@ $noEligible = ! $noBatch && $c['eligible'] === 0;
             ['key' => 'map', 'label' => 'Map'],
         ],
         'active' => 'table',
+        'stripId' => 'barangay',
     ]) ?>
 
-    <div data-strip-pane="table">
+    <?php /* Pane ids follow components/card_tabs.php's contract,
+             "<stripId>-pane-<key>" against its "<stripId>-tab-<key>", so the
+             two strips on this page cannot collide on a shared pane key. */ ?>
+    <div id="barangay-pane-table" role="tabpanel" aria-labelledby="barangay-tab-table" data-strip-pane="table">
       <div class="table-responsive">
         <table class="table manage-record-table align-middle w-100 mb-0" id="barangayTable">
           <thead><tr><th scope="col">Barangay</th><th scope="col">Eligible</th><th scope="col">Served</th><th scope="col">Coverage</th></tr></thead>
@@ -228,7 +232,7 @@ $noEligible = ! $noBatch && $c['eligible'] === 0;
       </div>
     </div>
 
-    <div data-strip-pane="map" hidden>
+    <div id="barangay-pane-map" role="tabpanel" aria-labelledby="barangay-tab-map" data-strip-pane="map" hidden>
       <?= view('Admin/batch-barangay-map', ['byBarangay' => $byBarangay]) ?>
     </div>
   </div>

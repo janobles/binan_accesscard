@@ -55,13 +55,32 @@ final class DashboardSubstanceViewTest extends CIUnitTestCase
      * scanner/stats answers Scanner, Admin and Developer only, while the
      * dashboard renders for every staff role. An Encoder or Viewer must get an
      * inert row, not a control that 403s when they press it.
+     *
+     * data-scanner-id is what makes a row a control: station-modal.js matches
+     * tr[data-scanner-id] and nothing else. So the assertion is that the
+     * attribute is emitted once and only from inside the $canDrillIn branch.
+     * Checking that the literals appear somewhere in the file would pass with
+     * the gate inverted or deleted, since data-can-drill-in is written
+     * unconditionally on the table itself.
      */
     public function testStationRowIsOnlyInteractiveForRolesThatCanReadIt(): void
     {
         $src = file_get_contents(APPPATH . 'Views/Admin/batch-stations-table.php');
 
-        $this->assertStringContainsString('$canDrillIn', $src);
-        $this->assertStringContainsString("data-can-drill-in", $src);
+        $this->assertSame(
+            1,
+            substr_count($src, 'data-scanner-id'),
+            'data-scanner-id must be emitted from exactly one place, the gated branch.'
+        );
+        $this->assertMatchesRegularExpression(
+            "/if \(\\\$canDrillIn && \(int\) \\\$row\['userID'\] > 0\) \{\s*echo ' data-scanner-id=/",
+            $src,
+            'The row control must be emitted only inside the $canDrillIn branch.'
+        );
+
+        // The table still declares the gate for the live poll to honour when it
+        // rebuilds the rows.
+        $this->assertStringContainsString('data-can-drill-in="<?= $canDrillIn ? \'1\' : \'0\' ?>"', $src);
 
         $overview = file_get_contents(APPPATH . 'Views/Admin/batch-overview.php');
         $this->assertMatchesRegularExpression(

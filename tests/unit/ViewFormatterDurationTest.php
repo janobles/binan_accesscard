@@ -14,6 +14,23 @@ use CodeIgniter\Test\CIUnitTestCase;
  */
 final class ViewFormatterDurationTest extends CIUnitTestCase
 {
+    /**
+     * Two rows of one column must not spell the same unit two ways. Every band
+     * that prints minutes prints them as "m", which the cases below cover at
+     * each boundary; this pins the rule itself so a future band cannot
+     * reintroduce "min" without failing here.
+     */
+    public function testMinutesHaveOneSpellingAtEveryBand(): void
+    {
+        foreach ([60, 76, 299, 300, 2460, 3599, 24300] as $seconds) {
+            $this->assertStringNotContainsString(
+                'min',
+                ViewFormatter::duration($seconds),
+                $seconds . ' seconds spelled minutes as "min"'
+            );
+        }
+    }
+
     /** @return list<array{int, string}> */
     public static function durations(): array
     {
@@ -22,9 +39,9 @@ final class ViewFormatterDurationTest extends CIUnitTestCase
             'never negative'        => [-40, '-'],
             'seconds only'          => [45, '45 s'],
             'last second under one minute' => [59, '59 s'],
-            'a flat minute'         => [60, '1 min'],
-            'a service time'        => [76, '1 min 16 s'],
-            'last second under five minutes' => [299, '4 min 59 s'],
+            'a flat minute'         => [60, '1 m'],
+            'a service time'        => [76, '1 m 16 s'],
+            'last second under five minutes' => [299, '4 m 59 s'],
             'five minutes drops the seconds' => [300, '5 m'],
             'most of an hour'       => [2460, '41 m'],
             'last second under an hour' => [3599, '59 m'],

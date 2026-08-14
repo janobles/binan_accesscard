@@ -34,6 +34,11 @@ $weekdayLabels = [0 => 'Sunday', 1 => 'Monday', 2 => 'Tuesday', 3 => 'Wednesday'
 <section class="card batch-card" id="activityCard" data-strip="hours">
   <div class="card-body">
     <h3 class="batch-pane-title">Activity</h3>
+    <?php /* Pane ids are "<stripId>-pane-<key>" and the buttons that control
+             them are "<stripId>-tab-<key>", which is the contract
+             components/card_tabs.php defines and this card holds up its half
+             of: the strip cannot render the panes, so the two build the same
+             ids from the same strip id. */ ?>
     <?= view('components/card_tabs', [
         'tabs' => [
             ['key' => 'hours', 'label' => 'Hours'],
@@ -41,13 +46,26 @@ $weekdayLabels = [0 => 'Sunday', 1 => 'Monday', 2 => 'Tuesday', 3 => 'Wednesday'
             ['key' => 'weekdays', 'label' => 'Weekdays'],
         ],
         'active' => 'hours',
+        'stripId' => 'activity',
     ]) ?>
 
-    <div data-strip-pane="hours">
-      <?= view('Admin/batch-heatmap', ['heatmap' => $heatmap, 'selectedDay' => $selectedDay, 'rowLabels' => $dayLabels]) ?>
+    <div id="activity-pane-hours" role="tabpanel" aria-labelledby="activity-tab-hours" data-strip-pane="hours">
+      <?php /* Every parameter passed explicitly, including the three that have
+               defaults. CI4's renderer carries view data from one view() call
+               into the next, so a partial rendered twice on one page inherits
+               whatever the other call set; relying on the defaults here would
+               make the two grids depend on which order they render in. */ ?>
+      <?= view('Admin/batch-heatmap', [
+          'heatmap' => $heatmap,
+          'selectedDay' => $selectedDay,
+          'rowLabels' => $dayLabels,
+          'gridId' => 'peakHeatmap',
+          'selectable' => true,
+          'caption' => 'Families served by hour, one row per day',
+      ]) ?>
     </div>
 
-    <div data-strip-pane="days" hidden>
+    <div id="activity-pane-days" role="tabpanel" aria-labelledby="activity-tab-days" data-strip-pane="days" hidden>
       <?php /* One bar per day the batch ran. A single-day batch gets no chart:
                one bar says nothing the Served card has not already said. Shown
                for closed batches too, because this is retrospective reporting
@@ -59,7 +77,7 @@ $weekdayLabels = [0 => 'Sunday', 1 => 'Monday', 2 => 'Tuesday', 3 => 'Wednesday'
       <?php endif; ?>
     </div>
 
-    <div data-strip-pane="weekdays" hidden>
+    <div id="activity-pane-weekdays" role="tabpanel" aria-labelledby="activity-tab-weekdays" data-strip-pane="weekdays" hidden>
       <p class="text-muted small">Every batch the city has run, not just this one.</p>
       <?= view('Admin/batch-heatmap', [
           'heatmap' => $weekdayHeatmap,
@@ -67,6 +85,7 @@ $weekdayLabels = [0 => 'Sunday', 1 => 'Monday', 2 => 'Tuesday', 3 => 'Wednesday'
           'rowLabels' => $weekdayLabels,
           'gridId' => 'weekdayHeatmap',
           'selectable' => false,
+          'caption' => 'Families served by hour, one row per weekday',
       ]) ?>
     </div>
   </div>

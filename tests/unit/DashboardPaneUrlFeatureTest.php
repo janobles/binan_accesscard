@@ -127,6 +127,90 @@ final class DashboardPaneUrlFeatureTest extends CIUnitTestCase
         $this->assertStringNotContainsString('<input type="hidden" name="tab"', $body);
     }
 
+    /**
+     * A tablist whose tabs control nothing is worse than no tablist: a screen
+     * reader announces a control relationship the page does not have. Every
+     * aria-controls has to name a real pane, that pane has to be a tabpanel,
+     * and it has to point back at the tab. Asserted against the rendered page
+     * rather than the view sources, because the ids are built in two files and
+     * a grep of either alone cannot see them meet.
+     */
+    public function testEveryCardTabControlsARealPanel(): void
+    {
+        $body = $this->withSession($this->session('administrator', 1, 'boss'))
+            ->get('dashboard?view=distribution&batch=' . self::BATCH_ID)
+            ->getBody();
+
+        preg_match_all('/id="([^"]+)"\s+class="nav-link[^"]*"[^>]*aria-controls="([^"]+)"/', $body, $tabs, PREG_SET_ORDER);
+
+        // Activity's three views plus Barangay coverage's two.
+        $this->assertCount(5, $tabs, 'Expected five card tabs across the two strips.');
+
+        foreach ($tabs as [, $tabId, $paneId]) {
+            $this->assertSame(
+                1,
+                preg_match(
+                    '/<div id="' . preg_quote($paneId, '/') . '" role="tabpanel" aria-labelledby="'
+                        . preg_quote($tabId, '/') . '"/',
+                    $body
+                ),
+                $tabId . ' does not control a tabpanel that names it back.'
+            );
+        }
+
+        // Two strips share the pane key "table" only by accident of wording, so
+        // the ids they build must still be distinct.
+        $paneIds = array_column($tabs, 2);
+        $this->assertSame($paneIds, array_unique($paneIds), 'Two panes claimed the same id.');
+    }
+
+    /**
+     * The caption is the only description a screen reader gets of what a
+     * heatmap's rows are, and the Activity card renders the same partial for
+     * days and for weekdays. One caption serving both would tell a reader the
+     * weekday grid has one row per day.
+     */
+    public function testEachHeatmapCaptionDescribesItsOwnRows(): void
+    {
+        $body = $this->withSession($this->session('administrator', 1, 'boss'))
+            ->get('dashboard?view=distribution&batch=' . self::BATCH_ID)
+            ->getBody();
+
+        // Both grids are empty for this fixture (no scans), and an empty grid
+        // renders no table at all, so drive the partial directly instead.
+        // Every parameter explicit, for the same reason the Activity card
+        // passes them all: the dashboard render above left its own values on
+        // the renderer, so a call leaning on the defaults would inherit them.
+        $days = view('Admin/batch-heatmap', [
+            'heatmap'    => ['days' => ['2026-08-01'], 'hours' => [8], 'cells' => ['2026-08-01' => [8 => ['families' => 3, 'state' => 'served']]], 'max' => 3],
+            'rowLabels'  => ['2026-08-01' => 'Aug 1'],
+            'gridId'     => 'peakHeatmap',
+            'selectable' => true,
+            'caption'    => 'Families served by hour, one row per day',
+        ]);
+        $weekdays = view('Admin/batch-heatmap', [
+            'heatmap'    => ['days' => ['2'], 'hours' => [8], 'cells' => ['2' => [8 => ['families' => 3, 'state' => 'served']]], 'max' => 3],
+            'rowLabels'  => ['2' => 'Tuesday'],
+            'gridId'     => 'weekdayHeatmap',
+            'selectable' => false,
+            'caption'    => 'Families served by hour, one row per weekday',
+        ]);
+
+        $this->assertStringContainsString('one row per day</caption>', $days);
+        $this->assertStringContainsString('one row per weekday</caption>', $weekdays);
+        $this->assertStringContainsString('id="weekdayHeatmap"', $weekdays);
+        // A weekday is not a day the batch ran, so it offers no day filter.
+        $this->assertStringNotContainsString('heatmap-day', $weekdays);
+        $this->assertStringContainsString('heatmap-day', $days);
+
+        // And the card is what wires the weekday grid up that way. Read off the
+        // source, not $body: this fixture logs no scans, and an empty grid
+        // renders the empty-state line with no table and so no caption.
+        $this->assertStringNotContainsString('one row per weekday', $body);
+        $card = file_get_contents(APPPATH . 'Views/Admin/batch-activity-card.php');
+        $this->assertStringContainsString("'caption' => 'Families served by hour, one row per weekday'", $card);
+    }
+
     public function testRemainingPaginationAndFormsStayInsideTheDistributionPane(): void
     {
         $body = $this->withSession($this->session('administrator', 1, 'boss'))

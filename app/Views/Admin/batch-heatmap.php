@@ -15,20 +15,22 @@
  *
  * Params: $heatmap (ScannerMetrics::heatmap() shape), $selectedDay ?string,
  *         $rowLabels array<string,string> day key to display label,
- *         $gridId string the table's id, and $selectable bool.
+ *         $gridId string the table's id, $selectable bool, and $caption string.
  *
- * The last two exist because the Activity card renders this partial twice, once
- * for the batch's days and once for the all-time weekday grid. Two tables
- * cannot share one id, and a weekday is not a day the batch ran, so its row
- * headers are plain text rather than buttons offering a filter that has nothing
- * to filter. Both default to the batch view's values, so the day grid's caller
- * passes neither.
+ * The last three exist because the Activity card renders this partial twice,
+ * once for the batch's days and once for the all-time weekday grid. Two tables
+ * cannot share one id; a weekday is not a day the batch ran, so its row headers
+ * are plain text rather than buttons offering a filter that has nothing to
+ * filter; and the caption is the only description a screen reader gets of what
+ * the rows are, so a grid of weekdays must not claim one row per day. All three
+ * default to the batch view's values, so the day grid's caller passes none.
  */
 $heatmap = $heatmap ?? ['days' => [], 'hours' => [], 'cells' => [], 'max' => 0];
 $selectedDay = $selectedDay ?? null;
 $rowLabels = $rowLabels ?? [];
 $gridId = (string) ($gridId ?? 'peakHeatmap');
 $selectable = (bool) ($selectable ?? true);
+$caption = (string) ($caption ?? 'Families served by hour, one row per day');
 
 $max = (int) $heatmap['max'];
 
@@ -50,7 +52,7 @@ $hourLabel = static fn (int $hour): string => date('ga', mktime($hour, 0));
 <?php else: ?>
 <div class="table-responsive">
   <table class="heatmap" id="<?= esc($gridId, 'attr') ?>">
-    <caption class="visually-hidden">Families served by hour, one row per day</caption>
+    <caption class="visually-hidden"><?= esc($caption) ?></caption>
     <thead>
       <tr>
         <th scope="col"><span class="visually-hidden">Day</span></th>

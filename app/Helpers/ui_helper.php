@@ -4,7 +4,7 @@
  * UI helper: semantic button roles.
  *
  * btn() is the single source of truth for toolbar button colors. The role
- * table is documented in docs/knowledge/binan-conventions/ui-design-system.md;
+ * table is documented in docs/20-frontend.md;
  * extend the map there first, then here.
  */
 

@@ -174,3 +174,6 @@ sessions.json
 .playwright-mcp/
 
 /node_modules/
+
+# Stale TUI tool locks
+*.tuxedo-lock

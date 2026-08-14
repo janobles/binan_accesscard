@@ -7,7 +7,7 @@ use InvalidArgumentException;
 
 /**
  * btn() maps semantic button roles to the Bootstrap classes documented in
- * docs/knowledge/binan-conventions/ui-design-system.md. The map is the single
+ * docs/20-frontend.md. The map is the single
  * source of truth for button colors across the dashboard toolbars.
  */
 final class UiHelperTest extends CIUnitTestCase

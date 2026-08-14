@@ -63,10 +63,25 @@ trail.
 `app/Controllers/Admin/ReportsController.php` serves the distribution reports,
 and everything it returns is batch-scoped. There is no date-range filter; it was
 removed rather than superseded when batches arrived, because a date range spanning
-two batches answers no question anyone asks.
+two batches answers no question anyone asks. That is a different question from
+the day filter inside a single open batch (below): the day filter narrows one
+batch's own figures to one of its days, it never spans batches, and it does not
+bring the date-range filter back.
 
 `stats()` returns the combined totals and the per-kiosk drilldown as JSON, which
-is what the dashboard's Distribution pane polls. `pdf()` renders the export.
+is what the dashboard's Distribution pane polls for its live updates. `pdf()`
+renders the export. Both read `SubsidyStatsModel::batchSnapshot()`
+(`app/Models/Scanner/SubsidyStatsModel.php:588`), so the two cannot disagree
+about a figure.
+
+Three of `stats()`'s payload keys carry the peak-hours work: `heatmap` is the
+day-by-hour grid behind the Activity card's Hours view, `byScanner` is the
+per-scanner fold (the table's rows, TOTAL last; this replaced the old
+`perScanner` key), `byScannerByDay` is the same fold partitioned by calendar
+day, keyed by date, for the Stations card's Per day view, and `days` lists the
+batch's own days for the day picker. See chapter 15's `ScannerMetrics` section
+for what a `byScanner` row means, especially `pace`, which is a cadence figure
+(non-idle gaps per active hour), never families divided by elapsed time.
 
 The underlying queries live in `SubsidyStatsModel`, covered in chapter 15
 alongside the role filtering: the Scanner role only ever sees its own row, and
@@ -74,10 +89,49 @@ that filtering happens server-side.
 
 The per-kiosk table and its PDF export are Admin and Developer only.
 
+### The Distribution pane's cards
+
+The pane used to be one block with a page-level tab strip switching between
+Barangay, Stations, and Remaining. They are three separate subjects, not three
+views of one, so reading two of them meant losing the first; each is now a card
+of its own, rendered together, and there is no `?tab=` for this pane any more
+(the reference-data page and the `distribution` page's own Schedule/Log tabs
+still use `?tab=`, unrelated to this pane). A tab strip survives only inside a
+card, switching client-side between views of that card's own data:
+`components/card_tabs.php` renders it, and it writes no query parameter, unlike
+`components/page_tabs.php`'s page-level strip.
+
+Below the always-visible headline KPI row and coverage bar sit five cards:
+Activity (Hours, the peak-hours heatmap; Days, the rollout bar chart; and
+Weekdays, the all-time histogram that ignores the batch picker), the
+families-served timeline chart, shown only while the batch is open, Barangay
+coverage (Table and Map), Stations (All and Per day), and Remaining.
+
+`?day=` picks a day inside the current batch, read server-side by
+`DashboardPageBuilder` and echoed by the heatmap's day rows and the `#dayPick`
+select (`app/Views/Admin/batch-overview.php`). It narrows the headline
+figures that have a day dimension, served and peak hour, to that one day;
+eligible and scanners active stay batch-wide, because a family is eligible for
+the batch, not for one of its days. Choosing a day is client-side
+(`public/assets/js/dashboard/batch-heatmap.js` writes `?day=` with
+`replaceState`, no reload), which is what keeps it from being the date-range
+filter above: it never leaves the batch it started in.
+
 ## Exports
 
-The PDF export is generated server-side from the same model methods that feed the
-on-screen tables, so the printed report and the screen cannot disagree.
+The PDF export (`app/Views/Scanner/pdf/report-hours.php`,
+`app/Libraries/Scanner/ReportsPdfGenerator.php`) is generated server-side from
+the same batch snapshot that feeds the on-screen tables, so the printed report
+and the screen cannot disagree. It carries five sections: the KPI row,
+coverage by barangay, rollout by day, the peak-hours grid, and per-scanner
+performance, each read off the same `byScanner`/`heatmap`/`byDay` data the
+dashboard cards render.
+
+**The PDF does not print the unclaimed-families roster.** Remaining families
+are a KPI count in the report, not a list of names. An earlier version printed
+the full roster and ran the file to a hundred-odd pages behind one page of
+report; the names live on the dashboard's Remaining card instead, where they
+are paginated and searchable.
 
 If you are adding an export, take the data from the model rather than from the
 assembled view data. The view data is shaped for display, and reproducing that

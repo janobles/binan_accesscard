@@ -367,6 +367,11 @@ $noEligible = ! $noBatch && $c['eligible'] === 0;
     JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT,
 ) ?></script>
 
+<?php /* Day selection and the card strips are independent of Chart.js, so this
+         loads unconditionally rather than behind the chart.js/scanner-reports.js
+         pair: a closed batch (no charts, no live poll) still gets a working day
+         filter and working strips. */ ?>
+<script src="<?= esc(asset_url('assets/js/dashboard/batch-heatmap.js'), 'attr') ?>"></script>
 <script src="<?= esc(asset_url('vendor/chart.js/chart.umd.min.js'), 'attr') ?>"></script>
 <script src="<?= esc(asset_url('assets/js/dashboard/scanner-reports.js'), 'attr') ?>"></script>
 <?php /* This fragment renders inside <main>, ahead of layout.php's Bootstrap

@@ -4,11 +4,11 @@
    or the canvases are absent.
 
    update(data) also repaints everything else under the "Last updated" stamp
-   that a fresh distribution/reports/stats payload carries: the batch cards and
-   bar. It used to repaint the Stations squares grid too; that grid became the
-   Stations table, whose repaint is coming with the day filter's module rather
-   than staying here. All values are written with textContent, never innerHTML,
-   so nothing here needs a separate escaping step. */
+   that a fresh distribution/reports/stats payload carries: the batch cards,
+   the bar, the Stations table (see stationsTable() below) and, through
+   window.BatchHeatmap.render(), the peak-hours grid and the day-filtered KPIs.
+   All values are written with textContent, never innerHTML, so nothing here
+   needs a separate escaping step. */
 (function () {
     'use strict';
 
@@ -146,24 +146,101 @@
         }
     }
 
-    // The Busiest day card reads the same byDay series the rollout chart draws,
-    // so it has to be recomputed here: left to the server-rendered value it
-    // would sit beside a repainted chart disagreeing with the tallest bar.
-    function applyBusiestDay(byDay) {
-        var label = document.getElementById('busiestDayLabel');
-        if (!label || !Array.isArray(byDay)) { return; }
+    // Matches ViewFormatter::duration() exactly, so a repaint prints the same
+    // wording the server would have for the same figure.
+    function duration(seconds) {
+        if (seconds <= 0) { return '-'; }
+        if (seconds < 60) { return seconds + ' s'; }
+        if (seconds < 300) {
+            var minutes = Math.floor(seconds / 60);
+            var rest = seconds % 60;
 
-        var best = null;
-        byDay.forEach(function (day) {
-            if (!best || day.served > best.served) { best = day; }
+            return rest === 0 ? minutes + ' m' : minutes + ' m ' + rest + ' s';
+        }
+        if (seconds < 3600) { return Math.floor(seconds / 60) + ' m'; }
+
+        var hours = Math.floor(seconds / 3600);
+        var restMinutes = Math.floor((seconds % 3600) / 60);
+
+        return restMinutes === 0 ? hours + ' h' : hours + ' h ' + restMinutes + ' m';
+    }
+
+    // Matches PHP's date('ga', ...): hour without a leading zero, lowercase
+    // am/pm, no space.
+    function hourLabel(hour) {
+        var h = hour % 12;
+        if (h === 0) { h = 12; }
+
+        return h + (hour < 12 ? 'am' : 'pm');
+    }
+
+    function timeLabel(unixSeconds) {
+        var d = new Date(unixSeconds * 1000);
+        var h = d.getHours() % 12;
+        if (h === 0) { h = 12; }
+        var minutes = d.getMinutes();
+
+        return h + ':' + (minutes < 10 ? '0' : '') + minutes + (d.getHours() < 12 ? 'am' : 'pm');
+    }
+
+    // Rebuilds #stationsTable's body from a fresh byScanner fold, replacing
+    // the squares grid's old repaint function. Mirrors
+    // Admin/batch-stations-table.php column for column, including the role
+    // gate: a row only carries data-scanner-id when the table's own
+    // data-can-drill-in says this role may read scanner/stats, read fresh off
+    // the table on every call rather than cached, so the gate can never end up
+    // wider than what the server rendered.
+    function stationsTable(byScanner) {
+        var table = document.getElementById('stationsTable');
+        if (!table || !Array.isArray(byScanner)) { return; }
+        var tbody = table.querySelector('tbody');
+        if (!tbody) { return; }
+
+        var canDrillIn = table.getAttribute('data-can-drill-in') === '1';
+
+        while (tbody.firstChild) { tbody.removeChild(tbody.firstChild); }
+
+        byScanner.forEach(function (row) {
+            var userId = Number(row.userID) || 0;
+            var tr = document.createElement('tr');
+            if (userId === 0) { tr.className = 'is-total'; }
+            if (canDrillIn && userId > 0) {
+                tr.setAttribute('data-scanner-id', String(userId));
+                tr.setAttribute('data-scanner-name', String(row.scanner));
+            }
+
+            [
+                row.scanner,
+                Number(row.families || 0).toLocaleString(),
+                Number(row.handouts || 0).toLocaleString(),
+                row.pace === null || row.pace === undefined ? '-' : Number(row.pace).toFixed(0),
+                row.typicalSeconds === null || row.typicalSeconds === undefined ? '-' : duration(Number(row.typicalSeconds)),
+                row.firstTs === null || row.firstTs === undefined
+                    ? '-'
+                    : timeLabel(Number(row.firstTs)) + ' - ' + timeLabel(Number(row.lastTs)),
+                duration(Number(row.idleSeconds || 0)),
+                row.bestHour === null || row.bestHour === undefined
+                    ? '-'
+                    : hourLabel(Number(row.bestHour)) + ' - ' + hourLabel(Number(row.bestHour) + 1),
+                Number((row.share || 0) * 100).toFixed(0) + '%'
+            ].forEach(function (value) {
+                var td = document.createElement('td');
+                td.textContent = String(value);
+                tr.appendChild(td);
+            });
+
+            tbody.appendChild(tr);
         });
 
-        label.textContent = best ? best.label : '-';
-
-        var sub = document.getElementById('busiestDaySub');
-        if (sub) {
-            sub.classList.toggle('d-none', !best);
-            count('busiestDayCount', best ? best.served : 0);
+        if (byScanner.length === 0) {
+            var emptyRow = document.createElement('tr');
+            emptyRow.id = 'stationsTableEmpty';
+            var emptyCell = document.createElement('td');
+            emptyCell.setAttribute('colspan', '9');
+            emptyCell.className = 'text-muted';
+            emptyCell.textContent = 'No station has logged a scan in this batch yet.';
+            emptyRow.appendChild(emptyCell);
+            tbody.appendChild(emptyRow);
         }
     }
 
@@ -182,8 +259,9 @@
                 charts.rollout.data.datasets[0].data = fresh.byDay.map(function (d) { return d.served; });
                 charts.rollout.update();
             }
-            applyBusiestDay(fresh.byDay);
             applyCoverage(fresh.coverage);
+            stationsTable(fresh.byScanner);
+            if (window.BatchHeatmap) { window.BatchHeatmap.render(fresh); }
         }
     };
 

@@ -291,8 +291,8 @@ final class ScannerMetrics
         $openTo   = self::hourOf($dailyEnd);
 
         $hours = [];
-        if ($openFrom !== null && $openTo !== null) {
-            for ($hour = $openFrom; $hour < max($openFrom + 1, $openTo); $hour++) {
+        if ($openFrom !== null && $openTo !== null && $openFrom < $openTo) {
+            for ($hour = $openFrom; $hour < $openTo; $hour++) {
                 $hours[$hour] = true;
             }
         }
@@ -313,8 +313,9 @@ final class ScannerMetrics
 
                 if ($families > 0) {
                     $state = 'served';
-                } elseif ($openFrom === null || $openTo === null) {
-                    // No declared window, so no hour can be called closed.
+                } elseif ($openFrom === null || $openTo === null || $openFrom >= $openTo) {
+                    // No usable window means no evidence the station was shut, so no
+                    // hour can be called closed.
                     $state = 'empty';
                 } else {
                     $state = $hour >= $openFrom && $hour < $openTo ? 'empty' : 'closed';

@@ -93,4 +93,32 @@ final class ScannerMetricsHeatmapTest extends CIUnitTestCase
         $this->assertSame([], $map['days']);
         $this->assertSame(0, $map['max']);
     }
+
+    /** A window crossing midnight is unusable and cannot declare any hour closed. */
+    public function testMidnightCrossingWindowMeansNoClosedCells(): void
+    {
+        $map = ScannerMetrics::heatmap(
+            $this->fold([['2026-08-11 21:30:00', 100]]),
+            '20:00:00',
+            '06:00:00'
+        );
+
+        foreach ($map['cells']['2026-08-11'] as $cell) {
+            $this->assertNotSame('closed', $cell['state']);
+        }
+    }
+
+    /** A zero-width window (start and end the same) is unusable and cannot declare any hour closed. */
+    public function testZeroWidthWindowMeansNoClosedCells(): void
+    {
+        $map = ScannerMetrics::heatmap(
+            $this->fold([['2026-08-11 06:30:00', 100]]),
+            '06:00:00',
+            '06:00:00'
+        );
+
+        foreach ($map['cells']['2026-08-11'] as $cell) {
+            $this->assertNotSame('closed', $cell['state']);
+        }
+    }
 }

@@ -54,7 +54,7 @@ $hourRange = static fn (int $hour): string => date('ga', mktime($hour, 0)) . ' -
   <div class="family-detail-item">
     <span>Best hour</span>
     <strong data-metric="bestHour"><?= $metrics === null || $metrics['bestHour'] === null ? '-' : esc($hourRange((int) $metrics['bestHour'])) ?></strong>
-    <small data-metric-sub="bestHour"><?= $metrics === null || $metrics['bestHour'] === null ? '' : esc(number_format((int) $metrics['bestHourFamilies']) . ' families') ?></small>
+    <small data-metric-sub="bestHour"><?= $metrics === null || $metrics['bestHour'] === null ? '' : esc(number_format((int) $metrics['bestHourFamilies']) . ((int) $metrics['bestHourFamilies'] === 1 ? ' family' : ' families')) ?></small>
   </div>
   <div class="family-detail-item">
     <span>Share</span>

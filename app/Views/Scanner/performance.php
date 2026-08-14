@@ -174,7 +174,7 @@ $viewingOther = (bool) ($viewingOther ?? false);
     };
     var sub = {
       bestHour: metrics && metrics.bestHour !== null && metrics.bestHour !== undefined
-        ? Number(metrics.bestHourFamilies || 0).toLocaleString() + ' families' : ''
+        ? Number(metrics.bestHourFamilies || 0).toLocaleString() + (Number(metrics.bestHourFamilies || 0) === 1 ? ' family' : ' families') : ''
     };
 
     document.querySelectorAll('[data-metric]').forEach(function (el) {

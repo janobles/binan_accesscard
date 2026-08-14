@@ -97,7 +97,7 @@ $hourLabel = static fn (int $hour): string => date('ga', mktime($hour, 0));
 </div>
 <ul class="heatmap-legend" aria-hidden="true">
   <li><span class="heatmap-swatch is-closed"></span>closed</li>
-  <li><span class="heatmap-swatch" data-heat="0"></span>none</li>
+  <li><span class="heatmap-swatch" data-heat="0"></span>0 served</li>
   <li><span class="heatmap-swatch" data-heat="3"></span>busy</li>
   <li><span class="heatmap-swatch" data-heat="5"></span>busiest</li>
 </ul>

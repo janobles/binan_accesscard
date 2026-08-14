@@ -56,12 +56,15 @@ class ReportsController extends BaseController
         // Read from the same cached snapshot the screen renders, per the export
         // rule in docs/17-dashboard-and-reports.md: a fresh query here could
         // land between two scans and disagree with the page the officer was
-        // just looking at.
+        // just looking at. Coverage and byBarangay come out of it too, not a
+        // second pair of queries: batchSnapshot() has already paid for both,
+        // and a fresh read one line later is the same disagreement risk this
+        // whole method exists to avoid.
         $snapshot = $batchId > 0 ? $stats->batchSnapshot($batchId, ($batch['closed_at'] ?? null) === null) : null;
 
         $bytes = (new \App\Libraries\Scanner\ReportsPdfGenerator())->generate(
-            $stats->coverage($batchId),
-            $stats->byBarangay($batchId),
+            $snapshot['coverage'] ?? ['eligible' => 0, 'served' => 0, 'remaining' => 0, 'coverage' => 0, 'voided' => 0],
+            $snapshot['byBarangay'] ?? [],
             $batch['name'] ?? null,
             $snapshot['byScanner'] ?? [],
             $snapshot['heatmap'] ?? [],

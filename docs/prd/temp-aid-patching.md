@@ -119,14 +119,13 @@ auto-increment on the venue laptop and means nothing once the row is somewhere
 else, so the identity has to be `(batch_id, control_no)`, or `(control_no,
 claim_date)` if batch ids turn out not to survive the copy either.
 
-**Ids are only as portable as the tables behind them.** `batch_id`,
-`aid_type_id`, and any user ids in a full dump are local to the machine that
-generated them. If the office database and the venue laptop were both seeded from
-the same dump and neither has added batches or subsidy types independently, the
-ids line up and the copy is trivial. If they diverged, a scan's `batch_id` points
-at the wrong batch after loading, silently, and nothing in the schema will catch
-it. Establishing which of those two worlds this is, before any patching is
-designed, is the single highest-value thing to check.
+**Ids are only as portable as the tables behind them.** `batch_id` and
+`aid_type_id` are local to the machine that generated them, and nothing in the
+schema catches a scan that lands on the wrong batch after loading. In practice
+this is small: the server has run exactly one batch, so there is one id to place
+and it can be confirmed by name, venue, and dates rather than trusted. Treat the
+mapping as something an operator states, not something the load infers, and it
+stays small even if a second batch appears.
 
 **A void performed after an export is invisible.** A scan voided at the venue is
 deleted there. If it was already exported, the office holds a row the venue no
@@ -140,6 +139,48 @@ the opposite of what this work needs. If the transfer is a full dump, only
 `temp_aid_distribution` is restored from it, into an office database that stays
 authoritative for everything else. That direction has to be written down and
 followed, because getting it backwards destroys the import.
+
+## What the live deployment already showed
+
+The temporary branch has been running on the server through a real distribution
+at the Alonte Sports Arena, scheduled 8am to 4pm. Two things came out of it that
+were not visible from the code.
+
+### A batch is not one continuous span
+
+The distribution ran 14 to 16 July, stopped, and resumed on 14 August. One
+event, one subsidy type, one venue, one roster of families, with a month of
+nothing in the middle.
+
+`distribution_batch` cannot express that. It holds `scheduled_start` and
+`scheduled_end` and treats everything between them as the batch. Recording this
+event as 14 July to 14 August makes every day in that month a scanning day, makes
+the batch appear open in the calendar for a month, and blocks any other batch
+from being plotted across a span that is mostly empty, because
+`DistributionBatchModel::overlapping()` refuses overlapping spans. Recording it as
+two batches splits one event's handouts into two rosters and two completion
+percentages, and a family who claimed in July would count as not yet served in
+August.
+
+So the schedule needs to become a set of dates a batch runs on, not a single
+range: several ranges, or explicit occurrence rows, with the daily times still
+applying to each. `BatchScheduleWindow` already separates the two ideas the right
+way, dates gate and times advise (`docs/15-distribution.md`), which is what makes
+this a change to what a date span is rather than a rewrite of the verdict logic.
+
+This is a schema and scheduling change, not a patching change, and it may well
+deserve a design of its own. It sits here because the patch cannot finish without
+it: the scans it converts belong to a batch whose real shape the current schema
+cannot hold, and a completion percentage computed against the wrong span is wrong
+in a way nobody will notice.
+
+### Staff start before the posted time
+
+The logs show scans before 8am. The schedule was posted as 8 to 4, and the queue
+formed earlier. This is the behaviour the dates-gate rule was designed for and it
+worked, but it is worth stating plainly for anyone reading the patched data
+later: a claim timestamped 7:40 is not an error, and `daily_start_time` describes
+the plan rather than the day.
 
 ## Goals
 
@@ -236,12 +277,27 @@ file being the numbers actually printed on the cards.
 copied across and loaded, and someone has confirmed that its batch ids and
 subsidy type ids mean what they say in the database receiving them.
 
-**The `temporary-aid` branch is brought up to the current schema.** It was cut
-against `accesscardV18.sql`, before the v19 rename of aid to subsidy, before the
-v20 eligibility roster, the v21 batch schedule, and the v22 normalisation. Its
-`aid_type_id` column and its `AidStatsModel` references are pre-rename names. This
-is a rebase and a rename, not a redesign, but it has to happen before the branch
-can merge at all.
+**The `temporary-aid` branch is reconciled with main.** This is the largest piece
+of work in the whole exercise, and it is easy to underestimate because the branch
+itself is small. It was cut on 13 July 2026 against `accesscardV18.sql`. Main has
+moved 419 commits since, through the v19 rename of aid to subsidy, the v20
+eligibility roster, the v21 batch schedule, and the v22 normalisation that split
+addresses, moved sectors into a junction table, and switched name storage to
+uppercase. The branch's `aid_type_id` column, its `AidStatsModel` references, and
+its scan controller are all pre-rename.
+
+Two consequences follow, and the second is the one that bites:
+
+The branch is a rebase and a rename, not a redesign. Its three commits touch a
+scan controller, a model, a view, and a patch file, and every one of those has a
+current equivalent on main to rebase onto.
+
+**The server is running the old code against old data.** Whatever is in the
+production database was written by a July build, and the office database it has to
+reconcile with is four schema versions ahead. The temporary table itself is
+simple enough to survive that, being six columns of integers and dates, but
+anything it references is not. Confirm the shape of what actually came off the
+server before writing any loader against a remembered schema.
 
 **Schema changes are patch files.** A new column, if the design needs one, is
 `sql/patches/vNN-*.sql` folded into a new dump. Never a migration
@@ -252,56 +308,61 @@ can merge at all.
 These are the ones a brainstorming session has to settle. They are listed in the
 order they block each other.
 
-1. **Do the venue laptop's `batch_id` and `aid_type_id` values mean the same thing
-   in the office database?** Everything else is downstream of this. If they do,
-   loading the export is a copy. If they do not, the load needs a translation
-   step, and the safest form of it is a mapping the operator confirms by name and
-   date rather than one the system infers.
+1. **How does a batch express dates it does not run on?** Several date ranges on
+   one batch, or a row per day, or a range plus exclusions. This decides the
+   schema change, what the calendar draws, what `overlapping()` compares, and
+   what the completion percentage divides by. It is the first thing to settle
+   because the Alonte batch cannot be recorded truthfully until it is.
 
-2. **What is the transfer, exactly?** A `mysqldump` of the single table, a CSV, or
+2. **Which batch does each scan belong to, and who says so?** There is one batch
+   on the server, so this is a single confirmed mapping rather than a matching
+   problem. The question is only whether the operator states it during the load
+   or whether the load claims to work it out.
+
+3. **What is the transfer, exactly?** A `mysqldump` of the single table, a CSV, or
    a full database dump that the office restores selectively. This decides what
    the load step reads and how it is verified on arrival.
 
-3. **Is patching a one-time operation or an ongoing tool?** The spreadsheet will
+4. **Is patching a one-time operation or an ongoing tool?** The spreadsheet will
    arrive in pieces and be corrected after the first import. If corrections keep
    coming, the patch is a page someone opens repeatedly, not a script run once.
    Everything below depends on this answer.
 
-4. **Who runs it, and from where?** A `spark` command run by a developer, or an
+5. **Who runs it, and from where?** A `spark` command run by a developer, or an
    admin page. A page means access control, a review screen, and progress on a
    run that may take minutes. A command means a developer is present for every
    correction, forever.
 
-5. **Does it go through the background worker?** The import already does, for the
+6. **Does it go through the background worker?** The import already does, for the
    reason that a large workbook does not fit in a web request
    (`docs/05-background-worker.md`). A patch over thousands of rows has the same
    shape.
 
-6. **What is `userID` on a patched row?** NULL is honest and matches the existing
+7. **What is `userID` on a patched row?** NULL is honest and matches the existing
    handling of the developer-account scan path, which already stores NULL. A
    dedicated system account is more explicit but adds a real row to `users` that
    can log in unless it is prevented from doing so.
 
-7. **What happens to `temp_aid_distribution` after a clean run?** Kept as history,
+8. **What happens to `temp_aid_distribution` after a clean run?** Kept as history,
    kept with a patched marker per row, or dropped in the dump version that
    completes the work. It cannot simply be dropped if unresolved rows are still
    sitting in it.
 
-8. **Are eligibility rosters built retroactively for temporary-period batches?**
+9. **Are eligibility rosters built retroactively for temporary-period batches?**
    Without a roster there is no denominator and the completion percentage for
    those batches stays meaningless. With one, it is built from a roster that
    nobody approved at the time, against a population that did not exist when the
    batch ran. `EligibilityBuilder` freezes the roster once per batch on purpose
    (`docs/15-distribution.md`), so this is a deliberate exception either way.
 
-9. **How is a control number that was never issued told apart from one whose
+10. **How is a control number that was never issued told apart from one whose
    household is simply missing?** If the city has the list of printed number
    ranges, an out-of-range scan is a different problem from a household that has
    not been encoded, and it should read differently in the report. If there is no
    such list, they are indistinguishable and the report should not pretend
    otherwise.
 
-10. **What is the answer when a batch has both a temporary and a real handout for
+11. **What is the answer when a batch has both a temporary and a real handout for
    the same family?** This happens if any batch straddled the import. Skip and
    report is the conservative answer; it needs confirming that it is the right
    one.

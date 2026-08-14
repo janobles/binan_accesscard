@@ -320,6 +320,39 @@
     border-bottom-width: 1px;
 }
 
+/* Card variant: the small underline row inside a card header, switching
+   between views of that card's own data, not between pages. Bootstrap's
+   .nav-underline would do this, but the dashboard shell compiles Bootstrap
+   5.2.3 into the SB Admin theme and that class arrived in 5.3, so it silently
+   does nothing here. See docs/reference/version-pins.md. */
+.segmented-tabs--card {
+    gap: 0 1.25rem;
+    border-bottom: 1px solid var(--token-border-light);
+    margin-bottom: 1rem;
+}
+
+.segmented-tabs--card .nav-link {
+    background: none;
+    border-radius: 0;
+    color: var(--token-text-secondary);
+    font-size: 0.85rem;
+    padding: 0 0 0.5rem;
+    /* -1px so the active tab's rule sits on the strip's border, not under it,
+       which is what stops the card shifting a pixel on tab switch. */
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+}
+
+.segmented-tabs--card .nav-link:hover {
+    color: var(--token-text-primary);
+}
+
+.segmented-tabs--card .nav-link.active {
+    background: none;
+    color: var(--bs-primary);
+    border-bottom-color: var(--bs-primary);
+}
+
 /* Stepper: the app's own step indicator, since Bootstrap ships none. Indicators
    stay neutral and the section label carries the emphasis, so colour is spent
    only where it means something (a finished step, a step needing attention). */

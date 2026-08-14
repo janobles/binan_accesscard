@@ -62,12 +62,20 @@ optional. Every existing figure on the pane is defined against the frozen roster
 and a station table built without it would report more served than the Served
 card above it.
 
-`hourHistogram(?int $batchId): list<array{day:string,dow:int,hour:int,families:int}>`
+`weekdayHistogram(): list<array{dow:int,hour:int,families:int}>`
 
-Grouped on `claim_date` and the hour of `dt_created`. A null `$batchId` is the
-all-time weekday view and groups on day-of-week instead; it gets its own cache
-key because it cannot use the per-batch fingerprint that `batchSnapshot()`
-relies on.
+Day-of-week by hour across every batch, for the all-time view. It gets its own
+cache key, because it cannot use the per-batch fingerprint that
+`batchSnapshot()` relies on.
+
+There is deliberately no per-batch hour query. The batch heatmap is derived from
+the same `scanEvents()` fold as the per-scanner metrics. A second SQL path
+grouping the same rows by hour would be a second source for the same figure, and
+the two disagree the moment two scanners handle the same control number within
+one hour: the fold counts one family, a naive per-scanner sum counts two. One
+source per view means there is nothing to reconcile. The all-time view is the
+only case where the row set is too large to fold in PHP, which is why it, and
+only it, stays in SQL.
 
 ### One new library
 
@@ -75,7 +83,8 @@ relies on.
 
 `fold(array $events, int $idleGapSeconds = 900): array` walks the event stream
 once and returns, per scanner: `families`, `handouts`, `activeSeconds`,
-`medianGapSeconds`, `firstTs`, `lastTs`, `longestGapSeconds`, and `byHour[]`. A `TOTAL`
+`medianGapSeconds`, `firstTs`, `lastTs`, `longestGapSeconds`, and `byHour[]`, plus
+a `byDayHour` map for the batch heatmap folded in the same pass. A `TOTAL`
 row is folded by the same code path, so the total can never be a differently
 computed number that happens to sit at the bottom of the table.
 
@@ -308,8 +317,8 @@ boundary at exactly the threshold, a single-scan scanner, a scanner with one lon
 break, all scans inside one minute, an empty batch, and a day with a staffed but
 empty hour.
 
-The two model methods run against both CI backends. The SQLite path is where the
-hour and day-of-week extraction differs from MariaDB, so that difference is
+The two model methods run against both CI backends. `weekdayHistogram()` is where
+day-of-week extraction differs between SQLite and MariaDB, so that difference is
 asserted rather than assumed.
 
 ## End-to-end verification

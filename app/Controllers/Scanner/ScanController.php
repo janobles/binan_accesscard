@@ -7,6 +7,7 @@ use App\Libraries\Qr\ControlNumber;
 use App\Libraries\Qr\QrImageGenerator;
 use App\Libraries\RoleAccess;
 use App\Libraries\Scanner\BatchScope;
+use App\Libraries\Scanner\ScannerMetrics;
 use App\Libraries\SessionAccount;
 use App\Models\Audit\AuditTrailsModel;
 use App\Models\Auth\UserModel;
@@ -274,7 +275,7 @@ class ScanController extends BaseController
 
         $userId       = $this->resolveViewedScanner();
         $viewingOther = $userId !== (int) (session('user_id') ?? 0);
-        $snapshot     = $this->kioskSnapshot($batchId, $userId, $batchRow);
+        $snapshot     = $this->kioskSnapshot($batchId, $userId);
 
         return view('Scanner/performance', array_merge([
             'pageTitle'    => $viewingOther ? 'Station Performance' : 'My Performance',
@@ -337,40 +338,50 @@ class ScanController extends BaseController
 
     /**
      * One kiosk's live figures for a batch: totals, a time-bucketed throughput
-     * timeline, and derived pace (families/hour, busiest window). Shared by the
-     * performance page and the polling endpoint so both stay in sync.
+     * timeline, and this scanner's row from ScannerMetrics::derive(). Shared by
+     * the performance page and the polling endpoint so both stay in sync, and
+     * folded from the same scan-event stream the Stations table and the station
+     * modal read, so the three can never disagree about one scanner's pace.
      *
-     * @return array{mine:array{families:int,handouts:int},timeline:list<array{label:string,families:int,handouts:int}>,pace:array{perHour:int,busiest:string}}
+     * Pace used to divide this scanner's families by the batch's wall clock
+     * (started_at to now, or to closed_at). A scanner who worked two of a
+     * three-day batch's days counted the idle night in between as scanning
+     * time and read at a fraction of their real rate. Folding the event stream
+     * instead derives active time from the scans themselves, so days the
+     * scanner did not work never enter the denominator.
+     *
+     * share's denominator is the whole batch's families, not this scanner's
+     * own total, which is why the unfiltered stream is folded a second time
+     * for TOTAL rather than reused from $fold: reusing it would make every
+     * scanner's share read 100%.
+     *
+     * @return array{mine:array{families:int,handouts:int},timeline:list<array{label:string,families:int,handouts:int}>,metrics:?array<string,mixed>}
      */
-    private function kioskSnapshot(int $batchId, int $userId, ?array $batchRow): array
+    private function kioskSnapshot(int $batchId, int $userId): array
     {
-        $stats    = model(SubsidyStatsModel::class);
-        $mineRow  = $batchId > 0 ? ($stats->perScanner($batchId, $userId)[0] ?? null) : null;
-        $mine     = ['families' => (int) ($mineRow['families'] ?? 0), 'handouts' => (int) ($mineRow['handouts'] ?? 0)];
-        $timeline = $batchId > 0 ? $stats->timelineForUserInBatch($batchId, $userId) : [];
+        $stats  = model(SubsidyStatsModel::class);
+        $events = $batchId > 0 ? $stats->scanEvents($batchId) : [];
 
-        // Pace uses the batch's active span (open batch → now, else its close time).
-        $perHour = 0;
-        if ($mine['families'] > 0 && $batchRow !== null && ! empty($batchRow['started_at'])) {
-            $start   = strtotime((string) $batchRow['started_at']);
-            $end     = ! empty($batchRow['closed_at']) ? strtotime((string) $batchRow['closed_at']) : time();
-            $hours   = max(0.05, ($end - $start) / 3600);
-            $perHour = (int) round($mine['families'] / $hours);
+        $mineEvents = array_values(array_filter(
+            $events,
+            static fn (array $event): bool => (int) $event['userID'] === $userId
+        ));
+        $fold = ScannerMetrics::fold($mineEvents);
+        $row  = $fold['scanners'][0] ?? null;
+        $mine = ['families' => (int) ($row['families'] ?? 0), 'handouts' => (int) ($row['handouts'] ?? 0)];
+
+        $metrics = null;
+        if ($row !== null) {
+            $totalFold = ScannerMetrics::fold($events);
+            $metrics   = array_merge($mine, ScannerMetrics::derive($row, (int) $totalFold['total']['families']));
         }
 
-        $busiest = '';
-        $peak    = -1;
-        foreach ($timeline as $bucket) {
-            if ($bucket['families'] > $peak) {
-                $peak    = $bucket['families'];
-                $busiest = $bucket['label'];
-            }
-        }
+        $timeline = $batchId > 0 ? $stats->timelineForUserInBatch($batchId, $userId, 60) : [];
 
         return [
             'mine'     => $mine,
             'timeline' => $timeline,
-            'pace'     => ['perHour' => $perHour, 'busiest' => $busiest],
+            'metrics'  => $metrics,
         ];
     }
 
@@ -402,7 +413,7 @@ class ScanController extends BaseController
         }
 
         $batchId  = (int) $batch['batch_id'];
-        $snapshot = $this->kioskSnapshot($batchId, $userId, $batch);
+        $snapshot = $this->kioskSnapshot($batchId, $userId);
 
         return $this->response->setJSON([
             'batch'    => [
@@ -413,7 +424,7 @@ class ScanController extends BaseController
             'families' => $snapshot['mine']['families'],
             'handouts' => $snapshot['mine']['handouts'],
             'timeline' => $snapshot['timeline'],
-            'pace'     => $snapshot['pace'],
+            'metrics'  => $snapshot['metrics'],
             'updated'  => date('c'),
         ]);
     }

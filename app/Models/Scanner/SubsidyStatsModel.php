@@ -486,7 +486,7 @@ class SubsidyStatsModel extends Model
      *
      * @return list<array{label:string,families:int,handouts:int}>
      */
-    public function timelineForUserInBatch(int $batchId, int $userId, int $bucketMinutes = 15): array
+    public function timelineForUserInBatch(int $batchId, int $userId, int $bucketMinutes = 60): array
     {
         if ($batchId <= 0 || $userId <= 0) {
             return [];

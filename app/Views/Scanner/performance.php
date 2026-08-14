@@ -42,54 +42,17 @@ $viewingOther = (bool) ($viewingOther ?? false);
   </div>
 </div>
 
-<?php /* The row does its own columns, the same way the dashboard's KPI rows do.
-         This section used to carry .reports-stats, a four-column CSS grid from
-         when the tiles were its direct children; with a Bootstrap row inside it
-         instead, the whole row became one grid item in a single 1fr track and
-         got a quarter of the width, which squeezed the four labels down to one
-         character per line. That grid and the rest of the .stat-card system are
-         deleted now. The .stat-card--* classes below are not styling: they are
-         the hooks setTile() uses to find a tile when the poll comes back. */ ?>
+<?php /* Eight label-over-value lines from the same partial the station modal
+         renders, so the kiosk's own page and an admin's drill-in view of this
+         same station can never disagree about what these figures are. See
+         Scanner/_metrics-grid.php for the shape $metrics takes. */ ?>
 <section class="mb-4" aria-label="Kiosk performance">
-  <div class="row row-cols-2 row-cols-md-4 g-3 kpi-row">
-    <div class="col stat-card--records">
-      <div class="card kpi-card h-100">
-        <div class="card-body">
-          <p class="kpi-label">Families served</p>
-          <p class="kpi-value"><?= esc((string) (int) ($mine['families'] ?? 0)) ?></p>
-        </div>
-      </div>
-    </div>
-    <div class="col stat-card--members">
-      <div class="card kpi-card h-100">
-        <div class="card-body">
-          <p class="kpi-label">Handouts logged</p>
-          <p class="kpi-value"><?= esc((string) (int) ($mine['handouts'] ?? 0)) ?></p>
-        </div>
-      </div>
-    </div>
-    <div class="col stat-card--sectors">
-      <div class="card kpi-card h-100">
-        <div class="card-body">
-          <p class="kpi-label">Families / hour</p>
-          <p class="kpi-value"><?= esc((string) (int) ($pace['perHour'] ?? 0)) ?></p>
-        </div>
-      </div>
-    </div>
-    <div class="col stat-card--services">
-      <div class="card kpi-card h-100">
-        <div class="card-body">
-          <p class="kpi-label">Busiest window</p>
-          <p class="kpi-value"><?= esc(($pace['busiest'] ?? '') !== '' ? $pace['busiest'] : '-') ?></p>
-        </div>
-      </div>
-    </div>
-  </div>
+  <?= $this->include('Scanner/_metrics-grid', ['metrics' => $metrics ?? null]) ?>
 </section>
 
 <div class="card border-0 rounded-3 mb-3">
   <div class="card-body">
-    <div class="fw-bold mb-2">Throughput - families served per 15 minutes</div>
+    <div class="fw-bold mb-2">Throughput - families served per hour</div>
     <div style="position:relative;height:260px"><canvas id="chartThroughput"></canvas></div>
     <p class="text-muted small mb-0" id="throughputEmpty" hidden>No scans logged yet for this batch.</p>
   </div>
@@ -162,18 +125,72 @@ $viewingOther = (bool) ($viewingOther ?? false);
     });
   }
 
-  function setTile(variant, value) {
-    var el = document.querySelector('.' + variant + ' .kpi-value');
-    if (el) { el.textContent = value; }
+  // Matches ViewFormatter::duration() exactly, so a repaint prints the same
+  // wording the server would have for the same figure. Duplicated rather than
+  // shared with station-modal.js/scanner-reports.js: see those files' headers
+  // for why each keeps its own copy.
+  function duration(seconds) {
+    if (seconds <= 0) { return '-'; }
+    if (seconds < 60) { return seconds + ' s'; }
+    if (seconds < 300) {
+      var minutes = Math.floor(seconds / 60);
+      var rest = seconds % 60;
+
+      return rest === 0 ? minutes + ' m' : minutes + ' m ' + rest + ' s';
+    }
+    if (seconds < 3600) { return Math.floor(seconds / 60) + ' m'; }
+
+    var hours = Math.floor(seconds / 3600);
+    var restMinutes = Math.floor((seconds % 3600) / 60);
+
+    return restMinutes === 0 ? hours + ' h' : hours + ' h ' + restMinutes + ' m';
+  }
+
+  // Matches PHP's date('ga', mktime($hour, 0)).
+  function hourLabel(hour) {
+    var normalized = ((hour % 24) + 24) % 24;
+    var h = normalized % 12;
+    if (h === 0) { h = 12; }
+
+    return h + (normalized < 12 ? 'am' : 'pm');
+  }
+
+  // Reads the fetched metrics row by data-metric key, the same
+  // Scanner/_metrics-grid.php partial the poll's markup already carries, so
+  // a repaint never invents a field the server-rendered grid does not have.
+  function paintMetrics(metrics) {
+    var text = {
+      families: metrics ? Number(metrics.families || 0).toLocaleString() : '-',
+      handouts: metrics ? Number(metrics.handouts || 0).toLocaleString() : '-',
+      pace: !metrics || metrics.pace === null || metrics.pace === undefined
+        ? '-' : Number(metrics.pace).toFixed(0) + ' / hour',
+      typical: !metrics || metrics.typicalSeconds === null || metrics.typicalSeconds === undefined
+        ? '-' : duration(Number(metrics.typicalSeconds)),
+      onStation: metrics ? duration(Number(metrics.onStationSeconds || 0)) : '-',
+      idle: metrics ? duration(Number(metrics.idleSeconds || 0)) : '-',
+      bestHour: !metrics || metrics.bestHour === null || metrics.bestHour === undefined
+        ? '-' : hourLabel(Number(metrics.bestHour)) + ' - ' + hourLabel(Number(metrics.bestHour) + 1),
+      share: metrics ? Number((metrics.share || 0) * 100).toFixed(0) + '%' : '-'
+    };
+    var sub = {
+      bestHour: metrics && metrics.bestHour !== null && metrics.bestHour !== undefined
+        ? Number(metrics.bestHourFamilies || 0).toLocaleString() + ' families' : ''
+    };
+
+    document.querySelectorAll('[data-metric]').forEach(function (el) {
+      var key = el.getAttribute('data-metric');
+      el.textContent = key in text ? text[key] : '-';
+    });
+    document.querySelectorAll('[data-metric-sub]').forEach(function (el) {
+      var key = el.getAttribute('data-metric-sub');
+      if (key in sub) {
+        el.textContent = sub[key];
+      }
+    });
   }
 
   function paint(d) {
-    setTile('stat-card--records', d.families);
-    setTile('stat-card--members', d.handouts);
-    if (d.pace) {
-      setTile('stat-card--sectors', d.pace.perHour);
-      setTile('stat-card--services', d.pace.busiest || '-');
-    }
+    paintMetrics(d.metrics || null);
     if (Array.isArray(d.timeline)) { draw(d.timeline); }
     document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString();
   }

@@ -23,6 +23,19 @@
     --chart-color-4: #1cc88a;
     --chart-track: #dddfeb;
     --chart-grid: #eaecf4;
+
+    /* Sequential ramp for magnitude (peak-hours heatmap): one hue, light to
+       dark, steps 100/250/350/450/550/650 of the documented blue scale so the
+       lightest step ("staffed, served nobody") still reads as a real color,
+       not the surface. Same blue family as --chart-color-1, matched hue. */
+    --heat-0: #cde2fb;
+    --heat-1: #86b6ef;
+    --heat-2: #5598e7;
+    --heat-3: #2a78d6;
+    --heat-4: #1c5cab;
+    --heat-5: #104281;
+    --heat-closed-base: #eaecf4;
+    --heat-closed-stripe: #dee2e6;
 }
 
 /* Bootstrap's stock .btn-warning uses black text on yellow (default WCAG

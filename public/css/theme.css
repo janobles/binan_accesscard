@@ -336,7 +336,13 @@
     border-radius: 0;
     color: var(--token-text-secondary);
     font-size: 0.85rem;
-    padding: 0 0 0.5rem;
+    /* Horizontal and vertical padding here, not just the 0.5rem this strip's
+       siblings use, because this variant carries tabs like Barangay
+       coverage's Map/Table switch, which exist so a phone user can reach
+       content hidden below the large breakpoint. A tap target sized to the
+       label text alone is too small to hit on touch. The gap above keeps the
+       now-padded tabs from reading as one run-together block. */
+    padding: 0.65rem 0.5rem;
     /* -1px so the active tab's rule sits on the strip's border, not under it,
        which is what stops the card shifting a pixel on tab switch. */
     border-bottom: 2px solid transparent;
@@ -344,13 +350,13 @@
 }
 
 .segmented-tabs--card .nav-link:hover {
-    color: var(--token-text-primary);
+    color: var(--token-primary-green);
 }
 
 .segmented-tabs--card .nav-link.active {
     background: none;
-    color: var(--bs-primary);
-    border-bottom-color: var(--bs-primary);
+    color: var(--token-primary-green);
+    border-bottom-color: var(--token-primary-green);
 }
 
 /* Stepper: the app's own step indicator, since Bootstrap ships none. Indicators

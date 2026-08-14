@@ -1,12 +1,19 @@
 <?php
 /**
- * Dashboard Zone 2, "this batch": the batch picker, the served-of-eligible
- * headline, and the Barangay/Stations/Remaining tabs. A fragment, not a page:
- * rendered inline by Pages/dashboard.php for every role. Data comes
- * from DashboardPageBuilder::buildReportsData() (batches, batchRow, batchOpen,
- * batchSnapshot, remainingPage, batchBodyTab, busiestDay) plus $role, which
- * decides only whether a station square is clickable. All server data is
- * escaped.
+ * Dashboard Zone 2, "this batch": the batch picker, the four headline figures,
+ * and the cards underneath them. A fragment, not a page: rendered inline by
+ * Pages/dashboard.php for every role. Data comes from
+ * DashboardPageBuilder::buildReportsData() (batches, batchRow, batchOpen,
+ * batchSnapshot, selectedDay, weekdayHeatmap, remainingPage) plus $batchHeadline
+ * and $role, the last of which decides only whether a station row is clickable.
+ * All server data is escaped.
+ *
+ * Activity, Barangay coverage, Stations and Remaining used to be one block with
+ * a page-level tab strip switching between them. They are four separate
+ * subjects, not four views of one, so reading two of them meant clicking
+ * between them and losing the first. Each is a card of its own now and they all
+ * render together. A tab strip survives only inside a card, and only where it
+ * switches between views of that card's own data.
  *
  * The batch figures render as a KPI card row plus a slim coverage bar,
  * matching the Overview pane's card row (`.kpi-card` styles are shared, see
@@ -18,18 +25,25 @@ $batchRow = $batchRow ?? null;
 $batchOpen = (bool) ($batchOpen ?? false);
 $batchSnapshot = $batchSnapshot ?? ['coverage' => ['eligible' => 0, 'served' => 0, 'remaining' => 0, 'coverage' => 0, 'voided' => 0], 'byBarangay' => [], 'perScanner' => [], 'timeline' => [], 'byDay' => [], 'heatmap' => ['days' => [], 'hours' => [], 'cells' => [], 'max' => 0], 'byScanner' => [], 'days' => []];
 $remainingPage = $remainingPage ?? ['rows' => [], 'keyword' => '', 'page' => 1, 'perPage' => 25, 'perPageOptions' => [10, 25, 50, 100], 'totalPages' => 1, 'totalRows' => 0, 'fromRecord' => 0, 'toRecord' => 0];
-$batchBodyTab = $batchBodyTab ?? 'barangay';
-$busiestDay = $busiestDay ?? null;
+$weekdayHeatmap = $weekdayHeatmap ?? ['days' => [], 'hours' => [], 'cells' => [], 'max' => 0];
+$selectedDay = $selectedDay ?? null;
+$batchHeadline = $batchHeadline ?? [
+    'eligible'       => ['value' => '0', 'sub' => ''],
+    'served'         => ['value' => '0', 'sub' => ''],
+    'peakHour'       => ['value' => '-', 'sub' => ''],
+    'scannersActive' => ['value' => '0', 'sub' => ''],
+];
 
 // Only these two reach scanner/stats, which is what the station modal reads.
-// See the note in Admin/batch-stations-grid.php.
+// See the note in Admin/batch-stations-table.php.
 $canDrillInStations = in_array($role ?? '', ['Developer', 'Admin'], true);
 
 $c = $batchSnapshot['coverage'];
 $byBarangay = $batchSnapshot['byBarangay'];
-$perScanner = $batchSnapshot['perScanner'];
 $timeline = $batchSnapshot['timeline'];
 $byDay = $batchSnapshot['byDay'] ?? [];
+$heatmap = $batchSnapshot['heatmap'] ?? ['days' => [], 'hours' => [], 'cells' => [], 'max' => 0];
+$byScanner = $batchSnapshot['byScanner'] ?? [];
 
 $batchId = (int) ($batchRow['batch_id'] ?? 0);
 $noBatch = $batchRow === null;
@@ -45,12 +59,13 @@ $noEligible = ! $noBatch && $c['eligible'] === 0;
   <div class="section-actions">
     <?php if ($batches !== []): ?>
     <form class="reports-filter" method="get" action="<?= site_url('dashboard') ?>">
-      <?php /* A GET form submits only its own fields, so the pane and the
-               sub-tab have to ride along or picking a batch drops the reader
-               back on Overview/Barangay. Same fix the scanner performance
-               page's batch selector already carries. */ ?>
+      <?php /* A GET form submits only its own fields, so the pane has to ride
+               along or picking a batch drops the reader back on Overview. Same
+               fix the scanner performance page's batch selector already
+               carries. The sub-tab used to ride along too and no longer
+               exists; the picked day deliberately does not, because a day of
+               one batch is not a day of the next. */ ?>
       <input type="hidden" name="view" value="distribution">
-      <input type="hidden" name="tab" value="<?= esc($batchBodyTab, 'attr') ?>">
       <label for="batchPick" class="form-label mb-0 visually-hidden">Batch</label>
       <select class="form-select" id="batchPick" name="batch" onchange="this.form.submit()">
         <?php foreach ($batches as $b): ?>
@@ -60,6 +75,21 @@ $noEligible = ! $noBatch && $c['eligible'] === 0;
         <?php endforeach; ?>
       </select>
     </form>
+    <?php endif; ?>
+    <?php if (! $noBatch && ! $noEligible): ?>
+    <?php /* Deliberately outside the batch form: this control filters the page
+             in place (batch-heatmap.js writes ?day= with replaceState) rather
+             than reloading, and it is the same selection the heatmap's row
+             headers make, so it must not submit anything on its own. */ ?>
+    <label for="dayPick" class="form-label mb-0 visually-hidden">Day</label>
+    <select class="form-select" id="dayPick">
+      <option value=""<?= $selectedDay === null ? ' selected' : '' ?>>All days</option>
+      <?php foreach ($byDay as $index => $day): ?>
+      <option value="<?= esc($day['date'], 'attr') ?>"<?= $selectedDay === $day['date'] ? ' selected' : '' ?>>
+        <?= esc(date('M j', strtotime($day['date'])) . ' (Day ' . ($index + 1) . ')') ?>
+      </option>
+      <?php endforeach; ?>
+    </select>
     <?php endif; ?>
     <?php if (! $noBatch): ?>
     <a class="btn btn-primary reports-download-btn" href="<?= site_url('distribution/reports/pdf') . '?batch=' . (int) $batchId ?>"><i class="bi bi-file-earmark-arrow-down" aria-hidden="true"></i><span>Download Report</span></a>
@@ -73,37 +103,38 @@ $noEligible = ! $noBatch && $c['eligible'] === 0;
 <p class="text-muted mb-4">This batch has no eligible families. Check its barangay and sector filters.</p>
 <?php else: ?>
 
+<?php /* Every value carries data-metric and every sub-line data-metric-sub, so
+         the day filter and the live poll rewrite the same four figures through
+         one contract rather than a list of ids. The sub-line is always in the
+         markup, even when it has nothing to say, because both of those repaint
+         it in place and neither should be inserting markup mid-batch. */ ?>
 <div class="row row-cols-2 row-cols-md-4 g-3 kpi-row">
   <div class="col">
     <div class="card kpi-card h-100"><div class="card-body">
-      <p class="kpi-label">Eligible families</p>
-      <p class="kpi-value" id="progressEligible"><?= esc(number_format($c['eligible'])) ?></p>
+      <p class="kpi-label">Eligible</p>
+      <p class="kpi-value" id="progressEligible" data-metric="eligible"><?= esc($batchHeadline['eligible']['value']) ?></p>
+      <p class="kpi-sub" data-metric-sub="eligible"><?= esc($batchHeadline['eligible']['sub']) ?></p>
     </div></div>
   </div>
   <div class="col">
     <div class="card kpi-card h-100"><div class="card-body">
       <p class="kpi-label">Served</p>
-      <p class="kpi-value" id="progressServed"><?= esc(number_format($c['served'])) ?></p>
-      <p class="kpi-sub"><span id="progressCoverage"><?= esc((string) $c['coverage']) ?></span>%</p>
+      <p class="kpi-value" id="progressServed" data-metric="served"><?= esc($batchHeadline['served']['value']) ?></p>
+      <p class="kpi-sub" data-metric-sub="served"><?= esc($batchHeadline['served']['sub']) ?></p>
     </div></div>
   </div>
   <div class="col">
     <div class="card kpi-card h-100"><div class="card-body">
-      <p class="kpi-label"><?= $batchOpen ? 'Remaining' : 'Not claimed' ?></p>
-      <p class="kpi-value" id="remainingTileValue"><?= esc(number_format($c['remaining'])) ?></p>
+      <p class="kpi-label">Peak hour</p>
+      <p class="kpi-value" data-metric="peakHour"><?= esc($batchHeadline['peakHour']['value']) ?></p>
+      <p class="kpi-sub" data-metric-sub="peakHour"><?= esc($batchHeadline['peakHour']['sub']) ?></p>
     </div></div>
   </div>
   <div class="col">
     <div class="card kpi-card h-100"><div class="card-body">
-      <p class="kpi-label">Busiest day</p>
-      <?php /* Carries ids, and the sub-line is always in the markup (hidden
-               when there is nothing to say), because the live poll recomputes
-               this card from the same byDay series it repaints the rollout
-               chart from. Left server-only it would drift out of agreement
-               with the tallest bar beside it during an open batch. */ ?>
-      <p class="kpi-value" id="busiestDayLabel"><?= $busiestDay === null ? '-' : esc($busiestDay['label']) ?></p>
-      <p class="kpi-sub<?= $busiestDay === null ? ' d-none' : '' ?>" id="busiestDaySub">
-        <span id="busiestDayCount"><?= $busiestDay === null ? '0' : esc(number_format($busiestDay['served'])) ?></span> families</p>
+      <p class="kpi-label">Scanners active</p>
+      <p class="kpi-value" data-metric="scannersActive"><?= esc($batchHeadline['scannersActive']['value']) ?></p>
+      <p class="kpi-sub" data-metric-sub="scannersActive"><?= esc($batchHeadline['scannersActive']['sub']) ?></p>
     </div></div>
   </div>
 </div>
@@ -119,6 +150,9 @@ $noEligible = ! $noBatch && $c['eligible'] === 0;
            place without inserting new markup mid-batch. */ ?>
   <span id="voidedTileWrap"<?= $c['voided'] > 0 ? '' : ' class="d-none"' ?>>
     <span id="voidedTileValue"><?= esc((string) $c['voided']) ?></span> voided &middot;</span>
+  <span id="remainingTileWrap"><span id="remainingTileValue"><?= esc(number_format($c['remaining'])) ?></span>
+    <?= $batchOpen ? 'remaining' : 'not claimed' ?> &middot;</span>
+  <span id="progressCoverageWrap"><span id="progressCoverage"><?= esc((string) $c['coverage']) ?></span>% coverage &middot;</span>
   <?php /* The state reads as a pill rather than a sentence, matching the "open"
            pill on the Overview pane's Distributions table. Not a Bootstrap
            alert: an alert is a block banner for something needing attention,
@@ -129,65 +163,54 @@ $noEligible = ! $noBatch && $c['eligible'] === 0;
   <?php endif; ?>
 </p>
 
-<?php if (count($byDay) > 1): ?>
-<?php /* One bar per day the batch ran. A single-day batch gets no chart:
-         one bar says nothing the Served card has not already said. Shown for
-         closed batches too, because this is retrospective reporting rather
-         than the live monitoring the cumulative timeline does. */ ?>
-<section class="batch-pane">
-  <h3 class="batch-pane-title">Rollout by day</h3>
-  <div class="batch-rollout-chart"><canvas id="chartRollout"></canvas></div>
-</section>
-<?php endif; ?>
-
-<?php if ($batchOpen): ?>
-<section class="batch-pane">
-  <h3 class="batch-pane-title">Families served over time</h3>
-  <div class="batch-timeline-chart"><canvas id="chartTimeline"></canvas></div>
-</section>
-<?php endif; ?>
-
-<?= view('components/page_tabs', [
-    'tabs' => [
-        ['key' => 'barangay', 'label' => 'Barangay'],
-        ['key' => 'stations', 'label' => 'Stations'],
-        ['key' => 'remaining', 'label' => 'Remaining'],
-    ],
-    'active' => $batchBodyTab,
-    'baseUrl' => 'dashboard',
-    // Named even though 'tab' is the default: the outer strip on
-    // Pages/dashboard.php renders first with 'view', and CI4's renderer carries
-    // view data from one view() call into the next, so leaving this implicit
-    // makes the sub-tabs switch ?view= instead of ?tab=.
-    'param' => 'tab',
-    // Carries the pane and the batch selection through the sub-tab switch.
-    // Without view=, DashboardPageBuilder falls back to Overview and the click
-    // leaves the Distribution pane; without batch=, ?tab= alone silently
-    // reverts an explicitly-picked batch back to the default.
-    'queryParams' => ['view' => 'distribution', 'batch' => $batchId],
-    // Subordinate to the outer Overview/Distribution strip on
-    // Pages/dashboard.php: same component, toned down in theme.css so it
-    // reads as inside a pane rather than a second page nav.
-    'variantClass' => 'segmented-tabs--subordinate',
+<?= view('Admin/batch-activity-card', [
+    'heatmap'        => $heatmap,
+    'weekdayHeatmap' => $weekdayHeatmap,
+    'byDay'          => $byDay,
+    'selectedDay'    => $selectedDay,
+    'batchOpen'      => $batchOpen,
 ]) ?>
 
-<?php if ($batchBodyTab === 'barangay'): ?>
-  <div class="row g-3 align-items-start">
-    <?php /* Desktop-only: measured at 390px the SVG renders 342x520 and four
-             barangays (Casile 18x19, Poblacion 14x44, Santo Domingo 16x51, San
-             Jose 23x62) fall under a 24px tap target in at least one dimension.
-             The popover trigger is hover-or-focus and hover does not exist on
-             touch, and the map costs 520px of scroll before the leaderboard
-             table below carries the same figures legibly. Hidden below lg
-             rather than shipped unusable; the table column is already col-12
-             at that width so nothing is left holding an empty column open. */ ?>
-    <div class="col-12 col-lg-5 d-none d-lg-block">
-      <?= view('Admin/batch-barangay-map', ['byBarangay' => $byBarangay]) ?>
-    </div>
-    <div class="col-12 col-lg-7">
+<?php if ($batchOpen): ?>
+<?php /* Live monitoring rather than reporting, which is why it is a card of its
+         own and not a fourth view inside Activity: the three Activity views all
+         answer "when was it busy", this one answers "is it still moving", and
+         it is the only block on the pane that a closed batch has no use for. */ ?>
+<section class="card batch-card">
+  <div class="card-body">
+    <h3 class="batch-pane-title">Families served over time</h3>
+    <div class="batch-timeline-chart"><canvas id="chartTimeline"></canvas></div>
+  </div>
+</section>
+<?php endif; ?>
+
+<section class="card batch-card" id="barangayCard" data-strip="table">
+  <div class="card-body">
+    <h3 class="batch-pane-title">Barangay coverage</h3>
+    <?php /* Map and Table are two readings of one set of figures, so they are a
+             card strip rather than two blocks side by side. Table leads: it is
+             legible at every width and carries the exact numbers, while the map
+             carries the pattern. The map used to be hidden below the large
+             breakpoint because at 390px the SVG renders 342x520 and four
+             barangays (Casile 18x19,
+             Poblacion 14x44, Santo Domingo 16x51, San Jose 23x62) fall under a
+             24px tap target in at least one dimension, and the popover trigger
+             is hover-or-focus while hover does not exist on touch. Behind a
+             strip that measurement no longer justifies hiding it: nobody is
+             made to scroll past an awkward map to reach the figures, and a
+             phone reader who wants the pattern can still ask for it. */ ?>
+    <?= view('components/card_tabs', [
+        'tabs' => [
+            ['key' => 'table', 'label' => 'Table'],
+            ['key' => 'map', 'label' => 'Map'],
+        ],
+        'active' => 'table',
+    ]) ?>
+
+    <div data-strip-pane="table">
       <div class="table-responsive">
         <table class="table manage-record-table align-middle w-100 mb-0" id="barangayTable">
-          <thead><tr><th>Barangay</th><th>Eligible</th><th>Served</th><th>Coverage</th></tr></thead>
+          <thead><tr><th scope="col">Barangay</th><th scope="col">Eligible</th><th scope="col">Served</th><th scope="col">Coverage</th></tr></thead>
           <tbody>
             <?php foreach ($byBarangay as $b): ?>
             <tr data-barangay="<?= esc($b['barangay'], 'attr') ?>">
@@ -204,70 +227,88 @@ $noEligible = ! $noBatch && $c['eligible'] === 0;
         </table>
       </div>
     </div>
-  </div>
-<?php elseif ($batchBodyTab === 'stations'): ?>
-  <?= view('Admin/batch-stations-grid', [
-      'perScanner' => $perScanner,
-      'batchId' => $batchId,
-      'canDrillIn' => $canDrillInStations,
-  ]) ?>
-  <?php if ($canDrillInStations): ?>
-    <?= view('Admin/batch-station-modal') ?>
-  <?php endif; ?>
-<?php else: ?>
-  <?php
-  // Server-side paginated (SubsidyStatsModel::remainingPage()): against the
-  // 100k-family target, fetching the whole roster into the DOM for
-  // table-paginate.js to slice client-side (the Distribution Batches/Log
-  // pattern) is too large a page. Preserves batch + tab across page links.
-  $remainingPageUrl = static function (int $targetPage) use ($batchId, $remainingPage): string {
-      $params = array_filter([
-          'view'     => 'distribution',
-          'tab'      => 'remaining',
-          'batch'    => $batchId > 0 ? (string) $batchId : '',
-          'q'        => $remainingPage['keyword'],
-          'per_page' => $remainingPage['perPage'] !== 25 ? (string) $remainingPage['perPage'] : '',
-          'page'     => $targetPage > 1 ? (string) $targetPage : '',
-      ], static fn ($value): bool => $value !== '');
 
-      return site_url('dashboard') . ($params === [] ? '' : '?' . http_build_query($params));
-  };
-  // The pane, tab and batch selection have to survive the search and per-page
-  // forms below; a new search always lands on page 1, so neither form carries
-  // one. table_controls escapes these.
-  $remainingContext = [
-      'view'  => 'distribution',
-      'tab'   => 'remaining',
-      'batch' => $batchId > 0 ? (string) $batchId : '',
-  ];
-  ?>
-  <?= view('Admin/batch-remaining', [
-      'remaining' => $remainingPage['rows'],
-      'keyword' => $remainingPage['keyword'],
-      'perPage' => $remainingPage['perPage'],
-      'perPageOptions' => $remainingPage['perPageOptions'],
-      'searchHidden' => $remainingContext + [
-          'per_page' => $remainingPage['perPage'] !== 25 ? (string) $remainingPage['perPage'] : '',
-      ],
-      'sizeHidden' => $remainingContext + ['q' => $remainingPage['keyword']],
-  ]) ?>
-  <?= view('components/table_footer', [
-      'fromRecord' => $remainingPage['fromRecord'],
-      'toRecord' => $remainingPage['toRecord'],
-      'totalRows' => $remainingPage['totalRows'],
-      'page' => $remainingPage['page'],
-      'totalPages' => $remainingPage['totalPages'],
-      'pageUrl' => $remainingPageUrl,
-      'entityLabel' => 'families',
-  ]) ?>
+    <div data-strip-pane="map" hidden>
+      <?= view('Admin/batch-barangay-map', ['byBarangay' => $byBarangay]) ?>
+    </div>
+  </div>
+</section>
+
+<section class="card batch-card" id="stationsCard">
+  <div class="card-body">
+    <h3 class="batch-pane-title">Stations</h3>
+    <?= view('Admin/batch-stations-table', [
+        'byScanner'  => $byScanner,
+        'batchId'    => $batchId,
+        'canDrillIn' => $canDrillInStations,
+    ]) ?>
+  </div>
+</section>
+<?php if ($canDrillInStations): ?>
+<?= view('Admin/batch-station-modal') ?>
 <?php endif; ?>
+
+<section class="card batch-card" id="remainingCard">
+  <div class="card-body">
+    <h3 class="batch-pane-title">Remaining</h3>
+    <?php
+    // Server-side paginated (SubsidyStatsModel::remainingPage()): against the
+    // 100k-family target, fetching the whole roster into the DOM for
+    // table-paginate.js to slice client-side (the Distribution Batches/Log
+    // pattern) is too large a page. Preserves the pane and the batch across
+    // page links; there is no sub-tab to preserve any more, and the picked day
+    // does not narrow this list, so neither rides along.
+    $remainingPageUrl = static function (int $targetPage) use ($batchId, $remainingPage): string {
+        $params = array_filter([
+            'view'     => 'distribution',
+            'batch'    => $batchId > 0 ? (string) $batchId : '',
+            'q'        => $remainingPage['keyword'],
+            'per_page' => $remainingPage['perPage'] !== 25 ? (string) $remainingPage['perPage'] : '',
+            'page'     => $targetPage > 1 ? (string) $targetPage : '',
+        ], static fn ($value): bool => $value !== '');
+
+        return site_url('dashboard') . ($params === [] ? '' : '?' . http_build_query($params));
+    };
+    // The pane and the batch selection have to survive the search and per-page
+    // forms below; a new search always lands on page 1, so neither form carries
+    // one. table_controls escapes these.
+    $remainingContext = [
+        'view'  => 'distribution',
+        'batch' => $batchId > 0 ? (string) $batchId : '',
+    ];
+    ?>
+    <?= view('Admin/batch-remaining', [
+        'remaining' => $remainingPage['rows'],
+        'keyword' => $remainingPage['keyword'],
+        'perPage' => $remainingPage['perPage'],
+        'perPageOptions' => $remainingPage['perPageOptions'],
+        'searchHidden' => $remainingContext + [
+            'per_page' => $remainingPage['perPage'] !== 25 ? (string) $remainingPage['perPage'] : '',
+        ],
+        'sizeHidden' => $remainingContext + ['q' => $remainingPage['keyword']],
+    ]) ?>
+    <?= view('components/table_footer', [
+        'fromRecord' => $remainingPage['fromRecord'],
+        'toRecord' => $remainingPage['toRecord'],
+        'totalRows' => $remainingPage['totalRows'],
+        'page' => $remainingPage['page'],
+        'totalPages' => $remainingPage['totalPages'],
+        'pageUrl' => $remainingPageUrl,
+        'entityLabel' => 'families',
+    ]) ?>
+  </div>
+</section>
 
 <script id="reportsData" type="application/json"><?= json_encode(
     [
-        'coverage'  => $c,
-        'barangay'  => $byBarangay,
-        'timeline'  => $timeline,
-        'byDay'     => $byDay,
+        'coverage'    => $c,
+        'barangay'    => $byBarangay,
+        'timeline'    => $timeline,
+        'byDay'       => $byDay,
+        'heatmap'     => $heatmap,
+        'byScanner'   => $byScanner,
+        'days'        => $batchSnapshot['days'] ?? [],
+        'selectedDay' => $selectedDay,
     ],
     JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT,
 ) ?></script>
@@ -280,24 +321,28 @@ $noEligible = ! $noBatch && $c['eligible'] === 0;
          below would throw. defer holds it until after the document (and the
          blocking bootstrap.bundle.min.js tag within it) has parsed. */ ?>
 <script src="<?= esc(asset_url('assets/js/dashboard/barangay-map.js'), 'attr') ?>" defer></script>
-<?php if ($batchBodyTab === 'stations' && $canDrillInStations): ?>
+<?php if ($canDrillInStations): ?>
 <?php /* defer for the same reason as barangay-map.js above: this fragment
          renders ahead of layout.php's Bootstrap bundle, and the Modal
-         constructor needs window.bootstrap to exist. */ ?>
+         constructor needs window.bootstrap to exist. Loaded only for the roles
+         the modal was rendered for; it used to be gated on the Stations tab
+         being the one showing as well, and there is no such tab now. */ ?>
 <script src="<?= esc(asset_url('assets/js/dashboard/station-modal.js'), 'attr') ?>" defer></script>
 <?php endif; ?>
 <script>
 (function () {
   // Live poll: fetch fresh stats for the selected batch and repaint the charts
-  // in place (no page reload, so the batch selector, tab and scroll stay put).
+  // in place (no page reload, so the batch selector, the picked day and scroll
+  // stay put).
   var statsUrl = '<?= site_url('distribution/reports/stats') ?>';
   var batchId = <?= (int) $batchId ?>;
   var batchOpen = <?= $batchOpen ? 'true' : 'false' ?>;
   // distribution/reports/stats carries no remaining-families rows, so there is
-  // nothing to repaint the Remaining table with. Rather than tick the figures
-  // and the "updated" stamp while the list underneath sits frozen (a poll that
-  // looks live but visibly isn't), the whole poll is skipped on this tab.
-  var onRemainingTab = <?= $batchBodyTab === 'remaining' ? 'true' : 'false' ?>;
+  // nothing to repaint the Remaining card with. That card used to be a tab of
+  // its own and the whole poll was skipped while it showed, rather than tick
+  // the figures above a list sitting frozen. Every card renders together now,
+  // so the poll runs whenever the batch is open and simply leaves Remaining
+  // alone; its rows are a page of a database query, not a live figure.
   if (batchId > 0) { statsUrl += '?batch=' + batchId; }
 
   // A stamp that stops ticking looks the same as a quiet batch, so a failed
@@ -332,10 +377,9 @@ $noEligible = ! $noBatch && $c['eligible'] === 0;
 
   stampNow();
 
-  // Live-poll only while the selected batch is open (closed batches are
-  // static), the sub-tab isn't Remaining (see onRemainingTab above), and the
-  // tab is visible; browsers throttle hidden-tab timers anyway.
-  if (batchOpen && !onRemainingTab) {
+  // Live-poll only while the selected batch is open (closed batches are static)
+  // and the tab is visible; browsers throttle hidden-tab timers anyway.
+  if (batchOpen) {
     setInterval(function () {
       if (document.visibilityState === 'visible') { poll(); }
     }, 5000);

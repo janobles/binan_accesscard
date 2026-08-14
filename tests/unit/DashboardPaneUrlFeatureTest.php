@@ -100,40 +100,37 @@ final class DashboardPaneUrlFeatureTest extends CIUnitTestCase
         return array_values(array_filter($links, static fn (string $href): bool => str_contains($href, $needle)));
     }
 
-    public function testStationsSubTabKeepsEveryLinkInsideTheDistributionPane(): void
+    public function testEveryCardRendersTogetherOnOnePaneLoad(): void
     {
         $body = $this->withSession($this->session('administrator', 1, 'boss'))
-            ->get('dashboard?view=distribution&tab=stations&batch=' . self::BATCH_ID)
+            ->get('dashboard?view=distribution&batch=' . self::BATCH_ID)
             ->getBody();
 
         // The Distribution pane rendered, and the Overview pane did not.
-        $this->assertStringContainsString('id="stationsGrid"', $body);
         $this->assertStringNotContainsString('Families profiled', $body);
 
-        // Sub-tab strip: three links, each switching ?tab= while holding the
-        // pane and the picked batch.
-        $subTabs = $this->dashboardLinks($body, 'tab=');
-        $this->assertCount(3, $subTabs);
-        foreach ($subTabs as $href) {
-            $this->assertStringContainsString('view=distribution', $href, $href);
-            $this->assertStringContainsString('batch=' . self::BATCH_ID, $href, $href);
-        }
+        // All four subjects at once, which is the point of the restructure:
+        // reading two of them no longer costs the first.
+        $this->assertStringContainsString('id="activityCard"', $body);
+        $this->assertStringContainsString('id="barangayCard"', $body);
+        $this->assertStringContainsString('id="stationsTable"', $body);
+        $this->assertStringContainsString('id="remainingCard"', $body);
 
-        // Batch picker: submitting it must not drop the pane or the sub-tab.
+        // No sub-tab strip carrying ?tab= on this pane any more.
+        $this->assertSame([], $this->dashboardLinks($body, 'tab='));
+
+        // Batch picker: submitting it must not drop the pane.
         $this->assertMatchesRegularExpression(
             '/<input type="hidden" name="view" value="distribution"\s*\/?>/',
             $body
         );
-        $this->assertMatchesRegularExpression(
-            '/<input type="hidden" name="tab" value="stations"\s*\/?>/',
-            $body
-        );
+        $this->assertStringNotContainsString('<input type="hidden" name="tab"', $body);
     }
 
     public function testRemainingPaginationAndFormsStayInsideTheDistributionPane(): void
     {
         $body = $this->withSession($this->session('administrator', 1, 'boss'))
-            ->get('dashboard?view=distribution&tab=remaining&batch=' . self::BATCH_ID . '&per_page=10')
+            ->get('dashboard?view=distribution&batch=' . self::BATCH_ID . '&per_page=10')
             ->getBody();
 
         $pageLinks = $this->dashboardLinks($body, 'page=');
@@ -186,11 +183,11 @@ final class DashboardPaneUrlFeatureTest extends CIUnitTestCase
     public function testEncoderReachesTheDistributionPaneToo(): void
     {
         $body = $this->withSession($this->session('encoder', 2, 'keyer'))
-            ->get('dashboard?view=distribution&tab=stations&batch=' . self::BATCH_ID)
+            ->get('dashboard?view=distribution&batch=' . self::BATCH_ID)
             ->getBody();
 
-        $this->assertStringContainsString('id="stationsGrid"', $body);
-        $this->assertStringContainsString('Eligible families', $body);
+        $this->assertStringContainsString('id="stationsTable"', $body);
+        $this->assertStringContainsString('Eligible', $body);
     }
 
     /**
@@ -229,13 +226,13 @@ final class DashboardPaneUrlFeatureTest extends CIUnitTestCase
 
     /**
      * The station modal reads scanner/stats, which answers Scanner, Admin and
-     * Developer only. An Encoder sees the grid but must get no control that
+     * Developer only. An Encoder sees the table but must get no control that
      * would 403, and no modal markup to go with it.
      */
     public function testEncoderGetsStationsWithoutADrillIn(): void
     {
         $body = $this->withSession($this->session('encoder', 2, 'keyer'))
-            ->get('dashboard?view=distribution&tab=stations&batch=' . self::BATCH_ID)
+            ->get('dashboard?view=distribution&batch=' . self::BATCH_ID)
             ->getBody();
 
         $this->assertStringContainsString('data-can-drill-in="0"', $body);
@@ -243,11 +240,11 @@ final class DashboardPaneUrlFeatureTest extends CIUnitTestCase
         $this->assertStringNotContainsString('id="stationModal"', $body);
     }
 
-    /** The same grid, for a role that may open a station. */
+    /** The same table, for a role that may open a station. */
     public function testDeveloperGetsTheStationModal(): void
     {
         $body = $this->withSession($this->session('developer', 4, 'dev'))
-            ->get('dashboard?view=distribution&tab=stations&batch=' . self::BATCH_ID)
+            ->get('dashboard?view=distribution&batch=' . self::BATCH_ID)
             ->getBody();
 
         $this->assertStringContainsString('data-can-drill-in="1"', $body);

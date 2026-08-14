@@ -37,14 +37,14 @@ final class DashboardSubstanceViewTest extends CIUnitTestCase
     }
 
     /**
-     * A station square opens the modal rather than navigating into the kiosk
+     * A station row opens the modal rather than navigating into the kiosk
      * shell, so it carries the scanner id as data and no href. The role-gated
      * ?scanner= override on the scanner endpoints is what makes reading another
      * account's figures safe; the modal is the caller of it now.
      */
-    public function testStationsGridOpensTheModalRatherThanTheKioskShell(): void
+    public function testStationsTableOpensTheModalRatherThanTheKioskShell(): void
     {
-        $src = file_get_contents(APPPATH . 'Views/Admin/batch-stations-grid.php');
+        $src = file_get_contents(APPPATH . 'Views/Admin/batch-stations-table.php');
 
         $this->assertStringContainsString('data-scanner-id=', $src);
         $this->assertStringNotContainsString('scanner/performance', $src);
@@ -54,14 +54,14 @@ final class DashboardSubstanceViewTest extends CIUnitTestCase
     /**
      * scanner/stats answers Scanner, Admin and Developer only, while the
      * dashboard renders for every staff role. An Encoder or Viewer must get an
-     * inert tile, not a control that 403s when they press it.
+     * inert row, not a control that 403s when they press it.
      */
-    public function testStationSquareIsOnlyInteractiveForRolesThatCanReadIt(): void
+    public function testStationRowIsOnlyInteractiveForRolesThatCanReadIt(): void
     {
-        $src = file_get_contents(APPPATH . 'Views/Admin/batch-stations-grid.php');
+        $src = file_get_contents(APPPATH . 'Views/Admin/batch-stations-table.php');
 
         $this->assertStringContainsString('$canDrillIn', $src);
-        $this->assertStringContainsString('station-square is-static', $src);
+        $this->assertStringContainsString("data-can-drill-in", $src);
 
         $overview = file_get_contents(APPPATH . 'Views/Admin/batch-overview.php');
         $this->assertMatchesRegularExpression(
@@ -71,45 +71,54 @@ final class DashboardSubstanceViewTest extends CIUnitTestCase
     }
 
     /**
-     * The live poll rebuilds the grid, so its squares have to match what the
-     * server rendered. Emitting an anchor or an always-clickable button there
-     * would hand a role a control the page withheld.
+     * The squares grid the Stations table replaced is gone, along with the
+     * live-poll function that painted it. A stray reference would repaint a
+     * container that no longer exists.
      */
-    public function testLivePollRebuildsSquaresWithTheSameRoleGate(): void
+    public function testTheSquaresGridIsGone(): void
     {
-        $js = file_get_contents(FCPATH . 'assets/js/dashboard/scanner-reports.js');
+        $this->assertFileDoesNotExist(APPPATH . 'Views/Admin/batch-stations-grid.php');
 
-        $this->assertStringContainsString("data-can-drill-in", $js);
-        $this->assertStringContainsString('is-static', $js);
-        $this->assertStringNotContainsString('data-performance-url', $js);
+        $js = file_get_contents(FCPATH . 'assets/js/dashboard/scanner-reports.js');
+        $this->assertStringNotContainsString('applyStations', $js);
+        $this->assertStringNotContainsString('stationsGrid', $js);
+
+        $css = file_get_contents(FCPATH . 'css/theme.css');
+        $this->assertStringNotContainsString('.station-square', $css);
     }
 
     /**
-     * The #stationsGrid container must render even with zero stations, so the
-     * live poll (scanner-reports.js applyStations()) has somewhere to land an
-     * open batch's first station without a page reload. Fix round 1 caught
-     * this rendering only a bare <p> and omitting the container entirely.
+     * The #stationsTable element must render even with zero stations, so the
+     * live poll has somewhere to land an open batch's first station without a
+     * page reload, and so the modal's delegated click has something to bind to.
      */
-    public function testStationsGridContainerAlwaysRenders(): void
+    public function testStationsTableAlwaysRenders(): void
     {
-        $src = file_get_contents(APPPATH . 'Views/Admin/batch-stations-grid.php');
-        $gridPos = strpos($src, 'id="stationsGrid"');
-        $emptyCheckPos = strpos($src, '$perScanner === []');
+        $src = file_get_contents(APPPATH . 'Views/Admin/batch-stations-table.php');
+        $tablePos = strpos($src, 'id="stationsTable"');
+        $emptyCheckPos = strpos($src, '$byScanner === []');
 
-        $this->assertNotFalse($gridPos, 'stationsGrid container not found');
+        $this->assertNotFalse($tablePos, 'stationsTable not found');
         $this->assertNotFalse($emptyCheckPos, 'empty-state check not found');
         $this->assertLessThan(
             $emptyCheckPos,
-            $gridPos,
-            'the stationsGrid container must open before the empty-state branch, not be replaced by it'
+            $tablePos,
+            'the stationsTable element must open before the empty-state branch, not be replaced by it'
         );
     }
 
-    /** The dashboard's batch sub-tabs must carry ?batch= through the switch. */
-    public function testBatchSubTabsCarryTheBatchSelectionThrough(): void
+    /**
+     * The pane's sub-tabs are gone: Barangay, Stations and Remaining are cards
+     * that all render together. A reinstated ?tab= here would put the reader
+     * back to clicking between three separate subjects.
+     */
+    public function testTheBatchSubTabStripIsGone(): void
     {
         $src = file_get_contents(APPPATH . 'Views/Admin/batch-overview.php');
-        $this->assertStringContainsString("'queryParams'", $src);
-        $this->assertStringContainsString("'batch' => \$batchId", $src);
+        $this->assertStringNotContainsString('batchBodyTab', $src);
+        $this->assertStringNotContainsString("components/page_tabs", $src);
+
+        $builder = file_get_contents(APPPATH . 'Libraries/DashboardPageBuilder.php');
+        $this->assertStringNotContainsString('$batchBodyTab', $builder);
     }
 }

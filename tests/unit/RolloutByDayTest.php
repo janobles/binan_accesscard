@@ -6,9 +6,10 @@ use CodeIgniter\Test\CIUnitTestCase;
 
 final class RolloutByDayTest extends CIUnitTestCase
 {
+    /** The chart lives in the Activity card's Days view now, not the pane root. */
     public function testChartOnlyRendersForMultiDayBatches(): void
     {
-        $src = file_get_contents(APPPATH . 'Views/Admin/batch-overview.php');
+        $src = file_get_contents(APPPATH . 'Views/Admin/batch-activity-card.php');
         $this->assertStringContainsString('count($byDay) > 1', $src);
         $this->assertStringContainsString('chartRollout', $src);
     }

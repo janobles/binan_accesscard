@@ -14,11 +14,21 @@
  * ceiling, so a small batch still shows contrast.
  *
  * Params: $heatmap (ScannerMetrics::heatmap() shape), $selectedDay ?string,
- *         $rowLabels array<string,string> day key to display label.
+ *         $rowLabels array<string,string> day key to display label,
+ *         $gridId string the table's id, and $selectable bool.
+ *
+ * The last two exist because the Activity card renders this partial twice, once
+ * for the batch's days and once for the all-time weekday grid. Two tables
+ * cannot share one id, and a weekday is not a day the batch ran, so its row
+ * headers are plain text rather than buttons offering a filter that has nothing
+ * to filter. Both default to the batch view's values, so the day grid's caller
+ * passes neither.
  */
 $heatmap = $heatmap ?? ['days' => [], 'hours' => [], 'cells' => [], 'max' => 0];
 $selectedDay = $selectedDay ?? null;
 $rowLabels = $rowLabels ?? [];
+$gridId = (string) ($gridId ?? 'peakHeatmap');
+$selectable = (bool) ($selectable ?? true);
 
 $max = (int) $heatmap['max'];
 
@@ -39,7 +49,7 @@ $hourLabel = static fn (int $hour): string => date('ga', mktime($hour, 0));
 <p class="text-muted mb-0">No scans logged yet, so there are no peak hours to show.</p>
 <?php else: ?>
 <div class="table-responsive">
-  <table class="heatmap" id="peakHeatmap">
+  <table class="heatmap" id="<?= esc($gridId, 'attr') ?>">
     <caption class="visually-hidden">Families served by hour, one row per day</caption>
     <thead>
       <tr>
@@ -53,10 +63,14 @@ $hourLabel = static fn (int $hour): string => date('ga', mktime($hour, 0));
       <?php foreach ($heatmap['days'] as $day): ?>
       <tr<?= $selectedDay === $day ? ' class="is-selected"' : '' ?>>
         <th scope="row">
+          <?php if ($selectable): ?>
           <button type="button" class="heatmap-day" data-day="<?= esc($day, 'attr') ?>"
                   aria-pressed="<?= $selectedDay === $day ? 'true' : 'false' ?>">
             <?= esc($rowLabels[$day] ?? $day) ?>
           </button>
+          <?php else: ?>
+          <?= esc($rowLabels[$day] ?? $day) ?>
+          <?php endif; ?>
         </th>
         <?php foreach ($heatmap['hours'] as $hour): ?>
         <?php

@@ -5,8 +5,10 @@
 
    update(data) also repaints everything else under the "Last updated" stamp
    that a fresh distribution/reports/stats payload carries: the batch cards and
-   bar, and the Stations grid. All values are written with textContent, never
-   innerHTML, so nothing here needs a separate escaping step. */
+   bar. It used to repaint the Stations squares grid too; that grid became the
+   Stations table, whose repaint is coming with the day filter's module rather
+   than staying here. All values are written with textContent, never innerHTML,
+   so nothing here needs a separate escaping step. */
 (function () {
     'use strict';
 
@@ -165,60 +167,6 @@
         }
     }
 
-    // Repaint the stations grid. Squares are rebuilt rather than patched
-    // because a station appears the moment it logs its first scan, so the set
-    // itself changes during an open batch.
-    function applyStations(perScanner) {
-        var grid = document.getElementById('stationsGrid');
-        if (!grid || !Array.isArray(perScanner)) { return; }
-
-        grid.innerHTML = '';
-        if (perScanner.length === 0) {
-            var emptyCol = document.createElement('div');
-            emptyCol.className = 'col-12';
-            var empty = document.createElement('p');
-            empty.className = 'text-muted';
-            empty.id = 'stationsGridEmpty';
-            empty.textContent = 'No station has logged a scan in this batch yet.';
-            emptyCol.appendChild(empty);
-            grid.appendChild(emptyCol);
-            return;
-        }
-        // Mirrors Admin/batch-stations-grid.php: a button that opens the station
-        // modal where the viewer may read scanner/stats, an inert tile where
-        // they may not. Diverging here would let the poll hand a role a control
-        // the server-rendered page deliberately withheld.
-        var canDrillIn = grid.getAttribute('data-can-drill-in') === '1';
-
-        perScanner.forEach(function (row) {
-            var col = document.createElement('div');
-            col.className = 'col';
-
-            var square;
-            if (canDrillIn) {
-                square = document.createElement('button');
-                square.type = 'button';
-                square.className = 'station-square';
-                square.setAttribute('data-scanner-id', String(row.userID));
-                square.setAttribute('data-scanner-name', String(row.scanner));
-            } else {
-                square = document.createElement('div');
-                square.className = 'station-square is-static';
-            }
-
-            [['station-name', row.scanner], ['station-count', row.families], ['station-unit', 'families']]
-                .forEach(function (pair) {
-                    var span = document.createElement('span');
-                    span.className = pair[0];
-                    span.textContent = typeof pair[1] === 'number' ? pair[1].toLocaleString() : String(pair[1]);
-                    square.appendChild(span);
-                });
-
-            col.appendChild(square);
-            grid.appendChild(col);
-        });
-    }
-
     // Live update: repaint datasets and the surrounding page in place from a
     // fresh distribution/reports/stats payload.
     window.ReportsCharts = {
@@ -236,7 +184,6 @@
             }
             applyBusiestDay(fresh.byDay);
             applyCoverage(fresh.coverage);
-            applyStations(fresh.perScanner);
         }
     };
 

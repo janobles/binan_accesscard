@@ -203,15 +203,15 @@ class DashboardPageBuilder
             ? $this->buildDistributionListData()
             : [];
 
-        // Dashboard batch zone's own table: Barangay / Stations / Remaining,
-        // switched by ?tab= like the other tabbed pages. Not shared with
-        // $distributionTab above: that one belongs to the Distribution page.
-        $batchBodyTab = (string) $this->request->getGet('tab');
-        $batchBodyTab = in_array($batchBodyTab, ['barangay', 'stations', 'remaining'], true) ? $batchBodyTab : 'barangay';
+        // The dashboard batch zone had its own ?tab= (Barangay / Stations /
+        // Remaining) until those three became independent cards that all render
+        // at once. Nothing on this pane switches on ?tab= any more, so the
+        // parameter is not read here; ?tab= belongs to the Distribution page
+        // alone ($distributionTab above).
 
         // Two panes share the dashboard page. An unknown ?view= falls back to
-        // Overview rather than erroring, matching how $batchBodyTab treats a
-        // bad ?tab=.
+        // Overview rather than erroring, the same way an out-of-batch ?day=
+        // falls back to all days in buildReportsData().
         $dashboardView = (string) $this->request->getGet('view');
         $dashboardView = in_array($dashboardView, ['overview', 'distribution'], true) ? $dashboardView : 'overview';
 
@@ -230,14 +230,16 @@ class DashboardPageBuilder
         // page and the pane, not on the role: every role reaches the dashboard
         // and both panes, but neither pane pays for the other's queries.
         $reportsData = $isDashboard && $dashboardView === 'distribution'
-            ? $this->buildReportsData($batchModel, $batchBodyTab)
+            ? $this->buildReportsData($batchModel)
             : [
-                'batches'       => [],
-                'batchId'       => 0,
-                'batchRow'      => null,
-                'batchOpen'     => false,
-                'batchSnapshot' => $this->emptyBatchSnapshot(),
-                'remainingPage' => $this->emptyRemainingPage(),
+                'batches'        => [],
+                'batchId'        => 0,
+                'batchRow'       => null,
+                'batchOpen'      => false,
+                'batchSnapshot'  => $this->emptyBatchSnapshot(),
+                'selectedDay'    => null,
+                'weekdayHeatmap' => ['days' => [], 'hours' => [], 'cells' => [], 'max' => 0],
+                'remainingPage'  => $this->emptyRemainingPage(),
             ];
 
         // Hide the logged-in user's own account from Account Management; self-service
@@ -317,7 +319,12 @@ class DashboardPageBuilder
             'batchOpen'          => $reportsData['batchOpen'],
             'batchSnapshot'      => $reportsData['batchSnapshot'],
             'remainingPage'      => $reportsData['remainingPage'],
-            'batchBodyTab'       => $batchBodyTab,
+            'selectedDay'        => $reportsData['selectedDay'],
+            'weekdayHeatmap'     => $reportsData['weekdayHeatmap'],
+            'batchHeadline'      => self::batchHeadline(
+                $reportsData['batchSnapshot'],
+                $reportsData['selectedDay']
+            ),
             'dashboardView'      => $dashboardView,
             'selectedBatchId'    => $isDashboard && $dashboardView === 'distribution'
                 ? (int) ($reportsData['batchId'] ?? 0)
@@ -334,7 +341,6 @@ class DashboardPageBuilder
             'scheduleGrid'       => $isDashboard && $dashboardView === 'overview'
                 ? $this->buildScheduleGrid($batchModel)
                 : ['weeks' => [], 'bars' => []],
-            'busiestDay'         => self::busiestDay($reportsData['batchSnapshot']['byDay'] ?? []),
             // Only the roles that may open the record-entry page get the Add and
             // Import buttons on the records list (Config\Navigation, records-entry).
             'canCreateFamily'    => in_array($currentRole, Navigation::pageRoles('records-entry'), true),
@@ -589,14 +595,16 @@ class DashboardPageBuilder
      * batch (BatchScope::resolve(), shared with the reports endpoint and the
      * scanner performance page).
      *
-     * The remaining-families query only runs when $batchBodyTab is 'remaining':
-     * against the 100k-family target, SubsidyStatsModel::remaining() lists
-     * everyone in one response, so it is too large to fetch on every dashboard
-     * load regardless of which sub-tab is showing. The Remaining tab is now the
-     * only place that list appears: the report PDF carries the count, not the
-     * names.
+     * The remaining-families list used to be gated on its sub-tab being the one
+     * showing. The pane is cards now and every card renders, so the query runs
+     * on every Distribution-pane load. It stays paginated at the database
+     * (buildRemainingPageData()) rather than fetched whole, which is what
+     * actually keeps it affordable against the 100k-family target;
+     * SubsidyStatsModel::remaining() lists everyone in one response and is not
+     * what this calls. The card is still the only place that list appears: the
+     * report PDF carries the count, not the names.
      */
-    private function buildReportsData(DistributionBatchModel $batchModel, string $batchBodyTab): array
+    private function buildReportsData(DistributionBatchModel $batchModel): array
     {
         $batches = $batchModel->allBatches();
         $active  = $batchModel->activeBatch();
@@ -606,15 +614,163 @@ class DashboardPageBuilder
         $isOpen = $batch !== null && ($batch['closed_at'] ?? null) === null;
         $stats  = model(SubsidyStatsModel::class);
 
+        $snapshot = $batchId > 0 ? $stats->batchSnapshot($batchId, $isOpen) : $this->emptyBatchSnapshot();
+
+        // A day that is not in this batch falls back to "all days" rather than
+        // rendering a card full of zeroes. The only way to reach that state is
+        // an edited URL or a link to a batch that has since been reimported.
+        $requestedDay = (string) ($this->request->getGet('day') ?? '');
+        $selectedDay  = in_array($requestedDay, $snapshot['days'], true) ? $requestedDay : null;
+
         return [
-            'batches'       => $batches,
-            'batchId'       => $batchId,
-            'batchRow'      => $batch,
-            'batchOpen'     => $isOpen,
-            'batchSnapshot' => $batchId > 0 ? $stats->batchSnapshot($batchId, $isOpen) : $this->emptyBatchSnapshot(),
-            'remainingPage' => $batchId > 0 && $batchBodyTab === 'remaining'
+            'batches'        => $batches,
+            'batchId'        => $batchId,
+            'batchRow'       => $batch,
+            'batchOpen'      => $isOpen,
+            'batchSnapshot'  => $snapshot,
+            'selectedDay'    => $selectedDay,
+            'weekdayHeatmap' => $this->weekdayHeatmap($stats),
+            'remainingPage'  => $batchId > 0
                 ? $this->buildRemainingPageData($stats, $batchId)
                 : $this->emptyRemainingPage(),
+        ];
+    }
+
+    /**
+     * The all-time weekday grid, in the same shape ScannerMetrics::heatmap()
+     * returns so one partial renders both views. Rows are the integer weekday,
+     * 0 for Sunday, which is what weekdayHistogram() normalises to across both
+     * database backends.
+     *
+     * Every hour a scan has ever landed in is a column; there is no daily
+     * window to widen from, because this spans every batch the city has run and
+     * they do not share one. Nothing here can be "closed" for that reason.
+     *
+     * Cached on its own key rather than the batch fingerprint: it is not about
+     * a batch, and it changes only when scanning happens.
+     *
+     * @return array{days:list<string>,hours:list<int>,cells:array<string,array<int,array{families:int,state:string}>>,max:int}
+     */
+    private function weekdayHeatmap(SubsidyStatsModel $stats): array
+    {
+        $cached = cache('subsidy_weekday_heatmap');
+        if (is_array($cached)) {
+            return $cached;
+        }
+
+        $cells = [];
+        $hours = [];
+        $max   = 0;
+
+        foreach ($stats->weekdayHistogram() as $bucket) {
+            $day   = (string) $bucket['dow'];
+            $hour  = (int) $bucket['hour'];
+            $count = (int) $bucket['families'];
+
+            $hours[$hour] = true;
+            $max          = max($max, $count);
+
+            $cells[$day][$hour] = ['families' => $count, 'state' => 'served'];
+        }
+
+        $hourList = array_keys($hours);
+        sort($hourList);
+
+        $days = array_keys($cells);
+        sort($days);
+
+        // Fill the gaps so every row has every column; an hour some weekday
+        // never saw is a genuine zero here, not a closed station.
+        foreach ($days as $day) {
+            foreach ($hourList as $hour) {
+                $cells[$day][$hour] ??= ['families' => 0, 'state' => 'empty'];
+            }
+            ksort($cells[$day]);
+        }
+
+        $grid = ['days' => $days, 'hours' => $hourList, 'cells' => $cells, 'max' => $max];
+        cache()->save('subsidy_weekday_heatmap', $grid, 600);
+
+        return $grid;
+    }
+
+    /**
+     * The four figures across the top of the Distribution pane, for the day the
+     * reader picked or for the whole batch when they picked none. Assembled
+     * here rather than in the view because three of the four are derived
+     * readings rather than snapshot fields, and because the day filter's
+     * JavaScript (batch-heatmap.js) recomputes the same four from the same
+     * payload: two derivations that have to agree, so the rule each one follows
+     * is written down once, here.
+     *
+     * Eligible is the only one that ignores the day: a family is eligible for
+     * the batch, not for a Tuesday. Scanners active is a batch figure too, but
+     * for a duller reason, which its sub-line states: the snapshot's byScanner
+     * rows carry no day dimension to slice on.
+     *
+     * @param array<string,mixed> $snapshot
+     * @return array<string,array{value:string,sub:string}>
+     */
+    private static function batchHeadline(array $snapshot, ?string $selectedDay): array
+    {
+        $coverage = $snapshot['coverage'] ?? ['eligible' => 0, 'served' => 0, 'coverage' => 0];
+        $heatmap  = $snapshot['heatmap'] ?? ['days' => [], 'hours' => [], 'cells' => [], 'max' => 0];
+
+        // Scanner rows carry a TOTAL row last (userID 0), which is a fold of the
+        // rows above it and not a station that turned up.
+        $stations = 0;
+        foreach ($snapshot['byScanner'] ?? [] as $row) {
+            if ((int) ($row['userID'] ?? 0) > 0) {
+                $stations++;
+            }
+        }
+
+        $servedOnDay = 0;
+        $byHour      = [];
+        foreach ($heatmap['cells'] as $day => $hours) {
+            if ($selectedDay !== null && (string) $day !== $selectedDay) {
+                continue;
+            }
+
+            foreach ($hours as $hour => $cell) {
+                $families = (int) $cell['families'];
+                $servedOnDay += $families;
+                $byHour[(int) $hour] = ($byHour[(int) $hour] ?? 0) + $families;
+            }
+        }
+
+        $peakHour     = null;
+        $peakFamilies = 0;
+        foreach ($byHour as $hour => $families) {
+            if ($families > $peakFamilies) {
+                $peakHour     = $hour;
+                $peakFamilies = $families;
+            }
+        }
+
+        $servedValue = $selectedDay === null ? (int) $coverage['served'] : $servedOnDay;
+
+        return [
+            'eligible' => [
+                'value' => number_format((int) $coverage['eligible']),
+                'sub'   => 'in this batch',
+            ],
+            'served' => [
+                'value' => number_format($servedValue),
+                'sub'   => $selectedDay === null
+                    ? $coverage['coverage'] . '% of eligible'
+                    : number_format((int) $coverage['served']) . ' across the batch',
+            ],
+            'peakHour' => [
+                'value' => $peakHour === null
+                    ? '-'
+                    : date('ga', mktime($peakHour, 0)) . ' - ' . date('ga', mktime($peakHour + 1, 0)),
+                'sub' => $peakHour === null ? 'no scans yet' : number_format($peakFamilies) . ' families',
+            ],
+            'scannersActive' => [
+                'value' => number_format($stations),
+                'sub'   => 'across the batch',
+            ],
         ];
     }
 
@@ -804,26 +960,6 @@ class DashboardPageBuilder
         }
 
         return false;
-    }
-
-    /**
-     * The day carrying the largest served count, for the Busiest day card.
-     * Null when the batch has no scans at all, which the view renders as a
-     * dash rather than a zero that looks like a real reading.
-     *
-     * @param list<array{date:string,label:string,served:int}> $byDay
-     * @return array{label:string,served:int}|null
-     */
-    private static function busiestDay(array $byDay): ?array
-    {
-        $best = null;
-        foreach ($byDay as $day) {
-            if ($best === null || $day['served'] > $best['served']) {
-                $best = ['label' => $day['label'], 'served' => (int) $day['served']];
-            }
-        }
-
-        return $best;
     }
 
     /**

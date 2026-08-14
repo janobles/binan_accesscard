@@ -28,7 +28,7 @@ final class DashboardViewTabTest extends CIUnitTestCase
     public function testOverviewKeysAreExposed(): void
     {
         $src = $this->builderSource();
-        foreach (['overviewStats', 'distributionRows', 'busiestDay'] as $key) {
+        foreach (['overviewStats', 'distributionRows', 'scheduleGrid'] as $key) {
             $this->assertStringContainsString("'" . $key . "'", $src);
         }
     }

@@ -6,10 +6,23 @@ use CodeIgniter\Test\CIUnitTestCase;
 
 final class BarangayMapViewTest extends CIUnitTestCase
 {
-    public function testMapPanelSitsBesideTheTable(): void
+    public function testMapPanelSharesTheCardWithTheTable(): void
     {
         $src = file_get_contents(APPPATH . 'Views/Admin/batch-overview.php');
         $this->assertStringContainsString('Admin/batch-barangay-map', $src);
+        $this->assertStringContainsString('data-strip-pane="map"', $src);
+        $this->assertStringContainsString('data-strip-pane="table"', $src);
+    }
+
+    /**
+     * The map used to be hidden below the large breakpoint. Behind a Map/Table
+     * strip it does not need hiding: nobody is made to scroll past it to reach
+     * the figures, so a phone reader who wants the pattern can ask for it.
+     */
+    public function testMapIsNoLongerHiddenBelowTheLargeBreakpoint(): void
+    {
+        $src = file_get_contents(APPPATH . 'Views/Admin/batch-overview.php');
+        $this->assertStringNotContainsString('d-none d-lg-block', $src);
     }
 
     public function testMapUsesBootstrapPopoverNotAModal(): void

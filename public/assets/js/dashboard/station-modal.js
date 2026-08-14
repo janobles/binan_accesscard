@@ -1,18 +1,20 @@
-/* Opens one station's figures over the dashboard's Stations grid, so an admin
+/* Opens one station's figures over the dashboard's Stations table, so an admin
    reading the batch never has to detour through the scanner kiosk shell.
 
    Reads scanner/stats, the same endpoint the kiosk polls, with ?scanner= and
-   ?batch=. The click is delegated off #stationsGrid because the live poll
-   rebuilds the squares every few seconds (scanner-reports.js applyStations),
-   which would strip a handler bound to a square directly. Values are written
-   with textContent, never innerHTML. Loads only where the modal was rendered,
-   which is the roles that may read it. */
+   ?batch=. The click is delegated off #stationsTable because the live poll
+   rebuilds the rows every few seconds, which would strip a handler bound to a
+   row directly. Only rows the server marked with data-scanner-id answer, which
+   is how a role that may not read scanner/stats gets an inert table rather than
+   a control that 403s. Values are written with textContent, never innerHTML.
+   Loads only where the modal was rendered, which is the roles that may read
+   it. */
 (function () {
     'use strict';
 
-    var grid = document.getElementById('stationsGrid');
+    var table = document.getElementById('stationsTable');
     var modalEl = document.getElementById('stationModal');
-    if (!grid || !modalEl || !window.bootstrap) {
+    if (!table || !modalEl || !window.bootstrap) {
         return;
     }
 
@@ -21,7 +23,7 @@
     var title = document.getElementById('stationModalLabel');
     var errorEl = document.getElementById('stationModalError');
     var bodyEl = document.getElementById('stationModalBody');
-    // Request sequence number. A second square clicked while the first is still
+    // Request sequence number. A second row clicked while the first is still
     // in flight must not have its numbers overwritten by the slower response.
     var latest = 0;
 
@@ -51,16 +53,16 @@
         errorEl.classList.remove('d-none');
     }
 
-    grid.addEventListener('click', function (event) {
-        var square = event.target.closest('.station-square[data-scanner-id]');
-        if (!square || !grid.contains(square)) {
+    table.addEventListener('click', function (event) {
+        var row = event.target.closest('tr[data-scanner-id]');
+        if (!row || !table.contains(row)) {
             return;
         }
 
-        var scannerId = square.getAttribute('data-scanner-id');
-        var batchId = grid.getAttribute('data-batch') || '0';
+        var scannerId = row.getAttribute('data-scanner-id');
+        var batchId = table.getAttribute('data-batch') || '0';
 
-        title.textContent = 'Station ' + (square.getAttribute('data-scanner-name') || '');
+        title.textContent = 'Station ' + (row.getAttribute('data-scanner-name') || '');
         clear();
         modal.show();
 

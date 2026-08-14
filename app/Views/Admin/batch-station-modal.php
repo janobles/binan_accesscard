@@ -1,10 +1,10 @@
 <?php
 /**
  * One station's figures for the selected batch, shown over the dashboard's
- * Stations grid instead of navigating into the kiosk shell.
+ * Stations table instead of navigating into the kiosk shell.
  *
  * Empty on render. Rendered only for the roles that may read it (see
- * Admin/batch-stations-grid.php), and filled by
+ * Admin/batch-stations-table.php), and filled by
  * assets/js/dashboard/station-modal.js from scanner/stats, which already
  * accepts ?scanner= and ?batch= and already restricts the ?scanner= override to
  * Admin and Developer.

@@ -65,7 +65,8 @@ class ReportsController extends BaseController
             $batch['name'] ?? null,
             $snapshot['byScanner'] ?? [],
             $snapshot['heatmap'] ?? [],
-            $snapshot['byDay'] ?? []
+            $snapshot['byDay'] ?? [],
+            $snapshot['byScannerByDay'] ?? []
         );
 
         $name = 'subsidy-report-' . ($batchId > 0 ? 'batch' . $batchId : 'all') . '.pdf';

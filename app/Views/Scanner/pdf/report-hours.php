@@ -92,7 +92,6 @@ $heatStep = static function (int $families) use ($heatMax): int {
   <?php endif; ?>
   </tbody>
 </table>
-<p class="note">Scanners active is a batch-wide count, not sliced per day: the underlying figures carry no day dimension to slice on.</p>
 
 <h2>Peak hours</h2>
 <?php if ($heatmap['days'] === []): ?>

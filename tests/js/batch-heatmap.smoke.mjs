@@ -238,12 +238,18 @@ const heatmapTable = el('table', { id: 'peakHeatmap' }, [heatmapTbody]);
 
 const kpiRow = el('div', {}, [eligible.value, eligible.sub, served.value, served.sub, peakHour.value, peakHour.sub, scannersActive.value, scannersActive.sub]);
 
-// A strip: one card, two panes, one button pressed. Independent of day
-// selection, exercised for the "writes no query parameter" property.
+// The Stations card's strip, id'd exactly as Admin/batch-overview.php
+// renders it: #stationsTable inside the All pane (data-batch/data-can-drill-in,
+// what renderStationsDayPane() reads for the Per day table) and
+// #stations-pane-day starting with the "no day picked" hint, matching the
+// server's own initial render for a page that loaded with no ?day=.
 const stripTabAll = el('button', { type: 'button', class: 'nav-link active', 'data-strip-target': 'all', 'aria-selected': 'true' });
 const stripTabDay = el('button', { type: 'button', class: 'nav-link', 'data-strip-target': 'day', 'aria-selected': 'false' });
-const paneAll = el('div', { 'data-strip-pane': 'all' });
-const paneDay = el('div', { 'data-strip-pane': 'day', hidden: '' });
+const stationsAllTable = el('table', { id: 'stationsTable', 'data-batch': '7', 'data-can-drill-in': '1' });
+const paneAll = el('div', { 'data-strip-pane': 'all' }, [stationsAllTable]);
+const dayHint = el('p', { id: 'stationsDayHint', class: 'text-muted mb-0' });
+dayHint.textContent = 'Use the Day picker above to choose a day.';
+const paneDay = el('div', { id: 'stations-pane-day', 'data-strip-pane': 'day', hidden: '' }, [dayHint]);
 const stripCard = el('section', { id: 'stationsCard', 'data-strip': 'all' }, [stripTabAll, stripTabDay, paneAll, paneDay]);
 
 const reportsPayload = {
@@ -269,6 +275,13 @@ const reportsPayload = {
             },
         },
         max: 30,
+    },
+    byScannerByDay: {
+        '2026-08-01': [
+            { userID: 1, scanner: 'Scanner1', families: 5, handouts: 5, pace: 1, typicalSeconds: 90, firstTs: 1735700000, lastTs: 1735710000, idleSeconds: 60, bestHour: 9, share: 1 },
+            { userID: 0, scanner: 'TOTAL', families: 5, handouts: 5, pace: 1, typicalSeconds: 90, firstTs: 1735700000, lastTs: 1735710000, idleSeconds: 60, bestHour: 9, share: 1 },
+        ],
+        '2026-08-02': [],
     },
     selectedDay: null,
 };
@@ -351,6 +364,8 @@ assert.equal(served.sub.textContent, '60% of eligible', 'Served sub-line (all da
 assert.equal(peakHour.value.textContent, '9am - 10am', 'Peak hour (all days) should be the tallest column across every day.');
 assert.equal(peakHour.sub.textContent, '35 families', 'Peak hour sub-line should carry that column\'s summed count (2026-08-01\'s 30 + 2026-08-02\'s 5).');
 assert.equal(scannersActive.value.textContent, '2', 'Scanners active should count byScanner rows with userID > 0, excluding TOTAL.');
+assert.equal(paneDay.querySelectorAll('table').length, 0, 'The Per day pane must not show a table before any day is picked.');
+assert.equal(paneDay.querySelector('#stationsDayHint').textContent, 'Use the Day picker above to choose a day.', 'The Per day pane must open on the "no day picked" hint.');
 
 // --- Selecting a day from the heatmap row header must update #dayPick,
 // aria-pressed, the row's is-selected class, the KPIs and the URL - all from
@@ -370,6 +385,22 @@ assert.equal(eligible.value.textContent, '100', 'Eligible must never change with
 assert.equal(scannersActive.value.textContent, '2', 'Scanners active must never change with the day (no day dimension on byScanner).');
 assert.ok(historyCalls.length > 0 && historyCalls[historyCalls.length - 1].includes('day=2026-08-01'), 'The URL must carry ?day= after a selection, via replaceState.');
 
+// --- The Per day Stations pane must rebuild into a table for a day that has
+// rows, gated by #stationsTable's own data-can-drill-in (here "1"): the
+// scanner row carries data-scanner-id, the TOTAL row does not and renders
+// last. This is the property Important 2 of the review found missing - the
+// pane used to sit frozen at whatever the server rendered at load. ---
+assert.equal(paneDay.querySelector('#stationsDayHint'), null, 'The hint must be gone once a day with rows is picked.');
+const dayTable = paneDay.querySelector('table');
+assert.notEqual(dayTable, null, 'The Per day pane must render a table for a day that has rows.');
+assert.equal(dayTable.id, 'stationsTableDay', 'The Per day table must carry its own id, distinct from #stationsTable.');
+assert.equal(dayTable.getAttribute('data-batch'), '7', 'The Per day table must carry the batch id read off #stationsTable.');
+const dayTbody = dayTable.querySelectorAll('tr').filter((tr) => tr.parentNode.tagName === 'TBODY');
+assert.equal(dayTbody.length, 2, 'The Per day table must have one row per scanner in byScannerByDay for that day, TOTAL included.');
+assert.equal(dayTbody[0].getAttribute('data-scanner-id'), '1', 'A drillable role must get data-scanner-id on the Per day table too.');
+assert.equal(dayTbody[1].hasAttribute('data-scanner-id'), false, 'The TOTAL row must never carry data-scanner-id.');
+assert.equal(dayTbody[1], dayTbody[dayTbody.length - 1], 'The TOTAL row must render last in the Per day table.');
+
 // --- Changing #dayPick must drive the same function and move the heatmap's
 // pressed state, not just its own value. ---
 dayPick.value = '2026-08-02';
@@ -380,6 +411,26 @@ assert.equal(day2Row.button.getAttribute('aria-pressed'), 'true', 'Changing #day
 assert.equal(day1Row.button.getAttribute('aria-pressed'), 'false', 'The previously selected row must lose aria-pressed.');
 assert.equal(served.value.textContent, '25', 'Served (2026-08-02) should sum that day\'s cells (10 + 5 + 10).');
 
+// --- A day with no rows in byScannerByDay must show the "no scans that day"
+// hint, not an empty table and not the "pick a day" hint - all three states
+// have to stay distinguishable. ---
+assert.equal(paneDay.querySelectorAll('table').length, 0, 'A day with no rows must not render a table.');
+assert.equal(paneDay.querySelector('#stationsDayHint').textContent, 'No station logged a scan on Aug 2.', 'A day with no rows must name that day in the hint.');
+
+// --- The role gate applies to the Per day pane exactly as it does to the
+// All pane: flipping #stationsTable's data-can-drill-in must close the Per
+// day table's gate too, read fresh, not cached from the first render. ---
+stationsAllTable.setAttribute('data-can-drill-in', '0');
+fakeWindow.BatchHeatmap.selectDay('2026-08-01');
+
+const gatedOffTable = paneDay.querySelector('table');
+assert.notEqual(gatedOffTable, null, 'A day with rows must still render a table once the gate is closed.');
+const gatedOffRows = gatedOffTable.querySelectorAll('tr').filter((tr) => tr.parentNode.tagName === 'TBODY');
+for (const row of gatedOffRows) {
+    assert.equal(row.hasAttribute('data-scanner-id'), false, 'No row of the Per day table may carry data-scanner-id while the gate reads "0", real scanner or TOTAL.');
+}
+stationsAllTable.setAttribute('data-can-drill-in', '1');
+
 // --- An unknown day falls back to all days rather than an empty card. ---
 fakeWindow.BatchHeatmap.selectDay('2099-01-01');
 
@@ -388,6 +439,7 @@ assert.equal(dayPick.value, '', 'Falling back to all days must clear #dayPick.')
 assert.equal(day1Row.button.getAttribute('aria-pressed'), 'false', 'No row header should read pressed once the fallback happens.');
 assert.equal(day2Row.button.getAttribute('aria-pressed'), 'false', 'No row header should read pressed once the fallback happens.');
 assert.equal(served.value.textContent, '60', 'Falling back to all days must recompute Served against the whole batch again.');
+assert.equal(paneDay.querySelector('#stationsDayHint').textContent, 'Use the Day picker above to choose a day.', 'Falling back to all days must also revert the Per day pane to its "no day picked" hint.');
 
 // --- A re-render (the live poll) must rebuild the grid from the fresh
 // payload and preserve whatever day is currently selected. ---
@@ -420,6 +472,29 @@ fakeWindow.BatchHeatmap.render(freshPayloadNoDay1);
 assert.equal(fakeWindow.BatchHeatmap.selectedDay(), null, 'render() must fall back to all days when the selection no longer exists in the fresh payload.');
 assert.equal(dayPick.value, '', 'The fallback from render() must also clear #dayPick.');
 
+// --- hourLabel()'s range end must wrap the same way PHP's
+// date('ga', mktime($hour, 0)) does: mktime(24, 0) rolls into the next day's
+// midnight and prints "12am", not "12pm". The other fixtures only use hours
+// 8-10, so a naive `hour % 12` (no `12am` case for the wrapped hour) would
+// pass everything above and still be wrong at the one boundary that matters
+// - a peak or best hour of 23, whose range end is hour 24. ---
+const hour23Payload = JSON.parse(JSON.stringify(reportsPayload));
+hour23Payload.heatmap.days = ['2026-08-03'];
+hour23Payload.heatmap.hours = [22, 23];
+hour23Payload.heatmap.cells = {
+    '2026-08-03': {
+        22: { families: 2, state: 'served' },
+        23: { families: 9, state: 'served' },
+    },
+};
+hour23Payload.heatmap.max = 9;
+
+fakeWindow.BatchHeatmap.render(hour23Payload);
+fakeWindow.BatchHeatmap.selectDay('2026-08-03');
+
+assert.equal(peakHour.value.textContent, '11pm - 12am', 'A peak hour of 23 must range to "12am" (the next day\'s midnight), not "12pm".');
+assert.equal(peakHour.sub.textContent, '9 families', 'The peak hour sub-line should still carry that hour\'s count.');
+
 // --- Strip switching writes no query parameter and touches only its own
 // card. ---
 const historyCallsBeforeStrip = historyCalls.length;
@@ -432,4 +507,4 @@ assert.equal(paneDay.hasAttribute('hidden'), false, 'The target pane must lose t
 assert.equal(paneAll.hasAttribute('hidden'), true, 'The other pane must gain the hidden attribute.');
 assert.equal(historyCalls.length, historyCallsBeforeStrip, 'Strip switching must write no query parameter (no new replaceState call).');
 
-console.log('OK: BatchHeatmap selects a day from either control through one function, recomputes all four KPIs from the payload, falls back to all days for an unknown or since-removed day, preserves the selection across render(), and switches strips without touching the URL.');
+console.log('OK: BatchHeatmap selects a day from either control through one function, recomputes all four KPIs from the payload, wraps hour 23 correctly, rebuilds the Per day Stations pane (hint/table/gate) for every selection, falls back to all days for an unknown or since-removed day, preserves the selection across render(), and switches strips without touching the URL.');

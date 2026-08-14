@@ -165,13 +165,19 @@
         return restMinutes === 0 ? hours + ' h' : hours + ' h ' + restMinutes + ' m';
     }
 
-    // Matches PHP's date('ga', ...): hour without a leading zero, lowercase
-    // am/pm, no space.
+    // Matches PHP's date('ga', mktime($hour, 0)): hour without a leading
+    // zero, lowercase am/pm, no space. mktime() rolls hour 24 over into the
+    // next day's midnight, so a Best hour of 23 ranges to "12am", not
+    // "12pm" - wrap the hour first, the same rollover, before deriving am/pm
+    // from it. (This duplicates batch-heatmap.js's hourLabel(); see that
+    // file's header for why the two are not shared, which is also why this
+    // fix landed in both places.)
     function hourLabel(hour) {
-        var h = hour % 12;
+        var normalized = ((hour % 24) + 24) % 24;
+        var h = normalized % 12;
         if (h === 0) { h = 12; }
 
-        return h + (hour < 12 ? 'am' : 'pm');
+        return h + (normalized < 12 ? 'am' : 'pm');
     }
 
     function timeLabel(unixSeconds) {

@@ -136,4 +136,19 @@ for (const row of tbody.children) {
     assert.equal(row.hasAttribute('data-scanner-name'), false, 'No row may carry data-scanner-name while data-can-drill-in="0".');
 }
 
-console.log('OK: the stations repaint reads data-can-drill-in fresh on every call, gates data-scanner-id/data-scanner-name on it exactly, and keeps the TOTAL row last.');
+// --- hourLabel()'s range end must wrap the way PHP's
+// date('ga', mktime($hour, 0)) does: mktime(24, 0) rolls into the next day's
+// midnight and prints "12am", not "12pm". The Best hour column is the only
+// place this file's own copy of hourLabel() renders a range, and the fixture
+// above only used hour 9, which cannot catch the wrap. ---
+stationsTable.setAttribute('data-can-drill-in', '1');
+fakeWindow.ReportsCharts.update({
+    byScanner: [
+        { userID: 3, scanner: 'Scanner3', families: 4, handouts: 4, pace: 1, typicalSeconds: 60, firstTs: null, lastTs: null, idleSeconds: 0, bestHour: 23, share: 1 },
+    ],
+});
+
+const bestHourCell = tbody.children[0].children[7];
+assert.equal(bestHourCell.textContent, '11pm - 12am', 'A Best hour of 23 must range to "12am" (the next day\'s midnight), not "12pm".');
+
+console.log('OK: the stations repaint reads data-can-drill-in fresh on every call, gates data-scanner-id/data-scanner-name on it exactly, keeps the TOTAL row last, and wraps a Best hour of 23 to "12am".');

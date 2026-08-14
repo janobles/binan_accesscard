@@ -24,7 +24,21 @@
    unrelated to the day filter except that both are card-local, client-side
    controls: switching a strip writes no query parameter and touches nothing
    outside the card it sits in, so one delegated listener on [data-strip-target]
-   covers every strip on the page rather than one binding per card. */
+   covers every strip on the page rather than one binding per card.
+
+   The Stations card's Per day pane (#stations-pane-day) is also driven from
+   selectDay(), the same path as everything else that depends on the picked
+   day: Admin/batch-overview.php renders one of a hint paragraph or a
+   #stationsTableDay table there, chosen by ?day=, and a selection made after
+   load has to reproduce that same choice client-side rather than leave the
+   pane showing whatever the server picked at load. This duplicates the
+   column formatting (duration(), hourLabel(), timeLabel()) that
+   scanner-reports.js's stationsTable() already has for the All pane's table,
+   for the same reason that file's copy of hourLabel() is not shared with
+   this one: this script has to run standalone the moment the page loads,
+   before scanner-reports.js has necessarily run (it loads after this file
+   and no-ops without Chart.js), so the Per day pane cannot depend on a
+   function that script has not defined yet. */
 (function () {
     'use strict';
 
@@ -42,6 +56,12 @@
 
     var dayPick = document.getElementById('dayPick');
     var grid = document.getElementById('peakHeatmap');
+    var stationsDayPane = document.getElementById('stations-pane-day');
+    // The All pane's table is the one place the role gate and the batch id
+    // are already on the page (Admin/batch-stations-table.php writes both on
+    // every table it renders), so the Per day table reads them from there
+    // rather than carrying a second copy of either.
+    var stationsAllTable = document.getElementById('stationsTable');
 
     var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -74,14 +94,18 @@
         return dayLabelCache[day];
     }
 
-    // Matches PHP's date('ga', ...): hour without a leading zero, lowercase
-    // am/pm, no space. Used both for the heatmap's own hour headers and for
-    // the Peak hour KPI, which prints "10am - 11am".
+    // Matches PHP's date('ga', mktime($hour, 0)): hour without a leading
+    // zero, lowercase am/pm, no space. mktime() rolls hour 24 over into the
+    // next day's midnight, so the range end for a peak hour of 23 reads
+    // "12am", not "12pm" - wrap the hour first, the same rollover, before
+    // deriving am/pm from it. Used both for the heatmap's own hour headers
+    // and for the Peak hour KPI, which prints "10am - 11am".
     function hourLabel(hour) {
-        var h = hour % 12;
+        var normalized = ((hour % 24) + 24) % 24;
+        var h = normalized % 12;
         if (h === 0) { h = 12; }
 
-        return h + (hour < 12 ? 'am' : 'pm');
+        return h + (normalized < 12 ? 'am' : 'pm');
     }
 
     // The same proportional five-step scale as Admin/batch-heatmap.php's
@@ -96,10 +120,50 @@
         return Math.max(1, Math.ceil((families / max) * 5));
     }
 
+    // Matches ViewFormatter::duration() exactly. See this file's header for
+    // why it is not shared with scanner-reports.js's copy.
+    function duration(seconds) {
+        if (seconds <= 0) { return '-'; }
+        if (seconds < 60) { return seconds + ' s'; }
+        if (seconds < 300) {
+            var minutes = Math.floor(seconds / 60);
+            var rest = seconds % 60;
+
+            return rest === 0 ? minutes + ' m' : minutes + ' m ' + rest + ' s';
+        }
+        if (seconds < 3600) { return Math.floor(seconds / 60) + ' m'; }
+
+        var hours = Math.floor(seconds / 3600);
+        var restMinutes = Math.floor((seconds % 3600) / 60);
+
+        return restMinutes === 0 ? hours + ' h' : hours + ' h ' + restMinutes + ' m';
+    }
+
+    // Matches PHP's date('g:ia', ...).
+    function timeLabel(unixSeconds) {
+        var d = new Date(unixSeconds * 1000);
+        var h = d.getHours() % 12;
+        if (h === 0) { h = 12; }
+        var minutes = d.getMinutes();
+
+        return h + ':' + (minutes < 10 ? '0' : '') + minutes + (d.getHours() < 12 ? 'am' : 'pm');
+    }
+
+    // Matches PHP's date('M j', strtotime($selectedDay)): the Per day hint's
+    // "No station logged a scan on Aug 1." wording, with no day-index suffix
+    // (unlike dayLabel() above, which is the heatmap row's own label).
+    function monthDayLabel(day) {
+        var parts = day.split('-');
+        var month = MONTHS[parseInt(parts[1], 10) - 1] || parts[1];
+
+        return month + ' ' + parseInt(parts[2], 10);
+    }
+
     var state = {
         heatmap: payload.heatmap || { days: [], hours: [], cells: {}, max: 0 },
         coverage: payload.coverage || { eligible: 0, served: 0, coverage: 0 },
         byScanner: payload.byScanner || [],
+        byScannerByDay: payload.byScannerByDay || {},
         selectedDay: payload.selectedDay || null
     };
 
@@ -191,6 +255,102 @@
         history.replaceState(null, '', url.toString());
     }
 
+    // One row, matching Admin/batch-stations-table.php's columns and its role
+    // gate: data-scanner-id/data-scanner-name only when canDrillIn is true
+    // and the row is not the TOTAL fold (userID 0).
+    function stationsDayRow(row, canDrillIn) {
+        var userId = Number(row.userID) || 0;
+        var tr = document.createElement('tr');
+        if (userId === 0) { tr.setAttribute('class', 'is-total'); }
+        if (canDrillIn && userId > 0) {
+            tr.setAttribute('data-scanner-id', String(userId));
+            tr.setAttribute('data-scanner-name', String(row.scanner));
+        }
+
+        [
+            row.scanner,
+            Number(row.families || 0).toLocaleString(),
+            Number(row.handouts || 0).toLocaleString(),
+            row.pace === null || row.pace === undefined ? '-' : Number(row.pace).toFixed(0),
+            row.typicalSeconds === null || row.typicalSeconds === undefined ? '-' : duration(Number(row.typicalSeconds)),
+            row.firstTs === null || row.firstTs === undefined
+                ? '-'
+                : timeLabel(Number(row.firstTs)) + ' - ' + timeLabel(Number(row.lastTs)),
+            duration(Number(row.idleSeconds || 0)),
+            row.bestHour === null || row.bestHour === undefined
+                ? '-'
+                : hourLabel(Number(row.bestHour)) + ' - ' + hourLabel(Number(row.bestHour) + 1),
+            Number((row.share || 0) * 100).toFixed(0) + '%'
+        ].forEach(function (value) {
+            var td = document.createElement('td');
+            td.textContent = String(value);
+            tr.appendChild(td);
+        });
+
+        return tr;
+    }
+
+    // Rebuilds #stations-pane-day from scratch: the server renders one of a
+    // hint paragraph or a table there depending on ?day=, and a client-side
+    // selection has to reproduce that same three-way choice, not just patch
+    // rows into whichever one happened to load. The role gate and the batch
+    // id both come from the All pane's table, the one place the server
+    // already wrote them.
+    function renderStationsDayPane() {
+        if (!stationsDayPane) { return; }
+
+        while (stationsDayPane.firstChild) { stationsDayPane.removeChild(stationsDayPane.firstChild); }
+
+        var day = state.selectedDay;
+        if (day === null) {
+            var hint = document.createElement('p');
+            hint.setAttribute('class', 'text-muted mb-0');
+            hint.id = 'stationsDayHint';
+            hint.textContent = 'Use the Day picker above to choose a day.';
+            stationsDayPane.appendChild(hint);
+            return;
+        }
+
+        var rows = state.byScannerByDay[day] || [];
+        if (rows.length === 0) {
+            var noScans = document.createElement('p');
+            noScans.setAttribute('class', 'text-muted mb-0');
+            noScans.id = 'stationsDayHint';
+            noScans.textContent = 'No station logged a scan on ' + monthDayLabel(day) + '.';
+            stationsDayPane.appendChild(noScans);
+            return;
+        }
+
+        var canDrillIn = !!stationsAllTable && stationsAllTable.getAttribute('data-can-drill-in') === '1';
+        var batchId = stationsAllTable ? (stationsAllTable.getAttribute('data-batch') || '0') : '0';
+
+        var wrap = document.createElement('div');
+        wrap.setAttribute('class', 'table-responsive');
+        var table = document.createElement('table');
+        table.setAttribute('class', 'table manage-record-table align-middle w-100 mb-0');
+        table.id = 'stationsTableDay';
+        table.setAttribute('data-batch', batchId);
+        table.setAttribute('data-can-drill-in', canDrillIn ? '1' : '0');
+
+        var thead = document.createElement('thead');
+        var headRow = document.createElement('tr');
+        ['Scanner', 'Families', 'Handouts', 'Pace', 'Typical', 'On station', 'Idle', 'Best hour', 'Share'].forEach(function (label) {
+            var th = document.createElement('th');
+            th.setAttribute('scope', 'col');
+            th.textContent = label;
+            headRow.appendChild(th);
+        });
+        thead.appendChild(headRow);
+        table.appendChild(thead);
+
+        var tbody = document.createElement('tbody');
+        rows.forEach(function (row) { tbody.appendChild(stationsDayRow(row, canDrillIn)); });
+        table.appendChild(tbody);
+
+        wrap.appendChild(table);
+        stationsDayPane.appendChild(wrap);
+    }
+
     function selectDay(day) {
         var normalized = day || null;
         // A payload refresh or a stale link can name a day this batch no
@@ -204,6 +364,7 @@
         applyDayPick();
         applyRowSelection();
         recomputeHeadline();
+        renderStationsDayPane();
         updateUrl(normalized);
     }
 
@@ -264,6 +425,7 @@
         state.heatmap = fresh.heatmap || { days: [], hours: [], cells: {}, max: 0 };
         state.coverage = fresh.coverage || { eligible: 0, served: 0, coverage: 0 };
         state.byScanner = fresh.byScanner || [];
+        state.byScannerByDay = fresh.byScannerByDay || {};
 
         rebuildGrid();
         // Reapplies through selectDay() rather than writing the controls

@@ -312,6 +312,53 @@ The two model methods run against both CI backends. The SQLite path is where the
 hour and day-of-week extraction differs from MariaDB, so that difference is
 asserted rather than assumed.
 
+## End-to-end verification
+
+Unit tests prove the fold. They do not prove that the numbers on the page came
+from it, so the change is not done until it has been driven in a browser against
+a database seeded with a scenario whose answers are known in advance.
+
+The local database is throwaway and is recreated for this: drop, import
+`accesscardV22.sql`, then run a seed script. The script is a test fixture, not a
+schema change, so it lives in the scratchpad and never under `sql/patches`, which
+holds patches only.
+
+The seed is built so every metric has a hand-computed expected value:
+
+- A three-day batch with a daily window of 8:00 to 17:00, at a known venue, with
+  a frozen roster of a few hundred heads across several barangays.
+- **Scanner A**: a full three days, a clear morning peak on day two, and one 90
+  minute lunch break each day. Exercises pace, median gap and idle time on the
+  normal case.
+- **Scanner B**: arrives late on day one and works only two of the three days.
+  This is the case the rejected daily-window denominator would have punished, so
+  its pace must come out close to Scanner A's despite a much smaller total.
+- **Scanner C**: exactly one scan, all batch. Pace and typical time must render
+  as dashes, not zero, not infinity.
+- One hour inside the daily window with no scans at all, so the heatmap's
+  staffed-but-empty state is exercised rather than assumed.
+- A voided distribution and a scan for a family outside the roster, neither of
+  which may move any figure.
+
+What is checked, with Playwright against the dev server:
+
+1. The KPI row, the heatmap and the Stations table agree with the hand-computed
+   values for the whole batch.
+2. Selecting each day changes Served, Peak hour and Scanners active to that day's
+   figures and leaves Eligible alone, and the Stations `Per day` strip agrees
+   with the heatmap row above it.
+3. `?day=` survives a reload, and an unknown day falls back to `All days`.
+4. The three Activity strips and the two Barangay strips all render, at both
+   viewport widths, with the map hidden behind the Table strip rather than by a
+   breakpoint.
+5. The station modal and the kiosk performance page show the same eight values as
+   that scanner's row in the Stations table. Three surfaces, one fold, no
+   disagreement.
+6. The PDF downloads, opens, and its five sections carry the same numbers as the
+   screen, with the printed heatmap legible in monochrome.
+
+Screenshots at both widths, per the `ui-verification` workflow.
+
 ## Documentation
 
 `docs/15-distribution.md` and `docs/17-dashboard-and-reports.md` both describe

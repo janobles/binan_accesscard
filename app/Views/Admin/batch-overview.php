@@ -268,6 +268,7 @@ $noEligible = ! $noBatch && $c['eligible'] === 0;
           'byScanner'  => $byScanner,
           'batchId'    => $batchId,
           'canDrillIn' => $canDrillInStations,
+          'tableId'    => 'stationsTable',
       ]) ?>
     </div>
 
@@ -280,10 +281,17 @@ $noEligible = ! $noBatch && $c['eligible'] === 0;
       <?php elseif ($dayRows === []): ?>
       <p class="text-muted mb-0" id="stationsDayHint">No station logged a scan on <?= esc(date('M j', strtotime($selectedDay))) ?>.</p>
       <?php else: ?>
+      <?php /* A second table on the same page cannot reuse stationsTable's id,
+               the same reason the Activity card's day/weekday heatmaps do not
+               share peakHeatmap/weekdayHeatmap. station-modal.js delegates
+               from #stationsCard rather than a fixed table id (see that file),
+               so this second table's data-scanner-id rows still open the
+               drill-in modal without a matching bind of their own. */ ?>
       <?= view('Admin/batch-stations-table', [
           'byScanner'  => $dayRows,
           'batchId'    => $batchId,
           'canDrillIn' => $canDrillInStations,
+          'tableId'    => 'stationsTableDay',
       ]) ?>
       <?php endif; ?>
     </div>

@@ -86,6 +86,24 @@ final class DashboardPaneUrlFeatureTest extends CIUnitTestCase
     }
 
     /**
+     * One scan on 2026-08-01, inside self::BATCH_ID's roster, by a scanner
+     * account. The base fixture logs no scans at all (heatmap/stations tests
+     * that want an empty state rely on that), so the two cases below that need
+     * a day with rows to pick from seed this themselves rather than growing
+     * setUp() for every other case in this file.
+     */
+    private function seedOneScan(): void
+    {
+        $db = db_connect();
+        $db->table('users')->insert(['userID' => 5, 'username' => 'scanner1', 'password' => 'x']);
+        $db->table('subsidy_distribution')->insert([
+            'control_no' => 1, 'memberID' => 1, 'subsidy_type_id' => 1,
+            'claim_date' => '2026-08-01', 'batch_id' => self::BATCH_ID,
+            'userID' => 5, 'dt_created' => '2026-08-01 09:00:00',
+        ]);
+    }
+
+    /**
      * Every href in $html that points at the dashboard and carries $needle,
      * with entity-encoded ampersands decoded back so a caller can grep params.
      *
@@ -143,8 +161,16 @@ final class DashboardPaneUrlFeatureTest extends CIUnitTestCase
 
         preg_match_all('/id="([^"]+)"\s+class="nav-link[^"]*"[^>]*aria-controls="([^"]+)"/', $body, $tabs, PREG_SET_ORDER);
 
-        // Activity's three views, Barangay coverage's two, and Stations' two.
-        $this->assertCount(7, $tabs, 'Expected seven card tabs across the three strips.');
+        // Expected count is derived from the rendered page, not a hardcoded
+        // number, so a future card_tabs strip does not have to remember to
+        // bump one here: components/card_tabs.php renders exactly one
+        // role="tabpanel" per tab it declares, so the two counts must match.
+        // At least one strip is still required, or an empty page would pass
+        // by having zero of both.
+        $tablistCount = preg_match_all('/role="tablist"/', $body);
+        $panelCount   = preg_match_all('/role="tabpanel"/', $body);
+        $this->assertGreaterThan(0, $tablistCount, 'Expected at least one card tab strip.');
+        $this->assertCount($panelCount, $tabs, 'Expected as many card tabs as tabpanels rendered on the page.');
 
         foreach ($tabs as [, $tabId, $paneId]) {
             $this->assertSame(
@@ -162,6 +188,52 @@ final class DashboardPaneUrlFeatureTest extends CIUnitTestCase
         // the ids they build must still be distinct.
         $paneIds = array_column($tabs, 2);
         $this->assertSame($paneIds, array_unique($paneIds), 'Two panes claimed the same id.');
+    }
+
+    /**
+     * batch-stations-table.php renders twice on this page once a day with
+     * rows is picked (the Stations card's All and Per day panes). Two elements
+     * sharing an id is invalid HTML the moment that happens, which a source
+     * grep of the view cannot see because it only exists once two view() calls
+     * both resolve to non-empty output. Rendered end to end instead.
+     */
+    public function testStationsCardRendersNoDuplicateTableIdOnceADayIsPicked(): void
+    {
+        $this->seedOneScan();
+
+        $body = $this->withSession($this->session('administrator', 1, 'boss'))
+            ->get('dashboard?view=distribution&batch=' . self::BATCH_ID . '&day=2026-08-01')
+            ->getBody();
+
+        $this->assertSame(
+            1,
+            substr_count($body, 'id="stationsTable"'),
+            'id="stationsTable" must appear exactly once even when the Per day pane has rows.'
+        );
+        $this->assertStringContainsString(
+            'id="stationsTableDay"',
+            $body,
+            'the Per day pane must render its own table id, not reuse the All pane\'s.'
+        );
+    }
+
+    /**
+     * station-modal.js delegates its click listener from #stationsCard, not
+     * one table's id, so it can answer a row in either pane. That only works
+     * if the Per day table still carries data-scanner-id for a role that may
+     * drill in; this is the row-level half of the delegation fix.
+     */
+    public function testPerDayRowCarriesDataScannerIdForADrillInRole(): void
+    {
+        $this->seedOneScan();
+
+        $body = $this->withSession($this->session('administrator', 1, 'boss'))
+            ->get('dashboard?view=distribution&batch=' . self::BATCH_ID . '&day=2026-08-01')
+            ->getBody();
+
+        $dayPanePos = strpos($body, 'id="stations-pane-day"');
+        $this->assertNotFalse($dayPanePos, 'stations-pane-day not found');
+        $this->assertStringContainsString('data-scanner-id', substr($body, $dayPanePos));
     }
 
     /**

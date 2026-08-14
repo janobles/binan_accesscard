@@ -107,23 +107,34 @@ final class DashboardSubstanceViewTest extends CIUnitTestCase
     }
 
     /**
-     * The #stationsTable element must render even with zero stations, so the
-     * live poll has somewhere to land an open batch's first station without a
-     * page reload, and so the modal's delegated click has something to bind to.
+     * The table element must render even with zero stations, so the live poll
+     * has somewhere to land an open batch's first station without a page
+     * reload, and so the modal's delegated click has something to bind to.
      */
     public function testStationsTableAlwaysRenders(): void
     {
         $src = file_get_contents(APPPATH . 'Views/Admin/batch-stations-table.php');
-        $tablePos = strpos($src, 'id="stationsTable"');
+        $tablePos = strpos($src, 'id="<?= esc($tableId, \'attr\') ?>"');
         $emptyCheckPos = strpos($src, '$byScanner === []');
 
-        $this->assertNotFalse($tablePos, 'stationsTable not found');
+        $this->assertNotFalse($tablePos, 'the table\'s $tableId element not found');
         $this->assertNotFalse($emptyCheckPos, 'empty-state check not found');
         $this->assertLessThan(
             $emptyCheckPos,
             $tablePos,
-            'the stationsTable element must open before the empty-state branch, not be replaced by it'
+            'the table element must open before the empty-state branch, not be replaced by it'
         );
+    }
+
+    /**
+     * $tableId defaults to 'stationsTable', the id every existing binding
+     * (station-modal.js, and the live poll it will grow) already expects, so
+     * the All pane and any caller that passes nothing render unchanged.
+     */
+    public function testTableIdDefaultsToStationsTable(): void
+    {
+        $src = file_get_contents(APPPATH . 'Views/Admin/batch-stations-table.php');
+        $this->assertStringContainsString("\$tableId = (string) (\$tableId ?? 'stationsTable');", $src);
     }
 
     /**

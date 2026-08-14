@@ -26,7 +26,14 @@
  * somewhere to land without a page reload.
  *
  * Params: $byScanner (SubsidyStatsModel::batchSnapshot()['byScanner']),
- *         $batchId int, $canDrillIn bool.
+ *         $batchId int, $canDrillIn bool, $tableId string the table's id.
+ *
+ * $tableId defaults to 'stationsTable', the id station-modal.js and the live
+ * poll already bind to, so the Stations card's All pane and every existing
+ * caller are unchanged. The Per day pane renders this same partial a second
+ * time on one page (batch-overview.php) and passes its own id: two tables
+ * cannot share one, the same reason $gridId exists on Admin/batch-heatmap.php.
+ * The empty-state row's id is derived from it for the same reason.
  */
 
 use App\Libraries\ViewFormatter;
@@ -34,11 +41,12 @@ use App\Libraries\ViewFormatter;
 $byScanner = $byScanner ?? [];
 $batchId = (int) ($batchId ?? 0);
 $canDrillIn = (bool) ($canDrillIn ?? false);
+$tableId = (string) ($tableId ?? 'stationsTable');
 
 $hourRange = static fn (int $hour): string => date('ga', mktime($hour, 0)) . ' - ' . date('ga', mktime($hour + 1, 0));
 ?>
 <div class="table-responsive">
-  <table class="table manage-record-table align-middle w-100 mb-0" id="stationsTable"
+  <table class="table manage-record-table align-middle w-100 mb-0" id="<?= esc($tableId, 'attr') ?>"
          data-batch="<?= esc((string) $batchId, 'attr') ?>"
          data-can-drill-in="<?= $canDrillIn ? '1' : '0' ?>">
     <thead>
@@ -74,7 +82,7 @@ $hourRange = static fn (int $hour): string => date('ga', mktime($hour, 0)) . ' -
       </tr>
       <?php endforeach; ?>
       <?php if ($byScanner === []): ?>
-      <tr id="stationsTableEmpty"><td colspan="9" class="text-muted">No station has logged a scan in this batch yet.</td></tr>
+      <tr id="<?= esc($tableId, 'attr') ?>Empty"><td colspan="9" class="text-muted">No station has logged a scan in this batch yet.</td></tr>
       <?php endif; ?>
     </tbody>
   </table>

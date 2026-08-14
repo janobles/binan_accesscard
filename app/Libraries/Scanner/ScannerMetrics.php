@@ -49,6 +49,18 @@ final class ScannerMetrics
 
             $row['handouts']++;
             $row['controls'][$control] = true;
+
+            // The previous timestamp is still in lastTs at this point, so the
+            // gap is measured before the assignment below overwrites it.
+            if ($row['lastTs'] !== null) {
+                $gap = $timestamp - $row['lastTs'];
+                $row['gaps'][] = $gap;
+                $row['longestGapSeconds'] = max($row['longestGapSeconds'], $gap);
+                if ($gap <= $idleGapSeconds) {
+                    $row['activeSeconds'] += $gap;
+                    $row['activeGapCount']++;
+                }
+            }
             $row['firstTs'] = $row['firstTs'] === null ? $timestamp : min($row['firstTs'], $timestamp);
             $row['lastTs']  = $row['lastTs'] === null ? $timestamp : max($row['lastTs'], $timestamp);
             $handouts++;
@@ -67,11 +79,11 @@ final class ScannerMetrics
 
         // The total is aggregated first, while the raw accumulators still carry
         // their gap lists and hour buckets; finishRow() consumes them.
-        $total = self::aggregate($byScanner, count($totalCtl), $handouts);
+        $total = self::aggregate($byScanner, count($totalCtl), $handouts, $idleGapSeconds);
 
         $scanners = [];
         foreach ($byScanner as $row) {
-            $scanners[] = self::finishRow($row);
+            $scanners[] = self::finishRow($row, $idleGapSeconds);
         }
 
         $days = array_keys($dayHour);
@@ -110,13 +122,14 @@ final class ScannerMetrics
      * @param array<int,array<string,mixed>> $byScanner raw accumulators, pre-finishRow
      * @return array<string,mixed>
      */
-    private static function aggregate(array $byScanner, int $families, int $handouts): array
+    private static function aggregate(array $byScanner, int $families, int $handouts, int $idleGapSeconds): array
     {
         $total = self::emptyRow(0);
         $total['handouts'] = $handouts;
 
         foreach ($byScanner as $row) {
             $total['activeSeconds'] += (int) $row['activeSeconds'];
+            $total['activeGapCount'] += (int) $row['activeGapCount'];
             $total['longestGapSeconds'] = max($total['longestGapSeconds'], (int) $row['longestGapSeconds']);
             $total['gaps'] = array_merge($total['gaps'], $row['gaps']);
 
@@ -134,7 +147,7 @@ final class ScannerMetrics
             }
         }
 
-        $total = self::finishRow($total);
+        $total = self::finishRow($total, $idleGapSeconds);
         // finishRow() counts the row's own control set, which the total does not
         // keep: holding every control number twice to recount them here would
         // double the fold's memory on a citywide batch for a number the caller
@@ -152,9 +165,14 @@ final class ScannerMetrics
             'handouts'          => 0,
             'controls'          => [],
             'byHour'            => [],
-            // Populated in Task 2, which is also where finishRow() consumes it.
+            // Raw gap list, filtered to non-idle gaps and consumed by
+            // finishRow(), which reduces it to medianGapSeconds and drops it.
             'gaps'              => [],
             'activeSeconds'     => 0,
+            // Count of the gaps folded into activeSeconds, kept separately so
+            // pace can be a rate over those transitions rather than over the
+            // family count, which includes the arrival with no gap before it.
+            'activeGapCount'    => 0,
             'medianGapSeconds'  => null,
             'firstTs'           => null,
             'lastTs'            => null,
@@ -166,12 +184,89 @@ final class ScannerMetrics
      * @param array<string,mixed> $row
      * @return array<string,mixed>
      */
-    private static function finishRow(array $row): array
+    private static function finishRow(array $row, int $idleGapSeconds): array
     {
         $row['families'] = count($row['controls']);
         unset($row['controls']);
         ksort($row['byHour']);
 
+        $row['medianGapSeconds'] = self::median(array_values(array_filter(
+            $row['gaps'],
+            static fn (int $gap): bool => $gap <= $idleGapSeconds
+        )));
+        unset($row['gaps']);
+
         return $row;
+    }
+
+    /**
+     * Middle value of an ordered list, the mean of the middle pair when the
+     * count is even. Null for an empty list, which is a scanner with a single
+     * scan: there is no gap, so there is nothing to report, and printing a
+     * zero there would read as an instantaneous handout.
+     *
+     * @param list<int> $values
+     */
+    private static function median(array $values): ?int
+    {
+        $count = count($values);
+        if ($count === 0) {
+            return null;
+        }
+
+        sort($values);
+        $middle = intdiv($count, 2);
+
+        return $count % 2 === 1
+            ? $values[$middle]
+            : (int) round(($values[$middle - 1] + $values[$middle]) / 2);
+    }
+
+    /**
+     * The figures that need a denominator outside the row itself, kept separate
+     * from fold() so the fold stays a pure accumulation and this stays pure
+     * arithmetic over one row.
+     *
+     * pace is families per active hour, not per elapsed hour. A station that
+     * served fifty families in an hour of scanning and then waited three hours
+     * for the next barangay to arrive was working at fifty an hour, and the
+     * waiting is reported separately as idle rather than folded into the rate.
+     *
+     * The rate is counted in transitions, not families: a scanner's first
+     * family arrives with no gap behind it, so counting it as a unit of rate
+     * would understate the pace by folding in an arrival that consumed no
+     * active time.
+     *
+     * @param array<string,mixed> $row a row from fold()
+     * @return array{pace:?float,typicalSeconds:?int,share:float,onStationSeconds:int,idleSeconds:int,bestHour:?int,bestHourFamilies:int}
+     */
+    public static function derive(array $row, int $totalFamilies): array
+    {
+        $active         = (int) $row['activeSeconds'];
+        $activeGapCount = (int) $row['activeGapCount'];
+        $families       = (int) $row['families'];
+
+        $onStation = $row['firstTs'] === null || $row['lastTs'] === null
+            ? 0
+            : (int) $row['lastTs'] - (int) $row['firstTs'];
+
+        $bestHour  = null;
+        $bestCount = 0;
+        foreach (($row['byHour'] ?? []) as $hour => $count) {
+            if ($count > $bestCount) {
+                $bestCount = (int) $count;
+                $bestHour  = (int) $hour;
+            }
+        }
+
+        return [
+            'pace'             => $activeGapCount > 0 ? $activeGapCount / ($active / 3600) : null,
+            'typicalSeconds'   => $row['medianGapSeconds'],
+            'share'            => $totalFamilies > 0 ? $families / $totalFamilies : 0.0,
+            'onStationSeconds' => $onStation,
+            'idleSeconds'      => max(0, $onStation - $active),
+            'bestHour'         => $bestHour,
+            'bestHourFamilies' => $bestCount,
+        ];
     }
 }

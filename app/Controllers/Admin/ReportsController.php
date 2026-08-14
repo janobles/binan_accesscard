@@ -30,7 +30,7 @@ class ReportsController extends BaseController
         $stats      = model(SubsidyStatsModel::class);
         $snapshot   = $batchId > 0
             ? $stats->batchSnapshot($batchId, $isOpen)
-            : ['coverage' => ['eligible' => 0, 'served' => 0, 'remaining' => 0, 'coverage' => 0, 'voided' => 0], 'byBarangay' => [], 'perScanner' => [], 'timeline' => [], 'byDay' => []];
+            : ['coverage' => ['eligible' => 0, 'served' => 0, 'remaining' => 0, 'coverage' => 0, 'voided' => 0], 'byBarangay' => [], 'perScanner' => [], 'timeline' => [], 'byDay' => [], 'heatmap' => ['days' => [], 'hours' => [], 'cells' => [], 'max' => 0], 'byScanner' => [], 'days' => []];
 
         return $this->response->setJSON([
             'coverage'   => $snapshot['coverage'],
@@ -38,6 +38,9 @@ class ReportsController extends BaseController
             'perScanner' => $snapshot['perScanner'],
             'timeline'   => $snapshot['timeline'],
             'byDay'      => $snapshot['byDay'] ?? [],
+            'heatmap'    => $snapshot['heatmap'] ?? ['days' => [], 'hours' => [], 'cells' => [], 'max' => 0],
+            'byScanner'  => $snapshot['byScanner'] ?? [],
+            'days'       => $snapshot['days'] ?? [],
             'updated'    => date('c'),
         ]);
     }

@@ -876,6 +876,9 @@ class DashboardPageBuilder
             'perScanner' => [],
             'timeline'   => [],
             'byDay'      => [],
+            'heatmap'    => ['days' => [], 'hours' => [], 'cells' => [], 'max' => 0],
+            'byScanner'  => [],
+            'days'       => [],
         ];
     }
 

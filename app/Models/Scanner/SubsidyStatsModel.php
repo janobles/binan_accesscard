@@ -2,6 +2,7 @@
 
 namespace App\Models\Scanner;
 
+use App\Libraries\Scanner\ScannerMetrics;
 use CodeIgniter\Model;
 
 /**
@@ -635,12 +636,18 @@ class SubsidyStatsModel extends Model
             return $cached['snapshot'];
         }
 
+        $fold  = ScannerMetrics::fold($this->scanEvents($batchId));
+        $batch = $this->batchWindow($batchId);
+
         $snapshot = [
             'coverage'   => $this->coverage($batchId),
             'byBarangay' => $this->byBarangay($batchId),
             'perScanner' => $this->perScanner($batchId),
             'timeline'   => $isOpen ? $this->servedTimeline($batchId) : [],
             'byDay'      => $this->servedByDay($batchId),
+            'heatmap'    => ScannerMetrics::heatmap($fold, $batch['daily_start_time'] ?? null, $batch['daily_end_time'] ?? null),
+            'byScanner'  => $this->scannerRows($fold),
+            'days'       => $fold['days'],
         ];
 
         if ($fingerprint !== '' && $this->dbIsHealthy()) {
@@ -652,6 +659,123 @@ class SubsidyStatsModel extends Model
         }
 
         return $snapshot;
+    }
+
+    /**
+     * Per-scanner performance rows for the Stations table, the station modal
+     * and the PDF. Names are resolved in one query rather than one per row, and
+     * the TOTAL row is folded by the same code as the rows above it, so a total
+     * can never be a separately computed number.
+     *
+     * @param array{scanners:list<array>,total:array} $fold
+     * @return list<array<string,mixed>>
+     */
+    private function scannerRows(array $fold): array
+    {
+        $names = $this->scannerNames(array_map(
+            static fn ($row) => (int) $row['userID'],
+            $fold['scanners']
+        ));
+
+        $totalFamilies = (int) $fold['total']['families'];
+
+        $rows = [];
+        foreach ($fold['scanners'] as $row) {
+            $rows[] = array_merge(
+                [
+                    'userID'   => (int) $row['userID'],
+                    'scanner'  => $names[(int) $row['userID']] ?? 'Unknown',
+                    'families' => (int) $row['families'],
+                    'handouts' => (int) $row['handouts'],
+                ],
+                ScannerMetrics::derive($row, $totalFamilies),
+                [
+                    'longestGapSeconds' => (int) $row['longestGapSeconds'],
+                    'firstTs'           => $row['firstTs'],
+                    'lastTs'            => $row['lastTs'],
+                ]
+            );
+        }
+
+        usort($rows, static fn ($a, $b) => $b['families'] <=> $a['families'] ?: strcmp($a['scanner'], $b['scanner']));
+
+        if ($rows !== []) {
+            $rows[] = array_merge(
+                [
+                    'userID'   => 0,
+                    'scanner'  => 'TOTAL',
+                    'families' => $totalFamilies,
+                    'handouts' => (int) $fold['total']['handouts'],
+                ],
+                ScannerMetrics::derive($fold['total'], $totalFamilies),
+                [
+                    'longestGapSeconds' => (int) $fold['total']['longestGapSeconds'],
+                    'firstTs'           => $fold['total']['firstTs'],
+                    'lastTs'            => $fold['total']['lastTs'],
+                ]
+            );
+        }
+
+        return $rows;
+    }
+
+    /**
+     * Usernames for the given ids, in one query. Missing ids simply do not
+     * appear, and the caller falls back to 'Unknown', matching perScanner().
+     *
+     * @param list<int> $userIds
+     * @return array<int,string>
+     */
+    private function scannerNames(array $userIds): array
+    {
+        $userIds = array_values(array_filter(array_unique($userIds), static fn ($id) => $id > 0));
+        if ($userIds === []) {
+            return [];
+        }
+
+        try {
+            $rows = $this->db->table('users')
+                ->select('userID, username')
+                ->whereIn('userID', $userIds)
+                ->get()->getResultArray();
+        } catch (\Throwable $e) {
+            return [];
+        }
+
+        $out = [];
+        foreach ($rows as $row) {
+            $out[(int) $row['userID']] = (string) $row['username'];
+        }
+
+        return $out;
+    }
+
+    /**
+     * The batch's declared daily hours, which decide which empty heatmap cells
+     * are "closed" rather than "staffed but idle".
+     *
+     * @return array{daily_start_time:?string,daily_end_time:?string}
+     */
+    private function batchWindow(int $batchId): array
+    {
+        $empty = ['daily_start_time' => null, 'daily_end_time' => null];
+        if ($batchId <= 0) {
+            return $empty;
+        }
+
+        try {
+            $row = $this->db->table('distribution_batch')
+                ->select('daily_start_time, daily_end_time')
+                ->where('batch_id', $batchId)
+                ->get()->getRowArray();
+        } catch (\Throwable $e) {
+            return $empty;
+        }
+
+        return $row === null ? $empty : [
+            'daily_start_time' => $row['daily_start_time'] === null ? null : (string) $row['daily_start_time'],
+            'daily_end_time'   => $row['daily_end_time'] === null ? null : (string) $row['daily_end_time'],
+        ];
     }
 
     /**

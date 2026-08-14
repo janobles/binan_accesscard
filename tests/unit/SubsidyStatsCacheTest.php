@@ -63,4 +63,17 @@ final class SubsidyStatsCacheTest extends CIUnitTestCase
         // active batch - a void can land on a closed batch.
         $this->assertStringContainsString("row['batch_id']", $body);
     }
+
+    /**
+     * The snapshot is one cached payload and the pane reads nothing else, so a
+     * key missing here is a card that renders empty with no error anywhere.
+     */
+    public function testSnapshotCarriesTheHeatmapScannerRowsAndDays(): void
+    {
+        $snapshot = model(SubsidyStatsModel::class)->batchSnapshot(0, false);
+
+        $this->assertArrayHasKey('heatmap', $snapshot);
+        $this->assertArrayHasKey('byScanner', $snapshot);
+        $this->assertArrayHasKey('days', $snapshot);
+    }
 }

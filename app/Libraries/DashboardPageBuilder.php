@@ -1009,7 +1009,6 @@ class DashboardPageBuilder
         return [
             'coverage'       => ['eligible' => 0, 'served' => 0, 'remaining' => 0, 'coverage' => 0, 'voided' => 0],
             'byBarangay'     => [],
-            'perScanner'     => [],
             'timeline'       => [],
             'byDay'          => [],
             'heatmap'        => ['days' => [], 'hours' => [], 'cells' => [], 'max' => 0],

@@ -438,48 +438,6 @@ class SubsidyStatsModel extends Model
     }
 
     /**
-     * Per-scanner performance within one batch: handouts logged and distinct
-     * families (control numbers) served, most families first. $onlyUserId
-     * narrows to a single user for the scanner-role reports view.
-     */
-    public function perScanner(int $batchId, ?int $onlyUserId = null): array
-    {
-        if ($batchId <= 0) {
-            return [];
-        }
-
-        try {
-            $b = $this->db->table('subsidy_distribution')
-                ->select('subsidy_distribution.userID,'
-                    . ' COALESCE(' . $this->db->prefixTable('users') . ".username, 'Unknown') AS scanner,"
-                    . ' COUNT(subsidy_distribution.distribution_id) AS handouts,'
-                    . ' COUNT(DISTINCT subsidy_distribution.control_no) AS families')
-                ->join('users', 'users.userID = subsidy_distribution.userID', 'left')
-                ->where('subsidy_distribution.batch_id', $batchId)
-                ->where('subsidy_distribution.dt_voided', null)
-                ->groupBy('subsidy_distribution.userID')
-                // username is selected, so it has to be grouped too or
-                // ONLY_FULL_GROUP_BY rejects the query. One username per userID,
-                // so this changes no row count.
-                ->groupBy('users.username')
-                ->orderBy('families', 'DESC')
-                ->orderBy('scanner', 'ASC');
-            if ($onlyUserId !== null) {
-                $b->where('subsidy_distribution.userID', $onlyUserId);
-            }
-
-            return array_map(static fn ($r) => [
-                'userID'   => (int) $r['userID'],
-                'scanner'  => (string) $r['scanner'],
-                'handouts' => (int) $r['handouts'],
-                'families' => (int) $r['families'],
-            ], $b->get()->getResultArray());
-        } catch (\Throwable $e) {
-            return [];
-        }
-    }
-
-    /**
      * One kiosk's handouts bucketed into fixed time windows within a batch, for
      * the throughput-over-time chart. Buckets align to $bucketMinutes boundaries;
      * each row is a bucket that actually had activity, ordered oldest first.
@@ -617,7 +575,7 @@ class SubsidyStatsModel extends Model
      * $isOpen decides the TTL: closed batches never change again, so they save
      * with ttl 0 (the file cache handler's "never expires").
      *
-     * coverage()/byBarangay()/perScanner()/servedTimeline() each swallow
+     * coverage()/byBarangay()/servedTimeline() each swallow
      * \Throwable and return an empty shape rather than raise, per the scanner
      * module's no-DB test posture, so a transient DB error inside them is
      * indistinguishable from "batch genuinely has no data yet" once it reaches
@@ -660,7 +618,6 @@ class SubsidyStatsModel extends Model
         $snapshot = [
             'coverage'       => $this->coverage($batchId),
             'byBarangay'     => $this->byBarangay($batchId),
-            'perScanner'     => $this->perScanner($batchId),
             'timeline'       => $isOpen ? $this->servedTimeline($batchId) : [],
             'byDay'          => $this->servedByDay($batchId),
             'heatmap'        => ScannerMetrics::heatmap($fold, $batch['daily_start_time'] ?? null, $batch['daily_end_time'] ?? null),
@@ -747,7 +704,7 @@ class SubsidyStatsModel extends Model
 
     /**
      * Usernames for the given ids, in one query. Missing ids simply do not
-     * appear, and the caller falls back to 'Unknown', matching perScanner().
+     * appear, and the caller falls back to 'Unknown'.
      *
      * @param list<int> $userIds
      * @return array<int,string>

@@ -6,9 +6,10 @@ use Dompdf\Dompdf;
 use Dompdf\Options;
 
 /**
- * Renders the Scanner Reports summary (KPIs, per-barangay coverage, per-scanner
- * totals) into a US-Letter PDF that stays a page or two long. Server-side, no
- * chart.js: the barangay coverage is drawn as CSS bars. Mirrors
+ * Renders the Scanner Reports summary (KPIs, per-barangay coverage, rollout by
+ * day, the peak-hours grid, per-scanner performance) into a US-Letter PDF that
+ * stays a few pages long. Server-side, no chart.js: the barangay coverage is
+ * drawn as CSS bars and the heatmap as a shaded table. Mirrors
  * Qr\QrCardPdfGenerator's dompdf setup.
  *
  * Batch-scoped only, no date range, and summary figures only. It used to print
@@ -22,9 +23,10 @@ final class ReportsPdfGenerator
     /**
      * Dompdf, not the queries, is what this report costs. Dropping the roster
      * took the bulk of that away, but the ceilings stay: a citywide batch still
-     * draws a row per barangay and per scanner, and both are deliberately
-     * finite. An unlimited memory_limit would let one oversized report exhaust
-     * the machine and take every other request down with it; hitting a bounded
+     * draws a row per barangay, a row per day and a row per scanner, and a
+     * column per hour in the heatmap, and all of those are deliberately finite.
+     * An unlimited memory_limit would let one oversized report exhaust the
+     * machine and take every other request down with it; hitting a bounded
      * ceiling fails one download.
      */
     private const RENDER_TIME_LIMIT_SECONDS = 300;
@@ -33,9 +35,11 @@ final class ReportsPdfGenerator
     /**
      * @param array{eligible:int,served:int,remaining:int,coverage:int,voided:int} $coverage
      * @param list<array{barangay:string,total:int,received:int,coverage:int}> $byBarangay
-     * @param list<array{userID:int,scanner:string,handouts:int,families:int}> $perScanner
+     * @param list<array{userID:int,scanner:string,families:int,handouts:int,pace:?float,typicalSeconds:?int,share:float,onStationSeconds:int,idleSeconds:int,bestHour:?int,bestHourFamilies:int,longestGapSeconds:int,firstTs:?int,lastTs:?int}> $byScanner SubsidyStatsModel::batchSnapshot()['byScanner'], TOTAL row last
+     * @param array{days:list<string>,hours:list<int>,cells:array<string,array<int,array{families:int,state:string}>>,max:int} $heatmap SubsidyStatsModel::batchSnapshot()['heatmap']
+     * @param list<array{date:string,label:string,served:int}> $byDay SubsidyStatsModel::batchSnapshot()['byDay']
      */
-    public function generate(array $coverage, array $byBarangay, ?string $batchName, array $perScanner = []): string
+    public function generate(array $coverage, array $byBarangay, ?string $batchName, array $byScanner = [], array $heatmap = [], array $byDay = []): string
     {
         $previousMemoryLimit = ini_get('memory_limit');
         $previousTimeLimit   = ini_get('max_execution_time');
@@ -43,7 +47,7 @@ final class ReportsPdfGenerator
         set_time_limit(self::RENDER_TIME_LIMIT_SECONDS);
 
         try {
-            return $this->render($coverage, $byBarangay, $batchName, $perScanner);
+            return $this->render($coverage, $byBarangay, $batchName, $byScanner, $heatmap, $byDay);
         } finally {
             $this->restoreMemoryLimit($previousMemoryLimit === false ? '128M' : $previousMemoryLimit);
             // Same reason as the memory limit: a queue worker rendering a
@@ -96,14 +100,20 @@ final class ReportsPdfGenerator
     /**
      * @param array{eligible:int,served:int,remaining:int,coverage:int,voided:int} $coverage
      * @param list<array{barangay:string,total:int,received:int,coverage:int}> $byBarangay
-     * @param list<array{userID:int,scanner:string,handouts:int,families:int}> $perScanner
+     * @param list<array{userID:int,scanner:string,families:int,handouts:int,pace:?float,typicalSeconds:?int,share:float,onStationSeconds:int,idleSeconds:int,bestHour:?int,bestHourFamilies:int,longestGapSeconds:int,firstTs:?int,lastTs:?int}> $byScanner
+     * @param array{days:list<string>,hours:list<int>,cells:array<string,array<int,array{families:int,state:string}>>,max:int} $heatmap
+     * @param list<array{date:string,label:string,served:int}> $byDay
      */
-    private function render(array $coverage, array $byBarangay, ?string $batchName, array $perScanner): string
+    private function render(array $coverage, array $byBarangay, ?string $batchName, array $byScanner, array $heatmap, array $byDay): string
     {
-        $html = view('Scanner/pdf/report', [
+        $heatmap = $heatmap === [] ? ['days' => [], 'hours' => [], 'cells' => [], 'max' => 0] : $heatmap;
+
+        $html = view('Scanner/pdf/report-hours', [
             'coverage'   => $coverage,
             'byBarangay' => $byBarangay,
-            'perScanner' => $perScanner,
+            'byScanner'  => $byScanner,
+            'heatmap'    => $heatmap,
+            'byDayRows'  => $this->dayRows($byDay, $heatmap, $byScanner),
             'batchName'  => $batchName,
         ]);
 
@@ -116,5 +126,55 @@ final class ReportsPdfGenerator
         $dompdf->render();
 
         return $dompdf->output();
+    }
+
+    /**
+     * Widens each byDay row with a peak hour, read off the heatmap's own cells
+     * for that date so the printed figure can never disagree with the printed
+     * grid below it.
+     *
+     * Scanners active is the batch-wide station count, repeated on every row
+     * rather than sliced per day: the byScanner rows carry no day dimension to
+     * slice on, the same limit DashboardPageBuilder::batchHeadline() documents
+     * for the screen's own headline tile. Printing a fabricated per-day count
+     * would read as more precise than the data supports.
+     *
+     * @param list<array{date:string,label:string,served:int}> $byDay
+     * @param array{days:list<string>,hours:list<int>,cells:array<string,array<int,array{families:int,state:string}>>,max:int} $heatmap
+     * @param list<array{userID:int,scanner:string,families:int,handouts:int}> $byScanner
+     * @return list<array{date:string,label:string,served:int,peakHour:?int,peakFamilies:int,scannersActive:int}>
+     */
+    private function dayRows(array $byDay, array $heatmap, array $byScanner): array
+    {
+        $scannersActive = 0;
+        foreach ($byScanner as $row) {
+            if ((int) ($row['userID'] ?? 0) > 0) {
+                $scannersActive++;
+            }
+        }
+
+        $rows = [];
+        foreach ($byDay as $day) {
+            $peakHour     = null;
+            $peakFamilies = 0;
+            foreach ($heatmap['cells'][$day['date']] ?? [] as $hour => $cell) {
+                $families = (int) $cell['families'];
+                if ($families > $peakFamilies) {
+                    $peakHour     = (int) $hour;
+                    $peakFamilies = $families;
+                }
+            }
+
+            $rows[] = [
+                'date'           => (string) $day['date'],
+                'label'          => (string) $day['label'],
+                'served'         => (int) $day['served'],
+                'peakHour'       => $peakHour,
+                'peakFamilies'   => $peakFamilies,
+                'scannersActive' => $scannersActive,
+            ];
+        }
+
+        return $rows;
     }
 }

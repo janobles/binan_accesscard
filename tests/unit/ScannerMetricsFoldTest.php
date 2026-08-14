@@ -6,11 +6,11 @@ use App\Libraries\Scanner\ScannerMetrics;
 use CodeIgniter\Test\CIUnitTestCase;
 
 /**
- * The fold's counting half: families are distinct control numbers, handouts are
- * rows, and both have to agree with SubsidyStatsModel::perScanner(), which
- * defines them the same way in SQL. The totals row is folded by the same code
- * as the scanner rows, so a batch total can never be a separately computed
- * number that happens to sit at the bottom of the table.
+ * The fold's counting half: families are distinct control numbers, handouts
+ * are rows, the same definitions the grouped SQL query used before the fold
+ * replaced it. The totals row is folded by the same code as the scanner rows,
+ * so a batch total can never be a separately computed number that happens to
+ * sit at the bottom of the table.
  */
 final class ScannerMetricsFoldTest extends CIUnitTestCase
 {

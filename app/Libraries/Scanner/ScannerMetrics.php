@@ -14,8 +14,8 @@ namespace App\Libraries\Scanner;
  * second GROUP BY, keeps a family scanned at two stations in one hour counted
  * once instead of twice.
  *
- * "Families" is distinct control numbers and "handouts" is rows, matching
- * SubsidyStatsModel::perScanner()'s SQL definitions exactly.
+ * "Families" is distinct control numbers and "handouts" is rows, the same
+ * definitions the grouped SQL query used before this fold replaced it.
  */
 final class ScannerMetrics
 {

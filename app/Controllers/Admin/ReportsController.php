@@ -30,12 +30,11 @@ class ReportsController extends BaseController
         $stats      = model(SubsidyStatsModel::class);
         $snapshot   = $batchId > 0
             ? $stats->batchSnapshot($batchId, $isOpen)
-            : ['coverage' => ['eligible' => 0, 'served' => 0, 'remaining' => 0, 'coverage' => 0, 'voided' => 0], 'byBarangay' => [], 'perScanner' => [], 'timeline' => [], 'byDay' => [], 'heatmap' => ['days' => [], 'hours' => [], 'cells' => [], 'max' => 0], 'byScanner' => [], 'byScannerByDay' => [], 'days' => []];
+            : ['coverage' => ['eligible' => 0, 'served' => 0, 'remaining' => 0, 'coverage' => 0, 'voided' => 0], 'byBarangay' => [], 'timeline' => [], 'byDay' => [], 'heatmap' => ['days' => [], 'hours' => [], 'cells' => [], 'max' => 0], 'byScanner' => [], 'byScannerByDay' => [], 'days' => []];
 
         return $this->response->setJSON([
             'coverage'       => $snapshot['coverage'],
             'barangay'       => $snapshot['byBarangay'],
-            'perScanner'     => $snapshot['perScanner'],
             'timeline'       => $snapshot['timeline'],
             'byDay'          => $snapshot['byDay'] ?? [],
             'heatmap'        => $snapshot['heatmap'] ?? ['days' => [], 'hours' => [], 'cells' => [], 'max' => 0],
@@ -54,11 +53,19 @@ class ReportsController extends BaseController
         [$batchId, $batch]  = BatchScope::resolve($batches, $batchModel->activeBatch(), (int) $this->request->getGet('batch'));
         $stats              = model(SubsidyStatsModel::class);
 
+        // Read from the same cached snapshot the screen renders, per the export
+        // rule in docs/17-dashboard-and-reports.md: a fresh query here could
+        // land between two scans and disagree with the page the officer was
+        // just looking at.
+        $snapshot = $batchId > 0 ? $stats->batchSnapshot($batchId, ($batch['closed_at'] ?? null) === null) : null;
+
         $bytes = (new \App\Libraries\Scanner\ReportsPdfGenerator())->generate(
             $stats->coverage($batchId),
             $stats->byBarangay($batchId),
             $batch['name'] ?? null,
-            $batchId > 0 ? $stats->perScanner($batchId) : []
+            $snapshot['byScanner'] ?? [],
+            $snapshot['heatmap'] ?? [],
+            $snapshot['byDay'] ?? []
         );
 
         $name = 'subsidy-report-' . ($batchId > 0 ? 'batch' . $batchId : 'all') . '.pdf';

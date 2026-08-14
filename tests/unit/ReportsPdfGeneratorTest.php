@@ -24,10 +24,10 @@ final class ReportsPdfGeneratorTest extends CIUnitTestCase
      */
     public function testTheUnclaimedFamiliesAreCountedNotListed(): void
     {
-        $html = view('Scanner/pdf/report', [
+        $html = view('Scanner/pdf/report-hours', [
             'coverage'   => ['eligible' => 3, 'served' => 2, 'remaining' => 1, 'coverage' => 67, 'voided' => 0],
             'byBarangay' => [],
-            'perScanner' => [],
+            'byScanner'  => [],
             'batchName'  => 'Batch 1',
         ], ['saveData' => false]);
 

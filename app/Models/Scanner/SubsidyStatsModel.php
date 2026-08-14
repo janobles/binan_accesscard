@@ -787,6 +787,12 @@ class SubsidyStatsModel extends Model
      * the ones fixed when the batch is created or opened, not the counters that
      * move during distribution, so a live batch keeps its cache hits.
      *
+     * daily_start_time and daily_end_time are part of that identity too, not a
+     * counter: they are what the cached heatmap used to decide an empty cell
+     * was a staffed-but-idle hour rather than a closed one. saveSchedule() can
+     * edit them on a batch that already has a cache entry, and a closed batch
+     * caches with ttl 0, so leaving them out would serve the old hours forever.
+     *
      * @return string Empty when the row is missing or the query fails, which
      *                tells batchSnapshot() to skip the cache write entirely.
      */
@@ -798,7 +804,7 @@ class SubsidyStatsModel extends Model
 
         try {
             $row = $this->db->table('distribution_batch')
-                ->select('name, scheduled_start, started_at, closed_at, created_by')
+                ->select('name, scheduled_start, started_at, closed_at, created_by, daily_start_time, daily_end_time')
                 ->where('batch_id', $batchId)
                 ->get()->getRowArray();
         } catch (\Throwable $e) {

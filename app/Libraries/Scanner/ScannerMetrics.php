@@ -269,4 +269,73 @@ final class ScannerMetrics
             'bestHourFamilies' => $bestCount,
         ];
     }
+
+    /**
+     * The grid the heatmap table renders. Hours span the batch's declared daily
+     * window, widened to include any hour that actually saw a scan: the window
+     * decides what counts as closed, never whether real work is shown.
+     *
+     * @param array{byDayHour:array<string,array<int,int>>,days:list<string>} $fold
+     * @param string|null $dailyStart HH:MM:SS from distribution_batch, null when unset
+     * @param string|null $dailyEnd HH:MM:SS from distribution_batch, null when unset
+     * @return array{days:list<string>,hours:list<int>,cells:array<string,array<int,array{families:int,state:string}>>,max:int}
+     */
+    public static function heatmap(array $fold, ?string $dailyStart, ?string $dailyEnd): array
+    {
+        $days = $fold['days'];
+        if ($days === []) {
+            return ['days' => [], 'hours' => [], 'cells' => [], 'max' => 0];
+        }
+
+        $openFrom = self::hourOf($dailyStart);
+        $openTo   = self::hourOf($dailyEnd);
+
+        $hours = [];
+        if ($openFrom !== null && $openTo !== null) {
+            for ($hour = $openFrom; $hour < max($openFrom + 1, $openTo); $hour++) {
+                $hours[$hour] = true;
+            }
+        }
+        foreach ($fold['byDayHour'] as $dayHours) {
+            foreach (array_keys($dayHours) as $hour) {
+                $hours[(int) $hour] = true;
+            }
+        }
+        $hourList = array_keys($hours);
+        sort($hourList);
+
+        $cells = [];
+        $max   = 0;
+        foreach ($days as $day) {
+            foreach ($hourList as $hour) {
+                $families = (int) ($fold['byDayHour'][$day][$hour] ?? 0);
+                $max      = max($max, $families);
+
+                if ($families > 0) {
+                    $state = 'served';
+                } elseif ($openFrom === null || $openTo === null) {
+                    // No declared window, so no hour can be called closed.
+                    $state = 'empty';
+                } else {
+                    $state = $hour >= $openFrom && $hour < $openTo ? 'empty' : 'closed';
+                }
+
+                $cells[$day][$hour] = ['families' => $families, 'state' => $state];
+            }
+        }
+
+        return ['days' => $days, 'hours' => $hourList, 'cells' => $cells, 'max' => $max];
+    }
+
+    /** Hour component of an HH:MM:SS column value, null when it is not one. */
+    private static function hourOf(?string $clockTime): ?int
+    {
+        if ($clockTime === null || $clockTime === '') {
+            return null;
+        }
+
+        $parts = explode(':', $clockTime);
+
+        return is_numeric($parts[0]) ? (int) $parts[0] : null;
+    }
 }

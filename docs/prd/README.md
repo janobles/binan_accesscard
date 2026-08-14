@@ -13,3 +13,4 @@ documented in the numbered handbook chapters. The PRD stays as it was written.
 | Document | Status |
 |---|---|
 | [Temporary aid patching](temp-aid-patching.md) | Not started, blocked on the consolidated household spreadsheet |
+| [Access card issuance](access-card-issuance.md) | Not started, follows the patching work |

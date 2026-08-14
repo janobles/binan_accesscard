@@ -33,17 +33,16 @@ final class ScannerPerformanceScopeTest extends CIUnitTestCase
     }
 
     /**
-     * The bug kioskSnapshot() used to have: pace divided a scanner's families
-     * by the batch's wall clock (started_at to now), so a scanner who worked
-     * two of a three-day batch's days had one idle night folded into their
-     * denominator and read at a fraction of their real rate. kioskSnapshot()
-     * now folds each scanner's own event stream through ScannerMetrics, which
-     * derives active time from the scans themselves, so pace for a two-day
-     * scanner matches an equally fast three-day scanner exactly - this test
-     * pins that property by running the same fold+derive kioskSnapshot() runs,
-     * since the method itself is private and DB-backed.
+     * ScannerMetrics::fold()/derive() - the arithmetic kioskSnapshot() now
+     * runs, not kioskSnapshot() itself - gives a two-day scanner and an
+     * equally fast three-day scanner the same pace, because active time comes
+     * from the scans themselves rather than the batch's wall clock. This pins
+     * that library-level property. It is not a regression guard for
+     * kioskSnapshot(): the bug lived in a wall-clock block that called neither
+     * function, so this would have passed unchanged against the buggy code.
+     * ScannerKioskPaceFeatureTest drives the actual endpoint for that.
      */
-    public function testPaceIgnoresDaysNotWorkedTheSameWayKioskSnapshotComputesIt(): void
+    public function testFoldAndDeriveIgnoreDaysNotWorked(): void
     {
         $twoOfThreeDays = $this->cadenceEvents(7, ['2026-08-11', '2026-08-13']);
         $allThreeDays   = $this->cadenceEvents(8, ['2026-08-11', '2026-08-12', '2026-08-13']);
@@ -63,9 +62,12 @@ final class ScannerPerformanceScopeTest extends CIUnitTestCase
     }
 
     /**
-     * Regression guard for the wall-clock bug directly: kioskSnapshot() must
-     * no longer read started_at/closed_at to build a denominator, and must
-     * fold the batch's scan events through ScannerMetrics instead.
+     * Source-text check, not a behaviour test: kioskSnapshot()'s body must not
+     * mention started_at/closed_at and must call ScannerMetrics. Cheap to run
+     * and catches the literal wall-clock block coming back, but a rewrite that
+     * kept these calls while adding a new division elsewhere in the method
+     * would slip past it - ScannerKioskPaceFeatureTest is the one that
+     * actually exercises the arithmetic through the endpoint.
      */
     public function testKioskSnapshotNoLongerDividesByBatchWallClock(): void
     {

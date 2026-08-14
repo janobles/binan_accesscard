@@ -376,7 +376,9 @@ class ScanController extends BaseController
             $metrics   = array_merge($mine, ScannerMetrics::derive($row, (int) $totalFold['total']['families']));
         }
 
-        $timeline = $batchId > 0 ? $stats->timelineForUserInBatch($batchId, $userId, 60) : [];
+        // Bucket size is left to timelineForUserInBatch()'s own default
+        // (60 minutes) rather than repeated here, so the two cannot drift.
+        $timeline = $batchId > 0 ? $stats->timelineForUserInBatch($batchId, $userId) : [];
 
         return [
             'mine'     => $mine,

@@ -143,8 +143,8 @@ final class DashboardPaneUrlFeatureTest extends CIUnitTestCase
 
         preg_match_all('/id="([^"]+)"\s+class="nav-link[^"]*"[^>]*aria-controls="([^"]+)"/', $body, $tabs, PREG_SET_ORDER);
 
-        // Activity's three views plus Barangay coverage's two.
-        $this->assertCount(5, $tabs, 'Expected five card tabs across the two strips.');
+        // Activity's three views, Barangay coverage's two, and Stations' two.
+        $this->assertCount(7, $tabs, 'Expected seven card tabs across the three strips.');
 
         foreach ($tabs as [, $tabId, $paneId]) {
             $this->assertSame(

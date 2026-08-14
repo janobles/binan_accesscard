@@ -107,6 +107,41 @@ final class ScannerMetrics
     }
 
     /**
+     * The same fold, partitioned by calendar day first. Each day's figures come
+     * from the same fold() the batch total does, so a day's pace and the
+     * batch's pace can never disagree about what pace means.
+     *
+     * Partitioning before folding, rather than folding once and slicing the
+     * result, is what keeps a gap from ever spanning midnight: an overnight gap
+     * would exceed the idle threshold and be discarded anyway, so making the
+     * boundary explicit here is the correct reading, not just a convenient one.
+     *
+     * $events is already sorted by userID then ts (scanEvents()'s contract), and
+     * splitting it into day buckets in that same order preserves that ordering
+     * inside each bucket, so every day's fold sees its events in the order
+     * fold() requires without a re-sort.
+     *
+     * @param list<array{userID:int,ts:int,control_no:int}> $events sorted by userID then ts
+     * @return array<string,array{scanners:list<array>,total:array,byDayHour:array<string,array<int,int>>,days:list<string>}>
+     */
+    public static function foldByDay(array $events, int $idleGapSeconds = self::IDLE_GAP_SECONDS): array
+    {
+        $byDay = [];
+        foreach ($events as $event) {
+            $day = date('Y-m-d', (int) $event['ts']);
+            $byDay[$day][] = $event;
+        }
+        ksort($byDay);
+
+        $out = [];
+        foreach ($byDay as $day => $dayEvents) {
+            $out[$day] = self::fold($dayEvents, $idleGapSeconds);
+        }
+
+        return $out;
+    }
+
+    /**
      * The TOTAL row, aggregated from the per-scanner accumulators rather than
      * walked separately. Deriving it from the same rows is what stops a total
      * being a differently computed number that happens to sit at the bottom of

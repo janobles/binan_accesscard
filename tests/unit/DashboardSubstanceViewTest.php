@@ -140,4 +140,85 @@ final class DashboardSubstanceViewTest extends CIUnitTestCase
         $builder = file_get_contents(APPPATH . 'Libraries/DashboardPageBuilder.php');
         $this->assertStringNotContainsString('$batchBodyTab', $builder);
     }
+
+    /**
+     * The Stations card gets its own All/Per day strip (task 8b), sharing the
+     * card_tabs stripId contract the Barangay and Activity strips already
+     * follow: pane ids are "<stripId>-pane-<key>" against "<stripId>-tab-<key>".
+     */
+    public function testStationsCardHasAnAllAndPerDayStrip(): void
+    {
+        $overview = file_get_contents(APPPATH . 'Views/Admin/batch-overview.php');
+
+        $this->assertStringContainsString("'stripId' => 'stations'", $overview);
+        $this->assertStringContainsString("['key' => 'all', 'label' => 'All']", $overview);
+        $this->assertStringContainsString("['key' => 'day', 'label' => 'Per day']", $overview);
+        $this->assertStringContainsString('id="stations-pane-all"', $overview);
+        $this->assertStringContainsString('id="stations-pane-day"', $overview);
+    }
+
+    /**
+     * Neither of the Per day pane's two non-table states may look like a
+     * broken table: no day picked says which control to use, and a picked day
+     * with no rows says that instead of rendering zero rows.
+     */
+    public function testStationsPerDayPaneNamesBothItsEmptyStates(): void
+    {
+        $overview = file_get_contents(APPPATH . 'Views/Admin/batch-overview.php');
+
+        $this->assertStringContainsString('Use the Day picker above to choose a day.', $overview);
+        $this->assertStringContainsString('No station logged a scan on', $overview);
+    }
+
+    /**
+     * batch-stations-table.php renders twice on this page once a day is
+     * picked (the All pane and the Per day pane). CI4 carries one view() call's
+     * data into the next, so every parameter has to be passed explicitly on
+     * both calls rather than relying on the partial's own defaults - the same
+     * fix the Activity card's Hours/Weekdays panes already carry.
+     */
+    public function testBothStationsTableRendersPassEveryParameterExplicitly(): void
+    {
+        $overview = file_get_contents(APPPATH . 'Views/Admin/batch-overview.php');
+        $marker   = "view('Admin/batch-stations-table', [";
+
+        $calls = [];
+        $offset = 0;
+        while (($pos = strpos($overview, $marker, $offset)) !== false) {
+            $close  = strpos($overview, ']) ?>', $pos);
+            $calls[] = substr($overview, $pos, $close - $pos);
+            $offset  = $close + 1;
+        }
+
+        $this->assertCount(2, $calls, 'batch-stations-table.php must be rendered from exactly two call sites: All and Per day.');
+
+        foreach ($calls as $call) {
+            foreach (['byScanner', 'batchId', 'canDrillIn'] as $param) {
+                $this->assertStringContainsString(
+                    "'" . $param . "'",
+                    $call,
+                    "'" . $param . "' must be passed explicitly on every batch-stations-table.php render call."
+                );
+            }
+        }
+    }
+
+    /**
+     * SubsidyStatsModel::batchSnapshot() gains byScannerByDay alongside the
+     * batch-wide byScanner, and every one of the three empty-shape literals
+     * that describe an empty snapshot (ReportsController::stats(),
+     * DashboardPageBuilder::emptyBatchSnapshot(), and batch-overview.php's own
+     * fallback) has to carry it too, or a missing key renders a blank card
+     * with no error anywhere.
+     */
+    public function testByScannerByDayIsInEveryEmptySnapshotLiteral(): void
+    {
+        $controller = file_get_contents(APPPATH . 'Controllers/Admin/ReportsController.php');
+        $builder    = file_get_contents(APPPATH . 'Libraries/DashboardPageBuilder.php');
+        $overview   = file_get_contents(APPPATH . 'Views/Admin/batch-overview.php');
+
+        $this->assertStringContainsString("'byScannerByDay'", $controller);
+        $this->assertStringContainsString("'byScannerByDay' => []", $builder);
+        $this->assertStringContainsString("'byScannerByDay' => []", $overview);
+    }
 }

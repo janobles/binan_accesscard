@@ -23,7 +23,7 @@
 $batches = $batches ?? [];
 $batchRow = $batchRow ?? null;
 $batchOpen = (bool) ($batchOpen ?? false);
-$batchSnapshot = $batchSnapshot ?? ['coverage' => ['eligible' => 0, 'served' => 0, 'remaining' => 0, 'coverage' => 0, 'voided' => 0], 'byBarangay' => [], 'perScanner' => [], 'timeline' => [], 'byDay' => [], 'heatmap' => ['days' => [], 'hours' => [], 'cells' => [], 'max' => 0], 'byScanner' => [], 'days' => []];
+$batchSnapshot = $batchSnapshot ?? ['coverage' => ['eligible' => 0, 'served' => 0, 'remaining' => 0, 'coverage' => 0, 'voided' => 0], 'byBarangay' => [], 'perScanner' => [], 'timeline' => [], 'byDay' => [], 'heatmap' => ['days' => [], 'hours' => [], 'cells' => [], 'max' => 0], 'byScanner' => [], 'byScannerByDay' => [], 'days' => []];
 $remainingPage = $remainingPage ?? ['rows' => [], 'keyword' => '', 'page' => 1, 'perPage' => 25, 'perPageOptions' => [10, 25, 50, 100], 'totalPages' => 1, 'totalRows' => 0, 'fromRecord' => 0, 'toRecord' => 0];
 $weekdayHeatmap = $weekdayHeatmap ?? ['days' => [], 'hours' => [], 'cells' => [], 'max' => 0];
 $selectedDay = $selectedDay ?? null;
@@ -44,6 +44,7 @@ $timeline = $batchSnapshot['timeline'];
 $byDay = $batchSnapshot['byDay'] ?? [];
 $heatmap = $batchSnapshot['heatmap'] ?? ['days' => [], 'hours' => [], 'cells' => [], 'max' => 0];
 $byScanner = $batchSnapshot['byScanner'] ?? [];
+$byScannerByDay = $batchSnapshot['byScannerByDay'] ?? [];
 
 $batchId = (int) ($batchRow['batch_id'] ?? 0);
 $noBatch = $batchRow === null;
@@ -238,14 +239,54 @@ $noEligible = ! $noBatch && $c['eligible'] === 0;
   </div>
 </section>
 
-<section class="card batch-card" id="stationsCard">
+<section class="card batch-card" id="stationsCard" data-strip="all">
   <div class="card-body">
     <h3 class="batch-pane-title">Stations</h3>
-    <?= view('Admin/batch-stations-table', [
-        'byScanner'  => $byScanner,
-        'batchId'    => $batchId,
-        'canDrillIn' => $canDrillInStations,
+    <?php /* All is the batch-wide fold every earlier task shipped; Per day
+             narrows to one day's fold (SubsidyStatsModel::batchSnapshot()'s
+             byScannerByDay), which task 9 wires to the #dayPick control this
+             card shares with the Activity card's Hours view. Same stripId
+             contract as the Barangay and Activity strips: pane ids are
+             "<stripId>-pane-<key>" against "<stripId>-tab-<key>". */ ?>
+    <?= view('components/card_tabs', [
+        'tabs' => [
+            ['key' => 'all', 'label' => 'All'],
+            ['key' => 'day', 'label' => 'Per day'],
+        ],
+        'active' => 'all',
+        'stripId' => 'stations',
     ]) ?>
+
+    <div id="stations-pane-all" role="tabpanel" aria-labelledby="stations-tab-all" data-strip-pane="all">
+      <?php /* Every parameter passed explicitly, including the defaults this
+               card's own extraction already computed: this partial renders a
+               second time below for the Per day pane, and CI4's renderer
+               carries one view() call's data into the next, so the two would
+               otherwise depend on which one runs first. Same fix as the
+               Activity card's Hours/Weekdays panes. */ ?>
+      <?= view('Admin/batch-stations-table', [
+          'byScanner'  => $byScanner,
+          'batchId'    => $batchId,
+          'canDrillIn' => $canDrillInStations,
+      ]) ?>
+    </div>
+
+    <div id="stations-pane-day" role="tabpanel" aria-labelledby="stations-tab-day" data-strip-pane="day" hidden>
+      <?php
+      $dayRows = $selectedDay !== null ? ($byScannerByDay[$selectedDay] ?? []) : null;
+      ?>
+      <?php if ($selectedDay === null): ?>
+      <p class="text-muted mb-0" id="stationsDayHint">Use the Day picker above to choose a day.</p>
+      <?php elseif ($dayRows === []): ?>
+      <p class="text-muted mb-0" id="stationsDayHint">No station logged a scan on <?= esc(date('M j', strtotime($selectedDay))) ?>.</p>
+      <?php else: ?>
+      <?= view('Admin/batch-stations-table', [
+          'byScanner'  => $dayRows,
+          'batchId'    => $batchId,
+          'canDrillIn' => $canDrillInStations,
+      ]) ?>
+      <?php endif; ?>
+    </div>
   </div>
 </section>
 <?php if ($canDrillInStations): ?>
@@ -305,14 +346,15 @@ $noEligible = ! $noBatch && $c['eligible'] === 0;
 
 <script id="reportsData" type="application/json"><?= json_encode(
     [
-        'coverage'    => $c,
-        'barangay'    => $byBarangay,
-        'timeline'    => $timeline,
-        'byDay'       => $byDay,
-        'heatmap'     => $heatmap,
-        'byScanner'   => $byScanner,
-        'days'        => $batchSnapshot['days'] ?? [],
-        'selectedDay' => $selectedDay,
+        'coverage'       => $c,
+        'barangay'       => $byBarangay,
+        'timeline'       => $timeline,
+        'byDay'          => $byDay,
+        'heatmap'        => $heatmap,
+        'byScanner'      => $byScanner,
+        'byScannerByDay' => $byScannerByDay,
+        'days'           => $batchSnapshot['days'] ?? [],
+        'selectedDay'    => $selectedDay,
     ],
     JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT,
 ) ?></script>

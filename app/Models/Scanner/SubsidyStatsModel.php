@@ -636,18 +636,37 @@ class SubsidyStatsModel extends Model
             return $cached['snapshot'];
         }
 
-        $fold  = ScannerMetrics::fold($this->scanEvents($batchId));
-        $batch = $this->batchWindow($batchId);
+        $events    = $this->scanEvents($batchId);
+        $fold      = ScannerMetrics::fold($events);
+        $foldByDay = ScannerMetrics::foldByDay($events);
+        $batch     = $this->batchWindow($batchId);
+
+        // Resolved once for the whole snapshot rather than once per call to
+        // scannerRows(): without this, adding a day's worth of rows turns one
+        // username query into one per day the batch ran.
+        $userIds = array_map(static fn ($row) => (int) $row['userID'], $fold['scanners']);
+        foreach ($foldByDay as $dayFold) {
+            foreach ($dayFold['scanners'] as $row) {
+                $userIds[] = (int) $row['userID'];
+            }
+        }
+        $names = $this->scannerNames($userIds);
+
+        $byScannerByDay = [];
+        foreach ($foldByDay as $day => $dayFold) {
+            $byScannerByDay[$day] = $this->scannerRows($dayFold, $names);
+        }
 
         $snapshot = [
-            'coverage'   => $this->coverage($batchId),
-            'byBarangay' => $this->byBarangay($batchId),
-            'perScanner' => $this->perScanner($batchId),
-            'timeline'   => $isOpen ? $this->servedTimeline($batchId) : [],
-            'byDay'      => $this->servedByDay($batchId),
-            'heatmap'    => ScannerMetrics::heatmap($fold, $batch['daily_start_time'] ?? null, $batch['daily_end_time'] ?? null),
-            'byScanner'  => $this->scannerRows($fold),
-            'days'       => $fold['days'],
+            'coverage'       => $this->coverage($batchId),
+            'byBarangay'     => $this->byBarangay($batchId),
+            'perScanner'     => $this->perScanner($batchId),
+            'timeline'       => $isOpen ? $this->servedTimeline($batchId) : [],
+            'byDay'          => $this->servedByDay($batchId),
+            'heatmap'        => ScannerMetrics::heatmap($fold, $batch['daily_start_time'] ?? null, $batch['daily_end_time'] ?? null),
+            'byScanner'      => $this->scannerRows($fold, $names),
+            'byScannerByDay' => $byScannerByDay,
+            'days'           => $fold['days'],
         ];
 
         if ($fingerprint !== '' && $this->dbIsHealthy()) {
@@ -667,12 +686,19 @@ class SubsidyStatsModel extends Model
      * the TOTAL row is folded by the same code as the rows above it, so a total
      * can never be a separately computed number.
      *
+     * $names, when given, is the pre-resolved userID-to-username map for the
+     * whole snapshot (batchSnapshot() builds one and reuses it across the
+     * batch-wide fold and every day's fold); left null, it is resolved here for
+     * this fold alone, which is what the test suite's direct reflection calls
+     * still exercise.
+     *
      * @param array{scanners:list<array>,total:array} $fold
+     * @param array<int,string>|null $names
      * @return list<array<string,mixed>>
      */
-    private function scannerRows(array $fold): array
+    private function scannerRows(array $fold, ?array $names = null): array
     {
-        $names = $this->scannerNames(array_map(
+        $names ??= $this->scannerNames(array_map(
             static fn ($row) => (int) $row['userID'],
             $fold['scanners']
         ));

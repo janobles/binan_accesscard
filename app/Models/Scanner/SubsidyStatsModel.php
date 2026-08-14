@@ -519,6 +519,84 @@ class SubsidyStatsModel extends Model
     }
 
     /**
+     * The batch's live scan events, narrowest possible shape, ordered so
+     * ScannerMetrics::fold() can walk them in one pass. This is the single
+     * source behind the Stations table, the station modal, the kiosk
+     * performance page and the peak-hours heatmap.
+     *
+     * Joined to batch_eligibility on the same terms as coverage(), so an
+     * off-roster scan is invisible here exactly as it is there. It is still
+     * logged and audited; it just never moves a reported figure.
+     *
+     * @return list<array{userID:int,ts:int,control_no:int}>
+     */
+    public function scanEvents(int $batchId): array
+    {
+        if ($batchId <= 0) {
+            return [];
+        }
+
+        try {
+            $rows = $this->db->table('subsidy_distribution sd')
+                ->select('sd.userID, sd.dt_created, sd.control_no')
+                ->join('batch_eligibility be', 'be.batch_id = sd.batch_id AND be.headID = sd.memberID')
+                ->where('sd.batch_id', $batchId)
+                ->where('sd.dt_voided', null)
+                ->orderBy('sd.userID', 'ASC')
+                ->orderBy('sd.dt_created', 'ASC')
+                ->get()->getResultArray();
+
+            return array_map(static fn ($r) => [
+                'userID'     => (int) $r['userID'],
+                'ts'         => (int) strtotime((string) $r['dt_created']),
+                'control_no' => (int) $r['control_no'],
+            ], $rows);
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
+
+    /**
+     * Weekday by hour across every batch, for the heatmap's all-time view. This
+     * is the one figure on the pane that ignores the batch picker, and the only
+     * one computed in SQL rather than folded in PHP: the row set is every scan
+     * the city has ever logged, which is too large to pull.
+     *
+     * Day-of-week is normalised to 0 for Sunday through 6 for Saturday. The two
+     * CI backends disagree here, so the driver is asked which expression to
+     * use rather than one being assumed.
+     *
+     * @return list<array{dow:int,hour:int,families:int}>
+     */
+    public function weekdayHistogram(): array
+    {
+        $isSQLite = str_contains(strtolower($this->db->getPlatform()), 'sqlite');
+        $dow      = $isSQLite
+            ? "CAST(strftime('%w', dt_created) AS INTEGER)"
+            : 'DAYOFWEEK(dt_created) - 1';
+        $hour = $isSQLite
+            ? "CAST(strftime('%H', dt_created) AS INTEGER)"
+            : 'HOUR(dt_created)';
+
+        try {
+            $rows = $this->db->table('subsidy_distribution')
+                ->select($dow . ' AS dow, ' . $hour . ' AS hour, COUNT(DISTINCT control_no) AS families', false)
+                ->where('dt_voided', null)
+                ->groupBy('dow')
+                ->groupBy('hour')
+                ->get()->getResultArray();
+
+            return array_map(static fn ($r) => [
+                'dow'      => (int) $r['dow'],
+                'hour'     => (int) $r['hour'],
+                'families' => (int) $r['families'],
+            ], $rows);
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
+
+    /**
      * Per-batch cache key. A closed batch's figures are immutable, so they are
      * cached indefinitely; the open batch caches briefly and is invalidated by
      * every scan, mirroring how AuditTrailsModel clears the dashboard counts.

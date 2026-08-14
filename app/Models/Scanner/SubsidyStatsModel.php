@@ -525,22 +525,28 @@ class SubsidyStatsModel extends Model
      * CI backends disagree here, so the driver is asked which expression to
      * use rather than one being assumed.
      *
+     * Joined to batch_eligibility on the same terms as scanEvents(), so an
+     * off-roster scan is invisible here too: this view spans every batch the
+     * city has run, but each row still carries its own batch_id, so the join
+     * stays exact per row even across batches.
+     *
      * @return list<array{dow:int,hour:int,families:int}>
      */
     public function weekdayHistogram(): array
     {
         $isSQLite = str_contains(strtolower($this->db->getPlatform()), 'sqlite');
         $dow      = $isSQLite
-            ? "CAST(strftime('%w', dt_created) AS INTEGER)"
-            : 'DAYOFWEEK(dt_created) - 1';
+            ? "CAST(strftime('%w', sd.dt_created) AS INTEGER)"
+            : 'DAYOFWEEK(sd.dt_created) - 1';
         $hour = $isSQLite
-            ? "CAST(strftime('%H', dt_created) AS INTEGER)"
-            : 'HOUR(dt_created)';
+            ? "CAST(strftime('%H', sd.dt_created) AS INTEGER)"
+            : 'HOUR(sd.dt_created)';
 
         try {
-            $rows = $this->db->table('subsidy_distribution')
-                ->select($dow . ' AS dow, ' . $hour . ' AS hour, COUNT(DISTINCT control_no) AS families', false)
-                ->where('dt_voided', null)
+            $rows = $this->db->table('subsidy_distribution sd')
+                ->select($dow . ' AS dow, ' . $hour . ' AS hour, COUNT(DISTINCT sd.control_no) AS families', false)
+                ->join('batch_eligibility be', 'be.batch_id = sd.batch_id AND be.headID = sd.memberID')
+                ->where('sd.dt_voided', null)
                 ->groupBy('dow')
                 ->groupBy('hour')
                 ->get()->getResultArray();

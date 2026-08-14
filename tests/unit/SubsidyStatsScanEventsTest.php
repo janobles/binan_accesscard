@@ -153,22 +153,30 @@ final class SubsidyStatsScanEventsTest extends CIUnitTestCase
         $db = db_connect();
 
         ReferentialFixture::claimParents($db, [500, 600, 700], 0);
+        $db->table('distribution_batch')->insert([
+            'batch_id' => 1, 'name' => 'Rice Q1', 'subsidy_type_id' => 1, 'eligible_count' => 3,
+        ]);
+        $db->table('batch_eligibility')->insertBatch([
+            ['batch_id' => 1, 'headID' => 500],
+            ['batch_id' => 1, 'headID' => 600],
+            ['batch_id' => 1, 'headID' => 700],
+        ]);
 
         // Two live scans, same day and hour, different families: one bucket
         // with families = 2.
         $db->table('subsidy_distribution')->insert([
             'control_no' => 500, 'memberID' => 500, 'subsidy_type_id' => 1,
-            'claim_date' => '2026-08-10', 'dt_created' => '2026-08-10 09:15:00',
+            'claim_date' => '2026-08-10', 'dt_created' => '2026-08-10 09:15:00', 'batch_id' => 1,
         ]);
         $db->table('subsidy_distribution')->insert([
             'control_no' => 600, 'memberID' => 600, 'subsidy_type_id' => 1,
-            'claim_date' => '2026-08-10', 'dt_created' => '2026-08-10 09:47:00',
+            'claim_date' => '2026-08-10', 'dt_created' => '2026-08-10 09:47:00', 'batch_id' => 1,
         ]);
         // A voided scan in a different hour: must never surface as a bucket.
         $db->table('subsidy_distribution')->insert([
             'control_no' => 700, 'memberID' => 700, 'subsidy_type_id' => 1,
             'claim_date' => '2026-08-11', 'dt_created' => '2026-08-11 14:20:00',
-            'dt_voided'  => '2026-08-11 14:21:00',
+            'dt_voided'  => '2026-08-11 14:21:00', 'batch_id' => 1,
         ]);
 
         $buckets = (new SubsidyStatsModel())->weekdayHistogram();
@@ -196,5 +204,45 @@ final class SubsidyStatsScanEventsTest extends CIUnitTestCase
         $this->assertNotNull($liveBucket, 'The two live scans must produce a bucket.');
         $this->assertSame(2, $liveBucket['families']);
         $this->assertNull($voidedHour, 'The voided scan must not surface as a bucket.');
+    }
+
+    /**
+     * Finding 4 (task-13): the Weekdays grid counted a scan the Hours grid
+     * excludes, because weekdayHistogram() had no batch_eligibility join. The
+     * all-time view spans many batches, but each scan still carries its own
+     * batch_id, so the join stays exact per row even here.
+     */
+    public function testWeekdayHistogramExcludesAnOffRosterScan(): void
+    {
+        $db = db_connect();
+
+        ReferentialFixture::claimParents($db, [500, 999], 0);
+        $db->table('distribution_batch')->insert([
+            'batch_id' => 1, 'name' => 'Rice Q1', 'subsidy_type_id' => 1, 'eligible_count' => 1,
+        ]);
+        // Only head 500 is on the roster.
+        $db->table('batch_eligibility')->insert(['batch_id' => 1, 'headID' => 500]);
+
+        $db->table('subsidy_distribution')->insert([
+            'control_no' => 500, 'memberID' => 500, 'subsidy_type_id' => 1,
+            'claim_date' => '2026-08-10', 'dt_created' => '2026-08-10 10:05:00', 'batch_id' => 1,
+        ]);
+        // head 999 was never granted eligibility for batch 1.
+        $db->table('subsidy_distribution')->insert([
+            'control_no' => 999, 'memberID' => 999, 'subsidy_type_id' => 1,
+            'claim_date' => '2026-08-10', 'dt_created' => '2026-08-10 10:05:00', 'batch_id' => 1,
+        ]);
+
+        $buckets = (new SubsidyStatsModel())->weekdayHistogram();
+
+        $bucket = null;
+        foreach ($buckets as $row) {
+            if ($row['hour'] === 10) {
+                $bucket = $row;
+            }
+        }
+
+        $this->assertNotNull($bucket, 'The on-roster scan must still produce a bucket.');
+        $this->assertSame(1, $bucket['families'], 'The off-roster scan must not be counted alongside it.');
     }
 }

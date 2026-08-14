@@ -115,6 +115,16 @@
 .heatmap tbody th {
     text-align: left;
     padding-right: 0.5rem;
+    /* Auto table layout gives leftover width to whichever column has no
+       explicit width; every hour cell carries one (.heatmap-cell's 2.25rem)
+       but this row-header column never did, so it absorbed the rest of the
+       card's 100% width. Capping it here is what makes the day label sit next
+       to its row instead of two-thirds of the card away from it. Narrow
+       viewports already scroll the table inside .table-responsive, so this
+       has no separate mobile case, and the PDF's grid is a different
+       stylesheet (Views/Scanner/pdf/report-hours.php), untouched by this. */
+    width: 9rem;
+    white-space: nowrap;
 }
 
 .heatmap tr.is-selected .heatmap-day {

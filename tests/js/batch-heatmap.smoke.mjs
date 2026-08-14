@@ -363,7 +363,8 @@ assert.equal(served.value.textContent, '60', 'Served (all days) should read cove
 assert.equal(served.sub.textContent, '60% of eligible', 'Served sub-line (all days) should carry the coverage percentage.');
 assert.equal(peakHour.value.textContent, '9am - 10am', 'Peak hour (all days) should be the tallest column across every day.');
 assert.equal(peakHour.sub.textContent, '35 families', 'Peak hour sub-line should carry that column\'s summed count (2026-08-01\'s 30 + 2026-08-02\'s 5).');
-assert.equal(scannersActive.value.textContent, '2', 'Scanners active should count byScanner rows with userID > 0, excluding TOTAL.');
+assert.equal(scannersActive.value.textContent, '2', 'Scanners active (all days) should count byScanner rows with userID > 0, excluding TOTAL.');
+assert.equal(scannersActive.sub.textContent, 'across the batch', 'Scanners active sub-line (all days) should read "across the batch".');
 assert.equal(paneDay.querySelectorAll('table').length, 0, 'The Per day pane must not show a table before any day is picked.');
 assert.equal(paneDay.querySelector('#stationsDayHint').textContent, 'Use the Day picker above to choose a day.', 'The Per day pane must open on the "no day picked" hint.');
 
@@ -382,7 +383,12 @@ assert.equal(served.sub.textContent, '60 across the batch', 'Served sub-line (a 
 assert.equal(peakHour.value.textContent, '9am - 10am', 'Peak hour (2026-08-01 only) should be that day\'s tallest column.');
 assert.equal(peakHour.sub.textContent, '30 families', 'Peak hour sub-line should still carry the count.');
 assert.equal(eligible.value.textContent, '100', 'Eligible must never change with the day.');
-assert.equal(scannersActive.value.textContent, '2', 'Scanners active must never change with the day (no day dimension on byScanner).');
+// Finding 1 (task 13): the PDF's per-day Rollout table counts scanners from
+// byScannerByDay, so the screen has to match it rather than repeating the
+// batch-wide byScanner fold under a day heading. 2026-08-01 only has one
+// non-TOTAL row (userID 1) in byScannerByDay.
+assert.equal(scannersActive.value.textContent, '1', 'Scanners active must re-scope to the selected day\'s own byScannerByDay rows, not the batch-wide fold.');
+assert.equal(scannersActive.sub.textContent, 'that day', 'Scanners active sub-line must say "that day" once a day is selected.');
 assert.ok(historyCalls.length > 0 && historyCalls[historyCalls.length - 1].includes('day=2026-08-01'), 'The URL must carry ?day= after a selection, via replaceState.');
 
 // --- The Per day Stations pane must rebuild into a table for a day that has
@@ -410,6 +416,7 @@ assert.equal(fakeWindow.BatchHeatmap.selectedDay(), '2026-08-02', 'Changing #day
 assert.equal(day2Row.button.getAttribute('aria-pressed'), 'true', 'Changing #dayPick must move aria-pressed to the matching row header.');
 assert.equal(day1Row.button.getAttribute('aria-pressed'), 'false', 'The previously selected row must lose aria-pressed.');
 assert.equal(served.value.textContent, '25', 'Served (2026-08-02) should sum that day\'s cells (10 + 5 + 10).');
+assert.equal(scannersActive.value.textContent, '0', 'Scanners active (2026-08-02) must read the day\'s own byScannerByDay rows, which are empty, not the batch-wide fold.');
 
 // --- A day with no rows in byScannerByDay must show the "no scans that day"
 // hint, not an empty table and not the "pick a day" hint - all three states
@@ -439,6 +446,8 @@ assert.equal(dayPick.value, '', 'Falling back to all days must clear #dayPick.')
 assert.equal(day1Row.button.getAttribute('aria-pressed'), 'false', 'No row header should read pressed once the fallback happens.');
 assert.equal(day2Row.button.getAttribute('aria-pressed'), 'false', 'No row header should read pressed once the fallback happens.');
 assert.equal(served.value.textContent, '60', 'Falling back to all days must recompute Served against the whole batch again.');
+assert.equal(scannersActive.value.textContent, '2', 'Falling back to all days must recompute Scanners active against the batch-wide byScanner fold again.');
+assert.equal(scannersActive.sub.textContent, 'across the batch', 'Falling back to all days must revert the sub-line too.');
 assert.equal(paneDay.querySelector('#stationsDayHint').textContent, 'Use the Day picker above to choose a day.', 'Falling back to all days must also revert the Per day pane to its "no day picked" hint.');
 
 // --- A re-render (the live poll) must rebuild the grid from the fresh

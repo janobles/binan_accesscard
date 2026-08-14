@@ -704,9 +704,12 @@ class DashboardPageBuilder
      * is written down once, here.
      *
      * Eligible is the only one that ignores the day: a family is eligible for
-     * the batch, not for a Tuesday. Scanners active is a batch figure too, but
-     * for a duller reason, which its sub-line states: the snapshot's byScanner
-     * rows carry no day dimension to slice on.
+     * the batch, not for a Tuesday. Scanners active does re-scope by day: the
+     * snapshot's byScannerByDay rows carry the same per-day slice the PDF's
+     * Rollout by day table already counts from
+     * (Scanner/ReportsPdfGenerator::dayRows()), so the screen counts from the
+     * same field rather than repeating the batch-wide byScanner total under a
+     * day heading.
      *
      * @param array<string,mixed> $snapshot
      * @return array<string,array{value:string,sub:string}>
@@ -717,9 +720,15 @@ class DashboardPageBuilder
         $heatmap  = $snapshot['heatmap'] ?? ['days' => [], 'hours' => [], 'cells' => [], 'max' => 0];
 
         // Scanner rows carry a TOTAL row last (userID 0), which is a fold of the
-        // rows above it and not a station that turned up.
+        // rows above it and not a station that turned up. With a day selected,
+        // count that day's own rows from byScannerByDay instead of the
+        // batch-wide byScanner fold, or a station that never showed up that day
+        // still gets counted.
         $stations = 0;
-        foreach ($snapshot['byScanner'] ?? [] as $row) {
+        $scannerRows = $selectedDay === null
+            ? ($snapshot['byScanner'] ?? [])
+            : ($snapshot['byScannerByDay'][$selectedDay] ?? []);
+        foreach ($scannerRows as $row) {
             if ((int) ($row['userID'] ?? 0) > 0) {
                 $stations++;
             }
@@ -769,7 +778,7 @@ class DashboardPageBuilder
             ],
             'scannersActive' => [
                 'value' => number_format($stations),
-                'sub'   => 'across the batch',
+                'sub'   => $selectedDay === null ? 'across the batch' : 'that day',
             ],
         ];
     }

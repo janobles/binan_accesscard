@@ -218,9 +218,13 @@
         write(metric('peakHour'), peakHour === null ? '-' : hourLabel(peakHour) + ' - ' + hourLabel(peakHour + 1));
         write(metricSub('peakHour'), peakHour === null ? 'no scans yet' : Number(peakFamilies).toLocaleString() + ' families');
 
-        var stations = state.byScanner.filter(function (row) { return (row.userID || 0) > 0; }).length;
+        // With a day selected, count that day's own rows from byScannerByDay
+        // rather than the batch-wide byScanner fold, or a station that never
+        // showed up that day still gets counted. Mirrors batchHeadline().
+        var scannerRows = day === null ? state.byScanner : (state.byScannerByDay[day] || []);
+        var stations = scannerRows.filter(function (row) { return (row.userID || 0) > 0; }).length;
         write(metric('scannersActive'), Number(stations).toLocaleString());
-        write(metricSub('scannersActive'), 'across the batch');
+        write(metricSub('scannersActive'), day === null ? 'across the batch' : 'that day');
     }
 
     function applyDayPick() {

@@ -295,7 +295,7 @@ final class ScannerMetrics
         }
 
         return [
-            'pace'             => $activeGapCount > 0 ? $activeGapCount / ($active / 3600) : null,
+            'pace'             => $activeGapCount > 0 && $active > 0 ? $activeGapCount / ($active / 3600) : null,
             'typicalSeconds'   => $row['medianGapSeconds'],
             'share'            => $totalFamilies > 0 ? $families / $totalFamilies : 0.0,
             'onStationSeconds' => $onStation,

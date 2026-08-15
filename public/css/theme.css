@@ -750,16 +750,17 @@
 /* Stations table. Only the rows the server marked as drillable get the pointer,
    so a role that may not open the modal is not offered one. The TOTAL row is a
    fold of the rows above it, not a station, so it is weighted rather than
-   clickable. */
-#stationsTable tr[data-scanner-id] {
+   clickable. Scoped to the card, not #stationsTable, so the Per day pane's
+   #stationsTableDay (rendered by batch-heatmap.js) gets the same treatment. */
+#stationsCard tr[data-scanner-id] {
     cursor: pointer;
 }
 
-#stationsTable tr[data-scanner-id]:hover {
+#stationsCard tr[data-scanner-id]:hover {
     background-color: var(--binan-green-soft, #f2f5f4);
 }
 
-#stationsTable tr.is-total td {
+#stationsCard tr.is-total td {
     font-weight: 700;
     border-top: 2px solid #e3e6f0;
 }

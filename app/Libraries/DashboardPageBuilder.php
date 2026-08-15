@@ -620,7 +620,7 @@ class DashboardPageBuilder
         // rendering a card full of zeroes. The only way to reach that state is
         // an edited URL or a link to a batch that has since been reimported.
         $requestedDay = (string) ($this->request->getGet('day') ?? '');
-        $selectedDay  = in_array($requestedDay, $snapshot['days'], true) ? $requestedDay : null;
+        $selectedDay  = in_array($requestedDay, $snapshot['days'] ?? [], true) ? $requestedDay : null;
 
         return [
             'batches'        => $batches,

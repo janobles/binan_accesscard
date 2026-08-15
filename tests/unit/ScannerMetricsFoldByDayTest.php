@@ -56,7 +56,7 @@ final class ScannerMetricsFoldByDayTest extends CIUnitTestCase
      * A family (control number) claimed on two different days is one family to
      * each day's fold, since each day only ever sees its own events. The two
      * per-day counts can therefore both be true at once, and the per-day figures
-     * sum to no more than the batch total.
+     * sum to at least the batch total.
      */
     public function testEachDayCountsOnlyItsOwnEventsAndAFamilyServedOnTwoDaysIsOneInEach(): void
     {

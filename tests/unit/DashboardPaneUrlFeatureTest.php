@@ -95,7 +95,7 @@ final class DashboardPaneUrlFeatureTest extends CIUnitTestCase
     private function seedOneScan(): void
     {
         $db = db_connect();
-        $db->table('users')->insert(['userID' => 5, 'username' => 'scanner1', 'password' => 'x']);
+        $db->table('users')->insert(['userID' => 5, 'username' => 'scanner1', 'password' => 'x', 'account_level' => 'scanner', 'isactive' => 'Enable']);
         $db->table('subsidy_distribution')->insert([
             'control_no' => 1, 'memberID' => 1, 'subsidy_type_id' => 1,
             'claim_date' => '2026-08-01', 'batch_id' => self::BATCH_ID,

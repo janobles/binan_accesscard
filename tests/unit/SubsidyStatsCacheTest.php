@@ -94,12 +94,12 @@ final class SubsidyStatsCacheTest extends CIUnitTestCase
      * reflection the way this repo's other tests reach a private method (see
      * FamilyRulesTest, DashboardScheduleCardTest).
      *
-     * Family 500 is scanned by both scanner1 and the ghost userID, so the
+     * Family 500 is scanned by both scanner1 and scanner3, so the
      * TOTAL row's families (the batch's distinct control numbers) has to come
      * out lower than the sum of the per-scanner families - proving TOTAL is
      * folded, not added up from the rows above it.
      */
-    public function testScannerRowsAreSortedTotalledAndFallBackToUnknown(): void
+    public function testScannerRowsAreSortedTotalledAndResolveNames(): void
     {
         $db = db_connect();
 
@@ -107,7 +107,8 @@ final class SubsidyStatsCacheTest extends CIUnitTestCase
         ReferentialFixture::claimParents($db, [500, 600, 700], 0);
         $db->table('users')->insert(['userID' => 1, 'username' => 'scanner1', 'password' => 'x']);
         $db->table('users')->insert(['userID' => 2, 'username' => 'scanner2', 'password' => 'x']);
-        // userID 3 has no users row: a deleted or otherwise unresolvable account.
+        // userID 3 is a scanner account resolved through the same name lookup.
+        $db->table('users')->insert(['userID' => 3, 'username' => 'scanner3', 'password' => 'x']);
         $db->table('distribution_batch')->insert([
             'batch_id' => 1, 'name' => 'Rice Q1', 'subsidy_type_id' => 1, 'eligible_count' => 3,
         ]);
@@ -117,7 +118,7 @@ final class SubsidyStatsCacheTest extends CIUnitTestCase
 
         // scanner1: families 500 and 600 (2 families).
         // scanner2: family 700 (1 family).
-        // ghost userID 3 (no users row): family 500 again, overlapping scanner1.
+        // scanner3: family 500 again, overlapping scanner1.
         foreach ([
             ['userID' => 1, 'control_no' => 500, 'memberID' => 500, 'dt_created' => '2026-03-01 09:00:00'],
             ['userID' => 1, 'control_no' => 600, 'memberID' => 600, 'dt_created' => '2026-03-01 09:05:00'],
@@ -137,7 +138,7 @@ final class SubsidyStatsCacheTest extends CIUnitTestCase
         $method->setAccessible(true);
         $rows = $method->invoke($stats, $fold);
 
-        // 4 rows: scanner1, scanner2, the ghost userID, then TOTAL.
+        // 4 rows: scanner1, scanner2, scanner3, then TOTAL.
         $this->assertCount(4, $rows);
 
         $total = array_pop($rows);
@@ -159,8 +160,8 @@ final class SubsidyStatsCacheTest extends CIUnitTestCase
                 $ghost = $row;
             }
         }
-        $this->assertNotNull($ghost, 'The scanner with no users row must still appear.');
-        $this->assertSame('Unknown', $ghost['scanner']);
+        $this->assertNotNull($ghost, 'The scanner3 row must still appear.');
+        $this->assertSame('scanner3', $ghost['scanner']);
 
         // share is families / the batch total (3), not families / itself,
         // which would read 1.0 on every row regardless of size.

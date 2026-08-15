@@ -43,7 +43,7 @@ final class ReportsPdfSnapshotConsistencyTest extends CIUnitTestCase
 
         $db->table('users')->insert([
             'userID' => self::ADMIN_ID, 'username' => 'admin41',
-            'account_level' => 'admin', 'isactive' => 'Enable', 'password' => 'x',
+            'account_level' => 'administrator', 'isactive' => 'Enable', 'password' => 'x',
         ]);
 
         $db->table('distribution_batch')->insert([

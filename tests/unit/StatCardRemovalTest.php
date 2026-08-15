@@ -6,8 +6,11 @@ use CodeIgniter\Test\CIUnitTestCase;
 
 /**
  * The .stat-card system (a component plus hand-rolled CSS grids) rendered KPI
- * tiles before .kpi-card in a Bootstrap row replaced it. It is deleted. These
- * pin the deletion, and pin the one piece of it that deliberately survived.
+ * tiles before .kpi-card in a Bootstrap row replaced it. It is deleted,
+ * including the one exception (Scanner/performance.php's poll hooks) that had
+ * survived until the kiosk performance page and the station modal moved onto
+ * the shared Scanner/_metrics-grid.php partial, addressed by [data-metric].
+ * These pin the deletion.
  */
 final class StatCardRemovalTest extends CIUnitTestCase
 {
@@ -56,18 +59,22 @@ final class StatCardRemovalTest extends CIUnitTestCase
     }
 
     /**
-     * The one survivor. Scanner/performance.php keeps .stat-card--* on its
-     * columns because its poll looks tiles up by those class names; deleting
-     * them as "leftover stat-card naming" would silently stop the page
-     * repainting. Markup and JS have to keep agreeing.
+     * The one former survivor, now retired too. Scanner/performance.php used
+     * to keep .stat-card--* on its columns because its poll looked tiles up
+     * by those class names; the KPI cards those hooks addressed are gone,
+     * replaced by Scanner/_metrics-grid.php's label-over-value lines, which
+     * both the modal and the kiosk page address by [data-metric] instead.
+     * Markup and JS still have to keep agreeing, just on the new attribute.
      */
-    public function testPerformanceTileHooksSurviveInBothMarkupAndPoll(): void
+    public function testPerformanceUsesDataMetricNotStatCardHooks(): void
     {
         $src = (string) file_get_contents(APPPATH . 'Views/Scanner/performance.php');
 
-        foreach (['records', 'members', 'sectors', 'services'] as $variant) {
-            $this->assertStringContainsString('col stat-card--' . $variant, $src, 'markup hook');
-            $this->assertStringContainsString("setTile('stat-card--" . $variant . "'", $src, 'poll lookup');
+        $this->assertStringNotContainsString('stat-card--', $src, 'the retired hooks must not come back');
+
+        foreach (['families', 'handouts', 'pace', 'typical', 'onStation', 'idle', 'bestHour', 'share'] as $metric) {
+            $this->assertStringContainsString("text[key] : '-'", $src, 'poll reads data-metric generically');
+            $this->assertStringContainsString($metric . ':', $src, $metric . ' must be handled by the poll');
         }
     }
 }

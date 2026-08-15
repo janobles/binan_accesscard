@@ -21,6 +21,9 @@
  *         appearance, unaffected). A page nesting a second strip inside a pane
  *         of the first passes 'segmented-tabs--subordinate' (theme.css) so the
  *         inner strip reads as subordinate rather than a second page nav.
+ *         A strip inside a card header, switching between views of that
+ *         card's own data rather than between pages, passes
+ *         'segmented-tabs--card' (theme.css).
  */
 $tabs = $tabs ?? [];
 $active = $active ?? '';

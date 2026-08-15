@@ -86,6 +86,25 @@ final class DashboardPaneUrlFeatureTest extends CIUnitTestCase
     }
 
     /**
+     * One scan on 2026-08-01, inside self::BATCH_ID's roster, by a scanner
+     * account. The base fixture logs no scans at all (heatmap/stations tests
+     * that want an empty state rely on that), so the two cases below that need
+     * a day with rows to pick from seed this themselves rather than growing
+     * setUp() for every other case in this file.
+     */
+    private function seedOneScan(): void
+    {
+        $db = db_connect();
+        $db->table('users')->insert(['userID' => 5, 'username' => 'scanner1', 'password' => 'x', 'account_level' => 'scanner', 'isactive' => 'Enable']);
+        $db->table('qr_control')->insert(['control_no' => 1, 'headID' => 1]);
+        $db->table('subsidy_distribution')->insert([
+            'control_no' => 1, 'memberID' => 1, 'subsidy_type_id' => 1,
+            'claim_date' => '2026-08-01', 'batch_id' => self::BATCH_ID,
+            'userID' => 5, 'dt_created' => '2026-08-01 09:00:00',
+        ]);
+    }
+
+    /**
      * Every href in $html that points at the dashboard and carries $needle,
      * with entity-encoded ampersands decoded back so a caller can grep params.
      *
@@ -100,40 +119,175 @@ final class DashboardPaneUrlFeatureTest extends CIUnitTestCase
         return array_values(array_filter($links, static fn (string $href): bool => str_contains($href, $needle)));
     }
 
-    public function testStationsSubTabKeepsEveryLinkInsideTheDistributionPane(): void
+    public function testEveryCardRendersTogetherOnOnePaneLoad(): void
     {
         $body = $this->withSession($this->session('administrator', 1, 'boss'))
-            ->get('dashboard?view=distribution&tab=stations&batch=' . self::BATCH_ID)
+            ->get('dashboard?view=distribution&batch=' . self::BATCH_ID)
             ->getBody();
 
         // The Distribution pane rendered, and the Overview pane did not.
-        $this->assertStringContainsString('id="stationsGrid"', $body);
         $this->assertStringNotContainsString('Families profiled', $body);
 
-        // Sub-tab strip: three links, each switching ?tab= while holding the
-        // pane and the picked batch.
-        $subTabs = $this->dashboardLinks($body, 'tab=');
-        $this->assertCount(3, $subTabs);
-        foreach ($subTabs as $href) {
-            $this->assertStringContainsString('view=distribution', $href, $href);
-            $this->assertStringContainsString('batch=' . self::BATCH_ID, $href, $href);
-        }
+        // All four subjects at once, which is the point of the restructure:
+        // reading two of them no longer costs the first.
+        $this->assertStringContainsString('id="activityCard"', $body);
+        $this->assertStringContainsString('id="barangayCard"', $body);
+        $this->assertStringContainsString('id="stationsTable"', $body);
+        $this->assertStringContainsString('id="remainingCard"', $body);
 
-        // Batch picker: submitting it must not drop the pane or the sub-tab.
+        // No sub-tab strip carrying ?tab= on this pane any more.
+        $this->assertSame([], $this->dashboardLinks($body, 'tab='));
+
+        // Batch picker: submitting it must not drop the pane.
         $this->assertMatchesRegularExpression(
             '/<input type="hidden" name="view" value="distribution"\s*\/?>/',
             $body
         );
-        $this->assertMatchesRegularExpression(
-            '/<input type="hidden" name="tab" value="stations"\s*\/?>/',
-            $body
+        $this->assertStringNotContainsString('<input type="hidden" name="tab"', $body);
+    }
+
+    /**
+     * A tablist whose tabs control nothing is worse than no tablist: a screen
+     * reader announces a control relationship the page does not have. Every
+     * aria-controls has to name a real pane, that pane has to be a tabpanel,
+     * and it has to point back at the tab. Asserted against the rendered page
+     * rather than the view sources, because the ids are built in two files and
+     * a grep of either alone cannot see them meet.
+     */
+    public function testEveryCardTabControlsARealPanel(): void
+    {
+        $body = $this->withSession($this->session('administrator', 1, 'boss'))
+            ->get('dashboard?view=distribution&batch=' . self::BATCH_ID)
+            ->getBody();
+
+        preg_match_all('/id="([^"]+)"\s+class="nav-link[^"]*"[^>]*aria-controls="([^"]+)"/', $body, $tabs, PREG_SET_ORDER);
+
+        // Expected count is derived from the rendered page, not a hardcoded
+        // number, so a future card_tabs strip does not have to remember to
+        // bump one here: components/card_tabs.php renders exactly one
+        // role="tabpanel" per tab it declares, so the two counts must match.
+        // At least one strip is still required, or an empty page would pass
+        // by having zero of both.
+        $tablistCount = preg_match_all('/role="tablist"/', $body);
+        $panelCount   = preg_match_all('/role="tabpanel"/', $body);
+        $this->assertGreaterThan(0, $tablistCount, 'Expected at least one card tab strip.');
+        $this->assertCount($panelCount, $tabs, 'Expected as many card tabs as tabpanels rendered on the page.');
+
+        foreach ($tabs as [, $tabId, $paneId]) {
+            $this->assertSame(
+                1,
+                preg_match(
+                    '/<div id="' . preg_quote($paneId, '/') . '" role="tabpanel" aria-labelledby="'
+                        . preg_quote($tabId, '/') . '"/',
+                    $body
+                ),
+                $tabId . ' does not control a tabpanel that names it back.'
+            );
+        }
+
+        // Two strips share the pane key "table" only by accident of wording, so
+        // the ids they build must still be distinct.
+        $paneIds = array_column($tabs, 2);
+        $this->assertSame($paneIds, array_unique($paneIds), 'Two panes claimed the same id.');
+    }
+
+    /**
+     * batch-stations-table.php renders twice on this page once a day with
+     * rows is picked (the Stations card's All and Per day panes). Two elements
+     * sharing an id is invalid HTML the moment that happens, which a source
+     * grep of the view cannot see because it only exists once two view() calls
+     * both resolve to non-empty output. Rendered end to end instead.
+     */
+    public function testStationsCardRendersNoDuplicateTableIdOnceADayIsPicked(): void
+    {
+        $this->seedOneScan();
+
+        $body = $this->withSession($this->session('administrator', 1, 'boss'))
+            ->get('dashboard?view=distribution&batch=' . self::BATCH_ID . '&day=2026-08-01')
+            ->getBody();
+
+        $this->assertSame(
+            1,
+            substr_count($body, 'id="stationsTable"'),
+            'id="stationsTable" must appear exactly once even when the Per day pane has rows.'
         );
+        $this->assertStringContainsString(
+            'id="stationsTableDay"',
+            $body,
+            'the Per day pane must render its own table id, not reuse the All pane\'s.'
+        );
+    }
+
+    /**
+     * station-modal.js delegates its click listener from #stationsCard, not
+     * one table's id, so it can answer a row in either pane. That only works
+     * if the Per day table still carries data-scanner-id for a role that may
+     * drill in; this is the row-level half of the delegation fix.
+     */
+    public function testPerDayRowCarriesDataScannerIdForADrillInRole(): void
+    {
+        $this->seedOneScan();
+
+        $body = $this->withSession($this->session('administrator', 1, 'boss'))
+            ->get('dashboard?view=distribution&batch=' . self::BATCH_ID . '&day=2026-08-01')
+            ->getBody();
+
+        $dayPanePos = strpos($body, 'id="stations-pane-day"');
+        $this->assertNotFalse($dayPanePos, 'stations-pane-day not found');
+        $this->assertStringContainsString('data-scanner-id', substr($body, $dayPanePos));
+    }
+
+    /**
+     * The caption is the only description a screen reader gets of what a
+     * heatmap's rows are, and the Activity card renders the same partial for
+     * days and for weekdays. One caption serving both would tell a reader the
+     * weekday grid has one row per day.
+     */
+    public function testEachHeatmapCaptionDescribesItsOwnRows(): void
+    {
+        $body = $this->withSession($this->session('administrator', 1, 'boss'))
+            ->get('dashboard?view=distribution&batch=' . self::BATCH_ID)
+            ->getBody();
+
+        // Both grids are empty for this fixture (no scans), and an empty grid
+        // renders no table at all, so drive the partial directly instead.
+        // Every parameter explicit, for the same reason the Activity card
+        // passes them all: the dashboard render above left its own values on
+        // the renderer, so a call leaning on the defaults would inherit them.
+        $days = view('Admin/batch-heatmap', [
+            'heatmap'    => ['days' => ['2026-08-01'], 'hours' => [8], 'cells' => ['2026-08-01' => [8 => ['families' => 3, 'state' => 'served']]], 'max' => 3],
+            'rowLabels'  => ['2026-08-01' => 'Aug 1'],
+            'gridId'     => 'peakHeatmap',
+            'selectable' => true,
+            'caption'    => 'Families served by hour, one row per day',
+        ]);
+        $weekdays = view('Admin/batch-heatmap', [
+            'heatmap'    => ['days' => ['2'], 'hours' => [8], 'cells' => ['2' => [8 => ['families' => 3, 'state' => 'served']]], 'max' => 3],
+            'rowLabels'  => ['2' => 'Tuesday'],
+            'gridId'     => 'weekdayHeatmap',
+            'selectable' => false,
+            'caption'    => 'Families served by hour, one row per weekday',
+        ]);
+
+        $this->assertStringContainsString('one row per day</caption>', $days);
+        $this->assertStringContainsString('one row per weekday</caption>', $weekdays);
+        $this->assertStringContainsString('id="weekdayHeatmap"', $weekdays);
+        // A weekday is not a day the batch ran, so it offers no day filter.
+        $this->assertStringNotContainsString('heatmap-day', $weekdays);
+        $this->assertStringContainsString('heatmap-day', $days);
+
+        // And the card is what wires the weekday grid up that way. Read off the
+        // source, not $body: this fixture logs no scans, and an empty grid
+        // renders the empty-state line with no table and so no caption.
+        $this->assertStringNotContainsString('one row per weekday', $body);
+        $card = file_get_contents(APPPATH . 'Views/Admin/batch-activity-card.php');
+        $this->assertStringContainsString("'caption' => 'Families served by hour, one row per weekday'", $card);
     }
 
     public function testRemainingPaginationAndFormsStayInsideTheDistributionPane(): void
     {
         $body = $this->withSession($this->session('administrator', 1, 'boss'))
-            ->get('dashboard?view=distribution&tab=remaining&batch=' . self::BATCH_ID . '&per_page=10')
+            ->get('dashboard?view=distribution&batch=' . self::BATCH_ID . '&per_page=10')
             ->getBody();
 
         $pageLinks = $this->dashboardLinks($body, 'page=');
@@ -186,11 +340,11 @@ final class DashboardPaneUrlFeatureTest extends CIUnitTestCase
     public function testEncoderReachesTheDistributionPaneToo(): void
     {
         $body = $this->withSession($this->session('encoder', 2, 'keyer'))
-            ->get('dashboard?view=distribution&tab=stations&batch=' . self::BATCH_ID)
+            ->get('dashboard?view=distribution&batch=' . self::BATCH_ID)
             ->getBody();
 
-        $this->assertStringContainsString('id="stationsGrid"', $body);
-        $this->assertStringContainsString('Eligible families', $body);
+        $this->assertStringContainsString('id="stationsTable"', $body);
+        $this->assertStringContainsString('Eligible', $body);
     }
 
     /**
@@ -229,13 +383,13 @@ final class DashboardPaneUrlFeatureTest extends CIUnitTestCase
 
     /**
      * The station modal reads scanner/stats, which answers Scanner, Admin and
-     * Developer only. An Encoder sees the grid but must get no control that
+     * Developer only. An Encoder sees the table but must get no control that
      * would 403, and no modal markup to go with it.
      */
     public function testEncoderGetsStationsWithoutADrillIn(): void
     {
         $body = $this->withSession($this->session('encoder', 2, 'keyer'))
-            ->get('dashboard?view=distribution&tab=stations&batch=' . self::BATCH_ID)
+            ->get('dashboard?view=distribution&batch=' . self::BATCH_ID)
             ->getBody();
 
         $this->assertStringContainsString('data-can-drill-in="0"', $body);
@@ -243,11 +397,11 @@ final class DashboardPaneUrlFeatureTest extends CIUnitTestCase
         $this->assertStringNotContainsString('id="stationModal"', $body);
     }
 
-    /** The same grid, for a role that may open a station. */
+    /** The same table, for a role that may open a station. */
     public function testDeveloperGetsTheStationModal(): void
     {
         $body = $this->withSession($this->session('developer', 4, 'dev'))
-            ->get('dashboard?view=distribution&tab=stations&batch=' . self::BATCH_ID)
+            ->get('dashboard?view=distribution&batch=' . self::BATCH_ID)
             ->getBody();
 
         $this->assertStringContainsString('data-can-drill-in="1"', $body);

@@ -19,8 +19,18 @@
         return;
     }
 
+    // binan_brgy_paths.json (the SVG's data-brgy names) is Title Case, while
+    // the V22 dump stores barangay names uppercase and byBarangay() reads them
+    // back that way. Comparing the two exactly makes every lookup miss, so
+    // both sides are folded to the same case here rather than editing either
+    // source. Do not remove this: it looks redundant only until one side's
+    // casing changes again.
+    function normaliseBrgy(name) {
+        return (name || '').toUpperCase();
+    }
+
     var byName = {};
-    rows.forEach(function (row) { byName[row.barangay] = row; });
+    rows.forEach(function (row) { byName[normaliseBrgy(row.barangay)] = row; });
 
     // Four flat steps rather than a continuous ramp: the eye cannot read a
     // gradient to two significant figures anyway, and the popover carries the
@@ -36,18 +46,31 @@
 
     function paint(scopeRows) {
         var scoped = {};
-        (scopeRows || rows).forEach(function (row) { scoped[row.barangay] = row; });
+        (scopeRows || rows).forEach(function (row) { scoped[normaliseBrgy(row.barangay)] = row; });
 
         paths.forEach(function (path) {
-            var row = scoped[path.getAttribute('data-brgy')];
+            var row = scoped[normaliseBrgy(path.getAttribute('data-brgy'))];
             path.classList.remove('is-high', 'is-mid', 'is-low', 'is-none');
             path.classList.add(step(row ? row.coverage : 0));
         });
     }
 
+    // Case-insensitive counterpart to the attribute selector below, since the
+    // leaderboard's data-barangay carries the dump's uppercase name while this
+    // path's data-brgy carries the JSON's Title Case one.
+    function leaderboardRow(name) {
+        var target = normaliseBrgy(name);
+        var trs = document.querySelectorAll('tr[data-barangay]');
+        for (var i = 0; i < trs.length; i++) {
+            if (normaliseBrgy(trs[i].getAttribute('data-barangay')) === target) { return trs[i]; }
+        }
+
+        return null;
+    }
+
     paths.forEach(function (path) {
         var name = path.getAttribute('data-brgy');
-        var row  = byName[name];
+        var row  = byName[normaliseBrgy(name)];
         var text = row
             ? row.received.toLocaleString() + ' of ' + row.total.toLocaleString() + ' served, ' + row.coverage + '%'
             : 'No eligible families in this batch';
@@ -70,11 +93,11 @@
         // Hovering a barangay marks its row in the leaderboard, so the map
         // acts as a spatial index into the table rather than a second copy.
         path.addEventListener('mouseenter', function () {
-            var tr = document.querySelector('tr[data-barangay="' + name + '"]');
+            var tr = leaderboardRow(name);
             if (tr) { tr.classList.add('is-highlighted'); }
         });
         path.addEventListener('mouseleave', function () {
-            var tr = document.querySelector('tr[data-barangay="' + name + '"]');
+            var tr = leaderboardRow(name);
             if (tr) { tr.classList.remove('is-highlighted'); }
         });
     });

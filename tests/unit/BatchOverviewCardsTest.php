@@ -14,9 +14,29 @@ final class BatchOverviewCardsTest extends CIUnitTestCase
     public function testFourCardsAreRendered(): void
     {
         $src = $this->source();
-        foreach (['Eligible families', 'Served', 'Remaining', 'Busiest day'] as $label) {
+        foreach (['Eligible', 'Served', 'Peak hour', 'Scanners active'] as $label) {
             $this->assertStringContainsString($label, $src);
         }
+    }
+
+    /**
+     * The day filter and the live poll both rewrite these four, from the same
+     * payload, through one contract rather than a list of ids. A value without
+     * its data-metric is a figure that silently stops following the day.
+     */
+    public function testEveryHeadlineFigureCarriesItsMetricContract(): void
+    {
+        $src = $this->source();
+        foreach (['eligible', 'served', 'peakHour', 'scannersActive'] as $metric) {
+            $this->assertStringContainsString('data-metric="' . $metric . '"', $src);
+            $this->assertStringContainsString('data-metric-sub="' . $metric . '"', $src);
+        }
+    }
+
+    /** The day picker is the other half of the heatmap's day selection. */
+    public function testTheDayPickerIsRendered(): void
+    {
+        $this->assertStringContainsString('id="dayPick"', $this->source());
     }
 
     /**

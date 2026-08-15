@@ -565,7 +565,7 @@ Canonical: views compose Bootstrap 5 classes (`card`, `table`, `btn`,
 
 **Anti-pattern:** inline `style="..."` attributes (past offenders tracked
 and fixed in `docs/reference/violations.md`). Exceptions: PDF views
-(`app/Views/Scanner/pdf/report.php:1`) and framework error pages.
+(`app/Views/Scanner/pdf/report-hours.php:1`) and framework error pages.
 
 **Why:** theme changes retile the shells and components; views that stick
 to Bootstrap + component classes migrate for free, inline styles have to

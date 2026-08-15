@@ -30,15 +30,18 @@ class ReportsController extends BaseController
         $stats      = model(SubsidyStatsModel::class);
         $snapshot   = $batchId > 0
             ? $stats->batchSnapshot($batchId, $isOpen)
-            : ['coverage' => ['eligible' => 0, 'served' => 0, 'remaining' => 0, 'coverage' => 0, 'voided' => 0], 'byBarangay' => [], 'perScanner' => [], 'timeline' => [], 'byDay' => []];
+            : ['coverage' => ['eligible' => 0, 'served' => 0, 'remaining' => 0, 'coverage' => 0, 'voided' => 0], 'byBarangay' => [], 'timeline' => [], 'byDay' => [], 'heatmap' => ['days' => [], 'hours' => [], 'cells' => [], 'max' => 0], 'byScanner' => [], 'byScannerByDay' => [], 'days' => []];
 
         return $this->response->setJSON([
-            'coverage'   => $snapshot['coverage'],
-            'barangay'   => $snapshot['byBarangay'],
-            'perScanner' => $snapshot['perScanner'],
-            'timeline'   => $snapshot['timeline'],
-            'byDay'      => $snapshot['byDay'] ?? [],
-            'updated'    => date('c'),
+            'coverage'       => $snapshot['coverage'],
+            'barangay'       => $snapshot['byBarangay'],
+            'timeline'       => $snapshot['timeline'],
+            'byDay'          => $snapshot['byDay'] ?? [],
+            'heatmap'        => $snapshot['heatmap'] ?? ['days' => [], 'hours' => [], 'cells' => [], 'max' => 0],
+            'byScanner'      => $snapshot['byScanner'] ?? [],
+            'byScannerByDay' => $snapshot['byScannerByDay'] ?? [],
+            'days'           => $snapshot['days'] ?? [],
+            'updated'        => date('c'),
         ]);
     }
 
@@ -50,11 +53,23 @@ class ReportsController extends BaseController
         [$batchId, $batch]  = BatchScope::resolve($batches, $batchModel->activeBatch(), (int) $this->request->getGet('batch'));
         $stats              = model(SubsidyStatsModel::class);
 
+        // Read from the same cached snapshot the screen renders, per the export
+        // rule in docs/17-dashboard-and-reports.md: a fresh query here could
+        // land between two scans and disagree with the page the officer was
+        // just looking at. Coverage and byBarangay come out of it too, not a
+        // second pair of queries: batchSnapshot() has already paid for both,
+        // and a fresh read one line later is the same disagreement risk this
+        // whole method exists to avoid.
+        $snapshot = $batchId > 0 ? $stats->batchSnapshot($batchId, ($batch['closed_at'] ?? null) === null) : null;
+
         $bytes = (new \App\Libraries\Scanner\ReportsPdfGenerator())->generate(
-            $stats->coverage($batchId),
-            $stats->byBarangay($batchId),
+            $snapshot['coverage'] ?? ['eligible' => 0, 'served' => 0, 'remaining' => 0, 'coverage' => 0, 'voided' => 0],
+            $snapshot['byBarangay'] ?? [],
             $batch['name'] ?? null,
-            $batchId > 0 ? $stats->perScanner($batchId) : []
+            $snapshot['byScanner'] ?? [],
+            $snapshot['heatmap'] ?? [],
+            $snapshot['byDay'] ?? [],
+            $snapshot['byScannerByDay'] ?? []
         );
 
         $name = 'subsidy-report-' . ($batchId > 0 ? 'batch' . $batchId : 'all') . '.pdf';

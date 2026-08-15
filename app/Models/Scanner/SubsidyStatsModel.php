@@ -2,6 +2,7 @@
 
 namespace App\Models\Scanner;
 
+use App\Libraries\Scanner\ScannerMetrics;
 use CodeIgniter\Model;
 
 /**
@@ -437,55 +438,13 @@ class SubsidyStatsModel extends Model
     }
 
     /**
-     * Per-scanner performance within one batch: handouts logged and distinct
-     * families (control numbers) served, most families first. $onlyUserId
-     * narrows to a single user for the scanner-role reports view.
-     */
-    public function perScanner(int $batchId, ?int $onlyUserId = null): array
-    {
-        if ($batchId <= 0) {
-            return [];
-        }
-
-        try {
-            $b = $this->db->table('subsidy_distribution')
-                ->select('subsidy_distribution.userID,'
-                    . ' COALESCE(' . $this->db->prefixTable('users') . ".username, 'Unknown') AS scanner,"
-                    . ' COUNT(subsidy_distribution.distribution_id) AS handouts,'
-                    . ' COUNT(DISTINCT subsidy_distribution.control_no) AS families')
-                ->join('users', 'users.userID = subsidy_distribution.userID', 'left')
-                ->where('subsidy_distribution.batch_id', $batchId)
-                ->where('subsidy_distribution.dt_voided', null)
-                ->groupBy('subsidy_distribution.userID')
-                // username is selected, so it has to be grouped too or
-                // ONLY_FULL_GROUP_BY rejects the query. One username per userID,
-                // so this changes no row count.
-                ->groupBy('users.username')
-                ->orderBy('families', 'DESC')
-                ->orderBy('scanner', 'ASC');
-            if ($onlyUserId !== null) {
-                $b->where('subsidy_distribution.userID', $onlyUserId);
-            }
-
-            return array_map(static fn ($r) => [
-                'userID'   => (int) $r['userID'],
-                'scanner'  => (string) $r['scanner'],
-                'handouts' => (int) $r['handouts'],
-                'families' => (int) $r['families'],
-            ], $b->get()->getResultArray());
-        } catch (\Throwable $e) {
-            return [];
-        }
-    }
-
-    /**
      * One kiosk's handouts bucketed into fixed time windows within a batch, for
      * the throughput-over-time chart. Buckets align to $bucketMinutes boundaries;
      * each row is a bucket that actually had activity, ordered oldest first.
      *
      * @return list<array{label:string,families:int,handouts:int}>
      */
-    public function timelineForUserInBatch(int $batchId, int $userId, int $bucketMinutes = 15): array
+    public function timelineForUserInBatch(int $batchId, int $userId, int $bucketMinutes = 60): array
     {
         if ($batchId <= 0 || $userId <= 0) {
             return [];
@@ -519,6 +478,90 @@ class SubsidyStatsModel extends Model
     }
 
     /**
+     * The batch's live scan events, narrowest possible shape, ordered so
+     * ScannerMetrics::fold() can walk them in one pass. This is the single
+     * source behind the Stations table, the station modal, the kiosk
+     * performance page and the peak-hours heatmap.
+     *
+     * Joined to batch_eligibility on the same terms as coverage(), so an
+     * off-roster scan is invisible here exactly as it is there. It is still
+     * logged and audited; it just never moves a reported figure.
+     *
+     * @return list<array{userID:int,ts:int,control_no:int}>
+     */
+    public function scanEvents(int $batchId): array
+    {
+        if ($batchId <= 0) {
+            return [];
+        }
+
+        try {
+            $rows = $this->db->table('subsidy_distribution sd')
+                ->select('sd.userID, sd.dt_created, sd.control_no')
+                ->join('batch_eligibility be', 'be.batch_id = sd.batch_id AND be.headID = sd.memberID')
+                ->where('sd.batch_id', $batchId)
+                ->where('sd.dt_voided', null)
+                ->orderBy('sd.userID', 'ASC')
+                ->orderBy('sd.dt_created', 'ASC')
+                ->get()->getResultArray();
+
+            return array_map(static fn ($r) => [
+                'userID'     => (int) $r['userID'],
+                'ts'         => (int) strtotime((string) $r['dt_created']),
+                'control_no' => (int) $r['control_no'],
+            ], $rows);
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
+
+    /**
+     * Weekday by hour across every batch, for the heatmap's all-time view. This
+     * is the one figure on the pane that ignores the batch picker, and the only
+     * one computed in SQL rather than folded in PHP: the row set is every scan
+     * the city has ever logged, which is too large to pull.
+     *
+     * Day-of-week is normalised to 0 for Sunday through 6 for Saturday. The two
+     * CI backends disagree here, so the driver is asked which expression to
+     * use rather than one being assumed.
+     *
+     * Joined to batch_eligibility on the same terms as scanEvents(), so an
+     * off-roster scan is invisible here too: this view spans every batch the
+     * city has run, but each row still carries its own batch_id, so the join
+     * stays exact per row even across batches.
+     *
+     * @return list<array{dow:int,hour:int,families:int}>
+     */
+    public function weekdayHistogram(): array
+    {
+        $isSQLite = str_contains(strtolower($this->db->getPlatform()), 'sqlite');
+        $dow      = $isSQLite
+            ? "CAST(strftime('%w', sd.dt_created) AS INTEGER)"
+            : 'DAYOFWEEK(sd.dt_created) - 1';
+        $hour = $isSQLite
+            ? "CAST(strftime('%H', sd.dt_created) AS INTEGER)"
+            : 'HOUR(sd.dt_created)';
+
+        try {
+            $rows = $this->db->table('subsidy_distribution sd')
+                ->select($dow . ' AS dow, ' . $hour . ' AS hour, COUNT(DISTINCT sd.control_no) AS families', false)
+                ->join('batch_eligibility be', 'be.batch_id = sd.batch_id AND be.headID = sd.memberID')
+                ->where('sd.dt_voided', null)
+                ->groupBy('dow')
+                ->groupBy('hour')
+                ->get()->getResultArray();
+
+            return array_map(static fn ($r) => [
+                'dow'      => (int) $r['dow'],
+                'hour'     => (int) $r['hour'],
+                'families' => (int) $r['families'],
+            ], $rows);
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
+
+    /**
      * Per-batch cache key. A closed batch's figures are immutable, so they are
      * cached indefinitely; the open batch caches briefly and is invalidated by
      * every scan, mirroring how AuditTrailsModel clears the dashboard counts.
@@ -538,7 +581,7 @@ class SubsidyStatsModel extends Model
      * $isOpen decides the TTL: closed batches never change again, so they save
      * with ttl 0 (the file cache handler's "never expires").
      *
-     * coverage()/byBarangay()/perScanner()/servedTimeline() each swallow
+     * coverage()/byBarangay()/servedTimeline() each swallow
      * \Throwable and return an empty shape rather than raise, per the scanner
      * module's no-DB test posture, so a transient DB error inside them is
      * indistinguishable from "batch genuinely has no data yet" once it reaches
@@ -557,12 +600,36 @@ class SubsidyStatsModel extends Model
             return $cached['snapshot'];
         }
 
+        $events    = $this->scanEvents($batchId);
+        $fold      = ScannerMetrics::fold($events);
+        $foldByDay = ScannerMetrics::foldByDay($events);
+        $batch     = $this->batchWindow($batchId);
+
+        // Resolved once for the whole snapshot rather than once per call to
+        // scannerRows(): without this, adding a day's worth of rows turns one
+        // username query into one per day the batch ran.
+        $userIds = array_map(static fn ($row) => (int) $row['userID'], $fold['scanners']);
+        foreach ($foldByDay as $dayFold) {
+            foreach ($dayFold['scanners'] as $row) {
+                $userIds[] = (int) $row['userID'];
+            }
+        }
+        $names = $this->scannerNames($userIds);
+
+        $byScannerByDay = [];
+        foreach ($foldByDay as $day => $dayFold) {
+            $byScannerByDay[$day] = $this->scannerRows($dayFold, $names);
+        }
+
         $snapshot = [
-            'coverage'   => $this->coverage($batchId),
-            'byBarangay' => $this->byBarangay($batchId),
-            'perScanner' => $this->perScanner($batchId),
-            'timeline'   => $isOpen ? $this->servedTimeline($batchId) : [],
-            'byDay'      => $this->servedByDay($batchId),
+            'coverage'       => $this->coverage($batchId),
+            'byBarangay'     => $this->byBarangay($batchId),
+            'timeline'       => $isOpen ? $this->servedTimeline($batchId) : [],
+            'byDay'          => $this->servedByDay($batchId),
+            'heatmap'        => ScannerMetrics::heatmap($fold, $batch['daily_start_time'] ?? null, $batch['daily_end_time'] ?? null),
+            'byScanner'      => $this->scannerRows($fold, $names),
+            'byScannerByDay' => $byScannerByDay,
+            'days'           => $fold['days'],
         ];
 
         if ($fingerprint !== '' && $this->dbIsHealthy()) {
@@ -577,6 +644,130 @@ class SubsidyStatsModel extends Model
     }
 
     /**
+     * Per-scanner performance rows for the Stations table, the station modal
+     * and the PDF. Names are resolved in one query rather than one per row, and
+     * the TOTAL row is folded by the same code as the rows above it, so a total
+     * can never be a separately computed number.
+     *
+     * $names, when given, is the pre-resolved userID-to-username map for the
+     * whole snapshot (batchSnapshot() builds one and reuses it across the
+     * batch-wide fold and every day's fold); left null, it is resolved here for
+     * this fold alone, which is what the test suite's direct reflection calls
+     * still exercise.
+     *
+     * @param array{scanners:list<array>,total:array} $fold
+     * @param array<int,string>|null $names
+     * @return list<array<string,mixed>>
+     */
+    private function scannerRows(array $fold, ?array $names = null): array
+    {
+        $names ??= $this->scannerNames(array_map(
+            static fn ($row) => (int) $row['userID'],
+            $fold['scanners']
+        ));
+
+        $totalFamilies = (int) $fold['total']['families'];
+
+        $rows = [];
+        foreach ($fold['scanners'] as $row) {
+            $rows[] = array_merge(
+                [
+                    'userID'   => (int) $row['userID'],
+                    'scanner'  => $names[(int) $row['userID']] ?? 'Unknown',
+                    'families' => (int) $row['families'],
+                    'handouts' => (int) $row['handouts'],
+                ],
+                ScannerMetrics::derive($row, $totalFamilies),
+                [
+                    'longestGapSeconds' => (int) $row['longestGapSeconds'],
+                    'firstTs'           => $row['firstTs'],
+                    'lastTs'            => $row['lastTs'],
+                ]
+            );
+        }
+
+        usort($rows, static fn ($a, $b) => $b['families'] <=> $a['families'] ?: strcmp($a['scanner'], $b['scanner']));
+
+        if ($rows !== []) {
+            $rows[] = array_merge(
+                [
+                    'userID'   => 0,
+                    'scanner'  => 'TOTAL',
+                    'families' => $totalFamilies,
+                    'handouts' => (int) $fold['total']['handouts'],
+                ],
+                ScannerMetrics::derive($fold['total'], $totalFamilies),
+                [
+                    'longestGapSeconds' => (int) $fold['total']['longestGapSeconds'],
+                    'firstTs'           => $fold['total']['firstTs'],
+                    'lastTs'            => $fold['total']['lastTs'],
+                ]
+            );
+        }
+
+        return $rows;
+    }
+
+    /**
+     * Usernames for the given ids, in one query. Missing ids simply do not
+     * appear, and the caller falls back to 'Unknown'.
+     *
+     * @param list<int> $userIds
+     * @return array<int,string>
+     */
+    private function scannerNames(array $userIds): array
+    {
+        $userIds = array_values(array_filter(array_unique($userIds), static fn ($id) => $id > 0));
+        if ($userIds === []) {
+            return [];
+        }
+
+        try {
+            $rows = $this->db->table('users')
+                ->select('userID, username')
+                ->whereIn('userID', $userIds)
+                ->get()->getResultArray();
+        } catch (\Throwable $e) {
+            return [];
+        }
+
+        $out = [];
+        foreach ($rows as $row) {
+            $out[(int) $row['userID']] = (string) $row['username'];
+        }
+
+        return $out;
+    }
+
+    /**
+     * The batch's declared daily hours, which decide which empty heatmap cells
+     * are "closed" rather than "staffed but idle".
+     *
+     * @return array{daily_start_time:?string,daily_end_time:?string}
+     */
+    private function batchWindow(int $batchId): array
+    {
+        $empty = ['daily_start_time' => null, 'daily_end_time' => null];
+        if ($batchId <= 0) {
+            return $empty;
+        }
+
+        try {
+            $row = $this->db->table('distribution_batch')
+                ->select('daily_start_time, daily_end_time')
+                ->where('batch_id', $batchId)
+                ->get()->getRowArray();
+        } catch (\Throwable $e) {
+            return $empty;
+        }
+
+        return $row === null ? $empty : [
+            'daily_start_time' => $row['daily_start_time'] === null ? null : (string) $row['daily_start_time'],
+            'daily_end_time'   => $row['daily_end_time'] === null ? null : (string) $row['daily_end_time'],
+        ];
+    }
+
+    /**
      * Identity of the batch row behind $batchId, so a cached snapshot can be
      * matched to the batch it was computed from. The cache key is the batch id
      * alone, and a closed batch saves with ttl 0, so without this check any
@@ -584,6 +775,12 @@ class SubsidyStatsModel extends Model
      * a fresh schema) serves the old batch's figures forever. The columns are
      * the ones fixed when the batch is created or opened, not the counters that
      * move during distribution, so a live batch keeps its cache hits.
+     *
+     * daily_start_time and daily_end_time are part of that identity too, not a
+     * counter: they are what the cached heatmap used to decide an empty cell
+     * was a staffed-but-idle hour rather than a closed one. saveSchedule() can
+     * edit them on a batch that already has a cache entry, and a closed batch
+     * caches with ttl 0, so leaving them out would serve the old hours forever.
      *
      * @return string Empty when the row is missing or the query fails, which
      *                tells batchSnapshot() to skip the cache write entirely.
@@ -596,7 +793,7 @@ class SubsidyStatsModel extends Model
 
         try {
             $row = $this->db->table('distribution_batch')
-                ->select('name, scheduled_start, started_at, closed_at, created_by')
+                ->select('name, scheduled_start, started_at, closed_at, created_by, daily_start_time, daily_end_time')
                 ->where('batch_id', $batchId)
                 ->get()->getRowArray();
         } catch (\Throwable $e) {

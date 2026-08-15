@@ -186,11 +186,78 @@ mutation.
 entirely rather than merely superseded, so every method takes a trailing
 `?int $batchId`.
 
-`perScanner(int $batchId, ?int $onlyUserId)` returns rows of
-`{userID, scanner, handouts, families}`, where `families` is
-`COUNT(DISTINCT control_no)`. The Scanner role only ever sees its own row, and it
-is filtered server-side by passing `$onlyUserId`, never hidden client-side. The
-full per-kiosk table and its PDF export are Admin and Developer only.
+`scanEvents(int $batchId)` (`app/Models/Scanner/SubsidyStatsModel.php:492`) is the
+one query behind every per-scanner figure: every scan in the batch, as
+`{userID, ts, control_no}`, sorted by scanner then time. Nothing downstream
+queries the database again for a scanner's numbers; it folds this stream.
+
+### `ScannerMetrics`: the fold, and what active time is not
+
+`App\Libraries\Scanner\ScannerMetrics` (`app/Libraries/Scanner/ScannerMetrics.php`)
+turns that event stream into per-scanner figures and the peak-hours grid. It
+touches no database and no framework state, matching the scanner module's
+no-DB test posture, so every figure is unit-testable without a fixture. One
+fold behind the Stations table, the station drill-in modal, and the kiosk
+performance page is the point: the three read the same numbers and cannot
+disagree about a scanner's pace.
+
+**What the old figure got wrong.** `ScanController::kioskSnapshot()` used to
+compute a scanner's pace by dividing their families by the batch's wall clock,
+`started_at` to now. A batch scheduled across three days closes each evening
+and reopens the next morning (see the schedule section above), so that clock
+kept running through both nights the venue was empty. A scanner who worked two
+of the three days had their families divided by roughly three days of elapsed
+time, and every station in a multi-day batch read at a fraction, often near a
+quarter, of the rate it was actually working at.
+
+**What it does now.** Active time is derived from the scan timestamps
+themselves, not the clock. `ScannerMetrics::fold()` walks one scanner's events
+in order and measures the gap between each consecutive pair. A gap of
+`ScannerMetrics::IDLE_GAP_SECONDS` (900 seconds, `app/Libraries/Scanner/ScannerMetrics.php:29`)
+or less is counted as active time; anything longer is idle, someone standing at
+an empty queue, not work, and is excluded from both the active-time total and
+the pace calculation. A scanner's own idle nights, lunch break, or any other
+gap this wide simply never enters the denominator, whether the batch runs one
+day or five.
+
+**`pace` is a cadence figure, not a throughput one.** It is non-idle gaps per
+active hour: `3600 / mean(non-idle gap)`. Read it as "how close together this
+scanner's scans landed while they were working", never as "families per hour".
+The first scan in any run has no gap before it, so it is excluded from the gap
+count entirely; counting it would understate the pace by folding in an arrival
+that consumed no active time.
+
+`ScannerMetrics::derive()` turns one folded row into eight figures, shown
+identically in the Stations table, the station drill-in modal
+(`App\Libraries\Scanner\BatchScope`, `app/Views/Admin/batch-station-modal.php`),
+and the kiosk performance page, all from `app/Views/Scanner/_metrics-grid.php`:
+families served, handouts logged, pace, typical time between families (the
+median non-idle gap), time on station (first scan to last), idle time, best
+hour, and share of the batch's families. `perScanner()` is gone; every reader
+that used it now reads `byScanner`, the same fold's rows.
+
+### The peak-hours heatmap
+
+`ScannerMetrics::heatmap()` folds the same event stream into a day-by-hour
+grid: one row per day the batch ran, one column per hour, a distinct-family
+count per cell. A family scanned twice at two stations in the same hour counts
+once, because the grid is built from the same control-number folding the
+`families` figure uses, not a second `GROUP BY`.
+
+Rendered as an HTML table (`app/Views/Admin/batch-heatmap.php`), not a chart,
+because a screen reader can take keyboard focus on a table cell and read its
+value as text, which a canvas cannot offer. The same partial also renders an
+all-time weekday-by-hour view, fed by `weekdayHistogram()`
+(`app/Models/Scanner/SubsidyStatsModel.php:530`), which spans every batch the
+city has ever run and ignores the batch picker entirely.
+
+Three cell states carry the reading, and the distinction between the first two
+is the one worth remembering: **closed** is an hour outside the batch's daily
+window, no evidence the station was open. **Staffed but empty** is an hour
+inside that window with zero families, a blank the batch actually paid for and
+the one state worth acting on. **Served** is any hour with at least one
+family, shaded across five steps scaled to the grid's own busiest cell rather
+than an absolute ceiling, so a small batch still shows contrast.
 
 The live counter on the scan page updates from the `myBatchCount` field in the
 `scanner/log` response.
@@ -344,17 +411,28 @@ The scan IS the log - there is no confirm step and no claimant/date form:
   batches and the distributions log (the `distribution` page), and its reports
   endpoints (`distribution/reports/*`).
 
-### Rule 5: Performance stats are batch-scoped and role-filtered
+### Rule 5: Performance stats are folded from scan events, batch-scoped, role-filtered
 
 `SubsidyStatsModel` methods take a trailing `?int $batchId` (batch-scoped only -
 the date-range filter is removed entirely, not just superseded).
-`perScanner(int $batchId, ?int $onlyUserId)` returns
-`{userID, scanner, handouts, families}` rows - `families` =
-`COUNT(DISTINCT control_no)`. `bySubsidyType(?int $batchId)` drives the
-handouts-per-subsidy-type chart/PDF table. The Scanner role only ever sees its
-own row on `scanner/performance` (`ScanController` passes `$onlyUserId`
-server-side, never hides rows client-side). The `distribution` page's reports show
-the full per-kiosk table (Admin/Developer only), including the PDF export.
+`scanEvents(int $batchId)` (`app/Models/Scanner/SubsidyStatsModel.php:492`) is
+the one query behind every per-scanner figure and the peak-hours grid;
+`App\Libraries\Scanner\ScannerMetrics::fold()` turns it into
+`{userID, scanner, handouts, families, pace, typicalSeconds, share,
+onStationSeconds, idleSeconds, bestHour, bestHourFamilies}` rows per scanner -
+`families` = `COUNT(DISTINCT control_no)`, `pace` = non-idle gaps per active
+hour, not families per elapsed hour. `perScanner()` is gone; every reader
+(Stations table, station drill-in modal, kiosk performance page, PDF) now
+reads `byScanner`, the same fold's rows, so the four cannot disagree about one
+scanner's pace. See "`ScannerMetrics`: the fold, and what active time is not"
+above for why active time is derived from scan timestamps rather than the
+batch's wall clock.
+
+The Scanner role only ever sees its own row on `scanner/performance`
+(`ScanController` passes `$onlyUserId` server-side, never hides rows
+client-side). The dashboard's Distribution pane and the `distribution` page's
+reports show the full per-kiosk table (Admin/Developer only), including the
+PDF export.
 
 The live counter on the scan page updates from the `myBatchCount` field in
 the `scanner/log` JSON response

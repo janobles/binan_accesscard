@@ -61,6 +61,48 @@ class ViewFormatter
         return '<span class="sector-badges">' . implode(' ', $badges) . '</span>';
     }
 
+    /**
+     * A span of seconds as a short human reading for a table cell: "6 h 45 m",
+     * "41 m", "1 m 16 s", "45 s". Zero or negative prints a dash, because the
+     * columns this serves (time on station, idle, typical time per family) all
+     * mean "nothing measured" at zero rather than "no time at all".
+     *
+     * One letter per unit at every band, h, m and s. Two spellings of minutes
+     * would land in the same table cell, one row printing "1 min 16 s" and the
+     * row under it "41 m", which reads as two different quantities.
+     *
+     * Seconds are only spelled out below five minutes. Above that they are
+     * noise against the figure beside them, and below it they are the whole
+     * reading: a typical family taking 1 m 16 s and one taking 2 m is the
+     * difference the column exists to show.
+     */
+    public static function duration(int $seconds): string
+    {
+        if ($seconds <= 0) {
+            return '-';
+        }
+
+        if ($seconds < 60) {
+            return $seconds . ' s';
+        }
+
+        if ($seconds < 300) {
+            $minutes = intdiv($seconds, 60);
+            $rest    = $seconds % 60;
+
+            return $rest === 0 ? $minutes . ' m' : $minutes . ' m ' . $rest . ' s';
+        }
+
+        if ($seconds < 3600) {
+            return intdiv($seconds, 60) . ' m';
+        }
+
+        $hours   = intdiv($seconds, 3600);
+        $minutes = intdiv($seconds % 3600, 60);
+
+        return $minutes === 0 ? $hours . ' h' : $hours . ' h ' . $minutes . ' m';
+    }
+
     /** True if a value has non-whitespace text. */
     public static function hasText(mixed $value): bool
     {

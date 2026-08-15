@@ -26,6 +26,15 @@ jobs:
       - name: Install dependencies
         run: composer install --prefer-dist --no-interaction --no-progress
 
+      # ReportsPdfSnapshotConsistencyTest reads a generated PDF's text layer
+      # with Ghostscript's txtwrite device to confirm the report prints the
+      # cached snapshot's figures rather than a fresher, disagreeing query.
+      # It skips itself on a machine without gs, which would otherwise make
+      # this coverage silently absent from the run that actually gates a
+      # merge.
+      - name: Install Ghostscript
+        run: sudo apt-get update && sudo apt-get install -y ghostscript
+
       # Formatting is deliberately not checked. The repo is unformatted on
       # purpose: php-cs-fixer moves executable tokens, which the documentation
       # branch's token gate forbids, so `composer lint` is the sniffer plus the
@@ -114,6 +123,12 @@ jobs:
 
       - name: Install dependencies
         run: composer install --prefer-dist --no-interaction --no-progress
+
+      # See the lint-and-test job's identical step: ReportsPdfSnapshotConsistencyTest
+      # needs gs to read a generated PDF's text layer, and this job runs the
+      # same suite.
+      - name: Install Ghostscript
+        run: sudo apt-get update && sudo apt-get install -y ghostscript
 
       # Resolve the dump by version instead of naming one: DumpSchema::dumpPath()
       # (tests/_support/Database/DumpSchema.php) picks the highest-numbered

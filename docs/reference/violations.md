@@ -107,7 +107,7 @@ unchecked item was already moved to issue #9 (UX decision, not code mess).
   restored.)*
 
 Exempt (checked, not violations): `app/Views/errors/html/*` (framework error
-pages, standalone by design), `app/Views/Scanner/pdf/report.php` (PDF
+pages, standalone by design), `app/Views/Scanner/pdf/report-hours.php` (PDF
 rendering needs inline styles), layout shells + `Auth/login.php` (standalone
 `<html>` is their job).
 
@@ -276,3 +276,21 @@ branch, which changed documentation only.
   page, laid out three per row", but the grid is 3x4 and the page count comes
   from `QrCardSettings::$cellsPerPage`, which is 12. The header contradicts both
   the config docblock and `QrCardPdfGenerator::` padding to a full 3x4 grid.
+
+## Appended from feat/distribution-peak-hours (2026-08-14)
+
+- [ ] ⚪ Cleanup: the duration and hour-label formatters are duplicated four
+  times: `ViewFormatter::duration()` (`app/Libraries/ViewFormatter.php:79`),
+  and matching copies in `public/assets/js/dashboard/scanner-reports.js:151,175`,
+  `public/assets/js/dashboard/batch-heatmap.js:103,125`, and
+  `app/Views/Scanner/performance.php:132,150`. The JS files load independently
+  on the same dashboard page, each ahead of the scripts it depends on, and a
+  shared module would need a fourth `<script>` tag on a page that already orders
+  several carefully; that is why `scanner-reports.js`'s `hourLabel()` comment
+  says the duplication is deliberate. The argument still holds for two
+  consumers. It stops holding at three: the peak-hours heatmap gave
+  `batch-heatmap.js` its own copy of both formatters, and the kiosk performance
+  page carries a fourth, so a change to either now has to land in four places by
+  hand, and a person fixing the PHP copy has no reason to know three JS copies
+  exist. Revisit if a fifth consumer turns up, or on general principle now that
+  the count has moved.

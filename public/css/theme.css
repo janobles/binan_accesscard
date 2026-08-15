@@ -23,6 +23,19 @@
     --chart-color-4: #1cc88a;
     --chart-track: #dddfeb;
     --chart-grid: #eaecf4;
+
+    /* Sequential ramp for magnitude (peak-hours heatmap): one hue, light to
+       dark, steps 100/250/350/450/550/650 of the documented blue scale so the
+       lightest step ("staffed, served nobody") still reads as a real color,
+       not the surface. Same blue family as --chart-color-1, matched hue. */
+    --heat-0: #cde2fb;
+    --heat-1: #86b6ef;
+    --heat-2: #5598e7;
+    --heat-3: #2a78d6;
+    --heat-4: #1c5cab;
+    --heat-5: #104281;
+    --heat-closed-base: #eaecf4;
+    --heat-closed-stripe: #dee2e6;
 }
 
 /* Bootstrap's stock .btn-warning uses black text on yellow (default WCAG
@@ -318,6 +331,45 @@
 .segmented-tabs--subordinate .nav-link.active {
     font-weight: 500;
     border-bottom-width: 1px;
+}
+
+/* Card variant: the small underline row inside a card header, switching
+   between views of that card's own data, not between pages. Bootstrap's
+   .nav-underline would do this, but the dashboard shell compiles Bootstrap
+   5.2.3 into the SB Admin theme and that class arrived in 5.3, so it silently
+   does nothing here. See docs/reference/version-pins.md. */
+.segmented-tabs--card {
+    gap: 0 1.25rem;
+    border-bottom: 1px solid var(--token-border-light);
+    margin-bottom: 1rem;
+}
+
+.segmented-tabs--card .nav-link {
+    background: none;
+    border-radius: 0;
+    color: var(--token-text-secondary);
+    font-size: 0.85rem;
+    /* Horizontal and vertical padding here, not just the 0.5rem this strip's
+       siblings use, because this variant carries tabs like Barangay
+       coverage's Map/Table switch, which exist so a phone user can reach
+       content hidden below the large breakpoint. A tap target sized to the
+       label text alone is too small to hit on touch. The gap above keeps the
+       now-padded tabs from reading as one run-together block. */
+    padding: 0.65rem 0.5rem;
+    /* -1px so the active tab's rule sits on the strip's border, not under it,
+       which is what stops the card shifting a pixel on tab switch. */
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+}
+
+.segmented-tabs--card .nav-link:hover {
+    color: var(--token-primary-green);
+}
+
+.segmented-tabs--card .nav-link.active {
+    background: none;
+    color: var(--token-primary-green);
+    border-bottom-color: var(--token-primary-green);
 }
 
 /* Stepper: the app's own step indicator, since Bootstrap ships none. Indicators
@@ -667,6 +719,14 @@
     margin-bottom: 2rem;
 }
 
+/* One subject per card on the Distribution pane, stacked. The spacing is the
+   only thing this adds over Bootstrap's .card: the cards are what tells the
+   reader where one subject ends, so they need a gap wide enough to read as a
+   break rather than a table rule. */
+.batch-card {
+    margin-bottom: 1.5rem;
+}
+
 .batch-pane-title {
     font-size: 0.78rem;
     font-weight: 700;
@@ -687,56 +747,22 @@
     height: 220px;
 }
 
-/* Stations grid. One square per scanner working the batch, sized square so a
-   fleet of twenty reads as a fleet rather than a list. */
-/* Rendered as a <button> for the roles that can open the station modal and as
-   an inert <div> for everyone else, so the shared properties reset what a
-   button inherits (font, full width) and the hover/focus lift is scoped to the
-   interactive one. */
-.station-square {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    width: 100%;
-    aspect-ratio: 1 / 1;
-    padding: 0.75rem;
-    border: 1px solid #e3e6f0;
-    border-radius: 0.35rem;
-    background: #fff;
-    color: #3a3b45;
-    font: inherit;
-    text-align: center;
-    text-decoration: none;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-
-button.station-square {
+/* Stations table. Only the rows the server marked as drillable get the pointer,
+   so a role that may not open the modal is not offered one. The TOTAL row is a
+   fold of the rows above it, not a station, so it is weighted rather than
+   clickable. Scoped to the card, not #stationsTable, so the Per day pane's
+   #stationsTableDay (rendered by batch-heatmap.js) gets the same treatment. */
+#stationsCard tr[data-scanner-id] {
     cursor: pointer;
 }
 
-button.station-square:hover,
-button.station-square:focus-visible {
-    border-color: #2e75b6;
-    box-shadow: 0 0.15rem 0.5rem rgba(58, 59, 69, 0.12);
-    color: #3a3b45;
+#stationsCard tr[data-scanner-id]:hover {
+    background-color: var(--binan-green-soft, #f2f5f4);
 }
 
-.station-name {
-    font-size: 0.78rem;
-    font-weight: 600;
-    color: #6e707e;
-}
-
-.station-count {
-    font-size: 1.5rem;
+#stationsCard tr.is-total td {
     font-weight: 700;
-    line-height: 1.2;
-}
-
-.station-unit {
-    font-size: 0.72rem;
-    color: #858796;
+    border-top: 2px solid #e3e6f0;
 }
 
 /* Barangay choropleth. Four flat steps, no legend: the popover carries the

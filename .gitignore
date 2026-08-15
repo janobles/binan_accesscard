@@ -177,3 +177,4 @@ sessions.json
 
 # Stale TUI tool locks
 *.tuxedo-lock
+writable/accesscard_ci
